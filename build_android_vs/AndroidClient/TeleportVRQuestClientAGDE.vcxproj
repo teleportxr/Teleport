@@ -64,7 +64,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <Link>
-      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt</LibraryDependencies>
+      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt;mediandk</LibraryDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libsrt.a;$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libcrypto.a;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libxrspacewarp.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -75,7 +75,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <Link>
-      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt</LibraryDependencies>
+      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;fmt;mediandk</LibraryDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libsrt.a;$(SolutionDir)../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/lib/libcrypto.a;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -91,8 +91,9 @@
     <ClCompile Include="..\..\AndroidClient\CmdBuffer.cpp" />
     <ClCompile Include="..\..\AndroidClient\FileLoader.cpp" />
     <ClCompile Include="..\..\AndroidClient\main.cpp" />
+    <ClCompile Include="..\..\AndroidClient\NdkVideoDecoder.cpp" />
     <ClCompile Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.c" />
-    <ClCompile Include="..\..\AndroidClient\VideoDecoder.cpp" />
+    <ClCompile Include="..\..\AndroidClient\VideoDecoderBackend.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h" />
@@ -100,8 +101,9 @@
     <ClInclude Include="..\..\AndroidClient\AndroidRenderer.h" />
     <ClInclude Include="..\..\AndroidClient\CmdBuffer.h" />
     <ClInclude Include="..\..\AndroidClient\FileLoader.h" />
+    <ClInclude Include="..\..\AndroidClient\NdkVideoDecoder.h" />
     <ClInclude Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.h" />
-    <ClInclude Include="..\..\AndroidClient\VideoDecoder.h" />
+    <ClInclude Include="..\..\AndroidClient\VideoDecoderBackend.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AndroidPackaging\app\build.gradle" />

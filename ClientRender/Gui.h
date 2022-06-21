@@ -18,6 +18,7 @@ namespace teleport
 	class Gui
 	{
 	public:
+		void SetPlatformWindow(PlatformWindow *w);
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r,PlatformWindow *w);
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
@@ -46,6 +47,10 @@ namespace teleport
 		avs::uid GetSelectedUid() const
 		{
 			return selected_uid;
+		}
+		vec3 Get3DPos()
+		{
+			return menu_pos;
 		}
 	protected:
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 

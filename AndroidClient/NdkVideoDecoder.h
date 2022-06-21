@@ -1,53 +1,43 @@
 #include <media/NdkMediaCodec.h>
+#include <media/NdkImageReader.h>
 #include <vector>
+#include <libavstream/common.hpp>
+#include "Platform/CrossPlatform/VideoDecoder.h"
 
-enum class VideoCodec
+namespace platform
 {
-	H264,
-	H265,
-	INVALID
-};
-
-enum class PayloadType
-{
-	FirstVCL,		/*!< Video Coding Layer unit (first VCL in an access unit). */
-	VCL,			/*!< Video Coding Layer unit (any subsequent in each access unit). */
-	VPS,			/*!< Video Parameter Set (HEVC only) */
-	SPS,			/*!< Sequence Parameter Set */
-	PPS,			/*!< Picture Parameter Set */
-	ALE,			/*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
-	OtherNALUnit,	/*!< Other NAL unit. */
-	AccessUnit		/*!< Entire access unit (possibly multiple NAL units). */
-};
-
-class VideoDecoder;
+	namespace crossplatform
+	{
+		class Texture;
+	}
+}
+class VideoDecoderBackend;
 
 class NdkVideoDecoder //: SurfaceTexture.OnFrameAvailableListener
 {
-	NdkVideoDecoder(VideoDecoder *d,int codecType);
-	VideoDecoder *videoDecoder=nullptr;
-	int mCodecTypeIndex;
+public:
+	NdkVideoDecoder(VideoDecoderBackend *d,avs::VideoCodec codecType);
+	void initialize(platform::crossplatform::Texture* texture);
+	void shutdown();
+	bool decode(std::vector<uint8_t> &ByteBuffer, avs::VideoPayloadType p, bool lastPayload);
+	bool display();
+protected:
+	VideoDecoderBackend *videoDecoder=nullptr;
+	avs::VideoCodec mCodecType;
 	AMediaCodec * mDecoder = nullptr;
+	AImageReader *imageReader=nullptr;
 	bool mDecoderConfigured = false;
 	int mDisplayRequests = 0;
-
-	void initialize(void* SurfaceTexture, int frameWidth , int frameHeight);
-
-	void shutdown();
-
-	bool decode(std::vector<uint8_t> &ByteBuffer, int payloadTypeIndex, bool lastPayload);
-	bool display();
 
 	ssize_t queueInputBuffer(std::vector<uint8_t> &ByteArray, int flags);
 
 	int releaseOutputBuffer(bool render ) ;
-	std::function<void(VideoDecoder *)> nativeFrameAvailable;
+	std::function<void(VideoDecoderBackend *)> nativeFrameAvailable;
 	void onFrameAvailable(void* SurfaceTexture)
 	{
 		nativeFrameAvailable(videoDecoder);
 	}
 
-	VideoCodec getCodecType();
 	const char *getCodecMimeType();
-	PayloadType getPayloadTypeFromIndex(int payloadTypeIndex) ;
+	platform::crossplatform::VideoDecoderParams videoDecoderParams;
 };

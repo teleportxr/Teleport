@@ -36,11 +36,11 @@ void Config::LoadConfigFromIniFile()
 			ip_list.erase(0, pos + 1);
 		} while (pos != std::string::npos);
 
-		enable_vr = ini.GetLongValue("", "ENABLE_VR", true);
-		dev_mode = ini.GetLongValue("", "DEV_MODE", false);
+		enable_vr = ini.GetLongValue("", "ENABLE_VR", enable_vr);
+		dev_mode = ini.GetLongValue("", "DEV_MODE", dev_mode);
 		log_filename = ini.GetValue("", "LOG_FILE", "TeleportClient.log");
 
-		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", false);
+		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", render_local_offline);
 
 	}
 	else

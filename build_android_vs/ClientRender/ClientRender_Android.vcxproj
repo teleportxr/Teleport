@@ -70,7 +70,7 @@
     <ClCompile Include="..\..\ClientRender\Transform.cpp" />
     <ClCompile Include="..\..\ClientRender\UniformBuffer.cpp" />
     <ClCompile Include="..\..\ClientRender\VertexBuffer.cpp" />
-    <ClCompile Include="..\..\ClientRender\VideoDecoder.cpp" />
+    <ClCompile Include="..\..\ClientRender\VideoDecoderBackend.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h" />
@@ -110,7 +110,7 @@
     <ClInclude Include="..\..\ClientRender\UniformBuffer.h" />
     <ClInclude Include="..\..\ClientRender\VertexBuffer.h" />
     <ClInclude Include="..\..\ClientRender\VertexBufferLayout.h" />
-    <ClInclude Include="..\..\ClientRender\VideoDecoder.h" />
+    <ClInclude Include="..\..\ClientRender\VideoDecoderBackend.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E60416E1-F881-4E0B-8459-488A21C53030}</ProjectGuid>

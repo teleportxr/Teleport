@@ -100,7 +100,7 @@ namespace teleport
 		};
 		struct NodePoseState
 		{
-			avs::Pose pose;	// In global space, the offset to the node's current pose.
+			avs::Pose pose_worldSpace;	// In global space, the offset to the node's current pose.
 		};
 		struct OpenXRServer
 		{
@@ -139,7 +139,7 @@ namespace teleport
 				float vec2f[2];
 				bool poseActive;
 			};
-			XrPosef	pose;
+			XrPosef pose_stageSpace;
 		};
 
 		//
@@ -195,7 +195,9 @@ namespace teleport
 			virtual bool TryInitDevice()=0;
 			void MakeActions();
 			void PollActions();
-			void RenderFrame( platform::crossplatform::RenderDelegate &, vec3 origin_pos, vec4 origin_orientation);
+			// Set the origin of OpenXR's local stage space in current client worldspace.
+			void SetStagePoseInWorldSpace(avs::Pose stagePose);
+			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
 			void Shutdown();
 			void PollEvents(bool& exit);
 			bool HaveXRDevice() const;
@@ -214,7 +216,6 @@ namespace teleport
 			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 
 			const avs::Pose& GetHeadPose() const;
-			const avs::Pose& GetControllerPose(int index) const;
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			size_t GetNumControllers() const
 			{
@@ -227,20 +228,24 @@ namespace teleport
 				return xr_session_running;
 			}
 		protected:
+			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
 			void BindUnboundPoses(avs::uid server_uid);
 			std::map<avs::uid,OpenXRServer> openXRServers;
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 			bool haveXRDevice = false;
-			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
-			bool RenderLayer(XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views,std::vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation);
+			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate);
+			bool RenderLayer(XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views,std::vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views
+						, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate);
 			void DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCompositionLayerSpaceWarpInfoFB &spacewarp_view,int i);
-			bool RenderOverlayLayer(XrTime predictedTime);
+			bool RenderOverlayLayer(XrTime predictedTime,platform::crossplatform::RenderDelegate &overlayDelegate);
 			bool AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
-			avs::Pose headPose;
+
+			avs::Pose stagePose_worldSpace={};
+			avs::Pose headPose_worldSpace={};
 			std::vector<avs::Pose> controllerPoses;
 			struct XrState
 			{
-				XrPosef XrSpacePoseInWorld;
+				XrPosef XrSpacePoseInWorld={0};
 			};
 			XrState state;
 			XrState previousState;

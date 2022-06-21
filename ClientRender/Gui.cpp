@@ -33,6 +33,15 @@ ImFont *smallFont=nullptr;
 ImFont *symbolFont=nullptr;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
+PlatformWindow *platformWindow=nullptr;
+void Gui::SetPlatformWindow(PlatformWindow *w)
+{
+#ifndef _MSC_VER
+	if(renderPlatform!=nullptr&&w!=platformWindow)
+		ImGui_ImplAndroid_Init(w);
+#endif
+	platformWindow=w;
+}
 
 void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,PlatformWindow *w)
 {
@@ -92,11 +101,12 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 	style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.32f, 0.52f, 0.65f, 1.00f);*/
-	#ifdef _MSC_VER
+	SetPlatformWindow(w);
+#ifdef _MSC_VER
 	ImGui_ImplWin32_Init(GetActiveWindow());
-	#else
-	ImGui_ImplAndroid_Init(w);
-	#endif
+#else
+	ImGui_ImplAndroid_Init(platformWindow);
+#endif
 	ImGui_ImplPlatform_Init(r);
 
 	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
@@ -161,7 +171,6 @@ void Gui::RecompileShaders()
 	ImGui_ImplPlatform_RecompileShaders();
 }
 
-
 void Gui::ShowHide()
 {
 	if(visible)
@@ -170,17 +179,16 @@ void Gui::ShowHide()
 		Show();
 }
 
-
 void Gui::Show()
 {
-	visible = true;
-	menu_pos = view_pos;
+	visible			= true;
+	menu_pos		= view_pos;
 	static float z_offset = -.3f;
 	static float distance = 0.4f;
-	azimuth= atan2f(-view_dir.x, view_dir.y);
-	tilt = 3.1415926536f / 4.0f;
+	azimuth			= atan2f(-view_dir.x, view_dir.y);
+	tilt			= 3.1415926536f / 4.0f;
 	vec3 menu_offset = { distance * -sin(azimuth),distance * cos(azimuth),z_offset };
-	menu_pos += menu_offset;
+	menu_pos		+= menu_offset;
 	keys_pressed.clear();
 }
 

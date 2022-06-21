@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="../../../../firstparty\Platform\Core\BaseMouseHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\CommandLine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\CommandLineParams.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\DefaultFileLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\firstparty\Platform\Core\ConvertUTF.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\EnvironmentVariables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\firstparty\Platform\Core\FileLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\MemoryInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\ProfilingInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\StringFunctions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\StringToWString.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\Timer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="../../../../firstparty\Platform\Core\RuntimeError.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="../../../../firstparty\Platform\Core\CommandLine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\CommandLineParams.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\firstparty\Platform\Core\ConvertUTF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\DebugMemory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\DefaultFileLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\EnvironmentVariables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\Export.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\FileLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\MemoryInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\MemoryUsageInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\ProfilingInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\PropertyMacros.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\ReadWriteMutex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\RuntimeError.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\SimpleIni.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\StringFunctions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\StringToWString.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="../../../../firstparty\Platform\Core\BaseMouseHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{42f92019-546f-4ccd-91db-2aca47863252}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{7ea35de1-c43f-49ac-b8fd-a9594548ba36}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

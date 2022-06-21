@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="../../../../firstparty/Platform/build\CMakeFiles\c6f6e28e772831ddedf1a06887a151da\VulkanCoreShaders.rule" />
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\copy.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\debug.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\font.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\hdr.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\imgui.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\light_probes.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\mip.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\solid.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\sphere.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\spherical_harmonics.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="../../../../firstparty\Platform\Vulkan\Sfx\VulkanAndroid.json" />
+    <None Include="../../../../firstparty/Platform/build\Vulkan\CMakeFiles\VulkanCoreShaders" />
+    <None Include="../../../../firstparty\Platform\Shaders\SL\common.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\brdf.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\camera_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\colour_packing.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\CppSl.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\cubemap_matrices.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\debug_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\hdr_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\image_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\light_probe_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\noise.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\quaternion.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\raytracing.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\raytracing_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\sampler_states.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\render_states.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Vulkan\Sfx\shader_platform.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\solid_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\sphere_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\spherical_harmonics.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\spherical_harmonics_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\text_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform\Shaders\SL\depth.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Shader Includes">
+      <UniqueIdentifier>{10d27e19-9adc-46c1-b5b4-194a0aa3e76a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{ce90b369-f0e1-4373-a8d0-a44bdc0f2015}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

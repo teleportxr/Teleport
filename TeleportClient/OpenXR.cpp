@@ -622,11 +622,10 @@ void OpenXR::PollActions()
 				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 			{
-				xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose= space_location.pose;
+				xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose_stageSpace=( space_location.pose);
 				if(hand>= controllerPoses.size())
 					controllerPoses.resize(hand+1);
-				controllerPoses[hand].position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
-				controllerPoses[hand].orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+				controllerPoses[hand] = ConvertGLStageSpacePoseToWorldSpacePose(xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose_stageSpace);
 			}
 		}
 	}
@@ -671,7 +670,7 @@ struct FallbackBinding
 };
 struct FallbackState
 {
-	avs::Pose pose;
+	avs::Pose pose_worldSpace;
 };
 std::map<avs::uid,FallbackBinding> fallbackBindings;
 std::map<avs::uid,FallbackState> fallbackStates;
@@ -681,9 +680,9 @@ void OpenXR::SetFallbackBinding(ActionId actionId,std::string path)
 	fallbackBindings[actionId].path=path;
 }
 
-void OpenXR::SetFallbackPose(ActionId actionId,const avs::Pose &pose)
+void OpenXR::SetFallbackPose(ActionId actionId,const avs::Pose &pose_worldSpace)
 {
-	fallbackStates[actionId].pose=pose;
+	fallbackStates[actionId].pose_worldSpace=pose_worldSpace;
 }
 
 std::string GetBoundPath(const ActionDefinition &def)
@@ -845,16 +844,15 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
-					xr_input_session.actionStates[def.actionId].pose= space_location.pose;
-					state.pose.position = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
-					state.pose.orientation = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+					xr_input_session.actionStates[def.actionId].pose_stageSpace=(space_location.pose);
+					state.pose_worldSpace=ConvertGLStageSpacePoseToWorldSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
 				}
 			}
 			else
 			{
 				if(fallbackBindings.find(def.actionId)!=fallbackBindings.end())
 				{
-					state.pose=fallbackStates[def.actionId].pose;
+					state.pose_worldSpace=fallbackStates[def.actionId].pose_worldSpace;
 				}
 			}
 		}
@@ -992,11 +990,10 @@ void OpenXR::openxr_poll_predicted(XrTime predicted_time)
 			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
-			xr_input_session.actionStates[LEFT_GRIP_POSE+i].pose = space_location.pose;
+			xr_input_session.actionStates[LEFT_GRIP_POSE+i].pose_stageSpace=( space_location.pose);
 			if (i >= controllerPoses.size())
 				controllerPoses.resize(i + 1);
-			controllerPoses[i].position = platform::crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
-			controllerPoses[i].orientation = platform::crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+			controllerPoses[i] =ConvertGLStageSpacePoseToWorldSpacePose( xr_input_session.actionStates[LEFT_GRIP_POSE+i].pose_stageSpace);
 		}
 	}
 }
@@ -1076,26 +1073,29 @@ mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 }
 
 void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view
-	,swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+	,swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate)
 {
 	errno=0;
 	// Set up camera matrices based on OpenXR's predicted viewpoint information
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
-	crossplatform::Quaternionf rot = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const crossplatform::Quaternionf*)&view.pose.orientation));
-	vec3 pos=crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL,crossplatform::AxesStandard::Engineering,*((const vec3 *)&view.pose.position));
-	crossplatform::Quaternionf orig_rot = origin_orientation;
-	Multiply(pos,orig_rot,pos);
-	pos += origin_pos;
+	avs::Pose avsPose=ConvertGLStageSpacePoseToWorldSpacePose(view.pose);
+	//crossplatform::Quaternionf rot = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const crossplatform::Quaternionf*)&view.pose.orientation));
+	//vec3 pos=crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL,crossplatform::AxesStandard::Engineering,*((const vec3 *)&view.pose.position));
+
+	//crossplatform::Quaternionf &orig_rot = *((crossplatform::Quaternionf*)&stagePose_worldSpace.orientation);
+	//Multiply(pos,orig_rot,pos);
+	//pos += origin_pos;
+
 	deviceContext.viewStruct.proj = *((const platform::math::Matrix4x4*)&proj); 
 	deviceContext.viewStruct.frustum=platform::crossplatform::GetFrustumFromProjectionMatrix(deviceContext.viewStruct.proj);
-	rot=orig_rot*rot;
+	//rot=orig_rot*rot;
 
 	platform::math::SimulOrientation globalOrientation;
 	// global pos/orientation:
-	globalOrientation.SetPosition((const float*)&pos);
+	globalOrientation.SetPosition((const float*)&avsPose.position);
 
 	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
-	platform::math::Quaternion q1 = (const float*)&rot;
+	platform::math::Quaternion q1 = (const float*)&avsPose.orientation;
 
 	auto q_rel = q1 / q0;
 	globalOrientation.SetOrientation(q_rel);
@@ -1179,7 +1179,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 bool OpenXR::RenderLayer( XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& projection_views,vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views
 	, XrCompositionLayerProjection& layer
-	, platform::crossplatform::RenderDelegate& renderDelegate, vec3 origin_pos, vec4 origin_orientation)
+	, platform::crossplatform::RenderDelegate& renderDelegate)
 {
 	lastTime=predictedTime;
 	// Find the state and location of each viewpoint at the predicted time
@@ -1225,7 +1225,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		deviceContext.viewStruct.view_id = i;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 		// Call the rendering callback with our view and swapchain info
-		RenderLayerView(deviceContext,projection_views[i], xr_swapchains[i].surface_data[img_id],renderDelegate, origin_pos,origin_orientation);
+		RenderLayerView(deviceContext,projection_views[i], xr_swapchains[i].surface_data[img_id],renderDelegate);
 		
 		FinishDeviceContext(i);
 		// And tell OpenXR we're done with rendering to this one!
@@ -1491,18 +1491,7 @@ bool OpenXR::IsXRDeviceActive() const
 
 const avs::Pose& OpenXR::GetHeadPose() const
 {
-	return headPose;
-}
-
-const avs::Pose& OpenXR::GetControllerPose(int index) const
-{
-	if (index >= 0 && controllerPoses.size())
-		return controllerPoses[index];
-	else
-	{
-		static avs::Pose nullPose;
-		return nullPose;
-	}
+	return headPose_worldSpace;
 }
 
 typedef union {
@@ -1511,7 +1500,32 @@ typedef union {
 } XrCompositionLayer_Union;
 XrCompositionLayer_Union layers[3];
 
-void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,vec3 origin_pos,vec4 origin_orientation)
+void OpenXR::SetStagePoseInWorldSpace(avs::Pose stagePose)
+{
+	stagePose_worldSpace=stagePose;
+}
+
+avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &xrpose) const
+{
+	avs::Pose pose;
+	// first convert to the correct scheme.
+	vec3 pos_e							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&xrpose.position));
+ 	crossplatform::Quaternionf ori_e	= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&xrpose.orientation));
+	// now convert to the correct frame.
+	// rotation position and orientation by the stage orientation.
+	// and add the stage position.
+	crossplatform::Quaternionf &orig_rot = *((crossplatform::Quaternionf*)&stagePose_worldSpace.orientation);
+	vec3 pos;
+	Multiply(pos,orig_rot,pos_e);
+	pos += *((vec3*)&stagePose_worldSpace.position);
+
+	crossplatform::Quaternionf rot=orig_rot*ori_e;
+	pose.position=*((avs::vec3*)&pos);
+	pose.orientation=*((avs::vec4*)&rot);
+	return pose;
+}
+
+void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,platform::crossplatform::RenderDelegate &overlayDelegate)
 {
 	if(!xr_session_running)
 		return;
@@ -1545,8 +1559,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 		(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 	{
 		state.XrSpacePoseInWorld=space_location.pose;
-		headPose.position	= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&space_location.pose.position));
- 		headPose.orientation= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&space_location.pose.orientation));
+		headPose_worldSpace=ConvertGLStageSpacePoseToWorldSpacePose(space_location.pose);
 	}
 	// If the session is active, lets render our layer in the compositor!
 	
@@ -1559,14 +1572,14 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
 	bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
 	session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
-	if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate, origin_pos, origin_orientation))
+	if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate))
 	{
 	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 	}
-	static bool add_overlay=false;
+	static bool add_overlay=true;
 	if(add_overlay)
 	{
-		RenderOverlayLayer(frame_state.predictedDisplayTime);
+		RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
 		if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
 		{
 			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
@@ -1586,9 +1599,8 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	XR_CHECK(xrEndFrame(xr_session, &end_info));
 }
  
-bool OpenXR::RenderOverlayLayer(XrTime predictedTime)
+bool OpenXR::RenderOverlayLayer(XrTime predictedTime,platform::crossplatform::RenderDelegate &overlayDelegate)
 {
-#if 1	
 	uint32_t					img_id;
 	XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, NULL};
 	XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &acquireInfo, &img_id));
@@ -1609,13 +1621,14 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime)
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.5f, 0.5f, 0.3f, 0.5f };
+	static float clear[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
+	overlayDelegate(deviceContext);
 	FinishDeviceContext(2);
 	XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
 	XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &releaseInfo));
-	#endif
+
 	return true;
 }
 
@@ -1624,8 +1637,8 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 
 // Build the quad layer
     const XrVector3f axis = {0.0f, 1.0f, 0.0f};
-    XrVector3f pos = {0.0f, 1.5f, -2.0f};
-    XrExtent2Df size = {1.0f, 1.0f};
+    XrVector3f pos = {0.0f, 1.8f, -2.0f};
+    XrExtent2Df size = {2.0f, 2.0f};
 
     quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
     quad_layer.next = NULL;
@@ -1711,6 +1724,7 @@ const std::string &OpenXR::GetDebugString() const
 {
 	static std::string str;
 	str.clear();
+
 	// Note: when the runtime thinks no-one's wearing the headset, it will go into SYNCHRONIZED mode, and stop taking controller inputs.
 	// prevent this by blocking the light sensor on the inside of the headset with some tape etc.
 	str+=fmt::format("XrSessionState: {0}\n",stringOf(xr_session_state));
@@ -1732,6 +1746,9 @@ const std::string &OpenXR::GetDebugString() const
 		{
 			case XR_ACTION_TYPE_POSE_INPUT:
 			{
+				avs::Pose pose_worldspace=ConvertGLStageSpacePoseToWorldSpacePose(state.pose_stageSpace);
+				str+=fmt::format("{: .3f},{: .3f},{: .3f}    - {: .2f},{: .2f},{: .2f},{: .2f}",pose_worldspace.position.x,pose_worldspace.position.y,pose_worldspace.position.z
+										,pose_worldspace.orientation.x,pose_worldspace.orientation.y,pose_worldspace.orientation.z,pose_worldspace.orientation.w);
 			}
 			break;
 			case XR_ACTION_TYPE_BOOLEAN_INPUT:

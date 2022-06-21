@@ -3,7 +3,6 @@
 #pragma once
 
 #include <libavstream/decoders/dec_interface.hpp>
-#include <jni.h>
 #include "Platform/CrossPlatform/Texture.h"
 
 class DecodeEventInterface
@@ -11,12 +10,14 @@ class DecodeEventInterface
 public:
 	virtual void OnFrameAvailable() = 0;
 };
+class NdkVideoDecoder;
 
-class VideoDecoder final : public avs::DecoderBackendInterface
+
+class VideoDecoderBackend final: public avs::DecoderBackendInterface
 {
 public:
-	VideoDecoder(JNIEnv* env, DecodeEventInterface* eventInterface);
-	virtual ~VideoDecoder();
+	VideoDecoderBackend(platform::crossplatform::RenderPlatform* renderPlatform, platform::crossplatform::Texture* surfaceTexture,DecodeEventInterface* eventInterface);
+	virtual ~VideoDecoderBackend();
 
 	/* Begin avs::DecoderBackendInterface */
 	avs::Result initialize(const avs::DeviceHandle& device, int frameWidth, int frameHeight, const avs::DecoderParams& params) override;
@@ -29,38 +30,23 @@ public:
 	/* End avs::DecoderBackendInterface */
 
 	void NotifyFrameAvailable();
-	static void InitializeJNI(JNIEnv* env);
-	static bool IsJNIInitialized()
-	{
-		return mJNIInitialized;
-	}
 
 private:
 	void InitializeVideoDecoder(platform::crossplatform::Texture* colorSurfaceTexture, platform::crossplatform::Texture* alphaSurfaceTexture);
 	void ShutdownVideoDecoder();
 
-	int mFrameWidth, mFrameHeight;
-	bool mUseAlphaLayerDecoding;
-	bool mInitialized;
-	static bool mJNIInitialized;
+	int mFrameWidth=0, mFrameHeight=0;
+	bool mUseAlphaLayerDecoding=false;
+	bool mInitialized=false;
 
+	platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 	platform::crossplatform::Texture* mColorSurfaceTexture=nullptr;
-	platform::crossplatform::Texture* mAlphaSurfaceTexture=nullptr;
+	//platform::crossplatform::Texture* mAlphaSurfaceTexture=nullptr;
 	DecodeEventInterface* mEventInterface=nullptr;
 
-	JNIEnv* mEnv=nullptr;
-	jobject mColorDecoder=nullptr;
-	jobject mAlphaDecoder=nullptr;
+	NdkVideoDecoder *mColorDecoder=nullptr;
+	//NdkVideoDecoder *mAlphaDecoder=nullptr;
 
-	struct JNI {
-		jclass videoDecoderClass;
-		jmethodID ctorMethod;
-		jmethodID initializeMethod;
-		jmethodID shutdownMethod;
-		jmethodID decodeMethod;
-		jmethodID displayMethod;
-	};
-	static JNI jni;
 };
 
 

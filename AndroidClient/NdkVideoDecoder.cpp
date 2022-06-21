@@ -1,28 +1,36 @@
 #include "NdkVideoDecoder.h"
 #include <media/NdkMediaFormat.h>
 #include <iostream>
+#include "Platform/Vulkan/Texture.h"
 
-NdkVideoDecoder::NdkVideoDecoder(VideoDecoder *d,int codecType)
+NdkVideoDecoder::NdkVideoDecoder(VideoDecoderBackend *d,avs::VideoCodec codecType)
 {
+	videoDecoder=d;
+	mCodecType=codecType;
 	mDecoder= AMediaCodec_createDecoderByType(getCodecMimeType());
 }
-void NdkVideoDecoder::initialize(void*  SurfaceTexture, int frameWidth, int frameHeight)
+void NdkVideoDecoder::initialize(platform::crossplatform::Texture* texture)
 {
 	if(mDecoderConfigured)
 	{
 		std::cerr<<"VideoDecoder: Cannot initialize: already configured"<<std::endl;
 		return;
 	}
-
+	platform::vulkan::Texture *vulkanTexture=(platform::vulkan::Texture*)texture;
 	AMediaFormat *format=AMediaFormat_new();
+	//decoderParams.maxDecodePictureBufferCount
+	AImageReader_newWithUsage(vulkanTexture->width,vulkanTexture->length,AIMAGE_FORMAT_RGBA_8888,AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,videoDecoderParams.maxDecodePictureBufferCount,&imageReader);
+	// nativeWindow is managed by the ImageReader.
+	ANativeWindow *nativeWindow=nullptr;
+	media_status_t status=AImageReader_getWindow(imageReader,&nativeWindow);
 	//= AMediaFormat_createVideoFormat(getCodecMimeType, frameWidth, frameHeight)
 	// Guessing the following is equivalent:
 	AMediaFormat_setString(format,AMEDIAFORMAT_KEY_MIME,getCodecMimeType());
-	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_WIDTH, frameWidth);
-	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_HEIGHT, frameHeight);
+	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_WIDTH, vulkanTexture->width);
+	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_HEIGHT, vulkanTexture->length);
 
 	//surface.setOnFrameAvailableListener(this)
-	AMediaCodec_configure(mDecoder,format,nullptr,nullptr,0);
+	AMediaCodec_configure(mDecoder,format,nativeWindow,nullptr,0);
 	//mDecoder.configure(format, Surface(surface), null, 0)
 	AMediaCodec_start(mDecoder);
 //	mDecoder.start()
@@ -37,15 +45,19 @@ void NdkVideoDecoder::shutdown()
 		std::cerr<<"VideoDecoder: Cannot shutdown: not configured"<<std::endl;
 		return;
 	}
+	AImageReader_delete(imageReader);
+	imageReader=nullptr;
 	AMediaCodec_flush(mDecoder);
 	//mDecoder.flush()
 	AMediaCodec_stop(mDecoder);
 	//mDecoder.stop()
+	AMediaCodec_delete(mDecoder);
+	mDecoder=nullptr;
 	mDecoderConfigured = false;
 	mDisplayRequests = 0;
 }
 
-bool NdkVideoDecoder::decode(std::vector<uint8_t> &buffer, int payloadTypeIndex, bool lastPayload)
+bool NdkVideoDecoder::decode(std::vector<uint8_t> &buffer, avs::VideoPayloadType payloadType, bool lastPayload)
 {
 	if(!mDecoderConfigured)
 	{
@@ -53,14 +65,13 @@ bool NdkVideoDecoder::decode(std::vector<uint8_t> &buffer, int payloadTypeIndex,
 		return false;
 	}
 
-	PayloadType payloadType = getPayloadTypeFromIndex(payloadTypeIndex);
 	int payloadFlags=0;
 	switch(payloadType)
 	{
-		case PayloadType::VPS:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
-		case PayloadType::PPS:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
-		case PayloadType::SPS:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
-		case PayloadType::ALE:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
+		case avs::VideoPayloadType::VPS:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
+		case avs::VideoPayloadType::PPS:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
+		case avs::VideoPayloadType::SPS:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
+		case avs::VideoPayloadType::ALE:payloadFlags=AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;break;
 		default:break;
 	}
 	std::vector<uint8_t> startCodes;
@@ -120,19 +131,21 @@ bool NdkVideoDecoder::display()
 
 ssize_t NdkVideoDecoder::queueInputBuffer(std::vector<uint8_t> &buffer, int flags) 
 {
+	// Returns the index of an input buffer to be filled with valid data or -1 if no such buffer is currently available.
 	ssize_t inputBufferID=AMediaCodec_dequeueInputBuffer(mDecoder,0);
 	//val inputBufferID = mDecoder.dequeueInputBuffer(0) // microseconds
 	if(inputBufferID >= 0)
 	{
 		size_t buffer_size=0;
 		uint8_t *inputBuffer=AMediaCodec_getInputBuffer(mDecoder,inputBufferID,&buffer_size);
-		//val inputBuffer = mDecoder.getInputBuffer(inputBufferID)
+		// if buffer is valid, copy our data into it.
 		if(inputBuffer)
 		{
 			memcpy(inputBuffer,buffer.data(),buffer.size());
 			//inputBuffer?.clear();
 			//inputBuffer?.put(buffer);
 		}
+		// Send the inputBuffer back to the codec for processing.
 		AMediaCodec_queueInputBuffer(mDecoder,inputBufferID,0,buffer.size(),0,flags);
 		//mDecoder.queueInputBuffer(inputBufferID, 0, buffer.size, 0, flags)
 	}
@@ -160,53 +173,16 @@ int NdkVideoDecoder::releaseOutputBuffer(bool render)
 	return outputBufferID;
 }
 
-VideoCodec NdkVideoDecoder::getCodecType ()
-{
-	switch(mCodecTypeIndex)
-	{
-		case 1:
-			return VideoCodec::H264;
-		case 2:
-			return VideoCodec::H265;
-		default:
-			return VideoCodec::INVALID;
-	}
-}
 
-const char *NdkVideoDecoder::getCodecMimeType ()
+const char *NdkVideoDecoder::getCodecMimeType()
 {
-	switch(getCodecType())
+	switch(mCodecType)
 	{
-		case VideoCodec::H264:
+		case avs::VideoCodec::H264:
 			return "video/avc";
-		case VideoCodec::H265:
+		case avs::VideoCodec::HEVC:
 			return "video/hevc";
 		default:
-			return "";
+			return "Invalid";
 	};
-}
-
-PayloadType NdkVideoDecoder::getPayloadTypeFromIndex(int payloadTypeIndex)
-{
-	switch(payloadTypeIndex)
-	{
-		case 0:
-			return PayloadType::FirstVCL;
-		case 1:
-			return PayloadType::VCL;
-		case 2:
-			return PayloadType::VPS;
-		case 3:
-			return PayloadType::SPS;
-		case 4:
-			return PayloadType::PPS;
-		case 5:
-			return PayloadType::ALE;
-		case 6:
-			return PayloadType::OtherNALUnit;
-		case 7:
-			return PayloadType::AccessUnit;
-		default:
-			return PayloadType::OtherNALUnit;
-	}
 }

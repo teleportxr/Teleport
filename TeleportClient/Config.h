@@ -23,7 +23,11 @@ namespace teleport
 			void LoadConfigFromIniFile();
 			std::vector<std::string> server_ips;
 			bool enable_vr = true;
-			bool dev_mode = false;
+#if TELEPORT_INTERNAL_CHECKS
+			bool dev_mode=true;
+#else
+			bool dev_mode=false;
+#endif
 			bool render_local_offline = false;
 			std::string log_filename="TeleportClient.log";
 		};

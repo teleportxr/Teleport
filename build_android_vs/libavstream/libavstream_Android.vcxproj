@@ -22,6 +22,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\libavstream\include\libavstream\common.hpp" />
     <ClInclude Include="..\..\libavstream\src\abi_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\api\cuda.hpp" />
     <ClInclude Include="..\..\libavstream\src\api\cuda_dx12.hpp" />

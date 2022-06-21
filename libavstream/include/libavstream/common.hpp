@@ -13,10 +13,15 @@
 #define LIBAVSTREAM_VERSION 1
 
 #if defined(__GNUC__) || defined(__clang__)
-#define AVS_PACKED __attribute__ ((packed))
 #define _isnanf isnan
-#else
-#define AVS_PACKED
+#endif
+
+#ifndef AVS_PACKED
+	#if defined(__GNUC__) || defined(__clang__)
+		#define AVS_PACKED __attribute__ ((packed))
+	#else
+		#define AVS_PACKED
+	#endif
 #endif
 
 namespace avs

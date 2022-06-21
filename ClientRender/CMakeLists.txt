@@ -58,8 +58,8 @@ set( src_root
 	MemoryUtil.h
 	Tests.cpp
 	Tests.h
-	VideoDecoder.cpp
-	VideoDecoder.h
+	VideoDecoderBackend.cpp
+	VideoDecoderBackend.h
 	)
 
 set(src_node_components

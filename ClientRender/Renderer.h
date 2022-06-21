@@ -27,6 +27,7 @@
 #include "TeleportAudio/PC_AudioPlayer.h"
 #endif
 #include "TeleportAudio/NetworkPipeline.h"
+#include "TeleportClient/Config.h"
 
 namespace teleport
 {
@@ -67,7 +68,7 @@ namespace clientrender
 	};
 	enum class ShaderMode
 	{
-		PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS
+		DEFAULT,PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS,NUM
 	};
 	//! Timestamp of when the system started.
 	extern avs::Timestamp platformStartTimestamp;	
@@ -79,7 +80,7 @@ namespace clientrender
 		Renderer(teleport::client::ClientDeviceState *c,clientrender::NodeManager *localNodeManager
 				,clientrender::NodeManager *remoteNodeManager
 				,teleport::client::SessionClient *sessionClient
-				, teleport::Gui &g,bool dev_mode);
+				, teleport::Gui &g,teleport::client::Config &config);
 		virtual ~Renderer();
 		//! This allows live-recompile of shaders (desktop platforms only).
 		void RecompileShaders();
@@ -186,7 +187,6 @@ namespace clientrender
 		vec3 videoPos;
 
 		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
-		bool dev_mode = false;
 
 		static constexpr float HFOV = 90;
 		float gamma=0.44f;
@@ -203,6 +203,8 @@ namespace clientrender
 		avs::uid server_uid=1;
 		const avs::uid local_server_uid=0;
 		const avs::InputId local_menu_input_id=0;
+		const avs::InputId local_cycle_osd_id=1;
+		const avs::InputId local_cycle_shader_id=2;
 	
 		bool show_video = false;
 
@@ -215,6 +217,8 @@ namespace clientrender
 		std::string overridePassName = ""; //Pass used for rendering geometry.
 
 		teleport::Gui &gui;
+		teleport::client::Config &config;
+		ShaderMode shaderMode=ShaderMode::PBR;
 		bool Match(const std::string& full_string, const std::string& substring);
 	public:
 		teleport::client::ClientPipeline clientPipeline;
@@ -237,7 +241,6 @@ namespace clientrender
 
 		GeometryDecoder geometryDecoder;
 	
-		bool render_local_offline = false;
 		void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 		void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);

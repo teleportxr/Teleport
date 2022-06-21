@@ -44,6 +44,7 @@ using namespace teleport;
 clientrender::Renderer *clientRenderer=nullptr;
 teleport::client::SessionClient *sessionClient=nullptr;
 platform::crossplatform::RenderDelegate renderDelegate;
+platform::crossplatform::RenderDelegate overlayDelegate;
 UseOpenXR useOpenXR;
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
@@ -100,7 +101,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
         return FALSE;
     }
-	clientRenderer->render_local_offline = config.render_local_offline;
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
     MSG msg;
     // Main message loop:
@@ -214,7 +214,7 @@ void InitXR()
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
 	sessionClient=new teleport::client::SessionClient(std::make_unique<PCDiscoveryService>());
-	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,dev_mode);
+	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -274,6 +274,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		}
 	}
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
+	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
 	if(config.server_ips.size())
 		clientRenderer->SetServer(config.server_ips[0].c_str());
@@ -462,8 +463,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					clientDeviceState.SetHeadPose(headPose.position, headPose.orientation);
 					for (int i = 0; i < useOpenXR.GetNumControllers(); i++)
 					{
-						const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
-						clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
+						//const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
+						//clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
 					}
 				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
@@ -487,14 +488,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					dsmi->Render(hWnd);
 
 					SIMUL_COMBINED_PROFILE_END(deviceContext);
-					vec3 originPosition = *((vec3*)&clientDeviceState.originPose.position);
-					vec4 originOrientation = *((vec4*)&clientDeviceState.originPose.orientation);
 					if (useOpenXR.HaveXRDevice())
 					{
 						// Note we do this even when the device is inactive.
 						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
-						useOpenXR.RenderFrame( renderDelegate, originPosition, originOrientation);
+						useOpenXR.SetStagePoseInWorldSpace(clientDeviceState.originPose);
+						useOpenXR.RenderFrame( renderDelegate,overlayDelegate);
 						if(useOpenXR.IsXRDeviceActive())
 						{
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());

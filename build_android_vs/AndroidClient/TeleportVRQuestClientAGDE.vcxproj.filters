@@ -132,7 +132,10 @@
     <ClCompile Include="..\..\AndroidClient\AndroidDiscoveryService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\AndroidClient\VideoDecoder.cpp">
+    <ClCompile Include="..\..\AndroidClient\VideoDecoderBackend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\AndroidClient\NdkVideoDecoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -155,7 +158,10 @@
     <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\AndroidClient\VideoDecoder.h">
+    <ClInclude Include="..\..\AndroidClient\VideoDecoderBackend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\AndroidClient\NdkVideoDecoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

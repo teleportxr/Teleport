@@ -29,7 +29,7 @@ namespace avparser
 //{
 	namespace clientrender
 	{
-		class VideoDecoder : public avs::DecoderBackendInterface
+		class VideoDecoderBackend : public avs::DecoderBackendInterface
 		{
 			struct FrameCache
 			{
@@ -63,8 +63,8 @@ namespace avparser
 			};
 
 		public:
-			VideoDecoder(platform::crossplatform::RenderPlatform* renderPlatform, platform::crossplatform::Texture* surfaceTexture);
-			~VideoDecoder();
+			VideoDecoderBackend(platform::crossplatform::RenderPlatform* renderPlatform, platform::crossplatform::Texture* surfaceTexture);
+			~VideoDecoderBackend();
 
 			/* Begin DecoderBackendInterface */
 			avs::Result initialize(const avs::DeviceHandle& device, int frameWidth, int frameHeight, const avs::DecoderParams& params) override;

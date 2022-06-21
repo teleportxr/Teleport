@@ -3,7 +3,7 @@
 #ifdef _MSC_VER
 #include <Windows.h>
 #endif
-#include "VideoDecoder.h"
+#include "VideoDecoderBackend.h"
 #include "Common.h"
 #include "Platform/CrossPlatform/Macros.h"
 #include "Platform/CrossPlatform/Texture.h"
@@ -25,7 +25,7 @@ using namespace clientrender;
 
 namespace cp = platform::crossplatform;
 
-VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surfaceTexture)
+VideoDecoderBackend::VideoDecoderBackend(cp::RenderPlatform* renderPlatform, cp::Texture* surfaceTexture)
 	: mRenderPlatform(renderPlatform)
 	, mSurfaceTexture(surfaceTexture)
 	, mOutputTexture(nullptr)
@@ -36,11 +36,11 @@ VideoDecoder::VideoDecoder(cp::RenderPlatform* renderPlatform, cp::Texture* surf
 	recompileShaders();
 }
 
-VideoDecoder::~VideoDecoder()
+VideoDecoderBackend::~VideoDecoderBackend()
 {
 }
 
-Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params)
+Result VideoDecoderBackend::initialize(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params)
 {
 	if (device.type == DeviceType::Invalid)
 	{
@@ -130,7 +130,7 @@ Result VideoDecoder::initialize(const DeviceHandle& device, int frameWidth, int 
 	return Result::OK;
 }
 
-Result VideoDecoder::reconfigure(int frameWidth, int frameHeight, const DecoderParams& params)
+Result VideoDecoderBackend::reconfigure(int frameWidth, int frameHeight, const DecoderParams& params)
 {
 	if (!mDecoder)
 	{
@@ -141,7 +141,7 @@ Result VideoDecoder::reconfigure(int frameWidth, int frameHeight, const DecoderP
 	return Result::OK;
 }
 
-Result VideoDecoder::shutdown()
+Result VideoDecoderBackend::shutdown()
 {
 	mParams = {};
 	mDeviceType = DeviceType::Invalid;
@@ -167,7 +167,7 @@ Result VideoDecoder::shutdown()
 	return Result::OK;
 }
 
-Result VideoDecoder::registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface)
+Result VideoDecoderBackend::registerSurface(const SurfaceBackendInterface* surface, const SurfaceBackendInterface* alphaSurface)
 {
 	if (!mDecoder)
 	{
@@ -188,7 +188,7 @@ Result VideoDecoder::registerSurface(const SurfaceBackendInterface* surface, con
 	return Result::OK;
 }
 
-Result VideoDecoder::unregisterSurface()
+Result VideoDecoderBackend::unregisterSurface()
 {
 	if (!mDecoder)
 	{
@@ -199,7 +199,7 @@ Result VideoDecoder::unregisterSurface()
 	return Result::OK;
 }
 
-Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
+Result VideoDecoderBackend::decode(const void* buffer, size_t bufferSizeInBytes, const void* alphaBuffer, size_t alphaBufferSizeInBytes, VideoPayloadType payloadType, bool lastPayload)
 {
 	if (!mDecoder)
 	{
@@ -246,7 +246,7 @@ Result VideoDecoder::decode(const void* buffer, size_t bufferSizeInBytes, const 
 	return Result::DecoderBackend_ReadyToDisplay;
 }
 
-Result VideoDecoder::display(bool showAlphaAsColor)
+Result VideoDecoderBackend::display(bool showAlphaAsColor)
 {
 	cp::GraphicsDeviceContext& deviceContext = mRenderPlatform->GetImmediateContext();
 	
@@ -269,7 +269,7 @@ Result VideoDecoder::display(bool showAlphaAsColor)
 }
 
 
-void VideoDecoder::updateInputArguments(size_t sliceControlSize)
+void VideoDecoderBackend::updateInputArguments(size_t sliceControlSize)
 {
 	switch (mParams.codec)
 	{
@@ -284,7 +284,7 @@ void VideoDecoder::updateInputArguments(size_t sliceControlSize)
 	mCurrentFrame = (mCurrentFrame + 1) % (uint32_t)mDPB.size();
 }
 
-void VideoDecoder::updateInputArgumentsH264(size_t sliceControlSize)
+void VideoDecoderBackend::updateInputArgumentsH264(size_t sliceControlSize)
 {
 	cp::VideoDecodeArgument& picParams = mDecodeArgs[0];
 	cp::VideoDecodeArgument& sliceControl = mDecodeArgs[1];
@@ -307,7 +307,7 @@ void VideoDecoder::updateInputArgumentsH264(size_t sliceControlSize)
 #endif
 }
 
-void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
+void VideoDecoderBackend::updateInputArgumentsHEVC(size_t sliceControlSize)
 {
 	cp::VideoDecodeArgument& picParams = mDecodeArgs[0];
 	cp::VideoDecodeArgument& sliceControl = mDecodeArgs[1];
@@ -580,7 +580,7 @@ void VideoDecoder::updateInputArgumentsHEVC(size_t sliceControlSize)
 #endif
 }
 
-void VideoDecoder::resetFrames()
+void VideoDecoderBackend::resetFrames()
 {
 	mPocFrameIndexMap.clear();
 	for (auto& frame : mDPB)
@@ -590,7 +590,7 @@ void VideoDecoder::resetFrames()
 	mCurrentFrame = 0;
 }
 
-void VideoDecoder::markFramesUnusedForReference()
+void VideoDecoderBackend::markFramesUnusedForReference()
 {
 	for (auto& frame : mDPB)
 	{
@@ -598,7 +598,7 @@ void VideoDecoder::markFramesUnusedForReference()
 	}
 }
 
-void VideoDecoder::clearDecodeArguments()
+void VideoDecoderBackend::clearDecodeArguments()
 {
 	for (auto& arg : mDecodeArgs)
 	{
@@ -608,7 +608,7 @@ void VideoDecoder::clearDecodeArguments()
 	mDecodeArgs.clear();
 }
 
-void VideoDecoder::recompileShaders()
+void VideoDecoderBackend::recompileShaders()
 {
 	SAFE_DELETE(mTextureConversionEffect);
 	mTextureConversionEffect = mRenderPlatform->CreateEffect("texture_conversion");

@@ -5,6 +5,14 @@
 #include "common.hpp"
 #include "common_maths.h"
 
+#ifndef AVS_PACKED
+	#if defined(__GNUC__) || defined(__clang__)
+		#define AVS_PACKED __attribute__ ((packed))
+	#else
+		#define AVS_PACKED
+	#endif
+#endif
+
 namespace avs
 {
 #ifdef _MSC_VER

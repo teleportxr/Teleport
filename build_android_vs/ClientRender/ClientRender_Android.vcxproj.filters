@@ -105,7 +105,7 @@
     <ClCompile Include="..\..\ClientRender\AVParser\Parser.cpp">
       <Filter>AVParser</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ClientRender\VideoDecoder.cpp">
+    <ClCompile Include="..\..\ClientRender\VideoDecoderBackend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -221,7 +221,7 @@
     <ClInclude Include="..\..\ClientRender\AVParser\HevcTypes.h">
       <Filter>AVParser</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\ClientRender\VideoDecoder.h">
+    <ClInclude Include="..\..\ClientRender\VideoDecoderBackend.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
