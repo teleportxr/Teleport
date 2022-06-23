@@ -82,7 +82,11 @@ Result PipelineNode::link(PipelineNode& source, PipelineNode& target)
 	}
 	if (!targetSlot.has_value())
 	{
-		AVSLOG(Error) << "PipelineNode: Cannot link nodes: no free source slot found";
+		AVSLOG(Error) << "PipelineNode: Cannot link nodes: no free source slot found from "<<(int)target.getNumInputSlots()<<" slots. Slots linked already:";
+		for (int i = 0; i < (int)target.getNumInputSlots(); ++i)
+		{
+			AVSLOG(Error) << "\tSlot "<<i<<": "<<target.getInput(i)->getDisplayName()<<"\n";
+		}
 		return Result::Node_LinkFailed;
 	}
 

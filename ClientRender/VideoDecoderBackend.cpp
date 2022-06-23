@@ -209,7 +209,11 @@ Result VideoDecoderBackend::decode(const void* buffer, size_t bufferSizeInBytes,
 	{
 		return Result::DecoderBackend_InvalidParam;
 	}
-
+	
+#ifdef __ANDROID__
+// have to KEEP DOING THIS!
+	RedirectStdCoutCerr();
+#endif
 	switch (payloadType)
 	{
 	case VideoPayloadType::VPS:

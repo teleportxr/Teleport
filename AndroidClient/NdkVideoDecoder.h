@@ -17,7 +17,7 @@ class NdkVideoDecoder //: SurfaceTexture.OnFrameAvailableListener
 {
 public:
 	NdkVideoDecoder(VideoDecoderBackend *d,avs::VideoCodec codecType);
-	void initialize(platform::crossplatform::Texture* texture);
+	void initialize(platform::crossplatform::RenderPlatform* p,platform::crossplatform::Texture* texture);
 	void shutdown();
 	bool decode(std::vector<uint8_t> &ByteBuffer, avs::VideoPayloadType p, bool lastPayload);
 	bool display();
@@ -34,6 +34,7 @@ public:
         int32_t actionCode,
         const char *detail);
 protected:
+	platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 	VideoDecoderBackend *videoDecoder=nullptr;
 	avs::VideoCodec mCodecType;
 	AMediaCodec * mDecoder = nullptr;
@@ -41,7 +42,7 @@ protected:
 	bool mDecoderConfigured = false;
 	int mDisplayRequests = 0;
 
-	ssize_t queueInputBuffer(std::vector<uint8_t> &ByteArray, int flags);
+	int32_t queueInputBuffer(std::vector<uint8_t> &ByteArray, int flags,bool send);
 
 	int releaseOutputBuffer(bool render ) ;
 	std::function<void(VideoDecoderBackend *)> nativeFrameAvailable;
@@ -52,4 +53,14 @@ protected:
 
 	const char *getCodecMimeType();
 	platform::crossplatform::VideoDecoderParams videoDecoderParams;
+	std::vector<uint8_t> inputBufferToBeQueued;
+	int nextPayloadFlags=0;
+	struct InputBuffer
+	{
+		int32_t inputBufferId=-1;
+		size_t offset=0;
+		int flags=-1;
+	};
+	std::vector<InputBuffer> nextInputBuffers;
+	size_t nextInputBufferIndex=0;
 };

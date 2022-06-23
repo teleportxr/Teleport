@@ -99,7 +99,7 @@ avs::Result VideoDecoderBackend::registerSurface(const avs::SurfaceBackendInterf
 	}
  
 	//mAlphaSurfaceTexture = alphaSurfaceTexture;
-	mColorDecoder->initialize(mColorSurfaceTexture);
+	mColorDecoder->initialize(renderPlatform,mColorSurfaceTexture);
 	return avs::Result::OK;
 }
 
