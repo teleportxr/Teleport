@@ -7,7 +7,16 @@
 #include "Platform/Vulkan/Texture.h"
 #include <TeleportCore/ErrorHandling.h>
 #include <android/log.h>
+#include <sys/prctl.h>
+void SetThreadName( const char* threadName)
+{
+  prctl(PR_SET_NAME,threadName,0,0,0);
+}
 #define AMEDIA_CHECK(r) {media_status_t res=r;if(res!=AMEDIA_OK){TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;return;}}
+
+// TODO: this should be a member variabls:
+	std::mutex buffers_mutex;
+	std::atomic<bool> stopProcessBuffersThread=false;
 
 void codecOnAsyncInputAvailable(
 	AMediaCodec *codec,
@@ -149,7 +158,9 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	androidHardwareBufferInfo.memory=;
 	vkGetMemoryAndroidHardwareBufferANDROID(vkDev,&androidHardwareBufferInfo,&hardwareBuffer);
 	*/
-
+	
+	stopProcessBuffersThread=false;
+	processBuffersThread=new std::thread(&NdkVideoDecoder::processBuffersOnThread, this);
 	mDecoderConfigured = true;
 }
 int VulkanFormatToHardwareBufferFormat(VkFormat v)
@@ -186,6 +197,13 @@ int VulkanFormatToHardwareBufferFormat(VkFormat v)
 
 void NdkVideoDecoder::shutdown()
 {
+	stopProcessBuffersThread=true;
+	while(!processBuffersThread->joinable())
+	{
+	}
+	processBuffersThread->join();
+	delete processBuffersThread;
+	processBuffersThread=nullptr;
 	if(!mDecoderConfigured)
 	{
 		TELEPORT_CERR<<"NdkVideoDecoder - "<<"VideoDecoder: Cannot shutdown: not configured"<<std::endl;
@@ -236,7 +254,7 @@ bool NdkVideoDecoder::decode(std::vector<uint8_t> &buffer, avs::VideoPayloadType
 		// Signifies partial frame data. For all VCLs in a frame besides the last one. Needed for H264.
 		if (payloadFlags == 0)
 		{
-			payloadFlags = 8;
+			payloadFlags = AMEDIACODEC_BUFFER_FLAG_PARTIAL_FRAME;
 		}
 	}
 
@@ -290,29 +308,7 @@ void NdkVideoDecoder::onAsyncOutputAvailable(AMediaCodec *codec,
 {
 	if(codec!=mDecoder)
 		return;
-	if ((bufferInfo->flags & AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG) != 0)
-	{
-		__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","video decoder: codec config buffer");
-		AMediaCodec_releaseOutputBuffer(codec,outputBufferId,false);
-		return;
-	}
-    //auto bufferFormat = AMediaCodec_getOutputFormat(codec,outputBufferId); // option A
-    // bufferFormat is equivalent to mOutputFormat
-    // outputBuffer is ready to be processed or rendered.
- 	__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","Output available %d, size: %d",outputBufferId,bufferInfo->size);
-
-	AMediaCodec_releaseOutputBuffer(codec,outputBufferId,true);
-
-	// Does this mean we can now do AImageReader_acquireNextImage?
-	AImage *nextImage=nullptr;
-	media_status_t res=AImageReader_acquireNextImage(imageReader, &nextImage) ;
-	
-	if(res!=AMEDIA_OK)
-	{
-		TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;
-		return ;
-	}
-
+	outputBuffers.push_back({outputBufferId,bufferInfo->offset,bufferInfo->size,bufferInfo->presentationTimeUs,bufferInfo->flags});
 }
 
 void NdkVideoDecoder::onAsyncFormatChanged(	AMediaCodec *codec,
@@ -333,137 +329,161 @@ void NdkVideoDecoder::onAsyncError(AMediaCodec *codec,
 }
 #pragma clang optimize off
 
-int32_t NdkVideoDecoder::queueInputBuffer(std::vector<uint8_t> &buffer, int flags,bool send) 
+int32_t NdkVideoDecoder::queueInputBuffer(std::vector<uint8_t> &b, int flg,bool snd) 
 {
-#if 0
-	size_t pos=inputBufferToBeQueued.size();
-	inputBufferToBeQueued.resize(pos+buffer.size());
-	memcpy(inputBufferToBeQueued.data()+pos,buffer.data(),buffer.size());
-	nextPayloadFlags=flags;
-#else
-	bool lastpacket=send;
-	send=false;
     //ByteBuffer inputBuffer = codec->getInputBuffer(inputBufferId);
-	if(buffer.size()==0)
-		return -1;
+	buffers_mutex.lock();
+	dataBuffers.push_back({b,flg,snd});
+	buffers_mutex.unlock();
+	return 0;
+}
+
+void NdkVideoDecoder::processBuffersOnThread()
+{
+	SetThreadName("processBuffersOnThread");
+	while(!stopProcessBuffersThread)
+	{
+		buffers_mutex.lock();
+		processInputBuffers();
+		processOutputBuffers();
+		buffers_mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::nanoseconds(10000));
+	}
+}
+
+void NdkVideoDecoder::processInputBuffers()
+{
 	// Returns the index of an input buffer to be filled with valid data or -1 if no such buffer is currently available.
 	//ssize_t inputBufferID=AMediaCodec_dequeueInputBuffer(codec,0);
 	//val inputBufferID = mDecoder.dequeueInputBuffer(0) // microseconds
+	if(!dataBuffers.size())
+	{
+		//TELEPORT_CERR<<"NdkVideoDecoder - "<<"Out of buffers, queueing."<<std::endl;
+		return;
+	}
 	if(!nextInputBuffers.size())
 	{
-		TELEPORT_CERR<<"NdkVideoDecoder - "<<"Out of buffers"<<std::endl;
-
-		return -1;
+		//TELEPORT_CERR<<"NdkVideoDecoder - "<<"Out of buffers, queueing."<<std::endl;
+		return;
 	}
-	/*if(inputBufferToBeQueued.size())
-	{
-		size_t pos=inputBufferToBeQueued.size();
-		inputBufferToBeQueued.resize(pos+buffer.size());
-		memcpy(inputBufferToBeQueued.data()+pos,buffer.data(),buffer.size());
-		nextPayloadFlags=flags;
-		return -1;
-	}*/
+	DataBuffer &dataBuffer=dataBuffers[0];
+	bool send=dataBuffer.send;
+	bool lastpacket=dataBuffer.send;
+	send=false;
 	InputBuffer &inputBuffer=nextInputBuffers[nextInputBufferIndex];
 	
+	
+	size_t buffer_size=0;
+	size_t copiedSize=0;
+	uint8_t *targetBufferData=AMediaCodec_getInputBuffer(mDecoder,inputBuffer.inputBufferId,&buffer_size);
+	if(!targetBufferData)
 	{
-		size_t buffer_size=0;
-		size_t copiedSize=0;
-		uint8_t *targetBufferData=AMediaCodec_getInputBuffer(mDecoder,inputBuffer.inputBufferId,&buffer_size);
-		if(!targetBufferData)
+		__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer failed.");
+		return ;
+	}
+	copiedSize=std::min(buffer_size-inputBuffer.offset,dataBuffer.bytes.size());
+	bool add_to_new=!targetBufferData||copiedSize<dataBuffer.bytes.size();
+	// if buffer is valid, copy our data into it.
+	if(targetBufferData&&copiedSize==dataBuffer.bytes.size())
+	{
+		// if flags changes and data is already on the buffer, send this buffer and add to a new one.
+		if(inputBuffer.flags!=-1&&dataBuffer.flags!=inputBuffer.flags)
 		{
-			TELEPORT_CERR<<"NdkVideoDecoder - "<<"AMediaCodec_getInputBuffer failed."<<std::endl;
-			return -1;
-		}
-		copiedSize=std::min(buffer_size-inputBuffer.offset,buffer.size());
-		bool add_to_new=!targetBufferData||copiedSize<buffer.size();
-		// if buffer is valid, copy our data into it.
-		if(targetBufferData&&copiedSize==buffer.size())
-		{
-			// if flags changes and data is already on the buffer, send this buffer and add to a new one.
-			if(inputBuffer.flags!=-1&&flags!=inputBuffer.flags)
-			{
-				send=true;
-				add_to_new=true;
-			}
-			else
-			{
-				memcpy(targetBufferData+inputBuffer.offset,buffer.data(),copiedSize);
-				inputBuffer.offset+=copiedSize;
-				inputBuffer.flags=flags;
-				__android_log_print(ANDROID_LOG_INFO,"queueInputBuffer","buffer %d added: %zu bytes with flag %d",inputBuffer.inputBufferId,copiedSize,flags);
-			}
+			send=true;
+			add_to_new=true;
 		}
 		else
 		{
-			//TELEPORT_COUT<<"queueInputBuffer - buffer "<<inputBuffer.inputBufferId<<" full."<<std::endl;
-			__android_log_print(ANDROID_LOG_INFO,"queueInputBuffer","buffer %d full",inputBuffer.inputBufferId);
+			memcpy(targetBufferData+inputBuffer.offset,dataBuffer.bytes.data(),copiedSize);
+			inputBuffer.offset+=copiedSize;
+			inputBuffer.flags=dataBuffer.flags;
+			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d added: %zu bytes with flag %d",inputBuffer.inputBufferId,copiedSize,dataBuffer.flags);
 			send=true;
 		}
-		if(send&&inputBuffer.offset)
-		{
-			media_status_t res=AMediaCodec_queueInputBuffer(mDecoder,inputBuffer.inputBufferId,0,inputBuffer.offset,0,inputBuffer.flags);
-			if(res!=AMEDIA_OK)
-			{
-				TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;
-				return -1;
-			}
-			if(lastpacket)
-				__android_log_print(ANDROID_LOG_INFO,"queueInputBuffer","Last Packet.");
-			__android_log_print(ANDROID_LOG_INFO,"queueInputBuffer","buffer: %d SENT %zu bytes with flag %d.",inputBuffer.inputBufferId,inputBuffer.offset,inputBuffer.flags);
-			//TELEPORT_COUT<<"queueInputBuffer - buffer "<<inputBuffer.inputBufferId<<" SENT "<<inputBuffer.offset<<" bytes with flag "<<inputBuffer.flags<<"."<<std::endl;
-			nextInputBuffers.erase(nextInputBuffers.begin()+nextInputBufferIndex);
-			//inputBuffer.offset=0;
-			//inputBuffer.flags=-1;
-			//nextInputBufferIndex++;
-			if(nextInputBufferIndex>=nextInputBuffers.size())
-				nextInputBufferIndex=0;
-		}
-		if(add_to_new)
-		{
-			InputBuffer &nextInputBuffer=nextInputBuffers[nextInputBufferIndex];
-			uint8_t *targetBufferData2=AMediaCodec_getInputBuffer(mDecoder,nextInputBuffer.inputBufferId,&buffer_size);
-			if(targetBufferData2)
-			{
-				__android_log_print(ANDROID_LOG_INFO,"queueInputBuffer","newbuffer %d added: %lu bytes with flag %d.",inputBuffer.inputBufferId,buffer.size(),flags);
-				//TELEPORT_COUT<<"queueInputBuffer - next buffer "<<nextInputBuffer.inputBufferId<<" added "<<buffer.size()<<" bytes with flag "<<flags<<"."<<std::endl;
-				memcpy(targetBufferData2,buffer.data(),buffer.size());
-				nextInputBuffer.offset+=buffer.size();
-				nextInputBuffer.flags=flags;
-			}
-			else
-			{
-				TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;
-				return -1;
-			}
-		}
-		// if any left over, put it in the next buffer.
-		//nextInputBufferIds.erase(nextInputBufferIds.begin());
-		return inputBuffer.inputBufferId;
 	}
-	//else
+	else
 	{
-		//Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder input buffer")
+		__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d full",inputBuffer.inputBufferId);
+		send=true;
 	}
-   // codec.queueInputBuffer(inputBufferId, …);
-#endif
-	return -1;
+	if(send&&inputBuffer.offset)
+	{
+		media_status_t res=AMediaCodec_queueInputBuffer(mDecoder,inputBuffer.inputBufferId,0,inputBuffer.offset,0,inputBuffer.flags);
+		if(res!=AMEDIA_OK)
+		{
+			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer failed.");
+			return ;
+		}
+		if(lastpacket)
+			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","Last Packet.");
+		__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer: %d SENT %zu bytes with flag %d.",inputBuffer.inputBufferId,inputBuffer.offset,inputBuffer.flags);
+		nextInputBuffers.erase(nextInputBuffers.begin()+nextInputBufferIndex);
+		//inputBuffer.offset=0;
+		//inputBuffer.flags=-1;
+		//nextInputBufferIndex++;
+		if(nextInputBufferIndex>=nextInputBuffers.size())
+			nextInputBufferIndex=0;
+	}
+	if(add_to_new)
+	{
+		InputBuffer &nextInputBuffer=nextInputBuffers[nextInputBufferIndex];
+		uint8_t *targetBufferData2=AMediaCodec_getInputBuffer(mDecoder,nextInputBuffer.inputBufferId,&buffer_size);
+		if(targetBufferData2)
+		{
+			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","newbuffer %d added: %lu bytes with flag %d.",inputBuffer.inputBufferId,dataBuffer.bytes.size(),dataBuffer.flags);
+			memcpy(targetBufferData2,dataBuffer.bytes.data(),dataBuffer.bytes.size());
+			nextInputBuffer.offset+=dataBuffer.bytes.size();
+			nextInputBuffer.flags=dataBuffer.flags;
+		}
+		else
+		{
+			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer failed.");
+			return ;
+		}
+	}
+	dataBuffers.erase(dataBuffers.begin());
 }
 
 int NdkVideoDecoder::releaseOutputBuffer(bool render) 
 {
-/*	AMediaCodecBufferInfo bufferInfo = {0};
-	ssize_t outputBufferID=AMediaCodec_dequeueOutputBuffer(mDecoder,&bufferInfo,10000000);
-	//int outputBufferID = mDecoder.dequeueOutputBuffer(bufferInfo, 0)
-	if(outputBufferID >= 0)
+	buffers_mutex.lock();
+	if(!outputBuffers.size())
 	{
-		AMediaCodec_releaseOutputBuffer(mDecoder,outputBufferID,render);
-		//mDecoder.releaseOutputBuffer(outputBufferID, render)
+		buffers_mutex.unlock();
+		return 0;
 	}
-	else
+	buffers_mutex.unlock();
+	return 0;
+}
+
+void NdkVideoDecoder::processOutputBuffers() 
+{
+	if(!outputBuffers.size())
+		return;
+	OutputBuffer &outputBuffer=outputBuffers[0];
+	if ((outputBuffer.flags & AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG) != 0)
 	{
-		//Log.w("RemotePlay", "VideoDecoder: Could not dequeue decoder output buffer");
-	}*/
-	return -1;// outputBufferID;
+		__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","video decoder: codec config buffer");
+		AMediaCodec_releaseOutputBuffer(mDecoder,outputBuffer.outputBufferId,false);
+		return ;
+	}
+    //auto bufferFormat = AMediaCodec_getOutputFormat(codec,outputBufferId); // option A
+    // bufferFormat is equivalent to mOutputFormat
+    // outputBuffer is ready to be processed or rendered.
+ 	__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","Output available %d, size: %d",outputBuffer.outputBufferId,outputBuffer.size);
+
+	AMediaCodec_releaseOutputBuffer(mDecoder,outputBuffer.outputBufferId,true);
+	
+	outputBuffers.erase(outputBuffers.begin());
+	// Does this mean we can now do AImageReader_acquireNextImage?
+	AImage *nextImage=nullptr;
+	//media_status_t res=AImageReader_acquireNextImage(imageReader, &nextImage) ;
+	
+	//if(res!=AMEDIA_OK)
+	{
+		//TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;
+	//	return ;
+	}
 }
 
 

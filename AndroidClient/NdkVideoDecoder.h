@@ -2,6 +2,7 @@
 #include <media/NdkImageReader.h>
 #include <vector>
 #include <libavstream/common.hpp>
+#include <thread>
 #include "Platform/CrossPlatform/VideoDecoder.h"
 
 namespace platform
@@ -33,7 +34,14 @@ public:
         media_status_t error,
         int32_t actionCode,
         const char *detail);
+
+		// processing thread:
+	void processBuffersOnThread();
+	void processInputBuffers();
+	void processOutputBuffers();
 protected:
+	std::thread *processBuffersThread= nullptr;
+
 	platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 	VideoDecoderBackend *videoDecoder=nullptr;
 	avs::VideoCodec mCodecType;
@@ -55,6 +63,13 @@ protected:
 	platform::crossplatform::VideoDecoderParams videoDecoderParams;
 	std::vector<uint8_t> inputBufferToBeQueued;
 	int nextPayloadFlags=0;
+	struct DataBuffer
+	{
+		std::vector<uint8_t> bytes;
+		int flags=-1;
+		bool send=false;
+	};
+	std::vector<DataBuffer> dataBuffers;
 	struct InputBuffer
 	{
 		int32_t inputBufferId=-1;
@@ -63,4 +78,14 @@ protected:
 	};
 	std::vector<InputBuffer> nextInputBuffers;
 	size_t nextInputBufferIndex=0;
+
+	struct OutputBuffer
+	{
+		int32_t outputBufferId=-1;
+		int32_t offset=0;
+		int32_t size=0;
+		int64_t presentationTimeUs=0;
+		uint32_t flags=-1;
+	};
+	std::vector<OutputBuffer> outputBuffers;
 };
