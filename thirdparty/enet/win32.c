@@ -378,7 +378,8 @@ enet_socket_receive (ENetSocket socket,
                      NULL,
                      NULL) == SOCKET_ERROR)
     {
-       switch (WSAGetLastError ())
+       int wserr=WSAGetLastError ();
+       switch (wserr)
        {
        case WSAEWOULDBLOCK:
        case WSAECONNRESET:

@@ -89,7 +89,7 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	platform::vulkan::Texture *vulkanTexture=(platform::vulkan::Texture*)texture;
 	AMediaFormat *format=AMediaFormat_new();
 	//decoderParams.maxDecodePictureBufferCount
-	AImageReader_newWithUsage(vulkanTexture->width,vulkanTexture->length,AIMAGE_FORMAT_RGBA_8888,AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,videoDecoderParams.maxDecodePictureBufferCount,&imageReader);
+	AImageReader_newWithUsage(vulkanTexture->width,vulkanTexture->length,AIMAGE_FORMAT_RAW_PRIVATE,AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,videoDecoderParams.maxDecodePictureBufferCount,&imageReader);
 	// nativeWindow is managed by the ImageReader.
 	ANativeWindow *nativeWindow=nullptr;
 	media_status_t status;
@@ -99,11 +99,13 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	AMediaFormat_setString(format,AMEDIAFORMAT_KEY_MIME,getCodecMimeType());
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_WIDTH, vulkanTexture->width);
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_MAX_HEIGHT, vulkanTexture->length);
-	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_HEIGHT, vulkanTexture->length);
-	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_WIDTH, vulkanTexture->width);
-	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_BIT_RATE, videoDecoderParams.bitRate);
-	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_FRAME_RATE, videoDecoderParams.frameRate);
-	//AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21); // #21 COLOR_FormatYUV420SemiPlanar (NV12) 
+	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_HEIGHT, vulkanTexture->length);
+	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_WIDTH, vulkanTexture->width);
+	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_BIT_RATE, videoDecoderParams.bitRate);
+	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_FRAME_RATE, videoDecoderParams.frameRate);
+	int OUTPUT_VIDEO_COLOR_FORMAT =
+            MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface;
+	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21); // #21 COLOR_FormatYUV420SemiPlanar (NV12) 
 	
 	uint32_t flags = 0;
 	//surface.setOnFrameAvailableListener(this)
@@ -136,28 +138,8 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	AMEDIA_CHECK(AMediaCodec_start(mDecoder));
 	int format_color;
 	AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, &format_color);
-	/*
-	//auto outp_format = AMediaCodec_getOutputFormat(mDecoder);
-	AHardwareBuffer *hardwareBuffer=nullptr;
-	AHardwareBuffer_Desc hardwareBuffer_Desc={};
-	hardwareBuffer_Desc.format=AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM;
-	hardwareBuffer_Desc.height=vulkanTexture->length;
-	hardwareBuffer_Desc.width=vulkanTexture->width;
-	hardwareBuffer_Desc.layers=1;
-	hardwareBuffer_Desc.rfu0=0;
-	hardwareBuffer_Desc.rfu1=0;
-	hardwareBuffer_Desc.usage=AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE;
-	
-	AHardwareBuffer_allocate(&hardwareBuffer_Desc, &hardwareBuffer);
-	VkAndroidHardwareBufferPropertiesANDROID androidHardwareBufferProperties;
-	vk::Device *dev=renderPlatform->AsVulkanDevice();
-	VkDevice vkDev=(VkDevice)dev;
-	vkGetAndroidHardwareBufferPropertiesANDROID(vkDev,hardwareBuffer,&androidHardwareBufferProperties);
-	VkMemoryGetAndroidHardwareBufferInfoANDROID androidHardwareBufferInfo;
-	androidHardwareBufferInfo.sType=VK_STRUCTURE_TYPE_MEMORY_GET_ANDROID_HARDWARE_BUFFER_INFO_ANDROID;
-	androidHardwareBufferInfo.memory=;
-	vkGetMemoryAndroidHardwareBufferANDROID(vkDev,&androidHardwareBufferInfo,&hardwareBuffer);
-	*/
+	auto format2 = AMediaCodec_getOutputFormat(mDecoder);
+	AMediaFormat_getInt32(format2, AMEDIAFORMAT_KEY_COLOR_FORMAT, &format_color);
 	
 	stopProcessBuffersThread=false;
 	processBuffersThread=new std::thread(&NdkVideoDecoder::processBuffersOnThread, this);
@@ -477,12 +459,17 @@ void NdkVideoDecoder::processOutputBuffers()
 	outputBuffers.erase(outputBuffers.begin());
 	// Does this mean we can now do AImageReader_acquireNextImage?
 	AImage *nextImage=nullptr;
-	//media_status_t res=AImageReader_acquireNextImage(imageReader, &nextImage) ;
-	
-	//if(res!=AMEDIA_OK)
+	media_status_t res=AImageReader_acquireLatestImage(imageReader, &nextImage) ;
+	//AImage_getHardwareBuffer
+	if(res!=AMEDIA_OK)
 	{
-		//TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;
-	//	return ;
+		TELEPORT_CERR<<"NdkVideoDecoder - "<<"Failed"<<std::endl;
+		return ;
+	}
+	else
+	{
+		TELEPORT_CERR<<"NdkVideoDecoder - "<<"Succeeded"<<std::endl;
+		return ;
 	}
 }
 

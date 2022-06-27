@@ -1,31 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="C:\Teleport\client\Shaders\cubemap_clear.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="C:\Teleport\client\Shaders\pbr.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="C:\Teleport\client\Shaders\test.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="C:\Teleport\client\Shaders\texture_conversion.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
     <CustomBuild Include="C:\Teleport\build_pc_client\CMakeFiles\9705d267972308b2efa3ea393da5c190\VulkanShaders.rule" />
-    <CustomBuild Include="C:\Teleport\client\Shaders\Vulkan\CMakeLists.txt" />
+    <CustomBuild Include="../../../../client/Shaders/cubemap_clear.sfx" />
+    <CustomBuild Include="../../../../client/Shaders/pbr.sfx" />
+    <CustomBuild Include="../../../../client/Shaders/test.sfx" />
+    <CustomBuild Include="../../../../client/Shaders/texture_conversion.sfx" />
+    <CustomBuild Include="../../../../client/Shaders/Vulkan\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="C:\Teleport\client\Shaders\cubemap_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\client\Shaders\pbr_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\client\Shaders\video_types.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
     <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\CppSl.sl">
       <Filter>Shader Includes</Filter>
     </None>
@@ -94,6 +77,9 @@
     </None>
     <None Include="C:\Teleport\firstparty\Platform\Vulkan\Sfx\VulkanAndroid.json" />
     <None Include="C:\Teleport\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders" />
+    <None Include="../../../../client/Shaders/cubemap_constants.sl" />
+    <None Include="../../../../client/Shaders/pbr_constants.sl" />
+    <None Include="../../../../client/Shaders/video_types.sl" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
