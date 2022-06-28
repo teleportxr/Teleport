@@ -89,7 +89,7 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	platform::vulkan::Texture *vulkanTexture=(platform::vulkan::Texture*)texture;
 	AMediaFormat *format=AMediaFormat_new();
 	//decoderParams.maxDecodePictureBufferCount
-	AImageReader_newWithUsage(vulkanTexture->width,vulkanTexture->length,AIMAGE_FORMAT_RAW_PRIVATE,AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,videoDecoderParams.maxDecodePictureBufferCount,&imageReader);
+	AMEDIA_CHECK(AImageReader_newWithUsage(vulkanTexture->width,vulkanTexture->length,AIMAGE_FORMAT_RAW_PRIVATE,AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE,videoDecoderParams.maxDecodePictureBufferCount,&imageReader));
 	// nativeWindow is managed by the ImageReader.
 	ANativeWindow *nativeWindow=nullptr;
 	media_status_t status;
@@ -103,9 +103,9 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_WIDTH, vulkanTexture->width);
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_BIT_RATE, videoDecoderParams.bitRate);
 	AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_FRAME_RATE, videoDecoderParams.frameRate);
-	int OUTPUT_VIDEO_COLOR_FORMAT =
-            MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface;
-	AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21); // #21 COLOR_FormatYUV420SemiPlanar (NV12) 
+	//int OUTPUT_VIDEO_COLOR_FORMAT =
+    //        MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface;
+	//AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21); // #21 COLOR_FormatYUV420SemiPlanar (NV12) 
 	
 	uint32_t flags = 0;
 	//surface.setOnFrameAvailableListener(this)
@@ -138,8 +138,10 @@ void NdkVideoDecoder::initialize(platform::crossplatform::RenderPlatform* p,plat
 	AMEDIA_CHECK(AMediaCodec_start(mDecoder));
 	int format_color;
 	AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, &format_color);
+	TELEPORT_CERR<<"NdkVideoDecoder AMEDIAFORMAT_KEY_COLOR_FORMAT - "<<format_color<<std::endl;
 	auto format2 = AMediaCodec_getOutputFormat(mDecoder);
 	AMediaFormat_getInt32(format2, AMEDIAFORMAT_KEY_COLOR_FORMAT, &format_color);
+	TELEPORT_CERR<<"NdkVideoDecoder AMEDIAFORMAT_KEY_COLOR_FORMAT - "<<format_color<<std::endl;
 	
 	stopProcessBuffersThread=false;
 	processBuffersThread=new std::thread(&NdkVideoDecoder::processBuffersOnThread, this);
@@ -471,6 +473,7 @@ void NdkVideoDecoder::processOutputBuffers()
 		TELEPORT_CERR<<"NdkVideoDecoder - "<<"Succeeded"<<std::endl;
 		return ;
 	}
+	//..AImage_getHardwareBuffer
 }
 
 

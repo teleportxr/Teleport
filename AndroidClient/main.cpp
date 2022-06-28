@@ -185,7 +185,6 @@ void android_main(struct android_app* app)
 	renderPlatform->PushTexturePath("");
 	renderPlatform->PushTexturePath("textures");
 	renderPlatform->PushTexturePath("fonts");
-	renderPlatform->PushShaderBinaryPath("");
 	renderPlatform->PushShaderBinaryPath("shaders");
 
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());
