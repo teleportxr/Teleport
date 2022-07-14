@@ -89,7 +89,7 @@ void DefaultDiscoveryService::tick()
 		return;
 	}
 
-	uint32_t clientID = 0; //Newly received ID.
+	avs::uid clientID = 0; //Newly received ID.
 	ENetBuffer buffer = { sizeof(clientID), &clientID }; //Buffer to retrieve client ID with.
 
 	ENetAddress addr;

@@ -98,19 +98,18 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 
 	for (auto s : nodeSubTypes)
 	{
-		clientMessaging->setNodeSubtype(s.first,s.second.state.nodeSubType,s.second.state.regexPath);
+		clientMessaging->setNodePosePath(s.first,s.second.state.regexPath);
 		s.second.status = ReflectedStateStatus::SENT;
 	}
 }
 
-void ClientData::setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType,const std::string &regexPosePath)
+void ClientData::setNodePosePath(avs::uid nodeID, const std::string &regexPosePath)
 {
-	nodeSubTypes[nodeID].state.nodeSubType = subType;
 	nodeSubTypes[nodeID].state.regexPath = regexPosePath;
 	nodeSubTypes[nodeID].status=ReflectedStateStatus::UNSENT;
 	if (isStreaming)
 	{
-		clientMessaging->setNodeSubtype(nodeID, subType, regexPosePath);
+		clientMessaging->setNodePosePath(nodeID,  regexPosePath);
 		nodeSubTypes[nodeID].status = ReflectedStateStatus::SENT;
 	}
 }

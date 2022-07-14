@@ -6,7 +6,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
 
-#include "crossplatform/AudioStreamTarget.h"
+#include "AudioStreamTarget.h"
 
 namespace teleport
 {

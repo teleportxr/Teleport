@@ -250,7 +250,7 @@ namespace teleport
 				TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< std::endl;
 			}
 			avs::InputState inputState;
-			inputState.numBinaryStates		=latestInputStateAndEvents.binaryStates.size();
+			inputState.numBinaryStates		=(uint16_t)latestInputStateAndEvents.binaryStates.size();
 			inputState.numAnalogueStates	=latestInputStateAndEvents.analogueStates.size();
 			inputState.numBinaryEvents		=latestInputStateAndEvents.binaryEvents.size();
 			inputState.numAnalogueEvents	=latestInputStateAndEvents.analogueEvents.size();
@@ -317,9 +317,9 @@ namespace teleport
 		sendCommand(command);
 	}
 	
-	void ClientMessaging::setNodeSubtype(avs::uid nodeID, avs::NodeSubtype subType,const std::string &regexPosePath)
+	void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPosePath)
 	{
-		avs::UpdateNodeSubtypeCommand command(nodeID, subType, regexPosePath.size());
+		avs::UpdateNodeSubtypeCommand command(nodeID,  regexPosePath.size());
 		std::vector<char> chars;
 		chars.resize(regexPosePath.size());
 		memcpy(chars.data(),regexPosePath.data(),chars.size());
