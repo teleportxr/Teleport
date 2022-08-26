@@ -17,11 +17,19 @@ namespace teleport
 {
 	namespace client
 	{
+		struct Bookmark
+		{
+			std::string url;
+			std::string title;
+		};
 		class Config
 		{
+			std::vector<Bookmark> bookmarks;
+			std::string storageFolder="";
+			const std::string &GetStoragePath() const;
 		public:
 			void LoadConfigFromIniFile();
-			std::vector<std::string> server_ips;
+			std::vector<std::string> recent_server_urls;
 			bool enable_vr = true;
 #if TELEPORT_INTERNAL_CHECKS
 			bool dev_mode=true;
@@ -30,6 +38,15 @@ namespace teleport
 #endif
 			bool render_local_offline = false;
 			std::string log_filename="TeleportClient.log";
+			const std::vector<Bookmark> &GetBookmarks() const;
+			void AddBookmark(const Bookmark &b);
+			void LoadBookmarks();
+			void SaveBookmarks();
+			//! When we connect, store the URL
+			void StoreRecentURL(const char *r);
+			//! Where do we store temp files?
+			void SetStorageFolder(const char *f);
+			const std::string &GetStorageFolder() const;
 		};
 	}
 }

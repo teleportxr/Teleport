@@ -59,7 +59,7 @@ namespace teleport
 			bool validClientSettings = false;
 			bool videoKeyframeRequired = false;
 
-			bool setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head,avs::vec4 orientation);
+			bool setOrigin(uint64_t ctr,avs::uid uid,avs::vec3 pos,avs::vec4 orientation);
 			bool isConnected() const;
 			bool hasOrigin() const;
 			avs::vec3 getOrigin() const;

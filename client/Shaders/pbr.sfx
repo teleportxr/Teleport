@@ -175,8 +175,8 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);
-	OUT.texCoords0		=vec2(IN.texCoords0.x,1.0-IN.texCoords0.y);
-	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
+	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
+	OUT.texCoords1		=vec2(IN.texCoords1.x,1.0-IN.texCoords1.y);
 #ifdef SFX_OPENGL_NONE
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
@@ -192,30 +192,36 @@ shader vertexOutput VS_Solid(vertexInput IN)
 shader vertexOutput VS_Animation(vertexInputAnim IN)
 {
 	vertexOutput OUT;
-	
-	mat4 boneTransform	= boneMatrices[int(IN.joints[0])] * IN.weights[0]
-						+ boneMatrices[int(IN.joints[1])] * IN.weights[1]
-						+ boneMatrices[int(IN.joints[2])] * IN.weights[2]
-						+ boneMatrices[int(IN.joints[3])] * IN.weights[3];
+	vec4 w	=IN.weights;
+	// normalize: should we REALLY have to do this?
+	float W	=w.x+w.y+w.z+w.w;
+	w/=W;
+	mat4 boneTransform	= boneMatrices[int(IN.joints[0])] * w.x
+						+ boneMatrices[int(IN.joints[1])] * w.y
+						+ boneMatrices[int(IN.joints[2])] * w.z
+						+ boneMatrices[int(IN.joints[3])] * w.w;
 	
 	vec4 opos		= vec4(IN.position.xyz,1.0);
 	// boneTransform transforms between two positions in object-local space.
 	vec4 wpos		= mul(mul(opos, boneTransform), world);
+	//vec4 wpos		= mul(opos, world);
 	//vec4 wpos = mul(opos, world);
 
-	OUT.view		=normalize(wpos.xyz-viewPosition);
-	vec4 viewspace_pos = mul( view, vec4(wpos.xyz, 1.0));
-	OUT.clip_pos	=mul(proj,vec4(viewspace_pos.xyz,1.0));
-	OUT.wpos = wpos.xyz;
+	OUT.view			=normalize(wpos.xyz-viewPosition);
+	vec4 viewspace_pos	=mul( view, vec4(wpos.xyz, 1.0));
+	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
+	OUT.wpos			=wpos.xyz;
 
 	OUT.texCoords0	=IN.texCoords0;
 	OUT.texCoords1	=IN.texCoords1;
-
-	OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
-	OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
+	
+	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
+	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), world).xyz;
+	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
+	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
-	OUT.debug_colour = IN.joints;
+	OUT.debug_colour = IN.weights;
 	return OUT;
 }
 
@@ -344,7 +350,7 @@ SurfaceState PreprocessSurface(vec3 viewDir,SurfaceProperties surfaceProperties)
 	float cosLo					= saturate(n_v );
 	surfaceState.F				= FresnelTerm(F0, cosLo);
 	surfaceState.kS				= surfaceState.F;
-	surfaceState.kD =  lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
+	surfaceState.kD				= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
 	surfaceState.refl			= reflect(viewDir,surfaceProperties.normal);
 	surfaceState.n_v			= saturate(n_v);
 	return surfaceState;
@@ -385,7 +391,7 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 
 	 //Metallic materials will have no diffuse output.
 	
-	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo * diffuse_env;
+	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo ;//* diffuse_env;
 	//diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+ specular;
 
@@ -462,7 +468,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	diffuseColour		= diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	vec2 lightmapUVs	=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	lightmapUVs.y		=1.0- lightmapUVs.y;
+	//lightmapUVs.y		=1.0- lightmapUVs.y;
 	vec3 view			= normalize(diff);
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
@@ -513,7 +519,8 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 //u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 //u.b=0;
 // 
-	//u.rgb= surfaceProperties.roughness;
+	//u.rgb=frac(5.0*IN.texCoords0.xyy);
+
 	return u;
 }
 
@@ -530,6 +537,15 @@ shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 	return Solid(IN,false,true,0);
 }
 
+shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
+{
+	float dotp=saturate(IN.normal.z);
+	vec3 light=vec3(dotp,dotp,dotp);
+	vec3 colour=diffuseOutputScalar.rgb*light;
+	colour		+=emissiveOutputScalar.rgb;
+	//colour=IN.debug_colour.rgb;
+	return vec4(colour,1.0);
+}
 shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
 {
 	return Solid(IN,true,false,0);
@@ -685,6 +701,7 @@ VertexShader vs_solid = CompileShader(vs_4_0, VS_Solid());
 VertexShader vs_anim = CompileShader(vs_4_0, VS_Animation());
 PixelShader ps_solid_lightmap = CompileShader(ps_4_0, PS_Solid_Lightmap());
 PixelShader ps_solid_nolightmap = CompileShader(ps_4_0, PS_Solid_NoLightmap());
+PixelShader ps_local_hand = CompileShader(ps_4_0, PS_Solid_LocalHand());
 PixelShader ps_depth = CompileShader(ps_5_0, PS_Depth());
 
 //Debug renders.
@@ -699,7 +716,7 @@ technique solid
 {
 	pass local
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -708,7 +725,7 @@ technique solid
 	}
     pass depth 
     {
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -717,7 +734,7 @@ technique solid
     }
     pass pbr_lightmap 
     {
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -726,7 +743,7 @@ technique solid
     }
 	pass pbr_nolightmap
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -735,7 +752,7 @@ technique solid
 	}
 	pass albedo_only
     {
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -744,7 +761,7 @@ technique solid
     }
 	pass normal_unswizzled
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -753,7 +770,7 @@ technique solid
     }
 	pass debug_lightmaps
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -762,7 +779,7 @@ technique solid
 	}
 	pass anim_debug_lightmaps
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim);
@@ -771,7 +788,7 @@ technique solid
 	}
 	pass debug_anim
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -780,7 +797,7 @@ technique solid
 	}
 	pass anim_debug_anim
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -789,7 +806,7 @@ technique solid
     }
 	pass normal_unity
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -798,7 +815,7 @@ technique solid
     }
 	pass normal_vertexnormals
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -808,7 +825,7 @@ technique solid
 
 	pass anim_pbr_lightmap
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim);
@@ -817,16 +834,33 @@ technique solid
 	}
 	pass anim_pbr_nolightmap
 	{
-		SetRasterizerState(RenderFrontfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_nolightmap);
 	}
+	pass local_hand
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_local_hand);
+	}
+	pass anim_local_hand
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_anim);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_local_hand);
+	}
 	pass anim_albedo_only
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -835,7 +869,7 @@ technique solid
 	}
 	pass anim_normal_unswizzled
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -844,7 +878,7 @@ technique solid
 	}
 	pass anim_debug_anim
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -853,7 +887,7 @@ technique solid
 	}
 	pass anim_normal_unity
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -862,7 +896,7 @@ technique solid
 	}
 	pass anim_normal_vertexnormals
 	{
-		SetRasterizerState(RenderFrontfaceCull);
+		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -876,7 +910,7 @@ technique transparent
 {
     pass base 
     {
-		SetRasterizerState(RenderBackfaceCull);
+		
 		//SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(CompileShader(vs_4_0,VS_Solid()));

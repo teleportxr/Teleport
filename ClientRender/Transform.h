@@ -59,6 +59,8 @@ namespace clientrender
 
 		inline const mat4& GetTransformMatrix() const { return  m_TransformData.m_ModelMatrix; }
 		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
+
+		Transform GetInverse() const;
 	};
 
 }

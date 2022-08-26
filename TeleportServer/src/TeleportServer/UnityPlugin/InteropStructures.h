@@ -5,7 +5,7 @@
 #pragma once
 
 #include "libavstream/common.hpp"
-#include "libavstream/geometry/animation_interface.h"
+#include "TeleportCore/AnimationInterface.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
 struct InteropNode
@@ -101,7 +101,11 @@ struct InteropSkin
 			{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
 			{boneIDs, boneIDs + numBones},
 			{jointIDs, jointIDs + numJoints},
-			rootTransform
+			rootTransform,
+			{},
+			{},
+			{},
+			{},
 		};
 	}
 };

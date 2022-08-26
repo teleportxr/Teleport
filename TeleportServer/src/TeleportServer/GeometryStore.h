@@ -25,8 +25,6 @@ namespace teleport
 		//Load from disk.
 		//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
 		void loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials);
-		//Inform GeometryStore of the resources that still exist, and of their new IDs.
-		void reaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials);
 
 		void clear(bool freeMeshBuffers);
 
@@ -46,6 +44,9 @@ namespace teleport
 		virtual const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const override;
 
 		virtual std::vector<avs::uid> getMeshIDs() const override;
+		
+		const ExtractedMesh* getExtractedMesh(avs::uid meshID, avs::AxesStandard standard) const;
+
 		const avs::CompressedMesh* getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const override;
 		virtual avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) override;
 		virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const override;
@@ -89,7 +90,7 @@ namespace teleport
 		void updateNodeTransform(avs::uid id, avs::Transform& newLTransform, avs::Transform& newGTransform);
 
 		//Returns amount of textures waiting to be compressed.
-		size_t getAmountOfTexturesWaitingForCompression() const;
+		size_t getNumberOfTexturesWaitingForCompression() const;
 		//Returns the texture that will be compressed next.
 		const avs::Texture* getNextCompressedTexture() const;
 		//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
@@ -99,6 +100,10 @@ namespace teleport
 		{
 			cachePath=path;
 		}
+		/// Debug: check for clashing uid's: this should never return a non-empty set.
+		std::set<avs::uid> GetClashingUids() const;
+		/// Check for errors - these should be resolved before using this store in a server.
+		bool CheckForErrors() const;
 	private:
 		std::string cachePath;
 		//Stores data on a texture that is to be compressed.

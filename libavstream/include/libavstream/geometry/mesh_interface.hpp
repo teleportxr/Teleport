@@ -64,7 +64,7 @@ struct Animation;
 	struct Attribute
 	{
 		AttributeSemantic semantic;
-		uid accessor;
+		uint64_t accessor;
 
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Attribute& attribute)
@@ -87,7 +87,7 @@ struct Animation;
 	{
 		size_t attributeCount;
 		Attribute *attributes;
-		uid indices_accessor;
+		uint64_t indices_accessor;
 		uid material;
 		PrimitiveMode primitiveMode;
 
@@ -167,7 +167,7 @@ struct Animation;
 	//! A view into a buffer. Could either be a contiguous subset of the data, or a stride-view skipping elements.
 	struct BufferView
 	{
-		uid buffer;
+		uint64_t buffer;
 		size_t byteOffset;
 		size_t byteLength;
 		size_t byteStride;
@@ -196,7 +196,7 @@ struct Animation;
 		};
 		enum class ComponentType : uint32_t
 		{
-			FLOAT
+			FLOAT=0
 			, DOUBLE
 			, HALF
 			, UINT
@@ -209,7 +209,7 @@ struct Animation;
 		DataType type;
 		ComponentType componentType;
 		size_t count;
-		uid bufferView;
+		uint64_t bufferView;
 		size_t byteOffset;
 
 		template<typename OutStream>
@@ -352,6 +352,11 @@ struct Animation;
 		// of which a subset is:
 		std::vector<uid> jointIDs;
 		Transform skinTransform;
+		// New method, bones are built into the skin:
+		std::vector<Transform> boneTransforms;
+		std::vector<uint16_t> parentIndices;
+		std::vector<uint16_t> jointIndices;
+		std::vector<std::string> boneNames;
 
 		static Skin convertToStandard(const Skin& skin, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
@@ -377,10 +382,63 @@ struct Animation;
 		std::string name;
 
 		std::vector<PrimitiveArray> primitiveArrays;
-		std::unordered_map<uid, Accessor> accessors;
-		std::map<uid, BufferView> bufferViews;
-		std::map<uid, GeometryBuffer> buffers;
-
+		std::unordered_map<uint64_t, Accessor> accessors;
+		std::map<uint64_t, BufferView> bufferViews;
+		std::map<uint64_t, GeometryBuffer> buffers;
+		void ResetAccessors(uint64_t subtract)
+		{
+			for(auto &a:primitiveArrays)
+			{
+				a.indices_accessor-=subtract;
+			}
+			std::unordered_map<uint64_t, Accessor> accessors_new;
+			for( auto &c:accessors)
+			{
+				c.second.bufferView-=subtract;
+				accessors_new[c.first-subtract]=c.second;
+			}
+			accessors=accessors_new;
+			std::map<uint64_t, BufferView> bufferViews_new;
+			for( auto &v:bufferViews)
+			{
+				v.second.buffer-=subtract;
+				bufferViews_new[v.first-subtract]=v.second;
+			}
+			bufferViews=bufferViews_new;
+			std::map<uint64_t, GeometryBuffer> buffers_new;
+			for(auto &b:buffers)
+			{
+				buffers_new[b.first-subtract]=b.second;
+			}
+			buffers=buffers_new;
+		}
+		void GetAccessorRange(uint64_t &lowest,uint64_t &highest) const
+		{
+			for(const auto &a:primitiveArrays)
+			{
+				lowest=std::min(lowest,a.indices_accessor);
+				highest=std::max(lowest,a.indices_accessor);
+			}
+			for(const auto &c:accessors)
+			{
+				lowest=std::min(lowest,(uint64_t)c.first);
+				highest=std::max(lowest,(uint64_t)c.first);
+				lowest=std::min(lowest,(uint64_t)c.second.bufferView);
+				highest=std::max(lowest,(uint64_t)c.second.bufferView);
+			}
+			for(const auto &v:bufferViews)
+			{
+				lowest=std::min(lowest,(uint64_t)v.first);
+				highest=std::max(lowest,(uint64_t)v.first);
+				lowest=std::min(lowest,(uint64_t)v.second.buffer);
+				highest=std::max(lowest,(uint64_t)v.second.buffer);
+			}
+			for(const auto &b:buffers)
+			{
+				lowest=std::min(lowest,(uint64_t)b.first);
+				highest=std::max(lowest,(uint64_t)b.first);
+			}
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Mesh& mesh)
 		{
@@ -477,7 +535,7 @@ struct Animation;
 	};
 	struct CompressedSubMesh
 	{
-		uid indices_accessor;
+		uint64_t indices_accessor;
 		uid material;
 		uint32_t first_index;
 		uint32_t num_indices;
@@ -485,12 +543,37 @@ struct Animation;
 		// Raw data buffer of draco (or other) encoded mesh.
 		std::vector<uint8_t> buffer;
 		//uint8_t subMeshAttributeIndex=0;		// which attribute is the subMesh index if any.
+		
+		void ResetAccessors(uint64_t subtract)
+		{
+			indices_accessor=indices_accessor-subtract;
+		}
+		void GetAccessorRange(uint64_t &lowest,uint64_t &highest) const
+		{
+			lowest=std::min(lowest,indices_accessor);
+			highest=std::max(lowest,indices_accessor);
+		}
 	};
 	struct CompressedMesh
 	{
 		MeshCompressionType meshCompressionType;
 		std::string name;
 		std::vector<CompressedSubMesh> subMeshes;
+		
+		void ResetAccessors(uint64_t subtract)
+		{
+			for( auto &subMesh:subMeshes)
+			{
+				subMesh.ResetAccessors(subtract);
+			}
+		}
+		void GetAccessorRange(uint64_t &lowest,uint64_t &highest) const
+		{
+			for(const auto &subMesh:subMeshes)
+			{
+				subMesh.GetAccessorRange(lowest,highest);
+			}
+		}
 		template<typename OutStream> friend OutStream& operator<< (OutStream& out, const CompressedMesh& compressedMesh)
 		{
 			//Name needs its own line, so spaces can be included.
@@ -694,7 +777,7 @@ struct Animation;
 	{
 	public:
 		virtual ~GeometryEncoderBackendInterface() = default;
-		virtual Result encode(uint32_t timestamp, GeometrySourceBackendInterface* target, GeometryRequesterBackendInterface* requester) = 0;
+		virtual Result encode(uint64_t timestamp, GeometrySourceBackendInterface* target, GeometryRequesterBackendInterface* requester) = 0;
 		virtual Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual Result unmapOutputBuffer() = 0;
 		virtual void setMinimumPriority(int32_t) =0;
@@ -705,7 +788,7 @@ struct Animation;
 	*/
 	struct MeshElementCreate
 	{
-		uid vb_uid = 0;
+		uint64_t vb_id = 0;
 		size_t m_ElementIndex = 0;
 		PrimitiveMode primitiveMode= PrimitiveMode::TRIANGLES;
 
@@ -721,7 +804,7 @@ struct Animation;
 		const vec4* m_Weights = nullptr;
 		const uint8_t* m_TangentNormals = nullptr;
 
-		uid ib_uid = 0;
+		uint64_t ib_id = 0;
 		size_t m_IndexCount = 0;
 		size_t m_IndexSize = 0;
 		const unsigned char* m_Indices = nullptr;

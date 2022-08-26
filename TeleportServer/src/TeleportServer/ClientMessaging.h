@@ -18,7 +18,7 @@
 #include "enet/enet.h"
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
-typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, uint64_t, const avs::Pose*);
+typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, avs::uid, uint64_t, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
@@ -76,7 +76,7 @@ namespace teleport
 		bool hasPeer() const;
 		bool hasReceivedHandshake() const;
 
-		bool setPosition(uint64_t valid_counter,const avs::vec3 &pos,bool set_rel,const avs::vec3 &rel_to_head,const avs::vec4 &orientation);
+		bool setOrigin(uint64_t valid_counter,avs::uid originNode,const avs::vec3 &pos,const avs::vec4 &orientation);
 
 		bool sendCommand(const avs::Command& avsCommand) const;
 
@@ -197,7 +197,7 @@ namespace teleport
 		void receiveResourceRequest(const ENetPacket* packet);
 		void receiveKeyframeRequest(const ENetPacket* packet);
 		void receiveClientMessage(const ENetPacket* packet);
-
+		
 		avs::ThreadSafeQueue<ENetEvent> eventQueue;
 		avs::Handshake handshake;
 		static bool asyncNetworkDataProcessingFailed;
@@ -224,7 +224,7 @@ namespace teleport
 		CasterContext* casterContext;
 		CaptureDelegates captureComponentDelegates;
 
-		ENetPeer* peer;
+		ENetPeer* peer=nullptr;
 
 		std::atomic_bool receivedHandshake = false;				//Whether we've received the handshake from the client.
 

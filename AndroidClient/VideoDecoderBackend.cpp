@@ -103,6 +103,12 @@ avs::Result VideoDecoderBackend::registerSurface(const avs::SurfaceBackendInterf
 	return avs::Result::OK;
 }
 
+void VideoDecoderBackend::CopyVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+{
+	if(mColorDecoder)
+		mColorDecoder->CopyVideoTexture(deviceContext);
+}
+
 avs::Result VideoDecoderBackend::unregisterSurface()
 {
 	if(!mColorSurfaceTexture)

@@ -15,6 +15,8 @@ else()
 endif()
 set(PLATFORM_USE_FMT ON)
 set(TELEPORT_SOLUTION_NAME "" CACHE STRING "")
+option(TELEPORT_SERVER_SUPPORT_WEBRTC "Should the server support WebRTC connections from browsers?" OFF)
+set(TELEPORT_LIBWEBRTC_BUILD_DIR "" CACHE PATH "WebRTC Build path")
 set(REMOTEPLAY_PLATFORM_DIR "${CMAKE_SOURCE_DIR}/firstparty/Platform" )
 set(SIMUL_PLATFORM_FOLDER_PREFIX "Platform" )
 set(SIMUL_PLATFORM_DIR ${REMOTEPLAY_PLATFORM_DIR})
@@ -86,8 +88,8 @@ option(ENABLE_STATIC "" ON)
 
 #openssl
 
-set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MD.lib)
-set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MD.lib)
+set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
+set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 
@@ -102,7 +104,7 @@ endif()
 #defaults for basisu
 if(TELEPORT_SERVER)
 	option(STATIC "" OFF)
-	set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi /DNDEBUG /DNOMINMAX")
+	set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi /DNDEBUG /DNOMINMAX /MT")
 	set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1 /DNOMINMAX /MDd")
 else()
 	option(STATIC "" ON)

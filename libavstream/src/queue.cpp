@@ -17,7 +17,7 @@ namespace avs
 
 	Queue::~Queue()
 	{
-		data->flushInternal();
+		flushInternal();
 	}
 
 	Result Queue::configure(size_t maxBufferSize, size_t maxBuffers, const char *n)
@@ -26,54 +26,54 @@ namespace avs
 		{
 			return Result::Node_InvalidConfiguration;
 		}
-		data->name=n;
-		std::lock_guard<std::mutex> lock(data->m_mutex);
-		data->flushInternal();
-		data->m_originalMaxBufferSize = maxBufferSize;
-		data->m_originalMaxBuffers = maxBuffers;
-		data->m_maxBufferSize = maxBufferSize;
-		data->m_maxBuffers = maxBuffers;
-		data->m_numElements = 0;
-		data->m_front = -1;
-		data->m_mem = new char[data->m_maxBuffers * data->m_maxBufferSize];
-		data->m_dataSizes = new size_t[data->m_maxBuffers];
-		for (size_t i = 0; i < data->m_maxBuffers; ++i)
+		name=n;
+		std::lock_guard<std::mutex> lock(m_mutex);
+		flushInternal();
+		m_originalMaxBufferSize = maxBufferSize;
+		m_originalMaxBuffers = maxBuffers;
+		m_maxBufferSize = maxBufferSize;
+		m_maxBuffers = maxBuffers;
+		m_numElements = 0;
+		m_front = -1;
+		m_mem = new char[m_maxBuffers * m_maxBufferSize];
+		m_dataSizes = new size_t[m_maxBuffers];
+		for (size_t i = 0; i < m_maxBuffers; ++i)
 		{
-			data->m_dataSizes[i] = 0;
+			m_dataSizes[i] = 0;
 		}
 		return Result::OK;
 	}
 
 	Result Queue::deconfigure()
 	{
-		std::lock_guard<std::mutex> lock(data->m_mutex);
-		data->flushInternal();
-		data->m_originalMaxBufferSize = 0;
-		data->m_originalMaxBuffers = 0;
-		data->m_maxBufferSize = 0;
-		data->m_maxBuffers = 0;
-		data->m_numElements = 0;
-		data->m_front = -1;
+		std::lock_guard<std::mutex> lock(m_mutex);
+		flushInternal();
+		m_originalMaxBufferSize = 0;
+		m_originalMaxBuffers = 0;
+		m_maxBufferSize = 0;
+		m_maxBuffers = 0;
+		m_numElements = 0;
+		m_front = -1;
 		return Result::OK;
 	}
 
 	void Queue::flush()
 	{
-		std::lock_guard<std::mutex> lock(data->m_mutex);
-		data->flushInternal();
+		std::lock_guard<std::mutex> lock(m_mutex);
+		flushInternal();
 	}
 
 	Result Queue::read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead)
 	{
 		bytesRead = 0;
-		std::lock_guard<std::mutex> lock(data->m_mutex);
-		if (data->m_numElements == 0)
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_numElements == 0)
 		{
 			return Result::IO_Empty;
 		}
 
 		size_t frontSize;
-		const void* front = data->front(frontSize);
+		const void* front = frontp(frontSize);
 		if (!buffer || bufferSize < frontSize)
 		{
 			bufferSize = frontSize;
@@ -82,40 +82,40 @@ namespace avs
 
 		std::memcpy(buffer, front, frontSize);
 		bytesRead = frontSize;
-		data->pop();
+		pop();
 
 		return Result::OK;
 	}
 
 	Result Queue::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
-		std::lock_guard<std::mutex> lock(data->m_mutex);
-		if (data->m_numElements == data->m_maxBuffers)
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_numElements == m_maxBuffers)
 		{
-			auto oldsize=data->m_maxBuffers;
-			data->increaseBufferCount();
-			AVSLOG(Warning) << data->name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<data->m_maxBuffers<<".\n";
+			auto oldsize=m_maxBuffers;
+			increaseBufferCount();
+			AVSLOG(Warning) << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
 		}
-		if (bufferSize > data->m_maxBufferSize)
+		if (bufferSize > m_maxBufferSize)
 		{
-			data->increaseBufferSize(bufferSize);
-			AVSLOG(Warning) << data->name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<data->m_maxBufferSize<<".\n";
+			increaseBufferSize(bufferSize);
+			AVSLOG(Warning) << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<".\n";
 		}
 		
-		data->push(buffer, bufferSize);
+		push(buffer, bufferSize);
 
 		bytesWritten = bufferSize;
 
 		return Result::OK;
 	}
 
-	void Queue::Private::flushInternal()
+	void Queue::flushInternal()
 	{
 		SAFE_DELETE_ARRAY(m_mem)
 		SAFE_DELETE_ARRAY(m_dataSizes)
 	}
 
-	void Queue::Private::increaseBufferCount()
+	void Queue::increaseBufferCount()
 	{
 		const size_t oldBufferCount = m_maxBuffers;
 		
@@ -153,7 +153,7 @@ namespace avs
 		delete[] oldSizes;
 	}
 
-	void Queue::Private::increaseBufferSize(size_t requestedSize)
+	void Queue::increaseBufferSize(size_t requestedSize)
 	{
 		const size_t oldBufferSize = m_maxBufferSize;
 		m_maxBufferSize = requestedSize + (requestedSize / 2);
@@ -181,13 +181,13 @@ namespace avs
 		delete[] oldMem;
 	}
 
-	const void* Queue::Private::front(size_t& bufferSize) const
+	const void* Queue::frontp(size_t& bufferSize) const
 	{
 		bufferSize = m_dataSizes[m_front];
 		return &m_mem[m_front * m_maxBufferSize];
 	}
 
-	void Queue::Private::push(const void* buffer, size_t bufferSize)
+	void Queue::push(const void* buffer, size_t bufferSize)
 	{
 		if (m_numElements == 0)
 		{
@@ -199,7 +199,7 @@ namespace avs
 		m_numElements++;
 	}
 
-	void Queue::Private::pop()
+	void Queue::pop()
 	{
 		m_dataSizes[m_front] = 0;
 		m_numElements--;

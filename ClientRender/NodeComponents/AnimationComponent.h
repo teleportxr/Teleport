@@ -25,25 +25,25 @@ namespace clientrender
 		//	animationID : ID of the animation to start playing.
 		//	startTimestamp : Timestamp of when the animation started playing on the server.
 		void setAnimation(avs::uid animationID, uint64_t startTimestamp);
-
+		void setAnimation(avs::uid animationID);
 		//Causes the time used to seek the animation position to be overriden by the passed value.
 		//Passing in a nullptr will cause the animation to use the default; i.e. the current time in the animation controller.
 		//	animationID : ID of the animation we are changing the target for.
 		//	timeOverride : Pointer to the float that will be used as the current animation time.
 		//	valueMaximum : Maximum value the override can be; i.e. number is of the range [0.0, valueMaximum].
-		void setAnimationTimeOverride(avs::uid animationID, const float* timeOverride = nullptr, float overrideMaximum = 0.0f);
+		void setAnimationTimeOverride(avs::uid animationID,  float timeOverride , float overrideMaximum = 0.0f);
 
 		void setAnimationSpeed(avs::uid animationID, float speed);
 
 		void update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTime);
 
 		const AnimationStateMap &GetAnimationStates() const;
+		AnimationState* GetAnimationState(avs::uid);
 		const AnimationState* GetCurrentAnimationState() const;
 		float GetCurrentAnimationTimeSeconds() const;
 	private:
 		AnimationStateMap animationStates;
 		AnimationStateMap::iterator currentAnimationState = animationStates.end();
-		float currentAnimationTimeS = 0.0f; //How many seconds along the current animation is.
 
 		//Variables for if we can't start the animation because it has yet to be received, but we want to start when the animation is received.
 		avs::uid latestAnimationID = 0;
@@ -54,7 +54,5 @@ namespace clientrender
 		//	startTimestamp : The timestamp of when the animation started on the server.
 		void startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestamp);
 
-		//Animation may have an animation override, so we need to use the current time in the animation component only when it is set.
-		float getAnimationTimeSeconds();
 	};
 }

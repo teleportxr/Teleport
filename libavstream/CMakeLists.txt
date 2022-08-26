@@ -172,7 +172,6 @@ set(src_public_platforms
 	include/libavstream/platforms/platform_windows.hpp
 )
 set(hdr_public_geometry
-	include/libavstream/geometry/animation_interface.h
 	include/libavstream/geometry/mesh_interface.hpp
 	include/libavstream/geometry/material_interface.hpp
 	include/libavstream/geometry/material_extensions.h

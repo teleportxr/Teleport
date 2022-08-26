@@ -5,12 +5,18 @@
 
 using namespace avs;
 
+static avs::uid static_uid = 1;
 uid avs::GenerateUid()
 {
-	static avs::uid static_uid = 1;
 	if (!static_uid)
 		throw(std::runtime_error("Out of uid's"));
 	return static_uid++;
+}
+
+void avs::ClaimUidRange(avs::uid last)
+{
+	if (static_uid<=last)
+		static_uid=last+1;
 }
 
 GeometrySource::GeometrySource()

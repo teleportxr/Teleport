@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #endif
 
-#include "libavstream/geometry/animation_interface.h"
+#include "TeleportCore/AnimationInterface.h"
 #include "draco/compression/encode.h"
 #include "draco/compression/decode.h"
 using namespace teleport;
@@ -184,10 +184,9 @@ void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshe
 		}
 #endif
 	}
-}
-
-void GeometryStore::reaffirmResources(int32_t numMeshes, ReaffirmedResource* reaffirmedMeshes, int32_t numTextures, ReaffirmedResource* reaffirmedTextures, int32_t numMaterials, ReaffirmedResource* reaffirmedMaterials)
-{
+#if TELEPORT_INTERNAL_CHECKS		
+	GetClashingUids();
+#endif
 }
 
 void GeometryStore::clear(bool freeMeshBuffers)
@@ -296,6 +295,11 @@ std::vector<avs::uid> GeometryStore::getMeshIDs() const
 {
 	//Every mesh map should be identical, so we just use the engineering style.
 	return getVectorOfIDs(meshes.at(avs::AxesStandard::EngineeringStyle));
+}
+const ExtractedMesh* GeometryStore::getExtractedMesh(avs::uid meshID, avs::AxesStandard standard) const
+{
+	const ExtractedMesh* meshData = getResource(meshes.at(standard), meshID);
+	return meshData;
 }
 
 const avs::CompressedMesh* GeometryStore::getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const
@@ -529,6 +533,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		const auto& primitive = sourceMesh.primitiveArrays[i];
 		auto &subMesh= compressedMesh.subMeshes[i];
 		const avs::Accessor& indices_accessor = sourceMesh.accessors[primitive.indices_accessor];
+		
 		subMesh.material=primitive.material;
 		subMesh.indices_accessor=primitive.indices_accessor;
 		subMesh.first_index= 0;
@@ -543,8 +548,8 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			const avs::Attribute& attrib = primitive.attributes[j];
 			const auto &attrib_accessor=sourceMesh.accessors[attrib.accessor];
 			numVertices=std::max(numVertices, attrib_accessor.count);
-			auto s= attributeSemantics.find(attrib.accessor);
-			if(s== attributeSemantics.end())
+			auto s=attributeSemantics.find(attrib.accessor);
+			if(s==attributeSemantics.end())
 				attributeSemantics[attrib.accessor]=attrib.semantic;
 			 if(attrib.semantic!= attributeSemantics[attrib.accessor])
 			{
@@ -563,6 +568,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 				continue;	// not an attribute.
 			auto semantic=s->second;
 			draco::GeometryAttribute::Type dracoGeometryAttributeType = ToDracoGeometryAttribute(semantic);
+			
 			avs::BufferView& bufferView = sourceMesh.bufferViews[accessor.bufferView];
 			avs::GeometryBuffer& geometryBuffer = sourceMesh.buffers[bufferView.buffer];
 			const uint8_t* data = geometryBuffer.data + bufferView.byteOffset;
@@ -643,7 +649,6 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 	dracoDecoderBuffer.Init((const char*)dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
 	draco::Mesh dracoMesh2;
 	dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh2);*/
-	
 	return true;
 }
 
@@ -1032,7 +1037,7 @@ void GeometryStore::updateNodeTransform(avs::uid id, avs::Transform& newLocalTra
 	nodeIt->second.globalTransform= newGlobalTransform;
 }
 
-size_t GeometryStore::getAmountOfTexturesWaitingForCompression() const
+size_t GeometryStore::getNumberOfTexturesWaitingForCompression() const
 {
 	return texturesToCompress.size();
 }
@@ -1271,4 +1276,39 @@ avs::guid GeometryStore::UidToGuid(avs::uid u) const
 		throw std::runtime_error("");
 	}
 	return i->second;
+}
+
+std::set<avs::uid> GeometryStore::GetClashingUids() const
+{
+	std::set<avs::uid> clash_uids;
+	for(auto m:meshes)
+	{
+		std::set<avs::uid> mesh_uids;
+		std::map<avs::Accessor::ComponentType,std::set<avs::uid>> component_uids;
+		avs::AxesStandard axesStandard=m.first;
+		for(const auto &mesh:m.second)
+		{
+			for(const auto &mesh2:m.second)
+			{
+				for(const auto &a:mesh2.second.mesh.accessors)
+				{
+					if(mesh.first==a.first)
+					{
+						clash_uids.insert(mesh.first);
+						TELEPORT_CERR<<"UID clash, mesh "<<mesh.first<<" "<<mesh.second.getName().c_str()
+							<<" clashes with accessor in mesh "<<mesh2.first<<" "<<mesh2.second.getName().c_str()<<std::endl;
+					}
+				}
+			}
+		}
+	}
+	return clash_uids;
+}
+
+bool GeometryStore::CheckForErrors() const
+{
+	auto clashes=GetClashingUids();
+	if(clashes.size())
+		return false;
+	return true;
 }

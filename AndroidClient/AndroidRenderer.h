@@ -12,8 +12,10 @@ namespace teleport
 			AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState,teleport::client::SessionClient *s,teleport::Gui &g,teleport::client::Config &cfg);
 			~AndroidRenderer();
 			void OnFrameAvailable() override;
+			void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext ) override;
 		protected:
 			avs::DecoderBackendInterface* CreateVideoDecoder() override;
+			VideoDecoderBackend *videoDecoderBackend= nullptr;
 		};
 	}
 }

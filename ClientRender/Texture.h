@@ -127,6 +127,7 @@ namespace clientrender
 		struct TextureCreateInfo
 		{
 			std::string name;
+			avs::uid uid;						//session uid of the texture.
 
 			uint32_t width = 0;
 			uint32_t height = 0;

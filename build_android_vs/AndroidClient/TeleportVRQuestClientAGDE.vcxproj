@@ -94,6 +94,7 @@
     <ClCompile Include="..\..\AndroidClient\NdkVideoDecoder.cpp" />
     <ClCompile Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.c" />
     <ClCompile Include="..\..\AndroidClient\VideoDecoderBackend.cpp" />
+    <ClCompile Include="..\..\ClientApp\ClientApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h" />
@@ -104,6 +105,7 @@
     <ClInclude Include="..\..\AndroidClient\NdkVideoDecoder.h" />
     <ClInclude Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.h" />
     <ClInclude Include="..\..\AndroidClient\VideoDecoderBackend.h" />
+    <ClInclude Include="..\..\ClientApp\ClientApp.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AndroidPackaging\app\build.gradle" />
@@ -180,6 +182,9 @@
     <ProjectReference Include="../../build_android_vs\TeleportClient\TeleportClient_Android.vcxproj">
       <Project>{07e69bb7-5a19-4a53-ad74-5e841a897e70}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\client\Shaders\Vulkan\VulkanShaders.vcxproj">
+      <Project>{4c406386-ce91-3ac0-8c4e-e119e47334ef}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\firstparty\Platform\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
       <Project>{160adc84-9b1c-3598-a176-5eb52cecb5b1}</Project>
     </ProjectReference>
@@ -188,6 +193,9 @@
     </ProjectReference>
     <ProjectReference Include="..\firstparty\Platform\Vulkan\SimulVulkan_MT.vcxproj">
       <Project>{97036138-28ed-340a-82bf-867c6d8f0330}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\firstparty\Platform\Vulkan\VulkanCoreShaders.vcxproj">
+      <Project>{d023754d-ff4e-36bd-8630-fd0581b1b55d}</Project>
     </ProjectReference>
     <ProjectReference Include="..\libavstream\libavstream_Android.vcxproj">
       <Project>{6f52b627-c756-44dd-ae24-a9370c3dbddc}</Project>

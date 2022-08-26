@@ -7,13 +7,11 @@
 
 namespace avs
 {
-
-struct SystemTime
-{
-	uint16_t hour;
-	uint16_t minute;
-	uint16_t second;
-	uint16_t ms;
-};
-
+	struct SystemTime
+	{
+		uint16_t hour;
+		uint16_t minute;
+		uint16_t second;
+		uint16_t ms;
+	};
 } // avs

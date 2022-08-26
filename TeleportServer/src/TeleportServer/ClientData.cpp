@@ -118,11 +118,11 @@ void ClientData::setInputDefinitions(const std::vector<avs::InputDefinition>& in
 	inputDefinitions = inputDefs;
 }
 
-bool ClientData::setOrigin(uint64_t ctr,avs::vec3 pos,bool set_rel,avs::vec3 rel_to_head,avs::vec4 orientation)
+bool ClientData::setOrigin(uint64_t ctr,avs::uid uid,avs::vec3 pos,avs::vec4 orientation)
 {
 	if(clientMessaging->hasPeer()&& clientMessaging->hasReceivedHandshake())
 	{
-		if(clientMessaging->setPosition(ctr,pos,set_rel,rel_to_head,orientation))
+		if(clientMessaging->setOrigin(ctr,uid,pos,orientation))
 		{
 		// ASSUME the message was received...
 		// TODO: Only set this when client confirms.

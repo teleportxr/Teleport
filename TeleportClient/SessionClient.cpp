@@ -244,7 +244,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
 		{
 			TELEPORT_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
-			mResourceRequests.push_back(sentResource.first);
+			mQueuedResourceRequests.push_back(sentResource.first);
 		}
 	}
 }
@@ -276,17 +276,12 @@ avs::Pose SessionClient::GetOriginPose() const
 	return originPose;
 }
 
-avs::vec3 SessionClient::GetOriginToHeadOffset() const
-{
-	return originToHeadPos;
-}
-
 void SessionClient::DispatchEvent(const ENetEvent& event)
 {
 	switch(event.channelID)
 	{
 		case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control) :
-			ParseCommandPacket(event.packet);
+			ReceiveCommandPacket(event.packet);
 			break;
 		default:
 			TELEPORT_CLIENT_WARN("Received packet on output-only channel: %d", event.channelID);
@@ -296,7 +291,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 	enet_packet_destroy(event.packet);
 }
 
-void SessionClient::ParseCommandPacket(ENetPacket* packet)
+void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 {
 	avs::CommandPayloadType commandPayloadType = *(reinterpret_cast<avs::CommandPayloadType*>(packet->data) + sizeof(void*));
 	switch(commandPayloadType)
@@ -316,8 +311,8 @@ void SessionClient::ParseCommandPacket(ENetPacket* packet)
 		case avs::CommandPayloadType::SetPosition:
 			ReceivePositionUpdate(packet);
 			break;
-		case avs::CommandPayloadType::NodeBounds:
-			ReceiveNodeBoundsUpdate(packet);
+		case avs::CommandPayloadType::NodeVisibility:
+			ReceiveNodeVisibilityUpdate(packet);
 			break;
 		case avs::CommandPayloadType::UpdateNodeMovement:
 			ReceiveNodeMovementUpdate(packet);
@@ -437,25 +432,26 @@ void SessionClient::SendResourceRequests()
 	std::vector<avs::uid> resourceRequests = geometryCache->GetResourceRequests();
 	geometryCache->ClearResourceRequests();
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
-	mResourceRequests.insert(mResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
+	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
 	resourceRequests.clear();
 
-	if(mResourceRequests.size() != 0)
+	if(mQueuedResourceRequests.size() != 0)
 	{
-		size_t resourceCount = mResourceRequests.size();
+		size_t resourceCount = mQueuedResourceRequests.size();
 		ENetPacket* packet = enet_packet_create(&resourceCount, sizeof(size_t) , ENET_PACKET_FLAG_RELIABLE);
 
 		enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceCount);
-		memcpy(packet->data + sizeof(size_t), mResourceRequests.data(), sizeof(avs::uid) * resourceCount);
+		memcpy(packet->data + sizeof(size_t), mQueuedResourceRequests.data(), sizeof(avs::uid) * resourceCount);
 
 		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
 
 		//Store sent resource requests, so we can resend them if it has been too long since the request.
-		for(avs::uid id : mResourceRequests)
+		for(avs::uid id : mQueuedResourceRequests)
 		{
 			mSentResourceRequests[id] = time;
+			TELEPORT_COUT<<"SessionClient::SendResourceRequests Requested "<<id<<std::endl;
 		}
-		mResourceRequests.clear();
+		mQueuedResourceRequests.clear();
 	}
 }
 
@@ -606,19 +602,14 @@ void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
 		receivedInitialPos = command.valid_counter;
 		originPose.position = command.origin_pos;
 		originPose.orientation = command.orientation;
-		if(command.set_relative_pos)
-		{
-			receivedRelativePos = command.valid_counter;
-		}
-		originToHeadPos = command.relative_pos;
 	}
 }
 
-void SessionClient::ReceiveNodeBoundsUpdate(const ENetPacket* packet)
+void SessionClient::ReceiveNodeVisibilityUpdate(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::NodeBoundsCommand);
+	size_t commandSize = sizeof(avs::NodeVisibilityCommand);
 
-	avs::NodeBoundsCommand command;
+	avs::NodeVisibilityCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	size_t enteredSize = sizeof(avs::uid) * command.nodesShowCount;
@@ -643,7 +634,7 @@ void SessionClient::ReceiveNodeBoundsUpdate(const ENetPacket* packet)
 			mReceivedNodes.push_back(node_uid);
 		}
 	}
-	mResourceRequests.insert(mResourceRequests.end(), missingNodes.begin(), missingNodes.end());
+	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), missingNodes.begin(), missingNodes.end());
 
 	//Tell renderer to hide nodes that have left bounds.
 	for(avs::uid node_uid : leftNodes)
@@ -791,6 +782,7 @@ void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
 	memcpy(static_cast<void*>(str.data()), packet->data+commandSize,updateNodeSubtypeCommand.pathLength);
 	mCommandInterface->UpdateNodeSubtype(updateNodeSubtypeCommand,str);
 }
+
 
 void SessionClient::SetDiscoveryClientID(uint64_t clientID)
 {

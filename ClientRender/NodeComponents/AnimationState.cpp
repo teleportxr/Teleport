@@ -20,31 +20,29 @@ namespace clientrender
 		return animation;
 	}
 
-	bool AnimationState::hasTimeOverride() const
+	AnimationTimeMode AnimationState::GetAnimationTimeMode() const
 	{
-		return timeOverride != nullptr;
+		return animationTimeMode;
 	}
 
-	void AnimationState::clearTimeOverride()
+	void AnimationState::setAnimationTimeMode(AnimationTimeMode m)
 	{
-		timeOverride = nullptr;
+		animationTimeMode = m;
 		timeOverrideMaximum = 0.0f;
 	}
 
-	void AnimationState::setTimeOverride(const float* override, float maximum)
+	void AnimationState::setTimeOverride(float override, float maximum)
 	{
-		if(override == nullptr || maximum == 0.0f)
+		if(animationTimeMode!=AnimationTimeMode::SCRUBBING)
 		{
-			clearTimeOverride();
-			return;
+			TELEPORT_CERR<<"AnimationState::setTimeOverride called when not in scrubbing mode."<<std::endl;
 		}
-
 		timeOverride = override;
 		timeOverrideMaximum = maximum;
 	}
 
 	float AnimationState::getNormalisedTimeOverride() const
 	{
-		return timeOverride && timeOverrideMaximum != 0.0f ? *timeOverride / timeOverrideMaximum : 0.0f;
+		return animationTimeMode==AnimationTimeMode::SCRUBBING&&timeOverrideMaximum>0.0f ? timeOverride / timeOverrideMaximum : 0.0f;
 	}
 }

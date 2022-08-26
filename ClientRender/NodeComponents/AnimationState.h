@@ -7,11 +7,18 @@
 namespace clientrender
 {
 	class Animation;
-
+	enum class AnimationTimeMode
+	{
+		INVALID=0,
+		TIMESTAMP,	// Animation automatically based on timestamp and speed.
+		SCRUBBING	// Animate based on explicit setting of time value.
+	};
+	//! Manages the state of a specific animation applied to a specific skin/skeleton.
 	class AnimationState
 	{
 	public:
 		float speed = 1.0f; //Speed the animation plays at.
+		float currentAnimationTimeS = 0.0f;
 
 		AnimationState();
 		AnimationState(const std::shared_ptr<Animation>& animation);
@@ -21,9 +28,9 @@ namespace clientrender
 		//Returns state's animation.
 		std::shared_ptr<Animation> getAnimation() const;
 
-		bool hasTimeOverride() const;
-		void clearTimeOverride();
-		void setTimeOverride(const float* override, float maximum);
+		AnimationTimeMode GetAnimationTimeMode() const;
+		void setAnimationTimeMode(AnimationTimeMode m);
+		void setTimeOverride(float override, float maximum);
 
 		//Returns the time override normalised between zero and one; returns zero when there is no time override.
 		float getNormalisedTimeOverride() const;
@@ -34,8 +41,9 @@ namespace clientrender
 		}
 	private:
 		std::shared_ptr<Animation> animation;
-
-		const float* timeOverride = nullptr;
+		
+		float timeOverride = 0.0f;
 		float timeOverrideMaximum = 0.0f;
+		AnimationTimeMode animationTimeMode=AnimationTimeMode::TIMESTAMP;
 	};
 }

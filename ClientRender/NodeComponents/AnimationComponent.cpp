@@ -1,6 +1,7 @@
 #include "AnimationComponent.h"
 
 #include <algorithm>
+#include <libavstream/src/platform.hpp>
 
 #include "ClientRender/Animation.h"
 
@@ -57,14 +58,22 @@ namespace clientrender
 #endif
 	}
 
-	void AnimationComponent::setAnimationTimeOverride(avs::uid animationID, const float* timeOverride, float overrideMaximum)
+	void AnimationComponent::setAnimation(avs::uid animationID)
+	{
+		static auto tBegin = avs::Platform::getTimestamp();
+		auto ts = avs::Platform::getTimestamp();
+		double ms=avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts);
+		setAnimation(animationID,ms);
+	}
+	
+		
+	void AnimationComponent::setAnimationTimeOverride(avs::uid animationID, float timeOverride, float overrideMaximum)
 	{
 		auto animationIt = animationStates.find(animationID);
 		if(animationIt == animationStates.end())
 		{
 			return;
 		}
-
 		animationIt->second.setTimeOverride(timeOverride, overrideMaximum);
 	}
 
@@ -88,8 +97,9 @@ namespace clientrender
 		}
 
 		std::shared_ptr<Animation> animation = currentAnimationState->second.getAnimation();
-		currentAnimationTimeS = std::min(currentAnimationTimeS + deltaTimeS * currentAnimationState->second.speed, animation->getAnimationLengthSeconds());
-		animation->seekTime(boneList, getAnimationTimeSeconds());
+		currentAnimationState->second.currentAnimationTimeS+=deltaTimeS * currentAnimationState->second.speed;
+		currentAnimationState->second.currentAnimationTimeS = std::max(0.0f,std::min(currentAnimationState->second.currentAnimationTimeS, animation->getAnimationLengthSeconds()));
+		animation->seekTime(boneList, currentAnimationState->second.currentAnimationTimeS);
 
 #if CYCLE_ANIMATIONS
 		if(currentAnimationTime >= animation->getAnimationLength())
@@ -111,6 +121,14 @@ namespace clientrender
 	{
 		return animationStates;
 	}
+	
+	AnimationState* AnimationComponent:: GetAnimationState(avs::uid u) 
+	{
+		auto i=animationStates.find(u);
+		if(i==animationStates.end())
+			return nullptr;
+		return &i->second;
+	}
 
 	const AnimationState *AnimationComponent::GetCurrentAnimationState() const
 	{
@@ -121,25 +139,15 @@ namespace clientrender
 
 	float AnimationComponent::GetCurrentAnimationTimeSeconds() const
 	{
-		return currentAnimationTimeS;
+		return currentAnimationState->second.currentAnimationTimeS;
 	}
 
 	void AnimationComponent::startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestampUtcMs)
 	{
-		currentAnimationState = animationIterator;
-		currentAnimationTimeS = float(0.001 * (teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - startTimestampUtcMs));
-	}
-
-	float AnimationComponent::getAnimationTimeSeconds()
-	{
-		AnimationState animationState = currentAnimationState->second;
-		if(!animationState.hasTimeOverride())
+		if(currentAnimationState != animationIterator)
 		{
-			return currentAnimationTimeS;
+			currentAnimationState = animationIterator;
+			currentAnimationState->second.currentAnimationTimeS = 0.f;//float(0.001 * (teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - startTimestampUtcMs));
 		}
-
-		float normalisedTime = animationState.getNormalisedTimeOverride();
-		float animationLength = animationState.getAnimation()->getAnimationLengthSeconds();
-		return normalisedTime * animationLength;
 	}
 }

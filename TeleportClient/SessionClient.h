@@ -96,11 +96,8 @@ namespace teleport
 			int GetPort() const;
 
 			unsigned long long receivedInitialPos = 0;
-			unsigned long long receivedRelativePos = 0;
 
 			avs::Pose GetOriginPose() const;
-
-			avs::vec3 GetOriginToHeadOffset() const;
 
 			uint64_t GetClientID() const
 			{
@@ -108,10 +105,13 @@ namespace teleport
 			}
 
 			void SetDiscoveryClientID(uint64_t clientID);
-
+				
+			const std::map<avs::uid, double> &GetSentResourceRequests(){
+				return mSentResourceRequests;
+			};
 		private:
 			void DispatchEvent(const ENetEvent& event);
-			void ParseCommandPacket(ENetPacket* packet);
+			void ReceiveCommandPacket(ENetPacket* packet);
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 			void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
@@ -123,12 +123,13 @@ namespace teleport
 			void SendKeyframeRequest();
 			//Tell server we are ready to receive geometry payloads.
 			void SendHandshake(const avs::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
+			void sendAcknowledgeRemovedNodesMessage(const std::vector<avs::uid> &uids);
 	
 			void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
 			void ReceiveSetupCommand(const ENetPacket* packet);
 			void ReceiveVideoReconfigureCommand(const ENetPacket* packet);
 			void ReceivePositionUpdate(const ENetPacket* packet);
-			void ReceiveNodeBoundsUpdate(const ENetPacket* packet);
+			void ReceiveNodeVisibilityUpdate(const ENetPacket* packet);
 			void ReceiveNodeMovementUpdate(const ENetPacket* packet);
 			void ReceiveNodeEnabledStateUpdate(const ENetPacket* packet);
 			void ReceiveNodeHighlightUpdate(const ENetPacket* packet);
@@ -139,7 +140,6 @@ namespace teleport
 			void ReceiveSetupInputsCommand(const ENetPacket* packet);
 			void ReceiveUpdateNodeStructureCommand(const ENetPacket* packet);
 			void ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet);
-
 			static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
 			avs::uid lastServerID = 0; //UID of the server we last connected to.
@@ -154,13 +154,13 @@ namespace teleport
 			ENetAddress mServerEndpoint{};
 
 			bool handshakeAcknowledged = false;
-			std::vector<avs::uid> mResourceRequests; //Requests the session client has discovered need to be made; currently only for nodes.
-			std::map<avs::uid, double> mSentResourceRequests; //<ID of requested resource, time we sent the request> Resource requests we have received, but have yet to receive confirmation of their receival.
-			std::vector<avs::uid> mReceivedNodes; //Nodes that have entered bounds, are about to be drawn, and need to be confirmed to the server.
-			std::vector<avs::uid> mLostNodes; //Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
+			/// Requests the session client has discovered need to be made.
+			std::vector<avs::uid> mQueuedResourceRequests;			
+			std::map<avs::uid, double> mSentResourceRequests;	/// <ID of requested resource, time we sent the request> Resource requests we have received, but have yet to receive confirmation of their receival.
+			std::vector<avs::uid> mReceivedNodes;				/// Nodes that have entered bounds, are about to be drawn, and need to be confirmed to the server.
+			std::vector<avs::uid> mLostNodes;					/// Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
 			avs::Pose originPose;
-			avs::vec3 originToHeadPos;
 
 			uint64_t clientID=0;
 

@@ -319,20 +319,23 @@ bool OpenXR::InitInstance(const char *app_name)
 	// the second call will provide you with the actual data!
 	uint32_t ext_count = 0;
 	xrEnumerateInstanceExtensionProperties(nullptr, 0, &ext_count, nullptr);
-	vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
-	xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_exts.data());
-
-	std::cout<<"OpenXR extensions available:\n";
-	for (size_t i = 0; i < xr_exts.size(); i++)
+	if(ext_count)
 	{
-		std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
+		vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
+		xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_exts.data());
 
-		// Check if we're asking for this extensions, and add it to our use 
-		// list!
-		for (int32_t ask = 0; ask < ask_extensions.size(); ask++) {
-			if (strcmp(ask_extensions[ask].c_str(), xr_exts[i].extensionName) == 0) {
-				use_extensions.push_back(ask_extensions[ask].c_str());
-				break;
+		std::cout<<"OpenXR extensions available:\n";
+		for (size_t i = 0; i < xr_exts.size(); i++)
+		{
+			std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
+
+			// Check if we're asking for this extensions, and add it to our use 
+			// list!
+			for (int32_t ask = 0; ask < ask_extensions.size(); ask++) {
+				if (strcmp(ask_extensions[ask].c_str(), xr_exts[i].extensionName) == 0) {
+					use_extensions.push_back(ask_extensions[ask].c_str());
+					break;
+				}
 			}
 		}
 	}

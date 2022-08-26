@@ -7,10 +7,10 @@ namespace clientrender
 	public:
 		enum class InvisibilityReason
 		{
-			VISIBLE, //Node is not invisible.
+			VISIBLE			=0, //Node is not invisible.
 
-			OUT_OF_BOUNDS, //Node should not be renderered because it is too far from the client.
-			DISABLED //Node should not be renderered because its renderable components are disabled.
+			OUT_OF_BOUNDS	=1, //Node should not be renderered because it is too far from the client.
+			DISABLED		=2 //Node should not be renderered because its renderable components are disabled.
 		};
 
 		void update(float deltaTime);

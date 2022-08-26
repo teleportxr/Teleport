@@ -7,7 +7,7 @@ namespace clientrender
 	BoneKeyframeList::BoneKeyframeList()
 	{}
 
-	void BoneKeyframeList::seekTime(std::shared_ptr<Bone> bone, float time)
+	void BoneKeyframeList::seekTime(std::shared_ptr<Bone> bone, float time) const
 	{
 		if(!bone)
 		{
@@ -22,7 +22,7 @@ namespace clientrender
 		bone->SetLocalTransform(transform);
 	}
 
-	void BoneKeyframeList::setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes)
+	void BoneKeyframeList::setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes) const
 	{
 		if(keyframes.size() == 0)
 		{
@@ -44,7 +44,7 @@ namespace clientrender
 		bonePosition = (1.0f - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
 	}
 
-	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes)
+	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes) const
 	{
 		if(keyframes.size() == 0)
 		{
@@ -67,7 +67,7 @@ namespace clientrender
 		//boneRotation = quat::Slerp(previousKeyframe.value, nextKeyframe.value, timeBlend);
 	}
 
-	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes)
+	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes) const
 	{
 		for(size_t i = 1; i < keyframes.size(); i++)
 		{
@@ -80,7 +80,7 @@ namespace clientrender
 		return keyframes.size() - 1;
 	}
 
-	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes)
+	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes) const
 	{
 		for(size_t i = 1; i < keyframes.size(); i++)
 		{
@@ -93,7 +93,7 @@ namespace clientrender
 		return keyframes.size() - 1;
 	}
 
-	float BoneKeyframeList::getTimeBlend(float currentTime, float previousTime, float nextTime)
+	float BoneKeyframeList::getTimeBlend(float currentTime, float previousTime, float nextTime) const
 	{
 		return (currentTime - previousTime) / (nextTime - previousTime);
 	}
@@ -136,7 +136,7 @@ namespace clientrender
 		return endTime_s;
 	}
 
-	void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float time)
+	void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float time) const
 	{
 		for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 		{

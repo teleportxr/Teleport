@@ -47,6 +47,14 @@ namespace teleport
 			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 		if (!mHost)
 		{
+			ListenAddress.port ++;
+			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+			if(mHost)
+			{
+				std::cerr << "Error: port "<<listenPort<<" is in use."<<std::endl;
+				enet_host_destroy(mHost);
+				mHost = nullptr;
+			}
 			std::cerr << "Session: Failed to create ENET server host!\n";
 			DEBUG_BREAK_ONCE;
 			return false;
@@ -219,19 +227,23 @@ namespace teleport
 		ENetEvent event;
 		try
 		{
+		// TODO: Can hang in enet_host_service. Why?
 			while (enet_host_service(mHost, &event, 0) > 0)
 			{
 				if (event.type != ENET_EVENT_TYPE_NONE)
 				{
 					for (auto client : mClients)
 					{
-						char peerIP[20];
-						enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
-
-						if (client->clientIP == std::string(peerIP))
+						if(event.peer==client->peer||(event.type==ENET_EVENT_TYPE_CONNECT&&client->peer==nullptr))
 						{
-							client->eventQueue.push(event);
-							break;
+							char peerIP[20];
+							enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
+							// Was the message from this client?
+							if (client->clientIP == std::string(peerIP))
+							{
+								client->eventQueue.push(event);
+								break;
+							}
 						}
 					}
 				}

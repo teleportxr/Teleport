@@ -5,7 +5,6 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
-#include <libavstream/geometry/mesh_interface.hpp>
 
 namespace avs
 {

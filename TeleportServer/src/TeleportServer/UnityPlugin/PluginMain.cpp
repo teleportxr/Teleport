@@ -61,8 +61,8 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 	return avs::ConvertAxis(fromStandard,toStandard,axis);
 }
 
-typedef bool(__stdcall* ShowNodeFn)(avs::uid clientID, avs::uid nodeID);
-typedef bool(__stdcall* HideNodeFn)(avs::uid clientID, avs::uid nodeID);
+typedef bool(__stdcall* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
+typedef bool(__stdcall* ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
 
 
@@ -78,8 +78,8 @@ teleport::ServerSettings serverSettings; //Engine-side settings are copied into 
 
 teleport::AudioSettings audioSettings;
 
-static ShowNodeFn onShowNode;
-static HideNodeFn onHideNode;
+static ClientStoppedRenderingNodeFn callback_clientStoppedRenderingNode;
+static ClientStartedRenderingNodeFn callback_clientStartedRenderingNode;
 
 static SetHeadPoseFn setHeadPose;
 static SetOriginFromClientFn setOriginFromClient;
@@ -124,26 +124,27 @@ public:
 	virtual ~PluginGeometryStreamingService() = default;
 
 private:
-	virtual bool showNode_Internal(avs::uid clientID, avs::uid nodeID)
+	virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID)
 	{
-		if(onShowNode)
+		if(callback_clientStoppedRenderingNode)
 		{
-			if(!onShowNode(clientID, nodeID))
+			if(!callback_clientStoppedRenderingNode(clientID, nodeID))
 			{
-				TELEPORT_CERR << "onShowNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
+			// This is ok, it means we probably already deleted the node.
+				//TELEPORT_CERR << "callback_clientStoppedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
 				return false;
 			}
 			return true;
 		}
 		return false;
 	}
-	virtual bool hideNode_Internal(avs::uid clientID, avs::uid nodeID)
+	virtual bool clientStartedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID)
 	{
-		if(onHideNode)
+		if(callback_clientStartedRenderingNode)
 		{
-			if(!onHideNode(clientID, nodeID))
+			if(!callback_clientStartedRenderingNode(clientID, nodeID))
 			{
-				TELEPORT_CERR << "onHideNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
+				TELEPORT_CERR << "callback_clientStartedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
 				return false;
 			}
 			return true;
@@ -347,8 +348,8 @@ struct InitialiseState
 	uint32_t DISCOVERY_PORT = 10607;
 	uint32_t SERVICE_PORT = 10500;
 
-	ShowNodeFn showNode;
-	HideNodeFn hideNode;
+	ClientStoppedRenderingNodeFn clientStoppedRenderingNode;
+	ClientStartedRenderingNodeFn clientStartedRenderingNode;
 	SetHeadPoseFn headPoseSetter;
 	SetOriginFromClientFn setOriginFromClientFn;
 	SetControllerPoseFn controllerPoseSetter;
@@ -404,14 +405,14 @@ TELEPORT_EXPORT void SetCachePath(const char* path)
 	geometryStore.SetCachePath(path);
 }
 
-TELEPORT_EXPORT void SetShowNodeDelegate(ShowNodeFn showNode)
+TELEPORT_EXPORT void SetClientStoppedRenderingNodeDelegate(ClientStoppedRenderingNodeFn clientStoppedRenderingNode)
 {
-	onShowNode = showNode;
+	callback_clientStoppedRenderingNode = clientStoppedRenderingNode;
 }
 
-TELEPORT_EXPORT void SetHideNodeDelegate(HideNodeFn hideNode)
+TELEPORT_EXPORT void SetClientStartedRenderingNodeDelegate(ClientStartedRenderingNodeFn clientStartedRenderingNode)
 {
-	onHideNode = hideNode;
+	callback_clientStartedRenderingNode = clientStartedRenderingNode;
 }
 
 TELEPORT_EXPORT void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
@@ -517,8 +518,8 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 	serverID = avs::GenerateUid();
 
-	SetShowNodeDelegate(initialiseState->showNode);
-	SetHideNodeDelegate(initialiseState->hideNode);
+	SetClientStoppedRenderingNodeDelegate(initialiseState->clientStoppedRenderingNode);
+	SetClientStartedRenderingNodeDelegate(initialiseState->clientStartedRenderingNode);
 	SetHeadPoseSetterDelegate(initialiseState->headPoseSetter);
 
 	setOriginFromClient = initialiseState->setOriginFromClientFn;
@@ -589,8 +590,8 @@ TELEPORT_EXPORT void Shutdown()
 	unlinkedClientIDs.clear();
 	clientServices.clear();
 
-	onShowNode = nullptr;
-	onHideNode = nullptr;
+	callback_clientStoppedRenderingNode = nullptr;
+	callback_clientStartedRenderingNode = nullptr;
 
 	setHeadPose = nullptr;
 	setOriginFromClient=nullptr;
@@ -879,7 +880,7 @@ TELEPORT_EXPORT void EditorTick()
 	PipeOutMessages();
 }
 
-TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter, const avs::vec3* pos, bool set_rel, const avs::vec3* orig_to_head, const avs::vec4* orient)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter,avs::uid originNode, const avs::vec3* pos,const avs::vec4* orient)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -888,7 +889,7 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter, c
 		return false;
 	}
 	ClientData& clientData = clientPair->second;
-	return clientData.setOrigin(validCounter,*pos, set_rel, *orig_to_head,*orient);
+	return clientData.setOrigin(validCounter, originNode,*pos, *orient);
 }
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
@@ -1008,42 +1009,6 @@ TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid nodeID
 	}
 
 	return clientPair->second.geometryStreamingService->isStreamingNode(nodeID);
-}
-
-TELEPORT_EXPORT void Client_ShowNode(avs::uid clientID, avs::uid nodeID)
-{
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to show Node_" << nodeID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	clientPair->second.geometryStreamingService->showNode(clientID, nodeID);
-}
-
-TELEPORT_EXPORT void Client_HideNode(avs::uid clientID, avs::uid nodeID)
-{
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to hide Node_" << nodeID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	clientPair->second.geometryStreamingService->hideNode(clientID, nodeID);
-}
-
-TELEPORT_EXPORT void Client_SetNodeVisible(avs::uid clientID, avs::uid nodeID, bool isVisible)
-{
-	if(isVisible)
-	{
-		Client_ShowNode(clientID, nodeID);
-	}
-	else
-	{
-		Client_HideNode(clientID, nodeID);
-	}
 }
 
 TELEPORT_EXPORT bool Client_IsClientRenderingNodeID(avs::uid clientID, avs::uid nodeID)
@@ -1595,15 +1560,13 @@ TELEPORT_EXPORT void SaveGeometryStore()
 	geometryStore.verify();
 }
 
+TELEPORT_EXPORT bool CheckGeometryStoreForErrors()
+{
+	return geometryStore.CheckForErrors();
+}
 TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
 {
 	geometryStore.loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
-}
-
-//Inform GeometryStore of resources that still exist, and of their new IDs.
-TELEPORT_EXPORT void ReaffirmResources(int32_t meshAmount, ReaffirmedResource* reaffirmedMeshes, int32_t textureAmount, ReaffirmedResource* reaffirmedTextures, int32_t materialAmount, ReaffirmedResource* reaffirmedMaterials)
-{
-	geometryStore.reaffirmResources(meshAmount, reaffirmedMeshes, textureAmount, reaffirmedTextures, materialAmount, reaffirmedMaterials);
 }
 
 TELEPORT_EXPORT void ClearGeometryStore()
@@ -1698,9 +1661,9 @@ TELEPORT_EXPORT avs::Node* getNode(avs::uid nodeID)
 	return geometryStore.getNode(nodeID);
 }
 
-TELEPORT_EXPORT uint64_t GetAmountOfTexturesWaitingForCompression()
+TELEPORT_EXPORT uint64_t GetNumberOfTexturesWaitingForCompression()
 {
-	return static_cast<int64_t>(geometryStore.getAmountOfTexturesWaitingForCompression());
+	return static_cast<int64_t>(geometryStore.getNumberOfTexturesWaitingForCompression());
 }
 
 ///TODO: Free memory of allocated string, or use passed in string to return message.

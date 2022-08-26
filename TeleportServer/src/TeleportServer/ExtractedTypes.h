@@ -27,6 +27,20 @@ namespace teleport
 		std::time_t lastModified;
 		avs::Mesh mesh;
 		avs::CompressedMesh compressedMesh;
+		void GetAccessorRange(uint64_t &lowest,uint64_t &highest) const
+		{
+			lowest=0xFFFFFFFFFFFFFFFF;
+			highest=0;
+			mesh.GetAccessorRange(lowest,highest);
+			compressedMesh.GetAccessorRange(lowest,highest);
+		}
+		void ResetAccessorRange()
+		{
+			uint64_t lowest,highest;
+			GetAccessorRange(lowest,highest);
+			mesh.ResetAccessors(lowest);
+			compressedMesh.ResetAccessors(lowest);
+		}
 		
 		template<class OutStream>
 		friend OutStream& operator<< (OutStream& out, const ExtractedMesh& meshData)
@@ -46,6 +60,8 @@ namespace teleport
 			meshData.guid = _bstr_t(guidAsString.data());
 
 			in >> meshData.lastModified >> meshData.mesh >> meshData.compressedMesh;
+			// having loaded, now rescale the uid's:
+			meshData.ResetAccessorRange();
 			return in;
 		}
 	};

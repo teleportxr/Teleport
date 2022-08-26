@@ -22,6 +22,7 @@
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 #include "TeleportClient/ClientDeviceState.h"
+#include "ClientApp/ClientApp.h"
 VisualStudioDebugOutput debug_buffer(true,nullptr, 128);
 #endif
 
@@ -52,8 +53,8 @@ platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 client::ClientDeviceState clientDeviceState;
-teleport::Gui gui;
-teleport::client::Config config;
+client::ClientApp clientApp;
+Gui gui;
 
 // Need ONE global instance of this:
 avs::Context context;
@@ -84,19 +85,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED); 
 	if (FAILED(hr))
 	{
-		TELEPORT_CERR << "Coinitialize failed. Exiting." << std::endl;
+		TELEPORT_CERR << "CoInitialize failed. Exiting." << std::endl;
 		return 0;
 	}
-	config.LoadConfigFromIniFile();
-	gui.SetServerIPs(config.server_ips);
-	if(config.log_filename.size()>0)
-		debug_buffer.setLogFile(config.log_filename.c_str());
+	clientApp.Initialize();
+	gui.SetConfig(&clientApp.config);
+	gui.SetServerIPs(clientApp.config.recent_server_urls);
+	if(clientApp.config.log_filename.size()>0)
+		debug_buffer.setLogFile(clientApp.config.log_filename.c_str());
 	errno=0;
     // Initialize global strings
     MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
-	InitRenderer(hWnd, config.enable_vr, config.dev_mode);
+	InitRenderer(hWnd, clientApp.config.enable_vr, clientApp.config.dev_mode);
 	if(!hWnd)
     {
         return FALSE;
@@ -214,13 +216,17 @@ void InitXR()
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
 	sessionClient=new teleport::client::SessionClient(std::make_unique<PCDiscoveryService>());
-	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,config);
+	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,clientApp.config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" for first argument to deviceManager to use API debugging:
+#if TELEPORT_INTERNAL_CHECKS
+	gdi->Initialize(true, false, false);
+#else
 	gdi->Initialize(false, false, false);
+#endif
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
 	// Create an instance of our simple clientRenderer class defined above:
@@ -237,6 +243,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 		renderPlatform->PushTexturePath("pc_client/Textures");
 		renderPlatform->PushShaderPath("pc_client/Shaders");
+		renderPlatform->PushShaderPath("../client/Shaders");
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushShaderPath("Shaders");	// working directory C:\Teleport
 
@@ -276,8 +283,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
-	if(config.server_ips.size())
-		clientRenderer->SetServer(config.server_ips[0].c_str());
+	if(clientApp.config.recent_server_urls.size())
+		clientRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(hWnd,clientRenderer,-1);
@@ -316,7 +323,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		ui_handled=true;
 	}
-	if (!ui_handled && !gui.HasFocus())
+	if (!ui_handled)// && gui.HasFocus())
 	{
 		switch (message)
 		{
@@ -324,7 +331,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			switch (wParam)
 			{
 			case VK_ESCAPE:
-				gui.Hide();
+				clientRenderer->ShowHideGui();
 			default:
 				break;
 			}

@@ -76,3 +76,9 @@ void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const Mater
 	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_CombinedTexture", {m_CI.combined.texture });
 	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_EmissiveTexture", {m_CI.emissive.texture});
 }
+
+
+void Material::SetShaderOverride(const char *c)
+{
+	m_CI.shader=c;
+}

@@ -18,7 +18,7 @@ struct AVSTextureImpl :public clientrender::AVSTexture
 	avs::SurfaceBackendInterface* createSurface() const override
 	{
 		auto &img=((platform::vulkan::Texture*)texture)->AsVulkanImage();
-		return new avs::SurfaceVulkan(&img,texture->width,texture->length,platform::vulkan::RenderPlatform::ToVulkanFormat(texture->pixelFormat));
+		return new avs::SurfaceVulkan(&img,512,512,platform::vulkan::RenderPlatform::ToVulkanFormat(texture->pixelFormat));
 	}
 };
 
@@ -33,11 +33,20 @@ AndroidRenderer::~AndroidRenderer()
 
 void AndroidRenderer::OnFrameAvailable()
 {
+	//videoDecoderBackend->CopyVideoTexture(deviceContext);
 }
 
 avs::DecoderBackendInterface* AndroidRenderer::CreateVideoDecoder()
 {
 	clientrender::AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
-	return new VideoDecoderBackend(renderPlatform,t->texture,this);
+	videoDecoderBackend=new VideoDecoderBackend(renderPlatform,t->texture,this);
+	return videoDecoderBackend;
+}
+
+void AndroidRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+{
+	if(videoDecoderBackend)
+		videoDecoderBackend->CopyVideoTexture(deviceContext);
+	clientrender::Renderer::RenderView(deviceContext);
 }

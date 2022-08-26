@@ -37,7 +37,7 @@ namespace clientrender
 		~ResourceCreator();
 	
 		void Initialize(clientrender::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
-
+		/// Full reset, when the server has changed.
 		void Clear();
 
 		//Updates any processes that need to happen on a regular basis; should be called at least once per second.
@@ -89,8 +89,6 @@ namespace clientrender
 								  const std::shared_ptr<clientrender::Texture>& dummyTexture,
 								  std::shared_ptr<IncompleteMaterial> incompleteMaterial,
 								  clientrender::Material::MaterialParameter& materialParameter);
-
-		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
 
 		void BasisThread_TranscodeTextures();
 

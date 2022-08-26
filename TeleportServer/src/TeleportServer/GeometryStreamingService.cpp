@@ -133,31 +133,31 @@ void GeometryStreamingService::stopStreaming()
 	reset();
 }
 
-void GeometryStreamingService::hideNode(avs::uid clientID, avs::uid nodeID)
+void GeometryStreamingService::clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID)
 {
 	auto nodePair = streamedNodeIDs.find(nodeID);
 	if (nodePair != streamedNodeIDs.end())
 	{
-		bool result=hideNode_Internal(clientID, nodeID);
-		hiddenNodes.insert(nodeID);
+		bool result=clientStartedRenderingNode_Internal(clientID, nodeID);
+		clientRenderingNodes.insert(nodeID);
 	}
 	else
 	{
-		TELEPORT_COUT << "Tried to hide non-streamed node with ID of " << nodeID << "!\n";
+		TELEPORT_COUT << "Client started rendering non-streamed node with ID of " << nodeID << "!\n";
 	}
 }
 
-void GeometryStreamingService::showNode(avs::uid clientID, avs::uid nodeID)
+void GeometryStreamingService::clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID)
 {
-	auto nodePair = hiddenNodes.find(nodeID);
-	if (nodePair != hiddenNodes.end())
+	auto nodePair = clientRenderingNodes.find(nodeID);
+	if (nodePair != clientRenderingNodes.end())
 	{
-		bool result=showNode_Internal(clientID, nodeID);
-		hiddenNodes.erase(nodeID);
+		clientStoppedRenderingNode_Internal(clientID, nodeID);
+		clientRenderingNodes.erase(nodeID);
 	}
 	else
 	{
-		TELEPORT_COUT << "Tried to show non-hidden node with ID of " << nodeID << "!\n";
+		TELEPORT_COUT << "Client stopped rendering node with ID of " << nodeID << " - didn't know it was rendering this!\n";
 	}
 }
 
@@ -165,17 +165,17 @@ void GeometryStreamingService::setNodeVisible(avs::uid clientID, avs::uid nodeID
 {
 	if (isVisible)
 	{
-		showNode(clientID, nodeID);
+		clientStoppedRenderingNode(clientID, nodeID);
 	}
 	else
 	{
-		hideNode(clientID, nodeID);
+		clientStartedRenderingNode(clientID, nodeID);
 	}
 }
 
 bool teleport::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 {
-	return hiddenNodes.find(nodeID) != hiddenNodes.end();
+	return clientRenderingNodes.find(nodeID) != clientRenderingNodes.end();
 }
 
 void GeometryStreamingService::tick(float deltaTime)
@@ -212,7 +212,7 @@ void GeometryStreamingService::reset()
 
 	unconfirmedResourceTimes.clear();
 	streamedNodeIDs.clear();
-	hiddenNodes.clear();
+	clientRenderingNodes.clear();
 }
 
 void GeometryStreamingService::addNode(avs::uid nodeID)

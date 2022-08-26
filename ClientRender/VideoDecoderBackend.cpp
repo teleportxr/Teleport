@@ -12,6 +12,7 @@
 #if TELEPORT_CLIENT_USE_D3D12
 #include <dxva.h>
 #include "Platform/DirectX12/VideoDecoder.h"
+#elif TELEPORT_CLIENT_USE_D3D11
 #else
 #include "Platform/Vulkan/VideoDecoder.h"
 #endif
@@ -106,6 +107,7 @@ Result VideoDecoderBackend::initialize(const DeviceHandle& device, int frameWidt
 	mDecoder.reset(new platform::dx12::VideoDecoder());
 	// Change to common state for use with D3D12 video decode command list.
 	((platform::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
+#elif TELEPORT_CLIENT_USE_D3D11
 #else
 	mDecoder.reset(new platform::vulkan::VideoDecoder());
 	// Change to common state for use with D3D12 video decode command list.
@@ -283,6 +285,8 @@ void VideoDecoderBackend::updateInputArguments(size_t sliceControlSize)
 	case VideoCodec::HEVC:
 		updateInputArgumentsHEVC(sliceControlSize);
 		break;
+		default:
+	break;
 	}
 
 	mCurrentFrame = (mCurrentFrame + 1) % (uint32_t)mDPB.size();

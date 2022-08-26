@@ -3,6 +3,8 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/DeviceContext.h"
 #include "ClientRender/NodeManager.h"
+#include "ClientRender/GeometryCache.h"
+#include "TeleportClient/Config.h"
 #include <functional>
 #ifdef __ANDROID__
 struct ANativeWindow;
@@ -17,24 +19,40 @@ namespace teleport
 	#endif
 	class Gui
 	{
+		client::Config *config=nullptr;
 	public:
+		Gui()
+		{
+		}
+		~Gui()
+		{
+		}
+		void SetConfig(client::Config *c)
+		{
+			config=c;
+		}
 		void SetPlatformWindow(PlatformWindow *w);
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r,PlatformWindow *w);
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
 		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void LinePrint(const char* txt,const float *clr=nullptr);
-		void Anims(const ResourceManager<clientrender::Animation>& animManager);
+		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
 		void NodeTree(const clientrender::NodeManager::nodeList_t&);
+		void Scene();
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		//void RenderDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void setGeometryCache(const clientrender::GeometryCache *g)
+		{
+			geometryCache=g;
+		}
+		void SetConnectHandler(std::function<void(const std::string&)> fn);
+		void SetCancelConnectHandler(std::function<void()> fn);
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void ShowHide();
 		void Show();
 		void Hide();
 		void SetScaleMetres();
-		void SetConnectHandler(std::function<void(const std::string&)> fn);
 		bool HasFocus() const
 		{
 			return visible;
@@ -44,17 +62,19 @@ namespace teleport
 			return connecting=c;
 		}
 		void SetServerIPs(const std::vector<std::string> &server_ips);
-		avs::uid GetSelectedUid() const
-		{
-			return selected_uid;
-		}
+		avs::uid GetSelectedServer() const;
+		avs::uid GetSelectedUid() const;
 		vec3 Get3DPos()
 		{
 			return menu_pos;
 		}
+		void Select(avs::uid u);
+		void SelectPrevious();
+		void SelectNext();
 	protected:
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
+		const clientrender::GeometryCache *geometryCache=nullptr;
 		platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;
@@ -63,16 +83,18 @@ namespace teleport
 		std::string current_url;
 		std::vector<std::string> server_ips;
 		std::function<void(const std::string&)> connectHandler;
-		bool visible = false;
-		bool connecting=false;
+		std::function<void()> cancelConnectHandler;
+		bool visible	= false;
+		bool connecting	=false;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();
         char buf[500];
 		bool have_vr_device = false;
-		avs::uid selected_uid=0;
-		std::shared_ptr<clientrender::Node> selected_node;
-		std::shared_ptr<clientrender::Material> selected_material;
+		std::vector<avs::uid> selection_history;
+		size_t selection_cursor;
+		avs::uid selected_server=0;
+
 		bool show_inspector=false;
 		std::vector<vec4> hand_pos_press;
 	};

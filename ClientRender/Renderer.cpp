@@ -22,7 +22,7 @@
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/Core/StringFunctions.h"
 #include "TeleportClient/OpenXR.h"
-#include <fmt/format.h>
+#include <fmt/core.h>
 #if TELEPORT_CLIENT_USE_VULKAN
 #include <libavstream/surfaces/surface_vulkan.hpp>
 #include "Platform/Vulkan/Texture.h"
@@ -122,9 +122,9 @@ Renderer::Renderer(client::ClientDeviceState *c,clientrender::NodeManager *local
 	sessionClient->SetSessionCommandInterface(this);
 	if (!timestamp_initialized)
 #ifdef _MSC_VER
-		platformStartTimestamp = avs::PlatformWindows::getTimestamp();
+		platformStartTimestamp = avs::Platform::getTimestamp();
 #else
-		platformStartTimestamp = avs::PlatformPOSIX::getTimestamp();
+		platformStartTimestamp = avs::Platform::getTimestamp();
 #endif
 	timestamp_initialized=true;
 	sessionClient->SetResourceCreator(&resourceCreator);
@@ -192,6 +192,8 @@ void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client:
 	gui.RestoreDeviceObjects(renderPlatform,active_window);
 	auto connectButtonHandler = std::bind(&Renderer::ConnectButtonHandler, this,std::placeholders::_1);
 	gui.SetConnectHandler(connectButtonHandler);
+	auto cancelConnectHandler = std::bind(&Renderer::CancelConnectButtonHandler, this);
+	gui.SetCancelConnectHandler(cancelConnectHandler);
 	videoTexture = renderPlatform->CreateTexture();
 	specularCubemapTexture = renderPlatform->CreateTexture();
 	diffuseCubemapTexture = renderPlatform->CreateTexture();
@@ -213,7 +215,9 @@ void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client:
 	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
 
 	// initialize the default local geometry:
-	geometryDecoder.decodeFromFile("meshes/Wand.mesh_compressed",&localResourceCreator);
+	geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator);
+	geometryDecoder.decodeFromFile("assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator);
+	geometryDecoder.decodeFromFile("assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator);
 	
 	avs::uid wand_uid = 11;
 	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
@@ -225,61 +229,104 @@ void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client:
 	{
 		TELEPORT_BREAK_ONCE("Wand mesh not found");
 	}
+	uids=localGeometryCache.mSkinManager.GetAllIDs();
+	hand_skin_uid=0;
+	if (uids.size())
 	{
-	
+		hand_skin_uid = uids[0];
+	}
+	else
+	{
+		TELEPORT_BREAK_ONCE("Skin not found");
+	}
+	uids=localGeometryCache.mAnimationManager.GetAllIDs();
+	avs::uid point_anim_uid=0;
+	if (uids.size())
+	{
+		point_anim_uid = uids[0];
+	}
+	else
+	{
+		TELEPORT_BREAK_ONCE("Anim not found");
+	}
+	{
 		avs::Material avsMaterial;
 		avsMaterial.name="local material";
 		avsMaterial.pbrMetallicRoughness.metallicFactor=0.0f;
+		avsMaterial.pbrMetallicRoughness.baseColorFactor={.5f,.5f,.5f,.5f};
 		localResourceCreator.CreateMaterial(14,avsMaterial);// not used just now.
 		avsMaterial.name="local blue glow";
-		avsMaterial.emissiveFactor={0.0f,0.5f,1.f};
+		avsMaterial.emissiveFactor={0.0f,0.2f,0.5f};
 		localResourceCreator.CreateMaterial(15,avsMaterial);
 		avsMaterial.name="local red glow";
-		avsMaterial.emissiveFactor={1.0f,0.1f,0.1f};
+		avsMaterial.emissiveFactor={0.4f,0.1f,0.1f};
 		localResourceCreator.CreateMaterial(16,avsMaterial);
+
+		localGeometryCache.mMaterialManager.Get(14)->SetShaderOverride("local_hand");
+		localGeometryCache.mMaterialManager.Get(15)->SetShaderOverride("local_hand");
+		localGeometryCache.mMaterialManager.Get(16)->SetShaderOverride("local_hand");
 	}
 	avs::Node avsNode;
+	avsNode.data_type=avs::NodeDataType::None;
+	avsNode.data_uid=0;
+	avsNode.name = "local Left Root";
+	localResourceCreator.CreateNode(1,avsNode);
+	avsNode.name = "local Right Root";
+	localResourceCreator.CreateNode(2,avsNode);
+
 	avsNode.data_type=avs::NodeDataType::Mesh;
 	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
 	avsNode.data_uid=wand_uid;
 	avsNode.materials.push_back(15);
-	avsNode.materials.push_back(0);
+	avsNode.materials.push_back(14);
 	
-	avsNode.name = "local Left Aim";
+	avsNode.name = "local Left Hand";
+	avsNode.skinID=hand_skin_uid;
+	avsNode.animations.push_back(point_anim_uid);
 	avsNode.materials[0]=15;
-	localResourceCreator.CreateNode(23,avsNode);
+	avsNode.parentID=1;
+	avsNode.localTransform.rotation={0.707f,0,0,0.707f};
+	avsNode.localTransform.scale={-1.f,1.f,1.f};
+	// 10cm forward, because root of hand is at fingers.
+	avsNode.localTransform.position={0.f,0.1f,0.f};
+	local_left_hand_uid=23;
+	localResourceCreator.CreateNode(local_left_hand_uid,avsNode);
 	//std::shared_ptr<clientrender::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
 	//leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 
-	avsNode.name="local Right Aim";
+	avsNode.name="local Right Hand";
 	avsNode.materials[0]=16;
-	localResourceCreator.CreateNode(24,avsNode);
-
-	avsNode.name = "local Left Grip";
-	avsNode.materials[0]=15;
-	localResourceCreator.CreateNode(25,avsNode);
-
-	avsNode.name="local Right Grip";
-	avsNode.materials[0]=16;
-	localResourceCreator.CreateNode(26,avsNode);
+	avsNode.parentID=2;
+	avsNode.localTransform.scale={1.f,1.f,1.f};
+	// 10cm forward, because root of hand is at fingers.
+	avsNode.localTransform.position={0.f,0.1f,0.f};
+	local_right_hand_uid=24;
+	localResourceCreator.CreateNode(local_right_hand_uid,avsNode);
 
 	if(openXR)
 	{
 		openXR->SetFallbackBinding(client::LEFT_AIM_POSE,"left/input/aim/pose");
 		openXR->SetFallbackBinding(client::RIGHT_AIM_POSE,"right/input/aim/pose");
-		openXR->MapNodeToPose(local_server_uid,23,"left/input/aim/pose");
-		openXR->MapNodeToPose(local_server_uid,24,"right/input/aim/pose");
+		openXR->MapNodeToPose(local_server_uid,1,"left/input/aim/pose");
+		openXR->MapNodeToPose(local_server_uid,2,"right/input/aim/pose");
 		
 		openXR->SetFallbackBinding(client::LEFT_GRIP_POSE,"left/input/grip/pose");
 		openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE,"right/input/grip/pose");
-		openXR->MapNodeToPose(local_server_uid,25,"left/input/grip/pose");
-		openXR->MapNodeToPose(local_server_uid,26,"right/input/grip/pose");
+	/*	openXR->MapNodeToPose(local_server_uid,1,"left/input/grip/pose");
+		openXR->MapNodeToPose(local_server_uid,2,"right/input/grip/pose");*/
 
 		// Hard-code the menu button
 		openXR->SetHardInputMapping(local_server_uid,local_menu_input_id,avs::InputType::IntegerEvent,teleport::client::SHOW_MENU);
 		openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id,avs::InputType::IntegerEvent,teleport::client::X);
 		openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id,avs::InputType::IntegerEvent,teleport::client::Y);
 	}
+	
+	auto rightHand=localGeometryCache.mNodeManager->GetNode(local_right_hand_uid);
+	palm_to_hand_r=rightHand->GetLocalTransform();
+	auto leftHand=localGeometryCache.mNodeManager->GetNode(local_left_hand_uid);
+	palm_to_hand_l=leftHand->GetLocalTransform();
+
+	geometryDecoder.setCacheFolder(config.GetStorageFolder());
 }
 
 // This allows live-recompile of shaders. 
@@ -360,14 +407,14 @@ void Renderer::FillInControllerPose(int index, float offset)
 	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);
 	float sine= sin(controllerSim.angle), cosine=cos(controllerSim.angle);
 	float sine_elev= controllerSim.view_dir.z;
-	static float hand_dist=0.5f;
+	static float hand_dist=0.7f;
 	// Position the hand based on mouse pos.
 	static float xmotion_scale = 1.0f;
-	static float ymotion_scale = 1.0f;
-	static float ymotion_offset = .2f;
+	static float ymotion_scale = .5f;
+	static float ymotion_offset = .6f;
 	static float z_offset = -0.1f;
 	vec2 pos; 
-	pos.x = offset+(x - 0.5f) * xmotion_scale;
+	pos.x = 0.4f*offset+(x - 0.5f) * xmotion_scale;
 	pos.y = ymotion_offset + (0.5f-y)*ymotion_scale;
 
 	controllerSim.pos_offset[index]=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
@@ -386,7 +433,10 @@ void Renderer::FillInControllerPose(int index, float offset)
 	float elevation	= asin(local_controller_dir.z);
 	q.Reset();
 	q.Rotate(azimuth,vec3(0,0,1.0f));
-	q.Rotate(elevation, vec3(1.0f, 0, 0));
+	//q.Rotate(elevation, vec3(1.0f, 0, 0));
+	vec3 point_dir=q*vec3(0, 1.0f, 0);
+	static float roll=-1.3f;
+	q.Rotate(roll*offset, point_dir);
 
 	// convert from footspace to worldspace
 	clientDeviceState->SetControllerPose( index,*((avs::vec3*)&footspace_pos),*((const clientrender::quat*)&q));
@@ -403,6 +453,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	controllerSim.position[index] =footspace_pos;
 	controllerSim.orientation[index] =((const float*)&q);
 }
+
 void Renderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
 {
 	clientPipeline.videoConfig = videoConfig;
@@ -414,7 +465,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	pbrEffect->UnbindTextures(deviceContext);
 	// The following block renders to the hdrFramebuffer's rendertarget:
-	//vec3 finalViewPos=localOriginPos+relativeHeadPos;
+
 	{
 		clientrender::AVSTextureHandle th = avsTexture;
 		clientrender::AVSTexture& tx = *th;
@@ -447,7 +498,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 				tagDataIDBuffer.CloseReadBuffer(deviceContext);
 			}
 			
-			#ifdef _MSC_VER
+		#if 1
 			UpdateTagDataBuffers(deviceContext);
 			if (sessionClient->IsConnected())
 			{
@@ -468,41 +519,51 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 			}
 			RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(clientPipeline.videoConfig.diffuse_x, clientPipeline.videoConfig.diffuse_y));
 			RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y));
-			#endif
+		#endif
 		}
+		else
+		{
+			cubemapClearEffect->Apply(deviceContext, "unconnected", 0);
+			cameraConstants.invWorldViewProj=deviceContext.viewStruct.invViewProj;
+			cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;//clientDeviceState->headPose.localPose.position;//
+			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+			renderPlatform->DrawQuad(deviceContext);
+			cubemapClearEffect->Unapply(deviceContext);
+		}
+				vec4 white={1.f,1.f,1.f,1.f};
 		//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 		pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 		if (sessionClient->IsConnected()||config.render_local_offline)
 			RenderLocalNodes(deviceContext,server_uid,geometryCache);
-
 		{
 			const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 				=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
-			auto l=nodePoseStates.find(23);
+			auto l=nodePoseStates.find(1);
 			std::vector<vec4> hand_pos_press;
 			if(l!=nodePoseStates.end())
 			{
-				avs::Pose leftHand = l->second.pose_worldSpace;
-				avs::vec3 pos = LocalToGlobal(leftHand,avs::vec3(0,0.12f, 0));
+				avs::Pose handPose	= l->second.pose_worldSpace;
+				avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
+					renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"L",(const float*)&white);
+				vec4 pos4;
+				pos4.xyz			= (const float*)&pos;
+				pos4.w				= 0.0f;
+				hand_pos_press.push_back(pos4);
+			}
+			auto r=nodePoseStates.find(2);
+			if(r!=nodePoseStates.end())
+			{
+				avs::Pose rightHand = r->second.pose_worldSpace;
+				avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
+					renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"R",(const float*)&white);
 				vec4 pos4;
 				pos4.xyz = (const float*)&pos;
 				pos4.w = 0.0f;
 				hand_pos_press.push_back(pos4);
 			}
-		/*	auto r=nodePoseStates.find(24);
-			if(r!=nodePoseStates.end())
-			{
-				avs::Pose rightHand = r->second.pose;
-				avs::vec3 pos = LocalToGlobal(rightHand,avs::vec3(0,0.12f, 0));
-				vec4 pos4;
-				pos4.xyz = (const float*)&pos;
-				pos4.w = 0.0f;
-				hand_pos_press.push_back(pos4);
-			}*/
-			gui.Update(hand_pos_press, have_vr_device);
+			static bool override_have_vr_device=false;
+			gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
 		}
-		
-
 		if (!sessionClient->IsConnected()|| gui.HasFocus())
 		{	
 			pbrConstants.drawDistance = 1000.0f;
@@ -541,7 +602,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		}
 	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
-	if(show_textures)
+	//if(show_textures)
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
@@ -593,6 +654,8 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
 			overridePassName = "normal_vertexnormals";
+		default:
+			overridePassName = "";
 			break;
 	}
 }
@@ -818,7 +881,7 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 		const auto &nodePoseStates=openXR->GetNodePoseStates(this_server_uid,renderPlatform->GetFrameNumber());
 		for(auto &n:nodePoseStates)
 		{
-		// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
+			// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
 			//clientDeviceState->SetLocalNodePose(n.first,n.second.pose_worldSpace);
 			//auto &globalPose=clientDeviceState->GetGlobalNodePose(n.first);
 			std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(n.first);
@@ -852,9 +915,9 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 	clientrender::AVSTextureHandle th = avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-	
+	/*avs::uid node_select=gui.GetSelectedUid();
 	if(!force&&(node_select > 0 && node_select != node->id))
-		return;
+		return;*/
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture ;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
@@ -878,6 +941,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 			{
 				if(mat_select >= 0 && mat_select != element)
 					continue;
+				bool double_sided=false;
 				auto* vb = meshInfo.vb[element].get();
 				const auto* ib = meshInfo.ib[element].get();
 
@@ -895,19 +959,25 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 
 				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
 				cameraConstants.world = model;
-
+				// TODO: Improve this.
+				bool negative_scale=(node->GetGlobalScale().x<0.0f);
 				std::shared_ptr<clientrender::Texture> gi = globalIlluminationTexture;
 				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
 				std::string usedPassName = passName;
-
-				std::shared_ptr<clientrender::Skin> skin = node->GetSkin();
-				if (skin)
+				if(material->GetMaterialCreateInfo().shader.length())
 				{
-					mat4* scr_matrices = skin->GetBoneMatrices(globalTransformMatrix);
+					usedPassName=material->GetMaterialCreateInfo().shader;
+					double_sided=true;
+				}
+				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
+				if (skinInstance)
+				{
+					mat4* scr_matrices = skinInstance->GetBoneMatrices(globalTransformMatrix);
 					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(mat4) * clientrender::Skin::MAX_BONES);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
 					usedPassName = "anim_" + usedPassName;
+				//	force_highlight=true;
 				}
 				crossplatform::EffectPass *pass = pbrEffect->GetTechniqueByName("solid")->GetPass(usedPassName.c_str());
 				if(material)
@@ -954,6 +1024,12 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+				if(double_sided)
+					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
+				else if(negative_scale)
+					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_CLOCKWISE);
+				else
+					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_COUNTERCLOCKWISE);
 				renderPlatform->SetLayout(deviceContext, layout);
 				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
@@ -984,21 +1060,22 @@ void Renderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext&
 	clientrender::AVSTextureHandle th = avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-	if(!force&&(node_select > 0 && node_select != node->id))
-		return;
+	avs::uid node_select=gui.GetSelectedUid();
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
-	if (node->IsVisible()&& (show_only == 0 || show_only == node->id))
+	if (node->IsVisible()&& (node_select == 0 || node_select == node->id))
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		const clientrender::AnimationComponent& anim = node->animationComponent;
 		avs::vec3 pos = node->GetGlobalPosition();
+		mat4 m=node->GetGlobalTransform().GetTransformMatrix();
+		renderPlatform->DrawAxes(deviceContext,m,0.1f);
 		avs::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
-		if (node->GetSkin().get())
+		if (node->GetSkinInstance().get())
 		{
 			std::string str;
 			const clientrender::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
@@ -1011,7 +1088,7 @@ void Renderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext&
 					const auto& a = animationState->getAnimation();
 					if (a.get())
 					{
-						str +=fmt::format( "%llu %s %3.3f\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTimeSeconds());
+						str +=fmt::format( "{0} {1} {2}\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTimeSeconds());
 						
 					}
 				}
@@ -1020,13 +1097,13 @@ void Renderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext&
 		}
 		else if (mesh)
 		{
-			std::string str=fmt::format("%llu %s: %s", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
+			std::string str=fmt::format("{0} {1}: {2}", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white), nullptr, 0, 0, false);
 		}
 		else
 		{
 			avs::vec4 yellow(1.0f, 1.0f, 0.0f, 1.0f); 
-			std::string str=fmt::format("%llu %s", node->id, node->name.c_str());
+			std::string str=fmt::format("{0} {1}", node->id, node->name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&yellow), nullptr, 0, 0, false);
 		}
 	}
@@ -1102,6 +1179,11 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		const teleport::core::Input& local_inputs=openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
 		HandleLocalInputs(local_inputs);
 		have_vr_device=openXR->HaveXRDevice();
+		if (have_headset)
+		{
+			avs::Pose headPose=openXR->GetHeadPose();
+			clientDeviceState->SetHeadPose(headPose.position, headPose.orientation);
+		}
 	}
 	// Handle networked session.
 	if (sessionClient->IsConnected())
@@ -1113,7 +1195,6 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
-
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
 		avs::Pose controllerPoses[2];
@@ -1134,12 +1215,6 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			clientDeviceState->UpdateGlobalPoses();
 		}
 		
-		if(receivedRelativePos!=sessionClient->receivedRelativePos)
-		{
-			receivedRelativePos=sessionClient->receivedRelativePos;
-			auto pos =sessionClient->GetOriginToHeadOffset();
-			camera.SetPosition((const float*)(&pos));
-		}
 		
 		avs::Result result = clientPipeline.pipeline.process();
 		if (result == avs::Result::Network_Disconnection)
@@ -1171,8 +1246,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 
 	if (!have_headset)
 	{
-		FillInControllerPose(0, -0.5f);
-		FillInControllerPose(1, 0.5f);
+		FillInControllerPose(0, -1.f);
+		FillInControllerPose(1, 1.f);
 	}
 	// Have parsed these, can free them now.
 	inputs.clearEvents();
@@ -1279,9 +1354,6 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case 'H':
 			WriteHierarchies();
 			break;
-		case 'T':
-			show_textures = !show_textures;
-			break;
 		case 'N':
 			show_node_overlays = !show_node_overlays;
 			break;
@@ -1303,7 +1375,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 			#ifdef _MSC_VER
 		case VK_SPACE:
-			gui.ShowHide();
+			ShowHideGui();
 			break;
 		case VK_NUMPAD0: //Display full PBR rendering.
 			ChangePass(clientrender::ShaderMode::PBR);
@@ -1330,6 +1402,74 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 	}
 }
 
+void Renderer::ShowHideGui()
+{
+	gui.ShowHide();
+	auto rightHand=localGeometryCache.mNodeManager->GetNode(local_right_hand_uid);
+	auto leftHand=localGeometryCache.mNodeManager->GetNode(local_left_hand_uid);
+	avs::uid point_anim_uid=localGeometryCache.mAnimationManager.GetUidByName("Point");
+	rightHand->animationComponent.setAnimation(point_anim_uid);
+	leftHand->animationComponent.setAnimation(point_anim_uid);
+	AnimationState *leftAnimState=leftHand->animationComponent.GetAnimationState(point_anim_uid);
+	AnimationState *rightAnimState=rightHand->animationComponent.GetAnimationState(point_anim_uid);
+	if(gui.HasFocus())
+	{
+		// If we've just started to show the gui, let's make the hands point, so the index finger alone is extended for typing.
+		if(leftAnimState)
+		{
+			leftAnimState->setAnimationTimeMode(clientrender::AnimationTimeMode::TIMESTAMP);
+			leftAnimState->speed=1.0f;
+		}
+		if(rightAnimState)
+		{
+			rightAnimState->setAnimationTimeMode(clientrender::AnimationTimeMode::TIMESTAMP);
+			rightAnimState->speed=1.0f;
+		}
+		rightHand->GetLocalTransform();
+		// The AIM pose should be mapped to the index finger.
+		openXR->MapNodeToPose(local_server_uid,1,"left/input/aim/pose");
+		openXR->MapNodeToPose(local_server_uid,2,"right/input/aim/pose");
+		// Now adjust the local transform of the hand object based on the root being at the finger.
+		clientrender::Transform finger_to_hand;
+		// "global" transform is in hand's root cooords.
+		auto rSkin=rightHand->GetSkinInstance()->GetSkin();
+		clientrender::Transform hand_to_finger=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
+		clientrender::Transform root_to_hand=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
+		// We want the transform in the finger's coords!
+		finger_to_hand=hand_to_finger.GetInverse();
+		{
+			Transform tr=rightHand->GetLocalTransform();
+			tr.m_Translation=tr.m_Rotation.RotateVector(finger_to_hand.m_Translation);
+			rightHand->SetLocalTransform(tr);
+		}
+		{
+			Transform tr=leftHand->GetLocalTransform();
+			tr.m_Translation=tr.m_Rotation.RotateVector(finger_to_hand.m_Translation);
+			leftHand->SetLocalTransform(tr);
+		}
+	}
+	else
+	{
+	// reverse the animation.
+		if(leftAnimState)
+			leftAnimState->speed=-1.0f;
+		if(rightAnimState)
+			rightAnimState->speed=-1.0f;
+		// The GRIP pose should be mapped to the palm.
+		openXR->MapNodeToPose(local_server_uid,1,"left/input/grip/pose");
+		openXR->MapNodeToPose(local_server_uid,2,"right/input/grip/pose");
+		rightHand->SetLocalTransform(palm_to_hand_r);
+		leftHand->SetLocalTransform(palm_to_hand_l);
+	}
+	
+	{
+		auto rightHand=localGeometryCache.mNodeManager->GetNode(local_right_hand_uid);
+		auto rSkin=localGeometryCache.mSkinManager.Get(hand_skin_uid);
+		clientrender::Transform hand_to_finger=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
+		avs::vec3 v=rightHand->GetLocalTransform().LocalToGlobal(hand_to_finger.m_Translation);
+		index_finger_offset=*((vec3*)&v);
+	}
+}
 
 void Renderer::WriteHierarchy(int tabDepth, std::shared_ptr<clientrender::Node> node)
 {
@@ -1390,6 +1530,7 @@ bool Renderer::OnNodeLeftBounds(avs::uid id)
 {
 	return geometryCache.mNodeManager->HideNode(id);
 }
+
 
 void Renderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
@@ -1473,7 +1614,7 @@ void Renderer::Render(int view_id, void* context, void* renderTexture, int w, in
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
-
+	//deviceContext.viewStruct.Init();
 	platform::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
@@ -1482,7 +1623,7 @@ void Renderer::Render(int view_id, void* context, void* renderTexture, int w, in
 
 	hdrFramebuffer->Activate(deviceContext);
 	hdrFramebuffer->Clear(deviceContext, 0.0f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
-	// 
+
 	vec3 true_pos = camera.GetPosition();
 	if (render_from_video_centre)
 	{
@@ -1549,28 +1690,53 @@ void Renderer::Render(int view_id, void* context, void* renderTexture, int w, in
 		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 	}
-	if (show_textures)
+	//
 	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
 		static int tw = 128;
 		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
-		for (auto t : textures)
+		avs::uid sel_uid=gui.GetSelectedUid();
+		if(sel_uid!=0)
 		{
-			clientrender::Texture* pct = t.second.resource.get();
-			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
-			x += tw;
-			if (x > hdrFramebuffer->GetWidth() - tw)
+			std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+			std::shared_ptr<Node> n=geometryCache.mNodeManager->GetNode(sel_uid);
+			if(n.get())
 			{
-				x = 0;
-				y += tw;
+				avs::uid gi_uid=n->GetGlobalIlluminationTextureUid();
+				if(gi_uid)
+				{
+					int w=tw*2;
+					std::shared_ptr<Texture> t=geometryCache.mTextureManager.Get(gi_uid);
+					renderPlatform->DrawTexture(deviceContext, x, y, w, w, t->GetSimulTexture());
+				}
+			}
+			std::shared_ptr<clientrender::Texture> t=geometryCache.mTextureManager.Get(sel_uid);
+			if(t.get())
+			{
+				int w=tw*2;
+				renderPlatform->DrawTexture(deviceContext, x, y, w, w, t->GetSimulTexture());
 			}
 		}
-		y += tw;
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyWhite.get()->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyNormal.get()->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyCombined.get()->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyBlack.get()->GetSimulTexture());
+		else if (show_textures)
+		{
+			std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+			auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
+			for (auto t : textures)
+			{
+				clientrender::Texture* pct = t.second.resource.get();
+				renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
+				x += tw;
+				if (x > hdrFramebuffer->GetWidth() - tw)
+				{
+					x = 0;
+					y += tw;
+				}
+			}
+			y += tw;
+			renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyWhite.get()->GetSimulTexture());
+			renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyNormal.get()->GetSimulTexture());
+			renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyCombined.get()->GetSimulTexture());
+			renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyBlack.get()->GetSimulTexture());
+		}
 	}
 
 	hdrFramebuffer->Deactivate(deviceContext);
@@ -1604,6 +1770,13 @@ void Renderer::SetServer(const char *ip_port)
 		server_discovery_port =atoi(ip.substr(pos+1,ip.length()-pos-1).c_str());
 		server_ip = ip.substr(0,pos);
 	}
+	config.StoreRecentURL(ip_port);
+}
+
+void Renderer::CancelConnectButtonHandler()
+{
+	//SetServer("");
+	canConnect = false;
 }
 
 void Renderer::ConnectButtonHandler(const std::string& url)
@@ -1634,6 +1807,7 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 {
 	if (!show_osd||gui.HasFocus())
 		return;
+	gui.setGeometryCache(&geometryCache);
 	gui.BeginDebugGui(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
@@ -1680,44 +1854,7 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 	}
 	else if(show_osd== clientrender::GEOMETRY_OSD)
 	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		gui.LinePrint( platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
-
-		static int nodeLimit = 5;
-		auto& rootNodes = geometryCache.mNodeManager->GetRootNodes();
-		static int lineLimit = 50;
-
-		gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
-						geometryCache.mLightManager.GetCache(cacheLock).size()), white);
-
-		gui.Anims(geometryCache.mAnimationManager);
-
-		gui.NodeTree( rootNodes);
-
-		auto &missing=geometryCache.m_MissingResources;
-		if(missing.size())
-		{
-			gui.LinePrint( platform::core::QuickFormat("Missing Resources"));
-			for(const auto& missingPair : missing)
-			{
-				const clientrender::MissingResource& missingResource = missingPair.second;
-				std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
-				for(auto u:missingResource.waitingResources)
-				{
-					auto type= u.get()->type;
-					avs::uid id=u.get()->id;
-					if(type==avs::GeometryPayloadType::Node)
-					{
-						txt+="Node ";
-						auto n = geometryCache.mNodeManager->GetNode(id);
-						if(n)
-							txt += n->name;
-					}
-					txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
-				}
-				gui.LinePrint( txt.c_str());
-			}
-		}
+		GeometryOSD(localGeometryCache);
 	}
 	else if(show_osd== clientrender::TAG_OSD)
 	{
@@ -1797,15 +1934,78 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
 }
 
+void Renderer::GeometryOSD(const clientrender::GeometryCache &geometryCache)
+{
+	vec4 white(1.f, 1.f, 1.f, 1.f);
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	gui.LinePrint( platform::core::QuickFormat("Nodes: %d",geometryCache.mNodeManager->GetNodeAmount()), white);
+
+	static int nodeLimit = 5;
+	auto& rootNodes = geometryCache.mNodeManager->GetRootNodes();
+	static int lineLimit = 50;
+
+	gui.LinePrint( platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache.mMeshManager.GetCache(cacheLock).size(),
+					geometryCache.mLightManager.GetCache(cacheLock).size()), white);
+					
+	gui.Scene();
+
+	auto &missing=geometryCache.m_MissingResources;
+	if(missing.size())
+	{
+		gui.LinePrint( platform::core::QuickFormat("Missing Resources"));
+		for(const auto& missingPair : missing)
+		{
+			const clientrender::MissingResource& missingResource = missingPair.second;
+			std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
+			for(auto &u:missingResource.waitingResources)
+			{
+				auto type= u.get()->type;
+				avs::uid id=u.get()->id;
+				if(type==avs::GeometryPayloadType::Node)
+				{
+					txt+="Node ";
+					auto n = geometryCache.mNodeManager->GetNode(id);
+					if(n)
+						txt += n->name;
+				}
+				txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
+			}
+			gui.LinePrint( txt.c_str());
+		}
+	}
+	const auto &req=geometryCache.GetResourceRequests();
+	gui.LinePrint( platform::core::QuickFormat("%d Requests",req.size()));
+	if(req.size())
+	{
+		std::string lst;
+		for(const auto &r:req)
+		{
+			lst+=fmt::format("%d ",r);
+		}
+		gui.LinePrint(lst.c_str());
+	}
+	const auto &sent_req=sessionClient->GetSentResourceRequests();
+	gui.LinePrint( platform::core::QuickFormat("%d Requests Sent",sent_req.size()));
+	if(sent_req.size())
+	{
+		std::string lst;
+		for(const auto &r:sent_req)
+		{
+			lst+=fmt::format("{0} ",r.first);
+		}
+		gui.LinePrint(lst.c_str());
+	}
+}
 
 std::vector<uid> Renderer::GetGeometryResources()
 {
 	return geometryCache.GetAllResourceIDs();
 }
 
+// This is called when we connect to a new server.
 void Renderer::ClearGeometryResources()
 {
-	geometryCache.Clear();
+	geometryCache.ClearAll();
 	resourceCreator.Clear();
 }
 
@@ -1823,7 +2023,6 @@ void Renderer::PrintHelpText(platform::crossplatform::GraphicsDeviceContext& dev
 	renderPlatform->LinePrint(deviceContext, "O: Toggle OSD");
 	renderPlatform->LinePrint(deviceContext, "V: Show video");
 	renderPlatform->LinePrint(deviceContext, "C: Toggle render from centre");
-	renderPlatform->LinePrint(deviceContext, "T: Toggle Textures");
 	renderPlatform->LinePrint(deviceContext, "M: Change rendermode");
 	renderPlatform->LinePrint(deviceContext, "R: Recompile shaders");
 	renderPlatform->LinePrint(deviceContext, "NUM 0: PBR");
@@ -1872,6 +2071,7 @@ avs::DecoderBackendInterface* Renderer::CreateVideoDecoder()
 	AVSTextureHandle th = avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
 	return new VideoDecoderBackend(renderPlatform, t->texture);
+	
 }
 
 bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
@@ -1970,12 +2170,12 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 	{
 		if(clientPipeline.videoConfig.colour_cubemap_size)
 			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
-				crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
+				crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, true);
 	}
 	else
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
+			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false);
 	}
 	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.specular_cubemap_size, clientPipeline.videoConfig.specular_cubemap_size, 1, clientPipeline.videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.diffuse_cubemap_size, clientPipeline.videoConfig.diffuse_cubemap_size, 1, 1,
@@ -1992,8 +2192,7 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
-	
-	CreateTexture(avsTexture, int(stream_width), int(stream_height));
+	CreateTexture(avsTexture, int(512), int(512));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
@@ -2203,7 +2402,7 @@ void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 		{
 			// do this on *releasing* the button:
 			if(i.activated==false)
-				gui.ShowHide();
+				ShowHideGui();
 		}
 		else if(i.inputID==local_cycle_osd_id)
 		{

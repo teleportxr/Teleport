@@ -103,9 +103,9 @@ void Node::Update(float deltaTime_ms)
 	visibility.update(deltaTime_ms);
 
 	//Attempt to animate, if we have a skin.
-	if(skin)
+	if(skinInstance&&skinInstance->GetSkin())
 	{
-		animationComponent.update(skin->GetJoints(), deltaTime_ms);
+		animationComponent.update(skinInstance->GetJoints(), deltaTime_ms);
 	}
 
 	for(std::weak_ptr<Node> child : children)
@@ -186,6 +186,7 @@ void Node::SetLocalTransform(const Transform& transform)
 		return;
 	}
 	localTransform = transform;
+	isTransformDirty = true;
 }
 
 void Node::SetGlobalTransform(const Transform& transform)

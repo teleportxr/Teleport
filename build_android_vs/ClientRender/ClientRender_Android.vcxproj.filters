@@ -108,6 +108,9 @@
     <ClCompile Include="..\..\ClientRender\VideoDecoderBackend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ClientRender\SkinInstance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h">
@@ -222,6 +225,9 @@
       <Filter>AVParser</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\VideoDecoderBackend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\SkinInstance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

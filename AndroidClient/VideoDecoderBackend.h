@@ -30,7 +30,9 @@ public:
 	/* End avs::DecoderBackendInterface */
 
 	void NotifyFrameAvailable();
-
+	
+	//! Copy incoming video to the main video texture.
+	void CopyVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 private:
 	void InitializeVideoDecoder(platform::crossplatform::Texture* colorSurfaceTexture, platform::crossplatform::Texture* alphaSurfaceTexture);
 	void ShutdownVideoDecoder();

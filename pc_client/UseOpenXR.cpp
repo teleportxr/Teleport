@@ -23,7 +23,7 @@ using namespace platform;
 using namespace teleport;
 using namespace client;
 
-const XrPosef	xr_pose_identity = { {0,0,0,1}, {0,0,0} };
+const XrPosef xr_pose_identity = { {0,0,0,1}, {0,0,0} };
 
 const char *UseOpenXR::GetOpenXRGraphicsAPIExtensionName() const
 {

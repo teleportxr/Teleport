@@ -106,14 +106,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CustomBuild Include="../../../../client/Shaders/cubemap_clear.sfx">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/cubemap_clear.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe -d ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -122,16 +122,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/cubemap_clear.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/cubemap_clear.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -140,16 +140,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/cubemap_clear.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -158,16 +158,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/cubemap_clear.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -176,20 +176,20 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="../../../../client/Shaders/pbr.sfx">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/pbr.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -198,16 +198,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/pbr.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -216,16 +216,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/pbr.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -234,16 +234,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/pbr.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -252,20 +252,20 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="../../../../client/Shaders/texture_conversion.sfx">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/texture_conversion.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -274,16 +274,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/texture_conversion.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -292,16 +292,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/texture_conversion.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -310,16 +310,16 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/texture_conversion.sfxo</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 C:
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -328,7 +328,7 @@ exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">..\..\..\..\build_pc_client\bin\Release\Sfx.exe;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
@@ -343,7 +343,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Teleport\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</VerifyInputsAndOutputsExist>
@@ -356,7 +356,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Teleport\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</VerifyInputsAndOutputsExist>
@@ -369,7 +369,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Teleport\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</VerifyInputsAndOutputsExist>
@@ -382,7 +382,7 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets\cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets\texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ProjectDir)../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/test.sfxo;../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo;%(AdditionalInputs)</AdditionalInputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Teleport\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
       <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</VerifyInputsAndOutputsExist>

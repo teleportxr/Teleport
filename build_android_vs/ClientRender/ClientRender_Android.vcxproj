@@ -65,6 +65,7 @@
     <ClCompile Include="..\..\ClientRender\ResourceCreator.cpp" />
     <ClCompile Include="..\..\ClientRender\ShaderResource.cpp" />
     <ClCompile Include="..\..\ClientRender\Skin.cpp" />
+    <ClCompile Include="..\..\ClientRender\SkinInstance.cpp" />
     <ClCompile Include="..\..\ClientRender\Tests.cpp" />
     <ClCompile Include="..\..\ClientRender\Texture.cpp" />
     <ClCompile Include="..\..\ClientRender\Transform.cpp" />
@@ -104,6 +105,7 @@
     <ClInclude Include="..\..\ClientRender\ShaderResource.h" />
     <ClInclude Include="..\..\ClientRender\ShaderStorageBuffer.h" />
     <ClInclude Include="..\..\ClientRender\Skin.h" />
+    <ClInclude Include="..\..\ClientRender\SkinInstance.h" />
     <ClInclude Include="..\..\ClientRender\Tests.h" />
     <ClInclude Include="..\..\ClientRender\Texture.h" />
     <ClInclude Include="..\..\ClientRender\Transform.h" />
@@ -243,6 +245,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
+      <ErrorFormatSecurity>false</ErrorFormatSecurity>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">

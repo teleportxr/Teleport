@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(TeleportServer)
 
+
 # Build options
 option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" ON)
 
@@ -97,14 +98,19 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/openssl/include)
 #Include cpp-httplib
 target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 
-
+if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
+	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
+endif()
 #Include CUDA library location.
 #target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 
-target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MD)
+target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MT)
 
 target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp winmm d3d12 draco libssl libcrypto )
-
+if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
+	target_link_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/lib)
+	target_link_libraries(TeleportServer webrtc.lib)
+endif()
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
 else()

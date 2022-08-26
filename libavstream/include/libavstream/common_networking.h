@@ -53,7 +53,7 @@ namespace avs
 		AcknowledgeHandshake,
 		ReconfigureVideo,
 		SetPosition,
-		NodeBounds,
+		NodeVisibility,
 		UpdateNodeMovement,
 		UpdateNodeEnabledState,
 		SetNodeHighlighted,
@@ -73,7 +73,7 @@ namespace avs
 		NodeStatus,
 		ReceivedResources,
 		ControllerPoses,
-		OriginPose
+		OriginPose,
 	};
 	
 	//! The response payload sent by a server to a client on discovery.
@@ -238,15 +238,12 @@ namespace avs
 		{
 			return sizeof(SetPositionCommand);
 		}
+		avs::uid origin_node=0;
 		// TODO: replace these with a Pose.
 		vec3 origin_pos;			//!< Position of the origin in world space.
 		vec4 orientation;			//!< Orientation of the origin in world space.
 		//!< A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 		uint64_t valid_counter = 0;
-		//!< If nonzero, set the relative position of the origin and headset. Rarely used.
-		uint8_t set_relative_pos = 0;
-		//!< The relative position of the headset from the origin, if specified.
-		vec3 relative_pos;
 	} AVS_PACKED;
 
 	struct SetupCommand : public Command
@@ -347,22 +344,22 @@ namespace avs
 		}
 	} AVS_PACKED;
 
-	struct NodeBoundsCommand : public Command
+	struct NodeVisibilityCommand : public Command
 	{
 		size_t nodesShowCount;
 		size_t nodesHideCount;
 
-		NodeBoundsCommand()
-			:NodeBoundsCommand(0, 0)
+		NodeVisibilityCommand()
+			:NodeVisibilityCommand(0, 0)
 		{}
 
-		NodeBoundsCommand(size_t nodesShowCount, size_t nodesHideCount)
-			:Command(CommandPayloadType::NodeBounds), nodesShowCount(nodesShowCount), nodesHideCount(nodesHideCount)
+		NodeVisibilityCommand(size_t nodesShowCount, size_t nodesHideCount)
+			:Command(CommandPayloadType::NodeVisibility), nodesShowCount(nodesShowCount), nodesHideCount(nodesHideCount)
 		{}
 
 		virtual size_t getCommandSize() const override
 		{
-			return sizeof(NodeBoundsCommand);
+			return sizeof(NodeVisibilityCommand);
 		}
 	} AVS_PACKED;
 
@@ -401,6 +398,7 @@ namespace avs
 			return sizeof(UpdateNodeEnabledStateCommand);
 		}
 	} AVS_PACKED;
+	
 
 	struct SetNodeHighlightedCommand : public Command
 	{
@@ -596,6 +594,7 @@ namespace avs
 	struct OriginPoseMessage : public ClientMessage
 	{
 		uint64_t counter = 0;
+		avs::uid originId=0;
 		Pose originPose;
 
 		OriginPoseMessage() :ClientMessage(ClientMessagePayloadType::OriginPose) {}
@@ -605,7 +604,6 @@ namespace avs
 			return sizeof(OriginPoseMessage);
 		}
 	} AVS_PACKED;
-
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif

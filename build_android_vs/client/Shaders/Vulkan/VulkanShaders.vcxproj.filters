@@ -4,7 +4,6 @@
     <CustomBuild Include="C:\Teleport\build_pc_client\CMakeFiles\9705d267972308b2efa3ea393da5c190\VulkanShaders.rule" />
     <CustomBuild Include="../../../../client/Shaders/cubemap_clear.sfx" />
     <CustomBuild Include="../../../../client/Shaders/pbr.sfx" />
-    <CustomBuild Include="../../../../client/Shaders/test.sfx" />
     <CustomBuild Include="../../../../client/Shaders/texture_conversion.sfx" />
     <CustomBuild Include="../../../../client/Shaders/Vulkan\CMakeLists.txt" />
   </ItemGroup>

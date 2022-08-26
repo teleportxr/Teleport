@@ -27,6 +27,8 @@ set(srcs
 	Resource.h
 	PCDiscoveryService.h
 	targetver.h
+	../ClientApp/ClientApp.cpp
+	../ClientApp/ClientApp.h
 )
 
 if(WIN32)

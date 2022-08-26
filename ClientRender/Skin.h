@@ -7,6 +7,7 @@
 
 namespace clientrender
 {
+	//! A resource containing bones and joints to animate a mesh.
 	class Skin
 	{
 	public:
@@ -19,37 +20,24 @@ namespace clientrender
 
 		virtual ~Skin() = default;
 
-		virtual void UpdateBoneMatrices(const mat4& rootTransform);
-
-		mat4* GetBoneMatrices(const mat4& rootTransform)
-		{
-			UpdateBoneMatrices(rootTransform);
-			return boneMatrices;
-		}
-
 		void SetInverseBindMatrices(const std::vector<mat4>& vector) { inverseBindMatrices = vector; }
-		const std::vector<mat4>& GetInverseBindMatrices() { return inverseBindMatrices; }
+		const std::vector<mat4>& GetInverseBindMatrices() const { return inverseBindMatrices; }
 
 		void SetBones(const std::vector<std::shared_ptr<Bone>>& vector) { bones = vector; }
-		const std::vector<std::shared_ptr<Bone>>& GetBones() { return bones; }
+		const std::vector<std::shared_ptr<Bone>>& GetBones() const { return bones; }
+		std::shared_ptr<Bone> GetBoneByName(const char *txt);
 
 		void SetNumBones(size_t numBones) { bones.resize(numBones); }
 		void SetBone(size_t index, std::shared_ptr<Bone> bone);
 		void SetJoints(const std::vector<std::shared_ptr<Bone>>& j);
-		const std::vector<std::shared_ptr<Bone>>& GetJoints() { return joints; }
-		void SetSkinTransform(const Transform& value) { skinTransform = value; }
+		const std::vector<std::shared_ptr<Bone>>& GetJoints() const { return joints; }
 		const Transform& GetSkinTransform() { return skinTransform; }
 	protected:
-		//Internal function for returning the bone matrices without updating them.
-		mat4* GetBoneMatrices()
-		{
-			return boneMatrices;
-		}
 		std::vector<mat4> inverseBindMatrices;
 		std::vector<std::shared_ptr<Bone>> bones;
 		std::vector<std::shared_ptr<Bone>> joints;
+		// TODO: do we need this?
 		Transform skinTransform; //Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.
 
-		mat4 boneMatrices[MAX_BONES];
 	};
 }

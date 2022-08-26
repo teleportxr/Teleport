@@ -31,14 +31,16 @@ Platform gPlatform = Platform::ANDROID;
 #include "AndroidOpenXR.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "TeleportClient/Config.h"
+#include "ClientApp/ClientApp.h"
 #include "AndroidRenderer.h"
 #include "AndroidDiscoveryService.h"
 
 using namespace platform;
 using namespace crossplatform;
 using namespace platform;
-using namespace core;
+using namespace platform::core;
 using namespace teleport;
+using namespace teleport::core;
 using namespace android;
 
 int kOverrideWidth = 1440;
@@ -47,7 +49,7 @@ int kOverrideHeight = 900;
 extern "C" { void android_main(struct android_app* app); }
 DisplaySurfaceManager* displaySurfaceManager = nullptr;
 teleport::client::ClientDeviceState clientDeviceState;
-teleport::client::Config config;
+teleport::client::ClientApp clientApp;
 teleport::Gui gui;
 // Need ONE global instance of this:
 avs::Context context;
@@ -156,36 +158,53 @@ void android_main(struct android_app* app)
 			if (source != NULL)
 				source->process(app, source);
 		}
-	}
+	} 
 	teleport::android::FileLoader androidFileLoader;
 	androidFileLoader.SetAndroid_AAssetManager(app->activity->assetManager);
 	platform::core::FileLoader::SetFileLoader(&androidFileLoader);
-	config.LoadConfigFromIniFile();
+	clientApp.config.SetStorageFolder(app->activity->internalDataPath);
+	clientApp.Initialize();
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
 	gui.SetPlatformWindow(app->window);
-	gui.SetServerIPs(config.server_ips);
+	gui.SetConfig(&clientApp.config);
+	
+	gui.SetServerIPs(clientApp.config.recent_server_urls);
 
 	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient(std::make_unique<android::AndroidDiscoveryService>());
-	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,config);
-	
+	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,clientApp.config);
+	androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
-	
+	// Provided by VK_VERSION_1_0
+/*void vkGetPhysicalDeviceFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkFormatProperties*                         pFormatProperties);*/
+
 	openXR.InitInstance("Teleport VR Client");
 	openXR.InitSystem();
 	vulkan::DeviceManager vulkanDeviceManager;
 	RedirectStdCoutCerr();
 	
 	auto device_exts=openXR.GetRequiredVulkanDeviceExtensions();
+	RedirectStdCoutCerr();
 	device_exts.push_back(VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME);
 	device_exts.push_back(VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME);
+	device_exts.push_back(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME);
+#if TELEPORT_INTERNAL_CHECKS
+	device_exts.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+#endif
+	RedirectStdCoutCerr();
 	vulkanDeviceManager.Initialize(true,false,false,device_exts,openXR.GetRequiredVulkanInstanceExtensions());
 	RenderPlatform *renderPlatform = new vulkan::RenderPlatform();
 
 	renderPlatform->PushTexturePath("");
 	renderPlatform->PushTexturePath("textures");
+	renderPlatform->PushTexturePath("assets/textures");
 	renderPlatform->PushTexturePath("fonts");
+	renderPlatform->PushTexturePath("assets/fonts");
 	renderPlatform->PushShaderBinaryPath("shaders");
+	renderPlatform->PushShaderBinaryPath("assets/shaders");
 
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());
 	renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::NEVER_BUILD);
@@ -241,6 +260,9 @@ void android_main(struct android_app* app)
 		float time_step_seconds=new_time_seconds-time_seconds;
 		time_seconds=new_time_seconds;
 		
+		double timestamp_ms = avs::Platform::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::Platform::getTimestamp());
+
+		androidRenderer->Update(timestamp_ms);
 		androidRenderer->OnFrameMove(float(time_seconds),float(time_step_seconds),openXR.HaveXRDevice());
 		renderPlatform->BeginFrame(frame);
 		if (openXR.HaveXRDevice())

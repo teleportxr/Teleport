@@ -12,6 +12,7 @@
 #include "NodeComponents/AnimationComponent.h"
 #include "NodeComponents/VisibilityComponent.h"
 #include "Skin.h"
+#include "SkinInstance.h"
 #include "Transform.h"
 
 namespace clientrender
@@ -69,9 +70,9 @@ namespace clientrender
 		virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
 		std::shared_ptr<Mesh> GetMesh() const { return mesh; }
 
-		virtual void SetSkin(std::shared_ptr<Skin> skin) { this->skin = skin; }
-		const std::shared_ptr<Skin> GetSkin() const { return skin; }
-		std::shared_ptr<Skin> GetSkin() { return skin; }
+		virtual void SetSkin(std::shared_ptr<Skin> skin) { skinInstance.reset(new SkinInstance(skin)); }
+		const std::shared_ptr<SkinInstance> GetSkinInstance() const { return skinInstance; }
+		std::shared_ptr<SkinInstance> GetSkinInstance() { return skinInstance; }
 
 		virtual void SetMaterial(size_t index, std::shared_ptr<Material> material)
 		{
@@ -160,7 +161,7 @@ namespace clientrender
 	protected:
 		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
-		std::shared_ptr<Skin> skin;
+		std::shared_ptr<SkinInstance> skinInstance;
 		std::vector<std::shared_ptr<Material>> materials;
 		avs::vec4 lightmapScaleOffset;
 		Transform localTransform;

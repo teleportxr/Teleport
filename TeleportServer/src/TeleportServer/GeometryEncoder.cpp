@@ -4,7 +4,7 @@
 #include <set>
 
 #include "libavstream/common.hpp"
-#include "libavstream/geometry/animation_interface.h"
+#include "TeleportCore/AnimationInterface.h"
 
 #include "ServerSettings.h"
 
@@ -39,7 +39,7 @@ namespace teleport
 		:settings(settings), prevBufferSize(0)
 	{}
 
-	avs::Result GeometryEncoder::encode(uint32_t timestamp, avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req)
+	avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req)
 	{
 		if(!req||req->getClientAxesStandard()==avs::AxesStandard::NotInitialized)
 			return avs::Result::Failed;
@@ -92,7 +92,7 @@ namespace teleport
 				}
 				if(meshResourceInfo.skinID != 0)
 				{
-					if( meshResourceInfo.boneIDs.size())
+				/*	if( meshResourceInfo.boneIDs.size())
 					{
 						// It should have either none or all of the joints.
 						if(!req->hasResource(meshResourceInfo.boneIDs[0]))
@@ -105,7 +105,7 @@ namespace teleport
 								break;
 							}
 						}
-					}
+					}*/
 					if(!req->hasResource(meshResourceInfo.skinID))
 					{
 						encodeSkin(src, req, meshResourceInfo.skinID);
@@ -249,30 +249,29 @@ namespace teleport
 		for(avs::uid uid : missingUIDs)
 		{
 			size_t oldBufferSize = buffer.size();
-			avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
-			if (!mesh)
-			{
-				TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
-				continue;
-			}
 			const avs::CompressedMesh* compressedMesh = src->getCompressedMesh(uid, req->getClientAxesStandard());
 			putPayload(avs::GeometryPayloadType::Mesh);
 			put((size_t)1);
 			put(uid);
 			if(compressedMesh&& compressedMesh->meshCompressionType!= avs::MeshCompressionType::NONE)
 			{
+				uint64_t lowest_accessor=0xFFFFFFFFFFFFFFFF,highest_accessor=0;
+				compressedMesh->GetAccessorRange(lowest_accessor,highest_accessor);
+				uint64_t accessor_subtract=lowest_accessor;
+				uint64_t accessor_add=0;
 				put(compressedMesh->meshCompressionType);
+				static const int32_t DRACO_COMPRESSED_MESH_VERSION_NUMBER=1;
+				put(DRACO_COMPRESSED_MESH_VERSION_NUMBER);
 				//Push name.
 				size_t nameLength = compressedMesh->name.length();
 				put(nameLength);
 				put((uint8_t*)compressedMesh->name.data(), nameLength);
-				//put(compressedMesh->subMeshAttributeIndex);
 				size_t num_elements= compressedMesh->subMeshes.size();
 				put((uint32_t)num_elements);
 				for(size_t i=0;i< num_elements;i++)
 				{
 					auto &subMesh= compressedMesh->subMeshes[i];
-					put(subMesh.indices_accessor);
+					put(subMesh.indices_accessor-accessor_subtract);
 					put(subMesh.material);
 					put(subMesh.first_index);
 					put(subMesh.num_indices);
@@ -288,9 +287,17 @@ namespace teleport
 					put((uint8_t*)subMesh.buffer.data(), bufferSize);
 				}
 			}
-			else
+			if(compressedMesh&& compressedMesh->meshCompressionType== avs::MeshCompressionType::NONE)
 			{
+				avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
+				if (!mesh)
+				{
+					TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
+					continue;
+				}
 				put(avs::MeshCompressionType::NONE);
+				static const int32_t UNCOMPRESSED_MESH_VERSION_NUMBER=1;
+				put(UNCOMPRESSED_MESH_VERSION_NUMBER);
 				//Push name length.
 				size_t nameLength = mesh->name.length();
 				put(nameLength);
@@ -392,7 +399,10 @@ namespace teleport
 			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), localTransform);
 			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), globalTransform);
 
-			put(localTransform);
+			if(node->parentID)
+				put(localTransform);
+			else
+				put(globalTransform);
 			put(globalTransform);
 			// If the node is stationary, we will normally use the global transform.
 			put((uint8_t)(!node->stationary));
@@ -474,6 +484,7 @@ namespace teleport
 			{
 				put(skin->inverseBindMatrices[i]);
 			}
+#if 0
 			// TODO: This is inefficient, most boneID's will be jointID's :
 			put(skin->boneIDs.size());
 			for (int i = 0; i < skin->boneIDs.size(); i++)
@@ -486,7 +497,36 @@ namespace teleport
 			{
 				put(skin->jointIDs[i]);
 			}
-
+#else
+			auto findIndex = [](std::vector<avs::uid> v,avs::uid u)
+				{
+					auto j=std::find(v.begin(),v.end(),u);
+					uint16_t index=(uint16_t)std::distance(v.begin(),j);
+					return index;
+				};
+			put(skin->boneIDs.size());
+			for (int i = 0; i < skin->boneIDs.size(); i++)
+			{
+				avs::Node* node = src->getNode(skin->boneIDs[i]);
+				avs::Transform localTransform = node->localTransform;
+				avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), localTransform);
+				//put(skin->boneIDs[i]);
+				uint16_t parentIndex=findIndex(skin->boneIDs,node->parentID);
+				put(parentIndex);
+				put(localTransform);
+				size_t nameLength = node->name.length();
+				put(nameLength);
+				//Push name.
+				put((uint8_t*)node->name.data(), nameLength);
+			}
+			put(skin->jointIDs.size());
+			// which bones are joints?
+			for(int i = 0; i < skin->jointIDs.size(); i++)
+			{
+				uint16_t jointIndex=findIndex(skin->boneIDs,skin->jointIDs[i]);
+				put(jointIndex);
+			}
+#endif
 			put(skin->skinTransform);
 
 			putPayloadSize();

@@ -21,6 +21,7 @@ namespace clientrender
 
 namespace clientrender
 {
+	typedef unsigned long long geometry_cache_uid;
 	struct IncompleteResource
 	{
 		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
@@ -88,11 +89,32 @@ namespace clientrender
 	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 	class GeometryCache : public avs::GeometryCacheBackendInterface
 	{
+		geometry_cache_uid next_geometry_cache_uid=1;
+		std::map<uint64_t,geometry_cache_uid> uid_mapping;
 	public:
 		GeometryCache(NodeManager *);
 
 		~GeometryCache();
-
+		/// Generate a new uid unique in this cache (not globally unique).
+		geometry_cache_uid GenerateUid()
+		{
+			geometry_cache_uid u=next_geometry_cache_uid;
+			next_geometry_cache_uid++;
+			return u;
+		}
+		/// Generate a new uid unique in this cache and store a mapping from the given input number.
+		geometry_cache_uid GenerateUid(uint64_t from)
+		{
+			geometry_cache_uid u=next_geometry_cache_uid;
+			uid_mapping[from]=u;
+			next_geometry_cache_uid++;
+			return u;
+		}
+		/// Get the locally unique id that the specified number maps to.
+		geometry_cache_uid GetCorrespondingUid(uint64_t from)
+		{
+			return uid_mapping[from];
+		}
 		//Clear any resources that have not been used longer than their expiry time.
 		//	timeElapsed_s : Delta time in seconds.
 		void Update(float timeElapsed_s)
@@ -101,7 +123,6 @@ namespace clientrender
 			mIndexBufferManager.Update(timeElapsed_s);
 			mMaterialManager.Update(timeElapsed_s);
 			mTextureManager.Update(timeElapsed_s);
-			mUniformBufferManager.Update(timeElapsed_s);
 			mVertexBufferManager.Update(timeElapsed_s);
 			mMeshManager.Update(timeElapsed_s);
 			mSkinManager.Update(timeElapsed_s);
@@ -139,20 +160,18 @@ namespace clientrender
 				//These IDs aren't stored on the server currently, and thus are ignored.
 				mIndexBufferManager.GetAllIDs();
 				mShaderManager.GetAllIDs();
-				mUniformBufferManager.GetAllIDs();
 				mVertexBufferManager.GetAllIDs();
 			*/
 		}
 
 		//Clear all resources.
-		void Clear()
+		void ClearAll()
 		{
 			mNodeManager->Clear();
 
 			mIndexBufferManager.Clear();
 			mMaterialManager.Clear();
 			mTextureManager.Clear();
-			mUniformBufferManager.Clear();
 			mVertexBufferManager.Clear();
 			mMeshManager.Clear();
 			mSkinManager.Clear();
@@ -160,33 +179,13 @@ namespace clientrender
 			mBoneManager.Clear();
 			mAnimationManager.Clear();
 		}
-
-		//Clear all resources that aren't in the exclude list.
-		//	excludeList : List of resources that should be spared from clearing of resource managers.
-		//	outExistingNodes : List of nodes in the excludeList that existed on the client.
-		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)
-		{
-			mMaterialManager.ClearCareful(excludeList);
-			mTextureManager.ClearCareful(excludeList);
-			mMeshManager.ClearCareful(excludeList);
-			mSkinManager.ClearCareful(excludeList);
-			mLightManager.ClearCareful(excludeList);
-			mBoneManager.ClearCareful(excludeList);
-			mAnimationManager.ClearCareful(excludeList);
-
-			//Last as it will likely be the largest.
-			mNodeManager->ClearCareful(excludeList, outExistingNodes);
-
-			///As the UIDs of these aren't(?) stored on the server; the server can't confirm their existence.
-			///If the mesh is cleared, then these will be cleared.
-			//mIndexBufferManager.ClearCareful(excludeList);
-			//mShaderManager.ClearCareful(excludeList);
-			//mUniformBufferManager.ClearCareful(excludeList);
-			//mVertexBufferManager.ClearCareful(excludeList);
-		}
+		
+		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
+		MissingResource* GetMissingResourceIfMissing(avs::uid id, avs::GeometryPayloadType resourceType);
 		//Returns the resources the ResourceCreator needs, and clears the list.
 		std::vector<avs::uid> GetResourceRequests() const override;
 		void ClearResourceRequests() override;
+		void ReceivedResource(avs::uid id);
 		//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
 		std::vector<avs::uid> GetReceivedResources() const override;
 		void ClearReceivedResources() override;
@@ -194,21 +193,25 @@ namespace clientrender
 		std::vector<avs::uid> GetCompletedNodes() const override;
 		void ClearCompletedNodes() override;
 
-		std::unique_ptr<clientrender::NodeManager>	mNodeManager;
-		ResourceManager<clientrender::IndexBuffer>   mIndexBufferManager;
-		ResourceManager<clientrender::Material>		mMaterialManager;
-		ResourceManager<clientrender::Texture>       mTextureManager;
-		ResourceManager<clientrender::UniformBuffer> mUniformBufferManager;
-		ResourceManager<clientrender::VertexBuffer>  mVertexBufferManager;
-		ResourceManager<clientrender::Mesh>			mMeshManager;
-		ResourceManager<clientrender::Skin>			mSkinManager;
-		ResourceManager<clientrender::Light>			mLightManager;
-		ResourceManager<clientrender::Bone>			mBoneManager;
-		ResourceManager<clientrender::Animation>		mAnimationManager;
+		std::unique_ptr<clientrender::NodeManager>		mNodeManager;
+		ResourceManager<avs::uid,clientrender::Material>		mMaterialManager;
+		ResourceManager<avs::uid,clientrender::Texture>			mTextureManager;
+		ResourceManager<avs::uid,clientrender::Mesh>			mMeshManager;
+		ResourceManager<avs::uid,clientrender::Skin>			mSkinManager;
+		ResourceManager<avs::uid,clientrender::Light>			mLightManager;
+		ResourceManager<uint64_t,clientrender::Bone>			mBoneManager;
+		ResourceManager<avs::uid,clientrender::Animation>		mAnimationManager;
 
-		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
-		std::vector<avs::uid> m_ReceivedResources; //Resources the client will confirm receival of.
+		// Buffers used in meshes do not have server-unique id's, their id's are generated clientside.
+		ResourceManager<geometry_cache_uid,clientrender::IndexBuffer>	mIndexBufferManager;
+		ResourceManager<geometry_cache_uid,clientrender::VertexBuffer>	mVertexBufferManager;
+
 		std::vector<avs::uid> m_CompletedNodes; //List of IDs of nodes that have been fully received, and have yet to be confirmed to the server.
 		std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
+
+		const std::vector<avs::uid> &GetResourceRequests();
+	protected:
+		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
+		std::vector<avs::uid> m_ReceivedResources; //Resources received.
 	};
 }

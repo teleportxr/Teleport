@@ -54,7 +54,7 @@ namespace clientrender
 		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
 		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 		void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate);
-		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* const animationTimeOverride = nullptr, float overrideMaximum = 0.0f);
+		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID,  float  animationTimeOverride=0.0f, float overrideMaximum = 0.0f);
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
 		void ReparentNode(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand);
@@ -67,7 +67,7 @@ namespace clientrender
 		//Clear, and free memory of, all resources; bar from resources on the list.
 		//	excludeList : Elements to not clear from the manager; removes UID if it finds the element.
 		//	outExistingNodes : List of nodes in the exclude list that were actually in the node manager.
-		void ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes);
+		void ClearAllButExcluded(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes);
 
 	protected:
 		nodeList_t rootNodes; //Nodes that are parented to the world root.
@@ -79,7 +79,7 @@ namespace clientrender
 		struct EarlyAnimationControl
 		{
 			avs::uid animationID;
-			const float* timeOverride;
+			float timeOverride;
 			float overrideMaximum;
 		};
 
@@ -98,7 +98,8 @@ namespace clientrender
 		std::map<avs::uid, avs::ApplyAnimation> earlyAnimationUpdates;
 		std::map<avs::uid, std::vector<EarlyAnimationControl>> earlyAnimationControlUpdates;
 		std::map<avs::uid, std::vector<EarlyAnimationSpeed>> earlyAnimationSpeedUpdates;
-
+		/// For tracking which nodes have been hidden.
+		std::set<avs::uid> hiddenNodes;
 		//Uses the index of the node in the nodeList to determine if it is visible.
 		bool IsNodeVisible(avs::uid nodeID) const;
 

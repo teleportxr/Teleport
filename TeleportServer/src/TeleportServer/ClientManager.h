@@ -47,20 +47,20 @@ namespace teleport
 		void handleStreaming();
 		void processNetworkDataAsync();
 
-		std::atomic_bool mAsyncNetworkDataProcessingFailed;
-		bool mInitialized;
-		int32_t mListenPort;
+		std::atomic_bool mAsyncNetworkDataProcessingFailed=false;
+		bool mInitialized=false;
+		int32_t mListenPort=0;
 
-		ENetHost* mHost;
+		ENetHost* mHost=nullptr;
 
-		std::atomic_bool mAsyncNetworkDataProcessingActive;
+		std::atomic_bool mAsyncNetworkDataProcessingActive=false;
 		
 		std::vector<ClientMessaging*> mClients;
 		std::thread mNetworkThread;
 		std::mutex mNetworkMutex;
 		mutable std::mutex mDataMutex;
 		avs::Timestamp mLastTickTimestamp;
-		uint32_t mMaxClients;
+		uint32_t mMaxClients=0;
 		std::vector<bool> mPorts;
 
 		// Seconds

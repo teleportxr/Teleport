@@ -138,6 +138,9 @@
     <ClCompile Include="..\..\AndroidClient\NdkVideoDecoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ClientApp\ClientApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h">
@@ -162,6 +165,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\AndroidClient\NdkVideoDecoder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientApp\ClientApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

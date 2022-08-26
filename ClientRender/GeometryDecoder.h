@@ -25,21 +25,22 @@ public:
 	GeometryDecoder();
 	~GeometryDecoder();
 	//! Treat the file as buffer input and decode.
-	avs::Result decodeFromFile(const std::string &filename,avs::GeometryTargetBackendInterface *intf);
+	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *intf);
 	// Inherited via GeometryDecoderBackendInterface
 	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
 	
 	void saveBuffer(const std::string &name) const;
+	void setCacheFolder(const std::string &f);
 private:
-	avs::Result decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target);
+	avs::Result decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target,bool save_to_disk);
 	
-	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeAnimation(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
+	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
+	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
+	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
+	avs::Result decodeAnimation(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
 	avs::Result decodeNode(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeSkin(avs::GeometryTargetBackendInterface*& target);
+	avs::Result decodeSkin(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
 
 	avs::Result decodeFloatKeyframes(std::vector<avs::FloatKeyframe>& keyframes);
 	avs::Result decodeVector3Keyframes(std::vector<avs::Vector3Keyframe>& keyframes);
@@ -54,6 +55,7 @@ private:
 	size_t m_DecompressedBufferIndex=0;
 
 private:
+	std::string cacheFolder;
 	struct PrimitiveArray2
 	{
 		size_t attributeCount;
@@ -92,7 +94,6 @@ private:
 			buffers.clear();
 		}
 	};
-	DecodedGeometry dg = {};
 	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry& dg, const avs::CompressedMesh &compressedMesh);
 };
 

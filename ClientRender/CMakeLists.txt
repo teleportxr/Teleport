@@ -52,6 +52,8 @@ set( src_root
 	ShaderResource.h
 	Skin.cpp
 	Skin.h
+	SkinInstance.cpp
+	SkinInstance.h
 	Transform.cpp
 	Transform.h
 	MemoryUtil.cpp

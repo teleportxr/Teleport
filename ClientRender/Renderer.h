@@ -28,6 +28,7 @@
 #endif
 #include "TeleportAudio/NetworkPipeline.h"
 #include "TeleportClient/Config.h"
+#include "VideoDecoderBackend.h"
 
 namespace teleport
 {
@@ -177,13 +178,21 @@ namespace clientrender
 		bool using_vr = true;
 		clientrender::GeometryCache localGeometryCache;
 		clientrender::ResourceCreator localResourceCreator;
+		clientrender::GeometryCache geometryCache;
+		clientrender::ResourceCreator resourceCreator;
+		avs::uid local_left_hand_uid=0;
+		clientrender::Transform palm_to_hand_l;
+		avs::uid local_right_hand_uid=0;
+		clientrender::Transform palm_to_hand_r;
+		avs::uid hand_skin_uid=0;
+		vec3 index_finger_offset;
 
 		int RenderMode=0;
 		std::shared_ptr<clientrender::Material> mFlatColourMaterial;
 		unsigned long long receivedInitialPos = 0;
 		unsigned long long receivedRelativePos = 0;
 		bool videoPosDecoded=false;
-		bool canConnect=false;
+		bool canConnect=true;
 		vec3 videoPos;
 
 		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
@@ -191,7 +200,6 @@ namespace clientrender
 		static constexpr float HFOV = 90;
 		float gamma=0.44f;
 
-		avs::uid node_select=0;
 		bool have_vr_device = false;
 		platform::crossplatform::Texture* externalTexture = nullptr;
 		teleport::client::OpenXR *openXR=nullptr;
@@ -220,10 +228,9 @@ namespace clientrender
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;
 		bool Match(const std::string& full_string, const std::string& substring);
+		void GeometryOSD(const clientrender::GeometryCache &geometryCache);
 	public:
 		teleport::client::ClientPipeline clientPipeline;
-		clientrender::GeometryCache geometryCache;
-		clientrender::ResourceCreator resourceCreator;
 		std::vector<avs::InputDefinition> inputDefinitions;
 		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 #ifdef _MSC_VER
@@ -235,7 +242,6 @@ namespace clientrender
 		static constexpr bool GeoStream		= true;
 		static constexpr uint32_t NominalJitterBufferLength = 0;
 		static constexpr uint32_t MaxJitterBufferLength = 50;
-
 		//static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
 		AVSTextureHandle avsTexture;
 
@@ -266,6 +272,7 @@ namespace clientrender
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		// handler for the UI to tell us to connect.
 		void ConnectButtonHandler(const std::string& url);
+		void CancelConnectButtonHandler();
 		
 		std::vector<avs::uid> GetGeometryResources() override;
 		void ClearGeometryResources() override;
@@ -296,5 +303,6 @@ namespace clientrender
 		void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) override;
 
 		void HandleLocalInputs(const teleport::core::Input& local_inputs);
+		void ShowHideGui();
 	};
 }

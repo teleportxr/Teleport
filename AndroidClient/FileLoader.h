@@ -6,9 +6,12 @@ namespace teleport
 {
 	namespace android
 	{
-		//! The default derived file loader
+		//! The file loader for Android - uses either fstream or AAssetManager depending on the path.
+		//! Paths beginning with "assets/" are obtained from the asset manager, all others from the file system.
 		class FileLoader:public platform::core::FileLoader
 		{
+			bool IsAsset(const char *filename_utf8) const;
+			std::string AssetFilename(const char *filename_utf8) const;
 		public:
 			FileLoader();
 			bool FileExists(const char *filename_utf8) const override;

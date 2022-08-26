@@ -6,8 +6,8 @@
 #include "Common.h"
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/AnimationInterface.h"
 
-#include "libavstream/geometry/animation_interface.h"
 #ifdef _MSC_VER
 #pragma warning(disable:4018;disable:4804)
 #endif
@@ -23,6 +23,7 @@
 #define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 using namespace avs;
+using std::string;
 
 GeometryDecoder::GeometryDecoder()
 {
@@ -58,7 +59,8 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 }
 
 std::vector<uint8_t> savedBuffer;
-avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,GeometryTargetBackendInterface *target)
+avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,
+	avs::GeometryPayloadType type,GeometryTargetBackendInterface *target)
 {
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	if(!fileLoader->FileExists(filename.c_str()))
@@ -72,8 +74,7 @@ avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,Geometry
 	memcpy(m_Buffer.data(),ptr,m_BufferSize);
 	fileLoader->ReleaseFileContents(ptr);
 	m_Buffer.resize(m_BufferSize);
-	GeometryPayloadType &type=*((GeometryPayloadType*)m_Buffer.data());
-	return decode( type, target);
+	return decode( type, target,false);
 }
 
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface* target)
@@ -83,34 +84,34 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	m_BufferOffset = 0;
 	m_Buffer.resize(m_BufferSize);
  	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
-	return decode(type,target);
+	return decode(type,target,true);
 }
 
-avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
+avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target,bool save_to_disk)
 {
 	size_t bufferSizeK=(m_BufferSize+1023)/1024;
 	switch(type)
 	{
 	case GeometryPayloadType::Mesh:
 		//TELEPORT_COUT << "GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
-		return decodeMesh(target);
+		return decodeMesh(target,save_to_disk);
 	case GeometryPayloadType::Material:
 		//TELEPORT_COUT << "GeometryPayloadType::Material: " << bufferSizeK << std::endl;
-		return decodeMaterial(target);
+		return decodeMaterial(target,save_to_disk);
 	case GeometryPayloadType::MaterialInstance:
-		return decodeMaterialInstance(target);
+		return decodeMaterialInstance(target,save_to_disk);
 	case GeometryPayloadType::Texture:
 		//TELEPORT_COUT << "GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
-		return decodeTexture(target);
+		return decodeTexture(target,save_to_disk);
 	case GeometryPayloadType::Animation:
 		//TELEPORT_COUT << "GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
-		return decodeAnimation(target);
+		return decodeAnimation(target,save_to_disk);
 	case GeometryPayloadType::Node:
 		//TELEPORT_COUT << "GeometryPayloadType::Node: " << bufferSizeK << std::endl;
 		return decodeNode(target);
 	case GeometryPayloadType::Skin:
 		//TELEPORT_COUT << "GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
-		return decodeSkin(target);
+		return decodeSkin(target,save_to_disk);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
@@ -188,11 +189,14 @@ avs::Accessor::DataType FromDracoNumComponents(int num_components)
 }
 
 // NOTE the inefficiency here, we're coding into "DecodedGeometry", but that is then immediately converted to a MeshCreate.
-avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh)
+avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid
+													,DecodedGeometry &dg
+													, const avs::CompressedMesh &compressedMesh)
 {
 	size_t primitiveArraysSize = compressedMesh.subMeshes.size();
 	dg.primitiveArrays[primitiveArrayUid].reserve(primitiveArraysSize);
 	size_t indexStride = sizeof(draco::PointIndex);
+	uint64_t next_uid=0;
 	for (size_t i = 0; i < primitiveArraysSize; i++)
 	{
 		auto& subMesh = compressedMesh.subMeshes[i];
@@ -210,17 +214,17 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 
 		size_t attributeCount = dracoMesh.num_attributes();
 		// Let's create ONE buffer per attribute.
-		std::vector<avs::uid> buffers;
-		std::vector<avs::uid> buffer_views;
+		std::vector<uint64_t> buffers;
+		std::vector<uint64_t> buffer_views;
 		const auto* dracoPositionAttribute = dracoMesh.GetNamedAttribute(draco::GeometryAttribute::Type::POSITION);
 		for (size_t k = 0; k < attributeCount; k++)
 		{
 			const auto* dracoAttribute = dracoMesh.attribute((int32_t)k);
-			avs::uid buffer_uid = GenerateUid();
+			uint64_t buffer_uid = next_uid++;
 			auto& buffer = dg.buffers[buffer_uid];
 			buffers.push_back(buffer_uid);
 			buffer.byteLength = dracoAttribute->buffer()->data_size();
-			avs::uid buffer_view_uid = GenerateUid();
+			uint64_t buffer_view_uid = next_uid++;
 			buffer_views.push_back(buffer_view_uid);
 			auto& bufferView = dg.bufferViews[buffer_view_uid];
 			bufferView.byteStride = dracoAttribute->byte_stride();
@@ -246,7 +250,7 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 			bufferView.buffer = buffer_uid;
 		}
 		std::vector<uid> index_buffer_uids;
-		uid indices_buffer_uid = GenerateUid();
+		uid indices_buffer_uid = next_uid++;
 		buffers.push_back(indices_buffer_uid);
 		auto& indicesBuffer = dg.buffers[indices_buffer_uid];
 		size_t subMeshFaces= dracoMesh.num_faces(); ;//subMesh.num_indices / 3;
@@ -271,13 +275,13 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 			}
 		}
 
-		avs::uid indices_accessor_uid = subMesh.indices_accessor;
+		uint64_t indices_accessor_uid = subMesh.indices_accessor;
 		auto & indices_accessor =dg.accessors[indices_accessor_uid];
 		if (sizeof(draco::PointIndex) == sizeof(uint32_t))
 			indices_accessor.componentType=avs::Accessor::ComponentType::UINT;
 		else
 			indices_accessor.componentType = avs::Accessor::ComponentType::USHORT;
-		indices_accessor.bufferView = GenerateUid();
+		indices_accessor.bufferView = next_uid++;
 		indices_accessor.count=subMesh.num_indices;
 		indices_accessor.byteOffset=0;
 		indices_accessor.type=avs::Accessor::DataType::SCALAR;
@@ -299,7 +303,7 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 			if(a== subMesh.attributeSemantics.end())
 				continue;
 			avs::AttributeSemantic semantic = a->second;
-			avs::uid accessor_uid = GenerateUid();
+			uint64_t accessor_uid = next_uid++;
 			attributes.push_back({ semantic, accessor_uid });
 			auto &accessor=dg.accessors[accessor_uid];
 			accessor.componentType=FromDracoDataType(dracoAttribute->data_type());
@@ -317,15 +321,22 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid,De
 void GeometryDecoder::saveBuffer(const std::string &filename) const
 {
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
-	fileLoader->Save((const void*)m_Buffer.data(),(unsigned)m_Buffer.size(),filename.c_str(),false);
+	string f=cacheFolder.length()?(cacheFolder+"/")+filename:filename;
+	fileLoader->Save((const void*)m_Buffer.data(),(unsigned)m_Buffer.size(),f.c_str(),false);
 /*	std::ofstream ofs(filename.c_str(),std::ofstream::out|std::ofstream::binary);
 	ofs.write((const char *)m_Buffer.data(), m_Buffer.size());
 	ofs.close();*/
 }
 
-avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
+void GeometryDecoder::setCacheFolder(const std::string &f)
+{
+	cacheFolder=f;
+}
+
+avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target,bool save_to_disk)
 {
 	//Parse buffer and fill struct DecodedGeometry
+	DecodedGeometry dg = {};
 	dg.clear();
 	avs::uid uid;
 
@@ -341,15 +352,16 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		uid = Next8B;
 		avs::CompressedMesh compressedMesh;
 		compressedMesh.meshCompressionType =(avs::MeshCompressionType)NextB;
-		size_t nameLength = Next8B;
-		name.resize(nameLength);
-		copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
-		compressedMesh.name= name;
 		//if(uid==12)
-		saveBuffer(std::string("meshes/"+name+".mesh_compressed"));
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
-			//compressedMesh.subMeshAttributeIndex = (size_t)NextB;
+			int32_t version_number= Next4B;
+			size_t nameLength = Next8B;
+			name.resize(nameLength);
+			copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+			compressedMesh.name= name;
+			if(save_to_disk)
+				saveBuffer(std::string("meshes/"+name+".mesh_compressed"));
 			size_t num_elements=(size_t)Next4B;
 			compressedMesh.subMeshes.resize(num_elements);
 			for(size_t i=0;i< num_elements;i++)
@@ -375,6 +387,11 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		}
 		else if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::NONE)
 		{
+			int32_t version_number= Next4B;
+			size_t nameLength = Next8B;
+			name.resize(nameLength);
+			copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+			compressedMesh.name= name;
 			size_t primitiveArraysSize = Next8B;
 			dg.primitiveArrays[uid].reserve(primitiveArraysSize);
 
@@ -464,7 +481,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 		for (const auto& primitive : it->second)
 		{
 			MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[index];
-			meshElementCreate.vb_uid = primitive.attributes[0].accessor;
+			meshElementCreate.vb_id = primitive.attributes[0].accessor;
 			size_t vertexCount = 0;
 			for (size_t i = 0; i < primitive.attributeCount; i++)
 			{
@@ -528,7 +545,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 			const BufferView& indicesBufferView = dg.bufferViews[indicesAccessor.bufferView];
 			const GeometryBuffer& indicesBuffer = dg.buffers[indicesBufferView.buffer];
 			size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
-			meshElementCreate.ib_uid = primitive.indices_accessor;
+			meshElementCreate.ib_id = primitive.indices_accessor;
 			meshElementCreate.m_Indices = (indicesBuffer.data + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
 			meshElementCreate.m_IndexSize = componentSize;
 			meshElementCreate.m_IndexCount = indicesAccessor.count;
@@ -546,7 +563,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target)
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target)
+avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& target,bool save_to_disk)
 {
 	size_t materialAmount = Next8B;
 
@@ -621,12 +638,12 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryTargetBackendInterface*& tar
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterface*& target)
+avs::Result GeometryDecoder::decodeMaterialInstance(GeometryTargetBackendInterface*& target,bool save_to_disk)
 {
 	return avs::Result::GeometryDecoder_Incomplete;
 }
 
-Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
+Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target,bool save_to_disk)
 {
 	size_t textureAmount = Next8B;
 	for(size_t i = 0; i < textureAmount; i++)
@@ -660,14 +677,15 @@ Result GeometryDecoder::decodeTexture(GeometryTargetBackendInterface*& target)
 	return Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target)
+avs::Result GeometryDecoder::decodeAnimation(GeometryTargetBackendInterface*& target,bool save_to_disk)
 {
 	Animation animation;
 	uid animationID = Next8B;
-
 	size_t nameLength = Next8B;
 	animation.name.resize(nameLength);
 	copy<char>(animation.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+	if(save_to_disk)
+		saveBuffer(std::string("animations/"+animation.name+".anim"));
 
 	animation.boneKeyframes.resize(Next8B);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
@@ -718,27 +736,27 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 
 		switch(node.data_type)
 		{
-		case avs::NodeDataType::Mesh:
-		{
-			uint64_t materialCount = Next8B;
-			node.materials.reserve(materialCount);
-			for(uint64_t j = 0; j < materialCount; ++j)
+			case avs::NodeDataType::Mesh:
 			{
-				node.materials.push_back(Next8B);
+				uint64_t materialCount = Next8B;
+				node.materials.reserve(materialCount);
+				for(uint64_t j = 0; j < materialCount; ++j)
+				{
+					node.materials.push_back(Next8B);
+				}
+				node.renderState.lightmapScaleOffset=NextVec4;
+				node.renderState.globalIlluminationUid = Next8B;
 			}
-			node.renderState.lightmapScaleOffset=NextVec4;
-			node.renderState.globalIlluminationUid = Next8B;
-		}
-		break;
-		case avs::NodeDataType::Light:
-			node.lightColour = NextVec4;
-			node.lightRadius = NextFloat;
-			node.lightRange = NextFloat;
-			node.lightDirection = NextVec3;
-			node.lightType = NextB;
 			break;
-		default:
-			break;
+			case avs::NodeDataType::Light:
+				node.lightColour = NextVec4;
+				node.lightRadius = NextFloat;
+				node.lightRange = NextFloat;
+				node.lightDirection = NextVec3;
+				node.lightType = NextB;
+				break;
+			default:
+				break;
 		};
 
 		uint64_t childCount = Next8B;
@@ -753,7 +771,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& target)
+avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
 {
 	avs::uid skinID = Next8B;
 
@@ -762,6 +780,8 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 	size_t nameLength = Next8B;
 	skin.name.resize(nameLength);
 	copy<char>(skin.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+	if(save_to_disk)
+		saveBuffer(std::string("skins/"+skin.name+".skin"));
 
 	skin.inverseBindMatrices.resize(Next8B);
 	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
@@ -769,6 +789,7 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 		skin.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
 	}
 
+	#if 0
 	skin.boneIDs.resize(Next8B);
 	for (size_t i = 0; i < skin.boneIDs.size(); i++)
 	{
@@ -780,7 +801,24 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 	{
 		skin.jointIDs[i] = Next8B;
 	}
-
+	#else
+	skin.boneTransforms.resize(Next8B);
+	skin.parentIndices.resize(skin.boneTransforms.size());
+	skin.boneNames.resize(skin.boneTransforms.size());
+	for (size_t i = 0; i < skin.boneTransforms.size(); i++)
+	{
+		skin.parentIndices[i]=Next2B;
+		skin.boneTransforms[i] = NextChunk(avs::Transform);
+		size_t nameLength = Next8B;
+		skin.boneNames[i].resize(nameLength);
+		copy<char>(skin.boneNames[i].data(), m_Buffer.data(), m_BufferOffset, nameLength);
+	}
+	skin.jointIndices.resize(Next8B);
+	for (size_t i = 0; i < skin.jointIndices.size(); i++)
+	{
+		skin.jointIndices[i]=Next2B;
+	}
+	#endif
 	skin.skinTransform = NextChunk(avs::Transform);
 
 	target->CreateSkin(skinID, skin);

@@ -256,7 +256,7 @@ namespace avs
 		bool m_configured = false;
 		bool m_outputPending = false;
 
-		Result process(uint32_t timestamp, GeometrySourceInterface *inputMesh,IOInterface *outputNode);
+		Result process(uint64_t timestamp, GeometrySourceInterface *inputMesh,IOInterface *outputNode);
 
 		Result writeOutput(IOInterface* outputNode);
 		// Geom encoder doesn't own its backend.
@@ -321,7 +321,7 @@ Result GeometryEncoder::process(uint64_t timestamp, uint64_t deltaTime)
 	return d().process(timestamp, geometrySourceInterface,outputNode);
 }
 
-Result GeometryEncoder::Private::process(uint32_t timestamp, GeometrySourceInterface *geometrySourceInterface,IOInterface* outputNode)
+Result GeometryEncoder::Private::process(uint64_t timestamp, GeometrySourceInterface *geometrySourceInterface,IOInterface* outputNode)
 {
 	if (!m_configured)
 	{

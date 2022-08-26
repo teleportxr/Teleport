@@ -31,6 +31,7 @@ namespace avs
 #endif
 	typedef unsigned long long uid;
 	extern AVSTREAM_API uid GenerateUid();
+	extern AVSTREAM_API void ClaimUidRange(avs::uid last);
 
 	/*!
 	 * Result type.

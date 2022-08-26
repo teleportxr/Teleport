@@ -25,7 +25,8 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		distanceSortedRootNodes.push_back(node);
 	}
 	nodeLookup[node->id] = node;
-
+	if(avsNode.parentID)
+		parentLookup[node->id]=avsNode.parentID;
 	//Link new node to parent.
 	LinkToParentNode(node->id);
 
@@ -193,6 +194,7 @@ bool NodeManager::ShowNode(avs::uid nodeID)
 	if (nodeIt != nodeLookup.end())
 	{
 		nodeIt->second->SetVisible(true);
+		hiddenNodes.erase(nodeID);
 		return true;
 	}
 
@@ -204,7 +206,9 @@ bool NodeManager::HideNode(avs::uid nodeID)
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())
 	{
+		TELEPORT_COUT<<"NodeManager::HideNode Hiding node "<<nodeID<<std::endl;
 		nodeIt->second->SetVisible(false);
+		hiddenNodes.insert(nodeID);
 		return true;
 	}
 
@@ -217,6 +221,7 @@ void NodeManager::SetVisibleNodes(const std::vector<avs::uid> visibleNodes)
 	for(const auto& it : nodeLookup)
 	{
 		it.second->SetVisible(false);
+		hiddenNodes.insert(it.first);
 	}
 
 	//Show visible nodes.
@@ -300,7 +305,7 @@ void NodeManager::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate
 	}
 }
 
-void clientrender::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, const float* animationTimeOverride, float overrideMaximum)
+void clientrender::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, float animationTimeOverride, float overrideMaximum)
 {
 	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
 	if(node)
@@ -358,10 +363,17 @@ void NodeManager::Update(float deltaTime)
 	for(const std::shared_ptr<clientrender::Node>& node : rootNodes)
 	{
 		node->Update(deltaTime);
-
-		if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
+	}
+	for(const avs::uid u : hiddenNodes)
+	{
+		auto n=nodeLookup.find(u);
+		if(n!=nodeLookup.end())
 		{
-			expiredNodes.push_back(node);
+			std::shared_ptr<clientrender::Node>& node =n->second;
+			if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
+			{
+				expiredNodes.push_back(node);
+			}
 		}
 	}
 
@@ -389,7 +401,7 @@ void NodeManager::Clear()
 	earlyAnimationSpeedUpdates.clear();
 }
 
-void NodeManager::ClearCareful(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)
+void NodeManager::ClearAllButExcluded(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)
 {
 	for (auto it = nodeLookup.begin(); it != nodeLookup.end();)
 	{
