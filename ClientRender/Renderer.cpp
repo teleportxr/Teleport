@@ -537,7 +537,6 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		renderPlatform->DrawQuad(deviceContext);
 		cubemapClearEffect->Unapply(deviceContext);
 	}
-	return;
 	vec4 white={1.f,1.f,1.f,1.f};
 	//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 	pbrConstants.drawDistance = lastSetupCommand.draw_distance;
