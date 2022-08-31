@@ -513,7 +513,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	if(dist<0.01)
 		emissive=vec3(1.0,1.0,1.0);*/
 	vec4 u				=vec4(c+emissive,1.0);
-	//u.g += 0.5;
+u.g += normal.z;
 //	u.rg+= step(0.5,IN.texCoords0.x)*saturate(IN.texCoords0.xy* emissiveTexCoordsScalar_R-vec2(0.0,0.5));
 	vec3 highlight		=vec3(0.01,0.02,0.05);
 //u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;

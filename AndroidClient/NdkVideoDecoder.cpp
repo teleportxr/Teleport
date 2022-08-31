@@ -204,12 +204,15 @@ int VulkanFormatToHardwareBufferFormat(VkFormat v)
 void NdkVideoDecoder::shutdown()
 {
 	stopProcessBuffersThread=true;
-	while(!processBuffersThread->joinable())
+	if(processBuffersThread)
 	{
+		while(!processBuffersThread->joinable())
+		{
+		}
+		processBuffersThread->join();
+		delete processBuffersThread;
+		processBuffersThread=nullptr;
 	}
-	processBuffersThread->join();
-	delete processBuffersThread;
-	processBuffersThread=nullptr;
 	if(!mDecoderConfigured)
 	{
 		TELEPORT_CERR<<"NdkVideoDecoder - "<<"VideoDecoder: Cannot shutdown: not configured"<<std::endl;
@@ -536,7 +539,7 @@ void NdkVideoDecoder::processInputBuffers()
 			memcpy(targetBufferData+inputBuffer.offset,dataBuffer.bytes.data(),copiedSize);
 			inputBuffer.offset+=copiedSize;
 			inputBuffer.flags=dataBuffer.flags;
-			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d added: %zu bytes with flag %d",inputBuffer.inputBufferId,copiedSize,dataBuffer.flags);
+			//__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d added: %zu bytes with flag %d",inputBuffer.inputBufferId,copiedSize,dataBuffer.flags);
 			send=true;
 		}
 	}
@@ -553,13 +556,11 @@ void NdkVideoDecoder::processInputBuffers()
 			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer failed.");
 			return ;
 		}
-		if(lastpacket)
-			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","Last Packet.");
-		__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer: %d SENT %zu bytes with flag %d.",inputBuffer.inputBufferId,inputBuffer.offset,inputBuffer.flags);
+		//if(lastpacket)
+		//	__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","Last Packet.");
+		//__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer: %d SENT %zu bytes with flag %d.",inputBuffer.inputBufferId,inputBuffer.offset,inputBuffer.flags);
 		nextInputBuffers.erase(nextInputBuffers.begin()+nextInputBufferIndex);
-		//inputBuffer.offset=0;
-		//inputBuffer.flags=-1;
-		//nextInputBufferIndex++;
+		
 		if(nextInputBufferIndex>=nextInputBuffers.size())
 			nextInputBufferIndex=0;
 	}
@@ -569,7 +570,7 @@ void NdkVideoDecoder::processInputBuffers()
 		uint8_t *targetBufferData2=AMediaCodec_getInputBuffer(mDecoder,nextInputBuffer.inputBufferId,&buffer_size);
 		if(targetBufferData2)
 		{
-			__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","newbuffer %d added: %lu bytes with flag %d.",inputBuffer.inputBufferId,dataBuffer.bytes.size(),dataBuffer.flags);
+			//__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","newbuffer %d added: %lu bytes with flag %d.",inputBuffer.inputBufferId,dataBuffer.bytes.size(),dataBuffer.flags);
 			memcpy(targetBufferData2,dataBuffer.bytes.data(),dataBuffer.bytes.size());
 			nextInputBuffer.offset+=dataBuffer.bytes.size();
 			nextInputBuffer.flags=dataBuffer.flags;
@@ -609,7 +610,7 @@ void NdkVideoDecoder::processOutputBuffers()
     //auto bufferFormat = AMediaCodec_getOutputFormat(codec,outputBufferId); // option A
     // bufferFormat is equivalent to mOutputFormat
     // outputBuffer is ready to be processed or rendered.
- 	__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","Output available %d, size: %d",outputBuffer.outputBufferId,outputBuffer.size);
+ 	//__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","Output available %d, size: %d",outputBuffer.outputBufferId,outputBuffer.size);
 	
 	bool render = outputBuffer.size != 0;
 	if(AMediaCodec_releaseOutputBuffer(mDecoder,outputBuffer.outputBufferId,true)!=AMEDIA_OK)
@@ -662,6 +663,10 @@ void NdkVideoDecoder::FreeTexture(int index)
 
 void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
+	if(!mDecoderConfigured)
+	{
+		return;
+	}
 	std::unique_lock<std::mutex> lock( _mutex);
 	// start freeing images after 12 frames.
 	for(int i=0;i<texturesToFree.size();i++)
@@ -669,6 +674,8 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 		FreeTexture(texturesToFree[i]);
 	}
 	texturesToFree.clear();
+	if(!renderPlatform)
+		return;
 	#if 0
 	if(nextImageIndex<0)
 		return;

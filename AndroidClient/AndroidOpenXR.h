@@ -20,6 +20,8 @@ extern void OXR_CheckErrors(XrInstance instance, XrResult result, const char* fu
 #define OXR(func) OXR_CheckErrors(ovrApp_GetInstance(), func, #func, false);
 #endif
 
+#define VULKAN_FRAME_LATENCY 3
+
 namespace teleport
 {
 	namespace android
@@ -44,10 +46,9 @@ namespace teleport
 			vk::Device *vulkanDevice=nullptr;
 			//vk::PhysicalDevice *vulkanPhysicalDevice=nullptr;
 			vk::Instance *vulkanInstance=nullptr;
-			CmdBuffer cmdBuffer{};
+			CmdBuffer cmdBuffers[VULKAN_FRAME_LATENCY];
 			vk::Queue vulkanQueue;
-#define VULKAN_FRAME_LATENCY 2
-			vk::Fence fences[VULKAN_FRAME_LATENCY+1];
+			//vk::Fence fences[VULKAN_FRAME_LATENCY+1];
 			// These threads will be marked as performance threads.
 			int MainThreadTid=0;
 			int RenderThreadTid=0;

@@ -610,7 +610,7 @@ void VideoDecoderBackend::clearDecodeArguments()
 {
 	for (auto& arg : mDecodeArgs)
 	{
-		delete[] arg.data;
+		delete[] (char*)arg.data;
 		arg.data=nullptr;
 	}
 	mDecodeArgs.clear();
