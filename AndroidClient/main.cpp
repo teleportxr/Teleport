@@ -191,6 +191,8 @@ void android_main(struct android_app* app)
 	device_exts.push_back(VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME);
 	device_exts.push_back(VK_ANDROID_EXTERNAL_MEMORY_ANDROID_HARDWARE_BUFFER_EXTENSION_NAME);
 	device_exts.push_back(VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME);
+	device_exts.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME); 
+	
 	RedirectStdCoutCerr();
 	vulkanDeviceManager.Initialize(true,false,false,device_exts,openXR.GetRequiredVulkanInstanceExtensions());
 	RenderPlatform *renderPlatform = new vulkan::RenderPlatform();

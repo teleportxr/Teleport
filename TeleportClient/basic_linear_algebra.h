@@ -456,7 +456,7 @@ namespace clientrender
 
 		static avs::vec3 GetTranslation(const mat4& m) 
 		{
-			return avs::vec3(m.d, m.h, m.l);
+			return avs::vec3(m._m03, m._m13, m._m23);
 		}
 
 		static clientrender::quat GetRotation(const mat4 &m) 
@@ -467,9 +467,9 @@ namespace clientrender
 
 		static avs::vec3 GetScale(const mat4 &m) 
 		{
-			avs::vec3 x(m.a,m.e,m.i);
-			avs::vec3 y(m.b,m.f,m.j);
-			avs::vec3 z(m.c,m.g,m.k);
+			avs::vec3 x(m._m00,m._m10,m._m20);
+			avs::vec3 y(m._m01,m._m11,m._m21);
+			avs::vec3 z(m._m02,m._m12,m._m22);
 
 			return avs::vec3(x.Length(), y.Length(), z.Length());
 		} 

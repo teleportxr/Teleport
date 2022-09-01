@@ -56,12 +56,14 @@
     <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <AndroidNdkVersion>22.1.7171670</AndroidNdkVersion>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <AndroidNdkVersion>22.1.7171670</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

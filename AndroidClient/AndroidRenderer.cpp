@@ -18,7 +18,7 @@ struct AVSTextureImpl :public clientrender::AVSTexture
 	avs::SurfaceBackendInterface* createSurface() const override
 	{
 		auto &img=((platform::vulkan::Texture*)texture)->AsVulkanImage();
-		return new avs::SurfaceVulkan(&img,512,512,platform::vulkan::RenderPlatform::ToVulkanFormat(texture->pixelFormat));
+		return new avs::SurfaceVulkan(&img,texture->width,texture->length,platform::vulkan::RenderPlatform::ToVulkanFormat(texture->pixelFormat));
 	}
 };
 

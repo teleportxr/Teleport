@@ -151,9 +151,13 @@ void OpenXR::SetVulkanDeviceAndInstance(vk::Device *vkDevice,vk::Instance *vkIns
 	vulkanDevice=vkDevice;
 	vulkanInstance=vkInstance;
 	vulkanQueue=vulkanDevice->getQueue(0,0);
-	if (!cmdBuffer.Init(vulkanDevice->operator VkDevice(),0))
+	for(int i=0;i<VULKAN_FRAME_LATENCY;i++)
 	{
-		std::cerr << "Failed to create command buffer"<< std::endl;
+		CmdBuffer &commandBuffer=cmdBuffers[i];
+		if (!commandBuffer.Init(vulkanDevice->operator VkDevice(),0))
+		{
+			std::cerr << "Failed to create command buffer"<< std::endl;
+		}
 	}
 }
 
@@ -370,19 +374,20 @@ platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 	static platform::crossplatform::GraphicsDeviceContext dcs[3];
 	platform::crossplatform::GraphicsDeviceContext& deviceContext=dcs[i];
 	// the platform context is the pointer to the VkCommandBuffer.
-	CmdBuffer &commandBuffer=cmdBuffer;
+	CmdBuffer &commandBuffer=cmdBuffers[i];
 	deviceContext.platform_context=(void*)&commandBuffer.buf;
-	cmdBuffer.Reset();
-	cmdBuffer.Begin();
+	commandBuffer.Reset();
+	commandBuffer.Begin();
 	return deviceContext;
 }
 
 void OpenXR::FinishDeviceContext(int i)
 {
-	cmdBuffer.End();
-	cmdBuffer.Exec(vulkanQueue.operator VkQueue());
+	CmdBuffer &commandBuffer=cmdBuffers[i];
+	commandBuffer.End();
+	commandBuffer.Exec(vulkanQueue.operator VkQueue());
 	// XXX Should double-buffer the command buffers, for now just flush
-	cmdBuffer.Wait();
+	commandBuffer.Wait();
 }
 
 void OpenXR::EndFrame() 
@@ -544,71 +549,77 @@ bool OpenXR::TryInitDevice()
 		}
 		xr_swapchains.push_back(swapchain);
 	}
-	// motion vector swapchains:
-	MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
-	swapchain_info.createFlags=0;
-	swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-	swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-	swapchain_info.sampleCount = 1;
-	swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
-	swapchain_info.height = spaceWarpProperties.recommendedMotionVectorImageRectHeight;
-	swapchain_info.faceCount = 1;
-	swapchain_info.arraySize = 1;
-	swapchain_info.mipCount = 1;
-	if(swapchain_info.width*swapchain_info.height>0)
-	for (uint32_t i = 0; i < view_count; i++)
+	static bool add_motion_swapchains=false;
+	if(add_motion_swapchains)
 	{
-		XrSwapchain              handle;
-		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
-		uint32_t surface_count = 0;
-		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
-		client::swapchain_t swapchain = {};
-		swapchain.width = swapchain_info.width;
-		swapchain.height = swapchain_info.height;
-		swapchain.handle = handle;
-		vector<XrSwapchainImageVulkanKHR> surface_images;
-		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
-		swapchain.surface_data.resize(surface_count);
-		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
-		for (uint32_t i = 0; i < surface_count; i++)
-		{
-			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
-		}
-		xr_swapchains.push_back(swapchain);
-	}
-	MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
-	swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
-	for (uint32_t i = 0; i < view_count; i++)
-	{
-		XrViewConfigurationView& view = xr_config_views[i];
-		XrSwapchain              handle;
+		// motion vector swapchains:
+		MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
 		swapchain_info.createFlags=0;
-		swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
-		swapchain_info.width = view.recommendedImageRectWidth;
-		swapchain_info.height = view.recommendedImageRectHeight;
+		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+		swapchain_info.sampleCount = 1;
+		swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
+		swapchain_info.height = spaceWarpProperties.recommendedMotionVectorImageRectHeight;
 		swapchain_info.faceCount = 1;
 		swapchain_info.arraySize = 1;
 		swapchain_info.mipCount = 1;
-		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
-		uint32_t surface_count = 0;
-		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
-		client::swapchain_t swapchain = {};
-		swapchain.width = swapchain_info.width;
-		swapchain.height = swapchain_info.height;
-		swapchain.handle = handle;
-		vector<XrSwapchainImageVulkanKHR> surface_images;
-		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
-		swapchain.surface_data.resize(surface_count);
-		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
-		for (uint32_t i = 0; i < surface_count; i++)
+		if(swapchain_info.width*swapchain_info.height>0)
+		for (uint32_t i = 0; i < view_count; i++)
 		{
-			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+			XrSwapchain              handle;
+			XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+			uint32_t surface_count = 0;
+			xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
+			client::swapchain_t swapchain = {};
+			swapchain.width = swapchain_info.width;
+			swapchain.height = swapchain_info.height;
+			swapchain.handle = handle;
+			vector<XrSwapchainImageVulkanKHR> surface_images;
+			surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+			swapchain.surface_data.resize(surface_count);
+			xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
+			for (uint32_t i = 0; i < surface_count; i++)
+			{
+				swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+			}
+			xr_swapchains.push_back(swapchain);
 		}
-		xr_swapchains.push_back(swapchain);
+		MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
+		swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+		for (uint32_t i = 0; i < view_count; i++)
+		{
+			XrViewConfigurationView& view = xr_config_views[i];
+			XrSwapchain              handle;
+			swapchain_info.createFlags=0;
+			swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
+			swapchain_info.width = view.recommendedImageRectWidth;
+			swapchain_info.height = view.recommendedImageRectHeight;
+			swapchain_info.faceCount = 1;
+			swapchain_info.arraySize = 1;
+			swapchain_info.mipCount = 1;
+			XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+			uint32_t surface_count = 0;
+			xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
+			client::swapchain_t swapchain = {};
+			swapchain.width = swapchain_info.width;
+			swapchain.height = swapchain_info.height;
+			swapchain.handle = handle;
+			vector<XrSwapchainImageVulkanKHR> surface_images;
+			surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+			swapchain.surface_data.resize(surface_count);
+			xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
+			for (uint32_t i = 0; i < surface_count; i++)
+			{
+				swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+			}
+			xr_swapchains.push_back(swapchain);
+		}
 	}
 	// 
 	// quad swapchain:
+	static bool add_overlay_swapchain=true;
+	if(add_overlay_swapchain)
 	{
 		XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
 		XrSwapchain              handle;

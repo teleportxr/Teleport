@@ -1112,14 +1112,21 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 	#if 1
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.1f, 0.1f, 0.2f, 1.0f };
-	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, nullptr);
+	static float clear[] = { 0.9f, 0.1f, 0.2f, 1.0f };
+/*	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, nullptr);
 	renderPlatform->Clear(deviceContext, clear);
-	renderPlatform->DeactivateRenderTargets(deviceContext);
+	renderPlatform->DeactivateRenderTargets(deviceContext);*/
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
+	renderPlatform->Clear(deviceContext, clear);
 	if(surface.depth_view)
 		surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
-
+	else
+	{
+		SIMUL_BREAK("");
+	}
+		
+		//	static float clear2[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+		//	renderPlatform->Clear(deviceContext, clear2);
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
 	renderPlatform->DeactivateRenderTargets(deviceContext);
@@ -1231,10 +1238,12 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		RenderLayerView(deviceContext,projection_views[i], xr_swapchains[i].surface_data[img_id],renderDelegate);
 		
 		FinishDeviceContext(i);
+	}
+	for (uint32_t i = 0; i < view_count; i++)
+	{
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info));
-
 	}
 	
 	if(do_spacewarp)
@@ -1549,50 +1558,52 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	beginFrameDesc.type = XR_TYPE_FRAME_BEGIN_INFO;
 	beginFrameDesc.next = NULL;
 	XR_CHECK(xrBeginFrame(xr_session, &beginFrameDesc));
-
-	// Execute any code that's dependant on the predicted time, such as updating the location of
-	// controller models.
-	openxr_poll_predicted(frame_state.predictedDisplayTime);
-	app_update_predicted();
-
-	XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-	XrResult		res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &space_location);
-	if (XR_UNQUALIFIED_SUCCESS(res) &&
-		(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-		(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
-	{
-		state.XrSpacePoseInWorld=space_location.pose;
-		headPose_worldSpace=ConvertGLStageSpacePoseToWorldSpacePose(space_location.pose);
-	}
-	// If the session is active, lets render our layer in the compositor!
-	
 	int num_layers=0;
-	// Compose the layers for this frame.
 	const XrCompositionLayerBaseHeader* layer_ptrs[4] = {};
-	XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
-	layer_proj= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-	vector<XrCompositionLayerProjectionView> projection_views;
-	vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
-	bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
-	session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
-	if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate))
+	if(frame_state.shouldRender)
 	{
-	    layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
-	}
-	static bool add_overlay=true;
-	if(add_overlay)
-	{
-		RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
-		if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
+		// Execute any code that's dependant on the predicted time, such as updating the location of
+		// controller models.
+		openxr_poll_predicted(frame_state.predictedDisplayTime);
+		app_update_predicted();
+
+		XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
+		XrResult		res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &space_location);
+		if (XR_UNQUALIFIED_SUCCESS(res) &&
+			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
-			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
+			state.XrSpacePoseInWorld=space_location.pose;
+			headPose_worldSpace=ConvertGLStageSpacePoseToWorldSpacePose(space_location.pose);
 		}
-		if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
+		// If the session is active, lets render our layer in the compositor!
+	
+		// Compose the layers for this frame.
+		XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
+		layer_proj= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+		vector<XrCompositionLayerProjectionView> projection_views;
+		vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
+		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
+		session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
+		if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate))
 		{
-			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
+			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 		}
+		static bool add_overlay=true;
+		if(add_overlay)
+		{
+			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
+			if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
+			{
+				layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
+			}
+			if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
+			{
+				layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
+			}
+		}
+		EndFrame();
 	}
-	EndFrame();
 	// We're finished with rendering our layer, so send it off for display!
 	XrFrameEndInfo end_info{ XR_TYPE_FRAME_END_INFO };
 	end_info.displayTime = frame_state.predictedDisplayTime;
