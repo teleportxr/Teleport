@@ -4,7 +4,6 @@
 #include "Animation.h"
 #include "Material.h"
 
-using namespace avs;
 using namespace clientrender;
 
 ResourceCreator::ResourceCreator()
@@ -143,7 +142,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 
 	for (size_t i = 0; i < meshCreate.m_NumElements; i++)
 	{
-		MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[i];
+		avs::MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[i];
 
 		//We have to pad the UV1s, if we are missing UV1s but have joints and weights; we use a vector so it will clean itself up.
 		std::vector<avs::vec2> paddedUV1s(meshElementCreate.m_VertexCount);
@@ -155,35 +154,35 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		std::shared_ptr<VertexBufferLayout> layout(new VertexBufferLayout);
 		if (meshElementCreate.m_Vertices)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::POSITION, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_Normals || meshElementCreate.m_TangentNormals)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::NORMAL, VertexBufferLayout::ComponentCount::VEC3, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_Tangents || meshElementCreate.m_TangentNormals)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::TANGENT, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_UV0s)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::TEXCOORD_0, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_UV1s)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::TEXCOORD_1, VertexBufferLayout::ComponentCount::VEC2, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_Colors)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::COLOR_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_Joints)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::JOINTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
 		}
 		if (meshElementCreate.m_Weights)
 		{
-			layout->AddAttribute((uint32_t)AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
+			layout->AddAttribute((uint32_t)avs::AttributeSemantic::WEIGHTS_0, VertexBufferLayout::ComponentCount::VEC4, VertexBufferLayout::Type::FLOAT);
 		}
 		layout->CalculateStride();
 		layout->m_PackingStyle = this->m_PackingStyle;
@@ -208,36 +207,36 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				if (meshElementCreate.m_TangentNormals)
 				{
 					avs::vec3 normal;
-					avs::vec4 tangent;
+					::vec4 tangent;
 					char* nt = (char*)(meshElementCreate.m_TangentNormals + (meshElementCreate.m_TangentNormalSize * j));
 					// tangentx tangentz
 					if (meshElementCreate.m_TangentNormalSize == 8)
 					{
-						Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
+						avs::Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
 						tangent.x = float(x8.x) / 127.0f;
 						tangent.y = float(x8.y) / 127.0f;
 						tangent.z = float(x8.z) / 127.0f;
 						tangent.w = float(x8.w) / 127.0f;
-						Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
+						avs::Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
 						normal.x = float(n8.x) / 127.0f;
 						normal.y = float(n8.y) / 127.0f;
 						normal.z = float(n8.z) / 127.0f;
 					}
 					else // 16
 					{
-						Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
+						avs::Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
 						tangent.x = float(x8.x) / 32767.0f;
 						tangent.y = float(x8.y) / 32767.0f;
 						tangent.z = float(x8.z) / 32767.0f;
 						tangent.w = float(x8.w) / 32767.0f;
-						Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
+						avs::Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
 						normal.x = float(n8.x) / 32767.0f;
 						normal.y = float(n8.y) / 32767.0f;
 						normal.z = float(n8.z) / 32767.0f;
 					}
 					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &normal, sizeof(avs::vec3));
 					intraStrideOffset += 3;
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &tangent, sizeof(avs::vec4));
+					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &tangent, sizeof(vec4));
 					intraStrideOffset += 4;
 				}
 				else
@@ -249,7 +248,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 					}
 					if (meshElementCreate.m_Tangents)
 					{
-						memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Tangents + j, sizeof(avs::vec4));
+						memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Tangents + j, sizeof(vec4));
 						intraStrideOffset += 4;
 					}
 				}
@@ -265,17 +264,17 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				}
 				if (meshElementCreate.m_Colors)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Colors + j, sizeof(avs::vec4));
+					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Colors + j, sizeof(vec4));
 					intraStrideOffset += 4;
 				}
 				if (meshElementCreate.m_Joints)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Joints + j, sizeof(avs::vec4));
+					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Joints + j, sizeof(vec4));
 					intraStrideOffset += 4;
 				}
 				if (meshElementCreate.m_Weights)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Weights + j, sizeof(avs::vec4));
+					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Weights + j, sizeof(vec4));
 					intraStrideOffset += 4;
 				}
 			}
@@ -295,29 +294,29 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				for (size_t j = 0; j < meshElementCreate.m_VertexCount; j++)
 				{
 					avs::vec3 normal;
-					avs::vec4 tangent;
+					vec4 tangent;
 					char* nt = (char*)(meshElementCreate.m_TangentNormals + (meshElementCreate.m_TangentNormalSize * j));
 					// tangentx tangentz
 					if (meshElementCreate.m_TangentNormalSize == 8)
 					{
-						Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
+						avs::Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
 						tangent.x = float(x8.x) / 127.0f;
 						tangent.y = float(x8.y) / 127.0f;
 						tangent.z = float(x8.z) / 127.0f;
 						tangent.w = float(x8.w) / 127.0f;
-						Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
+						avs::Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
 						normal.x = float(n8.x) / 127.0f;
 						normal.y = float(n8.y) / 127.0f;
 						normal.z = float(n8.z) / 127.0f;
 					}
 					else // 16
 					{
-						Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
+						avs::Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
 						tangent.x = float(x8.x) / 32767.0f;
 						tangent.y = float(x8.y) / 32767.0f;
 						tangent.z = float(x8.z) / 32767.0f;
 						tangent.w = float(x8.w) / 32767.0f;
-						Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
+						avs::Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
 						normal.x = float(n8.x) / 32767.0f;
 						normal.y = float(n8.y) / 32767.0f;
 						normal.z = float(n8.z) / 32767.0f;
@@ -328,7 +327,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 					memcpy(constructedVB.get() + vertexBufferOffset, &normal, size);
 					vertexBufferOffset += size;
 
-					size = sizeof(avs::vec4);
+					size = sizeof(vec4);
 					assert(constructedVBSize >= vertexBufferOffset + size);
 					memcpy(constructedVB.get() + vertexBufferOffset, &tangent, size);
 					vertexBufferOffset += size;
@@ -345,7 +344,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				}
 				if (meshElementCreate.m_Tangents)
 				{
-					size_t size = sizeof(avs::vec4) * meshElementCreate.m_VertexCount;
+					size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 					assert(constructedVBSize >= vertexBufferOffset + size);
 					memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Tangents, size);
 					vertexBufferOffset += size;
@@ -367,21 +366,21 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			}
 			if (meshElementCreate.m_Colors)
 			{
-				size_t size = sizeof(avs::vec4) * meshElementCreate.m_VertexCount;
+				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
 				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Colors, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Joints)
 			{
-				size_t size = sizeof(avs::vec4) * meshElementCreate.m_VertexCount;
+				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
 				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Joints, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Weights)
 			{
-				size_t size = sizeof(avs::vec4) * meshElementCreate.m_VertexCount;
+				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
 				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Weights, size);
 				vertexBufferOffset += size;
@@ -529,7 +528,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression,texture.valueScale });
-		std::cout << "will transcode with "<<(texture.compression== TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
+		std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
 	}
 	else
 	{
@@ -554,28 +553,28 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 
 	//Colour/Albedo/Diffuse
 	AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
-		material.pbrMetallicRoughness.baseColorFactor,
+		*((vec4*)&material.pbrMetallicRoughness.baseColorFactor),
 		m_DummyWhite,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.diffuse);
 
 	//Normal
 	AddTextureToMaterial(material.normalTexture,
-		avs::vec4{ material.normalTexture.scale, material.normalTexture.scale, 1.0f, 1.0f },
+		vec4{ material.normalTexture.scale, material.normalTexture.scale, 1.0f, 1.0f },
 		m_DummyNormal,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.normal);
 
 	//Combined
 	AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
-		avs::vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
+		vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
 		m_DummyCombined,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.combined);
 
 	//Emissive
 	AddTextureToMaterial(material.emissiveTexture,
-		avs::vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
+		vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
 		m_DummyWhite,
 		incompleteMaterial,
 		incompleteMaterial->materialInfo.emissive);
@@ -596,19 +595,19 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 
 	switch (node.data_type)
 	{
-	case NodeDataType::Invalid:
+	case avs::NodeDataType::Invalid:
 		TELEPORT_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
 		break;
-	case NodeDataType::None:
+	case avs::NodeDataType::None:
 		CreateMeshNode(id, node);
 		break;
-	case NodeDataType::Mesh:
+	case avs::NodeDataType::Mesh:
 		CreateMeshNode(id, node);
 		break;
-	case NodeDataType::Light:
+	case avs::NodeDataType::Light:
 		CreateLight(id, node);
 		break;
-	case NodeDataType::Bone:
+	case avs::NodeDataType::Bone:
 		CreateBone(id, node);
 		break;
 	default:
@@ -627,7 +626,7 @@ void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 	//Convert avs::Mat4x4 to clientrender::Transform.
 	std::vector<mat4> inverseBindMatrices;
 	inverseBindMatrices.reserve(skin.inverseBindMatrices.size());
-	for (const Mat4x4& matrix : skin.inverseBindMatrices)
+	for (const avs::Mat4x4& matrix : skin.inverseBindMatrices)
 	{
 		inverseBindMatrices.push_back(*((mat4*)&matrix));
 	}
@@ -1100,7 +1099,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrende
 	}
 }
 
-void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const avs::vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,
+void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,
 										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, clientrender::Material::MaterialParameter& materialParameter)
 {
 	if (accessor.index != 0)
@@ -1137,7 +1136,7 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 		materialParameter.texCoordIndex = 0.0f;
 	}
 
-	materialParameter.textureOutputScalar = colourFactor;
+	materialParameter.textureOutputScalar = *((avs::vec4*)&colourFactor);
 }
 
 //#define STB_IMAGE_IMPLEMENTATION

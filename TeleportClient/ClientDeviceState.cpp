@@ -34,7 +34,7 @@ void ClientDeviceState::TransformPose(LocalGlobalPose &p)
 	clientrender::quat stickRotateQ = originPose.orientation;// (stickYaw, avs::vec3(0, 1.0f, 0));
 	clientrender::quat localQ=*((clientrender::quat*)(&p.localPose.orientation));
 	clientrender::quat globalQ=(stickRotateQ*localQ);
-	p.globalPose.orientation=globalQ;
+	p.globalPose.orientation=*((avs::vec4*)&globalQ);
 
 	avs::vec3 relp=p.localPose.position;
 	clientrender::quat localP=*((clientrender::quat*)(&(relp)));

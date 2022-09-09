@@ -24,7 +24,6 @@ namespace teleport
 		float confirmationWaitTime = 0.0f;		// Seconds to wait before resending a resource.
 		float clientDrawDistanceOffset = 0.0f;	// Offset for distance pixels are clipped at for geometry on the client.
 
-
 		bool enableVideoStreaming = false;
 		bool enableWebcamStreaming = false;
 		int32_t captureCubeSize = 0;
@@ -100,6 +99,7 @@ namespace teleport
 		avs::vec3 bodyOffsetFromHead;
 		int32_t captureCubeTextureSize;
 		avs::BackgroundMode backgroundMode;
+		avs::vec4 backgroundColour;
 		float drawDistance;
 	};
 	struct InputDefinitionInterop

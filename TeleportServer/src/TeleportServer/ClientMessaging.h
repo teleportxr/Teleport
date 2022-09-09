@@ -77,14 +77,31 @@ namespace teleport
 		bool hasReceivedHandshake() const;
 
 		bool setOrigin(uint64_t valid_counter,avs::uid originNode,const avs::vec3 &pos,const avs::vec4 &orientation);
+		template<typename C> bool sendCommand(const C& command) const
+		{
+			if(!peer)
+			{
+				TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
+				return false;
+			}
 
-		bool sendCommand(const avs::Command& avsCommand) const;
+			size_t commandSize = sizeof(C);
+			ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
+	
+			if(!packet)
+			{
+				TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! Failed to create packet!\n";
+				return false;
+			}
+
+			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+		}
 
 		uint16_t getServerPort() const;
 
 		uint16_t getStreamingPort() const;
 
-		template<typename T> bool sendCommand(const avs::Command& command, const std::vector<T>& appendedList) const
+		template<typename C,typename T> bool sendCommand(const C& command, const std::vector<T>& appendedList) const
 		{
 			if(!peer)
 			{
@@ -92,7 +109,7 @@ namespace teleport
 				return false;
 			}
 
-			size_t commandSize = command.getCommandSize();
+			size_t commandSize = sizeof(C);
 			size_t listSize = sizeof(T) * appendedList.size();
 
 			ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
@@ -109,7 +126,7 @@ namespace teleport
 			
 			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
-		template <> bool sendCommand<avs::InputDefinition>(const avs::Command& command, const std::vector<avs::InputDefinition>& appendedInputDefinitions) const
+		template <> bool sendCommand<avs::SetupInputsCommand,avs::InputDefinition>(const avs::SetupInputsCommand& command, const std::vector<avs::InputDefinition>& appendedInputDefinitions) const
 		{
 			if (!peer)
 			{
@@ -121,7 +138,7 @@ namespace teleport
 				TELEPORT_CERR << "Invalid command!\n";
 				return false;
 			}
-			size_t commandSize = command.getCommandSize();
+			size_t commandSize = sizeof(avs::InputDefinition);
 			size_t listSize = appendedInputDefinitions.size()*(sizeof(avs::InputId)+sizeof(avs::InputType));
 			for (const auto& d : appendedInputDefinitions)
 			{

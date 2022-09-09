@@ -49,7 +49,7 @@ namespace teleport
 		// Configure for num video streams + 1 audio stream + 1 geometry stream
 		if (!networkSource->configure(std::move(streams), sourceParams))
 		{
-			TELEPORT_CERR << "Failed to configure network source!" << std::endl;
+			TELEPORT_CERR << "Failed to configure network source!" << "\n";
 			return;
 		}
 
@@ -60,19 +60,19 @@ namespace teleport
 			auto& pipe = audioPipes[i];
 			if (!avs::PipelineNode::link(*networkSource, *pipe->queue))
 			{
-				TELEPORT_CERR << "Failed to link network source and audio queue!" << std::endl;
+				TELEPORT_CERR << "Failed to link network source and audio queue!" << "\n";
 				return;
 			}
 
 			if (!avs::PipelineNode::link(*pipe->queue, *pipe->decoder))
 			{
-				TELEPORT_CERR << "Failed to link audio queue and audio decoder!" << std::endl;
+				TELEPORT_CERR << "Failed to link audio queue and audio decoder!" << "\n";
 				return;
 			}
 
 			if (pipeline->link({ pipe->decoder, pipe->target }))
 			{
-				TELEPORT_CERR << "Failed to link audio queue and audio decoder!" << std::endl;
+				TELEPORT_CERR << "Failed to link audio queue and audio decoder!" << "\n";
 				return;
 			}
 		}
@@ -98,7 +98,7 @@ namespace teleport
 		{
 			if (result != prevProcResult)
 			{
-				TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
+				TELEPORT_CERR << "Network pipeline processing encountered an error!" << "\n";
 				prevProcResult = result;
 			}
 			return false;
@@ -121,7 +121,7 @@ namespace teleport
 		}
 		else
 		{
-			TELEPORT_CERR << "Can't return counters because network source is null." << std::endl;
+			TELEPORT_CERR << "Can't return counters because network source is null." << "\n";
 			return avs::Result::Node_Null;
 		}
 		return avs::Result::OK;

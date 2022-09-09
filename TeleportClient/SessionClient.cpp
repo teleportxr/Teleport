@@ -165,12 +165,6 @@ void SessionClient::SetPeerTimeout(uint timeout)
 	}
 }
 
-void SessionClient::SendClientMessage(const avs::ClientMessage& message)
-{
-	size_t messageSize = message.getMessageSize();
-	ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
-}
 
 void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &headPose
@@ -293,7 +287,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 
 void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 {
-	avs::CommandPayloadType commandPayloadType = *(reinterpret_cast<avs::CommandPayloadType*>(packet->data) + sizeof(void*));
+	avs::CommandPayloadType commandPayloadType = *(reinterpret_cast<avs::CommandPayloadType*>(packet->data));
 	switch(commandPayloadType)
 	{
 		case avs::CommandPayloadType::Shutdown:
@@ -553,7 +547,7 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::SetupCommand);
+	size_t commandSize= sizeof(avs::SetupCommand);
 
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);

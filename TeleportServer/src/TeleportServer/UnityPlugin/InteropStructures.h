@@ -29,15 +29,15 @@ struct InteropNode
 	float lightRange;
 	uint8_t lightType;
 
-	size_t animationAmount;
+	size_t animationCount;
 	avs::uid* animationIDs;
 
-	size_t materialAmount;
+	size_t materialCount;
 	avs::uid* materialIDs;
 	
 	avs::NodeRenderState renderState;
 
-	size_t childAmount;
+	size_t childCount;
 	avs::uid* childIDs;
 
 	int32_t priority;
@@ -58,14 +58,14 @@ struct InteropNode
 			priority,
 
 			parentID,
-			{childIDs, childIDs + childAmount},
+			{childIDs, childIDs + childCount},
 
 			dataType,
 			dataID,
 
-			{materialIDs, materialIDs + materialAmount},
+			{materialIDs, materialIDs + materialCount},
 			skinID,
-			{animationIDs, animationIDs + animationAmount},
+			{animationIDs, animationIDs + animationCount},
 
 			renderState,
 
@@ -81,6 +81,7 @@ struct InteropNode
 struct InteropSkin
 {
 	BSTR name;
+	BSTR path;
 
 	size_t numInverseBindMatrices;
 	avs::Mat4x4* inverseBindMatrices;
@@ -113,19 +114,20 @@ struct InteropSkin
 struct InteropMesh
 {
 	BSTR name;
+	BSTR path;
 
-	int64_t primitiveArrayAmount;
+	int64_t primitiveArrayCount;
 	avs::PrimitiveArray* primitiveArrays;
 
-	int64_t accessorAmount;
+	int64_t accessorCount;
 	avs::uid* accessorIDs;
 	avs::Accessor* accessors;
 
-	int64_t bufferViewAmount;
+	int64_t bufferViewCount;
 	avs::uid* bufferViewIDs;
 	avs::BufferView* bufferViews;
 
-	int64_t bufferAmount;
+	int64_t bufferCount;
 	avs::uid* bufferIDs;
 	avs::GeometryBuffer* buffers;
 
@@ -135,9 +137,9 @@ struct InteropMesh
 		newMesh.name = avs::convertToByteString(name);
 
 		//Create vector in-place with pointer.
-		newMesh.primitiveArrays = {primitiveArrays, primitiveArrays + primitiveArrayAmount};
+		newMesh.primitiveArrays = {primitiveArrays, primitiveArrays + primitiveArrayCount};
 		//Memcpy the attributes into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
-		for(int i = 0; i < primitiveArrayAmount; i++)
+		for(int i = 0; i < primitiveArrayCount; i++)
 		{
 			size_t dataSize = sizeof(avs::Attribute) * primitiveArrays[i].attributeCount;
 
@@ -146,17 +148,17 @@ struct InteropMesh
 		}
 
 		//Zip all of the maps back together.
-		for(int i = 0; i < accessorAmount; i++)
+		for(int i = 0; i < accessorCount; i++)
 		{
 			newMesh.accessors[accessorIDs[i]] = accessors[i];
 		}
 
-		for(int i = 0; i < bufferViewAmount; i++)
+		for(int i = 0; i < bufferViewCount; i++)
 		{
 			newMesh.bufferViews[bufferViewIDs[i]] = bufferViews[i];
 		}
 
-		for(int i = 0; i < bufferAmount; i++)
+		for(int i = 0; i < bufferCount; i++)
 		{
 			newMesh.buffers[bufferIDs[i]] = buffers[i];
 
@@ -172,6 +174,7 @@ struct InteropMesh
 struct InteropMaterial
 {
 	BSTR name;
+	BSTR path;
 
 	avs::PBRMetallicRoughness pbrMetallicRoughness;
 	avs::TextureAccessor normalTexture;
@@ -179,7 +182,7 @@ struct InteropMaterial
 	avs::TextureAccessor emissiveTexture;
 	avs::vec3 emissiveFactor;
 
-	size_t extensionAmount;
+	size_t extensionCount;
 	avs::MaterialExtensionIdentifier* extensionIDs;
 	avs::MaterialExtension** extensions;
 	const InteropMaterial &operator=(const avs::Material& avsMaterial)
@@ -191,7 +194,7 @@ struct InteropMaterial
 		std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> convertedExtensions;
 
 		//Stitch extension map together.
-		for(int i = 0; i < extensionAmount; i++)
+		for(int i = 0; i < extensionCount; i++)
 		{
 			avs::MaterialExtensionIdentifier extensionID = extensionIDs[i];
 
@@ -219,6 +222,7 @@ struct InteropMaterial
 struct InteropTexture
 {
 	BSTR name;
+	BSTR path;
 
 	uint32_t width;
 	uint32_t height;
@@ -282,8 +286,8 @@ struct InteropTransformKeyframe
 struct InteropTransformAnimation
 {
 	BSTR name;
-
-	int64_t boneAmount;
+	BSTR path;
+	int64_t boneCount;
 	InteropTransformKeyframe* boneKeyframes;
 
 	operator avs::Animation() const
@@ -291,7 +295,7 @@ struct InteropTransformAnimation
 		return
 		{
 			avs::convertToByteString(name),
-			{boneKeyframes, boneKeyframes + boneAmount}
+			{boneKeyframes, boneKeyframes + boneCount}
 		};
 	}
 };

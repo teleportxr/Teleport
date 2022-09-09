@@ -24,25 +24,25 @@ namespace teleport
 	{
 		if (mountDirectory == "")
 		{
-			TELEPORT_CERR << "Path of directory to mount cannot be empty!" << std::endl;
+			TELEPORT_CERR << "Path of directory to mount cannot be empty!" << "\n";
 			return false;
 		}
 
 		if (port == 0)
 		{
-			TELEPORT_CERR << "HTTP port cannot be 0!" << std::endl;
+			TELEPORT_CERR << "HTTP port cannot be 0!" << "\n";
 			return false;
 		}
 
 		if (certPath.size() > 0 && privateKeyPath.size() > 0)
 		{
-			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTPS server." << std::endl;
+			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTPS server." << "\n";
 			mServer.reset(new httplib::SSLServer(certPath.c_str(), privateKeyPath.c_str()));
 			mUsingSSL = true;
 		}
 		else
 		{
-			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTP server." << std::endl;
+			TELEPORT_COUT << "SSL certificate and key provided. Usng HTTP server." << "\n";
 			mServer.reset(new httplib::Server());
 			mUsingSSL = false;
 		}
@@ -53,7 +53,7 @@ namespace teleport
 		auto ret = mServer->set_mount_point("/", mountDirectory);
 		if (!ret) 
 		{
-			TELEPORT_CERR << "Provided mount directory does not exist!" << std::endl;
+			TELEPORT_CERR << "Provided mount directory does not exist!" << "\n";
 			return false;
 		}
 

@@ -116,19 +116,12 @@ namespace clientrender
 			avs::vec4 orientation[2];
 		};
 		ControllerSim controllerSim;
-		enum MouseOrKey :char
-		{
-			LEFT_BUTTON = 0x01
-			, MIDDLE_BUTTON = 0x02
-			, RIGHT_BUTTON = 0x04
-		};
 	
 		/// A camera instance to generate view and proj matrices and handle mouse control.
 		/// In practice you will have your own solution for this.
 		platform::crossplatform::Camera			camera;
 		platform::crossplatform::MouseCameraState	mouseCameraState;
 		platform::crossplatform::MouseCameraInput	mouseCameraInput;
-		std::map<MouseOrKey, avs::InputId> inputIdMappings;
 		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
 		virtual void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
@@ -153,7 +146,7 @@ namespace clientrender
 
 		bool keydown[256] = {};
 		teleport::client::SessionClient *sessionClient=nullptr;
-		teleport::core::Input inputs;
+	
 		/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
 		platform::crossplatform::RenderPlatform *renderPlatform	=nullptr;
 		/// A framebuffer to store the colour and depth textures for the view.
@@ -227,11 +220,9 @@ namespace clientrender
 		teleport::Gui &gui;
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;
-		bool Match(const std::string& full_string, const std::string& substring);
 		void GeometryOSD(const clientrender::GeometryCache &geometryCache);
 	public:
 		teleport::client::ClientPipeline clientPipeline;
-		std::vector<avs::InputDefinition> inputDefinitions;
 		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
 #ifdef _MSC_VER
 		sca::PC_AudioPlayer audioPlayer;
@@ -265,7 +256,11 @@ namespace clientrender
 		
 		int AddView() override;
 		void ResizeView(int view_id, int W, int H) override;
-		void Render(int view_id,void* context,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr) override;
+		void Render(int view_id,void* pContext,void* renderTexture,int w,int h,long long frame,void* context_allocator=nullptr) override
+		{
+			RenderDesktopView(view_id,pContext,renderTexture,w,h,frame,context_allocator);
+		}
+		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
 		void SetServer(const char* ip_port);
 		void RemoveView(int) override;

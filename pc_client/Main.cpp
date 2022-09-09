@@ -203,14 +203,9 @@ void ShutdownRenderer(HWND hWnd)
 
 void InitXR()
 {
-	if(useOpenXR.TryInitDevice())
-	{
-		useOpenXR.MakeActions();
-		// create the input defs for the local (zero-uid) server:		
-		//std::vector<avs::InputDefinition> inputDefinitions;
-		//inputDefinitions.push_back({avs::InputId::})
-		//useOpenXR.OnInputsSetupChanged(0,inputDefinitions);
-	}
+	useOpenXR.TryInitDevice();
+	// Make the actions, even without a device. Because we treat mouse/kb as virtual devices.
+	useOpenXR.MakeActions();
 }
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
@@ -352,9 +347,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
+			if(!gui.HasFocus())
+				useOpenXR.OnMouseButtonPressed(false, true, false, 0);
 			break;
 		case WM_RBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
+			if(!gui.HasFocus())
+				useOpenXR.OnMouseButtonReleased(false, true, false, 0);
 			break;
 		case WM_MOUSEMOVE:
 		{
@@ -378,21 +377,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case WM_KEYDOWN:
 			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.HasFocus());
+			if(!gui.HasFocus())
+				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
 			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.HasFocus());
+			if(!gui.HasFocus())
+				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
+			if(!gui.HasFocus())
+				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
+			if(!gui.HasFocus())
+				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
+			if(!gui.HasFocus())
+				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
+			if(!gui.HasFocus())
+				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:
 		{
@@ -448,9 +459,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					c--;
 					if(!c)
 					{
-						InitXR();
-						c=retry_wait;
-						retry_wait*=2;
+						if(useOpenXR.TryInitDevice())
+						{
+							useOpenXR.MakeActions();
+							retry_wait=256;
+							c=retry_wait;
+						}
+						else
+						{
+							c=retry_wait;
+							if(retry_wait<16384)
+								retry_wait*=2;
+						}
 					}
 				}
 				static double fTime=0.0;

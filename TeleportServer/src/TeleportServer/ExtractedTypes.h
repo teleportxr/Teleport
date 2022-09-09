@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ctime>
+#include <algorithm>
 
 #include "comdef.h"
 
@@ -24,9 +25,16 @@ namespace teleport
 			return mesh.name;
 		}
 		_bstr_t guid;
+		//! The path to the asset, which is both the relative path from the cache directory, and the URI
+		//! relative to the server.
+		_bstr_t path;
 		std::time_t lastModified;
 		avs::Mesh mesh;
 		avs::CompressedMesh compressedMesh;
+		bool Verify(const ExtractedMesh &t) const
+		{
+			return true;
+		}
 		void GetAccessorRange(uint64_t &lowest,uint64_t &highest) const
 		{
 			lowest=0xFFFFFFFFFFFFFFFF;
@@ -45,10 +53,13 @@ namespace teleport
 		template<class OutStream>
 		friend OutStream& operator<< (OutStream& out, const ExtractedMesh& meshData)
 		{
+			std::wstring pathAsString={meshData.path, SysStringLen(meshData.path)};
+			std::replace(pathAsString.begin(),pathAsString.end(),' ','%');
 			out << std::wstring{meshData.guid, SysStringLen(meshData.guid)}
+				<< " " << pathAsString
 				<< " " << meshData.lastModified
-				<< std::endl << meshData.mesh
-				<< std::endl << meshData.compressedMesh << std::endl;
+				<< "\n" << meshData.mesh
+				<< "\n" << meshData.compressedMesh << "\n";
 			return out;
 		}
 
@@ -58,6 +69,11 @@ namespace teleport
 			std::wstring guidAsString;
 			in >> guidAsString;
 			meshData.guid = _bstr_t(guidAsString.data());
+
+			std::wstring pathAsString;
+			in >> pathAsString;
+			std::replace(pathAsString.begin(),pathAsString.end(),'%',' ');
+			meshData.path = _bstr_t(pathAsString.data());
 
 			in >> meshData.lastModified >> meshData.mesh >> meshData.compressedMesh;
 			// having loaded, now rescale the uid's:
@@ -77,17 +93,27 @@ namespace teleport
 			return material.name;
 		}
 		_bstr_t guid;
+		//! The path to the asset, which is both the relative path from the cache directory, and the URI
+		//! relative to the server.
+		_bstr_t path;
 		std::time_t lastModified;
 		avs::Material material;
-
+		
+		bool Verify(const ExtractedMaterial &t) const
+		{
+			return material.Verify(t.material);
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const ExtractedMaterial& materialData)
 		{
+			std::wstring pathAsString={materialData.path, SysStringLen(materialData.path)};
+			std::replace(pathAsString.begin(),pathAsString.end(),' ','%');
 			out << std::wstring{materialData.guid, SysStringLen(materialData.guid)}
+				<< " " << pathAsString
 				<< " " << materialData.lastModified
-				<< std::endl;
+				<< "\n";
 			out<< materialData.material;
-			out<< std::endl;
+			out<< "\n";
 			return out;
 		}
 		
@@ -97,6 +123,12 @@ namespace teleport
 			std::wstring guidAsString;
 			in >> guidAsString;
 			materialData.guid = _bstr_t(guidAsString.data());
+
+			std::wstring pathAsString;
+			in >> pathAsString;
+			std::replace(pathAsString.begin(),pathAsString.end(),'%',' ');
+			materialData.path = _bstr_t(pathAsString.data());
+
 			 in >> materialData.lastModified;
 			 in >> materialData.material;
 			 return in;
@@ -114,17 +146,28 @@ namespace teleport
 			return texture.name;
 		}
 		_bstr_t guid;
+		//! The path to the asset, which is both the relative path from the cache directory, and the URI
+		//! relative to the server.
+		_bstr_t path;
 		std::time_t lastModified;
 		avs::Texture texture;
 		float valueScale=1.0f;
+		bool Verify(const ExtractedTexture &t) const
+		{
+			return true;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const ExtractedTexture& textureData)
 		{
+			std::wstring pathAsString={textureData.path, SysStringLen(textureData.path)};
+			std::replace(pathAsString.begin(),pathAsString.end(),' ','%');
+
 			out << std::wstring{textureData.guid, SysStringLen(textureData.guid)};
+			out << " " << pathAsString;
 			out << " " << textureData.lastModified;
-			out << std::endl;
+			out << "\n";
 			out << textureData.texture;
-			out << " " << textureData.valueScale << std::endl;
+			out << " " << textureData.valueScale << "\n";
 			return out;
 		}
 		
@@ -134,6 +177,11 @@ namespace teleport
 			std::wstring guidAsString;
 			in >> guidAsString;
 			textureData.guid = _bstr_t(guidAsString.data());
+			
+			std::wstring pathAsString;
+			in >> pathAsString;
+			std::replace(pathAsString.begin(),pathAsString.end(),'%',' ');
+			textureData.path = _bstr_t(pathAsString.data());
 
 			in >> textureData.lastModified;
 			in >> textureData.texture;
@@ -147,19 +195,14 @@ namespace teleport
 	{
 		avs::uid id;	// The id of the resource in this session.
 		BSTR guid;		// Uniquely identifying string that the engine uses to identify assets.
+		BSTR path;		// Uniquely identifying string that the engine uses to identify assets.
 		BSTR name;		// Name of the asset to tell it apart from assets with the GUID; i.e. they come from the same source file.
 		std::time_t lastModified;
 
 		LoadedResource() = default;
-		LoadedResource(avs::uid oldID, _bstr_t guid, BSTR name, std::time_t lastModified)
-			:id(oldID), guid(guid), name(name), lastModified(lastModified)
+		LoadedResource(avs::uid uid, _bstr_t gud, _bstr_t pth, BSTR name, std::time_t lastModified)
+			:id(uid), guid(gud), path(pth), name(name), lastModified(lastModified)
 		{}
 	};
 
-	//Resource that the server found to still be in-use, and has assigned a new ID to.
-	struct ReaffirmedResource
-	{
-		_bstr_t guid;
-		avs::uid newID;
-	};
 }

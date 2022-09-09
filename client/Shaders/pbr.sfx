@@ -176,7 +176,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);
 	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
-	OUT.texCoords1		=vec2(IN.texCoords1.x,1.0-IN.texCoords1.y);
+	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
 #ifdef SFX_OPENGL_NONE
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
@@ -464,11 +464,13 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	normalLookup		= normalOutputScalar.xyz*2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
 	vec3 normal			= normalize(mul(normalLookup, TangentMatrix));
 
-	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
+	vec2 diffuseTexCoords	= IN.texCoords0.xy * diffuseTexCoordsScalar_R;
+	//diffuseTexCoords.y=1.0-diffuseTexCoords.y;
+	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgb;
 	diffuseColour		= diffuseColour.rgb * diffuseOutputScalar.rgb;
 
 	vec2 lightmapUVs	=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	//lightmapUVs.y		=1.0- lightmapUVs.y;
+	lightmapUVs.y		=1.0- lightmapUVs.y;
 	vec3 view			= normalize(diff);
 	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
@@ -508,19 +510,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 
 	vec3 emissive		= emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
 	emissive			*=emissiveOutputScalar.rgb;
-/*	vec2 diffl = abs(IN.texCoords0.xy - vec2(0.25, 0.75));
-	float dist = min(diffl.x, diffl.y);
-	if(dist<0.01)
-		emissive=vec3(1.0,1.0,1.0);*/
 	vec4 u				=vec4(c+emissive,1.0);
-u.g += normal.z;
-//	u.rg+= step(0.5,IN.texCoords0.x)*saturate(IN.texCoords0.xy* emissiveTexCoordsScalar_R-vec2(0.0,0.5));
-	vec3 highlight		=vec3(0.01,0.02,0.05);
-//u.rg=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-//u.b=0;
-// 
-	//u.rgb=frac(5.0*IN.texCoords0.xyy);
-
 	return u;
 }
 
