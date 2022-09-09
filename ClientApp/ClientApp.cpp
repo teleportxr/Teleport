@@ -15,4 +15,5 @@ void ClientApp::Initialize()
 {
 	config.LoadConfigFromIniFile();
 	config.LoadBookmarks();
+	config.LoadOptions();
 }

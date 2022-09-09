@@ -2,6 +2,7 @@
 #include "Platform/Core/SimpleIni.h"
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include <fmt/core.h>
 #include <sstream>
 using namespace teleport;
@@ -12,16 +13,10 @@ using namespace std::string_literals;
 void Config::LoadConfigFromIniFile()
 {
 	CSimpleIniA ini;
-	string str;
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	if(!fileLoader)
 		return;
-	void *ptr=nullptr;
-	unsigned bytelen=0;
-	fileLoader->AcquireFileContents(ptr,bytelen,"assets/client.ini",true);
-	if(ptr)
-		str=(char*)ptr;
-	fileLoader->ReleaseFileContents(ptr);
+	string str=fileLoader->LoadAsString("assets/client.ini");
 	SI_Error rc = ini.LoadData(str);
 	if(rc == SI_OK)
 	{
@@ -106,8 +101,40 @@ void Config::SaveBookmarks()
 		{
 			str+=fmt::format("{0} {1}\r\n",b.url,b.title);
 		}
-		std::string filename=storageFolder+"config/bookmarks.txt"s;
+		std::string filename=GetStoragePath()+"config/bookmarks.txt"s;
 		fileLoader->Save(str.data(),str.length(),filename.c_str(),true);
+	}
+}
+
+void Config::LoadOptions()
+{
+	CSimpleIniA ini;
+	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
+	if(!fileLoader)
+		return;
+	std::string filename=GetStoragePath()+"config/options.txt"s;
+	string str=fileLoader->LoadAsString(filename.c_str());
+	if(!str.length())
+		return;	
+	SI_Error rc = ini.LoadData(str);
+	if(rc == SI_OK)
+	{
+		std::string s=ini.GetValue("", "LobbyView","");
+		auto l=magic_enum::enum_cast<LobbyView>(s);
+		if(l.has_value())
+			options.lobbyView = l.value(); 
+	}
+}
+
+void Config::SaveOptions()
+{
+	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
+	{
+		string str;
+		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
+		std::string filename=GetStoragePath()+"config/options.txt"s;
+		fileLoader->Save(str.data(),str.length(),filename.c_str(),true);
+		LoadOptions();
 	}
 }
 

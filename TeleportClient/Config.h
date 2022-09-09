@@ -22,6 +22,15 @@ namespace teleport
 			std::string url;
 			std::string title;
 		};
+		enum class LobbyView:uint8_t
+		{
+			WHITE,
+			NEON
+		};
+		struct Options
+		{
+			LobbyView lobbyView;
+		};
 		class Config
 		{
 			std::vector<Bookmark> bookmarks;
@@ -38,6 +47,10 @@ namespace teleport
 #endif
 			bool render_local_offline = false;
 			std::string log_filename="TeleportClient.log";
+			
+			Options options;
+			void LoadOptions();
+			void SaveOptions();
 			const std::vector<Bookmark> &GetBookmarks() const;
 			void AddBookmark(const Bookmark &b);
 			void LoadBookmarks();

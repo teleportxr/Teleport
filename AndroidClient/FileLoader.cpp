@@ -125,7 +125,16 @@ bool FileLoader::FileExists(const char *filename_utf8) const
 	else
 	{
 		fs::path p(filename_utf8);
-		return fs::exists(p);
+		bool result=false;
+		try
+		{
+			result=fs::exists(p);
+		}
+		catch(...)
+		{
+			return false;
+		}
+		return result;
 	}
 }
 
