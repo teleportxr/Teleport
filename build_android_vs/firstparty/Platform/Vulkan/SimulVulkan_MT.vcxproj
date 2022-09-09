@@ -153,13 +153,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR;SIMUL_INTERNAL_CHECKS=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR;SIMUL_INTERNAL_CHECKS=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
