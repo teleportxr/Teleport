@@ -16,17 +16,23 @@ namespace avs
 	{
 		return (t1==t2);
 	}
+	template<> inline bool verify(const float& t1,const float& t2)
+	{
+		return fabs(t1-t2)/(fabs(t1)+fabs(t2)+0.0001f)<0.0001f;
+	}
 	template<> inline bool verify(const vec2& t1,const vec2& t2)
 	{
-		return (t1.x==t2.x&&t1.y==t2.y);
+		return verify(t1.x,t2.x)&&verify(t1.y,t2.y);
 	}
 	template<> inline bool verify(const vec3& t1,const vec3& t2)
 	{
-		return (t1.x==t2.x&&t1.y==t2.y&&t1.z==t2.z);
+		return verify(t1.x,t2.x)&&verify(t1.y,t2.y)
+				&&verify(t1.z,t2.z);
 	}
 	template<> inline bool verify(const vec4& t1,const vec4& t2)
 	{
-		return (t1.x==t2.x&&t1.y==t2.y&&t1.z==t2.z&&t1.w==t2.w);
+		return verify(t1.x,t2.x)&&verify(t1.y,t2.y)
+				&&verify(t1.z,t2.z)&&verify(t1.w,t2.w);
 	}
 	#define TELEPORT_VERIFY(t1,t2) \
 	if(!verify(t1,t2))\
