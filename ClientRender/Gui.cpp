@@ -470,13 +470,13 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 				vec4 q = selected_node->GetLocalRotation();
 				vec4 gq = selected_node->GetGlobalRotation();
 				avs::vec3 gs = selected_node->GetGlobalScale();
-				ImGui::Text("%d: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
+				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
 					auto DoRow=[this](const char *title,const char *text, auto ...rest)-> void{
 						ImGui::TableNextColumn();
-						ImGui::Text(title);
+						ImGui::Text("%s",title);
 						ImGui::TableNextColumn();
 						ImGui::Text(text,rest...);
 					};
@@ -534,7 +534,7 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 				{
 					if(m)
 					{
-						ImGui::TreeNodeEx("", flags, "%d: %s", m->id, m->GetMaterialCreateInfo().name.c_str(), flags);
+						ImGui::TreeNodeEx("", flags, "%llu: %s", m->id, m->GetMaterialCreateInfo().name.c_str());
 						if (ImGui::IsItemClicked())
 						{
 							Select(m->id);
@@ -546,7 +546,7 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 			else if (selected_material.get())
 			{
 				const auto& mci = selected_material->GetMaterialCreateInfo();
-				ImGui::Text("%d: %s", selected_material->id, mci.name.c_str());
+				ImGui::Text("%llu: %s", selected_material->id, mci.name.c_str());
 				if(mci.diffuse.texture.get())
 				{
 					ImGui::TreeNodeEx("", flags," Diffuse: %s",  mci.diffuse.texture->GetTextureCreateInfo().name.c_str());
@@ -579,16 +579,16 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 			else if (selected_texture.get())
 			{
 				const auto& tci = selected_texture->GetTextureCreateInfo();
-				ImGui::Text("%d: %s", tci.uid, tci.name.c_str());
+				ImGui::Text("%llu: %s", tci.uid, tci.name.c_str());
 			}
 			else if(selected_animation.get())
 			{
-				ImGui::Text("%d: %s", selected_uid,selected_animation->name.c_str());
+				ImGui::Text("%llu: %s", selected_uid,selected_animation->name.c_str());
 				if (ImGui::BeginTable("selected", 2))
 				{
 					auto DoRow=[this](const int index,const char *text, auto ...rest)-> void{
 						ImGui::TableNextColumn();
-						ImGui::Text(fmt::format("{0}",index).c_str());
+						ImGui::Text("%s",fmt::format("{0}", index).c_str());
 						ImGui::TableNextColumn();
 						ImGui::Text(text,rest...);
 					};
@@ -627,7 +627,7 @@ void Gui::BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char*
 	}
 	if (show)
 	{
-		open = ImGui::TreeNodeEx(bone->name.c_str(), (has_children ? 0 : ImGuiTreeNodeFlags_Leaf),str.c_str());
+		open = ImGui::TreeNodeEx(bone->name.c_str(), (has_children ? 0 : ImGuiTreeNodeFlags_Leaf),"%s",str.c_str());
 	}
 	else
 	{
@@ -837,7 +837,7 @@ void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 				for (int i = 0; i < bookmarks.size(); i++)
 				{
 					const client::Bookmark &b=bookmarks[i];
-					if(ImGui::TreeNodeEx(b.url.c_str(), ImGuiTreeNodeFlags_Leaf,b.title.c_str()))
+					if(ImGui::TreeNodeEx(b.url.c_str(), ImGuiTreeNodeFlags_Leaf,"%s",b.title.c_str()))
 					{
 						if (ImGui::IsItemClicked())
 						{

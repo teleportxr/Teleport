@@ -427,7 +427,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(AImageReader *reader)
 	imageCreateInfo.initialLayout			= vk::ImageLayout::eUndefined;
 	// Not allowed with external format: imageCreateInfo.flags=vk::ImageCreateFlagBits::eMutableFormat;//VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT
 	
-	vulkanDevice->createImage(&imageCreateInfo, nullptr, &reflectedTexture.videoSourceVkImage);
+	auto result = vulkanDevice->createImage(&imageCreateInfo, nullptr, &reflectedTexture.videoSourceVkImage);
 	
 	vk::PhysicalDeviceMemoryProperties memoryProperties;
 	renderPlatform->GetVulkanGPU()->getMemoryProperties(&memoryProperties);
@@ -533,7 +533,7 @@ void NdkVideoDecoder::processInputBuffers()
 		return ;
 	}
 	if(!inputBuffer.offset)
-		verbose_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer %d got size %d",inputBuffer.inputBufferId,buffer_size);
+		verbose_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer %d got size %zu",inputBuffer.inputBufferId,buffer_size);
 	copiedSize=std::min(buffer_size-inputBuffer.offset,dataBuffer.bytes.size());
 	bool add_to_new=!targetBufferData||copiedSize<dataBuffer.bytes.size();
 	// if buffer is valid, copy our data into it.
