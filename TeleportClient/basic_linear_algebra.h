@@ -22,8 +22,6 @@ namespace clientrender
 	struct quat;
 	inline quat operator*(float lhs, const quat& rhs);
 
-	struct mat4_deprecated;
-	inline mat4_deprecated operator*(float lhs, const mat4_deprecated& rhs);
 
 	//DEFINITIONS
 
@@ -51,6 +49,10 @@ namespace clientrender
 		}
 
 		quat(avs::vec4 vec)
+			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
+		{}
+
+		quat(vec4 vec)
 			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
 		{}
 
@@ -107,29 +109,29 @@ namespace clientrender
 
 		static quat Slerp(const clientrender::quat& source, const clientrender::quat& target, float time)
 		{
-			avs::vec4 unitSource = source.GetNormalised();
-			avs::vec4 unitTarget = target.GetNormalised();
+			vec4 unitSource = source.GetNormalised();
+			vec4 unitTarget = target.GetNormalised();
 
-			float dot = unitSource.Dot(unitTarget);
-			if(dot < 0.0f)
+			float dot_product = dot(unitSource,unitTarget);
+			if(dot_product < 0.0f)
 			{
 				unitSource = -unitSource;
-				dot = -dot;
+				dot_product = -dot_product;
 			}
 
 			static const double DOT_THRESHOLD = 0.9995f;
-			if(static_cast<double>(dot) > DOT_THRESHOLD)
+			if(static_cast<double>(dot_product) > DOT_THRESHOLD)
 			{
 				quat result = (unitSource * time) + (unitTarget - unitSource);
 				return result.Normalise();
 			}
 
-			float theta_0 = acos(dot);
+			float theta_0 = acos(dot_product);
 			float theta = theta_0 * time;
 			float sin_theta_0 = sin(theta_0);
 			float sin_theta = sin(theta);
 
-			float s0 = cos(theta) - dot * sin_theta / sin_theta_0;
+			float s0 = cos(theta) - dot_product * sin_theta / sin_theta_0;
 			float s1 = sin_theta / sin_theta_0;
 
 			return (s0 * unitSource) + (s1 * unitTarget);
@@ -197,9 +199,9 @@ namespace clientrender
 			return *this;
 		}
 
-		operator avs::vec4() const
+		operator vec4() const
 		{
-			return avs::vec4(i, j, k, s);
+			return vec4(i, j, k, s);
 		}
 	};
 
@@ -374,86 +376,16 @@ namespace clientrender
 			return Determinant(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p);
 		}
 
-		mat4_deprecated GetInverted() const
+
+		vec4 operator*(const vec4& input) const
 		{
-			const mat4_deprecated cofactors
-			(
-				+mat3::Determinant(f, g, h, j, k, l, n, o, p), -mat3::Determinant(e, g, h, i, k, l, m, o, p), +mat3::Determinant(e, f, h, i, j, l, m, n, p), -mat3::Determinant(e, f, g, i, j, k, m, n, o),
-				-mat3::Determinant(b, c, d, j, k, l, n, o, p), +mat3::Determinant(a, c, d, i, k, l, m, o, p), -mat3::Determinant(a, b, d, i, j, l, m, n, p), +mat3::Determinant(a, b, c, i, j, k, m, n, o),
-				+mat3::Determinant(b, c, d, f, g, h, n, o, p), -mat3::Determinant(a, c, d, e, g, h, m, o, p), +mat3::Determinant(a, b, d, e, f, h, m, n, p), -mat3::Determinant(a, b, c, e, f, g, m, n, o),
-				-mat3::Determinant(b, c, d, f, g, h, j, k, l), +mat3::Determinant(a, c, d, e, g, h, i, k, l), -mat3::Determinant(a, b, d, e, f, h, i, j, l), +mat3::Determinant(a, b, c, e, f, g, i, j, k)
-			);
-
-			mat4_deprecated adjugate = cofactors.GetTranspose();
-			float determinate = a * cofactors.a + b * cofactors.b + c * cofactors.c + d * cofactors.d;
-
-			return (1 / determinate) * adjugate;
-		}
-
-		avs::vec4 operator*(const avs::vec4& input) const
-		{
-			avs::vec4 transform_i(a, e, i, m);
-			avs::vec4 transform_j(b, f, j, n);
-			avs::vec4 transform_k(c, g, k, o);
-			avs::vec4 transform_l(d, h, l, p);
-			avs::vec4 output(transform_i * input.x + transform_j * input.y + transform_k * input.z + transform_l * input.w);
+			vec4 transform_i(a, e, i, m);
+			vec4 transform_j(b, f, j, n);
+			vec4 transform_k(c, g, k, o);
+			vec4 transform_l(d, h, l, p);
+			vec4 output(transform_i * input.x + transform_j * input.y + transform_k * input.z + transform_l * input.w);
 			return output;
 		}
-		
-		mat4_deprecated operator* (const mat4_deprecated& input) const
-		{
-			avs::vec4 input_i(input.a, input.e, input.i, input.m);
-			avs::vec4 input_j(input.b, input.f, input.j, input.n);
-			avs::vec4 input_k(input.c, input.g, input.k, input.o);
-			avs::vec4 input_l(input.d, input.h, input.l, input.p);
-
-			avs::vec4 output_i = *this * input_i;
-			avs::vec4 output_j = *this * input_j;
-			avs::vec4 output_k = *this * input_k;
-			avs::vec4 output_l = *this * input_l;
-
-			mat4_deprecated output(output_i, output_j, output_k, output_l);
-			output.Transposed();
-			return output;
-		}
-
-		mat4_deprecated operator*(float rhs) const
-		{
-			return mat4_deprecated
-			(
-				a * rhs, b * rhs, c * rhs, d * rhs,
-				e * rhs, f * rhs, g * rhs, h * rhs,
-				i * rhs, j * rhs, k * rhs, l * rhs,
-				m * rhs, n * rhs, o * rhs, p * rhs
-			);
-		}
-
-		bool operator==(const mat4_deprecated& rhs) const
-		{
-			return
-				a == rhs.a &&
-				b == rhs.b &&
-				c == rhs.c &&
-				d == rhs.d &&
-				e == rhs.e &&
-				f == rhs.f &&
-				g == rhs.g &&
-				h == rhs.h &&
-				i == rhs.i &&
-				j == rhs.j &&
-				k == rhs.k &&
-				l == rhs.l &&
-				m == rhs.m &&
-				n == rhs.n &&
-				o == rhs.o &&
-				p == rhs.p;
-		}
-
-		bool operator!=(const mat4_deprecated& rhs) const
-		{
-			return !(*this == rhs);
-		}
-
 		static avs::vec3 GetTranslation(const mat4& m) 
 		{
 			return avs::vec3(m._m03, m._m13, m._m23);
@@ -474,10 +406,6 @@ namespace clientrender
 			return avs::vec3(x.Length(), y.Length(), z.Length());
 		} 
 
-		static mat4_deprecated Identity()
-		{
-			return mat4_deprecated(1.0f);
-		}
 
 		static mat4 Perspective(float horizontalFOV, float aspectRatio, float zNear, float zFar)
 		{
@@ -522,7 +450,7 @@ namespace clientrender
 
 		static mat4 Rotation(float angle, const avs::vec3& axis)
 		{
-			mat4_deprecated result(1);
+			mat4 result;
 			float c_angle = static_cast<float>(cos(angle));
 			float s_angle = static_cast<float>(sin(angle));
 			float omcos = static_cast<float>(1 - c_angle);
@@ -534,7 +462,7 @@ namespace clientrender
 			result.a = x * x * omcos + c_angle;
 			result.e = x * y * omcos + z * s_angle;
 			result.i = x * z * omcos - y * s_angle;
-			result.m = 0;
+			result.mm = 0;
 
 			result.b = y * x * omcos - z * s_angle;
 			result.f = y * y * omcos + c_angle;
@@ -551,7 +479,7 @@ namespace clientrender
 			result.l = 0;
 			result.p = 1;
 
-			return *((mat4*)&result);
+			return result;
 		}
 
 		static mat4 Scale(const avs::vec3& scale)
@@ -575,11 +503,6 @@ namespace clientrender
 			);
 		}
 	};
-
-	inline mat4_deprecated operator*(float lhs, const mat4_deprecated& rhs)
-	{
-		return rhs * lhs;
-	}
 
 	struct uvec2
 	{

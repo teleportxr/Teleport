@@ -127,12 +127,12 @@ namespace avs
 		bool isGlobal = true;
 
 		uid nodeID = 0;
-		vec3 position;
-		vec4 rotation;
-		vec3 scale;
+		vec3 position={0,0,0};
+		vec4 rotation={0,0,0,0};
+		vec3 scale={0,0,0};
 
-		vec3 velocity;
-		vec3 angularVelocityAxis;
+		vec3 velocity={0,0,0};
+		vec3 angularVelocityAxis={0,0,0};
 		float angularVelocityAngle = 0.0f;
 	} AVS_PACKED;
 
@@ -209,8 +209,6 @@ namespace avs
 
 		Command(CommandPayloadType t) : commandPayloadType(t) {}
 
-		//! Returns byte size of the command.
-		virtual size_t getCommandSize() const = 0;
 	} AVS_PACKED;
 	
 	//! The message sent by a server to a client on receipt of the client's handshake,
@@ -221,7 +219,7 @@ namespace avs
 		AcknowledgeHandshakeCommand() : Command(CommandPayloadType::AcknowledgeHandshake) {}
 		AcknowledgeHandshakeCommand(size_t visibleNodeCount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleNodeCount(visibleNodeCount) {}
 		
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(AcknowledgeHandshakeCommand);
 		}
@@ -234,44 +232,45 @@ namespace avs
 	{
 		SetPositionCommand() : Command(CommandPayloadType::SetPosition) {}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetPositionCommand);
 		}
-		avs::uid origin_node=0;
+		avs::uid		origin_node=0;
 		// TODO: replace these with a Pose.
-		vec3 origin_pos;			//!< Position of the origin in world space.
-		vec4 orientation;			//!< Orientation of the origin in world space.
+		vec3			origin_pos;			//!< Position of the origin in world space.
+		vec4			orientation;			//!< Orientation of the origin in world space.
 		//!< A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
-		uint64_t valid_counter = 0;
+		uint64_t		valid_counter = 0;
 	} AVS_PACKED;
 
 	struct SetupCommand : public Command
 	{
 		SetupCommand() : Command(CommandPayloadType::Setup) {}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetupCommand);
 		}
-
-		int32_t server_streaming_port = 0;
-		int32_t server_http_port = 0;
-		uint32_t debug_stream = 0;
-		uint32_t do_checksums = 0;
-		uint32_t debug_network_packets = 0;
-		int32_t requiredLatencyMs = 0;
-		uint32_t idle_connection_timeout = 5000;
-		uid	server_id = 0;
-		ControlModel control_model = ControlModel::NONE;
-		VideoConfig video_config;
-		float       draw_distance = 0.0f;
-		vec3 bodyOffsetFromHead;
-		AxesStandard axesStandard = AxesStandard::NotInitialized;
-		uint8_t audio_input_enabled = 0;
-		bool using_ssl = true;
-		int64_t startTimestamp_utc_unix_ms = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
-		BackgroundMode backgroundMode;
+		int32_t			server_streaming_port = 0;
+		int32_t			server_http_port = 0;
+		uint32_t		debug_stream = 0;
+		uint32_t		do_checksums = 0;
+		uint32_t		debug_network_packets = 0;
+		int32_t			requiredLatencyMs = 0;
+		uint32_t		idle_connection_timeout = 5000;
+		uid				server_id = 0;
+		ControlModel	control_model = ControlModel::NONE;
+		VideoConfig		video_config;
+		float			draw_distance = 0.0f;
+		vec3			bodyOffsetFromHead;
+		AxesStandard	axesStandard = AxesStandard::NotInitialized;
+		uint8_t			audio_input_enabled = 0;
+		bool			using_ssl = true;
+		int64_t			startTimestamp_utc_unix_ms = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+		// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
+		BackgroundMode	backgroundMode;
+		vec4			backgroundColour;
 	} AVS_PACKED;
 
 	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
@@ -282,7 +281,7 @@ namespace avs
 			:Command(CommandPayloadType::SetupLighting), num_gi_textures(numGI)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetupLightingCommand);
 		}
@@ -306,7 +305,7 @@ namespace avs
 		uint16_t pathLength;
 	} AVS_PACKED;
 
-	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
+	//! Sends Input definitions. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
 	struct SetupInputsCommand : public Command
 	{
 		SetupInputsCommand() : Command(CommandPayloadType::SetupInputs) {}
@@ -314,7 +313,7 @@ namespace avs
 			:Command(CommandPayloadType::SetupInputs), numInputs(numi)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetupInputsCommand);
 		}
@@ -326,7 +325,7 @@ namespace avs
 	{
 		ReconfigureVideoCommand() : Command(CommandPayloadType::ReconfigureVideo) {}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(ReconfigureVideoCommand);
 		}
@@ -338,7 +337,7 @@ namespace avs
 	{
 		ShutdownCommand() : Command(CommandPayloadType::Shutdown) {}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(ShutdownCommand);
 		}
@@ -357,7 +356,7 @@ namespace avs
 			:Command(CommandPayloadType::NodeVisibility), nodesShowCount(nodesShowCount), nodesHideCount(nodesHideCount)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(NodeVisibilityCommand);
 		}
@@ -375,7 +374,7 @@ namespace avs
 			:Command(CommandPayloadType::UpdateNodeMovement), updatesCount(updatesCount)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(UpdateNodeMovementCommand);
 		}
@@ -393,7 +392,7 @@ namespace avs
 			:Command(CommandPayloadType::UpdateNodeEnabledState), updatesCount(updatesCount)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(UpdateNodeEnabledStateCommand);
 		}
@@ -413,7 +412,7 @@ namespace avs
 			:Command(CommandPayloadType::SetNodeHighlighted), nodeID(nodeID), isHighlighted(isHighlighted)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetNodeHighlightedCommand);
 		}
@@ -433,7 +432,7 @@ namespace avs
 			,relativePose(relPose)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(UpdateNodeStructureCommand);
 		}
@@ -455,7 +454,7 @@ namespace avs
 			:Command(CommandPayloadType::UpdateNodeSubtype), nodeID(n),nodeSubtype(NodeSubtype_deprecated::None), pathLength(pathl)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(UpdateNodeSubtypeCommand);
 		}
@@ -473,7 +472,7 @@ namespace avs
 			:Command(CommandPayloadType::UpdateNodeAnimation), animationUpdate(update)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(UpdateNodeAnimationCommand);
 		}
@@ -491,7 +490,7 @@ namespace avs
 			:Command(CommandPayloadType::UpdateNodeAnimationControl), animationControlUpdate(update)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetAnimationControlCommand);
 		}
@@ -511,7 +510,7 @@ namespace avs
 			:Command(CommandPayloadType::SetNodeAnimationSpeed), nodeID(nodeID), animationID(animationID), speed(speed)
 		{}
 
-		virtual size_t getCommandSize() const override
+		static size_t getCommandSize()
 		{
 			return sizeof(SetNodeAnimationSpeedCommand);
 		}
@@ -522,11 +521,8 @@ namespace avs
 	{
 		/// Specifies what type of client message this is.
 		ClientMessagePayloadType clientMessagePayloadType;
-
 		ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
-		/// Returns byte size of message.
-		virtual size_t getMessageSize() const = 0;
 	} AVS_PACKED;
 
 	//! Message info struct containing how many nodes have changed to what state; sent alongside two lists of node UIDs.
@@ -547,10 +543,6 @@ namespace avs
 			nodesWantToReleaseCount(nodesWantToReleaseCount)
 		{}
 
-		virtual size_t getMessageSize() const override
-		{
-			return sizeof(NodeStatusMessage);
-		}
 	} AVS_PACKED;
 
 	//! Message info struct containing how many resources were received; sent alongside a list of UIDs.
@@ -566,11 +558,6 @@ namespace avs
 		ReceivedResourcesMessage(size_t receivedResourcesCount)
 			:ClientMessage(ClientMessagePayloadType::ReceivedResources), receivedResourcesCount(receivedResourcesCount)
 		{}
-
-		virtual size_t getMessageSize() const override
-		{
-			return sizeof(ReceivedResourcesMessage);
-		}
 	} AVS_PACKED;
 
 	//! Message info struct containing how many resources were received; sent alongside a list of UIDs.
@@ -584,11 +571,6 @@ namespace avs
 		ControllerPosesMessage()
 			:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 		{}
-
-		virtual size_t getMessageSize() const override
-		{
-			return sizeof(ControllerPosesMessage);
-		}
 	} AVS_PACKED;
 
 	struct OriginPoseMessage : public ClientMessage
@@ -599,10 +581,6 @@ namespace avs
 
 		OriginPoseMessage() :ClientMessage(ClientMessagePayloadType::OriginPose) {}
 
-		virtual size_t getMessageSize() const override
-		{
-			return sizeof(OriginPoseMessage);
-		}
 	} AVS_PACKED;
 #ifdef _MSC_VER
 #pragma pack(pop)

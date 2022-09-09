@@ -615,7 +615,7 @@ namespace teleport
 				{
 					if(!src->getTexture(u))
 					{
-						TELEPORT_CERR<<"Material "<<material->name.c_str()<<" points to "<<u<<" which is not a texture."<<std::endl;
+						TELEPORT_CERR<<"Material "<<material->name.c_str()<<" points to "<<u<<" which is not a texture.\n";
 						continue;
 					}
 				}
@@ -838,7 +838,7 @@ namespace teleport
 		memcpy(buffer.data() + pos, data, count);
 		if(count>= settings->geometryBufferCutoffSize)
 		{
-			TELEPORT_CERR<<"Data too big for geometry buffer cutoff size."<<std::endl;
+			TELEPORT_CERR<<"Data too big for geometry buffer cutoff size.\n";
 		}
 		return pos;
 	}

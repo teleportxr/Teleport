@@ -12,6 +12,29 @@
 
 namespace avs
 {
+	template<typename T> bool verify(const T& t1,const T& t2)
+	{
+		return (t1==t2);
+	}
+	template<> inline bool verify(const vec2& t1,const vec2& t2)
+	{
+		return (t1.x==t2.x&&t1.y==t2.y);
+	}
+	template<> inline bool verify(const vec3& t1,const vec3& t2)
+	{
+		return (t1.x==t2.x&&t1.y==t2.y&&t1.z==t2.z);
+	}
+	template<> inline bool verify(const vec4& t1,const vec4& t2)
+	{
+		return (t1.x==t2.x&&t1.y==t2.y&&t1.z==t2.z&&t1.w==t2.w);
+	}
+	#define TELEPORT_VERIFY(t1,t2) \
+	if(!verify(t1,t2))\
+	{\
+		std::cerr<<"Verify failed for "<<#t1<<"\n";\
+		return false;\
+	}
+
 	//Convert from wide char to byte char.
 	//We should really NOT use wide strings for the names of textures and materials, as we will want to support UTF-8.
 	// Roderick: wstring is not UTF-8, but UTF-16, favoured only by Microsoft.
@@ -233,7 +256,7 @@ namespace avs
 	
 	struct TextureAccessor
 	{
-		uid index = 0;		// Session uid of the texture.
+		uid index = 0;			// Session uid of the texture.
 		uint8_t texCoord = 0;	// A reference to TEXCOORD_<N>
 		
 		vec2 tiling = {1.0f, 1.0f};
@@ -250,7 +273,7 @@ namespace avs
 			//wchar_t tc=(wchar_t)textureAccessor.texCoord;
 			out<<textureAccessor.index;
  			//out.write(&tc,1);
-			out	<< " " << textureAccessor.tiling
+			out	<< textureAccessor.tiling
 				<< " " << textureAccessor.scale;
 			return out;
 		}
@@ -278,10 +301,25 @@ namespace avs
 		SMOOTHNESS
 	};
 
-       template<typename istream> istream& operator>>( istream  &is, RoughnessMode &obj ) { 
-	   is>>*((char*)&obj);
-         return is;            
-      }
+	template<typename istream> istream& operator>>( istream  &is, RoughnessMode &obj )
+	{ 
+		is>>*((char*)&obj);
+		return is;            
+	}
+
+	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec4& vec)
+	{
+		std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
+		o << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+		return out;
+	}
+	
+	template<typename InStream> InStream& operator>> (InStream& in, vec4& vec)
+	{
+		std::basic_istream<wchar_t,std::char_traits<wchar_t>> &i=in;
+		i >> vec.x >> vec.y >> vec.z >> vec.w;
+		return in;
+	}
 	struct PBRMetallicRoughness
 	{
 		TextureAccessor baseColorTexture;
@@ -299,7 +337,8 @@ namespace avs
 			out << metallicRoughness.baseColorFactor;
 			out<< " " ;
 			out << metallicRoughness.metallicRoughnessTexture;
-			out<< " "  << metallicRoughness.metallicFactor<< " "  << metallicRoughness.roughnessMultiplier;
+			out<< " "  << metallicRoughness.metallicFactor;
+			out<< " "  << metallicRoughness.roughnessMultiplier;
 			out<< " " << metallicRoughness.roughnessOffset;
 				// TODO: roughnessMode not implemented here.
 			 return out;
@@ -318,6 +357,24 @@ namespace avs
 				return in;
 		}
 	};
+	template<> inline bool verify(const TextureAccessor& t1,const TextureAccessor& t2)
+	{
+		TELEPORT_VERIFY(t1.index,t2.index);
+		TELEPORT_VERIFY(t1.texCoord,t2.texCoord);
+		TELEPORT_VERIFY(t1.tiling,t2.tiling);
+		TELEPORT_VERIFY(t1.scale,t2.scale);
+		return true;
+	}
+	template<> inline bool verify(const PBRMetallicRoughness& t1,const PBRMetallicRoughness& t2)
+	{
+		TELEPORT_VERIFY(t1.baseColorTexture,t2.baseColorTexture);
+		TELEPORT_VERIFY(t1.baseColorFactor,t2.baseColorFactor);
+		TELEPORT_VERIFY(t1.metallicRoughnessTexture,t2.metallicRoughnessTexture);
+		TELEPORT_VERIFY(t1.metallicFactor,t2.metallicFactor);
+		TELEPORT_VERIFY(t1.roughnessMultiplier,t2.roughnessMultiplier);
+		TELEPORT_VERIFY(t1.roughnessOffset,t2.roughnessOffset);
+		return true;
+	}
 	struct Material
 	{
 		std::string name;
@@ -329,9 +386,19 @@ namespace avs
 
 		std::unordered_map<MaterialExtensionIdentifier, std::shared_ptr<MaterialExtension>> extensions; //Mapping of extensions for a material. There should only be one extension per identifier.
 		
+		bool Verify(const Material &t) const
+		{
+			TELEPORT_VERIFY(name,t.name);
+			TELEPORT_VERIFY(pbrMetallicRoughness,t.pbrMetallicRoughness);
+			TELEPORT_VERIFY(normalTexture,t.normalTexture);
+			TELEPORT_VERIFY(occlusionTexture,t.occlusionTexture);
+			TELEPORT_VERIFY(emissiveTexture,t.emissiveTexture);
+			return true;
+		}
 		inline std::vector<avs::uid> GetTextureUids() const
 		{
 			std::vector<avs::uid> uids;
+			uids.reserve(5);
 			if(pbrMetallicRoughness.baseColorTexture.index)
 				uids.push_back(pbrMetallicRoughness.baseColorTexture.index);
 			

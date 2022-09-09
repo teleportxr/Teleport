@@ -13,6 +13,7 @@
 
 #include "API.h"
 #include "ClientRender/RenderPlatform.h"
+#include "Platform/Shaders/SL/CppSl.sl"
 #include "Light.h"
 #include "MemoryUtil.h"
 #include "NodeManager.h"
@@ -85,7 +86,7 @@ namespace clientrender
 		//	incompleteMaterial : IncompleteMaterial we are attempting to add the texture to.
 		//	materialParameter : Parameter we are modifying.
 		void AddTextureToMaterial(const avs::TextureAccessor& accessor,
-								  const avs::vec4& colourFactor,
+								  const vec4& colourFactor,
 								  const std::shared_ptr<clientrender::Texture>& dummyTexture,
 								  std::shared_ptr<IncompleteMaterial> incompleteMaterial,
 								  clientrender::Material::MaterialParameter& materialParameter);

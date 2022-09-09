@@ -213,6 +213,33 @@ shader vec4 PS_Unconnected(posTexVertexOutput IN) : SV_TARGET
 	}
 	return res;
 }
+shader vec4 PS_UnconnectedWhite(posTexVertexOutput IN) : SV_TARGET
+{
+	vec3 view = normalize(TexCoordsToView(IN.texCoords).xyz);
+	vec4 res=vec4(0.9,0.9,0.9,1.0);
+	// flat surface at 0:
+	float h=viewPosition.z;
+	if(view.z<-0.1f)
+	{
+		float distance=h/-view.z;
+		vec3 targetPosition=viewPosition+distance*view;
+		vec2 fr=frac(targetPosition.xy);
+		fr-=vec2(0.5,0.5);
+		vec2 ln=abs(fr);
+		float m=min(ln.x,ln.y);
+		vec2 e=exp(-50.0*ln);
+		float br=saturate(step(m,0.02)+(e.x+e.y));
+		//vec3(0.4f,0.8f,0.9f)*
+		vec3 clr=view*vec3(.5,.5,.5);
+		res.rgb=lerp(res.rgb,res.rgb*clr,br*exp(-.3*distance));
+	}
+	if(view.z>0)
+	{
+		res.rgb=lerp(res.rgb,res.rgb*0.2,exp(-10.0*view.z));
+		res.rgb=lerp(res.rgb,res.rgb*0.4,exp(-50.0*view.z));
+	}
+	return res;
+}
 
 shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
 {
@@ -394,7 +421,16 @@ technique use_perspective
 }
 technique unconnected
 {
-    pass p0
+    pass white
+    {
+		SetRasterizerState( RenderNoCull );
+		SetDepthStencilState( DisableDepth, 0 );
+		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
+        SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_5_0, PS_UnconnectedWhite()));
+    }
+    pass neon
     {
 		SetRasterizerState( RenderNoCull );
 		SetDepthStencilState( DisableDepth, 0 );

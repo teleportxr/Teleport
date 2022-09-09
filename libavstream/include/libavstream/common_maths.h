@@ -108,7 +108,7 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const vec2& vec)
 		{
-			out << vec.x << " " << vec.y;
+			out << " "<<vec.x << " " << vec.y;
 			return out;
 		}
 
@@ -255,124 +255,7 @@ namespace avs
 
 	struct vec4
 	{
-		static const vec4 ZERO;
-
 		float x, y, z, w;
-
-		vec4()
-			:vec4(0.0f, 0.0f, 0.0f, 0.0f)
-		{}
-
-		constexpr vec4(float x, float y, float z, float w)
-			:x(x), y(y), z(z), w(w)
-		{}
-
-		vec4(const float* v)
-		{
-			this->x = v[0];
-			this->y = v[1];
-			this->z = v[2];
-			this->w = v[3];
-		}
-
-		vec4 operator-() const
-		{
-			return vec4(-x, -y, -z, -w);
-		}
-
-		void operator=(const float* v)
-		{
-			x = v[0];
-			y = v[1];
-			z = v[2];
-			w = v[3];
-		}
-
-		vec4 operator+(const vec4& rhs) const
-		{
-			return vec4(x + rhs.x, y + rhs.y, z + rhs.z, w + rhs.w);
-		}
-
-		vec4 operator-(const vec4& rhs) const
-		{
-			return vec4(x - rhs.x, y - rhs.y, z - rhs.z, w - rhs.w);
-		}
-
-		vec4 operator*(float rhs) const
-		{
-			return vec4(x * rhs, y * rhs, z * rhs, w * rhs);
-		}
-
-		vec4 operator/(float rhs) const
-		{
-			return vec4(x / rhs, y / rhs, z / rhs, w / rhs);
-		}
-
-		void operator+=(const vec4& rhs)
-		{
-			*this = *this + rhs;
-		}
-
-		void operator-=(const vec4& rhs)
-		{
-			*this = *this - rhs;
-		}
-
-		void operator*=(float rhs)
-		{
-			*this = *this * rhs;
-		}
-
-		void operator/=(float rhs)
-		{
-			*this = *this / rhs;
-		}
-
-		bool operator==(const vec4 other)
-		{
-			return x == other.x && y == other.y && z == other.z && w == other.w;
-		}
-
-		bool operator!=(const vec4 other)
-		{
-			return !(*this == other);
-		}
-
-		float Length() const
-		{
-			return sqrtf(x * x + y * y + z * z + w * w);
-		}
-
-		vec4 Normalised() const
-		{
-			return *this / Length();
-		}
-
-		float Dot(const vec4& rhs) const
-		{
-			return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w;
-		}
-
-		vec4 GetAbsolute() const
-		{
-			return vec4(abs(x), abs(y), abs(z), abs(w));
-		}
-
-		template<typename OutStream>
-		friend OutStream& operator<< (OutStream& out, const vec4& vec)
-		{
-			std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
-			o << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
-			return out;
-		}
-
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, vec4& vec)
-		{
-			std::basic_istream<wchar_t,std::char_traits<wchar_t>> &i=in;
-			i >> vec.x >> vec.y >> vec.z >> vec.w;
-			return in;
-		}
 	};
 
 	inline vec2 operator*(float lhs, const vec2& rhs)
@@ -383,11 +266,6 @@ namespace avs
 	inline vec3 operator*(float lhs, const vec3& rhs)
 	{
 		return vec3(rhs.x * lhs, rhs.y * lhs, rhs.z * lhs);
-	}
-
-	inline vec4 operator*(float lhs, const vec4& rhs)
-	{
-		return vec4(rhs.x * lhs, rhs.y * lhs, rhs.z * lhs, rhs.w * lhs);
 	}
 
 	struct int3

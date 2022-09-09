@@ -97,5 +97,6 @@ namespace teleport
 
 		bool show_inspector=false;
 		std::vector<vec4> hand_pos_press;
+		std::string selected_url;
 	};
 }

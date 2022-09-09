@@ -231,6 +231,8 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(uid primitiveArrayUid
 			bufferView.byteLength = dracoAttribute->buffer()->data_size();
 			bufferView.byteOffset = 0;
 			buffer.byteLength = bufferView.byteLength;
+			if(m_DecompressedBufferIndex>=m_DecompressedBuffers.size())
+				m_DecompressedBuffers.resize(m_DecompressedBuffers.size()*2);
 			auto &buf=m_DecompressedBuffers[m_DecompressedBufferIndex++];
 			buf.resize(buffer.byteLength);
 			buffer.data = buf.data();
@@ -345,7 +347,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryTargetBackendInterface*& target,
 	size_t meshCount = Next8B;
 	m_DecompressedBuffers.clear();
 	const size_t MAX_ATTR_COUNT=20;
-	m_DecompressedBuffers.resize(meshCount*MAX_ATTR_COUNT);
+	if(meshCount*MAX_ATTR_COUNT>=m_DecompressedBuffers.size())
+		m_DecompressedBuffers.resize(meshCount*MAX_ATTR_COUNT);
 	m_DecompressedBufferIndex=0;
 	for (size_t i = 0; i < meshCount; i++)
 	{

@@ -26,7 +26,7 @@ namespace sca
 	{
 		avs::NetworkSinkParams SinkParams = {};
 		SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
-		SinkParams.throttleToRateKpS = SinkParams.throttleToRateKpS = 1; // Unused
+		SinkParams.throttleToRateKpS =  1; // Unused
 		SinkParams.socketBufferSize = inNetworkSettings.clientBufferSize;
 		SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
 		SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;

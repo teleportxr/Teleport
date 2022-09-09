@@ -79,7 +79,6 @@ namespace teleport
 
 			void SetPeerTimeout(uint timeout);
 
-			void SendClientMessage(const avs::ClientMessage &msg);
 
 			void Frame(
 					const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
@@ -110,6 +109,12 @@ namespace teleport
 				return mSentResourceRequests;
 			};
 		private:
+			template<typename MessageType> void SendClientMessage(const MessageType &message)
+			{
+				size_t messageSize = sizeof(MessageType);
+				ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+				enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
+			}
 			void DispatchEvent(const ENetEvent& event);
 			void ReceiveCommandPacket(ENetPacket* packet);
 

@@ -48,12 +48,12 @@ namespace teleport
 		{
 			avs::NetworkSinkStream stream;
 			stream.parserType = avs::StreamParserType::AVC_AnnexB;
-			stream.useParser = false;
-			stream.isDataLimitPerFrame = false;
-			stream.counter = 0;
+			//stream.useParser = false; default
+//			stream.isDataLimitPerFrame = false;
+//			stream.counter = 0;
 			stream.chunkSize = 64 * 1024;
 			stream.id = 20;
-			stream.dataType = avs::NetworkDataType::HEVC;
+			//stream.dataType = avs::NetworkDataType::HEVC;
 			streams.emplace_back(std::move(stream));
 		}
 
@@ -98,7 +98,7 @@ namespace teleport
 
 		if (!mNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
 		{
-			TELEPORT_CERR << "Failed to configure network sink!" << std::endl;
+			TELEPORT_CERR << "Failed to configure network sink!" << "\n";
 			return;
 		}
 
@@ -106,7 +106,7 @@ namespace teleport
 		{
 			if (!avs::PipelineNode::link(*videoQueue, *mNetworkSink))
 			{
-				TELEPORT_CERR << "Failed to configure network pipeline for video!" << std::endl;
+				TELEPORT_CERR << "Failed to configure network pipeline for video!" << "\n";
 				return;
 			}
 			mPipeline->add(videoQueue);
@@ -116,7 +116,7 @@ namespace teleport
 		{
 			if (!avs::PipelineNode::link(*tagDataQueue, *mNetworkSink))
 			{
-				TELEPORT_CERR << "Failed to configure network pipeline for video tag data!" << std::endl;
+				TELEPORT_CERR << "Failed to configure network pipeline for video tag data!" << "\n";
 				return;
 			}
 			mPipeline->add(tagDataQueue);
@@ -126,7 +126,7 @@ namespace teleport
 		{
 			if (!avs::PipelineNode::link(*audioQueue, *mNetworkSink))
 			{
-				TELEPORT_CERR << "Failed to configure network pipeline for audio!" << std::endl;
+				TELEPORT_CERR << "Failed to configure network pipeline for audio!" << "\n";
 				return;
 			}
 			mPipeline->add(audioQueue);
@@ -136,7 +136,7 @@ namespace teleport
 		{
 			if (!avs::PipelineNode::link(*geometryQueue, *mNetworkSink))
 			{
-				TELEPORT_CERR << "Failed to configure network pipeline for geometry!" << std::endl;
+				TELEPORT_CERR << "Failed to configure network pipeline for geometry!" << "\n";
 				return;
 			}
 			mPipeline->add(geometryQueue);
@@ -167,7 +167,7 @@ namespace teleport
 		{
 			if (result != mPrevProcResult)
 			{
-				TELEPORT_CERR << "Network pipeline processing encountered an error!" << std::endl;
+				TELEPORT_CERR << "Network pipeline processing encountered an error!" << "\n";
 				mPrevProcResult = result;
 			}
 			return false;
@@ -180,7 +180,7 @@ namespace teleport
 		if (avs::PlatformWindows::getTimeElapsed(lastTimestamp, timestamp) >= networkPipelineStatInterval)
 		{
 			const avs::NetworkSinkCounters counters = mNetworkSink->getCounterValues();
-			TELEPORT_COUT << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << std::endl;
+			TELEPORT_COUT << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << "\n";
 			lastTimestamp = timestamp;
 		}
 		mNetworkSink->setDebugStream(mSettings->debugStream);
@@ -204,7 +204,7 @@ namespace teleport
 		}
 		else
 		{
-			TELEPORT_CERR << "Can't return counters because network sink is null." << std::endl;
+			TELEPORT_CERR << "Can't return counters because network sink is null." << "\n";
 			return avs::Result::Node_Null;
 		}
 		return avs::Result::OK;

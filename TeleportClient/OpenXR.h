@@ -76,6 +76,8 @@ namespace teleport
 			RIGHT_STICK_Y,
 			LEFT_HAPTIC,
 			RIGHT_HAPTIC,
+			MOUSE_LEFT_BUTTON,
+			MOUSE_RIGHT_BUTTON,
 			MAX_ACTIONS
 		};
 		//! Defines a mapping between an Input Definition from the server, 
@@ -100,14 +102,22 @@ namespace teleport
 		};
 		struct NodePoseState
 		{
-			avs::Pose pose_worldSpace;	// In global space, the offset to the node's current pose.
+			avs::Pose pose_footSpace;	// In the current XR space, the offset to the node's current pose.
 		};
+		//! Each OpenXRServer contains the currently bound inputs and poses for the connection. Both mappings (initialized on connection)
+		//! and states (updated in real time).
 		struct OpenXRServer
 		{
+			//! Definitions used on startup
+			std::vector<avs::InputDefinition> inputDefinitions;
+			//! Mappings initialized on startup.
 			std::vector<InputMapping> inputMappings;
-			std::vector<InputState> inputStates;
 			std::map<avs::uid,NodePoseMapping> nodePoseMappings;
+			avs::uid rootNode=0;
+			//! Current states
+			std::vector<InputState> inputStates;
 			std::map<avs::uid,NodePoseState> nodePoseStates;
+			//! Temporary - these poses will be bound on the next update.
 			std::map<avs::uid,NodePoseMapping> unboundPoses;
 			teleport::core::Input inputs;
 			unsigned long long framenumber=0;
@@ -160,11 +170,11 @@ namespace teleport
 			std::string localizedName;
 		};
 
-		struct XrInputSession
+		struct InputSession
 		{
 			XrActionSet			actionSet;
-			ActionDefinition    actionDefinitions[MAX_ACTIONS];
-			ActionState			actionStates[MAX_ACTIONS];
+			ActionDefinition    actionDefinitions[ActionId::MAX_ACTIONS];
+			ActionState			actionStates[ActionId::MAX_ACTIONS];
 			std::vector<XRInputDeviceState> inputDeviceStates;
 			// Here we  can set all the actions to be supported.
 			void SetActions( std::initializer_list<ActionInitializer> actions);
@@ -186,6 +196,22 @@ namespace teleport
 			std::vector<std::string> bindingPaths;
 			void Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings);
 		};
+
+		struct FallbackBinding
+		{
+			std::string path;
+		};
+		struct FallbackState
+		{
+			avs::Pose pose_worldSpace;
+			bool buttonDown=false;
+		};
+		struct MouseState
+		{
+			bool leftButtonDown=false;
+			bool rightButtonDown=false;
+			bool middleButtonDown=false; 
+		};
 		class OpenXR
 		{
 		public:
@@ -203,9 +229,16 @@ namespace teleport
 			bool HaveXRDevice() const;
 			bool IsXRDeviceActive() const;
 			
-			// Set a "virtual" pose - e.g. mouse emulation.
+			//! Set a "virtual" pose binding - e.g. mouse emulation.
 			void SetFallbackBinding(ActionId actionId,std::string path);
-			void SetFallbackPose(ActionId actionId,const avs::Pose &pose);
+			void SetFallbackPoseState(ActionId actionId,const avs::Pose &pose);
+			void SetFallbackButtonState(ActionId actionId,bool btn_down);
+
+			//! Process mouse and keyboard
+			void OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
+			void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
+			void OnMouseMove(int xPos, int yPos );
+			void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 			// Getting mapped inputs specific to a given server, in-frame.
 			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);
@@ -216,6 +249,7 @@ namespace teleport
 			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 
 			const avs::Pose& GetHeadPose() const;
+			 avs::uid GetRootNode(avs::uid server_uid);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			size_t GetNumControllers() const
 			{
@@ -228,6 +262,10 @@ namespace teleport
 				return xr_session_running;
 			}
 		protected:
+			MouseState mouseState;
+			std::string GetBoundPath(const ActionDefinition &def) const;
+			std::map<avs::uid,FallbackBinding> fallbackBindings;
+			std::map<avs::uid,FallbackState> fallbackStates;
 			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
 			void BindUnboundPoses(avs::uid server_uid);
 			std::map<avs::uid,OpenXRServer> openXRServers;
@@ -263,25 +301,34 @@ namespace teleport
 			virtual void FinishDeviceContext(int i) {}
 			virtual void EndFrame() {}
 
-			XrFormFactor					app_config_form = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-			XrViewConfigurationType			app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+			XrFormFactor							app_config_form = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+			XrViewConfigurationType					app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
-			XrInstance						xr_instance = {};
+			XrInstance								xr_instance = {};
 
-			XrSession						xr_session = {};
-			XrSessionState					xr_session_state = XR_SESSION_STATE_UNKNOWN;
-			bool							xr_session_running = false;
-			XrSpace							xr_app_space = {};
-			XrSpace							xr_head_space = {};
-			XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
-			XrInputSession					xr_input_session = { };
-			XrEnvironmentBlendMode			xr_environment_blend = {XR_ENVIRONMENT_BLEND_MODE_OPAQUE};
-			XrDebugUtilsMessengerEXT		xr_debug = {};
-			std::vector<XrView>					xr_views;
+			XrSession								xr_session = {};
+			XrSessionState							xr_session_state = XR_SESSION_STATE_UNKNOWN;
+			bool									xr_session_running = false;
+			XrSpace									xr_app_space = {};
+			XrSpace									xr_head_space = {};
+			XrSystemId								xr_system_id = XR_NULL_SYSTEM_ID;
+			InputSession							xr_input_session = { };
+			XrEnvironmentBlendMode					xr_environment_blend = {XR_ENVIRONMENT_BLEND_MODE_OPAQUE};
+			XrDebugUtilsMessengerEXT				xr_debug = {};
+			std::vector<XrView>						xr_views;
 			std::vector<XrViewConfigurationView>	xr_config_views;
 			int OVERLAY_SWAPCHAIN=0;
 			int MOTION_VECTOR_SWAPCHAIN=0;
 			int MOTION_DEPTH_SWAPCHAIN=0;
+			XrPath userHandLeftActiveProfile;
+			XrPath userHandRightActiveProfile;
+			
+
+			std::vector<XrPath> activeInteractionProfilePaths;
+			std::map<uint16_t, uint16_t> mapActionIndexToInputId;
+			std::vector<InteractionProfile> interactionProfiles;
+			size_t MOUSE_KEYBOARD_PROFILE_INDEX=0;
+			const InteractionProfile *GetActiveBinding(XrPath p) const;
 		};
 	}
 }

@@ -97,6 +97,8 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/draco/src)
 target_include_directories(TeleportServer PUBLIC ../thirdparty/openssl/include)
 #Include cpp-httplib
 target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
+#Include Platform - for pure header functions only.
+target_include_directories(TeleportServer PUBLIC ../firstparty)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)

@@ -31,12 +31,12 @@ namespace teleport
 			{
 				avsSurfaceBackend = new avs::SurfaceDX11(reinterpret_cast<ID3D11Texture2D*>(resource));
 			}
-			if (deviceType == GraphicsDeviceType::Direct3D12)
+			else if (deviceType == GraphicsDeviceType::Direct3D12)
 			{
 				avsSurfaceBackend = new avs::SurfaceDX12(reinterpret_cast<ID3D12Resource*>(resource));
 			}
 #endif
-			if (deviceType == GraphicsDeviceType::OpenGL)
+			else if (deviceType == GraphicsDeviceType::OpenGL)
 			{
 				// TODO: Implement
 			}

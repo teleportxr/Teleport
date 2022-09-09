@@ -128,8 +128,8 @@ struct Animation;
 	//! A buffer of arbitrary binary data, which should not be freed.
 	struct GeometryBuffer
 	{
-		size_t byteLength;
-		uint8_t* data;
+		size_t byteLength=0;
+		uint8_t* data=nullptr;
 
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const GeometryBuffer& buffer)
@@ -247,7 +247,7 @@ struct Animation;
 
 	struct NodeRenderState
 	{
-		vec4 lightmapScaleOffset;
+		vec4 lightmapScaleOffset={0,0,0,0};
 		uid globalIlluminationUid = 0;
 	};
 
@@ -319,13 +319,6 @@ struct Animation;
 		default:
 			return 1;
 		};
-		if (t == Accessor::ComponentType::UBYTE)
-			return 2;
-		if (t == Accessor::ComponentType::USHORT)
-			return 2;
-		if (t == Accessor::ComponentType::DOUBLE)
-			return 8;
-		return 4;
 	}
 
 	inline size_t GetDataTypeSize(Accessor::DataType t)
@@ -417,26 +410,26 @@ struct Animation;
 			for(const auto &a:primitiveArrays)
 			{
 				lowest=std::min(lowest,a.indices_accessor);
-				highest=std::max(lowest,a.indices_accessor);
+				highest=std::max(highest,a.indices_accessor);
 			}
 			for(const auto &c:accessors)
 			{
 				lowest=std::min(lowest,(uint64_t)c.first);
-				highest=std::max(lowest,(uint64_t)c.first);
+				highest=std::max(highest,(uint64_t)c.first);
 				lowest=std::min(lowest,(uint64_t)c.second.bufferView);
-				highest=std::max(lowest,(uint64_t)c.second.bufferView);
+				highest=std::max(highest,(uint64_t)c.second.bufferView);
 			}
 			for(const auto &v:bufferViews)
 			{
 				lowest=std::min(lowest,(uint64_t)v.first);
-				highest=std::max(lowest,(uint64_t)v.first);
+				highest=std::max(highest,(uint64_t)v.first);
 				lowest=std::min(lowest,(uint64_t)v.second.buffer);
-				highest=std::max(lowest,(uint64_t)v.second.buffer);
+				highest=std::max(highest,(uint64_t)v.second.buffer);
 			}
 			for(const auto &b:buffers)
 			{
 				lowest=std::min(lowest,(uint64_t)b.first);
-				highest=std::max(lowest,(uint64_t)b.first);
+				highest=std::max(highest,(uint64_t)b.first);
 			}
 		}
 		template<typename OutStream>
@@ -662,15 +655,15 @@ struct Animation;
 	};
 	struct MaterialResources
 	{
-		uid material_uid;
+		uid material_uid=0;
 		std::vector<uid> texture_uids;
 	};
 
 	struct MeshNodeResources
 	{
-		uid node_uid;
-		uid mesh_uid;
-		uid skinID;
+		uid node_uid=0;
+		uid mesh_uid=0;
+		uid skinID=0;
 		std::vector<uid> boneIDs;
 		std::vector<uid> animationIDs;
 		std::vector<MaterialResources> materials;
@@ -678,7 +671,7 @@ struct Animation;
 
 	struct LightNodeResources
 	{
-		uid node_uid;
+		uid node_uid=0;
 		uid shadowmap_uid=0;
 	};
 

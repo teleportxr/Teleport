@@ -350,14 +350,15 @@ namespace avs
 
 	enum class FilePayloadType : uint8_t
 	{
-		Texture = 0,
+		Invalid=0,
+		Texture,
 		Mesh,
 		Material
 	};
 
 	struct HTTPPayloadRequest
 	{
-		FilePayloadType type;
+		FilePayloadType type=FilePayloadType::Invalid;
 		std::string fileName;
 	};
 
@@ -389,7 +390,7 @@ namespace avs
 
 	struct FilePayloadInfo : PayloadInfo
 	{
-		FilePayloadType httpPayloadType;
+		FilePayloadType httpPayloadType=FilePayloadType::Invalid;
 
 		FilePayloadInfo() : PayloadInfo(PayloadInfoType::File) {}
 	} AVS_PACKED;

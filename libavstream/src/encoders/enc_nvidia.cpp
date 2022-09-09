@@ -1055,7 +1055,7 @@ namespace avs
 		return apiVersion <= maxSupportedVersion;
 	}
 
-	Result EncoderNV::chooseEncodeConfig(void* encoder, const EncoderParams& params, NV_ENC_TUNING_INFO tuningInfo, EncodeConfig& config)
+	Result EncoderNV::chooseEncodeConfig(void* encoder, const EncoderParams& params, NV_ENC_TUNING_INFO tuningInfo, EncodeConfig& resultConfig)
 	{
 		GUID requestedEncodeGUID = { 0 };
 		switch (params.codec)
@@ -1212,7 +1212,7 @@ namespace avs
 			return Result::EncoderBackend_NoSuitableCodecFound;
 		}
 
-		config = rankedConfigs.begin()->second;
+		resultConfig = rankedConfigs.begin()->second;
 
 		return Result::OK;
 	}

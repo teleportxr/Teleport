@@ -63,7 +63,9 @@ namespace clientrender
 
 		//Linear interpolation between previous keyframe and next keyframe.
 		float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
-		boneRotation = (1.0f - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
+		vec4 &previousValue=*((vec4*)&previousKeyframe.value);
+		vec4 &nextValue=*((vec4*)&nextKeyframe.value);
+		boneRotation = (1.0f - timeBlend) * previousValue + timeBlend * nextValue;
 		//boneRotation = quat::Slerp(previousKeyframe.value, nextKeyframe.value, timeBlend);
 	}
 

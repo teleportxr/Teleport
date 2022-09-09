@@ -70,7 +70,7 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 	style.FrameRounding = 12.f;
 	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
 	style.FramePadding = ImVec2(8.f,2.f);
-	style.FramePadding.x=8.f;
+	style.FramePadding.x=4.f;
 	style.FrameBorderSize=2.f;
     ImVec4* colors = style.Colors;
 	ImVec4 imWhite(1.00f, 1.00f, 1.00f, 1.00f);
@@ -141,6 +141,8 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 	std::vector<std::string> texture_paths;
 	texture_paths.push_back("textures");
 	texture_paths.push_back("fonts");
+	texture_paths.push_back("assets/textures");
+	texture_paths.push_back("assets/fonts");
 	ImGuiIO& io = ImGui::GetIO();
 	auto AddFont=[texture_paths,fileLoader,&io](const char *font_filename,float size_pixels=32.f,ImFontConfig *config=nullptr,const ImWchar *ranges=nullptr)->ImFont*
 	{
@@ -172,7 +174,9 @@ void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,Platfo
 		builder.AddText(ICON_FK_BOOK);			
 		builder.AddText(ICON_FK_BOOKMARK);		
 		builder.AddText(ICON_FK_FOLDER_O);			
-		builder.AddText(ICON_FK_FOLDER_OPEN_O);					
+		builder.AddText(ICON_FK_FOLDER_OPEN_O);		
+		builder.AddText(ICON_FK_COG);				
+		builder.AddText(ICON_FK_ARROW_LEFT);									
 		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
 		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
@@ -224,6 +228,7 @@ void Gui::Show()
 
 void Gui::Hide()
 {
+	config->SaveOptions();
 	visible = false;
 }
 
@@ -462,10 +467,10 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 				avs::vec3 pos = selected_node->GetLocalPosition();
 				avs::vec3 gpos = selected_node->GetGlobalPosition();
 				avs::vec3 sc = selected_node->GetLocalScale();
-				avs::vec4 q = selected_node->GetLocalRotation();
-				avs::vec4 gq = selected_node->GetGlobalRotation();
+				vec4 q = selected_node->GetLocalRotation();
+				vec4 gq = selected_node->GetGlobalRotation();
 				avs::vec3 gs = selected_node->GetGlobalScale();
-				ImGui::Text("%d: %s", selected_node->id,selected_node->name.c_str());
+				ImGui::Text("%d: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
@@ -500,8 +505,8 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 
 					ImGui::Text("Animation Time: %3.3f", anim_time_s);
 					ImGui::BeginGroup();
-					const auto &skin=skinInstance->GetSkin();
-					const auto &bones =skinInstance->GetBones();
+					const auto &skin	=skinInstance->GetSkin();
+					const auto &bones	=skinInstance->GetBones();
 					{
 						for (auto b : bones)
 						{
@@ -716,7 +721,7 @@ void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 	static float window_width=720.0f;
 	static float window_height=240.0f;
 	ImVec2 size_min(window_width,100.f);
-	ImVec2 size_max(window_width,window_height);
+	ImVec2 size_max(window_width+40.0f,window_height);
 	ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
 	static int refocus=0;
 	bool show_hide=true;
@@ -786,109 +791,152 @@ void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 	//		show_hide=false;
 		}
 		static bool show_bookmarks=false;
-		if (ImGui::Button(ICON_FK_FOLDER_O,ImVec2(64,32)))
+		static bool show_options=false;
+		if(show_options)
 		{
-			show_bookmarks=!show_bookmarks;
-		}
-		if(show_bookmarks)
-		{
-			const std::vector<client::Bookmark> &bookmarks=config->GetBookmarks();
-			ImGui::SameLine();
-            ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
-            ImGui::BeginChild("Bookmarks", ImVec2(-1,-1), true, window_flags);
-            for (int i = 0; i < bookmarks.size(); i++)
+            ImGui::Spacing();
+            ImGui::SameLine(ImGui::GetWindowWidth()-70);
+    //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);
+			if(ImGui::Button(ICON_FK_ARROW_LEFT,ImVec2(64,32)))
 			{
-				const client::Bookmark &b=bookmarks[i];
-				if(ImGui::TreeNodeEx(b.url.c_str(), ImGuiTreeNodeFlags_Leaf,b.title.c_str()))
-				{
-					if (ImGui::IsItemClicked())
-					{
-						connectHandler(b.url);
-						show_bookmarks=false;
-						connecting=true;
-					}
-					ImGui::TreePop();
-				}
+				config->SaveOptions();
+				show_options=false;
 			}
-            ImGui::EndChild();
+			if (ImGui::BeginTable("options", 2))
+			{
+				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f); // Default to 100.0f
+				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f); // Default to 200.0f
+                ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::LabelText("##LobbyView","Lobby View");
+				ImGui::TableNextColumn();
+				int e = (int)config->options.lobbyView;
+				ImGui::RadioButton("White", &e, 0);
+				ImGui::SameLine();
+				ImGui::RadioButton("Neon", &e, 1);
+				if((client::LobbyView)e!=config->options.lobbyView)
+				{
+					config->options.lobbyView=(client::LobbyView)e;
+				}
+				ImGui::EndTable();
+			}
 		}
 		else
 		{
-			ImGui::SameLine();
-			//ImGui::LabelText("##URLLabel","URL");
-			//ImGui::SameLine();
-			if(refocus==0)
+			if (ImGui::Button(ICON_FK_FOLDER_O,ImVec2(64,32)))
 			{
-				ImGui::SetKeyboardFocusHere();
+				show_bookmarks=!show_bookmarks;
+				selected_url="";
 			}
-			if(ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))
+			if(show_bookmarks)
 			{
-				current_url=buf;
-			}
-			refocus++;
-			ImGui::SameLine();
-			ImGui::BeginDisabled(connecting);
-			if (ImGui::Button("Connect"))
-			{
-				if(connectHandler)
+				const std::vector<client::Bookmark> &bookmarks=config->GetBookmarks();
+				ImGui::SameLine();
+				ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
+				ImGui::BeginChild("Bookmarks", ImVec2(-1,-1), true, window_flags);
+				for (int i = 0; i < bookmarks.size(); i++)
 				{
-					connectHandler(current_url);
-					connecting=true;
-				}
-			}
-			ImGui::EndDisabled();
-			if (show_keyboard)
-			{
-				auto KeyboardLine = [&io,this](const char* key)
-				{
-					size_t num = strlen(key);
-					for (size_t i = 0; i < num; i++)
+					const client::Bookmark &b=bookmarks[i];
+					if(ImGui::TreeNodeEx(b.url.c_str(), ImGuiTreeNodeFlags_Leaf,b.title.c_str()))
 					{
-						char key_label[] = "X";
-						key_label[0] = *key;
-						ImGui::Button(key_label,ImVec2(46,32));
-						if(ImGui::IsItemClicked())
+						if (ImGui::IsItemClicked())
 						{
-							refocus=0;
-							keys_pressed.push_back(*key);
-							if(connecting)
-							{
-								cancelConnectHandler();
-								connecting=false;
-							}
+							selected_url=b.url;
 						}
-						key++;
-						if (i<num-1)
-							ImGui::SameLine();
+						else if(!ImGui::IsMouseDown(0)&&selected_url==b.url)
+						{
+							current_url=b.url;
+							memcpy(buf,current_url.c_str(),std::min((size_t)499,current_url.size()));
+							connectHandler(b.url);
+							show_bookmarks=false;
+							connecting=true;
+						}
+						ImGui::TreePop();
 					}
-				};
-				KeyboardLine("1234567890-");
-				ImGui::SameLine();
-				ImGui::PushFont(symbolFont);
-	//ImGui::Button(ICON_FK_SEARCH " Search");
-				if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
-				{
-					 refocus=0;
-					// keys_pressed.push_back(ImGuiKey_Backspace);
-					 keys_pressed.push_back(VK_BACK);
 				}
-				ImGui::PopFont();
-				ImGui::Text("  ");
+				ImGui::EndChild();
+			}
+			else
+			{
 				ImGui::SameLine();
-				KeyboardLine("qwertyuiop");
-				ImGui::Text("	");
-				ImGui::SameLine();
-				KeyboardLine("asdfghjkl:");
-				ImGui::SameLine();
-				static char buf[32] = "Return";
-				if (ImGui::Button(buf,ImVec2(92,32)))
+				if(refocus==0)
 				{
-					 refocus=0;
-					 keys_pressed.push_back(ImGuiKey_Enter);
+					ImGui::SetKeyboardFocusHere();
 				}
-				ImGui::Text("	  ");
+				if(ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))//,ImGuiInputTextFlags))
+				{
+					current_url=buf;
+				}
+				refocus++;
 				ImGui::SameLine();
-				KeyboardLine("zxcvbnm,./");
+				ImGui::BeginDisabled(connecting);
+				if (ImGui::Button("Connect"))
+				{
+					if(connectHandler)
+					{
+						connectHandler(current_url);
+						connecting=true;
+					}
+				}
+				ImGui::EndDisabled();
+				ImGui::SameLine(ImGui::GetWindowWidth()-70);
+				if (ImGui::Button(ICON_FK_COG,ImVec2(64,32)))
+				{
+					show_options=!show_options;
+				}
+				if (show_keyboard)
+				{
+					auto KeyboardLine = [&io,this](const char* key)
+					{
+						size_t num = strlen(key);
+						for (size_t i = 0; i < num; i++)
+						{
+							char key_label[] = "X";
+							key_label[0] = *key;
+							ImGui::Button(key_label,ImVec2(46,32));
+							if(ImGui::IsItemClicked())
+							{
+								refocus=0;
+								keys_pressed.push_back(*key);
+								if(connecting)
+								{
+									cancelConnectHandler();
+									connecting=false;
+								}
+							}
+							key++;
+							if (i<num-1)
+								ImGui::SameLine();
+						}
+					};
+					KeyboardLine("1234567890-");
+					ImGui::SameLine();
+					ImGui::PushFont(symbolFont);
+		//ImGui::Button(ICON_FK_SEARCH " Search");
+					if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
+					{
+						 refocus=0;
+						// keys_pressed.push_back(ImGuiKey_Backspace);
+						 keys_pressed.push_back(VK_BACK);
+					}
+					ImGui::PopFont();
+					ImGui::Text("  ");
+					ImGui::SameLine();
+					KeyboardLine("qwertyuiop");
+					ImGui::Text("	");
+					ImGui::SameLine();
+					KeyboardLine("asdfghjkl:");
+					ImGui::SameLine();
+					static char buf[32] = "Return";
+					if (ImGui::Button(buf,ImVec2(92,32)))
+					{
+						 refocus=0;
+						 keys_pressed.push_back(ImGuiKey_Enter);
+					}
+					ImGui::Text("	  ");
+					ImGui::SameLine();
+					KeyboardLine("zxcvbnm,./");
+				}
 			}
 		}
 		//ShowFont();

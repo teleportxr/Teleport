@@ -20,7 +20,7 @@ namespace teleport
 
 		bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
 
-		void saveToDisk() const;
+		bool saveToDisk() const;
 		void verify();
 		//Load from disk.
 		//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
@@ -80,10 +80,10 @@ namespace teleport
 		void storeNode(avs::uid id, avs::Node& newNode);
 		void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
 		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
-		void storeMesh(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
-		void storeMaterial(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Material& newMaterial);
-		void storeTexture(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC,bool forceOverwrite);
-		void storeShadowMap(avs::uid id, _bstr_t guid, std::time_t lastModified, avs::Texture& shadowMap);
+		void storeMesh(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
+		void storeMaterial(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Material& newMaterial);
+		void storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC,bool forceOverwrite);
+		void storeShadowMap(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& shadowMap);
 
 		void removeNode(avs::uid id);
 
@@ -104,6 +104,8 @@ namespace teleport
 		std::set<avs::uid> GetClashingUids() const;
 		/// Check for errors - these should be resolved before using this store in a server.
 		bool CheckForErrors() const;
+		//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.
+		avs::uid GetOrGenerateUid(const std::string &path);
 	private:
 		std::string cachePath;
 		//Stores data on a texture that is to be compressed.
@@ -120,11 +122,6 @@ namespace teleport
 			avs::TextureCompression textureCompression = avs::TextureCompression::UNCOMPRESSED;
 		};
 
-		//Names of the files that store each resource type.
-		const std::string TEXTURE_CACHE_PATH		= "textures";
-		const std::string MATERIAL_CACHE_PATH		= "materials";
-		const std::string MESH_PC_CACHE_PATH		= "meshes/engineering";
-		const std::string MESH_ANDROID_CACHE_PATH	= "meshes/gl";
 		uint8_t compressionStrength = 1;
 		uint8_t compressionQuality = 1;
 
@@ -141,20 +138,27 @@ namespace teleport
 		std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
 		
 		template<typename ExtractedResource>
-		void saveResource(const std::string file_name, avs::uid uid, const ExtractedResource& resource) const;
+		bool saveResource(const std::string file_name, avs::uid uid, const ExtractedResource& resource) const;
 		template<typename ExtractedResource>
-		avs::uid loadResource(const std::string file_name,std::map<avs::uid, ExtractedResource>& resourceMap);
+		avs::uid loadResource(const std::string file_name,const std::string &path_root,std::map<avs::uid, ExtractedResource>& resourceMap);
 
 		template<typename ExtractedResource>
-		void saveResources(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;
+		bool saveResources(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;
 
 		template<typename ExtractedResource>
 		void loadResources(const std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
-
+		#if TELEPORT_SERVER_USE_GUIDS
 		avs::uid GuidToUid(avs::guid g) const;
 		avs::guid UidToGuid(avs::uid u) const;
 
-		std::map<avs::uid,avs::guid> guids;
-		std::map<avs::guid,avs::uid> uids;
+		std::map<avs::uid,avs::guid> uid_to_guid;
+		std::map<avs::guid,avs::uid> guid_to_uid;
+		#else
+		avs::uid PathToUid(std::string p) const;
+		std::string UidToPath(avs::uid u) const;
+
+		std::map<avs::uid,std::string> uid_to_path;
+		std::map<std::string,avs::uid> path_to_uid;
+		#endif
 	};
 }

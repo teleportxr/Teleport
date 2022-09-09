@@ -22,7 +22,7 @@ namespace teleport
     {
         if (kUnityGfxRendererD3D11 != mRendererType)
         {
-            std::cout << "Texture conversion only supported for D3D11 currently" << std::endl;
+            std::cout << "Texture conversion only supported for D3D11 currently" << "\n";
             return nullptr;
         }
         
@@ -52,7 +52,7 @@ namespace teleport
     {
         if (kUnityGfxRendererD3D11 != mRendererType)
         {
-            std::cout << "Texture conversion only supported for D3D11 currently" << std::endl;
+            std::cout << "Texture conversion only supported for D3D11 currently" << "\n";
             return;
         }
 

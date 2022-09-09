@@ -8,6 +8,14 @@
 #include <android/log.h>
 #include <sys/prctl.h>
 #include <fmt/core.h>
+
+#define DISABLE_VULKAN_EXTERNAL_TEXTURE 0
+#define VERBOSE_LOGGING 1
+#if VERBOSE_LOGGING
+	#define verbose_log_print __android_log_print
+#else
+	#define verbose_log_print(...)
+#endif
 void SetThreadName( const char* threadName)
 {
   prctl(PR_SET_NAME,threadName,0,0,0);
@@ -342,10 +350,11 @@ static bool memory_type_from_properties(vk::PhysicalDevice *gpu,uint32_t typeBit
 	return false;
 }
 
-
 void NdkVideoDecoder::onAsyncImageAvailable(AImageReader *reader)
 {
-   // if (!reader)
+#if !DISABLE_VULKAN_EXTERNAL_TEXTURE
+    if (!reader)
+#endif
 		return;
 	static int counter=0;
 	reflectedTextureIndex++;
@@ -523,6 +532,8 @@ void NdkVideoDecoder::processInputBuffers()
 		__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer failed.");
 		return ;
 	}
+	if(!inputBuffer.offset)
+		verbose_log_print(ANDROID_LOG_INFO,"processInputBuffers","AMediaCodec_getInputBuffer %d got size %d",inputBuffer.inputBufferId,buffer_size);
 	copiedSize=std::min(buffer_size-inputBuffer.offset,dataBuffer.bytes.size());
 	bool add_to_new=!targetBufferData||copiedSize<dataBuffer.bytes.size();
 	// if buffer is valid, copy our data into it.
@@ -539,8 +550,10 @@ void NdkVideoDecoder::processInputBuffers()
 			memcpy(targetBufferData+inputBuffer.offset,dataBuffer.bytes.data(),copiedSize);
 			inputBuffer.offset+=copiedSize;
 			inputBuffer.flags=dataBuffer.flags;
-			//__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d added: %zu bytes with flag %d",inputBuffer.inputBufferId,copiedSize,dataBuffer.flags);
-			send=true;
+			//verbose_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d at offset %d added: %zu bytes with flag %d",inputBuffer.inputBufferId,inputBuffer.offset,copiedSize,dataBuffer.flags);
+			// over half the buffer filled then send
+			if(inputBuffer.offset>=buffer_size/2)
+				send=true;
 		}
 	}
 	else
@@ -548,7 +561,8 @@ void NdkVideoDecoder::processInputBuffers()
 		__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer %d full",inputBuffer.inputBufferId);
 		send=true;
 	}
-	if(send&&inputBuffer.offset)
+	// offset now equals the accumulated size of the buffer.
+	if(send&&inputBuffer.offset>0)
 	{
 		media_status_t res=AMediaCodec_queueInputBuffer(mDecoder,inputBuffer.inputBufferId,0,inputBuffer.offset,0,inputBuffer.flags);
 		if(res!=AMEDIA_OK)
@@ -558,7 +572,7 @@ void NdkVideoDecoder::processInputBuffers()
 		}
 		//if(lastpacket)
 		//	__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","Last Packet.");
-		//__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer: %d SENT %zu bytes with flag %d.",inputBuffer.inputBufferId,inputBuffer.offset,inputBuffer.flags);
+		verbose_log_print(ANDROID_LOG_INFO,"processInputBuffers","buffer: %d SENT %zu bytes with flag %d.",inputBuffer.inputBufferId,inputBuffer.offset,inputBuffer.flags);
 		nextInputBuffers.erase(nextInputBuffers.begin()+nextInputBufferIndex);
 		
 		if(nextInputBufferIndex>=nextInputBuffers.size())
@@ -570,7 +584,7 @@ void NdkVideoDecoder::processInputBuffers()
 		uint8_t *targetBufferData2=AMediaCodec_getInputBuffer(mDecoder,nextInputBuffer.inputBufferId,&buffer_size);
 		if(targetBufferData2)
 		{
-			//__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","newbuffer %d added: %lu bytes with flag %d.",inputBuffer.inputBufferId,dataBuffer.bytes.size(),dataBuffer.flags);
+			verbose_log_print(ANDROID_LOG_INFO,"processInputBuffers","newbuffer %d added: %lu bytes with flag %d.",inputBuffer.inputBufferId,dataBuffer.bytes.size(),dataBuffer.flags);
 			memcpy(targetBufferData2,dataBuffer.bytes.data(),dataBuffer.bytes.size());
 			nextInputBuffer.offset+=dataBuffer.bytes.size();
 			nextInputBuffer.flags=dataBuffer.flags;
@@ -610,7 +624,7 @@ void NdkVideoDecoder::processOutputBuffers()
     //auto bufferFormat = AMediaCodec_getOutputFormat(codec,outputBufferId); // option A
     // bufferFormat is equivalent to mOutputFormat
     // outputBuffer is ready to be processed or rendered.
- 	//__android_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","Output available %d, size: %d",outputBuffer.outputBufferId,outputBuffer.size);
+ 	verbose_log_print(ANDROID_LOG_INFO,"NdkVideoDecoder","Output available %d, size: %d",outputBuffer.outputBufferId,outputBuffer.size);
 	
 	bool render = outputBuffer.size != 0;
 	if(AMediaCodec_releaseOutputBuffer(mDecoder,outputBuffer.outputBufferId,true)!=AMEDIA_OK)
@@ -676,15 +690,14 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	texturesToFree.clear();
 	if(!renderPlatform)
 		return;
-	#if 0
+	#if 1
 	if(nextImageIndex<0)
 		return;
 	ReflectedTexture &reflectedTexture=reflectedTextures[nextImageIndex];
 	if(!reflectedTexture.nextImage)
 		return;
-	if(!reflectedTexture.sourceTexture->IsValid())
-		return;
-	nextImageIndex=-1;	platform::crossplatform::TextureCreate textureCreate;
+	nextImageIndex=-1;
+	platform::crossplatform::TextureCreate textureCreate;
 	textureCreate.w=targetTexture->width;
 	textureCreate.l=targetTexture->length;
 	textureCreate.d=1;
@@ -700,17 +713,19 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	textureCreate.forceInit=true;
 	
 	reflectedTexture.sourceTexture->InitFromExternalTexture(renderPlatform,&textureCreate);
+	if(!reflectedTexture.sourceTexture->IsValid())
+		return;
 	reflectedTexture.sourceTexture->AssumeLayout(vk::ImageLayout::eUndefined);
 	#endif
 	// Can't use CopyTexture because we can't use transfer_src.
 	//renderPlatform->CopyTexture(deviceContext,targetTexture,sourceTexture);
 	auto *effect		=renderPlatform->copyEffect;
 	auto *effectPass	=(platform::vulkan::EffectPass *)effect->GetTechniqueByName("copy_2d_from_video")->GetPass(0);
-	//effectPass->SetVideoSource(true);
+	effectPass->SetVideoSource(true);
 	targetTexture->activateRenderTarget(deviceContext);
 	auto srcResource=effect->GetShaderResource("SourceTex2");
 	auto dstResource=effect->GetShaderResource("DestTex2");
-	//renderPlatform->SetTexture(deviceContext,srcResource,reflectedTexture.sourceTexture);
+	renderPlatform->SetTexture(deviceContext,srcResource,reflectedTexture.sourceTexture);
 	effect->SetUnorderedAccessView(deviceContext,dstResource,targetTexture);
 	renderPlatform->ApplyPass(deviceContext,effectPass);
 	int w=(targetTexture->width+7)/8;

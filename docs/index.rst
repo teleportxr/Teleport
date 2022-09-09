@@ -10,7 +10,7 @@ Teleport VR
 	introduction
 	protocol
 	reference/index
-	unity
+	unity/index
 
 Indices and tables
 ==================

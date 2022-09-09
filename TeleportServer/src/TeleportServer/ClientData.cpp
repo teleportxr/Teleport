@@ -31,6 +31,7 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	setupCommand.startTimestamp_utc_unix_ms = getUnixTimestamp();
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings.backgroundMode;
+	setupCommand.backgroundColour = clientSettings.backgroundColour;
 	setupCommand.draw_distance = clientSettings.drawDistance;
 	// Often drawDistance will equal serverSettings.detectionSphereRadius + serverSettings.clientDrawDistanceOffset;
 	// but this is for the server operator to decide.
@@ -159,7 +160,7 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 	if(num>255)
 	{
 		num=255;
-		TELEPORT_CERR<<"Too many GI Textures."<<std::endl;
+		TELEPORT_CERR<<"Too many GI Textures.\n";
 	}
 	if(global_illumination_texture_uids.size()!=num)
 		global_illumination_texture_uids.resize(num);

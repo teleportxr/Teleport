@@ -29,7 +29,7 @@
 
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
-VisualStudioDebugOutput debug_buffer(false, nullptr, 128);
+VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
 using namespace teleport;
@@ -131,7 +131,7 @@ private:
 			if(!callback_clientStoppedRenderingNode(clientID, nodeID))
 			{
 			// This is ok, it means we probably already deleted the node.
-				//TELEPORT_CERR << "callback_clientStoppedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
+				//TELEPORT_CERR << "callback_clientStoppedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << "\n";
 				return false;
 			}
 			return true;
@@ -144,7 +144,7 @@ private:
 		{
 			if(!callback_clientStartedRenderingNode(clientID, nodeID))
 			{
-				TELEPORT_CERR << "callback_clientStartedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << std::endl;
+				TELEPORT_CERR << "callback_clientStartedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << "\n";
 				return false;
 			}
 			return true;
@@ -175,19 +175,19 @@ public:
 	{
 		if (configured)
 		{
-			TELEPORT_CERR << "Video encode pipeline already configured." << std::endl;
+			TELEPORT_CERR << "Video encode pipeline already configured." << "\n";
 			return Result::Code::EncoderAlreadyConfigured;
 		}
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
-			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
 			return Result::Code::InvalidGraphicsDevice;
 		}
 
 		if (!videoEncodeParams.inputSurfaceResource)
 		{
-			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
 			return Result::Code::InvalidGraphicsResource;
 		}
 
@@ -211,19 +211,19 @@ public:
 	{
 		if (!configured)
 		{
-			TELEPORT_CERR << "Video encoder cannot be reconfigured if pipeline has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder cannot be reconfigured if pipeline has not been configured." << "\n";
 			return Result::Code::EncoderNotConfigured;
 		}
 
 		if (!GraphicsManager::mGraphicsDevice)
 		{
-			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
 			return Result::Code::InvalidGraphicsDevice;
 		}
 
 		if (videoEncodeParams.inputSurfaceResource)
 		{
-			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << std::endl;
+			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
 			return Result::Code::InvalidGraphicsResource;
 		}
 
@@ -249,7 +249,7 @@ public:
 	{
 		if (!configured)
 		{
-			TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << "\n";
 			return Result::Code::EncoderNotConfigured;
 		}
 
@@ -263,7 +263,7 @@ public:
 	{
 		if (!configured)
 		{
-			TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << "\n";
 			return Result::Code::EncoderNotConfigured;
 		}
 
@@ -307,7 +307,7 @@ public:
 	{
 		if (configured)
 		{
-			TELEPORT_CERR << "Audio encode pipeline already configured." << std::endl;
+			TELEPORT_CERR << "Audio encode pipeline already configured." << "\n";
 			return Result::Code::EncoderAlreadyConfigured;
 		}
 
@@ -323,7 +323,7 @@ public:
 	{
 		if (!configured)
 		{
-			TELEPORT_CERR << "Audio encoder can not encode because it has not been configured." << std::endl;
+			TELEPORT_CERR << "Audio encoder can not encode because it has not been configured." << "\n";
 			return Result::Code::EncoderNotConfigured;
 		}
 
@@ -390,7 +390,7 @@ void ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize)
 ///MEMORY-MANAGEMENT START
 TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 {
-	delete[] *unmanagedArray;
+	delete[] (uint8_t*)*unmanagedArray;
 }
 ///MEMORY-MANAGEMENT END
 
@@ -729,7 +729,12 @@ TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int num
 		TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	if (numControls > 0 && (controlPaths==nullptr|| inputDefinitions==nullptr))
+	if (numControls > 0 && (controlPaths==nullptr))
+	{
+		TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << ". Null pointer!\n";
+		return;
+	}
+	if ( inputDefinitions==nullptr)
 	{
 		TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << ". Null pointer!\n";
 		return;
@@ -955,11 +960,18 @@ TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID)
 ///PLUGIN-SPECIFC END
 
 ///libavstream START
-TELEPORT_EXPORT avs::uid GenerateID()
+TELEPORT_EXPORT avs::uid GenerateUid()
 {
 	return avs::GenerateUid();
 }
 ///libavstream END
+
+TELEPORT_EXPORT avs::uid GetOrGenerateUid(BSTR path)
+{
+	_bstr_t p=path;
+	std::string str(p);
+	return geometryStore.GetOrGenerateUid(str);
+}
 
 //! Add the specified texture to be sent to the client.
 TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textureID)
@@ -1213,7 +1225,7 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 	}
 	else
 	{
-		TELEPORT_CERR << "Unknown event id" << std::endl;
+		TELEPORT_CERR << "Unknown event id" << "\n";
 	}
 }
 
@@ -1263,7 +1275,7 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 		result = clientData.audioEncodePipeline->sendAudio(data, dataSize);
 		if (!result)
 		{
-			TELEPORT_CERR << "Failed to send audio to Client " << clientID << "! Error occurred when trying to send audio" << std::endl;
+			TELEPORT_CERR << "Failed to send audio to Client " << clientID << "! Error occurred when trying to send audio" << "\n";
 		}
 	}
 }
@@ -1599,24 +1611,24 @@ TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransf
 	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
 }
 
-TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, std::time_t lastModified, InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
+TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
-	geometryStore.storeMesh(id, guid, lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
+	geometryStore.storeMesh(id, guid, path, lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
 }
 
-TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, std::time_t lastModified, InteropMaterial material)
+TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropMaterial material)
 {
-	geometryStore.storeMaterial(id, guid, lastModified, avs::Material(material));
+	geometryStore.storeMaterial(id, guid, path, lastModified, avs::Material(material));
 }
 
-TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
+TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	geometryStore.storeTexture(id, guid, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	geometryStore.storeTexture(id, guid, path, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
 }
 
-TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, std::time_t lastModified, InteropTexture shadowMap)
+TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture shadowMap)
 {
-	geometryStore.storeShadowMap(id, guid, lastModified, avs::Texture(shadowMap));
+	geometryStore.storeShadowMap(id, guid, path, lastModified, avs::Texture(shadowMap));
 }
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
@@ -1691,6 +1703,6 @@ TELEPORT_EXPORT size_t SizeOf(const char *str)
 	{
 		return sizeof(ServerSettings);
 	}
-	TELEPORT_CERR<<"Unknown type for SizeOf: "<<str<<std::endl;
+	TELEPORT_CERR<<"Unknown type for SizeOf: "<<str<<"\n";
 	return 0;
 }

@@ -65,7 +65,7 @@ bool DefaultDiscoveryService::initialize(uint16_t discovPort, uint16_t servPort,
 	if (enet_socket_bind(discoverySocket, &address) != 0)
 	{
 		int err= WSAGetLastError();
-		TELEPORT_CERR << "Failed to bind discovery socket on port: " << address.port << " with error "<<err<<std::endl;
+		TELEPORT_CERR << "Failed to bind discovery socket on port: " << address.port << " with error "<<err<<"\n";
 		enet_socket_destroy(discoverySocket);
 		discoverySocket = 0;
 		return false;

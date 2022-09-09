@@ -51,7 +51,7 @@ namespace teleport
 			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 			if(mHost)
 			{
-				std::cerr << "Error: port "<<listenPort<<" is in use."<<std::endl;
+				std::cerr << "Error: port "<<listenPort<<" is in use.\n";
 				enet_host_destroy(mHost);
 				mHost = nullptr;
 			}

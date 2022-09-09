@@ -75,10 +75,12 @@ file(GLOB RST_FILES *.rst "*.rst" )
 file(GLOB RST_REF_FILES *.rst "reference/*.rst" )
 file(GLOB RST_PROTOCOL_FILES *.rst "protocol/*.rst" )
 file(GLOB RST_PROTOCOL_SERVICE_FILES *.rst "protocol/service/*.rst" )
+file(GLOB RST_UNITY_FILES *.rst "unity/*.rst" )
 source_group("Documentation" FILES ${RST_FILES} )
 source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
 source_group("Documentation/Protocol" FILES ${RST_PROTOCOL_FILES} )
 source_group("Documentation/Protocol/Service" FILES ${RST_PROTOCOL_SERVICE_FILES} )
+source_group("Documentation/Unity" FILES ${RST_UNITY_FILES} )
 add_custom_target(Sphinx ALL
 					COMMAND
 					${SPHINX_EXECUTABLE} -b html
