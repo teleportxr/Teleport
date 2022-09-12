@@ -389,6 +389,24 @@ void Gui::LinePrint(const char* txt,const float *clr)
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), "%s",txt);
 }
 
+void DoRow(const char* title, const char* text, ...)
+{
+	ImGui::TableNextColumn();
+	ImGui::Text("%s", title);
+	ImGui::TableNextColumn();
+	va_list args;
+	va_start(args, text);
+	va_list args2;
+	va_copy(args2, args);
+	size_t bufferSize = static_cast<size_t>(vsnprintf(nullptr, 0, text, args2)) + 1;
+	va_end(args2);
+	char* bufferData = new char[bufferSize];
+	vsnprintf(bufferData, bufferSize, text, args);
+	va_end(args);
+	ImGui::Text("%s", bufferData);
+	delete[] bufferData;
+};
+
 void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 1)
@@ -474,12 +492,6 @@ void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceCont
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
-					auto DoRow=[this](const char *title,const char *text, auto ...rest)-> void{
-						ImGui::TableNextColumn();
-						ImGui::Text("%s",title);
-						ImGui::TableNextColumn();
-						ImGui::Text(text,rest...);
-					};
 					if(!selected_node->IsVisible())
 					{
 						DoRow("HIDDEN","");

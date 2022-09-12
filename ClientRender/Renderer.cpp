@@ -87,6 +87,19 @@ const char *stringof(avs::GeometryPayloadType t)
 	return txt[(size_t)t];
 }
 
+//TODO: Implement Vector, Matrix and Quaternion conversions between avs:: <-> platform::math:: <-> CppSl.h - AJR
+template<typename T1, typename T2> T1 ConvertVec2(const T2& value) { return T1(value.x, value.y); }
+template<typename T1, typename T2> T1 ConvertVec3(const T2& value) { return T1(value.x, value.y, value.z); }
+template<typename T1, typename T2> T1 ConvertVec4(const T2& value) { return T1(value.x, value.y, value.z, value.w); }
+mat4 ConvertMat4(const float value[4][4]) 
+{
+	mat4 result;
+	result.M[0][0] = value[0][0]; result.M[0][1] = value[0][1]; result.M[0][2] = value[0][2]; result.M[0][3] = value[0][3];
+	result.M[1][0] = value[1][0]; result.M[1][1] = value[1][1]; result.M[1][2] = value[1][2]; result.M[1][3] = value[1][3];
+	result.M[2][0] = value[2][0]; result.M[2][1] = value[2][1]; result.M[2][2] = value[2][2]; result.M[2][3] = value[2][3];
+	result.M[3][0] = value[3][0]; result.M[3][1] = value[3][1]; result.M[3][2] = value[3][2]; result.M[3][3] = value[3][3];
+	return  result;
+}
 
 
 struct AVSTextureImpl :public clientrender::AVSTexture
@@ -541,7 +554,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	{
 		if(lastSetupCommand.backgroundMode==avs::BackgroundMode::COLOUR)
 		{
-			renderPlatform->Clear(deviceContext, *((vec4*)&lastSetupCommand.backgroundColour));
+			renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(lastSetupCommand.backgroundColour));
 		}
 		else if(lastSetupCommand.backgroundMode==avs::BackgroundMode::VIDEO)
 		{
@@ -762,7 +775,7 @@ void Renderer::UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceConte
 			LightTag &t=videoTagDataCube[i].lightTags[j];
 			const clientrender::LightTagData &l=td.lights[j];
 			t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
-			t.colour=*((vec4*)&l.color);
+			t.colour=ConvertVec4<vec4>(l.color);
 			// Convert from +-1 to [0,1]
 			t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(lastSetupCommand.video_config.video_width);
 			t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(lastSetupCommand.video_config.video_height);
@@ -774,9 +787,7 @@ void Renderer::UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceConte
 			t.position=*((vec3*)&position);
 			crossplatform::Quaternionf q((const float*)&orientation);
 			t.direction=q*vec3(0,0,1.0f);
-			::mat4 worldToShadowMatrix=*((const ::mat4*)&l.worldToShadowMatrix);
-				
-			t.worldToShadowMatrix	=*((::mat4*)&worldToShadowMatrix);
+			t.worldToShadowMatrix	=ConvertMat4(l.worldToShadowMatrix);
 
 			auto nodeLight=cachedLights.find(l.uid);
 			if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
