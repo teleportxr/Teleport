@@ -31,24 +31,27 @@ or if you have already cloned the main repo,
 
 1. Build pthread.2019.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
 	* You may retarget the projects to a more recent version of the build tools.
-2. Using CMakeGUI, set src: (Teleport Folder) and bin: (Teleport Folder)/build_pc_client
-3. Configure for x64 platform with default native compiler
-4. In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
-5. Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
-6. Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
-7. Uncheck 'ENABLE_ENCRYPTION' option from srt.
-8. set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to the correct installed Cuda version
-9. In firstparty/Platform, run Setup.py to build required libraries fmt and glfw.
-10. Generate, open and build the Visual Studio project.
+2. In firstparty/Platform, run Setup.py to build required libraries fmt and glfw.
+3. Using CMakeGUI:
+    * Set src: (Teleport Folder) and bin: (Teleport Folder)/build_pc_client
+    * Configure for x64 platform with default native compiler
+    * In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
+    * Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
+    * Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
+    * Uncheck 'ENABLE_ENCRYPTION' option from srt.
+    * Uncheck LIBAV_USE_DYNAMIC_RUNTIME.
+    * Set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to the correct installed Cuda version
+4. Generate, open and build the Visual Studio project.
 
 ## Building Unity plugin
 
 The Unity server plugin is currently the main testbed for Teleport servers.
 
 1. Using CMakeGUI:
+    * Build to a subfolder of your Unity project, e.g. Project/teleport_build. *Don't* build inside the Assets folder.
 	* Check REMOTEPLAY_UNITY.
 	* Check REMOTEPLAY_SERVER.
-	* Check LIBAV_USE_DYNAMIC_RUNTIME.
+	* Uncheck LIBAV_USE_DYNAMIC_RUNTIME.
 	* Click 'Configure' solution button.
 	* Set REMOTEPLAY_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
 	* Click 'Generate' solution button.
