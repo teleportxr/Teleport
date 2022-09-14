@@ -20,7 +20,7 @@ or if you have already cloned the main repo,
 2. Android Studio
 3. Unreal Engine 4.22 incorporating the patch to move SceneCaptureSource from USceneCaptureComponent2D to USceneCaptureComponent
 4. NVIDIA CUDA Toolkit 11 https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64.
-5. NVIDIA Video Codec SDK
+5. NVIDIA Video Codec SDK https://developer.nvidia.com/nvidia-video-codec-sdk
 6. Recent CMake. Edit local.properties to contain cmake.dir=C\:\\Program Files\\CMake
 7. ninja.exe: put it in C:\Program Files\CMake\bin
 8. Ubuntu on Windows
@@ -46,9 +46,10 @@ or if you have already cloned the main repo,
 The Unity server plugin is currently the main testbed for Teleport servers.
 
 1. Using CMakeGUI:
-	* Check REMOTEPLAY_UNITY.
-	* Check REMOTEPLAY_SERVER.
-	* Check LIBAV_USE_DYNAMIC_RUNTIME.
+	* Check TELEPORT_UNITY.
+	* Check TELEPORT_SERVER.
+	* Uncheck LIBAV_USE_DYNAMIC_RUNTIME.
+    * Uncheck USE_DYNAMIC_RUNTIME.
 	* Click 'Configure' solution button.
 	* Set REMOTEPLAY_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
 	* Click 'Generate' solution button.
