@@ -20,8 +20,10 @@ namespace teleport
 
 		bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
 
-		bool saveToDisk() const;
+		//Checks and sets the global cache path for the project. Returns true if path is valid.
+		bool SetCachePath(const char* path);
 		void verify();
+		bool saveToDisk() const;
 		//Load from disk.
 		//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
 		void loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials);
@@ -95,11 +97,7 @@ namespace teleport
 		const avs::Texture* getNextCompressedTexture() const;
 		//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
 		void compressNextTexture();
-		/// Set the global cache path for the project.
-		void SetCachePath(const char *path)
-		{
-			cachePath=path;
-		}
+		
 		/// Debug: check for clashing uid's: this should never return a non-empty set.
 		std::set<avs::uid> GetClashingUids() const;
 		/// Check for errors - these should be resolved before using this store in a server.

@@ -131,6 +131,15 @@ bool GeometryStore::saveToDisk() const
 	return true;
 }
 
+bool GeometryStore::SetCachePath(const char* path)
+{
+	bool exist = std::filesystem::exists(std::filesystem::path(path));
+	if (exist)
+		cachePath = path;
+
+	return exist;
+}
+
 void GeometryStore::verify()
 {
 	loadResources(cachePath , materials);

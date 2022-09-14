@@ -400,9 +400,9 @@ TELEPORT_EXPORT void UpdateServerSettings(const teleport::ServerSettings newSett
 	serverSettings = newSettings;
 }
 
-TELEPORT_EXPORT void SetCachePath(const char* path)
+TELEPORT_EXPORT bool SetCachePath(const char* path)
 {
-	geometryStore.SetCachePath(path);
+	return geometryStore.SetCachePath(path);
 }
 
 TELEPORT_EXPORT void SetClientStoppedRenderingNodeDelegate(ClientStoppedRenderingNodeFn clientStoppedRenderingNode)
