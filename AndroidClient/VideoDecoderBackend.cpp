@@ -99,7 +99,7 @@ avs::Result VideoDecoderBackend::registerSurface(const avs::SurfaceBackendInterf
 	}
  
 	//mAlphaSurfaceTexture = alphaSurfaceTexture;
-	mColorDecoder->initialize(renderPlatform,mColorSurfaceTexture);
+	mColorDecoder->Initialize(renderPlatform,mColorSurfaceTexture);
 	return avs::Result::OK;
 }
 
@@ -133,7 +133,7 @@ avs::Result VideoDecoderBackend::decode(const void* buffer, size_t bufferSizeInB
 
 	std::vector<uint8_t> bf(bufferSizeInBytes);
 	memcpy(bf.data(),buffer,bufferSizeInBytes);
-	bool isReadyToDisplay = mColorDecoder->decode(bf, payloadType, lastPayload);
+	bool isReadyToDisplay = mColorDecoder->Decode(bf, payloadType, lastPayload);
 	
 	//if (mUseAlphaLayerDecoding)
 	{
@@ -154,7 +154,7 @@ avs::Result VideoDecoderBackend::display(bool showAlphaAsColor)
 	{
 		return avs::Result::DecoderBackend_InvalidSurface;
 	}
-	bool displayResult = mColorDecoder->display();
+	bool displayResult = mColorDecoder->Display();
 	if (mUseAlphaLayerDecoding && displayResult)
 	{
 		//displayResult = mAlphaDecoder->display();
@@ -172,7 +172,7 @@ void VideoDecoderBackend::NotifyFrameAvailable()
 
 void VideoDecoderBackend::ShutdownVideoDecoder()
 {
-	mColorDecoder->shutdown();
+	mColorDecoder->Shutdown();
 	delete mColorDecoder;
 	mColorDecoder = nullptr;
 	if (mUseAlphaLayerDecoding)
