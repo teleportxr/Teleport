@@ -12,7 +12,11 @@
 #include <iostream>
 #include <sys/prctl.h>
 #include <android/hardware_buffer_jni.h>
+#include <android/native_window.h>
 #include <android/log.h>
+
+using namespace teleport;
+using namespace android;
 
 #define DISABLE_VULKAN_EXTERNAL_TEXTURE 0
 
@@ -108,9 +112,6 @@ static int VulkanFormatToHardwareBufferFormat(VkFormat v)
 	}
 }
 
-// TODO: this should be a member variabls:
-
-
 NdkVideoDecoder::NdkVideoDecoder(VideoDecoderBackend* d, avs::VideoCodec codecType)
 {
 	this->videoDecoder = d;
@@ -154,6 +155,7 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	//NativeWindow is managed by the ImageReader.
 	ANativeWindow* nativeWindow = nullptr;
 	AMEDIA_CHECK(AImageReader_getWindow(imageReader, &nativeWindow));
+	AHardwareBuffer_Format nativeWindowFormat = (AHardwareBuffer_Format)ANativeWindow_getFormat(nativeWindow);
 
 	//Configure codec. Guessing the following is equivalent:
 	AMediaFormat* configFormat = AMediaFormat_new();
@@ -162,9 +164,11 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_MAX_HEIGHT,		targetTexture->length);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_HEIGHT,			targetTexture->length);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_WIDTH,			targetTexture->width);
+	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_BITRATE_MODE,	(int32_t)BitRateMode::BITRATE_MODE_CBR);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_BIT_RATE,		videoDecoderParams.bitRate);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_FRAME_RATE,		videoDecoderParams.frameRate);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT,	(int32_t)CodecCapabilities::COLOR_FormatYUV420Flexible);
+	
 	AMEDIA_CHECK(AMediaCodec_configure(decoder, configFormat, nativeWindow, nullptr, 0));
 	decoderConfigured = true;
 	
@@ -180,14 +184,31 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	AMEDIA_CHECK(AMediaCodec_start(decoder));
 
 	//Check config and output formats for codec
-	CodecCapabilities  format_color;
+	auto GetAMediaFormatStringAndDelete = [](AMediaFormat* format) -> std::string
+	{
+		if (format)
+		{	
+			std::string result = AMediaFormat_toString(format);
+			AMediaFormat_delete(format);
+			return result;
+		}
+		else
+		{
+			return "";
+		}
+	};
+
+	/*CodecCapabilities format_color;
 	AMediaFormat_getInt32(configFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, (int32_t*)&format_color);
 	NDK_VIDEO_DECODER_LOG_FMT_CERR("AMEDIAFORMAT_KEY_COLOR_FORMAT - {0}", (int32_t)format_color);
 	AMediaFormat_delete(configFormat);
 	AMediaFormat* outputFormat = AMediaCodec_getOutputFormat(decoder);
 	AMediaFormat_getInt32(outputFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, (int32_t*)&format_color);
 	NDK_VIDEO_DECODER_LOG_FMT_CERR("AMEDIAFORMAT_KEY_COLOR_FORMAT - {0}", (int32_t)format_color);
-	AMediaFormat_delete(outputFormat);
+	AMediaFormat_delete(outputFormat);*/
+	std::string decoderConfigFormatStr = GetAMediaFormatStringAndDelete(configFormat);
+	std::string decoderInputFormatStr = GetAMediaFormatStringAndDelete(AMediaCodec_getInputFormat(decoder));
+	std::string decoderOutputFormatStr = GetAMediaFormatStringAndDelete(AMediaCodec_getOutputFormat(decoder));
 
 	//Check ImageReader format and maxImages
 	AIMAGE_FORMATS imageReaderFormat = AIMAGE_FORMATS(0);
@@ -439,6 +460,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	AHardwareBuffer_Desc hardwareBufferDesc;
 	AHardwareBuffer_describe(hardwareBuffer, &hardwareBufferDesc);
 	const AHardwareBuffer_Format& hardwareBufferFormat = AHardwareBuffer_Format(hardwareBufferDesc.format);
+	const AHardwareBuffer_UsageFlags& hardwareBufferUsage = AHardwareBuffer_UsageFlags(hardwareBufferDesc.usage);
 
 	//Vulkan Properties and FormatProperties from the AHardwareBuffer
 	vk::Device* vulkanDevice = ndkVideoDecoder->renderPlatform->AsVulkanDevice();
@@ -472,7 +494,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	imageCI.sharingMode = vk::SharingMode::eExclusive;
 	imageCI.queueFamilyIndexCount = 0;
 	imageCI.pQueueFamilyIndices = nullptr;
-	imageCI.initialLayout = vk::ImageLayout::ePreinitialized;
+	imageCI.initialLayout = vk::ImageLayout::eUndefined;
 	VK_CHECK(vulkanDevice->createImage(&imageCI, nullptr, &reflectedTexture.videoSourceVkImage));
 
 	//Set up MemoryDedicatedAllocateInfo and ImportAndroidHardwareBufferInfoANDROID

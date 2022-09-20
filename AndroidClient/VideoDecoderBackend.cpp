@@ -4,6 +4,8 @@
 #include "NdkVideoDecoder.h"
 #include <TeleportCore/ErrorHandling.h>
 
+using namespace teleport;
+using namespace android;
 
 VideoDecoderBackend::VideoDecoderBackend(platform::crossplatform::RenderPlatform* r, platform::crossplatform::Texture* t,DecodeEventInterface* eventInterface)
 	:mEventInterface(eventInterface)
