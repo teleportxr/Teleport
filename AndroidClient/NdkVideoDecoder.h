@@ -116,6 +116,16 @@ namespace teleport
 				COLOR_FormatRGBFlexible = 0x7F36B888,
 				COLOR_FormatRGBAFlexible = 0x7F36A888,
 				COLOR_QCOM_FormatYUV420SemiPlanar = 0x7fa30c00,
+
+				//OMX extensions
+				//https://android.googlesource.com/platform/frameworks/native/+/kitkat-release/include/media/openmax/OMX_IVCommon.h
+				
+				OMX_COLOR_FormatAndroidOpaque = 0x7F000789,
+				OMX_TI_COLOR_FormatYUV420PackedSemiPlanar = 0x7F000100,
+				OMX_QCOM_COLOR_FormatYVU420SemiPlanar = 0x7FA30C00,
+				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka = 0x7FA30C03,
+				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m = 0x7FA30C04,
+				OMX_SEC_COLOR_FormatNV12Tiled = 0x7FC00002,
 			};
 			enum class BitRateMode
 			{
@@ -199,6 +209,7 @@ namespace teleport
 			std::atomic_bool stopProcessBuffersThread = false;
 
 			platform::vulkan::RenderPlatform* renderPlatform = nullptr;
+			vk::PhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 			VideoDecoderBackend* videoDecoder = nullptr;
 			avs::VideoCodec codecType;
 			AMediaCodec* decoder = nullptr;

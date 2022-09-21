@@ -59,10 +59,8 @@ void SetThreadName(const char* threadName)
 	}\
 }
 
-static bool memory_type_from_properties(vk::PhysicalDevice* gpu, uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex)
+static bool memory_type_from_properties(vk::PhysicalDeviceMemoryProperties memory_properties, uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex)
 {
-	vk::PhysicalDeviceMemoryProperties memory_properties;
-	gpu->getMemoryProperties(&memory_properties);
 	// Search memtypes to find first index with those properties
 	for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++)
 	{
@@ -140,6 +138,7 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	//Class member assignments
 	renderPlatform = (platform::vulkan::RenderPlatform*)p;
 	targetTexture = (platform::vulkan::Texture*)texture;
+	physicalDeviceMemoryProperties = renderPlatform->GetVulkanGPU()->getMemoryProperties();
 
 	//Create Decoder
 	decoder = AMediaCodec_createDecoderByType(GetCodecMimeType());
@@ -156,19 +155,17 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	ANativeWindow* nativeWindow = nullptr;
 	AMEDIA_CHECK(AImageReader_getWindow(imageReader, &nativeWindow));
 	AHardwareBuffer_Format nativeWindowFormat = (AHardwareBuffer_Format)ANativeWindow_getFormat(nativeWindow);
-
+	
 	//Configure codec. Guessing the following is equivalent:
+	//https://developer.android.com/reference/android/media/MediaFormat
 	AMediaFormat* configFormat = AMediaFormat_new();
 	AMediaFormat_setString	(configFormat, AMEDIAFORMAT_KEY_MIME,			GetCodecMimeType());
+	AMediaFormat_setInt64	(configFormat, AMEDIAFORMAT_KEY_DURATION,		INT64_MAX);
+	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_WIDTH,			targetTexture->width);
+	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_HEIGHT,			targetTexture->length);
+	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT,	(int32_t)CodecCapabilities::COLOR_FormatYUV420Flexible);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_MAX_WIDTH,		targetTexture->width);
 	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_MAX_HEIGHT,		targetTexture->length);
-	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_HEIGHT,			targetTexture->length);
-	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_WIDTH,			targetTexture->width);
-	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_BITRATE_MODE,	(int32_t)BitRateMode::BITRATE_MODE_CBR);
-	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_BIT_RATE,		videoDecoderParams.bitRate);
-	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_FRAME_RATE,		videoDecoderParams.frameRate);
-	AMediaFormat_setInt32	(configFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT,	(int32_t)CodecCapabilities::COLOR_FormatYUV420Flexible);
-	
 	AMEDIA_CHECK(AMediaCodec_configure(decoder, configFormat, nativeWindow, nullptr, 0));
 	decoderConfigured = true;
 	
@@ -198,14 +195,6 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 		}
 	};
 
-	/*CodecCapabilities format_color;
-	AMediaFormat_getInt32(configFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, (int32_t*)&format_color);
-	NDK_VIDEO_DECODER_LOG_FMT_CERR("AMEDIAFORMAT_KEY_COLOR_FORMAT - {0}", (int32_t)format_color);
-	AMediaFormat_delete(configFormat);
-	AMediaFormat* outputFormat = AMediaCodec_getOutputFormat(decoder);
-	AMediaFormat_getInt32(outputFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, (int32_t*)&format_color);
-	NDK_VIDEO_DECODER_LOG_FMT_CERR("AMEDIAFORMAT_KEY_COLOR_FORMAT - {0}", (int32_t)format_color);
-	AMediaFormat_delete(outputFormat);*/
 	std::string decoderConfigFormatStr = GetAMediaFormatStringAndDelete(configFormat);
 	std::string decoderInputFormatStr = GetAMediaFormatStringAndDelete(AMediaCodec_getInputFormat(decoder));
 	std::string decoderOutputFormatStr = GetAMediaFormatStringAndDelete(AMediaCodec_getOutputFormat(decoder));
@@ -440,7 +429,6 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	int32_t maxImages = 0;
 	AMEDIA_CHECK(AImageReader_getMaxImages(ndkVideoDecoder->imageReader, &maxImages));
 
-	// Does this mean we can now do AImageReader_acquireNextImage?
 	auto res = AImageReader_acquireLatestImage(ndkVideoDecoder->imageReader, &reflectedTexture.nextImage);
 	if (res != AMEDIA_OK)
 	{
@@ -449,6 +437,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 		ndkVideoDecoder->reflectedTextureIndex--;
 		return;
 	}
+
 	std::unique_lock<std::mutex> lock(ndkVideoDecoder->texture_mutex);
 	// start freeing images after 12 frames.
 	int idx = (ndkVideoDecoder->reflectedTextureIndex + 4) % maxImages;
@@ -474,7 +463,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	externalFormatAndroid.pNext = nullptr;
 	externalFormatAndroid.externalFormat = hardwareBufferFormatProperties.externalFormat;
 
-	//Set ExternalMemoryImageCreateInfo - TODO: Needed? Not in spec. - AJR.
+	//Set ExternalMemoryImageCreateInfo
 	vk::ExternalMemoryImageCreateInfo externalMemoryImageCI;
 	externalMemoryImageCI.pNext = &externalFormatAndroid;
 	externalMemoryImageCI.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eAndroidHardwareBufferANDROID;
@@ -497,8 +486,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	imageCI.initialLayout = vk::ImageLayout::eUndefined;
 	VK_CHECK(vulkanDevice->createImage(&imageCI, nullptr, &reflectedTexture.videoSourceVkImage));
 
-	//Set up MemoryDedicatedAllocateInfo and ImportAndroidHardwareBufferInfoANDROID
-	// Required for AHB images.
+	//Set up MemoryDedicatedAllocateInfo and ImportAndroidHardwareBufferInfoANDROID - Required for AHB images.
 	vk::MemoryDedicatedAllocateInfo memoryDedicatedAllocateInfo;
 	memoryDedicatedAllocateInfo.image = reflectedTexture.videoSourceVkImage;
 	
@@ -506,22 +494,11 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	importAndroidHardwareBufferInfo.pNext = &memoryDedicatedAllocateInfo;
 	importAndroidHardwareBufferInfo.buffer = hardwareBuffer;
 
-	//Get PhysicalDeviceMemoryProperties
-	vk::PhysicalDeviceMemoryProperties memoryProperties;
-	ndkVideoDecoder->renderPlatform->GetVulkanGPU()->getMemoryProperties(&memoryProperties);
-
 	//Set up MemoryAllocateInfo
-	vk::MemoryAllocateInfo mem_alloc_info = vk::MemoryAllocateInfo()
-		.setPNext(&importAndroidHardwareBufferInfo)
-		.setAllocationSize(hardwareBufferProperties.allocationSize)
-		.setMemoryTypeIndex(memoryProperties.memoryTypes[0].heapIndex)
-		.setMemoryTypeIndex(1 << (__builtin_ffs(hardwareBufferProperties.memoryTypeBits) - 1));
-
-	// overwrites the above
-	vk::MemoryRequirements mem_reqs;
-	mem_reqs.size = hardwareBufferProperties.allocationSize;
-	mem_reqs.memoryTypeBits = hardwareBufferProperties.memoryTypeBits;
-	memory_type_from_properties(ndkVideoDecoder->renderPlatform->GetVulkanGPU(), mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &mem_alloc_info.memoryTypeIndex);
+	vk::MemoryAllocateInfo mem_alloc_info;
+	mem_alloc_info.pNext = &importAndroidHardwareBufferInfo;
+	mem_alloc_info.allocationSize = hardwareBufferProperties.allocationSize;
+	memory_type_from_properties(ndkVideoDecoder->physicalDeviceMemoryProperties, hardwareBufferProperties.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &mem_alloc_info.memoryTypeIndex);
 	
 	//Allocate the memory within Vulkan.
 	VK_CHECK(vulkanDevice->allocateMemory(&mem_alloc_info, nullptr, &reflectedTexture.videoSourceVkDeviceMemory));

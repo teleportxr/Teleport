@@ -319,16 +319,34 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	// RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
 	SceneColor.rgb *= SceneColor.rgb;
 	SceneColor.a = d;
-	RWTextureTargetArray[pos] = SceneColor;// float4(SceneColor.rgba);
+	RWTextureTargetArray[pos] = SceneColor; // float4(SceneColor.rgba);
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(16, 16, 1)]
 shader void CS_Test(uint3 ThreadID : SV_DispatchThreadID)
 { 
 	float4 sampleColour = plainTexture.SampleLevel(wwcNearestSamplerState, vec2(ThreadID.xy)/8.0, 0).rgba;
 	float4 texelFetchColour=plainTexture.Load(int3((ThreadID.xy/4)%int2(2,2),0));
 	sampleColour.rgb+=vec3(0.1,0.1,0.1);
-	RWTextureTarget[ThreadID.xy] = 0.5*(texelFetchColour+sampleColour);// float4(SceneColor.rgba);
+	RWTextureTargetArray[ThreadID] = 0.5 * (texelFetchColour + sampleColour); // float4(SceneColor.rgba);
+}
+
+[numthreads(16, 16, 1)]
+shader void CS_Test_Face_Colour(uint3 ThreadID : SV_DispatchThreadID)
+{
+	float4 colour = float4(0.0, 0.0, 0.0, 1.0);
+	switch (ThreadID.z)
+	{
+		default:
+		case 0: colour = float4(1.0, 0.0, 0.0, 1.0); break;
+		case 1: colour = float4(0.0, 1.0, 1.0, 1.0); break;
+		case 2: colour = float4(0.0, 1.0, 0.0, 1.0); break;
+		case 3: colour = float4(1.0, 0.0, 1.0, 1.0); break;
+		case 4: colour = float4(0.0, 0.0, 1.0, 1.0); break;
+		case 5: colour = float4(1.0, 1.0, 0.0, 1.0); break;
+	}
+	
+	RWTextureTargetArray[ThreadID] = 0.25 * colour;
 }
 
 [numthreads(16, 16, 1)]
@@ -464,6 +482,10 @@ technique recompose_with_depth_alpha
 	pass test
 	{
 		SetComputeShader(CompileShader(cs_5_0, CS_Test()));
+	}
+	pass test_face_colour
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_Test_Face_Colour()));
 	}
 }
 technique recompose_perspective

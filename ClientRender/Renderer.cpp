@@ -811,10 +811,10 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 	cubemapConstants.sourceOffset = { 0, 0 };
 	cubemapConstants.targetSize.x = W;
 	cubemapConstants.targetSize.y = H;
-	//cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+
 #if 0
 	static crossplatform::Texture *testSourceTexture=nullptr;
-	static crossplatform::Texture *testTargetTexture=nullptr;
+	bool faceColour = true;
 	if(!testSourceTexture)
 	{
 		static uint32_t whiteABGR = 0xFFFFFFFF;
@@ -831,25 +831,17 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 		testSourceTexture=renderPlatform->CreateTexture("testsourceTexture");
 		testSourceTexture->EnsureTexture(renderPlatform,&textureCreate);
 	}
-	if(!testTargetTexture)
-	{
-		crossplatform::TextureCreate textureCreate;
-		textureCreate.w=textureCreate.l=16;
-		textureCreate.f=crossplatform::PixelFormat::RGBA_8_UNORM;
-		textureCreate.computable=true;
-		testTargetTexture=renderPlatform->CreateTexture("testTargetTexture");
-		testTargetTexture->EnsureTexture(renderPlatform,&textureCreate);
-	}
 	{
 		cubemapClearEffect->SetTexture(deviceContext, "plainTexture",testSourceTexture);
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTarget", testTargetTexture);
-		cubemapClearEffect->Apply(deviceContext, technique, "test");
-		renderPlatform->DispatchCompute(deviceContext, testTargetTexture->width/1, testTargetTexture->length/1, 1);
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
+		cubemapClearEffect->Apply(deviceContext, technique, faceColour ? "test_face_colour" : "test");
+		int zGroups = videoTexture->IsCubemap() ? 6 : 1;
+		renderPlatform->DispatchCompute(deviceContext, targetTexture->width/16, targetTexture->length/16, zGroups);
 		cubemapClearEffect->Unapply(deviceContext);
 	}
-	#endif
+#endif
+	
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture",srcTexture);
-
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
