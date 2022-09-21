@@ -128,8 +128,8 @@ Renderer::Renderer(client::ClientDeviceState *c,clientrender::NodeManager *local
 	,teleport::client::Config &cfg)
 	:sessionClient(sc)
 	,localGeometryCache(localNodeManager)
-	,clientDeviceState(c)
 	,geometryCache(remoteNodeManager)
+	,clientDeviceState(c)
 	,gui(g)
 	,config(cfg)
 {
@@ -545,8 +545,8 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 				}
 			}
 		}
-		RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(clientPipeline.videoConfig.diffuse_x, clientPipeline.videoConfig.diffuse_y));
-		RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(clientPipeline.videoConfig.specular_x, clientPipeline.videoConfig.specular_y));
+		RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(lastSetupCommand.clientDynamicLighting.diffusePos[0], lastSetupCommand.clientDynamicLighting.diffusePos[1]));
+		RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(lastSetupCommand.clientDynamicLighting.specularPos[0], lastSetupCommand.clientDynamicLighting.specularPos[1]));
 	}
 	// Draw the background. If unconnected, we show a grid and horizon.
 	// If connected, we show the server's chosen background: video, texture or colour.
@@ -2178,8 +2178,8 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false);
 	}
-	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.specular_cubemap_size, clientPipeline.videoConfig.specular_cubemap_size, 1, clientPipeline.videoConfig.specular_mips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.diffuse_cubemap_size, clientPipeline.videoConfig.diffuse_cubemap_size, 1, 1,
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lastSetupCommand.clientDynamicLighting.specularCubemapSize, lastSetupCommand.clientDynamicLighting.specularCubemapSize, 1, lastSetupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lastSetupCommand.clientDynamicLighting.diffuseCubemapSize, lastSetupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);

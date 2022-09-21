@@ -296,10 +296,10 @@ namespace avs
 		uint32_t	perspective_height = 0;
 		float       perspective_fov = 110;
 		float       nearClipPlane = 0.5f;
-		uint32_t webcam_width = 0;
-		uint32_t webcam_height = 0;
-		int32_t webcam_offset_x = 0;
-		int32_t webcam_offset_y = 0;
+		uint32_t	webcam_width = 0;
+		uint32_t	webcam_height = 0;
+		int32_t		webcam_offset_x = 0;
+		int32_t		webcam_offset_y = 0;
 		uint32_t    use_10_bit_decoding = 0;
 		uint32_t    use_yuv_444_decoding = 0;
 		uint32_t    use_alpha_layer_decoding = 1;
@@ -308,22 +308,30 @@ namespace avs
 		int32_t     use_cubemap = 1;
 		int32_t     stream_webcam = 0;
 		avs::VideoCodec videoCodec = avs::VideoCodec::Any;
-		int32_t		specular_x=0;
-		int32_t		specular_y=0;
-		int32_t		specular_cubemap_size=0;
-		int32_t		specular_mips=0;
-		int32_t		diffuse_x=0;
-		int32_t		diffuse_y=0;
-		int32_t		diffuse_cubemap_size=0;
-		int32_t		light_x=0;
-		int32_t		light_y=0;
-		int32_t		light_cubemap_size=0;
 		
 		int32_t		shadowmap_x=0;
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
 	} AVS_PACKED;
 
+	
+	enum class LightingMode : uint8_t
+	{
+		NONE = 0, TEXTURE, VIDEO
+	};
+	struct ClientDynamicLighting
+	{
+		int32_t specularPos[2]={0,0};
+		int32_t specularCubemapSize=0;
+		int32_t specularMips=0;
+		int32_t diffusePos[2]={0,0};
+		int32_t diffuseCubemapSize=0;
+		int32_t lightPos[2]={0,0};
+		int32_t lightCubemapSize=0;
+		uid specularCubemapTexture=0;
+		uid diffuseCubemapTexture=0;
+		LightingMode lightingMode = LightingMode::TEXTURE;
+	} AVS_PACKED;
 
 	struct AudioConfig
 	{

@@ -23,6 +23,19 @@ namespace filesystem = std::experimental::filesystem;
 namespace filesystem = std::filesystem;
 #endif
 
+#include <regex>
+std::string StandardizePath(const std::string &file_name,const std::string &path_root)
+{
+	std::string p=file_name;
+	std::replace(p.begin(),p.end(),' ','%');
+	std::replace(p.begin(),p.end(),'\\','/');
+	p=std::regex_replace( p, std::regex(path_root), "" );
+	size_t last_dot_pos=p.find_last_of('.');
+	if(last_dot_pos<p.length())
+		p=p.substr(0,last_dot_pos);
+	return p;
+}
+
 static avs::guid bstr_to_guid(_bstr_t b)
 {
 	avs::guid g;
@@ -1346,33 +1359,12 @@ template<typename ExtractedResource> bool GeometryStore::saveResources(const std
 	}
 	return true;
 }
-/*
-template<typename OutStream> OutStream& operator<< (OutStream& out, const std::string& g)
-{
-	out << g << std::endl;
-	return out;
-}
 
-template<typename InStream> InStream& operator>> (InStream& in, std::string& g)
-{
-	std::wstring w;
-	std::getline(in, w);
-	g = convertToByteString(w);
-	while(g.length()>0&&g[0]==' ')
-	{
-		g.erase(g.begin());
-	}
-	return in;
-}*/
-#include <regex>
+
 template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const std::string file_name,const std::string &path_root,std::map<avs::uid, ExtractedResource>& resourceMap)
 {
 	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
-	std::string p=file_name;
-	std::replace(p.begin(),p.end(),' ','%');
-	std::replace(p.begin(),p.end(),'\\','/');
-	//std::replace(p.begin(),p.end(),path_root,"");
-	p=std::regex_replace( p, std::regex(path_root), "" );
+	std::string p=StandardizePath(file_name,path_root);
 	auto write_time= std::filesystem::last_write_time(file_name);
 	// If there's a duplicate, use the newer file.
 	// This guid might already exist!

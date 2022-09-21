@@ -772,6 +772,17 @@ TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID, ClientSettings 
 	clientData.clientSettings = clientSettings;
 	clientData.validClientSettings = true;
 }
+TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, avs::ClientDynamicLighting clientDynamicLighting)
+{
+	auto clientPair = clientServices.find(clientID);
+	if (clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to set clientDynamicLighting to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+	ClientData& clientData = clientPair->second;
+	clientData.clientDynamicLighting = clientDynamicLighting;
+}
 
 TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 {

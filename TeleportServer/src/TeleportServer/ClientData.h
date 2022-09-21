@@ -47,6 +47,7 @@ namespace teleport
 			void setInputDefinitions(const std::vector<avs::InputDefinition> &inputDefs);
 			// client settings from engine-side:
 			teleport::ClientSettings clientSettings;
+			avs::ClientDynamicLighting clientDynamicLighting;
 			std::vector<avs::InputDefinition> inputDefinitions;
 			teleport::CasterContext casterContext;
 

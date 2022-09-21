@@ -56,24 +56,10 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	videoConfig.videoCodec = serverSettings.videoCodec;
 	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
 	videoConfig.stream_webcam = serverSettings.enableWebcamStreaming;
+	
+	TELEPORT_ASSERT(sizeof(setupCommand.clientDynamicLighting)==sizeof(clientDynamicLighting));
+	memcpy(&setupCommand.clientDynamicLighting,&clientDynamicLighting,sizeof(clientDynamicLighting));
 
-	videoConfig.specular_cubemap_size = clientSettings.specularCubemapSize;
-
-	// To the right of the depth cube, underneath the colour cube.
-	videoConfig.specular_x = clientSettings.specularPos[0];
-	videoConfig.specular_y = clientSettings.specularPos[1];
-
-	videoConfig.specular_mips = clientSettings.specularMips;
-	// To the right of the specular cube, after 3 mips = 1 + 1/2 + 1/4
-	videoConfig.diffuse_cubemap_size = clientSettings.diffuseCubemapSize;
-	// To the right of the depth map (if alpha layer encoding is disabled), under the specular map.
-	videoConfig.diffuse_x = clientSettings.diffusePos[0];
-	videoConfig.diffuse_y = clientSettings.diffusePos[1];
-
-	videoConfig.light_cubemap_size = clientSettings.lightCubemapSize;
-	// To the right of the diffuse map.
-	videoConfig.light_x = clientSettings.lightPos[0];
-	videoConfig.light_y = clientSettings.lightPos[1];
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;

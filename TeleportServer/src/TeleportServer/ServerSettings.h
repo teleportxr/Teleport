@@ -85,13 +85,6 @@ namespace teleport
 	struct ClientSettings
 	{
 		int32_t videoTextureSize[2];
-		int32_t specularPos[2];
-		int32_t specularCubemapSize ;
-		int32_t specularMips;
-		int32_t diffusePos[2];
-		int32_t diffuseCubemapSize;
-		int32_t lightPos[2];
-		int32_t lightCubemapSize ;
 		int32_t shadowmapPos[2];
 		int32_t shadowmapSize;
 		int32_t webcamPos[2];

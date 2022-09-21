@@ -271,6 +271,7 @@ namespace avs
 		// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 		BackgroundMode	backgroundMode;
 		vec4			backgroundColour;
+		ClientDynamicLighting clientDynamicLighting;
 	} AVS_PACKED;
 
 	//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
