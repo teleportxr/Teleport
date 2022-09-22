@@ -1874,6 +1874,15 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 			gui.LinePrint( platform::core::QuickFormat(" Video: -"), white);
 		}
 	}
+	else if (show_osd == clientrender::VIDEO_OSD)
+	{
+		clientrender::AVSTextureHandle th = avsTexture;
+		clientrender::AVSTexture& tx = *th;
+		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+
+		gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+		gui.DrawTexture(ti->texture);
+	}
 	else if(show_osd== clientrender::GEOMETRY_OSD)
 	{
 		GeometryOSD(localGeometryCache);

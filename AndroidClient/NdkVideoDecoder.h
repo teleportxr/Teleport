@@ -36,8 +36,8 @@ namespace teleport
 		protected:
 			struct ReflectedTexture
 			{
-				platform::vulkan::Texture* sourceTexture = nullptr;
-				AImage* nextImage = nullptr;
+				platform::vulkan::Texture*	sourceTexture = nullptr;
+				AImage*						nextImage = nullptr;
 				vk::Image					videoSourceVkImage;
 				vk::DeviceMemory			videoSourceVkDeviceMemory;
 			};
