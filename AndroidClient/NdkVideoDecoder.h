@@ -122,10 +122,22 @@ namespace teleport
 				
 				OMX_COLOR_FormatAndroidOpaque = 0x7F000789,
 				OMX_TI_COLOR_FormatYUV420PackedSemiPlanar = 0x7F000100,
+				//OMX_QCOM_COLOR_FormatYVU420SemiPlanar = 0x7FA30C00,
+				//OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka = 0x7FA30C03,
+				//OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m = 0x7FA30C04,
+				OMX_SEC_COLOR_FormatNV12Tiled = 0x7FC00002,
+
+				//https://review.carbonrom.org/plugins/gitiles/CarbonROM/android_hardware_qcom_media/+/fa202b9b18f17f7835fd602db5fff530e61112b4/msmcobalt/mm-core/inc/OMX_QCOMExtns.h
+
 				OMX_QCOM_COLOR_FormatYVU420SemiPlanar = 0x7FA30C00,
+				OMX_QCOM_COLOR_FormatYVU420PackedSemiPlanar32m4ka = 0x7FA30C01,
+				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar16m2ka = 0x7FA30C02,
 				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka = 0x7FA30C03,
 				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m = 0x7FA30C04,
-				OMX_SEC_COLOR_FormatNV12Tiled = 0x7FC00002,
+				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32mMultiView = 0x7FA30C05,
+				OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32mCompressed = 0x7FA30C06,
+				OMX_QCOM_COLOR_Format32bitRGBA8888 = 0x7FA30C07,
+				OMX_QCOM_COLOR_Format32bitRGBA8888Compressed = 0x7FA30C08
 			};
 			enum class BitRateMode
 			{

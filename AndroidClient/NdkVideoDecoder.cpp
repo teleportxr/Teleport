@@ -438,6 +438,24 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 		return;
 	}
 
+	/*int32_t numPlanes = 0;
+	AImage_getNumberOfPlanes(reflectedTexture.nextImage, &numPlanes);
+	std::vector<int32_t> rowStrides, pixelStrides;
+	rowStrides.reserve(numPlanes);
+	pixelStrides.reserve(numPlanes);
+	for (int32_t i = 0; i < numPlanes; i++)
+	{
+		int32_t rowStride;
+		AImage_getPlaneRowStride(reflectedTexture.nextImage, i, &rowStride);
+		rowStrides.push_back(rowStride);
+		int32_t pixelStride;
+		AImage_getPlanePixelStride(reflectedTexture.nextImage, i, &pixelStride);
+		pixelStrides.push_back(pixelStride);
+	}
+
+	AIMAGE_FORMATS format2;
+	AImage_getFormat(reflectedTexture.nextImage, (int32_t*)&format2);*/
+	
 	std::unique_lock<std::mutex> lock(ndkVideoDecoder->texture_mutex);
 	// start freeing images after 12 frames.
 	int idx = (ndkVideoDecoder->reflectedTextureIndex + 4) % maxImages;
