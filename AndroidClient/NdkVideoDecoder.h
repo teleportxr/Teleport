@@ -206,6 +206,7 @@ namespace teleport
 			void processImages();
 
 		protected:
+			platform::crossplatform::Effect* textureConversionEffect = nullptr;
 			platform::vulkan::Texture* targetTexture = nullptr;
 			int acquireFenceFd = 0;
 			std::mutex texture_mutex;
@@ -228,6 +229,7 @@ namespace teleport
 			AImageReader* imageReader = nullptr;
 			bool decoderConfigured = false;
 			int displayRequests = 0; //TODO: Remove maybe?
+			vk::SamplerYcbcrModelConversion ycbcrModel = vk::SamplerYcbcrModelConversion::eYcbcr709;
 
 			platform::crossplatform::VideoDecoderParams videoDecoderParams;
 
