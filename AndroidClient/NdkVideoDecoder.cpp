@@ -114,6 +114,8 @@ NdkVideoDecoder::NdkVideoDecoder(VideoDecoderBackend* d, avs::VideoCodec codecTy
 {
 	this->videoDecoder = d;
 	this->codecType = codecType;
+
+	
 }
 
 NdkVideoDecoder::~NdkVideoDecoder()
@@ -138,7 +140,8 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	//Class member assignments
 	renderPlatform = (platform::vulkan::RenderPlatform*)p;
 	targetTexture = (platform::vulkan::Texture*)texture;
-	physicalDeviceMemoryProperties = renderPlatform->GetVulkanGPU()->getMemoryProperties();
+	physicalDeviceMemoryProperties = renderPlatform->GetVulkanGPU()->getMemoryProperties(); 
+	textureConversionEffect = p->CreateEffect("texture_conversion");
 
 	//Create Decoder
 	decoder = AMediaCodec_createDecoderByType(GetCodecMimeType());
@@ -249,6 +252,13 @@ void NdkVideoDecoder::Shutdown()
 	decoderConfigured = false;
 
 	displayRequests = 0;
+
+	if (textureConversionEffect)
+	{
+		delete textureConversionEffect;
+		textureConversionEffect = nullptr;
+	}
+
 }
 
 bool NdkVideoDecoder::Decode(std::vector<uint8_t>& buffer, avs::VideoPayloadType payloadType, bool lastPayload)
@@ -336,6 +346,13 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	if (nextImageIndex < 0)
 		return;
 
+	bool bt601 = ycbcrModel == vk::SamplerYcbcrModelConversion::eYcbcr601;
+	bool bt709 = ycbcrModel == vk::SamplerYcbcrModelConversion::eYcbcr709;
+	bool bt2020 = ycbcrModel == vk::SamplerYcbcrModelConversion::eYcbcr2020;
+
+	if (!bt601 && !bt709 && !bt2020)
+		return;
+
 	ReflectedTexture& reflectedTexture = reflectedTextures[nextImageIndex];
 	if (!reflectedTexture.nextImage)
 		return;
@@ -362,12 +379,12 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	reflectedTexture.sourceTexture->AssumeLayout(vk::ImageLayout::eUndefined);
 
 	// Can't use RenderPlatform::CopyTexture because we can't use transfer_src.
-	auto* effect = renderPlatform->copyEffect;
-	auto* effectPass = (platform::vulkan::EffectPass*)effect->GetTechniqueByName("copy_2d_from_video")->GetPass(0);
+	auto* effect = textureConversionEffect;
+	int passIndex = bt2020 ? 2 : bt709 ? 1 : bt601 ? 0 : 1;
+	auto* effectPass = (platform::vulkan::EffectPass*)effect->GetTechniqueByName("ycbcr_to_rgb")->GetPass(passIndex);
 	effectPass->SetVideoSource(true);
-	targetTexture->activateRenderTarget(deviceContext);
-	auto srcResource = effect->GetShaderResource("SourceTex2");
-	auto dstResource = effect->GetShaderResource("DestTex2");
+	auto srcResource = effect->GetShaderResource("ycbcrTexture");
+	auto dstResource = effect->GetShaderResource("rgbTexture");
 	renderPlatform->SetTexture(deviceContext, srcResource, reflectedTexture.sourceTexture);
 	effect->SetUnorderedAccessView(deviceContext, dstResource, targetTexture);
 	renderPlatform->ApplyPass(deviceContext, effectPass);
@@ -375,7 +392,6 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	int l = (targetTexture->length + 7) / 8;
 	renderPlatform->DispatchCompute(deviceContext, w, l, 1);
 	renderPlatform->UnapplyPass(deviceContext);
-	targetTexture->deactivateRenderTarget(deviceContext);
 }
 
 //Callbacks
@@ -438,6 +454,24 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 		return;
 	}
 
+	/*int32_t numPlanes = 0;
+	AImage_getNumberOfPlanes(reflectedTexture.nextImage, &numPlanes);
+	std::vector<int32_t> rowStrides, pixelStrides;
+	rowStrides.reserve(numPlanes);
+	pixelStrides.reserve(numPlanes);
+	for (int32_t i = 0; i < numPlanes; i++)
+	{
+		int32_t rowStride;
+		AImage_getPlaneRowStride(reflectedTexture.nextImage, i, &rowStride);
+		rowStrides.push_back(rowStride);
+		int32_t pixelStride;
+		AImage_getPlanePixelStride(reflectedTexture.nextImage, i, &pixelStride);
+		pixelStrides.push_back(pixelStride);
+	}
+
+	AIMAGE_FORMATS format2;
+	AImage_getFormat(reflectedTexture.nextImage, (int32_t*)&format2);*/
+	
 	std::unique_lock<std::mutex> lock(ndkVideoDecoder->texture_mutex);
 	// start freeing images after 12 frames.
 	int idx = (ndkVideoDecoder->reflectedTextureIndex + 4) % maxImages;
@@ -457,6 +491,9 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	vk::AndroidHardwareBufferFormatPropertiesANDROID hardwareBufferFormatProperties;
 	hardwareBufferProperties.pNext = &hardwareBufferFormatProperties;
 	VK_CHECK(vulkanDevice->getAndroidHardwareBufferPropertiesANDROID(hardwareBuffer, &hardwareBufferProperties));
+
+	//Set the YCbCr Model for later conversion.
+	ndkVideoDecoder->ycbcrModel = hardwareBufferFormatProperties.suggestedYcbcrModel;
 
 	//Set ExternalFormatANDROID
 	vk::ExternalFormatANDROID externalFormatAndroid;

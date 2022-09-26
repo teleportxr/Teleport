@@ -48,7 +48,7 @@ static inline ImVec4 ImLerp(const ImVec4& a, const ImVec4& b, float t)
 	return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
 }
 
-void Gui::RestoreDeviceObjects(platform::crossplatform::RenderPlatform* r,PlatformWindow *w)
+void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 {
 	renderPlatform=r;
 	if(!r)
@@ -351,7 +351,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *sear
 }
 
 static int in_debug_gui = 0;
-void Gui::BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 0)
 	{
@@ -389,7 +389,25 @@ void Gui::LinePrint(const char* txt,const float *clr)
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), "%s",txt);
 }
 
-void DoRow(const char* title, const char* text, ...)
+void Gui::DrawTexture(Texture* texture)
+{
+	if (!texture)
+		return;
+	if (!texture->IsValid())
+		return;
+
+	const int width = texture->width;
+	const int height = texture->length;
+	const float aspect = static_cast<float>(width) / static_cast<float>(height);
+	const ImVec2 regionSize = ImGui::GetContentRegionAvail();
+	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
+	const ImVec2 size = ImVec2(std::min(regionSize.x, textureSize.x), std::min(regionSize.x, textureSize.x) * aspect);
+	ImTextureID imTextureID = (ImTextureID)texture;
+
+	ImGui::Image(imTextureID, size);
+}
+
+static void DoRow(const char* title, const char* text, ...)
 {
 	ImGui::TableNextColumn();
 	ImGui::Text("%s", title);
@@ -407,7 +425,7 @@ void DoRow(const char* title, const char* text, ...)
 	delete[] bufferData;
 };
 
-void Gui::EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 1)
 	{
@@ -711,7 +729,7 @@ void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 	have_vr_device = have_vr;
 }
 
-void Gui::Render(platform::crossplatform::GraphicsDeviceContext& deviceContext)
+void Gui::Render(GraphicsDeviceContext& deviceContext)
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;

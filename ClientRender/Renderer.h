@@ -60,6 +60,7 @@ namespace clientrender
 	{
 		NO_OSD=0,
 		CAMERA_OSD,
+		VIDEO_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,
 		TEXTURES_OSD,

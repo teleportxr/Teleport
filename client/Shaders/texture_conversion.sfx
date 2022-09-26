@@ -4,6 +4,7 @@
 
 uniform Texture2D<uint> yTexture;
 uniform Texture2D<uint2> uvTexture;
+uniform Texture2D<float4> ycbcrTexture;
 uniform RWTexture2D<float4> rgbTexture; 
 
 float4 Yuv420ToRgbForPixel(uint y, uint u, uint v) 
@@ -62,10 +63,144 @@ shader void CS_NV12ToRGBA(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	rgbTexture[int2(pos.x + 1, pos.y + 1)] = p3;
 }
 
+static float3 Colour_BT601_PrimaryR = float3(0.6400f, 0.3300f, 0.2126f);
+static float3 Colour_BT601_PrimaryG = float3(0.2900f, 0.6000f, 0.7152f);
+static float3 Colour_BT601_PrimaryB = float3(0.1500f, 0.0600f, 0.0722f);
+
+static float3 Colour_BT709_PrimaryR = float3(0.6400f, 0.3300f, 0.2126f);
+static float3 Colour_BT709_PrimaryG = float3(0.3000f, 0.6000f, 0.7152f);
+static float3 Colour_BT709_PrimaryB = float3(0.1500f, 0.0600f, 0.0722f);
+
+static float3 Colour_BT2020_PrimaryR = float3(0.7080f, 0.2920f, 0.2627f);
+static float3 Colour_BT2020_PrimaryG = float3(0.1700f, 0.7970f, 0.6780f);
+static float3 Colour_BT2020_PrimaryB = float3(0.1310f, 0.0460f, 0.0593f);
+
+//https://en.wikipedia.org/wiki/YCbCr
+//https://gist.github.com/yohhoy/dafa5a47dade85d8b40625261af3776a
+mat3 YCbCrToRGB_ConversionMatrix(uint type)
+{
+	float a, b, c, d, e;
+	switch (type)
+	{
+		case 0:
+		{
+			a = Colour_BT601_PrimaryR.z;
+			b = Colour_BT601_PrimaryG.z;
+			c = Colour_BT601_PrimaryB.z;
+			break;
+		}
+		default:
+		case 1:
+		{
+			a = Colour_BT709_PrimaryR.z;
+			b = Colour_BT709_PrimaryG.z;
+			c = Colour_BT709_PrimaryB.z;
+			break;
+		}
+		case 2:
+		{
+			a = Colour_BT2020_PrimaryR.z;
+			b = Colour_BT2020_PrimaryG.z;
+			c = Colour_BT2020_PrimaryB.z;
+			break;
+		}
+	}
+	d = 2 * (a + b);
+	e = 2 * (1 - a);
+	
+	return mat3(
+		float3(1.0,                0.0,                  e),
+		float3(1.0, (-1.0 * c * d / b), (-1.0 * a * e / b)),
+		float3(1.0,                  d,                0.0)
+	);
+}
+
+mat3 YCbCrToRGB_ConversionMatrix_Fast(uint type)
+{
+	mat3 result;
+	switch (type)
+	{
+
+		case 0:
+		{
+			result = mat3(
+				float3(+1.000, +0.000, +1.402),
+				float3(+1.000, -0.344, -0.714),
+				float3(+1.000, +1.772, +0.000));
+			break;
+		}
+		default:
+		case 1:
+		{
+			result = mat3(
+				float3(+1.0000, +0.0000, +1.5748),
+				float3(+1.0000, -0.1873, -0.4681),
+				float3(+1.0000, +1.8556, +0.0000));
+			break;
+		}
+		case 2:
+		{
+			result = mat3(
+				float3(+1.0000, +0.0000, +1.4746),
+				float3(+1.0000, -0.1646, -0.5714),
+				float3(+1.0000, +1.8814, +0.0000));
+			break;
+		}
+	}
+	return result;
+}
+
+void CS_ConvertYCbCrToRGB(uint3 position, uint type)
+{
+	float3 value = ycbcrTexture.Load(int3(position.x, position.y, 0)).rgb;
+	float Cr = value.r - 0.5;
+	float Cb = value.b - 0.5;
+	float Y1 = value.g;
+	
+	vec4 clr;
+	clr.rgb = mul(float3(Y1, Cb, Cr), YCbCrToRGB_ConversionMatrix_Fast(type));
+	clr.a = 1.0;
+	rgbTexture[position.xy] = clr;
+}
+
+[numthreads(8, 8, 1)]
+shader void CS_ConvertYCbCrToRGB_BT601(uint3 position : SV_DispatchThreadID)
+{
+	CS_ConvertYCbCrToRGB(position, 0);
+}
+
+[numthreads(8, 8, 1)]
+shader void CS_ConvertYCbCrToRGB_BT709(uint3 position : SV_DispatchThreadID)
+{
+	CS_ConvertYCbCrToRGB(position, 1);
+}
+
+[numthreads(8, 8, 1)]
+shader void CS_ConvertYCbCrToRGB_BT2020(uint3 position : SV_DispatchThreadID) 
+{ 
+	CS_ConvertYCbCrToRGB(position, 2);
+}
+
 technique nv12_to_rgba
 {
 	pass p0
 	{
 		SetComputeShader(CompileShader(cs_5_0, CS_NV12ToRGBA()));
+	}
+}
+
+technique ycbcr_to_rgb
+{
+	pass bt601
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_ConvertYCbCrToRGB_BT601()));
+	}
+	pass bt709
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_ConvertYCbCrToRGB_BT709()));
+	}
+	pass bt2020
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_ConvertYCbCrToRGB_BT2020()));
 	}
 }
