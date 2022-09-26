@@ -29,7 +29,10 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 	std::string p=file_name;
 	std::replace(p.begin(),p.end(),' ','%');
 	std::replace(p.begin(),p.end(),'\\','/');
-	p=std::regex_replace( p, std::regex(path_root), "" );
+	std::string r=path_root;
+	if(r.size()&&r[r.size()-1]!='/')
+		r+="/";
+	p=std::regex_replace( p, std::regex(r), "" );
 	size_t last_dot_pos=p.find_last_of('.');
 	if(last_dot_pos<p.length())
 		p=p.substr(0,last_dot_pos);
@@ -137,9 +140,9 @@ bool GeometryStore::saveToDisk() const
 		return false;
 	if(!saveResources(cachePath + "/" , materials))
 		return false;
-	if(!saveResources(cachePath + "/" , meshes.at(avs::AxesStandard::EngineeringStyle)))
+	if(!saveResources(cachePath + "/engineering/" , meshes.at(avs::AxesStandard::EngineeringStyle)))
 		return false;
-	if(!saveResources(cachePath + "/" , meshes.at(avs::AxesStandard::GlStyle)))
+	if(!saveResources(cachePath + "/gl/" , meshes.at(avs::AxesStandard::GlStyle)))
 		return false;
 	return true;
 }

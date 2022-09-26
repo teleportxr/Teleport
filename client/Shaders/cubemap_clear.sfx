@@ -92,7 +92,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 		}
 	}
 	//lookup.rgb += saturate(view_orig);
-	return  lookup;
+	return lookup;
 }
 
 shader vec4 PS_UsePerspectiveOld(posTexVertexOutput IN) : SV_TARGET
@@ -307,7 +307,7 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	int3 pos			= int3(ThreadID);
 	int2 FaceOffsets[]	= { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
 	int3 loadPos		= int3(pos.xy + OutputW * FaceOffsets[ThreadID.z], 0);
-	float4 SceneColor = plainTexture.Load(int3((ThreadID.xy/4)%int2(8,8),0));
+	vec4 SceneColor		= plainTexture.Load(int3(loadPos),0);
 
 	int2 loadDepthPos	= loadPos.xy / 2;
 	int2 offsetToPos	= pos.xy % 2;// -loadDepthPos * 2;

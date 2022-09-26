@@ -979,6 +979,8 @@ TELEPORT_EXPORT avs::uid GenerateUid()
 
 TELEPORT_EXPORT avs::uid GetOrGenerateUid(BSTR path)
 {
+	if(!path)
+		return 0;
 	_bstr_t p=path;
 	std::string str(p);
 	return geometryStore.GetOrGenerateUid(str);

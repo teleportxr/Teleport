@@ -483,7 +483,7 @@ void SetRenderPose(platform::crossplatform::GraphicsDeviceContext &deviceContext
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&pose.position);
 	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
-	platform::math::Quaternion q1 = (const float*)&pose.orientation;
+	platform::math::Quaternion q1 = (const float*)&pose.orientation;http://collider.com/
 	auto q_rel = q1/q0;
 	globalOrientation.SetOrientation(q_rel);
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
