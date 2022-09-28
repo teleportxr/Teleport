@@ -13,3 +13,5 @@ Simul provides reference code for the Teleport VR server and client in the Telep
 	libavstream_example
 	clientrenderer
 	teleportclient
+	video_ndk_decoding
+	video_vulkan_android_import_and_ycbcr
