@@ -510,10 +510,16 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
-					if(!selected_node->IsVisible())
-					{
-						DoRow("HIDDEN","");
-					}
+					ImGui::TableNextColumn();
+					ImGui::Text("Hidden");
+					ImGui::TableNextColumn();
+					bool hidden=!selected_node->IsVisible();
+					ImGui::Checkbox("isHidden", &hidden);
+					ImGui::TableNextColumn();
+					ImGui::Text("Stationary");
+					ImGui::TableNextColumn();
+					bool stationary=selected_node->IsStatic();
+					ImGui::Checkbox("isStatic", &stationary);
 					DoRow("GI"			,"%d", gi_uid);
 					DoRow("Local Pos"	,"%3.3f %3.3f %3.3f", pos.x, pos.y, pos.z);
 					DoRow("Rot"			,"%3.3f %3.3f %3.3f %3.3f", q.x, q.y, q.z, q.w);

@@ -7,6 +7,8 @@
 #include "TeleportCore/ErrorHandling.h"
 
 using namespace teleport;
+ClientStoppedRenderingNodeFn PluginGeometryStreamingService::callback_clientStoppedRenderingNode=nullptr;
+ClientStartedRenderingNodeFn PluginGeometryStreamingService::callback_clientStartedRenderingNode=nullptr;
 //Remove duplicates, and 0s, from passed vector of UIDs.
 void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 {
@@ -193,7 +195,7 @@ void GeometryStreamingService::tick(float deltaTime)
 
 		if (it->second > settings->confirmationWaitTime)
 		{
-			TELEPORT_COUT << "Resource with ID " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
+			TELEPORT_COUT << "Resource " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
 			sentResources[it->first] = false;
 			it = unconfirmedResourceTimes.erase(it);

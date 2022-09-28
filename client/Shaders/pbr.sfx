@@ -208,7 +208,7 @@ shader vertexOutput VS_Animation(vertexInputAnim IN)
 	//vec4 wpos = mul(opos, world);
 
 	OUT.view			=normalize(wpos.xyz-viewPosition);
-	vec4 viewspace_pos	=mul( view, vec4(wpos.xyz, 1.0));
+	vec4 viewspace_pos	=mul(view, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos			=wpos.xyz;
 
@@ -456,23 +456,23 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	vec3 diff			=IN.wpos.xyz - viewPosition;
 	if(length(diff) > drawDistance)
 		discard;
-	vec3 tangentx		= normalize(IN.tangent);
-	vec3 tangenty		= normalize(cross(IN.normal, tangentx));
-	mat3 TangentMatrix	= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
+	vec3 tangentx			= normalize(IN.tangent);
+	vec3 tangenty			= normalize(cross(IN.normal, tangentx));
+	mat3 TangentMatrix		= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
-	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
-	normalLookup		= normalOutputScalar.xyz*2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
-	vec3 normal			= normalize(mul(normalLookup, TangentMatrix));
+	vec3 normalLookup		= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
+	normalLookup			= normalOutputScalar.xyz*2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
+	vec3 normal				= normalize(mul(normalLookup, TangentMatrix));
 
-	vec2 diffuseTexCoords	= IN.texCoords0.xy * diffuseTexCoordsScalar_R;
+	vec2 diffuseTexCoords	=IN.texCoords0.xy * diffuseTexCoordsScalar_R;
 	//diffuseTexCoords.y=1.0-diffuseTexCoords.y;
-	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgb;
-	diffuseColour		= diffuseColour.rgb * diffuseOutputScalar.rgb;
+	vec3 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgb;
+	diffuseColour			=diffuseColour.rgb * diffuseOutputScalar.rgb;
 
-	vec2 lightmapUVs	=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	lightmapUVs.y		=1.0- lightmapUVs.y;
-	vec3 view			= normalize(diff);
-	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
+	vec2 lightmapUVs		=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
+	lightmapUVs.y			=1.0-lightmapUVs.y;
+	vec3 view				=normalize(diff);
+	vec4 combinedLookup		=combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
 	// this allows us to have either roughness or smoothness textures.
 	//combinedLookup.b	=1.0;
@@ -486,7 +486,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	surfaceProperties.metallic		=roughMetalOcclusion.g;
 	surfaceProperties.ao			=roughMetalOcclusion.b;
 
-	surfaceProperties.normal =  normal;
+	surfaceProperties.normal		=normal;
 	surfaceProperties.albedo		=diffuseColour;
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
 	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
@@ -499,7 +499,10 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	if(lightmap)
 		c+=PBRLightmap(surfaceState, view, surfaceProperties);
 	if(ambient)
+	{
 		c+=PBRAmbient(surfaceState, view, surfaceProperties);
+	}
+	//c.rgb=surfaceProperties.globalIllumination.rgb;
 	for(int i=0;i<max_lights;i++)
 	{
 		if(i>=tagData.lightCount)
@@ -508,9 +511,9 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 		c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
 
-	vec3 emissive		= emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
-	emissive			*=emissiveOutputScalar.rgb;
-	vec4 u				=vec4(c+emissive,1.0);
+	vec3 emissive		=	emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
+	emissive			*=	emissiveOutputScalar.rgb;
+	vec4 u				=	vec4(c+emissive,1.0);
 	return u;
 }
 

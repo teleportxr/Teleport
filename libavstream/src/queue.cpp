@@ -94,12 +94,12 @@ namespace avs
 		{
 			auto oldsize=m_maxBuffers;
 			increaseBufferCount();
-			AVSLOG(Warning) << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
+			AVSLOG(Info) << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
 		}
 		if (bufferSize > m_maxBufferSize)
 		{
 			increaseBufferSize(bufferSize);
-			AVSLOG(Warning) << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<".\n";
+			AVSLOG(Info) << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<".\n";
 		}
 		
 		push(buffer, bufferSize);

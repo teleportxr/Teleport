@@ -31,9 +31,8 @@ namespace avs
 
 	enum class ControlModel : uint32_t
 	{
-		NONE,
-		CLIENT_ORIGIN_SERVER_GRAVITY,
-		SERVER_ORIGIN_CLIENT_LOCAL
+		NONE=0,
+		SERVER_ORIGIN_CLIENT_LOCAL=2
 	};
 
 	enum class NodeStatus : uint8_t
@@ -72,8 +71,7 @@ namespace avs
 		Invalid,
 		NodeStatus,
 		ReceivedResources,
-		ControllerPoses,
-		OriginPose,
+		ControllerPoses
 	};
 	
 	//! The response payload sent by a server to a client on discovery.
@@ -572,16 +570,6 @@ namespace avs
 		ControllerPosesMessage()
 			:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 		{}
-	} AVS_PACKED;
-
-	struct OriginPoseMessage : public ClientMessage
-	{
-		uint64_t counter = 0;
-		avs::uid originId=0;
-		Pose originPose;
-
-		OriginPoseMessage() :ClientMessage(ClientMessagePayloadType::OriginPose) {}
-
 	} AVS_PACKED;
 #ifdef _MSC_VER
 #pragma pack(pop)

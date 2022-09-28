@@ -1647,9 +1647,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	vec3 true_pos = camera.GetPosition();
 	if (render_from_video_centre)
 	{
-	#ifdef _MSC_VER
-		Sleep(200);
-	#endif
 		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
 		camera.SetPosition(pos);
 	};
@@ -1728,7 +1725,8 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 				{
 					int w=tw*2;
 					std::shared_ptr<Texture> t=geometryCache.mTextureManager.Get(gi_uid);
-					renderPlatform->DrawTexture(deviceContext, x, y, w, w, t->GetSimulTexture());
+					if(t)
+						renderPlatform->DrawTexture(deviceContext, x, y, w, w, t->GetSimulTexture());
 				}
 			}
 			std::shared_ptr<clientrender::Texture> t=geometryCache.mTextureManager.Get(sel_uid);
@@ -2187,8 +2185,8 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false);
 	}
-	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lastSetupCommand.clientDynamicLighting.specularCubemapSize, lastSetupCommand.clientDynamicLighting.specularCubemapSize, 1, lastSetupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, lastSetupCommand.clientDynamicLighting.diffuseCubemapSize, lastSetupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,
 		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);

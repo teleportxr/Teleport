@@ -2,8 +2,8 @@
 using namespace teleport;
 using namespace server;
 
-ClientData::ClientData(std::shared_ptr<teleport::GeometryStreamingService> geometryStreamingService, std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, std::shared_ptr<teleport::ClientMessaging> clientMessaging)
-	: geometryStreamingService(geometryStreamingService), videoEncodePipeline(videoPipeline), audioEncodePipeline(audioPipeline), clientMessaging(clientMessaging)
+ClientData::ClientData( std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, std::shared_ptr<teleport::ClientMessaging> clientMessaging)
+	:  videoEncodePipeline(videoPipeline), audioEncodePipeline(audioPipeline), clientMessaging(clientMessaging)
 {
 	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
 	memset(&clientSettings,0,sizeof(clientSettings));
@@ -157,7 +157,7 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 		{
 			changed=true;
 			global_illumination_texture_uids[i] = uids[i];
-			geometryStreamingService->addGenericTexture(uids[i]);
+			clientMessaging->GetGeometryStreamingService().addGenericTexture(uids[i]);
 		}
 	}
 	if (!isStreaming)

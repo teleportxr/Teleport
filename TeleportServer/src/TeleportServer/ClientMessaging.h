@@ -18,7 +18,6 @@
 #include "enet/enet.h"
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
-typedef void(__stdcall* SetOriginFromClientFn) (avs::uid uid, avs::uid, uint64_t, const avs::Pose*);
 typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
 typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
@@ -37,9 +36,7 @@ namespace teleport
 	public:
 		ClientMessaging(const struct ServerSettings* settings,
 						std::shared_ptr<DiscoveryService> discoveryService,
-						std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 						SetHeadPoseFn setHeadPose,
-						SetOriginFromClientFn setOriginFromClient,
 						SetControllerPoseFn setControllerPose,
 						ProcessNewInputFn processNewInput,
 						DisconnectFn onDisconnect,
@@ -138,7 +135,7 @@ namespace teleport
 				TELEPORT_CERR << "Invalid command!\n";
 				return false;
 			}
-			size_t commandSize = sizeof(avs::InputDefinition);
+			size_t commandSize = sizeof(avs::SetupInputsCommand);
 			size_t listSize = appendedInputDefinitions.size()*(sizeof(avs::InputId)+sizeof(avs::InputType));
 			for (const auto& d : appendedInputDefinitions)
 			{
@@ -169,7 +166,7 @@ namespace teleport
 				defPacket.pathLength= (uint16_t)d.regexPath.length();
 				memcpy(data_ptr, &defPacket, sizeof(defPacket));
 				data_ptr += sizeof(defPacket);
-				memcpy(data_ptr, d.regexPath.c_str(),  d.regexPath.length());
+				memcpy(data_ptr, d.regexPath.c_str(), d.regexPath.length());
 				data_ptr += d.regexPath.length();
 			}
 			if (packet->data + commandSize + listSize != data_ptr)
@@ -204,6 +201,10 @@ namespace teleport
 
 		void ConfirmSessionStarted();
 
+		GeometryStreamingService &GetGeometryStreamingService()
+		{
+			return geometryStreamingService;
+		}
 	private:
 		friend class ClientManager;
 		void dispatchEvent(const ENetEvent& event);
@@ -226,10 +227,9 @@ namespace teleport
 		float timeSinceLastClientComm;
 		const ServerSettings* settings;
 		std::shared_ptr<DiscoveryService> discoveryService;
-		std::shared_ptr<GeometryStreamingService> geometryStreamingService;
+		PluginGeometryStreamingService geometryStreamingService;
 		ClientManager* clientManager;
 		SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.
-		SetOriginFromClientFn setOriginFromClient; //Delegate called when an origin is received.
 		SetControllerPoseFn setControllerPose; //Delegate called when a head pose is received.
 		ProcessNewInputFn processNewInput; //Delegate called when new input is received.
 		DisconnectFn onDisconnect; //Delegate called when the peer disconnects.

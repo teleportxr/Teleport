@@ -119,7 +119,6 @@ namespace teleport
 			void ReceiveCommandPacket(ENetPacket* packet);
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-			void sendOriginPose(uint64_t validCounter,const avs::Pose& headPose);
 			void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
 			void SendInput(const teleport::core::Input& input);
 			void SendResourceRequests();

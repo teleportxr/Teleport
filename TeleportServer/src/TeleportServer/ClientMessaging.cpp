@@ -14,9 +14,7 @@ using namespace teleport;
 
 ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 std::shared_ptr<DiscoveryService> discoveryService,
-								 std::shared_ptr<GeometryStreamingService> geometryStreamingService,
 								 SetHeadPoseFn setHeadPose,
-								 SetOriginFromClientFn setOriginFromClient,
 								 SetControllerPoseFn setControllerPose,
 								 ProcessNewInputFn processNewInput,
 								 DisconnectFn onDisconnect,
@@ -25,9 +23,8 @@ ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 ClientManager* clientManager)
 	: settings(settings)
 	, discoveryService(discoveryService)
-	, geometryStreamingService(geometryStreamingService)
+	, geometryStreamingService(settings)
 	, setHeadPose(setHeadPose)
-	, setOriginFromClient(setOriginFromClient)
 	, setControllerPose(setControllerPose)
 	, processNewInput(processNewInput)
 	, onDisconnect(onDisconnect)
@@ -116,7 +113,7 @@ void ClientMessaging::stopSession()
 	}
 
 	receivedHandshake = false;
-	geometryStreamingService->reset();
+	geometryStreamingService.reset();
 
 	eventQueue.clear();
 }
@@ -139,12 +136,12 @@ void ClientMessaging::tick(float deltaTime)
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
 
-	const float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / settings->geometryTicksPerSecond;
+	float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f/settings->geometryTicksPerSecond;
 
 	//Only tick the geometry streaming service a set amount of times per second.
 	if (timeSinceLastGeometryStream >= TIME_BETWEEN_GEOMETRY_TICKS)
 	{
-		geometryStreamingService->tick(TIME_BETWEEN_GEOMETRY_TICKS);
+		geometryStreamingService.tick(TIME_BETWEEN_GEOMETRY_TICKS);
 
 		//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
 		if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
@@ -473,11 +470,11 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	//Confirm resources the client has told us they have.
 	for (int i = 0; i < handshake.resourceCount; i++)
 	{
-		geometryStreamingService->confirmResource(clientResources[i]);
+		geometryStreamingService.confirmResource(clientResources[i]);
 	}
 
 	captureComponentDelegates.startStreaming(casterContext);
-	geometryStreamingService->startStreaming(casterContext, handshake);
+	geometryStreamingService.startStreaming(casterContext, handshake);
 	receivedHandshake = true;
 
 	//Client has nothing, thus can't show nodes.
@@ -489,7 +486,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	// Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
 	else
 	{
-		const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService->getStreamedNodeIDs();
+		const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService.getStreamedNodeIDs();
 		avs::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 		sendCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 	}
@@ -624,7 +621,7 @@ void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 
 	for (avs::uid id : resourceRequests)
 	{
-		geometryStreamingService->requestResource(id);
+		geometryStreamingService.requestResource(id);
 	}
 }
 
@@ -645,15 +642,6 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	avs::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<avs::ClientMessagePayloadType*>(packet->data));
 	switch (clientMessagePayloadType)
 	{
-	case avs::ClientMessagePayloadType::OriginPose:
-	{
-		avs::OriginPoseMessage message;
-		memcpy(&message, packet->data, packet->dataLength);
-		avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, message.originPose.orientation);
-		avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, message.originPose.position);
-		setOriginFromClient(clientID, message.counter, message.originId,&message.originPose);
-	}
-	break;
 	case avs::ClientMessagePayloadType::ControllerPoses:
 	{
 		avs::ControllerPosesMessage message;
@@ -696,12 +684,12 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 
 		for (avs::uid nodeID : drawn)
 		{
-			geometryStreamingService->clientStartedRenderingNode(clientID, nodeID);
+			geometryStreamingService.clientStartedRenderingNode(clientID, nodeID);
 		}
 
 		for (avs::uid nodeID : toRelease)
 		{
-			geometryStreamingService->clientStoppedRenderingNode(clientID, nodeID);
+			geometryStreamingService.clientStoppedRenderingNode(clientID, nodeID);
 		}
 
 	}
@@ -723,7 +711,7 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 
 		for (avs::uid id : confirmedResources)
 		{
-			geometryStreamingService->confirmResource(id);
+			geometryStreamingService.confirmResource(id);
 		}
 	}
 	break;

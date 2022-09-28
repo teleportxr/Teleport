@@ -9,11 +9,10 @@
 
 #include "CasterContext.h"
 #include "GeometryEncoder.h"
-
+#include "GeometryStore.h"
+extern teleport::GeometryStore geometryStore;
 namespace teleport
 {
-	class GeometryStore;
-
 	class GeometryStreamingService : public avs::GeometryRequesterBackendInterface
 	{
 	public:
@@ -82,5 +81,50 @@ namespace teleport
 
 		//Recursively obtains the resources from the mesh node, and its child nodes.
 		void GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
+	};
+	
+	typedef bool(__stdcall* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
+	typedef bool(__stdcall* ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
+	class PluginGeometryStreamingService : public teleport::GeometryStreamingService
+	{
+	public:
+		PluginGeometryStreamingService(const struct ServerSettings* serverSettings)
+			:teleport::GeometryStreamingService(serverSettings)
+		{
+			this->geometryStore = &::geometryStore;
+		}
+		virtual ~PluginGeometryStreamingService() = default;
+		
+
+		static ClientStoppedRenderingNodeFn callback_clientStoppedRenderingNode;
+		static ClientStartedRenderingNodeFn callback_clientStartedRenderingNode;
+	private:
+		virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID)
+		{
+			if(callback_clientStoppedRenderingNode)
+			{
+				if(!callback_clientStoppedRenderingNode(clientID, nodeID))
+				{
+				// This is ok, it means we probably already deleted the node.
+					//TELEPORT_CERR << "callback_clientStoppedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << "\n";
+					return false;
+				}
+				return true;
+			}
+			return false;
+		}
+		virtual bool clientStartedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID)
+		{
+			if(callback_clientStartedRenderingNode)
+			{
+				if(!callback_clientStartedRenderingNode(clientID, nodeID))
+				{
+				//	TELEPORT_CERR << "callback_clientStartedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << "\n";
+					return false;
+				}
+				return true;
+			}
+			return false;
+		}
 	};
 }

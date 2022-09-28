@@ -219,7 +219,7 @@ void InputSession::InstanceInit(XrInstance& xr_instance)
 		action_info.actionType = def.xrActionType;
 		strcpy_s(action_info.actionName, XR_MAX_ACTION_NAME_SIZE, def.name.c_str());
 		strcpy_s(action_info.localizedActionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, def.localizedName.c_str());
-		if(actionId!=ActionId::INVALID)
+		if(actionId!=ActionId::INVALID&&action_info.actionName[0]!=0)
 			XR_CHECK(xrCreateAction(actionSet, &action_info, &def.xrAction));
 		def.actionId=actionId;
 		def.xrActionType=def.xrActionType;
@@ -1652,7 +1652,6 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	
 		// Compose the layers for this frame.
 		XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
-		layer_proj= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 		vector<XrCompositionLayerProjectionView> projection_views;
 		vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
 		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
@@ -1661,7 +1660,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 		{
 			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
 		}
-		static bool add_overlay=true;
+		static bool add_overlay=false;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);

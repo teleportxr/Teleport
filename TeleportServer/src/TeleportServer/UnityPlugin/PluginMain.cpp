@@ -61,8 +61,6 @@ TELEPORT_EXPORT int8_t ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStan
 	return avs::ConvertAxis(fromStandard,toStandard,axis);
 }
 
-typedef bool(__stdcall* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
-typedef bool(__stdcall* ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
 
 
@@ -70,7 +68,7 @@ static avs::Context avsContext;
 
 static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_shared<DefaultDiscoveryService>();
 static std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
-static GeometryStore geometryStore;
+GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
 
@@ -78,11 +76,7 @@ teleport::ServerSettings serverSettings; //Engine-side settings are copied into 
 
 teleport::AudioSettings audioSettings;
 
-static ClientStoppedRenderingNodeFn callback_clientStoppedRenderingNode;
-static ClientStartedRenderingNodeFn callback_clientStartedRenderingNode;
-
 static SetHeadPoseFn setHeadPose;
-static SetOriginFromClientFn setOriginFromClient;
 static SetControllerPoseFn setControllerPose;
 static ProcessNewInputFn processNewInput;
 static DisconnectFn onDisconnect;
@@ -112,46 +106,6 @@ struct LogMessage
 static std::vector<LogMessage> messages(100);
 static std::mutex messagesMutex;
 
-
-class PluginGeometryStreamingService : public teleport::GeometryStreamingService
-{
-public:
-	PluginGeometryStreamingService()
-		:teleport::GeometryStreamingService(&serverSettings)
-	{
-		this->geometryStore = &::geometryStore;
-	}
-	virtual ~PluginGeometryStreamingService() = default;
-
-private:
-	virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID)
-	{
-		if(callback_clientStoppedRenderingNode)
-		{
-			if(!callback_clientStoppedRenderingNode(clientID, nodeID))
-			{
-			// This is ok, it means we probably already deleted the node.
-				//TELEPORT_CERR << "callback_clientStoppedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << "\n";
-				return false;
-			}
-			return true;
-		}
-		return false;
-	}
-	virtual bool clientStartedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID)
-	{
-		if(callback_clientStartedRenderingNode)
-		{
-			if(!callback_clientStartedRenderingNode(clientID, nodeID))
-			{
-				TELEPORT_CERR << "callback_clientStartedRenderingNode failed for node " << nodeID << "(" << geometryStore->getNodeName(nodeID) << ")" << "\n";
-				return false;
-			}
-			return true;
-		}
-		return false;
-	}
-};
 
 class PluginVideoEncodePipeline : public teleport::VideoEncodePipeline
 {
@@ -351,7 +305,6 @@ struct InitialiseState
 	ClientStoppedRenderingNodeFn clientStoppedRenderingNode;
 	ClientStartedRenderingNodeFn clientStartedRenderingNode;
 	SetHeadPoseFn headPoseSetter;
-	SetOriginFromClientFn setOriginFromClientFn;
 	SetControllerPoseFn controllerPoseSetter;
 	ProcessNewInputFn newInputProcessing;
 	DisconnectFn disconnect;
@@ -407,12 +360,12 @@ TELEPORT_EXPORT bool SetCachePath(const char* path)
 
 TELEPORT_EXPORT void SetClientStoppedRenderingNodeDelegate(ClientStoppedRenderingNodeFn clientStoppedRenderingNode)
 {
-	callback_clientStoppedRenderingNode = clientStoppedRenderingNode;
+	PluginGeometryStreamingService::callback_clientStoppedRenderingNode = clientStoppedRenderingNode;
 }
 
 TELEPORT_EXPORT void SetClientStartedRenderingNodeDelegate(ClientStartedRenderingNodeFn clientStartedRenderingNode)
 {
-	callback_clientStartedRenderingNode = clientStartedRenderingNode;
+	PluginGeometryStreamingService::callback_clientStartedRenderingNode = clientStartedRenderingNode;
 }
 
 TELEPORT_EXPORT void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
@@ -522,7 +475,6 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	SetClientStartedRenderingNodeDelegate(initialiseState->clientStartedRenderingNode);
 	SetHeadPoseSetterDelegate(initialiseState->headPoseSetter);
 
-	setOriginFromClient = initialiseState->setOriginFromClientFn;
 	setControllerPose = initialiseState->controllerPoseSetter;
 	SetNewInputProcessingDelegate(initialiseState->newInputProcessing);
 	SetDisconnectDelegate(initialiseState->disconnect);
@@ -590,11 +542,10 @@ TELEPORT_EXPORT void Shutdown()
 	unlinkedClientIDs.clear();
 	clientServices.clear();
 
-	callback_clientStoppedRenderingNode = nullptr;
-	callback_clientStartedRenderingNode = nullptr;
+	PluginGeometryStreamingService::callback_clientStoppedRenderingNode = nullptr;
+	PluginGeometryStreamingService::callback_clientStartedRenderingNode = nullptr;
 
 	setHeadPose = nullptr;
-	setOriginFromClient=nullptr;
 	setControllerPose = nullptr;
 	processNewInput = nullptr;
 }
@@ -610,11 +561,10 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
 	{
-		std::shared_ptr<PluginGeometryStreamingService> geometryStreamingService = std::make_shared<PluginGeometryStreamingService>();
 		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
 		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
-		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&serverSettings, discoveryService, geometryStreamingService, setHeadPose, setOriginFromClient, setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
-		ClientData newClientData(geometryStreamingService, videoEncodePipeline, audioEncodePipeline, clientMessaging);
+		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
+		ClientData newClientData( videoEncodePipeline, audioEncodePipeline, clientMessaging);
 
 		if(newClientData.clientMessaging->startSession(clientID, clientIP))
 		{
@@ -945,7 +895,7 @@ TELEPORT_EXPORT void Reset()
 {
 	for(auto& clientPair : clientServices)
 	{
-		clientPair.second.geometryStreamingService->reset();
+		clientPair.second.clientMessaging->GetGeometryStreamingService().reset();
 	}
 }
 
@@ -995,7 +945,7 @@ TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textur
 		TELEPORT_CERR << "Failed to start streaming Texture " << textureID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	clientPair->second.geometryStreamingService->addGenericTexture(textureID);
+	clientPair->second.clientMessaging->GetGeometryStreamingService().addGenericTexture(textureID);
 }
 
 //! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
@@ -1008,8 +958,8 @@ TELEPORT_EXPORT size_t Client_AddNode(avs::uid clientID, avs::uid nodeID)
 		return 0;
 	}
 
-	clientPair->second.geometryStreamingService->addNode(nodeID);
-	return clientPair->second.geometryStreamingService->getStreamedNodeIDs().size();
+	clientPair->second.clientMessaging->GetGeometryStreamingService().addNode(nodeID);
+	return clientPair->second.clientMessaging->GetGeometryStreamingService().getStreamedNodeIDs().size();
 }
 
 TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
@@ -1021,7 +971,7 @@ TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
 		return;
 	}
 
-	clientPair->second.geometryStreamingService->removeNode(nodeID);
+	clientPair->second.clientMessaging->GetGeometryStreamingService().removeNode(nodeID);
 }
 
 TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid nodeID)
@@ -1033,7 +983,7 @@ TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid nodeID
 		return false;
 	}
 
-	return clientPair->second.geometryStreamingService->isStreamingNode(nodeID);
+	return clientPair->second.clientMessaging->GetGeometryStreamingService().isStreamingNode(nodeID);
 }
 
 TELEPORT_EXPORT bool Client_IsClientRenderingNodeID(avs::uid clientID, avs::uid nodeID)
@@ -1045,7 +995,7 @@ TELEPORT_EXPORT bool Client_IsClientRenderingNodeID(avs::uid clientID, avs::uid 
 		return false;
 	}
 
-	return clientPair->second.geometryStreamingService->isClientRenderingNode(nodeID);
+	return clientPair->second.clientMessaging->GetGeometryStreamingService().isClientRenderingNode(nodeID);
 }
 
 bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
@@ -1056,7 +1006,7 @@ bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 		TELEPORT_CERR << "Failed to check if Client " << clientID << " has Resource_" << resourceID << "! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return clientPair->second.geometryStreamingService->hasResource(resourceID);
+	return clientPair->second.clientMessaging->GetGeometryStreamingService().hasResource(resourceID);
 }
 ///GeometryStreamingService END
 

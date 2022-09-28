@@ -186,8 +186,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			if(poseValidCounter)
 			{
 				SendControllerPoses(headPose,controllerPoses);
-				if(setupCommand.control_model==avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY)
-					sendOriginPose(poseValidCounter,originPose);
 			}
 			SendInput(input);
 			SendResourceRequests();
@@ -365,13 +363,6 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pos
 	SendClientMessage(message);
 }
 
-void SessionClient::sendOriginPose(uint64_t validCounter,const avs::Pose& originPose)
-{
-	avs::OriginPoseMessage message;
-	message.counter=validCounter;
-	message.originPose=originPose;
-	SendClientMessage(message);
-}
 
 static void copy_and_increment(void *&target,const void *source,size_t size)
 {

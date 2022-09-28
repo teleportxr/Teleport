@@ -11,6 +11,7 @@ namespace teleport
 	struct ServerSettings
 	{
 		int32_t requiredLatencyMs = 0;
+
 		int32_t detectionSphereRadius = 0;
 		int32_t detectionSphereBufferDistance = 0;
 		int64_t throttleKpS = 0;
@@ -80,7 +81,7 @@ namespace teleport
 		int32_t defaultLightCubemapSize = 0;
 		int32_t defaultShadowmapSize=0;
 
-		avs::ControlModel controlModel=avs::ControlModel::CLIENT_ORIGIN_SERVER_GRAVITY;
+		avs::ControlModel controlModel=avs::ControlModel::SERVER_ORIGIN_CLIENT_LOCAL;
 	};
 	struct ClientSettings
 	{

@@ -304,9 +304,10 @@ Result Decoder::DisplayFrame()
 		m_stats.framesProcessedPerSec = float(m_stats.framesProcessed / connection_time_s);
 		m_stats.framesDisplayedPerSec = float(m_stats.framesDisplayed / connection_time_s);
 	}
-	
+#if TELEPORT_INTERNAL_CHECKS
 	if(m_interimFramesProcessed > 3)
 		AVSLOG(Warning) << m_interimFramesProcessed << " interim frames processed \n";
+#endif
 	m_interimFramesProcessed = 0;
 	return result;
 }
