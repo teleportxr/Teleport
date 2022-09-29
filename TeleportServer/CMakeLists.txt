@@ -9,41 +9,41 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
-	src/TeleportServer/CasterTypes.h
-	src/TeleportServer/CaptureDelegates.h
-	src/TeleportServer/CasterContext.h
-	src/TeleportServer/ServerSettings.h
-	src/TeleportServer/ClientData.cpp
-	src/TeleportServer/ClientData.h
-	src/TeleportServer/ClientMessaging.cpp
-	src/TeleportServer/ClientMessaging.h
-	src/TeleportServer/ClientManager.cpp
-	src/TeleportServer/ClientManager.h
-	src/TeleportServer/DiscoveryService.cpp
-	src/TeleportServer/DiscoveryService.h 
-	src/TeleportServer/ExtractedTypes.h
-	src/TeleportServer/GeometryEncoder.cpp
-	src/TeleportServer/GeometryEncoder.h
-	src/TeleportServer/GeometryStore.cpp
-	src/TeleportServer/GeometryStore.h
-	src/TeleportServer/GeometryStreamingService.cpp
-	src/TeleportServer/GeometryStreamingService.h
-	src/TeleportServer/NetworkPipeline.cpp
-	src/TeleportServer/NetworkPipeline.h
-	src/TeleportServer/SourceNetworkPipeline.cpp
-	src/TeleportServer/SourceNetworkPipeline.h
-	src/TeleportServer/DefaultDiscoveryService.cpp
-	src/TeleportServer/DefaultDiscoveryService.h
-	src/TeleportServer/VideoEncodePipeline.cpp
-	src/TeleportServer/VideoEncodePipeline.h	
-	src/TeleportServer/AudioEncoder.cpp
-	src/TeleportServer/AudioEncoder.h
-	src/TeleportServer/AudioEncodePipeline.cpp
-	src/TeleportServer/AudioEncodePipeline.h	
-	src/TeleportServer/HTTPService.cpp
-	src/TeleportServer/HTTPService.h 
-	src/TeleportServer/DefaultHTTPService.cpp
-	src/TeleportServer/DefaultHTTPService.h 
+	CasterTypes.h
+	CaptureDelegates.h
+	CasterContext.h
+	ServerSettings.h
+	ClientData.cpp
+	ClientData.h
+	ClientMessaging.cpp
+	ClientMessaging.h
+	ClientManager.cpp
+	ClientManager.h
+	DiscoveryService.cpp
+	DiscoveryService.h 
+	ExtractedTypes.h
+	GeometryEncoder.cpp
+	GeometryEncoder.h
+	GeometryStore.cpp
+	GeometryStore.h
+	GeometryStreamingService.cpp
+	GeometryStreamingService.h
+	NetworkPipeline.cpp
+	NetworkPipeline.h
+	SourceNetworkPipeline.cpp
+	SourceNetworkPipeline.h
+	DefaultDiscoveryService.cpp
+	DefaultDiscoveryService.h
+	VideoEncodePipeline.cpp
+	VideoEncodePipeline.h	
+	AudioEncoder.cpp
+	AudioEncoder.h
+	AudioEncodePipeline.cpp
+	AudioEncodePipeline.h	
+	HTTPService.cpp
+	HTTPService.h 
+	DefaultHTTPService.cpp
+	DefaultHTTPService.h 
 )
 
 #Whether to build dynamic runtime libraries.
@@ -58,11 +58,11 @@ endif()
 #Create static library with source files from group.
 if(TELEPORT_UNITY)
 	set(src_plugin
-		src/TeleportServer/UnityPlugin/Export.h
-		src/TeleportServer/UnityPlugin/InteropStructures.h
-		src/TeleportServer/UnityPlugin/PluginGraphics.h
-		src/TeleportServer/UnityPlugin/PluginGraphics.cpp
-		src/TeleportServer/UnityPlugin/PluginMain.cpp
+		UnityPlugin/Export.h
+		UnityPlugin/InteropStructures.h
+		UnityPlugin/PluginGraphics.h
+		UnityPlugin/PluginGraphics.cpp
+		UnityPlugin/PluginMain.cpp
 	)
 
 	add_library(TeleportServer SHARED ${src} ${src_plugin})
@@ -79,7 +79,7 @@ endif()
 SetTeleportDefaults( TeleportServer )
 
 #Include its root directory
-target_include_directories(TeleportServer PUBLIC src)
+target_include_directories(TeleportServer PUBLIC .)
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
 #Include TeleportCore
@@ -97,7 +97,7 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/draco/src)
 target_include_directories(TeleportServer PUBLIC ../thirdparty/openssl/include)
 #Include cpp-httplib
 target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
-#Include Platform - for pure header functions only.
+#Include Platform - for pure header functions only.sr
 target_include_directories(TeleportServer PUBLIC ../firstparty)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})

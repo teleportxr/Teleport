@@ -13,6 +13,8 @@
 extern teleport::GeometryStore geometryStore;
 namespace teleport
 {
+	//! This per-client class tracks the resources and nodes that the client needs,
+	//! and returns them via GeometryRequesterBackendInterface to the encoder.
 	class GeometryStreamingService : public avs::GeometryRequesterBackendInterface
 	{
 	public:
@@ -25,7 +27,7 @@ namespace teleport
 		virtual void requestResource(avs::uid resourceID) override;
 		virtual void confirmResource(avs::uid resourceID) override;
 
-		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
+		void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
 		, std::vector<avs::MeshNodeResources>& outMeshResources
 		, std::vector<avs::LightNodeResources>& outLightResources
 		,std::set<avs::uid>& genericTextureUids,int32_t minimumPriority) const override;
