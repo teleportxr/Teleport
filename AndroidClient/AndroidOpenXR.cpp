@@ -492,7 +492,7 @@ bool OpenXR::TryInitDevice()
 	for (auto f : availableFormats)
 	{
 		vk::Format F = (vk::Format)f;
-		std::cout << "    format " << f << std::endl;
+		std::cout << "Format: " << vk::to_string(F) << std::endl;
 	}
 	
 	auto swapchainFormatIt =std::find_first_of(availableFormats.begin(), availableFormats.end(), std::begin(SupportedColorSwapchainFormats),

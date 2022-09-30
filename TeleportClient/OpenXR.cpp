@@ -219,7 +219,7 @@ void InputSession::InstanceInit(XrInstance& xr_instance)
 		action_info.actionType = def.xrActionType;
 		strcpy_s(action_info.actionName, XR_MAX_ACTION_NAME_SIZE, def.name.c_str());
 		strcpy_s(action_info.localizedActionName, XR_MAX_LOCALIZED_ACTION_NAME_SIZE, def.localizedName.c_str());
-		if(actionId!=ActionId::INVALID)
+		if(actionId!=ActionId::INVALID && def.name.size() && def.localizedName.c_str())
 			XR_CHECK(xrCreateAction(actionSet, &action_info, &def.xrAction));
 		def.actionId=actionId;
 		def.xrActionType=def.xrActionType;
@@ -1265,16 +1265,18 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 {
 	lastTime=predictedTime;
 	// Find the state and location of each viewpoint at the predicted time
-	uint32_t		 view_count = 0;
-	XrViewState	  view_state = { XR_TYPE_VIEW_STATE };
+	uint32_t view_count = 0;
+	XrViewState view_state = { XR_TYPE_VIEW_STATE };
 	XrViewLocateInfo locate_info = { XR_TYPE_VIEW_LOCATE_INFO };
 	locate_info.viewConfigurationType = app_config_view;
 	locate_info.displayTime = predictedTime;
 	locate_info.space = xr_app_space;
 	xrLocateViews(xr_session, &locate_info, &view_state, (uint32_t)xr_views.size(), &view_count, xr_views.data());
+
 	projection_views.resize(view_count);
 	spacewarp_views.resize(view_count);
 	static bool do_spacewarp=true;
+
 	// And now we'll iterate through each viewpoint, and render it!
 	for (uint32_t i = 0; i < view_count; i++)
 	{
@@ -1328,10 +1330,8 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 	}
 	
 	layer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-	layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-	layer.layerFlags |= XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT;
+	layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT | XR_COMPOSITION_LAYER_CORRECT_CHROMATIC_ABERRATION_BIT;
 	layer.space = xr_app_space;
-
 	layer.viewCount = (uint32_t)projection_views.size();
 	layer.views = projection_views.data();
 	return true;
@@ -1632,6 +1632,8 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	XR_CHECK(xrBeginFrame(xr_session, &beginFrameDesc));
 	int num_layers=0;
 	const XrCompositionLayerBaseHeader* layer_ptrs[4] = {};
+	vector<XrCompositionLayerProjectionView> projection_views;
+	vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
 	if(frame_state.shouldRender)
 	{
 		// Execute any code that's dependant on the predicted time, such as updating the location of
@@ -1651,15 +1653,12 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 		// If the session is active, lets render our layer in the compositor!
 	
 		// Compose the layers for this frame.
-		XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
-		layer_proj= { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
-		vector<XrCompositionLayerProjectionView> projection_views;
-		vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
-		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
-		session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
-		if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate))
+		XrCompositionLayerProjection& layer_proj = layers[0].Projection;
+		layer_proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED || xr_session_state == XR_SESSION_STATE_SYNCHRONIZED;
+		if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views, spacewarp_views, layer_proj, renderDelegate))
 		{
-			layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layer_proj;
+			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 		static bool add_overlay=true;
 		if(add_overlay)
@@ -1667,11 +1666,11 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
 			if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
 			{
-				layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[1];
+				layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layers[1];
 			}
 			if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
 			{
-				layer_ptrs[num_layers++] = ( XrCompositionLayerBaseHeader*)&layers[2];
+				layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layers[2];
 			}
 		}
 		EndFrame();
