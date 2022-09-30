@@ -133,11 +133,20 @@ This qualifier refers to the how the data is organised in memory.
 | NV21 | Semi Planar | :grn:`Y1` :grn:`Y2` :grn:`Y3` :grn:`Y4` :grn:`Y5` :grn:`Y6` :grn:`Y7` :grn:`Y8` :red:`V1` :blu:`U1` :red:`V2` :blu:`U2` |
 +------+-------------+-------------------------------------------------------------------------------------------------------------------------+
 
-Reference: `Video LAN Wiki YUV <https://wiki.videolan.org/YUV>`_
 
-.. image::https://gist.github.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb/raw/656de03d44d16517f9067943111c0a30bfa8ae05/YUV_formats.png
+.. image:: https://gist.githubusercontent.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb/raw/656de03d44d16517f9067943111c0a30bfa8ae05/YUV_formats.png
   :width: 800
   :alt:
+
+.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Yuv420.svg/800px-Yuv420.svg.png
+  :width: 800
+  :alt:
+
+Reference: `Video LAN Wiki YUV <https://wiki.videolan.org/YUV>`_
+
+Reference: `About YUV formats <https://gist.github.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb>`_.
+
+Reference: `Wikipedia Y′UV420p (and Y′V12 or YV12) to RGB888 conversion <https://en.wikipedia.org/wiki/YUV#Y%E2%80%B2UV420p_(and_Y%E2%80%B2V12_or_YV12)_to_RGB888_conversion>`_.
 
 ITU Colour Spaces and Encoding Ranges
 -------------------------------------
@@ -192,7 +201,7 @@ The terms of the encoding range, the ITU reserved regions at the begin and end o
 		d = 2 * (a + b);
 		e = 2 * (1 - a);
 
-		return mat3(
+		return float3x3(
 			float3(1.0,                0.0,                  e),
 			float3(1.0, (-1.0 * c * d / b), (-1.0 * a * e / b)),
 			float3(1.0,                  d,                0.0)
@@ -205,10 +214,99 @@ The terms of the encoding range, the ITU reserved regions at the begin and end o
 	}
 
 Reference: `Khronos Colour Space Conversions <https://registry.khronos.org/DataFormat/specs/1.3/dataformat.1.3.html#PRIMARY_CONVERSION>`_
+
 Reference: `Khronos Colour Space Quantisation <https://registry.khronos.org/DataFormat/specs/1.3/dataformat.1.3.html#CONVERSION_QUANTIZATION>`_
 
-Simul's Android client uses 4:2:0 NV12 Semi Planar, BT.709. See reference `About YUV formats <https://gist.github.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb>`_.
-On Meta Quest and Meta Quest 2, the ``AMediaCodec`` selects a vendor specific format ``OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m``. This is `Khronos OpenMax <https://www.khronos.org/openmax/>`_ `Qualcomm <https://www.qualcomm.com/home>`_ extension that is specific to Qualcomm SoCs(System On Chip) such as the Snapdragon 835/Adreno 540(Meta Quest) and the Qualcomm Snapdragon XR2/Adreno 650(Meta Quest 2).
+Co-sited vs Midpoint
+--------------------
+
+Due to the downsampling of the chroma components, when loading a YCbCr image for use in a shader, it is required that the full chroma samples are reconstructed from the lower spatial resolution of the chrominance planes. The two offset methods are *Co-sited* and *Midpoint*. Figures 5 - 10 in Section 16.3.8. of the Vulkan Specification show how the rescaled chroma plane(s) are overlayed on top of the luma plane for 4:2:2 and 4:2:0 in all varying combinations of Co-sited and Midpoint for X and Y.
+The downsampling method used on the server must match the upsampling method used on the Android client for the chrominance data to be reconstructed accurately.
+
+Reference: `Khronos Chroma Reconstruction <https://registry.khronos.org/vulkan/specs/1.3/html/chap16.html#textures-chroma-reconstruction>`_
+
+Simul's Implementation
+----------------------
+
+Simul's Implementation uses 4:2:0 NV12 Semi Planar, BT.709. 
+On Meta Quest and Meta Quest 2, the ``AMediaCodec`` selects a vendor specific format ``OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m``. This is `Khronos OpenMax <https://www.khronos.org/openmax/>`_ `Qualcomm <https://www.qualcomm.com/home>`_ extension that is specific to Qualcomm SoCs (System On Chip) such as the Snapdragon 835/Adreno 540 (Meta Quest) and the Qualcomm Snapdragon XR2/Adreno 650 (Meta Quest 2).
+
+We create a ``VKSamplerYcbcrConversionKHR`` from a ``VkSamplerYcbcrConversionCreateInfoKHR``. The majority of the memebers of the structure can filled out using the ``VkAndroidHardwareBufferFormatPropertiesANDROID`` structure acquired earlier. Here again ``VkSamplerYcbcrConversionCreateInfoKHR::format`` is set to ``VK_FORMAT_UNDEFINED`` as the format is defined in the chained ``VkExternalFormatANDROID`` structure. ``VkComponentMapping`` is set to ``VK_COMPONENT_SWIZZLE_IDENTITY`` for the R, G, B and A values. The component remapping is useful for when the Cb and Cr components are swapped such as the NV21 memory layout for 4:2:0. For ``VkSamplerYcbcrConversionCreateInfoKHR::chromaFilter`` we use ``VK_FILTER_NEAREST`` so as not to 'blend' between the chrominance pixels, and we disable ``VkSamplerYcbcrConversionCreateInfoKHR::forceExplicitReconstruction``.
+
+With the ``VKSamplerYcbcrConversionKHR`` created, we assign this to ``VkSamplerYcbcrConversionInfoKHR::conversion`` and chain the ``VkSamplerYcbcrConversionInfoKHR`` structure into a ``VkSamplerCreateInfo`` structure for ``platform::vulkan::RenderPlatform``'s single video sampler and into a ``VkImageViewCreateInfo`` structure for each instance of ``platform::vulkan::Texture`` where a YCbCr conversion is needed.
+
+.. image:: /images/reference/VKSamplerYcbcrConversionKHRCreationAndSetUpForVkImageViewAndVkSampler.png
+  :width: 800
+  :alt: VKSamplerYcbcrConversionKHR creation and set up for VkImageView and VkSampler.
+
+YCbCr in Compute Shaders and Load Operations
+--------------------------------------------
+
+Presently, the video sampler is unused, as we do a HLSL: ``Texture2D.Load()`` / GLSL: ``texelFetch()`` operation in a compute shader. The previous information used to create ``VKSamplerYcbcrConversionKHR``, and that was ultimately passed to the ``VkImageView``, is still used to reconstruct the chrominance data, returning the separated :grn:`Y`, :blu:`U` and :red:`V` components as if it were a 4:4:4 Planar YCbCr image. The load operation converts the 8-bit unsigned integer (0 - 255) to a normalised floating point 32-bit value (0.0 - 1.0). This works fine for the luma component, but the chroma need to offset by -0.5, putting them in the range (-0.5 - 0.5) to match the YCbCr colour space. The load operation assigns the Y, Cb and Cb channels to the RGB channels as follows:
+
+* :grn:`Y => G`.
+* :blu:`U => B`.
+* :red:`V => R`.
+
+.. code-block:: cpp
+  :caption: Loading a YCbCr texture in a compute shader.
+
+	Texture2D<float4> ycbcrTexture;
+	RWTexture2D<float4> rgbTexture; 
+
+	float3x3 YCbCrToRGB_ConversionMatrix_Fast(uint type)
+	{
+		float3x3 result;
+		switch (type)
+		{
+
+			case 0:
+			{
+				result = float3x3(
+					float3(+1.000, +0.000, +1.402),
+					float3(+1.000, -0.344, -0.714),
+					float3(+1.000, +1.772, +0.000));
+				break;
+			}
+			default:
+			case 1:
+			{
+				result = float3x3(
+					float3(+1.0000, +0.0000, +1.5748),
+					float3(+1.0000, -0.1873, -0.4681),
+					float3(+1.0000, +1.8556, +0.0000));
+				break;
+			}
+			case 2:
+			{
+				result = float3x3(
+					float3(+1.0000, +0.0000, +1.4746),
+					float3(+1.0000, -0.1646, -0.5714),
+					float3(+1.0000, +1.8814, +0.0000));
+				break;
+			}
+		}
+		return result;
+	}
+
+	void CS_ConvertYCbCrToRGB(uint3 position, uint type)
+	{
+		float3 value = ycbcrTexture.Load(int3(position.x, position.y, 0)).rgb;
+		float Cr = value.r - 0.5;
+		float Cb = value.b - 0.5;
+		float Y1 = value.g;
+
+		vec4 clr;
+		clr.rgb = mul(float3(Y1, Cb, Cr), YCbCrToRGB_ConversionMatrix_Fast(type));
+		clr.a = 1.0;
+		rgbTexture[position.xy] = clr;
+	}
+
+	[numthreads(8, 8, 1)]
+	shader void CS_ConvertYCbCrToRGB_BT709(uint3 position : SV_DispatchThreadID)
+	{
+		CS_ConvertYCbCrToRGB(position, 1);
+	}
 
 Classes
 -------
