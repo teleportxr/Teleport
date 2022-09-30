@@ -488,13 +488,14 @@ bool OpenXR::TryInitDevice()
 		formatCount,
 		&formatCount,
 		availableFormats.data());
+	#if 0
 	std::cout << "xrEnumerateSwapchainFormats:\n";
 	for (auto f : availableFormats)
 	{
 		vk::Format F = (vk::Format)f;
-		std::cout << "    format " << f << std::endl;
+		std::cout << "Format: " << vk::to_string(F) << std::endl;
 	}
-	
+	#endif
 	auto swapchainFormatIt =std::find_first_of(availableFormats.begin(), availableFormats.end(), std::begin(SupportedColorSwapchainFormats),
 						   std::end(SupportedColorSwapchainFormats));
 	if (swapchainFormatIt == availableFormats.end())
@@ -517,7 +518,7 @@ bool OpenXR::TryInitDevice()
 		XrViewConfigurationView& view = xr_config_views[i];
 		XrSwapchain              handle;
 		swapchain_info.createFlags=0;
-		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT;
 		swapchain_info.format = swapchain_format;
 		swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
 		swapchain_info.width = view.recommendedImageRectWidth;

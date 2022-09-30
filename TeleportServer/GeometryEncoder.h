@@ -11,6 +11,7 @@ struct Vector4Keyframe;
 
 namespace teleport
 {
+	//! Backend implementation of the geometry encoder.
 	class GeometryEncoder: public avs::GeometryEncoderBackendInterface
 	{
 	public:

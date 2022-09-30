@@ -5,6 +5,7 @@
 
 namespace teleport
 {
+	//! Generic discover interface.
 	class DiscoveryService
 	{
 	public:

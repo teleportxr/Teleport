@@ -14,6 +14,7 @@ typedef struct _ENetHost ENetHost;
 namespace teleport
 {
 	class ClientMessaging;
+	//! Container for the client-specific data objects.
 	class ClientManager
 	{
 	public:

@@ -13,6 +13,7 @@
 
 namespace teleport
 {
+	//! Wrapper for the network pipeline objects for a given client.
 	struct CasterContext
 	{
 		// Sending

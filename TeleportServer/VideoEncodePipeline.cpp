@@ -11,13 +11,13 @@
 #include <libavstream/surfaces/surface_dx12.hpp>
 
 
-namespace teleport
-{
+using namespace teleport;
+
 	static void CrateEncodeParams(const ServerSettings& settings, avs::EncoderParams& encoderParams);
 
 	VideoEncodePipeline::~VideoEncodePipeline()
 	{
-	
+		deconfigure();
 	}
 
 	Result VideoEncodePipeline::initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput)
@@ -90,7 +90,7 @@ namespace teleport
 		return Result::Code::OK;
 	}
 
-	Result VideoEncodePipeline::reconfigure(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams)
+	Result VideoEncodePipeline::reconfigure1(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams)
 	{
 		if (!mPipeline)
 		{
@@ -216,4 +216,114 @@ namespace teleport
 		}
 		return Result::Code::EncodeCapabilitiesRetrievalError;
 	}
+
+	
+Result VideoEncodePipeline::configure(const ServerSettings &serverSettings,const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue, avs::Queue* tagDataQueue)
+{
+	if (configured)
+	{
+		TELEPORT_CERR << "Video encode pipeline already configured." << "\n";
+		return Result::Code::EncoderAlreadyConfigured;
+	}
+
+	if (!GraphicsManager::mGraphicsDevice)
+	{
+		TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
+		return Result::Code::InvalidGraphicsDevice;
+	}
+
+	if (!videoEncodeParams.inputSurfaceResource)
+	{
+		TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
+		return Result::Code::InvalidGraphicsResource;
+	}
+
+	inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
+	// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
+	encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
+
+	VideoEncodeParams params = videoEncodeParams;
+	params.deviceHandle = GraphicsManager::mGraphicsDevice;
+	params.inputSurfaceResource = encoderSurfaceResource;
+
+	Result result = teleport::VideoEncodePipeline::initialize(serverSettings, params, colorQueue, tagDataQueue);
+	if (result)
+	{
+		configured = true;
+	}
+	return result;
+}
+
+Result VideoEncodePipeline::reconfigure(const ServerSettings &serverSettings,const VideoEncodeParams& videoEncodeParams)
+{
+	if (!configured)
+	{
+		TELEPORT_CERR << "Video encoder cannot be reconfigured if pipeline has not been configured." << "\n";
+		return Result::Code::EncoderNotConfigured;
+	}
+
+	if (!GraphicsManager::mGraphicsDevice)
+	{
+		TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
+		return Result::Code::InvalidGraphicsDevice;
+	}
+
+	if (videoEncodeParams.inputSurfaceResource)
+	{
+		TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
+		return Result::Code::InvalidGraphicsResource;
+	}
+
+	VideoEncodeParams params = videoEncodeParams;
+	params.deviceHandle = GraphicsManager::mGraphicsDevice;
+
+	if (videoEncodeParams.inputSurfaceResource)
+	{
+		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
+		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
+		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
+		params.inputSurfaceResource = encoderSurfaceResource;
+	}
+	else
+	{
+		params.inputSurfaceResource = encoderSurfaceResource;
+	}
+
+	return teleport::VideoEncodePipeline::reconfigure1(serverSettings, params);
+}
+
+Result VideoEncodePipeline::encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR)
+{
+	if (!configured)
+	{
+		TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << "\n";
+		return Result::Code::EncoderNotConfigured;
+	}
+
+	// Copy data from Unity texture to its CUDA compatible copy
+	GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
+
+	return teleport::VideoEncodePipeline::process(tagData, tagDataSize, forceIDR);
+}
+
+Result VideoEncodePipeline::deconfigure() 
+{
+	if (!configured)
+	{
+		TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << "\n";
+		return Result::Code::EncoderNotConfigured;
+	}
+
+	Result result = release();
+	if (!result)
+	{
+		return result;
+	}
+
+	GraphicsManager::ReleaseResource(encoderSurfaceResource);
+	inputSurfaceResource = nullptr;
+
+	configured = false;
+
+	return result;
 }

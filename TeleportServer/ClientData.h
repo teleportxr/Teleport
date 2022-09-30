@@ -7,10 +7,10 @@
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/GeometryStreamingService.h"
 #include "TeleportServer/ServerSettings.h"
-
+#include "TeleportServer/AudioEncodePipeline.h"
 class PluginDiscoveryService;
-class PluginVideoEncodePipeline;
-class PluginAudioEncodePipeline;
+class VideoEncodePipeline;
+class AudioEncodePipeline;
 namespace teleport
 {
 	namespace server
@@ -34,10 +34,11 @@ namespace teleport
 		};
 		
 		class GeometryStreamingService;
+		//! Data object for a connected client.
 		class ClientData
 		{
 		public:
-			ClientData( std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, std::shared_ptr<teleport::ClientMessaging> clientMessaging);
+			ClientData(  std::shared_ptr<teleport::ClientMessaging> clientMessaging);
 			void StartStreaming(const teleport::ServerSettings &casterSettings, const teleport::CasterEncoderSettings &encoderSettings
 				, uint32_t connectionTimeout
 				, avs::uid serverID
@@ -51,8 +52,8 @@ namespace teleport
 			std::vector<avs::InputDefinition> inputDefinitions;
 			teleport::CasterContext casterContext;
 
-			std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline;
-			std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline;
+			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;
+			std::shared_ptr<AudioEncodePipeline> audioEncodePipeline;
 			std::shared_ptr<teleport::ClientMessaging> clientMessaging;
 
 			bool isStreaming = false;

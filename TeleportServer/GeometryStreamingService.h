@@ -10,6 +10,7 @@
 #include "CasterContext.h"
 #include "GeometryEncoder.h"
 #include "GeometryStore.h"
+
 extern teleport::GeometryStore geometryStore;
 namespace teleport
 {

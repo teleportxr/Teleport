@@ -31,6 +31,7 @@ namespace teleport
 {
 	class DiscoveryService;
 	class ClientManager;
+	//! Per-client messaging handler.
 	class ClientMessaging
 	{
 	public:

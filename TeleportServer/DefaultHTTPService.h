@@ -12,6 +12,7 @@ namespace httplib
 
 namespace teleport
 {
+	//! Default service for HTTP download of resources from the Teleport server.
 	class DefaultHTTPService : public HTTPService
 	{
 	public:

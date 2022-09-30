@@ -2,12 +2,15 @@
 using namespace teleport;
 using namespace server;
 
-ClientData::ClientData( std::shared_ptr<PluginVideoEncodePipeline> videoPipeline, std::shared_ptr<PluginAudioEncodePipeline> audioPipeline, std::shared_ptr<teleport::ClientMessaging> clientMessaging)
-	:  videoEncodePipeline(videoPipeline), audioEncodePipeline(audioPipeline), clientMessaging(clientMessaging)
+ClientData::ClientData(  std::shared_ptr<teleport::ClientMessaging> clientMessaging)
+	:   clientMessaging(clientMessaging)
 {
+	videoEncodePipeline = std::make_shared<VideoEncodePipeline>();
+	audioEncodePipeline = std::make_shared<AudioEncodePipeline>();
 	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
 	memset(&clientSettings,0,sizeof(clientSettings));
 }
+
 void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	,const teleport::CasterEncoderSettings& encoderSettings
 	,uint32_t connectionTimeout

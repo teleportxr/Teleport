@@ -5,7 +5,8 @@
 namespace teleport
 {
 	struct ServerSettings;
-
+	
+	//! Implementation of the default audio encoding.
 	class AudioEncoder: public avs::AudioEncoderBackendInterface
 	{
 	public:

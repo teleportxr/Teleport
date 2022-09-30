@@ -9,6 +9,7 @@
 
 namespace teleport
 {
+	//! Discover service for establishing connections with clients.
 	class DefaultDiscoveryService: public DiscoveryService
 	{
 	public:

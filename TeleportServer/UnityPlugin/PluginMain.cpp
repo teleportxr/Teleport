@@ -107,192 +107,6 @@ static std::vector<LogMessage> messages(100);
 static std::mutex messagesMutex;
 
 
-class PluginVideoEncodePipeline : public teleport::VideoEncodePipeline
-{
-public:
-	PluginVideoEncodePipeline() 
-		:
-		teleport::VideoEncodePipeline(),
-		inputSurfaceResource(nullptr),
-		encoderSurfaceResource(nullptr),
-		configured(false)
-	{
-		
-	}
-
-	~PluginVideoEncodePipeline()
-	{
-		deconfigure();
-	}
-
-	Result configure(const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue, avs::Queue* tagDataQueue)
-	{
-		if (configured)
-		{
-			TELEPORT_CERR << "Video encode pipeline already configured." << "\n";
-			return Result::Code::EncoderAlreadyConfigured;
-		}
-
-		if (!GraphicsManager::mGraphicsDevice)
-		{
-			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
-			return Result::Code::InvalidGraphicsDevice;
-		}
-
-		if (!videoEncodeParams.inputSurfaceResource)
-		{
-			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
-			return Result::Code::InvalidGraphicsResource;
-		}
-
-		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
-		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
-		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
-
-		VideoEncodeParams params = videoEncodeParams;
-		params.deviceHandle = GraphicsManager::mGraphicsDevice;
-		params.inputSurfaceResource = encoderSurfaceResource;
-
-		Result result = teleport::VideoEncodePipeline::initialize(serverSettings, params, colorQueue, tagDataQueue);
-		if (result)
-		{
-			configured = true;
-		}
-		return result;
-	}
-
-	Result reconfigure(const VideoEncodeParams& videoEncodeParams)
-	{
-		if (!configured)
-		{
-			TELEPORT_CERR << "Video encoder cannot be reconfigured if pipeline has not been configured." << "\n";
-			return Result::Code::EncoderNotConfigured;
-		}
-
-		if (!GraphicsManager::mGraphicsDevice)
-		{
-			TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
-			return Result::Code::InvalidGraphicsDevice;
-		}
-
-		if (videoEncodeParams.inputSurfaceResource)
-		{
-			TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
-			return Result::Code::InvalidGraphicsResource;
-		}
-
-		VideoEncodeParams params = videoEncodeParams;
-		params.deviceHandle = GraphicsManager::mGraphicsDevice;
-
-		if (videoEncodeParams.inputSurfaceResource)
-		{
-			inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
-			// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
-			encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
-			params.inputSurfaceResource = encoderSurfaceResource;
-		}
-		else
-		{
-			params.inputSurfaceResource = encoderSurfaceResource;
-		}
-		
-		return teleport::VideoEncodePipeline::reconfigure(serverSettings, params);
-	}
-
-	Result encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false)
-	{
-		if (!configured)
-		{
-			TELEPORT_CERR << "Video encoder cannot encode because it has not been configured." << "\n";
-			return Result::Code::EncoderNotConfigured;
-		}
-
-		// Copy data from Unity texture to its CUDA compatible copy
-		GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
-
-		return teleport::VideoEncodePipeline::process(tagData, tagDataSize, forceIDR);
-	}
-
-	Result deconfigure() 
-	{
-		if (!configured)
-		{
-			TELEPORT_CERR << "Video encoder cannot be deconfigured because it has not been configured." << "\n";
-			return Result::Code::EncoderNotConfigured;
-		}
-
-		Result result = release();
-		if (!result)
-		{
-			return result;
-		}
-		
-		GraphicsManager::ReleaseResource(encoderSurfaceResource);
-		inputSurfaceResource = nullptr;
-
-		configured = false;
-		
-		return result;
-	}
-	
-private:
-	void* inputSurfaceResource;
-	void* encoderSurfaceResource;
-	bool configured;
-};
-
-class PluginAudioEncodePipeline : public teleport::AudioEncodePipeline
-{
-public:
-	PluginAudioEncodePipeline()
-		:
-		teleport::AudioEncodePipeline(),
-		configured(false)
-	{
-		
-	}
-
-	~PluginAudioEncodePipeline()
-	{
-		
-	}
-
-	Result configure(const AudioSettings& audioSettings, avs::Queue* audioQueue)
-	{
-		if (configured)
-		{
-			TELEPORT_CERR << "Audio encode pipeline already configured." << "\n";
-			return Result::Code::EncoderAlreadyConfigured;
-		}
-
-		Result result = teleport::AudioEncodePipeline::initialize(serverSettings, audioSettings, audioQueue);
-		if (result)
-		{
-			configured = true;
-		}
-		return result;
-	}
-
-	Result sendAudio(const uint8_t* data, size_t dataSize)
-	{
-		if (!configured)
-		{
-			TELEPORT_CERR << "Audio encoder can not encode because it has not been configured." << "\n";
-			return Result::Code::EncoderNotConfigured;
-		}
-
-		return teleport::AudioEncodePipeline::process(data, dataSize);
-	}
-
-	bool isConfigured() const
-	{
-		return configured;
-	}
-
-private:
-	bool configured;
-};
-
 struct InitialiseState
 {
 	char* clientIP;
@@ -561,10 +375,8 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
 	{
-		std::shared_ptr<PluginVideoEncodePipeline> videoEncodePipeline = std::make_shared<PluginVideoEncodePipeline>();
-		std::shared_ptr<PluginAudioEncodePipeline> audioEncodePipeline = std::make_shared<PluginAudioEncodePipeline>();
 		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
-		ClientData newClientData( videoEncodePipeline, audioEncodePipeline, clientMessaging);
+		ClientData newClientData(  clientMessaging);
 
 		if(newClientData.clientMessaging->startSession(clientID, clientIP))
 		{
@@ -1060,7 +872,7 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, teleport::VideoEn
 	ClientData& clientData = clientPair->second;
 	avs::Queue* cq = clientData.casterContext.ColorQueue.get();
 	avs::Queue* tq = clientData.casterContext.TagDataQueue.get();
-	Result result = clientData.videoEncodePipeline->configure(videoEncodeParams, cq, tq);
+	Result result = clientData.videoEncodePipeline->configure(serverSettings,videoEncodeParams, cq, tq);
 	if(!result)
 	{
 		TELEPORT_CERR << "Failed to initialise video encoder for Client " << clientID << "! Error occurred when trying to configure the video encoder pipeline!\n";
@@ -1079,7 +891,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoE
 	}
 
 	ClientData& clientData = clientPair->second;
-	Result result = clientData.videoEncodePipeline->reconfigure(videoEncodeParams);
+	Result result = clientData.videoEncodePipeline->reconfigure(serverSettings, videoEncodeParams);
 	if (!result)
 	{
 		TELEPORT_CERR << "Failed to reconfigure video encoder for Client " << clientID << "! Error occurred when trying to reconfigure the video encoder pipeline!\n";
@@ -1227,7 +1039,7 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 		Result result = Result(Result::Code::OK);
 		if (!clientData.audioEncodePipeline->isConfigured())
 		{
-			result = clientData.audioEncodePipeline->configure(audioSettings, clientData.casterContext.AudioQueue.get());
+			result = clientData.audioEncodePipeline->configure(serverSettings, audioSettings, clientData.casterContext.AudioQueue.get());
 			if (!result)
 			{
 				TELEPORT_CERR << "Failed to configure audio encoder pipeline for Client " << clientID << "!\n";

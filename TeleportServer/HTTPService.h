@@ -5,6 +5,7 @@
 
 namespace teleport
 {
+	//! Interface for http services.
 	class HTTPService
 	{
 	public:

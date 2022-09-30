@@ -15,9 +15,9 @@ LibAVStream uses Enet for UDP datagram control. It uses SRT and EFP over UDP for
   :alt: Two pipelines operating on separate threads are connected using a avs::Queue.
 
 
-
 Classes
 -------
+
 
 .. doxygenclass:: avs::Context
 	:members:

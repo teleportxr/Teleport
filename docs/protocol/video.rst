@@ -208,7 +208,7 @@ The following settings are recommended to minimize latency:
 
 1. Ultra-low latency or low latency Tuning Info
 2. Rate control mode of Constant Bit Rate (CBR)
-3. Multi Pass – Quarter/Full (evaluate and decide)
+3. Multi Pass - Quarter/Full (evaluate and decide)
 4. Very low VBV buffer size (e.g. single frame = bitrate/framerate)
 5. No B Frames - Just I and P frames
 6. Infinite GOP length

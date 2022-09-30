@@ -8,6 +8,7 @@ namespace teleport
 {
 #pragma pack(push)
 #pragma pack(1)
+	//! Settings specific to the server state, shared across all clients.
 	struct ServerSettings
 	{
 		int32_t requiredLatencyMs = 0;

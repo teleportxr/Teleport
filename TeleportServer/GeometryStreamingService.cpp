@@ -20,7 +20,8 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 
 GeometryStreamingService::GeometryStreamingService(const ServerSettings* settings)
 	:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings)
-{}
+{
+}
 
 GeometryStreamingService::~GeometryStreamingService()
 {

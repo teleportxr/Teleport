@@ -8,6 +8,7 @@
 #include "TeleportCore/AnimationInterface.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
+//! Interop struct to receive nodes from external code.
 struct InteropNode
 {
 	BSTR name;

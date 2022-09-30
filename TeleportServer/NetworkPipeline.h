@@ -12,7 +12,8 @@ namespace teleport
 {
 	struct CasterNetworkSettings;
 	struct ServerSettings;
-
+	
+//! Network pipeline.
 	class NetworkPipeline
 	{
 	public:
@@ -29,7 +30,6 @@ namespace teleport
 		avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
 
 		void setProcessingEnabled(bool enable);
-
 		bool isProcessingEnabled() const;
 
 	private:

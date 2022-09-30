@@ -126,7 +126,7 @@ i.e. at the root, an object containing a Teleport_Session Component, which track
 
   * Player
 
-	* Left Hand Controller : Teleport_Controller Component
+	* Left Hand Controller: Teleport_Controller Component
 	* Right Hand Controller: Teleport_Controller Component
 	* Head: Teleport_Head Component
 

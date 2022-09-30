@@ -160,7 +160,7 @@ endfunction()
 
 add_subdirectory(TeleportCore)
 
-if(TELEPORT_SERVER)
+if(TELEPORT_SERVER OR TELEPORT_BUILD_DOCS)
 	add_subdirectory(TeleportServer)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "")
