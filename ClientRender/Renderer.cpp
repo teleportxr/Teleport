@@ -30,6 +30,7 @@
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
 
+
 avs::Timestamp clientrender::platformStartTimestamp ;
 static bool timestamp_initialized=false;
 using namespace clientrender;

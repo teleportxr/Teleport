@@ -1655,15 +1655,13 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	
 		// Compose the layers for this frame.
 		XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
-		vector<XrCompositionLayerProjectionView> projection_views;
-		vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
-		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED;
-		session_active|=xr_session_state==XR_SESSION_STATE_SYNCHRONIZED;
+		layer_proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED || xr_session_state == XR_SESSION_STATE_SYNCHRONIZED;
 		if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate))
 		{
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
-		static bool add_overlay=false;
+		static bool add_overlay=true;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);

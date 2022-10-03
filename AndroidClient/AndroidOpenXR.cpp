@@ -518,7 +518,7 @@ bool OpenXR::TryInitDevice()
 		XrViewConfigurationView& view = xr_config_views[i];
 		XrSwapchain              handle;
 		swapchain_info.createFlags=0;
-		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT;
+		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchain_info.format = swapchain_format;
 		swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
 		swapchain_info.width = view.recommendedImageRectWidth;
