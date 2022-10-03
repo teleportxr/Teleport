@@ -801,7 +801,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		if(KeysDown[VK_BACK])
 		{
 			KeysDown[VK_BACK]= false;
-			io.AddKeyEvent((ImGuiKey)0x20b, false);
+			io.AddKeyEvent(ImGuiKey_Backspace, false);
 		}
 		if(refocus>=2)
 		{
@@ -813,7 +813,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					KeysDown[k] = true;
 					//io.KeysDown[ImGuiKey_Backspace] = true;
 					//io.AddInputCharacter(ImGuiKey_Backspace);
-					io.AddKeyEvent((ImGuiKey)0x20b, true);
+					io.AddKeyEvent(ImGuiKey_Backspace, true);
 				}
 				else
 				{
