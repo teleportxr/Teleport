@@ -176,6 +176,9 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_FOLDER_O);			
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);		
 		builder.AddText(ICON_FK_COG);				
+		builder.AddText(ICON_FK_REPEAT);
+		builder.AddText(ICON_FK_TIMES);
+		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
 		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
 		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
@@ -859,6 +862,11 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		}
 		else
 		{
+			if (ImGui::Button(ICON_FK_RENREN, ImVec2(64, 32)))
+			{
+				cancelConnectHandler();
+			}
+			ImGui::SameLine();
 			if (ImGui::Button(ICON_FK_FOLDER_O,ImVec2(64,32)))
 			{
 				show_bookmarks=!show_bookmarks;
@@ -885,7 +893,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 							memcpy(buf,current_url.c_str(),std::min((size_t)499,current_url.size()));
 							connectHandler(b.url);
 							show_bookmarks=false;
-							connecting=true;
 						}
 						ImGui::TreePop();
 					}
@@ -895,31 +902,38 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 			else
 			{
 				ImGui::SameLine();
-				if(refocus==0)
+				if (refocus == 0)
 				{
 					ImGui::SetKeyboardFocusHere();
 				}
-				if(ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))//,ImGuiInputTextFlags))
+				if (ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))//,ImGuiInputTextFlags))
 				{
-					current_url=buf;
+					current_url = buf;
 				}
 				refocus++;
-				ImGui::SameLine();
-				ImGui::BeginDisabled(connecting);
-				if (ImGui::Button("Connect"))
+
+				ImGui::SameLine(ImGui::GetWindowWidth()-2*70);
+				if (!connecting)
 				{
-					if(connectHandler)
+					if (ImGui::Button(ICON_FK_REPEAT, ImVec2(64, 32)))
 					{
 						connectHandler(current_url);
-						connecting=true;
 					}
 				}
-				ImGui::EndDisabled();
-				ImGui::SameLine(ImGui::GetWindowWidth()-70);
+				else
+				{
+					if (ImGui::Button(ICON_FK_TIMES, ImVec2(64, 32)))
+					{
+						cancelConnectHandler();
+					}
+				}
+
+				ImGui::SameLine(ImGui::GetWindowWidth()-1*70);
 				if (ImGui::Button(ICON_FK_COG,ImVec2(64,32)))
 				{
 					show_options=!show_options;
 				}
+
 				if (show_keyboard)
 				{
 					auto KeyboardLine = [&io,this](const char* key)
@@ -937,7 +951,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 								if(connecting)
 								{
 									cancelConnectHandler();
-									connecting=false;
 								}
 							}
 							key++;
