@@ -10,3 +10,4 @@ gradle
 bin
 *.bak
 teleport_commit.properties
+keystore.properties
