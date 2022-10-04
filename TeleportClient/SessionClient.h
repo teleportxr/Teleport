@@ -58,6 +58,22 @@ namespace teleport
 		class SessionClient
 		{
 		public:
+			enum class WebspaceLoaction : uint8_t
+			{
+				UNKNOWN,
+				LOBBY,
+				SERVER,
+
+				HOME = LOBBY,
+			};
+			enum class ConnectionRequest : uint8_t
+			{
+				NO_CHANGE,
+				CONNECT_TO_SERVER,
+				DISCONNECT_FROM_SERVER,
+			};
+
+		public:
 			SessionClient(
 					std::unique_ptr<teleport::client::DiscoveryService> &&discoveryService);
 
@@ -108,6 +124,10 @@ namespace teleport
 			const std::map<avs::uid, double> &GetSentResourceRequests(){
 				return mSentResourceRequests;
 			};
+
+			const WebspaceLoaction& GetWebspaceLocation() { return webspaceLocation; }
+			ConnectionRequest& GetConnectionRequest() { return connectionRequest; }
+
 		private:
 			template<typename MessageType> void SendClientMessage(const MessageType &message)
 			{
@@ -175,6 +195,9 @@ namespace teleport
 			std::string remoteIP;
 			double mTimeSinceLastServerComm = 0;
 			std::vector<avs::InputDefinition> inputDefinitions;
+
+			WebspaceLoaction webspaceLocation = WebspaceLoaction::LOBBY;
+			ConnectionRequest connectionRequest = ConnectionRequest::NO_CHANGE;
 		};
 	}
 }

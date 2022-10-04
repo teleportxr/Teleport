@@ -1273,7 +1273,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		
 		
 		avs::Result result = clientPipeline.pipeline.process();
-		if (result == avs::Result::Network_Disconnection)
+		if (result == avs::Result::Network_Disconnection 
+			|| sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER)
 		{
 			sessionClient->Disconnect(0);
 			return;
@@ -1291,14 +1292,17 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	else
 	{
 		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
+		bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 		if (canConnect && sessionClient->Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT);
-			gui.SetConnecting(false);
-			canConnect=false;
+			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 			gui.Hide();
 		}
 	}
+
+	gui.SetConnecting(sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER);
+	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLoaction::SERVER);
 
 	if (!have_headset)
 	{
@@ -1382,7 +1386,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case 'K':
 			if(sessionClient->IsConnected())
 				sessionClient->Disconnect(0);
-			canConnect=!canConnect;
+			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 			break;
 		case 'M':
 			RenderMode++;
@@ -1794,35 +1798,20 @@ void Renderer::SetServer(const char *ip_port)
 	config.StoreRecentURL(ip_port);
 }
 
-void Renderer::CancelConnectButtonHandler()
-{
-	//SetServer("");
-	canConnect = false;
-}
-
 void Renderer::ConnectButtonHandler(const std::string& url)
 {
 	SetServer(url.c_str());
-	/*size_t pos = url.find(":");
-	if (pos < url.length())
-	{
-		std::string port_str = url.substr(pos + 1, url.length() - pos - 1);
-		server_discovery_port = atoi(port_str.c_str());
-		std::string url_str = url.substr(0, pos);
-		server_ip = url_str;
-	}
-	else
-	{
-		server_ip = url;
-	}*/
-	canConnect = true;
+	sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 }
 
+void Renderer::CancelConnectButtonHandler()
+{
+	sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER;
+}
 
 void Renderer::RemoveView(int)
 {
 }
-
 
 void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
@@ -1835,6 +1824,7 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = clientPipeline.source.getCounterValues();
 	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
+	bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;

@@ -60,7 +60,11 @@ namespace teleport
 		}
 		bool SetConnecting(bool c)
 		{
-			return connecting=c;
+			return connecting = c;
+		}
+		bool SetConnected(bool c)
+		{
+			return connected = c;
 		}
 		void SetServerIPs(const std::vector<std::string> &server_ips);
 		avs::uid GetSelectedServer() const;
@@ -85,8 +89,9 @@ namespace teleport
 		std::vector<std::string> server_ips;
 		std::function<void(const std::string&)> connectHandler;
 		std::function<void()> cancelConnectHandler;
-		bool visible	= false;
-		bool connecting	=false;
+		bool visible = false;
+		bool connecting = false;
+		bool connected = false;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();

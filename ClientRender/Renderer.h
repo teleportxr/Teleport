@@ -186,7 +186,6 @@ namespace clientrender
 		unsigned long long receivedInitialPos = 0;
 		unsigned long long receivedRelativePos = 0;
 		bool videoPosDecoded=false;
-		bool canConnect=true;
 		vec3 videoPos;
 
 		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
