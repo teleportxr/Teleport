@@ -15,6 +15,7 @@ namespace teleport
 			void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext ) override;
 		protected:
 			avs::DecoderBackendInterface* CreateVideoDecoder() override;
+			avs::DecoderStatus GetVideoDecoderStatus() override;
 			VideoDecoderBackend *videoDecoderBackend= nullptr;
 		};
 	}

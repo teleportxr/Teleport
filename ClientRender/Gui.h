@@ -4,6 +4,7 @@
 #include "Platform/CrossPlatform/DeviceContext.h"
 #include "ClientRender/NodeManager.h"
 #include "ClientRender/GeometryCache.h"
+#include "libavstream/decoders/dec_interface.hpp"
 #include "TeleportClient/Config.h"
 #include <functional>
 #ifdef __ANDROID__
@@ -66,6 +67,8 @@ namespace teleport
 		{
 			return connected = c;
 		}
+		void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
+		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
 		void SetServerIPs(const std::vector<std::string> &server_ips);
 		avs::uid GetSelectedServer() const;
 		avs::uid GetSelectedUid() const;
@@ -92,6 +95,7 @@ namespace teleport
 		bool visible = false;
 		bool connecting = false;
 		bool connected = false;
+		avs::DecoderStatus videoStatus;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();

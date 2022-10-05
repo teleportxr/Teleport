@@ -28,6 +28,7 @@
 #include <libavstream/surfaces/surface_vulkan.hpp>
 #include "Platform/Vulkan/Texture.h"
 #include "Platform/Vulkan/RenderPlatform.h"
+#include "Platform/External/magic_enum/include/magic_enum.hpp"
 #endif
 
 
@@ -1303,6 +1304,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 
 	gui.SetConnecting(sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER);
 	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLoaction::SERVER);
+	gui.SetVideoDecoderStatus(GetVideoDecoderStatus());
 
 	if (!have_headset)
 	{
@@ -1870,6 +1872,10 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
 		gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
+		std::string str = "Decoder Status: ";
+		str += std::string(magic_enum::enum_name(status));
+		gui.LinePrint(str.c_str(), white);
 		gui.DrawTexture(ti->texture);
 	}
 	else if(show_osd== clientrender::GEOMETRY_OSD)

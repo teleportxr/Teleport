@@ -44,6 +44,14 @@ avs::DecoderBackendInterface* AndroidRenderer::CreateVideoDecoder()
 	return videoDecoderBackend;
 }
 
+avs::DecoderStatus AndroidRenderer::GetVideoDecoderStatus()
+{
+	avs::DecoderStatus status = avs::DecoderStatus::DecoderUnavailable;
+	if (videoDecoderBackend)
+		status = videoDecoderBackend->GetDecoderStatus();
+	return status;
+}
+
 void AndroidRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	if(videoDecoderBackend)

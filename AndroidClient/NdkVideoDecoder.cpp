@@ -3,6 +3,7 @@
 #include <media/NdkMediaFormat.h>
 #include <media/NdkMediaCodec.h>
 
+#include <AndroidClient/VideoDecoderBackend.h>
 #include <Platform/Vulkan/Texture.h>
 #include <Platform/Vulkan/EffectPass.h>
 #include <Platform/Vulkan/RenderPlatform.h>
@@ -114,8 +115,6 @@ NdkVideoDecoder::NdkVideoDecoder(VideoDecoderBackend* d, avs::VideoCodec codecTy
 {
 	this->videoDecoder = d;
 	this->codecType = codecType;
-
-	
 }
 
 NdkVideoDecoder::~NdkVideoDecoder()
@@ -220,6 +219,8 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	imageListener.context = this;
 	imageListener.onImageAvailable = onAsyncImageAvailable;
 	AMEDIA_CHECK(AImageReader_setImageListener(imageReader, &imageListener));
+
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecoderAvailable;
 	
 	//Start Async thread
 	stopProcessBuffersThread = false;
@@ -249,7 +250,8 @@ void NdkVideoDecoder::Shutdown()
 	AMediaCodec_stop(decoder);
 	AMediaCodec_delete(decoder);
 	decoder = nullptr;
-	decoderConfigured = false;
+	decoderConfigured = false; 
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecoderUnavailable;
 
 	displayRequests = 0;
 
@@ -263,6 +265,8 @@ void NdkVideoDecoder::Shutdown()
 
 bool NdkVideoDecoder::Decode(std::vector<uint8_t>& buffer, avs::VideoPayloadType payloadType, bool lastPayload)
 {
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::ReceivingVideoStream;
+
 	if (!decoderConfigured)
 	{
 		NDK_VIDEO_DECODER_LOG_MSG_CERR("VideoDecoder: Cannot decode buffer: not configured");
@@ -306,6 +310,7 @@ bool NdkVideoDecoder::Decode(std::vector<uint8_t>& buffer, avs::VideoPayloadType
 	inputBuffer.insert(inputBuffer.end(), buffer.begin(), buffer.end());
 	
 	int32_t bufferId = QueueInputBuffer(inputBuffer, payloadFlags, lastPayload);
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::QueuingVideoStreamBuffer;
 	if (lastPayload && bufferId >= 0)
 	{
 		displayRequests++;
@@ -392,6 +397,8 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	int l = (targetTexture->length + 7) / 8;
 	renderPlatform->DispatchCompute(deviceContext, w, l, 1);
 	renderPlatform->UnapplyPass(deviceContext);
+
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::FrameAvailable;
 }
 
 //Callbacks
@@ -435,6 +442,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	if (!reader)
 		return;
 #endif
+	ndkVideoDecoder->videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecodingVideoStream;
 
 	ndkVideoDecoder->reflectedTextureIndex = (ndkVideoDecoder->reflectedTextureIndex + 1) % ndkVideoDecoder->reflectedTextures.size();
 	NDK_VIDEO_DECODER_LOG_FMT_COUT("onAsyncImageAvailable {0}", ndkVideoDecoder->reflectedTextureIndex);
@@ -453,6 +461,8 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 		ndkVideoDecoder->reflectedTextureIndex--;
 		return;
 	}
+
+	ndkVideoDecoder->videoDecoder->GetDecoderStatus() = avs::DecoderStatus::ProcessingOutputFrameFromDecoder;
 
 	/*int32_t numPlanes = 0;
 	AImage_getNumberOfPlanes(reflectedTexture.nextImage, &numPlanes);
@@ -626,12 +636,13 @@ void NdkVideoDecoder::processInputBuffers()
 		NDK_VIDEO_DECODER_LOG_MSG_CERR("Out of buffers, queueing.");
 		return;
 	}
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::AccumulatingVideoStreamBuffers;
+
 	DataBuffer& dataBuffer = dataBuffers.front();
 	bool send = dataBuffer.send;
 	bool lastpacket = dataBuffer.send;
 	send = false;
 	InputBuffer& inputBuffer = nextInputBuffers[nextInputBufferIndex];
-
 
 	size_t buffer_size = 0;
 	size_t copiedSize = 0;
@@ -679,6 +690,7 @@ void NdkVideoDecoder::processInputBuffers()
 			__android_log_print(ANDROID_LOG_INFO, "processInputBuffers", "AMediaCodec_getInputBuffer failed.");
 			return;
 		}
+		videoDecoder->GetDecoderStatus() = avs::DecoderStatus::PassingVideoStreamToDecoder;
 		//if(lastpacket)
 		//	__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","Last Packet.");
 		verbose_log_print(ANDROID_LOG_INFO, "processInputBuffers", "buffer: %d SENT %zu bytes with flag %d.", inputBuffer.inputBufferId, inputBuffer.offset, inputBuffer.flags);
