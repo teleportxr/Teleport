@@ -88,7 +88,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
 		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d", remote_ip, remote.port);
 		remoteIP=remote_ip;
-		webspaceLocation = WebspaceLoaction::SERVER;
+		webspaceLocation = WebspaceLocation::SERVER;
 		return true;
 	}
 
@@ -157,7 +157,7 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 		clientID = 0;
 	}
 
-	webspaceLocation = WebspaceLoaction::LOBBY;
+	webspaceLocation = WebspaceLocation::LOBBY;
 }
 
 void SessionClient::SetPeerTimeout(uint timeout)

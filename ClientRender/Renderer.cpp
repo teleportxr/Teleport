@@ -631,11 +631,11 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	// We must deactivate the depth buffer here, in order to use it as a texture:
 	//hdrFramebuffer->DeactivateDepth(deviceContext);
 	if (show_video)
-		{
-			int W = hdrFramebuffer->GetWidth();
-			int H = hdrFramebuffer->GetHeight();
-			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
-		}
+	{
+		int W = hdrFramebuffer->GetWidth();
+		int H = hdrFramebuffer->GetHeight();
+		renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
+	}
 	static int lod=0;
 	static char tt=0;
 	tt--;
@@ -1303,7 +1303,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	}
 
 	gui.SetConnecting(sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER);
-	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLoaction::SERVER);
+	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLocation::SERVER);
 	gui.SetVideoDecoderStatus(GetVideoDecoderStatus());
 
 	if (!have_headset)

@@ -58,7 +58,7 @@ namespace teleport
 		class SessionClient
 		{
 		public:
-			enum class WebspaceLoaction : uint8_t
+			enum class WebspaceLocation : uint8_t
 			{
 				UNKNOWN,
 				LOBBY,
@@ -125,7 +125,7 @@ namespace teleport
 				return mSentResourceRequests;
 			};
 
-			const WebspaceLoaction& GetWebspaceLocation() { return webspaceLocation; }
+			const WebspaceLocation& GetWebspaceLocation() { return webspaceLocation; }
 			ConnectionRequest& GetConnectionRequest() { return connectionRequest; }
 
 		private:
@@ -196,7 +196,7 @@ namespace teleport
 			double mTimeSinceLastServerComm = 0;
 			std::vector<avs::InputDefinition> inputDefinitions;
 
-			WebspaceLoaction webspaceLocation = WebspaceLoaction::LOBBY;
+			WebspaceLocation webspaceLocation = WebspaceLocation::LOBBY;
 			ConnectionRequest connectionRequest = ConnectionRequest::NO_CHANGE;
 		};
 	}

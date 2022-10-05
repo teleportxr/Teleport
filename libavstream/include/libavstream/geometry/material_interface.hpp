@@ -174,6 +174,8 @@ namespace avs
 
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
 
+		bool cubemap=false;
+
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Texture& texture)
 		{

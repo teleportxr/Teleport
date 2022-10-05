@@ -1276,7 +1276,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 
 	projection_views.resize(view_count);
 	spacewarp_views.resize(view_count);
-	static bool do_spacewarp=true;
+	static bool do_spacewarp=false;
 
 	// And now we'll iterate through each viewpoint, and render it!
 	for (uint32_t i = 0; i < view_count; i++)
