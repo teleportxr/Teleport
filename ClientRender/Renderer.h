@@ -290,6 +290,7 @@ namespace clientrender
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 		
 		virtual avs::DecoderBackendInterface* CreateVideoDecoder();
+		virtual avs::DecoderStatus GetVideoDecoderStatus() { return avs::DecoderStatus::DecoderUnavailable; }
 		// Implement SessionCommandInterface
 		bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 		void OnVideoStreamClosed() override;

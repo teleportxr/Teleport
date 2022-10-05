@@ -37,6 +37,8 @@ namespace teleport
 
 			//! Copy incoming video to the main video texture.
 			void CopyVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+			std::atomic<avs::DecoderStatus>& GetDecoderStatus() { return mDecoderStatus; }
+
 		private:
 			void InitializeVideoDecoder(platform::crossplatform::Texture* colorSurfaceTexture, platform::crossplatform::Texture* alphaSurfaceTexture);
 			void ShutdownVideoDecoder();
@@ -51,8 +53,9 @@ namespace teleport
 			DecodeEventInterface* mEventInterface = nullptr;
 
 			NdkVideoDecoder* mColorDecoder = nullptr;
-			//NdkVideoDecoder *mAlphaDecoder=nullptr;
-
+			//NdkVideoDecoder *mAlphaDecoder=nullptr;			
+			
+			std::atomic<avs::DecoderStatus> mDecoderStatus = avs::DecoderStatus::DecoderUnavailable;
 		};
 	}
 }
