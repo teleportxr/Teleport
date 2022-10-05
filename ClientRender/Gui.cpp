@@ -176,10 +176,10 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_FOLDER_O);			
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);		
 		builder.AddText(ICON_FK_COG);				
-		builder.AddText(ICON_FK_REPEAT);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
+		builder.AddText(ICON_FK_ARROW_RIGHT);									
 		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
 		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
@@ -867,7 +867,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				cancelConnectHandler();
 			}
 			ImGui::SameLine();
-			if (ImGui::Button(ICON_FK_FOLDER_O,ImVec2(64,32)))
+			if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(64, 32)))
 			{
 				show_bookmarks=!show_bookmarks;
 				selected_url="";
@@ -906,16 +906,18 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				{
 					ImGui::SetKeyboardFocusHere();
 				}
-				if (ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))//,ImGuiInputTextFlags))
+				ImGui::PushItemWidth(ImGui::GetWindowWidth() - 4 * 80);
+				if (ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))
 				{
 					current_url = buf;
 				}
+				ImGui::PopItemWidth();
 				refocus++;
 
-				ImGui::SameLine(ImGui::GetWindowWidth()-2*70);
+				ImGui::SameLine();
 				if (!connecting)
 				{
-					if (ImGui::Button(ICON_FK_REPEAT, ImVec2(64, 32)))
+					if (ImGui::Button(ICON_FK_ARROW_RIGHT, ImVec2(64, 32)))
 					{
 						connectHandler(current_url);
 					}
@@ -928,8 +930,8 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					}
 				}
 
-				ImGui::SameLine(ImGui::GetWindowWidth()-1*70);
-				if (ImGui::Button(ICON_FK_COG,ImVec2(64,32)))
+				ImGui::SameLine();
+				if (ImGui::Button(ICON_FK_COG, ImVec2(64, 32)))
 				{
 					show_options=!show_options;
 				}
