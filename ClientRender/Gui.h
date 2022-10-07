@@ -79,6 +79,8 @@ namespace teleport
 		void Select(avs::uid u);
 		void SelectPrevious();
 		void SelectNext();
+		// Replaces Windows GetCursorPos if necessary.
+		static int GetCursorPos(long p[2]) ;
 	protected:
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);

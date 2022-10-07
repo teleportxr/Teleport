@@ -28,8 +28,8 @@
 #include <libavstream/surfaces/surface_vulkan.hpp>
 #include "Platform/Vulkan/Texture.h"
 #include "Platform/Vulkan/RenderPlatform.h"
-#include "Platform/External/magic_enum/include/magic_enum.hpp"
 #endif
+#include "Platform/External/magic_enum/include/magic_enum.hpp"
 
 
 avs::Timestamp clientrender::platformStartTimestamp ;

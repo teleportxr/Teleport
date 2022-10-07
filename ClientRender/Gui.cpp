@@ -1,7 +1,7 @@
 
 #include <imgui.h>
 #ifdef _MSC_VER
-#include "backends/imgui_impl_win32.h"
+#include "Platform/ImGui/imgui_impl_win32.h"
 #endif
 #ifdef __ANDROID__
 #include "backends/imgui_impl_android.h"
@@ -133,6 +133,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 #else
 	ImGui_ImplAndroid_Init(platformWindow);
 #endif
+	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 	ImGui_ImplPlatform_Init(r);
 
 	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
@@ -351,6 +352,14 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *sear
 		}
 		ImGui::TreePop();
 	}
+}
+
+int Gui::GetCursorPos(long p[2]) 
+{
+	ImGuiIO& io = ImGui::GetIO();
+	p[0]=(long)io.MousePos.x;
+	p[1]=(long)io.MousePos.y;
+	return 1;
 }
 
 static int in_debug_gui = 0;
@@ -751,10 +760,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	if (have_vr_device)
-		ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
-	else
-		ImGui_ImplPlatform_Update3DMousePos();
 	ImGuiIO& io = ImGui::GetIO();
 	static bool in3d=true;
 	static float window_width=720.0f;
@@ -764,7 +769,14 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
 	static int refocus=0;
 	bool show_hide=true;
+	if (have_vr_device)
+		ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+	else
+		ImGui_ImplPlatform_Update3DMousePos();
+	ImVec2 mousePos=io.MousePos;
 	ImGui::NewFrame();
+	// restore mouse pos here to override ImGui's internal shenanigans.
+	io.MousePos=mousePos;
 	{
 		bool show_keyboard = true;
 		ImGuiWindowFlags windowFlags =0;
@@ -974,6 +986,9 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					ImGui::Text("  ");
 					ImGui::SameLine();
 					KeyboardLine("qwertyuiop");
+					ImGui::SameLine();
+					ImGui::Text(fmt::format("{0: .0f} {1: .0f}",io.MousePos.x,io.MousePos.y).c_str());
+					//Sleep(1000);
 					ImGui::Text("	");
 					ImGui::SameLine();
 					KeyboardLine("asdfghjkl:");
