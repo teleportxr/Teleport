@@ -63,7 +63,7 @@ namespace clientrender
 		static auto tBegin = avs::Platform::getTimestamp();
 		auto ts = avs::Platform::getTimestamp();
 		double ms=avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts);
-		setAnimation(animationID,ms);
+		setAnimation(animationID,(uint64_t)ms);
 	}
 	
 		

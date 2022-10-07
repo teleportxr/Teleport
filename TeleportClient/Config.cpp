@@ -102,7 +102,7 @@ void Config::SaveBookmarks()
 			str+=fmt::format("{0} {1}\r\n",b.url,b.title);
 		}
 		std::string filename=GetStoragePath()+"config/bookmarks.txt"s;
-		fileLoader->Save(str.data(),str.length(),filename.c_str(),true);
+		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 	}
 }
 
@@ -133,7 +133,7 @@ void Config::SaveOptions()
 		string str;
 		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
 		std::string filename=GetStoragePath()+"config/options.txt"s;
-		fileLoader->Save(str.data(),str.length(),filename.c_str(),true);
+		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 		LoadOptions();
 	}
 }
@@ -163,7 +163,7 @@ void Config::StoreRecentURL(const char *r)
 			str+=fmt::format("{0}\r\n",i);
 		}
 		std::string filename=GetStoragePath()+"config/recent_servers.txt";
-		fileLoader->Save(str.data(),str.length(),filename.c_str(),true);
+		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 	}
 }
 
