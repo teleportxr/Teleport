@@ -1243,7 +1243,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					srcPtr+=sizeof(uint32_t);
 					dataSize-=sizeof(uint32_t);
 				}
-				imageOffsets.push_back(transcoding.data.size());
+				imageOffsets.push_back((uint32_t)transcoding.data.size());
 				std::vector<uint32_t> imageSizes(num_images);
 				for(int i=0;i<num_images;i++)
 				{
