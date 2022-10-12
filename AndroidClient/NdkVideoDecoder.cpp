@@ -28,6 +28,12 @@ using namespace android;
 #define verbose_log_print(...)
 #endif
 
+template<typename _Ty>
+constexpr _Ty operator|(_Ty lhs, _Ty rhs)
+{
+	return static_cast<_Ty>(static_cast<typename std::underlying_type<_Ty>::type>(lhs) | static_cast<typename std::underlying_type<_Ty>::type>(rhs));
+}
+
 void SetThreadName(const char* threadName)
 {
 	prctl(PR_SET_NAME, threadName, 0, 0, 0);
@@ -220,7 +226,7 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	imageListener.onImageAvailable = onAsyncImageAvailable;
 	AMEDIA_CHECK(AImageReader_setImageListener(imageReader, &imageListener));
 
-	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecoderAvailable;
+	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::DecoderAvailable;
 	
 	//Start Async thread
 	stopProcessBuffersThread = false;
@@ -251,7 +257,7 @@ void NdkVideoDecoder::Shutdown()
 	AMediaCodec_delete(decoder);
 	decoder = nullptr;
 	decoderConfigured = false; 
-	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecoderUnavailable;
+	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::DecoderUnavailable;
 
 	displayRequests = 0;
 
@@ -265,7 +271,7 @@ void NdkVideoDecoder::Shutdown()
 
 bool NdkVideoDecoder::Decode(std::vector<uint8_t>& buffer, avs::VideoPayloadType payloadType, bool lastPayload)
 {
-	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::ReceivingVideoStream;
+	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::ReceivingVideoStream;
 
 	if (!decoderConfigured)
 	{
@@ -310,7 +316,7 @@ bool NdkVideoDecoder::Decode(std::vector<uint8_t>& buffer, avs::VideoPayloadType
 	inputBuffer.insert(inputBuffer.end(), buffer.begin(), buffer.end());
 	
 	int32_t bufferId = QueueInputBuffer(inputBuffer, payloadFlags, lastPayload);
-	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::QueuingVideoStreamBuffer;
+	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::QueuingVideoStreamBuffer;
 	if (lastPayload && bufferId >= 0)
 	{
 		displayRequests++;
@@ -398,7 +404,7 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	renderPlatform->DispatchCompute(deviceContext, w, l, 1);
 	renderPlatform->UnapplyPass(deviceContext);
 
-	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::FrameAvailable;
+	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::FrameAvailable;
 }
 
 //Callbacks
@@ -442,7 +448,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	if (!reader)
 		return;
 #endif
-	ndkVideoDecoder->videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecodingVideoStream;
+	ndkVideoDecoder->videoDecoder->GetDecoderStatus() = ndkVideoDecoder->videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::DecodingVideoStream;
 
 	ndkVideoDecoder->reflectedTextureIndex = (ndkVideoDecoder->reflectedTextureIndex + 1) % ndkVideoDecoder->reflectedTextures.size();
 	NDK_VIDEO_DECODER_LOG_FMT_COUT("onAsyncImageAvailable {0}", ndkVideoDecoder->reflectedTextureIndex);
@@ -462,7 +468,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 		return;
 	}
 
-	ndkVideoDecoder->videoDecoder->GetDecoderStatus() = avs::DecoderStatus::ProcessingOutputFrameFromDecoder;
+	ndkVideoDecoder->videoDecoder->GetDecoderStatus() = ndkVideoDecoder->videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::ProcessingOutputFrameFromDecoder;
 
 	/*int32_t numPlanes = 0;
 	AImage_getNumberOfPlanes(reflectedTexture.nextImage, &numPlanes);
@@ -636,7 +642,7 @@ void NdkVideoDecoder::processInputBuffers()
 		NDK_VIDEO_DECODER_LOG_MSG_CERR("Out of buffers, queueing.");
 		return;
 	}
-	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::AccumulatingVideoStreamBuffers;
+	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::AccumulatingVideoStreamBuffers;
 
 	DataBuffer& dataBuffer = dataBuffers.front();
 	bool send = dataBuffer.send;
@@ -690,7 +696,7 @@ void NdkVideoDecoder::processInputBuffers()
 			__android_log_print(ANDROID_LOG_INFO, "processInputBuffers", "AMediaCodec_getInputBuffer failed.");
 			return;
 		}
-		videoDecoder->GetDecoderStatus() = avs::DecoderStatus::PassingVideoStreamToDecoder;
+		videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::PassingVideoStreamToDecoder;
 		//if(lastpacket)
 		//	__android_log_print(ANDROID_LOG_INFO,"processInputBuffers","Last Packet.");
 		verbose_log_print(ANDROID_LOG_INFO, "processInputBuffers", "buffer: %d SENT %zu bytes with flag %d.", inputBuffer.inputBufferId, inputBuffer.offset, inputBuffer.flags);

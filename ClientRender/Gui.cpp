@@ -130,10 +130,10 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	SetPlatformWindow(w);
 #ifdef _MSC_VER
 	ImGui_ImplWin32_Init(GetActiveWindow());
+	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 #else
 	ImGui_ImplAndroid_Init(platformWindow);
 #endif
-	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 	ImGui_ImplPlatform_Init(r);
 
 	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().

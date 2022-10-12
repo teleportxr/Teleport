@@ -485,7 +485,7 @@ void SetRenderPose(platform::crossplatform::GraphicsDeviceContext &deviceContext
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&pose.position);
 	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
-	platform::math::Quaternion q1 = (const float*)&pose.orientation;http://collider.com/
+	platform::math::Quaternion q1 = (const float*)&pose.orientation;//http://collider.com/
 	auto q_rel = q1/q0;
 	globalOrientation.SetOrientation(q_rel);
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
@@ -1713,6 +1713,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	lod = lod % 8;
 	if(show_cubemaps)
 	{
+		//renderPlatform->DrawCubemap(deviceContext, videoTexture,		  +0.0f, 0.0f, 1.0f, 1.f, 1.f, 0.0f);
 		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 	}
@@ -1819,6 +1820,20 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 {
 	if (!show_osd||gui.HasFocus())
 		return;
+
+	//Set up ViewStruct
+	platform::crossplatform::ViewStruct& viewStruct = deviceContext.viewStruct;
+	viewStruct.proj = platform::crossplatform::Camera::MakeDepthReversedProjectionMatrix(1.0f, 1.0f, 0.001f, 100.0f);
+	platform::math::SimulOrientation globalOrientation;
+	// global pos/orientation:
+	globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.localPose.position);
+	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
+	platform::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.localPose.orientation;
+	auto q_rel = q1 / q0;
+	globalOrientation.SetOrientation(q_rel);
+	viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
+	viewStruct.Init();
+	
 	gui.setGeometryCache(&geometryCache);
 	gui.BeginDebugGui(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -1876,7 +1891,24 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 		std::string str = "Decoder Status: ";
 		str += std::string(magic_enum::enum_name(status));
 		gui.LinePrint(str.c_str(), white);
-		gui.DrawTexture(ti->texture);
+		if (ti)
+			gui.DrawTexture(ti->texture);
+	}
+	else if (show_osd == clientrender::CUBEMAP_OSD)
+	{
+		gui.LinePrint(platform::core::QuickFormat("Cubemap Texture"), white);
+
+		static platform::crossplatform::Texture* debugCubemapTexture = nullptr;
+		if (!debugCubemapTexture)
+			debugCubemapTexture = renderPlatform->CreateTexture("debugCubemapTexture");
+		debugCubemapTexture->ensureTexture2DSizeAndFormat(renderPlatform, 512, 512, 1, platform::crossplatform::RGBA_8_UNORM, false, true);
+
+		debugCubemapTexture->activateRenderTarget(deviceContext);
+		renderPlatform->Clear(deviceContext, vec4(0.0f, 0.0f, 0.0f, 1.0f)); //Add in the alpha.
+		renderPlatform->DrawCubemap(deviceContext, videoTexture, 0.0f, 0.0f, 1.9f, 1.0f, 1.0f, 0.0f);
+		debugCubemapTexture->deactivateRenderTarget(deviceContext);
+
+		gui.DrawTexture(debugCubemapTexture);
 	}
 	else if(show_osd== clientrender::GEOMETRY_OSD)
 	{

@@ -270,7 +270,7 @@ void GeometryStore::clear(bool freeMeshBuffers)
 	texturesToCompress.clear();
 	lightNodes.clear();
 	std::filesystem::path p(cachePath);
-	for (auto const& dir_entry : std::filesystem::recursive_directory_iterator{ p })
+	for (auto const& dir_entry : std::filesystem::directory_iterator(p))
 	{
 		std::filesystem::remove_all(dir_entry);
 	}
