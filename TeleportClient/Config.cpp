@@ -20,26 +20,9 @@ void Config::LoadConfigFromIniFile()
 	SI_Error rc = ini.LoadData(str);
 	if(rc == SI_OK)
 	{
-		string server_ip = ini.GetValue("", "SERVER_IP", TELEPORT_SERVER_IP);
-		string ip_list;
-		ip_list = ini.GetValue("", "SERVER_IP", "");
-
-		size_t pos = 0;
-		string token;
-		do
-		{
-			pos = ip_list.find(",");
-			string ip = ip_list.substr(0, pos);
-			recent_server_urls.push_back(ip);
-			ip_list.erase(0, pos + 1);
-		} while (pos != string::npos);
-
 		enable_vr = ini.GetLongValue("", "ENABLE_VR", enable_vr);
 		dev_mode = ini.GetLongValue("", "DEV_MODE", dev_mode);
 		log_filename = ini.GetValue("", "LOG_FILE", "TeleportClient.log");
-
-		render_local_offline = ini.GetLongValue("", "RENDER_LOCAL_OFFLINE", render_local_offline);
-
 	}
 	else
 	{
@@ -60,7 +43,8 @@ void Config::AddBookmark(const Bookmark &b)
 
 void Config::LoadBookmarks()
 {
-	string str;
+	string bookmarks_str;
+	std::string recent_str;
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	if(fileLoader)
 	{
@@ -69,12 +53,14 @@ void Config::LoadBookmarks()
 		std::string filename=GetStoragePath()+"config/bookmarks.txt"s;
 		fileLoader->AcquireFileContents(ptr,bytelen,filename.c_str(),true);
 		if(ptr)
-			str=(char*)ptr;
+			bookmarks_str=(char*)ptr;
 		fileLoader->ReleaseFileContents(ptr);
+
+		recent_str=fileLoader->LoadAsString((GetStoragePath()+"config/recent_servers.txt"s).c_str());
 	}
-	if(str.length())
+	if(bookmarks_str.length())
 	{
-		std::istringstream f(str);
+		std::istringstream f(bookmarks_str);
 		string line;    
 		while (std::getline(f, line))
 		{
@@ -89,6 +75,15 @@ void Config::LoadBookmarks()
 		bookmarks.push_back({"test.teleportvr.io","test.teleportvr.io"});
 		SaveBookmarks();
 	}
+	if(recent_str.length())
+	{
+		std::istringstream f(recent_str);
+		string line;    
+		while (std::getline(f, line))
+		{
+			recent_server_urls.push_back(line);
+		}
+	}
 }
 
 void Config::SaveBookmarks()
@@ -99,10 +94,10 @@ void Config::SaveBookmarks()
 		string str;
 		for(const auto &b:bookmarks)
 		{
-			str+=fmt::format("{0} {1}\r\n",b.url,b.title);
+			str+=fmt::format("{0} {1}\n",b.url,b.title);
 		}
 		std::string filename=GetStoragePath()+"config/bookmarks.txt"s;
-		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
+		fileLoader->Save(str.data(),(uint32_t)str.length(),filename.c_str(),true);
 	}
 }
 
@@ -160,7 +155,7 @@ void Config::StoreRecentURL(const char *r)
 		string str;
 		for(const auto &i:recent_server_urls)
 		{
-			str+=fmt::format("{0}\r\n",i);
+			str+=fmt::format("{0}\n",i);
 		}
 		std::string filename=GetStoragePath()+"config/recent_servers.txt";
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);

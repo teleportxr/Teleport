@@ -29,7 +29,7 @@ or if you have already cloned the main repo,
 
 ## Building the PC Client
 
-1. Build pthread.2019.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
+1. Build pthread.2019.sln in "\thirdparty\srt\submodules\pthread-win32\windows\VS2019" in Release x64.
 	* You may retarget the projects to a more recent version of the build tools.
 2. In firstparty/Platform, run Setup.py to build required libraries fmt and glfw.
 3. Using CMakeGUI:

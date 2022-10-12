@@ -196,6 +196,7 @@ namespace avs
 			
 			out	<<" " << texture.dataSize
 				<<" " << texture.valueScale
+				<<" " << int(texture.cubemap?1:0)
 				<< std::endl;
 
 			size_t characterCount = texture.dataSize;
@@ -237,6 +238,9 @@ namespace avs
 			in >> texture.sampler_uid;
 			in >> texture.dataSize;
 			in >> texture.valueScale;
+			int c=0;
+			in >> c;
+			texture.cubemap=c!=0;
 
 			{
 				//Discard new line.

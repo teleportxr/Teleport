@@ -212,13 +212,18 @@ void Gui::RecompileShaders()
 void Gui::ShowHide()
 {
 	if(visible)
+	{
 		Hide();
+	}
 	else
+	{
 		Show();
+	}
 }
 
 void Gui::Show()
 {
+	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 	visible			= true;
 	menu_pos		= view_pos;
 	static float z_offset = -.3f;
@@ -232,6 +237,7 @@ void Gui::Show()
 
 void Gui::Hide()
 {
+	ImGui_ImplWin32_SetFunction_GetCursorPos(nullptr);
 	config->SaveOptions();
 	visible = false;
 }
@@ -865,6 +871,13 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::RadioButton("White", &e, 0);
 				ImGui::SameLine();
 				ImGui::RadioButton("Neon", &e, 1);
+				#if TELEPORT_INTERNAL_CHECKS
+                ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::LabelText("##labelGeometryOffline","Geometry Visible Offline");
+				ImGui::TableNextColumn();
+				config->options.showGeometryOffline=ImGui::Checkbox("##showGeometryOffline",&config->options.showGeometryOffline);
+				#endif
 				if((client::LobbyView)e!=config->options.lobbyView)
 				{
 					config->options.lobbyView=(client::LobbyView)e;
@@ -902,7 +915,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 						else if(!ImGui::IsMouseDown(0)&&selected_url==b.url)
 						{
 							current_url=b.url;
-							memcpy(buf,current_url.c_str(),std::min((size_t)499,current_url.size()));
+							memcpy(url_buffer,current_url.c_str(),std::min((size_t)499,current_url.size()));
 							connectHandler(b.url);
 							show_bookmarks=false;
 						}
@@ -919,9 +932,9 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					ImGui::SetKeyboardFocusHere();
 				}
 				ImGui::PushItemWidth(ImGui::GetWindowWidth() - 4 * 80);
-				if (ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))
+				if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
 				{
-					current_url = buf;
+					current_url = url_buffer;
 				}
 				ImGui::PopItemWidth();
 				refocus++;
@@ -986,8 +999,8 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					ImGui::Text("  ");
 					ImGui::SameLine();
 					KeyboardLine("qwertyuiop");
-					ImGui::SameLine();
-					ImGui::Text(fmt::format("{0: .0f} {1: .0f}",io.MousePos.x,io.MousePos.y).c_str());
+					//ImGui::SameLine();
+					//ImGui::Text(fmt::format("{0: .0f} {1: .0f}",io.MousePos.x,io.MousePos.y).c_str());
 					//Sleep(1000);
 					ImGui::Text("	");
 					ImGui::SameLine();
@@ -1031,8 +1044,8 @@ void Gui::SetServerIPs(const std::vector<std::string> &s)
 	server_ips=s;
 	if(server_ips.size())
 	{
-		memcpy(buf,server_ips[0].c_str(),std::min(500,(int)server_ips[0].size()+1));//,server_ips[0].size());
-		current_url = buf;
+		memcpy(url_buffer,server_ips[0].c_str(),std::min(500,(int)server_ips[0].size()+1));//,server_ips[0].size());
+		current_url = url_buffer;
 	}
 
 }

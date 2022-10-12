@@ -30,6 +30,7 @@ namespace teleport
 		struct Options
 		{
 			LobbyView lobbyView;
+			bool showGeometryOffline = false;
 		};
 		class Config
 		{
@@ -45,7 +46,6 @@ namespace teleport
 #else
 			bool dev_mode=false;
 #endif
-			bool render_local_offline = false;
 			std::string log_filename="TeleportClient.log";
 			
 			Options options;

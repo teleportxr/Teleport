@@ -57,6 +57,10 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources
 , std::vector<avs::LightNodeResources>& outLightResources,std::set<avs::uid>& genericTextureUids,int32_t minimumPriority) const
 {
+	for(const auto &r:streamedGenericTextureUids)
+	{
+		genericTextureUids.insert(r);
+	}
 	for (avs::uid nodeID : streamedNodeIDs)
 	{
 		avs::Node* node = geometryStore->getNode(nodeID);

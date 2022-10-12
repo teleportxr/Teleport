@@ -485,7 +485,7 @@ void SetRenderPose(platform::crossplatform::GraphicsDeviceContext &deviceContext
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&pose.position);
 	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
-	platform::math::Quaternion q1 = (const float*)&pose.orientation;//http://collider.com/
+	platform::math::Quaternion q1 = (const float*)&pose.orientation;
 	auto q_rel = q1/q0;
 	globalOrientation.SetOrientation(q_rel);
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
@@ -586,7 +586,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	vec4 white={1.f,1.f,1.f,1.f};
 	//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 	pbrConstants.drawDistance = lastSetupCommand.draw_distance;
-	if (sessionClient->IsConnected()||config.render_local_offline)
+	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
 		RenderLocalNodes(deviceContext,server_uid,geometryCache);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
@@ -623,7 +623,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		static bool override_have_vr_device=false;
 		gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
 	}
-	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.render_local_offline)
+	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.options.showGeometryOffline)
 	{	
 		pbrConstants.drawDistance = 1000.0f;
 		RenderLocalNodes(deviceContext, 0,localGeometryCache);
@@ -1069,7 +1069,19 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
 
 				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
-				pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+				// If lighting is via static textures.
+				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
+				{
+					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
+					if(t)
+					{
+						pbrEffect->SetTexture(deviceContext,"diffuseCubemap",t->GetSimulTexture());
+					}
+				}
+				else
+				{
+					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+				}
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
@@ -1716,6 +1728,11 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		//renderPlatform->DrawCubemap(deviceContext, videoTexture,		  +0.0f, 0.0f, 1.0f, 1.f, 1.f, 0.0f);
 		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+		auto t = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
+		if(t&&t->GetSimulTexture())
+		{
+			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), 0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+		}
 	}
 	//
 	{
@@ -1885,14 +1902,15 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 		clientrender::AVSTextureHandle th = avsTexture;
 		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-
-		gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
-		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
-		std::string str = "Decoder Status: ";
-		str += std::string(magic_enum::enum_name(status));
-		gui.LinePrint(str.c_str(), white);
-		if (ti)
+		if(ti)
+		{
+			gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+			avs::DecoderStatus status = gui.GetVideoDecoderStatus();
+			std::string str = "Decoder Status: ";
+			str += std::string(magic_enum::enum_name(status));
+			gui.LinePrint(str.c_str(), white);
 			gui.DrawTexture(ti->texture);
+		}
 	}
 	else if (show_osd == clientrender::CUBEMAP_OSD)
 	{

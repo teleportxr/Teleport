@@ -63,6 +63,11 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	TELEPORT_ASSERT(sizeof(setupCommand.clientDynamicLighting)==sizeof(clientDynamicLighting));
 	memcpy(&setupCommand.clientDynamicLighting,&clientDynamicLighting,sizeof(clientDynamicLighting));
 
+	// Set any static lighting textures to be required-streamable.
+	if(setupCommand.clientDynamicLighting.diffuseCubemapTexture)
+	{
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuseCubemapTexture);
+	}
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;

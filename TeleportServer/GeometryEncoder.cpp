@@ -754,6 +754,9 @@ namespace teleport
 				put(nameLength);
 				//Push name.
 				put((uint8_t*)texture->name.data(), nameLength);
+				
+				// TODO: make this a more generic texture type.
+				put(texture->cubemap);
 
 				//Push dimensions.
 				put(texture->width);
