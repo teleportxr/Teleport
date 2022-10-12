@@ -29,15 +29,15 @@ enum class DecodeFrequency
  */
 enum class DecoderStatus
 {
-	DecoderUnavailable, /*!< Decoder has not been set up. */
-	DecoderAvailable, /*!< Decoder is set up and ready to receive data. */
-	ReceivingVideoStream, /*!< Decoder is receiving video data from the server. */
-	QueuingVideoStreamBuffer, /*!< Decoder is storing the single received buffer for accumulation and processing. */
-	AccumulatingVideoStreamBuffers, /*!< Decoder is collecting multiple single buffers to assemble enough data for a frame. */
-	PassingVideoStreamToDecoder, /*!< Decoder is passing the completed frame data for decoding. */
-	DecodingVideoStream, /*!< Hardware or software accelerated decoding of the video stream data. */
-	ProcessingOutputFrameFromDecoder, /*!< Decoder is processing the output frame for use in graphics APIs. */
-	FrameAvailable /*!< Decoded video frame is available for use in graphics APIs. */
+	DecoderUnavailable					= 0x0000000, /*!< Decoder has not been set up. */
+	DecoderAvailable					= 0x0000001, /*!< Decoder is set up and ready to receive data. */
+	ReceivingVideoStream				= 0x0000002, /*!< Decoder is receiving video data from the server. */
+	QueuingVideoStreamBuffer			= 0x0000004, /*!< Decoder is storing the single received buffer for accumulation and processing. */
+	AccumulatingVideoStreamBuffers		= 0x0000008, /*!< Decoder is collecting multiple single buffers to assemble enough data for a frame. */
+	PassingVideoStreamToDecoder			= 0x0000010, /*!< Decoder is passing the completed frame data for decoding. */
+	DecodingVideoStream					= 0x0000020, /*!< Hardware or software accelerated decoding of the video stream data. */
+	ProcessingOutputFrameFromDecoder	= 0x0000040, /*!< Decoder is processing the output frame for use in graphics APIs. */
+	FrameAvailable						= 0x0000080, /*!< Decoded video frame is available for use in graphics APIs. */
 };
 
 /*!

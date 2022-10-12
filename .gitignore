@@ -11,3 +11,12 @@ bin
 *.bak
 teleport_commit.properties
 keystore.properties
+*.glsl
+*.spirv
+*.spv
+*.hlsl
+*.cso
+*.sfxo
+*.sfxb
+build_docs
+build_pc_client
