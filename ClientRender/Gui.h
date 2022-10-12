@@ -4,6 +4,7 @@
 #include "Platform/CrossPlatform/DeviceContext.h"
 #include "ClientRender/NodeManager.h"
 #include "ClientRender/GeometryCache.h"
+#include "libavstream/decoders/dec_interface.hpp"
 #include "TeleportClient/Config.h"
 #include <functional>
 #ifdef __ANDROID__
@@ -60,8 +61,14 @@ namespace teleport
 		}
 		bool SetConnecting(bool c)
 		{
-			return connecting=c;
+			return connecting = c;
 		}
+		bool SetConnected(bool c)
+		{
+			return connected = c;
+		}
+		void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
+		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
 		void SetServerIPs(const std::vector<std::string> &server_ips);
 		avs::uid GetSelectedServer() const;
 		avs::uid GetSelectedUid() const;
@@ -72,6 +79,8 @@ namespace teleport
 		void Select(avs::uid u);
 		void SelectPrevious();
 		void SelectNext();
+		// Replaces Windows GetCursorPos if necessary.
+		static int GetCursorPos(long p[2]) ;
 	protected:
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
@@ -85,8 +94,10 @@ namespace teleport
 		std::vector<std::string> server_ips;
 		std::function<void(const std::string&)> connectHandler;
 		std::function<void()> cancelConnectHandler;
-		bool visible	= false;
-		bool connecting	=false;
+		bool visible = false;
+		bool connecting = false;
+		bool connected = false;
+		avs::DecoderStatus videoStatus;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();

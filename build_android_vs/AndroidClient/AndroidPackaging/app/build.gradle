@@ -1,9 +1,28 @@
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+// Initialize a new Properties() object called keystoreProperties.
+def keystoreProperties = new Properties()
+
+// Load your keystore.properties file into the keystoreProperties object.
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 android {
     compileSdkVersion 29
     buildToolsVersion "29.0.1"
-    ndkVersion MSBUILD_NDK_VERSION
+	ndkVersion MSBUILD_NDK_VERSION
+	signingConfigs {
+		release
+		{
+			keyAlias keystoreProperties['RELEASE_KEY_ALIAS']
+			keyPassword keystoreProperties['RELEASE_STORE_PASSWORD']
+			storeFile file(keystoreProperties['RELEASE_STORE_FILE'])
+			storePassword keystoreProperties['RELEASE_KEY_PASSWORD']
+
+			// Optional, specify signing versions used
+			v1SigningEnabled true
+			v2SigningEnabled true
+		}
+	}
     defaultConfig {
         applicationId "com.simul.teleportvrquestclientagde"
         minSdkVersion MSBUILD_MIN_SDK_VERSION
@@ -15,8 +34,8 @@ android {
         release {
             debuggable true
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-
+			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+			signingConfig signingConfigs.release
         }
     }
     sourceSets {

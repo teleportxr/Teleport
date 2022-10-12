@@ -1,7 +1,7 @@
 
 #include <imgui.h>
 #ifdef _MSC_VER
-#include "backends/imgui_impl_win32.h"
+#include "Platform/ImGui/imgui_impl_win32.h"
 #endif
 #ifdef __ANDROID__
 #include "backends/imgui_impl_android.h"
@@ -130,6 +130,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	SetPlatformWindow(w);
 #ifdef _MSC_VER
 	ImGui_ImplWin32_Init(GetActiveWindow());
+	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 #else
 	ImGui_ImplAndroid_Init(platformWindow);
 #endif
@@ -176,7 +177,10 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_FOLDER_O);			
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);		
 		builder.AddText(ICON_FK_COG);				
+		builder.AddText(ICON_FK_TIMES);
+		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
+		builder.AddText(ICON_FK_ARROW_RIGHT);									
 		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
 		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
@@ -348,6 +352,14 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *sear
 		}
 		ImGui::TreePop();
 	}
+}
+
+int Gui::GetCursorPos(long p[2]) 
+{
+	ImGuiIO& io = ImGui::GetIO();
+	p[0]=(long)io.MousePos.x;
+	p[1]=(long)io.MousePos.y;
+	return 1;
 }
 
 static int in_debug_gui = 0;
@@ -748,10 +760,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	if (have_vr_device)
-		ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
-	else
-		ImGui_ImplPlatform_Update3DMousePos();
 	ImGuiIO& io = ImGui::GetIO();
 	static bool in3d=true;
 	static float window_width=720.0f;
@@ -761,7 +769,14 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
 	static int refocus=0;
 	bool show_hide=true;
+	if (have_vr_device)
+		ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+	else
+		ImGui_ImplPlatform_Update3DMousePos();
+	ImVec2 mousePos=io.MousePos;
 	ImGui::NewFrame();
+	// restore mouse pos here to override ImGui's internal shenanigans.
+	io.MousePos=mousePos;
 	{
 		bool show_keyboard = true;
 		ImGuiWindowFlags windowFlags =0;
@@ -801,7 +816,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		if(KeysDown[VK_BACK])
 		{
 			KeysDown[VK_BACK]= false;
-			io.AddKeyEvent(0x20b, false);
+			io.AddKeyEvent(ImGuiKey_Backspace, false);
 		}
 		if(refocus>=2)
 		{
@@ -813,7 +828,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					KeysDown[k] = true;
 					//io.KeysDown[ImGuiKey_Backspace] = true;
 					//io.AddInputCharacter(ImGuiKey_Backspace);
-					io.AddKeyEvent(0x20b, true);
+					io.AddKeyEvent(ImGuiKey_Backspace, true);
 				}
 				else
 				{
@@ -859,7 +874,12 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		}
 		else
 		{
-			if (ImGui::Button(ICON_FK_FOLDER_O,ImVec2(64,32)))
+			if (ImGui::Button(ICON_FK_RENREN, ImVec2(64, 32)))
+			{
+				cancelConnectHandler();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(64, 32)))
 			{
 				show_bookmarks=!show_bookmarks;
 				selected_url="";
@@ -885,7 +905,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 							memcpy(buf,current_url.c_str(),std::min((size_t)499,current_url.size()));
 							connectHandler(b.url);
 							show_bookmarks=false;
-							connecting=true;
 						}
 						ImGui::TreePop();
 					}
@@ -895,31 +914,40 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 			else
 			{
 				ImGui::SameLine();
-				if(refocus==0)
+				if (refocus == 0)
 				{
 					ImGui::SetKeyboardFocusHere();
 				}
-				if(ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))//,ImGuiInputTextFlags))
+				ImGui::PushItemWidth(ImGui::GetWindowWidth() - 4 * 80);
+				if (ImGui::InputText("##URL", buf, IM_ARRAYSIZE(buf)))
 				{
-					current_url=buf;
+					current_url = buf;
 				}
+				ImGui::PopItemWidth();
 				refocus++;
+
 				ImGui::SameLine();
-				ImGui::BeginDisabled(connecting);
-				if (ImGui::Button("Connect"))
+				if (!connecting)
 				{
-					if(connectHandler)
+					if (ImGui::Button(ICON_FK_ARROW_RIGHT, ImVec2(64, 32)))
 					{
 						connectHandler(current_url);
-						connecting=true;
 					}
 				}
-				ImGui::EndDisabled();
-				ImGui::SameLine(ImGui::GetWindowWidth()-70);
-				if (ImGui::Button(ICON_FK_COG,ImVec2(64,32)))
+				else
+				{
+					if (ImGui::Button(ICON_FK_TIMES, ImVec2(64, 32)))
+					{
+						cancelConnectHandler();
+					}
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button(ICON_FK_COG, ImVec2(64, 32)))
 				{
 					show_options=!show_options;
 				}
+
 				if (show_keyboard)
 				{
 					auto KeyboardLine = [&io,this](const char* key)
@@ -937,7 +965,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 								if(connecting)
 								{
 									cancelConnectHandler();
-									connecting=false;
 								}
 							}
 							key++;
@@ -959,6 +986,9 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					ImGui::Text("  ");
 					ImGui::SameLine();
 					KeyboardLine("qwertyuiop");
+					ImGui::SameLine();
+					ImGui::Text(fmt::format("{0: .0f} {1: .0f}",io.MousePos.x,io.MousePos.y).c_str());
+					//Sleep(1000);
 					ImGui::Text("	");
 					ImGui::SameLine();
 					KeyboardLine("asdfghjkl:");

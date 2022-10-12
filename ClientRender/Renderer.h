@@ -61,6 +61,7 @@ namespace clientrender
 		NO_OSD=0,
 		CAMERA_OSD,
 		VIDEO_OSD,
+		CUBEMAP_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,
 		TEXTURES_OSD,
@@ -186,7 +187,6 @@ namespace clientrender
 		unsigned long long receivedInitialPos = 0;
 		unsigned long long receivedRelativePos = 0;
 		bool videoPosDecoded=false;
-		bool canConnect=true;
 		vec3 videoPos;
 
 		avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
@@ -291,6 +291,7 @@ namespace clientrender
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 		
 		virtual avs::DecoderBackendInterface* CreateVideoDecoder();
+		virtual avs::DecoderStatus GetVideoDecoderStatus() { return avs::DecoderStatus::DecoderUnavailable; }
 		// Implement SessionCommandInterface
 		bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
 		void OnVideoStreamClosed() override;

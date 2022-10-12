@@ -23,6 +23,24 @@ enum class DecodeFrequency
 };
 
 /*!
+ * Video decoder status.
+ *
+ * Specifies the status of the video decoder at certain step in the video decoding pipeline.
+ */
+enum class DecoderStatus
+{
+	DecoderUnavailable					= 0x0000000, /*!< Decoder has not been set up. */
+	DecoderAvailable					= 0x0000001, /*!< Decoder is set up and ready to receive data. */
+	ReceivingVideoStream				= 0x0000002, /*!< Decoder is receiving video data from the server. */
+	QueuingVideoStreamBuffer			= 0x0000004, /*!< Decoder is storing the single received buffer for accumulation and processing. */
+	AccumulatingVideoStreamBuffers		= 0x0000008, /*!< Decoder is collecting multiple single buffers to assemble enough data for a frame. */
+	PassingVideoStreamToDecoder			= 0x0000010, /*!< Decoder is passing the completed frame data for decoding. */
+	DecodingVideoStream					= 0x0000020, /*!< Hardware or software accelerated decoding of the video stream data. */
+	ProcessingOutputFrameFromDecoder	= 0x0000040, /*!< Decoder is processing the output frame for use in graphics APIs. */
+	FrameAvailable						= 0x0000080, /*!< Decoded video frame is available for use in graphics APIs. */
+};
+
+/*!
  * Video decoder parameters.
  */
 struct DecoderParams

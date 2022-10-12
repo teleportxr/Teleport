@@ -29,6 +29,8 @@
 #include "Platform/Vulkan/Texture.h"
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
+#include "Platform/External/magic_enum/include/magic_enum.hpp"
+
 
 avs::Timestamp clientrender::platformStartTimestamp ;
 static bool timestamp_initialized=false;
@@ -483,7 +485,7 @@ void SetRenderPose(platform::crossplatform::GraphicsDeviceContext &deviceContext
 	// global pos/orientation:
 	globalOrientation.SetPosition((const float*)&pose.position);
 	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
-	platform::math::Quaternion q1 = (const float*)&pose.orientation;http://collider.com/
+	platform::math::Quaternion q1 = (const float*)&pose.orientation;//http://collider.com/
 	auto q_rel = q1/q0;
 	globalOrientation.SetOrientation(q_rel);
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
@@ -629,11 +631,11 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	// We must deactivate the depth buffer here, in order to use it as a texture:
 	//hdrFramebuffer->DeactivateDepth(deviceContext);
 	if (show_video)
-		{
-			int W = hdrFramebuffer->GetWidth();
-			int H = hdrFramebuffer->GetHeight();
-			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
-		}
+	{
+		int W = hdrFramebuffer->GetWidth();
+		int H = hdrFramebuffer->GetHeight();
+		renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
+	}
 	static int lod=0;
 	static char tt=0;
 	tt--;
@@ -1272,7 +1274,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		
 		
 		avs::Result result = clientPipeline.pipeline.process();
-		if (result == avs::Result::Network_Disconnection)
+		if (result == avs::Result::Network_Disconnection 
+			|| sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER)
 		{
 			sessionClient->Disconnect(0);
 			return;
@@ -1290,14 +1293,18 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	else
 	{
 		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
+		bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 		if (canConnect && sessionClient->Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
 		{
 			sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT);
-			gui.SetConnecting(false);
-			canConnect=false;
+			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 			gui.Hide();
 		}
 	}
+
+	gui.SetConnecting(sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER);
+	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLocation::SERVER);
+	gui.SetVideoDecoderStatus(GetVideoDecoderStatus());
 
 	if (!have_headset)
 	{
@@ -1381,7 +1388,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case 'K':
 			if(sessionClient->IsConnected())
 				sessionClient->Disconnect(0);
-			canConnect=!canConnect;
+			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 			break;
 		case 'M':
 			RenderMode++;
@@ -1706,6 +1713,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	lod = lod % 8;
 	if(show_cubemaps)
 	{
+		//renderPlatform->DrawCubemap(deviceContext, videoTexture,		  +0.0f, 0.0f, 1.0f, 1.f, 1.f, 0.0f);
 		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 	}
@@ -1793,40 +1801,39 @@ void Renderer::SetServer(const char *ip_port)
 	config.StoreRecentURL(ip_port);
 }
 
-void Renderer::CancelConnectButtonHandler()
-{
-	//SetServer("");
-	canConnect = false;
-}
-
 void Renderer::ConnectButtonHandler(const std::string& url)
 {
 	SetServer(url.c_str());
-	/*size_t pos = url.find(":");
-	if (pos < url.length())
-	{
-		std::string port_str = url.substr(pos + 1, url.length() - pos - 1);
-		server_discovery_port = atoi(port_str.c_str());
-		std::string url_str = url.substr(0, pos);
-		server_ip = url_str;
-	}
-	else
-	{
-		server_ip = url;
-	}*/
-	canConnect = true;
+	sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 }
 
+void Renderer::CancelConnectButtonHandler()
+{
+	sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER;
+}
 
 void Renderer::RemoveView(int)
 {
 }
 
-
 void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (!show_osd||gui.HasFocus())
 		return;
+
+	//Set up ViewStruct
+	platform::crossplatform::ViewStruct& viewStruct = deviceContext.viewStruct;
+	viewStruct.proj = platform::crossplatform::Camera::MakeDepthReversedProjectionMatrix(1.0f, 1.0f, 0.001f, 100.0f);
+	platform::math::SimulOrientation globalOrientation;
+	// global pos/orientation:
+	globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.localPose.position);
+	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
+	platform::math::Quaternion q1 = (const float*)&clientDeviceState->headPose.localPose.orientation;
+	auto q_rel = q1 / q0;
+	globalOrientation.SetOrientation(q_rel);
+	viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
+	viewStruct.Init();
+	
 	gui.setGeometryCache(&geometryCache);
 	gui.BeginDebugGui(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -1834,6 +1841,7 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = clientPipeline.source.getCounterValues();
 	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
+	bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
@@ -1879,7 +1887,28 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
 		gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
-		gui.DrawTexture(ti->texture);
+		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
+		std::string str = "Decoder Status: ";
+		str += std::string(magic_enum::enum_name(status));
+		gui.LinePrint(str.c_str(), white);
+		if (ti)
+			gui.DrawTexture(ti->texture);
+	}
+	else if (show_osd == clientrender::CUBEMAP_OSD)
+	{
+		gui.LinePrint(platform::core::QuickFormat("Cubemap Texture"), white);
+
+		static platform::crossplatform::Texture* debugCubemapTexture = nullptr;
+		if (!debugCubemapTexture)
+			debugCubemapTexture = renderPlatform->CreateTexture("debugCubemapTexture");
+		debugCubemapTexture->ensureTexture2DSizeAndFormat(renderPlatform, 512, 512, 1, platform::crossplatform::RGBA_8_UNORM, false, true);
+
+		debugCubemapTexture->activateRenderTarget(deviceContext);
+		renderPlatform->Clear(deviceContext, vec4(0.0f, 0.0f, 0.0f, 1.0f)); //Add in the alpha.
+		renderPlatform->DrawCubemap(deviceContext, videoTexture, 0.0f, 0.0f, 1.9f, 1.0f, 1.0f, 0.0f);
+		debugCubemapTexture->deactivateRenderTarget(deviceContext);
+
+		gui.DrawTexture(debugCubemapTexture);
 	}
 	else if(show_osd== clientrender::GEOMETRY_OSD)
 	{
