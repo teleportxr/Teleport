@@ -27,16 +27,16 @@ namespace clientrender
 		enum class Type : uint32_t
 		{
 			TEXTURE_UNKNOWN = 0,
-			TEXTURE_1D,
-			TEXTURE_2D,
-			TEXTURE_2D_EXTERNAL_OES,	// External video texture for OpenGL.
-			TEXTURE_3D,
-			TEXTURE_1D_ARRAY,
-			TEXTURE_2D_ARRAY,
-			TEXTURE_2D_MULTISAMPLE,
-			TEXTURE_2D_MULTISAMPLE_ARRAY,
-			TEXTURE_CUBE_MAP,
-			TEXTURE_CUBE_MAP_ARRAY
+			TEXTURE_1D=1,
+			TEXTURE_2D=2,
+			TEXTURE_CUBE_MAP=4,
+			TEXTURE_2D_EXTERNAL_OES=TEXTURE_2D|64,	// External video texture for OpenGL.
+			TEXTURE_3D=8,
+			TEXTURE_1D_ARRAY=TEXTURE_1D|16,
+			TEXTURE_2D_ARRAY=TEXTURE_2D|16,
+			TEXTURE_2D_MULTISAMPLE=TEXTURE_2D|32,
+			TEXTURE_2D_MULTISAMPLE_ARRAY=TEXTURE_2D|16|32,
+			TEXTURE_CUBE_MAP_ARRAY=TEXTURE_CUBE_MAP|16
 		};
 		enum class Format : uint32_t
 		{
@@ -140,8 +140,8 @@ namespace clientrender
 			Type type = Type::TEXTURE_UNKNOWN;
 			Format format = Format::FORMAT_UNKNOWN;
 			SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
-			std::vector<size_t> mipSizes;
-			std::vector<std::vector<unsigned char>> mips;
+			std::vector<size_t> imageSizes;
+			std::vector<std::vector<uint8_t>> images;
 
 			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
 		
@@ -210,4 +210,8 @@ namespace clientrender
 		virtual void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const;
 		virtual void Unbind() const ;
 	};
+	inline Texture::Type operator&(Texture::Type a, Texture::Type b)
+	{
+		return static_cast<Texture::Type>(static_cast<unsigned int>(a) | static_cast<unsigned int>(b));
+	}
 }

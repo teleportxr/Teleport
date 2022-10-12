@@ -104,9 +104,9 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
-	if(pTextureCreateInfo.compression==clientrender::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo.mipSizes[0] != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
+	if(pTextureCreateInfo.compression==clientrender::Texture::CompressionFormat::UNCOMPRESSED && pTextureCreateInfo.imageSizes[0] != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
 	{
-		TELEPORT_CLIENT_WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.mipSizes[0]);
+		TELEPORT_CLIENT_WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel, pTextureCreateInfo.imageSizes[0]);
 		return;
 	}
 	platform::crossplatform::TextureCreate textureCreate;
@@ -114,11 +114,22 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	textureCreate.l					= pTextureCreateInfo.height;
 	textureCreate.f					= pixelFormat;
 	textureCreate.computable		= computable;
+	textureCreate.cubemap			=((pTextureCreateInfo.type&Type::TEXTURE_CUBE_MAP)==Type::TEXTURE_CUBE_MAP);
 	textureCreate.make_rt			= rt;
 	textureCreate.setDepthStencil	= ds;
 	textureCreate.numOfSamples		= num_samp;
 	textureCreate.compressionFormat = (platform::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
-	textureCreate.initialData		= pTextureCreateInfo.mips[0].data();
+	size_t initialDataSize=0;
+	for(const auto &i:pTextureCreateInfo.images)
+	{
+		initialDataSize+=i.size();
+	}
+	std::vector<const uint8_t*> initialData(pTextureCreateInfo.images.size());
+	for(int i=0;i<initialData.size();i++)
+	{
+		initialData[i]=pTextureCreateInfo.images[i].data();
+	}
+	textureCreate.initialData		= initialData.data();
 	textureCreate.name				= m_CI.name.c_str();
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
 	//m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));

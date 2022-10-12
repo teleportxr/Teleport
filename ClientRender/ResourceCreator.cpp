@@ -51,27 +51,27 @@ void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::
 		false
 	};
 
-	tci.mips[0] = std::vector<unsigned char>(sizeof(whiteBGRA));
-	memcpy(tci.mips[0].data(), &whiteBGRA, sizeof(whiteBGRA));
+	tci.images[0] = std::vector<unsigned char>(sizeof(whiteBGRA));
+	memcpy(tci.images[0].data(), &whiteBGRA, sizeof(whiteBGRA));
 	m_DummyWhite->Create(tci);
 
-	tci.mips[0] = std::vector<unsigned char>(sizeof(normalRGBA));
-	memcpy(tci.mips[0].data(), &normalRGBA, sizeof(normalRGBA));
+	tci.images[0] = std::vector<unsigned char>(sizeof(normalRGBA));
+	memcpy(tci.images[0].data(), &normalRGBA, sizeof(normalRGBA));
 	m_DummyNormal->Create(tci);
 
-	tci.mips[0] = std::vector<unsigned char>(sizeof(combinedBGRA));
-	memcpy(tci.mips[0].data(), &combinedBGRA, sizeof(combinedBGRA));
+	tci.images[0] = std::vector<unsigned char>(sizeof(combinedBGRA));
+	memcpy(tci.images[0].data(), &combinedBGRA, sizeof(combinedBGRA));
 	m_DummyCombined->Create(tci);
 
-	tci.mips[0] = std::vector<unsigned char>(sizeof(blackBGRA));
-	memcpy(tci.mips[0].data(), &blackBGRA, sizeof(blackBGRA));
+	tci.images[0] = std::vector<unsigned char>(sizeof(blackBGRA));
+	memcpy(tci.images[0].data(), &blackBGRA, sizeof(blackBGRA));
 	m_DummyBlack->Create(tci);
 
 	const size_t GRID=128;
-	tci.mips[0] = std::vector<unsigned char>(sizeof(uint32_t)*GRID*GRID);
+	tci.images[0] = std::vector<unsigned char>(sizeof(uint32_t)*GRID*GRID);
 	tci.width=tci.height=GRID;
 	size_t sz=GRID*GRID*sizeof(uint32_t);
-	tci.mipSizes[0]=sz;
+	tci.imageSizes[0]=sz;
 	uint32_t green_grid[GRID*GRID];
 	memset(green_grid,0,sz);
 	for(size_t i=0;i<GRID;i+=16)
@@ -82,8 +82,8 @@ void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::
 			green_grid[GRID*j+i]=greenBGRA;
 		}
 	}
-	tci.mips[0] = std::vector<unsigned char>(sz);
-	memcpy(tci.mips[0].data(), &green_grid, sizeof(green_grid));
+	tci.images[0] = std::vector<unsigned char>(sz);
+	memcpy(tci.images[0].data(), &green_grid, sizeof(green_grid));
 	m_DummyGreen->Create(tci);
 }
 
@@ -510,7 +510,7 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 		texture.arrayCount,
 		texture.mipCount,
 		clientrender::Texture::Slot::UNKNOWN,
-		clientrender::Texture::Type::TEXTURE_2D, //Assumed
+		texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D, //Assumed
 		textureFormatFromAVSTextureFormat(texture.format),
 		clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
 		{},
@@ -532,8 +532,8 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	}
 	else
 	{
-		texInfo.mipSizes.push_back(texture.dataSize);
-		texInfo.mips.emplace_back(std::move(data));
+		texInfo.imageSizes.push_back(texture.dataSize);
+		texInfo.images.emplace_back(std::move(data));
 
 		std::cout << "Uncompressed, completing.\n";
 		CompleteTexture(id, texInfo);
@@ -1230,33 +1230,57 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			if (transcoding.fromCompressionFormat == avs::TextureCompression::PNG)
 			{
 				int mipWidth=0, mipHeight=0;
-				int num_channels=0;
-				unsigned char *target = teleport::stbi_load_from_memory((const unsigned char*)transcoding.data.data(),(int) transcoding.data.size(), &mipWidth, &mipHeight, &num_channels,(int)4);
-				if(num_channels ==4 && mipWidth > 0 && mipHeight > 0)
+				uint8_t *srcPtr=transcoding.data.data();
+				uint8_t *basePtr=srcPtr;
+				// let's have a uint16 here, N with the number of images, then a list of N uint32 offsets. Each is a subresource image. Then image 0 starts.
+				uint16_t num_images=*((uint16_t*)srcPtr);
+				std::vector<uint32_t> imageOffsets(num_images);
+				srcPtr+=sizeof(uint16_t);
+				size_t dataSize=transcoding.data.size()-sizeof(uint16_t);
+				for(int i=0;i<num_images;i++)
 				{
-					// this is for 8-bits-per-channel textures:
-					size_t outDataSize = (size_t)(mipWidth * mipHeight * 4);
-					std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
-					memcpy(outData.data(), target, outDataSize);
-					transcoding.scrTexture.mipSizes.push_back(outDataSize);
-					transcoding.scrTexture.mips.emplace_back(std::move(outData));
-					transcoding.scrTexture.valueScale=transcoding.valueScale;
-					if (transcoding.scrTexture.mips.size() != 0)
+					imageOffsets[i]=*((uint32_t*)srcPtr);
+					srcPtr+=sizeof(uint32_t);
+					dataSize-=sizeof(uint32_t);
+				}
+				imageOffsets.push_back(transcoding.data.size());
+				std::vector<uint32_t> imageSizes(num_images);
+				for(int i=0;i<num_images;i++)
+				{
+					imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
+				}
+				for(int i=0;i<num_images;i++)
+				{
+					// Convert from Png to raw data:
+					int num_channels=0;
+					unsigned char *target = teleport::stbi_load_from_memory(basePtr+imageOffsets[i],(int) imageSizes[i], &mipWidth, &mipHeight, &num_channels,(int)4);
+					if(num_channels ==4 && mipWidth > 0 && mipHeight > 0&&target&&transcoding.data.size()>2)
 					{
-						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-						texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+						// this is for 8-bits-per-channel textures:
+						size_t outDataSize = (size_t)(mipWidth * mipHeight * 4);
+						std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
+
+						memcpy(outData.data(), target, outDataSize);
+						transcoding.scrTexture.imageSizes.push_back(outDataSize);
+						transcoding.scrTexture.images.emplace_back(std::move(outData));
+						transcoding.scrTexture.valueScale=transcoding.valueScale;
+						if (transcoding.scrTexture.images.size() != 0)
+						{
+							std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
+							texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+						}
+						else
+						{
+							TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+						}
+
 					}
 					else
 					{
-						TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+						TELEPORT_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
 					}
-
+					teleport::stbi_image_free(target);
 				}
-				else
-				{
-					TELEPORT_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
-				}
-				teleport::stbi_image_free(target);
 			}
 			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
 			{
@@ -1272,8 +1296,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				if (basis_transcoder.start_transcoding(transcoding.data.data(), (uint32_t)transcoding.data.size()))
 				{
 					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
-					transcoding.scrTexture.mipSizes.reserve(transcoding.scrTexture.mipCount);
-					transcoding.scrTexture.mips.reserve(transcoding.scrTexture.mipCount);
+					//transcoding.scrTexture.arrayCount = basis_transcoder.get_total_images(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
+					transcoding.scrTexture.imageSizes.reserve(transcoding.scrTexture.mipCount*transcoding.scrTexture.arrayCount);
+					transcoding.scrTexture.images.reserve(transcoding.scrTexture.mipCount*transcoding.scrTexture.arrayCount);
 					//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
 					// choose a transcoder format based on this:
 					//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
@@ -1284,26 +1309,29 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						continue;
 					}
 					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
-					for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
 					{
-						uint32_t basisWidth, basisHeight, basisBlocks;
-
-						basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0, mipIndex, basisWidth, basisHeight, basisBlocks);
-						uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
-
-						std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
-						if (basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0, mipIndex, outData.data(), basisBlocks, basis_transcoder_textureFormat))
+						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
 						{
-							transcoding.scrTexture.mipSizes.push_back(outDataSize);
-							transcoding.scrTexture.mips.emplace_back(std::move(outData));
-						}
-						else
-						{
-							TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
+							uint32_t basisWidth, basisHeight, basisBlocks;
+
+							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
+							uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
+
+							std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
+							if (basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(),arrayIndex, mipIndex, outData.data(), basisBlocks, basis_transcoder_textureFormat))
+							{
+								transcoding.scrTexture.imageSizes.push_back(outDataSize);
+								transcoding.scrTexture.images.emplace_back(std::move(outData));
+							}
+							else
+							{
+								TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
+							}
 						}
 					}
 
-					if (transcoding.scrTexture.mips.size() != 0)
+					if (transcoding.scrTexture.images.size() != 0)
 					{
 						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
 						texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
