@@ -548,7 +548,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					if(selected_node->GetMesh())
 					{
 						auto m=selected_node->GetMesh();
-						DoRow("Mesh"		,"%s", m->GetMeshCreateInfo().name.c_str());
+						DoRow("Mesh"		,"%d : %s", m->GetMeshCreateInfo().id, m->GetMeshCreateInfo().name.c_str());
 					}
 					ImGui::EndTable();
 				}

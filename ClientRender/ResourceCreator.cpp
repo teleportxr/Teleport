@@ -137,6 +137,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 	}
 	clientrender::Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.name = meshCreate.name;
+	mesh_ci.id = meshCreate.mesh_uid;
 	mesh_ci.vb.resize(meshCreate.m_NumElements);
 	mesh_ci.ib.resize(meshCreate.m_NumElements);
 

@@ -12,7 +12,7 @@ namespace clientrender
 		struct MeshCreateInfo
 		{
 			std::string name;
-
+			avs::uid id;
 			std::vector<std::shared_ptr<VertexBuffer>> vb;
 			std::vector<std::shared_ptr<IndexBuffer>> ib;
 		};
