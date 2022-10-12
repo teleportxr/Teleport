@@ -111,8 +111,7 @@ namespace teleport
 		{
 			std::string basisFilePath;
 
-			uint8_t* rawData;
-			size_t dataSize;
+			std::vector<std::vector<uint8_t>> images;
 
 			size_t numMips;	
 			bool genMips;	// if false, numMips tells how many are in the data already.

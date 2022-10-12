@@ -160,6 +160,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;../../../../firstparty\Platform\External\stb</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

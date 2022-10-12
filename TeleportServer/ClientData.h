@@ -5,7 +5,6 @@
 
 #include "TeleportServer/ClientManager.h"
 #include "TeleportServer/ClientMessaging.h"
-#include "TeleportServer/GeometryStreamingService.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/AudioEncodePipeline.h"
 class PluginDiscoveryService;
@@ -33,7 +32,6 @@ namespace teleport
 		{
 		};
 		
-		class GeometryStreamingService;
 		//! Data object for a connected client.
 		class ClientData
 		{

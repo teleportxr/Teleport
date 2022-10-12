@@ -101,7 +101,7 @@ namespace teleport
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();
-        char buf[500];
+        char url_buffer[500];
 		bool have_vr_device = false;
 		std::vector<avs::uid> selection_history;
 		size_t selection_cursor;

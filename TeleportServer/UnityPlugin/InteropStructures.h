@@ -242,6 +242,7 @@ struct InteropTexture
 
 	float valueScale=1.0f;
 
+	bool cubemap=false;
 	operator avs::Texture() const
 	{
 		return
@@ -258,7 +259,8 @@ struct InteropTexture
 			dataSize,
 			data,
 			sampler_uid,
-			valueScale
+			valueScale,
+			cubemap
 		};
 	}
 };

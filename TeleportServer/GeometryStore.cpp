@@ -1097,6 +1097,20 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::ti
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 #endif
+	uint16_t numImages=*((uint16_t*)newTexture.data);
+	std::vector<uint32_t> imageOffsets(numImages);
+	memcpy(imageOffsets.data(),newTexture.data+2,sizeof(int32_t)*numImages);
+	imageOffsets.push_back(newTexture.dataSize);
+	std::vector<size_t> imageSizes(numImages);
+	for(size_t i=0;i<numImages;i++)
+	{
+		imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
+		if(imageSizes[i]>newTexture.dataSize)
+		{
+			TELEPORT_BREAK_ONCE("Bad data.");
+			return;
+		}
+	}
 	//Compress the texture with Basis Universal if the file location is not blank, and bytes per pixel is equal to 4.
 	if(!basisFileLocation.empty() && newTexture.bytesPerPixel == 4)
 	{
@@ -1113,31 +1127,48 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::ti
 			//The file is valid if the basis file is younger than the texture file.
 			validFileExists = basisModified >= lastModified;
 		}
-		//Read from disk if the file exists or if it isn't basis compression.
-		if(newTexture.compression!= avs::TextureCompression::BASIS_COMPRESSED||highQualityUASTC||((!forceOverwrite)&&validFileExists))
+		// if it isn't basis compression, just take the data we've been given. Either uncompressed or png. But copy it, because the original pointer is not ours.
+		if(newTexture.compression!= avs::TextureCompression::BASIS_COMPRESSED)//||highQualityUASTC||((!forceOverwrite)&&validFileExists))
 		{
-			std::ifstream basisReader(fsFilePath, std::ifstream::in | std::ifstream::binary);
+			//std::ifstream fileReader(fsFilePath, std::ifstream::in | std::ifstream::binary);
 
-			newTexture.dataSize = static_cast<uint32_t>(filesystem::file_size(fsFilePath));
-			newTexture.data = new unsigned char[newTexture.dataSize];
-			basisReader.read(reinterpret_cast<char*>(newTexture.data), newTexture.dataSize);
-
-			basisReader.close();
+			//newTexture.dataSize = static_cast<uint32_t>(filesystem::file_size(fsFilePath));
+			uint8_t *newDataCopy = new unsigned char[newTexture.dataSize];
+			memcpy(newDataCopy,newTexture.data,newTexture.dataSize);
+			newTexture.data = newDataCopy;
+			//fileReader.read(reinterpret_cast<char*>(newTexture.data), newTexture.dataSize);
+			//fileReader.close();
 		}
 		//Otherwise, queue the texture for compression.
 		else 	// UASTC doesn't work from inside the dll. Unclear why.
 		{
-			//Copy data from source, so it isn't lost.
-			unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
-			memcpy(dataCopy, newTexture.data, newTexture.dataSize);
-			newTexture.data = dataCopy;
-			texturesToCompress.emplace(id, PrecompressedTexture{basisFileLocation, newTexture.data, newTexture.dataSize, newTexture.mipCount, genMips, highQualityUASTC,newTexture.compression});
+			PrecompressedTexture pct;
+			pct.basisFilePath=basisFileLocation;
+			pct.numMips=newTexture.mipCount;
+			pct.genMips=genMips;
+			pct.highQualityUASTC=highQualityUASTC;
+			pct.textureCompression=newTexture.compression;
+			for(size_t i=0;i<imageSizes.size();i++)
+			{
+				size_t offset=(size_t)imageOffsets[i];
+				size_t imageSize=(size_t)imageSizes[i];
+				uint8_t *src=newTexture.data+offset;
+				std::vector<uint8_t> img;
+				img.resize(imageSize);
+				//Copy data from source, so it isn't lost.
+				memcpy(img.data(), src, img.size());
+				pct.images.push_back(std::move(img));
+			}
+ 			newTexture.data = nullptr;
+			newTexture.dataSize=0;
+			
+			texturesToCompress.emplace(id, pct);
 		}
 	}
 	else
 	{
 		newTexture.compression = avs::TextureCompression::UNCOMPRESSED;
-
+		
 		unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
 		memcpy(dataCopy, newTexture.data, newTexture.dataSize);
 		newTexture.data = dataCopy;
@@ -1202,14 +1233,62 @@ void GeometryStore::compressNextTexture()
 	PrecompressedTexture& compressionData = compressionPair->second;
 	if (compressionData.textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
-		basisu::image image(newTexture.width, newTexture.height);
-		basisu::color_rgba_vec& imageData = image.get_pixels();
-		memcpy(imageData.data(), compressionData.rawData, compressionData.dataSize);
-
-
 		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
 		basisCompressorParams.m_source_images.clear();
-		basisCompressorParams.m_source_images.push_back(image);
+		// Basis stores mip 0 in m_source_images, and subsequent mips in m_source_mipmap_images.
+		// They MUST have equal sizes.
+		if(compressionData.numMips<1)
+		{
+			TELEPORT_CERR<<"Bad mipcount "<<compressionData.numMips<<"\n";
+			texturesToCompress.erase(texturesToCompress.begin());
+			return;
+		}
+		size_t imagesPerMip=compressionData.images.size()/compressionData.numMips;
+		if(imagesPerMip*compressionData.numMips!=compressionData.images.size())
+		{
+			TELEPORT_CERR<<"Bad image count "<<compressionData.images.size()<<" for "<<compressionData.numMips<<" mips.\n";
+			texturesToCompress.erase(texturesToCompress.begin());
+			return;
+		}
+		for(size_t i=0;i<imagesPerMip;i++)
+		{
+			basisu::image image(newTexture.width, newTexture.height);
+			// TODO: This ONLY works for 8-bit rgba.
+			basisu::color_rgba_vec& imageData = image.get_pixels();
+			std::vector<uint8_t> &img=compressionData.images[i];
+			if(img.size()>4*imageData.size())
+			{
+				TELEPORT_CERR<<"Image data size mismatch.\n";
+				return;
+			}
+			memcpy(imageData.data(),img.data(),img.size());
+			basisCompressorParams.m_source_images.push_back(std::move(image));
+		}
+		size_t n=imagesPerMip;
+		int w=newTexture.width;
+		int h=newTexture.height;
+		for(size_t m=1;m<compressionData.numMips;m++)
+		{
+			basisu::vector<basisu::image> m_source_mipmap_images;
+			for(size_t i=0;i<imagesPerMip;i++)
+			{
+				basisu::image image(w, h);
+				// TODO: This ONLY works for 8-bit rgba.
+				basisu::color_rgba_vec& imageData = image.get_pixels();
+				std::vector<uint8_t> &img=compressionData.images[n];
+				if(img.size()>4*imageData.size())
+				{
+					TELEPORT_CERR<<"Image data size mismatch.\n";
+					return;
+				}
+				memcpy(imageData.data(),img.data(),img.size());
+				m_source_mipmap_images.push_back(std::move(image));
+				n++;
+				w=(w+1)/2;
+				h=(h+1)/2;
+			}
+			basisCompressorParams.m_source_mipmap_images.push_back(std::move(m_source_mipmap_images));
+		}
 
 		basisCompressorParams.m_quality_level = compressionQuality;
 		basisCompressorParams.m_compression_level = compressionStrength;
@@ -1254,7 +1333,11 @@ void GeometryStore::compressNextTexture()
 		{
 			basisCompressorParams.m_mip_gen = compressionData.genMips;
 			basisCompressorParams.m_mip_smallest_dimension = 4; // ???
-			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
+		}
+		basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
+		if(newTexture.cubemap)
+		{
+			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexTypeCubemapArray;
 		}
 		if (!basisCompressorParams.m_pJob_pool)
 		{
@@ -1272,7 +1355,7 @@ void GeometryStore::compressNextTexture()
 			{
 				basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
 
-				delete[] newTexture.data;
+			//	delete[] newTexture.data;
 
 				newTexture.dataSize = basisCompressor.get_basis_file_size();
 				newTexture.data = new unsigned char[newTexture.dataSize];
