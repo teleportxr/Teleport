@@ -29,6 +29,11 @@ using namespace android;
 #endif
 
 template<typename _Ty>
+constexpr _Ty operator&(_Ty lhs, _Ty rhs)
+{
+	return static_cast<_Ty>(static_cast<typename std::underlying_type<_Ty>::type>(lhs) & static_cast<typename std::underlying_type<_Ty>::type>(rhs));
+}
+template<typename _Ty>
 constexpr _Ty operator|(_Ty lhs, _Ty rhs)
 {
 	return static_cast<_Ty>(static_cast<typename std::underlying_type<_Ty>::type>(lhs) | static_cast<typename std::underlying_type<_Ty>::type>(rhs));
@@ -257,7 +262,7 @@ void NdkVideoDecoder::Shutdown()
 	AMediaCodec_delete(decoder);
 	decoder = nullptr;
 	decoderConfigured = false; 
-	videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() | avs::DecoderStatus::DecoderUnavailable;
+	videoDecoder->GetDecoderStatus() = avs::DecoderStatus::DecoderUnavailable;
 
 	displayRequests = 0;
 
@@ -619,6 +624,8 @@ void NdkVideoDecoder::processBuffersOnThread()
 	while (!stopProcessBuffersThread)
 	{
 		buffers_mutex.lock();
+		videoDecoder->GetDecoderStatus() = videoDecoder->GetDecoderStatus().load() & 
+			(avs::DecoderStatus::DecoderAvailable|avs::DecoderStatus::ReceivingVideoStream|avs::DecoderStatus::QueuingVideoStreamBuffer);
 		processInputBuffers();
 		processOutputBuffers();
 		processImages();

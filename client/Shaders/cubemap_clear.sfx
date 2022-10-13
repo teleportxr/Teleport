@@ -75,7 +75,6 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 		pos_m += vec3(offsetFromVideo2.yxz)*step(-0.999, -depth);
 
 		// But this does not intersect at depth. We want the vector from the original centre, of 
-
 		// original radius to hit point
 		float R = dist_m;
 		float F = length(offsetFromVideo2);
@@ -91,7 +90,6 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
 	}
-	//lookup.rgb += saturate(view_orig);
 	return lookup;
 }
 

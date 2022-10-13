@@ -61,6 +61,7 @@ namespace clientrender
 		NO_OSD=0,
 		CAMERA_OSD,
 		VIDEO_OSD,
+		DECODER_OSD,
 		CUBEMAP_OSD,
 		NETWORK_OSD,
 		GEOMETRY_OSD,

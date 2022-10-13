@@ -1905,11 +1905,26 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 		if(ti)
 		{
 			gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
-			avs::DecoderStatus status = gui.GetVideoDecoderStatus();
-			std::string str = "Decoder Status: ";
-			str += std::string(magic_enum::enum_name(status));
-			gui.LinePrint(str.c_str(), white);
 			gui.DrawTexture(ti->texture);
+		}
+	}
+	else if (show_osd == clientrender::DECODER_OSD)
+	{
+		gui.LinePrint("Decoder Status:", white);
+		auto names = magic_enum::enum_names<avs::DecoderStatus>();
+		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
+		if (status == avs::DecoderStatus::DecoderUnavailable)
+		{
+			gui.LinePrint(std::string(names[0]).c_str(), white);
+		}
+		else
+		{
+			for (size_t i = 0; i < 8; i++)
+			{
+				bool valid = uint32_t(status) & uint32_t(1 << i);
+				std::string str = std::string(names[i + 1]) + ": %s";
+				gui.LinePrint(platform::core::QuickFormat(str.c_str(), valid ? "true" : "false"), white);
+			}
 		}
 	}
 	else if (show_osd == clientrender::CUBEMAP_OSD)
