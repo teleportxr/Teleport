@@ -1,8 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="C:\Teleport\build_pc_client\CMakeFiles\9705d267972308b2efa3ea393da5c190\VulkanShaders.rule" />
-    <CustomBuild Include="../../../../client/Shaders/Vulkan\CMakeLists.txt" />
     <CustomBuild Include="../../../../client/Shaders/texture_conversion.sfx">
       <Filter>Shaders</Filter>
     </CustomBuild>
@@ -12,76 +10,9 @@
     <CustomBuild Include="../../../../client/Shaders/pbr.sfx">
       <Filter>Shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\..\..\build_pc_client\CMakeFiles\9705d267972308b2efa3ea393da5c190\VulkanShaders.rule" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\CppSl.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\brdf.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\camera_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\colour_packing.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\common.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\cubemap_matrices.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\debug_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\depth.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\hdr_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\image_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\light_probe_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\noise.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\quaternion.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\raytracing.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\raytracing_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\render_states.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\sampler_states.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\solid_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\sphere_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\spherical_harmonics.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\spherical_harmonics_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Shaders\SL\text_constants.sl">
-      <Filter>Shader Includes</Filter>
-    </None>
-    <None Include="C:\Teleport\firstparty\Platform\Vulkan\Sfx\VulkanAndroid.json" />
-    <None Include="C:\Teleport\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders" />
     <None Include="../../../../client/Shaders/video_types.sl">
       <Filter>Shader Includes</Filter>
     </None>
@@ -90,6 +21,74 @@
     </None>
     <None Include="../../../../client/Shaders/pbr_constants.sl">
       <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Vulkan\Sfx\VulkanAndroid.json" />
+    <None Include="../../../..\build_pc_client\client\Shaders\Vulkan\CMakeFiles\VulkanShaders" />
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\brdf.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\camera_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\colour_packing.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\common.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\Shaders\SL\CppSl.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\cubemap_matrices.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\debug_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\depth.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\hdr_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\image_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\light_probe_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\noise.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\quaternion.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\raytracing.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\raytracing_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\render_states.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\sampler_states.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\solid_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\sphere_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\spherical_harmonics.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\spherical_harmonics_constants.sl">
+      <Filter>Global Shader Includes</Filter>
+    </None>
+    <None Include="../../../..\firstparty\Platform\Shaders\SL\text_constants.sl">
+      <Filter>Global Shader Includes</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -102,5 +101,11 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{05A2DD90-AB1B-36EA-9635-4562DFE54359}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Global Shader Includes">
+      <UniqueIdentifier>{05f6503b-a352-4f0d-8c94-085e867dba80}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\..\..\client\Shaders\Vulkan\CMakeLists.txt" />
   </ItemGroup>
 </Project>
