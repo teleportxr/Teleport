@@ -1265,15 +1265,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						transcoding.scrTexture.imageSizes.push_back(outDataSize);
 						transcoding.scrTexture.images.emplace_back(std::move(outData));
 						transcoding.scrTexture.valueScale=transcoding.valueScale;
-						if (transcoding.scrTexture.images.size() != 0)
-						{
-							std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-							texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
-						}
-						else
-						{
-							TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
-						}
 
 					}
 					else
@@ -1281,6 +1272,15 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						TELEPORT_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
 					}
 					teleport::stbi_image_free(target);
+				}
+				if (transcoding.scrTexture.images.size() != 0)
+				{
+					std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
+					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+				}
+				else
+				{
+					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 				}
 			}
 			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)

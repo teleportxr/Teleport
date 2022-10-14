@@ -5,6 +5,7 @@
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include <fmt/core.h>
 #include <sstream>
+
 using namespace teleport;
 using namespace client;
 using std::string;
@@ -81,6 +82,33 @@ void Config::LoadBookmarks()
 		string line;    
 		while (std::getline(f, line))
 		{
+			while(line.length()>0&&line[line.length()-1]=='\r')
+			{
+				line=line.substr(0,line.length()-1);
+			}
+			while(line.length()>0&&line[line.length()-1]==' ')
+			{
+				line=line.substr(0,line.length()-1);
+			}
+			while(line.length()>0&&line[line.length()-1]=='\n')
+			{
+				line=line.substr(0,line.length()-1);
+			}
+			while(line.length()>0&&line[0]==' ')
+			{
+				line=line.substr(1,line.length()-1);
+			}
+			bool already=false;
+			for(int i=0;i<recent_server_urls.size();i++)
+			{
+				if(recent_server_urls[i]==line)
+				{
+					already=true;
+					break;
+				}
+			}
+			if(already)
+				continue;
 			recent_server_urls.push_back(line);
 		}
 	}

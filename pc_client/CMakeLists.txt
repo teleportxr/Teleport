@@ -22,10 +22,8 @@ set(srcs
 	MemoryUtil.cpp
 	MemoryUtil.h
 	UseOpenXR.cpp
-	PCDiscoveryService.cpp
 	UseOpenXR.h
 	Resource.h
-	PCDiscoveryService.h
 	targetver.h
 	../ClientApp/ClientApp.cpp
 	../ClientApp/ClientApp.h

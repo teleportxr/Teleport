@@ -413,21 +413,26 @@ void Gui::LinePrint(const char* txt,const float *clr)
 	else
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), "%s",txt);
 }
+std::map<uint64_t,ImGui_ImplPlatform_TextureView> drawTextures;
 
-void Gui::DrawTexture(Texture* texture)
+void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 {
 	if (!texture)
 		return;
 	if (!texture->IsValid())
 		return;
-
+	uint64_t u=(uint64_t)texture+mip*1000+slice;
+	auto &tv=drawTextures[u];
+	tv.texture=texture;
+	tv.mip=mip;
+	tv.slice=slice;
 	const int width = texture->width;
 	const int height = texture->length;
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
 	const ImVec2 regionSize = ImGui::GetContentRegionAvail();
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
 	const ImVec2 size = ImVec2(std::min(regionSize.x, textureSize.x), std::min(regionSize.x, textureSize.x) * aspect);
-	ImTextureID imTextureID = (ImTextureID)texture;
+	ImTextureID imTextureID = (ImTextureID)&tv;
 
 	ImGui::Image(imTextureID, size);
 }
@@ -641,6 +646,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			{
 				const auto& tci = selected_texture->GetTextureCreateInfo();
 				ImGui::Text("%llu: %s", tci.uid, tci.name.c_str());
+				
+				const char* mips[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10","11","12" };
+				static int mip_current = 0;
+				ImGui::Combo("Mip", &mip_current, mips, IM_ARRAYSIZE(mips));
+				const clientrender::Texture* pct = static_cast<const clientrender::Texture*>(selected_texture.get());
+				DrawTexture(selected_texture->GetSimulTexture(),mip_current,0);
 			}
 			else if(selected_animation.get())
 			{
@@ -703,6 +714,25 @@ void Gui::BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char*
 		ImGui::TreePop();
 	}
 }
+void Gui::Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager)
+{
+	ImGui::BeginGroup();
+	const auto& ids= textureManager.GetAllIDs();
+	for (auto id : ids)
+	{
+		const auto &texture=textureManager.Get(id);
+		ImGui::TreeNodeEx(fmt::format("{0}: {1} ",id, texture->GetTextureCreateInfo().name.c_str()).c_str(),ImGuiTreeNodeFlags_Leaf);
+		if (ImGui::IsItemClicked())
+		{
+			if(!show_inspector)
+				show_inspector=true;
+			Select(id);
+		}
+		ImGui::TreePop();
+	}
+	ImGui::EndGroup();
+}
+
 void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager)
 {
 	ImGui::BeginGroup();
@@ -717,6 +747,7 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 				show_inspector=true;
 			Select(id);
 		}
+		ImGui::TreePop();
 	}
 	
 	ImGui::EndGroup();
@@ -735,6 +766,11 @@ void Gui::Scene()
 	if(ImGui::BeginTabItem("Animations"))
 	{
 		Anims(geometryCache->mAnimationManager);
+		ImGui::EndTabItem();
+	}
+	if(ImGui::BeginTabItem("Textures"))
+	{
+		Textures(geometryCache->mTextureManager);
 		ImGui::EndTabItem();
 	}
 	ImGui::EndTabBar();
@@ -1040,11 +1076,11 @@ void Gui::SetConnectHandler(std::function<void(const std::string&)> fn)
 {
 	connectHandler = fn;
 }
+
 void Gui::SetCancelConnectHandler(std::function<void()> fn)
 {
 	cancelConnectHandler = fn;
 }
-
 
 void Gui::SetServerIPs(const std::vector<std::string> &s)
 {

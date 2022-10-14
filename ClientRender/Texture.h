@@ -205,6 +205,10 @@ namespace clientrender
 		{
 			return m_SimulTexture;
 		}
+		const platform::crossplatform::Texture* GetSimulTexture() const
+		{
+			return m_SimulTexture;
+		}
 	protected:
 		virtual void Bind(uint32_t mip,uint32_t layer) const;
 		virtual void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const;

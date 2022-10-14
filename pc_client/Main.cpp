@@ -124,7 +124,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 #include <filesystem>
 #include <fstream>
-#include <PCDiscoveryService.h>
+#include "TeleportClient/DiscoveryService.h"
 namespace fs = std::filesystem;
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -210,7 +210,7 @@ void InitXR()
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	sessionClient=new teleport::client::SessionClient(std::make_unique<PCDiscoveryService>());
+	sessionClient=new teleport::client::SessionClient(std::make_unique<teleport::client::DiscoveryService>());
 	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,clientApp.config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;

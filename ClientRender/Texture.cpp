@@ -119,6 +119,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	textureCreate.setDepthStencil	= ds;
 	textureCreate.numOfSamples		= num_samp;
 	textureCreate.compressionFormat = (platform::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
+	textureCreate.mips				=pTextureCreateInfo.mipCount;
 	size_t initialDataSize=0;
 	for(const auto &i:pTextureCreateInfo.images)
 	{

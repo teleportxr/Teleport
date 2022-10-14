@@ -37,8 +37,9 @@ namespace teleport
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
 		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		void DrawTexture(platform::crossplatform::Texture* texture);
+		void DrawTexture(const platform::crossplatform::Texture* texture,int mip=0,int slice=0);
 		void LinePrint(const char* txt,const float *clr=nullptr);
+		void Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager);
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
 		void NodeTree(const clientrender::NodeManager::nodeList_t&);
 		void Scene();

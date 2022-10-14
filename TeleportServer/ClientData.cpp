@@ -68,6 +68,10 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	{
 		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuseCubemapTexture);
 	}
+	if(setupCommand.clientDynamicLighting.specularCubemapTexture)
+	{
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specularCubemapTexture);
+	}
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;

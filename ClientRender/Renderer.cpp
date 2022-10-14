@@ -1068,7 +1068,6 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 				}
 				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
 
-				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 				// If lighting is via static textures.
 				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
@@ -1081,6 +1080,18 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 				else
 				{
 					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+				}
+				if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
+				{
+					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+					if(t)
+					{
+						pbrEffect->SetTexture(deviceContext,"specularCubemap",t->GetSimulTexture());
+					}
+				}
+				else
+				{
+					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
 				}
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
@@ -1803,7 +1814,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 
 void Renderer::SetServer(const char *ip_port)
 {
-	std::string ip= ip_port;
+	std::string ip=ip_port;
 	size_t pos=ip.find(":");
 	if(pos>=ip.length())
 	{
