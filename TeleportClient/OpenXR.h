@@ -317,9 +317,9 @@ namespace teleport
 			XrDebugUtilsMessengerEXT				xr_debug = {};
 			std::vector<XrView>						xr_views;
 			std::vector<XrViewConfigurationView>	xr_config_views;
-			int OVERLAY_SWAPCHAIN=0;
 			int MOTION_VECTOR_SWAPCHAIN=0;
 			int MOTION_DEPTH_SWAPCHAIN=0;
+			int OVERLAY_SWAPCHAIN=0;
 			XrPath userHandLeftActiveProfile;
 			XrPath userHandRightActiveProfile;
 			

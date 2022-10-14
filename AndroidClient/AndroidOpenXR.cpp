@@ -106,25 +106,30 @@ void OXR_CheckErrors(XrInstance instance, XrResult result, const char* function,
 client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* renderPlatform, XrBaseInStructure& swapchain_img, XrSwapchainCreateInfo swapchain_info)
 {
 	client::swapchain_surfdata_t result = {};
+
 	// Get information about the swapchain image that OpenXR made for us!
 	XrSwapchainImageVulkanKHR& vulkan_swapchain_img = (XrSwapchainImageVulkanKHR&)swapchain_img;
-	result.target_view = renderPlatform->CreateTexture("swapchain target");
-	platform::crossplatform::PixelFormat pixelFormat=platform::vulkan::RenderPlatform::FromVulkanFormat((vk::Format)swapchain_info.format);
-	result.target_view->InitFromExternalTexture2D(renderPlatform, vulkan_swapchain_img.image, nullptr, swapchain_info.width,swapchain_info.height
-		,pixelFormat, true,false,true,swapchain_info.sampleCount);
-#if 1
-	result.depth_view = renderPlatform->CreateTexture("swapchain depth");
+	platform::crossplatform::PixelFormat pixelFormat = platform::vulkan::RenderPlatform::FromVulkanFormat((vk::Format)swapchain_info.format);
+
 	platform::crossplatform::TextureCreate textureCreate = {};
-	textureCreate.numOfSamples = std::max(1, result.target_view->GetSampleCount());
-	textureCreate.mips = 1;
+	textureCreate.external_texture = vulkan_swapchain_img.image;
+	textureCreate.w = swapchain_info.width;
+	textureCreate.l = swapchain_info.height;
+	textureCreate.arraysize = swapchain_info.arraySize;
+	textureCreate.make_rt = true;
+	textureCreate.f = pixelFormat;
+	textureCreate.numOfSamples = std::max((uint32_t)1, swapchain_info.sampleCount);
+	result.target_view = renderPlatform->CreateTexture("swapchain target");
+	result.target_view->InitFromExternalTexture(renderPlatform, &textureCreate);
+	
 	textureCreate.w = result.target_view->width;
 	textureCreate.l = result.target_view->length;
-	textureCreate.arraysize = 1;
 	textureCreate.f = platform::crossplatform::PixelFormat::D_32_FLOAT;
 	textureCreate.setDepthStencil = true;
 	textureCreate.computable = false;
+	textureCreate.numOfSamples = std::max(1, result.target_view->GetSampleCount());
+	result.depth_view = renderPlatform->CreateTexture("swapchain depth");
 	result.depth_view->EnsureTexture(renderPlatform, &textureCreate);
-	#endif
 	return result;
 }
 
@@ -463,6 +468,7 @@ bool OpenXR::TryInitDevice()
 	xr_config_views.resize(view_count, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
 	xr_views.resize(view_count, { XR_TYPE_VIEW });
 	xrEnumerateViewConfigurationViews(xr_instance, xr_system_id, app_config_view, view_count, &view_count, xr_config_views.data());
+	
 	// Can we override this stuff?
 	static int samples = 1;
 	for (uint32_t i = 0; i < view_count; i++)
@@ -471,44 +477,64 @@ bool OpenXR::TryInitDevice()
 		xr_config_views[i].recommendedSwapchainSampleCount = samples;
 	}
 	int64_t swapchain_format = VK_FORMAT_R8G8B8A8_UNORM;
-	constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB,
-															  VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
+	constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
+	
 	// Find out what format to use:
 	uint32_t formatCount = 0;
-	XrResult res = xrEnumerateSwapchainFormats(
-		xr_session,
-		0,
-		&formatCount,
-		nullptr);
+	XrResult res = xrEnumerateSwapchainFormats(xr_session, 0, &formatCount, nullptr);
 	if (!formatCount)
 		return false;
+
 	std::vector<int64_t> availableFormats(formatCount);
-	res = xrEnumerateSwapchainFormats(
-		xr_session,
-		formatCount,
-		&formatCount,
-		availableFormats.data());
-	#if 0
+	res = xrEnumerateSwapchainFormats(xr_session, formatCount, &formatCount, availableFormats.data());
+#if 0
 	std::cout << "xrEnumerateSwapchainFormats:\n";
 	for (auto f : availableFormats)
 	{
 		vk::Format F = (vk::Format)f;
 		std::cout << "Format: " << vk::to_string(F) << std::endl;
 	}
-	#endif
-	auto swapchainFormatIt =std::find_first_of(availableFormats.begin(), availableFormats.end(), std::begin(SupportedColorSwapchainFormats),
-						   std::end(SupportedColorSwapchainFormats));
+#endif
+	auto swapchainFormatIt =std::find_first_of(availableFormats.begin(), availableFormats.end(), std::begin(SupportedColorSwapchainFormats), std::end(SupportedColorSwapchainFormats));
 	if (swapchainFormatIt == availableFormats.end())
 	{
 		throw("No runtime swapchain format supported for color swapchain");
 	}
 	swapchain_format = *swapchainFormatIt;
 	
-	XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
+	auto AddXrSwapchain = [&, this](XrSwapchainCreateInfo swapchain_info) -> void
+	{
+		XrSwapchain handle;
+		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+
+		// Find out how many textures were generated for the swapchain
+		uint32_t surface_count = 0;
+		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
+
+		// We'll want to track our own information about the swapchain, so we can draw stuff onto it! We'll also create
+		// a depth buffer for each generated texture here as well with make_surfacedata.
+		client::swapchain_t swapchain = {};
+		swapchain.width = swapchain_info.width;
+		swapchain.height = swapchain_info.height;
+		swapchain.handle = handle;
+
+		vector<XrSwapchainImageVulkanKHR> surface_images;
+		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
+
+		swapchain.surface_data.resize(surface_count);
+		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
+		for (uint32_t i = 0; i < surface_count; i++)
+		{
+			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+		}
+		xr_swapchains.push_back(swapchain);
+	};
+
+	XrSwapchainCreateInfo swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
 	// One xr_swapchain for each view, plus one for the overlay...?
 	for (uint32_t i = 0; i < view_count; i++)
 	{
-		// Create a swapchain for this viewpoint! A swapchain is a set of texture buffers used for displaying to screen,
+		// Create a swapchain for these viewpoints! A swapchain is a set of texture buffers used for displaying to screen,
 		// typically this is a backbuffer and a front buffer, one for rendering data to, and one for displaying on-screen.
 		// A note about swapchain image format here! OpenXR doesn't create a concrete image format for the texture, like 
 		// DXGI_FORMAT_R8G8B8A8_UNORM. Instead, it switches to the TYPELESS variant of the provided texture format, like 
@@ -516,7 +542,6 @@ bool OpenXR::TryInitDevice()
 		// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
 		// we do need to store the format separately and remember it later.
 		XrViewConfigurationView& view = xr_config_views[i];
-		XrSwapchain              handle;
 		swapchain_info.createFlags=0;
 		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchain_info.format = swapchain_format;
@@ -526,104 +551,47 @@ bool OpenXR::TryInitDevice()
 		swapchain_info.faceCount = 1;
 		swapchain_info.arraySize = 1;
 		swapchain_info.mipCount = 1;
-		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
-
-		// Find out how many textures were generated for the swapchain
-		uint32_t surface_count = 0;
-		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
-
-		// We'll want to track our own information about the swapchain, so we can draw stuff onto it! We'll also create
-		// a depth buffer for each generated texture here as well with make_surfacedata.
-		client::swapchain_t swapchain = {};
-		swapchain.width = swapchain_info.width;
-		swapchain.height = swapchain_info.height;
-		swapchain.handle = handle;
-
-		vector<XrSwapchainImageVulkanKHR> surface_images;
-		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
-
-		swapchain.surface_data.resize(surface_count);
-		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
-		for (uint32_t i = 0; i < surface_count; i++)
-		{
-			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
-		}
-		xr_swapchains.push_back(swapchain);
+		AddXrSwapchain(swapchain_info);
 	}
+
+	//Motion vector swapchains:
 	static bool add_motion_swapchains=false;
 	if(add_motion_swapchains)
 	{
-		// motion vector swapchains:
-		MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
-		swapchain_info.createFlags=0;
-		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-		swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
-		swapchain_info.sampleCount = 1;
-		swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
-		swapchain_info.height = spaceWarpProperties.recommendedMotionVectorImageRectHeight;
-		swapchain_info.faceCount = 1;
-		swapchain_info.arraySize = 1;
-		swapchain_info.mipCount = 1;
-		if(swapchain_info.width*swapchain_info.height>0)
-		for (uint32_t i = 0; i < view_count; i++)
+		if (spaceWarpProperties.recommendedMotionVectorImageRectWidth * spaceWarpProperties.recommendedMotionVectorImageRectHeight > 0)
 		{
-			XrSwapchain              handle;
-			XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
-			uint32_t surface_count = 0;
-			xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
-			client::swapchain_t swapchain = {};
-			swapchain.width = swapchain_info.width;
-			swapchain.height = swapchain_info.height;
-			swapchain.handle = handle;
-			vector<XrSwapchainImageVulkanKHR> surface_images;
-			surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
-			swapchain.surface_data.resize(surface_count);
-			xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
-			for (uint32_t i = 0; i < surface_count; i++)
-			{
-				swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
-			}
-			xr_swapchains.push_back(swapchain);
-		}
-		MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
-		swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
-		for (uint32_t i = 0; i < view_count; i++)
-		{
-			XrViewConfigurationView& view = xr_config_views[i];
-			XrSwapchain              handle;
+			//Vector
+			MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
 			swapchain_info.createFlags=0;
-			swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
-			swapchain_info.width = view.recommendedImageRectWidth;
-			swapchain_info.height = view.recommendedImageRectHeight;
+			swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+			swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
+			swapchain_info.sampleCount = 1;
+			swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
+			swapchain_info.height = spaceWarpProperties.recommendedMotionVectorImageRectHeight;
 			swapchain_info.faceCount = 1;
 			swapchain_info.arraySize = 1;
 			swapchain_info.mipCount = 1;
-			XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
-			uint32_t surface_count = 0;
-			xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
-			client::swapchain_t swapchain = {};
-			swapchain.width = swapchain_info.width;
-			swapchain.height = swapchain_info.height;
-			swapchain.handle = handle;
-			vector<XrSwapchainImageVulkanKHR> surface_images;
-			surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
-			swapchain.surface_data.resize(surface_count);
-			xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
-			for (uint32_t i = 0; i < surface_count; i++)
+			for (uint32_t i = 0; i < view_count; i++)
 			{
-				swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
+				AddXrSwapchain(swapchain_info);
 			}
-			xr_swapchains.push_back(swapchain);
+			
+			//Depth
+			MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
+			swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
+			for (uint32_t i = 0; i < view_count; i++)
+			{
+				AddXrSwapchain(swapchain_info);
+			}
 		}
 	}
-	// 
-	// quad swapchain:
+
+	//Quad swapchain:
 	static bool add_overlay_swapchain=true;
 	if(add_overlay_swapchain)
 	{
-		XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
-		XrSwapchain              handle;
+		OVERLAY_SWAPCHAIN = xr_swapchains.size();
 		swapchain_info.createFlags=0;
 		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchain_info.format = VK_FORMAT_R8G8B8A8_SRGB;
@@ -633,31 +601,9 @@ bool OpenXR::TryInitDevice()
 		swapchain_info.faceCount = 1;
 		swapchain_info.arraySize = 1;
 		swapchain_info.mipCount = 1;
-		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
+		AddXrSwapchain(swapchain_info);
 
-		// Find out how many textures were generated for the swapchain
-		uint32_t surface_count = 0;
-		xrEnumerateSwapchainImages(handle, 0, &surface_count, nullptr);
-
-		// We'll want to track our own information about the swapchain, so we can draw stuff onto it! We'll also create
-		// a depth buffer for each generated texture here as well with make_surfacedata.
-		client::swapchain_t swapchain = {};
-		swapchain.width = swapchain_info.width;
-		swapchain.height = swapchain_info.height;
-		swapchain.handle = handle;
-
-		vector<XrSwapchainImageVulkanKHR> surface_images;
-		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR });
-
-		swapchain.surface_data.resize(surface_count);
-		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
-		for (uint32_t i = 0; i < surface_count; i++)
-		{
-			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
-		}
-		OVERLAY_SWAPCHAIN=xr_swapchains.size();
-		xr_swapchains.push_back(swapchain);
-#if 1	
+	#if 1	
 		uint32_t					img_id;
 		XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, NULL};
 		XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[2].handle, &acquireInfo, &img_id));

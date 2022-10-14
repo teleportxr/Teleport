@@ -1183,27 +1183,24 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	XrRect2Di& rect = view.subImage.imageRect;
 	crossplatform::Viewport viewport{ (int)rect.offset.x, (int)rect.offset.y, (int)rect.extent.width, (int)rect.extent.height };
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
-	#if 1
+
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
 	static float clear[] = { 0.9f, 0.1f, 0.2f, 1.0f };
-/*	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, nullptr);
-	renderPlatform->Clear(deviceContext, clear);
-	renderPlatform->DeactivateRenderTargets(deviceContext);*/
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
-	if(surface.depth_view)
+	if (surface.depth_view)
+	{
 		surface.depth_view->ClearDepthStencil(deviceContext, 0.0f, 0);
+	}
 	else
 	{
 		SIMUL_BREAK("");
 	}
 		
-		//	static float clear2[] = { 0.3f, 0.3f, 0.3f, 1.0f };
-		//	renderPlatform->Clear(deviceContext, clear2);
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
+
 	renderPlatform->DeactivateRenderTargets(deviceContext);
-	#endif
 }
 
 platform::crossplatform::Texture* OpenXR::GetRenderTexture(int index)
