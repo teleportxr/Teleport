@@ -2240,16 +2240,15 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupComm
 	{
 		if(clientPipeline.videoConfig.colour_cubemap_size)
 			videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
-				crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, true);
+				crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false, true);
 	}
 	else
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false);
+			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false, false);
 	}
-	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
-	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,
-		crossplatform::PixelFormat::RGBA_8_UNORM, true, false, true);
+	specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, false, true);
+	diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, true, false, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
 	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
@@ -2429,12 +2428,12 @@ void Renderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigur
 	if (clientPipeline.videoConfig.use_cubemap)
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, true);
+			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false, true);
 	}
 	else
 	{
 		videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false);
+			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false, false);
 	}
 
 	colourOffsetScale.x = 0;
