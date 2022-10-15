@@ -189,6 +189,37 @@ shader vertexOutput VS_Solid(vertexInput IN)
 	return OUT;
 }
 
+shader vertexOutput VS_Solid_MV(vertexInput IN, uint viewID : SV_ViewID)
+{
+	vertexOutput OUT;
+	mat4 _world = viewID == 0 ? leftWorld : rightWorld;
+	mat4 _view = viewID == 0 ? leftView : rightView;
+	mat4 _proj = viewID == 0 ? leftProj : rightProj;
+	vec3 _viewPosition = stereoViewPosition;
+	
+	vec4 opos			=vec4(IN.position.xyz,1.0);
+	vec4 wpos			=mul(opos, _world);
+
+	//wpos.xyz		-= videoCamPosition;
+	OUT.view			=normalize(wpos.xyz-_viewPosition);
+	vec4 viewspace_pos	=mul(_view, vec4(wpos.xyz, 1.0));
+	OUT.clip_pos		=mul(_proj,vec4(viewspace_pos.xyz,1.0));
+	OUT.wpos = wpos.xyz;
+	//OUT.clip_pos	=mul( opos, worldViewProj);
+	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
+	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
+#ifdef SFX_OPENGL_NONE
+	OUT.normal.xyz = mul(IN.normal, mat3(world));
+	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
+#else
+	OUT.normal			= mul(vec4(IN.normal.xyz, 0.0), _world).xyz;
+	OUT.tangent			= mul(vec4(IN.tangent.xyz,0.0), _world).xyz;
+#endif
+	OUT.hPosition		=OUT.clip_pos;
+	OUT.debug_colour	= vec4(IN.position.xyz, 0);
+	return OUT;
+}
+
 shader vertexOutput VS_Animation(vertexInputAnim IN)
 {
 	vertexOutput OUT;
@@ -219,6 +250,47 @@ shader vertexOutput VS_Animation(vertexInputAnim IN)
 	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), world).xyz;
 	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
+
+	OUT.hPosition = OUT.clip_pos;
+	OUT.debug_colour = IN.weights;
+	return OUT;
+}
+
+shader vertexOutput VS_Animation_MV(vertexInputAnim IN, uint viewID : SV_ViewID)
+{
+	vertexOutput OUT;
+	mat4 _world = viewID == 0 ? leftWorld : rightWorld;
+	mat4 _view = viewID == 0 ? leftView : rightView;
+	mat4 _proj = viewID == 0 ? leftProj : rightProj;
+	vec3 _viewPosition = stereoViewPosition;
+	
+	vec4 w	=IN.weights;
+	// normalize: should we REALLY have to do this?
+	float W	=w.x+w.y+w.z+w.w;
+	w/=W;
+	mat4 boneTransform	= boneMatrices[int(IN.joints[0])] * w.x
+						+ boneMatrices[int(IN.joints[1])] * w.y
+						+ boneMatrices[int(IN.joints[2])] * w.z
+						+ boneMatrices[int(IN.joints[3])] * w.w;
+	
+	vec4 opos		= vec4(IN.position.xyz,1.0);
+	// boneTransform transforms between two positions in object-local space.
+	vec4 wpos		= mul(mul(opos, boneTransform), _world);
+	//vec4 wpos		= mul(opos, world);
+	//vec4 wpos = mul(opos, world);
+
+	OUT.view			=normalize(wpos.xyz-_viewPosition);
+	vec4 viewspace_pos	=mul(_view, vec4(wpos.xyz, 1.0));
+	OUT.clip_pos		=mul(_proj,vec4(viewspace_pos.xyz,1.0));
+	OUT.wpos			=wpos.xyz;
+
+	OUT.texCoords0	=IN.texCoords0;
+	OUT.texCoords1	=IN.texCoords1;
+	
+	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
+	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), _world).xyz;
+	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
+	OUT.tangent.xyz = mul(IN.tangent, _world).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
 	OUT.debug_colour = IN.weights;
@@ -690,8 +762,8 @@ shader vec4 PS_DebugLightmaps(vertexOutput IN) : SV_TARGET
 	return globalIllumination;
 }
 
-VertexShader vs_solid = CompileShader(vs_6_1, VS_Solid());
-VertexShader vs_anim = CompileShader(vs_6_1, VS_Animation());
+VertexShader vs_solid = CompileShader(vs_6_1, VS_Solid_MV());
+VertexShader vs_anim = CompileShader(vs_6_1, VS_Animation_MV());
 PixelShader ps_solid_lightmap = CompileShader(ps_4_0, PS_Solid_Lightmap());
 PixelShader ps_solid_nolightmap = CompileShader(ps_4_0, PS_Solid_NoLightmap());
 PixelShader ps_local_hand = CompileShader(ps_4_0, PS_Solid_LocalHand());

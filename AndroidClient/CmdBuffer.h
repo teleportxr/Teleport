@@ -10,10 +10,10 @@ namespace teleport
 		{
 			enum class CmdBufferState
 			{
-				Undefined,		
-				Initialized,		
-				Recording,		
-				Executable,			
+				Undefined,
+				Initialized,
+				Recording,
+				Executable,
 				Executing
 			};
 			CmdBufferState state{CmdBufferState::Undefined};

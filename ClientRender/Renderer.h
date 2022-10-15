@@ -163,6 +163,7 @@ namespace clientrender
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 		platform::crossplatform::ShaderResource _lights;
 		platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
+		platform::crossplatform::ConstantBuffer<StereoCameraConstants> stereoCameraConstants;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
 		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;

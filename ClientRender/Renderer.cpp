@@ -221,7 +221,8 @@ void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client:
 	pbrConstants.LinkToEffect(pbrEffect,"pbrConstants");
 	cubemapConstants.RestoreDeviceObjects(renderPlatform);
 	cubemapConstants.LinkToEffect(cubemapClearEffect, "CubemapConstants");
-	cameraConstants.RestoreDeviceObjects(renderPlatform); 
+	cameraConstants.RestoreDeviceObjects(renderPlatform);
+	stereoCameraConstants.RestoreDeviceObjects(renderPlatform);
 	tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 	tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
 	lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
@@ -574,12 +575,21 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	}
 	else
 	{
-		///static float clear[] = { 0.0f, 0.4f, 0.3f, 1.0f };
-		//renderPlatform->Clear(deviceContext, clear);
 		cubemapClearEffect->Apply(deviceContext, "unconnected",(int) config.options.lobbyView);
-		cameraConstants.invWorldViewProj=deviceContext.viewStruct.invViewProj;
-		cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;//clientDeviceState->headPose.localPose.position;//
-		cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+		if (deviceContext.deviceContextType == platform::crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+		{
+			platform::crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+			stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+			stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+			stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
+			cubemapClearEffect->SetConstantBuffer(mgdc, &stereoCameraConstants);
+		}
+		//else
+		{
+			cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+		}
 		renderPlatform->DrawQuad(deviceContext);
 		cubemapClearEffect->Unapply(deviceContext);
 	}
@@ -863,9 +873,9 @@ void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext
 	cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.globalPose.position) - videoPos;
 	cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.globalPose.position);
 	cubemapConstants.cameraRotation = *((vec4*)&clientDeviceState->headPose.globalPose.orientation);
-	cameraConstants.invWorldViewProj = invCamMatrix;
+	//cameraConstants.invWorldViewProj = invCamMatrix;
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	//cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 	cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
 	cubemapClearEffect->Apply(deviceContext, technique, 0);
@@ -878,7 +888,7 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 {
 	cubemapConstants.sourceOffset = sourceOffset;
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
-	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+	//cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 
 	cubemapConstants.targetSize.x = targetTexture->width;
 	cubemapConstants.targetSize.y = targetTexture->length;
@@ -898,17 +908,36 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 }
 
 
-void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid this_server_uid,clientrender::GeometryCache &g)
+void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext, avs::uid this_server_uid, clientrender::GeometryCache& g)
 {
-	deviceContext.viewStruct.Init();
 
-	cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-	cameraConstants.view = deviceContext.viewStruct.view;
-	cameraConstants.proj = deviceContext.viewStruct.proj;
-	cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
-	// The following block renders to the hdrFramebuffer's rendertarget:
-	cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
-	
+	if (deviceContext.deviceContextType == platform::crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+	{
+		platform::crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+		mgdc.viewStructs[0].Init();
+		mgdc.viewStructs[1].Init();
+		stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+		stereoCameraConstants.leftView = mgdc.viewStructs[0].view;
+		stereoCameraConstants.leftProj = mgdc.viewStructs[0].proj;
+		stereoCameraConstants.leftViewProj = mgdc.viewStructs[0].viewProj;
+		stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+		stereoCameraConstants.rightView = mgdc.viewStructs[1].view;
+		stereoCameraConstants.rightProj = mgdc.viewStructs[1].proj;
+		stereoCameraConstants.rightViewProj = mgdc.viewStructs[1].viewProj;
+		// The following block renders to the hdrFramebuffer's rendertarget:
+		stereoCameraConstants.stereoViewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
+	}
+	//else
+	{
+		deviceContext.viewStruct.Init();
+		cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+		cameraConstants.view = deviceContext.viewStruct.view;
+		cameraConstants.proj = deviceContext.viewStruct.proj;
+		cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
+		// The following block renders to the hdrFramebuffer's rendertarget:
+		cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
+	}
+
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 		auto &cachedLights=g.mLightManager.GetCache(cacheLock);
@@ -1013,8 +1042,19 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					model=mat4::identity();
 				}
 
-				mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
-				cameraConstants.world = model;
+				if (deviceContext.deviceContextType == platform::crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+				{
+					platform::crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+					mat4::mul(stereoCameraConstants.leftWorldViewProj, *((mat4*)&mgdc.viewStructs[0].viewProj), model);
+					stereoCameraConstants.leftWorld = model;
+					mat4::mul(stereoCameraConstants.rightWorldViewProj, *((mat4*)&mgdc.viewStructs[1].viewProj), model);
+					stereoCameraConstants.rightWorld = model;
+				}
+				//else
+				{
+					mat4::mul(cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
+					cameraConstants.world = model;
+				}
 				// TODO: Improve this.
 				bool negative_scale=(node->GetGlobalScale().x<0.0f);
 				std::shared_ptr<clientrender::Texture> gi = globalIlluminationTexture;
@@ -1091,7 +1131,10 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataIDBuffer"));
 
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
-				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
+				if (deviceContext.deviceContextType == platform::crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+					pbrEffect->SetConstantBuffer(deviceContext, &stereoCameraConstants);
+				//else
+					pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 				if(double_sided)
 					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
 				else if(negative_scale)
