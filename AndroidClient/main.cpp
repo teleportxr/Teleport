@@ -172,7 +172,8 @@ void android_main(struct android_app* app)
 
 	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient(std::make_unique<android::AndroidDiscoveryService>());
 	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,clientApp.config);
-	androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
+	if (!clientApp.config.recent_server_urls.empty())
+		androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
 
