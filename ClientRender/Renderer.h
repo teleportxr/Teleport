@@ -159,9 +159,23 @@ namespace clientrender
 
 		// A simple example mesh to draw as transparent
 		platform::crossplatform::Effect *pbrEffect				= nullptr;
+		platform::crossplatform::EffectTechnique*	pbrEffect_solidTechnique=nullptr;
+		platform::crossplatform::EffectPass *pbrEffect_solidTechnique_localPass=nullptr;
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 		platform::crossplatform::ShaderResource _lights;
+		platform::crossplatform::ShaderResource plainTexture;
+		platform::crossplatform::ShaderResource RWTextureTargetArray;
+		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataIDBuffer;
+		platform::crossplatform::ShaderResource pbrEffect_TagDataIDBuffer;
+		platform::crossplatform::ShaderResource pbrEffect_specularCubemap,pbrEffect_diffuseCubemap;
+		platform::crossplatform::ShaderResource pbrEffect_diffuseTexture;
+		platform::crossplatform::ShaderResource pbrEffect_normalTexture;
+		platform::crossplatform::ShaderResource pbrEffect_combinedTexture;
+		platform::crossplatform::ShaderResource pbrEffect_emissiveTexture;
+		platform::crossplatform::ShaderResource pbrEffect_globalIlluminationTexture;
+		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataCubeBuffer; 
+
 		platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;

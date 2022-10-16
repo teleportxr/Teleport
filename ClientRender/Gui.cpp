@@ -12,6 +12,7 @@
 #include "Gui.h"
 #include "IconsForkAwesome.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include <fmt/format.h>
 
 #ifdef _MSC_VER
@@ -544,12 +545,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::Text("Hidden");
 					ImGui::TableNextColumn();
 					bool hidden=!selected_node->IsVisible();
-					ImGui::Checkbox("isHidden", &hidden);
+					ImGui::Checkbox("##isHidden", &hidden);
 					ImGui::TableNextColumn();
 					ImGui::Text("Stationary");
 					ImGui::TableNextColumn();
 					bool stationary=selected_node->IsStatic();
-					ImGui::Checkbox("isStatic", &stationary);
+					ImGui::Checkbox("##isStatic", &stationary);
 					DoRow("GI"			,"%d", gi_uid);
 					DoRow("Local Pos"	,"%3.3f %3.3f %3.3f", pos.x, pos.y, pos.z);
 					DoRow("Rot"			,"%3.3f %3.3f %3.3f %3.3f", q.x, q.y, q.z, q.w);
@@ -612,6 +613,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			else if (selected_material.get())
 			{
 				const auto& mci = selected_material->GetMaterialCreateInfo();
+				const clientrender::Material::MaterialData& md = selected_material->GetMaterialData();
 				ImGui::Text("%llu: %s", selected_material->id, mci.name.c_str());
 				if(mci.diffuse.texture.get())
 				{
@@ -626,6 +628,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				if (mci.combined.texture.get())
 				{
 					ImGui::TreeNodeEx("", flags,"Combined: %s", mci.combined.texture->GetTextureCreateInfo().name.c_str());
+					ImGui::TreeNodeEx("", flags,"Roughness: R = %3.3f a + %3.3f",  md.combinedOutputScalarRoughMetalOcclusion.x,md.combinedOutputScalarRoughMetalOcclusion.w);
 					
 					if (ImGui::IsItemClicked())
 					{
@@ -886,10 +889,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				keys_pressed.erase(keys_pressed.begin());
 			}
 		}
-	//	if(io.KeysDown[VK_ESCAPE])
-		{
-	//		show_hide=false;
-		}
 		static bool show_bookmarks=false;
 		static bool show_options=false;
 		if(show_options)
@@ -914,17 +913,36 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::RadioButton("White", &e, 0);
 				ImGui::SameLine();
 				ImGui::RadioButton("Neon", &e, 1);
+				if((client::LobbyView)e!=config->options.lobbyView)
+				{
+					config->options.lobbyView=(client::LobbyView)e;
+				}
+                ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::PushItemWidth(300.0f);
+				ImGui::LabelText("##StartupConnection","Startup Connection");
+				ImGui::TableNextColumn();
+				auto conn=magic_enum::enum_entries<teleport::client::StartupConnectOption>();
+				int c= (int)config->options.startupConnectOption;
+				int i=0;
+				for(const auto &e:conn)
+				{
+					std::string ename=fmt::format("{0}",e.second);
+					ImGui::RadioButton(ename.c_str(), &c, i++);
+					ImGui::SameLine();
+				}
+				if((client::StartupConnectOption)c!=config->options.startupConnectOption)
+				{
+					config->options.startupConnectOption=(client::StartupConnectOption)c;
+				}
+
 				#if TELEPORT_INTERNAL_CHECKS
                 ImGui::TableNextRow();
 				ImGui::TableNextColumn();
 				ImGui::LabelText("##labelGeometryOffline","Geometry Visible Offline");
 				ImGui::TableNextColumn();
-				config->options.showGeometryOffline=ImGui::Checkbox("##showGeometryOffline",&config->options.showGeometryOffline);
+				ImGui::Checkbox("##showGeometryOffline",&config->options.showGeometryOffline);
 				#endif
-				if((client::LobbyView)e!=config->options.lobbyView)
-				{
-					config->options.lobbyView=(client::LobbyView)e;
-				}
 				ImGui::EndTable();
 			}
 		}

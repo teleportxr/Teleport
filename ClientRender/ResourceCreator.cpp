@@ -1309,11 +1309,12 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
 						continue;
 					}
+					//transcoding.scrTexture.mipCount=std::min(transcoding.scrTexture.mipCount,(uint)2);
 					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
-					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
-					{
-						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+						for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
 						{
+					for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+					{
 							uint32_t basisWidth, basisHeight, basisBlocks;
 
 							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);

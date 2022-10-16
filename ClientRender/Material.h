@@ -82,7 +82,7 @@ namespace clientrender
 		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }
 		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }
-		inline const MaterialData& GetMaterialData() { return m_MaterialData; }
+		inline const MaterialData& GetMaterialData() const { return m_MaterialData; }
 
 		void SetShaderOverride(const char *);
 		avs::uid id = 0;
