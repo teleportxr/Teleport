@@ -120,6 +120,14 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	textureCreate.numOfSamples		= num_samp;
 	textureCreate.compressionFormat = (platform::crossplatform::CompressionFormat)pTextureCreateInfo.compression;
 	textureCreate.mips				=pTextureCreateInfo.mipCount;
+	while((1<<(textureCreate.mips-1))>textureCreate.w)
+	{
+		textureCreate.mips--;
+	}
+	while((1<<(textureCreate.mips-1))>textureCreate.l)
+	{
+		textureCreate.mips--;
+	}
 	size_t initialDataSize=0;
 	for(const auto &i:pTextureCreateInfo.images)
 	{

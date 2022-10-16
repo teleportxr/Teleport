@@ -359,8 +359,24 @@ void Renderer::RecompileShaders()
 	delete cubemapClearEffect;
 	pbrEffect = renderPlatform->CreateEffect("pbr");
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
-	_RWTagDataIDBuffer = cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
+
+	pbrEffect_solidTechnique=pbrEffect->GetTechniqueByName("solid");
+	pbrEffect_solidTechnique_localPass=pbrEffect_solidTechnique->GetPass("local");
+	_RWTagDataIDBuffer						= cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
+	cubemapClearEffect_TagDataCubeBuffer	= cubemapClearEffect->GetShaderResource("TagDataCubeBuffer");
 	_lights = pbrEffect->GetShaderResource("lights");
+	plainTexture		=cubemapClearEffect->GetShaderResource("plainTexture");
+	RWTextureTargetArray=cubemapClearEffect->GetShaderResource("RWTextureTargetArray");
+	cubemapClearEffect_TagDataIDBuffer		=cubemapClearEffect->GetShaderResource("TagDataIDBuffer");
+	pbrEffect_TagDataIDBuffer				=pbrEffect->GetShaderResource("TagDataIDBuffer");
+	
+	pbrEffect_diffuseCubemap				=pbrEffect->GetShaderResource("diffuseCubemap");
+	pbrEffect_specularCubemap				=pbrEffect->GetShaderResource("specularCubemap");
+	pbrEffect_diffuseTexture	=pbrEffect->GetShaderResource("diffuseTexture");
+	pbrEffect_normalTexture		=pbrEffect->GetShaderResource("normalTexture");
+	pbrEffect_combinedTexture	=pbrEffect->GetShaderResource("combinedTexture");
+	pbrEffect_emissiveTexture	=pbrEffect->GetShaderResource("emissiveTexture");
+	pbrEffect_globalIlluminationTexture=pbrEffect->GetShaderResource("globalIlluminationTexture");
 }
 
 void Renderer::InvalidateDeviceObjects()
@@ -508,8 +524,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	if (ti)
 	{
 		// This will apply to both rendering methods
-		
-		cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+		cubemapClearEffect->SetTexture(deviceContext, plainTexture, ti->texture);
 		tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, _RWTagDataIDBuffer);
 		cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
 		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
@@ -835,7 +850,7 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 	}
 	{
 		cubemapClearEffect->SetTexture(deviceContext, "plainTexture",testSourceTexture);
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
 		cubemapClearEffect->Apply(deviceContext, technique, faceColour ? "test_face_colour" : "test");
 		int zGroups = videoTexture->IsCubemap() ? 6 : 1;
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width/16, targetTexture->length/16, zGroups);
@@ -846,19 +861,19 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture",srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
-	tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
+	tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect_TagDataIDBuffer);
 	int zGroups = videoTexture->IsCubemap() ? 6 : 1;
 	cubemapClearEffect->Apply(deviceContext, technique, 0);
 	renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, zGroups);
 	cubemapClearEffect->Unapply(deviceContext);
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
 void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix)
 {
-	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
+	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect,cubemapClearEffect_TagDataCubeBuffer);
 	cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 	cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.globalPose.position) - videoPos;
 	cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.globalPose.position);
@@ -877,7 +892,7 @@ void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext
 void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
 {
 	cubemapConstants.sourceOffset = sourceOffset;
-	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->SetTexture(deviceContext, plainTexture, srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 
 	cubemapConstants.targetSize.x = targetTexture->width;
@@ -885,7 +900,7 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 
 	for (int m = 0; m < mips; m++)
 	{
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture, -1, m);
 		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
@@ -893,7 +908,7 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize.x;
 		cubemapConstants.targetSize /= 2;
 	}
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
@@ -1035,9 +1050,11 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					usedPassName = "anim_" + usedPassName;
 				//	force_highlight=true;
 				}
-				crossplatform::EffectPass *pass = pbrEffect->GetTechniqueByName("solid")->GetPass(usedPassName.c_str());
+				bool highlight=node->IsHighlighted()||force_highlight;
+				crossplatform::EffectPass *pass = pbrEffect_solidTechnique->GetPass(usedPassName.c_str());
 				if(material)
 				{
+					highlight|= (gui.GetSelectedUid() == material->id);
 					const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
 					const clientrender::Material::MaterialData& md = material->GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
@@ -1047,26 +1064,26 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					std::shared_ptr<clientrender::Texture> combined = matInfo.combined.texture;
 					std::shared_ptr<clientrender::Texture> emissive = matInfo.emissive.texture;
 					
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), diffuse ? diffuse->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), normal ? normal->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), combined ? combined->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"), emissive ? emissive->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture	, diffuse ? diffuse->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture	, normal ? normal->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture	, combined ? combined->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture	, emissive ? emissive->GetSimulTexture() : nullptr);
 
 				}
 				else
 				{
 					pbrConstants.diffuseOutputScalar=vec4(1.0f,1.0f,1.0f,0.5f);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"),  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"),  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"),  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"),  nullptr);
-					pass = pbrEffect->GetTechniqueByName("solid")->GetPass("local");
+					pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture,  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture,  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture,  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture,  nullptr);
+					pass = pbrEffect_solidTechnique_localPass;
 				}
-				if (node->IsHighlighted()||force_highlight)
+				if (highlight)
 				{
 					pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext,pbrEffect_globalIlluminationTexture, gi ? gi->GetSimulTexture() : nullptr);
 
 				// If lighting is via static textures.
 				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
@@ -1074,32 +1091,32 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
 					{
-						pbrEffect->SetTexture(deviceContext,"diffuseCubemap",t->GetSimulTexture());
+						pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap,t->GetSimulTexture());
 					}
 				}
 				else
 				{
-					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+					pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap, diffuseCubemapTexture);
 				}
 				if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
 					if(t)
 					{
-						pbrEffect->SetTexture(deviceContext,"specularCubemap",t->GetSimulTexture());
+						pbrEffect->SetTexture(deviceContext,pbrEffect_specularCubemap,t->GetSimulTexture());
 					}
 				}
 				else
 				{
-					pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_specularCubemap, specularCubemapTexture);
 				}
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
-				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataCubeBuffer"));
-				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataIDBuffer"));
+				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, cubemapClearEffect_TagDataCubeBuffer);
+				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect_TagDataIDBuffer);
 
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 				pbrEffect->SetConstantBuffer(deviceContext, &cameraConstants);
@@ -1729,10 +1746,12 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 	}
 	static int lod = 0;
-	static char tt = 0;
+	static int tt = 1000;
 	tt--;
 	if (!tt)
+	{
 		lod++;
+	}
 	lod = lod % 8;
 	if(show_cubemaps)
 	{
@@ -1744,6 +1763,22 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		{
 			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), 0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
 		}
+		auto s = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+		if(s&&s->GetSimulTexture())
+		{
+			static int s_lod=0;
+			if (!tt)
+			{
+				s_lod++;
+				s_lod=s_lod%s->GetSimulTexture()->mips;
+			}
+			renderPlatform->DrawCubemap(deviceContext, s->GetSimulTexture(), 0.6f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(s_lod));
+			renderPlatform->Print(deviceContext,200,32,fmt::format("cubemaps mip {0}",s_lod).c_str());
+		}
+	}
+	if (!tt)
+	{
+		tt=1000;
 	}
 	//
 	{

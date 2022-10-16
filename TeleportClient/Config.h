@@ -27,10 +27,17 @@ namespace teleport
 			WHITE,
 			NEON
 		};
+		enum class StartupConnectOption:uint8_t
+		{
+			NONE=0,
+			HOME,
+			LAST
+		};
 		struct Options
 		{
 			LobbyView lobbyView;
 			bool showGeometryOffline = false;
+			StartupConnectOption startupConnectOption = StartupConnectOption::LAST;
 		};
 		class Config
 		{

@@ -172,7 +172,8 @@ void android_main(struct android_app* app)
 
 	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient(std::make_unique<android::AndroidDiscoveryService>());
 	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,clientApp.config);
-	androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
+	if(clientApp.config.recent_server_urls.size())
+		androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
 	// Provided by VK_VERSION_1_0
@@ -194,7 +195,11 @@ void android_main(struct android_app* app)
 	device_exts.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME); 
 	
 	RedirectStdCoutCerr();
-	vulkanDeviceManager.Initialize(true,false,false,device_exts,openXR.GetRequiredVulkanInstanceExtensions());
+	bool enable_validation=false;
+	#ifdef _DEBUG
+	enable_validation=true;
+	#endif
+	vulkanDeviceManager.Initialize(enable_validation,false,false,device_exts,openXR.GetRequiredVulkanInstanceExtensions());
 	RenderPlatform *renderPlatform = new vulkan::RenderPlatform();
 
 	renderPlatform->PushTexturePath("");

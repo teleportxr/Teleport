@@ -24,9 +24,10 @@ uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
 //////////////////////////
 
-uniform StructuredBuffer<uint4> TagDataIDBuffer;
-uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
-uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
+// TODO Disable until fully supported
+//uniform StructuredBuffer<uint4> TagDataIDBuffer;
+//uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
+//uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
  
 /*
 SamplerComparisonState shadowComparisonState
@@ -492,28 +493,32 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
-	int id						=int(TagDataIDBuffer[0].x);
-	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
-	surfaceState.kD				*=tagData.diffuseAmbientScale;
+	//int id						=int(TagDataIDBuffer[0].x);
+	//VideoTagDataCube tagData	=TagDataCubeBuffer[id];
+
+	// TODO: THis ONLY applies for video lighting!
+	//surfaceState.kD				*=tagData.diffuseAmbientScale;
 	vec3 c						=vec3(0,0,0);
 	if(lightmap)
-		c+=PBRLightmap(surfaceState, view, surfaceProperties);
+		c=PBRLightmap(surfaceState, view, surfaceProperties);
 	if(ambient)
 	{
 		c+=PBRAmbient(surfaceState, view, surfaceProperties);
 	}
 	//c.rgb=surfaceProperties.globalIllumination.rgb;
-	for(int i=0;i<max_lights;i++)
+	//for(int i=0;i<max_lights;i++)
 	{
-		if(i>=tagData.lightCount)
-			break;
-		LightTag lightTag	=tagData.lightTags[i];
-		c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
+		//if(i>=tagData.lightCount)
+			//break;
+		//LightTag lightTag	=tagData.lightTags[i];
+		//c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
-
+	
 	vec3 emissive		=	emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
 	emissive			*=	emissiveOutputScalar.rgb;
 	vec4 u				=	vec4(c+emissive,1.0);
+	//if(lightmap)
+	//u.r=1.0;
 	return u;
 }
 
@@ -705,11 +710,17 @@ PixelShader ps_debug_lightmaps = CompileShader(ps_4_0, PS_DebugLightmaps()); //U
 PixelShader ps_debug_normal_unity = CompileShader(ps_4_0, PS_DebugNormal_Unity()); //Unity-basis normal view
 PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_4_0, PS_DebugNormal_VertexNormals()); //Vertex normals
 
+RasterizerState PbrBackfaceCull
+{
+	FillMode					= SOLID;
+	CullMode = back;
+	FrontCounterClockwise		= false;
+};
 technique solid
 {
 	pass local
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -718,7 +729,7 @@ technique solid
 	}
 	pass depth 
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -727,7 +738,7 @@ technique solid
 	}
 	pass pbr_lightmap 
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -736,7 +747,7 @@ technique solid
 	}
 	pass pbr_nolightmap
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -745,7 +756,7 @@ technique solid
 	}
 	pass albedo_only
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -754,7 +765,7 @@ technique solid
 	}
 	pass normal_unswizzled
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -763,7 +774,7 @@ technique solid
 	}
 	pass debug_lightmaps
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -772,7 +783,7 @@ technique solid
 	}
 	pass anim_debug_lightmaps
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim);
@@ -781,7 +792,7 @@ technique solid
 	}
 	pass debug_anim
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -790,7 +801,7 @@ technique solid
 	}
 	pass anim_debug_anim
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -799,7 +810,7 @@ technique solid
 	}
 	pass normal_unity
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -808,7 +819,7 @@ technique solid
 	}
 	pass normal_vertexnormals
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -818,7 +829,7 @@ technique solid
 
 	pass anim_pbr_lightmap
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim);
@@ -827,7 +838,7 @@ technique solid
 	}
 	pass anim_pbr_nolightmap
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -854,7 +865,7 @@ technique solid
 	}
 	pass anim_albedo_only
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -863,7 +874,7 @@ technique solid
 	}
 	pass anim_normal_unswizzled
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -872,7 +883,7 @@ technique solid
 	}
 	pass anim_debug_anim
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -881,7 +892,7 @@ technique solid
 	}
 	pass anim_normal_unity
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -890,7 +901,7 @@ technique solid
 	}
 	pass anim_normal_vertexnormals
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);

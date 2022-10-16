@@ -146,6 +146,10 @@ void Config::LoadOptions()
 		auto l=magic_enum::enum_cast<LobbyView>(s);
 		if(l.has_value())
 			options.lobbyView = l.value(); 
+		std::string c=ini.GetValue("", "StartupConnectOption","");
+		auto C=magic_enum::enum_cast<StartupConnectOption>(c);
+		if(C.has_value())
+			options.startupConnectOption = C.value(); 
 	}
 }
 
@@ -155,6 +159,7 @@ void Config::SaveOptions()
 	{
 		string str;
 		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
+		str+=fmt::format("\nStartupConnectOption={0}",magic_enum::enum_name(options.startupConnectOption));
 		std::string filename=GetStoragePath()+"config/options.txt"s;
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 		LoadOptions();
