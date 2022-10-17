@@ -171,7 +171,7 @@ void SessionClient::SetPeerTimeout(uint timeout)
 
 void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &headPose
-	,const avs::Pose* controllerPoses
+	,const std::map<avs::uid,avs::Pose> &controllerPoses
 	,uint64_t poseValidCounter
 	,const avs::Pose &originPose
 	,const core::Input &input
@@ -350,33 +350,119 @@ void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
 }
 
-void SessionClient::SendControllerPoses(const avs::Pose& headPose,const avs::Pose * poses)
+void SessionClient::SendControllerPoses(const avs::Pose& headPose,const std::map<avs::uid,avs::Pose> poses)
 {
-	if(!poses)
-		return;
 	avs::ControllerPosesMessage message;
 	message.headPose=headPose;
-	message.controllerPoses[0]=poses[0];
-	message.controllerPoses[1]=poses[1];
+	message.numPoses=(uint16_t)poses.size();
 	if(isnan(headPose.position.x))
 	{
 		TELEPORT_CLIENT_WARN("Trying to send NaN");
 		return;
 	}
-	SendClientMessage(message);
+	size_t messageSize = sizeof(avs::ControllerPosesMessage)+message.numPoses*sizeof(avs::NodePose);
+	ENetPacket* packet = enet_packet_create(&message, sizeof(avs::ControllerPosesMessage), ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+	enet_packet_resize(packet, messageSize);
+	int i=0;
+	avs::NodePose nodePose;
+	uint8_t *target=packet->data+sizeof(avs::ControllerPosesMessage);
+	for(const auto &p:poses)
+	{
+		nodePose.uid=p.first;
+		nodePose.pose=p.second;
+		memcpy(target,&nodePose,sizeof(nodePose));
+		target+=sizeof(nodePose);
+	}
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
 
-static void copy_and_increment(void *&target,const void *source,size_t size)
+static void copy_and_increment(uint8_t *&target,const void *source,size_t size)
 {
 	if(!size)
 		return;
 	memcpy(target, source, size);
-	unsigned char *t=(unsigned char *)target;
-	t+=size;
-	target=t;
+	target+=size;
 }
 
+void receiveInput(const ENetPacket* packet)
+{
+	size_t inputStateSize = sizeof(avs::InputState);
+
+	if (packet->dataLength < inputStateSize)
+	{
+		TELEPORT_CERR << "Error on receive input for Client_! Received malformed InputState packet of length " << packet->dataLength << "; less than minimum size of " << inputStateSize << "!\n";
+		return;
+	}
+
+	avs::InputState receivedInputState;
+	//Copy newest input state into member variable.
+	memcpy(&receivedInputState, packet->data, inputStateSize);
+	
+	size_t binaryStateSize		= receivedInputState.numBinaryStates;
+	size_t analogueStateSize	= sizeof(float)*receivedInputState.numAnalogueStates;
+	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * receivedInputState.numBinaryEvents;
+	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * receivedInputState.numAnalogueEvents;
+	size_t motionEventSize		= sizeof(avs::InputEventMotion) * receivedInputState.numMotionEvents;
+
+	if (packet->dataLength != inputStateSize +binaryStateSize+analogueStateSize+ binaryEventSize + analogueEventSize + motionEventSize)
+	{
+		TELEPORT_CERR << "Error on receive input for Client_! Received malformed InputState packet of length " << packet->dataLength << "; expected size of " << inputStateSize + binaryEventSize + analogueEventSize + motionEventSize << "!\n" <<
+			"     InputState Size: " << inputStateSize << "\n" <<
+			"  Binary States Size:" << binaryStateSize << "(" << receivedInputState.numBinaryStates << ")\n" <<
+			"Analogue States Size:" << analogueStateSize << "(" << receivedInputState.numAnalogueStates << ")\n" <<
+			"  Binary Events Size:" << binaryEventSize << "(" << receivedInputState.numBinaryEvents << ")\n" <<
+			"Analogue Events Size:" << analogueEventSize << "(" << receivedInputState.numAnalogueEvents << ")\n" <<
+			"  Motion Events Size:" << motionEventSize << "(" << receivedInputState.numMotionEvents << ")\n";
+
+		return;
+	}
+	core::Input latestInputStateAndEvents;
+	latestInputStateAndEvents.analogueStates.resize(receivedInputState.numAnalogueStates);
+	latestInputStateAndEvents.binaryStates.resize(binaryStateSize);
+	uint8_t *src=packet->data+inputStateSize;
+	if(receivedInputState.numBinaryStates != 0)
+	{
+		memcpy(latestInputStateAndEvents.binaryStates.data(), src, binaryStateSize);
+		src+=binaryStateSize;
+	}
+	if(receivedInputState.numAnalogueStates != 0)
+	{
+		memcpy(latestInputStateAndEvents.analogueStates.data(), src, analogueStateSize);
+		src+=analogueStateSize;
+		for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
+		{
+			float &f=latestInputStateAndEvents.analogueStates[i];
+			if(f<-1.f||f>1.f||isnan(f))
+			{
+				TELEPORT_CERR<<"Bad analogue state value "<<f<<std::endl;
+				f=0;
+			}
+		}
+	}
+	if(receivedInputState.numBinaryEvents != 0)
+	{
+		avs::InputEventBinary* binaryData = reinterpret_cast<avs::InputEventBinary*>(src);
+		latestInputStateAndEvents.binaryEvents.insert(latestInputStateAndEvents.binaryEvents.end(), binaryData, binaryData + receivedInputState.numBinaryEvents);
+		src+=binaryEventSize;
+	}
+	if(receivedInputState.numAnalogueEvents != 0)
+	{
+		avs::InputEventAnalogue* analogueData = reinterpret_cast<avs::InputEventAnalogue*>(src);
+		latestInputStateAndEvents.analogueEvents.insert(latestInputStateAndEvents.analogueEvents.end(), analogueData, analogueData + receivedInputState.numAnalogueEvents);
+		for (auto c : latestInputStateAndEvents.analogueEvents)
+		{
+			TELEPORT_COUT << "Analogue: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
+		}
+		src+=analogueEventSize;
+	}
+
+	if(receivedInputState.numMotionEvents != 0)
+	{
+		avs::InputEventMotion* motionData = reinterpret_cast<avs::InputEventMotion*>(src);
+		latestInputStateAndEvents.motionEvents.insert(latestInputStateAndEvents.motionEvents.end(), motionData, motionData + receivedInputState.numMotionEvents);
+	}
+}
 void SessionClient::SendInput(const core::Input& input)
 {
 	avs::InputState inputState = {};
@@ -399,20 +485,29 @@ void SessionClient::SendInput(const core::Input& input)
 	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * inputState.numAnalogueEvents;
 	size_t motionEventSize		= sizeof(avs::InputEventMotion) * inputState.numMotionEvents;
 
+	size_t packetSize=inputStateSize +binaryStateSize+ binaryEventSize +analogueStateSize+ analogueEventSize + motionEventSize;
+	std::cout<<"SendInput size "<<packetSize<<" with "<<inputState.numAnalogueStates<<" states.\n";
 	//Size packet to final size, but initially only put the InputState struct inside.
-	ENetPacket* packet = enet_packet_create(nullptr, inputStateSize +binaryStateSize+ binaryEventSize +analogueStateSize+ analogueEventSize + motionEventSize, packetFlags);
+	ENetPacket* packet = enet_packet_create(nullptr, packetSize, packetFlags);
 
 	//Copy events into packet.
-	void *target=packet->data;
+	uint8_t *target=packet->data;
 	copy_and_increment(target,&inputState,inputStateSize);
 	copy_and_increment(target,input.binaryStates.data(),binaryStateSize);
-	copy_and_increment(target,input.analogueStates.data(),analogueStateSize);
+	if(input.analogueStates.size()>0&&input.analogueStates[0]!=0)
+	{
+		copy_and_increment(target,input.analogueStates.data(),analogueStateSize);
+	}
+	else
+	{
+		copy_and_increment(target,input.analogueStates.data(),analogueStateSize);
+	}
 	copy_and_increment(target,input.binaryEvents.data(),binaryEventSize);
 	copy_and_increment(target,input.analogueEvents.data(),analogueEventSize);
 	copy_and_increment(target,input.motionEvents.data(),motionEventSize);
 
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
-	
+	//receiveInput(packet);
 }
 
 void SessionClient::SendResourceRequests()

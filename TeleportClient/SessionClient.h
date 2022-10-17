@@ -98,7 +98,7 @@ namespace teleport
 
 			void Frame(
 					const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
-					const avs::Pose *controllerPoses, uint64_t originValidCounter,
+					const std::map<avs::uid,avs::Pose> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					bool requestKeyframe, double time, double deltaTime);
 
@@ -139,7 +139,7 @@ namespace teleport
 			void ReceiveCommandPacket(ENetPacket* packet);
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-			void SendControllerPoses(const avs::Pose& headPose,const avs::Pose* poses);
+			void SendControllerPoses(const avs::Pose& headPose,const std::map<avs::uid,avs::Pose> poses);
 			void SendInput(const teleport::core::Input& input);
 			void SendResourceRequests();
 			void SendReceivedResources();
@@ -197,7 +197,7 @@ namespace teleport
 			std::vector<avs::InputDefinition> inputDefinitions;
 
 			WebspaceLocation webspaceLocation = WebspaceLocation::LOBBY;
-			ConnectionRequest connectionRequest = ConnectionRequest::NO_CHANGE;
+			ConnectionRequest connectionRequest = ConnectionRequest::CONNECT_TO_SERVER;
 		};
 	}
 }

@@ -117,6 +117,8 @@ namespace teleport
 			//! Current states
 			std::vector<InputState> inputStates;
 			std::map<avs::uid,NodePoseState> nodePoseStates;
+			// temp, filled from nodePoseStates:
+			std::map<avs::uid,avs::Pose> nodePoses;
 			//! Temporary - these poses will be bound on the next update.
 			std::map<avs::uid,NodePoseMapping> unboundPoses;
 			teleport::core::Input inputs;
@@ -250,6 +252,7 @@ namespace teleport
 
 			const avs::Pose& GetHeadPose() const;
 			 avs::uid GetRootNode(avs::uid server_uid);
+			const std::map<avs::uid,avs::Pose> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			size_t GetNumControllers() const
 			{

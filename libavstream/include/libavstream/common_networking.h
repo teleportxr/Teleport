@@ -558,14 +558,19 @@ namespace avs
 			:ClientMessage(ClientMessagePayloadType::ReceivedResources), receivedResourcesCount(receivedResourcesCount)
 		{}
 	} AVS_PACKED;
+	struct NodePose
+	{
+		avs::uid uid;
+		Pose pose;
+	} AVS_PACKED;
 
-	//! Message info struct containing how many resources were received; sent alongside a list of UIDs.
+	//! Message info struct containing head and other node poses. followed by numPoses NodePose structs.
 	struct ControllerPosesMessage : public ClientMessage
 	{
 	//! The headset's pose.
 		Pose headPose;
-	//! Poses of the two controllers.
-		Pose controllerPoses[2];
+	//! Poses of the  controllers.
+		uint16_t numPoses=0;
 
 		ControllerPosesMessage()
 			:ClientMessage(ClientMessagePayloadType::ControllerPoses)

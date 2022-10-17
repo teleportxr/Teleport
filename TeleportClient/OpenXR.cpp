@@ -791,9 +791,11 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 	for (const auto& def : inputDefinitions_)
 	{
 		std::regex re(def.regexPath, std::regex_constants::icase | std::regex::extended);
+		std::cout<<"Trying to bind "<<def.regexPath.c_str()<<"\n";
 		// which, if any, action should be used to map to this?
 		// we match by the bindings.
 		// For each action, get the currently bound path.
+		int found=0;
 		for(size_t a=0;a<ActionId::MAX_ACTIONS;a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
@@ -804,9 +806,15 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 				std::string path_str=GetBoundPath(actionDef);
 				if(!path_str.length())
 					continue;
+				std::cout<<"\tChecking against: "<<path_str.c_str()<<std::endl;
 				// Now we try to match this path to the input def.
 				if (std::regex_search(path_str, match, re))
+				{
+					std::cout<<"\t\t\tMatches.\n";
 					matches=true;
+				}
+				else
+					std::cout<<"\t\t\tX\n";
 			}
 			if(matches)
 			{
@@ -819,7 +827,16 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 				// store the definition.
 				mapping.serverInputDefinition=def;
 				mapping.clientActionId=(ActionId)a;
+				found++;
 			}
+		}
+		if(found==0)
+		{
+			TELEPORT_CERR<<"No match found for "<<def.regexPath.c_str()<<"\n";
+		}
+		else
+		{
+			std::cout<<"Found "<<found<<" matches for "<<def.regexPath.c_str()<<"\n";
 		}
 	}
 }
@@ -1042,6 +1059,18 @@ avs::uid OpenXR::GetRootNode(avs::uid server_uid)
 {
 	return openXRServers[server_uid].rootNode;
 }
+
+
+const std::map<avs::uid,avs::Pose> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
+{
+	const std::map<avs::uid,NodePoseState> &nodePoseStates=GetNodePoseStates(server_uid,framenumber);
+	for(const auto &i:nodePoseStates)
+	{
+		openXRServers[server_uid].nodePoses[i.first]=i.second.pose_footSpace;
+	}
+	return openXRServers[server_uid].nodePoses;
+}
+
 const std::map<avs::uid,NodePoseState> &OpenXR::GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber)
 {
 	UpdateServerState(server_uid, framenumber);

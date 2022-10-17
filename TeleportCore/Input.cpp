@@ -54,6 +54,12 @@ void Input::setBinaryState(uint16_t index, bool activated)
 
 void Input::setAnalogueState(uint16_t index, float strength)
 {
+	float &f=strength;
+	if(f<-1.f||f>1.f||isnan(f))
+	{
+		TELEPORT_CERR<<"Bad analogue state value "<<f<<std::endl;
+		strength=0;
+	}
 	if(index>=analogueStates.size())
 		analogueStates.resize(index+1);
 	analogueStates[index]=strength;

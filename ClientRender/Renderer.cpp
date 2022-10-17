@@ -618,7 +618,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		{
 			avs::Pose handPose	= l->second.pose_footSpace;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
-			renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"L",(const float*)&white);
+			//renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"L",(const float*)&white);
 			vec4 pos4;
 			pos4.xyz			= (const float*)&pos;
 			pos4.w				= 0.0f;
@@ -1084,7 +1084,8 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
 				pbrEffect->SetTexture(deviceContext,pbrEffect_globalIlluminationTexture, gi ? gi->GetSimulTexture() : nullptr);
-
+				
+					pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap, diffuseCubemapTexture);
 				// If lighting is via static textures.
 				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
@@ -1094,10 +1095,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 						pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap,t->GetSimulTexture());
 					}
 				}
-				else
-				{
-					pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap, diffuseCubemapTexture);
-				}
+				pbrEffect->SetTexture(deviceContext, pbrEffect_specularCubemap, specularCubemapTexture);
 				if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
@@ -1105,10 +1103,6 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					{
 						pbrEffect->SetTexture(deviceContext,pbrEffect_specularCubemap,t->GetSimulTexture());
 					}
-				}
-				else
-				{
-					pbrEffect->SetTexture(deviceContext, pbrEffect_specularCubemap, specularCubemapTexture);
 				}
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
@@ -1297,12 +1291,15 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		avs::Pose controllerPoses[2];
 		controllerPoses[0]=clientDeviceState->controllerPoses[0].globalPose;
 		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
+
+		const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		
 		if (openXR)
 		{
 			const teleport::core::Input& inputs = openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientDeviceState->SetInputs(inputs);
 		}
-		sessionClient->Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
+		sessionClient->Frame(displayInfo, clientDeviceState->headPose.globalPose, nodePoses, receivedInitialPos, clientDeviceState->originPose,
 			clientDeviceState->input, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		if(receivedInitialPos != sessionClient->receivedInitialPos)

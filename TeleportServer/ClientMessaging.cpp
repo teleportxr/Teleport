@@ -247,6 +247,15 @@ void ClientMessaging::handleEvents(float deltaTime)
 		{
 			TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
 		}
+		for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
+		{
+			float &f=latestInputStateAndEvents.analogueStates[i];
+			if(f<-1.f||f>1.f||isnan(f))
+			{
+				TELEPORT_CERR<<"Bad analogue state value "<<f<<std::endl;
+				f=0;
+			}
+		}
 		avs::InputState inputState;
 		inputState.numBinaryStates		=(uint16_t)latestInputStateAndEvents.binaryStates.size();
 		inputState.numAnalogueStates	=(uint16_t)latestInputStateAndEvents.analogueStates.size();
@@ -544,16 +553,26 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 		return;
 	}
 	latestInputStateAndEvents.analogueStates.resize(receivedInputState.numAnalogueStates);
+	latestInputStateAndEvents.binaryStates.resize(binaryStateSize);
 	uint8_t *src=packet->data+inputStateSize;
 	if(receivedInputState.numBinaryStates != 0)
 	{
 		memcpy(latestInputStateAndEvents.binaryStates.data(), src, binaryStateSize);
-		src+=binaryEventSize;
+		src+=binaryStateSize;
 	}
 	if(receivedInputState.numAnalogueStates != 0)
 	{
 		memcpy(latestInputStateAndEvents.analogueStates.data(), src, analogueStateSize);
 		src+=analogueStateSize;
+		for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
+		{
+			float &f=latestInputStateAndEvents.analogueStates[i];
+			if(f<-1.f||f>1.f||isnan(f))
+			{
+				TELEPORT_CERR<<"Bad analogue state value "<<f<<std::endl;
+				f=0;
+			}
+		}
 	}
 	if(receivedInputState.numBinaryEvents != 0)
 	{
@@ -645,17 +664,30 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	case avs::ClientMessagePayloadType::ControllerPoses:
 	{
 		avs::ControllerPosesMessage message;
-		memcpy(&message, packet->data, packet->dataLength);
-
+		if(packet->dataLength<sizeof(message))
+		{
+			TELEPORT_CERR << "Bad packet size.\n";
+			return;
+		}
+		memcpy(&message, packet->data, sizeof(message));
+		if(packet->dataLength!=sizeof(message)+sizeof(avs::NodePose)*message.numPoses)
+		{
+			TELEPORT_CERR << "Bad packet size.\n";
+			return;
+		}
 		avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, message.headPose.orientation);
 		avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, message.headPose.position);
 		setHeadPose(clientID, &message.headPose);
-		for (int i = 0; i < 2; i++)
+		uint8_t *src=packet->data+sizeof(message);
+		for (int i = 0; i < message.numPoses; i++)
 		{
-			avs::Pose& pose = message.controllerPoses[i];
+			avs::NodePose nodePose;
+			memcpy(&nodePose,src,sizeof(nodePose));
+			src+=sizeof(nodePose);
+			avs::Pose &pose=nodePose.pose;
 			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, pose.orientation);
 			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, pose.position);
-			setControllerPose(clientID, i, &pose);
+			setControllerPose(clientID, nodePose.uid, &pose);
 		}
 	}
 		break;
