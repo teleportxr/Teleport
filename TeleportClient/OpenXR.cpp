@@ -1312,6 +1312,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 			projection_views[0].subImage.swapchain = main_view_xr_swapchain.handle;
 			projection_views[0].subImage.imageRect.offset = { 0, 0 };
 			projection_views[0].subImage.imageRect.extent = { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
+			projection_views[0].subImage.imageArrayIndex = 0;
 
 			projection_views[1] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
 			projection_views[1].pose = xr_views[1].pose;
@@ -1319,6 +1320,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 			projection_views[1].subImage.swapchain = main_view_xr_swapchain.handle;
 			projection_views[1].subImage.imageRect.offset = { 0, 0 };
 			projection_views[1].subImage.imageRect.extent = { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
+			projection_views[1].subImage.imageArrayIndex = 1;
 		}
 		
 		platform::crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(0);
