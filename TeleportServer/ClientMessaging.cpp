@@ -687,7 +687,7 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 			avs::Pose &pose=nodePose.pose;
 			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, pose.orientation);
 			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, pose.position);
-			setControllerPose(clientID, nodePose.uid, &pose);
+			setControllerPose(clientID, int(nodePose.uid), &pose);
 		}
 	}
 		break;
