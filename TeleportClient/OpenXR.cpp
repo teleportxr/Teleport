@@ -791,7 +791,7 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 	for (const auto& def : inputDefinitions_)
 	{
 		std::regex re(def.regexPath, std::regex_constants::icase | std::regex::extended);
-		std::cout<<"Trying to bind "<<def.regexPath.c_str()<<"\n";
+		std::cerr<<"Trying to bind "<<def.regexPath.c_str()<<"\n";
 		// which, if any, action should be used to map to this?
 		// we match by the bindings.
 		// For each action, get the currently bound path.
@@ -935,7 +935,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
 					xr_input_session.actionStates[def.actionId].pose_stageSpace=(space_location.pose);
-					state.pose_footSpace=ConvertGLStageSpacePoseToWorldSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
+					state.pose_footSpace=ConvertGLStageSpacePoseToLocalSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
 				}
 			}
 			else
@@ -1600,9 +1600,21 @@ bool OpenXR::IsXRDeviceActive() const
 	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
 }
 
-const avs::Pose& OpenXR::GetHeadPose() const
+const avs::Pose& OpenXR::GetHeadPose_StageSpace() const
 {
-	return headPose_worldSpace;
+	return headPose_stageSpace;
+}
+
+avs::Pose OpenXR::GetActionPose(ActionId actionId) const
+{
+	avs::Pose pose=ConvertGLStageSpacePoseToLocalSpacePose(xr_input_session.actionStates[actionId].pose_stageSpace);
+	return pose;
+}
+
+float OpenXR::GetActionFloatState(ActionId actionId) const
+{
+	float st=xr_input_session.actionStates[actionId].f32;
+	return st;
 }
 
 typedef union {
@@ -1633,6 +1645,18 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &xrpose)
 	crossplatform::Quaternionf rot=orig_rot*ori_e;
 	pose.position=*((avs::vec3*)&pos);
 	pose.orientation=*((avs::vec4*)&rot);
+	return pose;
+}
+
+avs::Pose OpenXR::ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &xrpose) const
+{
+	avs::Pose pose;
+	// first convert to the correct scheme.
+	vec3 pos_e							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&xrpose.position));
+ 	crossplatform::Quaternionf ori_e	= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&xrpose.orientation));
+
+	pose.position=*((avs::vec3*)&pos_e);
+	pose.orientation=*((avs::vec4*)&ori_e);
 	return pose;
 }
 
@@ -1675,7 +1699,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
 			state.XrSpacePoseInWorld=space_location.pose;
-			headPose_worldSpace=ConvertGLStageSpacePoseToWorldSpacePose(space_location.pose);
+			headPose_stageSpace=ConvertGLStageSpacePoseToLocalSpacePose(space_location.pose);
 		}
 		// If the session is active, lets render our layer in the compositor!
 	
@@ -1748,9 +1772,6 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 {
 
 // Build the quad layer
-    const XrVector3f axis = {0.0f, 1.0f, 0.0f};
-    XrVector3f pos = {0.0f, 1.8f, -2.0f};
-    XrExtent2Df size = {2.0f, 2.0f};
 
     quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
     quad_layer.next = NULL;
@@ -1764,11 +1785,11 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
     quad_layer.subImage.imageArrayIndex = 0;
-    quad_layer.pose = xr_pose_identity;
+   // quad_layer.pose = xr_pose_identity;
    // quad_layer.pose.orientation =        XrQuaternionf_CreateFromVectorAngle(axis, 45.0f * MATH_PI / 180.0f);
-    quad_layer.pose.position = pos;
+    quad_layer.pose = overlay.pose;
 
-    quad_layer.size = size;
+    quad_layer.size = overlay.size;
 	return true;
 }
 

@@ -6,7 +6,7 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	int lightCount;
 	int reverseDepth;
 	float drawDistance;
-	float _pad0;
+	float roughestMip;
 
 	vec4 lightmapScaleOffset;
 

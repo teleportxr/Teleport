@@ -43,6 +43,37 @@ void Gui::SetPlatformWindow(PlatformWindow *w)
 #endif
 	platformWindow=w;
 }
+bool debug_begin_end=false;
+std::vector<std::string> begin_end_stack;
+bool ImGuiBegin(const char *txt,bool *on_off,ImGuiWindowFlags flags)
+{
+	begin_end_stack.push_back(txt);
+	if(debug_begin_end)
+	{
+		TELEPORT_CERR<<"ImGuiBegin "<<txt<<"\n";
+	}
+	return ImGui::Begin(txt,on_off,flags);
+}
+
+void ImGuiEnd()
+{
+	if(begin_end_stack.size()==0)
+	{
+		TELEPORT_CERR<<"Called ImGuiEnd too many times...\n";
+		debug_begin_end=true;
+		return;
+	}
+	if(debug_begin_end)
+	{
+		TELEPORT_CERR<<"ImGuiEnd "<<begin_end_stack.back().c_str()<<"\n";
+		if(begin_end_stack.size()==1)
+		{
+			TELEPORT_CERR<<"Empty.\n";
+		}
+	}
+	begin_end_stack.pop_back();
+	ImGui::End();
+}
 
 static inline ImVec4 ImLerp(const ImVec4& a, const ImVec4& b, float t)
 {
@@ -377,6 +408,13 @@ int Gui::GetCursorPos(long p[2])
 }
 
 static int in_debug_gui = 0;
+vec2 mouse;
+bool mouseButtons[5]={false,false,false,false};
+void Gui::SetDebugGuiMouse(vec2 m,bool leftButton)
+{
+	mouse=m;
+	mouseButtons[0]=leftButton;
+}
 void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 0)
@@ -394,12 +432,14 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
 	ImGuiIO& io = ImGui::GetIO();
+	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
+	ImGui_ImplPlatform_SetMousePos((int)((0.5f+mouse.x)*float(vp.w)),(int)((0.5f-mouse.y)*float(vp.h)));
+	ImGui_ImplPlatform_SetMouseDown(0,mouseButtons[0]);
 	ImGui::PushFont(smallFont);
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-	if (ImGui::Begin("Teleport VR", nullptr, window_flags))
+	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
 
-		
 	//	ShowFont();
 }
 
@@ -462,7 +502,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 	{
 		return;
 	}
-	ImGui::End();
+	ImGuiEnd();
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	{
 		const float PAD = 10.0f;
@@ -478,7 +518,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		window_flags |= ImGuiWindowFlags_NoMove;
 	}
 	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-	if (ImGui::Begin("Keyboard", nullptr, window_flags))
+	if (ImGuiBegin("Keyboard", nullptr, window_flags))
 	{
 		ImGui::Text("K: Connect/Disconnect\n"
 			"O: Toggle OSD\n"
@@ -494,13 +534,13 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			"NUM 5: Debug animation\n"
 			"NUM 6: Lightmaps\n"
 			"NUM 2: Vertex Normals\n");
-		ImGui::End();
+		ImGuiEnd();
 	}
 	if(geometryCache&&show_inspector)
 	{
 		ImGuiWindowFlags window_flags =ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_MenuBar|ImGuiWindowFlags_AlwaysAutoResize;//  | 
 			//| ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;|ImGuiWindowFlags_NoDecoration
-		if (ImGui::Begin("Properties", &show_inspector, window_flags))
+		if (ImGuiBegin("Properties", &show_inspector, window_flags))
 		{
 			if (ImGui::BeginMenuBar())
 			{
@@ -601,14 +641,14 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				{
 					if(m)
 					{
-						ImGui::TreeNodeEx("", flags, "%llu: %s", m->id, m->GetMaterialCreateInfo().name.c_str());
+						const char *name=m->GetMaterialCreateInfo().name.c_str();
+						ImGui::TreeNodeEx(name, flags, "%llu: %s", m->id, name);
 						if (ImGui::IsItemClicked())
 						{
 							Select(m->id);
 						}
 					}
 				}
-				ImGui::End();
 			}
 			else if (selected_material.get())
 			{
@@ -617,7 +657,8 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				ImGui::Text("%llu: %s", selected_material->id, mci.name.c_str());
 				if(mci.diffuse.texture.get())
 				{
-					ImGui::TreeNodeEx("", flags," Diffuse: %s",  mci.diffuse.texture->GetTextureCreateInfo().name.c_str());
+					const char *name=mci.diffuse.texture->GetTextureCreateInfo().name.c_str();
+					ImGui::TreeNodeEx(name, flags," Diffuse: %s",  name);
 					
 					if (ImGui::IsItemClicked())
 					{
@@ -627,8 +668,9 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 
 				if (mci.combined.texture.get())
 				{
-					ImGui::TreeNodeEx("", flags,"Combined: %s", mci.combined.texture->GetTextureCreateInfo().name.c_str());
-					ImGui::TreeNodeEx("", flags,"Roughness: R = %3.3f a + %3.3f",  md.combinedOutputScalarRoughMetalOcclusion.x,md.combinedOutputScalarRoughMetalOcclusion.w);
+					const char *name=mci.combined.texture->GetTextureCreateInfo().name.c_str();
+					ImGui::TreeNodeEx(name, flags,"Combined: %s", name);
+					ImGui::TreeNodeEx(name, flags,"Roughness: R = %3.3f a + %3.3f",  md.combinedOutputScalarRoughMetalOcclusion.x,md.combinedOutputScalarRoughMetalOcclusion.w);
 					
 					if (ImGui::IsItemClicked())
 					{
@@ -674,11 +716,18 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::EndTable();
 				}
 			}
+			ImGuiEnd();
 		}
-		ImGui::End();
 	}
 	in_debug_gui--;
 	ImGui::PopFont();
+    ImVec2 window_pos = ImGui::GetWindowPos();
+    ImVec2 window_size = ImGui::GetWindowSize();
+    ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+	
+	ImGuiIO& io = ImGui::GetIO();
+	ImVec2 mouse_pos=io.MousePos;
+	ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
@@ -846,7 +895,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGuiWindowFlags_NoScrollbar;
 		}
 		ImGui::LogToTTY();
-		ImGui::Begin("Teleport VR",&show_hide, windowFlags);
+		ImGuiBegin("Teleport VR",&show_hide, windowFlags);
 		#if 0
 		std::vector<vec3> client_press;
 		ImGui_ImplPlatform_Get3DTouchClientPos(client_press);
@@ -1082,7 +1131,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		//ShowFont();
 		//ImGui_ImplPlatform_DebugInfo();
 		//hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
-		ImGui::End();
+		ImGuiEnd();
 	}
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());

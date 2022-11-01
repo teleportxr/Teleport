@@ -316,5 +316,7 @@ namespace clientrender
 
 		void HandleLocalInputs(const teleport::core::Input& local_inputs);
 		void ShowHideGui();
+
+		vec3 hit={0,0,0};
 	};
 }

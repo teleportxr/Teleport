@@ -43,6 +43,8 @@ namespace teleport
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
 		void NodeTree(const clientrender::NodeManager::nodeList_t&);
 		void Scene();
+		// Unitless,relative to debug gui size, [-1,+1]
+		void SetDebugGuiMouse(vec2 m,bool leftButton);
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void setGeometryCache(const clientrender::GeometryCache *g)

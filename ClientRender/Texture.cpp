@@ -1,9 +1,11 @@
 #include "Texture.h"
 #include "RenderPlatform.h"
 #include "TeleportClient/Log.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "Platform/CrossPlatform/PixelFormat.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
+#include "Platform/External/magic_enum/include/magic_enum.hpp"
 using namespace clientrender;
 
 const avs::vec3 Texture::DUMMY_DIMENSIONS = {1, 1, 1};
@@ -129,9 +131,14 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 		textureCreate.mips--;
 	}
 	size_t initialDataSize=0;
-	for(const auto &i:pTextureCreateInfo.images)
+	if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
+		TELEPORT_CERR<<"CREATING TEXTURE "<<pTextureCreateInfo.name.c_str()<<" WITH "<<pTextureCreateInfo.images.size()<<" IMAGES "<<
+		magic_enum::enum_name<platform::crossplatform::CompressionFormat>(textureCreate.compressionFormat)<<"\n";
+	for(const auto &i:pTextureCreateInfo.images)  
 	{
 		initialDataSize+=i.size();
+		if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
+			TELEPORT_CERR<<"\tIMAGE SIZE "<<i.size()<<"\n";
 	}
 	std::vector<const uint8_t*> initialData(pTextureCreateInfo.images.size());
 	for(int i=0;i<initialData.size();i++)
@@ -140,8 +147,12 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	}
 	textureCreate.initialData		= initialData.data();
 	textureCreate.name				= m_CI.name.c_str();
+	if(textureCreate.cubemap)
+	{
+		if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
+			TELEPORT_CERR<<"CREATING CUBEMAP\n";
+	}
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
-	//m_SimulTexture->setTexels(srp->GetImmediateContext(), pTextureCreateInfo->data, 0, (int)(pTextureCreateInfo->size/pTextureCreateInfo->bytesPerPixel));
 }
 
 void Texture::GenerateMips()

@@ -44,7 +44,7 @@ void ClientDeviceState::TransformPose(LocalGlobalPose &p)
 	p.globalPose.position+=originPose.position;
 }
 
-void ClientDeviceState::SetHeadPose(avs::vec3 pos,clientrender::quat q)
+void ClientDeviceState::SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q)
 {
 	headPose.localPose.orientation=*((const avs::vec4 *)(&q));
 	headPose.localPose.position=pos;

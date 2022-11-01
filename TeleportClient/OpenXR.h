@@ -214,6 +214,11 @@ namespace teleport
 			bool rightButtonDown=false;
 			bool middleButtonDown=false; 
 		};
+		struct Overlay
+		{
+			XrPosef pose={{0,0,0,1.0f},{0.0f, 1.8f, -2.0f}};
+			XrExtent2Df size = {4.0f, 2.0f};
+		};
 		class OpenXR
 		{
 		public:
@@ -250,7 +255,10 @@ namespace teleport
 			// Force input mapping to a particular setting - normally for local controls.
 			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 
-			const avs::Pose& GetHeadPose() const;
+			//! Get the head pose in the device's stage space (axes adapted to the Engineering standard, Z=up).
+			const avs::Pose& GetHeadPose_StageSpace() const;
+			avs::Pose GetActionPose(ActionId id) const;
+			float GetActionFloatState(ActionId actionId) const;
 			 avs::uid GetRootNode(avs::uid server_uid);
 			const std::map<avs::uid,avs::Pose> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
@@ -264,12 +272,15 @@ namespace teleport
 			{
 				return xr_session_running;
 			}
+
+			Overlay overlay;
+			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
+			avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) const;
 		protected:
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
 			std::map<avs::uid,FallbackBinding> fallbackBindings;
 			std::map<avs::uid,FallbackState> fallbackStates;
-			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
 			void BindUnboundPoses(avs::uid server_uid);
 			std::map<avs::uid,OpenXRServer> openXRServers;
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
@@ -282,7 +293,7 @@ namespace teleport
 			bool AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
 
 			avs::Pose stagePose_worldSpace={};
-			avs::Pose headPose_worldSpace={};
+			avs::Pose headPose_stageSpace={};
 			std::vector<avs::Pose> controllerPoses;
 			struct XrState
 			{

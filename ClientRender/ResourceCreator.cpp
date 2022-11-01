@@ -524,19 +524,19 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
 	memcpy(data.data(), texture.data, texture.dataSize);
 
-	TELEPORT_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
+	//TELEPORT_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression,texture.valueScale });
-		std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
+		//std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
 	}
 	else
 	{
 		texInfo.imageSizes.push_back(texture.dataSize);
 		texInfo.images.emplace_back(std::move(data));
 
-		std::cout << "Uncompressed, completing.\n";
+		//std::cout << "Uncompressed, completing.\n";
 		CompleteTexture(id, texInfo);
 	}
 }

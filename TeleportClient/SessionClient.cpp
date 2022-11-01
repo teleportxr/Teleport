@@ -486,7 +486,7 @@ void SessionClient::SendInput(const core::Input& input)
 	size_t motionEventSize		= sizeof(avs::InputEventMotion) * inputState.numMotionEvents;
 
 	size_t packetSize=inputStateSize +binaryStateSize+ binaryEventSize +analogueStateSize+ analogueEventSize + motionEventSize;
-	std::cout<<"SendInput size "<<packetSize<<" with "<<inputState.numAnalogueStates<<" states.\n";
+	//std::cout<<"SendInput size "<<packetSize<<" with "<<inputState.numAnalogueStates<<" states.\n";
 	//Size packet to final size, but initially only put the InputState struct inside.
 	ENetPacket* packet = enet_packet_create(nullptr, packetSize, packetFlags);
 

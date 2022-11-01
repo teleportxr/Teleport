@@ -486,8 +486,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				w->StartFrame();
 				if (useOpenXR.HaveXRDevice())
 				{
-					const avs::Pose &headPose=useOpenXR.GetHeadPose();
-					clientDeviceState.SetHeadPose(headPose.position, headPose.orientation);
+					const avs::Pose &headPose=useOpenXR.GetHeadPose_StageSpace();
+					clientDeviceState.SetHeadPose_StageSpace(headPose.position, headPose.orientation);
 					for (int i = 0; i < useOpenXR.GetNumControllers(); i++)
 					{
 						//const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);

@@ -33,7 +33,7 @@ namespace teleport
 			void SetLocalNodePose(avs::uid,const avs::Pose &localPose);
 			const avs::Pose &GetGlobalNodePose(avs::uid) const;
 			void TransformPose(LocalGlobalPose &p);
-			void SetHeadPose(avs::vec3 pos,clientrender::quat q);
+			void SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q);
 			void SetControllerPose(int index,avs::vec3 pos,clientrender::quat q);
 			void SetInputs(const teleport::core::Input& st);
 
