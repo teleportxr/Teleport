@@ -613,7 +613,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		{
 			avs::Pose handPose	= l->second.pose_footSpace;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
-			renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"L",(const float*)&white);
+			renderPlatform->PrintAt3dPos(*deviceContext.AsMultiviewGraphicsDeviceContext(), (const float*)&pos, "L", (const float*)&white);
 			vec4 pos4;
 			pos4.xyz			= (const float*)&pos;
 			pos4.w				= 0.0f;
@@ -624,7 +624,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		{
 			avs::Pose rightHand = r->second.pose_footSpace;
 			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
-				renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"R",(const float*)&white);
+			renderPlatform->PrintAt3dPos(*deviceContext.AsMultiviewGraphicsDeviceContext(), (const float*)&pos, "R", (const float*)&white);
 			vec4 pos4;
 			pos4.xyz = (const float*)&pos;
 			pos4.w = 0.0f;
