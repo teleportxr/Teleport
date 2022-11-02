@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 
 #include "CasterTypes.h"
 
@@ -17,7 +17,7 @@ namespace teleport
 		int32_t detectionSphereBufferDistance = 0;
 		int64_t throttleKpS = 0;
 
-		avs::BackgroundMode backgroundMode = avs::BackgroundMode::COLOUR;
+		teleport::core::BackgroundMode backgroundMode = teleport::core::BackgroundMode::COLOUR;
 		avs::vec4 backgroundColour = { 0,0,1.0f,0.f };
 
 		bool enableGeometryStreaming = false;
@@ -82,7 +82,7 @@ namespace teleport
 		int32_t defaultLightCubemapSize = 0;
 		int32_t defaultShadowmapSize=0;
 
-		avs::ControlModel controlModel=avs::ControlModel::SERVER_ORIGIN_CLIENT_LOCAL;
+		teleport::core::ControlModel controlModel=teleport::core::ControlModel::SERVER_ORIGIN_CLIENT_LOCAL;
 	};
 	struct ClientSettings
 	{
@@ -93,7 +93,7 @@ namespace teleport
 		int32_t webcamSize[2];
 		avs::vec3 bodyOffsetFromHead;
 		int32_t captureCubeTextureSize;
-		avs::BackgroundMode backgroundMode;
+		teleport::core::BackgroundMode backgroundMode;
 		avs::vec4 backgroundColour;
 		float drawDistance;
 	};

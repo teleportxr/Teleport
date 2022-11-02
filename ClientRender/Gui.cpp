@@ -431,10 +431,12 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
+#ifdef __ANDROID__
 	ImGuiIO& io = ImGui::GetIO();
 	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
-	ImGui_ImplPlatform_SetMousePos((int)((0.5f+mouse.x)*float(vp.w)),(int)((0.5f-mouse.y)*float(vp.h)));
+	ImGui_ImplPlatform_SetMousePos((int)((0.5f+mouse.x)*float(vp.w)),(int)((0.5f-mouse.y)*float(vp.h)),vp.w,vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0,mouseButtons[0]);
+#endif
 	ImGui::PushFont(smallFont);
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
@@ -576,6 +578,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				avs::vec3 sc = selected_node->GetLocalScale();
 				vec4 q = selected_node->GetLocalRotation();
 				vec4 gq = selected_node->GetGlobalRotation();
+				
+				vec3 v=selected_node->GetGlobalVelocity();
+		//const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		//auto j=nodePoses.find(node->id);
 				avs::vec3 gs = selected_node->GetGlobalScale();
 				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();

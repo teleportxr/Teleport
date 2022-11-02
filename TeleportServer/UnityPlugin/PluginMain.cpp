@@ -210,7 +210,7 @@ TELEPORT_EXPORT void SetGetUnixTimestampDelegate(GetUnixTimestampFn function)
 static void passOnOutput(const char *msg)
 {
 	if(msg)
-		avsContext.log(avs::LogSeverity::Warning,msg);
+		avsContext.log(avs::LogSeverity::Info,msg);
 }
 
 static void passOnError(const char *msg)
@@ -506,7 +506,7 @@ TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int num
 		TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << ". Bad number!\n";
 		return;
 	}
-	std::vector<avs::InputDefinition> inputDefs;
+	std::vector<teleport::core::InputDefinition> inputDefs;
 	inputDefs.resize(numControls);
 	for (int i = 0; i < numControls; i++)
 	{
@@ -910,7 +910,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoE
 		true,
 		10000
 	};
-	avs::ReconfigureVideoCommand cmd;
+	teleport::core::ReconfigureVideoCommand cmd;
 	avs::VideoConfig& videoConfig = cmd.video_config;
 	videoConfig.video_width = encoderSettings.frameWidth;
 	videoConfig.video_height = encoderSettings.frameHeight;
@@ -1081,7 +1081,7 @@ TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
 	clientPair->second.clientMessaging->nodeLeftBounds(nodeID);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementUpdate* updates, int updateAmount)
+TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core::MovementUpdate* updates, int updateAmount)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1090,7 +1090,7 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementU
 		return;
 	}
 
-	std::vector<avs::MovementUpdate> updateList(updateAmount);
+	std::vector<teleport::core::MovementUpdate> updateList(updateAmount);
 	for(int i = 0; i < updateAmount; i++)
 	{
 		updateList[i] = updates[i];
@@ -1105,7 +1105,7 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::MovementU
 	clientPair->second.clientMessaging->updateNodeMovement(updateList);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, avs::NodeUpdateEnabledState* updates, int updateAmount)
+TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::core::NodeUpdateEnabledState* updates, int updateAmount)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1114,11 +1114,11 @@ TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, avs::NodeU
 		return;
 	}
 
-	std::vector<avs::NodeUpdateEnabledState> updateList(updates, updates + updateAmount);
+	std::vector<teleport::core::NodeUpdateEnabledState> updateList(updates, updates + updateAmount);
 	clientPair->second.clientMessaging->updateNodeEnabledState(updateList);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, avs::ApplyAnimation update)
+TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, teleport::core::ApplyAnimation update)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1130,7 +1130,7 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, avs::ApplyAni
 	clientPair->second.clientMessaging->updateNodeAnimation(update);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, avs::NodeUpdateAnimationControl update)
+TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, teleport::core::NodeUpdateAnimationControl update)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1221,7 +1221,7 @@ TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 	return clientPair->second.clientMessaging->hasPeer();
 }
 
-TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const avs::Command& avsCommand)
+TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const teleport::core::Command& avsCommand)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -1232,7 +1232,7 @@ TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const avs::Command& a
 	return clientPair->second.clientMessaging->sendCommand(avsCommand);
 }
 
-TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const avs::Command& avsCommand, std::vector<avs::uid>& appendedList)
+TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const teleport::core::Command& avsCommand, std::vector<avs::uid>& appendedList)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())

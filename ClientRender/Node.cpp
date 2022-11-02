@@ -223,7 +223,10 @@ void Node::SetHighlighted(bool highlighted)
 void Node::UpdateGlobalTransform() const
 {
 	std::shared_ptr<Node> parentPtr = parent.lock();
-	globalTransform = parentPtr ? localTransform * parentPtr->GetGlobalTransform() : localTransform;
+	if(parentPtr)
+		globalTransform =  localTransform * parentPtr->GetGlobalTransform() ;
+	else
+		globalTransform =  localTransform;
 
 	isTransformDirty = false;
 }

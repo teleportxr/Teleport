@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "libavstream/common_input.h"
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 
 #include "DiscoveryService.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -146,11 +146,11 @@ void ClientMessaging::tick(float deltaTime)
 		//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
 		if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
 			{
-				size_t commandSize = sizeof(avs::NodeVisibilityCommand);
+				size_t commandSize = sizeof(teleport::core::NodeVisibilityCommand);
 				size_t enteredBoundsSize = sizeof(avs::uid) * nodesEnteredBounds.size();
 				size_t leftBoundsSize = sizeof(avs::uid) * nodesLeftBounds.size();
 
-				avs::NodeVisibilityCommand boundsCommand(nodesEnteredBounds.size(), nodesLeftBounds.size());
+				teleport::core::NodeVisibilityCommand boundsCommand(nodesEnteredBounds.size(), nodesLeftBounds.size());
 				ENetPacket* packet = enet_packet_create(&boundsCommand, commandSize, ENET_PACKET_FLAG_RELIABLE);
 
 				//Resize packet, and insert node lists.
@@ -158,7 +158,7 @@ void ClientMessaging::tick(float deltaTime)
 				memcpy(packet->data + commandSize, nodesEnteredBounds.data(), enteredBoundsSize);
 				memcpy(packet->data + commandSize + enteredBoundsSize, nodesLeftBounds.data(), leftBoundsSize);
 
-				enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
+				enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet);
 
 				nodesEnteredBounds.clear();
 				nodesLeftBounds.clear();
@@ -256,7 +256,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 				f=0;
 			}
 		}
-		avs::InputState inputState;
+		teleport::core::InputState inputState;
 		inputState.numBinaryStates		=(uint16_t)latestInputStateAndEvents.binaryStates.size();
 		inputState.numAnalogueStates	=(uint16_t)latestInputStateAndEvents.analogueStates.size();
 		inputState.numBinaryEvents		=(uint16_t)latestInputStateAndEvents.binaryEvents.size();
@@ -298,21 +298,21 @@ void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
 	nodesEnteredBounds.erase(std::remove(nodesEnteredBounds.begin(), nodesEnteredBounds.end(), nodeID), nodesEnteredBounds.end());
 }
 
-void ClientMessaging::updateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
+void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
-	avs::UpdateNodeMovementCommand command(updateList.size());
+	teleport::core::UpdateNodeMovementCommand command(updateList.size());
 	sendCommand<>(command, updateList);
 }
 
-void ClientMessaging::updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+void ClientMessaging::updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
-	avs::UpdateNodeEnabledStateCommand command(updateList.size());
+	teleport::core::UpdateNodeEnabledStateCommand command(updateList.size());
 	sendCommand<>(command, updateList);
 }
 
 void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	avs::SetNodeHighlightedCommand command(nodeID, isHighlighted);
+	teleport::core::SetNodeHighlightedCommand command(nodeID, isHighlighted);
 	sendCommand(command);
 }
 
@@ -320,28 +320,28 @@ void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Po
 {
 	avs::ConvertRotation(settings->serverAxesStandard, casterContext->axesStandard, relPose.orientation);
 	avs::ConvertPosition(settings->serverAxesStandard, casterContext->axesStandard, relPose.position);
-	avs::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
+	teleport::core::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
 	sendCommand(command);
 }
 
 void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPosePath)
 {
-	avs::UpdateNodeSubtypeCommand command(nodeID, (uint16_t)regexPosePath.size());
+	teleport::core::UpdateNodeSubtypeCommand command(nodeID, (uint16_t)regexPosePath.size());
 	std::vector<char> chars;
 	chars.resize(regexPosePath.size());
 	memcpy(chars.data(),regexPosePath.data(),chars.size());
 	sendCommand(command,chars);
 }
 
-void ClientMessaging::updateNodeAnimation(avs::ApplyAnimation update)
+void ClientMessaging::updateNodeAnimation(teleport::core::ApplyAnimation update)
 {
-	avs::UpdateNodeAnimationCommand command(update);
+	teleport::core::UpdateNodeAnimationCommand command(update);
 	sendCommand(command);
 }
 
-void ClientMessaging::updateNodeAnimationControl(avs::NodeUpdateAnimationControl update)
+void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update)
 {
-	avs::SetAnimationControlCommand command(update);
+	teleport::core::SetAnimationControlCommand command(update);
 	sendCommand(command);
 }
 
@@ -353,7 +353,7 @@ void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState
 
 void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	avs::SetNodeAnimationSpeedCommand command(nodeID, animationID, speed);
+	teleport::core::SetNodeAnimationSpeedCommand command(nodeID, animationID, speed);
 	sendCommand(command);
 }
 
@@ -394,28 +394,28 @@ uint16_t ClientMessaging::getClientPort() const
 
 void ClientMessaging::dispatchEvent(const ENetEvent& event)
 {
-	switch(static_cast<avs::RemotePlaySessionChannel>(event.channelID))
+	switch(static_cast<teleport::core::RemotePlaySessionChannel>(event.channelID))
 	{
-	case avs::RemotePlaySessionChannel::RPCH_Handshake:
+	case teleport::core::RemotePlaySessionChannel::RPCH_Handshake:
 		//Delay the actual start of streaming until we receive a confirmation from the client that they are ready.
 		receiveHandshake(event.packet);
 		break;
-	case avs::RemotePlaySessionChannel::RPCH_Control:
+	case teleport::core::RemotePlaySessionChannel::RPCH_Control:
 		receiveInput(event.packet);
 		break;
-	case avs::RemotePlaySessionChannel::RPCH_DisplayInfo:
+	case teleport::core::RemotePlaySessionChannel::RPCH_DisplayInfo:
 		receiveDisplayInfo(event.packet);
 		break;
-	case avs::RemotePlaySessionChannel::RPCH_HeadPose:
+	case teleport::core::RemotePlaySessionChannel::RPCH_HeadPose:
 		receiveHeadPose(event.packet);
 		break;
-	case avs::RemotePlaySessionChannel::RPCH_ResourceRequest:
+	case teleport::core::RemotePlaySessionChannel::RPCH_ResourceRequest:
 		receiveResourceRequest(event.packet);
 		break;
-	case avs::RemotePlaySessionChannel::RPCH_KeyframeRequest:
+	case teleport::core::RemotePlaySessionChannel::RPCH_KeyframeRequest:
 		receiveKeyframeRequest(event.packet);
 		break;
-	case avs::RemotePlaySessionChannel::RPCH_ClientMessage:
+	case teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage:
 		receiveClientMessage(event.packet);
 		break;
 	default:
@@ -426,7 +426,7 @@ void ClientMessaging::dispatchEvent(const ENetEvent& event)
 
 void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 {
-	size_t handShakeSize = sizeof(avs::Handshake);
+	size_t handShakeSize = sizeof(teleport::core::Handshake);
 
 	memcpy(&handshake, packet->data, handShakeSize);
 
@@ -489,14 +489,14 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	//Client has nothing, thus can't show nodes.
 	if (handshake.resourceCount == 0)
 	{
-		avs::AcknowledgeHandshakeCommand ack;
+		teleport::core::AcknowledgeHandshakeCommand ack;
 		sendCommand(ack);
 	}
 	// Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
 	else
 	{
 		const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService.getStreamedNodeIDs();
-		avs::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
+		teleport::core::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 		sendCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 	}
 	reportHandshake(this->clientID, &handshake);
@@ -505,7 +505,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 
 bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode, const avs::vec3& pos, const avs::vec4& orientation)
 {
-	avs::SetPositionCommand setp;
+	teleport::core::SetPositionCommand setp;
 	if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
 	{
 		avs::vec3 p = pos;
@@ -522,7 +522,7 @@ bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode, con
 
 void ClientMessaging::receiveInput(const ENetPacket* packet)
 {
-	size_t inputStateSize = sizeof(avs::InputState);
+	size_t inputStateSize = sizeof(teleport::core::InputState);
 
 	if (packet->dataLength < inputStateSize)
 	{
@@ -530,7 +530,7 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 		return;
 	}
 
-	avs::InputState receivedInputState;
+	teleport::core::InputState receivedInputState;
 	//Copy newest input state into member variable.
 	memcpy(&receivedInputState, packet->data, inputStateSize);
 	
@@ -658,19 +658,19 @@ void ClientMessaging::receiveKeyframeRequest(const ENetPacket* packet)
 
 void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 {
-	avs::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<avs::ClientMessagePayloadType*>(packet->data));
+	teleport::core::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<teleport::core::ClientMessagePayloadType*>(packet->data));
 	switch (clientMessagePayloadType)
 	{
-	case avs::ClientMessagePayloadType::ControllerPoses:
+	case teleport::core::ClientMessagePayloadType::ControllerPoses:
 	{
-		avs::ControllerPosesMessage message;
+		teleport::core::ControllerPosesMessage message;
 		if(packet->dataLength<sizeof(message))
 		{
 			TELEPORT_CERR << "Bad packet size.\n";
 			return;
 		}
 		memcpy(&message, packet->data, sizeof(message));
-		if(packet->dataLength!=sizeof(message)+sizeof(avs::NodePose)*message.numPoses)
+		if(packet->dataLength!=sizeof(message)+sizeof(teleport::core::NodePose)*message.numPoses)
 		{
 			TELEPORT_CERR << "Bad packet size.\n";
 			return;
@@ -681,20 +681,22 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 		uint8_t *src=packet->data+sizeof(message);
 		for (int i = 0; i < message.numPoses; i++)
 		{
-			avs::NodePose nodePose;
+			teleport::core::NodePose nodePose;
 			memcpy(&nodePose,src,sizeof(nodePose));
 			src+=sizeof(nodePose);
-			avs::Pose &pose=nodePose.pose;
-			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, pose.orientation);
-			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, pose.position);
-			setControllerPose(clientID, int(nodePose.uid), &pose);
+			avs::PoseDynamic &nodePoseDynamic=nodePose.poseDynamic;
+			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
+			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
+			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
+			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
+			setControllerPose(clientID, int(nodePose.uid), &nodePoseDynamic);
 		}
 	}
 		break;
-	case avs::ClientMessagePayloadType::NodeStatus:
+	case teleport::core::ClientMessagePayloadType::NodeStatus:
 	{
-		size_t messageSize = sizeof(avs::NodeStatusMessage);
-		avs::NodeStatusMessage message;
+		size_t messageSize = sizeof(teleport::core::NodeStatusMessage);
+		teleport::core::NodeStatusMessage message;
 		memcpy(&message, packet->data, messageSize);
 		size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnCount;
 		if(messageSize+drawnSize>packet->dataLength)
@@ -726,10 +728,10 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 
 	}
 		break;
-	case avs::ClientMessagePayloadType::ReceivedResources:
+	case teleport::core::ClientMessagePayloadType::ReceivedResources:
 	{
-		size_t messageSize = sizeof(avs::ReceivedResourcesMessage);
-		avs::ReceivedResourcesMessage message;
+		size_t messageSize = sizeof(teleport::core::ReceivedResourcesMessage);
+		teleport::core::ReceivedResourcesMessage message;
 		memcpy(&message, packet->data, messageSize);
 
 		size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesCount;

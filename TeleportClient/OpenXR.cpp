@@ -779,7 +779,7 @@ std::string OpenXR::GetBoundPath(const ActionDefinition &def) const
 // It defines which xrActions are linked to which inputs needed by the server.
 // The mappings are initialized on connection and can be changed at any time by the server.
 // So we have a set of mappings for each currently connected server.
-void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition>& inputDefinitions_)
+void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition>& inputDefinitions_)
 {
 	RecordCurrentBindings();
 	auto &server		=openXRServers[server_uid];
@@ -925,7 +925,9 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 		{
 			auto &def=m.second;
 			auto &state=server.nodePoseStates[m.first];
-			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
+			XrSpaceVelocity space_velocity {XR_TYPE_SPACE_VELOCITY};
+			XrSpaceLocation space_location {XR_TYPE_SPACE_LOCATION, &space_velocity};
+			space_velocity.velocityFlags=XR_SPACE_VELOCITY_LINEAR_VALID_BIT |XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
 			auto space=xr_input_session.actionDefinitions[def.actionId].space;
 			if(space)
 			{
@@ -934,15 +936,25 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
-					xr_input_session.actionStates[def.actionId].pose_stageSpace=(space_location.pose);
-					state.pose_footSpace=ConvertGLStageSpacePoseToLocalSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
+					xr_input_session.actionStates[def.actionId].pose_stageSpace				=space_location.pose;
+					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_LINEAR_VALID_BIT)
+						xr_input_session.actionStates[def.actionId].velocity_stageSpace			=space_velocity.linearVelocity;
+					else
+						xr_input_session.actionStates[def.actionId].velocity_stageSpace			={0,0,0};
+					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_ANGULAR_VALID_BIT)
+						xr_input_session.actionStates[def.actionId].angularVelocity_stageSpace	={0,0,0};
+					state.pose_footSpace.pose				=ConvertGLStageSpacePoseToLocalSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
+					state.pose_footSpace.velocity			=ConvertGLStageSpaceDirectionToLocalSpace(xr_input_session.actionStates[def.actionId].velocity_stageSpace);
+					state.pose_footSpace.angularVelocity	=ConvertGLStageSpaceDirectionToLocalSpace(xr_input_session.actionStates[def.actionId].angularVelocity_stageSpace);
 				}
 			}
 			else
 			{
 				if(fallbackBindings.find(def.actionId)!=fallbackBindings.end())
 				{
-					state.pose_footSpace=fallbackStates[def.actionId].pose_worldSpace;
+					state.pose_footSpace.pose=fallbackStates[def.actionId].pose_worldSpace;
+					state.pose_footSpace.velocity			={0,0,0};
+					state.pose_footSpace.angularVelocity	={0,0,0};
 				}
 			}
 		}
@@ -1061,12 +1073,14 @@ avs::uid OpenXR::GetRootNode(avs::uid server_uid)
 }
 
 
-const std::map<avs::uid,avs::Pose> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
+const std::map<avs::uid,avs::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
 {
 	const std::map<avs::uid,NodePoseState> &nodePoseStates=GetNodePoseStates(server_uid,framenumber);
 	for(const auto &i:nodePoseStates)
 	{
-		openXRServers[server_uid].nodePoses[i.first]=i.second.pose_footSpace;
+		openXRServers[server_uid].nodePoses[i.first].pose=i.second.pose_footSpace.pose;
+		openXRServers[server_uid].nodePoses[i.first].velocity=i.second.pose_footSpace.velocity;
+		openXRServers[server_uid].nodePoses[i.first].angularVelocity=i.second.pose_footSpace.angularVelocity;
 	}
 	return openXRServers[server_uid].nodePoses;
 }
@@ -1658,6 +1672,12 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &xrpose)
 	pose.position=*((avs::vec3*)&pos_e);
 	pose.orientation=*((avs::vec4*)&ori_e);
 	return pose;
+}
+vec3 OpenXR::ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const
+{
+	vec3 D							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&d));
+
+	return D;
 }
 
 void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,platform::crossplatform::RenderDelegate &overlayDelegate)

@@ -131,14 +131,18 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 		textureCreate.mips--;
 	}
 	size_t initialDataSize=0;
+	#if 0
 	if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
 		TELEPORT_CERR<<"CREATING TEXTURE "<<pTextureCreateInfo.name.c_str()<<" WITH "<<pTextureCreateInfo.images.size()<<" IMAGES "<<
 		magic_enum::enum_name<platform::crossplatform::CompressionFormat>(textureCreate.compressionFormat)<<"\n";
+	#endif
 	for(const auto &i:pTextureCreateInfo.images)  
 	{
 		initialDataSize+=i.size();
+	#if 0
 		if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
 			TELEPORT_CERR<<"\tIMAGE SIZE "<<i.size()<<"\n";
+	#endif
 	}
 	std::vector<const uint8_t*> initialData(pTextureCreateInfo.images.size());
 	for(int i=0;i<initialData.size();i++)
@@ -147,11 +151,13 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	}
 	textureCreate.initialData		= initialData.data();
 	textureCreate.name				= m_CI.name.c_str();
+	#if 0
 	if(textureCreate.cubemap)
 	{
 		if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
 			TELEPORT_CERR<<"CREATING CUBEMAP\n";
 	}
+	#endif
 	m_SimulTexture->EnsureTexture(srp, &textureCreate);
 }
 

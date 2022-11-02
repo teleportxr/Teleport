@@ -9,7 +9,7 @@
 
 #include <enet/enet.h>
 #include "libavstream/common.hpp"
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 #include <libavstream/libavstream.hpp>
 
 #include "TeleportCore/Input.h"
@@ -31,27 +31,27 @@ namespace teleport
 		class SessionCommandInterface
 		{
 		public:
-			virtual bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand& setupCommand, avs::Handshake& handshake) = 0;
+			virtual bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand& setupCommand, teleport::core::Handshake& handshake) = 0;
 			virtual void OnVideoStreamClosed() = 0;
 
-			virtual void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
+			virtual void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
 
 			virtual bool OnNodeEnteredBounds(avs::uid node_uid) = 0;
 			virtual bool OnNodeLeftBounds(avs::uid node_uid) = 0;
-			virtual void OnLightingSetupChanged(const avs::SetupLightingCommand &) =0;
-			virtual void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) =0;
-			virtual void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& ) =0;
-			virtual void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &,const std::string &)=0;
+			virtual void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &) =0;
+			virtual void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) =0;
+			virtual void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& ) =0;
+			virtual void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &,const std::string &)=0;
     
 			virtual std::vector<avs::uid> GetGeometryResources() = 0;
 			virtual void ClearGeometryResources() = 0;
 
 			virtual void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) = 0;
-			virtual void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) = 0;
-			virtual void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) = 0;
+			virtual void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList) = 0;
+			virtual void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) = 0;
 			virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
-			virtual void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) = 0;
-			virtual void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) = 0;
+			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
+			virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
 		};
 
@@ -98,7 +98,7 @@ namespace teleport
 
 			void Frame(
 					const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
-					const std::map<avs::uid,avs::Pose> &controllerPoses, uint64_t originValidCounter,
+					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					bool requestKeyframe, double time, double deltaTime);
 
@@ -139,14 +139,14 @@ namespace teleport
 			void ReceiveCommandPacket(ENetPacket* packet);
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-			void SendControllerPoses(const avs::Pose& headPose,const std::map<avs::uid,avs::Pose> poses);
+			void SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses);
 			void SendInput(const teleport::core::Input& input);
 			void SendResourceRequests();
 			void SendReceivedResources();
 			void SendNodeUpdates();
 			void SendKeyframeRequest();
 			//Tell server we are ready to receive geometry payloads.
-			void SendHandshake(const avs::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
+			void SendHandshake(const teleport::core::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
 			void sendAcknowledgeRemovedNodesMessage(const std::vector<avs::uid> &uids);
 	
 			void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
@@ -190,11 +190,11 @@ namespace teleport
 
 			double time=0.0;
 			bool discovered=false;
-			avs::SetupCommand setupCommand;
-			avs::SetupLightingCommand setupLightingCommand;
+			teleport::core::SetupCommand setupCommand;
+			teleport::core::SetupLightingCommand setupLightingCommand;
 			std::string remoteIP;
 			double mTimeSinceLastServerComm = 0;
-			std::vector<avs::InputDefinition> inputDefinitions;
+			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
 			WebspaceLocation webspaceLocation = WebspaceLocation::LOBBY;
 			ConnectionRequest connectionRequest = ConnectionRequest::CONNECT_TO_SERVER;

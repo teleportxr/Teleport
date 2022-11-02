@@ -7,7 +7,7 @@
 
 #include "enet/enet.h"
 #include "libavstream/common_input.h"
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 
 
 #include "DiscoveryService.h"
@@ -44,11 +44,11 @@ namespace teleport
 
 		// ServerHost will live for the lifetime of the session.
 		if(!mHost)
-			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 		if (!mHost)
 		{
 			ListenAddress.port ++;
-			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 			if(mHost)
 			{
 				std::cerr << "Error: port "<<listenPort<<" is in use.\n";

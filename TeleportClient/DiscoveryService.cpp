@@ -2,7 +2,7 @@
 #include "Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 
 using namespace teleport;
 using namespace client;
@@ -122,7 +122,7 @@ uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscove
 	}
 	// Poor show: ENet reverses the order of size and pointer in ENetBuffer, between Win32 and Unix.
 	ENetBuffer buffer = MAKE_ENET_BUFFER(clientID);
-	avs::ServiceDiscoveryResponse response = {};
+	teleport::core::ServiceDiscoveryResponse response = {};
 	ENetAddress  responseAddress = {0xffffffff, 0};
 	ENetBuffer responseBuffer = MAKE_ENET_BUFFER(response);
 	// Send our client id to the server on the discovery port. Once every 1000 frames.

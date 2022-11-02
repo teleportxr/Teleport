@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
 #include "TeleportClient/basic_linear_algebra.h"
@@ -130,6 +130,7 @@ namespace clientrender
 		void SetLocalPosition(const avs::vec3& pos);
 		const avs::vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
 		const avs::vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
+		const vec3& GetGlobalVelocity() const { return GetGlobalTransform().m_Velocity; }
 
 		void SetLocalRotation(const clientrender::quat& rot);
 		const clientrender::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }

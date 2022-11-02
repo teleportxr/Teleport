@@ -105,6 +105,11 @@ namespace clientrender
 
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
+
+		bool OSDVisible() const
+		{
+			return show_osd != NO_OSD;
+		}
 	protected:
 		void InvalidateDeviceObjects();
 		void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);

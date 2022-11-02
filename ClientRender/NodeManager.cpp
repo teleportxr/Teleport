@@ -354,6 +354,8 @@ void NodeManager::ReparentNode(const avs::UpdateNodeStructureCommand& updateNode
 		oldp->RemoveChild(node);
 	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
 	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
+	// TODO: Force an update. SHOULD NOT be necessary.
+	node->GetGlobalTransform();
 	LinkToParentNode(updateNodeStructureCommand.nodeID);
 }
 

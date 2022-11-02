@@ -595,7 +595,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 	pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 	if(specularCubemapTexture)
-		pbrConstants.roughestMip=specularCubemapTexture->mips-1;
+		pbrConstants.roughestMip=float(specularCubemapTexture->mips-1);
 	if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 	{
 		auto t = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
@@ -620,7 +620,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		std::vector<vec4> hand_pos_press;
 		if(l!=nodePoseStates.end())
 		{
-			avs::Pose handPose	= l->second.pose_footSpace;
+			avs::Pose handPose	= l->second.pose_footSpace.pose;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
 			vec4 pos4;
 			pos4.xyz			= (const float*)&pos;
@@ -630,7 +630,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		auto r=nodePoseStates.find(2);
 		if(r!=nodePoseStates.end())
 		{
-			avs::Pose rightHand = r->second.pose_footSpace;
+			avs::Pose rightHand = r->second.pose_footSpace.pose;
 			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
 			//renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"R",(const float*)&white);
 			vec4 pos4;
@@ -951,8 +951,8 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 			if(node)
 			{
 			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-				node->SetLocalPosition(n.second.pose_footSpace.position);
-				node->SetLocalRotation(n.second.pose_footSpace.orientation);
+				node->SetLocalPosition(n.second.pose_footSpace.pose.position);
+				node->SetLocalRotation(n.second.pose_footSpace.pose.orientation);
 				// force update of model matrices - should not be necessary, but is.
 				node->UpdateModelMatrix();
 			}
@@ -1078,7 +1078,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 				
 				pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap, diffuseCubemapTexture);
 				// If lighting is via static textures.
-				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
+				if(lastSetupCommand.backgroundMode!=avs::BackgroundMode::VIDEO&&lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
@@ -1087,7 +1087,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					}
 				}
 				pbrEffect->SetTexture(deviceContext, pbrEffect_specularCubemap, specularCubemapTexture);
-				if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
+				if(lastSetupCommand.backgroundMode!=avs::BackgroundMode::VIDEO&&lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
 					if(t)
@@ -1154,6 +1154,14 @@ void Renderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext&
 		avs::vec3 pos = node->GetGlobalPosition();
 		mat4 m=node->GetGlobalTransform().GetTransformMatrix();
 		renderPlatform->DrawAxes(deviceContext,m,0.1f);
+		const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		auto j=nodePoses.find(node->id);
+		if(j!=nodePoses.end())
+		{
+			const avs::PoseDynamic &poseDynamic=j->second;
+			poseDynamic.velocity;
+		//renderPlatform->DrawLine(deviceContext,start,end);
+		}
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		if (node->GetSkinInstance().get())
 		{
