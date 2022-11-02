@@ -189,8 +189,7 @@ cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
-if %errorlevel% neq 0 goto :cmEnd
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v -d
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 :cmErrorLevel

@@ -124,7 +124,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 #include <filesystem>
 #include <fstream>
-#include <PCDiscoveryService.h>
+#include "TeleportClient/DiscoveryService.h"
 namespace fs = std::filesystem;
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -210,7 +210,7 @@ void InitXR()
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	sessionClient=new teleport::client::SessionClient(std::make_unique<PCDiscoveryService>());
+	sessionClient=new teleport::client::SessionClient(std::make_unique<teleport::client::DiscoveryService>());
 	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,clientApp.config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
@@ -292,7 +292,7 @@ static platform::core::DefaultProfiler cpuProfiler;
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y, int W, int H);
+extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y,int w,int h);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -340,19 +340,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		RECT rect;
 		GetClientRect(hWnd, &rect);
-		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y, rect.right - rect.left, rect.bottom - rect.top);
+		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y,rect.right-rect.left,rect.bottom-rect.top);
 	}
 	{
 		switch (message)
 		{
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(false, true, false, 0);
 			break;
 		case WM_RBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(false, true, false, 0);
 			break;
 		case WM_MOUSEMOVE:
@@ -377,32 +377,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case WM_KEYDOWN:
 			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.HasFocus());
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
 			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.HasFocus());
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-			if(!gui.HasFocus())
+			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:
@@ -486,8 +486,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				w->StartFrame();
 				if (useOpenXR.HaveXRDevice())
 				{
-					const avs::Pose &headPose=useOpenXR.GetHeadPose();
-					clientDeviceState.SetHeadPose(headPose.position, headPose.orientation);
+					const avs::Pose &headPose=useOpenXR.GetHeadPose_StageSpace();
+					clientDeviceState.SetHeadPose_StageSpace(headPose.position, headPose.orientation);
 					for (int i = 0; i < useOpenXR.GetNumControllers(); i++)
 					{
 						//const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);

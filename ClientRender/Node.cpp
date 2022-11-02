@@ -70,7 +70,7 @@ void Node::RequestTransformUpdate()
 	RequestChildrenUpdateTransforms();
 }
 
-void Node::SetLastMovement(const avs::MovementUpdate& update)
+void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 {
 	//TODO: Use movement updates to extrapolate a transform and then linearly interpolate towards the extrapolated position, rather than setting transform to the update. This will result in smoother movement.
 	lastReceivedMovement = update;
@@ -223,7 +223,10 @@ void Node::SetHighlighted(bool highlighted)
 void Node::UpdateGlobalTransform() const
 {
 	std::shared_ptr<Node> parentPtr = parent.lock();
-	globalTransform = parentPtr ? localTransform * parentPtr->GetGlobalTransform() : localTransform;
+	if(parentPtr)
+		globalTransform =  localTransform * parentPtr->GetGlobalTransform() ;
+	else
+		globalTransform =  localTransform;
 
 	isTransformDirty = false;
 }

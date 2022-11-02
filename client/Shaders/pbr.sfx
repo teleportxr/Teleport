@@ -22,12 +22,13 @@ uniform TextureCube nearFarTextureCube;
 uniform Texture2D loss2dTexture;
 uniform Texture2D shadowTexture;
 uniform Texture3D inscatterVolumeTexture;
-//////////////////////////
+// Ensure that we're treating matrices as column-major. Note, this SHOULD be the default.
+#pragma pack_matrix( column_major )
+// TODO Disable until fully supported
+//uniform StructuredBuffer<uint4> TagDataIDBuffer;
+//uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
+//uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
 
-uniform StructuredBuffer<uint4> TagDataIDBuffer;
-uniform StructuredBuffer<VideoTagData2D> TagData2DBuffer;
-uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
- 
 /*
 SamplerComparisonState shadowComparisonState
 {
@@ -373,14 +374,29 @@ vec3 FresnelTerm(vec3 specularColour, float v_h)
 	return fresnel;
 }
 
-float MipFromRoughness(float roughness, float CubemapMaxMip)
+//float RoughnessFromMip(float mip, float numMips)
+//{
+//	double roughness_mip_scale = 1.2;
+//	double C = (3.0  + mip - numMips) / roughness_mip_scale;
+//	return (float)Math.Pow(Math.Exp(C), 2.0);
+//}
+
+
+// double roughness_mip_scale = 1.2;
+// double C = (3.0  + mip - numMips) / roughness_mip_scale;
+// Exp(C)=roughness^0.5;
+// C=log2(roughness^0.5)=0.5*log2(roughness)
+// mip = CubemapRoughestMip+roughness_mip_scale*0.5*log2(roughness)-2.0;
+
+float MipFromRoughness(float roughness, float CubemapRoughestMip)
 {
 	// Heuristic that maps roughness to mip level
 	// This is done in a way such that a certain mip level will always have the same roughness, regardless of how many mips are in the texture
 	// Using more mips in the cubemap just allows sharper reflections to be supported
-	const float REFLECTION_CAPTURE_ROUGHEST_MIP = 6.0 - 1.0;
-	float LevelFrom1x1 = REFLECTION_CAPTURE_ROUGHEST_MIP - 1.2 * log2(roughness);
-	return  log2(roughness * 1.2) + 3.0;
+	//float LevelFrom1x1 = CubemapRoughestMip - 1.2 * log2(roughness);
+	//return  log2(roughness * 1.2) + 3.0;
+	float mip = CubemapRoughestMip+1.2*0.5*log2(roughness)-2.0;
+	return mip;
 }
 
 struct SurfaceState
@@ -446,15 +462,18 @@ vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 }
 vec3 ConvertCubemapLookup(vec3 d)
 {
-	d=d.xzy;
-	d.z=-d.z;
+	//d=-d.xzy;
+	//d.y=-d.y;
 	return d;
 }
 
-vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
+vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
 {
-	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, 5.0);
+	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, roughestMip);
 	// Sample the environment maps:
+	//vec3 diffuse_env		=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceProperties.normal.z));//diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
+	//vec3 env				=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+
 	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
 	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
@@ -462,18 +481,18 @@ vec3 PBRAmbient(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	vec3 specular			=surfaceState.kS* env;
 
 	 //Metallic materials will have no diffuse output.
-	
-	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo ;//* diffuse_env;
+	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo*diffuse_env;
 	//diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+ specular;
-
 	return colour;
 }
 
 vec3 PBRLightmap(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surfaceProperties)
 {
-	float roughness_mip = MipFromRoughness(surfaceProperties.roughness, 5.0);
+	float roughness_mip = MipFromRoughness(surfaceProperties.roughness, roughestMip);
 	// Sample the environment maps:
+	//vec3 env = lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+
 	vec3 env = specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
 	//vec3 envSpecularColour = ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
@@ -523,6 +542,19 @@ vec3 PBRAddLight(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfac
 	return PBRLight(surfaceState, viewDir, dir_from_surface_to_light,surfaceProperties, irradiance);
 } 
 
+// NOTE: This apparently compiles cleanly to insert the vectors as columns contiguously in memory.
+// Whereas the mat3() constructor in GLSL does the same, the float3x3 constructor in HLSL tries to insert the vectors as rows, very inefficient.
+mat3 CreateMat3FromCols(float3 c0, float3 c1, float3 c2)
+{
+#ifdef GLSL
+    return mat3(c0, c1, c2);
+#else
+    return mat3(c0.x, c1.x, c2.x,
+				c0.y, c1.y, c2.y,
+				c0.z, c1.z, c2.z);
+#endif
+}
+
 vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 {
 	vec3 diff			=IN.wpos.xyz - viewPosition;
@@ -530,11 +562,11 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 		discard;
 	vec3 tangentx			= normalize(IN.tangent);
 	vec3 tangenty			= normalize(cross(IN.normal, tangentx));
-	mat3 TangentMatrix		= mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
+	mat3 TangentMatrix		= CreateMat3FromCols(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
 	vec3 normalLookup		= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
 	normalLookup			= normalOutputScalar.xyz*2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
-	vec3 normal				= normalize(mul(normalLookup, TangentMatrix));
+	vec3 normal				= normalize(mul( TangentMatrix,normalLookup));
 
 	vec2 diffuseTexCoords	=IN.texCoords0.xy * diffuseTexCoordsScalar_R;
 	//diffuseTexCoords.y=1.0-diffuseTexCoords.y;
@@ -564,28 +596,33 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
 
 	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
-	int id						=int(TagDataIDBuffer[0].x);
-	VideoTagDataCube tagData	=TagDataCubeBuffer[id];
-	surfaceState.kD				*=tagData.diffuseAmbientScale;
+	//int id						=int(TagDataIDBuffer[0].x);
+	//VideoTagDataCube tagData		=TagDataCubeBuffer[id];
+
+	// TODO: THis ONLY applies for video lighting!
+	//surfaceState.kD				*=tagData.diffuseAmbientScale;
 	vec3 c						=vec3(0,0,0);
 	if(lightmap)
-		c+=PBRLightmap(surfaceState, view, surfaceProperties);
+		c=PBRLightmap(surfaceState, view, surfaceProperties);
 	if(ambient)
 	{
-		c+=PBRAmbient(surfaceState, view, surfaceProperties);
+		c+=PBRDynamic(surfaceState, view, surfaceProperties);
 	}
 	//c.rgb=surfaceProperties.globalIllumination.rgb;
-	for(int i=0;i<max_lights;i++)
+	//for(int i=0;i<max_lights;i++)
 	{
-		if(i>=tagData.lightCount)
-			break;
-		LightTag lightTag	=tagData.lightTags[i];
-		c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
+		//if(i>=tagData.lightCount)
+			//break;
+		//LightTag lightTag	=tagData.lightTags[i];
+		//c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
 
 	vec3 emissive		=	emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
 	emissive			*=	emissiveOutputScalar.rgb;
 	vec4 u				=	vec4(c+emissive,1.0);
+	//if(lightmap)
+	//u.rgb=normal.xyz;
+	//u.rgb+=.2*saturate(IN.wpos.xyz);
 	return u;
 }
 
@@ -777,11 +814,17 @@ PixelShader ps_debug_lightmaps = CompileShader(ps_4_0, PS_DebugLightmaps()); //U
 PixelShader ps_debug_normal_unity = CompileShader(ps_4_0, PS_DebugNormal_Unity()); //Unity-basis normal view
 PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_4_0, PS_DebugNormal_VertexNormals()); //Vertex normals
 
+RasterizerState PbrBackfaceCull
+{
+	FillMode					= SOLID;
+	CullMode = back;
+	FrontCounterClockwise		= false;
+};
 technique solid
 {
 	pass local
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -790,7 +833,7 @@ technique solid
 	}
 	pass depth 
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -799,7 +842,7 @@ technique solid
 	}
 	pass pbr_lightmap 
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -808,7 +851,7 @@ technique solid
 	}
 	pass pbr_nolightmap
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -817,7 +860,7 @@ technique solid
 	}
 	pass albedo_only
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -826,7 +869,7 @@ technique solid
 	}
 	pass normal_unswizzled
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -835,7 +878,7 @@ technique solid
 	}
 	pass debug_lightmaps
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -844,7 +887,7 @@ technique solid
 	}
 	pass anim_debug_lightmaps
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim);
@@ -853,7 +896,7 @@ technique solid
 	}
 	pass debug_anim
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -862,7 +905,7 @@ technique solid
 	}
 	pass anim_debug_anim
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -871,7 +914,7 @@ technique solid
 	}
 	pass normal_unity
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -880,7 +923,7 @@ technique solid
 	}
 	pass normal_vertexnormals
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -890,7 +933,7 @@ technique solid
 
 	pass anim_pbr_lightmap
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim);
@@ -899,7 +942,7 @@ technique solid
 	}
 	pass anim_pbr_nolightmap
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -926,7 +969,7 @@ technique solid
 	}
 	pass anim_albedo_only
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -935,7 +978,7 @@ technique solid
 	}
 	pass anim_normal_unswizzled
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -944,7 +987,7 @@ technique solid
 	}
 	pass anim_debug_anim
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -953,7 +996,7 @@ technique solid
 	}
 	pass anim_normal_unity
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
@@ -962,7 +1005,7 @@ technique solid
 	}
 	pass anim_normal_vertexnormals
 	{
-		SetRasterizerState(RenderBackfaceCull);
+		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);

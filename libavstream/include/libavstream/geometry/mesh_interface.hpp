@@ -9,13 +9,13 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/memory.hpp>
-#include <libavstream/common_networking.h>
+//#include <TeleportCore/CommonNetworking.h>
 
 #include "material_interface.hpp"
 
 namespace avs
 {
-struct Animation;
+	struct Animation;
 
 	template<typename T> struct Vec2
 	{

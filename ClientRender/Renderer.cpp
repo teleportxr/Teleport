@@ -308,8 +308,6 @@ void Renderer::Init(platform::crossplatform::RenderPlatform *r,teleport::client:
 	avsNode.localTransform.position={0.f,0.1f,0.f};
 	local_left_hand_uid=23;
 	localResourceCreator.CreateNode(local_left_hand_uid,avsNode);
-	//std::shared_ptr<clientrender::Node> leftHandNode=localGeometryCache.mNodeManager->CreateNode(23, avsNode);
-	//leftHandNode->SetMesh(localGeometryCache.mMeshManager.Get(wand_uid));
 
 	avsNode.name="local Right Hand";
 	avsNode.materials[0]=16;
@@ -360,8 +358,24 @@ void Renderer::RecompileShaders()
 	delete cubemapClearEffect;
 	pbrEffect = renderPlatform->CreateEffect("pbr");
 	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
+
+	pbrEffect_solidTechnique=pbrEffect->GetTechniqueByName("solid");
+	pbrEffect_solidTechnique_localPass=pbrEffect_solidTechnique->GetPass("local");
 	_RWTagDataIDBuffer = cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
+	cubemapClearEffect_TagDataCubeBuffer	= cubemapClearEffect->GetShaderResource("TagDataCubeBuffer");
 	_lights = pbrEffect->GetShaderResource("lights");
+	plainTexture		=cubemapClearEffect->GetShaderResource("plainTexture");
+	RWTextureTargetArray=cubemapClearEffect->GetShaderResource("RWTextureTargetArray");
+	cubemapClearEffect_TagDataIDBuffer		=cubemapClearEffect->GetShaderResource("TagDataIDBuffer");
+	pbrEffect_TagDataIDBuffer				=pbrEffect->GetShaderResource("TagDataIDBuffer");
+	
+	pbrEffect_diffuseCubemap				=pbrEffect->GetShaderResource("diffuseCubemap");
+	pbrEffect_specularCubemap				=pbrEffect->GetShaderResource("specularCubemap");
+	pbrEffect_diffuseTexture	=pbrEffect->GetShaderResource("diffuseTexture");
+	pbrEffect_normalTexture		=pbrEffect->GetShaderResource("normalTexture");
+	pbrEffect_combinedTexture	=pbrEffect->GetShaderResource("combinedTexture");
+	pbrEffect_emissiveTexture	=pbrEffect->GetShaderResource("emissiveTexture");
+	pbrEffect_globalIlluminationTexture=pbrEffect->GetShaderResource("globalIlluminationTexture");
 }
 
 void Renderer::InvalidateDeviceObjects()
@@ -420,14 +434,14 @@ void Renderer::FillInControllerPose(int index, float offset)
 		return;
 	float x= mouseCameraInput.MouseX / (float)hdrFramebuffer->GetWidth();
 	float y= mouseCameraInput.MouseY / (float)hdrFramebuffer->GetHeight();
-	controllerSim.controller_dir	=camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
-	controllerSim.view_dir			=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
+	vec3 controller_dir	=camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
+	vec3 view_dir			=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
 	static float cc=0.0f;
 	cc+=0.01f;
-	controllerSim.angle=atan2f(-controllerSim.view_dir.x, controllerSim.view_dir.y);
-	float sine= sin(controllerSim.angle), cosine=cos(controllerSim.angle);
-	float sine_elev= controllerSim.view_dir.z;
+	float angle=atan2f(-view_dir.x, view_dir.y);
+	float sine= sin(angle), cosine=cos(angle);
+	float sine_elev= view_dir.z;
 	static float hand_dist=0.7f;
 	// Position the hand based on mouse pos.
 	static float xmotion_scale = 1.0f;
@@ -438,12 +452,12 @@ void Renderer::FillInControllerPose(int index, float offset)
 	pos.x = 0.4f*offset+(x - 0.5f) * xmotion_scale;
 	pos.y = ymotion_offset + (0.5f-y)*ymotion_scale;
 
-	controllerSim.pos_offset[index]=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
+	vec3 pos_offset=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
 
 	// Get horizontal azimuth of view.
 	vec3 camera_local_pos	=camera.GetPosition();
 	vec3 footspace_pos		=camera_local_pos;
-	footspace_pos			+=controllerSim.pos_offset[index];
+	footspace_pos			+=pos_offset;
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
@@ -468,11 +482,6 @@ void Renderer::FillInControllerPose(int index, float offset)
 	openXR->SetFallbackPoseState(index?client::RIGHT_GRIP_POSE:client::LEFT_GRIP_POSE,pose);
 	pose.position.z-=0.1f;
 	openXR->SetFallbackPoseState(index?client::RIGHT_AIM_POSE:client::LEFT_AIM_POSE,pose);
-	//openXR->SetVirtualPose("/interaction_profiles/simul/mouse_ext/left/input/grip/pose",LEFT_GRIP_POSE);
-	//openXR->SetFallbackPath(teleport::client::ActionId::LEFT_GRIP_POSE,pose);
-	
-	controllerSim.position[index] =footspace_pos;
-	controllerSim.orientation[index] =*((const avs::vec4*)&q);
 }
 
 void Renderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
@@ -509,8 +518,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	if (ti)
 	{
 		// This will apply to both rendering methods
-		
-		cubemapClearEffect->SetTexture(deviceContext, "plainTexture", ti->texture);
+		cubemapClearEffect->SetTexture(deviceContext, plainTexture, ti->texture);
 		tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, cubemapClearEffect, _RWTagDataIDBuffer);
 		cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
 		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
@@ -534,7 +542,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		UpdateTagDataBuffers(deviceContext);
 		if (sessionClient->IsConnected())
 		{
-			if(lastSetupCommand.backgroundMode==avs::BackgroundMode::VIDEO)
+			if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::VIDEO)
 			{
 				if (videoTexture->IsCubemap())
 				{
@@ -555,11 +563,11 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	// If connected, we show the server's chosen background: video, texture or colour.
 	if (sessionClient->IsConnected())
 	{
-		if(lastSetupCommand.backgroundMode==avs::BackgroundMode::COLOUR)
+		if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::COLOUR)
 		{
 			renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(lastSetupCommand.backgroundColour));
 		}
-		else if(lastSetupCommand.backgroundMode==avs::BackgroundMode::VIDEO)
+		else if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::VIDEO)
 		{
 			if (videoTexture->IsCubemap())
 			{
@@ -596,6 +604,16 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	vec4 white={1.f,1.f,1.f,1.f};
 	//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 	pbrConstants.drawDistance = lastSetupCommand.draw_distance;
+	if(specularCubemapTexture)
+		pbrConstants.roughestMip=float(specularCubemapTexture->mips-1);
+	if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
+	{
+		auto t = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+		if(t&&t->GetSimulTexture())
+		{
+			pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
+		}
+	}
 	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
 		RenderLocalNodes(deviceContext,server_uid,geometryCache);
 
@@ -604,6 +622,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	SetRenderPose(deviceContext,clientDeviceState->headPose.localPose);
 	
 	gui.Render(deviceContext);
+//renderPlatform->PrintAt3dPos(deviceContext,(const float*)&hit,"HIT",(const float*)&white);
 	{
 		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
@@ -611,7 +630,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		std::vector<vec4> hand_pos_press;
 		if(l!=nodePoseStates.end())
 		{
-			avs::Pose handPose	= l->second.pose_footSpace;
+			avs::Pose handPose	= l->second.pose_footSpace.pose;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
 			renderPlatform->PrintAt3dPos(*deviceContext.AsMultiviewGraphicsDeviceContext(), (const float*)&pos, "L", (const float*)&white);
 			vec4 pos4;
@@ -622,7 +641,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		auto r=nodePoseStates.find(2);
 		if(r!=nodePoseStates.end())
 		{
-			avs::Pose rightHand = r->second.pose_footSpace;
+			avs::Pose rightHand = r->second.pose_footSpace.pose;
 			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
 			renderPlatform->PrintAt3dPos(*deviceContext.AsMultiviewGraphicsDeviceContext(), (const float*)&pos, "R", (const float*)&white);
 			vec4 pos4;
@@ -645,17 +664,6 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		int W = hdrFramebuffer->GetWidth();
 		int H = hdrFramebuffer->GetHeight();
 		renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
-	}
-	static int lod=0;
-	static char tt=0;
-	tt--;
-	if(!tt)
-		lod++;
-	lod=lod%8;
-	if(show_cubemaps)
-	{
-		renderPlatform->DrawCubemap(deviceContext,diffuseCubemapTexture,-0.3f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
-		renderPlatform->DrawCubemap(deviceContext,specularCubemapTexture,0.0f,0.5f,0.2f,1.f,1.f, static_cast<float>(lod));
 	}
 	
 	//if(show_textures)
@@ -845,7 +853,7 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 	}
 	{
 		cubemapClearEffect->SetTexture(deviceContext, "plainTexture",testSourceTexture);
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
 		cubemapClearEffect->Apply(deviceContext, technique, faceColour ? "test_face_colour" : "test");
 		int zGroups = videoTexture->IsCubemap() ? 6 : 1;
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width/16, targetTexture->length/16, zGroups);
@@ -856,19 +864,19 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture",srcTexture);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture);
-	tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataIDBuffer"));
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
+	tagDataIDBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect_TagDataIDBuffer);
 	int zGroups = videoTexture->IsCubemap() ? 6 : 1;
 	cubemapClearEffect->Apply(deviceContext, technique, 0);
 	renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, zGroups);
 	cubemapClearEffect->Unapply(deviceContext);
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
 void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix)
 {
-	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect, cubemapClearEffect->GetShaderResource("TagDataCubeBuffer"));
+	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect,cubemapClearEffect_TagDataCubeBuffer);
 	cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 	cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.globalPose.position) - videoPos;
 	cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.globalPose.position);
@@ -887,7 +895,7 @@ void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext
 void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
 {
 	cubemapConstants.sourceOffset = sourceOffset;
-	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
+	cubemapClearEffect->SetTexture(deviceContext, plainTexture, srcTexture);
 	//cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 
 	cubemapConstants.targetSize.x = targetTexture->width;
@@ -895,7 +903,7 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 
 	for (int m = 0; m < mips; m++)
 	{
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", targetTexture, -1, m);
+		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture, -1, m);
 		cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
 		cubemapClearEffect->Apply(deviceContext, "recompose", 0);
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
@@ -903,7 +911,7 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 		cubemapConstants.sourceOffset.x += 3 * cubemapConstants.targetSize.x;
 		cubemapConstants.targetSize /= 2;
 	}
-	cubemapClearEffect->SetUnorderedAccessView(deviceContext, "RWTextureTargetArray", nullptr);
+	cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, nullptr);
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
@@ -973,8 +981,8 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 			if(node)
 			{
 			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-				node->SetLocalPosition(n.second.pose_footSpace.position);
-				node->SetLocalRotation(n.second.pose_footSpace.orientation);
+				node->SetLocalPosition(n.second.pose_footSpace.pose.position);
+				node->SetLocalRotation(n.second.pose_footSpace.pose.orientation);
 				// force update of model matrices - should not be necessary, but is.
 				node->UpdateModelMatrix();
 			}
@@ -996,7 +1004,6 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 
 void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
 {
-#if 1
 	clientrender::AVSTextureHandle th = avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
@@ -1012,7 +1019,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 		passName="pbr_lightmap";
 	if(overridePassName.length()>0)
 		passName= overridePassName;
-	bool force_highlight = (gui.GetSelectedUid() == node->id);
+	bool force_highlight = force||(gui.GetSelectedUid() == node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
 	if(node->IsVisible()&&(show_only == 0 || show_only == node->id))
@@ -1075,9 +1082,11 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					usedPassName = "anim_" + usedPassName;
 				//	force_highlight=true;
 				}
-				crossplatform::EffectPass *pass = pbrEffect->GetTechniqueByName("solid")->GetPass(usedPassName.c_str());
+				bool highlight=node->IsHighlighted()||force_highlight;
+				crossplatform::EffectPass *pass = pbrEffect_solidTechnique->GetPass(usedPassName.c_str());
 				if(material)
 				{
+					highlight|= (gui.GetSelectedUid() == material->id);
 					const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
 					const clientrender::Material::MaterialData& md = material->GetMaterialData();
 					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
@@ -1087,48 +1096,53 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					std::shared_ptr<clientrender::Texture> combined = matInfo.combined.texture;
 					std::shared_ptr<clientrender::Texture> emissive = matInfo.emissive.texture;
 					
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"), diffuse ? diffuse->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"), normal ? normal->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"), combined ? combined->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"), emissive ? emissive->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture	, diffuse ? diffuse->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture	, normal ? normal->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture	, combined ? combined->GetSimulTexture() : nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture	, emissive ? emissive->GetSimulTexture() : nullptr);
 
 				}
 				else
 				{
 					pbrConstants.diffuseOutputScalar=vec4(1.0f,1.0f,1.0f,0.5f);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("diffuseTexture"),  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("normalTexture"),  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("combinedTexture"),  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("emissiveTexture"),  nullptr);
-					pass = pbrEffect->GetTechniqueByName("solid")->GetPass("local");
+					pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture,  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture,  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture,  nullptr);
+					pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture,  nullptr);
+					pass = pbrEffect_solidTechnique_localPass;
 				}
-				if (node->IsHighlighted()||force_highlight)
+				if (highlight)
 				{
 					pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
-				pbrEffect->SetTexture(deviceContext, pbrEffect->GetShaderResource("globalIlluminationTexture"), gi ? gi->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext,pbrEffect_globalIlluminationTexture, gi ? gi->GetSimulTexture() : nullptr);
 
-				pbrEffect->SetTexture(deviceContext, "specularCubemap", specularCubemapTexture);
+				pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap, diffuseCubemapTexture);
 				// If lighting is via static textures.
-				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
+				if(lastSetupCommand.backgroundMode!=teleport::core::BackgroundMode::VIDEO&&lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
 					{
-						pbrEffect->SetTexture(deviceContext,"diffuseCubemap",t->GetSimulTexture());
+						pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap,t->GetSimulTexture());
 					}
 				}
-				else
+				pbrEffect->SetTexture(deviceContext, pbrEffect_specularCubemap, specularCubemapTexture);
+				if(lastSetupCommand.backgroundMode!=teleport::core::BackgroundMode::VIDEO&&lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 				{
-					pbrEffect->SetTexture(deviceContext, "diffuseCubemap", diffuseCubemapTexture);
+					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+					if(t)
+					{
+						pbrEffect->SetTexture(deviceContext,pbrEffect_specularCubemap,t->GetSimulTexture());
+				}
 				}
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				
 				lightsBuffer.Apply(deviceContext, pbrEffect, _lights );
-				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataCubeBuffer"));
-				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect->GetShaderResource("TagDataIDBuffer"));
+				tagDataCubeBuffer.Apply(deviceContext, pbrEffect, cubemapClearEffect_TagDataCubeBuffer);
+				tagDataIDBuffer.Apply(deviceContext, pbrEffect, pbrEffect_TagDataIDBuffer);
 
 				pbrEffect->SetConstantBuffer(deviceContext, &pbrConstants);
 				if (deviceContext.deviceContextType == platform::crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
@@ -1159,10 +1173,9 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderNode(deviceContext, child,g,true);
+			RenderNode(deviceContext, child,g,false);
 		}
 	}
-	#endif
 }
 
 
@@ -1185,6 +1198,14 @@ void Renderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext&
 		avs::vec3 pos = node->GetGlobalPosition();
 		mat4 m=node->GetGlobalTransform().GetTransformMatrix();
 		renderPlatform->DrawAxes(deviceContext,m,0.1f);
+		const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		auto j=nodePoses.find(node->id);
+		if(j!=nodePoses.end())
+		{
+			//const avs::PoseDynamic &poseDynamic=j->second;
+			//poseDynamic.velocity;
+		//renderPlatform->DrawLine(deviceContext,start,end);
+		}
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		if (node->GetSkinInstance().get())
 		{
@@ -1281,7 +1302,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
-		clientDeviceState->SetHeadPose(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
+		clientDeviceState->SetHeadPose_StageSpace(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
 		const teleport::core::Input& inputs = openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
 		clientDeviceState->SetInputs( inputs);
 
@@ -1293,8 +1314,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		have_vr_device=openXR->HaveXRDevice();
 		if (have_headset)
 		{
-			avs::Pose headPose=openXR->GetHeadPose();
-			clientDeviceState->SetHeadPose(headPose.position, headPose.orientation);
+			const avs::Pose &headPose_stageSpace=openXR->GetHeadPose_StageSpace();
+			clientDeviceState->SetHeadPose_StageSpace(headPose_stageSpace.position, headPose_stageSpace.orientation);
 		}
 	}
 	// Handle networked session.
@@ -1309,15 +1330,15 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		// But we want orientation relative to X right, Y forward, Z up.
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
 	
-		avs::Pose controllerPoses[2];
-		controllerPoses[0]=clientDeviceState->controllerPoses[0].globalPose;
-		controllerPoses[1]=clientDeviceState->controllerPoses[1].globalPose;
+
+		const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		
 		if (openXR)
 		{
 			const teleport::core::Input& inputs = openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientDeviceState->SetInputs(inputs);
 		}
-		sessionClient->Frame(displayInfo, clientDeviceState->headPose.globalPose, controllerPoses, receivedInitialPos, clientDeviceState->originPose,
+		sessionClient->Frame(displayInfo, clientDeviceState->headPose.localPose, nodePoses, receivedInitialPos, clientDeviceState->originPose,
 			clientDeviceState->input, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		if(receivedInitialPos != sessionClient->receivedInitialPos)
@@ -1614,12 +1635,12 @@ bool Renderer::OnNodeLeftBounds(avs::uid id)
 }
 
 
-void Renderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
+void Renderer::UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
 	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
-void Renderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
+void Renderer::UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
 {
 	if(regexPath.size())
 	{
@@ -1636,12 +1657,12 @@ void Renderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
-void Renderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
+void Renderer::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
 	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
 }
 
-void Renderer::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+void Renderer::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
 	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
 }
@@ -1651,24 +1672,18 @@ void Renderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
-void Renderer::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
+void Renderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
 {
 	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
 
-void Renderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
+void Renderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
 {
 	switch(animationControlUpdate.timeControl)
 	{
-	case avs::AnimationTimeControl::ANIMATION_TIME:
+	case teleport::core::AnimationTimeControl::ANIMATION_TIME:
 		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 		break;
-	/*case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &inputs.triggerBack, 1.0f);
-		break;
-	case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &inputs.triggerBack, 1.0f);
-		break;*/
 	default:
 		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
 		break;
@@ -1761,21 +1776,42 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 	}
 	static int lod = 0;
-	static char tt = 0;
+	static int tt = 1000;
 	tt--;
 	if (!tt)
+	{
 		lod++;
+	}
 	lod = lod % 8;
 	if(show_cubemaps)
 	{
-		//renderPlatform->DrawCubemap(deviceContext, videoTexture,		  +0.0f, 0.0f, 1.0f, 1.f, 1.f, 0.0f);
-		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, -0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
-		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, 0.0f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+		int x=50,y=50;
+		static int r=100;
+		renderPlatform->DrawCubemap(deviceContext, videoTexture,		  x+=r, y, r, 1.f, 1.f, 0.0f);
+		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, x+=r, y, r, 1.f, 1.f, static_cast<float>(lod));
+		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, x+=r,y, r, 1.f, 1.f, static_cast<float>(lod));
+		renderPlatform->Print(deviceContext,x,y,fmt::format("mip {0}",lod).c_str());
 		auto t = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 		if(t&&t->GetSimulTexture())
 		{
-			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), 0.3f, 0.5f, 0.2f, 1.f, 1.f, static_cast<float>(lod));
+			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), x+=r, y, r, 1.f, 1.f, static_cast<float>(lod));
 		}
+		auto s = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+		if(s&&s->GetSimulTexture())
+		{
+			static int s_lod=0;
+			if (!tt)
+			{
+				s_lod++;
+				s_lod=s_lod%s->GetSimulTexture()->mips;
+	}
+			renderPlatform->Print(deviceContext,x,y,fmt::format("cubemaps mip {0}",s_lod).c_str());
+			renderPlatform->DrawCubemap(deviceContext, s->GetSimulTexture(), x+=r, y, r, 1.f, 1.f, static_cast<float>(s_lod));
+		}
+	}
+	if (!tt)
+	{
+		tt=1000;
 	}
 	//
 	{
@@ -1895,6 +1931,28 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 	viewStruct.Init();
 	
 	gui.setGeometryCache(&geometryCache);
+	if(openXR)
+	{
+		avs::Pose p=openXR->GetActionPose(client::RIGHT_AIM_POSE);
+		// from hand to overlay is diff:
+		vec3 start		=*((vec3*)&p.position);
+		vec3 normal		={0,-1.f,0};
+		avs::Pose overlay_pose=openXR->ConvertGLStageSpacePoseToLocalSpacePose(openXR->overlay.pose) ;
+		vec3 overlay_centre=*((vec3*)&overlay_pose.position);
+		vec3 diff		=overlay_centre-start;
+		float nf		=-dot(normal,diff);
+		vec3 dir		=*((crossplatform::Quaternionf*)&p.orientation)*vec3(0,1.0f,0);
+		float nr		=-dot(dir,normal);
+		float distance	=nf/nr;
+		hit		=start+distance*dir;
+
+		vec3 h			=hit-overlay_centre;
+		h.x				/=(float)openXR->overlay.size.width;
+		h.z				/=(float)openXR->overlay.size.height;
+		vec2 m(h.x,h.z);
+		float rightTrigger=openXR->GetActionFloatState(client::RIGHT_TRIGGER);
+		gui.SetDebugGuiMouse(m,rightTrigger>0.5f);
+	}
 	gui.BeginDebugGui(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
@@ -2047,18 +2105,6 @@ void Renderer::DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceCon
 			gui.LinePrint( platform::core::QuickFormat("     W %d A %d S %d D %d",keydown['w'],keydown['a'],keydown['s'],keydown['d']));
 			gui.LinePrint( platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
 			gui.LinePrint( platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
-		
-			gui.LinePrint( platform::core::QuickFormat("   view_dir: %3.3f %3.3f %3.3f", controllerSim.view_dir.x, controllerSim.view_dir.y, controllerSim.view_dir.z));
-
-			gui.LinePrint( platform::core::QuickFormat("   position: %3.3f %3.3f %3.3f", controllerSim.position[0].x, controllerSim.position[0].y, controllerSim.position[0].z));
-			gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.position[1].x, controllerSim.position[1].y, controllerSim.position[1].z));
-
-			gui.LinePrint( platform::core::QuickFormat("orientation: %3.3f %3.3f %3.3f", controllerSim.orientation[0].x, controllerSim.orientation[0].y, controllerSim.orientation[0].z, controllerSim.orientation[0].w));
-			gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.orientation[1].x, controllerSim.orientation[1].y, controllerSim.orientation[1].z, controllerSim.orientation[1].w));
-			gui.LinePrint( platform::core::QuickFormat("        dir: %3.3f %3.3f %3.3f", controllerSim.controller_dir.x, controllerSim.controller_dir.y, controllerSim.controller_dir.z));
-			gui.LinePrint( platform::core::QuickFormat("      angle: %3.3f", controllerSim.angle));
-			gui.LinePrint( platform::core::QuickFormat(" con offset: %3.3f %3.3f %3.3f", controllerSim.pos_offset[0].x, controllerSim.pos_offset[0].y, controllerSim.pos_offset[0].z));
-			gui.LinePrint( platform::core::QuickFormat("           : %3.3f %3.3f %3.3f", controllerSim.pos_offset[1].x, controllerSim.pos_offset[1].y, controllerSim.pos_offset[1].z));
 		}
 	}
 	gui.EndDebugGui(deviceContext);
@@ -2168,12 +2214,12 @@ void Renderer::PrintHelpText(platform::crossplatform::GraphicsDeviceContext& dev
 }
 
 
-void Renderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
+void Renderer::OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
 }
 
-void Renderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_)
+void Renderer::OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions_)
 {
 	if (openXR)
 		openXR->OnInputsSetupChanged(server_uid,inputDefinitions_);
@@ -2187,7 +2233,7 @@ avs::DecoderBackendInterface* Renderer::CreateVideoDecoder()
 	
 }
 
-bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+bool Renderer::OnSetupCommandReceived(const char *server_ip,const teleport::core::SetupCommand &setupCommand,teleport::core::Handshake &handshake)
 {
 	ConfigureVideo(setupCommand.video_config);
 
@@ -2439,7 +2485,7 @@ void Renderer::OnVideoStreamClosed()
 	receivedInitialPos = 0;
 }
 
-void Renderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
+void Renderer::OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand)
 {
 	clientPipeline.videoConfig = reconfigureVideoCommand.video_config;
 

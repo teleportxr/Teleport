@@ -598,7 +598,7 @@ bool OpenXR::TryInitDevice()
 		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchain_info.format = VK_FORMAT_R8G8B8A8_SRGB;
 		swapchain_info.sampleCount = 1;
-		swapchain_info.width = 512;
+		swapchain_info.width = 1024;
 		swapchain_info.height = 512;
 		swapchain_info.faceCount = 1;
 		swapchain_info.arraySize = 1;

@@ -133,7 +133,6 @@ set(src_public_root
 	include/libavstream/common.hpp
 	include/libavstream/common_input.h
 	include/libavstream/common_maths.h
-	include/libavstream/common_networking.h
 	include/libavstream/context.hpp
 	include/libavstream/decoder.hpp
 	include/libavstream/tagdatadecoder.hpp

@@ -243,11 +243,11 @@ bool NodeManager::UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translat
 	return false;
 }
 
-void NodeManager::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
+void NodeManager::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
 	earlyMovements.clear();
 
-	for(avs::MovementUpdate update : updateList)
+	for(teleport::core::MovementUpdate update : updateList)
 	{
 		std::shared_ptr<clientrender::Node> node = GetNode(update.nodeID);
 		if(node)
@@ -261,11 +261,11 @@ void NodeManager::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& upd
 	}
 }
 
-void NodeManager::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+void NodeManager::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
 	earlyEnabledUpdates.clear();
 
-	for(avs::NodeUpdateEnabledState update : updateList)
+	for(teleport::core::NodeUpdateEnabledState update : updateList)
 	{
 		std::shared_ptr<clientrender::Node> node = GetNode(update.nodeID);
 		if(node)
@@ -292,7 +292,7 @@ void clientrender::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighl
 	}
 }
 
-void NodeManager::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
+void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
 {
 	std::shared_ptr<clientrender::Node> node = GetNode(animationUpdate.nodeID);
 	if(node)
@@ -333,7 +333,7 @@ void clientrender::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid 
 	}
 }
 
-void NodeManager::ReparentNode(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand)
+void NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand)
 {
 	auto c = nodeLookup.find(updateNodeStructureCommand.nodeID);
 	auto p = nodeLookup.find(updateNodeStructureCommand.parentID);
@@ -354,6 +354,8 @@ void NodeManager::ReparentNode(const avs::UpdateNodeStructureCommand& updateNode
 		oldp->RemoveChild(node);
 	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
 	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
+	// TODO: Force an update. SHOULD NOT be necessary.
+	node->GetGlobalTransform();
 	LinkToParentNode(updateNodeStructureCommand.nodeID);
 }
 

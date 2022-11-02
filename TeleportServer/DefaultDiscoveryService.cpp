@@ -96,6 +96,10 @@ void DefaultDiscoveryService::tick()
 	//Retrieve all packets received since last call, and add any new clients.
 	while (size_t packetsize = enet_socket_receive(discoverySocket, &addr, &buffer, 1) > 0)
 	{
+		//Retrieve IP of client that sent message, and convert to string.
+		char clientIPRaw[20];
+		enet_address_get_host_ip(&addr, clientIPRaw, 20);
+		TELEPORT_COUT << "Received connection request from " << clientIPRaw << " identifying as client "<<clientID<<" .\n";
 		bool ipConnecting = false;
 		for (const auto& client : newClients)
 		{
@@ -131,8 +135,6 @@ void DefaultDiscoveryService::tick()
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
 		{
-			//Retrieve IP of client that sent message, and convert to string.
-			char clientIPRaw[20];
 			enet_address_get_host_ip(&addr, clientIPRaw, 20);
 
 			//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
@@ -186,7 +188,7 @@ void DefaultDiscoveryService::sendResponseToClient(uint64_t clientID)
 
 	// Send response, containing port to connect on, to all clients we want to host.
 	ENetAddress addr = clientPair->second;
-	avs::ServiceDiscoveryResponse response = {clientID, servicePort};
+	teleport::core::ServiceDiscoveryResponse response = {clientID, servicePort};
 	ENetBuffer buffer = {sizeof(response), &response};
 	enet_socket_send(discoverySocket, &addr, &buffer, 1);
 }

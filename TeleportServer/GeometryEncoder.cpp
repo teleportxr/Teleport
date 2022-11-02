@@ -92,20 +92,6 @@ namespace teleport
 				}
 				if(meshResourceInfo.skinID != 0)
 				{
-				/*	if( meshResourceInfo.boneIDs.size())
-					{
-						// It should have either none or all of the joints.
-						if(!req->hasResource(meshResourceInfo.boneIDs[0]))
-						{
-							encodeNodes(src, req, meshResourceInfo.boneIDs);
-
-							keepQueueing = attemptQueueData();
-							if(!keepQueueing)
-							{
-								break;
-							}
-						}
-					}*/
 					if(!req->hasResource(meshResourceInfo.skinID))
 					{
 						encodeSkin(src, req, meshResourceInfo.skinID);
@@ -593,13 +579,17 @@ namespace teleport
 		prevBufferSize = 0;
 	}
 
-	avs::Result GeometryEncoder::encodeTextures(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeTextures(avs::GeometrySourceBackendInterface * src
+												,avs::GeometryRequesterBackendInterface *req
+												,std::vector<avs::uid> missingUIDs)
 	{
 		encodeTexturesBackend(src, req, missingUIDs);
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeMaterials(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeMaterials(avs::GeometrySourceBackendInterface *src
+												,avs::GeometryRequesterBackendInterface *req
+												,std::vector<avs::uid> missingUIDs)
 	{
 		auto renderingFeatures=req->getClientRenderingFeatures();
 		//Push amount of materials.

@@ -100,11 +100,16 @@ namespace clientrender
 		void ChangePass(ShaderMode newShaderMode);
 		void ConfigureVideo(const avs::VideoConfig &vc);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		avs::SetupCommand lastSetupCommand;
-		avs::SetupLightingCommand lastSetupLightingCommand;
+		teleport::core::SetupCommand lastSetupCommand;
+		teleport::core::SetupLightingCommand lastSetupLightingCommand;
 
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
+
+		bool OSDVisible() const
+		{
+			return show_osd != NO_OSD;
+		}
 	protected:
 		void InvalidateDeviceObjects();
 		void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);
@@ -159,9 +164,23 @@ namespace clientrender
 
 		// A simple example mesh to draw as transparent
 		platform::crossplatform::Effect *pbrEffect				= nullptr;
+		platform::crossplatform::EffectTechnique*	pbrEffect_solidTechnique=nullptr;
+		platform::crossplatform::EffectPass *pbrEffect_solidTechnique_localPass=nullptr;
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 		platform::crossplatform::ShaderResource _lights;
+		platform::crossplatform::ShaderResource plainTexture;
+		platform::crossplatform::ShaderResource RWTextureTargetArray;
+		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataIDBuffer;
+		platform::crossplatform::ShaderResource pbrEffect_TagDataIDBuffer;
+		platform::crossplatform::ShaderResource pbrEffect_specularCubemap,pbrEffect_diffuseCubemap;
+		platform::crossplatform::ShaderResource pbrEffect_diffuseTexture;
+		platform::crossplatform::ShaderResource pbrEffect_normalTexture;
+		platform::crossplatform::ShaderResource pbrEffect_combinedTexture;
+		platform::crossplatform::ShaderResource pbrEffect_emissiveTexture;
+		platform::crossplatform::ShaderResource pbrEffect_globalIlluminationTexture;
+		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataCubeBuffer; 
+
 		platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
 		platform::crossplatform::ConstantBuffer<StereoCameraConstants> stereoCameraConstants;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
@@ -281,27 +300,29 @@ namespace clientrender
 		bool OnNodeEnteredBounds(avs::uid nodeID) override;
 		bool OnNodeLeftBounds(avs::uid nodeID) override;
 	
-		void UpdateNodeStructure(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
-		void UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
+		void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+		void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
 
 		void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
-		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList) override;
-		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList) override;
+		void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList) override;
+		void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) override;
 		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
-		void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate) override;
-		void UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate) override;
+		void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) override;
+		void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) override;
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 		
 		virtual avs::DecoderBackendInterface* CreateVideoDecoder();
 		virtual avs::DecoderStatus GetVideoDecoderStatus() { return avs::DecoderStatus::DecoderUnavailable; }
 		// Implement SessionCommandInterface
-		bool OnSetupCommandReceived(const char* server_ip, const avs::SetupCommand &setupCommand, avs::Handshake& handshake) override;
+		bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand &setupCommand, teleport::core::Handshake& handshake) override;
 		void OnVideoStreamClosed() override;
-		void OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand) override;
-		void OnLightingSetupChanged(const avs::SetupLightingCommand &l) override;
-		void OnInputsSetupChanged(const std::vector<avs::InputDefinition>& inputDefinitions) override;
+		void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) override;
+		void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l) override;
+		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
 
 		void HandleLocalInputs(const teleport::core::Input& local_inputs);
 		void ShowHideGui();
+
+		vec3 hit={0,0,0};
 	};
 }

@@ -779,7 +779,7 @@ std::string OpenXR::GetBoundPath(const ActionDefinition &def) const
 // It defines which xrActions are linked to which inputs needed by the server.
 // The mappings are initialized on connection and can be changed at any time by the server.
 // So we have a set of mappings for each currently connected server.
-void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition>& inputDefinitions_)
+void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition>& inputDefinitions_)
 {
 	RecordCurrentBindings();
 	auto &server		=openXRServers[server_uid];
@@ -791,9 +791,11 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 	for (const auto& def : inputDefinitions_)
 	{
 		std::regex re(def.regexPath, std::regex_constants::icase | std::regex::extended);
+		std::cerr<<"Trying to bind "<<def.regexPath.c_str()<<"\n";
 		// which, if any, action should be used to map to this?
 		// we match by the bindings.
 		// For each action, get the currently bound path.
+		int found=0;
 		for(size_t a=0;a<ActionId::MAX_ACTIONS;a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
@@ -804,9 +806,15 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 				std::string path_str=GetBoundPath(actionDef);
 				if(!path_str.length())
 					continue;
+				std::cout<<"\tChecking against: "<<path_str.c_str()<<std::endl;
 				// Now we try to match this path to the input def.
 				if (std::regex_search(path_str, match, re))
+				{
+					std::cout<<"\t\t\tMatches.\n";
 					matches=true;
+				}
+				else
+					std::cout<<"\t\t\tX\n";
 			}
 			if(matches)
 			{
@@ -819,7 +827,16 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::Inp
 				// store the definition.
 				mapping.serverInputDefinition=def;
 				mapping.clientActionId=(ActionId)a;
+				found++;
 			}
+		}
+		if(found==0)
+		{
+			TELEPORT_CERR<<"No match found for "<<def.regexPath.c_str()<<"\n";
+		}
+		else
+		{
+			std::cout<<"Found "<<found<<" matches for "<<def.regexPath.c_str()<<"\n";
 		}
 	}
 }
@@ -908,7 +925,9 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 		{
 			auto &def=m.second;
 			auto &state=server.nodePoseStates[m.first];
-			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
+			XrSpaceVelocity space_velocity {XR_TYPE_SPACE_VELOCITY};
+			XrSpaceLocation space_location {XR_TYPE_SPACE_LOCATION, &space_velocity};
+			space_velocity.velocityFlags=XR_SPACE_VELOCITY_LINEAR_VALID_BIT |XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
 			auto space=xr_input_session.actionDefinitions[def.actionId].space;
 			if(space)
 			{
@@ -917,15 +936,25 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
-					xr_input_session.actionStates[def.actionId].pose_stageSpace=(space_location.pose);
-					state.pose_footSpace=ConvertGLStageSpacePoseToWorldSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
+					xr_input_session.actionStates[def.actionId].pose_stageSpace				=space_location.pose;
+					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_LINEAR_VALID_BIT)
+						xr_input_session.actionStates[def.actionId].velocity_stageSpace			=space_velocity.linearVelocity;
+					else
+						xr_input_session.actionStates[def.actionId].velocity_stageSpace			={0,0,0};
+					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_ANGULAR_VALID_BIT)
+						xr_input_session.actionStates[def.actionId].angularVelocity_stageSpace	={0,0,0};
+					state.pose_footSpace.pose				=ConvertGLStageSpacePoseToLocalSpacePose(xr_input_session.actionStates[def.actionId].pose_stageSpace);
+					state.pose_footSpace.velocity			=ConvertGLStageSpaceDirectionToLocalSpace(xr_input_session.actionStates[def.actionId].velocity_stageSpace);
+					state.pose_footSpace.angularVelocity	=ConvertGLStageSpaceDirectionToLocalSpace(xr_input_session.actionStates[def.actionId].angularVelocity_stageSpace);
 				}
 			}
 			else
 			{
 				if(fallbackBindings.find(def.actionId)!=fallbackBindings.end())
 				{
-					state.pose_footSpace=fallbackStates[def.actionId].pose_worldSpace;
+					state.pose_footSpace.pose=fallbackStates[def.actionId].pose_worldSpace;
+					state.pose_footSpace.velocity			={0,0,0};
+					state.pose_footSpace.angularVelocity	={0,0,0};
 				}
 			}
 		}
@@ -1042,6 +1071,20 @@ avs::uid OpenXR::GetRootNode(avs::uid server_uid)
 {
 	return openXRServers[server_uid].rootNode;
 }
+
+
+const std::map<avs::uid,avs::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
+{
+	const std::map<avs::uid,NodePoseState> &nodePoseStates=GetNodePoseStates(server_uid,framenumber);
+	for(const auto &i:nodePoseStates)
+	{
+		openXRServers[server_uid].nodePoses[i.first].pose=i.second.pose_footSpace.pose;
+		openXRServers[server_uid].nodePoses[i.first].velocity=i.second.pose_footSpace.velocity;
+		openXRServers[server_uid].nodePoses[i.first].angularVelocity=i.second.pose_footSpace.angularVelocity;
+	}
+	return openXRServers[server_uid].nodePoses;
+}
+
 const std::map<avs::uid,NodePoseState> &OpenXR::GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber)
 {
 	UpdateServerState(server_uid, framenumber);
@@ -1597,9 +1640,21 @@ bool OpenXR::IsXRDeviceActive() const
 	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
 }
 
-const avs::Pose& OpenXR::GetHeadPose() const
+const avs::Pose& OpenXR::GetHeadPose_StageSpace() const
 {
-	return headPose_worldSpace;
+	return headPose_stageSpace;
+}
+
+avs::Pose OpenXR::GetActionPose(ActionId actionId) const
+{
+	avs::Pose pose=ConvertGLStageSpacePoseToLocalSpacePose(xr_input_session.actionStates[actionId].pose_stageSpace);
+	return pose;
+}
+
+float OpenXR::GetActionFloatState(ActionId actionId) const
+{
+	float st=xr_input_session.actionStates[actionId].f32;
+	return st;
 }
 
 typedef union {
@@ -1631,6 +1686,24 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &xrpose)
 	pose.position=*((avs::vec3*)&pos);
 	pose.orientation=*((avs::vec4*)&rot);
 	return pose;
+}
+
+avs::Pose OpenXR::ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &xrpose) const
+{
+	avs::Pose pose;
+	// first convert to the correct scheme.
+	vec3 pos_e							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&xrpose.position));
+ 	crossplatform::Quaternionf ori_e	= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&xrpose.orientation));
+
+	pose.position=*((avs::vec3*)&pos_e);
+	pose.orientation=*((avs::vec4*)&ori_e);
+	return pose;
+}
+vec3 OpenXR::ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const
+{
+	vec3 D							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&d));
+
+	return D;
 }
 
 void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,platform::crossplatform::RenderDelegate &overlayDelegate)
@@ -1672,7 +1745,7 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
 			state.XrSpacePoseInWorld=space_location.pose;
-			headPose_worldSpace=ConvertGLStageSpacePoseToWorldSpacePose(space_location.pose);
+			headPose_stageSpace=ConvertGLStageSpacePoseToLocalSpacePose(space_location.pose);
 		}
 		// If the session is active, lets render our layer in the compositor!
 	
@@ -1746,9 +1819,6 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 {
 
 // Build the quad layer
-    const XrVector3f axis = {0.0f, 1.0f, 0.0f};
-    XrVector3f pos = {0.0f, 1.8f, -2.0f};
-    XrExtent2Df size = {2.0f, 2.0f};
 
     quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
     quad_layer.next = NULL;
@@ -1762,11 +1832,11 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
     quad_layer.subImage.imageArrayIndex = 0;
-    quad_layer.pose = xr_pose_identity;
+   // quad_layer.pose = xr_pose_identity;
    // quad_layer.pose.orientation =        XrQuaternionf_CreateFromVectorAngle(axis, 45.0f * MATH_PI / 180.0f);
-    quad_layer.pose.position = pos;
+    quad_layer.pose = overlay.pose;
 
-    quad_layer.size = size;
+    quad_layer.size = overlay.size;
 	return true;
 }
 

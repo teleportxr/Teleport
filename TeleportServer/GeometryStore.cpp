@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 
 #if defined ( _WIN32 )
 #include <sys/stat.h>
@@ -670,12 +671,12 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
 		compressedSize+= subMesh.buffer.size();
 
-		std::string test_str="C:\\temp\\test";
+	/*	std::string test_str="C:\\temp\\test";
 		test_str +=char('0')+(char)i;
 		test_str +=".drc";
 		std::ofstream saveFile(test_str.c_str(), std::ofstream::out | std::ofstream::binary);
 		saveFile.write(dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
-		saveFile.close();
+		saveFile.close();*/
 	}
 	TELEPORT_INTERNAL_LOG_UNSAFE("Compressed from %uk to %uk\n",(sourceSize+1023)/1024,(compressedSize +1023)/1024);
 	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO;
@@ -1250,28 +1251,16 @@ void GeometryStore::compressNextTexture()
 			texturesToCompress.erase(texturesToCompress.begin());
 			return;
 		}
-		for(size_t i=0;i<imagesPerMip;i++)
-		{
-			basisu::image image(newTexture.width, newTexture.height);
-			// TODO: This ONLY works for 8-bit rgba.
-			basisu::color_rgba_vec& imageData = image.get_pixels();
-			std::vector<uint8_t> &img=compressionData.images[i];
-			if(img.size()>4*imageData.size())
-			{
-				TELEPORT_CERR<<"Image data size mismatch.\n";
-				return;
-			}
-			memcpy(imageData.data(),img.data(),img.size());
-			basisCompressorParams.m_source_images.push_back(std::move(image));
-		}
-		size_t n=imagesPerMip;
+		size_t n=0;
 		int w=newTexture.width;
 		int h=newTexture.height;
-		for(size_t m=1;m<compressionData.numMips;m++)
+		//compressionData.numMips=std::min((size_t)2,compressionData.numMips);
+		for(size_t m=0;m<compressionData.numMips;m++)
 		{
-			basisu::vector<basisu::image> m_source_mipmap_images;
 			for(size_t i=0;i<imagesPerMip;i++)
 			{
+				if(m>0&&basisCompressorParams.m_source_mipmap_images.size()<imagesPerMip)
+					basisCompressorParams.m_source_mipmap_images.push_back(basisu::vector<basisu::image>());
 				basisu::image image(w, h);
 				// TODO: This ONLY works for 8-bit rgba.
 				basisu::color_rgba_vec& imageData = image.get_pixels();
@@ -1281,13 +1270,19 @@ void GeometryStore::compressNextTexture()
 					TELEPORT_CERR<<"Image data size mismatch.\n";
 					return;
 				}
+				if(img.size()<4*imageData.size())
+				{
+					TELEPORT_CERR<<"Image data size mismatch.\n";
+				}
 				memcpy(imageData.data(),img.data(),img.size());
-				m_source_mipmap_images.push_back(std::move(image));
+				if(m==0)
+					basisCompressorParams.m_source_images.push_back(std::move(image));
+				else
+					basisCompressorParams.m_source_mipmap_images[i].push_back(std::move(image));
 				n++;
-				w=(w+1)/2;
-				h=(h+1)/2;
 			}
-			basisCompressorParams.m_source_mipmap_images.push_back(std::move(m_source_mipmap_images));
+			w=(w+1)/2;
+			h=(h+1)/2;
 		}
 
 		basisCompressorParams.m_quality_level = compressionQuality;

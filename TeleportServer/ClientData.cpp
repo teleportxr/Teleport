@@ -18,7 +18,7 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	,GetUnixTimestampFn getUnixTimestamp
 	,bool use_ssl)
 {
-	avs::SetupCommand setupCommand;
+	teleport::core::SetupCommand setupCommand;
 	setupCommand.server_http_port = clientMessaging->getServerPort() + 1;
 	setupCommand.server_streaming_port = clientMessaging->getStreamingPort();
 	setupCommand.debug_stream = serverSettings.debugStream;
@@ -68,20 +68,24 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	{
 		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuseCubemapTexture);
 	}
+	if(setupCommand.clientDynamicLighting.specularCubemapTexture)
+	{
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specularCubemapTexture);
+	}
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;
 	clientMessaging->sendCommand(setupCommand);
 
 	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
-	avs::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
+	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
 	clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 	if (inputDefinitions.size() >= 256)
 	{
 	}
 	else
 	{
-		avs::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
+		teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	/*	std::vector<avs::InputDefinition> inputDefinitionsV;
 		for (auto &it = inputDefinitions.begin(); it != inputDefinitions.end(); ++it)
 		{
@@ -108,7 +112,7 @@ void ClientData::setNodePosePath(avs::uid nodeID, const std::string &regexPosePa
 		nodeSubTypes[nodeID].status = ReflectedStateStatus::SENT;
 	}
 }
-void ClientData::setInputDefinitions(const std::vector<avs::InputDefinition>& inputDefs)
+void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefinition>& inputDefs)
 {
 	inputDefinitions = inputDefs;
 }
@@ -172,7 +176,7 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 		return;
 	if(changed)
 	{
-		avs::SetupLightingCommand setupLightingCommand;
+		teleport::core::SetupLightingCommand setupLightingCommand;
 		setupLightingCommand.num_gi_textures=(uint8_t)num;
 		clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 	}

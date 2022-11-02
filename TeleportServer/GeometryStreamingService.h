@@ -5,7 +5,7 @@
 
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "libavstream/pipeline.hpp"
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 
 #include "CasterContext.h"
 #include "GeometryEncoder.h"
@@ -36,7 +36,7 @@ namespace teleport
 		virtual avs::AxesStandard getClientAxesStandard() const override;
 		virtual avs::RenderingFeatures getClientRenderingFeatures() const override;
 
-		virtual void startStreaming(CasterContext* context,const avs::Handshake &handshake);
+		virtual void startStreaming(CasterContext* context,const teleport::core::Handshake &handshake);
 		//Stop streaming to client.
 		virtual void stopStreaming();
 
@@ -64,7 +64,7 @@ namespace teleport
 
 		virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 		virtual bool clientStartedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
-		avs::Handshake handshake;
+		teleport::core::Handshake handshake;
 	private:
 		const struct ServerSettings* settings;
 

@@ -524,19 +524,19 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
 	memcpy(data.data(), texture.data, texture.dataSize);
 
-	TELEPORT_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
+	//TELEPORT_COUT << "CreateTexture(" << id << ", " << texture.name << ") ";
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression,texture.valueScale });
-		std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
+		//std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
 	}
 	else
 	{
 		texInfo.imageSizes.push_back(texture.dataSize);
 		texInfo.images.emplace_back(std::move(data));
 
-		std::cout << "Uncompressed, completing.\n";
+		//std::cout << "Uncompressed, completing.\n";
 		CompleteTexture(id, texInfo);
 	}
 }
@@ -1265,15 +1265,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						transcoding.scrTexture.imageSizes.push_back(outDataSize);
 						transcoding.scrTexture.images.emplace_back(std::move(outData));
 						transcoding.scrTexture.valueScale=transcoding.valueScale;
-						if (transcoding.scrTexture.images.size() != 0)
-						{
-							std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-							texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
-						}
-						else
-						{
-							TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
-						}
 
 					}
 					else
@@ -1281,6 +1272,15 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						TELEPORT_CERR << "Failed to transcode PNG-format texture \"" << transcoding.name << "\"." << std::endl;
 					}
 					teleport::stbi_image_free(target);
+				}
+				if (transcoding.scrTexture.images.size() != 0)
+				{
+					std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
+					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+				}
+				else
+				{
+					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
 				}
 			}
 			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
@@ -1309,11 +1309,12 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
 						continue;
 					}
+					//transcoding.scrTexture.mipCount=std::min(transcoding.scrTexture.mipCount,(uint)2);
 					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
-					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
-					{
-						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+						for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
 						{
+					for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+					{
 							uint32_t basisWidth, basisHeight, basisBlocks;
 
 							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);

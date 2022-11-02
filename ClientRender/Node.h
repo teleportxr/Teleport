@@ -1,7 +1,7 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
 #include "TeleportClient/basic_linear_algebra.h"
@@ -45,7 +45,7 @@ namespace clientrender
 		//Requests global transform of node, and node's children, be recalculated.
 		void RequestTransformUpdate();
 
-		void SetLastMovement(const avs::MovementUpdate& update);
+		void SetLastMovement(const teleport::core::MovementUpdate& update);
 		//Updates the transform by extrapolating data from the last confirmed timestamp.
 		void TickExtrapolatedTransform(float deltaTime);
 
@@ -130,6 +130,7 @@ namespace clientrender
 		void SetLocalPosition(const avs::vec3& pos);
 		const avs::vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
 		const avs::vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
+		const vec3& GetGlobalVelocity() const { return GetGlobalTransform().m_Velocity; }
 
 		void SetLocalRotation(const clientrender::quat& rot);
 		const clientrender::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
@@ -178,7 +179,7 @@ namespace clientrender
 		std::weak_ptr<Node> parent;
 		std::vector<std::weak_ptr<Node>> children;
 
-		avs::MovementUpdate lastReceivedMovement;
+		teleport::core::MovementUpdate lastReceivedMovement;
 
 		bool isHighlighted = false;
 

@@ -4,7 +4,7 @@
 #include "Platform/CrossPlatform/RenderDelegate.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "libavstream/common_maths.h"		// for avs::Pose
-#include "libavstream/common_networking.h"		// for avs::InputState
+#include "TeleportCore/CommonNetworking.h"		// for avs::InputState
 #include "TeleportCore/Input.h"
 #include <openxr/openxr.h>
 
@@ -84,7 +84,7 @@ namespace teleport
 		//! and an action on the client.
 		struct InputMapping
 		{
-			avs::InputDefinition serverInputDefinition;
+			teleport::core::InputDefinition serverInputDefinition;
 			ActionId clientActionId;
 		};
 		//! State of an input. Note that we store *both* float and integer values,
@@ -102,14 +102,14 @@ namespace teleport
 		};
 		struct NodePoseState
 		{
-			avs::Pose pose_footSpace;	// In the current XR space, the offset to the node's current pose.
+			avs::PoseDynamic pose_footSpace;	// In the current XR space, the offset to the node's current pose.
 		};
 		//! Each OpenXRServer contains the currently bound inputs and poses for the connection. Both mappings (initialized on connection)
 		//! and states (updated in real time).
 		struct OpenXRServer
 		{
 			//! Definitions used on startup
-			std::vector<avs::InputDefinition> inputDefinitions;
+			std::vector<teleport::core::InputDefinition> inputDefinitions;
 			//! Mappings initialized on startup.
 			std::vector<InputMapping> inputMappings;
 			std::map<avs::uid,NodePoseMapping> nodePoseMappings;
@@ -117,6 +117,8 @@ namespace teleport
 			//! Current states
 			std::vector<InputState> inputStates;
 			std::map<avs::uid,NodePoseState> nodePoseStates;
+			// temp, filled from nodePoseStates:
+			std::map<avs::uid,avs::PoseDynamic> nodePoses;
 			//! Temporary - these poses will be bound on the next update.
 			std::map<avs::uid,NodePoseMapping> unboundPoses;
 			teleport::core::Input inputs;
@@ -149,7 +151,9 @@ namespace teleport
 				float vec2f[2];
 				bool poseActive;
 			};
-			XrPosef pose_stageSpace;
+			XrPosef		pose_stageSpace;
+			XrVector3f  velocity_stageSpace;
+			XrVector3f  angularVelocity_stageSpace;
 		};
 
 		//
@@ -212,6 +216,11 @@ namespace teleport
 			bool rightButtonDown=false;
 			bool middleButtonDown=false; 
 		};
+		struct Overlay
+		{
+			XrPosef pose={{0,0,0,1.0f},{0.0f, 1.8f, -2.0f}};
+			XrExtent2Df size = {4.0f, 2.0f};
+		};
 		class OpenXR
 		{
 		public:
@@ -241,15 +250,19 @@ namespace teleport
 			void OnKeyboard(unsigned wParam, bool bKeyDown);
 
 			// Getting mapped inputs specific to a given server, in-frame.
-			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<avs::InputDefinition> &inputDefinitions_);
+			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition> &inputDefinitions_);
 			void MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath);
 			const teleport::core::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
 			
 			// Force input mapping to a particular setting - normally for local controls.
 			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 
-			const avs::Pose& GetHeadPose() const;
+			//! Get the head pose in the device's stage space (axes adapted to the Engineering standard, Z=up).
+			const avs::Pose& GetHeadPose_StageSpace() const;
+			avs::Pose GetActionPose(ActionId id) const;
+			float GetActionFloatState(ActionId actionId) const;
 			 avs::uid GetRootNode(avs::uid server_uid);
+			const std::map<avs::uid,avs::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			size_t GetNumControllers() const
 			{
@@ -261,12 +274,16 @@ namespace teleport
 			{
 				return xr_session_running;
 			}
+
+			Overlay overlay;
+			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
+			avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) const;
+			vec3 ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const;
 		protected:
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
 			std::map<avs::uid,FallbackBinding> fallbackBindings;
 			std::map<avs::uid,FallbackState> fallbackStates;
-			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
 			void BindUnboundPoses(avs::uid server_uid);
 			std::map<avs::uid,OpenXRServer> openXRServers;
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
@@ -279,7 +296,7 @@ namespace teleport
 			bool AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
 
 			avs::Pose stagePose_worldSpace={};
-			avs::Pose headPose_worldSpace={};
+			avs::Pose headPose_stageSpace={};
 			std::vector<avs::Pose> controllerPoses;
 			struct XrState
 			{

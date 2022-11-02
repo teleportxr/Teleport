@@ -21,6 +21,9 @@
     <ClInclude Include="..\..\TeleportCore\TeleportUtility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\TeleportCore\CommonNetworking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
