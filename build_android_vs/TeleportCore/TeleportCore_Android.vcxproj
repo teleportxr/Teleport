@@ -27,6 +27,7 @@
     <ClCompile Include="..\..\TeleportCore\TeleportCore.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\TeleportCore\CommonNetworking.h" />
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h" />
     <ClInclude Include="..\..\TeleportCore\Input.h" />
     <ClInclude Include="..\..\TeleportCore\TeleportUtility.h" />

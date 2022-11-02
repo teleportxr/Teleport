@@ -5,7 +5,7 @@
 #include "Platform/CrossPlatform/Texture.h"
 #include "TeleportClient/OpenXR.h"
 #include "common_maths.h"			// for avs::Pose
-#include "common_networking.h"		// for avs::InputState
+#include "TeleportCore/CommonNetworking.h"		// for avs::InputState
 #include "TeleportCore/Input.h"
 
 namespace teleport

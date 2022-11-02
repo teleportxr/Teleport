@@ -4,7 +4,7 @@
 #include <limits>
 
 #include "libavstream/common.hpp"
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 #include "libavstream/common_input.h"
 #include <libavstream/geometry/mesh_interface.hpp>
 
@@ -61,7 +61,7 @@ bool SessionClient::Connect(const char* remote_ip, uint16_t remotePort, uint tim
 
 bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 {
-	mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+	mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 	if(!mClientHost)
 	{
 		TELEPORT_CLIENT_FAIL("Failed to create ENET client host");
@@ -69,7 +69,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 		return false;
 	}
 
-	mServerPeer = enet_host_connect(mClientHost, &remote, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_NumChannels), 0);
+	mServerPeer = enet_host_connect(mClientHost, &remote, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0);
 	if(!mServerPeer)
 	{
 		TELEPORT_CLIENT_WARN("Failed to initiate connection to the server");
@@ -171,7 +171,7 @@ void SessionClient::SetPeerTimeout(uint timeout)
 
 void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,const avs::Pose &headPose
-	,const std::map<avs::uid,avs::Pose> &controllerPoses
+	,const std::map<avs::uid,avs::PoseDynamic> &nodePoses
 	,uint64_t poseValidCounter
 	,const avs::Pose &originPose
 	,const core::Input &input
@@ -188,7 +188,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			SendDisplayInfo(displayInfo);
 			if(poseValidCounter)
 			{
-				SendControllerPoses(headPose,controllerPoses);
+				SendNodePoses(headPose,nodePoses);
 			}
 			SendInput(input);
 			SendResourceRequests();
@@ -275,7 +275,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 {
 	switch(event.channelID)
 	{
-		case static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control) :
+		case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control) :
 			ReceiveCommandPacket(event.packet);
 			break;
 		default:
@@ -288,55 +288,55 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 
 void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 {
-	avs::CommandPayloadType commandPayloadType = *(reinterpret_cast<avs::CommandPayloadType*>(packet->data));
+	teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<teleport::core::CommandPayloadType*>(packet->data));
 	switch(commandPayloadType)
 	{
-		case avs::CommandPayloadType::Shutdown:
+		case teleport::core::CommandPayloadType::Shutdown:
 			mCommandInterface->OnVideoStreamClosed();
 			break;
-		case avs::CommandPayloadType::Setup:
+		case teleport::core::CommandPayloadType::Setup:
 			ReceiveSetupCommand(packet);
 			break;
-		case avs::CommandPayloadType::AcknowledgeHandshake:
+		case teleport::core::CommandPayloadType::AcknowledgeHandshake:
 			ReceiveHandshakeAcknowledgement(packet);
 			break;
-		case avs::CommandPayloadType::ReconfigureVideo:
+		case teleport::core::CommandPayloadType::ReconfigureVideo:
 			ReceiveVideoReconfigureCommand(packet);
 			break;
-		case avs::CommandPayloadType::SetPosition:
+		case teleport::core::CommandPayloadType::SetPosition:
 			ReceivePositionUpdate(packet);
 			break;
-		case avs::CommandPayloadType::NodeVisibility:
+		case teleport::core::CommandPayloadType::NodeVisibility:
 			ReceiveNodeVisibilityUpdate(packet);
 			break;
-		case avs::CommandPayloadType::UpdateNodeMovement:
+		case teleport::core::CommandPayloadType::UpdateNodeMovement:
 			ReceiveNodeMovementUpdate(packet);
 			break;
-		case avs::CommandPayloadType::UpdateNodeEnabledState:
+		case teleport::core::CommandPayloadType::UpdateNodeEnabledState:
 			ReceiveNodeEnabledStateUpdate(packet);
 			break;
-		case avs::CommandPayloadType::SetNodeHighlighted:
+		case teleport::core::CommandPayloadType::SetNodeHighlighted:
 			ReceiveNodeHighlightUpdate(packet);
 			break;
-		case avs::CommandPayloadType::UpdateNodeAnimation:
+		case teleport::core::CommandPayloadType::UpdateNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
 			break;
-		case avs::CommandPayloadType::UpdateNodeAnimationControl:
+		case teleport::core::CommandPayloadType::UpdateNodeAnimationControl:
 			ReceiveNodeAnimationControlUpdate(packet);
 			break;
-		case avs::CommandPayloadType::SetNodeAnimationSpeed:
+		case teleport::core::CommandPayloadType::SetNodeAnimationSpeed:
 			ReceiveNodeAnimationSpeedUpdate(packet);
 			break;
-		case avs::CommandPayloadType::SetupLighting:
+		case teleport::core::CommandPayloadType::SetupLighting:
 			ReceiveSetupLightingCommand(packet);
 			break;
-		case avs::CommandPayloadType::SetupInputs:
+		case teleport::core::CommandPayloadType::SetupInputs:
 			ReceiveSetupInputsCommand(packet);
 			break;
-		case avs::CommandPayloadType::UpdateNodeStructure:
+		case teleport::core::CommandPayloadType::UpdateNodeStructure:
 			ReceiveUpdateNodeStructureCommand(packet);
 			break;
-		case avs::CommandPayloadType::UpdateNodeSubtype:
+		case teleport::core::CommandPayloadType::UpdateNodeSubtype:
 			ReceiveUpdateNodeSubtypeCommand(packet);
 			break;
 		default:
@@ -347,12 +347,12 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
 {
 	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(avs::DisplayInfo), 0);
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
 }
 
-void SessionClient::SendControllerPoses(const avs::Pose& headPose,const std::map<avs::uid,avs::Pose> poses)
+void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses)
 {
-	avs::ControllerPosesMessage message;
+	teleport::core::ControllerPosesMessage message;
 	message.headPose=headPose;
 	message.numPoses=(uint16_t)poses.size();
 	if(isnan(headPose.position.x))
@@ -360,20 +360,20 @@ void SessionClient::SendControllerPoses(const avs::Pose& headPose,const std::map
 		TELEPORT_CLIENT_WARN("Trying to send NaN");
 		return;
 	}
-	size_t messageSize = sizeof(avs::ControllerPosesMessage)+message.numPoses*sizeof(avs::NodePose);
-	ENetPacket* packet = enet_packet_create(&message, sizeof(avs::ControllerPosesMessage), ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+	size_t messageSize = sizeof(teleport::core::ControllerPosesMessage)+message.numPoses*sizeof(teleport::core::NodePose);
+	ENetPacket* packet = enet_packet_create(&message, sizeof(teleport::core::ControllerPosesMessage), ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
 	enet_packet_resize(packet, messageSize);
 	int i=0;
-	avs::NodePose nodePose;
-	uint8_t *target=packet->data+sizeof(avs::ControllerPosesMessage);
+	teleport::core::NodePose nodePose;
+	uint8_t *target=packet->data+sizeof(teleport::core::ControllerPosesMessage);
 	for(const auto &p:poses)
 	{
 		nodePose.uid=p.first;
-		nodePose.pose=p.second;
+		nodePose.poseDynamic=p.second;
 		memcpy(target,&nodePose,sizeof(nodePose));
 		target+=sizeof(nodePose);
 	}
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 }
 
 
@@ -387,7 +387,7 @@ static void copy_and_increment(uint8_t *&target,const void *source,size_t size)
 
 void receiveInput(const ENetPacket* packet)
 {
-	size_t inputStateSize = sizeof(avs::InputState);
+	size_t inputStateSize = sizeof(teleport::core::InputState);
 
 	if (packet->dataLength < inputStateSize)
 	{
@@ -395,7 +395,7 @@ void receiveInput(const ENetPacket* packet)
 		return;
 	}
 
-	avs::InputState receivedInputState;
+	teleport::core::InputState receivedInputState;
 	//Copy newest input state into member variable.
 	memcpy(&receivedInputState, packet->data, inputStateSize);
 	
@@ -465,7 +465,7 @@ void receiveInput(const ENetPacket* packet)
 }
 void SessionClient::SendInput(const core::Input& input)
 {
-	avs::InputState inputState = {};
+	teleport::core::InputState inputState = {};
 	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 	//Set event amount.
 	if(input.analogueEvents.size()>50)
@@ -478,7 +478,7 @@ void SessionClient::SendInput(const core::Input& input)
 	inputState.numAnalogueEvents	= static_cast<uint32_t>(input.analogueEvents.size());
 	inputState.numMotionEvents		= static_cast<uint32_t>(input.motionEvents.size());
 	//Calculate sizes for memory copy operations.
-	size_t inputStateSize		= sizeof(avs::InputState);
+	size_t inputStateSize		= sizeof(teleport::core::InputState);
 	size_t binaryStateSize		= inputState.numBinaryStates;
 	size_t analogueStateSize	= sizeof(float)*inputState.numAnalogueStates;
 	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * inputState.numBinaryEvents;
@@ -506,7 +506,7 @@ void SessionClient::SendInput(const core::Input& input)
 	copy_and_increment(target,input.analogueEvents.data(),analogueEventSize);
 	copy_and_increment(target,input.motionEvents.data(),motionEventSize);
 
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet);
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet);
 	//receiveInput(packet);
 }
 
@@ -526,7 +526,7 @@ void SessionClient::SendResourceRequests()
 		enet_packet_resize(packet, sizeof(size_t) + sizeof(avs::uid) * resourceCount);
 		memcpy(packet->data + sizeof(size_t), mQueuedResourceRequests.data(), sizeof(avs::uid) * resourceCount);
 
-		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
+		enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
 
 		//Store sent resource requests, so we can resend them if it has been too long since the request.
 		for(avs::uid id : mQueuedResourceRequests)
@@ -555,16 +555,16 @@ void SessionClient::SendReceivedResources()
 			}
 		}
 
-		avs::ReceivedResourcesMessage message(receivedResources.size());
+		teleport::core::ReceivedResourcesMessage message(receivedResources.size());
 
-		size_t messageSize = sizeof(avs::ReceivedResourcesMessage);
+		size_t messageSize = sizeof(teleport::core::ReceivedResourcesMessage);
 		size_t receivedResourcesSize = sizeof(avs::uid) * receivedResources.size();
 
 		ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_RELIABLE);
 		enet_packet_resize(packet, messageSize + receivedResourcesSize);
 		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
 
-		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
+		enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 	}
 }
 
@@ -579,9 +579,9 @@ void SessionClient::SendNodeUpdates()
 
 	if(mReceivedNodes.size() != 0 || mLostNodes.size() != 0)
 	{
-		avs::NodeStatusMessage message(mReceivedNodes.size(), mLostNodes.size());
+		teleport::core::NodeStatusMessage message(mReceivedNodes.size(), mLostNodes.size());
 
-		size_t messageSize = sizeof(avs::NodeStatusMessage);
+		size_t messageSize = sizeof(teleport::core::NodeStatusMessage);
 		size_t receivedSize = sizeof(avs::uid) * mReceivedNodes.size();
 		size_t lostSize = sizeof(avs::uid) * mLostNodes.size();
 
@@ -590,7 +590,7 @@ void SessionClient::SendNodeUpdates()
 		memcpy(packet->data + messageSize, mReceivedNodes.data(), receivedSize);
 		memcpy(packet->data + messageSize + receivedSize, mLostNodes.data(), lostSize);
 
-		enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
+		enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 
 		mReceivedNodes.clear();
 		mLostNodes.clear();
@@ -600,12 +600,12 @@ void SessionClient::SendNodeUpdates()
 void SessionClient::SendKeyframeRequest()
 {
 	ENetPacket* packet = enet_packet_create(0x0, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_KeyframeRequest), packet);
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_KeyframeRequest), packet);
 }
 
-void SessionClient::SendHandshake(const avs::Handshake& handshake, const std::vector<avs::uid>& clientResourceIDs)
+void SessionClient::SendHandshake(const teleport::core::Handshake& handshake, const std::vector<avs::uid>& clientResourceIDs)
 {
-	size_t handshakeSize = sizeof(avs::Handshake);
+	size_t handshakeSize = sizeof(teleport::core::Handshake);
 	size_t resourceListSize = sizeof(avs::uid) * clientResourceIDs.size();
 
 	//Create handshake.
@@ -614,15 +614,15 @@ void SessionClient::SendHandshake(const avs::Handshake& handshake, const std::ve
 	enet_packet_resize(packet, handshakeSize + resourceListSize);
 	memcpy(packet->data + handshakeSize, clientResourceIDs.data(), resourceListSize);
 
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Handshake), packet);
+	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Handshake), packet);
 }
 
 void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::AcknowledgeHandshakeCommand);
+	size_t commandSize = sizeof(teleport::core::AcknowledgeHandshakeCommand);
 
 	//Extract command from packet.
-	avs::AcknowledgeHandshakeCommand command;
+	teleport::core::AcknowledgeHandshakeCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	//Extract list of visible nodes.
@@ -636,12 +636,12 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 {
-	size_t commandSize= sizeof(avs::SetupCommand);
+	size_t commandSize= sizeof(teleport::core::SetupCommand);
 
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);
 
-	avs::Handshake handshake;
+	teleport::core::Handshake handshake;
 	char server_ip[100];
 	enet_address_get_host_ip(&mServerEndpoint, server_ip, 99);
 	if(!mCommandInterface->OnSetupCommandReceived(server_ip, setupCommand, handshake))
@@ -664,10 +664,10 @@ void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 
 void SessionClient::ReceiveVideoReconfigureCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::ReconfigureVideoCommand);
+	size_t commandSize = sizeof(teleport::core::ReconfigureVideoCommand);
 
 	//Copy command out of packet.
-	avs::ReconfigureVideoCommand reconfigureCommand;
+	teleport::core::ReconfigureVideoCommand reconfigureCommand;
 	memcpy(static_cast<void*>(&reconfigureCommand), packet->data, commandSize);
 
 	mCommandInterface->OnReconfigureVideo(reconfigureCommand);
@@ -675,9 +675,9 @@ void SessionClient::ReceiveVideoReconfigureCommand(const ENetPacket* packet)
 
 void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::SetPositionCommand);
+	size_t commandSize = sizeof(teleport::core::SetPositionCommand);
 
-	avs::SetPositionCommand command;
+	teleport::core::SetPositionCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	if(command.valid_counter > receivedInitialPos)
@@ -690,9 +690,9 @@ void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
 
 void SessionClient::ReceiveNodeVisibilityUpdate(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::NodeVisibilityCommand);
+	size_t commandSize = sizeof(teleport::core::NodeVisibilityCommand);
 
-	avs::NodeVisibilityCommand command;
+	teleport::core::NodeVisibilityCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	size_t enteredSize = sizeof(avs::uid) * command.nodesShowCount;
@@ -732,12 +732,12 @@ void SessionClient::ReceiveNodeVisibilityUpdate(const ENetPacket* packet)
 void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
-	avs::UpdateNodeMovementCommand command;
+	teleport::core::UpdateNodeMovementCommand command;
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
-	std::vector<avs::MovementUpdate> updateList(command.updatesCount);
-	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::MovementUpdate) * command.updatesCount);
+	std::vector<teleport::core::MovementUpdate> updateList(command.updatesCount);
+	memcpy(updateList.data(), packet->data + commandSize, sizeof(teleport::core::MovementUpdate) * command.updatesCount);
 
 	mCommandInterface->UpdateNodeMovement(updateList);
 }
@@ -745,19 +745,19 @@ void SessionClient::ReceiveNodeMovementUpdate(const ENetPacket* packet)
 void SessionClient::ReceiveNodeEnabledStateUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
-	avs::UpdateNodeEnabledStateCommand command;
+	teleport::core::UpdateNodeEnabledStateCommand command;
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
-	std::vector<avs::NodeUpdateEnabledState> updateList(command.updatesCount);
-	memcpy(updateList.data(), packet->data + commandSize, sizeof(avs::NodeUpdateEnabledState) * command.updatesCount);
+	std::vector<teleport::core::NodeUpdateEnabledState> updateList(command.updatesCount);
+	memcpy(updateList.data(), packet->data + commandSize, sizeof(teleport::core::NodeUpdateEnabledState) * command.updatesCount);
 
 	mCommandInterface->UpdateNodeEnabledState(updateList);
 }
 
 void SessionClient::ReceiveNodeHighlightUpdate(const ENetPacket* packet)
 {
-	avs::SetNodeHighlightedCommand command;
+	teleport::core::SetNodeHighlightedCommand command;
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
@@ -767,7 +767,7 @@ void SessionClient::ReceiveNodeHighlightUpdate(const ENetPacket* packet)
 void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
-	avs::UpdateNodeAnimationCommand command;
+	teleport::core::UpdateNodeAnimationCommand command;
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
@@ -777,7 +777,7 @@ void SessionClient::ReceiveNodeAnimationUpdate(const ENetPacket* packet)
 void SessionClient::ReceiveNodeAnimationControlUpdate(const ENetPacket* packet)
 {
 	//Extract command from packet.
-	avs::SetAnimationControlCommand command;
+	teleport::core::SetAnimationControlCommand command;
 	size_t commandSize = command.getCommandSize();
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
@@ -786,7 +786,7 @@ void SessionClient::ReceiveNodeAnimationControlUpdate(const ENetPacket* packet)
 
 void SessionClient::ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet)
 {
-	avs::SetNodeAnimationSpeedCommand command;
+	teleport::core::SetNodeAnimationSpeedCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, command.getCommandSize());
 
 	mCommandInterface->SetNodeAnimationSpeed(command.nodeID, command.animationID, command.speed);
@@ -794,7 +794,7 @@ void SessionClient::ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet)
 
 void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::SetupLightingCommand);
+	size_t commandSize = sizeof(teleport::core::SetupLightingCommand);
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupLightingCommand), packet->data, commandSize);
 
@@ -805,11 +805,11 @@ void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 
 void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 {
-	avs::SetupInputsCommand setupInputsCommand;
-	memcpy(static_cast<void*>(&setupInputsCommand), packet->data, sizeof(avs::SetupInputsCommand));
+	teleport::core::SetupInputsCommand setupInputsCommand;
+	memcpy(static_cast<void*>(&setupInputsCommand), packet->data, sizeof(teleport::core::SetupInputsCommand));
 
 	inputDefinitions.resize(setupInputsCommand.numInputs);
-	unsigned char* ptr = packet->data + sizeof(avs::SetupInputsCommand);
+	unsigned char* ptr = packet->data + sizeof(teleport::core::SetupInputsCommand);
 	for (int i = 0; i < setupInputsCommand.numInputs; i++)
 	{
 		if (size_t(ptr -packet->data) >= packet->dataLength)
@@ -818,8 +818,8 @@ void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 			return;
 		}
 		auto& def = inputDefinitions[i];
-		avs::InputDefinitionNetPacket& packetDef = *((avs::InputDefinitionNetPacket*)ptr);
-		ptr += sizeof(avs::InputDefinitionNetPacket);
+		teleport::core::InputDefinitionNetPacket& packetDef = *((teleport::core::InputDefinitionNetPacket*)ptr);
+		ptr += sizeof(teleport::core::InputDefinitionNetPacket);
 		if (size_t(ptr + packetDef.pathLength - packet->data) > packet->dataLength)
 		{
 			TELEPORT_CERR << "Bad packet" << std::endl;
@@ -837,23 +837,23 @@ void SessionClient::ReceiveSetupInputsCommand(const ENetPacket* packet)
 
 void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::UpdateNodeStructureCommand);
+	size_t commandSize = sizeof(teleport::core::UpdateNodeStructureCommand);
 	//Copy command out of packet.
-	avs::UpdateNodeStructureCommand updateNodeStructureCommand;
+	teleport::core::UpdateNodeStructureCommand updateNodeStructureCommand;
 	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet->data, commandSize);
 	mCommandInterface->UpdateNodeStructure(updateNodeStructureCommand);
 }
 
 void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(avs::UpdateNodeSubtypeCommand);
+	size_t commandSize = sizeof(teleport::core::UpdateNodeSubtypeCommand);
 	if(packet->dataLength<commandSize)
 	{
 		TELEPORT_CERR << "Bad packet." << std::endl;
 		return;
 	}
 	//Copy command out of packet.
-	avs::UpdateNodeSubtypeCommand updateNodeSubtypeCommand;
+	teleport::core::UpdateNodeSubtypeCommand updateNodeSubtypeCommand;
 	memcpy(static_cast<void*>(&updateNodeSubtypeCommand), packet->data, commandSize);
 	if(packet->dataLength!=commandSize+updateNodeSubtypeCommand.pathLength)
 	{

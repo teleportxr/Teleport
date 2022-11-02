@@ -43,11 +43,11 @@ namespace teleport
 				, GetUnixTimestampFn getUnixTimestamp
 				, bool use_ssl);
 			void setNodePosePath(avs::uid nodeID, const std::string &regexPosePath);
-			void setInputDefinitions(const std::vector<avs::InputDefinition> &inputDefs);
+			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
 			// client settings from engine-side:
 			teleport::ClientSettings clientSettings;
 			avs::ClientDynamicLighting clientDynamicLighting;
-			std::vector<avs::InputDefinition> inputDefinitions;
+			std::vector<teleport::core::InputDefinition> inputDefinitions;
 			teleport::CasterContext casterContext;
 
 			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;

@@ -541,7 +541,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		UpdateTagDataBuffers(deviceContext);
 		if (sessionClient->IsConnected())
 		{
-			if(lastSetupCommand.backgroundMode==avs::BackgroundMode::VIDEO)
+			if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::VIDEO)
 			{
 				if (videoTexture->IsCubemap())
 				{
@@ -562,11 +562,11 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	// If connected, we show the server's chosen background: video, texture or colour.
 	if (sessionClient->IsConnected())
 	{
-		if(lastSetupCommand.backgroundMode==avs::BackgroundMode::COLOUR)
+		if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::COLOUR)
 		{
 			renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(lastSetupCommand.backgroundColour));
 		}
-		else if(lastSetupCommand.backgroundMode==avs::BackgroundMode::VIDEO)
+		else if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::VIDEO)
 		{
 			if (videoTexture->IsCubemap())
 			{
@@ -595,7 +595,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 	pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 	if(specularCubemapTexture)
-		pbrConstants.roughestMip=specularCubemapTexture->mips-1;
+		pbrConstants.roughestMip=float(specularCubemapTexture->mips-1);
 	if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 	{
 		auto t = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
@@ -620,7 +620,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		std::vector<vec4> hand_pos_press;
 		if(l!=nodePoseStates.end())
 		{
-			avs::Pose handPose	= l->second.pose_footSpace;
+			avs::Pose handPose	= l->second.pose_footSpace.pose;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
 			vec4 pos4;
 			pos4.xyz			= (const float*)&pos;
@@ -630,7 +630,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		auto r=nodePoseStates.find(2);
 		if(r!=nodePoseStates.end())
 		{
-			avs::Pose rightHand = r->second.pose_footSpace;
+			avs::Pose rightHand = r->second.pose_footSpace.pose;
 			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
 			//renderPlatform->PrintAt3dPos(deviceContext,(const float*)&pos,"R",(const float*)&white);
 			vec4 pos4;
@@ -951,8 +951,8 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 			if(node)
 			{
 			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-				node->SetLocalPosition(n.second.pose_footSpace.position);
-				node->SetLocalRotation(n.second.pose_footSpace.orientation);
+				node->SetLocalPosition(n.second.pose_footSpace.pose.position);
+				node->SetLocalRotation(n.second.pose_footSpace.pose.orientation);
 				// force update of model matrices - should not be necessary, but is.
 				node->UpdateModelMatrix();
 			}
@@ -1078,7 +1078,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 				
 				pbrEffect->SetTexture(deviceContext,pbrEffect_diffuseCubemap, diffuseCubemapTexture);
 				// If lighting is via static textures.
-				if(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
+				if(lastSetupCommand.backgroundMode!=teleport::core::BackgroundMode::VIDEO&&lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
@@ -1087,7 +1087,7 @@ void Renderer::RenderNode(platform::crossplatform::GraphicsDeviceContext& device
 					}
 				}
 				pbrEffect->SetTexture(deviceContext, pbrEffect_specularCubemap, specularCubemapTexture);
-				if(lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
+				if(lastSetupCommand.backgroundMode!=teleport::core::BackgroundMode::VIDEO&&lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 				{
 					auto t = g.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
 					if(t)
@@ -1154,6 +1154,14 @@ void Renderer::RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext&
 		avs::vec3 pos = node->GetGlobalPosition();
 		mat4 m=node->GetGlobalTransform().GetTransformMatrix();
 		renderPlatform->DrawAxes(deviceContext,m,0.1f);
+		const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		auto j=nodePoses.find(node->id);
+		if(j!=nodePoses.end())
+		{
+			//const avs::PoseDynamic &poseDynamic=j->second;
+			//poseDynamic.velocity;
+		//renderPlatform->DrawLine(deviceContext,start,end);
+		}
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		if (node->GetSkinInstance().get())
 		{
@@ -1583,12 +1591,12 @@ bool Renderer::OnNodeLeftBounds(avs::uid id)
 }
 
 
-void Renderer::UpdateNodeStructure(const avs::UpdateNodeStructureCommand &updateNodeStructureCommand)
+void Renderer::UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand &updateNodeStructureCommand)
 {
 	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
-void Renderer::UpdateNodeSubtype(const avs::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
+void Renderer::UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
 {
 	if(regexPath.size())
 	{
@@ -1605,12 +1613,12 @@ void Renderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
-void Renderer::UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList)
+void Renderer::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
 	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
 }
 
-void Renderer::UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList)
+void Renderer::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
 	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
 }
@@ -1620,24 +1628,18 @@ void Renderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
-void Renderer::UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate)
+void Renderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
 {
 	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
 
-void Renderer::UpdateNodeAnimationControl(const avs::NodeUpdateAnimationControl& animationControlUpdate)
+void Renderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
 {
 	switch(animationControlUpdate.timeControl)
 	{
-	case avs::AnimationTimeControl::ANIMATION_TIME:
+	case teleport::core::AnimationTimeControl::ANIMATION_TIME:
 		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 		break;
-	/*case avs::AnimationTimeControl::CONTROLLER_0_TRIGGER:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &inputs.triggerBack, 1.0f);
-		break;
-	case avs::AnimationTimeControl::CONTROLLER_1_TRIGGER:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID, &inputs.triggerBack, 1.0f);
-		break;*/
 	default:
 		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
 		break;
@@ -2168,12 +2170,12 @@ void Renderer::PrintHelpText(platform::crossplatform::GraphicsDeviceContext& dev
 }
 
 
-void Renderer::OnLightingSetupChanged(const avs::SetupLightingCommand &l)
+void Renderer::OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l)
 {
 	lastSetupLightingCommand=l;
 }
 
-void Renderer::OnInputsSetupChanged(const std::vector<avs::InputDefinition> &inputDefinitions_)
+void Renderer::OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions_)
 {
 	if (openXR)
 		openXR->OnInputsSetupChanged(server_uid,inputDefinitions_);
@@ -2187,7 +2189,7 @@ avs::DecoderBackendInterface* Renderer::CreateVideoDecoder()
 	
 }
 
-bool Renderer::OnSetupCommandReceived(const char *server_ip,const avs::SetupCommand &setupCommand,avs::Handshake &handshake)
+bool Renderer::OnSetupCommandReceived(const char *server_ip,const teleport::core::SetupCommand &setupCommand,teleport::core::Handshake &handshake)
 {
 	ConfigureVideo(setupCommand.video_config);
 
@@ -2439,7 +2441,7 @@ void Renderer::OnVideoStreamClosed()
 	receivedInitialPos = 0;
 }
 
-void Renderer::OnReconfigureVideo(const avs::ReconfigureVideoCommand& reconfigureVideoCommand)
+void Renderer::OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand)
 {
 	clientPipeline.videoConfig = reconfigureVideoCommand.video_config;
 

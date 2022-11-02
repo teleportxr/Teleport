@@ -94,7 +94,7 @@ namespace clientrender
 
 		avs::vec3 GetIJK() const
 		{
-			return avs::vec3(i, j, k).Normalised();
+			return normalize(avs::vec3(i, j, k));
 		}
 
 		avs::vec3 RotateVector(const avs::vec3 rhs) const
@@ -102,9 +102,9 @@ namespace clientrender
 			avs::vec3 quatVec(i, j, k);
 
 			return
-				quatVec * 2.0f * quatVec.Dot(rhs) +
-				rhs * (s * s - quatVec.Dot(quatVec)) +
-				quatVec.Cross(rhs) * 2.0f * s;
+				quatVec * 2.0f * dot(quatVec,rhs) +
+				rhs * (s * s - dot(quatVec,quatVec)) +
+				cross(quatVec,rhs) * 2.0f * s;
 		}
 
 		static quat Slerp(const clientrender::quat& source, const clientrender::quat& target, float time)
@@ -403,7 +403,7 @@ namespace clientrender
 			avs::vec3 y(m._m01,m._m11,m._m21);
 			avs::vec3 z(m._m02,m._m12,m._m22);
 
-			return avs::vec3(x.Length(), y.Length(), z.Length());
+			return avs::vec3(length(x), length(y), length(z));
 		} 
 
 

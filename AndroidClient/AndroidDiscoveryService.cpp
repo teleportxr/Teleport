@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "libavstream/common_networking.h"
+#include "TeleportCore/CommonNetworking.h"
 
 #include "TeleportClient/Log.h"
 
@@ -70,7 +70,7 @@ uint64_t AndroidDiscoveryService::Discover1(std::string clientIP, uint16_t clien
     }
 
     {
-        avs::ServiceDiscoveryResponse response = {};
+        teleport::core::ServiceDiscoveryResponse response = {};
         struct sockaddr_in responseAddr;
         socklen_t responseAddrSize = sizeof(responseAddr);
 

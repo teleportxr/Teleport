@@ -76,7 +76,6 @@ namespace clientrender
 		{
 			return m_CI;
 		}
-		inline const ShaderResource& GetDescriptorSet() const { return m_ShaderResource; }
 		inline std::shared_ptr<Texture>& GetShadowMapTexture() { return m_CI.shadowMapTexture; }
 		inline bool IsValid() { return m_IsValid; }
 

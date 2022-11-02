@@ -32,7 +32,13 @@ namespace avs
 	typedef unsigned long long uid;
 	extern AVSTREAM_API uid GenerateUid();
 	extern AVSTREAM_API void ClaimUidRange(avs::uid last);
-
+	
+	//! Features supported by a client.
+	struct RenderingFeatures
+	{
+		bool normals=false;				//!< Whether normal maps are supported.
+		bool ambientOcclusion=false;	//!< Whether ambient occlusion maps are supported.
+	};
 	/*!
 	 * Result type.
 	 */

@@ -206,52 +206,44 @@ namespace avs
 		{
 			*this = *this * rhs;
 		}
-
-		float Length() const
-		{
-			return sqrtf(x * x + y * y + z * z);
-		}
-
-		vec3 Normalised() const
-		{
-			return *this / Length();
-		}
-
-		float Dot(const vec3& rhs) const
-		{
-			return x * rhs.x + y * rhs.y + z * rhs.z;
-		}
-
-		vec3 Cross(const vec3& rhs) const
-		{
-			return vec3(y * rhs.z - z * rhs.y, z * rhs.x - x * rhs.z, x * rhs.y - y * rhs.x);
-		}
-
-		vec3 GetAbsolute() const
-		{
-			return vec3(abs(x), abs(y), abs(z));
-		}
-
-		template<typename OutStream>
-		friend OutStream& operator<< (OutStream& out, const vec3& vec)
-		{
-			std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
-			o << vec.x << " " << vec.y << " " << vec.z;
-			return out;
-		}
-
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, vec3& vec)
-		{
-			in >> vec.x >> vec.y >> vec.z;
-			return in;
-		}
-
-		friend float length(const vec3& v)
-		{
-			return sqrt(v.Dot(v));
-		}
 	};
+	
+	inline float dot(const vec3& a,const vec3& b)
+	{
+		return a.x*b.x + a.y*b.y + a.z*b.z;
+	}
+
+	inline float length(const vec3& v)
+	{
+		return sqrt(dot(v,v));
+	}
+	
+
+	inline vec3 normalize(const vec3& v)
+	{
+		return v / length(v);
+	}
+	inline vec3 cross(const vec3& a,const vec3& rhs)
+	{
+		return vec3(a.y * rhs.z - a.z * rhs.y, a.z * rhs.x - a.x * rhs.z, a.x * rhs.y - a.y * rhs.x);
+	}
+	inline vec3 abs(const vec3 &v)
+	{
+		vec3 result={::abs(v.x), ::abs(v.y), ::abs(v.z)};
+		return result;
+	}
+	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec3& vec)
+	{
+		std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
+		o << vec.x << " " << vec.y << " " << vec.z;
+		return out;
+	}
+
+	template<typename InStream> InStream& operator>> (InStream& in, vec3& vec)
+	{
+		in >> vec.x >> vec.y >> vec.z;
+		return in;
+	}
 
 	struct vec4
 	{
@@ -414,5 +406,11 @@ namespace avs
 	{
 		avs::vec4 orientation = { 0, 0, 0, 1 };
 		avs::vec3 position = { 0, 0, 0 };
+	};
+	struct PoseDynamic
+	{
+		Pose pose;
+		avs::vec3 velocity;
+		avs::vec3 angularVelocity;
 	};
 } //namespace avs

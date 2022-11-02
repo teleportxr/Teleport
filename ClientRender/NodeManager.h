@@ -50,14 +50,14 @@ namespace clientrender
 
 		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const clientrender::quat& rotation, const avs::vec3& scale);
 
-		void UpdateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
-		void UpdateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
+		void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
+		void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);
 		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
-		void UpdateNodeAnimation(const avs::ApplyAnimation& animationUpdate);
+		void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate);
 		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID,  float  animationTimeOverride=0.0f, float overrideMaximum = 0.0f);
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
-		void ReparentNode(const avs::UpdateNodeStructureCommand& updateNodeStructureCommand);
+		void ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand);
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
 		void Update(float deltaTime);
@@ -92,10 +92,10 @@ namespace clientrender
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
 
 		//Node updates that were received before the node was received.
-		std::map<avs::uid, avs::MovementUpdate> earlyMovements;
-		std::map<avs::uid, avs::NodeUpdateEnabledState> earlyEnabledUpdates;
+		std::map<avs::uid, teleport::core::MovementUpdate> earlyMovements;
+		std::map<avs::uid, teleport::core::NodeUpdateEnabledState> earlyEnabledUpdates;
 		std::map<avs::uid, bool> earlyNodeHighlights;
-		std::map<avs::uid, avs::ApplyAnimation> earlyAnimationUpdates;
+		std::map<avs::uid, teleport::core::ApplyAnimation> earlyAnimationUpdates;
 		std::map<avs::uid, std::vector<EarlyAnimationControl>> earlyAnimationControlUpdates;
 		std::map<avs::uid, std::vector<EarlyAnimationSpeed>> earlyAnimationSpeedUpdates;
 		/// For tracking which nodes have been hidden.

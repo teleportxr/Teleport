@@ -18,10 +18,10 @@
 #include "enet/enet.h"
 
 typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
-typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::Pose*);
-typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const avs::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
+typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
+typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const teleport::core::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
 typedef void(__stdcall* DisconnectFn) (avs::uid uid);
-typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const avs::Handshake *h);
+typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const teleport::core::Handshake *h);
 
 //typedef struct _ENetPeer ENetPeer;
 //typedef struct _ENetPacket ENetPacket;
@@ -61,13 +61,13 @@ namespace teleport
 
 		void nodeEnteredBounds(avs::uid nodeID);
 		void nodeLeftBounds(avs::uid nodeID);
-		void updateNodeMovement(const std::vector<avs::MovementUpdate>& updateList);
-		void updateNodeEnabledState(const std::vector<avs::NodeUpdateEnabledState>& updateList);
+		void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
+		void updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);
 		void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 		void reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose);
 		void setNodePosePath(avs::uid nodeID, const std::string &regexPosePath);
-		void updateNodeAnimation(avs::ApplyAnimation update);
-		void updateNodeAnimationControl(avs::NodeUpdateAnimationControl update);
+		void updateNodeAnimation(teleport::core::ApplyAnimation update);
+		void updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update);
 		void updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update);
 		void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
@@ -92,7 +92,7 @@ namespace teleport
 				return false;
 			}
 
-			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+			return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
 
 		uint16_t getServerPort() const;
@@ -122,21 +122,21 @@ namespace teleport
 			enet_packet_resize(packet, commandSize + listSize);
 			memcpy(packet->data + commandSize, appendedList.data(), listSize);
 			
-			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+			return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
-		template <> bool sendCommand<avs::SetupInputsCommand,avs::InputDefinition>(const avs::SetupInputsCommand& command, const std::vector<avs::InputDefinition>& appendedInputDefinitions) const
+		template <> bool sendCommand<teleport::core::SetupInputsCommand,teleport::core::InputDefinition>(const teleport::core::SetupInputsCommand& command, const std::vector<teleport::core::InputDefinition>& appendedInputDefinitions) const
 		{
 			if (!peer)
 			{
 				TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
 				return false;
 			}
-			if (command.commandPayloadType != avs::CommandPayloadType::SetupInputs)
+			if (command.commandPayloadType != teleport::core::CommandPayloadType::SetupInputs)
 			{
 				TELEPORT_CERR << "Invalid command!\n";
 				return false;
 			}
-			size_t commandSize = sizeof(avs::SetupInputsCommand);
+			size_t commandSize = sizeof(teleport::core::SetupInputsCommand);
 			size_t listSize = appendedInputDefinitions.size()*(sizeof(avs::InputId)+sizeof(avs::InputType));
 			for (const auto& d : appendedInputDefinitions)
 			{
@@ -161,7 +161,7 @@ namespace teleport
 			unsigned char* data_ptr = packet->data + commandSize;
 			for (const auto& d : appendedInputDefinitions)
 			{
-				avs::InputDefinitionNetPacket defPacket;
+				teleport::core::InputDefinitionNetPacket defPacket;
 				defPacket.inputId = d.inputId;
 				defPacket.inputType = d.inputType;
 				defPacket.pathLength= (uint16_t)d.regexPath.length();
@@ -176,7 +176,7 @@ namespace teleport
 				return false;
 			}
 
-			return enet_peer_send(peer, static_cast<enet_uint8>(avs::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+			return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 		}
 		std::string getClientIP() const 
 		{
@@ -218,7 +218,7 @@ namespace teleport
 		void receiveClientMessage(const ENetPacket* packet);
 		
 		avs::ThreadSafeQueue<ENetEvent> eventQueue;
-		avs::Handshake handshake;
+		teleport::core::Handshake handshake;
 		static bool asyncNetworkDataProcessingFailed;
 		avs::uid clientID;
 		std::string clientIP;

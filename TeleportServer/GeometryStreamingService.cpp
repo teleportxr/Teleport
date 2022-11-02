@@ -102,7 +102,7 @@ avs::RenderingFeatures GeometryStreamingService::getClientRenderingFeatures() co
 	return handshake.renderingFeatures;
 }
 
-void GeometryStreamingService::startStreaming(teleport::CasterContext* context, const avs::Handshake& h)
+void GeometryStreamingService::startStreaming(teleport::CasterContext* context, const teleport::core::Handshake& h)
 {
 	if (casterContext == context)
 	{
