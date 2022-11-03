@@ -501,16 +501,38 @@ void SetRenderPose(platform::crossplatform::GraphicsDeviceContext &deviceContext
 	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
 	// MUST call init each frame.
 	deviceContext.viewStruct.Init();
+
+	crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
+	if (mvgdc)
+	{
+		vec3 deltaPosition = mvgdc->viewStructs[0].cam_pos - vec3((const float*)&pose.position);
+
+		for (auto& viewStruct : mvgdc->viewStructs)
+		{
+			vec3 newPosition = viewStruct.cam_pos - deltaPosition;
+
+			platform::math::SimulOrientation globalOrientation;
+			// global pos/orientation:
+			globalOrientation.SetPosition((const float*)&newPosition);
+			platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
+			platform::math::Quaternion q1 = (const float*)&pose.orientation;
+			auto q_rel = q1 / q0;
+			globalOrientation.SetOrientation(q_rel);
+			viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
+			// MUST call init each frame.
+			viewStruct.Init();
+		}
+	}	
 }
 
-void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext)
 {
-	SIMUL_COMBINED_PROFILE_START(deviceContext,"RenderView");
+	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	pbrEffect->UnbindTextures(deviceContext);
 	// Init the viewstruct in global space - i.e. with the server offsets.
-	SetRenderPose(deviceContext,clientDeviceState->headPose.globalPose);
-	
+	SetRenderPose(deviceContext, clientDeviceState->headPose.globalPose);
+
 	clientrender::AVSTextureHandle th = avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
@@ -542,7 +564,7 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		UpdateTagDataBuffers(deviceContext);
 		if (sessionClient->IsConnected())
 		{
-			if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::VIDEO)
+			if (lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
 			{
 				if (videoTexture->IsCubemap())
 				{
@@ -559,31 +581,10 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 		RecomposeCubemap(deviceContext, ti->texture, diffuseCubemapTexture, diffuseCubemapTexture->mips, int2(lastSetupCommand.clientDynamicLighting.diffusePos[0], lastSetupCommand.clientDynamicLighting.diffusePos[1]));
 		RecomposeCubemap(deviceContext, ti->texture, specularCubemapTexture, specularCubemapTexture->mips, int2(lastSetupCommand.clientDynamicLighting.specularPos[0], lastSetupCommand.clientDynamicLighting.specularPos[1]));
 	}
+
 	// Draw the background. If unconnected, we show a grid and horizon.
 	// If connected, we show the server's chosen background: video, texture or colour.
-	if (sessionClient->IsConnected())
 	{
-		if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::COLOUR)
-		{
-			renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(lastSetupCommand.backgroundColour));
-		}
-		else if(lastSetupCommand.backgroundMode==teleport::core::BackgroundMode::VIDEO)
-		{
-			if (videoTexture->IsCubemap())
-			{
-				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture", deviceContext.viewStruct.invViewProj);
-			}
-			else
-			{
-				platform::math::Matrix4x4 projInv;
-				deviceContext.viewStruct.proj.Inverse(projInv);
-				RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture", projInv);
-			}
-		}
-	}
-	else
-	{
-		cubemapClearEffect->Apply(deviceContext, "unconnected",(int) config.options.lobbyView);
 		if (deviceContext.deviceContextType == platform::crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
 			platform::crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -598,11 +599,35 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 			cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
 			cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 		}
-		renderPlatform->DrawQuad(deviceContext);
-		cubemapClearEffect->Unapply(deviceContext);
+		if (sessionClient->IsConnected())
+		{
+			if (lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::COLOUR)
+			{
+				renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(lastSetupCommand.backgroundColour));
+			}
+			else if (lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
+			{
+				if (videoTexture->IsCubemap())
+				{
+					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_cubemap", "cubemapTexture");
+				}
+				else
+				{
+					platform::math::Matrix4x4 projInv;
+					deviceContext.viewStruct.proj.Inverse(projInv);
+					RenderVideoTexture(deviceContext, ti->texture, videoTexture, "use_perspective", "perspectiveTexture");
+				}
+			}
+		}
+		else
+		{
+			cubemapClearEffect->Apply(deviceContext, "unconnected", (int)config.options.lobbyView);
+			renderPlatform->DrawQuad(deviceContext);
+			cubemapClearEffect->Unapply(deviceContext);
+		}
 	}
+
 	vec4 white={1.f,1.f,1.f,1.f};
-	//RecomposeCubemap(deviceContext, ti->texture, lightingCubemapTexture, lightingCubemapTexture->mips, int2(videoConfig.light_x, videoConfig.light_y));
 	pbrConstants.drawDistance = lastSetupCommand.draw_distance;
 	if(specularCubemapTexture)
 		pbrConstants.roughestMip=float(specularCubemapTexture->mips-1);
@@ -622,7 +647,6 @@ void Renderer::RenderView(platform::crossplatform::GraphicsDeviceContext &device
 	SetRenderPose(deviceContext,clientDeviceState->headPose.localPose);
 	
 	gui.Render(deviceContext);
-//renderPlatform->PrintAt3dPos(deviceContext,(const float*)&hit,"HIT",(const float*)&white);
 	{
 		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
@@ -874,16 +898,14 @@ void Renderer::RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceCont
 	cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
-void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix)
+void Renderer::RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
 {
 	tagDataCubeBuffer.Apply(deviceContext, cubemapClearEffect,cubemapClearEffect_TagDataCubeBuffer);
 	cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 	cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.globalPose.position) - videoPos;
 	cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.globalPose.position);
 	cubemapConstants.cameraRotation = *((vec4*)&clientDeviceState->headPose.globalPose.orientation);
-	//cameraConstants.invWorldViewProj = invCamMatrix;
 	cubemapClearEffect->SetConstantBuffer(deviceContext, &cubemapConstants);
-	//cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 	cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
 	cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
 	cubemapClearEffect->Apply(deviceContext, technique, 0);
@@ -896,7 +918,6 @@ void Renderer::RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& 
 {
 	cubemapConstants.sourceOffset = sourceOffset;
 	cubemapClearEffect->SetTexture(deviceContext, plainTexture, srcTexture);
-	//cubemapClearEffect->SetConstantBuffer(deviceContext, &cameraConstants);
 
 	cubemapConstants.targetSize.x = targetTexture->width;
 	cubemapConstants.targetSize.y = targetTexture->length;
