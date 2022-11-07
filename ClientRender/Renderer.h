@@ -99,6 +99,7 @@ namespace clientrender
 
 		void ChangePass(ShaderMode newShaderMode);
 		void ConfigureVideo(const avs::VideoConfig &vc);
+		void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& pose);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		teleport::core::SetupCommand lastSetupCommand;
 		teleport::core::SetupLightingCommand lastSetupLightingCommand;
@@ -166,6 +167,8 @@ namespace clientrender
 		platform::crossplatform::Effect *pbrEffect				= nullptr;
 		platform::crossplatform::EffectTechnique*	pbrEffect_solidTechnique=nullptr;
 		platform::crossplatform::EffectPass *pbrEffect_solidTechnique_localPass=nullptr;
+		platform::crossplatform::EffectTechnique* pbrEffect_solid_multiviewTechnique = nullptr;
+		platform::crossplatform::EffectPass* pbrEffect_solid_multiviewTechnique_localPass = nullptr;
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 		platform::crossplatform::ShaderResource _lights;
