@@ -15,6 +15,7 @@
 #include <iostream>
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportClient/Log.h"
+#include "Platform/Vulkan/RenderPlatform.h"
 
 std::string teleport::android::vkResultString(VkResult res)
 {
@@ -375,10 +376,11 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 	xr_session_state=state;
 }
 
+static platform::crossplatform::MultiviewGraphicsDeviceContext mgdc;
+static platform::crossplatform::GraphicsDeviceContext gdc;
+
 platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 {
-	static platform::crossplatform::MultiviewGraphicsDeviceContext mgdc;
-	static platform::crossplatform::GraphicsDeviceContext gdc;
 	platform::crossplatform::GraphicsDeviceContext& deviceContext = i == 0 ? mgdc : gdc;
 
 	// the platform context is the pointer to the VkCommandBuffer.
@@ -391,6 +393,15 @@ platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 
 void OpenXR::FinishDeviceContext(int i)
 {
+	platform::crossplatform::GraphicsDeviceContext& deviceContext = i == 0 ? mgdc : gdc;
+
+	//TODO: Find an in-API way of doing this!
+	if (deviceContext.renderPlatform && deviceContext.renderPlatform->GetType() == platform::crossplatform::RenderPlatformType::Vulkan)
+	{
+		vulkan::RenderPlatform* vkrp = (vulkan::RenderPlatform*)deviceContext.renderPlatform;
+		vkrp->EndRenderPass(deviceContext);
+	}
+
 	CmdBuffer &commandBuffer=cmdBuffers[i];
 	commandBuffer.End();
 	commandBuffer.Exec(vulkanQueue.operator VkQueue());

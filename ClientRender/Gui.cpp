@@ -434,7 +434,7 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 #ifdef __ANDROID__
 	ImGuiIO& io = ImGui::GetIO();
 	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
-	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)));
+	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0,mouseButtons[0]);
 #endif
 	ImGui::PushFont(smallFont);

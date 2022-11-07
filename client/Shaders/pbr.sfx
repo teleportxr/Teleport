@@ -1087,7 +1087,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_lightmaps);
 	}
@@ -1105,7 +1105,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_anim);
 	}
@@ -1133,7 +1133,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_lightmap);
 	}
@@ -1142,7 +1142,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_nolightmap);
 	}
@@ -1160,7 +1160,7 @@ technique solid_multiview
 		SetRasterizerState(RenderNoCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_local_hand);
 	}
@@ -1169,7 +1169,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
@@ -1178,7 +1178,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unswizzled);
 	}
@@ -1187,7 +1187,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_anim);
 	}
@@ -1196,7 +1196,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unity);
 	}
@@ -1205,7 +1205,7 @@ technique solid_multiview
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
+		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_vertexnormals);
 	}
