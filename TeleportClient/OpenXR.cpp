@@ -952,8 +952,15 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			{
 				if(fallbackBindings.find(def.actionId)!=fallbackBindings.end())
 				{
+					vec3 p0=*((vec3*)&state.pose_footSpace.pose.position);
+					vec3 p1=*((vec3*)&fallbackStates[def.actionId].pose_worldSpace.position);
+					float dt=float(framenumber-server.framenumber)*0.01f;
+					vec3 v=(p1-p0)/dt;
 					state.pose_footSpace.pose=fallbackStates[def.actionId].pose_worldSpace;
-					state.pose_footSpace.velocity			={0,0,0};
+					static float r=0.1f;
+					vec3 v0=*((vec3*)&state.pose_footSpace.velocity);
+					v=v0*(1.f-r)+r*v;
+					state.pose_footSpace.velocity			=v;
 					state.pose_footSpace.angularVelocity	={0,0,0};
 				}
 			}

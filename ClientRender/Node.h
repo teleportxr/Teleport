@@ -133,6 +133,7 @@ namespace clientrender
 		const vec3& GetGlobalVelocity() const { return GetGlobalTransform().m_Velocity; }
 
 		void SetLocalRotation(const clientrender::quat& rot);
+		void SetLocalVelocity(const vec3& value);
 		const clientrender::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
 		const clientrender::quat& GetGlobalRotation() const { return GetGlobalTransform().m_Rotation; }
 

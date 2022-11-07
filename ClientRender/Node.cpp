@@ -209,6 +209,11 @@ void Node::SetLocalRotation(const clientrender::quat& value)
 	RequestTransformUpdate();
 }
 
+void Node::SetLocalVelocity(const vec3& value)
+{
+	localTransform.m_Velocity = value;
+}
+
 void Node::SetLocalScale(const avs::vec3& value)
 {
 	localTransform.m_Scale = value;

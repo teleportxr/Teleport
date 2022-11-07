@@ -13,9 +13,6 @@
     <ClCompile Include="..\..\libavstream\src\buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libavstream\src\common_maths.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libavstream\src\context.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

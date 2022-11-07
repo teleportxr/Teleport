@@ -38,7 +38,6 @@ set(src_private_root
 	src/networksink.cpp
 	src/networksource.cpp
 	src/libraryloader.cpp
-	src/common_maths.cpp
 	src/timer.cpp
 )
 set(src_private_api
@@ -172,6 +171,7 @@ set(src_public_platforms
 )
 set(hdr_public_geometry
 	include/libavstream/geometry/mesh_interface.hpp
+	include/libavstream/geometry/GeometryParserInterface.h
 	include/libavstream/geometry/material_interface.hpp
 	include/libavstream/geometry/material_extensions.h
 )

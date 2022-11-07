@@ -135,7 +135,11 @@ bool ClientData::setOrigin(uint64_t ctr,avs::uid uid,avs::vec3 pos,avs::vec4 ori
 
 bool ClientData::isConnected() const
 {
-	return clientMessaging->hasPeer();
+	if(! clientMessaging->hasPeer())
+		return false;
+	if(!casterContext.NetworkPipeline)
+		return false;
+	return true;
 }
 
 bool ClientData::hasOrigin() const

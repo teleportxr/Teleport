@@ -7,6 +7,7 @@
 #include "node_p.hpp"
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
+#include <libavstream/geometry/GeometryParserInterface.h>
 
 namespace avs
 {

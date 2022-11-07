@@ -65,7 +65,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	VideoTagDataCube tagData = TagDataCubeBuffer[id];
 	vec3 offsetFromVideo2 = cameraPosition - tagData.cameraPosition;
 	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
-	vec3 view = view_orig;
+/*	vec3 view = view_orig;
 	float dist_m=0.0;
 	for (int i = 0; i < 5; i++)
 	{
@@ -89,7 +89,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			view = normalize(pos_m);
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
-	}
+	}*/
 //lookup.rgb=saturate(view_orig);
 	return lookup;
 }

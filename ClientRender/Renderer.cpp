@@ -953,6 +953,7 @@ void Renderer::RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& 
 			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
 				node->SetLocalPosition(n.second.pose_footSpace.pose.position);
 				node->SetLocalRotation(n.second.pose_footSpace.pose.orientation);
+				node->SetLocalVelocity(*((vec3*)&n.second.pose_footSpace.velocity));
 				// force update of model matrices - should not be necessary, but is.
 				node->UpdateModelMatrix();
 			}

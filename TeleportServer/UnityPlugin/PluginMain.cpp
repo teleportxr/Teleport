@@ -1286,6 +1286,7 @@ TELEPORT_EXPORT uint16_t Client_GetServerPort(avs::uid clientID)
 TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::NetworkSinkCounters& counters)
 {
 	auto clientPair = clientServices.find(clientID);
+	static bool failed=false;
 	if (clientPair == clientServices.end())
 	{
 		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -1295,16 +1296,21 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 	ClientData& clientData = clientPair->second;
 	if (!clientData.clientMessaging->hasPeer())
 	{
-		TELEPORT_COUT << "Failed to retrieve network stats of Client " << clientID << "! Client has no peer!\n";
+		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! Client has no peer!\n";
 		return false;
 	}
 
 	if (!clientData.casterContext.NetworkPipeline)
 	{
-		TELEPORT_COUT << "Failed to retrieve network stats of Client " << clientID << "! NetworkPipeline is null!\n";
+		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! NetworkPipeline is null!\n";
+		failed=true;
 		return false;
 	}
-	
+	if(failed)
+	{
+		TELEPORT_COUT << "Retrieved network stats of Client " << clientID << ".\n";
+		failed=false;
+	}
 	// Thread safe
 	clientData.casterContext.NetworkPipeline->getCounters(counters);
 
@@ -1323,13 +1329,13 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 	ClientData& clientData = clientPair->second;
 	if (!clientData.clientMessaging->hasPeer())
 	{
-		TELEPORT_COUT << "Failed to retrieve video encoder stats of Client " << clientID << "! Client has no peer!\n";
+		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client " << clientID << "! Client has no peer!\n";
 		return false;
 	}
 
 	if (!clientData.videoEncodePipeline)
 	{
-		TELEPORT_COUT << "Failed to retrieve video encoder stats of Client " << clientID << "! VideoEncoderPipeline is null!\n";
+		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client " << clientID << "! VideoEncoderPipeline is null!\n";
 		return false;
 	}
 
