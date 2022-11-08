@@ -846,12 +846,4 @@ namespace avs
 		virtual ~GeometryDecoderBackendInterface() = default;
 		virtual Result decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface *target) = 0;
 	};
-
-	class GeometryParserInterface
-	{
-	public:
-		virtual ~GeometryParserInterface() = default;
-		virtual GeometryPayloadType classify(const uint8_t* buffer, size_t bufferSize, size_t& dataOffset) const = 0;
-		static constexpr size_t HeaderSize = 2;
-	};
 } // avs

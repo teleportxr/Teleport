@@ -728,14 +728,14 @@ namespace avs
 			auto& bd = m_bufferData[i];
 			if (NVFAILED(g_api.nvEncUnmapInputResource(m_encoder, bd.inputBuffer.resource.mappedResource)))
 			{
-				AVSLOG(Error) << "EncoderNV: Failed to unmap input surface";
+				AVSLOG(Error) << "EncoderNV: Failed to unmap input surface\n";
 				return Result::EncoderBackend_UnmapFailed;
 			}
 			if (bd.inputBuffer.regPtr)
 			{
 				if (NVFAILED(g_api.nvEncUnregisterResource(m_encoder, bd.inputBuffer.regPtr)))
 				{
-					AVSLOG(Error) << "EncoderNV: Failed to unregister surface";
+					AVSLOG(Error) << "EncoderNV: Failed to unregister surface\n";
 					return Result::EncoderBackend_InvalidSurface;
 				}
 				bd.inputBuffer.regPtr = nullptr;

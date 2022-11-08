@@ -71,7 +71,6 @@
     <ClCompile Include="..\..\libavstream\src\audioencoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\audio\audiotarget.cpp" />
     <ClCompile Include="..\..\libavstream\src\buffer.cpp" />
-    <ClCompile Include="..\..\libavstream\src\common_maths.cpp" />
     <ClCompile Include="..\..\libavstream\src\context.cpp" />
     <ClCompile Include="..\..\libavstream\src\decoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\decoders\dec_nvidia.cpp" />

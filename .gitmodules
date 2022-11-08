@@ -28,3 +28,6 @@
 [submodule "libavstream/thirdparty/curl"]
 	path = libavstream/thirdparty/curl
 	url = git@github.com:simul/curl.git
+[submodule "thirdparty/websocketpp"]
+	path = thirdparty/websocketpp
+	url = git@github.com:zaphoyd/websocketpp.git
