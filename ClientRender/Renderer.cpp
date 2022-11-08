@@ -1762,7 +1762,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 				s_lod++;
 				s_lod=s_lod%s->GetSimulTexture()->mips;
 			}
-			renderPlatform->Print(deviceContext,x,y,fmt::format("cubemaps mip {0}",s_lod).c_str());
+			std::string str=fmt::format("cubemaps mip {0}",s_lod);
+
+			renderPlatform->Print(deviceContext,x,y,str.c_str());
 			renderPlatform->DrawCubemap(deviceContext, s->GetSimulTexture(), x+=r, y, r, 1.f, 1.f, static_cast<float>(s_lod));
 		}
 	}

@@ -497,7 +497,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	vec3 normal				= normalize(mul( TangentMatrix,normalLookup));
 
 	vec2 diffuseTexCoords	=IN.texCoords0.xy * diffuseTexCoordsScalar_R;
-	//diffuseTexCoords.y=1.0-diffuseTexCoords.y;
+	diffuseTexCoords.y=1.0-diffuseTexCoords.y;
 	vec3 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgb;
 	diffuseColour			=diffuseColour.rgb * diffuseOutputScalar.rgb;
 

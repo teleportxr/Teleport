@@ -104,6 +104,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	style.FramePadding = ImVec2(8.f,2.f);
 	style.FramePadding.x=4.f;
 	style.FrameBorderSize=2.f;
+	style.WindowPadding=ImVec2(20.f,14.f);
 	ImVec4* colors = style.Colors;
 	ImVec4 imWhite(1.00f, 1.00f, 1.00f, 1.00f);
 	colors[ImGuiCol_Text]                   = imWhite;
@@ -168,11 +169,8 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_Init(platformWindow);
 #endif
-
 	ImGui_ImplPlatform_Init(r);
-
 	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
-
 	platform::core::FileLoader *fileLoader=platform::core::FileLoader::GetFileLoader();
 	std::vector<std::string> texture_paths;
 	texture_paths.push_back("textures");
@@ -353,14 +351,13 @@ void Gui::ShowFont()
 	}
 }
 
-
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *search_text)
 {
 	const clientrender::Node *node=n.get();
-	bool has_children=node->GetChildren().size()!=0;
-	std::string str =(std::to_string(n->id)+" ")+ node->name;
-	bool open = false;
-	bool show = true;
+	bool has_children	=node->GetChildren().size()!=0;
+	std::string str		=(std::to_string(n->id)+" ")+ node->name;
+	bool open			= false;
+	bool show			= true;
 	if (search_text)
 	{
 		if (str.find(search_text) >= str.length())
@@ -476,8 +473,12 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
 	const ImVec2 size = ImVec2(std::min(regionSize.x, textureSize.x), std::min(regionSize.x, textureSize.x) * aspect);
 	ImTextureID imTextureID = (ImTextureID)&tv;
-
-	ImGui::Image(imTextureID, size);
+	
+	static ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+	static ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+	static ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+	static ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+	ImGui::Image(imTextureID, size, uv_min, uv_max, tint_col, border_col);
 }
 
 static void DoRow(const char* title, const char* text, ...)
@@ -567,10 +568,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			}
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			avs::uid selected_uid=GetSelectedUid();
-			std::shared_ptr<const clientrender::Node> selected_node=geometryCache->mNodeManager->GetNode(selected_uid);
-			std::shared_ptr<const clientrender::Material> selected_material=geometryCache->mMaterialManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Texture> selected_texture=geometryCache->mTextureManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Animation> selected_animation=geometryCache->mAnimationManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Node> selected_node				=geometryCache->mNodeManager->GetNode(selected_uid);
+			std::shared_ptr<const clientrender::Material> selected_material		=geometryCache->mMaterialManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Texture> selected_texture		=geometryCache->mTextureManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Animation> selected_animation	=geometryCache->mAnimationManager.Get(selected_uid);
 			if (selected_node.get())
 			{
 				avs::vec3 pos = selected_node->GetLocalPosition();
@@ -870,9 +871,9 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 	ImGuiIO& io = ImGui::GetIO();
 	static bool in3d=true;
 	static float window_width=720.0f;
-	static float window_height=240.0f;
-	ImVec2 size_min(window_width,100.f);
-	ImVec2 size_max(window_width+40.0f,window_height);
+	static float window_height=260.0f;
+	ImVec2 size_min(window_width,window_height);
+	ImVec2 size_max(window_width,window_height);
 	ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
 	static int refocus=0;
 	bool show_hide=true;
@@ -1139,6 +1140,18 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		//hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
 		ImGuiEnd();
 	}
+	
+	ImGui::GetForegroundDrawList()->AddCircleFilled(mousePos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+	static float handleWidth=12.f;
+	ImVec2 handle1_min={0.f,120.f};
+	ImVec2 handle1_max={handleWidth,480.f};
+	ImVec2 handle2_min={window_width-handleWidth,120.f};
+	ImVec2 handle2_max={window_width,480.f};
+	auto& style = ImGui::GetStyle();
+	ImU32 handle1Colour=ImGui::GetColorU32(style.Colors[ImGuiCol_Button]);
+	ImU32 handle2Colour=ImGui::GetColorU32(style.Colors[ImGuiCol_Button]);
+	ImGui::GetForegroundDrawList()->AddRectFilled(handle1_min,handle1_max,handle1Colour,0.5f);
+	ImGui::GetForegroundDrawList()->AddRectFilled(handle2_min,handle2_max,handle2Colour,0.5f);
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 	if(!show_hide)
