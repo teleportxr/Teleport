@@ -1126,111 +1126,32 @@ void OpenXR::openxr_poll_predicted(XrTime predicted_time)
 
 void app_update_predicted()
 {
-	// Update the location of the hand cubes. This is done after the inputs have been updated to 
-	// use the predicted location, but during the render code, so we have the most up-to-date location.
-	//if (app_cubes.size() < 2)
-	//	app_cubes.resize(2, xr_pose_identity);
-	//for (uint32_t i = 0; i < 2; i++) {
-	//	app_cubes[i] = xr_input_session.renderHand[i] ? xr_input_session.handPose[i] : xr_pose_identity;
-	//}
 }
 
- mat4  AffineTransformation(vec4 q,vec3 p)
+void OpenXR::RenderLayerView(crossplatform::GraphicsDeviceContext &deviceContext, std::vector<XrCompositionLayerProjectionView>& projection_views,
+	swapchain_surfdata_t& surface, crossplatform::RenderDelegate& renderDelegate)
 {
-	 platform::crossplatform::Quaternion<float> rotation = (const float*)&q;
-	 vec3 Translation = (const float*)&p;
-	 vec4 VTranslation = { Translation.x,Translation.y,Translation.z,1.0f };
-	 mat4 M;
-	 platform::crossplatform::QuaternionToMatrix(M, rotation);
-	 vec4 row3 = M.M[3];
-	 row3 = row3 + VTranslation;
-	 M.M[3][0] = row3.x;
-	 M.M[3][1] = row3.y;
-	 M.M[3][2] = row3.z;
-	 M.M[3][3] = row3.w;
-	 return M;
-}
+	if (projection_views.empty())
+		return;
 
-mat4 MatrixPerspectiveOffCenterRH
-(
-	float ViewLeft,
-	float ViewRight,
-	float ViewBottom,
-	float ViewTop,
-	float NearZ,
-	float FarZ
-)
-{
-	float TwoNearZ = NearZ + NearZ;
-	float ReciprocalWidth = 1.0f / (ViewRight - ViewLeft);
-	float ReciprocalHeight = 1.0f / (ViewTop - ViewBottom);
-	float fRange = FarZ / (NearZ - FarZ);
-
-	mat4 M;
-	M.M[0][0] = TwoNearZ * ReciprocalWidth;
-	M.M[0][1] = 0.0f;
-	M.M[0][2] = 0.0f;
-	M.M[0][3] = 0.0f;
-
-	M.M[1][0] = 0.0f;
-	M.M[1][1] = TwoNearZ * ReciprocalHeight;
-	M.M[1][2] = 0.0f;
-	M.M[1][3] = 0.0f;
-
-	M.M[2][0] = (ViewLeft + ViewRight) * ReciprocalWidth;
-	M.M[2][1] = (ViewTop + ViewBottom) * ReciprocalHeight;
-	M.M[2][2] = 0.f;// NearZ / (FarZ - NearZ); //fRange;
-	M.M[2][3] = -1.0f;
-
-	M.M[3][0] = 0.0f;
-	M.M[3][1] = 0.0f;
-	M.M[3][2] = NearZ;// FarZ* NearZ / (FarZ - NearZ); //fRange * NearZ;
-	M.M[3][3] = 0.0f;
-	return M;
-}
-mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
-{
-	const float left = clip_near * tanf(fov.angleLeft);
-	const float right = clip_near * tanf(fov.angleRight);
-	const float down = clip_near * tanf(fov.angleDown);
-	const float up = clip_near * tanf(fov.angleUp);
-
-	return MatrixPerspectiveOffCenterRH(left, right, down, up, clip_near, clip_far);
-}
-
-void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext,XrCompositionLayerProjectionView& view
-	,swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate)
-{
 	errno=0;
-	// Set up camera matrices based on OpenXR's predicted viewpoint information
-	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
-	avs::Pose avsPose=ConvertGLStageSpacePoseToWorldSpacePose(view.pose);
-	//crossplatform::Quaternionf rot = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const crossplatform::Quaternionf*)&view.pose.orientation));
-	//vec3 pos=crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL,crossplatform::AxesStandard::Engineering,*((const vec3 *)&view.pose.position));
 
-	//crossplatform::Quaternionf &orig_rot = *((crossplatform::Quaternionf*)&stagePose_worldSpace.orientation);
-	//Multiply(pos,orig_rot,pos);
-	//pos += origin_pos;
+	crossplatform::ViewStruct leftView = CreateViewStructFromXrCompositionLayerProjectionView(projection_views[0], 0, crossplatform::PROJECTION);
+	crossplatform::ViewStruct rightView = CreateViewStructFromXrCompositionLayerProjectionView(projection_views[1], 1, crossplatform::PROJECTION);
 
-	deviceContext.viewStruct.proj = *((const platform::math::Matrix4x4*)&proj); 
-	deviceContext.viewStruct.frustum=platform::crossplatform::GetFrustumFromProjectionMatrix(deviceContext.viewStruct.proj);
-	//rot=orig_rot*rot;
-
-	platform::math::SimulOrientation globalOrientation;
-	// global pos/orientation:
-	globalOrientation.SetPosition((const float*)&avsPose.position);
-
-	platform::math::Quaternion q0(3.1415926536f / 2.0f, platform::math::Vector3(-1.f, 0.0f, 0.0f));
-	platform::math::Quaternion q1 = (const float*)&avsPose.orientation;
-
-	auto q_rel = q1 / q0;
-	globalOrientation.SetOrientation(q_rel);
-	
-	deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
-	deviceContext.viewStruct.Init();
+	//Set the left eye as the GraphicsDeviceContext's ViewStruct, as a backup.
+	deviceContext.viewStruct = leftView;
+	//Assign the two ViewStruct to the MultiviewGraphicsDeviceContext.
+	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+	{
+		crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+		mgdc.viewStructs.resize(2);
+		mgdc.viewStructs[0] = leftView;
+		mgdc.viewStructs[1] = rightView;
+	}
 
 	// Set up where on the render target we want to draw, the view has a 
-	XrRect2Di& rect = view.subImage.imageRect;
+	const XrRect2Di& rect = projection_views[0].subImage.imageRect;
 	crossplatform::Viewport viewport{ (int)rect.offset.x, (int)rect.offset.y, (int)rect.extent.width, (int)rect.extent.height };
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
@@ -1246,14 +1167,13 @@ void OpenXR::RenderLayerView(platform::crossplatform::GraphicsDeviceContext &dev
 	{
 		SIMUL_BREAK("");
 	}
-		
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
 
 	renderPlatform->DeactivateRenderTargets(deviceContext);
 }
 
-platform::crossplatform::Texture* OpenXR::GetRenderTexture(int index)
+crossplatform::Texture* OpenXR::GetRenderTexture(int index)
 {
 	if (index < 0 || index >= xr_swapchains.size())
 		return nullptr;
@@ -1309,7 +1229,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 bool OpenXR::RenderLayer( XrTime predictedTime
 	, vector<XrCompositionLayerProjectionView>& projection_views,vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views
 	, XrCompositionLayerProjection& layer
-	, platform::crossplatform::RenderDelegate& renderDelegate)
+	, crossplatform::RenderDelegate& renderDelegate)
 {
 	lastTime=predictedTime;
 	// Find the state and location of each viewpoint at the predicted time
@@ -1323,51 +1243,61 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 
 	projection_views.resize(view_count);
 	spacewarp_views.resize(view_count);
-	static bool do_spacewarp=false;
 
-	// And now we'll iterate through each viewpoint, and render it!
-	for (uint32_t i = 0; i < view_count; i++)
+	// And render to the viewpoints via Multiview!
 	{
+		swapchain_t& main_view_xr_swapchain = xr_swapchains[0];
+
 		// We need to ask which swapchain image to use for rendering! Which one will we get?
 		// Who knows! It's up to the runtime to decide.
-		uint32_t					img_id;
+		uint32_t img_id;
 		XrSwapchainImageAcquireInfo acquire_info = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
-		XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[i].handle, &acquire_info, &img_id));
-		xr_swapchains[i].last_img_id = img_id;
+		XR_CHECK(xrAcquireSwapchainImage(main_view_xr_swapchain.handle, &acquire_info, &img_id));
+		main_view_xr_swapchain.last_img_id = img_id;
 		// Wait until the image is available to render to. The compositor could still be
 		// reading from it.
 		XrSwapchainImageWaitInfo wait_info = { XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
 		wait_info.timeout = XR_INFINITE_DURATION;
-		XR_CHECK(xrWaitSwapchainImage(xr_swapchains[i].handle, &wait_info));
+		XR_CHECK(xrWaitSwapchainImage(main_view_xr_swapchain.handle, &wait_info));
 
 		// Set up our rendering information for the viewpoint we're using right now!
-		projection_views[i] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-		projection_views[i].pose = xr_views[i].pose;
-		projection_views[i].fov = xr_views[i].fov;
-		projection_views[i].subImage.swapchain = xr_swapchains[i].handle;
-		projection_views[i].subImage.imageRect.offset = { 0, 0 };
-		projection_views[i].subImage.imageRect.extent = { xr_swapchains[i].width, xr_swapchains[i].height };
+		{
+			projection_views[0] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+			projection_views[0].pose = xr_views[0].pose;
+			projection_views[0].fov = xr_views[0].fov;
+			projection_views[0].subImage.swapchain = main_view_xr_swapchain.handle;
+			projection_views[0].subImage.imageRect.offset = { 0, 0 };
+			projection_views[0].subImage.imageRect.extent = { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
+			projection_views[0].subImage.imageArrayIndex = 0;
+
+			projection_views[1] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+			projection_views[1].pose = xr_views[1].pose;
+			projection_views[1].fov = xr_views[1].fov;
+			projection_views[1].subImage.swapchain = main_view_xr_swapchain.handle;
+			projection_views[1].subImage.imageRect.offset = { 0, 0 };
+			projection_views[1].subImage.imageRect.extent = { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
+			projection_views[1].subImage.imageArrayIndex = 1;
+		}
 		
-		platform::crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(i);
-		deviceContext.setDefaultRenderTargets(nullptr,nullptr, 0, 0, xr_swapchains[i].width, xr_swapchains[i].height
-			,&xr_swapchains[i].surface_data[img_id].target_view,1, xr_swapchains[i].surface_data[img_id].depth_view);
+		crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(0);
+		deviceContext.setDefaultRenderTargets(nullptr, nullptr, 0, 0, main_view_xr_swapchain.width, main_view_xr_swapchain.height,
+			&main_view_xr_swapchain.surface_data[img_id].target_view, 1, main_view_xr_swapchain.surface_data[img_id].depth_view);
 		
 		deviceContext.renderPlatform = renderPlatform;
-
-		deviceContext.viewStruct.view_id = i;
+		deviceContext.viewStruct.view_id = 0;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
+
 		// Call the rendering callback with our view and swapchain info
-		RenderLayerView(deviceContext,projection_views[i], xr_swapchains[i].surface_data[img_id],renderDelegate);
+		RenderLayerView(deviceContext, projection_views, main_view_xr_swapchain.surface_data[img_id], renderDelegate);
 		
-		FinishDeviceContext(i);
-	}
-	for (uint32_t i = 0; i < view_count; i++)
-	{
+		FinishDeviceContext(0);
+	
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
-		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info));
+		XR_CHECK(xrReleaseSwapchainImage(main_view_xr_swapchain.handle, &release_info));
 	}
 	
+	static bool do_spacewarp=false;
 	if(do_spacewarp)
 	{
 		for (uint32_t i = 0; i < view_count; i++)
@@ -1390,22 +1320,24 @@ void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCom
 	spacewarp_view.type = XR_TYPE_COMPOSITION_LAYER_SPACE_WARP_INFO_FB;
 	spacewarp_view.next = NULL;
 	spacewarp_view.layerFlags = 0;
-	auto &motion_swapchain=xr_swapchains[MOTION_VECTOR_SWAPCHAIN+i];
-	auto &depth_swapchain=xr_swapchains[MOTION_DEPTH_SWAPCHAIN+i];
+	
+	auto& motion_swapchain = xr_swapchains[MOTION_VECTOR_SWAPCHAIN];
 	spacewarp_view.motionVectorSubImage.swapchain =motion_swapchain.handle;
 	spacewarp_view.motionVectorSubImage.imageRect.offset.x = 0;
 	spacewarp_view.motionVectorSubImage.imageRect.offset.y = 0;
 	spacewarp_view.motionVectorSubImage.imageRect.extent.width	=motion_swapchain.width;
 	spacewarp_view.motionVectorSubImage.imageRect.extent.height	=motion_swapchain.height;
-	spacewarp_view.motionVectorSubImage.imageArrayIndex = 0;
-	spacewarp_view.depthSubImage.swapchain =	depth_swapchain.handle;
+	spacewarp_view.motionVectorSubImage.imageArrayIndex = i;
+	
+	auto& depth_swapchain = xr_swapchains[MOTION_DEPTH_SWAPCHAIN];
+	spacewarp_view.depthSubImage.swapchain = depth_swapchain.handle;
 	spacewarp_view.nearZ = 0.1f;
 	spacewarp_view.farZ = INFINITY;
 	spacewarp_view.depthSubImage.imageRect.offset.x = 0;
 	spacewarp_view.depthSubImage.imageRect.offset.y = 0;
 	spacewarp_view.depthSubImage.imageRect.extent.width =depth_swapchain.width;
 	spacewarp_view.depthSubImage.imageRect.extent.height =depth_swapchain.height;
-	spacewarp_view.depthSubImage.imageArrayIndex = 0;
+	spacewarp_view.depthSubImage.imageArrayIndex = i;
 	
 	// AppSpaceWarp: appSpaceDeltaPose is used to capture appState.CurrentSpace's
 	// movement between previous frame and current frame.
@@ -1434,9 +1366,9 @@ void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCom
 	// background only has clear color.
 	
 	XrPosef PrevFrameXrSpacePoseInWorld		= previousState.XrSpacePoseInWorld;
-	XrPosef InvPrevFrameXrSpacePoseInWorld	=XrPosef_Inverse(PrevFrameXrSpacePoseInWorld);
+	XrPosef InvPrevFrameXrSpacePoseInWorld	= XrPosef_Inverse(PrevFrameXrSpacePoseInWorld);
 	XrPosef XrSpacePoseInWorld				= state.XrSpacePoseInWorld;
-	spacewarp_view.appSpaceDeltaPose =XrPosef_Multiply(InvPrevFrameXrSpacePoseInWorld, XrSpacePoseInWorld);
+	spacewarp_view.appSpaceDeltaPose		= XrPosef_Multiply(InvPrevFrameXrSpacePoseInWorld, XrSpacePoseInWorld);
 	
 	// Make debugDeltaPose =1 and rotating the camera with thumbstick,
 	// if you looked carefully on the pixels between cube and background color,
@@ -1444,11 +1376,11 @@ void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCom
 	int debugDeltaPose = 0;
 	/*
 	if (!GetSystemPropertyInt("debug.oculus.debugDeltaPose", &debugDeltaPose)) {
-	    debugDeltaPose = 0; // default value
+		debugDeltaPose = 0; // default value
 	}*/
 	if (debugDeltaPose > 0) {
-	    spacewarp_view.appSpaceDeltaPose = xr_pose_identity;
-	    std::cerr<<"Bad appSpaceDeltaPose: watch carefully on background artifacts"<<std::endl;
+		spacewarp_view.appSpaceDeltaPose = xr_pose_identity;
+		std::cerr<<"Bad appSpaceDeltaPose: watch carefully on background artifacts"<<std::endl;
 	}
 	
 	spacewarp_view.minDepth = 0.0f;
@@ -1687,7 +1619,100 @@ vec3 OpenXR::ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const
 	return D;
 }
 
-void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate,platform::crossplatform::RenderDelegate &overlayDelegate)
+mat4 AffineTransformation(vec4 q, vec3 p)
+{
+	crossplatform::Quaternion<float> rotation = (const float*)&q;
+	vec3 Translation = (const float*)&p;
+	vec4 VTranslation = { Translation.x,Translation.y,Translation.z,1.0f };
+	mat4 M;
+	crossplatform::QuaternionToMatrix(M, rotation);
+	vec4 row3 = M.M[3];
+	row3 = row3 + VTranslation;
+	M.M[3][0] = row3.x;
+	M.M[3][1] = row3.y;
+	M.M[3][2] = row3.z;
+	M.M[3][3] = row3.w;
+	return M;
+}
+
+mat4 MatrixPerspectiveOffCenterRH
+(
+	float ViewLeft,
+	float ViewRight,
+	float ViewBottom,
+	float ViewTop,
+	float NearZ,
+	float FarZ
+)
+{
+	float TwoNearZ = NearZ + NearZ;
+	float ReciprocalWidth = 1.0f / (ViewRight - ViewLeft);
+	float ReciprocalHeight = 1.0f / (ViewTop - ViewBottom);
+	float fRange = FarZ / (NearZ - FarZ);
+
+	mat4 M;
+	M.M[0][0] = TwoNearZ * ReciprocalWidth;
+	M.M[0][1] = 0.0f;
+	M.M[0][2] = 0.0f;
+	M.M[0][3] = 0.0f;
+
+	M.M[1][0] = 0.0f;
+	M.M[1][1] = TwoNearZ * ReciprocalHeight;
+	M.M[1][2] = 0.0f;
+	M.M[1][3] = 0.0f;
+
+	M.M[2][0] = (ViewLeft + ViewRight) * ReciprocalWidth;
+	M.M[2][1] = (ViewTop + ViewBottom) * ReciprocalHeight;
+	M.M[2][2] = 0.f;// NearZ / (FarZ - NearZ); //fRange;
+	M.M[2][3] = -1.0f;
+
+	M.M[3][0] = 0.0f;
+	M.M[3][1] = 0.0f;
+	M.M[3][2] = NearZ;// FarZ* NearZ / (FarZ - NearZ); //fRange * NearZ;
+	M.M[3][3] = 0.0f;
+	return M;
+}
+mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
+{
+	const float left = clip_near * tanf(fov.angleLeft);
+	const float right = clip_near * tanf(fov.angleRight);
+	const float down = clip_near * tanf(fov.angleDown);
+	const float up = clip_near * tanf(fov.angleUp);
+
+	return MatrixPerspectiveOffCenterRH(left, right, down, up, clip_near, clip_far);
+}
+
+math::Matrix4x4 OpenXR::CreateViewMatrixFromPose(const avs::Pose& pose)
+{
+	// global pos/orientation:
+	math::SimulOrientation globalOrientation;
+	globalOrientation.SetPosition((const float*)&pose.position);
+	math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(-1.f, 0.0f, 0.0f));
+	math::Quaternion q1 = (const float*)&pose.orientation;
+	auto q_rel = q1 / q0;
+	globalOrientation.SetOrientation(q_rel);
+	math::Matrix4x4 view = globalOrientation.GetInverseMatrix().RowPointer(0);
+	return view;
+}
+
+crossplatform::ViewStruct OpenXR::CreateViewStructFromXrCompositionLayerProjectionView(XrCompositionLayerProjectionView view, int id, crossplatform::DepthTextureStyle depthTextureStyle)
+{
+	crossplatform::ViewStruct viewStruct;
+	viewStruct.view_id = id;
+	viewStruct.depthTextureStyle = depthTextureStyle;
+
+	// Set up camera matrices based on OpenXR's predicted viewpoint information
+	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
+	viewStruct.proj = *((const math::Matrix4x4*)&proj);
+
+	avs::Pose pose = ConvertGLStageSpacePoseToWorldSpacePose(view.pose);
+	viewStruct.view = CreateViewMatrixFromPose(pose);
+
+	viewStruct.Init();
+	return viewStruct;
+};
+
+void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplatform::RenderDelegate &overlayDelegate)
 {
 	if(!xr_session_running)
 		return;
@@ -1734,10 +1759,11 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 		XrCompositionLayerProjection  &layer_proj=layers[0].Projection;
 		layer_proj = { XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 		bool session_active = xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED || xr_session_state == XR_SESSION_STATE_SYNCHRONIZED;
-		if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj,renderDelegate))
+		if (session_active && RenderLayer(frame_state.predictedDisplayTime, projection_views,spacewarp_views, layer_proj, renderDelegate))
 		{
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
+
 		static bool add_overlay=true;
 		if(add_overlay)
 		{
@@ -1762,35 +1788,35 @@ void OpenXR::RenderFrame(platform::crossplatform::RenderDelegate &renderDelegate
 	XR_CHECK(xrEndFrame(xr_session, &end_info));
 }
  
-bool OpenXR::RenderOverlayLayer(XrTime predictedTime,platform::crossplatform::RenderDelegate &overlayDelegate)
+bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelegate &overlayDelegate)
 {
-	uint32_t					img_id;
+	swapchain_t& overlay_xr_swapchain = xr_swapchains[OVERLAY_SWAPCHAIN];
+	uint32_t img_id;
 	XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, NULL};
-	XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &acquireInfo, &img_id));
-	xr_swapchains[OVERLAY_SWAPCHAIN].last_img_id=img_id;
-	XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL,  XR_INFINITE_DURATION};
-	XR_CHECK(xrWaitSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &waitInfo));
-	platform::crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(2);
-	deviceContext.setDefaultRenderTargets(nullptr,nullptr, 0, 0, xr_swapchains[OVERLAY_SWAPCHAIN].width, xr_swapchains[OVERLAY_SWAPCHAIN].height
-		,&xr_swapchains[OVERLAY_SWAPCHAIN].surface_data[img_id].target_view,1, nullptr);
+	XR_CHECK(xrAcquireSwapchainImage(overlay_xr_swapchain.handle, &acquireInfo, &img_id));
+	overlay_xr_swapchain.last_img_id = img_id;
+	XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL, XR_INFINITE_DURATION};
+	XR_CHECK(xrWaitSwapchainImage(overlay_xr_swapchain.handle, &waitInfo));
+	
+	crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(OVERLAY_SWAPCHAIN);
+	deviceContext.setDefaultRenderTargets(nullptr, nullptr, 0, 0, overlay_xr_swapchain.width, overlay_xr_swapchain.height, 
+		&overlay_xr_swapchain.surface_data[img_id].target_view, 1, nullptr);
 	
 	deviceContext.renderPlatform = renderPlatform;
-
-	deviceContext.viewStruct.view_id =2;
+	deviceContext.viewStruct.view_id = OVERLAY_SWAPCHAIN;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
-	// Set up where on the render target we want to draw, the view has a 
 
-	crossplatform::Viewport viewport{ (int)0, (int)0, (int)xr_swapchains[OVERLAY_SWAPCHAIN].width, (int)xr_swapchains[OVERLAY_SWAPCHAIN].height };
+	// Set up where on the render target we want to draw, the view has a 
+	crossplatform::Viewport viewport{ (int)0, (int)0, (int)overlay_xr_swapchain.width, (int)overlay_xr_swapchain.height };
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
 	static float clear[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	overlayDelegate(deviceContext);
-	FinishDeviceContext(2);
+	FinishDeviceContext(OVERLAY_SWAPCHAIN);
 	XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-	XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &releaseInfo));
+	XR_CHECK(xrReleaseSwapchainImage(overlay_xr_swapchain.handle, &releaseInfo));
 
 	return true;
 }

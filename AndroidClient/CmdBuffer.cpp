@@ -108,7 +108,7 @@ bool CmdBuffer::Init(VkDevice device, uint32_t queueFamilyIndex) {
 	return true;
 }
 
-bool teleport::android::CmdBuffer::Begin()
+bool CmdBuffer::Begin()
 {
 	CHECK_CBSTATE(CmdBufferState::Initialized);
 	VkCommandBufferBeginInfo cmdBeginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
@@ -117,7 +117,7 @@ bool teleport::android::CmdBuffer::Begin()
 	return true;
 }
 
-bool teleport::android::CmdBuffer::End()
+bool CmdBuffer::End()
 {
 	CHECK_CBSTATE(CmdBufferState::Recording);
 	CHECK_VKCMD(vkEndCommandBuffer(buf));
@@ -125,7 +125,7 @@ bool teleport::android::CmdBuffer::End()
 	return true;
 }
 
-bool teleport::android::CmdBuffer::Exec(VkQueue queue)
+bool CmdBuffer::Exec(VkQueue queue)
 {
 	CHECK_CBSTATE(CmdBufferState::Executable);
 
@@ -138,7 +138,7 @@ bool teleport::android::CmdBuffer::Exec(VkQueue queue)
 	return true;
 }
 
-bool teleport::android::CmdBuffer::Wait()
+bool CmdBuffer::Wait()
 {
 	// Waiting on a not-in-flight command buffer is a no-op
 	if(state==CmdBufferState::Initialized)
@@ -164,7 +164,7 @@ bool teleport::android::CmdBuffer::Wait()
 	return false;
 }
 
-bool teleport::android::CmdBuffer::Reset()
+bool CmdBuffer::Reset()
 {
 	if(state!=CmdBufferState::Initialized)
 	{

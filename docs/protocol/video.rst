@@ -21,10 +21,10 @@ Currently the Teleport protocol specifies a video texture layout for VR applicat
 The server application should render an axis-aligned cubemap each frame and send the cubemap as part of the video texture to the client.
 **YUV** formats are commonly used with video encoders and therefore the alpha channel must be stored in an extra pixel.
 The alpha channel will store the depth of the rendered scene on the server.
-The RGB and alpha channels of the cubemap should therefore be rendered separately to the video texture as a color and depth cubemap.
-The depth cubemap should be rendered at half the resolution of the color cubemap.
+The RGB and alpha channels of the cubemap should therefore be rendered separately to the video texture as a colour and depth cubemap.
+The depth cubemap should be rendered at half the resolution of the colour cubemap.
 The resolution of the video texture is configurable but must be communicated to the client in the **VideoConfig** structure of the **SetupCommand**.
-A resolution of 1536x1536 pixels is recommended for the video texture with 512x512 for each face of the color cubemap and 256x256 for each face of the depth cubemap. 
+A resolution of 1536x1536 pixels is recommended for the video texture with 512x512 for each face of the colour cubemap and 256x256 for each face of the depth cubemap. 
 
 A **Tag ID** should also be included in the video texture. This links the video frame with the associated video metadata.
 The metadata is sent in a separate stream. See :ref:`video_metadata`.
@@ -44,25 +44,64 @@ A flag indicating if the webcam image is being streamed and the width, height an
 
 The video texture should be in the following form:
 
-+----------------------------------------------------------------------+
-|                        Video   Texture  Layout                       |
-|                                                                      |
-+=======================+=======================+======================+
-|                       |                       |                      |
-|      Front Face       |      Back Face        |      Right Face      |
-|                       |                       |                      |
-+-----------------------+-----------------------+----------------------+
-|                       |                       |                      |
-|     Left Face         |      Top Face         |      Bottom Face     |
-|                       |                       |                      |
-+-----------------------+-----------+-----------+------+---------------+
-|                                   | Specular Cubemap |               |
-|           Depth Cubemap           +------------------+--------+------+        
-+                                   | Diffuse Cubemap  | Webcam |      | 
-|                                   |                  |        |Tag ID|
-+-----------------------------------+------------------+--------+------+
++-----------------------------------------------------------------------+
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                            Colour Cubemap                             |
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                                                                       |
+|                                                                       |
++-----------------------------------+------------------+----------------+
+|                                   |                  |                |
+|                                   | Specular Cubemap |                |
+|                                   |                  |                |
+|           Depth Cubemap           +------------------+--------+-------+
+|                                   |                  | Webcam |       |
+|                                   | Diffuse Cubemap  +--------+-------+
+|                                   |                  |        |Tag ID |
++-----------------------------------+------------------+--------+-------+
 
+.. raw:: html
 
+    <style> .red {color:#FF0000} </style>
+    <style> .grn {color:#00CC00} </style>
+    <style> .blu {color:#0000FF} </style>
+    <style> .cyn {color:#00CCFF} </style>
+    <style> .mag {color:#FF33FF} </style>
+    <style> .yel {color:#FFCC00} </style>
+
+.. role:: red
+.. role:: grn
+.. role:: blu
+.. role:: cyn
+.. role:: mag
+.. role:: yel
+
+.. role::  raw-html(raw)
+    :format: html
+
+The cubemap sub-layout should be in the following form:
+
++-----------------------+-----------------------+-----------------------+
+|                       |                       |                       |
+|      Front Face       |      Back Face        |       Right Face      |
+|      :red:`+X`        |      :cyn:`-X`        |       :grn:`+Y`       |
+| +Z :raw-html:`&larr;` | +Z :raw-html:`&rarr;` | +Z :raw-html:`&darr;` |
+|                       |                       |                       |
++-----------------------+-----------------------+-----------------------+
+|                       |                       |                       |
+|      Left Face        |      Top Face         |      Bottom Face      |
+|      :mag:`-Y`        |      :blu:`+Z`        |      :yel:`-Z`        |
+| +Z :raw-html:`&uarr;` | +Z :raw-html:`&rarr;` | +X :raw-html:`&larr;` |
+|                       |                       |                       |
++-----------------------+-----------------------+-----------------------+
 
 
 where
@@ -80,32 +119,32 @@ where
      - 0
      - 512
      - 512
-     - Color Cubemap Front Face
+     - Colour Cubemap Front Face
    * - 512
      - 0
      - 512
      - 512
-     - Color Cubemap Back Face
+     - Colour Cubemap Back Face
    * - 1024
      - 0
      - 512
      - 512
-     - Color Cubemap Right Face
+     - Colour Cubemap Right Face
    * - 0
      - 512
      - 512
      - 512
-     - Color Cubemap Left Face
+     - Colour Cubemap Left Face
    * - 512
      - 512
      - 512
      - 512
-     - Color Cubemap Top Face
+     - Colour Cubemap Top Face
    * - 1024
      - 512
      - 512
      - 512
-     - Color Cubemap Bottom Face
+     - Colour Cubemap Bottom Face
    * - 0
      - 1024
      - 256

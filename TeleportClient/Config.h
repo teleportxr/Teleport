@@ -9,7 +9,7 @@ constexpr unsigned int TELEPORT_SERVER_PORT = 10500;
 constexpr unsigned int TELEPORT_CLIENT_SERVICE_PORT = 10501;
 constexpr unsigned int TELEPORT_CLIENT_STREAMING_PORT = 10502;
 constexpr unsigned int TELEPORT_CLIENT_DISCOVERY_PORT = 10599;
-constexpr unsigned int TELEPORT_SERVER_DISCOVERY_PORT = 10600;
+constexpr unsigned int TELEPORT_SERVER_DISCOVERY_PORT = 10700;
 
 constexpr unsigned int TELEPORT_TIMEOUT = 1000;
 

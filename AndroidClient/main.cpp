@@ -176,11 +176,6 @@ void android_main(struct android_app* app)
 		androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
-	// Provided by VK_VERSION_1_0
-/*void vkGetPhysicalDeviceFormatProperties(
-    VkPhysicalDevice                            physicalDevice,
-    VkFormat                                    format,
-    VkFormatProperties*                         pFormatProperties);*/
 
 	openXR.InitInstance("Teleport VR Client");
 	openXR.InitSystem();
@@ -218,8 +213,6 @@ void android_main(struct android_app* app)
 	openXR.Init(renderPlatform);
 	InitXR(openXR);
 	
-	//renderDelegate = std::bind(&RenderView,std::placeholders::_1);
-
 	while (!g_WindowQuit)
 	{
 	  // Read all pending events.
@@ -278,7 +271,7 @@ void android_main(struct android_app* app)
 			openXR.SetStagePoseInWorldSpace(clientDeviceState.originPose);
 			// Note we do this even when the device is inactive.
 			//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
-			openXR.RenderFrame( renderDelegate,overlayDelegate);
+			openXR.RenderFrame(renderDelegate, overlayDelegate);
 		}
 		renderPlatform->EndFrame();
 	}

@@ -15,6 +15,7 @@
 #include <iostream>
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportClient/Log.h"
+#include "Platform/Vulkan/RenderPlatform.h"
 
 std::string teleport::android::vkResultString(VkResult res)
 {
@@ -122,11 +123,12 @@ client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* re
 	result.target_view = renderPlatform->CreateTexture("swapchain target");
 	result.target_view->InitFromExternalTexture(renderPlatform, &textureCreate);
 	
+	textureCreate.external_texture = nullptr;
 	textureCreate.w = result.target_view->width;
 	textureCreate.l = result.target_view->length;
 	textureCreate.f = platform::crossplatform::PixelFormat::D_32_FLOAT;
+	textureCreate.make_rt = false;
 	textureCreate.setDepthStencil = true;
-	textureCreate.computable = false;
 	textureCreate.numOfSamples = std::max(1, result.target_view->GetSampleCount());
 	result.depth_view = renderPlatform->CreateTexture("swapchain depth");
 	result.depth_view->EnsureTexture(renderPlatform, &textureCreate);
@@ -374,13 +376,16 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 	xr_session_state=state;
 }
 
+static platform::crossplatform::MultiviewGraphicsDeviceContext mgdc;
+static platform::crossplatform::GraphicsDeviceContext gdc;
+
 platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 {
-	static platform::crossplatform::GraphicsDeviceContext dcs[3];
-	platform::crossplatform::GraphicsDeviceContext& deviceContext=dcs[i];
+	platform::crossplatform::GraphicsDeviceContext& deviceContext = i == 0 ? mgdc : gdc;
+
 	// the platform context is the pointer to the VkCommandBuffer.
-	CmdBuffer &commandBuffer=cmdBuffers[i];
-	deviceContext.platform_context=(void*)&commandBuffer.buf;
+	CmdBuffer& commandBuffer = cmdBuffers[i];
+	deviceContext.platform_context = (void*)&commandBuffer.buf;
 	commandBuffer.Reset();
 	commandBuffer.Begin();
 	return deviceContext;
@@ -388,6 +393,15 @@ platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
 
 void OpenXR::FinishDeviceContext(int i)
 {
+	platform::crossplatform::GraphicsDeviceContext& deviceContext = i == 0 ? mgdc : gdc;
+
+	//TODO: Find an in-API way of doing this!
+	if (deviceContext.renderPlatform && deviceContext.renderPlatform->GetType() == platform::crossplatform::RenderPlatformType::Vulkan)
+	{
+		vulkan::RenderPlatform* vkrp = (vulkan::RenderPlatform*)deviceContext.renderPlatform;
+		vkrp->EndRenderPass(deviceContext);
+	}
+
 	CmdBuffer &commandBuffer=cmdBuffers[i];
 	commandBuffer.End();
 	commandBuffer.Exec(vulkanQueue.operator VkQueue());
@@ -476,10 +490,18 @@ bool OpenXR::TryInitDevice()
 		xr_config_views[i].maxSwapchainSampleCount = samples;
 		xr_config_views[i].recommendedSwapchainSampleCount = samples;
 	}
-	int64_t swapchain_format = VK_FORMAT_R8G8B8A8_UNORM;
-	constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
+	
+	// Check the two eyes for stereo are the same
+	XrViewConfigurationView& config_view = xr_config_views[0];
+	if (app_config_view == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO && xr_config_views.size() == 2)
+	{
+		SIMUL_ASSERT(xr_config_views[0].recommendedImageRectWidth == xr_config_views[1].recommendedImageRectWidth)
+		SIMUL_ASSERT(xr_config_views[0].recommendedImageRectHeight == xr_config_views[1].recommendedImageRectHeight)
+	}
 	
 	// Find out what format to use:
+	int64_t swapchain_format = VK_FORMAT_R8G8B8A8_UNORM;
+	constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
 	uint32_t formatCount = 0;
 	XrResult res = xrEnumerateSwapchainFormats(xr_session, 0, &formatCount, nullptr);
 	if (!formatCount)
@@ -502,6 +524,7 @@ bool OpenXR::TryInitDevice()
 	}
 	swapchain_format = *swapchainFormatIt;
 	
+	//Add XR Swapchain Lambda
 	auto AddXrSwapchain = [&, this](XrSwapchainCreateInfo swapchain_info) -> void
 	{
 		XrSwapchain handle;
@@ -530,29 +553,25 @@ bool OpenXR::TryInitDevice()
 		xr_swapchains.push_back(swapchain);
 	};
 
+	//Main view swapchain:
+	// Create a swapchain for these viewpoints! A swapchain is a set of texture buffers used for displaying to screen,
+	// typically this is a backbuffer and a front buffer, one for rendering data to, and one for displaying on-screen.
+	// A note about swapchain image format here! OpenXR doesn't create a concrete image format for the texture, like 
+	// DXGI_FORMAT_R8G8B8A8_UNORM. Instead, it switches to the TYPELESS variant of the provided texture format, like 
+	// DXGI_FORMAT_R8G8B8A8_TYPELESS. When creating an IVulkanRenderTargetView for the swapchain texture, we must specify
+	// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
+	// we do need to store the format separately and remember it later.
 	XrSwapchainCreateInfo swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
-	// One xr_swapchain for each view, plus one for the overlay...?
-	for (uint32_t i = 0; i < view_count; i++)
-	{
-		// Create a swapchain for these viewpoints! A swapchain is a set of texture buffers used for displaying to screen,
-		// typically this is a backbuffer and a front buffer, one for rendering data to, and one for displaying on-screen.
-		// A note about swapchain image format here! OpenXR doesn't create a concrete image format for the texture, like 
-		// DXGI_FORMAT_R8G8B8A8_UNORM. Instead, it switches to the TYPELESS variant of the provided texture format, like 
-		// DXGI_FORMAT_R8G8B8A8_TYPELESS. When creating an IVulkanRenderTargetView for the swapchain texture, we must specify
-		// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
-		// we do need to store the format separately and remember it later.
-		XrViewConfigurationView& view = xr_config_views[i];
-		swapchain_info.createFlags=0;
-		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-		swapchain_info.format = swapchain_format;
-		swapchain_info.sampleCount = view.recommendedSwapchainSampleCount;
-		swapchain_info.width = view.recommendedImageRectWidth;
-		swapchain_info.height = view.recommendedImageRectHeight;
-		swapchain_info.faceCount = 1;
-		swapchain_info.arraySize = 1;
-		swapchain_info.mipCount = 1;
-		AddXrSwapchain(swapchain_info);
-	}
+	swapchain_info.createFlags = 0;
+	swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchain_info.format = swapchain_format;
+	swapchain_info.sampleCount = config_view.recommendedSwapchainSampleCount;
+	swapchain_info.width = config_view.recommendedImageRectWidth;
+	swapchain_info.height = config_view.recommendedImageRectHeight;
+	swapchain_info.faceCount = 1;
+	swapchain_info.arraySize = view_count;
+	swapchain_info.mipCount = 1;
+	AddXrSwapchain(swapchain_info);
 
 	//Motion vector swapchains:
 	static bool add_motion_swapchains=false;
@@ -562,28 +581,22 @@ bool OpenXR::TryInitDevice()
 		{
 			//Vector
 			MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
-			swapchain_info.createFlags=0;
+			swapchain_info.createFlags = 0;
 			swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 			swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			swapchain_info.sampleCount = 1;
 			swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
 			swapchain_info.height = spaceWarpProperties.recommendedMotionVectorImageRectHeight;
 			swapchain_info.faceCount = 1;
-			swapchain_info.arraySize = 1;
+			swapchain_info.arraySize = view_count;
 			swapchain_info.mipCount = 1;
-			for (uint32_t i = 0; i < view_count; i++)
-			{
-				AddXrSwapchain(swapchain_info);
-			}
+			AddXrSwapchain(swapchain_info);
 			
 			//Depth
 			MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
 			swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
-			for (uint32_t i = 0; i < view_count; i++)
-			{
-				AddXrSwapchain(swapchain_info);
-			}
+			AddXrSwapchain(swapchain_info);
 		}
 	}
 
@@ -592,7 +605,7 @@ bool OpenXR::TryInitDevice()
 	if(add_overlay_swapchain)
 	{
 		OVERLAY_SWAPCHAIN = xr_swapchains.size();
-		swapchain_info.createFlags=0;
+		swapchain_info.createFlags = 0;
 		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchain_info.format = VK_FORMAT_R8G8B8A8_SRGB;
 		swapchain_info.sampleCount = 1;
@@ -604,14 +617,14 @@ bool OpenXR::TryInitDevice()
 		AddXrSwapchain(swapchain_info);
 
 	#if 1	
-		uint32_t					img_id;
+		uint32_t img_id;
 		XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO, NULL};
-		XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[2].handle, &acquireInfo, &img_id));
-		xr_swapchains[2].last_img_id=img_id;
-		XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL,  XR_INFINITE_DURATION};
-		XR_CHECK(xrWaitSwapchainImage(xr_swapchains[2].handle, &waitInfo));
+		XR_CHECK(xrAcquireSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &acquireInfo, &img_id));
+		xr_swapchains[OVERLAY_SWAPCHAIN].last_img_id=img_id;
+		XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL, XR_INFINITE_DURATION};
+		XR_CHECK(xrWaitSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &waitInfo));
 		XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[2].handle, &releaseInfo));
+		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &releaseInfo));
 	#endif
 	}
 

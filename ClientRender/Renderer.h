@@ -99,6 +99,7 @@ namespace clientrender
 
 		void ChangePass(ShaderMode newShaderMode);
 		void ConfigureVideo(const avs::VideoConfig &vc);
+		void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& pose);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		teleport::core::SetupCommand lastSetupCommand;
 		teleport::core::SetupLightingCommand lastSetupLightingCommand;
@@ -166,6 +167,8 @@ namespace clientrender
 		platform::crossplatform::Effect *pbrEffect				= nullptr;
 		platform::crossplatform::EffectTechnique*	pbrEffect_solidTechnique=nullptr;
 		platform::crossplatform::EffectPass *pbrEffect_solidTechnique_localPass=nullptr;
+		platform::crossplatform::EffectTechnique* pbrEffect_solid_multiviewTechnique = nullptr;
+		platform::crossplatform::EffectPass* pbrEffect_solid_multiviewTechnique_localPass = nullptr;
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 		platform::crossplatform::ShaderResource _lights;
@@ -182,6 +185,7 @@ namespace clientrender
 		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataCubeBuffer; 
 
 		platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
+		platform::crossplatform::ConstantBuffer<StereoCameraConstants> stereoCameraConstants;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
 		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
@@ -262,7 +266,7 @@ namespace clientrender
 		void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 		void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
-		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture, const platform::math::Matrix4x4& invCamMatrix);
+		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
 		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 		
 		bool OnDeviceRemoved();
