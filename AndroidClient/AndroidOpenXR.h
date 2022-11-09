@@ -20,8 +20,6 @@ extern void OXR_CheckErrors(XrInstance instance, XrResult result, const char* fu
 #define OXR(func) OXR_CheckErrors(ovrApp_GetInstance(), func, #func, false);
 #endif
 
-#define VULKAN_FRAME_LATENCY 3
-
 namespace teleport
 {
 	namespace android
@@ -36,19 +34,22 @@ namespace teleport
 			bool TryInitDevice() override;
 			std::vector<std::string> GetRequiredVulkanDeviceExtensions() const;
 			std::vector<std::string> GetRequiredVulkanInstanceExtensions() const;
+
 		protected:
 			const char* GetOpenXRGraphicsAPIExtensionName() const override;
 			std::vector<std::string> GetRequiredExtensions() const override;
 			void HandleSessionStateChanges( XrSessionState state) override;
-			platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int i) override;
-			void FinishDeviceContext(int i) override;
+			platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(size_t swapchainIndex, size_t imageIndex) override;
+			void FinishDeviceContext(size_t swapchainIndex, size_t imageIndex) override;
 			void EndFrame() override;
+
+			size_t GetCommandBufferIndex(size_t swapchainIndex, size_t imageIndex);
+
+		protected:
 			vk::Device *vulkanDevice=nullptr;
-			//vk::PhysicalDevice *vulkanPhysicalDevice=nullptr;
 			vk::Instance *vulkanInstance=nullptr;
-			CmdBuffer cmdBuffers[VULKAN_FRAME_LATENCY];
+			CmdBuffer cmdBuffers[16]; //Can't use std::vector of this type, because of deleted constructors - AJR.
 			vk::Queue vulkanQueue;
-			//vk::Fence fences[VULKAN_FRAME_LATENCY+1];
 			// These threads will be marked as performance threads.
 			int MainThreadTid=0;
 			int RenderThreadTid=0;

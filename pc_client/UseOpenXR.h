@@ -20,7 +20,7 @@ namespace teleport
 		}
 	protected:
 		const char *GetOpenXRGraphicsAPIExtensionName() const override;
-		platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int uint32_t) override
+		platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(size_t, size_t) override
 		{
 			return *deviceContext;
 		}

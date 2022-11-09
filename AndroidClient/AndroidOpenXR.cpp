@@ -158,14 +158,6 @@ void OpenXR::SetVulkanDeviceAndInstance(vk::Device *vkDevice,vk::Instance *vkIns
 	vulkanDevice=vkDevice;
 	vulkanInstance=vkInstance;
 	vulkanQueue=vulkanDevice->getQueue(0,0);
-	for(int i=0;i<VULKAN_FRAME_LATENCY;i++)
-	{
-		CmdBuffer &commandBuffer=cmdBuffers[i];
-		if (!commandBuffer.Init(vulkanDevice->operator VkDevice(),0))
-		{
-			std::cerr << "Failed to create command buffer"<< std::endl;
-		}
-	}
 }
 
 std::vector<std::string> OpenXR::GetRequiredVulkanDeviceExtensions() const
@@ -376,37 +368,46 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 	xr_session_state=state;
 }
 
+size_t OpenXR::GetCommandBufferIndex(size_t swapchainIndex, size_t imageIndex)
+{
+	size_t index = 0;
+	if (swapchainIndex < xr_swapchains.size())
+	{
+		for (size_t i = 0; i < swapchainIndex; i++)
+			index += xr_swapchains[i].surface_data.size();
+
+		if (imageIndex < xr_swapchains[swapchainIndex].surface_data.size())
+			index += imageIndex;
+	}
+	return index;
+}
+
 static platform::crossplatform::MultiviewGraphicsDeviceContext mgdc;
 static platform::crossplatform::GraphicsDeviceContext gdc;
 
-platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(int i)
+platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(size_t swapchainIndex, size_t imageIndex)
 {
-	platform::crossplatform::GraphicsDeviceContext& deviceContext = i == 0 ? mgdc : gdc;
+	platform::crossplatform::GraphicsDeviceContext& deviceContext = swapchainIndex == 0 ? mgdc : gdc;
 
 	// the platform context is the pointer to the VkCommandBuffer.
+	size_t i = GetCommandBufferIndex(swapchainIndex, imageIndex);
 	CmdBuffer& commandBuffer = cmdBuffers[i];
 	deviceContext.platform_context = (void*)&commandBuffer.buf;
+	commandBuffer.Wait();
 	commandBuffer.Reset();
 	commandBuffer.Begin();
 	return deviceContext;
 }
 
-void OpenXR::FinishDeviceContext(int i)
+void OpenXR::FinishDeviceContext(size_t swapchainIndex, size_t imageIndex)
 {
-	platform::crossplatform::GraphicsDeviceContext& deviceContext = i == 0 ? mgdc : gdc;
+	platform::crossplatform::GraphicsDeviceContext& deviceContext = swapchainIndex == 0 ? mgdc : gdc;
 
-	//TODO: Find an in-API way of doing this!
-	if (deviceContext.renderPlatform && deviceContext.renderPlatform->GetType() == platform::crossplatform::RenderPlatformType::Vulkan)
-	{
-		vulkan::RenderPlatform* vkrp = (vulkan::RenderPlatform*)deviceContext.renderPlatform;
-		vkrp->EndRenderPass(deviceContext);
-	}
-
+	size_t i = GetCommandBufferIndex(swapchainIndex, imageIndex);
 	CmdBuffer &commandBuffer=cmdBuffers[i];
 	commandBuffer.End();
 	commandBuffer.Exec(vulkanQueue.operator VkQueue());
 	// XXX Should double-buffer the command buffers, for now just flush
-	commandBuffer.Wait();
 }
 
 void OpenXR::EndFrame() 
@@ -561,6 +562,7 @@ bool OpenXR::TryInitDevice()
 	// DXGI_FORMAT_R8G8B8A8_TYPELESS. When creating an IVulkanRenderTargetView for the swapchain texture, we must specify
 	// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
 	// we do need to store the format separately and remember it later.
+	MAIN_SWAPCHAIN = xr_swapchains.size();
 	XrSwapchainCreateInfo swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
 	swapchain_info.createFlags = 0;
 	swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
@@ -626,6 +628,21 @@ bool OpenXR::TryInitDevice()
 		XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
 		XR_CHECK(xrReleaseSwapchainImage(xr_swapchains[OVERLAY_SWAPCHAIN].handle, &releaseInfo));
 	#endif
+	}
+
+	//Create a CommandBuffer for each image in every swapchain.
+	size_t totalIamgeCount = 0;
+	for (const auto& xr_swapchain : xr_swapchains)
+		totalIamgeCount += xr_swapchain.surface_data.size();
+
+	SIMUL_ASSERT(totalIamgeCount <= 16);
+	for (size_t i = 0; i < totalIamgeCount; i++)
+	{
+		CmdBuffer& commandBuffer = cmdBuffers[i];
+		if (!commandBuffer.Init(vulkanDevice->operator VkDevice(), 0))
+		{
+			std::cerr << "Failed to create command buffer" << std::endl;
+		}
 	}
 
 	haveXRDevice = true;

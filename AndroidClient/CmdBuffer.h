@@ -38,10 +38,12 @@ namespace teleport
 			bool Exec(VkQueue queue);
 			bool Wait();
 			bool Reset();
-		   private:
-			VkDevice m_vkDevice{VK_NULL_HANDLE};
 
+		private:
 			void SetState(CmdBufferState newState) { state = newState; }
+
+		private:
+			VkDevice m_vkDevice{VK_NULL_HANDLE};
 		};
 	}
 }

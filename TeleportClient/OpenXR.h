@@ -317,8 +317,8 @@ namespace teleport
 			virtual const char *GetOpenXRGraphicsAPIExtensionName() const=0;
 			virtual std::vector<std::string> GetRequiredExtensions() const;
 			virtual void HandleSessionStateChanges( XrSessionState state);
-			virtual platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(int uint32_t)=0;
-			virtual void FinishDeviceContext(int i) {}
+			virtual platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(size_t swapchainIndex, size_t imageIndex)=0;
+			virtual void FinishDeviceContext(size_t swapchainIndex, size_t imageIndex) {}
 			virtual void EndFrame() {}
 
 			XrFormFactor							app_config_form = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
@@ -337,6 +337,7 @@ namespace teleport
 			XrDebugUtilsMessengerEXT				xr_debug = {};
 			std::vector<XrView>						xr_views;
 			std::vector<XrViewConfigurationView>	xr_config_views;
+			int MAIN_SWAPCHAIN = 0;
 			int MOTION_VECTOR_SWAPCHAIN=0;
 			int MOTION_DEPTH_SWAPCHAIN=0;
 			int OVERLAY_SWAPCHAIN=0;

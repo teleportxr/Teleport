@@ -639,7 +639,13 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	
 	gui.Render(deviceContext);
 	{
-		crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
+		bool multiview = false;
+		crossplatform::MultiviewGraphicsDeviceContext mvgdc;
+		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+		{
+			mvgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+			multiview = true;
+		}
 
 		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
@@ -649,7 +655,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			avs::Pose handPose	= l->second.pose_footSpace.pose;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
-			renderPlatform->PrintAt3dPos(mvgdc ? *mvgdc :  deviceContext, (const float*)&pos, "L", (const float*)&white);
+			//Clang can't handle overloaded functions, where a parameter could be upcast and another overload. Hence split the function calls.
+			if (multiview) 
+				renderPlatform->PrintAt3dPos(mvgdc, (const float*)&pos, "L", (const float*)&white);
+			else
+				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);
 			vec4 pos4;
 			pos4.xyz			= (const float*)&pos;
 			pos4.w				= 0.0f;
@@ -660,7 +670,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			avs::Pose rightHand = r->second.pose_footSpace.pose;
 			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
-			renderPlatform->PrintAt3dPos(mvgdc ? *mvgdc : deviceContext, (const float*)&pos, "R", (const float*)&white);
+			if(multiview)
+				renderPlatform->PrintAt3dPos(mvgdc, (const float*)&pos, "R", (const float*)&white);
+			else
+				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);
 			vec4 pos4;
 			pos4.xyz = (const float*)&pos;
 			pos4.w = 0.0f;

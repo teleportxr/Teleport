@@ -1246,7 +1246,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 
 	// And render to the viewpoints via Multiview!
 	{
-		swapchain_t& main_view_xr_swapchain = xr_swapchains[0];
+		swapchain_t& main_view_xr_swapchain = xr_swapchains[MAIN_SWAPCHAIN];
 
 		// We need to ask which swapchain image to use for rendering! Which one will we get?
 		// Who knows! It's up to the runtime to decide.
@@ -1279,18 +1279,18 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 			projection_views[1].subImage.imageArrayIndex = 1;
 		}
 		
-		crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(0);
+		crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(MAIN_SWAPCHAIN, img_id);
 		deviceContext.setDefaultRenderTargets(nullptr, nullptr, 0, 0, main_view_xr_swapchain.width, main_view_xr_swapchain.height,
 			&main_view_xr_swapchain.surface_data[img_id].target_view, 1, main_view_xr_swapchain.surface_data[img_id].depth_view);
 		
 		deviceContext.renderPlatform = renderPlatform;
-		deviceContext.viewStruct.view_id = 0;
+		deviceContext.viewStruct.view_id = MAIN_SWAPCHAIN;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 
 		// Call the rendering callback with our view and swapchain info
 		RenderLayerView(deviceContext, projection_views, main_view_xr_swapchain.surface_data[img_id], renderDelegate);
 		
-		FinishDeviceContext(0);
+		FinishDeviceContext(MAIN_SWAPCHAIN, img_id);
 	
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
@@ -1798,7 +1798,7 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelega
 	XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, NULL, XR_INFINITE_DURATION};
 	XR_CHECK(xrWaitSwapchainImage(overlay_xr_swapchain.handle, &waitInfo));
 	
-	crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(OVERLAY_SWAPCHAIN);
+	crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(OVERLAY_SWAPCHAIN, img_id);
 	deviceContext.setDefaultRenderTargets(nullptr, nullptr, 0, 0, overlay_xr_swapchain.width, overlay_xr_swapchain.height, 
 		&overlay_xr_swapchain.surface_data[img_id].target_view, 1, nullptr);
 	
@@ -1814,7 +1814,7 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelega
 	static float clear[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	renderPlatform->Clear(deviceContext, clear);
 	overlayDelegate(deviceContext);
-	FinishDeviceContext(OVERLAY_SWAPCHAIN);
+	FinishDeviceContext(OVERLAY_SWAPCHAIN, img_id);
 	XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
 	XR_CHECK(xrReleaseSwapchainImage(overlay_xr_swapchain.handle, &releaseInfo));
 
