@@ -1105,6 +1105,7 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
 				if (skinInstance)
 				{
+				continue;
 					mat4* scr_matrices = skinInstance->GetBoneMatrices(globalTransformMatrix);
 					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(mat4) * clientrender::Skin::MAX_BONES);
 
@@ -1819,15 +1820,18 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	if(show_cubemaps)
 	{
 		int x=50,y=50;
-		static int r=100;
-		renderPlatform->DrawCubemap(deviceContext, videoTexture,		  x+=r, y, r, 1.f, 1.f, 0.0f);
+		static int r=100,R=120;
+		renderPlatform->DrawCubemap(deviceContext, videoTexture,		  x+=R, y, R, 1.f, 1.f, 0.0f);
+		renderPlatform->Print(deviceContext,x,y,fmt::format("video").c_str());
 		renderPlatform->DrawCubemap(deviceContext, diffuseCubemapTexture, x+=r, y, r, 1.f, 1.f, static_cast<float>(lod));
+		renderPlatform->Print(deviceContext,x,y,fmt::format("v diffuse\n{0}",lod).c_str());
 		renderPlatform->DrawCubemap(deviceContext, specularCubemapTexture, x+=r,y, r, 1.f, 1.f, static_cast<float>(lod));
-		renderPlatform->Print(deviceContext,x,y,fmt::format("mip {0}",lod).c_str());
+		renderPlatform->Print(deviceContext,x,y,fmt::format("v specular\n{0}",lod).c_str());
 		auto t = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 		if(t&&t->GetSimulTexture())
 		{
-			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), x+=r, y, r, 1.f, 1.f, static_cast<float>(lod));
+			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), x+=R, y, R, 1.f, 1.f, static_cast<float>(lod));
+			renderPlatform->Print(deviceContext,x,y,fmt::format("diffuse\n{0}",lod).c_str());
 		}
 		auto s = geometryCache.mTextureManager.Get(lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
 		if(s&&s->GetSimulTexture())
@@ -1837,9 +1841,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 			{
 				s_lod++;
 				s_lod=s_lod%s->GetSimulTexture()->mips;
-	}
-			renderPlatform->Print(deviceContext,x,y,fmt::format("cubemaps mip {0}",s_lod).c_str());
-			renderPlatform->DrawCubemap(deviceContext, s->GetSimulTexture(), x+=r, y, r, 1.f, 1.f, static_cast<float>(s_lod));
+			}
+			renderPlatform->DrawCubemap(deviceContext, s->GetSimulTexture(), x+=R, y, R, 1.f, 1.f, static_cast<float>(s_lod));
+			renderPlatform->Print(deviceContext,x,y,fmt::format("specular\n{0}",s_lod).c_str());
 		}
 	}
 	if (!tt)

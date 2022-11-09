@@ -1011,6 +1011,11 @@ public:
 	}
 };
 
+void standardize_path(std::string &p)
+{
+	std::replace(p.begin(),p.end(),' ','%');
+}
+
 class resource_ifstream:public std::wifstream
 {
 protected:
@@ -1025,8 +1030,8 @@ public:
 	{
 		std::wstring w;
 		stream>>w;
-		std::replace(w.begin(),w.end(),'%',' ');
 		std::string p = WStringToString(w);
+		standardize_path(p);
 		u=stream.path_to_uid(p);
 		return stream;
 	}
@@ -1040,6 +1045,7 @@ void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, _bstr_t path,std::time_
 	guid_to_uid[g]=id;
 #else
 	std::string p=std::string(path);
+	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 #endif
@@ -1080,6 +1086,7 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid,_bstr_t path, std::t
 	guid_to_uid[g]=id;
 #else
 	std::string p=std::string(path);
+	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 #endif
@@ -1095,6 +1102,7 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::ti
 	guid_to_uid[g]=id;
 #else
 	auto p=std::string(path);
+	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 #endif
@@ -1394,8 +1402,6 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 	resource_ofstream resourceFile(file_name.c_str(), f);
 	try
 	{
-		//resourceFile << uid;
-	//	resourceFile << "\n";
 		resourceFile << resource;
 		resourceFile << "\n";
 	}
@@ -1418,6 +1424,14 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
 			teleport::DebugBreak();
+			resource_ifstream verifyFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
+			ExtractedResource  verifyResource2;
+			verifyFile>>verifyResource2;
+			verifyFile.close();
+			
+			resource_ofstream saveFile(file_name.c_str(), f);
+			saveFile << resource;
+			saveFile << "\n";
 			return false;
 		}
 	}
@@ -1469,6 +1483,7 @@ template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const 
 		TELEPORT_CERR<<"Failed to load "<<file_name.c_str()<<"\n";
 		return 0;
 	}
+	standardize_path(p);
 	uid_to_path[newID]=p;
 	path_to_uid[p]=newID;
 	return newID;
@@ -1523,6 +1538,7 @@ avs::uid GeometryStore::PathToUid(std::string p) const
 	auto i=path_to_uid.find(p);
 	if(i==path_to_uid.end())
 	{
+		TELEPORT_BREAK_ONCE("No uid for this path.");
 		TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
 		return 0;
 	}
@@ -1575,10 +1591,12 @@ bool GeometryStore::CheckForErrors() const
 	return true;
 }
 
-avs::uid GeometryStore::GetOrGenerateUid(const std::string &p)
+avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 {
+	std::string p=path;
 	if(p.size()<2)
 		return 0;
+	standardize_path(p);
 	auto i=path_to_uid.find(p);
 	if(i!=path_to_uid.end())
 	{
