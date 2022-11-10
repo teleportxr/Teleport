@@ -193,18 +193,14 @@ shader vertexOutput VS_Solid(vertexInput IN)
 shader vertexOutput VS_Solid_MV(vertexInput IN, uint viewID : SV_ViewID)
 {
 	vertexOutput OUT;
-	mat4 _world = viewID == 0 ? leftWorld : rightWorld;
-	mat4 _view = viewID == 0 ? leftView : rightView;
-	mat4 _proj = viewID == 0 ? leftProj : rightProj;
-	vec3 _viewPosition = stereoViewPosition;
 	
 	vec4 opos			=vec4(IN.position.xyz,1.0);
-	vec4 wpos			=mul(opos, _world);
+	vec4 wpos			=mul(opos, viewID == 0 ? leftWorld : rightWorld);
 
 	//wpos.xyz		-= videoCamPosition;
-	OUT.view			=normalize(wpos.xyz-_viewPosition);
-	vec4 viewspace_pos	=mul(_view, vec4(wpos.xyz, 1.0));
-	OUT.clip_pos		=mul(_proj,vec4(viewspace_pos.xyz,1.0));
+	OUT.view			=normalize(wpos.xyz-stereoViewPosition);
+	vec4 viewspace_pos = mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
+	OUT.clip_pos		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);
 	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
@@ -213,8 +209,8 @@ shader vertexOutput VS_Solid_MV(vertexInput IN, uint viewID : SV_ViewID)
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
 #else
-	OUT.normal			= mul(vec4(IN.normal.xyz, 0.0), _world).xyz;
-	OUT.tangent			= mul(vec4(IN.tangent.xyz,0.0), _world).xyz;
+	OUT.normal			= mul(vec4(IN.normal.xyz, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
+	OUT.tangent			= mul(vec4(IN.tangent.xyz,0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
 #endif
 	OUT.hPosition		=OUT.clip_pos;
 	OUT.debug_colour	= vec4(IN.position.xyz, 0);
@@ -260,10 +256,6 @@ shader vertexOutput VS_Animation(vertexInputAnim IN)
 shader vertexOutput VS_Animation_MV(vertexInputAnim IN, uint viewID : SV_ViewID)
 {
 	vertexOutput OUT;
-	mat4 _world = viewID == 0 ? leftWorld : rightWorld;
-	mat4 _view = viewID == 0 ? leftView : rightView;
-	mat4 _proj = viewID == 0 ? leftProj : rightProj;
-	vec3 _viewPosition = stereoViewPosition;
 	
 	vec4 w	=IN.weights;
 	// normalize: should we REALLY have to do this?
@@ -276,22 +268,22 @@ shader vertexOutput VS_Animation_MV(vertexInputAnim IN, uint viewID : SV_ViewID)
 	
 	vec4 opos		= vec4(IN.position.xyz,1.0);
 	// boneTransform transforms between two positions in object-local space.
-	vec4 wpos		= mul(mul(opos, boneTransform), _world);
+	vec4 wpos		= mul(mul(opos, boneTransform),  viewID == 0 ? leftWorld : rightWorld);
 	//vec4 wpos		= mul(opos, world);
 	//vec4 wpos = mul(opos, world);
 
-	OUT.view			=normalize(wpos.xyz-_viewPosition);
-	vec4 viewspace_pos	=mul(_view, vec4(wpos.xyz, 1.0));
-	OUT.clip_pos		=mul(_proj,vec4(viewspace_pos.xyz,1.0));
+	OUT.view = normalize(wpos.xyz - stereoViewPosition);
+	vec4 viewspace_pos = mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
+	OUT.clip_pos		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos			=wpos.xyz;
 
 	OUT.texCoords0	=IN.texCoords0;
 	OUT.texCoords1	=IN.texCoords1;
 	
 	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
-	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), _world).xyz;
+	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
 	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
-	OUT.tangent.xyz = mul(IN.tangent, _world).xyz;
+	OUT.tangent.xyz = mul(IN.tangent, viewID == 0 ? leftWorld : rightWorld).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
 	OUT.debug_colour = IN.weights;
@@ -636,7 +628,8 @@ vec4 Solid_AlbedoOnly(vertexOutput IN)
 
 shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN,false,true,0);
+	return vec4(0,1,0,1);
+	//Solid(IN, false, true, 0);
 }
 
 shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
@@ -805,18 +798,18 @@ VertexShader vs_anim_mv = CompileShader(vs_6_1, VS_Animation_MV());
 VertexShader vs_solid = CompileShader(vs_5_0, VS_Solid());
 VertexShader vs_anim = CompileShader(vs_5_0, VS_Animation());
 
-PixelShader ps_solid_lightmap = CompileShader(ps_4_0, PS_Solid_Lightmap());
-PixelShader ps_solid_nolightmap = CompileShader(ps_4_0, PS_Solid_NoLightmap());
-PixelShader ps_local_hand = CompileShader(ps_4_0, PS_Solid_LocalHand());
+PixelShader ps_solid_lightmap = CompileShader(ps_5_0, PS_Solid_Lightmap());
+PixelShader ps_solid_nolightmap = CompileShader(ps_5_0, PS_Solid_NoLightmap());
+PixelShader ps_local_hand = CompileShader(ps_5_0, PS_Solid_LocalHand());
 PixelShader ps_depth = CompileShader(ps_5_0, PS_Depth());
 
 //Debug renders.
-PixelShader ps_solid_albedo_only = CompileShader(ps_4_0, PS_Solid_AlbedoOnly()); //Albedo only view
-PixelShader ps_debug_normal_unswizzled = CompileShader(ps_4_0, PS_DebugNormal_Unswizzled()); //Unswizzled Normal view
-PixelShader ps_debug_anim = CompileShader(ps_4_0, PS_DebugAnim()); //Unreal-basis normal viewdebug_lightmaps
-PixelShader ps_debug_lightmaps = CompileShader(ps_4_0, PS_DebugLightmaps()); //Unreal-basis normal view
-PixelShader ps_debug_normal_unity = CompileShader(ps_4_0, PS_DebugNormal_Unity()); //Unity-basis normal view
-PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_4_0, PS_DebugNormal_VertexNormals()); //Vertex normals
+PixelShader ps_solid_albedo_only = CompileShader(ps_5_0, PS_Solid_AlbedoOnly()); //Albedo only view
+PixelShader ps_debug_normal_unswizzled = CompileShader(ps_5_0, PS_DebugNormal_Unswizzled()); //Unswizzled Normal view
+PixelShader ps_debug_anim = CompileShader(ps_5_0, PS_DebugAnim()); //Unreal-basis normal viewdebug_lightmaps
+PixelShader ps_debug_lightmaps = CompileShader(ps_5_0, PS_DebugLightmaps()); //Unreal-basis normal view
+PixelShader ps_debug_normal_unity = CompileShader(ps_5_0, PS_DebugNormal_Unity()); //Unity-basis normal view
+PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_5_0, PS_DebugNormal_VertexNormals()); //Vertex normals
 
 RasterizerState PbrBackfaceCull
 {
@@ -833,7 +826,7 @@ technique solid
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_4_0, PS_Local()));
+		SetPixelShader(CompileShader(ps_5_0, PS_Local()));
 	}
 	pass depth 
 	{
@@ -1026,7 +1019,7 @@ technique solid_multiview
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid_mv);
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_4_0, PS_Local()));
+		SetPixelShader(CompileShader(ps_5_0, PS_Local()));
 	}
 	pass depth
 	{
@@ -1221,7 +1214,7 @@ technique transparent
 		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(CompileShader(vs_4_0,VS_Solid()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_4_0,PS_Transparent()));
+		SetPixelShader(CompileShader(ps_5_0,PS_Transparent()));
 	}
 }
 
@@ -1234,6 +1227,6 @@ technique triangle_test
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(CompileShader(vs_4_0,VS_Triangle()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_4_0,PS_Triangle()));
+		SetPixelShader(CompileShader(ps_5_0,PS_Triangle()));
 	}
 }
