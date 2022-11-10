@@ -60,8 +60,6 @@ namespace clientrender
 		}
 
 	protected:
-		virtual void Bind() const {}
-		virtual void Unbind() const {}
 		platform::crossplatform::Buffer *m_SimulBuffer=nullptr;
 	};
 }

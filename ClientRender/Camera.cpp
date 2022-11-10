@@ -57,8 +57,6 @@ void Camera::UpdateDrawDistance(float distance)
 
 const ShaderResource& Camera::GetShaderResource() const
 {
-	// I THINK this updates the values on the GPU...
-	s_UB->Update();
 	return m_ShaderResource;
 }
 

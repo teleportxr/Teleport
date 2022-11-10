@@ -724,20 +724,20 @@ void OpenXR::SetFallbackButtonState(ActionId actionId,const bool btn_down)
 
 void OpenXR::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
 {
-	mouseState.leftButtonDown	|= (bLeftButtonDown ? true : false);
-	mouseState.rightButtonDown	|= (bRightButtonDown ? true : false);
-	mouseState.middleButtonDown	|= (bMiddleButtonDown ? true : false);
-	xr_input_session.actionStates[MOUSE_LEFT_BUTTON].u32=mouseState.leftButtonDown?1:0;
-	xr_input_session.actionStates[MOUSE_RIGHT_BUTTON].u32=mouseState.rightButtonDown?1:0;
+	mouseState.leftButtonDown	|=(bLeftButtonDown ? true : false);
+	mouseState.rightButtonDown	|=(bRightButtonDown ? true : false);
+	mouseState.middleButtonDown	|=(bMiddleButtonDown ? true : false);
+	xr_input_session.actionStates[MOUSE_LEFT_BUTTON].u32	=mouseState.leftButtonDown?1:0;
+	xr_input_session.actionStates[MOUSE_RIGHT_BUTTON].u32	=mouseState.rightButtonDown?1:0;
 }
 
 void OpenXR::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta)
 {
-	mouseState.leftButtonDown	&= (bLeftButtonReleased ? false : true);
-	mouseState.rightButtonDown	&= (bRightButtonReleased ? false : true);
-	mouseState.middleButtonDown	&= (bMiddleButtonReleased ? false : true);
-	xr_input_session.actionStates[MOUSE_LEFT_BUTTON].u32=mouseState.leftButtonDown?1:0;
-	xr_input_session.actionStates[MOUSE_RIGHT_BUTTON].u32=mouseState.rightButtonDown?1:0;
+	mouseState.leftButtonDown	&=(bLeftButtonReleased ? false : true);
+	mouseState.rightButtonDown	&=(bRightButtonReleased ? false : true);
+	mouseState.middleButtonDown	&=(bMiddleButtonReleased ? false : true);
+	xr_input_session.actionStates[MOUSE_LEFT_BUTTON].u32	=mouseState.leftButtonDown?1:0;
+	xr_input_session.actionStates[MOUSE_RIGHT_BUTTON].u32	=mouseState.rightButtonDown?1:0;
 }
 
 void OpenXR::OnMouseMove(int xPos, int yPos )

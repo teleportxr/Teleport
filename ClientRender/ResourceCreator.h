@@ -96,7 +96,7 @@ namespace clientrender
 		clientrender::RenderPlatform* m_pRenderPlatform = nullptr;
 		clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
 
-		basist::etc1_global_selector_codebook basis_codeBook;
+		//basist::etc1_global_selector_codebook basis_codeBook;
 	#ifdef _MSC_VER
 		basist::transcoder_texture_format basis_transcoder_textureFormat =basist::transcoder_texture_format::cTFBC3;
 	#else

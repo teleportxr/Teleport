@@ -333,12 +333,22 @@ void clientrender::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid 
 	}
 }
 
-void NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand)
+bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand)
 {
 	auto c = nodeLookup.find(updateNodeStructureCommand.nodeID);
 	auto p = nodeLookup.find(updateNodeStructureCommand.parentID);
 	std::shared_ptr<Node> node = c!= nodeLookup.end()?c->second:nullptr;
+	if(!node)
+	{
+		TELEPORT_CERR<<"Failed to reparent node "<<updateNodeStructureCommand.nodeID<<" as it was not found locally.\n";
+		return false;
+	}
 	std::shared_ptr<Node> parent = p!= nodeLookup.end()?p->second : nullptr;
+	if(updateNodeStructureCommand.parentID!=0&&!parent)
+	{
+		TELEPORT_CERR<<"Failed to reparent node "<<updateNodeStructureCommand.nodeID<<" as its new parent "<<updateNodeStructureCommand.parentID<<" was not found locally.\n";
+		return false;
+	}
 
 	if(updateNodeStructureCommand.parentID !=0)
 		parentLookup[updateNodeStructureCommand.nodeID] = updateNodeStructureCommand.parentID;
@@ -357,6 +367,7 @@ void NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 	// TODO: Force an update. SHOULD NOT be necessary.
 	node->GetGlobalTransform();
 	LinkToParentNode(updateNodeStructureCommand.nodeID);
+	return true;
 }
 
 void NodeManager::Update(float deltaTime)

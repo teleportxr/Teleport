@@ -6,6 +6,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/HdrRenderer.h"
 #include "Platform/CrossPlatform/MeshRenderer.h"
+#include "Platform/CrossPlatform/Text3DRenderer.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Platform/Shaders/SL/camera_constants.sl"
@@ -191,6 +192,8 @@ namespace clientrender
 		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
 		platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
 		platform::crossplatform::Texture* videoTexture				= nullptr;
+
+		platform::crossplatform::Text3DRenderer text3DRenderer;
 		int show_osd = NO_OSD;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
