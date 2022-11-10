@@ -640,10 +640,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	gui.Render(deviceContext);
 	{
 		bool multiview = false;
-		crossplatform::MultiviewGraphicsDeviceContext mvgdc;
+		crossplatform::MultiviewGraphicsDeviceContext* mvgdc;
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
-			mvgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+			mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 			multiview = true;
 		}
 
@@ -657,7 +657,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
 			//Clang can't handle overloaded functions, where a parameter could be upcast and another overload. Hence split the function calls.
 			if (multiview) 
-				renderPlatform->PrintAt3dPos(mvgdc, (const float*)&pos, "L", (const float*)&white);
+				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
 			else
 				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);
 			vec4 pos4;
@@ -671,7 +671,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			avs::Pose rightHand = r->second.pose_footSpace.pose;
 			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
 			if(multiview)
-				renderPlatform->PrintAt3dPos(mvgdc, (const float*)&pos, "R", (const float*)&white);
+				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
 			else
 				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);
 			vec4 pos4;
