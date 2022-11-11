@@ -41,12 +41,6 @@ namespace clientrender
 		{
 			m_CI = *pUniformBuffer;
 		}
-		virtual void Destroy(){}
-
-		//Submits the stored UBO data to the GPU.
-		virtual void Submit() const{}
-		// and... so does this? What is the difference?
-		virtual void Update() const{}
 
 		virtual bool ResourceInUse(int timeout){return true;}
 		std::function<bool(UniformBuffer*, int)> ResourceInUseCallback = &UniformBuffer::ResourceInUse;
@@ -54,7 +48,5 @@ namespace clientrender
 		inline UniformBufferCreateInfo& GetUniformBufferCreateInfo() {return m_CI;}
 
 	protected:
-		virtual void Bind() const{}
-		virtual void Unbind() const{}
 	};
 }

@@ -56,10 +56,6 @@ void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const Mater
 		m_UB = renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
 	}
-	else
-	{
-		m_UB->Update();
-	}
 
 	//Set up Descriptor Set for Textures and UB
 	//UB from 0 - 9, Texture/Samplers 10+

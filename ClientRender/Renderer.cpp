@@ -201,7 +201,8 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	camera.SetCameraViewStruct(vs);
 
 	memset(keydown,0,sizeof(keydown));
-
+	text3DRenderer.PushFontPath("assets/fonts");
+	text3DRenderer.RestoreDeviceObjects(renderPlatform);
 	hDRRenderer->RestoreDeviceObjects(renderPlatform);
 	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
@@ -352,6 +353,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 void Renderer::RecompileShaders()
 {
 	renderPlatform->RecompileShaders();
+	text3DRenderer.RecompileShaders();
 	hDRRenderer->RecompileShaders();
 	gui.RecompileShaders();
 	delete pbrEffect;
@@ -387,6 +389,7 @@ void Renderer::InvalidateDeviceObjects()
 	{
 		SAFE_DELETE(ti->texture);
 	}
+	text3DRenderer.InvalidateDeviceObjects();
 	gui.InvalidateDeviceObjects();
 	if(pbrEffect)
 	{

@@ -478,7 +478,7 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 		size_t index = 0;
 		avs::MeshCreate meshCreate;
 		meshCreate.mesh_uid = it->first;
-		meshCreate.m_NumElements = it->second.size();
+		meshCreate.m_MeshElementCreate.resize(it->second.size());
 		// Primitive array elements in each mesh.
 		for (const auto& primitive : it->second)
 		{

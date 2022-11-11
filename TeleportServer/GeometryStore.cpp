@@ -1292,7 +1292,8 @@ void GeometryStore::compressNextTexture()
 			w=(w+1)/2;
 			h=(h+1)/2;
 		}
-
+		// TODO: This doesn't work for mips>0. So can't flip textures from Unity for example.
+		//basisCompressorParams.m_y_flip=true;
 		basisCompressorParams.m_quality_level = compressionQuality;
 		basisCompressorParams.m_compression_level = compressionStrength;
 
@@ -1350,6 +1351,11 @@ void GeometryStore::compressNextTexture()
 		basisu::enable_debug_printf(true);
 
 		bool ok = basisCompressor.init(basisCompressorParams);
+		if(!ok)
+		{
+			basisu::basisu_encoder_init(false,false);
+			ok = basisCompressor.init(basisCompressorParams);
+		}
 		if (ok)
 		{
 			basisu::basis_compressor::error_code result = basisCompressor.process();
@@ -1477,6 +1483,7 @@ template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const 
 	try
 	{
 		resourceFile >> newResource;
+		TELEPORT_CERR<<"Loaded Resource "<<newResource.getName().c_str()<<" from file "<<file_name.c_str()<<"\n";
 	}
 	catch(...)
 	{

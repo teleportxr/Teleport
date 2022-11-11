@@ -3,12 +3,14 @@
 
 #include "Animation.h"
 #include "Material.h"
+#include <Platform/External/magic_enum/include/magic_enum.hpp>
 
 using namespace clientrender;
 
 ResourceCreator::ResourceCreator()
-	:basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb)
-	, basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
+	:
+	//basis_codeBook(basist::g_global_selector_cb_size, basist::g_global_selector_cb)
+	basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
 {
 	basist::basisu_transcoder_init();
 }
@@ -138,10 +140,11 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 	clientrender::Mesh::MeshCreateInfo mesh_ci;
 	mesh_ci.name = meshCreate.name;
 	mesh_ci.id = meshCreate.mesh_uid;
-	mesh_ci.vb.resize(meshCreate.m_NumElements);
-	mesh_ci.ib.resize(meshCreate.m_NumElements);
+	size_t num=meshCreate.m_MeshElementCreate.size();
+	mesh_ci.vb.resize(num);
+	mesh_ci.ib.resize(num);
 
-	for (size_t i = 0; i < meshCreate.m_NumElements; i++)
+	for (size_t i = 0; i < num; i++)
 	{
 		avs::MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[i];
 
@@ -944,8 +947,8 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 
 void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo)
 {
-	TELEPORT_COUT << "CompleteTexture(" << id << ", " << textureInfo.name << ")\n";
-
+	TELEPORT_COUT << "CompleteTexture(" << id << ", " << textureInfo.name << ")"<<
+		magic_enum::enum_name<clientrender::Texture::CompressionFormat>(textureInfo.compression)<<"\n";
 	std::shared_ptr<clientrender::Texture> scrTexture = m_pRenderPlatform->InstantiateTexture();
 	scrTexture->Create(textureInfo);
 
@@ -1230,6 +1233,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			UntranscodedTexture& transcoding = texturesToTranscode[0];
 			if (transcoding.fromCompressionFormat == avs::TextureCompression::PNG)
 			{
+				TELEPORT_COUT<<"Transcoding "<<transcoding.name.c_str()<<" with PNG\n";
 				int mipWidth=0, mipHeight=0;
 				uint8_t *srcPtr=transcoding.data.data();
 				uint8_t *basePtr=srcPtr;
@@ -1285,8 +1289,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			}
 			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
 			{
+				TELEPORT_COUT<<"Transcoding "<<transcoding.name.c_str()<<" with BASIS\n";
 				//We need a new transcoder for every .basis file.
-				basist::basisu_transcoder basis_transcoder(&basis_codeBook);
+				basist::basisu_transcoder basis_transcoder;
 				basist::basisu_file_info fileinfo;
 				if (!basis_transcoder.get_file_info(transcoding.data.data(), (uint32_t)transcoding.data.size(), fileinfo))
 				{
@@ -1311,10 +1316,10 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					//transcoding.scrTexture.mipCount=std::min(transcoding.scrTexture.mipCount,(uint)2);
 					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
-						for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
-						{
-					for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
 					{
+						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+						{
 							uint32_t basisWidth, basisHeight, basisBlocks;
 
 							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);

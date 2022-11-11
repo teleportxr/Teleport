@@ -807,8 +807,7 @@ namespace avs
 		std::string name;
 
 		uid mesh_uid = 0;
-		size_t m_NumElements = 0;
-		MeshElementCreate m_MeshElementCreate[8];
+		std::vector<MeshElementCreate> m_MeshElementCreate;
 	};
 	/*!
  * Common mesh decoder backend interface.

@@ -469,7 +469,7 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 	const int width = texture->width;
 	const int height = texture->length;
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
-	const ImVec2 regionSize = ImGui::GetContentRegionAvail();
+	const ImVec2 regionSize = {512.f,512.f};// ImGui::GetContentRegionAvail();
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
 	const ImVec2 size = ImVec2(std::min(regionSize.x, textureSize.x), std::min(regionSize.x, textureSize.x) * aspect);
 	ImTextureID imTextureID = (ImTextureID)&tv;

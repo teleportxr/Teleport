@@ -57,7 +57,8 @@ namespace clientrender
 		void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID,  float  animationTimeOverride=0.0f, float overrideMaximum = 0.0f);
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
-		void ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand);
+		//! Returns true if successful, or false if not e.g. if either the node or the parent is not present.
+		bool ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand);
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
 		void Update(float deltaTime);

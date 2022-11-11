@@ -280,7 +280,7 @@ namespace teleport
 			avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) const;
 			vec3 ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const;
 			platform::crossplatform::ViewStruct CreateViewStructFromXrCompositionLayerProjectionView(XrCompositionLayerProjectionView view, int id, platform::crossplatform::DepthTextureStyle depthTextureStyle);
-			platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
+			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
 
 		protected:
 			MouseState mouseState;

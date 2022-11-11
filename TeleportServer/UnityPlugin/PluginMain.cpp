@@ -1357,6 +1357,7 @@ TELEPORT_EXPORT bool CheckGeometryStoreForErrors()
 {
 	return geometryStore.CheckForErrors();
 }
+
 TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
 {
 	geometryStore.loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);

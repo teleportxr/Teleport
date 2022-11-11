@@ -130,7 +130,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	{
 		textureCreate.mips--;
 	}
-	size_t initialDataSize=0;
+	//size_t initialDataSize=0;
 	#if 0
 	if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
 		TELEPORT_CERR<<"CREATING TEXTURE "<<pTextureCreateInfo.name.c_str()<<" WITH "<<pTextureCreateInfo.images.size()<<" IMAGES "<<
@@ -138,7 +138,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	#endif
 	for(const auto &i:pTextureCreateInfo.images)  
 	{
-		initialDataSize+=i.size();
+		//initialDataSize+=i.size();
 	#if 0
 		if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
 			TELEPORT_CERR<<"\tIMAGE SIZE "<<i.size()<<"\n";
