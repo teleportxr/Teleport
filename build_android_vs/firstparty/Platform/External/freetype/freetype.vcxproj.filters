@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{db3a5a6f-baa4-47f4-ad76-eeaf69beb823}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{6c955bc7-1257-4245-98a6-2fdd0208802d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\firstparty\Platform\External\fmt\src\os.cc">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\firstparty\Platform\External\fmt\src\format.cc">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\args.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\chrono.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\color.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\compile.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\core.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\format.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\format-inl.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\locale.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\os.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\ostream.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\printf.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\ranges.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\firstparty\Platform\External\fmt\include\fmt\xchar.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -503,7 +503,8 @@ avs::Pose p;
 p.position={0,0,0};
 p.orientation={0,0,0,1.f};
 	math::Matrix4x4 originMat=client::OpenXR::CreateTransformMatrixFromPose(originPose);
-	Multiply4x4(deviceContext.viewStruct.view,originMat,deviceContext.viewStruct.view);// openXR->CreateViewMatrixFromPose(pose);
+	math::Matrix4x4 tmp=deviceContext.viewStruct.view;
+	Multiply4x4(deviceContext.viewStruct.view,originMat,tmp);
 	// MUST call init each frame, or whenever the matrices change.
 	deviceContext.viewStruct.Init();
 
@@ -514,7 +515,8 @@ p.orientation={0,0,0,1.f};
 		for (int i=0;i<mvgdc->viewStructs.size();i++)
 		{
 			auto &viewStruct=mvgdc->viewStructs[i];
-			Multiply4x4(viewStruct.view,originMat,viewStruct.view);
+			tmp=viewStruct.view;
+			Multiply4x4(viewStruct.view,originMat,tmp);
 			//avs::Pose newPose = pose;
 			//newPose.position = ConvertVec3<avs::vec3>(pose.position+eye_offsets[i]);//viewStruct.cam_pos - deltaPosition);
 			//viewStruct.view = openXR->CreateViewMatrixFromPose(newPose);
@@ -528,7 +530,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
 	bool multiview = false;
-	crossplatform::MultiviewGraphicsDeviceContext* mvgdc;
+	crossplatform::MultiviewGraphicsDeviceContext* mvgdc=nullptr;
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 	{
 		mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -536,7 +538,14 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	pbrEffect->UnbindTextures(deviceContext);
-	//auto v=mvgdc->viewStructs;
+	static std::vector<crossplatform::ViewStruct> defaultViewStructs;
+	if(mvgdc)
+		defaultViewStructs=mvgdc->viewStructs;
+	else
+	{
+		defaultViewStructs.resize(1);
+		defaultViewStructs[0]=deviceContext.viewStruct;
+	}
 	// Init the viewstruct in global space - i.e. with the server offsets.
 	SetRenderPose(deviceContext, clientDeviceState->originPose);
 
@@ -656,11 +665,19 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	//SetRenderPose(deviceContext,clientDeviceState->headPose.localPose);
-	/*mvgdc->viewStructs=v;
-	for(auto s:mvgdc->viewStructs)
+	if(mvgdc)
 	{
-		s.Init();
-	}*/
+		mvgdc->viewStructs=defaultViewStructs;
+		for(auto s:mvgdc->viewStructs)
+		{
+			s.Init();
+		}
+	}
+	else
+	{
+		deviceContext.viewStruct=defaultViewStructs[0];
+		deviceContext.viewStruct.Init();
+	}
 	{
 
 		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
