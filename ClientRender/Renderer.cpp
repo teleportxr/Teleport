@@ -655,7 +655,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			avs::Pose handPose	= l->second.pose_footSpace.pose;
 			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
-			//Clang can't handle overloaded functions, where a parameter could be upcast and another overload. Hence split the function calls.
+			//Clang can't handle overloaded functions, where a parameter could be upcast to another overload. Hence split the function calls.
 			if (multiview) 
 				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
 			else
