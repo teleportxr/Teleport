@@ -1705,7 +1705,7 @@ crossplatform::ViewStruct OpenXR::CreateViewStructFromXrCompositionLayerProjecti
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
 	viewStruct.proj = *((const math::Matrix4x4*)&proj);
 
-	avs::Pose pose = ConvertGLStageSpacePoseToWorldSpacePose(view.pose);
+	avs::Pose pose = ConvertGLStageSpacePoseToLocalSpacePose(view.pose);
 	viewStruct.view = CreateViewMatrixFromPose(pose);
 
 	viewStruct.Init();
