@@ -268,7 +268,7 @@ void android_main(struct android_app* app)
 			deviceContext.renderPlatform = renderPlatform;
 			// This context is active. So we will use it.
 			deviceContext.platform_context = vulkanDeviceManager.GetDeviceContext();
-			openXR.SetStagePoseInWorldSpace(clientDeviceState.originPose);
+	
 			// Note we do this even when the device is inactive.
 			//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 			openXR.RenderFrame(renderDelegate, overlayDelegate);

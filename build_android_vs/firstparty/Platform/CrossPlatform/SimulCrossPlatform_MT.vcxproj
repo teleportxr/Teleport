@@ -238,6 +238,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\View.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\ViewStruct.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.cpp" />
+    <ClCompile Include="..\..\..\..\firstparty\Platform\CrossPlatform\Text3DRenderer.cpp" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\AccelerationStructureManager.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\Allocator.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\AmortizationStruct.h" />
@@ -288,6 +289,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\View.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\ViewStruct.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\WinPixGpuCapturerLoader.h" />
+    <ClInclude Include="..\..\..\..\firstparty\Platform\CrossPlatform\Text3DRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -488,11 +488,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					const avs::Pose &headPose=useOpenXR.GetHeadPose_StageSpace();
 					clientDeviceState.SetHeadPose_StageSpace(headPose.position, headPose.orientation);
-					for (int i = 0; i < useOpenXR.GetNumControllers(); i++)
-					{
-						//const avs::Pose& controllerPose = useOpenXR.GetControllerPose(i);
-						//clientDeviceState.SetControllerPose(i, controllerPose.position, controllerPose.orientation);
-					}
+					
 				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
 				fTime+=time_step;
@@ -520,7 +516,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						// Note we do this even when the device is inactive.
 						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
-						useOpenXR.SetStagePoseInWorldSpace(clientDeviceState.originPose);
 						useOpenXR.RenderFrame( renderDelegate,overlayDelegate);
 						if(useOpenXR.IsXRDeviceActive())
 						{

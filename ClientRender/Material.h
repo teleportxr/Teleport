@@ -70,7 +70,7 @@ namespace clientrender
 		MaterialData m_MaterialData;
 		MaterialCreateInfo m_CI;
 
-		std::shared_ptr<UniformBuffer> m_UB;
+		//std::shared_ptr<UniformBuffer> m_UB;
 
 		ShaderResourceLayout m_ShaderResourceLayout;
 		ShaderResource m_ShaderResource;
