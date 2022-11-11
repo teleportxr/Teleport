@@ -230,8 +230,6 @@ namespace teleport
 			virtual bool TryInitDevice()=0;
 			void MakeActions();
 			void PollActions();
-			// Set the origin of OpenXR's local stage space in current client worldspace.
-			void SetStagePoseInWorldSpace(avs::Pose stagePose);
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
 			void Shutdown();
 			void PollEvents(bool& exit);
@@ -264,10 +262,7 @@ namespace teleport
 			 avs::uid GetRootNode(avs::uid server_uid);
 			const std::map<avs::uid,avs::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
-			size_t GetNumControllers() const
-			{
-				return controllerPoses.size();
-			};
+			
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
 			bool IsSessionActive() const
@@ -276,11 +271,12 @@ namespace teleport
 			}
 
 			Overlay overlay;
-			avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &pose) const;
-			avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) const;
+			static avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stagePose_worldSpace,const XrPosef &pose) ;
+			static avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) ;
 			vec3 ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const;
 			platform::crossplatform::ViewStruct CreateViewStructFromXrCompositionLayerProjectionView(XrCompositionLayerProjectionView view, int id, platform::crossplatform::DepthTextureStyle depthTextureStyle);
 			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
+			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const avs::Pose& pose);
 
 		protected:
 			MouseState mouseState;
@@ -298,9 +294,7 @@ namespace teleport
 			bool RenderOverlayLayer(XrTime predictedTime,platform::crossplatform::RenderDelegate &overlayDelegate);
 			bool AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
 
-			avs::Pose stagePose_worldSpace={};
 			avs::Pose headPose_stageSpace={};
-			std::vector<avs::Pose> controllerPoses;
 			struct XrState
 			{
 				XrPosef XrSpacePoseInWorld={0};

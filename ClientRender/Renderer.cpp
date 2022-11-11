@@ -494,21 +494,30 @@ void Renderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
 	clientPipeline.videoConfig = videoConfig;
 }
 
-void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& pose)
+void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)//,const std::vector<vec3> &eye_offsets)
 {
-	deviceContext.viewStruct.view = openXR->CreateViewMatrixFromPose(pose);
-	// MUST call init each frame.
+// Here we must transform the viewstructs in the device context by the specified origin pose,
+// so that the new view matrices will be in a global space which has the stage space at the specified origin.
+// This assumes that the initial viewStructs are in stage space.
+avs::Pose p;
+p.position={0,0,0};
+p.orientation={0,0,0,1.f};
+	math::Matrix4x4 originMat=client::OpenXR::CreateTransformMatrixFromPose(originPose);
+	Multiply4x4(deviceContext.viewStruct.view,originMat,deviceContext.viewStruct.view);// openXR->CreateViewMatrixFromPose(pose);
+	// MUST call init each frame, or whenever the matrices change.
 	deviceContext.viewStruct.Init();
 
 	crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 	if (mvgdc)
 	{
-		vec3 deltaPosition = mvgdc->viewStructs[0].cam_pos - vec3((const float*)&pose.position);
-		for (auto& viewStruct : mvgdc->viewStructs)
+		//vec3 deltaPosition = mvgdc->viewStructs[0].cam_pos - vec3((const float*)&pose.position);
+		for (int i=0;i<mvgdc->viewStructs.size();i++)
 		{
-			avs::Pose newPose = pose;
-			newPose.position = ConvertVec3<avs::vec3>(viewStruct.cam_pos - deltaPosition);
-			viewStruct.view = openXR->CreateViewMatrixFromPose(newPose);
+			auto &viewStruct=mvgdc->viewStructs[i];
+			Multiply4x4(viewStruct.view,originMat,viewStruct.view);
+			//avs::Pose newPose = pose;
+			//newPose.position = ConvertVec3<avs::vec3>(pose.position+eye_offsets[i]);//viewStruct.cam_pos - deltaPosition);
+			//viewStruct.view = openXR->CreateViewMatrixFromPose(newPose);
 			// MUST call init each frame.
 			viewStruct.Init();
 		}
@@ -518,10 +527,18 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
+	bool multiview = false;
+	crossplatform::MultiviewGraphicsDeviceContext* mvgdc;
+	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+	{
+		mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
+		multiview = true;
+	}
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 	pbrEffect->UnbindTextures(deviceContext);
+	//auto v=mvgdc->viewStructs;
 	// Init the viewstruct in global space - i.e. with the server offsets.
-	SetRenderPose(deviceContext, clientDeviceState->headPose.globalPose);
+	SetRenderPose(deviceContext, clientDeviceState->originPose);
 
 	clientrender::AVSTextureHandle th = avsTexture;
 	clientrender::AVSTexture& tx = *th;
@@ -638,17 +655,13 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	// Init the viewstruct in local space - i.e. with no server offsets.
-	SetRenderPose(deviceContext,clientDeviceState->headPose.localPose);
-	
-	gui.Render(deviceContext);
+	//SetRenderPose(deviceContext,clientDeviceState->headPose.localPose);
+	/*mvgdc->viewStructs=v;
+	for(auto s:mvgdc->viewStructs)
 	{
-		bool multiview = false;
-		crossplatform::MultiviewGraphicsDeviceContext* mvgdc;
-		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-		{
-			mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
-			multiview = true;
-		}
+		s.Init();
+	}*/
+	{
 
 		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
@@ -685,6 +698,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		static bool override_have_vr_device=false;
 		gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
 	}
+	gui.Render(deviceContext);
 	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.options.showGeometryOffline)
 	{	
 		pbrConstants.drawDistance = 1000.0f;
@@ -1108,7 +1122,6 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
 				if (skinInstance)
 				{
-				continue;
 					mat4* scr_matrices = skinInstance->GetBoneMatrices(globalTransformMatrix);
 					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(mat4) * clientrender::Skin::MAX_BONES);
 

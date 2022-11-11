@@ -662,9 +662,6 @@ void OpenXR::PollActions()
 				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 			{
 				xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose_stageSpace=( space_location.pose);
-				if(hand>= controllerPoses.size())
-					controllerPoses.resize(hand+1);
-				controllerPoses[hand] = ConvertGLStageSpacePoseToWorldSpacePose(xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose_stageSpace);
 			}
 		}
 	}
@@ -1117,9 +1114,6 @@ void OpenXR::openxr_poll_predicted(XrTime predicted_time)
 			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
 			xr_input_session.actionStates[LEFT_GRIP_POSE+i].pose_stageSpace=( space_location.pose);
-			if (i >= controllerPoses.size())
-				controllerPoses.resize(i + 1);
-			controllerPoses[i] =ConvertGLStageSpacePoseToWorldSpacePose( xr_input_session.actionStates[LEFT_GRIP_POSE+i].pose_stageSpace);
 		}
 	}
 }
@@ -1576,12 +1570,8 @@ typedef union {
 } XrCompositionLayer_Union;
 XrCompositionLayer_Union layers[3];
 
-void OpenXR::SetStagePoseInWorldSpace(avs::Pose stagePose)
-{
-	stagePose_worldSpace=stagePose;
-}
 
-avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &xrpose) const
+avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stagePose_worldSpace,const XrPosef &xrpose) 
 {
 	avs::Pose pose;
 	// first convert to the correct scheme.
@@ -1601,7 +1591,7 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const XrPosef &xrpose)
 	return pose;
 }
 
-avs::Pose OpenXR::ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &xrpose) const
+avs::Pose OpenXR::ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &xrpose) 
 {
 	avs::Pose pose;
 	// first convert to the correct scheme.
@@ -1691,6 +1681,17 @@ math::Matrix4x4 OpenXR::CreateViewMatrixFromPose(const avs::Pose& pose)
 	math::Quaternion q1 = (const float*)&pose.orientation;
 	auto q_rel = q1 / q0;
 	globalOrientation.SetOrientation(q_rel);
+	math::Matrix4x4 view = globalOrientation.GetInverseMatrix().RowPointer(0);
+	return view;
+}
+
+math::Matrix4x4 OpenXR::CreateTransformMatrixFromPose(const avs::Pose& pose)
+{
+	// global pos/orientation:
+	math::SimulOrientation globalOrientation;
+	globalOrientation.SetPosition((const float*)&pose.position);
+	math::Quaternion q1 = (const float*)&pose.orientation;
+	globalOrientation.SetOrientation(q1);
 	math::Matrix4x4 view = globalOrientation.GetInverseMatrix().RowPointer(0);
 	return view;
 }
@@ -1932,9 +1933,9 @@ const std::string &OpenXR::GetDebugString() const
 		{
 			case XR_ACTION_TYPE_POSE_INPUT:
 			{
-				avs::Pose pose_worldspace=ConvertGLStageSpacePoseToWorldSpacePose(state.pose_stageSpace);
-				str+=fmt::format("{: .3f},{: .3f},{: .3f}    - {: .2f},{: .2f},{: .2f},{: .2f}",pose_worldspace.position.x,pose_worldspace.position.y,pose_worldspace.position.z
-										,pose_worldspace.orientation.x,pose_worldspace.orientation.y,pose_worldspace.orientation.z,pose_worldspace.orientation.w);
+				avs::Pose pose_stagespace=ConvertGLStageSpacePoseToLocalSpacePose(state.pose_stageSpace);
+				str+=fmt::format("{: .3f},{: .3f},{: .3f}    - {: .2f},{: .2f},{: .2f},{: .2f}",pose_stagespace.position.x,pose_stagespace.position.y,pose_stagespace.position.z
+										,pose_stagespace.orientation.x,pose_stagespace.orientation.y,pose_stagespace.orientation.z,pose_stagespace.orientation.w);
 			}
 			break;
 			case XR_ACTION_TYPE_BOOLEAN_INPUT:

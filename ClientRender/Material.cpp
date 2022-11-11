@@ -45,7 +45,7 @@ void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const Mater
 	m_MaterialData.u_EmissiveTexCoordIndex		= m_CI.emissive.texCoordIndex;
 
 	//Set up UB
-	if(!m_UB.get())
+/*	if(!m_UB.get())
 	{
 		UniformBuffer::UniformBufferCreateInfo ub_ci;
 		ub_ci.name="u_MaterialData";
@@ -55,11 +55,11 @@ void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const Mater
 
 		m_UB = renderPlatform->InstantiateUniformBuffer();
 		m_UB->Create(&ub_ci);
-	}
+	}*/
 
 	//Set up Descriptor Set for Textures and UB
 	//UB from 0 - 9, Texture/Samplers 10+
-	m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_FRAGMENT);
+/*	m_ShaderResourceLayout.AddBinding(2, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_FRAGMENT);
 	m_ShaderResourceLayout.AddBinding(10, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
 	m_ShaderResourceLayout.AddBinding(11, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
 	m_ShaderResourceLayout.AddBinding(12, ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, ShaderStage::SHADER_STAGE_FRAGMENT);
@@ -70,7 +70,7 @@ void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const Mater
 	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 10, "u_DiffuseTexture",  {m_CI.diffuse.texture });
 	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 11, "u_NormalTexture",   {m_CI.normal.texture });
 	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 12, "u_CombinedTexture", {m_CI.combined.texture });
-	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_EmissiveTexture", {m_CI.emissive.texture});
+	m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 13, "u_EmissiveTexture", {m_CI.emissive.texture});*/
 }
 
 
