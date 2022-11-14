@@ -108,7 +108,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 {
 	const float PI = 3.1415926536;
 	const float TwoPI = 2.0 * PI;
-	vec3 view_orig = -TexCoordsToView(IN.texCoords)
+	vec3 view_orig = -TexCoordsToView(IN.texCoords);
 	view_orig.xy = -view_orig.xy;
 	view_orig.z *= -1.0;
 	int id = int(TagDataIDBuffer[0].x);
