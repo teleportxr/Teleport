@@ -120,9 +120,9 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	for (int i = 0; i < 5; i++)
 	{
 		float depth = lookup.a;
-		dist_m = 5.0+25.0 * depth;
+		dist_m = 5.0 + 25.0 * depth;
 		vec3 pos_m = dist_m * view_orig;
-		pos_m += vec3(offsetFromVideo2.yxz)*step(-0.999, -depth);
+		pos_m += vec3(offsetFromVideo2.yxz) * step(-0.999, -depth);
 
 		// But this does not intersect at depth. We want the vector from the original centre, of 
 		// original radius to hit point
@@ -496,40 +496,13 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	int2 offsetToPos	= pos.xy % 2;// -loadDepthPos * 2;
 	loadDepthPos		+= int2(0, OutputW) * 2;	// underneath the main cube in the video texture.
 	vec3 dMask			= DepthMask[offsetToPos.x];// +2 * offsetToPos.y ];
-	vec3 lookupDepth	= plainTexture.Load(int3(1,1, 0)).rgb;
+	vec3 lookupDepth	= plainTexture.Load(int3(loadDepthPos, 0)).rgb;
 
 	float d = dot(lookupDepth, dMask);
 	// RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
 	SceneColor.rgb *= SceneColor.rgb;
 	SceneColor.a = d;
 	RWTextureTargetArray[pos] = SceneColor; // float4(SceneColor.rgba);
-}
-
-[numthreads(16, 16, 1)]
-shader void CS_Test(uint3 ThreadID : SV_DispatchThreadID)
-{ 
-	float4 sampleColour = plainTexture.SampleLevel(wwcNearestSamplerState, vec2(ThreadID.xy)/8.0, 0).rgba;
-	float4 texelFetchColour=plainTexture.Load(int3((ThreadID.xy/4)%int2(2,2),0));
-	sampleColour.rgb+=vec3(0.1,0.1,0.1);
-	RWTextureTargetArray[ThreadID] = 0.5 * (texelFetchColour + sampleColour); // float4(SceneColor.rgba);
-}
-
-[numthreads(16, 16, 1)]
-shader void CS_Test_Face_Colour(uint3 ThreadID : SV_DispatchThreadID)
-{
-	float4 colour = float4(0.0, 0.0, 0.0, 1.0);
-	switch (ThreadID.z)
-	{
-		default:
-		case 0: colour = float4(1.0, 0.0, 0.0, 1.0); break;
-		case 1: colour = float4(0.0, 1.0, 1.0, 1.0); break;
-		case 2: colour = float4(0.0, 1.0, 0.0, 1.0); break;
-		case 3: colour = float4(1.0, 0.0, 1.0, 1.0); break;
-		case 4: colour = float4(0.0, 0.0, 1.0, 1.0); break;
-		case 5: colour = float4(1.0, 1.0, 0.0, 1.0); break;
-	}
-	
-	RWTextureTargetArray[ThreadID] = 0.25 * colour;
 }
 
 [numthreads(16, 16, 1)]
@@ -568,6 +541,45 @@ shader void CS_RecomposePerspectiveWithDepthAlpha(uint3 g : SV_GroupID, uint3 t 
 	SceneColor.rgb *= SceneColor.rgb;
 	SceneColor.a = d;
 	RWTextureTargetArray[pos] = SceneColor;
+}
+
+[numthreads(16, 16, 1)]
+shader void CS_Test(uint3 ThreadID : SV_DispatchThreadID)
+{
+	float4 sampleColour = plainTexture.SampleLevel(wwcNearestSamplerState, vec2(ThreadID.xy) / 8.0, 0).rgba;
+	float4 texelFetchColour = plainTexture.Load(int3((ThreadID.xy / 4) % int2(2, 2), 0));
+	sampleColour.rgb += vec3(0.1, 0.1, 0.1);
+	RWTextureTargetArray[ThreadID] = 0.5 * (texelFetchColour + sampleColour); // float4(SceneColor.rgba);
+}
+
+[numthreads(16, 16, 1)]
+shader void CS_Test_Face_Colour(uint3 ThreadID : SV_DispatchThreadID)
+{
+	float4 colour = float4(0.0, 0.0, 0.0, 1.0);
+	switch (ThreadID.z)
+	{
+		default:
+		case 0:
+			colour = float4(1.0, 0.0, 0.0, 1.0);
+			break;
+		case 1:
+			colour = float4(0.0, 1.0, 1.0, 1.0);
+			break;
+		case 2:
+			colour = float4(0.0, 1.0, 0.0, 1.0);
+			break;
+		case 3:
+			colour = float4(1.0, 0.0, 1.0, 1.0);
+			break;
+		case 4:
+			colour = float4(0.0, 0.0, 1.0, 1.0);
+			break;
+		case 5:
+			colour = float4(1.0, 1.0, 0.0, 1.0);
+			break;
+	}
+	
+	RWTextureTargetArray[ThreadID] = 0.25 * colour;
 }
 
 VertexShader vs = CompileShader(vs_5_0, VS_SimpleFullscreen());
@@ -678,18 +690,19 @@ technique unconnected
 	}
 }
 
-technique recompose
-{
-	pass p0
-	{
-		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
-	}
-}
 technique extract_tag_data_id 
 {
 	pass p0
 	{
 		SetComputeShader(CompileShader(cs_5_0, CS_ExtractTagDataID()));
+	}
+}
+
+technique recompose
+{
+	pass p0
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
 	}
 }
 technique recompose_with_depth_alpha
@@ -698,14 +711,7 @@ technique recompose_with_depth_alpha
 	{
 		SetComputeShader(CompileShader(cs_5_0, CS_RecomposeWithDepthAlpha()));
 	}
-	pass test
-	{
-		SetComputeShader(CompileShader(cs_5_0, CS_Test()));
-	}
-	pass test_face_colour
-	{
-		SetComputeShader(CompileShader(cs_5_0, CS_Test_Face_Colour()));
-	}
+
 }
 technique recompose_perspective
 {
@@ -719,5 +725,17 @@ technique recompose_perspective_with_depth_alpha
 	pass p0
 	{
 		SetComputeShader(CompileShader(cs_5_0, CS_RecomposePerspectiveWithDepthAlpha()));
+	}
+}
+
+technique test
+{
+	pass test
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_Test()));
+	}
+	pass test_face_colour
+	{
+		SetComputeShader(CompileShader(cs_5_0, CS_Test_Face_Colour()));
 	}
 }

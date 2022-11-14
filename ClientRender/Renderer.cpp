@@ -917,7 +917,7 @@ void Renderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContext& devic
 	{
 		cubemapClearEffect->SetTexture(deviceContext, "plainTexture",testSourceTexture);
 		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
-		cubemapClearEffect->Apply(deviceContext, technique, faceColour ? "test_face_colour" : "test");
+		cubemapClearEffect->Apply(deviceContext, "test", faceColour ? "test_face_colour" : "test");
 		int zGroups = videoTexture->IsCubemap() ? 6 : 1;
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width/16, targetTexture->length/16, zGroups);
 		cubemapClearEffect->Unapply(deviceContext);
