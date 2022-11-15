@@ -2081,7 +2081,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	else if (show_osd == clientrender::DECODER_OSD)
 	{
 		gui.LinePrint("Decoder Status:", white);
-		auto names = magic_enum::enum_names<avs::DecoderStatus>();
+		auto names = magic_enum::enum_names<avs::DecoderStatusNames>();
 		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
 		if (status == avs::DecoderStatus::DecoderUnavailable)
 		{
@@ -2091,9 +2091,9 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			for (size_t i = 0; i < 8; i++)
 			{
-				bool valid = uint32_t(status) & uint32_t(1 << i);
-				std::string str = std::string(names[i + 1]) + ": %s";
-				gui.LinePrint(platform::core::QuickFormat(str.c_str(), valid ? "true" : "false"), white);
+				uint32_t value = (uint32_t(status) & uint32_t(0xF << (i * 4))) >> (i * 4);
+				std::string str = std::string(names[i + 1]) + ": %d";
+				gui.LinePrint(platform::core::QuickFormat(str.c_str(), value), white);
 			}
 		}
 	}
