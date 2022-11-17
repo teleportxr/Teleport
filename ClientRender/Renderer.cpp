@@ -1584,6 +1584,8 @@ void Renderer::ShowHideGui()
 	AnimationState *rightAnimState=rightHand->animationComponent.GetAnimationState(point_anim_uid);
 	if(gui.HasFocus())
 	{
+		show_osd = NO_OSD; //TODO: Find a better fix for OSD and Keyboard resource collision in Vulkan/ImGui - AJR.
+
 		// If we've just started to show the gui, let's make the hands point, so the index finger alone is extended for typing.
 		if(leftAnimState)
 		{
