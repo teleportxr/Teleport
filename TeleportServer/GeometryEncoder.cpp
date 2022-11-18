@@ -619,6 +619,8 @@ namespace teleport
 				put(nameLength);
 				//Push name.
 				put((uint8_t*)material->name.data(), nameLength);
+				
+				put(material->materialMode);
 
 				//Push base colour, and factor.
 				put(material->pbrMetallicRoughness.baseColorTexture.index);

@@ -176,7 +176,7 @@ struct InteropMaterial
 {
 	BSTR name;
 	BSTR path;
-
+	avs::MaterialMode materialMode;
 	avs::PBRMetallicRoughness pbrMetallicRoughness;
 	avs::TextureAccessor normalTexture;
 	avs::TextureAccessor occlusionTexture;
@@ -207,9 +207,10 @@ struct InteropMaterial
 			}
 		}
 
-		return
+		avs::Material m=
 		{
 			avs::convertToByteString(name),
+			materialMode,
 			pbrMetallicRoughness,
 			normalTexture,
 			occlusionTexture,
@@ -217,6 +218,7 @@ struct InteropMaterial
 			emissiveFactor,
 			convertedExtensions
 		};
+		return m;
 	}
 };
 

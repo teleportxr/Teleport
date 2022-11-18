@@ -16,6 +16,7 @@
 #include "Log.h"
 
 #include <regex>
+static std::string letters_numbers="abcdefghijklmnopqrstuvwxyz0123456789 ";
 
 bool Match(const std::string& full_string, const std::string& substring)
 {
@@ -200,8 +201,16 @@ struct app_transform_buffer_t
 void InputSession::SetActions(std::initializer_list<ActionInitializer> actions)
 {
 	inputDeviceStates.resize(2);
+	if(actionDefinitions.size()<actions.size())
+		actionDefinitions.resize(actions.size());
+	actionStates.resize(actionDefinitions.size());
 	for (auto& a : actions)
 	{
+		if(a.actionId>actionDefinitions.size()-1)
+		{
+			actionDefinitions.resize(a.actionId+1);
+			actionStates.resize(actionDefinitions.size());
+		}
 		auto &def			=actionDefinitions[(uint16_t)a.actionId];
 		def.actionId		=a.actionId;
 		def.xrActionType	=a.xrActionType;
@@ -210,9 +219,22 @@ void InputSession::SetActions(std::initializer_list<ActionInitializer> actions)
 	}
 }
 
+ActionId InputSession::AddAction( const char* name,const char* localizedName,XrActionType xrActionType)
+{
+	int actionId		=actionDefinitions.size();
+	actionDefinitions.resize(actionDefinitions.size()+1);
+	actionStates.resize(actionDefinitions.size());
+	auto &def			=actionDefinitions[actionId];
+	def.actionId		=(ActionId)actionId;
+	def.xrActionType	=xrActionType;
+	def.name			=name;
+	def.localizedName	=localizedName;
+	return (ActionId)actionId;
+}
+
 void InputSession::InstanceInit(XrInstance& xr_instance)
 {
-	for(int i=0;i<ActionId::MAX_ACTIONS;i++)
+	for(int i=0;i<actionDefinitions.size();i++)
 	{
 		ActionId actionId=(ActionId)i;
 		auto &def=actionDefinitions[i];
@@ -229,7 +251,7 @@ void InputSession::InstanceInit(XrInstance& xr_instance)
 
 void InputSession::SessionInit(XrInstance xr_instance,XrSession &xr_session)
 {
-	for (int i=0;i<ActionId::MAX_ACTIONS;i++)
+	for (int i=0;i<actionDefinitions.size();i++)
 	{
 		auto& def = actionDefinitions[i];
 
@@ -246,8 +268,8 @@ void InputSession::SessionInit(XrInstance xr_instance,XrSession &xr_session)
 
 void InteractionProfile::Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings)
 {
-	name=pr;
-	profilePath= MakeXrPath(xr_instance, pr);
+	name			=pr;
+	profilePath		=MakeXrPath(xr_instance, pr);
 	xrActionSuggestedBindings.reserve(bindings.size());
 	bindingPaths.reserve(bindings.size());
 	size_t i = 0;
@@ -271,6 +293,28 @@ void InteractionProfile::Init(XrInstance &xr_instance,const char *pr,std::initia
 			{
 				TELEPORT_CERR<<"InteractionProfile: "<<pr<<": Failed to create suggested binding "<<elem.complete_path<<" as action is null."<<std::endl;
 			}
+		}
+	}
+}
+
+void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char *complete_path)
+{
+	XrPath p;
+	p= MakeXrPath(xr_instance, complete_path);
+	if(action&&p)
+	{
+		xrActionSuggestedBindings.push_back( {action, p});
+		bindingPaths.push_back(complete_path);
+	}
+	else
+	{
+		if(!p)
+		{
+			TELEPORT_CERR<<"InteractionProfile: "<<name.c_str()<<": Failed to create suggested binding as path "<<complete_path<<" was invalid."<<std::endl;
+		}
+		if(!action)
+		{
+			TELEPORT_CERR<<"InteractionProfile: "<<name.c_str()<<": Failed to create suggested binding "<<complete_path<<" as action is null."<<std::endl;
 		}
 	}
 }
@@ -328,6 +372,16 @@ bool OpenXR::InitInstance(const char *app_name)
 		,{ActionId::MOUSE_LEFT_BUTTON	,"mouse_left"			,"Left Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::MOUSE_RIGHT_BUTTON	,"mouse_right"			,"Right Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		});
+	#ifdef _MSC_VER
+	// Add keyboard keys:
+	for(size_t i=0;i<letters_numbers.size();i++)
+	{
+		std::string name;
+		name+=letters_numbers[i];
+		name+="_key";
+		xr_input_session.AddAction(name.c_str(),name.c_str(),XR_ACTION_TYPE_BOOLEAN_INPUT);
+	}
+	#endif
 	// OpenXR will fail to initialize if we ask for an extension that OpenXR
 	// can't provide! So we need to check our all extensions before 
 	// initializing OpenXR with them. Note that even if the extension is 
@@ -445,7 +499,6 @@ void OpenXR::MakeActions()
 	strcpy_s(actionset_info.localizedActionSetName, XR_MAX_LOCALIZED_ACTION_SET_NAME_SIZE, "TeleportClient");
 	XR_CHECK(xrCreateActionSet(xr_instance, &actionset_info, &xr_input_session.actionSet));
 
-		
 	xr_input_session.InstanceInit(xr_instance);
 	// Bind the actions we just created to specific locations on the Khronos simple_controller
 	// definition! These are labeled as 'suggested' because they may be overridden by the runtime
@@ -483,12 +536,12 @@ void OpenXR::MakeActions()
 	khrSimpleIP.Init(xr_instance
 			,"/interaction_profiles/khr/simple_controller"
 			,{
-				 {xr_input_session.actionDefinitions[ActionId::SELECT].xrAction			, LEFT "/input/select/click"}
-				,{xr_input_session.actionDefinitions[ActionId::SELECT].xrAction			,RIGHT "/input/select/click"}
-				,{xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction	, LEFT "/input/grip/pose"}
+				 {xr_input_session.actionDefinitions[ActionId::SELECT].xrAction				, LEFT "/input/select/click"}
+				,{xr_input_session.actionDefinitions[ActionId::SELECT].xrAction				,RIGHT "/input/select/click"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
 				,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction	,RIGHT "/input/grip/pose"}
-				,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction	, LEFT "/input/aim/pose"}
-				,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction	,RIGHT "/input/aim/pose"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction		, LEFT "/input/aim/pose"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction		,RIGHT "/input/aim/pose"}
 				,{xr_input_session.actionDefinitions[ActionId::LEFT_HAPTIC].xrAction		, LEFT "/output/haptic"}
 				,{xr_input_session.actionDefinitions[ActionId::RIGHT_HAPTIC].xrAction		,RIGHT "/output/haptic"}
 			});
@@ -497,7 +550,7 @@ void OpenXR::MakeActions()
 		,"/interaction_profiles/valve/index_controller"
 		,{
 			 {xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
-			,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction		,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction	,RIGHT "/input/grip/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction		, LEFT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction		,RIGHT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction			, LEFT "/input/b/click" }
@@ -506,13 +559,13 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::B].xrAction					,RIGHT "/input/b/click" }
 			,{xr_input_session.actionDefinitions[ActionId::X].xrAction					, LEFT "/input/a/click" }		// Note: a and b buttons on both controllers.
 			,{xr_input_session.actionDefinitions[ActionId::Y].xrAction					, LEFT "/input/b/click" }
-			,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction			, LEFT "/input/trigger/value"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction		, LEFT "/input/trigger/value"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value"}
-			,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction			, LEFT "/input/squeeze/value"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction		, LEFT "/input/squeeze/value"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction		,RIGHT "/input/squeeze/value"}
-			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_X].xrAction			, LEFT "/input/thumbstick/x"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_X].xrAction		, LEFT "/input/thumbstick/x"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
-			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_Y].xrAction			, LEFT "/input/thumbstick/y"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_Y].xrAction		, LEFT "/input/thumbstick/y"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(valveIndexIP);
@@ -544,6 +597,16 @@ void OpenXR::MakeActions()
 			 {xr_input_session.actionDefinitions[ActionId::MOUSE_LEFT_BUTTON].xrAction	,"/input/mouse/left/click"}
 			,{xr_input_session.actionDefinitions[ActionId::MOUSE_RIGHT_BUTTON].xrAction	,"/input/mouse/right/click"}
 		});
+	// keyboard:
+	#ifdef _MSC_VER
+	for(size_t i=ActionId::MAX_ACTIONS;i<xr_input_session.actionDefinitions.size();i++)
+	{
+		std::string path="/input/keyboard/";
+		const auto &def=xr_input_session.actionDefinitions[i];
+		path+=def.name[0];
+		mouseAndKeyboard.Add(xr_instance,xr_input_session.actionDefinitions[i].xrAction,path.c_str());
+	}
+	#endif
 	// No need to SuggestBind: OpenXR doesn't know what to do with this!
 	
 	// Attach the action set we just made to the session
@@ -743,6 +806,16 @@ void OpenXR::OnMouseMove(int xPos, int yPos )
 
 void OpenXR::OnKeyboard(unsigned wParam, bool bKeyDown)
 {
+	if(wParam>=(unsigned)'A'&&wParam<=(unsigned)'Z')
+	{
+		wParam+='a'-'A';
+	}
+	char k=(char)wParam;
+	auto K=xr_input_session.boundKeys.find(k);
+	if(K!=xr_input_session.boundKeys.end())
+	{
+		xr_input_session.actionStates[K->second].u32	=bKeyDown?1:0;
+	}
 }
 
 std::string OpenXR::GetBoundPath(const ActionDefinition &def) const
@@ -785,26 +858,26 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 	inputMappings.clear();
 	auto &inputStates	=server.inputStates;
 	inputStates.clear();
-	for (const auto& def : inputDefinitions_)
+	for (const auto& serverInputDef : inputDefinitions_)
 	{
-		std::regex re(def.regexPath, std::regex_constants::icase | std::regex::extended);
-		std::cerr<<"Trying to bind "<<def.regexPath.c_str()<<"\n";
+		std::regex re(serverInputDef.regexPath, std::regex_constants::icase | std::regex::extended);
+		std::cerr<<"Trying to bind "<<serverInputDef.regexPath.c_str()<<"\n";
 		// which, if any, action should be used to map to this?
 		// we match by the bindings.
 		// For each action, get the currently bound path.
 		int found=0;
-		for(size_t a=0;a<ActionId::MAX_ACTIONS;a++)
+		for(size_t a=0;a<xr_input_session.actionDefinitions.size();a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
 			bool matches=false;
 			std::smatch match;
-			if(def.regexPath.length())
+			if(serverInputDef.regexPath.length())
 			{
 				std::string path_str=GetBoundPath(actionDef);
 				if(!path_str.length())
 					continue;
-				std::cout<<"\tChecking against: "<<path_str.c_str()<<std::endl;
-				// Now we try to match this path to the input def.
+				//std::cout<<"\tChecking against: "<<path_str.c_str()<<std::endl;
+				// Now we try to match this path to the input serverInputDef.
 				if (std::regex_search(path_str, match, re))
 				{
 					std::cout<<"\t\t\tMatches.\n";
@@ -816,24 +889,32 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 			if(matches)
 			{
 				string matching=match.str(0);
-				std::cout<<"Binding matches: "<<def.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
+				std::cout<<"Binding matches: "<<serverInputDef.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
 				
 				inputMappings.push_back(InputMapping());
 				inputStates.push_back(InputState());
 				InputMapping& mapping = inputMappings.back();
 				// store the definition.
-				mapping.serverInputDefinition=def;
+				mapping.serverInputDefinition=serverInputDef;
 				mapping.clientActionId=(ActionId)a;
 				found++;
+				
+				// If it's in the keyboard range, make sure it's in the boundKeys map.
+				if(a>=MAX_ACTIONS&&a-MAX_ACTIONS<letters_numbers.size())
+				{
+					char character=letters_numbers[a-MAX_ACTIONS];
+				// keyboard.
+					xr_input_session.boundKeys[character]=actionDef.actionId;
+				}
 			}
 		}
 		if(found==0)
 		{
-			TELEPORT_CERR<<"No match found for "<<def.regexPath.c_str()<<"\n";
+			TELEPORT_CERR<<"No match found for "<<serverInputDef.regexPath.c_str()<<"\n";
 		}
 		else
 		{
-			std::cout<<"Found "<<found<<" matches for "<<def.regexPath.c_str()<<"\n";
+			std::cout<<"Found "<<found<<" matches for "<<serverInputDef.regexPath.c_str()<<"\n";
 		}
 	}
 }

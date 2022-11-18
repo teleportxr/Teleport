@@ -79,11 +79,12 @@ void Transform::UpdateModelMatrix()
 
 bool Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
 {
-	if (abs(scale.x) < 0.0001f)
+	// zero scale is valid.
+	/*if (abs(scale.x) < 0.0001f)
 	{
 		TELEPORT_CERR << "Failed to update model matrix of transform! Scale.x is zero!\n";
 		return false;
-	}
+	}*/
 
 	if (m_Translation != translation || m_Rotation != rotation || m_Scale != scale)
 	{

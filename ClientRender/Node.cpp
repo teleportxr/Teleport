@@ -265,7 +265,8 @@ void Node::SetMaterialListSize(size_t size)
 {
 	materials.resize(size);
 }
-void Node::SetMaterialList(std::vector<std::shared_ptr<Material>>& materials)
+
+void Node::SetMaterialList(std::vector<std::shared_ptr<Material>>& m)
 {
-	this->materials = materials;
+	materials = m;
 }

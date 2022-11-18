@@ -332,6 +332,12 @@ namespace avs
 		i >> vec.x >> vec.y >> vec.z >> vec.w;
 		return in;
 	}
+	enum class MaterialMode: uint8_t
+	{
+		UNKNOWNMODE,
+		OPAQUE_MATERIAL,
+		TRANSPARENT_MATERIAL
+	};
 	struct PBRMetallicRoughness
 	{
 		TextureAccessor baseColorTexture;
@@ -390,6 +396,7 @@ namespace avs
 	struct Material
 	{
 		std::string name;
+		MaterialMode materialMode=MaterialMode::UNKNOWNMODE;
 		PBRMetallicRoughness pbrMetallicRoughness;
 		TextureAccessor normalTexture;
 		TextureAccessor occlusionTexture;
@@ -405,6 +412,7 @@ namespace avs
 			TELEPORT_VERIFY(normalTexture,t.normalTexture);
 			TELEPORT_VERIFY(occlusionTexture,t.occlusionTexture);
 			TELEPORT_VERIFY(emissiveTexture,t.emissiveTexture);
+			TELEPORT_VERIFY(materialMode,t.materialMode);
 			return true;
 		}
 		inline std::vector<avs::uid> GetTextureUids() const
@@ -435,7 +443,10 @@ namespace avs
 			out << material.normalTexture<< " ";
 			out << material.occlusionTexture<< " ";
 			out << material.emissiveTexture<< " ";
-			out << material.emissiveFactor<< " ";
+			out << material.emissiveFactor;
+			int m=((int)material.materialMode);
+			out<< " "<<m;
+			out<< " ";
 			return out;
 		}
 		
@@ -443,7 +454,8 @@ namespace avs
 		friend InStream& operator>> (InStream& in, Material& material)
 		{
 			//Step past new line that may be next in buffer.
-			if(in.peek() == '\n') in.get(); 
+			if(in.peek() == '\n')
+				in.get(); 
 
 			//Read name with spaces included.
 			std::wstring wideName;
@@ -456,6 +468,9 @@ namespace avs
 			in >> material.occlusionTexture;
 			in >> material.emissiveTexture;
 			in >> material.emissiveFactor;
+			int m=0;
+			in >> m;
+			material.materialMode=(avs::MaterialMode)m;
 			return in;
 		}
 	};

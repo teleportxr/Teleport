@@ -37,7 +37,7 @@ namespace clientrender
 		const avs::uid id; //ID of the missing resource.
 		avs::GeometryPayloadType resourceType; //String indicating missing resource's type.
 		//Resources that can't be completed without this missing resource.
-		std::vector<std::shared_ptr<IncompleteResource>> waitingResources;
+		std::set<std::shared_ptr<IncompleteResource>> waitingResources;
 
 		MissingResource(avs::uid id, avs::GeometryPayloadType r)
 			:id(id), resourceType(r)
@@ -50,7 +50,7 @@ namespace clientrender
 		{}
 
 		clientrender::Material::MaterialCreateInfo materialInfo;
-		std::unordered_map<avs::uid, std::shared_ptr<clientrender::Texture>&> textureSlots; //<ID of the texture, slot the texture should be placed into>.
+		std::set<avs::uid> missingTextureUids; //<ID of the texture, slot the texture should be placed into>.
 	};
 
 	struct IncompleteNode : IncompleteResource

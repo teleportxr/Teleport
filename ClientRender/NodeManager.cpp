@@ -96,7 +96,6 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	else
 		node->SetLocalTransform(static_cast<clientrender::Transform>(avsNode.localTransform));
 	
-	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
 	node->SetLightmapScaleOffset(avsNode.renderState.lightmapScaleOffset);
 	node->SetMaterialListSize(avsNode.materials.size());
@@ -105,6 +104,12 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetHolderClientId(avsNode.holder_client_id);
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
+
+}
+
+void NodeManager::NotifyModifiedMaterials(std::shared_ptr<clientrender::Node> node)
+{
+	nodesWithModifiedMaterials.insert(node);
 }
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
@@ -121,6 +126,10 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 		rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), node));
 		distanceSortedRootNodes.erase(std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), node));
 	}
+	// If it's in the transparent list, erase it from there.
+	auto f=std::find(distanceSortedTransparentNodes.begin(), distanceSortedTransparentNodes.end(), node);
+	if(f!=distanceSortedTransparentNodes.end())
+		distanceSortedTransparentNodes.erase(f);
 
 	//Attach children to world root.
 	std::vector<std::weak_ptr<Node>> children = node->GetChildren();
@@ -186,6 +195,42 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
 	);
 
 	return distanceSortedRootNodes;
+}
+
+const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes()
+{
+	std::set<std::shared_ptr<clientrender::Node>>::iterator n=nodesWithModifiedMaterials.begin();
+	while(n!=nodesWithModifiedMaterials.end())
+	{
+		const auto &m=n->get()->GetMaterials();
+		bool transparent=false;
+		bool unknown=false;
+		for(const auto &M:m)
+		{
+			if(!M)
+				unknown=true;
+			if(M->GetMaterialCreateInfo().materialMode==avs::MaterialMode::TRANSPARENT_MATERIAL)
+				transparent=true;
+		}
+		if(!unknown)
+		{
+			if(transparent)
+				distanceSortedTransparentNodes.push_back(*n);
+			nodesWithModifiedMaterials.erase(n);
+			break;
+		}
+	}
+	std::sort
+	(
+		distanceSortedTransparentNodes.begin(),
+		distanceSortedTransparentNodes.end(),
+		[](std::shared_ptr<Node> a, std::shared_ptr<Node> b)
+		{
+			return a->distance < b->distance;
+		}
+	);
+
+	return distanceSortedTransparentNodes;
 }
 
 bool NodeManager::ShowNode(avs::uid nodeID)

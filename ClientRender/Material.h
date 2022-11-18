@@ -13,6 +13,7 @@ namespace clientrender
 	public:
 		struct MaterialParameter
 		{
+			avs::uid texture_uid=0;
 			std::shared_ptr<Texture> texture;	//Texture Reference.
 			avs::vec2 texCoordsScalar[4] = { {1, 1}, {1, 1}, {1, 1}, {1, 1} };		//Scales the texture co-ordinates for tiling; one per channel.
 			avs::vec4 textureOutputScalar = { 1, 1, 1, 1 };		//Scales the output of the texture per channel.
@@ -27,8 +28,9 @@ namespace clientrender
 			MaterialParameter normal;			//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;			//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			MaterialParameter emissive;
-			avs::uid uid;						//session uid of the material.
+			avs::uid uid=0;						//session uid of the material.
 			std::string shader;					// not used if empty
+			avs::MaterialMode materialMode=avs::MaterialMode::UNKNOWNMODE;
 		};
 
 		struct MaterialData //Layout conformant to GLSL std140

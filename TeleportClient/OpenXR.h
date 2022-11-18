@@ -177,11 +177,13 @@ namespace teleport
 		struct InputSession
 		{
 			XrActionSet			actionSet;
-			ActionDefinition    actionDefinitions[ActionId::MAX_ACTIONS];
-			ActionState			actionStates[ActionId::MAX_ACTIONS];
+			std::vector<ActionDefinition>    actionDefinitions;
+			std::vector<ActionState>		actionStates;
 			std::vector<XRInputDeviceState> inputDeviceStates;
+			std::map<int32_t,int32_t> boundKeys;
 			// Here we  can set all the actions to be supported.
 			void SetActions( std::initializer_list<ActionInitializer> actions);
+			ActionId AddAction( const char* name,const char* localizedName,XrActionType xrActionType);
 			void InstanceInit(XrInstance& xr_instance);
 			void SessionInit(XrInstance xr_instance,XrSession &xr_session);
 		};
@@ -199,6 +201,7 @@ namespace teleport
 			std::vector<XrActionSuggestedBinding> xrActionSuggestedBindings;
 			std::vector<std::string> bindingPaths;
 			void Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings);
+			void Add(XrInstance &xr_instance,XrAction action,const char *complete_path);
 		};
 
 		struct FallbackBinding

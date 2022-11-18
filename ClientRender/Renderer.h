@@ -133,7 +133,7 @@ namespace clientrender
 		platform::crossplatform::MouseCameraState	mouseCameraState;
 		platform::crossplatform::MouseCameraInput	mouseCameraInput;
 		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
-		virtual void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false,bool include_children=true);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
 		
 		clientrender::RenderPlatform PcClientRenderPlatform;
@@ -158,18 +158,24 @@ namespace clientrender
 		teleport::client::SessionClient *sessionClient=nullptr;
 	
 		/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
-		platform::crossplatform::RenderPlatform *renderPlatform	=nullptr;
+		platform::crossplatform::RenderPlatform		*renderPlatform	=nullptr;
 		/// A framebuffer to store the colour and depth textures for the view.
 		platform::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
 		/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
 		platform::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
 		// A simple example mesh to draw as transparent
-		platform::crossplatform::Effect *pbrEffect				= nullptr;
-		platform::crossplatform::EffectTechnique*	pbrEffect_solidTechnique=nullptr;
-		platform::crossplatform::EffectPass *pbrEffect_solidTechnique_localPass=nullptr;
-		platform::crossplatform::EffectTechnique* pbrEffect_solid_multiviewTechnique = nullptr;
-		platform::crossplatform::EffectPass* pbrEffect_solid_multiviewTechnique_localPass = nullptr;
+		platform::crossplatform::Effect *pbrEffect					= nullptr;
+		
+		platform::crossplatform::EffectTechnique	*pbrEffect_transparentTechnique					=nullptr;
+		platform::crossplatform::EffectTechnique	*pbrEffect_transparentMultiviewTechnique		=nullptr;
+		platform::crossplatform::EffectTechnique	*pbrEffect_solidTechnique						=nullptr;
+		platform::crossplatform::EffectPass			*pbrEffect_solidTechnique_localPass				=nullptr;
+		platform::crossplatform::EffectTechnique	*pbrEffect_solidAnimTechnique					=nullptr;
+		platform::crossplatform::EffectTechnique	*pbrEffect_solidMultiviewTechnique				=nullptr;
+		platform::crossplatform::EffectTechnique	*pbrEffect_solidAnimMultiviewTechnique			=nullptr;
+		platform::crossplatform::EffectPass			*pbrEffect_solidMultiviewTechnique_localPass	=nullptr;
+
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 		platform::crossplatform::ShaderResource _lights;

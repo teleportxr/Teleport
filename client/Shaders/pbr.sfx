@@ -403,7 +403,7 @@ struct SurfaceState
 // The instantaneous properties at a specific point on a surface.
 struct SurfaceProperties
 {
-	vec3 albedo;		// diffuse color
+	vec4 albedo;		// diffuse color
 	vec3 normal;
 	vec3 emission;
 	vec3 position;
@@ -424,7 +424,7 @@ SurfaceState PreprocessSurface(vec3 viewDir,SurfaceProperties surfaceProperties)
 	// Constant normal incidence Fresnel factor for all dielectrics.
 	vec3 Fdielectric			= vec3(0.04,0.04,0.04);
 	// Fresnel reflectance at normal incidence (for metals use albedo color).
-	vec3 F0						= lerp(Fdielectric, surfaceProperties.albedo, surfaceProperties.metallic);
+	vec3 F0						= lerp(Fdielectric, surfaceProperties.albedo.rgb, surfaceProperties.metallic);
 	// Angle between surface normal and outgoing light direction.
 	float n_v					=-dot(surfaceProperties.normal,viewDir);
 	float cosLo					= saturate(n_v );
@@ -473,7 +473,7 @@ vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	vec3 specular			=surfaceState.kS* env;
 
 	 //Metallic materials will have no diffuse output.
-	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo*diffuse_env;
+	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo.rgb*diffuse_env;
 	//diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+ specular;
 	return colour;
@@ -488,7 +488,7 @@ vec3 PBRLightmap(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 	vec3 env = specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
 	//vec3 envSpecularColour = ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
-	vec3 diffuse = surfaceState.kD * surfaceProperties.globalIllumination.rgb * surfaceProperties.albedo;
+	vec3 diffuse = surfaceState.kD * surfaceProperties.globalIllumination.rgb * surfaceProperties.albedo.rgb;
 	vec3 specular = surfaceState.kS * env;
 
 	return diffuse+specular;
@@ -505,7 +505,7 @@ vec3 PBRLight(SurfaceState surfaceState, vec3 viewDir,vec3 dir_from_surface_to_l
 	float lightD					=DistributionTerm(roughnessL, n_h);
 	float lightV					=VisibilityTerm(roughnessL, l_h);
 	// Per-light:
-	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo * saturate(n_l);
+	vec3 diffuse					=surfaceState.kD*irradiance * surfaceProperties.albedo.rgb * saturate(n_l);
 	vec3 specular					= irradiance * ( lightD*lightV * surfaceState.kS *n_l);
 	//float ao						= SceneAO(pos, normal, localToWorld);
 	///	specular						*=surfaceState.kS*saturate(pow(surfaceState.n_v + surfaceProperties.ao, surfaceProperties.roughness2) - 1.0 + surfaceProperties.ao);
@@ -562,8 +562,8 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 
 	vec2 diffuseTexCoords	=IN.texCoords0.xy * diffuseTexCoordsScalar_R;
 	diffuseTexCoords.y=1.0-diffuseTexCoords.y;
-	vec3 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgb;
-	diffuseColour			=diffuseColour.rgb * diffuseOutputScalar.rgb;
+	vec4 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgba;
+	diffuseColour			=diffuseColour.rgba * diffuseOutputScalar.rgba;
 
 	vec2 lightmapUVs		=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	lightmapUVs.y			=1.0-lightmapUVs.y;
@@ -584,6 +584,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 
 	surfaceProperties.normal		=normal;
 	surfaceProperties.albedo		=diffuseColour;
+	float alpha						=diffuseColour.a;
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
 	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
 
@@ -611,7 +612,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 
 	vec3 emissive		=	emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
 	emissive			*=	emissiveOutputScalar.rgb;
-	vec4 u				=	vec4(c+emissive,1.0);
+	vec4 u				=	vec4(c+emissive,alpha);
 	//if(lightmap)
 	//u.rgb=normal.xyz;
 //	u.rgb=normal.xyz;
@@ -628,8 +629,8 @@ vec4 Solid_AlbedoOnly(vertexOutput IN)
 
 shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 {
-	return vec4(0,1,0,1);
-	//Solid(IN, false, true, 0);
+	//return vec4(0,1,0,1);
+	return Solid(IN, false, true, 0);
 }
 
 shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
@@ -644,6 +645,14 @@ shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
 shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
 {
 	return Solid(IN,true,false,0);
+}
+shader vec4 PS_Transparent_Lightmap(vertexOutput IN) : SV_TARGET
+{
+	return Solid(IN,true,false,0);
+}
+shader vec4 PS_Transparent_NoLightmap(vertexOutput IN) : SV_TARGET
+{
+	return Solid(IN, false, true, 0);
 }
 
 shader vec4 PS_Depth(vertexOutput IN) : SV_TARGET
@@ -800,6 +809,11 @@ VertexShader vs_anim = CompileShader(vs_5_0, VS_Animation());
 
 PixelShader ps_solid_lightmap = CompileShader(ps_5_0, PS_Solid_Lightmap());
 PixelShader ps_solid_nolightmap = CompileShader(ps_5_0, PS_Solid_NoLightmap());
+
+
+PixelShader ps_transparent_lightmap		= CompileShader(ps_5_0, PS_Transparent_Lightmap());
+PixelShader ps_transparent_nolightmap	= CompileShader(ps_5_0, PS_Transparent_NoLightmap());
+
 PixelShader ps_local_hand = CompileShader(ps_5_0, PS_Solid_LocalHand());
 PixelShader ps_depth = CompileShader(ps_5_0, PS_Depth());
 
@@ -813,10 +827,41 @@ PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_5_0, PS_DebugNormal
 
 RasterizerState PbrBackfaceCull
 {
-	FillMode					= SOLID;
-	CullMode = back;
-	FrontCounterClockwise		= false;
+	FillMode				= SOLID;
+	CullMode				= back;
+	FrontCounterClockwise	= false;
 };
+
+RasterizerState PbrDontCull
+{
+	FillMode				= SOLID;
+	CullMode				= none;
+	FrontCounterClockwise	= false;
+};
+
+
+technique transparent
+{
+	pass pbr_lightmap 
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_transparent_lightmap);
+	}
+	pass pbr_nolightmap
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_transparent_nolightmap);
+	}
+}
+
 technique solid
 {
 	pass local
@@ -882,30 +927,12 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_lightmaps);
 	}
-	pass anim_debug_lightmaps
-	{
-		SetRasterizerState(PbrBackfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_lightmaps);
-	}
 	pass debug_anim
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass anim_debug_anim
-	{
-		SetRasterizerState(PbrBackfaceCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_anim);
 	}
@@ -927,8 +954,38 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_vertexnormals);
 	}
+	pass local_hand
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_local_hand);
+	}
+}
 
-	pass anim_pbr_lightmap
+technique solid_anim
+{
+	pass debug_lightmaps
+	{
+		SetRasterizerState(PbrBackfaceCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_anim);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_debug_lightmaps);
+	}
+	pass debug_anim
+	{
+		SetRasterizerState(PbrBackfaceCull);
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_anim);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_debug_anim);
+	}
+	pass pbr_lightmap
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -937,7 +994,7 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_lightmap);
 	}
-	pass anim_pbr_nolightmap
+	pass pbr_nolightmap
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -951,20 +1008,11 @@ technique solid
 		SetRasterizerState(RenderNoCull);
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_local_hand);
-	}
-	pass anim_local_hand
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_local_hand);
 	}
-	pass anim_albedo_only
+	pass albedo_only
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -973,7 +1021,7 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
-	pass anim_normal_unswizzled
+	pass normal_unswizzled
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -982,7 +1030,7 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unswizzled);
 	}
-	pass anim_debug_anim
+	pass debug_anim
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -991,7 +1039,7 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_anim);
 	}
-	pass anim_normal_unity
+	pass normal_unity
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -1000,7 +1048,7 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unity);
 	}
-	pass anim_normal_vertexnormals
+	pass normal_vertexnormals
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth,0);
@@ -1010,6 +1058,7 @@ technique solid
 		SetPixelShader(ps_debug_normal_vertexnormals);
 	}
 }
+
 technique solid_multiview
 {
 	pass local
@@ -1075,30 +1124,12 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_lightmaps);
 	}
-	pass anim_debug_lightmaps
-	{
-		SetRasterizerState(PbrBackfaceCull);
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_lightmaps);
-	}
 	pass debug_anim
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass anim_debug_anim
-	{
-		SetRasterizerState(PbrBackfaceCull);
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_anim);
 	}
@@ -1120,8 +1151,59 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_vertexnormals);
 	}
+	pass local_hand
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_local_hand);
+	}
+}
 
-	pass anim_pbr_lightmap
+technique transparent_multiview
+{
+	pass pbr_lightmap 
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_solid_lightmap);
+	}
+	pass pbr_nolightmap
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_solid_nolightmap);
+	}
+}
+technique solid_anim_multiview
+{
+	pass debug_lightmaps
+	{
+		SetRasterizerState(PbrBackfaceCull);
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_anim_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_debug_lightmaps);
+	}
+	pass debug_anim
+	{
+		SetRasterizerState(PbrBackfaceCull);
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_anim_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_debug_anim);
+	}
+	pass pbr_lightmap
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1130,7 +1212,7 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_lightmap);
 	}
-	pass anim_pbr_nolightmap
+	pass pbr_nolightmap
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1144,20 +1226,11 @@ technique solid_multiview
 		SetRasterizerState(RenderNoCull);
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_local_hand);
-	}
-	pass anim_local_hand
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_local_hand);
 	}
-	pass anim_albedo_only
+	pass albedo_only
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1166,7 +1239,7 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
-	pass anim_normal_unswizzled
+	pass normal_unswizzled
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1175,7 +1248,7 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unswizzled);
 	}
-	pass anim_debug_anim
+	pass debug_anim
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1184,7 +1257,7 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_anim);
 	}
-	pass anim_normal_unity
+	pass normal_unity
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1193,7 +1266,7 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_unity);
 	}
-	pass anim_normal_vertexnormals
+	pass normal_vertexnormals
 	{
 		SetRasterizerState(PbrBackfaceCull);
 		SetDepthStencilState(ReverseDepth, 0);
@@ -1201,20 +1274,6 @@ technique solid_multiview
 		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_vertexnormals);
-	}
-}
-
-
-technique transparent
-{
-	pass base 
-	{
-		
-		//SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(CompileShader(vs_4_0,VS_Solid()));
-		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0,PS_Transparent()));
 	}
 }
 

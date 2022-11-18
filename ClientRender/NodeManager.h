@@ -39,6 +39,7 @@ namespace clientrender
 		//Get list of nodes parented to the world root.
 		const nodeList_t& GetRootNodes() const;
 		const std::vector<std::shared_ptr<Node>> & GetSortedRootNodes();
+		const std::vector<std::shared_ptr<Node>>& GetSortedTransparentNodes();
 
 		//Causes the node to become visible.
 		bool ShowNode(avs::uid nodeID);
@@ -59,6 +60,8 @@ namespace clientrender
 
 		//! Returns true if successful, or false if not e.g. if either the node or the parent is not present.
 		bool ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand);
+
+		void NotifyModifiedMaterials(std::shared_ptr<clientrender::Node> node);
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
 		void Update(float deltaTime);
@@ -74,6 +77,12 @@ namespace clientrender
 		nodeList_t rootNodes; //Nodes that are parented to the world root.
 		std::vector<std::shared_ptr<clientrender::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
 	
+		nodeList_t transparentNodes; //Nodes that are parented to the world root.
+		std::vector<std::shared_ptr<clientrender::Node>> distanceSortedTransparentNodes; //The rootNodes list above, but sorted from near to far.
+
+		// Nodes that have been added, or modified, to be sorted into transparent or not.
+		std::set<std::shared_ptr<clientrender::Node>> nodesWithModifiedMaterials;
+
         std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
 	private:

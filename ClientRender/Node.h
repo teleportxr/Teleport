@@ -99,7 +99,7 @@ namespace clientrender
 		virtual void SetMaterialListSize(size_t size);
 		virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials);
 		const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
-		size_t GetMaterialAmount() const { return materials.size(); }
+		size_t GetNumMaterials() const { return materials.size(); }
 
 		void SetLocalTransform(const Transform& transform);
 		const Transform& GetLocalTransform() const { return localTransform; }

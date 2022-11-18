@@ -554,7 +554,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
  	std::set<avs::uid> missingResources;
 
 	incompleteMaterial->materialInfo.name = material.name;
-
+	incompleteMaterial->materialInfo.materialMode=material.materialMode;
 	//Colour/Albedo/Diffuse
 	AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
 		*((vec4*)&material.pbrMetallicRoughness.baseColorFactor),
@@ -587,7 +587,7 @@ void ResourceCreator::CreateMaterial(avs::uid id, const avs::Material& material)
 	geometryCache->mMaterialManager.Add(id, scrMaterial);
 	scrMaterial->id = id;
 
-	if (incompleteMaterial->textureSlots.size() == 0)
+	if (incompleteMaterial->missingTextureUids.size() == 0)
 	{
 		CompleteMaterial(id, incompleteMaterial->materialInfo);
 	}
@@ -743,7 +743,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			//TELEPORT_COUT << "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.push_back(newNode);
+			geometryCache->GetMissingResource(node.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(newNode);
 		}
 	}
 
@@ -756,7 +756,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			//TELEPORT_COUT << "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.skinID, avs::GeometryPayloadType::Skin).waitingResources.push_back(newNode);
+			geometryCache->GetMissingResource(node.skinID, avs::GeometryPayloadType::Skin).waitingResources.insert(newNode);
 		}
 	}
 
@@ -774,7 +774,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			TELEPORT_COUT << "MeshNode_" << id << "(" << node.name << ") missing Animation_" << animationID << std::endl;
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(animationID, avs::GeometryPayloadType::Animation).waitingResources.push_back(newNode);
+			geometryCache->GetMissingResource(animationID, avs::GeometryPayloadType::Animation).waitingResources.insert(newNode);
 		}
 	}
 
@@ -794,7 +794,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		if(!gi_texture)
 		{
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.push_back(newNode);
+			geometryCache->GetMissingResource(node.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.insert(newNode);
 		}
 	}
 	for (size_t i = 0; i < node.materials.size(); i++)
@@ -805,6 +805,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		if (material)
 		{
 			newNode->node->SetMaterial(i, material);
+			geometryCache->mNodeManager->NotifyModifiedMaterials(newNode->node);
 		}
 		else if(mat_uid!=0)
 		{
@@ -814,7 +815,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 			TELEPORT_CERR << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.materials[i], avs::GeometryPayloadType::Material).waitingResources.push_back(newNode);
+			geometryCache->GetMissingResource(node.materials[i], avs::GeometryPayloadType::Material).waitingResources.insert(newNode);
 			newNode->materialSlots[node.materials[i]].push_back(i);
 		}
 		else
@@ -965,20 +966,34 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 				case avs::GeometryPayloadType::Material:
 					{
 						std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
-						incompleteMaterial->textureSlots.at(id) = scrTexture;
-						TELEPORT_COUT << "Waiting Material_" << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
+						// Replacing this nonsense:
+						//incompleteMaterial->textureSlots.at(id) = scrTexture;
+						// with the correct:
+						if(incompleteMaterial->materialInfo.diffuse.texture_uid==id)
+							incompleteMaterial->materialInfo.diffuse.texture=scrTexture;
+						if(incompleteMaterial->materialInfo.normal.texture_uid==id)
+							incompleteMaterial->materialInfo.normal.texture=scrTexture;
+						if(incompleteMaterial->materialInfo.combined.texture_uid==id)
+							incompleteMaterial->materialInfo.combined.texture=scrTexture;
+						if(incompleteMaterial->materialInfo.emissive.texture_uid==id)
+							incompleteMaterial->materialInfo.emissive.texture=scrTexture;
+						TELEPORT_COUT << "Waiting Material " << incompleteMaterial->id << "(" << incompleteMaterial->materialInfo.name << ") got Texture " << id << "(" << textureInfo.name << ")\n";
 
 						//If only this texture and this function are pointing to the material, then it is complete.
 						if (it->use_count() == 2)
 						{
 							CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
 						}
+						else
+						{
+							TELEPORT_COUT<<" Still awaiting "<<(it->use_count()-2)<<" resources.\n";
+						}
 					}
 					break;
 				case avs::GeometryPayloadType::Node:
 					{
 						std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-						TELEPORT_COUT << "Waiting Node " << incompleteNode->id << "(" << incompleteNode->node->name.c_str() << ") got Texture_" << id << "(" << textureInfo.name << ")\n";
+						TELEPORT_COUT << "Waiting Node " << incompleteNode->id << "(" << incompleteNode->node->name.c_str() << ") got Texture " << id << "(" << textureInfo.name << ")\n";
 
 						//If only this material and function are pointing to the MeshNode, then it is complete.
 						if(incompleteNode.use_count() == 2)
@@ -1106,6 +1121,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrende
 void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,
 										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, clientrender::Material::MaterialParameter& materialParameter)
 {
+	materialParameter.texture_uid=accessor.index;
 	if (accessor.index != 0)
 	{
 		const std::shared_ptr<clientrender::Texture> texture = geometryCache->mTextureManager.Get(accessor.index);
@@ -1116,10 +1132,10 @@ void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor,
 		}
 		else
 		{
-			TELEPORT_COUT << "Material_" << incompleteMaterial->id << "(" << incompleteMaterial->id << ") missing Texture_" << accessor.index << std::endl;
-
-			geometryCache->GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture).waitingResources.push_back(incompleteMaterial);
-			incompleteMaterial->textureSlots.emplace(accessor.index, materialParameter.texture);
+			TELEPORT_COUT << "Material " << incompleteMaterial->id << "(" << incompleteMaterial->id << ") missing Texture " << accessor.index << std::endl;
+			clientrender::MissingResource& missing=geometryCache->GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture);
+			missing.waitingResources.insert(incompleteMaterial);
+			incompleteMaterial->missingTextureUids.insert(accessor.index);
 		}
 
 		avs::vec2 tiling = { accessor.tiling.x, accessor.tiling.y };

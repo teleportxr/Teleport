@@ -358,28 +358,35 @@ void Renderer::RecompileShaders()
 	gui.RecompileShaders();
 	delete pbrEffect;
 	delete cubemapClearEffect;
-	pbrEffect = renderPlatform->CreateEffect("pbr");
-	cubemapClearEffect = renderPlatform->CreateEffect("cubemap_clear");
+	pbrEffect			= renderPlatform->CreateEffect("pbr");
+	cubemapClearEffect	= renderPlatform->CreateEffect("cubemap_clear");
 
-	pbrEffect_solidTechnique=pbrEffect->GetTechniqueByName("solid");
-	pbrEffect_solidTechnique_localPass=pbrEffect_solidTechnique->GetPass("local");
-	pbrEffect_solid_multiviewTechnique = pbrEffect->GetTechniqueByName("solid_multiview");
-	pbrEffect_solid_multiviewTechnique_localPass = pbrEffect_solid_multiviewTechnique->GetPass("local");
-	_RWTagDataIDBuffer = cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
-	cubemapClearEffect_TagDataCubeBuffer	= cubemapClearEffect->GetShaderResource("TagDataCubeBuffer");
-	_lights = pbrEffect->GetShaderResource("lights");
-	plainTexture		=cubemapClearEffect->GetShaderResource("plainTexture");
-	RWTextureTargetArray=cubemapClearEffect->GetShaderResource("RWTextureTargetArray");
+	pbrEffect_solidTechnique			=pbrEffect->GetTechniqueByName("solid");
+	pbrEffect_solidAnimTechnique		=pbrEffect->GetTechniqueByName("solid_anim");
+	pbrEffect_solidTechnique_localPass	=pbrEffect_solidTechnique->GetPass("local");
+
+	pbrEffect_transparentTechnique		=pbrEffect->GetTechniqueByName("transparent");
+	pbrEffect_transparentMultiviewTechnique=pbrEffect->GetTechniqueByName("transparent_multiview");
+
+	pbrEffect_solidMultiviewTechnique				= pbrEffect->GetTechniqueByName("solid_multiview");
+	pbrEffect_solidAnimMultiviewTechnique			= pbrEffect->GetTechniqueByName("solid_multiview");
+	pbrEffect_solidMultiviewTechnique_localPass		= pbrEffect_solidMultiviewTechnique->GetPass("local");
+
+	_RWTagDataIDBuffer						=cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
+	cubemapClearEffect_TagDataCubeBuffer	=cubemapClearEffect->GetShaderResource("TagDataCubeBuffer");
+	_lights									=pbrEffect->GetShaderResource("lights");
+	plainTexture							=cubemapClearEffect->GetShaderResource("plainTexture");
+	RWTextureTargetArray					=cubemapClearEffect->GetShaderResource("RWTextureTargetArray");
 	cubemapClearEffect_TagDataIDBuffer		=cubemapClearEffect->GetShaderResource("TagDataIDBuffer");
 	pbrEffect_TagDataIDBuffer				=pbrEffect->GetShaderResource("TagDataIDBuffer");
 	
 	pbrEffect_diffuseCubemap				=pbrEffect->GetShaderResource("diffuseCubemap");
 	pbrEffect_specularCubemap				=pbrEffect->GetShaderResource("specularCubemap");
-	pbrEffect_diffuseTexture	=pbrEffect->GetShaderResource("diffuseTexture");
-	pbrEffect_normalTexture		=pbrEffect->GetShaderResource("normalTexture");
-	pbrEffect_combinedTexture	=pbrEffect->GetShaderResource("combinedTexture");
-	pbrEffect_emissiveTexture	=pbrEffect->GetShaderResource("emissiveTexture");
-	pbrEffect_globalIlluminationTexture=pbrEffect->GetShaderResource("globalIlluminationTexture");
+	pbrEffect_diffuseTexture				=pbrEffect->GetShaderResource("diffuseTexture");
+	pbrEffect_normalTexture					=pbrEffect->GetShaderResource("normalTexture");
+	pbrEffect_combinedTexture				=pbrEffect->GetShaderResource("combinedTexture");
+	pbrEffect_emissiveTexture				=pbrEffect->GetShaderResource("emissiveTexture");
+	pbrEffect_globalIlluminationTexture		=pbrEffect->GetShaderResource("globalIlluminationTexture");
 }
 
 void Renderer::InvalidateDeviceObjects()
@@ -470,10 +477,11 @@ void Renderer::FillInControllerPose(int index, float offset)
 	crossplatform::Quaternionf q = (const float*)(&clientDeviceState->headPose.localPose.orientation);
 	Multiply(local_controller_dir,q, local_controller_dir);
 	float azimuth	= atan2f(-local_controller_dir.x, local_controller_dir.y);
-	float elevation	= asin(local_controller_dir.z);
+	static float elev_mult=1.2f;
+	float elevation	= elev_mult*(y-0.5f);//-asin(local_controller_dir.z);
 	q.Reset();
 	q.Rotate(azimuth,vec3(0,0,1.0f));
-	//q.Rotate(elevation, vec3(1.0f, 0, 0));
+q.Rotate(elevation, vec3(1.0f, 0, 0));
 	vec3 point_dir=q*vec3(0, 1.0f, 0);
 	static float roll=-1.3f;
 	q.Rotate(roll*offset, point_dir);
@@ -499,9 +507,7 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext
 // Here we must transform the viewstructs in the device context by the specified origin pose,
 // so that the new view matrices will be in a global space which has the stage space at the specified origin.
 // This assumes that the initial viewStructs are in stage space.
-avs::Pose p;
-p.position={0,0,0};
-p.orientation={0,0,0,1.f};
+
 	math::Matrix4x4 originMat=client::OpenXR::CreateTransformMatrixFromPose(originPose);
 	math::Matrix4x4 tmp=deviceContext.viewStruct.view;
 	Multiply4x4(deviceContext.viewStruct.view,originMat,tmp);
@@ -1052,12 +1058,19 @@ void Renderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceCont
 			}
 		}
 	}
-	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetRootNodes();
+	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetSortedRootNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
 		if(show_only!=0&&show_only!=node->id)
 			continue;
 		RenderNode(deviceContext, node,g);
+	}
+	const clientrender::NodeManager::nodeList_t& transparentList = g.mNodeManager->GetSortedTransparentNodes();
+	for(const std::shared_ptr<clientrender::Node>& node : transparentList)
+	{
+		if(show_only!=0&&show_only!=node->id)
+			continue;
+		RenderNode(deviceContext, node,g,false,false);
 	}
 	if(show_node_overlays)
 	for (const std::shared_ptr<clientrender::Node>& node : nodeList)
@@ -1066,23 +1079,22 @@ void Renderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceCont
 	}
 }
 
-void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force)
+void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force
+,bool include_children)
 {
 	clientrender::AVSTextureHandle th = avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-	/*avs::uid node_select=gui.GetSelectedUid();
-	if(!force&&(node_select > 0 && node_select != node->id))
-		return;*/
-	std::shared_ptr<clientrender::Texture> globalIlluminationTexture ;
+
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
-
-	std::string passName = "pbr_nolightmap"; //Pass used for rendering geometry.
+	// Pass used for rendering geometry.
+	std::string passName = "pbr_nolightmap";
 	if(node->IsStatic())
 		passName="pbr_lightmap";
 	if(overridePassName.length()>0)
-		passName= overridePassName;
+		passName=overridePassName;
 	bool force_highlight = force||(gui.GetSelectedUid() == node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
@@ -1091,17 +1103,26 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		if(mesh)
 		{
-			const auto& meshInfo = mesh->GetMeshCreateInfo();
-			static int mat_select=-1;
-			for(size_t element = 0; element < node->GetMaterials().size() && element < meshInfo.ib.size(); element++)
+			const auto& meshInfo	= mesh->GetMeshCreateInfo();
+			static int mat_select	= -1;
+			for(size_t element=0; element<node->GetMaterials().size() && element<meshInfo.ib.size(); element++)
 			{
 				if(mat_select >= 0 && mat_select != element)
+					continue;
+				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
+				if(!material)
+					continue;
+				const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
+				bool transparent	=(matInfo.materialMode==avs::MaterialMode::TRANSPARENT_MATERIAL);
+				if(transparent==include_children)
 					continue;
 				bool double_sided=false;
 				auto* vb = meshInfo.vb[element].get();
 				const auto* ib = meshInfo.ib[element].get();
 
 				const crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
+				if(!v[0])
+					continue;
 				crossplatform::Layout* layout = vb->GetLayout();
 
 				mat4 model;
@@ -1129,7 +1150,6 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 				// TODO: Improve this.
 				bool negative_scale=(node->GetGlobalScale().x<0.0f);
 				std::shared_ptr<clientrender::Texture> gi = globalIlluminationTexture;
-				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
 				std::string usedPassName = passName;
 				if(material->GetMaterialCreateInfo().shader.length())
 				{
@@ -1137,46 +1157,41 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 					double_sided=true;
 				}
 				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
+				bool anim=skinInstance!=nullptr;
 				if (skinInstance)
 				{
 					mat4* scr_matrices = skinInstance->GetBoneMatrices(globalTransformMatrix);
 					memcpy(&boneMatrices.boneMatrices, scr_matrices, sizeof(mat4) * clientrender::Skin::MAX_BONES);
 
 					pbrEffect->SetConstantBuffer(deviceContext, &boneMatrices);
-					usedPassName = "anim_" + usedPassName;
-				//	force_highlight=true;
+					//usedPassName = "anim_" + usedPassName;
 				}
 
 				crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 				bool highlight=node->IsHighlighted()||force_highlight;
-				crossplatform::EffectTechnique* pbrEffectTechnique = mvgdc ? pbrEffect_solid_multiviewTechnique : pbrEffect_solidTechnique;
-				crossplatform::EffectPass *pass = pbrEffectTechnique->GetPass(usedPassName.c_str());
-				if(material)
+				crossplatform::EffectPass *pass=nullptr;
+				
+				highlight|= (gui.GetSelectedUid() == material->id);
+				const clientrender::Material::MaterialData& md = material->GetMaterialData();
+				memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
+				pbrConstants.lightmapScaleOffset=*(const vec4*)(&(node->GetLightmapScaleOffset()));
+				std::shared_ptr<clientrender::Texture> diffuse	= matInfo.diffuse.texture;
+				std::shared_ptr<clientrender::Texture> normal	= matInfo.normal.texture;
+				std::shared_ptr<clientrender::Texture> combined = matInfo.combined.texture;
+				std::shared_ptr<clientrender::Texture> emissive = matInfo.emissive.texture;
+				
+				pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture	,diffuse ? diffuse->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture	,normal ? normal->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture	,combined ? combined->GetSimulTexture() : nullptr);
+				pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture	,emissive ? emissive->GetSimulTexture() : nullptr);
+				
+				crossplatform::EffectTechnique* pbrEffectTechnique = mvgdc ?(transparent?pbrEffect_transparentMultiviewTechnique:(anim?pbrEffect_solidAnimMultiviewTechnique:pbrEffect_solidMultiviewTechnique))
+																			:(transparent?pbrEffect_transparentTechnique:(anim?pbrEffect_solidAnimTechnique:pbrEffect_solidTechnique));
+				pass = pbrEffectTechnique->GetPass(usedPassName.c_str());
+				if(!pass)
 				{
-					highlight|= (gui.GetSelectedUid() == material->id);
-					const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
-					const clientrender::Material::MaterialData& md = material->GetMaterialData();
-					memcpy(&pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-					pbrConstants.lightmapScaleOffset=*(const vec4*)(&(node->GetLightmapScaleOffset()));
-					std::shared_ptr<clientrender::Texture> diffuse	= matInfo.diffuse.texture;
-					std::shared_ptr<clientrender::Texture> normal	= matInfo.normal.texture;
-					std::shared_ptr<clientrender::Texture> combined = matInfo.combined.texture;
-					std::shared_ptr<clientrender::Texture> emissive = matInfo.emissive.texture;
-					
-					pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture	, diffuse ? diffuse->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture	, normal ? normal->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture	, combined ? combined->GetSimulTexture() : nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture	, emissive ? emissive->GetSimulTexture() : nullptr);
-
-				}
-				else
-				{
-					pbrConstants.diffuseOutputScalar=vec4(1.0f,1.0f,1.0f,0.5f);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_diffuseTexture,  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_normalTexture,  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_combinedTexture,  nullptr);
-					pbrEffect->SetTexture(deviceContext, pbrEffect_emissiveTexture,  nullptr);
-					pass = mvgdc ? pbrEffect_solid_multiviewTechnique_localPass : pbrEffect_solidTechnique_localPass;
+					TELEPORT_CERR<<"Pass "<<usedPassName.c_str()<<" not found in "<<pbrEffectTechnique->name.c_str()<<"\n";
+					pass=pbrEffectTechnique->GetPass(0);
 				}
 				if (highlight)
 				{
@@ -1201,7 +1216,7 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 					if(t)
 					{
 						pbrEffect->SetTexture(deviceContext,pbrEffect_specularCubemap,t->GetSimulTexture());
-				}
+					}
 				}
 				//pbrEffect->SetTexture(deviceContext, "lightingCubemap", lightingCubemapTexture);
 				//pbrEffect->SetTexture(deviceContext, "videoTexture", ti->texture);
@@ -1234,7 +1249,8 @@ void Renderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext, c
 			}
 		}
 	}
-
+	if(!include_children)
+		return;
 	for(std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
 	{
 		std::shared_ptr<clientrender::Node> child = childPtr.lock();

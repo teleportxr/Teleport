@@ -576,9 +576,10 @@ avs::Result GeometryDecoder::decodeMaterial(avs::GeometryTargetBackendInterface*
 		avs::uid mat_uid = Next8B;
 
 		size_t nameLength = Next8B;
-
+		
 		material.name.resize(nameLength);
 		copy<char>(material.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+		material.materialMode = (avs::MaterialMode)NextB;
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
 		TELEPORT_COUT <<"GeometryDecoder::decodeMaterial - "<<mat_uid<<" "<< material.name.c_str() << " diffuse " << material.pbrMetallicRoughness.baseColorTexture.index << std::endl;
 		material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
