@@ -17,13 +17,13 @@ namespace clientrender
 	class Texture : public APIObject
 	{
 	public:
-		enum class Slot : uint32_t
+	/*	enum class Slot : uint32_t
 		{
 			DIFFUSE,	//Slot 0: DIFFUSE	RGBA Colour Texture
 			NORMAL,		//Slot 1: NORMAL	R: Tangent, G: Bi-normals and B: Normals
 			COMBINED,	//Slot 2: COMBINED	R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			UNKNOWN = 65536,
-		};
+		};*/
 		enum class Type : uint32_t
 		{
 			TEXTURE_UNKNOWN = 0,
@@ -136,7 +136,6 @@ namespace clientrender
 			uint32_t arrayCount = 0;
 			uint32_t mipCount = 0;
 
-			Slot slot = Slot::UNKNOWN;
 			Type type = Type::TEXTURE_UNKNOWN;
 			Format format = Format::FORMAT_UNKNOWN;
 			SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
@@ -148,6 +147,29 @@ namespace clientrender
 			bool externalResource = false;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
 
 			float valueScale=1.0f;	// multiplier for texel values.
+			
+			void operator=(const TextureCreateInfo & t)
+			{
+				name	=t.name;
+				uid		=t.uid;
+
+				width			= t.width			;
+				height			= t.height			;
+				depth			= t.depth			;
+				bytesPerPixel	= t.bytesPerPixel	;
+				arrayCount		= t.arrayCount		;
+				mipCount		= t.mipCount		;
+
+				type			= t.type;
+				format			= t.format;
+				sampleCount		= t.sampleCount;
+		
+				compression		= t.compression;
+		
+				 externalResource = t.externalResource;
+
+				 valueScale			=t.valueScale;
+			}
 		};
 
 		static const avs::vec3 DUMMY_DIMENSIONS; //X = Width, Y = Height, Z = Depth

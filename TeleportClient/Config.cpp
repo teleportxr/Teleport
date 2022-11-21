@@ -36,6 +36,11 @@ const std::vector<Bookmark> &Config::GetBookmarks() const
 	return bookmarks;
 }
 
+const std::vector<std::string> &Config::GetRecent() const
+{
+	return recent_server_urls;
+}
+
 void Config::AddBookmark(const Bookmark &b)
 {
 	bookmarks.push_back(b);

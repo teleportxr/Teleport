@@ -369,7 +369,7 @@ void Renderer::RecompileShaders()
 	pbrEffect_transparentMultiviewTechnique=pbrEffect->GetTechniqueByName("transparent_multiview");
 
 	pbrEffect_solidMultiviewTechnique				= pbrEffect->GetTechniqueByName("solid_multiview");
-	pbrEffect_solidAnimMultiviewTechnique			= pbrEffect->GetTechniqueByName("solid_multiview");
+	pbrEffect_solidAnimMultiviewTechnique			= pbrEffect->GetTechniqueByName("solid_anim_multiview");
 	pbrEffect_solidMultiviewTechnique_localPass		= pbrEffect_solidMultiviewTechnique->GetPass("local");
 
 	_RWTagDataIDBuffer						=cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
@@ -480,8 +480,8 @@ void Renderer::FillInControllerPose(int index, float offset)
 	static float elev_mult=1.2f;
 	float elevation	= elev_mult*(y-0.5f);//-asin(local_controller_dir.z);
 	q.Reset();
+	q.Rotate(elevation,vec3(-1.0f, 0, 0));
 	q.Rotate(azimuth,vec3(0,0,1.0f));
-q.Rotate(elevation, vec3(1.0f, 0, 0));
 	vec3 point_dir=q*vec3(0, 1.0f, 0);
 	static float roll=-1.3f;
 	q.Rotate(roll*offset, point_dir);
@@ -698,45 +698,23 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		hand_pos_press.push_back(pos4);
 	}
 
+	auto r=nodePoseStates.find(2);
+	if(r!=nodePoseStates.end())
 	{
-
-		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
-			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
-		auto l=nodePoseStates.find(1);
-		std::vector<vec4> hand_pos_press;
-		if(l!=nodePoseStates.end())
-		{
-			avs::Pose handPose	= l->second.pose_footSpace.pose;
-			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
-			//Clang can't handle overloaded functions, where a parameter could be upcast to another overload. Hence split the function calls.
-			/*if (multiview) 
-				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
-			else
-				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);*/
-			vec4 pos4;
-			pos4.xyz			= (const float*)&pos;
-			pos4.w				= 0.0f;
-			hand_pos_press.push_back(pos4);
-		}
-		auto r=nodePoseStates.find(2);
-		if(r!=nodePoseStates.end())
-		{
-			avs::Pose rightHand = r->second.pose_footSpace.pose;
-			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
-			/*if(multiview)
-				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
-			else
-				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);*/
-			vec4 pos4;
-			pos4.xyz = (const float*)&pos;
-			pos4.w = 0.0f;
-			hand_pos_press.push_back(pos4);
-		}
-		static bool override_have_vr_device=false;
-		gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
+		avs::Pose rightHand = r->second.pose_footSpace.pose;
+		avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
+		/*if(multiview)
+			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
+		else
+			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);*/
+		vec4 pos4;
+		pos4.xyz = (const float*)&pos;
+		pos4.w = 0.0f;
+		hand_pos_press.push_back(pos4);
 	}
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
+
 	
 	gui.Render(deviceContext);
 	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.options.showGeometryOffline)
@@ -1475,6 +1453,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT);
 			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 			gui.Hide();
+			config.StoreRecentURL(fmt::format("{0}:{1}",server_ip,server_discovery_port).c_str());
 		}
 	}
 
@@ -1999,7 +1978,6 @@ void Renderer::SetServer(const char *ip_port)
 		server_discovery_port =atoi(ip.substr(pos+1,ip.length()-pos-1).c_str());
 		server_ip = ip.substr(0,pos);
 	}
-	config.StoreRecentURL(ip_port);
 }
 
 void Renderer::ConnectButtonHandler(const std::string& url)

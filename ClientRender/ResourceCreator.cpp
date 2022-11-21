@@ -43,7 +43,7 @@ void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::
 		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.y),
 		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.z),
 		4, 1, 1,
-		clientrender::Texture::Slot::UNKNOWN,
+		//clientrender::Texture::Slot::UNKNOWN,
 		clientrender::Texture::Type::TEXTURE_2D,
 		clientrender::Texture::Format::RGBA8,
 		clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
@@ -111,13 +111,14 @@ void ResourceCreator::Update(float deltaTime)
 	std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
 
 	//Complete any textures that have finished to transcode, and are waiting.
-	//This has to happen on the main thread, so we can use the main GL context.
+	//This has to happen on the main thread, so we can use the main GL context... still valid on Vulkan??
 	for (auto texturePair = texturesToCreate.begin(); texturePair != texturesToCreate.end();)
 	{
 		// The texture object has a copy of the create info and
 		// will delete the allocated mip data in its destructor.
-		CompleteTexture(texturePair->first, texturePair->second);
-		texturePair = texturesToCreate.erase(texturePair);
+		CompleteTexture(texturePair->first, *(texturePair->second));
+		texturesToCreate.erase(texturePair);
+		break;
 	}
 }
 
@@ -502,24 +503,22 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 			break;
 		};
 	}
-	clientrender::Texture::TextureCreateInfo texInfo =
-	{
-		texture.name,
-		id,
-		texture.width,
-		texture.height,
-		texture.depth,
-		texture.bytesPerPixel,
-		texture.arrayCount,
-		texture.mipCount,
-		clientrender::Texture::Slot::UNKNOWN,
-		texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D, //Assumed
-		textureFormatFromAVSTextureFormat(texture.format),
-		clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT, //Assumed
-		{},
-		(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED
-
-	};
+	std::shared_ptr<clientrender::Texture::TextureCreateInfo> texInfo =std::make_shared<clientrender::Texture::TextureCreateInfo>();
+	texInfo->name			=texture.name;
+	texInfo->uid			=id;
+	texInfo->width			=texture.width;
+	texInfo->height			=texture.height;
+	texInfo->depth			=texture.depth;
+	texInfo->bytesPerPixel	=texture.bytesPerPixel;
+	texInfo->arrayCount		=texture.arrayCount;
+	texInfo->mipCount		=texture.mipCount;
+	//texInfo->slot			=clientrender::Texture::Slot::UNKNOWN;
+	texInfo->type			=texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+	texInfo->format			=textureFormatFromAVSTextureFormat(texture.format);
+	texInfo->sampleCount	=clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT; //Assumed
+	
+	texInfo->compression	=(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED;
+	
 
 	//Copy the data out of the buffer, so it can be transcoded or used as-is (uncompressed).
 	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
@@ -529,15 +528,15 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), std::move(texInfo), texture.name,texture.compression,texture.valueScale });
+		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), texInfo, texture.name,texture.compression,texture.valueScale });
 		//std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
 	}
 	else
 	{
-		texInfo.images.emplace_back(std::move(data));
+		texInfo->images.emplace_back(std::move(data));
 
 		//std::cout << "Uncompressed, completing.\n";
-		CompleteTexture(id, texInfo);
+		CompleteTexture(id, *texInfo);
 	}
 }
 
@@ -1267,6 +1266,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				{
 					imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
 				}
+				transcoding.scrTexture->images.resize(num_images);
 				for(int i=0;i<num_images;i++)
 				{
 					// Convert from Png to raw data:
@@ -1276,11 +1276,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					{
 						// this is for 8-bits-per-channel textures:
 						size_t outDataSize = (size_t)(mipWidth * mipHeight * 4);
-						std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
-
-						memcpy(outData.data(), target, outDataSize);
-						transcoding.scrTexture.images.emplace_back(std::move(outData));
-						transcoding.scrTexture.valueScale=transcoding.valueScale;
+						transcoding.scrTexture->images[i].resize(outDataSize);
+						memcpy(transcoding.scrTexture->images[i].data(), target, outDataSize);
+						transcoding.scrTexture->valueScale=transcoding.valueScale;
 
 					}
 					else
@@ -1289,10 +1287,10 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					teleport::stbi_image_free(target);
 				}
-				if (transcoding.scrTexture.images.size() != 0)
+				if (transcoding.scrTexture->images.size() != 0)
 				{
 					std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, transcoding.scrTexture});
 				}
 				else
 				{
@@ -1313,9 +1311,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				BasisValidate(basis_transcoder, fileinfo,transcoding.data);
 				if (basis_transcoder.start_transcoding(transcoding.data.data(), (uint32_t)transcoding.data.size()))
 				{
-					transcoding.scrTexture.mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
-					//transcoding.scrTexture.arrayCount = basis_transcoder.get_total_images(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
-					transcoding.scrTexture.images.reserve(transcoding.scrTexture.mipCount*transcoding.scrTexture.arrayCount);
+					transcoding.scrTexture->mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
+					//transcoding.scrTexture->arrayCount = basis_transcoder.get_total_images(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
+					transcoding.scrTexture->images.resize(transcoding.scrTexture->mipCount*transcoding.scrTexture->arrayCount);
 					//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
 					// choose a transcoder format based on this:
 					//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
@@ -1325,30 +1323,26 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
 						continue;
 					}
-					//transcoding.scrTexture.mipCount=std::min(transcoding.scrTexture.mipCount,(uint)2);
-					//transcoding.scrTexture.compression= toSCRCompressionFormat(basis_transcoder_textureFormat);
-					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture.arrayCount; arrayIndex++)
+					int imageIndex=0;
+					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture->arrayCount; arrayIndex++)
 					{
-						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture.mipCount; mipIndex++)
+						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture->mipCount; mipIndex++)
 						{
 							uint32_t basisWidth, basisHeight, basisBlocks;
 
 							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
 							uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
-
-							std::vector<unsigned char> outData = std::vector<unsigned char>(outDataSize);
-							if (basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(),arrayIndex, mipIndex, outData.data(), basisBlocks, basis_transcoder_textureFormat))
-							{
-								transcoding.scrTexture.images.emplace_back(std::move(outData));
-							}
-							else
+							auto &img=transcoding.scrTexture->images[imageIndex];
+							img.resize(outDataSize);
+							if (!basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(),arrayIndex, mipIndex, img.data(), basisBlocks, basis_transcoder_textureFormat))
 							{
 								TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
 							}
+							imageIndex++;
 						}
 					}
 
-					if (transcoding.scrTexture.images.size() != 0)
+					if (transcoding.scrTexture->images.size() != 0)
 					{
 						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
 						texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });

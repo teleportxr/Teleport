@@ -80,7 +80,7 @@ namespace clientrender
 	{
 		avs::uid texture_uid;
 		std::vector<unsigned char> data; //The raw data of the basis file.
-		clientrender::Texture::TextureCreateInfo scrTexture; //Creation information on texture being transcoded.
+		std::shared_ptr<clientrender::Texture::TextureCreateInfo> scrTexture; //Creation information on texture being transcoded.
 		std::string name; //For debugging which texture failed.
 		avs::TextureCompression fromCompressionFormat;
 		float valueScale;	// scale on transcode.

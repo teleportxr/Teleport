@@ -104,7 +104,7 @@ namespace clientrender
 	#endif
 
 		std::vector<UntranscodedTexture> texturesToTranscode;
-		std::map<avs::uid, clientrender::Texture::TextureCreateInfo> texturesToCreate; //Textures that are ready to be created <Texture's UID, Texture's Data>
+		std::map<avs::uid, std::shared_ptr<clientrender::Texture::TextureCreateInfo>> texturesToCreate; //Textures that are ready to be created <Texture's UID, Texture's Data>
 	
 		std::mutex mutex_texturesToTranscode;
 		std::mutex mutex_texturesToCreate;

@@ -34,7 +34,7 @@ namespace clientrender
 	class APIObject
 	{
 	protected:
-		const RenderPlatform*const renderPlatform;
+		const RenderPlatform *const renderPlatform;
 		APIObject(const RenderPlatform*const r) 
 			: renderPlatform(r) {}
 	};

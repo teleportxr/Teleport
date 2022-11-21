@@ -221,7 +221,7 @@ namespace teleport
 		};
 		struct Overlay
 		{
-			XrPosef pose={{0,0,0,1.0f},{0.0f, 1.8f, -2.0f}};
+			XrPosef pose={{0,0,0.707f,0.707f},{0.0f, 1.8f, -2.0f}};
 			XrExtent2Df size = {4.0f, 2.0f};
 		};
 		class OpenXR

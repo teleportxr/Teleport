@@ -213,7 +213,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
-		builder.AddText(ICON_FK_ARROW_RIGHT);									
+		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);									
 		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
 		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
@@ -1020,24 +1020,36 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::SameLine();
 				ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 				ImGui::BeginChild("Bookmarks", ImVec2(-1,-1), true, window_flags);
-				for (int i = 0; i < bookmarks.size(); i++)
+
+				
+				auto BookmarkEntry = [this](const std::string &url,const std::string &title)
 				{
-					const client::Bookmark &b=bookmarks[i];
-					if(ImGui::TreeNodeEx(b.url.c_str(), ImGuiTreeNodeFlags_Leaf,"%s",b.title.c_str()))
+					if(ImGui::TreeNodeEx(url.c_str(), ImGuiTreeNodeFlags_Leaf,"%s",title.c_str()))
 					{
 						if (ImGui::IsItemClicked())
 						{
-							selected_url=b.url;
+							selected_url=url;
 						}
-						else if(!ImGui::IsMouseDown(0)&&selected_url==b.url)
+						else if(!ImGui::IsMouseDown(0)&&selected_url==url)
 						{
-							current_url=b.url;
+							current_url=url;
 							memcpy(url_buffer,current_url.c_str(),std::min((size_t)499,current_url.size()));
-							connectHandler(b.url);
+							connectHandler(url);
 							show_bookmarks=false;
 						}
 						ImGui::TreePop();
 					}
+				};
+				const std::vector<std::string> &recent=config->GetRecent();
+				for (int i = 0; i < recent.size(); i++)
+				{
+					const std::string &r=recent[i];
+					BookmarkEntry(r,r);
+				}
+				for (int i = 0; i < bookmarks.size(); i++)
+				{
+					const client::Bookmark &b=bookmarks[i];
+					BookmarkEntry(b.url,b.title);
 				}
 				ImGui::EndChild();
 			}
@@ -1059,7 +1071,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::SameLine();
 				if (!connecting)
 				{
-					if (ImGui::Button(ICON_FK_ARROW_RIGHT, ImVec2(64, 32)))
+					if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(64, 32)))
 					{
 						current_url = url_buffer;
 						connectHandler(current_url);
@@ -1123,13 +1135,13 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					ImGui::Text("	");
 					ImGui::SameLine();
 					KeyboardLine("asdfghjkl:");
-					ImGui::SameLine();
+					/*ImGui::SameLine();
 					static char buf[32] = "Return";
 					if (ImGui::Button(buf,ImVec2(92,32)))
 					{
 						 refocus=0;
 						 keys_pressed.push_back(ImGuiKey_Enter);
-					}
+					}*/
 					ImGui::Text("	  ");
 					ImGui::SameLine();
 					KeyboardLine("zxcvbnm,./");

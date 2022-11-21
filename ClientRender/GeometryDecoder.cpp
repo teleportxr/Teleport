@@ -510,19 +510,31 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 				continue;
 				case avs::AttributeSemantic::NORMAL:
 					meshElementCreate.m_Normals = reinterpret_cast<const avs::vec3*>(data);
-					assert(accessor.count == vertexCount);
+					if(accessor.count != vertexCount)
+					{
+					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
+					}
 					continue;
 				case avs::AttributeSemantic::TANGENT:
 					meshElementCreate.m_Tangents = reinterpret_cast<const avs::vec4*>(data);
-					assert(accessor.count == vertexCount);
+					if(accessor.count != vertexCount)
+					{
+					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
+					}
 					continue;
 				case avs::AttributeSemantic::TEXCOORD_0:
 					meshElementCreate.m_UV0s = reinterpret_cast<const avs::vec2*>(data);
-					assert(accessor.count == vertexCount);
+					if(accessor.count != vertexCount)
+					{
+					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
+					}
 					continue;
 				case avs::AttributeSemantic::TEXCOORD_1:
 					meshElementCreate.m_UV1s = reinterpret_cast<const avs::vec2*>(data);
-					assert(accessor.count == vertexCount);
+					if(accessor.count != vertexCount)
+					{
+					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
+					}
 					continue;
 				case avs::AttributeSemantic::COLOR_0:
 					meshElementCreate.m_Colors = reinterpret_cast<const avs::vec4*>(data);
