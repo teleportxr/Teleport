@@ -100,7 +100,7 @@ namespace clientrender
 
 		void ChangePass(ShaderMode newShaderMode);
 		void ConfigureVideo(const avs::VideoConfig &vc);
-		void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose);//,const std::vector<vec3> &eye_offsets);
+		void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		teleport::core::SetupCommand lastSetupCommand;
 		teleport::core::SetupLightingCommand lastSetupLightingCommand;

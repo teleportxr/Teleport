@@ -68,12 +68,6 @@ namespace avs
 		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		std::mutex m_countersMutex;
 		uint32_t m_statsTimeElapsed;
-
-		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
-		void sendOrCacheData(const std::vector<uint8_t>& subPacket);
-		void sendData(const std::vector<uint8_t>& subPacket);
-		void closeConnection();
-		void updateCounters(uint64_t timestamp, uint32_t deltaTime);
 	};
 
 } // avs

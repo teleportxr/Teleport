@@ -27,17 +27,35 @@ enum class DecodeFrequency
  *
  * Specifies the status of the video decoder at certain step in the video decoding pipeline.
  */
-enum class DecoderStatus
+enum class DecoderStatus : uint32_t
 {
-	DecoderUnavailable					= 0x0000000, /*!< Decoder has not been set up. */
-	DecoderAvailable					= 0x0000001, /*!< Decoder is set up and ready to receive data. */
-	ReceivingVideoStream				= 0x0000002, /*!< Decoder is receiving video data from the server. */
-	QueuingVideoStreamBuffer			= 0x0000004, /*!< Decoder is storing the single received buffer for accumulation and processing. */
-	AccumulatingVideoStreamBuffers		= 0x0000008, /*!< Decoder is collecting multiple single buffers to assemble enough data for a frame. */
-	PassingVideoStreamToDecoder			= 0x0000010, /*!< Decoder is passing the completed frame data for decoding. */
-	DecodingVideoStream					= 0x0000020, /*!< Hardware or software accelerated decoding of the video stream data. */
-	ProcessingOutputFrameFromDecoder	= 0x0000040, /*!< Decoder is processing the output frame for use in graphics APIs. */
-	FrameAvailable						= 0x0000080, /*!< Decoded video frame is available for use in graphics APIs. */
+	DecoderUnavailable					= 0x00000000, /*!< Decoder has not been set up. */
+	DecoderAvailable					= 0x0000000F, /*!< Decoder is set up and ready to receive data. */
+	ReceivingVideoStream				= 0x000000F0, /*!< Decoder is receiving video data from the server. */
+	QueuingVideoStreamBuffer			= 0x00000F00, /*!< Decoder is storing the single received buffer for accumulation and processing. */
+	AccumulatingVideoStreamBuffers		= 0x0000F000, /*!< Decoder is collecting multiple single buffers to assemble enough data for a frame. */
+	PassingVideoStreamToDecoder			= 0x000F0000, /*!< Decoder is passing the completed frame data for decoding. */
+	DecodingVideoStream					= 0x00F00000, /*!< Hardware or software accelerated decoding of the video stream data. */
+	ProcessingOutputFrameFromDecoder	= 0x0F000000, /*!< Decoder is processing the output frame for use in graphics APIs. */
+	FrameAvailable						= 0xF0000000, /*!< Decoded video frame is available for use in graphics APIs. */
+};
+
+/*!
+ * Video decoder status names.
+ *
+ * For use with magic_enum
+ */
+enum class DecoderStatusNames
+{
+	DecoderUnavailable,
+	DecoderAvailable,
+	ReceivingVideoStream,
+	QueuingVideoStreamBuffer,
+	AccumulatingVideoStreamBuffers,
+	PassingVideoStreamToDecoder,
+	DecodingVideoStream,
+	ProcessingOutputFrameFromDecoder,
+	FrameAvailable
 };
 
 /*!

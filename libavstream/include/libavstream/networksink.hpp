@@ -6,6 +6,10 @@
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
 #include <libavstream/stream/parser_interface.hpp>
+#if LIBAV_USE_SRT
+#include <srt.h>
+#endif
+
 
 namespace avs
 {
@@ -129,6 +133,13 @@ namespace avs
 		void setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency);	
 		void setProcessingEnabled(bool enable);
 		bool isProcessingEnabled() const;
+	protected:
+		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
+		void sendData(const std::vector<uint8_t>& subPacket);
+		void closeConnection();
+		void updateCounters(uint64_t timestamp, uint32_t deltaTime);
+	public:
+		void sendOrCacheData(const std::vector<uint8_t>& subPacket);
 	};
 
 } // avs

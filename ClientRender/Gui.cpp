@@ -1061,6 +1061,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				{
 					if (ImGui::Button(ICON_FK_ARROW_RIGHT, ImVec2(64, 32)))
 					{
+						current_url = url_buffer;
 						connectHandler(current_url);
 					}
 				}

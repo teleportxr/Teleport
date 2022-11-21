@@ -97,10 +97,11 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	auto onPacketParsed = [](PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
 	{
 		NetworkSink* ns = static_cast<NetworkSink*>(node);
-		return ns->m_data->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
+		return ns->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
 	};
-
-	for (size_t i = 0; i < m_data->m_streams.size(); ++i)
+	if(m_data->m_streams.size()>=INT_MAX)
+		return Result::Failed;
+	for (uint32_t i = 0; i < m_data->m_streams.size(); ++i)
 	{
 		auto& stream = m_data->m_streams[i];
 		stream.buffer.resize(stream.chunkSize);
@@ -116,7 +117,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 
 	m_data->m_EFPSender.reset(new ElasticFrameProtocolSender(PacketFormat::MaxPacketSize));
 	// The callback will be called on the same thread calling 'packAndSendFromPtr'
-	m_data->m_EFPSender->sendCallback = std::bind(&Private::sendOrCacheData, m_data, std::placeholders::_1);
+	m_data->m_EFPSender->sendCallback = std::bind(&NetworkSink::sendOrCacheData, this, std::placeholders::_1);
 
 	// 6 MB (48 mb) per second limit
 	m_data->m_maxPacketsAllowedPerSecond = 6000000 / PacketFormat::MaxPacketSize;
@@ -255,15 +256,15 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 				break;
 			case SRTS_BROKEN:
 				AVSLOG(Error) << "SRTS_BROKEN \n";
-				m_data->closeConnection();
+				closeConnection();
 				break;
 			case SRTS_NONEXIST:
 				AVSLOG(Error) << "SRTS_NONEXIST \n";
-				m_data->closeConnection();
+				closeConnection();
 				break;
 			case SRTS_CLOSED:
 				AVSLOG(Error) << "SRTS_CLOSED \n";
-				m_data->closeConnection();
+				closeConnection();
 				break;
 			case SRTS_CONNECTED:
 				AVSLOG(Info) << "SRTS_CONNECTED \n";
@@ -275,7 +276,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	}
 	else if (m_data->bConnected)
 	{
-		m_data->closeConnection();
+		closeConnection();
 		setProcessingEnabled(false);
 		return Result::Network_Disconnection;
 	}
@@ -288,7 +289,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		if (stat == SRT_SOCKSTATUS::SRTS_CLOSED)
 		{
-			m_data->closeConnection();
+			closeConnection();
 		}
 		return Result::Network_Disconnection;
 	}
@@ -341,7 +342,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			while (!m_data->m_dataQueue.empty() && m_data->m_packetsSent < m_data->m_maxPacketsAllowed)
 			{
-				m_data->sendData(m_data->m_dataQueue.front());
+				sendData(m_data->m_dataQueue.front());
 				m_data->m_dataQueue.pop();
 			}
 		}
@@ -374,7 +375,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 		else
 		{
-			res = m_data->packData(stream.buffer.data(), numBytesRead, i);
+			res = packData(stream.buffer.data(), numBytesRead, i);
 		}
 		if (!res)
 		{
@@ -382,7 +383,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 	}
 
-	m_data->updateCounters(timestamp, deltaTime);
+	updateCounters(timestamp, deltaTime);
 
 	return Result::OK;
 }
@@ -398,57 +399,57 @@ bool NetworkSink::isProcessingEnabled() const
 }
 
 
-void NetworkSink::Private::updateCounters(uint64_t timestamp, uint32_t deltaTime)
+void NetworkSink::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 {
-	if (m_params.bandwidthInterval == 0)
+	if (m_data->m_params.bandwidthInterval == 0)
 	{
 		return;
 	}
 
-	m_statsTimeElapsed += deltaTime;
+	m_data->m_statsTimeElapsed += deltaTime;
 
 	// Update network stats
-	std::lock_guard<std::mutex> lock(m_countersMutex);
+	std::lock_guard<std::mutex> lock(m_data->m_countersMutex);
 
-	if (m_packetsSent > 0)
+	if (m_data->m_packetsSent > 0)
 	{
-		m_counters.networkPacketsSent += m_packetsSent;
-		m_counters.bytesSent = m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
+		m_data->m_counters.networkPacketsSent += m_data->m_packetsSent;
+		m_data->m_counters.bytesSent = m_data->m_counters.networkPacketsSent * PacketFormat::MaxPacketSize;
 	}
 
-	if (m_statsTimeElapsed > m_params.bandwidthInterval)
+	if (m_data->m_statsTimeElapsed > m_data->m_params.bandwidthInterval)
 	{
-		m_statsTimeElapsed = 0;
+		m_data->m_statsTimeElapsed = 0;
 
 		SRT_TRACEBSTATS perf;
 		// returns 0 if there's no error during execution and -1 if there is
-		if (srt_bstats(m_remote_socket, &perf, true) != 0)
+		if (srt_bstats(m_data->m_remote_socket, &perf, true) != 0)
 		{
 			return;
 		}
-		m_counters.bandwidth = perf.mbpsBandwidth;
+		m_data->m_counters.bandwidth = perf.mbpsBandwidth;
 
-		m_counters.avgBandwidthUsed = perf.mbpsSendRate;
+		m_data->m_counters.avgBandwidthUsed = perf.mbpsSendRate;
 
-		if (m_counters.avgBandwidthUsed > 0 && m_counters.avgBandwidthUsed < m_minBandwidthUsed)
+		if (m_data->m_counters.avgBandwidthUsed > 0 && m_data->m_counters.avgBandwidthUsed < m_data->m_minBandwidthUsed)
 		{
-			m_minBandwidthUsed = m_counters.avgBandwidthUsed;
-			m_counters.minBandwidthUsed = m_minBandwidthUsed;
+			m_data->m_minBandwidthUsed = m_data->m_counters.avgBandwidthUsed;
+			m_data->m_counters.minBandwidthUsed = m_data->m_minBandwidthUsed;
 		}
 
-		if (m_counters.avgBandwidthUsed > m_counters.maxBandwidthUsed)
+		if (m_data->m_counters.avgBandwidthUsed > m_data->m_counters.maxBandwidthUsed)
 		{
-			m_counters.maxBandwidthUsed = m_counters.avgBandwidthUsed;
+			m_data->m_counters.maxBandwidthUsed = m_data->m_counters.avgBandwidthUsed;
 		}
 	}
 }
 
-Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
+Result NetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
 {
 	uint32_t code = 0;
 	ElasticFrameContent dataContent;
 
-	auto& stream = m_streams[inputNodeIndex];
+	auto& stream = m_data->m_streams[inputNodeIndex];
 
 	switch (stream.dataType)
 	{
@@ -473,7 +474,7 @@ Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, 
 	// Total number of EFP superframes created since the start for this stream.
 	stream.counter++;
 
-	auto efpResult = m_EFPSender->packAndSendFromPtr(buffer,
+	auto efpResult = m_data->m_EFPSender->packAndSendFromPtr(buffer,
 		bufferSize,
 		dataContent, 
 		stream.counter, // pts
@@ -491,47 +492,47 @@ Result NetworkSink::Private::packData(const uint8_t* buffer, size_t bufferSize, 
 	return Result::OK;
 }
 
-void NetworkSink::Private::sendOrCacheData(const std::vector<uint8_t>& subPacket)
+void NetworkSink::sendOrCacheData(const std::vector<uint8_t>& subPacket)
 {
 	uint8_t id = subPacket[1];
-	auto index = m_streamIndices[id];
+	auto index = m_data->m_streamIndices[id];
 
 	// streamID is second byte for all EFP packet types
-	const auto& stream = m_streams[index];
+	const auto& stream = m_data->m_streams[index];
 
-	if (stream.isDataLimitPerFrame && m_packetsSent >= m_maxPacketsAllowed)
+	if (stream.isDataLimitPerFrame && m_data->m_packetsSent >= m_data->m_maxPacketsAllowed)
 	{
-		m_dataQueue.push(subPacket);
+		m_data->m_dataQueue.push(subPacket);
 		return;
 	}
 
 	sendData(subPacket);
 }
 
-void NetworkSink::Private::sendData(const std::vector<uint8_t> &subPacket)
+void NetworkSink::sendData(const std::vector<uint8_t> &subPacket)
 {
 	const char* buffer = (const char*)subPacket.data();
 	const size_t bufferSize = subPacket.size();
 
 	SRT_MSGCTRL mctrl;
 	srt_msgctrl_init(&mctrl);
-	int r = srt_sendmsg2(m_remote_socket, buffer, bufferSize, &mctrl);
+	int r = srt_sendmsg2(m_data->m_remote_socket, buffer, bufferSize, &mctrl);
 	if (r < 0)
 	{
 		closeConnection();
-		q_ptr()->setProcessingEnabled(false);
+		m_data->q_ptr()->setProcessingEnabled(false);
 		return;
 	}
-	m_packetsSent++;
+	m_data->m_packetsSent++;
 }
 
-void NetworkSink::Private::closeConnection()
+void NetworkSink::closeConnection()
 {
-	if (bConnected)
+	if (m_data->bConnected)
 	{
-		bConnected = false;
-		srt_close(m_remote_socket);
-		m_remote_socket = 0;
+		m_data->bConnected = false;
+		srt_close(m_data->m_remote_socket);
+		m_data->m_remote_socket = 0;
 	}
 }
 

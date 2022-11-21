@@ -215,7 +215,7 @@ namespace teleport
 			size_t reflectedTextureIndex = -1;
 			std::atomic_int nextImageIndex = -1;
 			std::atomic_int freeImageIndex = -1;
-			std::vector<int> texturesToFree;
+			std::vector<size_t> texturesToFree;
 
 			std::thread* processBuffersThread = nullptr;
 			std::mutex buffers_mutex;
@@ -230,6 +230,7 @@ namespace teleport
 			bool decoderConfigured = false;
 			int displayRequests = 0; //TODO: Remove maybe?
 			vk::SamplerYcbcrModelConversion ycbcrModel = vk::SamplerYcbcrModelConversion::eYcbcr709;
+			uint64_t externalFormat = 0;
 
 			platform::crossplatform::VideoDecoderParams videoDecoderParams;
 

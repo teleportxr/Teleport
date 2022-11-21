@@ -502,7 +502,7 @@ void Renderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
 	clientPipeline.videoConfig = videoConfig;
 }
 
-void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)//,const std::vector<vec3> &eye_offsets)
+void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)
 {
 // Here we must transform the viewstructs in the device context by the specified origin pose,
 // so that the new view matrices will be in a global space which has the stage space at the specified origin.
@@ -517,15 +517,11 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext
 	crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 	if (mvgdc)
 	{
-		//vec3 deltaPosition = mvgdc->viewStructs[0].cam_pos - vec3((const float*)&pose.position);
 		for (int i=0;i<mvgdc->viewStructs.size();i++)
 		{
 			auto &viewStruct=mvgdc->viewStructs[i];
 			tmp=viewStruct.view;
 			Multiply4x4(viewStruct.view,originMat,tmp);
-			//avs::Pose newPose = pose;
-			//newPose.position = ConvertVec3<avs::vec3>(pose.position+eye_offsets[i]);//viewStruct.cam_pos - deltaPosition);
-			//viewStruct.view = openXR->CreateViewMatrixFromPose(newPose);
 			// MUST call init each frame.
 			viewStruct.Init();
 		}
@@ -669,8 +665,9 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		RenderLocalNodes(deviceContext,server_uid,geometryCache);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	
 	// Init the viewstruct in local space - i.e. with no server offsets.
-	//SetRenderPose(deviceContext,clientDeviceState->headPose.localPose);
+	SetRenderPose(deviceContext, avs::Pose());
 	if(mvgdc)
 	{
 		mvgdc->viewStructs=defaultViewStructs;
@@ -679,48 +676,44 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			s.Init();
 		}
 	}
-	else
-	{
-		deviceContext.viewStruct=defaultViewStructs[0];
-		deviceContext.viewStruct.Init();
-	}
-	{
+	deviceContext.viewStruct=defaultViewStructs[0];
+	deviceContext.viewStruct.Init();
 
-		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
-			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
-		auto l=nodePoseStates.find(1);
-		std::vector<vec4> hand_pos_press;
-		if(l!=nodePoseStates.end())
-		{
-			avs::Pose handPose	= l->second.pose_footSpace.pose;
-			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
-			//Clang can't handle overloaded functions, where a parameter could be upcast and another overload. Hence split the function calls.
-			if (multiview) 
-				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
-			else
-				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);
-			vec4 pos4;
-			pos4.xyz			= (const float*)&pos;
-			pos4.w				= 0.0f;
-			hand_pos_press.push_back(pos4);
-		}
-		auto r=nodePoseStates.find(2);
-		if(r!=nodePoseStates.end())
-		{
-			avs::Pose rightHand = r->second.pose_footSpace.pose;
-			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
-			if(multiview)
-				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
-			else
-				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);
-			vec4 pos4;
-			pos4.xyz = (const float*)&pos;
-			pos4.w = 0.0f;
-			hand_pos_press.push_back(pos4);
-		}
-		static bool override_have_vr_device=false;
-		gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
+	const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
+		=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
+	auto l=nodePoseStates.find(1);
+	std::vector<vec4> hand_pos_press;
+	if(l!=nodePoseStates.end())
+	{
+		avs::Pose handPose	= l->second.pose_footSpace.pose;
+		avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
+		//Clang can't handle overloaded functions, where a parameter could be upcast to another overload. Hence split the function calls.
+		if (multiview) 
+			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
+		else
+			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);
+		vec4 pos4;
+		pos4.xyz			= (const float*)&pos;
+		pos4.w				= 0.0f;
+		hand_pos_press.push_back(pos4);
 	}
+	auto r=nodePoseStates.find(2);
+	if(r!=nodePoseStates.end())
+	{
+		avs::Pose rightHand = r->second.pose_footSpace.pose;
+		avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
+		if(multiview)
+			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
+		else
+			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);
+		vec4 pos4;
+		pos4.xyz = (const float*)&pos;
+		pos4.w = 0.0f;
+		hand_pos_press.push_back(pos4);
+	}
+	static bool override_have_vr_device=false;
+	gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
+	
 	gui.Render(deviceContext);
 	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.options.showGeometryOffline)
 	{	
@@ -924,7 +917,7 @@ void Renderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContext& devic
 	{
 		cubemapClearEffect->SetTexture(deviceContext, "plainTexture",testSourceTexture);
 		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
-		cubemapClearEffect->Apply(deviceContext, technique, faceColour ? "test_face_colour" : "test");
+		cubemapClearEffect->Apply(deviceContext, "test", faceColour ? "test_face_colour" : "test");
 		int zGroups = videoTexture->IsCubemap() ? 6 : 1;
 		renderPlatform->DispatchCompute(deviceContext, targetTexture->width/16, targetTexture->length/16, zGroups);
 		cubemapClearEffect->Unapply(deviceContext);
@@ -1601,6 +1594,8 @@ void Renderer::ShowHideGui()
 	AnimationState *rightAnimState=rightHand->animationComponent.GetAnimationState(point_anim_uid);
 	if(gui.HasFocus())
 	{
+		show_osd = NO_OSD; //TODO: Find a better fix for OSD and Keyboard resource collision in Vulkan/ImGui - AJR.
+
 		// If we've just started to show the gui, let's make the hands point, so the index finger alone is extended for typing.
 		if(leftAnimState)
 		{
@@ -2098,7 +2093,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	else if (show_osd == clientrender::DECODER_OSD)
 	{
 		gui.LinePrint("Decoder Status:", white);
-		auto names = magic_enum::enum_names<avs::DecoderStatus>();
+		auto names = magic_enum::enum_names<avs::DecoderStatusNames>();
 		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
 		if (status == avs::DecoderStatus::DecoderUnavailable)
 		{
@@ -2108,9 +2103,9 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			for (size_t i = 0; i < 8; i++)
 			{
-				bool valid = uint32_t(status) & uint32_t(1 << i);
-				std::string str = std::string(names[i + 1]) + ": %s";
-				gui.LinePrint(platform::core::QuickFormat(str.c_str(), valid ? "true" : "false"), white);
+				uint32_t value = (uint32_t(status) & uint32_t(0xF << (i * 4))) >> (i * 4);
+				std::string str = std::string(names[i + 1]) + ": %d";
+				gui.LinePrint(platform::core::QuickFormat(str.c_str(), value), white);
 			}
 		}
 	}
