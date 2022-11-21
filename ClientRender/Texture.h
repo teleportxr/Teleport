@@ -140,7 +140,7 @@ namespace clientrender
 			Type type = Type::TEXTURE_UNKNOWN;
 			Format format = Format::FORMAT_UNKNOWN;
 			SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
-			std::vector<size_t> imageSizes;
+		
 			std::vector<std::vector<uint8_t>> images;
 
 			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
@@ -209,10 +209,6 @@ namespace clientrender
 		{
 			return m_SimulTexture;
 		}
-	protected:
-		virtual void Bind(uint32_t mip,uint32_t layer) const;
-		virtual void BindForWrite(uint32_t slot,uint32_t mip,uint32_t layer) const;
-		virtual void Unbind() const ;
 	};
 	inline Texture::Type operator&(Texture::Type a, Texture::Type b)
 	{
