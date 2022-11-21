@@ -697,19 +697,43 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		pos4.w				= 0.0f;
 		hand_pos_press.push_back(pos4);
 	}
-	auto r=nodePoseStates.find(2);
-	if(r!=nodePoseStates.end())
+
 	{
-		avs::Pose rightHand = r->second.pose_footSpace.pose;
-		avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
-		if(multiview)
-			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
-		else
-			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);
-		vec4 pos4;
-		pos4.xyz = (const float*)&pos;
-		pos4.w = 0.0f;
-		hand_pos_press.push_back(pos4);
+
+		const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
+			=openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
+		auto l=nodePoseStates.find(1);
+		std::vector<vec4> hand_pos_press;
+		if(l!=nodePoseStates.end())
+		{
+			avs::Pose handPose	= l->second.pose_footSpace.pose;
+			avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
+			//Clang can't handle overloaded functions, where a parameter could be upcast to another overload. Hence split the function calls.
+			/*if (multiview) 
+				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
+			else
+				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);*/
+			vec4 pos4;
+			pos4.xyz			= (const float*)&pos;
+			pos4.w				= 0.0f;
+			hand_pos_press.push_back(pos4);
+		}
+		auto r=nodePoseStates.find(2);
+		if(r!=nodePoseStates.end())
+		{
+			avs::Pose rightHand = r->second.pose_footSpace.pose;
+			avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
+			/*if(multiview)
+				renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
+			else
+				renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);*/
+			vec4 pos4;
+			pos4.xyz = (const float*)&pos;
+			pos4.w = 0.0f;
+			hand_pos_press.push_back(pos4);
+		}
+		static bool override_have_vr_device=false;
+		gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
 	}
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
