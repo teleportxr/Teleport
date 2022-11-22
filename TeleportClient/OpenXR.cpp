@@ -1902,7 +1902,42 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelega
 
 	return true;
 }
+static inline XrQuaternionf XrQuaternionf_Identity() {
+    XrQuaternionf r;
+    r.x = r.y = r.z = 0.0;
+    r.w = 1.0f;
+    return r;
+}
 
+static inline float XrVector3f_LengthSquared(const XrVector3f v) {
+    return v.x*v.x+v.y*v.y+v.z*v.z;
+}
+
+static inline float XrVector3f_Length(const XrVector3f v) {
+    return sqrtf(XrVector3f_LengthSquared(v));
+}
+
+static inline XrVector3f XrVector3f_Normalized(const XrVector3f v) {
+    float rcpLen = 1.0f / XrVector3f_Length(v);
+    return XrVector3f_ScalarMultiply(v, rcpLen);
+}
+static  XrQuaternionf XrQuaternionf_CreateFromVectorAngle(
+    const XrVector3f axis,
+    const float angle) {
+    XrQuaternionf r;
+    if (XrVector3f_LengthSquared(axis) == 0.0f) {
+        return XrQuaternionf_Identity();
+    }
+
+    XrVector3f unitAxis = XrVector3f_Normalized(axis);
+    float sinHalfAngle = sinf(angle * 0.5f);
+
+    r.w = cosf(angle * 0.5f);
+    r.x = unitAxis.x * sinHalfAngle;
+    r.y = unitAxis.y * sinHalfAngle;
+    r.z = unitAxis.z * sinHalfAngle;
+    return r;
+}
 bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_layer,int i)
 {
 
@@ -1921,7 +1956,7 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
     quad_layer.subImage.imageArrayIndex = 0;
    // quad_layer.pose = xr_pose_identity;
-   // quad_layer.pose.orientation =        XrQuaternionf_CreateFromVectorAngle(axis, 45.0f * MATH_PI / 180.0f);
+   overlay.pose.orientation =        XrQuaternionf_CreateFromVectorAngle({0,1.0f,0},-90.0f * 3.14159f / 180.0f);
     quad_layer.pose = overlay.pose;
 
     quad_layer.size = overlay.size;
