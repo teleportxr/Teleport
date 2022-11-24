@@ -757,7 +757,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	//hdrFramebuffer->Deactivate(deviceContext);
 	//hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
-
+	pbrEffect->UnbindTextures(deviceContext);
 }
 
 void Renderer::ChangePass(ShaderMode newShaderMode)
