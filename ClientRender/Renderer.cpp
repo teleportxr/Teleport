@@ -757,7 +757,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	//hdrFramebuffer->Deactivate(deviceContext);
 	//hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
-
+	pbrEffect->UnbindTextures(deviceContext);
 }
 
 void Renderer::ChangePass(ShaderMode newShaderMode)
@@ -2095,7 +2095,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	else if (show_osd == clientrender::DECODER_OSD)
 	{
 		gui.LinePrint("Decoder Status:", white);
-		auto names = magic_enum::enum_names<avs::DecoderStatusNames>();
+		const auto& names = magic_enum::enum_names<avs::DecoderStatusNames>();
 		avs::DecoderStatus status = gui.GetVideoDecoderStatus();
 		if (status == avs::DecoderStatus::DecoderUnavailable)
 		{
@@ -2110,6 +2110,17 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 				gui.LinePrint(platform::core::QuickFormat(str.c_str(), value), white);
 			}
 		}
+		gui.LinePrint(" ", white);
+
+		gui.LinePrint("Decoder Parameters:", white);
+		const avs::DecoderParams& params = clientPipeline.decoderParams;
+		const auto& videoCodecNames = magic_enum::enum_names<avs::VideoCodec>();
+		const auto& decoderFrequencyNames = magic_enum::enum_names<avs::DecodeFrequency>();
+		gui.LinePrint(platform::core::QuickFormat("Video Codec: %s", videoCodecNames[size_t(params.codec)]));
+		gui.LinePrint(platform::core::QuickFormat("Decode Frequency: %s", decoderFrequencyNames[size_t(params.decodeFrequency)]));
+		gui.LinePrint(platform::core::QuickFormat("Use 10-Bit Decoding: %s", params.use10BitDecoding ? "true" : "false"));
+		gui.LinePrint(platform::core::QuickFormat("Chroma Format: %s", params.useYUV444ChromaFormat ? "YUV444" : "YUV420"));
+		gui.LinePrint(platform::core::QuickFormat("Use Alpha Layer Decoding: %s", params.useAlphaLayerDecoding ? "true" : "false"));
 	}
 	else if (show_osd == clientrender::CUBEMAP_OSD)
 	{

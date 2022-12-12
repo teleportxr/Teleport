@@ -499,6 +499,17 @@ static void DoRow(const char* title, const char* text, ...)
 	delete[] bufferData;
 };
 
+static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
+{
+	auto now = std::chrono::system_clock::now();
+	time_t now_t = std::chrono::system_clock::to_time_t(now);
+	tm* t = localtime(&now_t);
+	std::string dateStr = std::to_string(1900 + t->tm_year) + "/" + std::to_string(1 + t->tm_mon) + "/" + std::to_string(t->tm_mday);
+	const char* leadingZero = (t->tm_hour < 10) ? "0" : "";
+	std::string timeStr = leadingZero + std::to_string(t->tm_hour) + ":" + std::to_string(t->tm_min);
+	return { dateStr, timeStr };
+}
+
 void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 1)
@@ -902,7 +913,10 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGuiWindowFlags_NoScrollbar;
 		}
 		ImGui::LogToTTY();
-		ImGuiBegin("Teleport VR",&show_hide, windowFlags);
+
+		const auto& [dateStr, timeStr] = GetCurrentDateTimeStrings();
+		std::string title = "Teleport VR - " + dateStr + " " + timeStr;
+		ImGuiBegin(title.c_str(),&show_hide, windowFlags);
 		#if 0
 		std::vector<vec3> client_press;
 		ImGui_ImplPlatform_Get3DTouchClientPos(client_press);
