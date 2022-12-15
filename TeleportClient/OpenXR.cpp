@@ -221,7 +221,7 @@ void InputSession::SetActions(std::initializer_list<ActionInitializer> actions)
 
 ActionId InputSession::AddAction( const char* name,const char* localizedName,XrActionType xrActionType)
 {
-	int actionId		=actionDefinitions.size();
+	int actionId		=(int)actionDefinitions.size();
 	actionDefinitions.resize(actionDefinitions.size()+1);
 	actionStates.resize(actionDefinitions.size());
 	auto &def			=actionDefinitions[actionId];

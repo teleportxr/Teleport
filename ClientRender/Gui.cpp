@@ -1,4 +1,5 @@
 
+	#define _CRT_SECURE_NO_WARNINGS 1
 #include <imgui.h>
 #ifdef _MSC_VER
 #include "Platform/ImGui/imgui_impl_win32.h"
