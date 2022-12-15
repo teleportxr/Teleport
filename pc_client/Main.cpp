@@ -90,13 +90,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return 0;
 	}
 	// run from pc_client directory.
-	std::filesystem::path current_path=std::filesystem::current_path();
 	if(!std::filesystem::exists("client_default.ini"))
 	{
-		std::string rel_pc_client="../../../pc_client";
-		auto pc_client=current_path.append(rel_pc_client).make_preferred();
-		if(std::filesystem::exists(pc_client))
-			std::filesystem::current_path(pc_client);
+		std::filesystem::path current_path=std::filesystem::current_path();
+		wchar_t filename[700];
+		DWORD res=GetModuleFileNameW(nullptr,filename,700);
+		if(res)
+		{
+			current_path=filename;
+			current_path=current_path.remove_filename();
+		}
+		while(!current_path.empty()&&!std::filesystem::exists("client_default.ini"))
+		{
+			std::string rel_pc_client="../../pc_client";
+			current_path=current_path.append(rel_pc_client).lexically_normal();
+			if(std::filesystem::exists(current_path))
+				std::filesystem::current_path(current_path);
+		}
 	}
 	clientApp.Initialize();
 	gui.SetConfig(&clientApp.config);
