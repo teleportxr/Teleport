@@ -1,33 +1,33 @@
 [submodule "thirdparty/basis_universal"]
 	path = thirdparty/basis_universal
-	url = https://github.com/simul/basis_universal.git
+	url = ../basis_universal.git
 [submodule "thirdparty/srt"]
 	path = thirdparty/srt
-	url = https://github.com/simul/srt.git
+	url = ../srt.git
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
-	url = https://github.com/simul/Platform.git
+	url = ../Platform.git
 [submodule "libavstream/thirdparty/efp"]
 	path = libavstream/thirdparty/efp
-	url = https://github.com/simul/efp.git
+	url = ../efp.git
 [submodule "plugins/UnrealDemo"]
 	path = plugins/UnrealDemo
-	url = https://github.com/simul/teleport-unreal.git
+	url = ../teleport-unreal.git
 [submodule "thirdparty/draco"]
 	path = thirdparty/draco
 	url = https://github.com/google/draco.git
 [submodule "thirdparty/zlib"]
 	path = thirdparty/zlib
-	url = https://github.com/simul/zlib.git
+	url = ../zlib.git
 [submodule "thirdparty/cpp-httplib"]
 	path = thirdparty/cpp-httplib
-	url = https://github.com/simul/cpp-httplib.git
+	url = ../cpp-httplib.git
 [submodule "firstparty/teleport-unity"]
 	path = firstparty/teleport-unity
-	url = https://github.com/simul/teleport-unity.git
+	url = ../teleport-unity.git
 [submodule "libavstream/thirdparty/curl"]
 	path = libavstream/thirdparty/curl
-	url = https://github.com/simul/curl.git
+	url = ../curl.git
 [submodule "thirdparty/websocketpp"]
 	path = thirdparty/websocketpp
 	url = https://github.com/zaphoyd/websocketpp.git
