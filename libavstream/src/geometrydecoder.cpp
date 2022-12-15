@@ -7,7 +7,6 @@
 #include "node_p.hpp"
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
-#include <libavstream/geometry/GeometryParserInterface.h>
 
 namespace avs
 {
@@ -28,14 +27,6 @@ namespace avs
 	struct GeometryDecoder::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(GeometryDecoder, PipelineNode)
-		// non-owned backend
-		GeometryDecoderBackendInterface *m_backend;
-		std::unique_ptr<GeometryParserInterface> m_parser;
-
-		std::vector<uint8_t> m_buffer;
-		bool m_configured = false;
-		int m_streamId = 0;
-		Result processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target);
 	};
 } // avs
 
@@ -45,7 +36,7 @@ GeometryDecoder::GeometryDecoder()
 	: PipelineNode(new GeometryDecoder::Private(this))
 {
 	setNumSlots(1, 1);
-	d().m_parser.reset(new GeometryParser);
+	m_parser.reset(new GeometryParser);
 }
 
 GeometryDecoder::~GeometryDecoder()
@@ -55,44 +46,44 @@ GeometryDecoder::~GeometryDecoder()
 
 Result GeometryDecoder::configure(uint8_t streamId, GeometryDecoderBackendInterface* backend)
 {
-	if (d().m_configured)
+	if (m_configured)
 	{
 		Result deconf_result = deconfigure();
 		if (deconf_result != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
-	d().m_backend=(backend);
+	m_backend=(backend);
 
-	assert(d().m_backend);
+	assert(m_backend);
 
-	d().m_configured = true;
-	d().m_streamId = streamId;
-	d().m_buffer.resize(2000);
+	m_configured = true;
+	m_streamId = streamId;
+	m_buffer.resize(2000);
 
 	return Result::OK;
 }
 
 Result GeometryDecoder::deconfigure()
 {
-	if (!d().m_configured)
+	if (!m_configured)
 	{
 		return Result::Node_NotConfigured;
 	}
 
 	Result result = Result::OK;
-	if (d().m_backend)
+	if (m_backend)
 	{
 		unlinkOutput();
 	}
 
-	d().m_configured = false;
+	m_configured = false;
 
 	return result;
 }
 
 Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
-	if (!d().m_configured)
+	if (!m_configured)
 	{
 		return Result::Node_NotConfigured;
 	}
@@ -101,20 +92,17 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_InvalidOutput;
 	}
-
 	IOInterface* input = dynamic_cast<IOInterface*>(getInput(0));
 	if (!input)
 	{
 		return Result::Node_InvalidInput;
 	}
-
 	Result result = Result::OK;
-
 	do
 	{
-		size_t bufferSize = d().m_buffer.size();
+		size_t bufferSize = m_buffer.size();
 		size_t bytesRead;
-		result = input->read(this, d().m_buffer.data(), bufferSize, bytesRead);
+		result = input->read(this, m_buffer.data(), bufferSize, bytesRead);
 
 		if (result == Result::IO_Empty)
 		{
@@ -123,8 +111,8 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		if (result == Result::IO_Retry)
 		{
-			d().m_buffer.resize(bufferSize);
-			result = input->read(this, d().m_buffer.data(), bufferSize, bytesRead);
+			m_buffer.resize(bufferSize);
+			result = input->read(this, m_buffer.data(), bufferSize, bytesRead);
 		}
 
 		if (result != Result::OK)
@@ -133,7 +121,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			return result;
 		}
 
-		PayloadInfoType payloadInfoType = (PayloadInfoType)d().m_buffer[4];
+		PayloadInfoType payloadInfoType = (PayloadInfoType)m_buffer[4];
 
 		size_t dataOffset;
 		size_t dataSize;
@@ -141,7 +129,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		if (payloadInfoType == PayloadInfoType::Stream)
 		{
 			StreamPayloadInfo info;
-			memcpy(&info, d().m_buffer.data(), sizeof(StreamPayloadInfo));
+			memcpy(&info, m_buffer.data(), sizeof(StreamPayloadInfo));
 
 			// Check if data was lost or corrupted
 			if (info.broken)
@@ -151,14 +139,14 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 			dataOffset = sizeof(StreamPayloadInfo);
 			// The offset is incremented in the classify function to be after the payload type.
-			payloadType = d().m_parser->classify(d().m_buffer.data(), bufferSize, dataOffset);
+			payloadType = m_parser->classify(m_buffer.data(), bufferSize, dataOffset);
 
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 		}
 		else if (payloadInfoType == PayloadInfoType::File)
 		{
 			FilePayloadInfo info;
-			memcpy(&info, d().m_buffer.data(), sizeof(FilePayloadInfo));
+			memcpy(&info, m_buffer.data(), sizeof(FilePayloadInfo));
 
 			dataOffset = sizeof(FilePayloadInfo);
 			dataSize = info.dataSize;
@@ -182,8 +170,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			continue;
 		}
-
-		result = d().processPayload(d().m_buffer.data() + dataOffset, dataSize, payloadType, gti);
+		result = processPayload(m_buffer.data() + dataOffset, dataSize, payloadType, gti);
 	} while (result == Result::OK);
 
 
@@ -192,17 +179,17 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 Result GeometryDecoder::setBackend(GeometryDecoderBackendInterface* backend)
 {
-	if (d().m_configured)
+	if (m_configured)
 	{
 		AVSLOG(Error) << "GeometryDecoder: Cannot set backend: already configured";
 		return Result::Node_AlreadyConfigured;
 	}
 
-	d().m_backend=backend;
+	m_backend=backend;
 	return Result::OK;
 }
 
-Result GeometryDecoder::Private::processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target)
+Result GeometryDecoder::processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target)
 {
 	assert(m_backend);
 	Result result = Result::UnknownError;
@@ -226,12 +213,12 @@ Result GeometryDecoder::onInputLink(int slot, PipelineNode* node)
 
 Result GeometryDecoder::onOutputLink(int slot, PipelineNode* node)
 {
-	if (!d().m_configured)
+	if (!m_configured)
 	{
 		AVSLOG(Error) << "GeometryDecoder: PipelineNode needs to be configured before it can accept output";
 		return Result::Node_NotConfigured;
 	}
-	assert(d().m_backend);
+	assert(m_backend);
 
 	GeometryTargetInterface* m = dynamic_cast<GeometryTargetInterface*>(node);
 	if (!m)
@@ -239,12 +226,12 @@ Result GeometryDecoder::onOutputLink(int slot, PipelineNode* node)
 		AVSLOG(Error) << "GeometryDecoder: Output node is not a Mesh";
 		return Result::Node_Incompatible;
 	}
-	return Result::OK;// d().m_backend->registerSurface(surface->getBackendSurface());
+	return Result::OK;// m_backend->registerSurface(surface->getBackendSurface());
 }
 
 void GeometryDecoder::onOutputUnlink(int slot, PipelineNode* node)
 {
-	if (!d().m_configured)
+	if (!m_configured)
 	{
 		return;
 	}
@@ -252,12 +239,12 @@ void GeometryDecoder::onOutputUnlink(int slot, PipelineNode* node)
 	GeometryTargetInterface* m = dynamic_cast<GeometryTargetInterface*>(node);
 	if (m)
 	{
-		assert(d().m_backend);
-		//d().m_backend->unregisterSurface(surface->getBackendSurface());
+		assert(m_backend);
+		//m_backend->unregisterSurface(surface->getBackendSurface());
 	}
 }
 
 uint8_t GeometryDecoder::getStreamId() const
 {
-	return d().m_streamId;
+	return m_streamId;
 }

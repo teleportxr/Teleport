@@ -130,7 +130,8 @@ namespace clientrender
 			mBoneManager.Update(timeElapsed_s);
 			mAnimationManager.Update(timeElapsed_s);
 		}
-
+		void setCacheFolder(const std::string &f);
+		void SaveNodeTree(const std::shared_ptr<clientrender::Node>& n) const;
 
 		std::vector<uid> GetAllResourceIDs()
 		{
@@ -213,5 +214,6 @@ namespace clientrender
 	protected:
 		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 		std::vector<avs::uid> m_ReceivedResources; //Resources received.
+		std::string cacheFolder;
 	};
 }

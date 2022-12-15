@@ -208,7 +208,7 @@ namespace teleport
 		}
 	private:
 		friend class ClientManager;
-		void dispatchEvent(const ENetEvent& event);
+		void receive(const ENetEvent& event);
 		void receiveHandshake(const ENetPacket* packet);
 		void receiveInput(const ENetPacket* packet);
 		void receiveDisplayInfo(const ENetPacket* packet);

@@ -994,6 +994,19 @@ void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &r
 	BindUnboundPoses(server_uid);
 }
 
+void OpenXR::RemoveNodePoseMapping(avs::uid server_uid,avs::uid uid)
+{
+	auto &server=openXRServers[server_uid];
+	auto &unboundPoses=server.unboundPoses;
+	auto u=unboundPoses.find(uid);
+	if(u!=unboundPoses.end())
+		unboundPoses.erase(u);
+	auto m=server.nodePoseMappings.find(uid);
+	if(m!=server.nodePoseMappings.end())
+		server.nodePoseMappings.erase(m);
+
+}
+
 void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumber)
 {
 	auto &server=openXRServers[server_uid];
@@ -1663,7 +1676,7 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stage
 	// and add the stage position.
 	crossplatform::Quaternionf &orig_rot = *((crossplatform::Quaternionf*)&stagePose_worldSpace.orientation);
 	vec3 pos;
-	Multiply(pos,orig_rot,pos_e);
+	Rotate(pos,orig_rot,pos_e);
 	pos += *((vec3*)&stagePose_worldSpace.position);
 
 	crossplatform::Quaternionf rot=orig_rot*ori_e;

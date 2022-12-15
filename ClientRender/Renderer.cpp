@@ -236,7 +236,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator);
 	geometryDecoder.decodeFromFile("assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator);
 	geometryDecoder.decodeFromFile("assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator);
-	
+	localResourceCreator.Update(0.0f);
 	avs::uid wand_uid = 11;
 	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
 	if (uids.size())
@@ -347,6 +347,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	palm_to_hand_l=leftHand->GetLocalTransform();
 
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
+	localGeometryCache.setCacheFolder(config.GetStorageFolder());
 }
 
 // This allows live-recompile of shaders. 
@@ -475,7 +476,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	// The up direction is x, and the left direction is z.
 	vec3 local_controller_dir = { 0,1.f,0 };
 	crossplatform::Quaternionf q = (const float*)(&clientDeviceState->headPose.localPose.orientation);
-	Multiply(local_controller_dir,q, local_controller_dir);
+	Rotate(local_controller_dir,q, local_controller_dir);
 	float azimuth	= atan2f(-local_controller_dir.x, local_controller_dir.y);
 	static float elev_mult=1.2f;
 	float elevation	= elev_mult*(y-0.5f);//-asin(local_controller_dir.z);
@@ -799,6 +800,13 @@ void Renderer::Update(double timestamp_ms)
 	localGeometryCache.Update(static_cast<float>(timeElapsed_s));
 	localResourceCreator.Update(static_cast<float>(timeElapsed_s));
 
+	if(server_uid!=0)
+	{
+		const auto &removedNodeUids=geometryCache.mNodeManager->GetRemovedNodeUids();
+		// Node has been deleted!
+		for(const auto u:removedNodeUids)
+			openXR->RemoveNodePoseMapping(server_uid,u);
+	}
 	previousTimestamp = timestamp_ms;
 }
 
@@ -1053,6 +1061,7 @@ void Renderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceCont
 			}
 		}
 	}
+
 	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetSortedRootNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
@@ -2541,7 +2550,7 @@ bool Renderer::OnSetupCommandReceived(const char *server_ip,const teleport::core
 		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
-		clientPipeline.geometryQueue.configure(10000, 200, "clientPipeline.geometryQueue");
+		clientPipeline.geometryQueue.configure(600000, 200, "clientPipeline.geometryQueue");
 
 		avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);

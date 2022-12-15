@@ -7,6 +7,7 @@
 #include "Platform/CrossPlatform/HdrRenderer.h"
 #include "Platform/CrossPlatform/MeshRenderer.h"
 #include "Platform/CrossPlatform/Text3DRenderer.h"
+#include "Platform/CrossPlatform/RenderDelegater.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Platform/Shaders/SL/camera_constants.sl"
@@ -79,7 +80,7 @@ namespace clientrender
 	extern avs::Timestamp platformStartTimestamp;	
 	//! Base class for a renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
-	class Renderer:public teleport::client::SessionCommandInterface,public platform::crossplatform::PlatformRendererInterface
+	class Renderer:public teleport::client::SessionCommandInterface,public platform::crossplatform::RenderDelegaterInterface
 	{
 	public:
 		Renderer(teleport::client::ClientDeviceState *c,clientrender::NodeManager *localNodeManager

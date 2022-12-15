@@ -380,6 +380,14 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *sear
 	{
 		open = true;
 	}
+	if (ImGui::BeginPopupContextItem())
+	{
+		if(ImGui::Selectable("Save..."))
+		{
+			geometryCache->SaveNodeTree(n);
+		}
+		ImGui::EndPopup();
+	}
 	if (ImGui::IsItemClicked())
 	{
 		if(!show_inspector)
@@ -412,6 +420,7 @@ void Gui::SetDebugGuiMouse(vec2 m,bool leftButton)
 	mouse=m;
 	mouseButtons[0]=leftButton;
 }
+
 void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 {
 	if (in_debug_gui != 0)
@@ -438,8 +447,6 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
-
-	//	ShowFont();
 }
 
 void Gui::LinePrint(const char* txt,const float *clr)
@@ -463,7 +470,7 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 		return;
 	uint64_t u=(uint64_t)texture+mip*1000+slice;
 	auto &tv=drawTextures[u];
-	tv.texture=texture;
+	tv.texture=const_cast<Texture*>(texture);
 	tv.mip=mip;
 	tv.slice=slice;
 	const int width = texture->width;

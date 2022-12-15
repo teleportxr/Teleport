@@ -4,6 +4,8 @@
 #include "Animation.h"
 #include "Material.h"
 #include <Platform/External/magic_enum/include/magic_enum.hpp>
+#include "ThisPlatform/Threads.h"
+#include "draco/compression/decode.h"
 
 using namespace clientrender;
 

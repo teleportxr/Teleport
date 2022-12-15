@@ -9,9 +9,11 @@
 
 #ifdef __ANDROID__
 #include <pthread.h>
+#include <sys/prctl.h>
 #endif
 
 #include <util/srtutil.h>
+#include "TeleportCore/ErrorHandling.h"
 
 
 using namespace avs;
@@ -433,6 +435,13 @@ __attribute__((optnone))
 
 void NetworkSource::asyncReceivePackets()
 {
+#ifdef __ANDROID__
+	const char *newName="asyncReceivePackets";
+	if (prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(const_cast<char *>(newName)), NULL, NULL, NULL))
+	{
+		TELEPORT_CERR<<"prctl(PR_SET_NAME, \"%s\") error - %s"<< newName<<" "<< strerror(errno);
+	}
+#endif
 	while (m_data->m_receivingPackets)
 	{
 		RawPacket* rawPacket = m_data->m_recvBuffer.reserve_next();

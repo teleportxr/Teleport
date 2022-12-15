@@ -305,7 +305,7 @@ if(NOT TELEPORT_SERVER)
 	set(curl_libraries libcurl)
 	target_compile_definitions(libavstream PUBLIC IS_CLIENT=1) 
 endif()
-target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} ${curl_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
+target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} ${curl_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
 if(LIBAV_BUILD_SHARED_LIBS)

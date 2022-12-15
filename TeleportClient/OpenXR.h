@@ -253,6 +253,8 @@ namespace teleport
 			// Getting mapped inputs specific to a given server, in-frame.
 			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition> &inputDefinitions_);
 			void MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath);
+			//! Remove the mapping of the specified node - it has perhaps been unmapped or destroyed.
+			void RemoveNodePoseMapping(avs::uid server_uid,avs::uid uid);
 			const teleport::core::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
 			
 			// Force input mapping to a particular setting - normally for local controls.

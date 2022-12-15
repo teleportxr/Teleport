@@ -5,6 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
+#include <libavstream/geometry/GeometryParserInterface.h>
 
 namespace avs
 {
@@ -76,9 +77,16 @@ namespace avs
 		const char* getDisplayName() const override { return "Geometry Decoder"; }
 
 	private:
+		GeometryDecoderBackendInterface *m_backend=nullptr;
+		// non-owned backend
+		std::unique_ptr<GeometryParserInterface> m_parser;
+		std::vector<uint8_t> m_buffer;
+		bool m_configured = false;
+		int m_streamId = 0;;
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
 		void   onOutputUnlink(int slot, PipelineNode* node) override;
+		Result processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target);
 	};
 
 } // avs

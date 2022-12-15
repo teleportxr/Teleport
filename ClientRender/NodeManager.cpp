@@ -434,13 +434,18 @@ void NodeManager::Update(float deltaTime)
 			}
 		}
 	}
-
+	removed_node_uids.clear();
 	//Delete nodes that have been invisible for too long.
 	for(const std::shared_ptr<clientrender::Node>& node : expiredNodes)
 	{
 		RemoveNode(node);
+		removed_node_uids.insert(node->id);
 	}
 
+}
+const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
+{
+	return removed_node_uids;
 }
 
 void NodeManager::Clear()

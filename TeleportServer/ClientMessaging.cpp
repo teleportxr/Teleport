@@ -214,7 +214,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 			timeSinceLastClientComm = 0;
 			if (!startingSession)
 			{
-				dispatchEvent(event);
+				receive(event);
 			}
 			break;
 		}
@@ -392,7 +392,7 @@ uint16_t ClientMessaging::getClientPort() const
 	return peer->address.port;
 }
 
-void ClientMessaging::dispatchEvent(const ENetEvent& event)
+void ClientMessaging::receive(const ENetEvent& event)
 {
 	switch(static_cast<teleport::core::RemotePlaySessionChannel>(event.channelID))
 	{

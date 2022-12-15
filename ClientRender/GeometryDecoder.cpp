@@ -23,6 +23,7 @@
 #define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
 
 using std::string;
+using namespace std::string_literals;
 
 GeometryDecoder::GeometryDecoder()
 {
@@ -81,7 +82,10 @@ avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes
 	// No m_GALU on the header or tail on the incoming buffer!
 	m_BufferSize = bufferSizeInBytes;
 	m_BufferOffset = 0;
+	if(m_BufferSize>m_Buffer.size())
+	{
 	m_Buffer.resize(m_BufferSize);
+	}
  	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
 	return decode(type,target,true);
 }

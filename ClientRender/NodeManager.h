@@ -73,6 +73,8 @@ namespace clientrender
 		//	outExistingNodes : List of nodes in the exclude list that were actually in the node manager.
 		void ClearAllButExcluded(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes);
 
+		//! Get the nodes that have been removed since the last update.
+		const std::set<avs::uid> &GetRemovedNodeUids() const;
 	protected:
 		nodeList_t rootNodes; //Nodes that are parented to the world root.
 		std::vector<std::shared_ptr<clientrender::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
@@ -101,6 +103,7 @@ namespace clientrender
 
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
 
+		std::set<avs::uid> removed_node_uids;
 		//Node updates that were received before the node was received.
 		std::map<avs::uid, teleport::core::MovementUpdate> earlyMovements;
 		std::map<avs::uid, teleport::core::NodeUpdateEnabledState> earlyEnabledUpdates;

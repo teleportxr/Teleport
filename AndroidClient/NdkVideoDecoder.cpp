@@ -16,6 +16,7 @@
 #include <sys/prctl.h>
 #include <android/hardware_buffer_jni.h>
 #include <android/native_window.h>
+#include "ThisPlatform/Threads.h"
 
 using namespace teleport;
 using namespace android;
@@ -244,6 +245,7 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	//Start Async thread
 	stopProcessBuffersThread = false;
 	processBuffersThread = new std::thread(&NdkVideoDecoder::processBuffersOnThread, this);
+	SetThreadName(*processBuffersThread,"NdkVideoDecoder::processBuffersOnThread");
 }
 
 void NdkVideoDecoder::Shutdown()

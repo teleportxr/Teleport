@@ -3,6 +3,7 @@
 
 #include "queue_p.hpp"
 #include <algorithm>
+#include <iostream>
 
 #define SAFE_DELETE_ARRAY(p)		{ if(p) { delete[] p; (p)=nullptr; } }
 
@@ -94,12 +95,12 @@ namespace avs
 		{
 			auto oldsize=m_maxBuffers;
 			increaseBufferCount();
-			AVSLOG(Info) << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
+			std::cerr << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
 		}
 		if (bufferSize > m_maxBufferSize)
 		{
 			increaseBufferSize(bufferSize);
-			AVSLOG(Info) << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<".\n";
+			std::cerr << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<" Have "<<m_numElements<<" buffers.\n";
 		}
 		
 		push(buffer, bufferSize);

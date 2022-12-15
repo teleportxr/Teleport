@@ -7,6 +7,7 @@
 #include <windows.h>
 // C RunTime Header Files
 #include <stdlib.h>
+#include <filesystem>
 
 #include "Resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
@@ -87,6 +88,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		TELEPORT_CERR << "CoInitialize failed. Exiting." << std::endl;
 		return 0;
+	}
+	// run from pc_client directory.
+	std::filesystem::path current_path=std::filesystem::current_path();
+	if(!std::filesystem::exists("client_default.ini"))
+	{
+		std::string rel_pc_client="../../../pc_client";
+		auto pc_client=current_path.append(rel_pc_client).make_preferred();
+		if(std::filesystem::exists(pc_client))
+			std::filesystem::current_path(pc_client);
 	}
 	clientApp.Initialize();
 	gui.SetConfig(&clientApp.config);
@@ -282,7 +292,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		clientRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 
 	dsmi->AddWindow(hWnd);
-	dsmi->SetRenderer(hWnd,clientRenderer,-1);
+	dsmi->SetRenderer(clientRenderer);
 }
 static platform::core::DefaultProfiler cpuProfiler;
 #define GET_X_LPARAM(lp)                        ((int)(short)LOWORD(lp))

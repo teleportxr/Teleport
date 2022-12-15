@@ -155,7 +155,7 @@ function(add_teleport_static_executable targname)
 	SetTeleportDefaults( ${targname} )
 endfunction()
 
-#add_subdirectory(thirdparty/zlib)
+add_subdirectory(firstparty/Platform/External/fmt)
 #set_target_properties(zlib PROPERTIES FOLDER thirdparty/zlib)
 
 add_subdirectory(TeleportCore)

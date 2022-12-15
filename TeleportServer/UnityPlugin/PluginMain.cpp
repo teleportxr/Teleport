@@ -29,7 +29,7 @@
 
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
-VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
+VisualStudioDebugOutput debug_buffer(true, "teleport_server.log", 128);
 #endif
 
 using namespace teleport;
