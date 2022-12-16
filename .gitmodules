@@ -4,9 +4,6 @@
 [submodule "thirdparty/srt"]
 	path = thirdparty/srt
 	url = ../srt.git
-[submodule "firstparty/Platform"]
-	path = firstparty/Platform
-	url = ../Platform.git
 [submodule "libavstream/thirdparty/efp"]
 	path = libavstream/thirdparty/efp
 	url = ../efp.git
@@ -28,6 +25,9 @@
 [submodule "thirdparty/websocketpp"]
 	path = thirdparty/websocketpp
 	url = https://github.com/zaphoyd/websocketpp.git
+[submodule "firstparty/Platform"]
+	path = firstparty/Platform
+	url = ../Platform.git
 [submodule "plugins/UnrealDemo"]
 	path = plugins/UnrealDemo
 	url = ../teleport-unreal.git
