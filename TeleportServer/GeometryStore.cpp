@@ -1546,7 +1546,8 @@ avs::uid GeometryStore::PathToUid(std::string p) const
 	if(i==path_to_uid.end())
 	{
 		TELEPORT_BREAK_ONCE("No uid for this path.");
-		TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
+		return 0;
+		//TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
 		return 0;
 	}
 	return i->second;
@@ -1558,7 +1559,8 @@ std::string GeometryStore::UidToPath(avs::uid u) const
 	if(i==uid_to_path.end())
 	{
 		TELEPORT_BREAK_ONCE("No path for this uid.");
-		throw std::runtime_error("No path for this uid.");
+		return "";
+		//throw std::runtime_error("No path for this uid.");
 	}
 	return i->second;
 }
