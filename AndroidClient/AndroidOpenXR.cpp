@@ -402,6 +402,13 @@ void OpenXR::FinishDeviceContext(size_t swapchainIndex, size_t imageIndex)
 {
 	platform::crossplatform::GraphicsDeviceContext& deviceContext = swapchainIndex == 0 ? mgdc : gdc;
 
+	//TODO: Find an in-API way of doing this!
+	if (deviceContext.renderPlatform && deviceContext.renderPlatform->GetType() == platform::crossplatform::RenderPlatformType::Vulkan)
+	{
+		vulkan::RenderPlatform* vkrp = (vulkan::RenderPlatform*)deviceContext.renderPlatform;
+		vkrp->EndRenderPass(deviceContext);
+	}
+
 	size_t i = GetCommandBufferIndex(swapchainIndex, 0);
 	CmdBuffer &commandBuffer=cmdBuffers[i];
 	commandBuffer.End();
