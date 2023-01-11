@@ -111,6 +111,7 @@
     <ClCompile Include="..\..\ClientRender\SkinInstance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ClientRender\InstanceRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h">
@@ -230,5 +231,6 @@
     <ClInclude Include="..\..\ClientRender\SkinInstance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ClientRender\InstanceRenderer.h" />
   </ItemGroup>
 </Project>

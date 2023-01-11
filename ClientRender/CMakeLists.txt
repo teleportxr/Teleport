@@ -29,6 +29,8 @@ set( src_root
 	GeometryCache.h
 	GeometryDecoder.cpp
 	GeometryDecoder.h
+	InstanceRenderer.cpp
+	InstanceRenderer.h
 	Gui.cpp
 	Gui.h
 	Light.cpp

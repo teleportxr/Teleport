@@ -80,7 +80,6 @@ namespace teleport
 			~SessionClient();
 	
 			void SetSessionCommandInterface(SessionCommandInterface*);
-			void SetResourceCreator(avs::GeometryTargetBackendInterface *);
 			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
 
 			uint64_t Discover(
@@ -121,7 +120,7 @@ namespace teleport
 
 			void SetDiscoveryClientID(uint64_t clientID);
 				
-			const std::map<avs::uid, double> &GetSentResourceRequests(){
+			const std::map<avs::uid, double> &GetSentResourceRequests() const{
 				return mSentResourceRequests;
 			};
 
@@ -170,7 +169,7 @@ namespace teleport
 
 			SessionCommandInterface* mCommandInterface=nullptr;
 			std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
-			avs::GeometryTargetBackendInterface* mResourceCreator=nullptr;
+
 			avs::GeometryCacheBackendInterface* geometryCache = nullptr;
 
 			ENetHost* mClientHost = nullptr;

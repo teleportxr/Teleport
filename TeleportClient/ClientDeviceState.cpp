@@ -51,13 +51,6 @@ void ClientDeviceState::SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat 
 	TransformPose(headPose);
 }
 
-void ClientDeviceState::SetControllerPose(int index,avs::vec3 pos,clientrender::quat q)
-{
-	controllerPoses[index].localPose.position = pos;
-	controllerPoses[index].localPose.orientation = *((const avs::vec4 *)(&q));
-	TransformPose(controllerPoses[index]);
-}
-
 void ClientDeviceState::SetInputs( const teleport::core::Input& st)
 {
 	input =st;
@@ -66,6 +59,4 @@ void ClientDeviceState::SetInputs( const teleport::core::Input& st)
 void ClientDeviceState::UpdateGlobalPoses()
 {
 	TransformPose(headPose);
-	TransformPose(controllerPoses[0]);
-	TransformPose(controllerPoses[1]);
 }

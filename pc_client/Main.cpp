@@ -231,7 +231,7 @@ void InitXR()
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
 	sessionClient=new teleport::client::SessionClient(std::make_unique<teleport::client::DiscoveryService>());
-	clientRenderer=new clientrender::Renderer(&clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager, sessionClient,gui,clientApp.config);
+	clientRenderer=new clientrender::Renderer(&clientDeviceState, sessionClient,gui,clientApp.config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -529,8 +529,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 
 					dsmi->Render(hWnd);
-
-					SIMUL_COMBINED_PROFILE_END(deviceContext);
+				
+					SIMUL_COMBINED_PROFILE_END(deviceContext);	
 					if (useOpenXR.HaveXRDevice())
 					{
 						// Note we do this even when the device is inactive.

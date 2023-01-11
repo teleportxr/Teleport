@@ -11,15 +11,19 @@
 #include "Platform/Core/FileLoader.h"
 #include "Platform/Core/StringToWString.h"
 #include "Gui.h"
+#include "Light.h"
 #include "IconsForkAwesome.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
+#include <fmt/core.h>
 #include <fmt/format.h>
 
 #ifdef _MSC_VER
 #include <direct.h>
 #include <Windows.h>
 #endif
+#include "Platform/Core/StringFunctions.h"
+#include "TeleportClient/SessionClient.h"
 
 #ifdef __ANDROID__
 #define VK_BACK           0x01
@@ -520,6 +524,9 @@ static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
 
 void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 {
+	if(in_tabs)
+		ImGui::EndTabBar();
+		in_tabs=false;
 	if (in_debug_gui != 1)
 	{
 		return;
@@ -619,11 +626,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::Checkbox("##isStatic", &stationary);
 					DoRow("GI"			,"%d", gi_uid);
 					DoRow("Local Pos"	,"%3.3f %3.3f %3.3f", pos.x, pos.y, pos.z);
-					DoRow("Rot"			,"%3.3f %3.3f %3.3f %3.3f", q.x, q.y, q.z, q.w);
-					DoRow("Scale"		,"%3.3f %3.3f %3.3f", sc.x, sc.y, sc.z);
-					DoRow("global Pos"	,"%3.3f %3.3f %3.3f", gpos.x, gpos.y, gpos.z);
-					DoRow("Rot"			,"%3.3f %3.3f %3.3f %3.3f", gq.x, gq.y, gq.z, gq.w);
-					DoRow("Scale"		,"%3.3f %3.3f %3.3f", gs.x, gs.y, gs.z);
+					DoRow("Local Rot"	,"%3.3f %3.3f %3.3f %3.3f", q.x, q.y, q.z, q.w);
+					DoRow("Local Scale"	,"%3.3f %3.3f %3.3f", sc.x, sc.y, sc.z);
+					ImGui::Separator();
+					DoRow("Global Pos"	,"%3.3f %3.3f %3.3f", gpos.x, gpos.y, gpos.z);
+					DoRow("Global Rot"	,"%3.3f %3.3f %3.3f %3.3f", gq.x, gq.y, gq.z, gq.w);
+					DoRow("Global Scale","%3.3f %3.3f %3.3f", gs.x, gs.y, gs.z);
 					if(selected_node->GetMesh())
 					{
 						auto m=selected_node->GetMesh();
@@ -696,6 +704,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				{
 					const char *name=mci.combined.texture->GetTextureCreateInfo().name.c_str();
 					ImGui::TreeNodeEx(name, flags,"Combined: %s", name);
+					ImGui::TreeNodeEx(name, flags,"Metal: %3.3f", md.combinedOutputScalarRoughMetalOcclusion.y);
 					ImGui::TreeNodeEx(name, flags,"Roughness: R = %3.3f a + %3.3f",  md.combinedOutputScalarRoughMetalOcclusion.x,md.combinedOutputScalarRoughMetalOcclusion.w);
 					
 					if (ImGui::IsItemClicked())
@@ -829,6 +838,185 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 	}
 	
 	ImGui::EndGroup();
+}
+
+static const char* ToString(clientrender::Light::Type type)
+{
+	const char* lightTypeName = "";
+	switch (type)
+	{
+	case clientrender::Light::Type::POINT:
+		lightTypeName = "Point";
+		break;
+	case clientrender::Light::Type::DIRECTIONAL:
+		lightTypeName = "  Dir";
+		break;
+	case clientrender::Light::Type::SPOT:
+		lightTypeName = " Spot";
+		break;
+	case clientrender::Light::Type::AREA:
+		lightTypeName = " Area";
+		break;
+	default:
+	case clientrender::Light::Type::DISC:
+		lightTypeName = " Disc";
+		break;
+		break;
+	};
+	return lightTypeName;
+}
+
+const char *stringof(avs::GeometryPayloadType t)
+{
+	static const char *txt[]=
+	{
+		"Invalid", 
+		"Mesh",
+		"Material",
+		"MaterialInstance",
+		"Texture",
+		"Animation",
+		"Node",
+		"Skin",
+		"Bone"
+	};
+	return txt[(size_t)t];
+}
+
+void Gui::CubemapOSD(crossplatform::Texture *videoTexture)
+{
+	LinePrint(platform::core::QuickFormat("Cubemap Texture"));
+
+/*	static crossplatform::Texture* debugCubemapTexture = nullptr;
+	if (!debugCubemapTexture)
+		debugCubemapTexture = renderPlatform->CreateTexture("debugCubemapTexture");
+	debugCubemapTexture->ensureTexture2DSizeAndFormat(renderPlatform, 512, 512, 1, crossplatform::RGBA_8_UNORM, false, true);
+
+	debugCubemapTexture->activateRenderTarget(deviceContext);
+	renderPlatform->Clear(deviceContext, vec4(0.0f, 0.0f, 0.0f, 1.0f)); //Add in the alpha.
+	renderPlatform->DrawCubemap(deviceContext, videoTexture, 0.0f, 0.0f, 1.9f, 1.0f, 1.0f, 0.0f);
+	debugCubemapTexture->deactivateRenderTarget(deviceContext);
+	*/
+	DrawTexture(videoTexture);
+}
+
+void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray
+	,VideoTagDataCube videoTagDataCube[])
+{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto& cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
+		const char *name="";
+		LinePrint("Tags\n");
+		for(int i=0;i<videoTagDataCubeArray.size();i++)
+		{
+			auto &tag=videoTagDataCubeArray[i];
+			LinePrint(platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
+
+			auto *gpu_tag_buffer=videoTagDataCube;
+			if(gpu_tag_buffer)
+			for(int j=0;j<tag.lights.size();j++)
+			{
+				auto &l=tag.lights[j];
+				auto &t=gpu_tag_buffer[j];
+				const LightTag &lightTag=t.lightTags[j];
+				vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
+				 
+				auto C = cachedLights.find(l.uid);
+				auto &c=C->second;
+				if (c.resource)
+				{
+					auto& lcr =c.resource->GetLightCreateInfo();
+					name=lcr.name.c_str();
+				}
+				if(l.lightType==clientrender::LightType::Directional)
+					LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((clientrender::Light::Type)l.lightType)
+						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
+						,l.color.x,l.color.y,l.color.z),clr);
+				else
+					LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((clientrender::Light::Type)l.lightType)
+						,lightTag.position.x
+						,lightTag.position.y
+						,lightTag.position.z
+						,l.color.x,l.color.y,l.color.z),clr);
+
+			}
+		}
+}
+
+void Gui::GeometryOSD()
+{
+	vec4 white(1.f, 1.f, 1.f, 1.f);
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	LinePrint(platform::core::QuickFormat("Nodes: %d",geometryCache->mNodeManager->GetNodeAmount()), white);
+
+	static int nodeLimit = 5;
+	auto& rootNodes = geometryCache->mNodeManager->GetRootNodes();
+	static int lineLimit = 50;
+
+	LinePrint(platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache->mMeshManager.GetCache(cacheLock).size(),
+					geometryCache->mLightManager.GetCache(cacheLock).size()), white);
+					
+	Scene();
+
+	auto &missing=geometryCache->m_MissingResources;
+	if(missing.size())
+	{
+		LinePrint(platform::core::QuickFormat("Missing Resources"));
+		for(const auto& missingPair : missing)
+		{
+			const clientrender::MissingResource& missingResource = missingPair.second;
+			std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
+			for(auto &u:missingResource.waitingResources)
+			{
+				auto type= u.get()->type;
+				avs::uid id=u.get()->id;
+				if(type==avs::GeometryPayloadType::Node)
+				{
+					txt+="Node ";
+					auto n = geometryCache->mNodeManager->GetNode(id);
+					if(n)
+						txt += n->name;
+				}
+				txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
+			}
+			LinePrint( txt.c_str());
+		}
+	}
+	const auto &req=geometryCache->GetResourceRequests();
+	LinePrint(platform::core::QuickFormat("%d Requests",req.size()));
+	if(req.size())
+	{
+		std::string lst;
+		for(const auto &r:req)
+		{
+			lst+=fmt::format("%d ",r);
+		}
+		LinePrint(lst.c_str());
+	}
+	const auto &sent_req=sessionClient->GetSentResourceRequests();
+	LinePrint(platform::core::QuickFormat("%d Requests Sent",sent_req.size()));
+	if(sent_req.size())
+	{
+		std::string lst;
+		for(const auto &r:sent_req)
+		{
+			lst+=fmt::format("{0} ",r.first);
+		}
+		LinePrint(lst.c_str());
+	}
+}
+
+bool Gui::Tab(const char *txt)
+{
+	if(!in_tabs)
+		ImGui::BeginTabBar("tabs");
+		in_tabs=true;
+	return ImGui::BeginTabItem(txt);
+}
+
+void Gui::EndTab()
+{
+	return ImGui::EndTabItem();
 }
 
 void Gui::Scene()

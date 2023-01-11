@@ -1,5 +1,6 @@
 #include "AndroidRenderer.h"
 #include "ClientRender/VideoDecoderBackend.h"
+#include "ClientRender/InstanceRenderer.h"
 #include "VideoDecoderBackend.h"
 #include "Platform/Vulkan/Texture.h"
 #include "Platform/Vulkan/RenderPlatform.h"
@@ -23,7 +24,7 @@ struct AVSTextureImpl :public clientrender::AVSTexture
 };
 
 AndroidRenderer::AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState,teleport::client::SessionClient *s,teleport::Gui &g,teleport::client::Config &cfg)
-	:clientrender::Renderer(clientDeviceState,new clientrender::NodeManager,new clientrender::NodeManager,s,g,cfg)
+	:clientrender::Renderer(clientDeviceState,s,g,cfg)
 {
 }
 
@@ -38,7 +39,7 @@ void AndroidRenderer::OnFrameAvailable()
 
 avs::DecoderBackendInterface* AndroidRenderer::CreateVideoDecoder()
 {
-	clientrender::AVSTextureHandle th = avsTexture;
+	clientrender::AVSTextureHandle th = renderState.avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
 	videoDecoderBackend=new VideoDecoderBackend(renderPlatform,t->texture,this);
 	return videoDecoderBackend;

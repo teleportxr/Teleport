@@ -29,11 +29,6 @@ void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
 	mCommandInterface=s;
 }
 
-void SessionClient::SetResourceCreator(avs::GeometryTargetBackendInterface *r)
-{
-	mResourceCreator=r;
-}
-
 void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
 {
 	geometryCache = r;
