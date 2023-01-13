@@ -6,6 +6,18 @@
 
 using namespace teleport;
 using namespace client;
+static teleport::client::DiscoveryService *discoveryService=nullptr;
+teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInstance()
+{
+	if(!discoveryService)
+		discoveryService=new teleport::client::DiscoveryService;
+	return *discoveryService;
+}
+void teleport::client::DiscoveryService::ShutdownInstance()
+{
+	delete discoveryService;
+	discoveryService=nullptr;
+}
 
 #ifdef _MSC_VER
 #define MAKE_ENET_BUFFER(x) {sizeof(x) ,(void*)&x};

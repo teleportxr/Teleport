@@ -23,8 +23,8 @@ struct AVSTextureImpl :public clientrender::AVSTexture
 	}
 };
 
-AndroidRenderer::AndroidRenderer(teleport::client::ClientDeviceState *clientDeviceState,teleport::client::SessionClient *s,teleport::Gui &g,teleport::client::Config &cfg)
-	:clientrender::Renderer(clientDeviceState,s,g,cfg)
+AndroidRenderer::AndroidRenderer(teleport::client::SessionClient *s,teleport::Gui &g,teleport::client::Config &cfg)
+	:clientrender::Renderer(s,g,cfg)
 {
 }
 

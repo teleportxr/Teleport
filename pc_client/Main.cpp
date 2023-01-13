@@ -23,6 +23,7 @@
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 #include "TeleportClient/ClientDeviceState.h"
+#include "TeleportClient/DiscoveryService.h"
 #include "ClientApp/ClientApp.h"
 VisualStudioDebugOutput debug_buffer(true,nullptr, 128);
 #endif
@@ -53,7 +54,6 @@ platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
-client::ClientDeviceState clientDeviceState;
 client::ClientApp clientApp;
 Gui gui;
 
@@ -135,7 +135,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 	ShutdownRenderer(msg.hwnd);
-
+	teleport::client::DiscoveryService::ShutdownInstance();
 	// Needed for asynchronous device creation in XAudio2
 	CoUninitialize();
 
@@ -230,8 +230,8 @@ void InitXR()
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	sessionClient=new teleport::client::SessionClient(std::make_unique<teleport::client::DiscoveryService>());
-	clientRenderer=new clientrender::Renderer(&clientDeviceState, sessionClient,gui,clientApp.config);
+	sessionClient=new teleport::client::SessionClient();
+	clientRenderer=new clientrender::Renderer(sessionClient,gui,clientApp.config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -504,12 +504,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// because vertex and index buffers can be created in OnFrameMove. 
 				// StartFrame does nothing for D3D11.
 				w->StartFrame();
-				if (useOpenXR.HaveXRDevice())
-				{
-					const avs::Pose &headPose=useOpenXR.GetHeadPose_StageSpace();
-					clientDeviceState.SetHeadPose_StageSpace(headPose.position, headPose.orientation);
-					
-				}
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
 				fTime+=time_step;
 				errno=0;

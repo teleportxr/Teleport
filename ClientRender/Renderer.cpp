@@ -16,6 +16,7 @@
 #include <regex>
 #include "Tests.h"
 #include "TeleportClient/Config.h"
+#include "TeleportClient/DiscoveryService.h"
 #include "Platform/CrossPlatform/Macros.h"
 #include "Platform/CrossPlatform/GpuProfiler.h"
 #include "Platform/CrossPlatform/BaseFramebuffer.h"
@@ -118,10 +119,9 @@ avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const
 }
 
 
-Renderer::Renderer(client::ClientDeviceState *c,teleport::client::SessionClient *sc,teleport::Gui& g
+Renderer::Renderer(teleport::client::SessionClient *sc,teleport::Gui& g
 	,teleport::client::Config &cfg)
 	:sessionClient(sc)
-	,clientDeviceState(c)
 	,gui(g)
 	,config(cfg)
 {
@@ -486,7 +486,8 @@ void Renderer::FillInControllerPose(int index, float offset)
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
 	vec3 local_controller_dir = { 0,1.f,0 };
-	crossplatform::Quaternionf q = (const float*)(&clientDeviceState->headPose.localPose.orientation);
+		const avs::Pose &headPose=renderState.openXR->GetHeadPose_StageSpace();
+	crossplatform::Quaternionf q = (const float*)(&headPose.orientation);
 	Rotate(local_controller_dir,q, local_controller_dir);
 	float azimuth	= atan2f(-local_controller_dir.x, local_controller_dir.y);
 	static float elev_mult=1.2f;
@@ -558,8 +559,9 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs.resize(1);
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
+	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	// Init the viewstruct in global space - i.e. with the server offsets.
-	SetRenderPose(deviceContext, clientDeviceState->originPose);
+	SetRenderPose(deviceContext, clientServerState.originPose);
 
 	clientrender::AVSTextureHandle th = renderState.avsTexture;
 	clientrender::AVSTexture& tx = *th;
@@ -637,13 +639,13 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			{
 				if (renderState.videoTexture->IsCubemap())
 				{
-					RenderVideoTexture(deviceContext, ti->texture, renderState.videoTexture, "use_cubemap", "cubemapTexture");
+					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_cubemap", "cubemapTexture");
 				}
 				else
 				{
 					math::Matrix4x4 projInv;
 					deviceContext.viewStruct.proj.Inverse(projInv);
-					RenderVideoTexture(deviceContext, ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
+					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
 				}
 			}
 		}
@@ -672,7 +674,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 	}
 	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
-		RenderLocalNodes(deviceContext,server_uid,geometryCache);
+		RenderLocalNodes(deviceContext,server_uid);
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	
@@ -732,7 +734,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 	auto &localGeometryCache=GetInstanceRenderer(0)->geometryCache;
-		RenderLocalNodes(deviceContext, 0,localGeometryCache);
+		RenderLocalNodes(deviceContext, 0);
 	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
 	//hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -960,15 +962,16 @@ void Renderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContext& devic
 	renderState.cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
-void Renderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
+void Renderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
 {
 	bool multiview = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
-
+	
+	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect,renderState.cubemapClearEffect_TagDataCubeBuffer);
 	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientDeviceState->headPose.globalPose.position) - videoPos;
-	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientDeviceState->headPose.globalPose.position);
-	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientDeviceState->headPose.globalPose.orientation);
+	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.globalPose.position) - videoPos;
+	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.globalPose.position);
+	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientServerState.headPose.globalPose.orientation);
 	renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 	renderState.cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
 	renderState.cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
@@ -1000,45 +1003,21 @@ void Renderer::RecomposeCubemap(crossplatform::GraphicsDeviceContext& deviceCont
 	renderState.cubemapClearEffect->UnbindTextures(deviceContext);
 }
 
-void Renderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext, avs::uid this_server_uid, clientrender::GeometryCache& g)
+void Renderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext, avs::uid this_server_uid)
 {
-	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-	{
-		renderState.stereoCameraConstants.stereoViewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
-	}
-	//else
-	{
-		// The following block renders to the hdrFramebuffer's rendertarget:
-		renderState.cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
-	}
-
-	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=g.mLightManager.GetCache(cacheLock);
-		if(cachedLights.size()>renderState.lightsBuffer.count)
-		{
-			renderState.lightsBuffer.InvalidateDeviceObjects();
-			renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
-		}
-		renderState.pbrConstants.lightCount = static_cast<int>(cachedLights.size());
-	}
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
-	if(renderState.openXR)
+	
 	{
-		avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
-		if(root_node_uid!=0)
+		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(this_server_uid);
+		auto pose1=sessionClient->GetOriginPose();
+		auto pose2=clientServerState.originPose;
+		if( memcmp ( &pose1, &pose2, 28))
 		{
-			std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(root_node_uid);
-			if(node)
-			{
-				auto pose=sessionClient->GetOriginPose();
-				node->SetLocalPosition(pose.position);
-				node->SetLocalRotation(pose.orientation);
-			}
+			//TELEPORT_BREAK_ONCE("");
 		}
 	}
 
-	GetInstanceRenderer(this_server_uid)->RenderLocalNodes(deviceContext,renderState,this_server_uid,g);
+	GetInstanceRenderer(this_server_uid)->RenderLocalNodes(deviceContext,renderState,this_server_uid);
 }
 
 bool Renderer::OnDeviceRemoved()
@@ -1072,6 +1051,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
 	
 #endif
+	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	if (!have_headset)
 	{
 		static float spd = 0.5f;
@@ -1093,9 +1073,9 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
-		clientDeviceState->SetHeadPose_StageSpace(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
+		clientServerState.SetHeadPose_StageSpace(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
 		const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
-		clientDeviceState->SetInputs( inputs);
+		clientServerState.SetInputs( inputs);
 
 	}
 	if (renderState.openXR)
@@ -1106,7 +1086,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		if (have_headset)
 		{
 			const avs::Pose &headPose_stageSpace=renderState.openXR->GetHeadPose_StageSpace();
-			clientDeviceState->SetHeadPose_StageSpace(headPose_stageSpace.position, headPose_stageSpace.orientation);
+			clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, headPose_stageSpace.orientation);
 		}
 	}
 	// Handle networked session.
@@ -1114,8 +1094,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	{
 		//vec3 forward=-camera.Orientation.Tz();
 		//vec3 right=camera.Orientation.Tx();
-		//*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.y*time_step*forward;
-		//*((vec3*)&clientDeviceState->originPose.position)+=clientspace_input.x*time_step*right;
+		//*((vec3*)&clientServerState.originPose.position)+=clientspace_input.y*time_step*forward;
+		//*((vec3*)&clientServerState.originPose.position)+=clientspace_input.x*time_step*right;
 		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
 		// The camera has Z backward, X right, Y up.
 		// But we want orientation relative to X right, Y forward, Z up.
@@ -1127,16 +1107,16 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		if (renderState.openXR)
 		{
 			const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
-			clientDeviceState->SetInputs(inputs);
+			clientServerState.SetInputs(inputs);
 		}
-		sessionClient->Frame(displayInfo, clientDeviceState->headPose.localPose, nodePoses, receivedInitialPos, clientDeviceState->originPose,
-			clientDeviceState->input, clientPipeline.decoder.idrRequired(),fTime, time_step);
+		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, receivedInitialPos, clientServerState.originPose,
+			clientServerState.input, clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		if(receivedInitialPos != sessionClient->receivedInitialPos)
 		{
-			clientDeviceState->originPose = sessionClient->GetOriginPose();
+			clientServerState.originPose = sessionClient->GetOriginPose();
 			receivedInitialPos = sessionClient->receivedInitialPos;
-			clientDeviceState->UpdateGlobalPoses();
+			clientServerState.UpdateGlobalPoses();
 		}
 		
 		
@@ -1159,16 +1139,19 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	}
 	else
 	{
-		ENetAddress remoteEndpoint; //192.168.3.42 45.132.108.84
+		ENetAddress remoteEndpoint; 
 		bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
-		if (canConnect && sessionClient->Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint))
+		if (canConnect)
 		{
-			auto ir=GetInstanceRenderer(server_uid);
-			sessionClient->SetGeometryCache(&ir->geometryCache);
-			sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT);
-			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
-			gui.Hide();
-			config.StoreRecentURL(fmt::format("{0}:{1}",server_ip,server_discovery_port).c_str());
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			if(cl_id!=0&&sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT,cl_id))
+			{
+				auto ir=GetInstanceRenderer(server_uid);
+				sessionClient->SetGeometryCache(&ir->geometryCache);
+				sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
+				gui.Hide();
+				config.StoreRecentURL(fmt::format("{0}:{1}",server_ip,server_discovery_port).c_str());
+			}
 		}
 	}
 
@@ -1550,14 +1533,15 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
 	else
 		deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
-
+		
+	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	{
 		math::SimulOrientation globalOrientation;
 		// global pos/orientation:
-		globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.localPose.position);
+		globalOrientation.SetPosition((const float*)&clientServerState.headPose.localPose.position);
 		math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(-1.f, 0.0f, 0.0f));
-		math::Quaternion q1 = (const float*)&clientDeviceState->headPose.localPose.orientation;
+		math::Quaternion q1 = (const float*)&clientServerState.headPose.localPose.orientation;
 		auto q_rel = q1/q0;
 		globalOrientation.SetOrientation(q_rel);
 		deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
@@ -1739,20 +1723,6 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (!show_osd||gui.HasFocus())
 		return;
-
-	//Set up ViewStruct
-	crossplatform::ViewStruct& viewStruct = deviceContext.viewStruct;
-	viewStruct.proj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(1.0f, 1.0f, 0.001f, 100.0f);
-	math::SimulOrientation globalOrientation;
-	// global pos/orientation:
-	globalOrientation.SetPosition((const float*)&clientDeviceState->headPose.localPose.position);
-	math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(-1.f, 0.0f, 0.0f));
-	math::Quaternion q1 = (const float*)&clientDeviceState->headPose.localPose.orientation;
-	auto q_rel = q1 / q0;
-	globalOrientation.SetOrientation(q_rel);
-	viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
-	viewStruct.Init();
-	
 	auto instanceRenderer=GetInstanceRenderer(server_uid);
 	auto &geometryCache=instanceRenderer->geometryCache;
 	gui.setGeometryCache(&geometryCache);
@@ -1817,10 +1787,11 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Camera"))
 	{
+		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 		vec3 offset=camera.GetPosition();
-		gui.LinePrint(receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientDeviceState->originPose.position.x, clientDeviceState->originPose.position.y, clientDeviceState->originPose.position.z)):"Origin:", white);
-		gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientDeviceState->headPose.localPose.position.x, clientDeviceState->headPose.localPose.position.y, clientDeviceState->headPose.localPose.position.z),white);
-		gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientDeviceState->headPose.globalPose.position.x, clientDeviceState->headPose.globalPose.position.y, clientDeviceState->headPose.globalPose.position.z),white);
+		gui.LinePrint(receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientServerState.originPose.position.x, clientServerState.originPose.position.y, clientServerState.originPose.position.z)):"Origin:", white);
+		gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
+		gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
 		if (videoPosDecoded)
 		{
 			gui.LinePrint(platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);

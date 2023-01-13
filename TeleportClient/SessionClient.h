@@ -13,7 +13,6 @@
 #include <libavstream/libavstream.hpp>
 
 #include "TeleportCore/Input.h"
-#include "TeleportClient/DiscoveryService.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
 typedef unsigned int uint;
@@ -74,36 +73,20 @@ namespace teleport
 			};
 
 		public:
-			SessionClient(
-					std::unique_ptr<teleport::client::DiscoveryService> &&discoveryService);
-
+			SessionClient();
 			~SessionClient();
-	
 			void SetSessionCommandInterface(SessionCommandInterface*);
 			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
-
-			uint64_t Discover(
-					std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP,
-					uint16_t serverDiscoveryPort, ENetAddress &remote);
-
-			bool Connect(const char *remoteIP, uint16_t remotePort, uint timeout);
-
-			bool Connect(const ENetAddress &remote, uint timeout);
-
+			bool Connect(const char *remoteIP, uint16_t remotePort, uint timeout,avs::uid client_id);
+			bool Connect(const ENetAddress &remote, uint timeout,avs::uid client_id);
 			void Disconnect(uint timeout, bool resetClientID = true);
-
 			void SetPeerTimeout(uint timeout);
-
-
-			void Frame(
-					const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
+			void Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					bool requestKeyframe, double time, double deltaTime);
 
 			bool IsConnected() const;
-
-			bool HasDiscovered() const;
 
 			std::string GetServerIP() const;
 
@@ -117,8 +100,6 @@ namespace teleport
 			{
 				return clientID;
 			}
-
-			void SetDiscoveryClientID(uint64_t clientID);
 				
 			const std::map<avs::uid, double> &GetSentResourceRequests() const{
 				return mSentResourceRequests;
@@ -168,7 +149,6 @@ namespace teleport
 			avs::uid lastServerID = 0; //UID of the server we last connected to.
 
 			SessionCommandInterface* mCommandInterface=nullptr;
-			std::unique_ptr<teleport::client::DiscoveryService> discoveryService;
 
 			avs::GeometryCacheBackendInterface* geometryCache = nullptr;
 
@@ -188,7 +168,6 @@ namespace teleport
 			uint64_t clientID=0;
 
 			double time=0.0;
-			bool discovered=false;
 			teleport::core::SetupCommand setupCommand;
 			teleport::core::SetupLightingCommand setupLightingCommand;
 			std::string remoteIP;

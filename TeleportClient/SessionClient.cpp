@@ -15,8 +15,7 @@ using namespace teleport;
 using namespace client;
 using namespace clientrender;
 
-SessionClient::SessionClient( std::unique_ptr<DiscoveryService>&& discoveryService)
-	:  discoveryService(std::move(discoveryService))
+SessionClient::SessionClient( )
 {}
 
 SessionClient::~SessionClient()
@@ -34,27 +33,16 @@ void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
 	geometryCache = r;
 }
 
-uint64_t SessionClient::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote)
-{
-	uint64_t cl_id=discoveryService->Discover(clientIP, clientDiscoveryPort, serverIP, serverDiscoveryPort, remote);
-	if(cl_id!=0)
-	{
-		clientID=cl_id;
-		discovered=true;
-	}
-	return cl_id;
-}
-
-bool SessionClient::Connect(const char* remote_ip, uint16_t remotePort, uint timeout)
+bool SessionClient::Connect(const char* remote_ip, uint16_t remotePort, uint timeout,avs::uid cl_id)
 {
 	ENetAddress remote;
 	enet_address_set_host_ip(&remote, remote_ip);
 	remote.port = remotePort;
 
-	return Connect(remote, timeout);
+	return Connect(remote, timeout,cl_id);
 }
 
-bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
+bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_id)
 {
 	mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 	if(!mClientHost)
@@ -63,7 +51,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout)
 		remoteIP="";
 		return false;
 	}
-
+	clientID=cl_id;
 	mServerPeer = enet_host_connect(mClientHost, &remote, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0);
 	if(!mServerPeer)
 	{
@@ -146,7 +134,6 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 
 	handshakeAcknowledged = false;
 	receivedInitialPos = false;
-	discovered = false;
 	if (resetClientID)
 	{
 		clientID = 0;
@@ -242,11 +229,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 bool SessionClient::IsConnected() const
 {
 	return mServerPeer != nullptr;
-}
-
-bool SessionClient::HasDiscovered() const
-{
-	return discovered;
 }
 
 int SessionClient::GetPort() const
@@ -859,10 +841,4 @@ void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
 	str.resize(updateNodeSubtypeCommand.pathLength);
 	memcpy(static_cast<void*>(str.data()), packet->data+commandSize,updateNodeSubtypeCommand.pathLength);
 	mCommandInterface->UpdateNodeSubtype(updateNodeSubtypeCommand,str);
-}
-
-
-void SessionClient::SetDiscoveryClientID(uint64_t clientID)
-{
-	discoveryService->SetClientID(clientID);
 }

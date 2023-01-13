@@ -53,8 +53,7 @@ namespace clientrender
 	class Renderer:public teleport::client::SessionCommandInterface,public platform::crossplatform::RenderDelegaterInterface
 	{
 	public:
-		Renderer(teleport::client::ClientDeviceState *c
-				,teleport::client::SessionClient *sessionClient
+		Renderer(teleport::client::SessionClient *sessionClient
 				, teleport::Gui &g,teleport::client::Config &config);
 		virtual ~Renderer();
 		//! This allows live-recompile of shaders (desktop platforms only).
@@ -103,7 +102,7 @@ namespace clientrender
 		platform::crossplatform::Camera			camera;
 		platform::crossplatform::MouseCameraState	mouseCameraState;
 		platform::crossplatform::MouseCameraInput	mouseCameraInput;
-		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
+		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid);
 		//void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false,bool include_children=true);
 		
 		clientrender::RenderPlatform PcClientRenderPlatform;
@@ -171,8 +170,6 @@ namespace clientrender
 		bool render_from_video_centre	= false;
 		//bool show_textures				= false;
 		bool show_cubemaps				=false;
-
-		teleport::client::ClientDeviceState *clientDeviceState = nullptr;
 	
 		teleport::Gui &gui;
 		teleport::client::Config &config;
@@ -195,7 +192,7 @@ namespace clientrender
 		void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 		void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
-		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
+		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, avs::uid server_uid,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
 		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 		
 		bool OnDeviceRemoved();

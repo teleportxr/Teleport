@@ -3,33 +3,25 @@
 
 using namespace teleport;
 using namespace client;
-
-ClientDeviceState::ClientDeviceState()
+static std::map<avs::uid,std::shared_ptr<ClientServerState>> clientServerStates;
+ClientServerState &ClientServerState::GetClientServerState(avs::uid u)
 {
-}
-void ClientDeviceState::Clear()
-{
-	nodePoses.clear();
-}
-
-void ClientDeviceState::SetLocalNodePose(avs::uid uid,const avs::Pose &localPose)
-{
-	nodePoses[uid].localPose=localPose;
-	TransformPose(nodePoses[uid]);
-}
-
-const avs::Pose &ClientDeviceState::GetGlobalNodePose(avs::uid uid) const
-{
-	const auto &p=nodePoses.find(uid);
-	if(p==nodePoses.end())
+	auto i=clientServerStates.find(u);
+	if(i==clientServerStates.end())
 	{
-	static avs::Pose p;
-		return p;
+		std::shared_ptr<ClientServerState> s=std::make_shared<ClientServerState>();
+		clientServerStates[u]=s;
+		return *(s.get());
 	}
-	return p->second.globalPose;
+	return *(i->second);
 }
 
-void ClientDeviceState::TransformPose(LocalGlobalPose &p)
+ClientServerState::ClientServerState()
+{
+}
+
+
+void ClientServerState::TransformPose(LocalGlobalPose &p)
 {
 	clientrender::quat stickRotateQ = originPose.orientation;// (stickYaw, avs::vec3(0, 1.0f, 0));
 	clientrender::quat localQ=*((clientrender::quat*)(&p.localPose.orientation));
@@ -44,19 +36,19 @@ void ClientDeviceState::TransformPose(LocalGlobalPose &p)
 	p.globalPose.position+=originPose.position;
 }
 
-void ClientDeviceState::SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q)
+void ClientServerState::SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q)
 {
 	headPose.localPose.orientation=*((const avs::vec4 *)(&q));
 	headPose.localPose.position=pos;
 	TransformPose(headPose);
 }
 
-void ClientDeviceState::SetInputs( const teleport::core::Input& st)
+void ClientServerState::SetInputs( const teleport::core::Input& st)
 {
 	input =st;
 }
 
-void ClientDeviceState::UpdateGlobalPoses()
+void ClientServerState::UpdateGlobalPoses()
 {
 	TransformPose(headPose);
 }

@@ -99,18 +99,17 @@ namespace clientrender
 
 		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,RenderState &renderState
-			,avs::uid this_server_uid, clientrender::GeometryCache& g);
+			,avs::uid this_server_uid);
 
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,RenderState &renderState
 			,const std::shared_ptr<clientrender::Node>& node
-			,clientrender::GeometryCache &g
 			,bool force=false
 			,bool include_children=true);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,RenderState &renderState
-			, const std::shared_ptr<clientrender::Node>& node
-			,clientrender::GeometryCache &g,bool force=false);
+			,const std::shared_ptr<clientrender::Node>& node
+			,bool force=false);
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
 	};

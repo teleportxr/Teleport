@@ -28,9 +28,39 @@ void InstanceRenderer::InvalidateDeviceObjects()
 
 void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
 			,RenderState &renderState
-			,avs::uid this_server_uid, clientrender::GeometryCache& g)
+			,avs::uid this_server_uid)
 {
 	auto renderPlatform=deviceContext.renderPlatform;
+	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(this_server_uid);
+		// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
+	if(renderState.openXR)
+	{
+		avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
+		if(root_node_uid!=0)
+		{
+			std::shared_ptr<clientrender::Node> node=geometryCache.mNodeManager->GetNode(root_node_uid);
+			if(node)
+			{
+				auto pose=clientServerState.originPose;
+				node->SetLocalPosition(pose.position);
+				node->SetLocalRotation(pose.orientation);
+			}
+		}
+	}
+	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+		renderState.stereoCameraConstants.stereoViewPosition = ((const float*)&clientServerState.headPose.globalPose.position);
+	renderState.cameraConstants.viewPosition = ((const float*)&clientServerState.headPose.globalPose.position);
+	
+	{
+		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
+		if(cachedLights.size()>renderState.lightsBuffer.count)
+		{
+			renderState.lightsBuffer.InvalidateDeviceObjects();
+			renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
+		}
+		renderState.pbrConstants.lightCount = static_cast<int>(cachedLights.size());
+	}
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 	{
 		crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -44,8 +74,6 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		renderState.stereoCameraConstants.rightView = mgdc.viewStructs[1].view;
 		renderState.stereoCameraConstants.rightProj = mgdc.viewStructs[1].proj;
 		renderState.stereoCameraConstants.rightViewProj = mgdc.viewStructs[1].viewProj;
-		// The following block renders to the hdrFramebuffer's rendertarget:
-		//renderState.stereoCameraConstants.stereoViewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
 	}
 	//else
 	{
@@ -54,13 +82,11 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		renderState.cameraConstants.view = deviceContext.viewStruct.view;
 		renderState.cameraConstants.proj = deviceContext.viewStruct.proj;
 		renderState.cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
-		// The following block renders to the hdrFramebuffer's rendertarget:
-		//renderState.cameraConstants.viewPosition = ((const float*)&clientDeviceState->headPose.globalPose.position);
 	}
 
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=g.mLightManager.GetCache(cacheLock);
+		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
 		if(cachedLights.size()>renderState.lightsBuffer.count)
 		{
 			renderState.lightsBuffer.InvalidateDeviceObjects();
@@ -87,9 +113,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		for(auto &n:nodePoseStates)
 		{
 			// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
-			//clientDeviceState->SetLocalNodePose(n.first,n.second.pose_worldSpace);
-			//auto &globalPose=clientDeviceState->GetGlobalNodePose(n.first);
-			std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(n.first);
+			std::shared_ptr<clientrender::Node> node=geometryCache.mNodeManager->GetNode(n.first);
 			if(node)
 			{
 			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
@@ -102,26 +126,26 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		}
 	}
 
-	const clientrender::NodeManager::nodeList_t& nodeList = g.mNodeManager->GetSortedRootNodes();
+	const clientrender::NodeManager::nodeList_t& nodeList = geometryCache.mNodeManager->GetSortedRootNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
 		RenderNode(deviceContext,renderState
-			,node,g);
+			,node);
 	}
-	const clientrender::NodeManager::nodeList_t& transparentList = g.mNodeManager->GetSortedTransparentNodes();
+	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache.mNodeManager->GetSortedTransparentNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : transparentList)
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
 		RenderNode(deviceContext,renderState
-		,node,g,false,false);
+		,node,false,false);
 	}
 	if(renderState.show_node_overlays)
 	for (const std::shared_ptr<clientrender::Node>& node : nodeList)
 	{
-		RenderNodeOverlay(deviceContext,renderState, node,g);
+		RenderNodeOverlay(deviceContext,renderState, node);
 	}
 
 }
@@ -130,7 +154,6 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext
 	,RenderState &renderState
 	,const std::shared_ptr<clientrender::Node>& node
-	,clientrender::GeometryCache &g
 	,bool force
 	,bool include_children)
 {
@@ -141,7 +164,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if(node->GetGlobalIlluminationTextureUid() )
-		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 	// Pass used for rendering geometry.
 	std::string passName = "pbr_nolightmap";
 	if(node->IsStatic())
@@ -258,7 +281,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				// If lighting is via static textures.
 				if(renderState.lastSetupCommand.backgroundMode!=teleport::core::BackgroundMode::VIDEO&&renderState.lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
-					auto t = g.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
+					auto t = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
 					{
 						renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,t->GetSimulTexture());
@@ -267,7 +290,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap,renderState.specularCubemapTexture);
 				if(renderState.lastSetupCommand.backgroundMode!=teleport::core::BackgroundMode::VIDEO&&renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
 				{
-					auto t = g.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+					auto t = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
 					if(t)
 					{
 						renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_specularCubemap,t->GetSimulTexture());
@@ -310,7 +333,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		{
 			RenderNode(deviceContext,
 			renderState
-		,child,g,false);
+		,child,false);
 		}
 	}
 }
@@ -319,7 +342,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext
 	,RenderState &renderState
 	,const std::shared_ptr<clientrender::Node>& node
-	,clientrender::GeometryCache &g,bool force)
+	,bool force)
 {
 	auto renderPlatform=deviceContext.renderPlatform;
 	clientrender::AVSTextureHandle th = renderState.avsTexture;
@@ -329,7 +352,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
-		globalIlluminationTexture = g.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
 	if (node->IsVisible()&& (node_select == 0 || node_select == node->id))
@@ -379,7 +402,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if (child)
 		{
-			RenderNodeOverlay(deviceContext, renderState,child,g,true);
+			RenderNodeOverlay(deviceContext, renderState,child,true);
 		}
 	}
 }
