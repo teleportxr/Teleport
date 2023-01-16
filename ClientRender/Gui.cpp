@@ -512,9 +512,12 @@ static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
 	auto now = std::chrono::system_clock::now();
 	time_t now_t = std::chrono::system_clock::to_time_t(now);
 	tm* t = localtime(&now_t);
-	std::string dateStr = std::to_string(1900 + t->tm_year) + "/" + std::to_string(1 + t->tm_mon) + "/" + std::to_string(t->tm_mday);
-	const char* leadingZero = (t->tm_hour < 10) ? "0" : "";
-	std::string timeStr = leadingZero + std::to_string(t->tm_hour) + ":" + std::to_string(t->tm_min);
+	const char* leadingZero0 = (t->tm_mon < 10) ? "0" : "";
+	const char* leadingZero1 = (t->tm_mday < 10) ? "0" : "";
+	std::string dateStr = std::to_string(1900 + t->tm_year) + "/" + leadingZero0 + std::to_string(1 + t->tm_mon) + "/" + leadingZero1 + std::to_string(t->tm_mday);
+	const char* leadingZero2 = (t->tm_hour < 10) ? "0" : "";
+	const char* leadingZero3 = (t->tm_min < 10) ? "0" : "";
+	std::string timeStr = leadingZero2 + std::to_string(t->tm_hour) + ":" + leadingZero3 + std::to_string(t->tm_min);
 	return { dateStr, timeStr };
 }
 
