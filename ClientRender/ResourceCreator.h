@@ -104,10 +104,7 @@ namespace clientrender
 	#endif
 
 		std::vector<UntranscodedTexture> texturesToTranscode;
-		std::map<avs::uid, std::shared_ptr<clientrender::Texture::TextureCreateInfo>> texturesToCreate; //Textures that are ready to be created <Texture's UID, Texture's Data>
-	
 		std::mutex mutex_texturesToTranscode;
-		std::mutex mutex_texturesToCreate;
 		std::atomic_bool shouldBeTranscoding = true;	//Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
 		std::thread basisThread;						//Thread where we transcode basis files to mip data.
 	

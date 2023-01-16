@@ -93,10 +93,6 @@ void ResourceCreator::Initialize(clientrender::RenderPlatform* r, clientrender::
 
 void ResourceCreator::Clear()
 {
-	mutex_texturesToCreate.lock();
-	texturesToCreate.clear();
-	mutex_texturesToCreate.unlock();
-
 	mutex_texturesToTranscode.lock();
 	texturesToTranscode.clear();
 	mutex_texturesToTranscode.unlock();
@@ -110,18 +106,6 @@ void ResourceCreator::Clear()
 
 void ResourceCreator::Update(float deltaTime)
 {
-	std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-
-	//Complete any textures that have finished to transcode, and are waiting.
-	//This has to happen on the main thread, so we can use the main GL context... still valid on Vulkan??
-	for (auto texturePair = texturesToCreate.begin(); texturePair != texturesToCreate.end();)
-	{
-		// The texture object has a copy of the create info and
-		// will delete the allocated mip data in its destructor.
-		CompleteTexture(texturePair->first, *(texturePair->second));
-		texturesToCreate.erase(texturePair);
-		break;
-	}
 }
 
 avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
@@ -1239,12 +1223,19 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	while (shouldBeTranscoding)
 	{
-		std::this_thread::yield(); //Yield at the start, as we don't want to yield before we unlock (when lock goes out of scope).
+		//std::this_thread::yield(); //Yield at the start, as we don't want to yield before we unlock (when lock goes out of scope).
 
-		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		if (texturesToTranscode.size() != 0)
+		//Copy the data out of the shared data structure and minimise thread stalls due to mutexes
+		std::vector<UntranscodedTexture> texturesToTranscode_Internal;
+		texturesToTranscode_Internal.reserve(texturesToTranscode.size());
 		{
-			UntranscodedTexture& transcoding = texturesToTranscode[0];
+			std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
+			texturesToTranscode_Internal.insert(texturesToTranscode_Internal.end(), texturesToTranscode.begin(), texturesToTranscode.end());
+			texturesToTranscode.clear();
+		}
+
+		for (UntranscodedTexture& transcoding : texturesToTranscode_Internal)
+		{
 			if (transcoding.fromCompressionFormat == avs::TextureCompression::PNG)
 			{
 				TELEPORT_COUT<<"Transcoding "<<transcoding.name.c_str()<<" with PNG\n";
@@ -1291,8 +1282,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				if (transcoding.scrTexture->images.size() != 0)
 				{
-					std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-					texturesToCreate.emplace(std::pair{ transcoding.texture_uid, transcoding.scrTexture});
+					CompleteTexture(transcoding.texture_uid, *(transcoding.scrTexture));
 				}
 				else
 				{
@@ -1346,8 +1336,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 
 					if (transcoding.scrTexture->images.size() != 0)
 					{
-						std::lock_guard<std::mutex> lock_texturesToCreate(mutex_texturesToCreate);
-						texturesToCreate.emplace(std::pair{ transcoding.texture_uid, std::move(transcoding.scrTexture) });
+						CompleteTexture(transcoding.texture_uid, *(transcoding.scrTexture));
 					}
 					else
 					{
@@ -1359,7 +1348,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to start transcoding." << std::endl;
 				}
 			}
-			texturesToTranscode.erase(texturesToTranscode.begin());
 		}
 	}
 }
