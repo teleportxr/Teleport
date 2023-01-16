@@ -31,8 +31,8 @@ set(srcs
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${REMOTEPLAY_PLATFORM_DIR}")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DPLATFORM_DIR=${REMOTEPLAY_PLATFORM_DIR}")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
 else()
 	message(FATAL_ERROR "Unsupported platform!")
 endif()
@@ -44,7 +44,7 @@ add_static_executable( pc_client WIN32 SOURCES ${srcs} ${shaders} ${inifiles} )
 
 
 target_include_directories(pc_client PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${REMOTEPLAY_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${REMOTEPLAY_PLATFORM_DIR}/Windows)
+	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
 
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(pc_client SimulDirectX12_MT)

@@ -67,12 +67,12 @@ if(TELEPORT_UNITY)
 
 	add_library(TeleportServer SHARED ${src} ${src_plugin})
 	set_target_properties( TeleportServer PROPERTIES 
-		VS_DEBUGGER_COMMAND ${REMOTEPLAY_UNITY_EDITOR_DIR}/${REMOTEPLAY_UNITY_EDITOR_EXE}
-		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${REMOTEPLAY_UNITY_PROJECT_DIR}\""
+		VS_DEBUGGER_COMMAND ${TELEPORT_UNITY_EDITOR_DIR}/${TELEPORT_UNITY_EDITOR_EXE}
+		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${TELEPORT_UNITY_PROJECT_DIR}\""
 		VS_DEBUGGER_ENVIRONMENT ""
 		)
 	#Include Unity's native plugin interface headers
-	target_include_directories(TeleportServer PUBLIC ${REMOTEPLAY_UNITY_EDITOR_DIR}/Data/PluginAPI)
+	target_include_directories(TeleportServer PUBLIC ${TELEPORT_UNITY_EDITOR_DIR}/Data/PluginAPI)
 else()
 	add_library(TeleportServer STATIC ${src})
 endif()

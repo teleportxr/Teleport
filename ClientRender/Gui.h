@@ -10,8 +10,13 @@
 #ifdef __ANDROID__
 struct ANativeWindow;
 #endif
+#include <client/Shaders/video_types.sl>
 namespace teleport
 {
+	namespace client
+	{
+		class SessionClient;
+	}
 	#ifdef _MSC_VER
 	typedef void* PlatformWindow;
 	#endif
@@ -42,7 +47,12 @@ namespace teleport
 		void Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager);
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
 		void NodeTree(const clientrender::NodeManager::nodeList_t&);
+		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
+		void TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
+		void GeometryOSD();
 		void Scene();
+		bool Tab(const char *txt);
+		void EndTab();
 		// Unitless,relative to debug gui size, [-1,+1]
 		void SetDebugGuiMouse(vec2 m,bool leftButton);
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -50,6 +60,10 @@ namespace teleport
 		void setGeometryCache(const clientrender::GeometryCache *g)
 		{
 			geometryCache=g;
+		}
+		void setSessionClient(const teleport::client::SessionClient *g)
+		{
+			sessionClient=g;
 		}
 		void SetConnectHandler(std::function<void(const std::string&)> fn);
 		void SetCancelConnectHandler(std::function<void()> fn);
@@ -88,10 +102,12 @@ namespace teleport
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
 		const clientrender::GeometryCache *geometryCache=nullptr;
+		const teleport::client::SessionClient *sessionClient=nullptr;
 		platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;
 		vec3 menu_pos;
+		bool in_tabs=false;
 		float azimuth=0.0f, tilt = 0.0f;
 		std::string current_url;
 		std::vector<std::string> server_ips;

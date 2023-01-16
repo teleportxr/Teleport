@@ -29,6 +29,8 @@ set( src_root
 	GeometryCache.h
 	GeometryDecoder.cpp
 	GeometryDecoder.h
+	InstanceRenderer.cpp
+	InstanceRenderer.h
 	Gui.cpp
 	Gui.h
 	Light.cpp
@@ -114,7 +116,6 @@ target_include_directories(ClientRender PRIVATE ../firstparty/Platform/External/
 #Include enet
 target_include_directories(ClientRender PRIVATE ../thirdparty/enet/include)
 target_include_directories(ClientRender PRIVATE ${SIMUL_PLATFORM_DIR}/External/imgui)
-target_include_directories(ClientRender PRIVATE ../TeleportClient)
 #Include draco
 target_include_directories(ClientRender PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/src)

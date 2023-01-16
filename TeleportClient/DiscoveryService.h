@@ -16,6 +16,8 @@ namespace teleport
 		public:
 			DiscoveryService();
 			virtual ~DiscoveryService();
+			static DiscoveryService &GetInstance();
+			static void ShutdownInstance();
 			/// Returns Client ID.
 			virtual uint64_t Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote);
 

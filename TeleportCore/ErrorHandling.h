@@ -35,12 +35,14 @@ namespace teleport
 #define TELEPORT_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
 
 #if TELEPORT_INTERNAL_CHECKS
+#define TELEPORT_INTERNAL_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
 void TeleportLogUnsafe(const char* fmt, ...);
 #define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
     { TeleportLogUnsafe(__VA_ARGS__); }
 #define TELEPORT_INTERNAL_CERR\
 		std::cerr << __FILE__ << "(" << __LINE__ << "): warning: "
 #else
+#define TELEPORT_INTERNAL_BREAK_ONCE(msg)
 #define TELEPORT_INTERNAL_CERR\
 	//
 #define TELEPORT_INTERNAL_LOG_UNSAFE(a,...)

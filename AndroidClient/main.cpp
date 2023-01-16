@@ -48,7 +48,6 @@ int kOverrideHeight = 900;
 
 extern "C" { void android_main(struct android_app* app); }
 DisplaySurfaceManager* displaySurfaceManager = nullptr;
-teleport::client::ClientDeviceState clientDeviceState;
 teleport::client::ClientApp clientApp;
 teleport::Gui gui;
 // Need ONE global instance of this:
@@ -170,8 +169,8 @@ void android_main(struct android_app* app)
 	
 	gui.SetServerIPs(clientApp.config.recent_server_urls);
 
-	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient(std::make_unique<android::AndroidDiscoveryService>());
-	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (&clientDeviceState, sessionClient,gui,clientApp.config);
+	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient();
+	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (sessionClient,gui,clientApp.config);
 	if(clientApp.config.recent_server_urls.size())
 		androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
@@ -278,4 +277,5 @@ void android_main(struct android_app* app)
 	openXR.Shutdown();
 	delete androidRenderer;
 	delete sessionClient;
+	teleport::client::DiscoveryService::ShutdownInstance();
 }

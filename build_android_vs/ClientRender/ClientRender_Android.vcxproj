@@ -51,6 +51,7 @@
     <ClCompile Include="..\..\ClientRender\GeometryDecoder.cpp" />
     <ClCompile Include="..\..\ClientRender\Gui.cpp" />
     <ClCompile Include="..\..\ClientRender\IndexBuffer.cpp" />
+    <ClCompile Include="..\..\ClientRender\InstanceRenderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Light.cpp" />
     <ClCompile Include="..\..\ClientRender\Material.cpp" />
     <ClCompile Include="..\..\ClientRender\MemoryUtil.cpp" />
@@ -89,6 +90,7 @@
     <ClInclude Include="..\..\ClientRender\GeometryDecoder.h" />
     <ClInclude Include="..\..\ClientRender\Gui.h" />
     <ClInclude Include="..\..\ClientRender\IndexBuffer.h" />
+    <ClInclude Include="..\..\ClientRender\InstanceRenderer.h" />
     <ClInclude Include="..\..\ClientRender\Light.h" />
     <ClInclude Include="..\..\ClientRender\Material.h" />
     <ClInclude Include="..\..\ClientRender\MemoryUtil.h" />

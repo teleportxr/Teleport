@@ -1483,7 +1483,7 @@ template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const 
 	try
 	{
 		resourceFile >> newResource;
-		TELEPORT_CERR<<"Loaded Resource "<<newResource.getName().c_str()<<" from file "<<file_name.c_str()<<"\n";
+		//TELEPORT_COUT<<"Loaded Resource "<<newResource.getName().c_str()<<" from file "<<file_name.c_str()<<"\n";
 	}
 	catch(...)
 	{
@@ -1545,7 +1545,7 @@ avs::uid GeometryStore::PathToUid(std::string p) const
 	auto i=path_to_uid.find(p);
 	if(i==path_to_uid.end())
 	{
-		TELEPORT_BREAK_ONCE("No uid for this path.");
+		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
 		return 0;
 		//TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
 		return 0;
@@ -1558,7 +1558,7 @@ std::string GeometryStore::UidToPath(avs::uid u) const
 	auto i=uid_to_path.find(u);
 	if(i==uid_to_path.end())
 	{
-		TELEPORT_BREAK_ONCE("No path for this uid.");
+		TELEPORT_INTERNAL_BREAK_ONCE("No path for this uid.");
 		return "";
 		//throw std::runtime_error("No path for this uid.");
 	}

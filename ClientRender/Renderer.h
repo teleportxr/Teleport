@@ -9,19 +9,11 @@
 #include "Platform/CrossPlatform/Text3DRenderer.h"
 #include "Platform/CrossPlatform/RenderDelegater.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
-#include "Platform/Shaders/SL/CppSl.sl"
-#include "Platform/Shaders/SL/camera_constants.sl"
 #include "TeleportClient/basic_linear_algebra.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/ClientPipeline.h"
-#include "TeleportClient/OpenXR.h"
 #include "TeleportClient/ClientDeviceState.h"
-#include "ClientRender/GeometryCache.h"
-#include "ClientRender/ResourceCreator.h"
 #include "ClientRender/GeometryDecoder.h"
-#include "client/Shaders/cubemap_constants.sl"
-#include "client/Shaders/pbr_constants.sl"
-#include "client/Shaders/video_types.sl"
 #include "ClientRender/Gui.h"
 #include "TeleportAudio/AudioStreamTarget.h"
 #include "TeleportAudio/AudioCommon.h"
@@ -31,6 +23,7 @@
 #include "TeleportAudio/NetworkPipeline.h"
 #include "TeleportClient/Config.h"
 #include "VideoDecoderBackend.h"
+#include "InstanceRenderer.h"
 
 namespace teleport
 {
@@ -39,18 +32,9 @@ namespace teleport
 		class ClientDeviceState;
 	}
 }
+
 namespace clientrender
 {
-	/// <summary>
-	/// A 
-	/// </summary>
-	struct AVSTexture
-	{
-		virtual ~AVSTexture() = default;
-		virtual avs::SurfaceBackendInterface* createSurface() const = 0;
-	};
-	using AVSTextureHandle = std::shared_ptr<AVSTexture>;
-
 	struct RendererStats
 	{
 		uint64_t frameCounter;
@@ -58,34 +42,18 @@ namespace clientrender
 		double lastFPS;
 	};
 
-	enum
-	{
-		NO_OSD=0,
-		CAMERA_OSD,
-		VIDEO_OSD,
-		DECODER_OSD,
-		CUBEMAP_OSD,
-		NETWORK_OSD,
-		GEOMETRY_OSD,
-		TEXTURES_OSD,
-		TAG_OSD,
-		CONTROLLER_OSD,
-		NUM_OSDS
-	};
 	enum class ShaderMode
 	{
 		DEFAULT,PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS,NUM
 	};
 	//! Timestamp of when the system started.
 	extern avs::Timestamp platformStartTimestamp;	
-	//! Base class for a renderer that draws for a specific server.
+	//! Renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
 	class Renderer:public teleport::client::SessionCommandInterface,public platform::crossplatform::RenderDelegaterInterface
 	{
 	public:
-		Renderer(teleport::client::ClientDeviceState *c,clientrender::NodeManager *localNodeManager
-				,clientrender::NodeManager *remoteNodeManager
-				,teleport::client::SessionClient *sessionClient
+		Renderer(teleport::client::SessionClient *sessionClient
 				, teleport::Gui &g,teleport::client::Config &config);
 		virtual ~Renderer();
 		//! This allows live-recompile of shaders (desktop platforms only).
@@ -103,17 +71,21 @@ namespace clientrender
 		void ConfigureVideo(const avs::VideoConfig &vc);
 		void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		teleport::core::SetupCommand lastSetupCommand;
-		teleport::core::SetupLightingCommand lastSetupLightingCommand;
+	
 
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
 
 		bool OSDVisible() const
 		{
-			return show_osd != NO_OSD;
+			return show_osd;
 		}
 	protected:
+	teleport::client::SessionClient *sessionClient=nullptr;
+		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
+		//std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient> sessionClients;
+		std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid);
+		void RemoveInstanceRenderer(avs::uid);
 		void InvalidateDeviceObjects();
 		void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);
 		void FillInControllerPose(int index, float offset);
@@ -127,25 +99,16 @@ namespace clientrender
 			avs::vec4 orientation[2];
 		};
 		ControllerSim controllerSim;
-	
-		/// A camera instance to generate view and proj matrices and handle mouse control.
-		/// In practice you will have your own solution for this.
 		platform::crossplatform::Camera			camera;
 		platform::crossplatform::MouseCameraState	mouseCameraState;
 		platform::crossplatform::MouseCameraInput	mouseCameraInput;
-		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid,clientrender::GeometryCache &g);
-		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false,bool include_children=true);
-		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false);
+		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid);
+		//void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext, const std::shared_ptr<clientrender::Node>& node,clientrender::GeometryCache &g,bool force=false,bool include_children=true);
 		
 		clientrender::RenderPlatform PcClientRenderPlatform;
 		/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 		/// distributes numerical precision to where it is better used.
 		static const bool reverseDepth = true;
-		platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
-		platform::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
-		platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
-		platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
-		platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
 		static constexpr int maxTagDataSize = 32;
 		VideoTagDataCube videoTagDataCube[maxTagDataSize];
 
@@ -156,7 +119,6 @@ namespace clientrender
 		vec4 depthOffsetScale;
 
 		bool keydown[256] = {};
-		teleport::client::SessionClient *sessionClient=nullptr;
 	
 		/// A pointer to RenderPlatform, so that we can use the platform::crossplatform API.
 		platform::crossplatform::RenderPlatform		*renderPlatform	=nullptr;
@@ -165,50 +127,13 @@ namespace clientrender
 		/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
 		platform::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 
-		// A simple example mesh to draw as transparent
-		platform::crossplatform::Effect *pbrEffect					= nullptr;
-		
-		platform::crossplatform::EffectTechnique	*pbrEffect_transparentTechnique					=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_transparentMultiviewTechnique		=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidTechnique						=nullptr;
-		platform::crossplatform::EffectPass			*pbrEffect_solidTechnique_localPass				=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidAnimTechnique					=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidMultiviewTechnique				=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidAnimMultiviewTechnique			=nullptr;
-		platform::crossplatform::EffectPass			*pbrEffect_solidMultiviewTechnique_localPass	=nullptr;
-
-		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
-		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
-		platform::crossplatform::ShaderResource _lights;
-		platform::crossplatform::ShaderResource plainTexture;
-		platform::crossplatform::ShaderResource RWTextureTargetArray;
-		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataIDBuffer;
-		platform::crossplatform::ShaderResource pbrEffect_TagDataIDBuffer;
-		platform::crossplatform::ShaderResource pbrEffect_specularCubemap,pbrEffect_diffuseCubemap;
-		platform::crossplatform::ShaderResource pbrEffect_diffuseTexture;
-		platform::crossplatform::ShaderResource pbrEffect_normalTexture;
-		platform::crossplatform::ShaderResource pbrEffect_combinedTexture;
-		platform::crossplatform::ShaderResource pbrEffect_emissiveTexture;
-		platform::crossplatform::ShaderResource pbrEffect_globalIlluminationTexture;
-		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataCubeBuffer; 
-
-		platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
-		platform::crossplatform::ConstantBuffer<StereoCameraConstants> stereoCameraConstants;
-		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
-		platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
-		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
-		platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
-		platform::crossplatform::Texture* videoTexture				= nullptr;
+		RenderState renderState;
 
 		platform::crossplatform::Text3DRenderer text3DRenderer;
-		int show_osd = NO_OSD;
+		bool show_osd = false;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
 		bool using_vr = true;
-		clientrender::GeometryCache localGeometryCache;
-		clientrender::ResourceCreator localResourceCreator;
-		clientrender::GeometryCache geometryCache;
-		clientrender::ResourceCreator resourceCreator;
 		avs::uid local_left_hand_uid=0;
 		clientrender::Transform palm_to_hand_l;
 		avs::uid local_right_hand_uid=0;
@@ -230,8 +155,6 @@ namespace clientrender
 
 		bool have_vr_device = false;
 		platform::crossplatform::Texture* externalTexture = nullptr;
-		teleport::client::OpenXR *openXR=nullptr;
-		avs::uid show_only=0;
 		
 		std::string server_ip;
 		int server_discovery_port=0;
@@ -245,17 +168,12 @@ namespace clientrender
 		bool show_video = false;
 
 		bool render_from_video_centre	= false;
-		bool show_textures				= false;
+		//bool show_textures				= false;
 		bool show_cubemaps				=false;
-		bool show_node_overlays			=false;
-
-		teleport::client::ClientDeviceState *clientDeviceState = nullptr;
-		std::string overridePassName = ""; //Pass used for rendering geometry.
-
+	
 		teleport::Gui &gui;
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;
-		void GeometryOSD(const clientrender::GeometryCache &geometryCache);
 	public:
 		teleport::client::ClientPipeline clientPipeline;
 		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
@@ -268,15 +186,13 @@ namespace clientrender
 		static constexpr bool GeoStream		= true;
 		static constexpr uint32_t NominalJitterBufferLength = 0;
 		static constexpr uint32_t MaxJitterBufferLength = 50;
-		//static constexpr avs::SurfaceFormat SurfaceFormat = avs::SurfaceFormat::ARGB;
-		AVSTextureHandle avsTexture;
-
+		
 		GeometryDecoder geometryDecoder;
 	
 		void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
 		void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
-		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
+		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, avs::uid server_uid,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
 		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 		
 		bool OnDeviceRemoved();
@@ -287,7 +203,7 @@ namespace clientrender
 		void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
 		
 		void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
-		void WriteHierarchies();
+		void WriteHierarchies(avs::uid server);
 		
 		int AddView() override;
 		void ResizeView(int view_id, int W, int H) override;
