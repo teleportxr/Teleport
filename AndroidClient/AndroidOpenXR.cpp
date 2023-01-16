@@ -390,9 +390,10 @@ platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(size_t 
 	platform::crossplatform::GraphicsDeviceContext& deviceContext = swapchainIndex == 0 ? mgdc : gdc;
 
 	// the platform context is the pointer to the VkCommandBuffer.
-	size_t i = GetCommandBufferIndex(swapchainIndex, 0);
+	size_t i = GetCommandBufferIndex(swapchainIndex, imageIndex);
 	CmdBuffer& commandBuffer = cmdBuffers[i];
 	deviceContext.platform_context = (void*)&commandBuffer.buf;
+	commandBuffer.Wait();
 	commandBuffer.Reset();
 	commandBuffer.Begin();
 	return deviceContext;
@@ -409,12 +410,10 @@ void OpenXR::FinishDeviceContext(size_t swapchainIndex, size_t imageIndex)
 		vkrp->EndRenderPass(deviceContext);
 	}
 
-	size_t i = GetCommandBufferIndex(swapchainIndex, 0);
+	size_t i = GetCommandBufferIndex(swapchainIndex, imageIndex);
 	CmdBuffer &commandBuffer=cmdBuffers[i];
 	commandBuffer.End();
 	commandBuffer.Exec(vulkanQueue.operator VkQueue());
-	bool waitResult = commandBuffer.Wait();
-	// XXX Should double-buffer the command buffers, for now just flush
 }
 
 void OpenXR::EndFrame() 
