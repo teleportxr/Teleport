@@ -90,20 +90,6 @@ static const char *stringof(avs::GeometryPayloadType t)
 	return txt[(size_t)t];
 }
 
-//TODO: Implement Vector, Matrix and Quaternion conversions between avs:: <-> math:: <-> CppSl.h - AJR
-template<typename T1, typename T2> T1 ConvertVec2(const T2& value) { return T1(value.x, value.y); }
-template<typename T1, typename T2> T1 ConvertVec3(const T2& value) { return T1(value.x, value.y, value.z); }
-template<typename T1, typename T2> T1 ConvertVec4(const T2& value) { return T1(value.x, value.y, value.z, value.w); }
-mat4 ConvertMat4(const float value[4][4]) 
-{
-	mat4 result;
-	result.M[0][0] = value[0][0]; result.M[0][1] = value[0][1]; result.M[0][2] = value[0][2]; result.M[0][3] = value[0][3];
-	result.M[1][0] = value[1][0]; result.M[1][1] = value[1][1]; result.M[1][2] = value[1][2]; result.M[1][3] = value[1][3];
-	result.M[2][0] = value[2][0]; result.M[2][1] = value[2][1]; result.M[2][2] = value[2][2]; result.M[2][3] = value[2][3];
-	result.M[3][0] = value[3][0]; result.M[3][1] = value[3][1]; result.M[3][2] = value[3][2]; result.M[3][3] = value[3][3];
-	return  result;
-}
-
 avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const 
 {
 	#if TELEPORT_CLIENT_USE_D3D12
@@ -119,13 +105,11 @@ avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const
 }
 
 
-Renderer::Renderer(teleport::client::SessionClient *sc,teleport::Gui& g
+Renderer::Renderer(teleport::Gui& g
 	,teleport::client::Config &cfg)
-	:sessionClient(sc)
-	,gui(g)
+	:gui(g)
 	,config(cfg)
 {
-	sessionClient->SetSessionCommandInterface(this);
 	if (!timestamp_initialized)
 #ifdef _MSC_VER
 		platformStartTimestamp = avs::Platform::getTimestamp();
@@ -139,28 +123,24 @@ Renderer::Renderer(teleport::client::SessionClient *sc,teleport::Gui& g
 
 Renderer::~Renderer()
 {
-	clientPipeline.pipeline.deconfigure();
 	InvalidateDeviceObjects(); 
 }
 
 void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window)
 {
 	// Initialize the audio (asynchronously)
-#ifdef _MSC_VER
-	audioPlayer.initializeAudioDevice();
-#endif
 	renderPlatform = r;
 	renderState.openXR=u;
 
 	PcClientRenderPlatform.SetSimulRenderPlatform(r);
 	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 
-	hDRRenderer = new crossplatform::HdrRenderer();
+	renderState.hDRRenderer = new crossplatform::HdrRenderer();
 
-	hdrFramebuffer	=renderPlatform->CreateFramebuffer();
-	hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
-	hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
-	hdrFramebuffer->SetAntialiasing(1);
+	renderState.hdrFramebuffer	=renderPlatform->CreateFramebuffer();
+	renderState.hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
+	renderState.hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
+	renderState.hdrFramebuffer->SetAntialiasing(1);
 	camera.SetPositionAsXYZ(0.f,0.f,2.f);
 	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
 	camera.LookInDirection(look,up);
@@ -170,7 +150,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	// Automatic vertical fov - depends on window shape:
 	camera.SetVerticalFieldOfViewDegrees(0.f);
 	
-	//const float aspect = hdrFramebuffer->GetWidth() / hdrFramebuffer->GetHeight();
+	//const float aspect = renderState.hdrFramebuffer->GetWidth() / renderState.hdrFramebuffer->GetHeight();
 	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
 	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 
@@ -187,8 +167,8 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	memset(keydown,0,sizeof(keydown));
 	text3DRenderer.PushFontPath("assets/fonts");
 	text3DRenderer.RestoreDeviceObjects(renderPlatform);
-	hDRRenderer->RestoreDeviceObjects(renderPlatform);
-	hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
+	renderState.hDRRenderer->RestoreDeviceObjects(renderPlatform);
+	renderState.hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	gui.RestoreDeviceObjects(renderPlatform,active_window);
 	auto connectButtonHandler = std::bind(&Renderer::ConnectButtonHandler, this,std::placeholders::_1);
@@ -209,7 +189,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	renderState.cameraConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.stereoCameraConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
-	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, maxTagDataSize, false, true);
+	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform,RenderState::maxTagDataSize, false, true);
 	renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
 	renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
 	renderState.boneMatrices.LinkToEffect(renderState.pbrEffect, "boneMatrices");
@@ -334,6 +314,9 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
 	localGeometryCache.setCacheFolder(config.GetStorageFolder());
+
+	GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
+	
 }
 
 // This allows live-recompile of shaders. 
@@ -341,7 +324,7 @@ void Renderer::RecompileShaders()
 {
 	renderPlatform->RecompileShaders();
 	text3DRenderer.RecompileShaders();
-	hDRRenderer->RecompileShaders();
+	renderState.hDRRenderer->RecompileShaders();
 	gui.RecompileShaders();
 	delete renderState.pbrEffect;
 	delete renderState.cubemapClearEffect;
@@ -376,12 +359,25 @@ void Renderer::RecompileShaders()
 	renderState.pbrEffect_globalIlluminationTexture		=renderState.pbrEffect->GetShaderResource("globalIlluminationTexture");
 }
 
+std::shared_ptr<teleport::client::SessionClient> Renderer::GetSessionClient(avs::uid server_uid)
+{
+	auto i=sessionClients.find(server_uid);
+	if(i==sessionClients.end())
+	{
+		auto r=std::make_shared<client::SessionClient>(server_uid);
+		sessionClients[server_uid]=r;
+		return r;
+	}
+	return i->second;
+}
+
 std::shared_ptr<InstanceRenderer> Renderer::GetInstanceRenderer(avs::uid server_uid)
 {
+	auto sc=GetSessionClient(server_uid);
 	auto i=instanceRenderers.find(server_uid);
 	if(i==instanceRenderers.end())
 	{
-		auto r=std::make_shared<InstanceRenderer>(server_uid);
+		auto r=std::make_shared<InstanceRenderer>(server_uid,config,geometryDecoder,renderState,sc.get());
 		instanceRenderers[server_uid]=r;
 		r->RestoreDeviceObjects(&PcClientRenderPlatform);
 		return r;
@@ -416,49 +412,29 @@ void Renderer::InvalidateDeviceObjects()
 		delete renderState.pbrEffect;
 		renderState.pbrEffect=nullptr;
 	}
-	if(hDRRenderer)
-		hDRRenderer->InvalidateDeviceObjects();
+	if(renderState.hDRRenderer)
+		renderState.hDRRenderer->InvalidateDeviceObjects();
 	if(renderPlatform)
 		renderPlatform->InvalidateDeviceObjects();
-	if(hdrFramebuffer)
-		hdrFramebuffer->InvalidateDeviceObjects();
+	if(renderState.hdrFramebuffer)
+		renderState.hdrFramebuffer->InvalidateDeviceObjects();
 	SAFE_DELETE(renderState.diffuseCubemapTexture);
 	SAFE_DELETE(renderState.specularCubemapTexture);
 	SAFE_DELETE(renderState.lightingCubemapTexture);
 	SAFE_DELETE(renderState.videoTexture);
-	SAFE_DELETE(hDRRenderer);
-	SAFE_DELETE(hdrFramebuffer);
+	SAFE_DELETE(renderState.hDRRenderer);
+	SAFE_DELETE(renderState.hdrFramebuffer);
 	SAFE_DELETE(renderState.pbrEffect);
 	SAFE_DELETE(renderState.cubemapClearEffect);
 }
 
-void Renderer::CreateTexture(clientrender::AVSTextureHandle &th,int width, int height)
-{
-	if (!(th))
-		th.reset(new AVSTextureImpl(nullptr));
-	clientrender::AVSTexture *t = th.get();
-	AVSTextureImpl *ti=(AVSTextureImpl*)t;
-	if(!ti->texture)
-		ti->texture = renderPlatform->CreateTexture();
-
-	// NVidia decoder needs a shared handle to the resource.
-#if TELEPORT_CLIENT_USE_D3D12 && !TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
-	bool useSharedHeap = true;
-#else
-	bool useSharedHeap = false;
-#endif
-
-	ti->texture->ensureTexture2DSizeAndFormat(renderPlatform, width, height,1, crossplatform::RGBA_8_UNORM, true, true, 
-		false, 1, 0, false, vec4(0.5f, 0.5f, 0.2f, 1.0f), 1.0f, 0, useSharedHeap);
-}
-
 void Renderer::FillInControllerPose(int index, float offset)
 {
-	if(!hdrFramebuffer->GetHeight())
+	if(!renderState.hdrFramebuffer->GetHeight())
 		return;
-	float x= mouseCameraInput.MouseX / (float)hdrFramebuffer->GetWidth();
-	float y= mouseCameraInput.MouseY / (float)hdrFramebuffer->GetHeight();
-	vec3 controller_dir	=camera.ScreenPositionToDirection(x, y, hdrFramebuffer->GetWidth() / static_cast<float>(hdrFramebuffer->GetHeight()));
+	float x= mouseCameraInput.MouseX / (float)renderState.hdrFramebuffer->GetWidth();
+	float y= mouseCameraInput.MouseY / (float)renderState.hdrFramebuffer->GetHeight();
+	vec3 controller_dir	=camera.ScreenPositionToDirection(x, y, renderState.hdrFramebuffer->GetWidth() / static_cast<float>(renderState.hdrFramebuffer->GetHeight()));
 	vec3 view_dir			=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
 	static float cc=0.0f;
@@ -508,12 +484,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	renderState.openXR->SetFallbackPoseState(index?client::RIGHT_AIM_POSE:client::LEFT_AIM_POSE,pose);
 }
 
-void Renderer::ConfigureVideo(const avs::VideoConfig& videoConfig)
-{
-	clientPipeline.videoConfig = videoConfig;
-}
-
-void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)
+void SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)
 {
 // Here we must transform the viewstructs in the device context by the specified origin pose,
 // so that the new view matrices will be in a global space which has the stage space at the specified origin.
@@ -538,7 +509,6 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext
 		}
 	}	
 }
-
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
@@ -559,125 +529,14 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs.resize(1);
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
-	// Init the viewstruct in global space - i.e. with the server offsets.
-	SetRenderPose(deviceContext, clientServerState.originPose);
-
-	clientrender::AVSTextureHandle th = renderState.avsTexture;
-	clientrender::AVSTexture& tx = *th;
-	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-
-	if (ti)
 	{
-		// This will apply to both rendering methods
-		renderState.cubemapClearEffect->SetTexture(deviceContext,renderState.plainTexture, ti->texture);
-		renderState.tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, renderState.cubemapClearEffect, renderState._RWTagDataIDBuffer);
-		renderState.cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
-		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-		renderState.cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
-		renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
-		renderState.cubemapClearEffect->Unapply(deviceContext);
-		renderState.cubemapClearEffect->UnbindTextures(deviceContext);
+		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+		// Init the viewstruct in global space - i.e. with the server offsets.
+		SetRenderPose(deviceContext, clientServerState.originPose);
+		GetInstanceRenderer(server_uid)->RenderView(deviceContext);
 
-		renderState.tagDataIDBuffer.CopyToReadBuffer(deviceContext);
-		const uint4* videoIDBuffer = renderState.tagDataIDBuffer.OpenReadBuffer(deviceContext);
-		if (videoIDBuffer && videoIDBuffer[0].x < 32 && videoIDBuffer[0].w == 110) // sanity check
-		{
-			int tagDataID = videoIDBuffer[0].x;
-
-			const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
-			videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
-
-			videoPosDecoded = true;
-		}
-		renderState.tagDataIDBuffer.CloseReadBuffer(deviceContext);
-		UpdateTagDataBuffers(deviceContext);
-		if (sessionClient->IsConnected())
-		{
-			if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
-			{
-				if (renderState.videoTexture->IsCubemap())
-				{
-					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
-					RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
-				}
-				else
-				{
-					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
-					RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
-				}
-			}
-		}
-		RecomposeCubemap(deviceContext, ti->texture, renderState.diffuseCubemapTexture, renderState.diffuseCubemapTexture->mips, int2(renderState.lastSetupCommand.clientDynamicLighting.diffusePos[0], renderState.lastSetupCommand.clientDynamicLighting.diffusePos[1]));
-		RecomposeCubemap(deviceContext, ti->texture, renderState.specularCubemapTexture, renderState.specularCubemapTexture->mips, int2(renderState.lastSetupCommand.clientDynamicLighting.specularPos[0], renderState.lastSetupCommand.clientDynamicLighting.specularPos[1]));
 	}
-
-	// Draw the background. If unconnected, we show a grid and horizon.
-	// If connected, we show the server's chosen background: video, texture or colour.
-	{
-		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-		{
-			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-			renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
-			renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
-			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-			renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-		}
-		//else
-		{
-			renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-			renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-		}
-		if (sessionClient->IsConnected())
-		{
-			if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::COLOUR)
-			{
-				renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(renderState.lastSetupCommand.backgroundColour));
-			}
-			else if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
-			{
-				if (renderState.videoTexture->IsCubemap())
-				{
-					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_cubemap", "cubemapTexture");
-				}
-				else
-				{
-					math::Matrix4x4 projInv;
-					deviceContext.viewStruct.proj.Inverse(projInv);
-					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
-				}
-			}
-		}
-		else
-		{
-			std::string passName = (int)config.options.lobbyView ? "neon" : "white";
-			if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
-				passName += "_multiview";
-
-			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-			renderPlatform->DrawQuad(deviceContext);
-			renderState.cubemapClearEffect->Unapply(deviceContext);
-		}
-	}
-	auto &geometryCache=GetInstanceRenderer(server_uid)->geometryCache;
-	vec4 white={1.f,1.f,1.f,1.f};
-	renderState.pbrConstants.drawDistance = renderState.lastSetupCommand.draw_distance;
-	if(renderState.specularCubemapTexture)
-		renderState.pbrConstants.roughestMip=float(renderState.specularCubemapTexture->mips-1);
-	if(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
-	{
-		auto t = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
-		if(t&&t->GetSimulTexture())
-		{
-			renderState.pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
-		}
-	}
-	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
-		RenderLocalNodes(deviceContext,server_uid);
-
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
-	
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	SetRenderPose(deviceContext, avs::Pose());
 	if(mvgdc)
@@ -694,6 +553,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 		=renderState.openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
 	auto l=nodePoseStates.find(1);
+		vec4 white={1.f,1.f,1.f,1.f};
 	std::vector<vec4> hand_pos_press;
 	if(l!=nodePoseStates.end())
 	{
@@ -730,47 +590,23 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	
 	gui.Render(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
+	auto sessionClient=GetSessionClient(server_uid);
 	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.options.showGeometryOffline)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
-	auto &localGeometryCache=GetInstanceRenderer(0)->geometryCache;
-		RenderLocalNodes(deviceContext, 0);
+		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
 	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
-	//hdrFramebuffer->DeactivateDepth(deviceContext);
+	//renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
 	if (show_video)
 	{
-		int W = hdrFramebuffer->GetWidth();
-		int H = hdrFramebuffer->GetHeight();
-		renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
+		int W = renderState.hdrFramebuffer->GetWidth();
+		int H = renderState.hdrFramebuffer->GetHeight();
+		AVSTextureImpl* ti = (AVSTextureImpl*)(renderState.avsTexture.get());
+		if (ti)
+			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 	}
 	
-	//if(show_textures)
-	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
-		static int tw = 128;
-		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
-	/*	for (auto t : textures)
-		{
-			pc_client::PC_Texture* pct = static_cast<pc_client::PC_Texture*>(&(*t.second.resource));
-			renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
-			x += tw;
-			if (x > hdrFramebuffer->GetWidth() - tw)
-			{
-				x = 0;
-				y += tw;
-			}
-		}
-		y += tw;
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyWhite.get()->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyNormal.get()->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyCombined.get()->GetSimulTexture());
-		renderPlatform->DrawTexture(deviceContext, x += tw, y, tw, tw, resourceCreator.m_DummyBlack.get()->GetSimulTexture());
-		*/
-	}
-	//hdrFramebuffer->Deactivate(deviceContext);
-	//hDRRenderer->Render(deviceContext,hdrFramebuffer->GetTexture(),1.0f,gamma);
 	renderState.pbrEffect->UnbindTextures(deviceContext);
 }
 
@@ -822,203 +658,6 @@ void Renderer::Update(double timestamp_ms)
 	previousTimestamp = timestamp_ms;
 }
 
-
-void Renderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSize)
-{
-	clientrender::SceneCaptureCubeTagData tagData;
-	memcpy(&tagData.coreData, data, sizeof(clientrender::SceneCaptureCubeCoreTagData));
-	avs::ConvertTransform(renderState.lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, tagData.coreData.cameraTransform);
-
-	tagData.lights.resize(tagData.coreData.lightCount);
-
-	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
-
-	// We will check the received light tags agains the current list of lights - rough and temporary.
-	/*
-	Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
-		to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
-	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
-	auto &cachedLight=cachedLights.begin();*/
-	////
-
-	size_t index = sizeof(clientrender::SceneCaptureCubeCoreTagData);
-	for (auto& light : tagData.lights)
-	{
-		memcpy(&light, &data[index], sizeof(clientrender::LightTagData));
-		//avs::ConvertTransform(renderState.lastSetupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, light.worldTransform);
-		index += sizeof(clientrender::LightTagData);
-	}
-	if(tagData.coreData.id>= videoTagDataCubeArray.size())
-	{
-		TELEPORT_CERR_BREAK("Bad tag id",1);
-		return;
-	}
-	videoTagDataCubeArray[tagData.coreData.id] = std::move(tagData);
-}
-
-void Renderer::UpdateTagDataBuffers(crossplatform::GraphicsDeviceContext& deviceContext)
-{				
-	for(auto i:instanceRenderers)
-	{
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=i.second->geometryCache.mLightManager.GetCache(cacheLock);
-		for (int i = 0; i < videoTagDataCubeArray.size(); ++i)
-		{
-			const auto& td = videoTagDataCubeArray[i];
-			const auto& pos = td.coreData.cameraTransform.position;
-			const auto& rot = td.coreData.cameraTransform.rotation;
-
-			videoTagDataCube[i].cameraPosition = { pos.x, pos.y, pos.z };
-			videoTagDataCube[i].cameraRotation = { rot.x, rot.y, rot.z, rot.w };
-			videoTagDataCube[i].diffuseAmbientScale=td.coreData.diffuseAmbientScale;
-			videoTagDataCube[i].lightCount = static_cast<int>(td.lights.size());
-			if(td.lights.size() > 10)
-			{
-				TELEPORT_CERR_BREAK("Too many lights in tag.",10);
-			}
-			for(int j=0;j<td.lights.size()&&j<10;j++)
-			{
-				LightTag &t=videoTagDataCube[i].lightTags[j];
-				const clientrender::LightTagData &l=td.lights[j];
-				t.uid32=(unsigned)(((uint64_t)0xFFFFFFFF)&l.uid);
-				t.colour=ConvertVec4<vec4>(l.color);
-				// Convert from +-1 to [0,1]
-				t.shadowTexCoordOffset.x=float(l.texturePosition[0])/float(renderState.lastSetupCommand.video_config.video_width);
-				t.shadowTexCoordOffset.y=float(l.texturePosition[1])/float(renderState.lastSetupCommand.video_config.video_height);
-				t.shadowTexCoordScale.x=float(l.textureSize)/float(renderState.lastSetupCommand.video_config.video_width);
-				t.shadowTexCoordScale.y=float(l.textureSize)/float(renderState.lastSetupCommand.video_config.video_height);
-				// Tag data has been properly transformed in advance:
-				avs::vec3 position		=l.position;
-				avs::vec4 orientation	=l.orientation;
-				t.position=*((vec3*)&position);
-				crossplatform::Quaternionf q((const float*)&orientation);
-				t.direction=q*vec3(0,0,1.0f);
-				t.worldToShadowMatrix	=ConvertMat4(l.worldToShadowMatrix);
-
-				auto nodeLight=cachedLights.find(l.uid);
-				if(nodeLight!=cachedLights.end()&& nodeLight->second.resource!=nullptr)
-				{
-					const clientrender::Light::LightCreateInfo &lc=nodeLight->second.resource->GetLightCreateInfo();
-					t.is_point=float(lc.type!=clientrender::Light::Type::DIRECTIONAL);
-					t.is_spot=float(lc.type==clientrender::Light::Type::SPOT);
-					t.radius=lc.lightRadius;
-					t.range=lc.lightRange;
-					t.shadow_strength=0.0f;
-				}
-			}
-		}	
-		renderState.tagDataCubeBuffer.SetData(deviceContext, videoTagDataCube);
-	}	
-}
-
-void Renderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique)
-{
-	int W = targetTexture->width;
-	int H = targetTexture->length;
-	renderState.cubemapConstants.sourceOffset = { 0, 0 };
-	renderState.cubemapConstants.targetSize.x = W;
-	renderState.cubemapConstants.targetSize.y = H;
-
-#if 0
-	static crossplatform::Texture *testSourceTexture=nullptr;
-	bool faceColour = true;
-	if(!testSourceTexture)
-	{
-		static uint32_t whiteABGR = 0xFFFFFFFF;
-		static uint32_t blueABGR = 0xFFFF7F7F;
-		static uint32_t combinedABGR = 0xFFFFFFFF;
-		static uint32_t blackABGR = 0x0;
-		static uint32_t greenABGR = 0xFF337733;
-		static uint32_t redABGR = 0xFF3333FF;
-		static uint32_t testABGR []={redABGR,greenABGR,blueABGR,whiteABGR};
-		crossplatform::TextureCreate textureCreate;
-		textureCreate.w=textureCreate.l=2;
-		textureCreate.initialData=testABGR;
-		textureCreate.f=crossplatform::PixelFormat::RGBA_8_UNORM;
-		testSourceTexture=renderPlatform->CreateTexture("testsourceTexture");
-		testSourceTexture->EnsureTexture(renderPlatform,&textureCreate);
-	}
-	{
-		cubemapClearEffect->SetTexture(deviceContext, "plainTexture",testSourceTexture);
-		cubemapClearEffect->SetUnorderedAccessView(deviceContext, RWTextureTargetArray, targetTexture);
-		cubemapClearEffect->Apply(deviceContext, "test", faceColour ? "test_face_colour" : "test");
-		int zGroups = videoTexture->IsCubemap() ? 6 : 1;
-		renderPlatform->DispatchCompute(deviceContext, targetTexture->width/16, targetTexture->length/16, zGroups);
-		cubemapClearEffect->Unapply(deviceContext);
-	}
-#endif
-	
-	renderState.cubemapClearEffect->SetTexture(deviceContext, "plainTexture",srcTexture);
-	renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-	renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-	renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, targetTexture);
-	renderState.tagDataIDBuffer.Apply(deviceContext, renderState.cubemapClearEffect, renderState.cubemapClearEffect_TagDataIDBuffer);
-	int zGroups = renderState.videoTexture->IsCubemap() ? 6 : 1;
-	renderState.cubemapClearEffect->Apply(deviceContext, technique, 0);
-	renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, zGroups);
-	renderState.cubemapClearEffect->Unapply(deviceContext);
-	renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, nullptr);
-	renderState.cubemapClearEffect->UnbindTextures(deviceContext);
-}
-
-void Renderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
-{
-	bool multiview = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
-	
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
-	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect,renderState.cubemapClearEffect_TagDataCubeBuffer);
-	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.globalPose.position) - videoPos;
-	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.globalPose.position);
-	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientServerState.headPose.globalPose.orientation);
-	renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-	renderState.cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
-	renderState.cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
-	renderState.cubemapClearEffect->Apply(deviceContext, technique, multiview ? "multiview" : "singleview");
-	renderPlatform->DrawQuad(deviceContext);
-	renderState.cubemapClearEffect->Unapply(deviceContext);
-	renderState.cubemapClearEffect->UnbindTextures(deviceContext);
-}
-
-void Renderer::RecomposeCubemap(crossplatform::GraphicsDeviceContext& deviceContext, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
-{
-	renderState.cubemapConstants.sourceOffset = sourceOffset;
-	renderState.cubemapClearEffect->SetTexture(deviceContext, renderState.plainTexture, srcTexture);
-
-	renderState.cubemapConstants.targetSize.x = targetTexture->width;
-	renderState.cubemapConstants.targetSize.y = targetTexture->length;
-
-	for (int m = 0; m < mips; m++)
-	{
-		renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, targetTexture, -1, m);
-		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-		renderState.cubemapClearEffect->Apply(deviceContext, "recompose", 0);
-		renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
-		renderState.cubemapClearEffect->Unapply(deviceContext);
-		renderState.cubemapConstants.sourceOffset.x += 3 * renderState.cubemapConstants.targetSize.x;
-		renderState.cubemapConstants.targetSize /= 2;
-	}
-	renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, nullptr);
-	renderState.cubemapClearEffect->UnbindTextures(deviceContext);
-}
-
-void Renderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext, avs::uid this_server_uid)
-{
-	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
-	
-	{
-		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(this_server_uid);
-		auto pose1=sessionClient->GetOriginPose();
-		auto pose2=clientServerState.originPose;
-		if( memcmp ( &pose1, &pose2, 28))
-		{
-			//TELEPORT_BREAK_ONCE("");
-		}
-	}
-
-	GetInstanceRenderer(this_server_uid)->RenderLocalNodes(deviceContext,renderState,this_server_uid);
-}
 
 bool Renderer::OnDeviceRemoved()
 {
@@ -1090,16 +729,12 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		}
 	}
 	// Handle networked session.
+	auto sessionClient=GetSessionClient(server_uid);
+	auto ir=GetInstanceRenderer(server_uid);
 	if (sessionClient->IsConnected())
 	{
-		//vec3 forward=-camera.Orientation.Tz();
-		//vec3 right=camera.Orientation.Tx();
-		//*((vec3*)&clientServerState.originPose.position)+=clientspace_input.y*time_step*forward;
-		//*((vec3*)&clientServerState.originPose.position)+=clientspace_input.x*time_step*right;
-		// std::cout << forward.x << " " << forward.y << " " << forward.z << "\n";
-		// The camera has Z backward, X right, Y up.
-		// But we want orientation relative to X right, Y forward, Z up.
-		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(hdrFramebuffer->GetWidth()), static_cast<uint32_t>(hdrFramebuffer->GetHeight())};
+		auto instanceRenderer=GetInstanceRenderer(server_uid);
+		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())};
 	
 
 		const auto &nodePoses=renderState.openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
@@ -1109,18 +744,18 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientServerState.SetInputs(inputs);
 		}
-		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, receivedInitialPos, clientServerState.originPose,
-			clientServerState.input, clientPipeline.decoder.idrRequired(),fTime, time_step);
+		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, clientServerState.originPose,
+			clientServerState.input,instanceRenderer->clientPipeline.decoder.idrRequired(),fTime, time_step);
 
-		if(receivedInitialPos != sessionClient->receivedInitialPos)
+		if(instanceRenderer->receivedInitialPos != sessionClient->receivedInitialPos)
 		{
 			clientServerState.originPose = sessionClient->GetOriginPose();
-			receivedInitialPos = sessionClient->receivedInitialPos;
+			instanceRenderer->receivedInitialPos = sessionClient->receivedInitialPos;
 			clientServerState.UpdateGlobalPoses();
 		}
 		
 		
-		avs::Result result = clientPipeline.pipeline.process();
+		avs::Result result = instanceRenderer->clientPipeline.pipeline.process();
 		if (result == avs::Result::Network_Disconnection 
 			|| sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER)
 		{
@@ -1131,7 +766,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		static short c = 0;
 		if (!(c--))
 		{
-			const avs::NetworkSourceCounters Counters = clientPipeline.source.getCounterValues();
+			const avs::NetworkSourceCounters Counters = instanceRenderer->clientPipeline.source.getCounterValues();
 			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"
 				<< "\nDecoder packets dropped: " << 100.0f*Counters.decoderDropped << "%"
 				<< std::endl;
@@ -1146,7 +781,6 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
 			if(cl_id!=0&&sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT,cl_id))
 			{
-				auto ir=GetInstanceRenderer(server_uid);
 				sessionClient->SetGeometryCache(&ir->geometryCache);
 				sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 				gui.Hide();
@@ -1157,7 +791,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 
 	gui.SetConnecting(sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER);
 	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLocation::SERVER);
-	gui.SetVideoDecoderStatus(GetVideoDecoderStatus());
+	gui.SetVideoDecoderStatus(ir->GetVideoDecoderStatus());
 
 	if (!have_headset)
 	{
@@ -1239,9 +873,12 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			renderState.show_node_overlays = !renderState.show_node_overlays;
 			break;
 		case 'K':
-			if(sessionClient->IsConnected())
-				sessionClient->Disconnect(0);
-			sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
+			{
+				auto sc=GetSessionClient(server_uid);
+				if(sc->IsConnected())
+					sc->Disconnect(0);
+				sc->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
+			}
 			break;
 		case 'M':
 			RenderMode++;
@@ -1251,8 +888,11 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			RecompileShaders();
 			break;
 		case 'Y':
-			if (sessionClient->IsConnected())
-				clientPipeline.decoder.toggleShowAlphaAsColor();
+			{
+				auto sc=GetSessionClient(server_uid);
+				if (sc->IsConnected())
+					GetInstanceRenderer(server_uid)->clientPipeline.decoder.toggleShowAlphaAsColor();
+			}
 			break;
 			#ifdef _MSC_VER
 		case VK_SPACE:
@@ -1387,113 +1027,22 @@ int Renderer::AddView()
 {
 	static int last_view_id=0;
 	// We override external_framebuffer here and pass "true" to demonstrate how external depth buffers are used.
-	// In this case, we use hdrFramebuffer's depth buffer.
+	// In this case, we use renderState.hdrFramebuffer's depth buffer.
 	return last_view_id++;
 }
 
 void Renderer::ResizeView(int view_id,int W,int H)
 {
-	if(hDRRenderer)
-		hDRRenderer->SetBufferSize(W,H);
-	if(hdrFramebuffer)
+	if(renderState.hDRRenderer)
+		renderState.hDRRenderer->SetBufferSize(W,H);
+	if(renderState.hdrFramebuffer)
 	{
-		hdrFramebuffer->SetWidthAndHeight(W,H);
-		hdrFramebuffer->SetAntialiasing(1);
+		renderState.hdrFramebuffer->SetWidthAndHeight(W,H);
+		renderState.hdrFramebuffer->SetAntialiasing(1);
 	}
 	//const float aspect = W / H;
 	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
 	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
-}
-
-bool Renderer::OnNodeEnteredBounds(avs::uid id)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	return geometryCache.mNodeManager->ShowNode(id);
-}
-
-bool Renderer::OnNodeLeftBounds(avs::uid id)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	return geometryCache.mNodeManager->HideNode(id);
-}
-
-
-void Renderer::UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand &updateNodeStructureCommand)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
-}
-
-void Renderer::UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
-{
-	if(regexPath.size())
-	{
-		renderState.openXR->MapNodeToPose(server_uid,updateNodeStructureCommand.nodeID,regexPath);
-	}
-	else
-	{
-		TELEPORT_CERR << "Unrecognised node regexPath: "<<regexPath.c_str() << "!\n";
-	}
-}
-
-void Renderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
-}
-
-void Renderer::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
-}
-
-void Renderer::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
-}
-
-void Renderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
-}
-
-void Renderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
-}
-
-void Renderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	switch(animationControlUpdate.timeControl)
-	{
-	case teleport::core::AnimationTimeControl::ANIMATION_TIME:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
-		break;
-	default:
-		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
-		break;
-	}
-}
-
-void Renderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture, int w, int h, long long frame, void* context_allocator)
@@ -1519,15 +1068,15 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
-	hdrFramebuffer->Activate(deviceContext);
-	hdrFramebuffer->Clear(deviceContext, 0.5f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
+	renderState.hdrFramebuffer->Activate(deviceContext);
+	renderState.hdrFramebuffer->Clear(deviceContext, 0.5f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
 
 	vec3 true_pos = camera.GetPosition();
-	if (render_from_video_centre)
+/*	if (render_from_video_centre)
 	{
 		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
 		camera.SetPosition(pos);
-	};
+	};*/
 	float aspect = (float)viewport.w / (float)viewport.h;
 	if (reverseDepth)
 		deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
@@ -1565,15 +1114,15 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		renderPlatform->Print(deviceContext, viewport.w - 16, viewport.h - 16, "C", white);
 	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
-  	hdrFramebuffer->DeactivateDepth(deviceContext);
-	//renderPlatform->DrawDepth(deviceContext, 0, 0, (256 * viewport.w)/ viewport.h, 256, hdrFramebuffer->GetDepthTexture());
+  	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
+	//renderPlatform->DrawDepth(deviceContext, 0, 0, (256 * viewport.w)/ viewport.h, 256, renderState.hdrFramebuffer->GetDepthTexture());
 	if (show_video)
 	{
 		clientrender::AVSTextureHandle th = renderState.avsTexture;
 		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-		int W = hdrFramebuffer->GetWidth();
-		int H = hdrFramebuffer->GetHeight();
+		int W = renderState.hdrFramebuffer->GetWidth();
+		int H = renderState.hdrFramebuffer->GetHeight();
 		if(ti)
 			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 	}
@@ -1624,7 +1173,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	#if 0
 	{
 		static int tw = 128;
-		int x = 0, y = 0;//hdrFramebuffer->GetHeight()-tw*2;
+		int x = 0, y = 0;//renderState.hdrFramebuffer->GetHeight()-tw*2;
 		avs::uid sel_uid=gui.GetSelectedUid();
 		if(sel_uid!=0)
 		{
@@ -1657,7 +1206,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 				clientrender::Texture* pct = t.second.resource.get();
 				renderPlatform->DrawTexture(deviceContext, x, y, tw, tw, pct->GetSimulTexture());
 				x += tw;
-				if (x > hdrFramebuffer->GetWidth() - tw)
+				if (x > renderState.hdrFramebuffer->GetWidth() - tw)
 				{
 					x = 0;
 					y += tw;
@@ -1671,8 +1220,8 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		}
 	}
 	#endif
-	hdrFramebuffer->Deactivate(deviceContext);
-	hDRRenderer->Render(deviceContext, hdrFramebuffer->GetTexture(), 1.0f, gamma);
+	renderState.hdrFramebuffer->Deactivate(deviceContext);
+	renderState.hDRRenderer->Render(deviceContext, renderState.hdrFramebuffer->GetTexture(), 1.0f, gamma);
 	
 	DrawOSD(deviceContext);
 #ifdef ONSCREEN_PROF
@@ -1707,12 +1256,14 @@ void Renderer::SetServer(const char *ip_port)
 void Renderer::ConnectButtonHandler(const std::string& url)
 {
 	SetServer(url.c_str());
-	sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
+	auto sc=GetSessionClient(server_uid);
+	sc->GetConnectionRequest() = client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 }
 
 void Renderer::CancelConnectButtonHandler()
 {
-	sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER;
+	auto sc=GetSessionClient(server_uid);
+	sc->GetConnectionRequest() = client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER;
 }
 
 void Renderer::RemoveView(int)
@@ -1726,7 +1277,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	auto instanceRenderer=GetInstanceRenderer(server_uid);
 	auto &geometryCache=instanceRenderer->geometryCache;
 	gui.setGeometryCache(&geometryCache);
-	gui.setSessionClient(sessionClient);
+	auto sc=GetSessionClient(server_uid);
+	gui.setSessionClient(sc.get());
 	if(renderState.openXR)
 	{
 		avs::Pose p=renderState.openXR->GetActionPose(client::RIGHT_AIM_POSE);
@@ -1758,21 +1310,21 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
-	const avs::NetworkSourceCounters counters = clientPipeline.source.getCounterValues();
-	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
-	bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
+	const avs::NetworkSourceCounters counters = instanceRenderer->clientPipeline.source.getCounterValues();
+	const avs::DecoderStats vidStats = instanceRenderer->clientPipeline.decoder.GetStats();
+	bool canConnect = sc->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
-	gui.LinePrint(sessionClient->IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
-		, sessionClient->GetClientID(),sessionClient->GetServerIP().c_str(),sessionClient->GetPort()):
+	gui.LinePrint(sc->IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
+		, sc->GetClientID(),sc->GetServerIP().c_str(),sc->GetPort()):
 		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
 	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
 
 	if(gui.Tab("Network"))
 	{
-		gui.LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
-		gui.LinePrint(platform::core::QuickFormat("Current timestamp: %d",clientPipeline.pipeline.GetTimestamp()));
+		gui.LinePrint(platform::core::QuickFormat("Start timestamp: %d", instanceRenderer->clientPipeline.pipeline.GetStartTimestamp()));
+		gui.LinePrint(platform::core::QuickFormat("Current timestamp: %d",instanceRenderer->clientPipeline.pipeline.GetTimestamp()));
 		gui.LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
 		gui.LinePrint(platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
 		gui.LinePrint(platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
@@ -1789,12 +1341,12 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 		vec3 offset=camera.GetPosition();
-		gui.LinePrint(receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientServerState.originPose.position.x, clientServerState.originPose.position.y, clientServerState.originPose.position.z)):"Origin:", white);
+		gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientServerState.originPose.position.x, clientServerState.originPose.position.y, clientServerState.originPose.position.z)):"Origin:", white);
 		gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
 		gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
-		if (videoPosDecoded)
+		if (instanceRenderer->videoPosDecoded)
 		{
-			gui.LinePrint(platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", videoPos.x, videoPos.y, videoPos.z), white);
+			gui.LinePrint(platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", instanceRenderer->videoPos.x, instanceRenderer->videoPos.y, instanceRenderer->videoPos.z), white);
 		}	
 		else
 		{
@@ -1835,7 +1387,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		gui.LinePrint(" ", white);
 
 		gui.LinePrint("Decoder Parameters:", white);
-		const avs::DecoderParams& params = clientPipeline.decoderParams;
+		const avs::DecoderParams& params = instanceRenderer->clientPipeline.decoderParams;
 		const auto& videoCodecNames = magic_enum::enum_names<avs::VideoCodec>();
 		const auto& decoderFrequencyNames = magic_enum::enum_names<avs::DecodeFrequency>();
 		gui.LinePrint(platform::core::QuickFormat("Video Codec: %s", videoCodecNames[size_t(params.codec)]));
@@ -1857,7 +1409,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Tags"))
 	{
-		gui.TagOSD(videoTagDataCubeArray,videoTagDataCube);
+		gui.TagOSD(instanceRenderer->videoTagDataCubeArray,instanceRenderer->videoTagDataCube);
 		gui.EndTab();
 	}
 	if(gui.Tab("Controllers"))
@@ -1887,23 +1439,6 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	//ImGui::PlotLines("Jitter buffer pop calls", statJitterPop.data(), statJitterPop.count(), 0, nullptr, 0.0f, 5.0f);
 }
 
-std::vector<uid> Renderer::GetGeometryResources()
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	return geometryCache.GetAllResourceIDs();
-}
-
-// This is called when we connect to a new server.
-void Renderer::ClearGeometryResources()
-{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	auto &resourceCreator=instanceRenderer->resourceCreator;
-	geometryCache.ClearAll();
-	resourceCreator.Clear();
-}
-
 void Renderer::SetExternalTexture(crossplatform::Texture* t)
 {
 	externalTexture = t;
@@ -1913,7 +1448,7 @@ void Renderer::SetExternalTexture(crossplatform::Texture* t)
 void Renderer::PrintHelpText(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	deviceContext.framePrintY = 8;
-	deviceContext.framePrintX = hdrFramebuffer->GetWidth() / 2;
+	deviceContext.framePrintX = renderState.hdrFramebuffer->GetWidth() / 2;
 	renderPlatform->LinePrint(deviceContext, "K: Connect/Disconnect");
 	renderPlatform->LinePrint(deviceContext, "O: Toggle OSD");
 	renderPlatform->LinePrint(deviceContext, "V: Show video");
@@ -1926,348 +1461,6 @@ void Renderer::PrintHelpText(crossplatform::GraphicsDeviceContext& deviceContext
 	renderPlatform->LinePrint(deviceContext, "NUM 5: Debug animation");
 	renderPlatform->LinePrint(deviceContext, "NUM 6: Lightmaps");
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
-}
-
-
-void Renderer::OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l)
-{
-	renderState.lastSetupLightingCommand=l;
-}
-
-void Renderer::OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions_)
-{
-	if (renderState.openXR)
-		renderState.openXR->OnInputsSetupChanged(server_uid,inputDefinitions_);
-}
-
-avs::DecoderBackendInterface* Renderer::CreateVideoDecoder()
-{
-	AVSTextureHandle th = renderState.avsTexture;
-	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
-	return new VideoDecoderBackend(renderPlatform, t->texture);
-	
-}
-
-bool Renderer::OnSetupCommandReceived(const char *server_ip,const teleport::core::SetupCommand &setupCommand,teleport::core::Handshake &handshake)
-{
-	ConfigureVideo(setupCommand.video_config);
-
-	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
-																	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height	);
-	videoPosDecoded=false;
-
-	videoTagDataCubeArray.clear();
-	videoTagDataCubeArray.resize(maxTagDataSize);
-
-	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
-	sessionClient->SetPeerTimeout(setupCommand.idle_connection_timeout);
-
-	const uint32_t geoStreamID = 80;
-	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
-	if (AudioStream)
-	{
-		streams.push_back({ 60 });
-	}
-	if (GeoStream)
-	{
-		streams.push_back({ geoStreamID });
-	}
-
-	avs::NetworkSourceParams sourceParams;
-	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
-	sourceParams.remoteIP = server_ip;
-	sourceParams.remotePort = setupCommand.server_streaming_port;
-	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
-	sourceParams.maxHTTPConnections = 10;
-	sourceParams.httpStreamID = geoStreamID;
-	sourceParams.useSSL = setupCommand.using_ssl;
-
-	// Configure for video stream, tag data stream, audio stream and geometry stream.
-	if (!clientPipeline.source.configure(std::move(streams), sourceParams))
-	{
-		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
-		return false;
-	}
-
-	clientPipeline.source.setDebugStream(setupCommand.debug_stream);
-	clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
-	clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
-
-	//test
-	//avs::HTTPPayloadRequest req;
-	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
-	//req.type = avs::FilePayloadType::Mesh;
-	//clientPipeline.source.GetHTTPRequestQueue().emplace(std::move(req));
-
-	bodyOffsetFromHead = setupCommand.bodyOffsetFromHead;
-	avs::ConvertPosition(setupCommand.axesStandard, avs::AxesStandard::EngineeringStyle, bodyOffsetFromHead);
-	
-	clientPipeline.decoderParams.deferDisplay = false;
-	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	clientPipeline.decoderParams.codec = clientPipeline.videoConfig.videoCodec;
-	clientPipeline.decoderParams.use10BitDecoding = clientPipeline.videoConfig.use_10_bit_decoding;
-	clientPipeline.decoderParams.useYUV444ChromaFormat = clientPipeline.videoConfig.use_yuv_444_decoding;
-	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
-
-	avs::DeviceHandle dev;
-	
-#if TELEPORT_CLIENT_USE_D3D12
-	dev.handle = renderPlatform->AsD3D12Device();
-	dev.type = avs::DeviceType::Direct3D12;
-#elif TELEPORT_CLIENT_USE_D3D11
-	dev.handle = renderPlatform->AsD3D11Device();
-	dev.type = avs::DeviceType::Direct3D11;
-#else
-	dev.handle = renderPlatform->AsVulkanDevice();
-	dev.type = avs::DeviceType::Vulkan;
-#endif
-
-	clientPipeline.pipeline.reset();
-	// Top of the clientPipeline.pipeline, we have the network clientPipeline.source.
-	clientPipeline.pipeline.add(&clientPipeline.source);
-
-	AVSTextureImpl* ti = (AVSTextureImpl*)(renderState.avsTexture.get());
-	if (ti)
-	{
-		SAFE_DELETE(ti->texture);
-	}
-	
-	/* Now for each stream, we add both a DECODER and a SURFACE node. e.g. for two streams:
-					 /->decoder -> surface
-			source -<
-					 \->decoder	-> surface
-	*/
-	size_t stream_width = clientPipeline.videoConfig.video_width;
-	size_t stream_height = clientPipeline.videoConfig.video_height;
-
-	if (clientPipeline.videoConfig.use_cubemap)
-	{
-		if(clientPipeline.videoConfig.colour_cubemap_size)
-			renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
-				crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false, true);
-	}
-	else
-	{
-		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false, false);
-	}
-	renderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, false, true);
-	renderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, true, false, false, true);
-
-	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
-	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
-	const float vertFOV = clientrender::GetVerticalFOVFromHorizontal(horzFOV, aspect);
-
-	renderState.cubemapConstants.serverProj = crossplatform::Camera::MakeDepthReversedProjectionMatrix(horzFOV, vertFOV, 0.01f, 0);
-
-	colourOffsetScale.x = 0;
-	colourOffsetScale.y = 0;
-	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
-
-	CreateTexture(renderState.avsTexture, int(stream_width), int(stream_height));
-
-// Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
-#if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
-	clientPipeline.decoder.setBackend(CreateVideoDecoder());
-#endif
-
-	// Video streams are 0+...
-	if (!clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, clientPipeline.decoderParams, 20))
-	{
-		TELEPORT_CERR << "Failed to configure decoder node!\n";
-	}
-	if (!clientPipeline.surface.configure(renderState.avsTexture->createSurface()))
-	{
-		TELEPORT_CERR << "Failed to configure output surface node!\n";
-	}
-
-	clientPipeline.videoQueue.configure(300000, 16, "VideoQueue");
-
-	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
-	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
-	clientPipeline.pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
-	
-	// Tag Data
-	{
-		auto f = std::bind(&Renderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
-		if (!clientPipeline.tagDataDecoder.configure(40, f))
-		{
-			TELEPORT_CERR << "Failed to configure video tag data decoder node!\n";
-		}
-
-		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
-
-		avs::PipelineNode::link(clientPipeline.source, clientPipeline.tagDataQueue);
-		clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
-	}
-
-	// Audio
-	if (AudioStream)
-	{
-		clientPipeline.avsAudioDecoder.configure(60);
-		sca::AudioSettings audioSettings;
-		audioSettings.codec = sca::AudioCodec::PCM;
-		audioSettings.numChannels = 1;
-		audioSettings.sampleRate = 48000;
-		audioSettings.bitsPerSample = 32;
-		// This will be deconfigured automatically when the clientPipeline.pipeline is deconfigured.
-		#ifdef _MSC_VER
-		audioPlayer.configure(audioSettings);
-		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
-		#endif
-		clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
-
-		clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
-
-		avs::PipelineNode::link(clientPipeline.source, clientPipeline.audioQueue);
-		avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
-		clientPipeline.pipeline.link({ &clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget });
-
-		// Audio Input
-		if (setupCommand.audio_input_enabled)
-		{
-			sca::NetworkSettings networkSettings =
-			{
-					setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
-					, static_cast<int32_t>(handshake.maxBandwidthKpS)
-					, static_cast<int32_t>(handshake.udpBufferSize)
-					, setupCommand.requiredLatencyMs
-					, (int32_t)setupCommand.idle_connection_timeout
-			};
-
-			audioInputNetworkPipeline.reset(new sca::NetworkPipeline());
-			audioInputQueue.configure(4096, 120, "AudioInputQueue");
-			audioInputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
-
-			// The callback will be called when audio input is received.
-			auto f = [this](const uint8_t* data, size_t dataSize) -> void
-			{
-				size_t bytesWritten;
-				if (audioInputQueue.write(nullptr, data, dataSize, bytesWritten))
-				{
-					audioInputNetworkPipeline->process();
-				}
-			};
-		#ifdef _MSC_VER
-			// The audio player will stop recording automatically when deconfigured. 
-			audioPlayer.startRecording(f);
-		#endif
-		}
-	}
-
-	// We will add a GEOMETRY PIPE
-	if(GeoStream)
-	{
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	auto &resourceCreator=instanceRenderer->resourceCreator;
-		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
-		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
-
-		clientPipeline.geometryQueue.configure(600000, 200, "clientPipeline.geometryQueue");
-
-		avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
-		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
-		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
-	}
-
-	handshake.startDisplayInfo.width = hdrFramebuffer->GetWidth();
-	handshake.startDisplayInfo.height = hdrFramebuffer->GetHeight();
-	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
-	handshake.MetresPerUnit = 1.0f;
-	handshake.FOV = 90.0f;
-	handshake.isVR = false;
-	handshake.framerate = 60;
-	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source.getSystemBufferSize());
-	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
-	handshake.maxLightsSupported=10;
-	handshake.clientStreamingPort = setupCommand.server_streaming_port + 1;
-	renderState.lastSetupCommand = setupCommand;
-
-	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
-	return true;
-}
-
-void Renderer::OnVideoStreamClosed()
-{
-	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
-	clientPipeline.pipeline.deconfigure();
-	clientPipeline.videoQueue.deconfigure();
-	clientPipeline.audioQueue.deconfigure();
-	clientPipeline.geometryQueue.deconfigure();
-
-	//const ovrJava* java = app->GetJava();
-	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
-
-	receivedInitialPos = 0;
-}
-
-void Renderer::OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand)
-{
-	clientPipeline.videoConfig = reconfigureVideoCommand.video_config;
-
-	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
-		, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height);
-
-	clientPipeline.decoderParams.deferDisplay = false;
-	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	clientPipeline.decoderParams.codec = clientPipeline.videoConfig.videoCodec;
-	clientPipeline.decoderParams.use10BitDecoding = clientPipeline.videoConfig.use_10_bit_decoding;
-	clientPipeline.decoderParams.useYUV444ChromaFormat = clientPipeline.videoConfig.use_yuv_444_decoding;
-	clientPipeline.decoderParams.useAlphaLayerDecoding = clientPipeline.videoConfig.use_alpha_layer_decoding;
-
-	avs::DeviceHandle dev;
-#if TELEPORT_CLIENT_USE_D3D12
-	dev.handle = renderPlatform->AsD3D12Device();;
-	dev.type = avs::DeviceType::Direct3D12;
-#elif TELEPORT_CLIENT_USE_D3D11
-	dev.handle = renderPlatform->AsD3D11Device();
-	dev.type = avs::DeviceType::Direct3D11;
-#else
-	dev.handle = renderPlatform->AsVulkanDevice();
-	dev.type = avs::DeviceType::Vulkan;
-#endif
-
-	size_t stream_width = clientPipeline.videoConfig.video_width;
-	size_t stream_height = clientPipeline.videoConfig.video_height;
-
-	if (clientPipeline.videoConfig.use_cubemap)
-	{
-		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.colour_cubemap_size, clientPipeline.videoConfig.colour_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false, true);
-	}
-	else
-	{
-		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, clientPipeline.videoConfig.perspective_width, clientPipeline.videoConfig.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false, false);
-	}
-
-	colourOffsetScale.x = 0;
-	colourOffsetScale.y = 0;
-	colourOffsetScale.z = 1.0f;
-	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
-
-	AVSTextureImpl* ti = (AVSTextureImpl*)(renderState.avsTexture.get());
-	// Only create new texture and register new surface if resolution has changed
-	if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
-	{
-		SAFE_DELETE(ti->texture);
-
-		if (!clientPipeline.decoder.unregisterSurface())
-		{
-			throw std::runtime_error("Failed to unregister decoder surface");
-		}
-
-		CreateTexture(renderState.avsTexture, int(stream_width), int(stream_height));
-	}
-
-	if (!clientPipeline.decoder.reconfigure((int)stream_width, (int)stream_height, clientPipeline.decoderParams))
-	{
-		throw std::runtime_error("Failed to reconfigure decoder");
-	}
-	
-	renderState.lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
 }
 
 void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)

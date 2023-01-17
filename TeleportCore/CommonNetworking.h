@@ -257,7 +257,7 @@ namespace teleport
 			ControlModel	control_model = ControlModel::NONE;
 			avs::VideoConfig		video_config;
 			float			draw_distance = 0.0f;
-			avs::vec3			bodyOffsetFromHead;
+			avs::vec3			bodyOffsetFromHead_DEPRECATED;
 			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;
 			uint8_t			audio_input_enabled = 0;
 			bool			using_ssl = true;

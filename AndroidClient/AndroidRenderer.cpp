@@ -23,21 +23,21 @@ struct AVSTextureImpl :public clientrender::AVSTexture
 	}
 };
 
-AndroidRenderer::AndroidRenderer(teleport::client::SessionClient *s,teleport::Gui &g,teleport::client::Config &cfg)
-	:clientrender::Renderer(s,g,cfg)
+AndroidInstanceRenderer::AndroidInstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,clientrender::RenderState &renderState,teleport::client::SessionClient *sessionClient)
+	:clientrender::InstanceRenderer( server, config,geometryDecoder,renderState,sessionClient)
 {
 }
 
-AndroidRenderer::~AndroidRenderer()
+AndroidInstanceRenderer::~AndroidInstanceRenderer()
 {
 }
 
-void AndroidRenderer::OnFrameAvailable()
+void AndroidInstanceRenderer::OnFrameAvailable()
 {
 	//videoDecoderBackend->CopyVideoTexture(deviceContext);
 }
 
-avs::DecoderBackendInterface* AndroidRenderer::CreateVideoDecoder()
+avs::DecoderBackendInterface* AndroidInstanceRenderer::CreateVideoDecoder()
 {
 	clientrender::AVSTextureHandle th = renderState.avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
@@ -45,7 +45,7 @@ avs::DecoderBackendInterface* AndroidRenderer::CreateVideoDecoder()
 	return videoDecoderBackend;
 }
 
-avs::DecoderStatus AndroidRenderer::GetVideoDecoderStatus()
+avs::DecoderStatus AndroidInstanceRenderer::GetVideoDecoderStatus()
 {
 	avs::DecoderStatus status = avs::DecoderStatus::DecoderUnavailable;
 	if (videoDecoderBackend)
@@ -53,9 +53,32 @@ avs::DecoderStatus AndroidRenderer::GetVideoDecoderStatus()
 	return status;
 }
 
-void AndroidRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+void AndroidInstanceRenderer::RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	if(videoDecoderBackend)
 		videoDecoderBackend->CopyVideoTexture(deviceContext);
-	clientrender::Renderer::RenderView(deviceContext);
+	clientrender::InstanceRenderer::RenderView(deviceContext);
+}
+
+AndroidRenderer::AndroidRenderer(teleport::Gui &g,teleport::client::Config &config)
+	:Renderer(g,config)
+{
+}
+
+AndroidRenderer::~AndroidRenderer()
+{
+}
+
+std::shared_ptr<clientrender::InstanceRenderer> AndroidRenderer::GetInstanceRenderer(avs::uid server_uid)
+{
+	auto sc=GetSessionClient(server_uid);
+	auto i=instanceRenderers.find(server_uid);
+	if(i==instanceRenderers.end())
+	{
+		auto r=std::make_shared<AndroidInstanceRenderer>(server_uid,config,geometryDecoder,renderState,sc.get());
+		instanceRenderers[server_uid]=r;
+		r->RestoreDeviceObjects(&PcClientRenderPlatform);
+		return r;
+	}
+	return i->second;
 }

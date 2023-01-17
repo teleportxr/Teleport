@@ -230,8 +230,7 @@ void InitXR()
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	sessionClient=new teleport::client::SessionClient();
-	clientRenderer=new clientrender::Renderer(sessionClient,gui,clientApp.config);
+	clientRenderer=new clientrender::Renderer(gui,clientApp.config);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;

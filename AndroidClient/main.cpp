@@ -169,8 +169,7 @@ void android_main(struct android_app* app)
 	
 	gui.SetServerIPs(clientApp.config.recent_server_urls);
 
-	teleport::client::SessionClient *sessionClient=new teleport::client::SessionClient();
-	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer (sessionClient,gui,clientApp.config);
+	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer(gui,clientApp.config);
 	if(clientApp.config.recent_server_urls.size())
 		androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
@@ -276,6 +275,5 @@ void android_main(struct android_app* app)
 	}
 	openXR.Shutdown();
 	delete androidRenderer;
-	delete sessionClient;
 	teleport::client::DiscoveryService::ShutdownInstance();
 }

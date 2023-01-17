@@ -15,7 +15,8 @@ using namespace teleport;
 using namespace client;
 using namespace clientrender;
 
-SessionClient::SessionClient( )
+SessionClient::SessionClient(avs::uid s)
+	:server_uid(s)
 {}
 
 SessionClient::~SessionClient()
@@ -662,6 +663,7 @@ void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
 		receivedInitialPos = command.valid_counter;
 		originPose.position = command.origin_pos;
 		originPose.orientation = command.orientation;
+		mCommandInterface->SetOrigin(originPose);
 	}
 }
 

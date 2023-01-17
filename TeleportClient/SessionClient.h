@@ -41,7 +41,8 @@ namespace teleport
 			virtual void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) =0;
 			virtual void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& ) =0;
 			virtual void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &,const std::string &)=0;
-    
+			virtual void SetOrigin(const avs::Pose &origin_pose)=0;
+
 			virtual std::vector<avs::uid> GetGeometryResources() = 0;
 			virtual void ClearGeometryResources() = 0;
 
@@ -56,6 +57,7 @@ namespace teleport
 
 		class SessionClient
 		{
+		avs::uid server_uid=0;
 		public:
 			enum class WebspaceLocation : uint8_t
 			{
@@ -73,7 +75,7 @@ namespace teleport
 			};
 
 		public:
-			SessionClient();
+			SessionClient(avs::uid server_uid);
 			~SessionClient();
 			void SetSessionCommandInterface(SessionCommandInterface*);
 			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);

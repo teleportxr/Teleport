@@ -7,14 +7,25 @@
 #include "Node.h"
 #include "GeometryCache.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
+#include "Platform/CrossPlatform/HdrRenderer.h"
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Platform/Shaders/SL/camera_constants.sl"
 #include "client/Shaders/cubemap_constants.sl"
 #include "client/Shaders/pbr_constants.sl"
 #include "client/Shaders/video_types.sl"
 #include "TeleportClient/OpenXR.h"
+#include "TeleportClient/SessionClient.h"
+#include "TeleportClient/ClientPipeline.h"
 #include "ClientRender/GeometryCache.h"
 #include "ClientRender/ResourceCreator.h"
+#include "ClientRender/GeometryDecoder.h"
+#include "TeleportClient/Config.h"
+#include "TeleportAudio/AudioStreamTarget.h"
+#include "TeleportAudio/AudioCommon.h"
+#ifdef _MSC_VER
+#include "TeleportAudio/PC_AudioPlayer.h"
+#endif
+#include "TeleportAudio/NetworkPipeline.h"
 
 namespace clientrender
 {
@@ -41,11 +52,15 @@ namespace clientrender
 		avs::uid show_only=0;
 		avs::uid selected_uid=0;
 		bool show_node_overlays			=false;
+		static constexpr int maxTagDataSize = 32;
 		teleport::core::SetupCommand lastSetupCommand;
 		teleport::core::SetupLightingCommand lastSetupLightingCommand;
 		std::string overridePassName;
-
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
+		/// A framebuffer to store the colour and depth textures for the view.
+		platform::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
+		/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
+		platform::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
 		platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
 		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
 		platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
@@ -87,30 +102,94 @@ namespace clientrender
 	};
 	//! Renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
-	class InstanceRenderer
+	class InstanceRenderer:public teleport::client::SessionCommandInterface
 	{
+	protected:
 		avs::uid server_uid=0;
 		clientrender::RenderPlatform *clientRenderPlatform=nullptr;
+		platform::crossplatform::RenderPlatform* renderPlatform	= nullptr;
+		teleport::client::SessionClient *sessionClient=nullptr;
+		RenderState &renderState;
+		teleport::client::Config &config;
+		GeometryDecoder &geometryDecoder;
+		static constexpr bool AudioStream	= true;
+		static constexpr bool GeoStream		= true;
+		// determined by the stream setup command:
+		vec4 colourOffsetScale;
+		vec4 depthOffsetScale;
+#ifdef _MSC_VER
+		sca::PC_AudioPlayer audioPlayer;
+#endif
+		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
+		std::unique_ptr<sca::NetworkPipeline> audioInputNetworkPipeline;
+		avs::Queue audioInputQueue;
+		static constexpr uint32_t NominalJitterBufferLength = 0;
+		static constexpr uint32_t MaxJitterBufferLength = 50;
+		
+		virtual avs::DecoderBackendInterface* CreateVideoDecoder()
+		{
+		return nullptr;
+		}
 	public:
-		InstanceRenderer(avs::uid server);
+		std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
+		VideoTagDataCube videoTagDataCube[RenderState::maxTagDataSize];
+		bool videoPosDecoded=false;
+		vec3 videoPos;
+		unsigned long long receivedInitialPos = 0;
+	//	unsigned long long receivedRelativePos = 0;
+	public:
+		InstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,RenderState &renderState,teleport::client::SessionClient *sessionClient);
 		virtual ~InstanceRenderer();
 		void RestoreDeviceObjects(clientrender::RenderPlatform *r);
 		void InvalidateDeviceObjects();
-
+		
+		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, avs::uid server_uid,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
+		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
+		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
+		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,RenderState &renderState
+			
 			,avs::uid this_server_uid);
 
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,RenderState &renderState
 			,const std::shared_ptr<clientrender::Node>& node
 			,bool force=false
 			,bool include_children=true);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,RenderState &renderState
 			,const std::shared_ptr<clientrender::Node>& node
 			,bool force=false);
+			
+		void ConfigureVideo(const avs::VideoConfig &vc);
+
+		teleport::client::ClientPipeline clientPipeline;
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
+		
+		virtual avs::DecoderStatus GetVideoDecoderStatus() { return avs::DecoderStatus::DecoderUnavailable; }
+		
+		void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void OnReceiveVideoTagData(const uint8_t* data, size_t dataSize);
+		// Implement SessionCommandInterface
+		std::vector<avs::uid> GetGeometryResources() override;
+		void ClearGeometryResources() override;
+		bool OnNodeEnteredBounds(avs::uid nodeID) override;
+		bool OnNodeLeftBounds(avs::uid nodeID) override;
+	
+		void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
+		void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
+
+		void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
+		void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList) override;
+		void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) override;
+		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
+		void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) override;
+		void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) override;
+		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
+		bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand &setupCommand, teleport::core::Handshake& handshake) override;
+		void OnVideoStreamClosed() override;
+		void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) override;
+		void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l) override;
+		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
+		void SetOrigin(const avs::Pose &o) override;
 	};
 }
