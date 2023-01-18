@@ -30,36 +30,36 @@ namespace avs
 		T x, y, z, w;
 	};
 	
-	enum class PrimitiveMode: uint32_t
+	enum class PrimitiveMode : uint32_t
 	{
 		POINTS, LINES, TRIANGLES, LINE_STRIP, TRIANGLE_STRIP
 	};
 	//! The standard glTF attribute semantics.
 	enum class AttributeSemantic : uint32_t
 	{
-		//Name	Accessor Type(s)	Component Type(s)				Description
-		POSITION=0	//"VEC3"	5126 (FLOAT)						XYZ vertex positions
-		, NORMAL		//"VEC3"	5126 (FLOAT)						Normalized XYZ vertex normals
-		, TANGENT	//"VEC4"	5126 (FLOAT)						XYZW vertex tangents where the w component is a sign value(-1 or +1) indicating handedness of the tangent basis
-		, TEXCOORD_0	//"VEC2"	5126 (FLOAT)
-					//			5121 (UNSIGNED_BYTE) normalized
-					//			5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the first set
-		, TEXCOORD_1	//"VEC2"	5126 (FLOAT)
-					//			5121 (UNSIGNED_BYTE) normalized
-					//			5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
-		, COLOR_0	//"VEC3"
-					//"VEC4"	5126 (FLOAT)
-					//			5121 (UNSIGNED_BYTE) normalized
-					//			5123 (UNSIGNED_SHORT) normalized	RGB or RGBA vertex color
-		, JOINTS_0	//"VEC4"	5121 (UNSIGNED_BYTE)
-					//			5123 (UNSIGNED_SHORT)				See Skinned Mesh Attributes
-		, WEIGHTS_0	//"VEC4"	5126 (FLOAT)
-					//			5121 (UNSIGNED_BYTE) normalized
-					//			5123 (UNSIGNED_SHORT) normalized
-		, TANGENTNORMALXZ	// VEC2 UNSIGNED_INT					Simul: implements packed tangent-normal xz. Actually two VEC4's of BYTE.
-							//		SIGNED_SHORT
-		, COUNT		//This is the number of elements in enum class AttributeSemantic{};
-					//Must always be the last element in this enum class. 
+		//Name		Accessor Type(s)	Component Type(s)					Description
+		POSITION=0,			//"VEC3"	5126 (FLOAT)						XYZ vertex positions
+		NORMAL,				//"VEC3"	5126 (FLOAT)						Normalized XYZ vertex normals
+		TANGENT,			//"VEC4"	5126 (FLOAT)						XYZW vertex tangents where the w component is a sign value(-1 or +1) indicating handedness of the tangent basis
+		TEXCOORD_0,			//"VEC2"	5126 (FLOAT)
+							//			5121 (UNSIGNED_BYTE) normalized
+							//			5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the first set
+		TEXCOORD_1,			//"VEC2"	5126 (FLOAT)
+							//			5121 (UNSIGNED_BYTE) normalized
+							//			5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		COLOR_0,			//"VEC3"
+							//"VEC4"	5126 (FLOAT)
+							//			5121 (UNSIGNED_BYTE) normalized
+							//			5123 (UNSIGNED_SHORT) normalized	RGB or RGBA vertex color
+		JOINTS_0,			//"VEC4"	5121 (UNSIGNED_BYTE)
+							//			5123 (UNSIGNED_SHORT)				See Skinned Mesh Attributes
+		WEIGHTS_0,			//"VEC4"	5126 (FLOAT)
+							//			5121 (UNSIGNED_BYTE) normalized
+							//			5123 (UNSIGNED_SHORT) normalized
+		TANGENTNORMALXZ,	//"VEC2"		 (UNSIGNED_INT)					Simul: implements packed tangent-normal xz. Actually two VEC4's of BYTE.
+							//				 (SIGNED_SHORT)
+		COUNT				//This is the number of elements in enum class AttributeSemantic{};
+							//Must always be the last element in this enum class. 
 	};
 	struct Attribute
 	{
@@ -196,15 +196,15 @@ namespace avs
 		};
 		enum class ComponentType : uint32_t
 		{
-			FLOAT=0
-			, DOUBLE
-			, HALF
-			, UINT
-			, USHORT
-			, UBYTE
-			, INT
-			, SHORT
-			, BYTE
+			FLOAT=0,
+			DOUBLE,
+			HALF,
+			UINT,
+			USHORT,
+			UBYTE,
+			INT,
+			SHORT,
+			BYTE,
 		};
 		DataType type;
 		ComponentType componentType;
