@@ -45,10 +45,10 @@ void CreateTexture(platform::crossplatform::RenderPlatform *renderPlatform,clien
 
 InstanceRenderer::InstanceRenderer(avs::uid server,teleport::client::Config &c,GeometryDecoder &g,RenderState &rs
 		,teleport::client::SessionClient *sc)
-	:renderState(rs)
+	:sessionClient(sc)
+	,renderState(rs)
 	,config(c)
 	,geometryDecoder(g)
-	,sessionClient(sc)
 	,geometryCache(new clientrender::NodeManager)
 {
 	server_uid=server;

@@ -194,7 +194,7 @@ namespace clientrender
 		std::vector<avs::uid> GetCompletedNodes() const override;
 		void ClearCompletedNodes() override;
 
-		std::unique_ptr<clientrender::NodeManager>		mNodeManager;
+		std::unique_ptr<clientrender::NodeManager>				mNodeManager;
 		ResourceManager<avs::uid,clientrender::Material>		mMaterialManager;
 		ResourceManager<avs::uid,clientrender::Texture>			mTextureManager;
 		ResourceManager<avs::uid,clientrender::Mesh>			mMeshManager;

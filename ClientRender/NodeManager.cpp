@@ -2,7 +2,7 @@
 
 using namespace clientrender;
 
-using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason;
+using InvisibilityReason = VisibilityComponent::InvisibilityReason;
 
 std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
 {
@@ -92,9 +92,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	}
 
 	if(avsNode.stationary)
-		node->SetGlobalTransform(static_cast<clientrender::Transform>(avsNode.globalTransform));
+		node->SetGlobalTransform(static_cast<Transform>(avsNode.globalTransform));
 	else
-		node->SetLocalTransform(static_cast<clientrender::Transform>(avsNode.localTransform));
+		node->SetLocalTransform(static_cast<Transform>(avsNode.localTransform));
 	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
 	node->SetLightmapScaleOffset(avsNode.renderState.lightmapScaleOffset);
@@ -107,7 +107,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 
 }
 
-void NodeManager::NotifyModifiedMaterials(std::shared_ptr<clientrender::Node> node)
+void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 {
 	nodesWithModifiedMaterials.insert(node);
 }
@@ -199,7 +199,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
 
 const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes()
 {
-	std::set<std::shared_ptr<clientrender::Node>>::iterator n=nodesWithModifiedMaterials.begin();
+	std::set<std::shared_ptr<Node>>::iterator n=nodesWithModifiedMaterials.begin();
 	while(n!=nodesWithModifiedMaterials.end())
 	{
 		const auto &m=n->get()->GetMaterials();
@@ -294,7 +294,7 @@ void NodeManager::UpdateNodeMovement(const std::vector<teleport::core::MovementU
 
 	for(teleport::core::MovementUpdate update : updateList)
 	{
-		std::shared_ptr<clientrender::Node> node = GetNode(update.nodeID);
+		std::shared_ptr<Node> node = GetNode(update.nodeID);
 		if(node)
 		{
 			node->SetLastMovement(update);
@@ -312,7 +312,7 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<teleport::core::NodeU
 
 	for(teleport::core::NodeUpdateEnabledState update : updateList)
 	{
-		std::shared_ptr<clientrender::Node> node = GetNode(update.nodeID);
+		std::shared_ptr<Node> node = GetNode(update.nodeID);
 		if(node)
 		{
 			node->visibility.setVisibility(update.enabled, InvisibilityReason::DISABLED);
@@ -324,9 +324,9 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<teleport::core::NodeU
 	}
 }
 
-void clientrender::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
+void NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
+	std::shared_ptr<Node> node = GetNode(nodeID);
 	if(node)
 	{
 		node->SetHighlighted(isHighlighted);
@@ -339,7 +339,7 @@ void clientrender::NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighl
 
 void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
 {
-	std::shared_ptr<clientrender::Node> node = GetNode(animationUpdate.nodeID);
+	std::shared_ptr<Node> node = GetNode(animationUpdate.nodeID);
 	if(node)
 	{
 		node->animationComponent.setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
@@ -350,9 +350,9 @@ void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& anim
 	}
 }
 
-void clientrender::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, float animationTimeOverride, float overrideMaximum)
+void NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, float animationTimeOverride, float overrideMaximum)
 {
-	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
+	std::shared_ptr<Node> node = GetNode(nodeID);
 	if(node)
 	{
 		node->animationComponent.setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
@@ -364,9 +364,9 @@ void clientrender::NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs:
 	}
 }
 
-void clientrender::NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
+void NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
+	std::shared_ptr<Node> node = GetNode(nodeID);
 	if(node)
 	{
 		node->animationComponent.setAnimationSpeed(animationID, speed);
@@ -403,7 +403,7 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 		if (p!=parentLookup.end())
 			parentLookup.erase(p);
 	}
-	std::weak_ptr<clientrender::Node> oldParent = node->GetParent();
+	std::weak_ptr<Node> oldParent = node->GetParent();
 	auto oldp = oldParent.lock();
 	if (oldp)
 		oldp->RemoveChild(node);
@@ -418,7 +418,7 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 void NodeManager::Update(float deltaTime)
 {
 	nodeList_t expiredNodes;
-	for(const std::shared_ptr<clientrender::Node>& node : rootNodes)
+	for(const std::shared_ptr<Node>& node : rootNodes)
 	{
 		node->Update(deltaTime);
 	}
@@ -427,7 +427,7 @@ void NodeManager::Update(float deltaTime)
 		auto n=nodeLookup.find(u);
 		if(n!=nodeLookup.end())
 		{
-			std::shared_ptr<clientrender::Node>& node =n->second;
+			std::shared_ptr<Node>& node =n->second;
 			if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
 			{
 				expiredNodes.push_back(node);
@@ -436,7 +436,7 @@ void NodeManager::Update(float deltaTime)
 	}
 	removed_node_uids.clear();
 	//Delete nodes that have been invisible for too long.
-	for(const std::shared_ptr<clientrender::Node>& node : expiredNodes)
+	for(const std::shared_ptr<Node>& node : expiredNodes)
 	{
 		RemoveNode(node);
 		removed_node_uids.insert(node->id);
@@ -486,7 +486,7 @@ void NodeManager::ClearAllButExcluded(std::vector<uid>& excludeList, std::vector
 
 bool NodeManager::IsNodeVisible(avs::uid nodeID) const
 {
-	std::shared_ptr<clientrender::Node> node = GetNode(nodeID);
+	std::shared_ptr<Node> node = GetNode(nodeID);
 	return node != nullptr && node->IsVisible();
 }
 
