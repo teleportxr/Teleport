@@ -13,17 +13,29 @@
 #endif
 #include "draco/compression/decode.h"
 
-#define Next8B get<uint64_t>(m_Buffer.data(), &m_BufferOffset)
-#define Next4B get<uint32_t>(m_Buffer.data(), &m_BufferOffset)
-#define Next2B get<uint16_t>(m_Buffer.data(), &m_BufferOffset)
-#define NextB get<uint8_t>(m_Buffer.data(), &m_BufferOffset)
-#define NextFloat get<float>(m_Buffer.data(), &m_BufferOffset)
-#define NextVec4 get<avs::vec4>(m_Buffer.data(), &m_BufferOffset)
-#define NextVec3 get<avs::vec3>(m_Buffer.data(), &m_BufferOffset)
-#define NextChunk(T) get<T>(m_Buffer.data(), &m_BufferOffset)  
+#define Next8B get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define Next4B get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define Next2B get<uint16_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextB get<uint8_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextFloat get<float>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextVec4 get<avs::vec4>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextVec3 get<avs::vec3>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextChunk(T) get<T>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 
 using std::string;
 using namespace std::string_literals;
+
+template<typename T> T get(const uint8_t* data, size_t* offset)
+{
+	T* t = (T*)(data + (*offset));
+	*offset += sizeof(T);
+	return *t;
+}
+template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffset, size_t count)
+{
+	memcpy(target, data + dataOffset, count * sizeof(T));
+	dataOffset += count * sizeof(T);
+}
 
 GeometryDecoder::GeometryDecoder()
 {
@@ -33,97 +45,58 @@ GeometryDecoder::~GeometryDecoder()
 {
 }
 
-template<typename T> T get(const uint8_t* data, size_t* offset)
+void GeometryDecoder::setCacheFolder(const std::string& f)
 {
-	T* t = (T*)(data + (*offset));
-	*offset += sizeof(T);
-	return *t;
-}
-template<typename T> size_t get(const T* &data)
-{
-	const T& t = *data;
-	data++;
-	return t;
-}
-
-template<typename T> void get(T* target,const uint8_t *data, size_t count)
-{
-	memcpy(target, data, count*sizeof(T));
-}
-
-template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffset, size_t count)
-{
-	memcpy(target, data + dataOffset, count * sizeof(T));
-	dataOffset += count;
-}
-
-avs::Result GeometryDecoder::decodeFromFile(const std::string &filename,
-	avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *target)
-{
-	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
-	if(!fileLoader->FileExists(filename.c_str()))
-		return avs::Result::Failed;
-	void *ptr=nullptr;
-	unsigned sz=0;
-	m_BufferOffset = 0;
-	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
-	m_BufferSize=sz;
-	m_Buffer.resize(m_BufferSize);
-	memcpy(m_Buffer.data(),ptr,m_BufferSize);
-	fileLoader->ReleaseFileContents(ptr);
-	m_Buffer.resize(m_BufferSize);
-	return decode( type, target,false);
+	cacheFolder = f;
 }
 
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
 {
-	// No m_GALU on the header or tail on the incoming buffer!
-	m_BufferSize = bufferSizeInBytes;
-	m_BufferOffset = 0;
-	if(m_BufferSize>m_Buffer.size())
-	{
-		m_Buffer.resize(m_BufferSize);
-	}
-	if (m_SavingBuffer)
-	{
-		m_SaveBufferFuture.wait();
-		m_SavingBuffer = false;
-	}
- 	memcpy(m_Buffer.data(), (uint8_t*)buffer, m_BufferSize);
-	return decode(type,target,true);
+	GeometryDecodeData geometryDecodeData(bufferSizeInBytes, type, target, true);
+	memcpy(geometryDecodeData.data.data(), (uint8_t*)buffer, bufferSizeInBytes);
+	return decodeInternal(geometryDecodeData);
 }
 
-avs::Result GeometryDecoder::decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
 {
-	size_t bufferSizeK=(m_BufferSize+1023)/1024;
-	switch(type)
+	platform::core::FileLoader* fileLoader=platform::core::FileLoader::GetFileLoader();
+	if (!fileLoader->FileExists(filename.c_str()))
+		return avs::Result::Failed;
+	
+	void *ptr=nullptr;
+	unsigned int sz=0;
+	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
+	GeometryDecodeData geometryDecodeData(sz, type, target, false);
+	memcpy(geometryDecodeData.data.data(), (uint8_t*)ptr, sz);
+	fileLoader->ReleaseFileContents(ptr);
+	return decodeInternal(geometryDecodeData);
+}
+
+avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData& geometryDecodeData)
+{
+	switch(geometryDecodeData.type)
 	{
 	case avs::GeometryPayloadType::Mesh:
-		//TELEPORT_COUT << "avs::GeometryPayloadType::Mesh: " << bufferSizeK << std::endl;
-		return decodeMesh(target,save_to_disk);
+		return decodeMesh(geometryDecodeData);
 	case avs::GeometryPayloadType::Material:
-		//TELEPORT_COUT << "avs::GeometryPayloadType::Material: " << bufferSizeK << std::endl;
-		return decodeMaterial(target,save_to_disk);
+		return decodeMaterial(geometryDecodeData);
 	case avs::GeometryPayloadType::MaterialInstance:
-		return decodeMaterialInstance(target,save_to_disk);
+		return decodeMaterialInstance(geometryDecodeData);
 	case avs::GeometryPayloadType::Texture:
-		//TELEPORT_COUT << "avs::GeometryPayloadType::Texture: " << bufferSizeK << std::endl;
-		return decodeTexture(target,save_to_disk);
+		return decodeTexture(geometryDecodeData);
 	case avs::GeometryPayloadType::Animation:
-		//TELEPORT_COUT << "avs::GeometryPayloadType::Animation: " << bufferSizeK << std::endl;
-		return decodeAnimation(target,save_to_disk);
+		return decodeAnimation(geometryDecodeData);
 	case avs::GeometryPayloadType::Node:
-		//TELEPORT_COUT << "avs::GeometryPayloadType::Node: " << bufferSizeK << std::endl;
-		return decodeNode(target);
+		return decodeNode(geometryDecodeData);
 	case avs::GeometryPayloadType::Skin:
-		//TELEPORT_COUT << "avs::GeometryPayloadType::Skin: " << bufferSizeK << std::endl;
-		return decodeSkin(target,save_to_disk);
+		return decodeSkin(geometryDecodeData);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
 	};
 }
 
+#pragma region DracoDecoding
 
 avs::Accessor::ComponentType FromDracoDataType(draco::DataType dracoDataType)
 {
@@ -195,9 +168,7 @@ avs::Accessor::DataType FromDracoNumComponents(int num_components)
 }
 
 // NOTE the inefficiency here, we're coding into "DecodedGeometry", but that is then immediately converted to a MeshCreate.
-avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid
-													,DecodedGeometry &dg
-													, const avs::CompressedMesh &compressedMesh)
+avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh)
 {
 	size_t primitiveArraysSize = compressedMesh.subMeshes.size();
 	dg.primitiveArrays[primitiveArrayUid].reserve(primitiveArraysSize);
@@ -325,25 +296,118 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayU
 	return avs::Result::OK;
 }
 
+#pragma endregion DracoDecoding
 
-void GeometryDecoder::saveBuffer(const std::string &filename) const
+avs::Result GeometryDecoder::CreateMeshesFromDecodedGeometry(avs::GeometryTargetBackendInterface* target, DecodedGeometry& dg, const std::string& name)
 {
-	auto saveBufferAsync = [&](std::string filename) -> void
+	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to
+	// 	   create the mesh? Why not go direct to MeshCreate??
+	// dg is complete, now send to avs::GeometryTargetBackendInterface
+	for (std::unordered_map<avs::uid, std::vector<PrimitiveArray>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
 	{
-		platform::core::FileLoader* fileLoader = platform::core::FileLoader::GetFileLoader();
-		std::string f = cacheFolder.length() ? (cacheFolder + "/") + filename : filename;
-		fileLoader->Save((const void*)m_Buffer.data(), (unsigned)m_Buffer.size(), f.c_str(), false);
-	};
-	m_SaveBufferFuture = std::async(std::launch::async, saveBufferAsync, filename);
-	m_SavingBuffer = true;
+		size_t index = 0;
+		avs::MeshCreate meshCreate;
+		meshCreate.mesh_uid = it->first;
+		meshCreate.m_MeshElementCreate.resize(it->second.size());
+		// Primitive array elements in each mesh.
+		for (const auto& primitive : it->second)
+		{
+			avs::MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[index];
+			meshElementCreate.vb_id = primitive.attributes[0].accessor;
+			size_t vertexCount = 0;
+			for (size_t i = 0; i < primitive.attributeCount; i++)
+			{
+				//Vertices
+				const avs::Attribute& attrib = primitive.attributes[i];
+				const avs::Accessor& accessor = dg.accessors[attrib.accessor];
+				const avs::BufferView& bufferView = dg.bufferViews[accessor.bufferView];
+				const avs::GeometryBuffer& buffer = dg.buffers[bufferView.buffer];
+				const uint8_t* data = buffer.data + bufferView.byteOffset;
+
+				switch (attrib.semantic)
+				{
+				case avs::AttributeSemantic::POSITION:
+					meshElementCreate.m_VertexCount = vertexCount = accessor.count;
+					meshElementCreate.m_Vertices = reinterpret_cast<const avs::vec3*>(data);
+					continue;
+				case avs::AttributeSemantic::TANGENTNORMALXZ:
+				{
+					size_t tnSize = 0;
+					tnSize = avs::GetComponentSize(accessor.componentType) * avs::GetDataTypeSize(accessor.type);
+					meshElementCreate.m_TangentNormalSize = tnSize;
+					meshElementCreate.m_TangentNormals = reinterpret_cast<const uint8_t*>(data);
+					continue;
+				}
+				case avs::AttributeSemantic::NORMAL:
+					meshElementCreate.m_Normals = reinterpret_cast<const avs::vec3*>(data);
+					if (accessor.count != vertexCount)
+					{
+						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
+					}
+					continue;
+				case avs::AttributeSemantic::TANGENT:
+					meshElementCreate.m_Tangents = reinterpret_cast<const avs::vec4*>(data);
+					if (accessor.count != vertexCount)
+					{
+						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
+					}
+					continue;
+				case avs::AttributeSemantic::TEXCOORD_0:
+					meshElementCreate.m_UV0s = reinterpret_cast<const avs::vec2*>(data);
+					if (accessor.count != vertexCount)
+					{
+						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
+					}
+					continue;
+				case avs::AttributeSemantic::TEXCOORD_1:
+					meshElementCreate.m_UV1s = reinterpret_cast<const avs::vec2*>(data);
+					if (accessor.count != vertexCount)
+					{
+						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
+					}
+					continue;
+				case avs::AttributeSemantic::COLOR_0:
+					meshElementCreate.m_Colors = reinterpret_cast<const avs::vec4*>(data);
+					assert(accessor.count == vertexCount);
+					continue;
+				case avs::AttributeSemantic::JOINTS_0:
+					meshElementCreate.m_Joints = reinterpret_cast<const avs::vec4*>(data);
+					assert(accessor.count == vertexCount);
+					continue;
+				case avs::AttributeSemantic::WEIGHTS_0:
+					meshElementCreate.m_Weights = reinterpret_cast<const avs::vec4*>(data);
+					assert(accessor.count == vertexCount);
+					continue;
+				default:
+					TELEPORT_CERR << "Unknown attribute semantic: " << (uint32_t)attrib.semantic << std::endl;
+					continue;
+				}
+			}
+
+			//Indices
+			const avs::Accessor& indicesAccessor = dg.accessors[primitive.indices_accessor];
+			const avs::BufferView& indicesBufferView = dg.bufferViews[indicesAccessor.bufferView];
+			const avs::GeometryBuffer& indicesBuffer = dg.buffers[indicesBufferView.buffer];
+			size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
+			meshElementCreate.ib_id = primitive.indices_accessor;
+			meshElementCreate.m_Indices = (indicesBuffer.data + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
+			meshElementCreate.m_IndexSize = componentSize;
+			meshElementCreate.m_IndexCount = indicesAccessor.count;
+			meshElementCreate.m_ElementIndex = index;
+			index++;
+		}
+		meshCreate.name = name;
+
+		avs::Result result = target->CreateMesh(meshCreate);
+		if (result != avs::Result::OK)
+		{
+			return result;
+		}
+	}
+	return avs::Result::OK;
 }
 
-void GeometryDecoder::setCacheFolder(const std::string &f)
-{
-	cacheFolder=f;
-}
-
-avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 {
 	//Parse buffer and fill struct DecodedGeometry
 	DecodedGeometry dg = {};
@@ -369,10 +433,10 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 			int32_t version_number= Next4B;
 			size_t nameLength = Next8B;
 			name.resize(nameLength);
-			copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+			copy<char>(name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 			compressedMesh.name= name;
-			if(save_to_disk)
-				saveBuffer(std::string("meshes/"+name+".mesh_compressed"));
+			if(geometryDecodeData.saveToDisk)
+				saveBuffer(geometryDecodeData, std::string("meshes/"+name+".mesh_compressed"));
 			size_t num_elements=(size_t)Next4B;
 			compressedMesh.subMeshes.resize(num_elements);
 			for(size_t i=0;i< num_elements;i++)
@@ -390,7 +454,7 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 				}
 				size_t bufferSize = Next8B;
 				subMesh.buffer.resize(bufferSize);
-				copy<uint8_t>(subMesh.buffer.data(), m_Buffer.data(), m_BufferOffset, bufferSize);
+				copy<uint8_t>(subMesh.buffer.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, bufferSize);
 			}
 			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh);
 			if (result != avs::Result::OK)
@@ -401,7 +465,7 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 			int32_t version_number= Next4B;
 			size_t nameLength = Next8B;
 			name.resize(nameLength);
-			copy<char>(name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+			copy<char>(name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 			compressedMesh.name= name;
 			size_t primitiveArraysSize = Next8B;
 			dg.primitiveArrays[uid].reserve(primitiveArraysSize);
@@ -454,13 +518,13 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 				avs::uid key = Next8B;
 				dg.buffers[key]= { 0, nullptr };
 				dg.buffers[key].byteLength = Next8B;
-				if(m_BufferSize < m_BufferOffset + dg.buffers[key].byteLength)
+				if(geometryDecodeData.data.size() < geometryDecodeData.offset + dg.buffers[key].byteLength)
 				{
 					return avs::Result::GeometryDecoder_InvalidBufferSize;
 				}
 
-				dg.buffers[key].data = (m_Buffer.data() + m_BufferOffset);
-				m_BufferOffset += dg.buffers[key].byteLength;
+				dg.buffers[key].data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
+				geometryDecodeData.offset += dg.buffers[key].byteLength;
 			}
 		}
 		else
@@ -469,114 +533,11 @@ avs::Result GeometryDecoder::decodeMesh(avs::GeometryTargetBackendInterface*& ta
 			return avs::Result::DecoderBackend_DecodeFailed;
 		}
 	}
-	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to
-	// 	   create the mesh? Why not go direct to MeshCreate??
-	// dg is complete, now send to avs::GeometryTargetBackendInterface
-	for (std::unordered_map<avs::uid, std::vector<PrimitiveArray>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
-	{
-		size_t index = 0;
-		avs::MeshCreate meshCreate;
-		meshCreate.mesh_uid = it->first;
-		meshCreate.m_MeshElementCreate.resize(it->second.size());
-		// Primitive array elements in each mesh.
-		for (const auto& primitive : it->second)
-		{
-			avs::MeshElementCreate& meshElementCreate = meshCreate.m_MeshElementCreate[index];
-			meshElementCreate.vb_id = primitive.attributes[0].accessor;
-			size_t vertexCount = 0;
-			for (size_t i = 0; i < primitive.attributeCount; i++)
-			{
-				//Vertices
-				const avs::Attribute& attrib = primitive.attributes[i];
-				const avs::Accessor& accessor = dg.accessors[attrib.accessor];
-				const avs::BufferView& bufferView = dg.bufferViews[accessor.bufferView];
-				const avs::GeometryBuffer& buffer = dg.buffers[bufferView.buffer];
-				const uint8_t* data = buffer.data + bufferView.byteOffset;
-
-				switch (attrib.semantic)
-				{
-				case avs::AttributeSemantic::POSITION:
-					meshElementCreate.m_VertexCount = vertexCount = accessor.count;
-					meshElementCreate.m_Vertices = reinterpret_cast<const avs::vec3*>(data);
-					continue;
-				case avs::AttributeSemantic::TANGENTNORMALXZ:
-				{
-					size_t tnSize = 0;
-					tnSize = avs::GetComponentSize(accessor.componentType) * avs::GetDataTypeSize(accessor.type);
-					meshElementCreate.m_TangentNormalSize = tnSize;
-					meshElementCreate.m_TangentNormals = reinterpret_cast<const uint8_t*>(data);
-					continue;
-				}
-				case avs::AttributeSemantic::NORMAL:
-					meshElementCreate.m_Normals = reinterpret_cast<const avs::vec3*>(data);
-					if(accessor.count != vertexCount)
-					{
-					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
-					}
-					continue;
-				case avs::AttributeSemantic::TANGENT:
-					meshElementCreate.m_Tangents = reinterpret_cast<const avs::vec4*>(data);
-					if(accessor.count != vertexCount)
-					{
-					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
-					}
-					continue;
-				case avs::AttributeSemantic::TEXCOORD_0:
-					meshElementCreate.m_UV0s = reinterpret_cast<const avs::vec2*>(data);
-					if(accessor.count != vertexCount)
-					{
-					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
-					}
-					continue;
-				case avs::AttributeSemantic::TEXCOORD_1:
-					meshElementCreate.m_UV1s = reinterpret_cast<const avs::vec2*>(data);
-					if(accessor.count != vertexCount)
-					{
-					TELEPORT_CERR<<"Accessor count mismatch in "<<name.c_str()<<"\n";
-					}
-					continue;
-				case avs::AttributeSemantic::COLOR_0:
-					meshElementCreate.m_Colors = reinterpret_cast<const avs::vec4*>(data);
-					assert(accessor.count == vertexCount);
-					continue;
-				case avs::AttributeSemantic::JOINTS_0:
-					meshElementCreate.m_Joints = reinterpret_cast<const avs::vec4*>(data);
-					assert(accessor.count == vertexCount);
-					continue;
-				case avs::AttributeSemantic::WEIGHTS_0:
-					meshElementCreate.m_Weights = reinterpret_cast<const avs::vec4*>(data);
-					assert(accessor.count == vertexCount);
-					continue;
-				default:
-					TELEPORT_CERR << "Unknown attribute semantic: " << (uint32_t)attrib.semantic << std::endl;
-					continue;
-				}
-			}
-
-			//Indices
-			const avs::Accessor& indicesAccessor = dg.accessors[primitive.indices_accessor];
-			const avs::BufferView& indicesBufferView = dg.bufferViews[indicesAccessor.bufferView];
-			const avs::GeometryBuffer& indicesBuffer = dg.buffers[indicesBufferView.buffer];
-			size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
-			meshElementCreate.ib_id = primitive.indices_accessor;
-			meshElementCreate.m_Indices = (indicesBuffer.data + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
-			meshElementCreate.m_IndexSize = componentSize;
-			meshElementCreate.m_IndexCount = indicesAccessor.count;
-			meshElementCreate.m_ElementIndex = index;
-			index++;
-		}
-		meshCreate.name = name;
-
-		avs::Result result = target->CreateMesh(meshCreate);
-		if (result != avs::Result::OK)
-		{
-			return result;
-		}
-	}
-	return avs::Result::OK;
+	
+	return CreateMeshesFromDecodedGeometry(geometryDecodeData.target, dg, name);
 }
 
-avs::Result GeometryDecoder::decodeMaterial(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeData)
 {
 	size_t materialAmount = Next8B;
 
@@ -589,7 +550,7 @@ avs::Result GeometryDecoder::decodeMaterial(avs::GeometryTargetBackendInterface*
 		size_t nameLength = Next8B;
 		
 		material.name.resize(nameLength);
-		copy<char>(material.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+		copy<char>(material.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 		material.materialMode = (avs::MaterialMode)NextB;
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
 		TELEPORT_COUT <<"GeometryDecoder::decodeMaterial - "<<mat_uid<<" "<< material.name.c_str() << " diffuse " << material.pbrMetallicRoughness.baseColorTexture.index << std::endl;
@@ -639,25 +600,25 @@ avs::Result GeometryDecoder::decodeMaterial(avs::GeometryTargetBackendInterface*
 			{
 				case avs::MaterialExtensionIdentifier::SIMPLE_GRASS_WIND:
 					newExtension = std::make_unique<avs::SimpleGrassWindExtension>();
-					newExtension->deserialise(m_Buffer, m_BufferOffset);
+					newExtension->deserialise(geometryDecodeData.data, geometryDecodeData.offset);
 					break;
 			}
 
 			material.extensions[id] = std::move(newExtension);
 		}
 
-		target->CreateMaterial(mat_uid, material);
+		geometryDecodeData.target->CreateMaterial(mat_uid, material);
 	}
 	
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeMaterialInstance(GeometryDecodeData& geometryDecodeData)
 {
 	return avs::Result::GeometryDecoder_Incomplete;
 }
 
-avs::Result GeometryDecoder::decodeTexture(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeData)
 {
 	size_t textureAmount = Next8B;
 	for(size_t i = 0; i < textureAmount; i++)
@@ -667,7 +628,7 @@ avs::Result GeometryDecoder::decodeTexture(avs::GeometryTargetBackendInterface*&
 
 		size_t nameLength = Next8B;
 		texture.name.resize(nameLength);
-		copy<char>(texture.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+		copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 		
 		texture.cubemap= NextB!=0;
 
@@ -684,25 +645,25 @@ avs::Result GeometryDecoder::decodeTexture(avs::GeometryTargetBackendInterface*&
 		texture.valueScale = NextFloat;
 
 		texture.dataSize = Next4B;
-		texture.data = (m_Buffer.data() + m_BufferOffset);
+		texture.data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
 
 		texture.sampler_uid = Next8B;
 
-		target->CreateTexture(texture_uid, texture);
+		geometryDecodeData.target->CreateTexture(texture_uid, texture);
 	}
 
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeAnimation(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeData)
 {
 	avs::Animation animation;
 	avs::uid animationID = Next8B;
 	size_t nameLength = Next8B;
 	animation.name.resize(nameLength);
-	copy<char>(animation.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
-	if(save_to_disk)
-		saveBuffer(std::string("animations/"+animation.name+".anim"));
+	copy<char>(animation.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	if(geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("animations/"+animation.name+".anim"));
 
 	animation.boneKeyframes.resize(Next8B);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
@@ -710,16 +671,16 @@ avs::Result GeometryDecoder::decodeAnimation(avs::GeometryTargetBackendInterface
 		avs::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
 		transformKeyframe.boneIndex = Next8B;
 
-		decodeVector3Keyframes(transformKeyframe.positionKeyframes);
-		decodeVector4Keyframes(transformKeyframe.rotationKeyframes);
+		decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes);
+		decodeVector4Keyframes(geometryDecodeData, transformKeyframe.rotationKeyframes);
 	}
 
-	target->CreateAnimation(animationID, animation);
+	geometryDecodeData.target->CreateAnimation(animationID, animation);
 
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& target)
+avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 {
 	uint64_t nodeCount = Next8B;
 	for(uint64_t i = 0; i < nodeCount; ++i)
@@ -730,7 +691,7 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 
 		size_t nameLength = Next8B;
 		node.name.resize(nameLength);
-		copy<char>(node.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
+		copy<char>(node.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 
 		node.localTransform = NextChunk(avs::Transform);
 		node.globalTransform = NextChunk(avs::Transform);
@@ -783,12 +744,12 @@ avs::Result GeometryDecoder::decodeNode(avs::GeometryTargetBackendInterface*& ta
 			node.childrenIDs.push_back(Next8B);
 		}
 
-		target->CreateNode(uid, node);
+		geometryDecodeData.target->CreateNode(uid, node);
 	}
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& target,bool save_to_disk)
+avs::Result GeometryDecoder::decodeSkin(GeometryDecodeData& geometryDecodeData)
 {
 	avs::uid skinID = Next8B;
 
@@ -796,9 +757,9 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 
 	size_t nameLength = Next8B;
 	skin.name.resize(nameLength);
-	copy<char>(skin.name.data(), m_Buffer.data(), m_BufferOffset, nameLength);
-	if(save_to_disk)
-		saveBuffer(std::string("skins/"+skin.name+".skin"));
+	copy<char>(skin.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	if(geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("skins/"+skin.name+".skin"));
 
 	skin.inverseBindMatrices.resize(Next8B);
 	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
@@ -828,7 +789,7 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 		skin.boneTransforms[i] = NextChunk(avs::Transform);
 		size_t nameLength = Next8B;
 		skin.boneNames[i].resize(nameLength);
-		copy<char>(skin.boneNames[i].data(), m_Buffer.data(), m_BufferOffset, nameLength);
+		copy<char>(skin.boneNames[i].data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	}
 	skin.jointIndices.resize(Next8B);
 	for (size_t i = 0; i < skin.jointIndices.size(); i++)
@@ -838,11 +799,11 @@ avs::Result GeometryDecoder::decodeSkin(avs::GeometryTargetBackendInterface*& ta
 	#endif
 	skin.skinTransform = NextChunk(avs::Transform);
 
-	target->CreateSkin(skinID, skin);
+	geometryDecodeData.target->CreateSkin(skinID, skin);
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeFloatKeyframes(std::vector<avs::FloatKeyframe>& keyframes)
+avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::FloatKeyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
 	for(size_t i = 0; i < keyframes.size(); i++)
@@ -854,7 +815,7 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(std::vector<avs::FloatKeyframe
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeVector3Keyframes(std::vector<avs::Vector3Keyframe>& keyframes)
+avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector3Keyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
 	for(size_t i = 0; i < keyframes.size(); i++)
@@ -866,7 +827,7 @@ avs::Result GeometryDecoder::decodeVector3Keyframes(std::vector<avs::Vector3Keyf
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeVector4Keyframes(std::vector<avs::Vector4Keyframe>& keyframes)
+avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector4Keyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
 	for(size_t i = 0; i < keyframes.size(); i++)
@@ -876,4 +837,11 @@ avs::Result GeometryDecoder::decodeVector4Keyframes(std::vector<avs::Vector4Keyf
 	}
 
 	return avs::Result::OK;
+}
+
+void GeometryDecoder::saveBuffer(GeometryDecodeData& geometryDecodeData, const std::string& filename)
+{
+	platform::core::FileLoader* fileLoader = platform::core::FileLoader::GetFileLoader();
+	std::string f = cacheFolder.length() ? (cacheFolder + "/") + filename : filename;
+	fileLoader->Save((const void*)geometryDecodeData.data.data(), (unsigned)geometryDecodeData.data.size(), f.c_str(), false);
 }

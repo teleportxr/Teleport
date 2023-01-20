@@ -4,7 +4,6 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 
 #include <map>
-#include <future>
 
 namespace avs
 {
@@ -22,39 +21,55 @@ namespace draco
 */
 class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
 {
+	//Forward Declarations
+private:
+	struct DecodedGeometry;
+
+	//enums/struct
+private:
+	struct GeometryDecodeData
+	{
+		std::vector<uint8_t>					data		= {};
+		size_t									offset		= 0;
+		avs::GeometryPayloadType				type		= avs::GeometryPayloadType::Invalid;
+		avs::GeometryTargetBackendInterface*	target		= nullptr;
+		bool									saveToDisk	= false;
+
+		GeometryDecodeData(size_t dataSize, avs::GeometryPayloadType type_, avs::GeometryTargetBackendInterface* target_, bool saveToDisk_)
+			: data(dataSize), type(type_), target(target_), saveToDisk(saveToDisk_) {}
+	};
+
 public:
 	GeometryDecoder();
 	~GeometryDecoder();
-	//! Treat the file as buffer input and decode.
-	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *intf);
-	// Inherited via GeometryDecoderBackendInterface
-	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
-	
-	void saveBuffer(const std::string &name) const;
+
 	void setCacheFolder(const std::string &f);
 
+	//! Inherited via GeometryDecoderBackendInterface
+	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
+	//! Treat the file as buffer input and decode.
+	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *intf);
+
 private:
-	avs::Result decode(avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target,bool save_to_disk);
+	avs::Result decodeInternal(GeometryDecodeData& geometryDecodeData);
 	
-	avs::Result decodeMesh(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
-	avs::Result decodeMaterial(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
-	avs::Result decodeMaterialInstance(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
-	avs::Result decodeTexture(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
-	avs::Result decodeAnimation(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
-	avs::Result decodeNode(avs::GeometryTargetBackendInterface*& target);
-	avs::Result decodeSkin(avs::GeometryTargetBackendInterface*& target,bool save_to_disk);
+	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry& dg, const avs::CompressedMesh& compressedMesh);
+	avs::Result CreateMeshesFromDecodedGeometry(avs::GeometryTargetBackendInterface* target, DecodedGeometry& dg, const std::string& name);
 
-	avs::Result decodeFloatKeyframes(std::vector<avs::FloatKeyframe>& keyframes);
-	avs::Result decodeVector3Keyframes(std::vector<avs::Vector3Keyframe>& keyframes);
-	avs::Result decodeVector4Keyframes(std::vector<avs::Vector4Keyframe>& keyframes);
+	avs::Result decodeMesh(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeMaterial(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeMaterialInstance(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeTexture(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeAnimation(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeNode(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeSkin(GeometryDecodeData& geometryDecodeData);
 
-	mutable bool m_SavingBuffer = false;
-	mutable std::future<void> m_SaveBufferFuture;
+	avs::Result decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::FloatKeyframe>& keyframes);
+	avs::Result decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector3Keyframe>& keyframes);
+	avs::Result decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector4Keyframe>& keyframes);
+	
+	void saveBuffer(GeometryDecodeData& geometryDecodeData, const std::string& name);
 
-	//Use for the #define Next8B and #define Next4B macros
-	std::vector<uint8_t> m_Buffer;
-	size_t m_BufferSize= 0;
-	size_t m_BufferOffset = 0;
 	// Use for data extracted from compressed objects.
 	std::vector<std::vector<uint8_t>> m_DecompressedBuffers;
 	size_t m_DecompressedBufferIndex=0;
@@ -99,6 +114,4 @@ private:
 			buffers.clear();
 		}
 	};
-	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry& dg, const avs::CompressedMesh &compressedMesh);
 };
-
