@@ -201,6 +201,8 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator);
 	geometryDecoder.decodeFromFile("assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator);
 	geometryDecoder.decodeFromFile("assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator);
+	geometryDecoder.WaitFromDecodeThread();
+	
 	localResourceCreator.Update(0.0f);
 	avs::uid wand_uid = 11;
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;

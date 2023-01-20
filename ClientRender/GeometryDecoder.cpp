@@ -39,10 +39,14 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 
 GeometryDecoder::GeometryDecoder()
 {
+	decodeThread = std::thread(&GeometryDecoder::decodeAsync, this);
+	decodeThreadActive = true;
 }
 
 GeometryDecoder::~GeometryDecoder()
 {
+	decodeThreadActive = false;
+	decodeThread.join();
 }
 
 void GeometryDecoder::setCacheFolder(const std::string& f)
@@ -52,9 +56,8 @@ void GeometryDecoder::setCacheFolder(const std::string& f)
 
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
 {
-	GeometryDecodeData geometryDecodeData(bufferSizeInBytes, type, target, true);
-	memcpy(geometryDecodeData.data.data(), (uint8_t*)buffer, bufferSizeInBytes);
-	return decodeInternal(geometryDecodeData);
+	decodeData.emplace(buffer, bufferSizeInBytes, type, target, true);
+	return avs::Result::OK;
 }
 
 avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
@@ -66,10 +69,21 @@ avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::Ge
 	void *ptr=nullptr;
 	unsigned int sz=0;
 	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
-	GeometryDecodeData geometryDecodeData(sz, type, target, false);
-	memcpy(geometryDecodeData.data.data(), (uint8_t*)ptr, sz);
+	decodeData.emplace(ptr, sz, type, target, false);
 	fileLoader->ReleaseFileContents(ptr);
-	return decodeInternal(geometryDecodeData);
+	return avs::Result::OK;
+}
+
+void GeometryDecoder::decodeAsync()
+{
+	while (decodeThreadActive)
+	{
+		if (!decodeData.empty())
+		{
+			decodeInternal(decodeData.front());
+			decodeData.pop();
+		}
+	}
 }
 
 avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData& geometryDecodeData)

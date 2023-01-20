@@ -1,6 +1,10 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 #include "ResourceCreator.h"
 
+#if defined(_MSC_VER)
+#pragma warning(disable : 4018) //warning C4018: '<': signed/unsigned mismatch
+#endif
+
 #include "Animation.h"
 #include "Material.h"
 #include <Platform/External/magic_enum/include/magic_enum.hpp>

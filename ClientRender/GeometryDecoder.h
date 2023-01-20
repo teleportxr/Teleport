@@ -4,6 +4,7 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 
 #include <map>
+#include <thread>
 
 namespace avs
 {
@@ -35,8 +36,11 @@ private:
 		avs::GeometryTargetBackendInterface*	target		= nullptr;
 		bool									saveToDisk	= false;
 
-		GeometryDecodeData(size_t dataSize, avs::GeometryPayloadType type_, avs::GeometryTargetBackendInterface* target_, bool saveToDisk_)
-			: data(dataSize), type(type_), target(target_), saveToDisk(saveToDisk_) {}
+		GeometryDecodeData(const void* ptr, size_t size, avs::GeometryPayloadType type_, avs::GeometryTargetBackendInterface* target_, bool saveToDisk_)
+			: data(size), type(type_), target(target_), saveToDisk(saveToDisk_) 
+		{
+			memcpy(data.data(), ptr, size);
+		}
 	};
 
 public:
@@ -50,7 +54,14 @@ public:
 	//! Treat the file as buffer input and decode.
 	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *intf);
 
+	inline void FlushDecodeThread()
+	{
+		//Ugly thread spin lock
+		while (!decodeData.empty()) {}
+	}
+
 private:
+	void decodeAsync();
 	avs::Result decodeInternal(GeometryDecodeData& geometryDecodeData);
 	
 	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry& dg, const avs::CompressedMesh& compressedMesh);
@@ -73,6 +84,11 @@ private:
 	// Use for data extracted from compressed objects.
 	std::vector<std::vector<uint8_t>> m_DecompressedBuffers;
 	size_t m_DecompressedBufferIndex=0;
+
+private:
+	std::thread decodeThread;
+	bool decodeThreadActive;
+	avs::ThreadSafeQueue<GeometryDecodeData> decodeData;
 
 private:
 	std::string cacheFolder;
