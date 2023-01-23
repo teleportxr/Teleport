@@ -416,6 +416,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
+	if (!node)
+		return;
+
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());

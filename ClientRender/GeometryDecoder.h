@@ -54,7 +54,7 @@ public:
 	//! Treat the file as buffer input and decode.
 	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *intf);
 
-	inline void FlushDecodeThread()
+	inline void WaitFromDecodeThread()
 	{
 		//Ugly thread spin lock
 		while (!decodeData.empty()) {}
