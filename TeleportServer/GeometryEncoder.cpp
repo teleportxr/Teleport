@@ -9,6 +9,7 @@
 #include "ServerSettings.h"
 
 #include "TeleportCore/ErrorHandling.h"
+#include <GeometryStore.h>
 
 
 //Clear a passed vector of UIDs that are believed to have already been sent to the client.
@@ -39,12 +40,12 @@ namespace teleport
 		:settings(settings), prevBufferSize(0)
 	{}
 
-	avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req)
+	avs::Result GeometryEncoder::encode(uint64_t timestamp,  avs::GeometryRequesterBackendInterface* req)
 	{
 		if(!req||req->getClientAxesStandard()==avs::AxesStandard::NotInitialized)
 			return avs::Result::Failed;
 		queuedBuffer.clear();
-
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
 		// The source backend will give us the data to encode.
 		// What data it provides depends on the contents of the avs::GeometryRequesterBackendInterface object.
 
@@ -67,7 +68,7 @@ namespace teleport
 			{
 				if(!req->hasResource(nodeID))
 				{
-					encodeNodes(src, req, {nodeID});
+					encodeNodes( req, {nodeID});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -82,7 +83,7 @@ namespace teleport
 			{
 				if(!req->hasResource(meshResourceInfo.mesh_uid))
 				{
-					encodeMeshes(src, req, {meshResourceInfo.mesh_uid});
+					encodeMeshes( req, {meshResourceInfo.mesh_uid});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -94,7 +95,7 @@ namespace teleport
 				{
 					if(!req->hasResource(meshResourceInfo.skinID))
 					{
-						encodeSkin(src, req, meshResourceInfo.skinID);
+						encodeSkin( req, meshResourceInfo.skinID);
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
@@ -108,7 +109,7 @@ namespace teleport
 				{
 					if(!req->hasResource(animationID))
 					{
-						encodeAnimation(src, req, animationID);
+						encodeAnimation( req, animationID);
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
@@ -126,7 +127,7 @@ namespace teleport
 				{
 					if (!req->hasResource(material.material_uid))
 					{
-						encodeMaterials(src, req, { material.material_uid });
+						encodeMaterials( req, { material.material_uid });
 						keepQueueing = attemptQueueData();
 						if (!keepQueueing)
 						{
@@ -137,7 +138,7 @@ namespace teleport
 					{
 						for(avs::uid textureID : material.texture_uids)
 						{
-							encodeTextures(src, req, {textureID});
+							encodeTextures( req, {textureID});
 							keepQueueing = attemptQueueData();
 							if(!keepQueueing)
 							{
@@ -157,7 +158,7 @@ namespace teleport
 
 				if(!req->hasResource(meshResourceInfo.node_uid))
 				{
-					encodeNodes(src, req, {meshResourceInfo.node_uid});
+					encodeNodes(req, {meshResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -173,7 +174,7 @@ namespace teleport
 				{
 					if(!req->hasResource(lightResourceInfo.shadowmap_uid))
 					{
-						encodeTextures(src, req, {lightResourceInfo.shadowmap_uid});
+						encodeTextures(req, {lightResourceInfo.shadowmap_uid});
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
@@ -185,7 +186,7 @@ namespace teleport
 
 				if(!req->hasResource(lightResourceInfo.node_uid))
 				{
-					encodeNodes(src, req, {lightResourceInfo.node_uid});
+					encodeNodes(req, {lightResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -200,7 +201,7 @@ namespace teleport
 			{
 				if(req->hasResource(texture_uid))
 					continue;
-				encodeTextures(src, req, {texture_uid});
+				encodeTextures(req, {texture_uid});
 				keepQueueing = attemptQueueData();
 				if(!keepQueueing)
 				{
@@ -230,12 +231,13 @@ namespace teleport
 		minimumPriority=p;
 	}
 
-	avs::Result GeometryEncoder::encodeMeshes(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeMeshes( avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 	{
+		GeometryStore * geometryStore=&GeometryStore::GetInstance();
 		for(avs::uid uid : missingUIDs)
 		{
 			size_t oldBufferSize = buffer.size();
-			const avs::CompressedMesh* compressedMesh = src->getCompressedMesh(uid, req->getClientAxesStandard());
+			const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, req->getClientAxesStandard());
 			putPayload(avs::GeometryPayloadType::Mesh);
 			put((size_t)1);
 			put(uid);
@@ -275,7 +277,7 @@ namespace teleport
 			}
 			if(compressedMesh&& compressedMesh->meshCompressionType== avs::MeshCompressionType::NONE)
 			{
-				avs::Mesh* mesh = src->getMesh(uid, req->getClientAxesStandard());
+				avs::Mesh* mesh = geometryStore->getMesh(uid, req->getClientAxesStandard());
 				if (!mesh)
 				{
 					TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
@@ -353,14 +355,15 @@ namespace teleport
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeNodes(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface *req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeNodes( avs::GeometryRequesterBackendInterface *req, std::vector<avs::uid> missingUIDs)
 	{
+		GeometryStore *geometryStore=&GeometryStore::GetInstance();
 		//Place payload type onto the buffer.
 		putPayload(avs::GeometryPayloadType::Node);
 		for (int i=0;i<missingUIDs.size();i++)
 		{
 			avs::uid uid =missingUIDs[i];
-			avs::Node* node = src->getNode(uid);
+			avs::Node* node = geometryStore->getNode(uid);
 			if(!node)
 			{
 				TELEPORT_CERR << "PipelineNode encoding error! Node_" << uid << " does not exist!\n";
@@ -371,7 +374,7 @@ namespace teleport
 		put(missingUIDs.size());
 		for (const avs::uid &uid : missingUIDs)
 		{
-			avs::Node* node = src->getNode(uid);
+			avs::Node* node = geometryStore->getNode(uid);
 			put(uid);
 
 			//Push name length.
@@ -450,11 +453,12 @@ namespace teleport
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeSkin(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid skinID)
+	avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface* req, avs::uid skinID)
 	{
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
 		putPayload(avs::GeometryPayloadType::Skin);
 
-		const avs::Skin* skin = src->getSkin(skinID, req->getClientAxesStandard());
+		const avs::Skin* skin = geometryStore->getSkin(skinID, req->getClientAxesStandard());
 		if(skin)
 		{
 			put(skinID);
@@ -493,7 +497,7 @@ namespace teleport
 			put(skin->boneIDs.size());
 			for (int i = 0; i < skin->boneIDs.size(); i++)
 			{
-				avs::Node* node = src->getNode(skin->boneIDs[i]);
+				avs::Node* node = geometryStore->getNode(skin->boneIDs[i]);
 				avs::Transform localTransform = node->localTransform;
 				avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), localTransform);
 				//put(skin->boneIDs[i]);
@@ -522,9 +526,10 @@ namespace teleport
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeAnimation(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
+	avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
 	{
-		const avs::Animation* animation = src->getAnimation(animationID, req->getClientAxesStandard());
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
+		const avs::Animation* animation = geometryStore->getAnimation(animationID, req->getClientAxesStandard());
 		if(animation)
 		{
 			putPayload(avs::GeometryPayloadType::Animation);
@@ -579,23 +584,23 @@ namespace teleport
 		prevBufferSize = 0;
 	}
 
-	avs::Result GeometryEncoder::encodeTextures(avs::GeometrySourceBackendInterface * src
-												,avs::GeometryRequesterBackendInterface *req
+	avs::Result GeometryEncoder::encodeTextures(avs::GeometryRequesterBackendInterface *req
 												,std::vector<avs::uid> missingUIDs)
 	{
-		encodeTexturesBackend(src, req, missingUIDs);
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
+		encodeTexturesBackend(req, missingUIDs);
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeMaterials(avs::GeometrySourceBackendInterface *src
-												,avs::GeometryRequesterBackendInterface *req
+	avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterface *req
 												,std::vector<avs::uid> missingUIDs)
 	{
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
 		auto renderingFeatures=req->getClientRenderingFeatures();
 		//Push amount of materials.
 		for (avs::uid uid : missingUIDs)
 		{
-			avs::Material* material = src->getMaterial(uid);
+			avs::Material* material = geometryStore->getMaterial(uid);
 
 			if (material)
 			{
@@ -603,7 +608,7 @@ namespace teleport
 				std::vector<avs::uid> materialTexture_uids =material ->GetTextureUids();
 				for(auto u:materialTexture_uids)
 				{
-					if(!src->getTexture(u))
+					if(!geometryStore->getTexture(u))
 					{
 						TELEPORT_CERR<<"Material "<<material->name.c_str()<<" points to "<<u<<" which is not a texture.\n";
 						continue;
@@ -700,7 +705,7 @@ namespace teleport
 				if (materialTexture_uids.size() != 0)
 				{
 					//Push textures.
-					encodeTexturesBackend(src, req, materialTexture_uids);
+					encodeTexturesBackend(req, materialTexture_uids);
 				}
 
 				//Flag we have encoded the material.
@@ -711,19 +716,20 @@ namespace teleport
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeShadowMaps(avs::GeometrySourceBackendInterface* src, avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeShadowMaps(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 	{
-		encodeTexturesBackend(src, req, missingUIDs, true);
+		encodeTexturesBackend(req, missingUIDs, true);
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometrySourceBackendInterface * src, avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs, bool )
+	avs::Result GeometryEncoder::encodeTexturesBackend( avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs, bool )
 	{
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
 		for (avs::uid uid : missingUIDs)
 		{
 			avs::Texture* texture;
 
-			texture = src->getTexture(uid);
+			texture = geometryStore->getTexture(uid);
 			if (texture)
 			{
 				if (texture->compression == avs::TextureCompression::UNCOMPRESSED)

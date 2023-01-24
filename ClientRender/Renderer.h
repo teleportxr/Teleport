@@ -34,7 +34,7 @@ namespace clientrender
 
 	enum class ShaderMode
 	{
-		DEFAULT,PBR, ALBEDO, NORMAL_UNSWIZZLED, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS,NUM
+		DEFAULT,PBR, ALBEDO, NORMALS, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS,NUM
 	};
 	//! Timestamp of when the system started.
 	extern avs::Timestamp platformStartTimestamp;	
@@ -99,7 +99,7 @@ namespace clientrender
 		platform::crossplatform::RenderPlatform		*renderPlatform	=nullptr;
 
 		RenderState renderState;
-
+		DebugOptions debugOptions;
 		platform::crossplatform::Text3DRenderer text3DRenderer;
 		bool show_osd = false;
 		double previousTimestamp=0.0;
@@ -141,6 +141,7 @@ namespace clientrender
 		teleport::Gui &gui;
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;
+		avs::Pose GetOriginPose(avs::uid server_uid);
 	public:
 		
 		GeometryDecoder geometryDecoder;

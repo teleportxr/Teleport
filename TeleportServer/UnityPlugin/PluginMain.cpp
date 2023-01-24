@@ -68,7 +68,6 @@ static avs::Context avsContext;
 
 static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_shared<DefaultDiscoveryService>();
 static std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
-GeometryStore geometryStore;
 
 std::map<avs::uid, ClientData> clientServices;
 
@@ -169,7 +168,7 @@ TELEPORT_EXPORT void UpdateServerSettings(const teleport::ServerSettings newSett
 
 TELEPORT_EXPORT bool SetCachePath(const char* path)
 {
-	return geometryStore.SetCachePath(path);
+	return teleport::GeometryStore::GetInstance().SetCachePath(path);
 }
 
 TELEPORT_EXPORT void SetClientStoppedRenderingNodeDelegate(ClientStoppedRenderingNodeFn clientStoppedRenderingNode)
@@ -658,7 +657,7 @@ TELEPORT_EXPORT void EditorTick()
 	PipeOutMessages();
 }
 
-TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter,avs::uid originNode, const avs::vec3* pos,const avs::vec4* orient)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter,avs::uid originNode)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -667,7 +666,7 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter,av
 		return false;
 	}
 	ClientData& clientData = clientPair->second;
-	return clientData.setOrigin(validCounter, originNode,*pos, *orient);
+	return clientData.setOrigin(validCounter, originNode);
 }
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
@@ -683,7 +682,7 @@ TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 	return clientData.isConnected();
 }
 
-TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID, avs::vec3* pos)
+TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -693,14 +692,7 @@ TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID, avs::vec3* pos)
 	}
 
 	ClientData& clientData = clientPair->second;
-
-	bool result = (clientData.hasOrigin());
-	if(result && pos)
-	{
-		*pos = clientData.getOrigin();
-	}
-
-	return result;
+	return clientData.hasOrigin();
 }
 
 TELEPORT_EXPORT void Reset()
@@ -745,7 +737,7 @@ TELEPORT_EXPORT avs::uid GetOrGenerateUid(BSTR path)
 		return 0;
 	_bstr_t p=path;
 	std::string str(p);
-	return geometryStore.GetOrGenerateUid(str);
+	return teleport::GeometryStore::GetInstance().GetOrGenerateUid(str);
 }
 
 //! Add the specified texture to be sent to the client.
@@ -1349,121 +1341,121 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 ///GeometryStore START
 TELEPORT_EXPORT void SaveGeometryStore()
 {
-	geometryStore.saveToDisk();
-	geometryStore.verify();
+	teleport::GeometryStore::GetInstance().saveToDisk();
+	teleport::GeometryStore::GetInstance().verify();
 }
 
 TELEPORT_EXPORT bool CheckGeometryStoreForErrors()
 {
-	return geometryStore.CheckForErrors();
+	return teleport::GeometryStore::GetInstance().CheckForErrors();
 }
 
 TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
 {
-	geometryStore.loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
+	teleport::GeometryStore::GetInstance().loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
 }
 
 TELEPORT_EXPORT void ClearGeometryStore()
 {
-	geometryStore.clear(true);
+	teleport::GeometryStore::GetInstance().clear(true);
 }
 
 TELEPORT_EXPORT void SetDelayTextureCompression(bool willDelay)
 {
-	geometryStore.willDelayTextureCompression = willDelay;
+	teleport::GeometryStore::GetInstance().willDelayTextureCompression = willDelay;
 }
 
 TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
 {
-	geometryStore.setCompressionLevels(compressionStrength, compressionQuality);
+	teleport::GeometryStore::GetInstance().setCompressionLevels(compressionStrength, compressionQuality);
 }
 
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
-	geometryStore.storeNode(id, avs::Node(node));
+	teleport::GeometryStore::GetInstance().storeNode(id, avs::Node(node));
 }
 
 TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
 {
-	geometryStore.storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
+	teleport::GeometryStore::GetInstance().storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
 {
-	geometryStore.storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
+	teleport::GeometryStore::GetInstance().storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
-	geometryStore.storeMesh(id, guid, path, lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
+	teleport::GeometryStore::GetInstance().storeMesh(id, guid, path, lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
 }
 
 TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropMaterial material)
 {
-	geometryStore.storeMaterial(id, guid, path, lastModified, avs::Material(material));
+	teleport::GeometryStore::GetInstance().storeMaterial(id, guid, path, lastModified, avs::Material(material));
 }
 
 TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	geometryStore.storeTexture(id, guid, path, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	teleport::GeometryStore::GetInstance().storeTexture(id, guid, path, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture shadowMap)
 {
-	geometryStore.storeShadowMap(id, guid, path, lastModified, avs::Texture(shadowMap));
+	teleport::GeometryStore::GetInstance().storeShadowMap(id, guid, path, lastModified, avs::Texture(shadowMap));
 }
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
 {
-	const avs::Node* node = geometryStore.getNode(id);
+	const avs::Node* node = teleport::GeometryStore::GetInstance().getNode(id);
 	return node != nullptr;
 }
 
 TELEPORT_EXPORT bool IsSkinStored(avs::uid id)
 {
 	//NOTE: Assumes we always are storing animations in the engineering axes standard.
-	const avs::Skin* skin = geometryStore.getSkin(id, avs::AxesStandard::EngineeringStyle);
+	const avs::Skin* skin = teleport::GeometryStore::GetInstance().getSkin(id, avs::AxesStandard::EngineeringStyle);
 	return skin != nullptr;
 }
 
 TELEPORT_EXPORT bool IsMeshStored(avs::uid id)
 {
 	//NOTE: Assumes we always are storing meshes in the engineering axes standard.
-	const avs::Mesh* mesh = geometryStore.getMesh(id, avs::AxesStandard::EngineeringStyle);
+	const avs::Mesh* mesh = teleport::GeometryStore::GetInstance().getMesh(id, avs::AxesStandard::EngineeringStyle);
 	return mesh != nullptr;
 }
 
 TELEPORT_EXPORT bool IsMaterialStored(avs::uid id)
 {
-	const avs::Material* material = geometryStore.getMaterial(id);
+	const avs::Material* material = teleport::GeometryStore::GetInstance().getMaterial(id);
 	return material != nullptr;
 }
 
 TELEPORT_EXPORT bool IsTextureStored(avs::uid id)
 {
-	const avs::Texture* texture = geometryStore.getTexture(id);
+	const avs::Texture* texture = teleport::GeometryStore::GetInstance().getTexture(id);
 	return texture != nullptr;
 }
 
 TELEPORT_EXPORT void RemoveNode(avs::uid nodeID)
 {
-	geometryStore.removeNode(nodeID);
+	teleport::GeometryStore::GetInstance().removeNode(nodeID);
 }
 
 TELEPORT_EXPORT avs::Node* getNode(avs::uid nodeID)
 {
-	return geometryStore.getNode(nodeID);
+	return teleport::GeometryStore::GetInstance().getNode(nodeID);
 }
 
 TELEPORT_EXPORT uint64_t GetNumberOfTexturesWaitingForCompression()
 {
-	return static_cast<int64_t>(geometryStore.getNumberOfTexturesWaitingForCompression());
+	return static_cast<int64_t>(teleport::GeometryStore::GetInstance().getNumberOfTexturesWaitingForCompression());
 }
 
 ///TODO: Free memory of allocated string, or use passed in string to return message.
 TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
-	const avs::Texture* texture = geometryStore.getNextCompressedTexture();
+	const avs::Texture* texture = teleport::GeometryStore::GetInstance().getNextCompressedTexture();
 
 	std::wstringstream messageStream;
 	//Write compression message to wide string stream.
@@ -1475,7 +1467,7 @@ TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, u
 
 TELEPORT_EXPORT void CompressNextTexture()
 {
-	geometryStore.compressNextTexture();
+	teleport::GeometryStore::GetInstance().compressNextTexture();
 }
 ///GeometryStore END
 

@@ -114,7 +114,7 @@ void GeometryStreamingService::startStreaming(teleport::CasterContext* context, 
  	avsPipeline.reset(new avs::Pipeline);
 	avsGeometrySource.reset(new avs::GeometrySource);
 	avsGeometryEncoder.reset(new avs::GeometryEncoder);
-	avsGeometrySource->configure(geometryStore, this);
+	avsGeometrySource->configure( this);
 	avsGeometryEncoder->configure(&geometryEncoder);
 
 	avsPipeline->link({ avsGeometrySource.get(), avsGeometryEncoder.get(), casterContext->GeometryQueue.get() });

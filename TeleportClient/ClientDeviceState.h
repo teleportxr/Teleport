@@ -15,13 +15,14 @@ namespace teleport
 			avs::Pose globalPose;
 		};
 		//! The generic state of the client hardware device e.g. headset, controllers etc.
+		//! There exists one of these for each server, plus one for the null server (local state).
 		class ClientServerState
 		{
 		public:
 			// TODO: these are never deleted, only added.
 			static ClientServerState &GetClientServerState(avs::uid u);
 			ClientServerState();
-			avs::Pose originPose;					// in game absolute space.
+			avs::uid origin_node_uid;
 			LocalGlobalPose headPose;
 			teleport::core::Input input;
 			void TransformPose(LocalGlobalPose &p);

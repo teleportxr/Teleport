@@ -71,7 +71,13 @@ void InstanceRenderer::RestoreDeviceObjects(clientrender::RenderPlatform *r)
 }
 
 void InstanceRenderer::InvalidateDeviceObjects()
-{}
+{
+	AVSTextureImpl *ti = (AVSTextureImpl*)instanceRenderState.avsTexture.get();
+	if (ti)
+	{
+		SAFE_DELETE(ti->texture);
+	}
+}
 
 
 
@@ -169,7 +175,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 {
 	auto renderPlatform=deviceContext.renderPlatform;
 
-		clientrender::AVSTextureHandle th = renderState.avsTexture;
+		clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -291,20 +297,10 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	if(renderState.openXR)
 	{
 		avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
-		if(root_node_uid!=0)
-		{
-			std::shared_ptr<clientrender::Node> node=geometryCache.mNodeManager->GetNode(root_node_uid);
-			if(node)
-			{
-				auto pose=clientServerState.originPose;
-				node->SetLocalPosition(pose.position);
-				node->SetLocalRotation(pose.orientation);
-			}
-		}
 	}
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-		renderState.stereoCameraConstants.stereoViewPosition = ((const float*)&clientServerState.headPose.globalPose.position);
-	renderState.cameraConstants.viewPosition = ((const float*)&clientServerState.headPose.globalPose.position);
+		renderState.stereoCameraConstants.stereoViewPosition =renderState.cameraConstants.viewPosition;// ((const float*)&clientServerState.headPose.globalPose.position);
+	//renderState.cameraConstants.viewPosition = ((const float*)&clientServerState.headPose.globalPose.position);
 	
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
@@ -407,12 +403,12 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 
 
 void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext
-	,const std::shared_ptr<clientrender::Node>& node
+	,const std::shared_ptr<clientrender::Node> node
 	,bool force
 	,bool include_children)
 {
 	auto renderPlatform=deviceContext.renderPlatform;
-	clientrender::AVSTextureHandle th = renderState.avsTexture;
+	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -566,9 +562,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				if(double_sided)
 					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
 				else if(negative_scale)
-					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_CLOCKWISE);
-				else
 					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_COUNTERCLOCKWISE);
+				else
+					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_CLOCKWISE);
 				renderPlatform->SetLayout(deviceContext, layout);
 				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
@@ -595,11 +591,11 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 
 
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext
-	,const std::shared_ptr<clientrender::Node>& node
+	,const std::shared_ptr<clientrender::Node> node
 	,bool force)
 {
 	auto renderPlatform=deviceContext.renderPlatform;
-	clientrender::AVSTextureHandle th = renderState.avsTexture;
+	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 	avs::uid node_select=renderState.selected_uid;
@@ -851,12 +847,12 @@ void InstanceRenderer::OnInputsSetupChanged(const std::vector<teleport::core::In
 		renderState.openXR->OnInputsSetupChanged(server_uid,inputDefinitions_);
 }
 
-void InstanceRenderer::SetOrigin(const avs::Pose &p) 
+void InstanceRenderer::SetOrigin(unsigned long long ctr,avs::uid origin_uid) 
 {
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
-	clientServerState.originPose=p;
+	clientServerState.origin_node_uid=origin_uid;
+	receivedInitialPos=ctr;
 }
-
 
 bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const teleport::core::SetupCommand &setupCommand,teleport::core::Handshake &handshake)
 {
@@ -933,7 +929,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	// Top of the clientPipeline.pipeline, we have the network clientPipeline.source.
 	clientPipeline.pipeline.add(&clientPipeline.source);
 
-	AVSTextureImpl* ti = (AVSTextureImpl*)(renderState.avsTexture.get());
+	AVSTextureImpl* ti = (AVSTextureImpl*)(instanceRenderState.avsTexture.get());
 	if (ti)
 	{
 		SAFE_DELETE(ti->texture);
@@ -972,7 +968,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
-	CreateTexture(renderPlatform,renderState.avsTexture, int(stream_width), int(stream_height));
+	CreateTexture(renderPlatform,instanceRenderState.avsTexture, int(stream_width), int(stream_height));
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
@@ -984,7 +980,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	{
 		TELEPORT_CERR << "Failed to configure decoder node!\n";
 	}
-	if (!clientPipeline.surface.configure(renderState.avsTexture->createSurface()))
+	if (!clientPipeline.surface.configure(instanceRenderState.avsTexture->createSurface()))
 	{
 		TELEPORT_CERR << "Failed to configure output surface node!\n";
 	}
@@ -1101,9 +1097,6 @@ void InstanceRenderer::OnVideoStreamClosed()
 	clientPipeline.audioQueue.deconfigure();
 	clientPipeline.geometryQueue.deconfigure();
 
-	//const ovrJava* java = app->GetJava();
-	//java->Env->CallVoidMethod(java->ActivityObject, jni.closeVideoStreamMethod);
-
 	receivedInitialPos = 0;
 }
 
@@ -1152,7 +1145,7 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 	colourOffsetScale.z = 1.0f;
 	colourOffsetScale.w = float(clientPipeline.videoConfig.video_height) / float(stream_height);
 
-	AVSTextureImpl* ti = (AVSTextureImpl*)(renderState.avsTexture.get());
+	AVSTextureImpl* ti = (AVSTextureImpl*)(instanceRenderState.avsTexture.get());
 	// Only create new texture and register new surface if resolution has changed
 	if (ti && ti->texture->GetWidth() != stream_width || ti->texture->GetLength() != stream_height)
 	{
@@ -1163,7 +1156,7 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 			throw std::runtime_error("Failed to unregister decoder surface");
 		}
 
-		CreateTexture(renderPlatform,renderState.avsTexture, int(stream_width), int(stream_height));
+		CreateTexture(renderPlatform,instanceRenderState.avsTexture, int(stream_width), int(stream_height));
 	}
 
 	if (!clientPipeline.decoder.reconfigure((int)stream_width, (int)stream_height, clientPipeline.decoderParams))

@@ -14,7 +14,6 @@ namespace avs
 	struct GeometrySource::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(GeometrySource, PipelineNode)
-		GeometrySourceBackendInterface *m_backend;
 		GeometryRequesterBackendInterface *m_requesterBackend;
 	};
 	struct GeometryTarget::Private final : public PipelineNode::Private

@@ -28,9 +28,7 @@ namespace avs
 		 *  - Result::Node_AlreadyConfigured if has already been configured with a backend.
 		 *  - Result::Mesh_InvalidBackend if backend is nullptr.
 		 */
-		Result configure(GeometrySourceBackendInterface* sourceBackend, GeometryRequesterBackendInterface *req);
-
-		GeometrySourceBackendInterface* getGeometrySourceBackendInterface() const override;
+		Result configure( GeometryRequesterBackendInterface *req);
 
 		GeometryRequesterBackendInterface* getGeometryRequesterBackendInterface() const override;
 

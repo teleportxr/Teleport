@@ -14,6 +14,7 @@
 #include "Light.h"
 #include "IconsForkAwesome.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "InstanceRenderer.h"
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -884,6 +885,12 @@ const char *stringof(avs::GeometryPayloadType t)
 		"Bone"
 	};
 	return txt[(size_t)t];
+}
+
+void Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
+{
+	ImGui::Checkbox("Global Origin Axes",&debugOptions.showAxes);
+	ImGui::Checkbox("Show Stage Space",&debugOptions.showStageSpace);
 }
 
 void Gui::CubemapOSD(crossplatform::Texture *videoTexture)

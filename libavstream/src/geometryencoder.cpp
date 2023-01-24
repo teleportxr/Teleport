@@ -337,7 +337,7 @@ Result GeometryEncoder::Private::process(uint64_t timestamp, GeometrySourceInter
 		}
 	}
 	// Next tell the backend encoder to actually encode. It will store the data for later retrieval.
-	if (Result result = m_backend->encode(timestamp, geometrySourceInterface->getGeometrySourceBackendInterface(),
+	if (Result result = m_backend->encode(timestamp, 
 		geometrySourceInterface->getGeometryRequesterBackendInterface()); !result)
 	{
 		return result;
@@ -364,14 +364,6 @@ Result GeometryEncoder::onInputLink(int slot, PipelineNode* node)
 		return Result::Node_Incompatible;
 	}
 
-#if 0
-	GeometrySourceBackendInterface* mi = meshInterface->getGeometrySourceBackendInterface();
-	if (si && si->getFormat() != d().m_backend->getInputFormat())
-	{
-		AVSLOG(Error) << "GeometryEncoder: Input mesh format is not compatible with GeometryEncoder configuration\n";
-		return Result::Node_Incompatible;
-	}
-#endif
 	return Result::OK;
 }
 

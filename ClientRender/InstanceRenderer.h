@@ -29,6 +29,11 @@
 
 namespace clientrender
 {
+	struct DebugOptions
+	{
+		bool showAxes=false;
+		bool showStageSpace=false;
+	};
 	struct AVSTexture
 	{
 		virtual ~AVSTexture() = default;
@@ -48,7 +53,6 @@ namespace clientrender
 	struct RenderState
 	{
 		teleport::client::OpenXR *openXR=nullptr;
-		AVSTextureHandle avsTexture;
 		avs::uid show_only=0;
 		avs::uid selected_uid=0;
 		bool show_node_overlays			=false;
@@ -100,6 +104,11 @@ namespace clientrender
 		platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 		platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
 	};
+	//! API objects that are per-server.
+	struct InstanceRenderState
+	{
+		AVSTextureHandle avsTexture;
+	};
 	//! Renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
 	class InstanceRenderer:public teleport::client::SessionCommandInterface
@@ -110,6 +119,7 @@ namespace clientrender
 		platform::crossplatform::RenderPlatform* renderPlatform	= nullptr;
 		teleport::client::SessionClient *sessionClient=nullptr;
 		RenderState &renderState;
+		InstanceRenderState instanceRenderState;
 		teleport::client::Config &config;
 		GeometryDecoder &geometryDecoder;
 		static constexpr bool AudioStream	= true;
@@ -137,6 +147,10 @@ namespace clientrender
 		vec3 videoPos;
 		unsigned long long receivedInitialPos = 0;
 	//	unsigned long long receivedRelativePos = 0;
+		InstanceRenderState &GetInstanceRenderState()
+		{
+			return instanceRenderState;
+		}
 	public:
 		InstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,RenderState &renderState,teleport::client::SessionClient *sessionClient);
 		virtual ~InstanceRenderer();
@@ -152,11 +166,11 @@ namespace clientrender
 			,avs::uid this_server_uid);
 
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,const std::shared_ptr<clientrender::Node>& node
+			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false
 			,bool include_children=true);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,const std::shared_ptr<clientrender::Node>& node
+			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false);
 			
 		void ConfigureVideo(const avs::VideoConfig &vc);
@@ -190,6 +204,6 @@ namespace clientrender
 		void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 		void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l) override;
 		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
-		void SetOrigin(const avs::Pose &o) override;
+		void SetOrigin(unsigned long long ctr,avs::uid oorigin_uid) override;
 	};
 }

@@ -134,6 +134,11 @@ GeometryStore::GeometryStore()
 GeometryStore::~GeometryStore()
 {
 }
+ GeometryStore &GeometryStore::GetInstance()
+ {
+	static GeometryStore geometryStore;
+	return geometryStore;
+ }
 
 bool GeometryStore::saveToDisk() const
 {

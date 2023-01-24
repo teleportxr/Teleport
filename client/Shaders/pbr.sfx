@@ -427,7 +427,7 @@ SurfaceState PreprocessSurface(vec3 viewDir,SurfaceProperties surfaceProperties)
 	vec3 F0						= lerp(Fdielectric, surfaceProperties.albedo.rgb, surfaceProperties.metallic);
 	// Angle between surface normal and outgoing light direction.
 	float n_v					=-dot(surfaceProperties.normal,viewDir);
-	float cosLo					= saturate(n_v );
+	float cosLo					= saturate(n_v);
 	surfaceState.F				= FresnelTerm(F0, cosLo);
 	surfaceState.kS				= surfaceState.F;
 	surfaceState.kD				= lerp(vec3(1.0, 1.0, 1.0) - surfaceState.kS, vec3(0.0, 0.0, 0.0), surfaceProperties.metallic);
@@ -588,7 +588,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
 	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
 
-	SurfaceState surfaceState	=PreprocessSurface(view,surfaceProperties);
+	SurfaceState surfaceState		=PreprocessSurface(view,surfaceProperties);
 	//int id						=int(TagDataIDBuffer[0].x);
 	//VideoTagDataCube tagData		=TagDataCubeBuffer[id];
 
@@ -615,7 +615,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	vec4 u				=	vec4(c+emissive,alpha);
 	//if(lightmap)
 	//u.rgb=normal.xyz;
-//	u.rgb=normal.xyz;
+	//u.rgb=viewPosition.xyz;
 	return u;
 }
 
@@ -677,18 +677,18 @@ vec4 DebugNormal(vertexOutput IN, int swizzle_mode)
 	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).rgb;
 	normalLookup		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
 	vec3 normal = normalize(mul(normalLookup, TangentMatrix));
-	normal = (normal + vec3(1.0f, 1.0f, 1.0f)) / 2.0f;
+//	normal = (normal + vec3(1.0f, 1.0f, 1.0f)) / 2.0f;
 
 	switch(swizzle_mode)
 	{
 		case 1: return vec4(normal.yxz, 1.0f); //Unreal-Swizzled
 		case 2: return vec4(normal.xzy, 1.0f); //Unity-Swizzled
-		case 3: return vec4(IN.normal.xyz, 1.0f); // Vertex normals unswizzled
-		default: return vec4(normalLookup.xyz, 1.0f); //Unswizzled
+		case 3: return vec4(IN.normal.xyz, 1.0f); // Vertex normals 
+		default: return vec4(normal.xyz, 1.0f); 
 	}
 }
 
-shader vec4 PS_DebugNormal_Unswizzled(vertexOutput IN) : SV_TARGET
+shader vec4 PS_DebugNormals(vertexOutput IN) : SV_TARGET
 {
 	return DebugNormal(IN, 0);
 }
@@ -819,7 +819,7 @@ PixelShader ps_depth = CompileShader(ps_5_0, PS_Depth());
 
 //Debug renders.
 PixelShader ps_solid_albedo_only = CompileShader(ps_5_0, PS_Solid_AlbedoOnly()); //Albedo only view
-PixelShader ps_debug_normal_unswizzled = CompileShader(ps_5_0, PS_DebugNormal_Unswizzled()); //Unswizzled Normal view
+PixelShader ps_debug_normals = CompileShader(ps_5_0, PS_DebugNormals()); // Normal view
 PixelShader ps_debug_anim = CompileShader(ps_5_0, PS_DebugAnim()); //Unreal-basis normal viewdebug_lightmaps
 PixelShader ps_debug_lightmaps = CompileShader(ps_5_0, PS_DebugLightmaps()); //Unreal-basis normal view
 PixelShader ps_debug_normal_unity = CompileShader(ps_5_0, PS_DebugNormal_Unity()); //Unity-basis normal view
@@ -874,7 +874,6 @@ technique solid
 	}
 	pass depth 
 	{
-		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
@@ -892,7 +891,6 @@ technique solid
 	}
 	pass pbr_nolightmap
 	{
-		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid);
@@ -908,14 +906,14 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
-	pass normal_unswizzled
+	pass normals
 	{
 		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_solid);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unswizzled);
+		SetPixelShader(ps_debug_normals);
 	}
 	pass debug_lightmaps
 	{
@@ -1020,14 +1018,14 @@ technique solid_anim
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
-	pass normal_unswizzled
+	pass normals
 	{
 		
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShader(vs_anim);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unswizzled);
+		SetPixelShader(ps_debug_normals);
 	}
 	pass debug_anim
 	{
@@ -1105,14 +1103,14 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
-	pass normal_unswizzled
+	pass normals
 	{
 		
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_solid_mv);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unswizzled);
+		SetPixelShader(ps_debug_normals);
 	}
 	pass debug_lightmaps
 	{
@@ -1238,14 +1236,14 @@ technique solid_anim_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_albedo_only);
 	}
-	pass normal_unswizzled
+	pass normals
 	{
 		
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unswizzled);
+		SetPixelShader(ps_debug_normals);
 	}
 	pass debug_anim
 	{

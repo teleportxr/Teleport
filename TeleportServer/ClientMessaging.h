@@ -74,7 +74,7 @@ namespace teleport
 		bool hasPeer() const;
 		bool hasReceivedHandshake() const;
 
-		bool setOrigin(uint64_t valid_counter,avs::uid originNode,const avs::vec3 &pos,const avs::vec4 &orientation);
+		bool setOrigin(uint64_t valid_counter,avs::uid originNode);
 		template<typename C> bool sendCommand(const C& command) const
 		{
 			if(!peer)

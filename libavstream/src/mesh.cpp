@@ -23,17 +23,13 @@ GeometrySource::GeometrySource()
 	: PipelineNode(new GeometrySource::Private(this))
 {}
 
-GeometrySourceBackendInterface* GeometrySource::getGeometrySourceBackendInterface() const
-{
-	return d().m_backend;
-}
 
 GeometryRequesterBackendInterface* GeometrySource::getGeometryRequesterBackendInterface() const
 {
 	return d().m_requesterBackend;
 }
 
-Result GeometrySource::configure(GeometrySourceBackendInterface* sourceBackend,GeometryRequesterBackendInterface *req)
+Result GeometrySource::configure(GeometryRequesterBackendInterface *req)
 {
 	if (d().m_requesterBackend)
 	{
@@ -41,11 +37,6 @@ Result GeometrySource::configure(GeometrySourceBackendInterface* sourceBackend,G
 		if (deconf_res != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
-	if (!sourceBackend)
-	{
-		return Result::Surface_InvalidBackend;
-	}
-	d().m_backend= sourceBackend;
 	d().m_requesterBackend = req;
 	setNumSlots(1, 1);
 	return Result::OK;
@@ -53,12 +44,11 @@ Result GeometrySource::configure(GeometrySourceBackendInterface* sourceBackend,G
 
 Result GeometrySource::deconfigure()
 {
-	if (!d().m_backend&&!d().m_requesterBackend)
+	if (!d().m_requesterBackend)
 	{
 		return Result::Node_NotConfigured;
 	}
 
-	d().m_backend = nullptr;
 	d().m_requesterBackend = nullptr;
 	setNumSlots(0, 0);
 	return Result::OK;

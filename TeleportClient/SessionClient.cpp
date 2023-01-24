@@ -134,7 +134,7 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 	}
 
 	handshakeAcknowledged = false;
-	receivedInitialPos = false;
+	receivedInitialPos = 0;
 	if (resetClientID)
 	{
 		clientID = 0;
@@ -244,11 +244,6 @@ std::string SessionClient::GetServerIP() const
 	return remoteIP;
 }
 
-avs::Pose SessionClient::GetOriginPose() const
-{
-	return originPose;
-}
-
 void SessionClient::DispatchEvent(const ENetEvent& event)
 {
 	switch(event.channelID)
@@ -281,7 +276,7 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 		case teleport::core::CommandPayloadType::ReconfigureVideo:
 			ReceiveVideoReconfigureCommand(packet);
 			break;
-		case teleport::core::CommandPayloadType::SetPosition:
+		case teleport::core::CommandPayloadType::SetStageSpaceOriginNode:
 			ReceivePositionUpdate(packet);
 			break;
 		case teleport::core::CommandPayloadType::NodeVisibility:
@@ -653,17 +648,15 @@ void SessionClient::ReceiveVideoReconfigureCommand(const ENetPacket* packet)
 
 void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(teleport::core::SetPositionCommand);
+	size_t commandSize = sizeof(teleport::core::SetStageSpaceOriginNodeCommand);
 
-	teleport::core::SetPositionCommand command;
+	teleport::core::SetStageSpaceOriginNodeCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
 
 	if(command.valid_counter > receivedInitialPos)
 	{
 		receivedInitialPos = command.valid_counter;
-		originPose.position = command.origin_pos;
-		originPose.orientation = command.orientation;
-		mCommandInterface->SetOrigin(originPose);
+		mCommandInterface->SetOrigin(command.valid_counter,command.origin_node);
 	}
 }
 

@@ -23,7 +23,7 @@ ClientServerState::ClientServerState()
 
 void ClientServerState::TransformPose(LocalGlobalPose &p)
 {
-	clientrender::quat stickRotateQ = originPose.orientation;// (stickYaw, avs::vec3(0, 1.0f, 0));
+/*	clientrender::quat stickRotateQ = originPose.orientation;
 	clientrender::quat localQ=*((clientrender::quat*)(&p.localPose.orientation));
 	clientrender::quat globalQ=(stickRotateQ*localQ);
 	p.globalPose.orientation=*((avs::vec4*)&globalQ);
@@ -33,14 +33,14 @@ void ClientServerState::TransformPose(LocalGlobalPose &p)
 	localP.s=0;
 	clientrender::quat globalP=(stickRotateQ*localP)*(stickRotateQ.Conjugate());
 	p.globalPose.position=avs::vec3(globalP.i,globalP.j,globalP.k);
-	p.globalPose.position+=originPose.position;
+	p.globalPose.position+=originPose.position;*/
 }
 
 void ClientServerState::SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q)
 {
 	headPose.localPose.orientation=*((const avs::vec4 *)(&q));
 	headPose.localPose.position=pos;
-	TransformPose(headPose);
+	//TransformPose(headPose);
 }
 
 void ClientServerState::SetInputs( const teleport::core::Input& st)

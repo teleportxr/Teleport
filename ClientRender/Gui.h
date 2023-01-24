@@ -11,6 +11,10 @@
 struct ANativeWindow;
 #endif
 #include <client/Shaders/video_types.sl>
+namespace clientrender
+{
+	struct DebugOptions;
+}
 namespace teleport
 {
 	namespace client
@@ -49,6 +53,7 @@ namespace teleport
 		void NodeTree(const clientrender::NodeManager::nodeList_t&);
 		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
 		void TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
+		void DebugPanel(clientrender::DebugOptions &debugOptions);
 		void GeometryOSD();
 		void Scene();
 		bool Tab(const char *txt);

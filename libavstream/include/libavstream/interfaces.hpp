@@ -11,7 +11,6 @@ namespace avs
 
 class PipelineNode;
 class SurfaceBackendInterface;
-class GeometrySourceBackendInterface;
 class GeometryTargetBackendInterface;
 class GeometryEncoderBackendInterface;
 class GeometryDecoderBackendInterface;
@@ -118,8 +117,7 @@ class AVSTREAM_API GeometrySourceInterface
 public:
 	virtual ~GeometrySourceInterface() = default;
 
-	/*! Get surface backend associated with this node. */
-	virtual GeometrySourceBackendInterface* getGeometrySourceBackendInterface() const = 0;
+	/*! Get  backend associated with this node. */
 	virtual GeometryRequesterBackendInterface* getGeometryRequesterBackendInterface() const = 0;
 };
 

@@ -678,22 +678,10 @@ namespace avs
 	//! Common mesh backend interface.
 	//! Mesh backend abstracts mesh definition.
 	//! We aim to follow the glTF format as a starting point https://www.khronos.org/gltf/
-	class AVSTREAM_API GeometrySourceBackendInterface : public UseInternalAllocator
+	/*class AVSTREAM_API GeometrySourceBackendInterface : public UseInternalAllocator
 	{
 	public:
 		virtual ~GeometrySourceBackendInterface() = default;
-
-		//! A PipelineNode has a transform, and MAY contain an instance of a mesh.
-		virtual std::vector<uid> getNodeIDs() const = 0;
-		//! If it exists, get the name of the node, otherwise an empty string.
-		virtual const char* getNodeName(avs::uid nodeID) const =0;
-		//Get node with passed ID.
-		//	nodeID : Indentifier of the node.
-		//Returns the node if successfully found, otherwise nullptr.
-		virtual Node* getNode(uid nodeID) = 0;
-		virtual const Node* getNode(uid nodeID) const = 0;
-		//! Nodes make up the hierarchy of the scene
-		virtual const std::map<uid, Node>& getNodes() const = 0;
 
 		//Get IDs of all meshes stored.
 		virtual std::vector<uid> getMeshIDs() const = 0;
@@ -733,7 +721,7 @@ namespace avs
 		//Returns the shadow map if successfully found, otherwise nullptr.
 		virtual Texture* getShadowMap(uid shadowID) = 0;
 		virtual const Texture* getShadowMap(uid shadowID) const = 0;
-	};
+	};*/
 	//! This tells the Geometry Source node what it wants from the Geometry Source backend
 	//! so the node can acquire the data to be sent for encoding.
 	class AVSTREAM_API GeometryRequesterBackendInterface : public UseInternalAllocator
@@ -770,7 +758,7 @@ namespace avs
 	{
 	public:
 		virtual ~GeometryEncoderBackendInterface() = default;
-		virtual Result encode(uint64_t timestamp, GeometrySourceBackendInterface* target, GeometryRequesterBackendInterface* requester) = 0;
+		virtual Result encode(uint64_t timestamp, GeometryRequesterBackendInterface* requester) = 0;
 		virtual Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual Result unmapOutputBuffer() = 0;
 		virtual void setMinimumPriority(int32_t) =0;

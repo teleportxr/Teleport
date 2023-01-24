@@ -503,17 +503,12 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << "\n";
 }
 
-bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode, const avs::vec3& pos, const avs::vec4& orientation)
+bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 {
-	teleport::core::SetPositionCommand setp;
+	teleport::core::SetStageSpaceOriginNodeCommand setp;
 	if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
 	{
-		avs::vec3 p = pos;
-		avs::ConvertPosition(settings->serverAxesStandard, casterContext->axesStandard, p);
 		setp.origin_node=originNode;
-		setp.origin_pos = p;
-		setp.orientation = orientation;
-		avs::ConvertRotation(settings->serverAxesStandard, casterContext->axesStandard, setp.orientation);
 		setp.valid_counter = valid_counter;
 		return sendCommand(setp);
 	}

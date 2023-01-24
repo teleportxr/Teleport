@@ -41,7 +41,7 @@ namespace teleport
 			virtual void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) =0;
 			virtual void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& ) =0;
 			virtual void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &,const std::string &)=0;
-			virtual void SetOrigin(const avs::Pose &origin_pose)=0;
+			virtual void SetOrigin(unsigned long long ctr,avs::uid origin_node_uid)=0;
 
 			virtual std::vector<avs::uid> GetGeometryResources() = 0;
 			virtual void ClearGeometryResources() = 0;
@@ -95,8 +95,6 @@ namespace teleport
 			int GetPort() const;
 
 			unsigned long long receivedInitialPos = 0;
-
-			avs::Pose GetOriginPose() const;
 
 			uint64_t GetClientID() const
 			{
@@ -164,8 +162,6 @@ namespace teleport
 			std::map<avs::uid, double> mSentResourceRequests;	/// <ID of requested resource, time we sent the request> Resource requests we have received, but have yet to receive confirmation of their receipt.
 			std::vector<avs::uid> mReceivedNodes;				/// Nodes that have entered bounds, are about to be drawn, and need to be confirmed to the server.
 			std::vector<avs::uid> mLostNodes;					/// Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
-
-			avs::Pose originPose;
 
 			uint64_t clientID=0;
 

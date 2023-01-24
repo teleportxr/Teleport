@@ -12,12 +12,13 @@
 namespace teleport
 {
 	//! Singleton for storing geometry data and managing the geometry file cache.
-	class GeometryStore: public avs::GeometrySourceBackendInterface
+	class GeometryStore
 	{
 	public:
 		GeometryStore();
 		~GeometryStore();
-
+		
+		static GeometryStore &GetInstance();
 		bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
 
 		//Checks and sets the global cache path for the project. Returns true if path is valid.
@@ -32,38 +33,38 @@ namespace teleport
 
 		void setCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality);
 		
-		const char* getNodeName(avs::uid nodeID) const override;
+		const char* getNodeName(avs::uid nodeID) const ;
 
-		virtual std::vector<avs::uid> getNodeIDs() const override;
-		virtual avs::Node* getNode(avs::uid nodeID) override;
-		virtual const avs::Node* getNode(avs::uid nodeID) const override;
-		virtual const std::map<avs::uid, avs::Node>& getNodes() const override;
+		std::vector<avs::uid> getNodeIDs() const;
+		avs::Node* getNode(avs::uid nodeID) ;
+		const avs::Node* getNode(avs::uid nodeID) const ;
+		const std::map<avs::uid, avs::Node>& getNodes() const;
 
-		virtual avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) override;
-		virtual const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const override;
+		avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard);
+		const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const;
 
-		virtual avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) override;
-		virtual const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const override;
+		avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard);
+		const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const;
 
-		virtual std::vector<avs::uid> getMeshIDs() const override;
+		std::vector<avs::uid> getMeshIDs() const;
 		
 		const ExtractedMesh* getExtractedMesh(avs::uid meshID, avs::AxesStandard standard) const;
 
-		const avs::CompressedMesh* getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const override;
-		virtual avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) override;
-		virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const override;
+		const avs::CompressedMesh* getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const;
+		virtual avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard);
+		virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const;
 
-		virtual std::vector<avs::uid> getTextureIDs() const override;
-		virtual avs::Texture* getTexture(avs::uid textureID) override;
-		virtual const avs::Texture* getTexture(avs::uid textureID) const override;
+		virtual std::vector<avs::uid> getTextureIDs() const;
+		virtual avs::Texture* getTexture(avs::uid textureID);
+		virtual const avs::Texture* getTexture(avs::uid textureID) const;
 
-		virtual std::vector<avs::uid> getMaterialIDs() const override;
-		virtual avs::Material* getMaterial(avs::uid materialID) override;
-		virtual const avs::Material* getMaterial(avs::uid materialID) const override;
+		virtual std::vector<avs::uid> getMaterialIDs() const;
+		virtual avs::Material* getMaterial(avs::uid materialID);
+		virtual const avs::Material* getMaterial(avs::uid materialID) const;
 
-		virtual std::vector<avs::uid> getShadowMapIDs() const override;
-		virtual avs::Texture* getShadowMap(avs::uid shadowID) override;
-		virtual const avs::Texture* getShadowMap(avs::uid shadowID) const override;
+		virtual std::vector<avs::uid> getShadowMapIDs() const;
+		virtual avs::Texture* getShadowMap(avs::uid shadowID);
+		virtual const avs::Texture* getShadowMap(avs::uid shadowID) const;
 
 		//Returns a list of all light nodes that need to be streamed to the client.
 		const std::map<avs::uid,avs::LightNodeResources>& getLightNodes() const;

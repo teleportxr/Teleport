@@ -271,7 +271,8 @@ namespace avs
 		None,
 		Mesh,
 		Light,
-		Bone
+		Bone,
+		TextCanvas
 	};
 
 	//! Identifies special use-cases for a locally-controlled node, used in UpdateNodeSubtypeCommand.

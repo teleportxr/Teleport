@@ -58,10 +58,10 @@ namespace teleport
 			bool validClientSettings = false;
 			bool videoKeyframeRequired = false;
 
-			bool setOrigin(uint64_t ctr,avs::uid uid,avs::vec3 pos,avs::vec4 orientation);
+			bool setOrigin(uint64_t ctr,avs::uid uid);
 			bool isConnected() const;
 			bool hasOrigin() const;
-			avs::vec3 getOrigin() const;
+			avs::uid getOrigin() const;
 
 			void setGlobalIlluminationTextures(size_t num, const avs::uid *uids);
 			const std::vector<avs::uid> &getGlobalIlluminationTextures() const
@@ -70,7 +70,7 @@ namespace teleport
 			}
 		protected:
 			mutable bool _hasOrigin=false;
-			avs::vec3 originClientHas;
+			avs::uid originClientHas=0;
 			std::vector<avs::uid> global_illumination_texture_uids;
 			struct NodeSubtypeState
 			{

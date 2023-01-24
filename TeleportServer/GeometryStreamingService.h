@@ -11,7 +11,7 @@
 #include "GeometryEncoder.h"
 #include "GeometryStore.h"
 
-extern teleport::GeometryStore geometryStore;
+ 
 namespace teleport
 {
 	//! This per-client class tracks the resources and nodes that the client needs,
@@ -94,7 +94,7 @@ namespace teleport
 		PluginGeometryStreamingService(const struct ServerSettings* serverSettings)
 			:teleport::GeometryStreamingService(serverSettings)
 		{
-			this->geometryStore = &::geometryStore;
+			this->geometryStore = &teleport::GeometryStore::GetInstance();
 		}
 		virtual ~PluginGeometryStreamingService() = default;
 		

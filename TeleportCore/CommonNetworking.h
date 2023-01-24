@@ -53,7 +53,7 @@ namespace teleport
 			Setup,
 			AcknowledgeHandshake,
 			ReconfigureVideo,
-			SetPosition,
+			SetStageSpaceOriginNode,
 			NodeVisibility,
 			UpdateNodeMovement,
 			UpdateNodeEnabledState,
@@ -222,18 +222,15 @@ namespace teleport
 		} AVS_PACKED;
 
 		//! Sent from server to client to set the origin of the client's space.
-		struct SetPositionCommand : public Command
+		struct SetStageSpaceOriginNodeCommand : public Command
 		{
-			SetPositionCommand() : Command(CommandPayloadType::SetPosition) {}
+			SetStageSpaceOriginNodeCommand() : Command(CommandPayloadType::SetStageSpaceOriginNode) {}
 
 			static size_t getCommandSize()
 			{
-				return sizeof(SetPositionCommand);
+				return sizeof(SetStageSpaceOriginNodeCommand);
 			}
 			avs::uid		origin_node=0;
-			// TODO: replace these with a Pose.
-			avs::vec3			origin_pos;			//!< Position of the origin in world space.
-			avs::vec4			orientation;			//!< Orientation of the origin in world space.
 			//!< A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 			uint64_t		valid_counter = 0;
 		} AVS_PACKED;

@@ -7,7 +7,6 @@ ClientData::ClientData(  std::shared_ptr<teleport::ClientMessaging> clientMessag
 {
 	videoEncodePipeline = std::make_shared<VideoEncodePipeline>();
 	audioEncodePipeline = std::make_shared<AudioEncodePipeline>();
-	originClientHas.x = originClientHas.y = originClientHas.z = 0.f;
 	memset(&clientSettings,0,sizeof(clientSettings));
 }
 
@@ -30,7 +29,7 @@ void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	setupCommand.control_model = serverSettings.controlModel;
-	setupCommand.bodyOffsetFromHead = clientSettings.bodyOffsetFromHead;
+	//setupCommand.bodyOffsetFromHead = clientSettings.bodyOffsetFromHead;
 	setupCommand.startTimestamp_utc_unix_ms = getUnixTimestamp();
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings.backgroundMode;
@@ -117,16 +116,16 @@ void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefi
 	inputDefinitions = inputDefs;
 }
 
-bool ClientData::setOrigin(uint64_t ctr,avs::uid uid,avs::vec3 pos,avs::vec4 orientation)
+bool ClientData::setOrigin(uint64_t ctr,avs::uid uid)
 {
 	if(clientMessaging->hasPeer()&& clientMessaging->hasReceivedHandshake())
 	{
-		if(clientMessaging->setOrigin(ctr,uid,pos,orientation))
+		if(clientMessaging->setOrigin(ctr,uid))
 		{
 		// ASSUME the message was received...
 		// TODO: Only set this when client confirms.
 			_hasOrigin=true;
-			originClientHas=pos;
+			originClientHas=uid;
 			return true;
 		}
 	}
@@ -152,7 +151,7 @@ bool ClientData::hasOrigin() const
 	return false;
 }
 
-avs::vec3 ClientData::getOrigin() const
+avs::uid ClientData::getOrigin() const
 {
 	return originClientHas;
 }

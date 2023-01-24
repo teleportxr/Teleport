@@ -318,7 +318,6 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	localGeometryCache.setCacheFolder(config.GetStorageFolder());
 
 	GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
-	
 }
 
 // This allows live-recompile of shaders. 
@@ -399,11 +398,6 @@ void Renderer::RemoveInstanceRenderer(avs::uid server_uid)
 
 void Renderer::InvalidateDeviceObjects()
 {
-	AVSTextureImpl *ti = (AVSTextureImpl*)renderState.avsTexture.get();
-	if (ti)
-	{
-		SAFE_DELETE(ti->texture);
-	}
 	for(auto i:instanceRenderers)
 		i.second->InvalidateDeviceObjects();
 	text3DRenderer.InvalidateDeviceObjects();
@@ -463,13 +457,11 @@ void Renderer::FillInControllerPose(int index, float offset)
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
-	vec3 local_controller_dir = { 0,1.f,0 };
-		const avs::Pose &headPose=renderState.openXR->GetHeadPose_StageSpace();
+	const avs::Pose &headPose=renderState.openXR->GetHeadPose_StageSpace();
 	crossplatform::Quaternionf q = (const float*)(&headPose.orientation);
-	Rotate(local_controller_dir,q, local_controller_dir);
-	float azimuth	= atan2f(-local_controller_dir.x, local_controller_dir.y);
+	float azimuth	= angle;
 	static float elev_mult=1.2f;
-	float elevation	= elev_mult*(y-0.5f);//-asin(local_controller_dir.z);
+	float elevation	= elev_mult*(y-0.5f);
 	q.Reset();
 	q.Rotate(elevation,vec3(-1.0f, 0, 0));
 	q.Rotate(azimuth,vec3(0,0,1.0f));
@@ -511,6 +503,21 @@ void SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const av
 		}
 	}	
 }
+
+avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
+{
+	avs::Pose origin_pose;
+	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
+	if(origin_node)
+	{
+		origin_pose.position=origin_node->GetGlobalPosition();
+		origin_pose.orientation=*((avs::vec4*)&origin_node->GetGlobalRotation());
+	}
+
+	return origin_pose;
+}
+
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
@@ -534,9 +541,21 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 		// Init the viewstruct in global space - i.e. with the server offsets.
-		SetRenderPose(deviceContext, clientServerState.originPose);
-		GetInstanceRenderer(server_uid)->RenderView(deviceContext);
+		avs::Pose origin_pose;
+		std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
+		if(origin_node)
+		{
+			origin_pose.position=origin_node->GetGlobalPosition();
+			origin_pose.orientation=*((avs::vec4*)&origin_node->GetGlobalRotation());
+			SetRenderPose(deviceContext,GetOriginPose(server_uid));
+			GetInstanceRenderer(server_uid)->RenderView(deviceContext);
 
+			if(debugOptions.showAxes)
+			{
+				renderPlatform->DrawAxes(deviceContext,mat4::identity(),2.0f);
+			}
+
+		}
 	}
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	// Init the viewstruct in local space - i.e. with no server offsets.
@@ -577,10 +596,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		avs::Pose rightHand = r->second.pose_footSpace.pose;
 		avs::vec3 pos = LocalToGlobal(rightHand,*((avs::vec3*)&index_finger_offset));
-		/*if(multiview)
-			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "R", (const float*)&white);
-		else
-			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "R", (const float*)&white);*/
 		vec4 pos4;
 		pos4.xyz = (const float*)&pos;
 		pos4.w = 0.0f;
@@ -593,20 +608,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	gui.Render(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
 	auto sessionClient=GetSessionClient(server_uid);
-	if (!sessionClient->IsConnected()|| gui.HasFocus()||config.options.showGeometryOffline)
+	if (!sessionClient->IsConnected()||gui.HasFocus()||config.options.showGeometryOffline)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
-	}
-	// We must deactivate the depth buffer here, in order to use it as a texture:
-	//renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
-	if (show_video)
-	{
-		int W = renderState.hdrFramebuffer->GetWidth();
-		int H = renderState.hdrFramebuffer->GetHeight();
-		AVSTextureImpl* ti = (AVSTextureImpl*)(renderState.avsTexture.get());
-		if (ti)
-			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
 	}
 	
 	renderState.pbrEffect->UnbindTextures(deviceContext);
@@ -623,8 +628,8 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 		case ShaderMode::ALBEDO:
 			renderState.overridePassName = "albedo_only";
 			break;
-		case ShaderMode::NORMAL_UNSWIZZLED:
-			renderState.overridePassName = "normal_unswizzled";
+		case ShaderMode::NORMALS:
+			renderState.overridePassName = "normals";
 			break;
 		case ShaderMode::DEBUG_ANIM:
 			renderState.overridePassName = "debug_anim";
@@ -693,6 +698,17 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	
 #endif
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+	if (renderState.openXR)
+	{
+		const teleport::core::Input& local_inputs=renderState.openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
+		HandleLocalInputs(local_inputs);
+		have_vr_device=renderState.openXR->HaveXRDevice();
+		if (have_headset)
+		{
+			const avs::Pose &headPose_stageSpace=renderState.openXR->GetHeadPose_StageSpace();
+			clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, headPose_stageSpace.orientation);
+		}
+	}
 	if (!have_headset)
 	{
 		static float spd = 0.5f;
@@ -717,18 +733,6 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		clientServerState.SetHeadPose_StageSpace(*((avs::vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
 		const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
 		clientServerState.SetInputs( inputs);
-
-	}
-	if (renderState.openXR)
-	{
-		const teleport::core::Input& local_inputs=renderState.openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
-		HandleLocalInputs(local_inputs);
-		have_vr_device=renderState.openXR->HaveXRDevice();
-		if (have_headset)
-		{
-			const avs::Pose &headPose_stageSpace=renderState.openXR->GetHeadPose_StageSpace();
-			clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, headPose_stageSpace.orientation);
-		}
 	}
 	// Handle networked session.
 	auto sessionClient=GetSessionClient(server_uid);
@@ -737,8 +741,6 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	{
 		auto instanceRenderer=GetInstanceRenderer(server_uid);
 		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())};
-	
-
 		const auto &nodePoses=renderState.openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
 		
 		if (renderState.openXR)
@@ -746,15 +748,14 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientServerState.SetInputs(inputs);
 		}
-		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, clientServerState.originPose,
+		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
 			clientServerState.input,instanceRenderer->clientPipeline.decoder.idrRequired(),fTime, time_step);
 
-		if(instanceRenderer->receivedInitialPos != sessionClient->receivedInitialPos)
+	/*	if(instanceRenderer->receivedInitialPos != sessionClient->receivedInitialPos)
 		{
-			clientServerState.originPose = sessionClient->GetOriginPose();
 			instanceRenderer->receivedInitialPos = sessionClient->receivedInitialPos;
 			clientServerState.UpdateGlobalPoses();
-		}
+		}*/
 		
 		
 		avs::Result result = instanceRenderer->clientPipeline.pipeline.process();
@@ -907,7 +908,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			ChangePass(clientrender::ShaderMode::ALBEDO);
 			break;
 		case VK_NUMPAD4: //Display normals for native PC client frame-of-reference.
-			ChangePass(clientrender::ShaderMode::NORMAL_UNSWIZZLED);
+			ChangePass(clientrender::ShaderMode::NORMALS);
 			break;
 		case VK_NUMPAD5: //Display normals swizzled for matching Unreal output.
 			ChangePass(clientrender::ShaderMode::DEBUG_ANIM);
@@ -1117,17 +1118,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
-	//renderPlatform->DrawDepth(deviceContext, 0, 0, (256 * viewport.w)/ viewport.h, 256, renderState.hdrFramebuffer->GetDepthTexture());
-	if (show_video)
-	{
-		clientrender::AVSTextureHandle th = renderState.avsTexture;
-		clientrender::AVSTexture& tx = *th;
-		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-		int W = renderState.hdrFramebuffer->GetWidth();
-		int H = renderState.hdrFramebuffer->GetHeight();
-		if(ti)
-			renderPlatform->DrawTexture(deviceContext, 0, 0, W, H, ti->texture);
-	}
 	static int lod = 0;
 	static int tt = 1000;
 	tt--;
@@ -1322,7 +1312,12 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		, sc->GetClientID(),sc->GetServerIP().c_str(),sc->GetPort()):
 		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
 	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
-
+	
+	if(gui.Tab("Debug"))
+	{
+		gui.DebugPanel(debugOptions);
+		gui.EndTab();
+	}
 	if(gui.Tab("Network"))
 	{
 		gui.LinePrint(platform::core::QuickFormat("Start timestamp: %d", instanceRenderer->clientPipeline.pipeline.GetStartTimestamp()));
@@ -1343,7 +1338,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 		vec3 offset=camera.GetPosition();
-		gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", clientServerState.originPose.position.x, clientServerState.originPose.position.y, clientServerState.originPose.position.z)):"Origin:", white);
+		auto originPose=GetOriginPose(server_uid);
+		gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z)):"Origin:", white);
 		gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
 		gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
 		if (instanceRenderer->videoPosDecoded)
@@ -1358,13 +1354,17 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Video"))
 	{
-		clientrender::AVSTextureHandle th = renderState.avsTexture;
-		clientrender::AVSTexture& tx = *th;
-		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-		if(ti)
+		std::shared_ptr<clientrender::InstanceRenderer> r=GetInstanceRenderer(server_uid);
+		if(r)
 		{
-			gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
-			gui.DrawTexture(ti->texture);
+			clientrender::AVSTextureHandle th = r->GetInstanceRenderState().avsTexture;
+			clientrender::AVSTexture& tx = *th;
+			AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+			if(ti)
+			{
+				gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+				gui.DrawTexture(ti->texture);
+			}
 		}
 		gui.EndTab();
 	}

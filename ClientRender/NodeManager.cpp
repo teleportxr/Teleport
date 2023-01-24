@@ -15,9 +15,10 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
+	mutex_nodes.lock();
 	//TELEPORT_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
-	RemoveNode(node->id);
+//	RemoveNode(node->id);
 	node->SetChildrenIDs(avsNode.childrenIDs);
 	// if !always_render...?
 	{
@@ -104,7 +105,8 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetHolderClientId(avsNode.holder_client_id);
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
-
+	
+	mutex_nodes.unlock();
 }
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
@@ -114,6 +116,7 @@ void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 {
+	mutex_nodes.lock();
 	//Remove node from parent's child list.
 	std::shared_ptr<Node> parent = node->GetParent().lock();
 	if(parent)
@@ -148,6 +151,7 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 
 	//Remove from node lookup table.
 	nodeLookup.erase(node->id);
+	mutex_nodes.unlock();
 }
 
 void NodeManager::RemoveNode(avs::uid nodeID)
@@ -417,8 +421,9 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 
 void NodeManager::Update(float deltaTime)
 {
+	mutex_nodes.lock();
 	nodeList_t expiredNodes;
-	for(const std::shared_ptr<Node>& node : rootNodes)
+	for(const std::shared_ptr<Node> node : rootNodes)
 	{
 		node->Update(deltaTime);
 	}
@@ -427,7 +432,7 @@ void NodeManager::Update(float deltaTime)
 		auto n=nodeLookup.find(u);
 		if(n!=nodeLookup.end())
 		{
-			std::shared_ptr<Node>& node =n->second;
+			std::shared_ptr<Node> node =n->second;
 			if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
 			{
 				expiredNodes.push_back(node);
@@ -441,8 +446,9 @@ void NodeManager::Update(float deltaTime)
 		RemoveNode(node);
 		removed_node_uids.insert(node->id);
 	}
-
+	mutex_nodes.unlock();
 }
+
 const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
 {
 	return removed_node_uids;
