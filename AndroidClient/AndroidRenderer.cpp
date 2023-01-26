@@ -60,8 +60,8 @@ void AndroidInstanceRenderer::RenderView(platform::crossplatform::GraphicsDevice
 	clientrender::InstanceRenderer::RenderView(deviceContext);
 }
 
-AndroidRenderer::AndroidRenderer(teleport::Gui &g,teleport::client::Config &config)
-	:Renderer(g,config)
+AndroidRenderer::AndroidRenderer(teleport::Gui &g)
+	:Renderer(g)
 {
 }
 
@@ -71,7 +71,7 @@ AndroidRenderer::~AndroidRenderer()
 
 std::shared_ptr<clientrender::InstanceRenderer> AndroidRenderer::GetInstanceRenderer(avs::uid server_uid)
 {
-	auto sc=GetSessionClient(server_uid);
+	auto sc=client::SessionClient::GetSessionClient(server_uid);
 	auto i=instanceRenderers.find(server_uid);
 	if(i==instanceRenderers.end())
 	{

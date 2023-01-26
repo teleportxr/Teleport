@@ -22,7 +22,7 @@ namespace teleport
 		class AndroidRenderer : public clientrender::Renderer
 		{
 		public:
-			AndroidRenderer(teleport::Gui &g,teleport::client::Config &config);
+			AndroidRenderer(teleport::Gui &g);
 			virtual ~AndroidRenderer();
 		protected:
 			std::shared_ptr<clientrender::InstanceRenderer> GetInstanceRenderer(avs::uid server_uid) override;

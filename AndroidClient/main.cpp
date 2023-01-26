@@ -161,17 +161,17 @@ void android_main(struct android_app* app)
 	teleport::android::FileLoader androidFileLoader;
 	androidFileLoader.SetAndroid_AAssetManager(app->activity->assetManager);
 	platform::core::FileLoader::SetFileLoader(&androidFileLoader);
-	clientApp.config.SetStorageFolder(app->activity->internalDataPath);
+	auto &config=client::Config::GetInstance();
+	config.SetStorageFolder(app->activity->internalDataPath);
 	clientApp.Initialize();
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
 	gui.SetPlatformWindow(app->window);
-	gui.SetConfig(&clientApp.config);
 	
-	gui.SetServerIPs(clientApp.config.recent_server_urls);
+	gui.SetServerIPs(config.recent_server_urls);
 
-	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer(gui,clientApp.config);
-	if(clientApp.config.recent_server_urls.size())
-		androidRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
+	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer(gui);
+	if(config.recent_server_urls.size())
+		client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
 
