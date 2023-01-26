@@ -160,6 +160,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../../../firstparty;</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

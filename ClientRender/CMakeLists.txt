@@ -48,8 +48,6 @@ set( src_root
 	ResourceManager.h
 	Renderer.h
 	Renderer.cpp
-	RenderPlatform.h
-	RenderPlatform.cpp
 	ShaderResource.cpp
 	ShaderResource.h
 	Skin.cpp

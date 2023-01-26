@@ -87,9 +87,6 @@
     <ClCompile Include="..\..\ClientRender\IndexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ClientRender\RenderPlatform.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ClientRender\VertexBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -162,9 +159,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\Renderer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ClientRender\RenderPlatform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\ResourceCreator.h">

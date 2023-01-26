@@ -25,7 +25,7 @@ namespace clientrender
 
 		struct LightCreateInfo
 		{
-			const RenderPlatform* renderPlatform = nullptr;
+			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 			Type type = Type::SPOT;
 			avs::vec3 position;
 			avs::vec4 lightColour;

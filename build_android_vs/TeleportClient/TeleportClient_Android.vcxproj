@@ -192,6 +192,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

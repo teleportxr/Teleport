@@ -12,7 +12,6 @@
 #include <libavstream/mesh.hpp>
 
 #include "API.h"
-#include "ClientRender/RenderPlatform.h"
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Light.h"
 #include "MemoryUtil.h"
@@ -34,10 +33,12 @@ namespace clientrender
 	{
 	public:
 
+		std::shared_ptr<clientrender::Material> placeholderMaterial;
+
 		ResourceCreator();
 		~ResourceCreator();
 	
-		void Initialize(clientrender::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
+		void Initialize(platform::crossplatform::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
 		/// Full reset, when the server has changed.
 		void Clear();
 
@@ -93,7 +94,7 @@ namespace clientrender
 
 		void BasisThread_TranscodeTextures();
 
-		clientrender::RenderPlatform* m_pRenderPlatform = nullptr;
+		platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 		clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
 
 		//basist::etc1_global_selector_codebook basis_codeBook;

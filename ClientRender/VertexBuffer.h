@@ -34,7 +34,7 @@ namespace clientrender
 		platform::crossplatform::Layout *m_layout=nullptr;
 	
 	public:
-		VertexBuffer(const RenderPlatform* const r)
+		VertexBuffer(platform::crossplatform::RenderPlatform*  r)
 			:APIObject(r), m_CI()
 		{}
 

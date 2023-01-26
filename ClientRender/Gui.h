@@ -29,17 +29,12 @@ namespace teleport
 	#endif
 	class Gui
 	{
-		client::Config *config=nullptr;
 	public:
 		Gui()
 		{
 		}
 		~Gui()
 		{
-		}
-		void SetConfig(client::Config *c)
-		{
-			config=c;
 		}
 		void SetPlatformWindow(PlatformWindow *w);
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r,PlatformWindow *w);
@@ -81,14 +76,6 @@ namespace teleport
 		{
 			return visible;
 		}
-		bool SetConnecting(bool c)
-		{
-			return connecting = c;
-		}
-		bool SetConnected(bool c)
-		{
-			return connected = c;
-		}
 		void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
 		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
 		void SetServerIPs(const std::vector<std::string> &server_ips);
@@ -119,8 +106,6 @@ namespace teleport
 		std::function<void(const std::string&)> connectHandler;
 		std::function<void()> cancelConnectHandler;
 		bool visible = false;
-		bool connecting = false;
-		bool connected = false;
 		avs::DecoderStatus videoStatus;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;

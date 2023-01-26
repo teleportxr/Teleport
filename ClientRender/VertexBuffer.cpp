@@ -1,7 +1,6 @@
 #include "VertexBuffer.h"
 #include "Platform/CrossPlatform/Buffer.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
-#include "RenderPlatform.h"
 #include "TeleportCore/ErrorHandling.h"
 
 using namespace clientrender;
@@ -154,8 +153,7 @@ void VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
 {
 	m_CI = *pVertexBufferCreateInfo;
 
-	auto* srp = renderPlatform->GetSimulRenderPlatform();
-	m_SimulBuffer = srp->CreateBuffer();
+	m_SimulBuffer = renderPlatform->CreateBuffer();
 
 	size_t numAttr = m_CI.layout->m_Attributes.size();
 	platform::crossplatform::LayoutDesc* desc = new platform::crossplatform::LayoutDesc[numAttr];
@@ -191,8 +189,8 @@ void VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
 	}
 
 	delete m_layout;
-	m_layout = srp->CreateLayout(static_cast<int>(m_CI.layout->m_Attributes.size()), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
-	m_SimulBuffer->EnsureVertexBuffer(srp, (int)m_CI.vertexCount, m_layout, m_CI.data);
+	m_layout = renderPlatform->CreateLayout(static_cast<int>(m_CI.layout->m_Attributes.size()), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
+	m_SimulBuffer->EnsureVertexBuffer(renderPlatform, (int)m_CI.vertexCount, m_layout, m_CI.data);
 	delete[] desc;
 }
 

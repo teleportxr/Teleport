@@ -281,7 +281,8 @@ void Gui::Hide()
 #ifdef _MSC_VER
 	ImGui_ImplWin32_SetFunction_GetCursorPos(nullptr);
 #endif
-	config->SaveOptions();
+	auto &config=client::Config::GetInstance();
+	config.SaveOptions();
 	visible = false;
 }
 
@@ -957,7 +958,7 @@ void Gui::GeometryOSD()
 {
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	LinePrint(platform::core::QuickFormat("Nodes: %d",geometryCache->mNodeManager->GetNodeAmount()), white);
+	LinePrint(platform::core::QuickFormat("Nodes: %d",geometryCache->mNodeManager->GetNodeCount()), white);
 
 	static int nodeLimit = 5;
 	auto& rootNodes = geometryCache->mNodeManager->GetRootNodes();
@@ -1121,7 +1122,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		ImGui::LogToTTY();
 
 		const auto& [dateStr, timeStr] = GetCurrentDateTimeStrings();
-		std::string title = "Teleport VR - " + dateStr + " " + timeStr;
+		std::string title = "Teleport VR";// + dateStr + " " + timeStr;
 		ImGuiBegin(title.c_str(),&show_hide, windowFlags);
 		#if 0
 		std::vector<vec3> client_press;
@@ -1165,6 +1166,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				keys_pressed.erase(keys_pressed.begin());
 			}
 		}
+		auto &config=client::Config::GetInstance();
 		static bool show_bookmarks=false;
 		static bool show_options=false;
 		if(show_options)
@@ -1174,7 +1176,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
     //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);
 			if(ImGui::Button(ICON_FK_ARROW_LEFT,ImVec2(64,32)))
 			{
-				config->SaveOptions();
+				config.SaveOptions();
 				show_options=false;
 			}
 			if (ImGui::BeginTable("options", 2))
@@ -1185,13 +1187,13 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::TableNextColumn();
 				ImGui::LabelText("##LobbyView","Lobby View");
 				ImGui::TableNextColumn();
-				int e = (int)config->options.lobbyView;
+				int e = (int)config.options.lobbyView;
 				ImGui::RadioButton("White", &e, 0);
 				ImGui::SameLine();
 				ImGui::RadioButton("Neon", &e, 1);
-				if((client::LobbyView)e!=config->options.lobbyView)
+				if((client::LobbyView)e!=config.options.lobbyView)
 				{
-					config->options.lobbyView=(client::LobbyView)e;
+					config.options.lobbyView=(client::LobbyView)e;
 				}
                 ImGui::TableNextRow();
 				ImGui::TableNextColumn();
@@ -1199,7 +1201,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::LabelText("##StartupConnection","Startup Connection");
 				ImGui::TableNextColumn();
 				auto conn=magic_enum::enum_entries<teleport::client::StartupConnectOption>();
-				int c= (int)config->options.startupConnectOption;
+				int c= (int)config.options.startupConnectOption;
 				int i=0;
 				for(const auto &e:conn)
 				{
@@ -1207,9 +1209,9 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					ImGui::RadioButton(ename.c_str(), &c, i++);
 					ImGui::SameLine();
 				}
-				if((client::StartupConnectOption)c!=config->options.startupConnectOption)
+				if((client::StartupConnectOption)c!=config.options.startupConnectOption)
 				{
-					config->options.startupConnectOption=(client::StartupConnectOption)c;
+					config.options.startupConnectOption=(client::StartupConnectOption)c;
 				}
 
 				#if TELEPORT_INTERNAL_CHECKS
@@ -1217,7 +1219,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::TableNextColumn();
 				ImGui::LabelText("##labelGeometryOffline","Geometry Visible Offline");
 				ImGui::TableNextColumn();
-				ImGui::Checkbox("##showGeometryOffline",&config->options.showGeometryOffline);
+				ImGui::Checkbox("##showGeometryOffline",&config.options.showGeometryOffline);
 				#endif
 				ImGui::EndTable();
 			}
@@ -1236,7 +1238,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 			}
 			if(show_bookmarks)
 			{
-				const std::vector<client::Bookmark> &bookmarks=config->GetBookmarks();
+				const std::vector<client::Bookmark> &bookmarks=config.GetBookmarks();
 				ImGui::SameLine();
 				ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 				ImGui::BeginChild("Bookmarks", ImVec2(-1,-1), true, window_flags);
@@ -1260,7 +1262,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 						ImGui::TreePop();
 					}
 				};
-				const std::vector<std::string> &recent=config->GetRecent();
+				const std::vector<std::string> &recent=config.GetRecent();
 				for (int i = 0; i < recent.size(); i++)
 				{
 					const std::string &r=recent[i];
@@ -1275,6 +1277,11 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 			}
 			else
 			{
+				// TODO: Temporary
+				avs::uid server_uid=1;
+				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+				bool connecting=sessionClient->IsConnecting();
+				bool connected=sessionClient->IsConnected();
 				ImGui::SameLine();
 				if (refocus == 0)
 				{
@@ -1313,7 +1320,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 
 				if (show_keyboard)
 				{
-					auto KeyboardLine = [&io,this](const char* key)
+					auto KeyboardLine = [&io,this,connecting](const char* key)
 					{
 						size_t num = strlen(key);
 						for (size_t i = 0; i < num; i++)

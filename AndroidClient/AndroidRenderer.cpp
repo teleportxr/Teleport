@@ -39,7 +39,7 @@ void AndroidInstanceRenderer::OnFrameAvailable()
 
 avs::DecoderBackendInterface* AndroidInstanceRenderer::CreateVideoDecoder()
 {
-	clientrender::AVSTextureHandle th = renderState.avsTexture;
+	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 	AVSTextureImpl* t = static_cast<AVSTextureImpl*>(th.get());
 	videoDecoderBackend=new VideoDecoderBackend(renderPlatform,t->texture,this);
 	return videoDecoderBackend;
@@ -77,7 +77,7 @@ std::shared_ptr<clientrender::InstanceRenderer> AndroidRenderer::GetInstanceRend
 	{
 		auto r=std::make_shared<AndroidInstanceRenderer>(server_uid,config,geometryDecoder,renderState,sc.get());
 		instanceRenderers[server_uid]=r;
-		r->RestoreDeviceObjects(&PcClientRenderPlatform);
+		r->RestoreDeviceObjects(renderPlatform);
 		return r;
 	}
 	return i->second;

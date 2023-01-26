@@ -42,8 +42,9 @@ namespace clientrender
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
 	class Renderer:public platform::crossplatform::RenderDelegaterInterface
 	{
+		void UpdateShaderPasses();
 	public:
-		Renderer(teleport::Gui &g,teleport::client::Config &config);
+		Renderer(teleport::Gui &g);
 		virtual ~Renderer();
 		//! This allows live-recompile of shaders (desktop platforms only).
 		void RecompileShaders();
@@ -64,11 +65,8 @@ namespace clientrender
 			return show_osd;
 		}
 	protected:
-		std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient>> sessionClients;
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
-		//std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient> sessionClients;
 		virtual std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid server_uid);
-		std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
 		void RemoveInstanceRenderer(avs::uid);
 		void InvalidateDeviceObjects();
 		void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);
@@ -87,7 +85,6 @@ namespace clientrender
 		platform::crossplatform::MouseCameraState	mouseCameraState;
 		platform::crossplatform::MouseCameraInput	mouseCameraInput;
 		
-		clientrender::RenderPlatform PcClientRenderPlatform;
 		/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 		/// distributes numerical precision to where it is better used.
 		static const bool reverseDepth = true;
@@ -123,8 +120,6 @@ namespace clientrender
 		bool have_vr_device = false;
 		platform::crossplatform::Texture* externalTexture = nullptr;
 		
-		std::string server_ip;
-		int server_discovery_port=0;
 		// TODO: temporary.
 		avs::uid server_uid=1;
 		const avs::uid local_server_uid=0;
@@ -164,12 +159,8 @@ namespace clientrender
 		}
 		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
-		void SetServer(const char* ip_port);
 		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		// handler for the UI to tell us to connect.
-		void ConnectButtonHandler(const std::string& url);
-		void CancelConnectButtonHandler();
 		
 		// to render the vr view instead of re-rendering.
 		void SetExternalTexture(platform::crossplatform::Texture* t);

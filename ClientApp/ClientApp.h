@@ -12,7 +12,6 @@ namespace teleport
 			ClientApp();
 			~ClientApp();
 			void Initialize();
-			teleport::client::Config config;
 		};
 	}
 }

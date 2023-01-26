@@ -13,6 +13,7 @@ ClientApp::~ClientApp()
 
 void ClientApp::Initialize()
 {
+	auto &config=Config::GetInstance();
 	config.LoadConfigFromIniFile();
 	config.LoadBookmarks();
 	config.LoadOptions();

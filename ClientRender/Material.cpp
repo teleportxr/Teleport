@@ -1,16 +1,15 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 
 #include "Material.h"
-#include "RenderPlatform.h"
 
 using namespace clientrender;
 
-Material::Material(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo)
+Material::Material(platform::crossplatform::RenderPlatform* r,const MaterialCreateInfo& pMaterialCreateInfo)
 {
-	SetMaterialCreateInfo(renderPlatform,pMaterialCreateInfo);
+	SetMaterialCreateInfo(r,pMaterialCreateInfo);
 }
 
-void Material::SetMaterialCreateInfo( RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo)
+void Material::SetMaterialCreateInfo( platform::crossplatform::RenderPlatform* r,const MaterialCreateInfo& pMaterialCreateInfo)
 {
 	m_CI= pMaterialCreateInfo;
 	m_MaterialData.diffuseOutputScalar			= m_CI.diffuse.textureOutputScalar;

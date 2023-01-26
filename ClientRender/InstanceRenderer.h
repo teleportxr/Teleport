@@ -50,6 +50,13 @@ namespace clientrender
 		platform::crossplatform::Texture *texture = nullptr;
 		avs::SurfaceBackendInterface* createSurface() const override;
 	};
+	struct ShaderPassSetup
+	{
+		platform::crossplatform::EffectTechnique	*technique				=nullptr;
+		platform::crossplatform::EffectPass			*lightmapPass			=nullptr;
+		platform::crossplatform::EffectPass			*noLightmapPass			=nullptr;
+		platform::crossplatform::EffectPass			*overridePass			=nullptr;
+	};
 	struct RenderState
 	{
 		teleport::client::OpenXR *openXR=nullptr;
@@ -72,13 +79,13 @@ namespace clientrender
 		// A simple example mesh to draw as transparent
 		platform::crossplatform::Effect *pbrEffect					= nullptr;
 		
-		platform::crossplatform::EffectTechnique	*pbrEffect_transparentTechnique					=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_transparentMultiviewTechnique		=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidTechnique						=nullptr;
+		ShaderPassSetup pbrEffect_transparent;
+		ShaderPassSetup pbrEffect_transparentMultiview;
+		ShaderPassSetup pbrEffect_solid;
+		ShaderPassSetup pbrEffect_solidMultiview;
+		ShaderPassSetup pbrEffect_solidAnim;
+		ShaderPassSetup pbrEffect_solidAnimMultiview;
 		platform::crossplatform::EffectPass			*pbrEffect_solidTechnique_localPass				=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidAnimTechnique					=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidMultiviewTechnique				=nullptr;
-		platform::crossplatform::EffectTechnique	*pbrEffect_solidAnimMultiviewTechnique			=nullptr;
 		platform::crossplatform::EffectPass			*pbrEffect_solidMultiviewTechnique_localPass	=nullptr;
 
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
@@ -154,7 +161,7 @@ namespace clientrender
 	public:
 		InstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,RenderState &renderState,teleport::client::SessionClient *sessionClient);
 		virtual ~InstanceRenderer();
-		void RestoreDeviceObjects(clientrender::RenderPlatform *r);
+		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 		void InvalidateDeviceObjects();
 		
 		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, avs::uid server_uid,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);

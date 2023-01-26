@@ -1,5 +1,4 @@
 #include "TeleportCore/ErrorHandling.h"
-
 #ifdef _MSC_VER
 	#include <Windows.h> // for DebugBreak 
 #elif defined __ANDROID__

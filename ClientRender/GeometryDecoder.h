@@ -8,9 +8,9 @@
 
 namespace avs
 {
-struct FloatKeyframe;
-struct Vector3Keyframe;
-struct Vector4Keyframe;
+	struct FloatKeyframe;
+	struct Vector3Keyframe;
+	struct Vector4Keyframe;
 }
 
 namespace draco

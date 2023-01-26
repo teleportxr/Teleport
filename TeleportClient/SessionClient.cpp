@@ -2,6 +2,7 @@
 #include "SessionClient.h"
 
 #include <limits>
+#include <fmt/core.h>
 
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
@@ -10,10 +11,61 @@
 
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "DiscoveryService.h"
+#include "Config.h"
 
 using namespace teleport;
 using namespace client;
 using namespace clientrender;
+
+static std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient>> sessionClients;
+
+struct IpPort
+{
+	std::string ip;
+	int port=0;
+};
+IpPort GetIpPort(const char *ip_port)
+{
+	std::string ip= ip_port;
+	size_t pos=ip.find(":");
+	IpPort ipPort;
+	if(pos>=ip.length())
+	{
+		ipPort.port=0;
+		ipPort.ip=ip;
+	}
+	else
+	{
+		ipPort.port=(atoi(ip.substr(pos+1,ip.length()-pos-1).c_str()));
+		ipPort.ip=ip.substr(0,pos);
+	}
+	return ipPort;
+}
+std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient(avs::uid server_uid)
+{
+	auto i=sessionClients.find(server_uid);
+	if(i==sessionClients.end())
+	{
+		auto r=std::make_shared<client::SessionClient>(server_uid);
+		sessionClients[server_uid]=r;
+		return r;
+	}
+	return i->second;
+}
+
+void SessionClient::ConnectButtonHandler(avs::uid server_uid,const std::string& url)
+{
+	IpPort ipP=GetIpPort(url.c_str());
+	auto sc=GetSessionClient(server_uid);
+	sc->RequestConnection(ipP.ip,ipP.port?ipP.port:TELEPORT_SERVER_DISCOVERY_PORT);
+}
+
+void SessionClient::CancelConnectButtonHandler(avs::uid server_uid)
+{
+	auto sc=GetSessionClient(server_uid);
+	sc->connectionRequest= client::ConnectionStatus::UNCONNECTED;
+}
 
 SessionClient::SessionClient(avs::uid s)
 	:server_uid(s)
@@ -24,6 +76,15 @@ SessionClient::~SessionClient()
 	//Disconnect(0); causes crash. trying to access deleted objects.
 }
 
+void SessionClient::RequestConnection(const std::string &ip,int port)
+{
+	connectionRequest= client::ConnectionStatus::CONNECTED;
+	if(server_ip==ip&&server_discovery_port==port&&(mServerPeer))
+		return;
+	SetServerIP(ip);
+	SetServerDiscoveryPort(port);
+}
+
 void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
 {
 	mCommandInterface=s;
@@ -32,6 +93,25 @@ void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
 void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
 {
 	geometryCache = r;
+}
+
+bool SessionClient::HandleConnections()
+{
+	if (!IsConnected())
+	{
+		auto &config=Config::GetInstance();
+		ENetAddress remoteEndpoint; 
+		bool canConnect = connectionRequest == client::ConnectionStatus::CONNECTED;
+		if (canConnect)
+		{
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			if(cl_id!=0&&Connect(remoteEndpoint, config.options.connectionTimeout,cl_id))
+			{
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 bool SessionClient::Connect(const char* remote_ip, uint16_t remotePort, uint timeout,avs::uid cl_id)
@@ -49,6 +129,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	if(!mClientHost)
 	{
 		TELEPORT_CLIENT_FAIL("Failed to create ENET client host");
+		connectionRequest=ConnectionStatus::UNCONNECTED;
 		remoteIP="";
 		return false;
 	}
@@ -57,6 +138,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	if(!mServerPeer)
 	{
 		TELEPORT_CLIENT_WARN("Failed to initiate connection to the server");
+		connectionRequest=ConnectionStatus::UNCONNECTED;
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
 		remoteIP="";
@@ -72,11 +154,11 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
 		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d", remote_ip, remote.port);
 		remoteIP=remote_ip;
-		webspaceLocation = WebspaceLocation::SERVER;
 		return true;
 	}
 
 	TELEPORT_CLIENT_WARN("Failed to connect to remote session server");
+	connectionRequest=ConnectionStatus::UNCONNECTED;
 
 	enet_host_destroy(mClientHost);
 	mClientHost = nullptr;
@@ -139,8 +221,6 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 	{
 		clientID = 0;
 	}
-
-	webspaceLocation = WebspaceLocation::LOBBY;
 }
 
 void SessionClient::SetPeerTimeout(uint timeout)
@@ -227,10 +307,24 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	}
 }
 
-bool SessionClient::IsConnected() const
+int SessionClient::GetServerDiscoveryPort() const
 {
-	return mServerPeer != nullptr;
+	return server_discovery_port;
 }
+
+void SessionClient::SetServerIP(std::string s) 
+{
+	IpPort ipP=GetIpPort(s.c_str());
+	server_ip=ipP.ip;
+	if(ipP.port)
+		server_discovery_port=ipP.port;
+}
+
+void SessionClient::SetServerDiscoveryPort(int p) 
+{
+	server_discovery_port=p;
+}
+
 
 int SessionClient::GetPort() const
 {
@@ -242,6 +336,23 @@ int SessionClient::GetPort() const
 std::string SessionClient::GetServerIP() const
 {
 	return remoteIP;
+}
+
+ConnectionStatus SessionClient::GetConnectionStatus() const
+{
+	return mServerPeer?ConnectionStatus::CONNECTED:ConnectionStatus::UNCONNECTED;
+}
+
+bool SessionClient::IsConnecting() const
+{
+	if(connectionRequest==ConnectionStatus::CONNECTED&&mServerPeer==nullptr)
+		return true;
+	return false;
+}
+
+bool SessionClient::IsConnected() const
+{
+	return (mServerPeer!=nullptr);
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)
@@ -505,7 +616,7 @@ void SessionClient::SendResourceRequests()
 		for(avs::uid id : mQueuedResourceRequests)
 		{
 			mSentResourceRequests[id] = time;
-			TELEPORT_COUT<<"SessionClient::SendResourceRequests Requested "<<id<<std::endl;
+			TELEPORT_INTERNAL_COUT("SessionClient::SendResourceRequests Requested {0}",id);
 		}
 		mQueuedResourceRequests.clear();
 	}

@@ -29,7 +29,7 @@ namespace clientrender
 		IndexBufferCreateInfo m_CI;
 	
 	public:
-		IndexBuffer(const RenderPlatform* const r)
+		IndexBuffer( platform::crossplatform::RenderPlatform *  r)
 			:APIObject(r), m_CI()
 		{}
 

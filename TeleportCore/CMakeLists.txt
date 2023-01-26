@@ -13,7 +13,7 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_library(TeleportCore STATIC ${src_files} ${header_files})
+add_library(TeleportCore STATIC ${src_files} ${header_files} )
 SetTeleportDefaults( TeleportCore )
 set_target_properties(TeleportCore PROPERTIES FOLDER Teleport)
 target_include_directories(TeleportCore PUBLIC ..)
@@ -25,4 +25,5 @@ target_include_directories(TeleportCore PRIVATE ../libavstream/include)
 target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 #Include enet
 target_include_directories(TeleportCore PRIVATE ../thirdparty/enet/include)
+target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
  

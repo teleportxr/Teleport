@@ -16,7 +16,9 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <random>
 
-//Debug
+// Platform
+#include "Platform/CrossPlatform/RenderPlatform.h"
+
 
 
 #if defined(__ANDROID__)
@@ -34,8 +36,8 @@ namespace clientrender
 	class APIObject
 	{
 	protected:
-		const RenderPlatform *const renderPlatform;
-		APIObject(const RenderPlatform*const r) 
+		 platform::crossplatform::RenderPlatform * renderPlatform;
+		APIObject( platform::crossplatform::RenderPlatform* r) 
 			: renderPlatform(r) {}
 	};
 

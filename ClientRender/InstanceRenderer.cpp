@@ -63,11 +63,10 @@ InstanceRenderer::~InstanceRenderer()
 	clientPipeline.pipeline.deconfigure();
 }
 
-void InstanceRenderer::RestoreDeviceObjects(clientrender::RenderPlatform *r)
+void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r)
 {
-	clientRenderPlatform=r;
-	renderPlatform=r->GetSimulRenderPlatform();
-	resourceCreator.Initialize(clientRenderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+	renderPlatform=r;
+	resourceCreator.Initialize(renderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 }
 
 void InstanceRenderer::InvalidateDeviceObjects()
@@ -382,8 +381,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
-		RenderNode(deviceContext
-			,node);
+		RenderNode(deviceContext,node);
 	}
 	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache.mNodeManager->GetSortedTransparentNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : transparentList)
@@ -398,10 +396,9 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	{
 		RenderNodeOverlay(deviceContext, node);
 	}
-
 }
 
-
+//[thread=RenderThread]
 void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext
 	,const std::shared_ptr<clientrender::Node> node
 	,bool force
@@ -418,12 +415,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
-	// Pass used for rendering geometry.
-	std::string passName = "pbr_nolightmap";
-	if(node->IsStatic())
-		passName="pbr_lightmap";
-	if(renderState.overridePassName.length()>0)
-		passName=renderState.overridePassName;
+
 	bool force_highlight = force||(renderState.selected_uid== node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
@@ -479,13 +471,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				// TODO: Improve this.
 				auto sc=node->GetGlobalScale();
 				bool negative_scale=(sc.x*sc.y*sc.z)<0.0f;
-				std::shared_ptr<clientrender::Texture> gi = globalIlluminationTexture;
-				std::string usedPassName = passName;
-				if(material->GetMaterialCreateInfo().shader.length())
-				{
-					usedPassName=material->GetMaterialCreateInfo().shader;
-					double_sided=true;
-				}
 				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
 				bool anim=skinInstance!=nullptr;
 				if (skinInstance)
@@ -500,7 +485,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 
 				crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 				bool highlight=node->IsHighlighted()||force_highlight;
-				crossplatform::EffectPass *pass=nullptr;
 				
 				highlight|= (renderState.selected_uid == material->id);
 				const clientrender::Material::MaterialData& md = material->GetMaterialData();
@@ -516,19 +500,35 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture	,combined ? combined->GetSimulTexture() : nullptr);
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture	,emissive ? emissive->GetSimulTexture() : nullptr);
 				
-				crossplatform::EffectTechnique* pbrEffectTechnique = mvgdc ?(transparent?renderState.pbrEffect_transparentMultiviewTechnique:(anim?renderState.pbrEffect_solidAnimMultiviewTechnique:renderState.pbrEffect_solidMultiviewTechnique))
-																			:(transparent?renderState.pbrEffect_transparentTechnique:(anim?renderState.pbrEffect_solidAnimTechnique:renderState.pbrEffect_solidTechnique));
-				pass = pbrEffectTechnique->GetPass(usedPassName.c_str());
+				ShaderPassSetup * shaderPassSetup = mvgdc?(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnimMultiview:&renderState.pbrEffect_solidMultiview))
+																			:(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnim:&renderState.pbrEffect_solid));
+
+				// Pass used for rendering geometry.
+				crossplatform::EffectPass *pass=nullptr;
+				if(shaderPassSetup->overridePass)
+					pass=shaderPassSetup->overridePass;
+				else
+				{
+					if(node->IsStatic())
+						pass=shaderPassSetup->lightmapPass;
+					else
+						pass=shaderPassSetup->noLightmapPass;
+				}
+				if(material->GetMaterialCreateInfo().shader.length())
+				{
+					pass=shaderPassSetup->technique->GetPass(material->GetMaterialCreateInfo().shader.c_str());
+					double_sided=true;
+				}
 				if(!pass)
 				{
-					TELEPORT_CERR<<"Pass "<<usedPassName.c_str()<<" not found in "<<pbrEffectTechnique->name.c_str()<<"\n";
-					pass=pbrEffectTechnique->GetPass(0);
+					TELEPORT_CERR<<"Pass not found in "<<shaderPassSetup->technique->name.c_str()<<"\n";
+					pass=renderState.pbrEffect_solid.noLightmapPass;
 				}
 				if (highlight)
 				{
 					renderState.pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
-				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_globalIlluminationTexture, gi ? gi->GetSimulTexture() : nullptr);
+				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_globalIlluminationTexture, globalIlluminationTexture ? globalIlluminationTexture->GetSimulTexture() : nullptr);
 
 				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,renderState.diffuseCubemapTexture);
 				// If lighting is via static textures.

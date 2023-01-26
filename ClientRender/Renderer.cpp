@@ -104,11 +104,9 @@ avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const
 	#endif
 }
 
-
-Renderer::Renderer(teleport::Gui& g
-	,teleport::client::Config &cfg)
+Renderer::Renderer(teleport::Gui& g)
 	:gui(g)
-	,config(cfg)
+	,config(teleport::client::Config::GetInstance())
 {
 	if (!timestamp_initialized)
 #ifdef _MSC_VER
@@ -132,8 +130,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	renderPlatform = r;
 	renderState.openXR=u;
 
-	PcClientRenderPlatform.SetSimulRenderPlatform(r);
-	r->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
+	renderPlatform->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 
 	renderState.hDRRenderer = new crossplatform::HdrRenderer();
 
@@ -171,9 +168,9 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	renderState.hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	gui.RestoreDeviceObjects(renderPlatform,active_window);
-	auto connectButtonHandler = std::bind(&Renderer::ConnectButtonHandler, this,std::placeholders::_1);
+	auto connectButtonHandler = std::bind(&client::SessionClient::ConnectButtonHandler, 1,std::placeholders::_1);
 	gui.SetConnectHandler(connectButtonHandler);
-	auto cancelConnectHandler = std::bind(&Renderer::CancelConnectButtonHandler, this);
+	auto cancelConnectHandler = std::bind(&client::SessionClient::CancelConnectButtonHandler, 1);
 	gui.SetCancelConnectHandler(cancelConnectHandler);
 	renderState.videoTexture = renderPlatform->CreateTexture();
 	renderState.specularCubemapTexture = renderPlatform->CreateTexture();
@@ -317,7 +314,30 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
 	localGeometryCache.setCacheFolder(config.GetStorageFolder());
 
-	GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
+	client::SessionClient::GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
+}
+
+void Renderer::UpdateShaderPasses()
+{
+	auto SetPasses= [this](const char *techname)
+		{
+			ShaderPassSetup shaderPassSetup;
+			shaderPassSetup.technique		=renderState.pbrEffect->GetTechniqueByName(techname);
+			shaderPassSetup.noLightmapPass	=shaderPassSetup.technique->GetPass("pbr_nolightmap");
+			shaderPassSetup.lightmapPass	=shaderPassSetup.technique->GetPass("pbr_lightmap");
+			shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
+			return shaderPassSetup;
+		};
+	renderState.pbrEffect_solid					=SetPasses("solid");
+	renderState.pbrEffect_solidAnim				=SetPasses("solid_anim");
+	renderState.pbrEffect_solid					=SetPasses("solid");
+	renderState.pbrEffect_solidMultiview		=SetPasses("solid_multiview");
+	renderState.pbrEffect_solidAnimMultiview	=SetPasses("solid_anim_multiview");
+	
+	renderState.pbrEffect_transparent			=SetPasses("transparent");
+	renderState.pbrEffect_transparentMultiview	=SetPasses("transparent_multiview");
+	
+	renderState.pbrEffect_solidMultiviewTechnique_localPass	=renderState.pbrEffect_solidMultiview.technique->GetPass("local");
 }
 
 // This allows live-recompile of shaders. 
@@ -332,16 +352,7 @@ void Renderer::RecompileShaders()
 	renderState.pbrEffect			= renderPlatform->CreateEffect("pbr");
 	renderState.cubemapClearEffect	= renderPlatform->CreateEffect("cubemap_clear");
 
-	renderState.pbrEffect_solidTechnique			=renderState.pbrEffect->GetTechniqueByName("solid");
-	renderState.pbrEffect_solidAnimTechnique		=renderState.pbrEffect->GetTechniqueByName("solid_anim");
-	renderState.pbrEffect_solidTechnique_localPass	=renderState.pbrEffect_solidTechnique->GetPass("local");
-	
-	renderState.pbrEffect_transparentTechnique		=renderState.pbrEffect->GetTechniqueByName("transparent");
-	renderState.pbrEffect_transparentMultiviewTechnique=renderState.pbrEffect->GetTechniqueByName("transparent_multiview");
-	
-	renderState.pbrEffect_solidMultiviewTechnique				=renderState.pbrEffect->GetTechniqueByName("solid_multiview");
-	renderState.pbrEffect_solidAnimMultiviewTechnique			=renderState.pbrEffect->GetTechniqueByName("solid_anim_multiview");
-	renderState.pbrEffect_solidMultiviewTechnique_localPass		=renderState.pbrEffect_solidMultiviewTechnique->GetPass("local");
+	UpdateShaderPasses();
 
 	renderState._RWTagDataIDBuffer						=renderState.cubemapClearEffect->GetShaderResource("RWTagDataIDBuffer");
 	renderState.cubemapClearEffect_TagDataCubeBuffer	=renderState.cubemapClearEffect->GetShaderResource("TagDataCubeBuffer");
@@ -360,27 +371,15 @@ void Renderer::RecompileShaders()
 	renderState.pbrEffect_globalIlluminationTexture		=renderState.pbrEffect->GetShaderResource("globalIlluminationTexture");
 }
 
-std::shared_ptr<teleport::client::SessionClient> Renderer::GetSessionClient(avs::uid server_uid)
-{
-	auto i=sessionClients.find(server_uid);
-	if(i==sessionClients.end())
-	{
-		auto r=std::make_shared<client::SessionClient>(server_uid);
-		sessionClients[server_uid]=r;
-		return r;
-	}
-	return i->second;
-}
-
 std::shared_ptr<InstanceRenderer> Renderer::GetInstanceRenderer(avs::uid server_uid)
 {
-	auto sc=GetSessionClient(server_uid);
+	auto sc=client::SessionClient::GetSessionClient(server_uid);
 	auto i=instanceRenderers.find(server_uid);
 	if(i==instanceRenderers.end())
 	{
 		auto r=std::make_shared<InstanceRenderer>(server_uid,config,geometryDecoder,renderState,sc.get());
 		instanceRenderers[server_uid]=r;
-		r->RestoreDeviceObjects(&PcClientRenderPlatform);
+		r->RestoreDeviceObjects(renderPlatform);
 		return r;
 	}
 	return i->second;
@@ -607,7 +606,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	
 	gui.Render(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
-	auto sessionClient=GetSessionClient(server_uid);
+	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 	if (!sessionClient->IsConnected()||gui.HasFocus()||config.options.showGeometryOffline)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
@@ -643,6 +642,7 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 			renderState.overridePassName = "";
 			break;
 	}
+	UpdateShaderPasses();
 }
 void Renderer::Update(double timestamp_ms)
 {
@@ -674,6 +674,15 @@ bool Renderer::OnDeviceRemoved()
 
 void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 {
+	std::shared_ptr<teleport::client::SessionClient> sessionClient=client::SessionClient::GetSessionClient(server_uid);
+	// returns true if a connection occurred:
+	if(sessionClient->HandleConnections())
+	{
+		auto ir=GetInstanceRenderer(server_uid);
+		sessionClient->SetGeometryCache(&ir->geometryCache);
+		config.StoreRecentURL(fmt::format("{0}:{1}",sessionClient->GetServerIP(),sessionClient->GetServerDiscoveryPort()).c_str());
+		gui.Hide();
+	}
 	using_vr = have_headset;
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
@@ -735,7 +744,6 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		clientServerState.SetInputs( inputs);
 	}
 	// Handle networked session.
-	auto sessionClient=GetSessionClient(server_uid);
 	auto ir=GetInstanceRenderer(server_uid);
 	if (sessionClient->IsConnected())
 	{
@@ -751,16 +759,9 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
 			clientServerState.input,instanceRenderer->clientPipeline.decoder.idrRequired(),fTime, time_step);
 
-	/*	if(instanceRenderer->receivedInitialPos != sessionClient->receivedInitialPos)
-		{
-			instanceRenderer->receivedInitialPos = sessionClient->receivedInitialPos;
-			clientServerState.UpdateGlobalPoses();
-		}*/
-		
-		
 		avs::Result result = instanceRenderer->clientPipeline.pipeline.process();
 		if (result == avs::Result::Network_Disconnection 
-			|| sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER)
+			|| sessionClient->GetConnectionRequest() == client::ConnectionStatus::UNCONNECTED)
 		{
 			sessionClient->Disconnect(0);
 			return;
@@ -775,25 +776,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 				<< std::endl;
 		}
 	}
-	else
-	{
-		ENetAddress remoteEndpoint; 
-		bool canConnect = sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
-		if (canConnect)
-		{
-			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
-			if(cl_id!=0&&sessionClient->Connect(remoteEndpoint, TELEPORT_TIMEOUT,cl_id))
-			{
-				sessionClient->SetGeometryCache(&ir->geometryCache);
-				sessionClient->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
-				gui.Hide();
-				config.StoreRecentURL(fmt::format("{0}:{1}",server_ip,server_discovery_port).c_str());
-			}
-		}
-	}
 
-	gui.SetConnecting(sessionClient->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER);
-	gui.SetConnected(sessionClient->GetWebspaceLocation() == client::SessionClient::WebspaceLocation::SERVER);
 	gui.SetVideoDecoderStatus(ir->GetVideoDecoderStatus());
 
 	if (!have_headset)
@@ -877,10 +860,9 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 		case 'K':
 			{
-				auto sc=GetSessionClient(server_uid);
+				auto sc=client::SessionClient::GetSessionClient(server_uid);
 				if(sc->IsConnected())
 					sc->Disconnect(0);
-				sc->GetConnectionRequest() = client::SessionClient::ConnectionRequest::NO_CHANGE;
 			}
 			break;
 		case 'M':
@@ -892,7 +874,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 		case 'Y':
 			{
-				auto sc=GetSessionClient(server_uid);
+				auto sc=client::SessionClient::GetSessionClient(server_uid);
 				if (sc->IsConnected())
 					GetInstanceRenderer(server_uid)->clientPipeline.decoder.toggleShowAlphaAsColor();
 			}
@@ -1229,34 +1211,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 #endif
 }
 
-void Renderer::SetServer(const char *ip_port)
-{
-	std::string ip= ip_port;
-	size_t pos=ip.find(":");
-	if(pos>=ip.length())
-	{
-		server_discovery_port = TELEPORT_SERVER_DISCOVERY_PORT;
-		server_ip=ip;
-	}
-	else
-	{
-		server_discovery_port =atoi(ip.substr(pos+1,ip.length()-pos-1).c_str());
-		server_ip = ip.substr(0,pos);
-	}
-}
-
-void Renderer::ConnectButtonHandler(const std::string& url)
-{
-	SetServer(url.c_str());
-	auto sc=GetSessionClient(server_uid);
-	sc->GetConnectionRequest() = client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
-}
-
-void Renderer::CancelConnectButtonHandler()
-{
-	auto sc=GetSessionClient(server_uid);
-	sc->GetConnectionRequest() = client::SessionClient::ConnectionRequest::DISCONNECT_FROM_SERVER;
-}
 
 void Renderer::RemoveView(int)
 {
@@ -1269,7 +1223,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	auto instanceRenderer=GetInstanceRenderer(server_uid);
 	auto &geometryCache=instanceRenderer->geometryCache;
 	gui.setGeometryCache(&geometryCache);
-	auto sc=GetSessionClient(server_uid);
+	auto sc=client::SessionClient::GetSessionClient(server_uid);
 	gui.setSessionClient(sc.get());
 	if(renderState.openXR)
 	{
@@ -1304,13 +1258,14 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = instanceRenderer->clientPipeline.source.getCounterValues();
 	const avs::DecoderStats vidStats = instanceRenderer->clientPipeline.decoder.GetStats();
-	bool canConnect = sc->GetConnectionRequest() == client::SessionClient::ConnectionRequest::CONNECT_TO_SERVER;
+	bool canConnect = (sc->GetConnectionStatus()!=client::ConnectionStatus::CONNECTED)
+		&&(sc->GetConnectionRequest() == client::ConnectionStatus::CONNECTED);
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	gui.LinePrint(sc->IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
 		, sc->GetClientID(),sc->GetServerIP().c_str(),sc->GetPort()):
-		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", server_ip.c_str(), server_discovery_port):"Offline"),white);
+		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", sc->GetServerIP().c_str(), sc->GetServerDiscoveryPort()):"Offline"),white);
 	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
 	
 	if(gui.Tab("Debug"))

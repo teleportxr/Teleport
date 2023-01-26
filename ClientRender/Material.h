@@ -78,8 +78,8 @@ namespace clientrender
 		ShaderResource m_ShaderResource;
 	
 	public:
-		Material(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
-		void SetMaterialCreateInfo(RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
+		Material(platform::crossplatform::RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
+		void SetMaterialCreateInfo(platform::crossplatform::RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
 
 		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }

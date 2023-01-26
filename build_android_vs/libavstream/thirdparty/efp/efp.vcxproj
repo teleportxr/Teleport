@@ -167,6 +167,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -11,6 +11,12 @@ using namespace client;
 using std::string;
 using namespace std::string_literals;
 
+Config &Config::GetInstance()
+{
+	static teleport::client::Config config;
+	return config;
+}
+
 void Config::LoadConfigFromIniFile()
 {
 	CSimpleIniA ini;

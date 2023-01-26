@@ -22,7 +22,7 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 		ub_ci.size = sizeof(CameraData);
 		ub_ci.data =  &m_CameraData;
 
-		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		s_UB = std::make_shared<clientrender::UniformBuffer>(m_CI.renderPlatform);
 		s_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}

@@ -21,7 +21,7 @@ namespace clientrender
 		UniformBufferCreateInfo m_CI;
 
 	public:
-		UniformBuffer(const clientrender::RenderPlatform* const r)
+		UniformBuffer( platform::crossplatform::RenderPlatform*  r)
 			:APIObject(r), m_CI()
 		{}
 

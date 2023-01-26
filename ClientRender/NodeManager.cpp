@@ -15,7 +15,6 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
-	mutex_nodes.lock();
 	//TELEPORT_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
 //	RemoveNode(node->id);
@@ -25,7 +24,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		rootNodes.push_back(node);
 		distanceSortedRootNodes.push_back(node);
 	}
+	nodeLookup_mutex.lock();
 	nodeLookup[node->id] = node;
+	nodeLookup_mutex.unlock();
 	if(avsNode.parentID)
 		parentLookup[node->id]=avsNode.parentID;
 	//Link new node to parent.
@@ -106,7 +107,6 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
 	
-	mutex_nodes.unlock();
 }
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
@@ -116,12 +116,13 @@ void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 {
-	mutex_nodes.lock();
+	nodeLookup_mutex.lock();
 	//Remove node from parent's child list.
-	std::shared_ptr<Node> parent = node->GetParent().lock();
-	if(parent)
+	if(!node->GetParent().expired())
 	{
-		parent->RemoveChild(node);
+		std::shared_ptr<Node> parent = node->GetParent().lock();
+		if(parent)
+			parent->RemoveChild(node);
 	}
 	//Remove from root nodes, if the node had no parent.
 	else
@@ -151,11 +152,12 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 
 	//Remove from node lookup table.
 	nodeLookup.erase(node->id);
-	mutex_nodes.unlock();
+	nodeLookup_mutex.unlock();
 }
 
 void NodeManager::RemoveNode(avs::uid nodeID)
 {
+	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())
 	{
@@ -165,19 +167,24 @@ void NodeManager::RemoveNode(avs::uid nodeID)
 
 bool NodeManager::HasNode(avs::uid nodeID) const
 {
+	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
 	return nodeLookup.find(nodeID) != nodeLookup.end();
 }
 
 std::shared_ptr<Node> NodeManager::GetNode(avs::uid nodeID) const
 {
+	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
 	auto f = nodeLookup.find(nodeID);
 	if (f == nodeLookup.end())
+	{
 		return nullptr;
+	}
 	return f->second;
 }
 
-size_t NodeManager::GetNodeAmount() const
+size_t NodeManager::GetNodeCount() const
 {
+	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
 	return nodeLookup.size();
 }
 
@@ -421,7 +428,7 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 
 void NodeManager::Update(float deltaTime)
 {
-	mutex_nodes.lock();
+	nodeLookup_mutex.lock();
 	nodeList_t expiredNodes;
 	for(const std::shared_ptr<Node> node : rootNodes)
 	{
@@ -446,7 +453,7 @@ void NodeManager::Update(float deltaTime)
 		RemoveNode(node);
 		removed_node_uids.insert(node->id);
 	}
-	mutex_nodes.unlock();
+	nodeLookup_mutex.unlock();
 }
 
 const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const

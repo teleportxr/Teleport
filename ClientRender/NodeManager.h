@@ -34,7 +34,7 @@ namespace clientrender
 		bool HasNode(avs::uid nodeID) const;
 
 		std::shared_ptr<Node> GetNode(avs::uid nodeID) const;
-		size_t GetNodeAmount() const;
+		size_t GetNodeCount() const;
 
 		//Get list of nodes parented to the world root.
 		const nodeList_t& GetRootNodes() const;
@@ -118,6 +118,6 @@ namespace clientrender
 
 		//Links the node with the passed ID to it's parent. If the node doesn't exist, then it doesn't do anything.
 		void LinkToParentNode(avs::uid nodeID);
-		std::mutex mutex_nodes;
+		mutable std::mutex nodeLookup_mutex;
 	};
 }

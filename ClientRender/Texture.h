@@ -180,7 +180,7 @@ namespace clientrender
 		platform::crossplatform::Texture* m_SimulTexture= nullptr;
 
 	public:
-		Texture(const RenderPlatform* const r)
+		Texture( platform::crossplatform::RenderPlatform*  r)
 			: APIObject(r), m_CI()
 		{}
 

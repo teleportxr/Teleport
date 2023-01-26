@@ -160,6 +160,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

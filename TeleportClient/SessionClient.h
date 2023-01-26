@@ -54,29 +54,35 @@ namespace teleport
 			virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
 		};
+		
+		enum class WebspaceLocation : uint8_t
+		{
+			UNKNOWN,
+			LOBBY,
+			SERVER,
 
+			HOME = LOBBY,
+		};
+		enum class ConnectionStatus : uint8_t
+		{
+			UNCONNECTED,
+			CONNECTED
+		};
 		class SessionClient
 		{
-		avs::uid server_uid=0;
+			avs::uid server_uid=0;
+			std::string server_ip;
+			int server_discovery_port=0;
 		public:
-			enum class WebspaceLocation : uint8_t
-			{
-				UNKNOWN,
-				LOBBY,
-				SERVER,
-
-				HOME = LOBBY,
-			};
-			enum class ConnectionRequest : uint8_t
-			{
-				NO_CHANGE,
-				CONNECT_TO_SERVER,
-				DISCONNECT_FROM_SERVER,
-			};
-
+			static std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
+			static void ConnectButtonHandler(avs::uid server_uid,const std::string& url);
+			static void CancelConnectButtonHandler(avs::uid server_uid);
 		public:
 			SessionClient(avs::uid server_uid);
 			~SessionClient();
+			
+			void RequestConnection(const std::string &ip,int port);
+			bool HandleConnections();
 			void SetSessionCommandInterface(SessionCommandInterface*);
 			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
 			bool Connect(const char *remoteIP, uint16_t remotePort, uint timeout,avs::uid client_id);
@@ -87,11 +93,17 @@ namespace teleport
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					bool requestKeyframe, double time, double deltaTime);
-
+					
+			ConnectionStatus GetConnectionRequest() const { return connectionRequest; }
+			ConnectionStatus GetConnectionStatus() const;
+			bool IsConnecting() const;
 			bool IsConnected() const;
 
 			std::string GetServerIP() const;
-
+			
+			int GetServerDiscoveryPort() const;
+			void SetServerIP(std::string) ;
+			void SetServerDiscoveryPort(int) ;
 			int GetPort() const;
 
 			unsigned long long receivedInitialPos = 0;
@@ -104,9 +116,6 @@ namespace teleport
 			const std::map<avs::uid, double> &GetSentResourceRequests() const{
 				return mSentResourceRequests;
 			};
-
-			const WebspaceLocation& GetWebspaceLocation() { return webspaceLocation; }
-			ConnectionRequest& GetConnectionRequest() { return connectionRequest; }
 
 		private:
 			template<typename MessageType> void SendClientMessage(const MessageType &message)
@@ -172,8 +181,7 @@ namespace teleport
 			double mTimeSinceLastServerComm = 0;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
-			WebspaceLocation webspaceLocation = WebspaceLocation::LOBBY;
-			ConnectionRequest connectionRequest = ConnectionRequest::CONNECT_TO_SERVER;
+			ConnectionStatus connectionRequest = ConnectionStatus::CONNECTED;
 		};
 	}
 }

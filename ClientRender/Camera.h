@@ -5,7 +5,6 @@
 #include "ClientRender/UniformBuffer.h"
 #include "TeleportClient/basic_linear_algebra.h"
 #include "ShaderResource.h"
-#include "ClientRender/RenderPlatform.h"
 
 namespace clientrender
 {
@@ -19,7 +18,7 @@ namespace clientrender
 		};
 		struct CameraCreateInfo
 		{
-			RenderPlatform* renderPlatform;
+			platform::crossplatform::RenderPlatform* renderPlatform;
 			ProjectionType type;
 			quat orientation;
 			avs::vec3 position;

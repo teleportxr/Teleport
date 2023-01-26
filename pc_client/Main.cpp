@@ -109,16 +109,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 	}
 	clientApp.Initialize();
-	gui.SetConfig(&clientApp.config);
-	gui.SetServerIPs(clientApp.config.recent_server_urls);
-	if(clientApp.config.log_filename.size()>0)
-		debug_buffer.setLogFile(clientApp.config.log_filename.c_str());
+	auto &config=client::Config::GetInstance();
+	gui.SetServerIPs(config.recent_server_urls);
+	if(config.log_filename.size()>0)
+		debug_buffer.setLogFile(config.log_filename.c_str());
 	errno=0;
     // Initialize global strings
     MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
-	InitRenderer(hWnd, clientApp.config.enable_vr, clientApp.config.dev_mode);
+	InitRenderer(hWnd, config.enable_vr, config.dev_mode);
 	if(!hWnd)
     {
         return FALSE;
@@ -230,7 +230,7 @@ void InitXR()
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
-	clientRenderer=new clientrender::Renderer(gui,clientApp.config);
+	clientRenderer=new clientrender::Renderer(gui);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
@@ -297,8 +297,9 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
 	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
-	if(clientApp.config.recent_server_urls.size())
-		clientRenderer->SetServer(clientApp.config.recent_server_urls[0].c_str());
+	auto &config=client::Config::GetInstance();
+	if(config.recent_server_urls.size())
+		client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(clientRenderer);

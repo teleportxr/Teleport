@@ -1,5 +1,4 @@
 #include "Texture.h"
-#include "RenderPlatform.h"
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "Platform/CrossPlatform/PixelFormat.h"
@@ -88,8 +87,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
 	//m_Data = data;
-	auto* srp = renderPlatform->GetSimulRenderPlatform();
-	m_SimulTexture = srp->CreateTexture();
+	m_SimulTexture = renderPlatform->CreateTexture();
 	auto pixelFormat = ToSimulPixelFormat(pTextureCreateInfo.format);
 	bool computable = false;
 	bool rt = false;
@@ -148,7 +146,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 			TELEPORT_CERR<<"CREATING CUBEMAP\n";
 	}
 	#endif
-	m_SimulTexture->EnsureTexture(srp, &textureCreate);
+	m_SimulTexture->EnsureTexture(renderPlatform, &textureCreate);
 }
 
 void Texture::GenerateMips()

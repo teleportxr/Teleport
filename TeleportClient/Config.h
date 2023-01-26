@@ -38,6 +38,7 @@ namespace teleport
 			LobbyView lobbyView;
 			bool showGeometryOffline = false;
 			StartupConnectOption startupConnectOption = StartupConnectOption::LAST;
+			unsigned int connectionTimeout=TELEPORT_TIMEOUT;
 		};
 		class Config
 		{
@@ -45,6 +46,7 @@ namespace teleport
 			std::string storageFolder="";
 			const std::string &GetStoragePath() const;
 		public:
+			static Config &GetInstance();
 			void LoadConfigFromIniFile();
 			std::vector<std::string> recent_server_urls;
 			bool enable_vr = true;

@@ -7,6 +7,7 @@
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/AnimationInterface.h"
+#include "ThisPlatform/Threads.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4018;disable:4804)
@@ -73,9 +74,13 @@ avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::Ge
 	fileLoader->ReleaseFileContents(ptr);
 	return avs::Result::OK;
 }
+#ifdef __ANDROID__
+#include <sys/prctl.h> // for prctl( PR_SET_NAME )
+#endif
 
 void GeometryDecoder::decodeAsync()
 {
+	SetThisThreadName("GeometryDecoder::decodeAsync");
 	while (decodeThreadActive)
 	{
 		if (!decodeData.empty())
@@ -83,6 +88,7 @@ void GeometryDecoder::decodeAsync()
 			decodeInternal(decodeData.front());
 			decodeData.pop();
 		}
+		std::this_thread::yield();
 	}
 }
 
@@ -553,9 +559,9 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 
 avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeData)
 {
-	size_t materialAmount = Next8B;
+	size_t materialCount = Next8B;
 
-	for(size_t i = 0; i < materialAmount; i++)
+	for(size_t i = 0; i < materialCount; i++)
 	{
 		avs::Material material;
 		
@@ -567,7 +573,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 		copy<char>(material.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 		material.materialMode = (avs::MaterialMode)NextB;
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
-		TELEPORT_COUT <<"GeometryDecoder::decodeMaterial - "<<mat_uid<<" "<< material.name.c_str() << " diffuse " << material.pbrMetallicRoughness.baseColorTexture.index << std::endl;
+		TELEPORT_INTERNAL_COUT("GeometryDecoder::decodeMaterial - {0}({1}) diffuse {2}",mat_uid,material.name.c_str(),material.pbrMetallicRoughness.baseColorTexture.index);
 		material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;
@@ -604,8 +610,8 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 		material.emissiveFactor.y = NextFloat;
 		material.emissiveFactor.z = NextFloat;
 
-		size_t extensionAmount = Next8B;
-		for(size_t i = 0; i < extensionAmount; i++)
+		size_t extensionCount = Next8B;
+		for(size_t i = 0; i < extensionCount; i++)
 		{
 			std::unique_ptr<avs::MaterialExtension> newExtension;
 			avs::MaterialExtensionIdentifier id = static_cast<avs::MaterialExtensionIdentifier>(Next4B);
@@ -634,8 +640,8 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryDecodeData& geometry
 
 avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeData)
 {
-	size_t textureAmount = Next8B;
-	for(size_t i = 0; i < textureAmount; i++)
+	size_t textureCount = Next8B;
+	for(size_t i = 0; i < textureCount; i++)
 	{
 		avs::Texture texture;
 		avs::uid texture_uid = Next8B;

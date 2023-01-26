@@ -244,6 +244,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

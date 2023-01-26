@@ -2,8 +2,6 @@
 
 #include "Light.h"
 
-#include "ClientRender/RenderPlatform.h"
-
 using namespace clientrender;
 
 const uint32_t Light::s_MaxLights = 8; 
@@ -23,7 +21,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 		ub_ci.size = sizeof(LightData) * s_MaxLights;
 		ub_ci.data = &s_LightData;
 
-		s_UB = m_CI.renderPlatform->InstantiateUniformBuffer();
+		s_UB = std::make_shared<clientrender::UniformBuffer>(m_CI.renderPlatform);
 		s_UB->Create(&ub_ci);
 		s_UninitialisedUB = false;
 	}
