@@ -49,12 +49,12 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 
 1. Using CMakeGUI:
 	* Build to a subfolder of your Unity project, e.g. Project/teleport_build. *Don't* build inside the Assets folder.
-	* Check REMOTEPLAY_UNITY.
-	* Check REMOTEPLAY_SERVER.
+	* Check TELEPORT_UNITY.
+	* Check TELEPORT_SERVER.
 	* Uncheck LIBAV_USE_DYNAMIC_RUNTIME.
 	* Uncheck USE_DYNAMIC_RUNTIME.
 	* Click 'Configure' solution button.
-	* Set REMOTEPLAY_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
+	* Set TELEPORT_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
 	* Click 'Generate' solution button.
 2. Open Project, and set to "Release" build mode.
 3. Set TeleportServer as startup project.
@@ -95,7 +95,7 @@ The UE4 plugin is not currently functional, it will be updated in mid-2022.
     * Your platform, and toolset, **must** match your Unreal Engine configuration.
     * Enable **Advanced** view in CMake-GUI, if you can't find any of the following settings. 
     * Ensure LIBAV_USE_DYNAMIC_RUNTIME is checked: Unreal uses the dynamic runtimes so this is needed for compatibility.
-    * Make sure REMOTEPLAY_SERVER is checked: this removes the client and test projects from the build.
+    * Make sure TELEPORT_SERVER is checked: this removes the client and test projects from the build.
     * For Basis, you can just set STATIC to unchecked, this will make it use the dynamic runtimes.
     * Ensure BUILD_AS_LIBRARY is checked for Basis.
     * Uncheck ENABLE_ENCRYPTION.
