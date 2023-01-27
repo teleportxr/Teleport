@@ -74,9 +74,6 @@ avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::Ge
 	fileLoader->ReleaseFileContents(ptr);
 	return avs::Result::OK;
 }
-#ifdef __ANDROID__
-#include <sys/prctl.h> // for prctl( PR_SET_NAME )
-#endif
 
 void GeometryDecoder::decodeAsync()
 {
