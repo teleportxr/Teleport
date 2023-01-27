@@ -62,7 +62,7 @@ set_target_properties( pc_client PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=C:/Pro
 target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
 target_compile_features(pc_client PRIVATE cxx_std_17)
 target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
-#target_link_directories(pc_client PUBLIC "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64")
+#target_link_direc tories(pc_client PUBLIC "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
 endif()
@@ -77,14 +77,24 @@ target_compile_options(pc_client PRIVATE /wd4711)
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
+LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
+    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\pc_client..exe' '-log'"
+)
+LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
+    "Delete '$INSTDIR\\\\TeleportClient.lnk'"
+)
 install(TARGETS pc_client
 		RUNTIME
-		DESTINATION build_client/bin/Release
+		DESTINATION build_pc_client/bin/Release
 		COMPONENT client)
-
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client RENAME client.ini COMPONENT client OPTIONAL)
+file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
+file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\pc_client.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
+install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
+install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
 message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
 
+
 #install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\Shaders" DESTINATION pc_client COMPONENT client)
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\textures" DESTINATION pc_client COMPONENT client)

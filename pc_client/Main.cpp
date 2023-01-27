@@ -90,7 +90,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return 0;
 	}
 	// run from pc_client directory.
-	if(!std::filesystem::exists("client_default.ini"))
+	if(!std::filesystem::exists("assets/client.ini"))
 	{
 		std::filesystem::path current_path=std::filesystem::current_path();
 		wchar_t filename[700];
@@ -100,10 +100,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			current_path=filename;
 			current_path=current_path.remove_filename();
 		}
-		while(!current_path.empty()&&!std::filesystem::exists("client_default.ini"))
+		while(!current_path.empty()&&!std::filesystem::exists("assets/client.ini"))
 		{
+			auto prev_path=current_path;
 			std::string rel_pc_client="../../pc_client";
 			current_path=current_path.append(rel_pc_client).lexically_normal();
+			if(prev_path==current_path)
+				break;
 			if(std::filesystem::exists(current_path))
 				std::filesystem::current_path(current_path);
 		}

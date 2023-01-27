@@ -1,6 +1,6 @@
 Teleport Client Binary Licence
 
-Version 1.0, January 2022
+Version 1.0, January 2023
 
 Copyright © Simul Software Ltd, all rights reserved.
 

@@ -201,16 +201,16 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	geometryDecoder.WaitFromDecodeThread();
 	
 	localResourceCreator.Update(0.0f);
-	avs::uid wand_uid = 11;
+	avs::uid hand_uid = 11;
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
 	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
 	if (uids.size())
 	{
-		wand_uid = uids[0];
+		hand_uid = uids[0];
 	}
 	else
 	{
-		TELEPORT_BREAK_ONCE("Wand mesh not found");
+		TELEPORT_BREAK_ONCE("Hand mesh not found");
 	}
 	uids=localGeometryCache.mSkinManager.GetAllIDs();
 	hand_skin_uid=0;
@@ -258,8 +258,8 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	localResourceCreator.CreateNode(2,avsNode);
 
 	avsNode.data_type=avs::NodeDataType::Mesh;
-	//avsNode.transform.scale = { 0.2f,0.2f,0.2f };
-	avsNode.data_uid=wand_uid;
+	
+	avsNode.data_uid=hand_uid;
 	avsNode.materials.push_back(15);
 	avsNode.materials.push_back(14);
 	
