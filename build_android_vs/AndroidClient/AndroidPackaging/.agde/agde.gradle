@@ -6,4 +6,4 @@ ext.'MSBUILD_ANDROID_GRADLE_BUILD_OUTPUT_DIR' = new File(rootProject.rootDir, 'a
 ext.'MSBUILD_ANDROID_OUTPUT_APK_NAME' = 'TeleportVRQuestClientAGDE-arm64-v8a.apk'
 ext.'MSBUILD_JNI_LIBS_SRC_DIR' = new File(rootProject.rootDir, '../../bin/Android-arm64-v8a/Release').canonicalPath
 ext.'MSBUILD_TOOLS_PATH' = 'C:/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64'
-ext.'agde.version' = '22.2.65'
+ext.'agde.version' = '22.2.69'
