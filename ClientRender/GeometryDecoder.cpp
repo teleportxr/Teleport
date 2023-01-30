@@ -14,7 +14,7 @@
 #endif
 #include "draco/compression/decode.h"
 
-#define TELEPORT_GEOMETRY_DECODER_ASYNC 0
+#define TELEPORT_GEOMETRY_DECODER_ASYNC 1
 
 #define Next8B get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define Next4B get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
