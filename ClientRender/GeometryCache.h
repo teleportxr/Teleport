@@ -78,13 +78,21 @@ namespace clientrender
 
 	struct UntranscodedTexture
 	{
-		avs::uid texture_uid;
-		std::vector<unsigned char> data; //The raw data of the basis file.
-		std::shared_ptr<clientrender::Texture::TextureCreateInfo> scrTexture; //Creation information on texture being transcoded.
-		std::string name; //For debugging which texture failed.
-		avs::TextureCompression fromCompressionFormat;
-		float valueScale;	// scale on transcode.
+		avs::uid													texture_uid			= 0;
+		std::vector<uint8_t>										data				= {};										//The raw data of the basis file.
+		std::shared_ptr<clientrender::Texture::TextureCreateInfo>	textureCI			= nullptr;									//Creation information on texture being transcoded.
+		std::string													name				= {};										//For debugging which texture failed.
+		avs::TextureCompression										compressionFormat	= avs::TextureCompression::UNCOMPRESSED;
+		float														valueScale			= 0.0f;										// scale on transcode.
+
+		UntranscodedTexture(avs::uid uid, const void* ptr, size_t size, const std::shared_ptr<clientrender::Texture::TextureCreateInfo>& textureCreateInfo,
+			const std::string& name, avs::TextureCompression compressionFormat, float valueScale)
+			: texture_uid(uid), data(size), textureCI(textureCreateInfo), name(name), compressionFormat(compressionFormat), valueScale(valueScale)
+		{
+			memcpy(data.data(), ptr, size);
+		}
 	};
+
 	//! A container for geometry sent from servers and cached locally.
 	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 	class GeometryCache : public avs::GeometryCacheBackendInterface
