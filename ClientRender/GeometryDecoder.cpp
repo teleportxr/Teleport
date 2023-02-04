@@ -8,11 +8,13 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/AnimationInterface.h"
 #include "ThisPlatform/Threads.h"
+#include "ResourceCreator.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4018;disable:4804)
 #endif
 #include "draco/compression/decode.h"
+#include <TeleportCore/FontAtlas.h>
 
 #define Next8B get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define Next4B get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
@@ -24,6 +26,7 @@
 #define NextChunk(T) get<T>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 
 using std::string;
+using namespace std::string_literals;
 using namespace std::string_literals;
 
 template<typename T> T get(const uint8_t* data, size_t* offset)
@@ -57,11 +60,11 @@ void GeometryDecoder::setCacheFolder(const std::string& f)
 
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
 {
-	decodeData.emplace(buffer, bufferSizeInBytes, type, target, true);
+	decodeData.emplace(buffer, bufferSizeInBytes, type, (clientrender::ResourceCreator*)target, true);
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
+avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::GeometryPayloadType type, clientrender::ResourceCreator* target)
 {
 	platform::core::FileLoader* fileLoader=platform::core::FileLoader::GetFileLoader();
 	if (!fileLoader->FileExists(filename.c_str()))
@@ -107,6 +110,10 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData& geometryDecodeDa
 		return decodeNode(geometryDecodeData);
 	case avs::GeometryPayloadType::Skin:
 		return decodeSkin(geometryDecodeData);
+	case avs::GeometryPayloadType::FontAtlas:
+		return decodeFontAtlas(geometryDecodeData);
+	case avs::GeometryPayloadType::TextCanvas:
+		return decodeTextCanvas(geometryDecodeData);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
@@ -315,7 +322,7 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayU
 
 #pragma endregion DracoDecoding
 
-avs::Result GeometryDecoder::CreateMeshesFromDecodedGeometry(avs::GeometryTargetBackendInterface* target, DecodedGeometry& dg, const std::string& name)
+avs::Result GeometryDecoder::CreateMeshesFromDecodedGeometry(clientrender::ResourceCreator* target, DecodedGeometry& dg, const std::string& name)
 {
 	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to
 	// 	   create the mesh? Why not go direct to MeshCreate??
@@ -784,19 +791,6 @@ avs::Result GeometryDecoder::decodeSkin(GeometryDecodeData& geometryDecodeData)
 		skin.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
 	}
 
-	#if 0
-	skin.boneIDs.resize(Next8B);
-	for (size_t i = 0; i < skin.boneIDs.size(); i++)
-	{
-		skin.boneIDs[i] = Next8B;
-	}
-
-	skin.jointIDs.resize(Next8B);
-	for(size_t i = 0; i < skin.jointIDs.size(); i++)
-	{
-		skin.jointIDs[i] = Next8B;
-	}
-	#else
 	skin.boneTransforms.resize(Next8B);
 	skin.parentIndices.resize(skin.boneTransforms.size());
 	skin.boneNames.resize(skin.boneTransforms.size());
@@ -813,10 +807,53 @@ avs::Result GeometryDecoder::decodeSkin(GeometryDecodeData& geometryDecodeData)
 	{
 		skin.jointIndices[i]=Next2B;
 	}
-	#endif
 	skin.skinTransform = NextChunk(avs::Transform);
 
 	geometryDecodeData.target->CreateSkin(skinID, skin);
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeData)
+{
+	avs::uid fontAtlasUid = Next8B;
+	teleport::FontAtlas fontAtlas(fontAtlasUid);
+	fontAtlas.font_texture_uid= Next8B;
+	int numMaps=NextB;
+	for(int i=0;i<numMaps;i++)
+	{
+		int sz=Next4B;
+		auto &fontMap=fontAtlas.fontMaps[sz];
+		fontMap.lineHeight=NextFloat;
+		uint16_t numGlyphs=Next2B;
+		fontMap.glyphs.resize(numGlyphs);
+		for(uint16_t j=0;j<numGlyphs;j++)
+		{
+			auto &glyph=fontMap.glyphs[j];
+			copy<char>((char*)&glyph, geometryDecodeData.data.data(), geometryDecodeData.offset, sizeof(glyph));
+		}
+	}
+	geometryDecodeData.target->CreateFontAtlas(fontAtlasUid, fontAtlas);
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecodeData)
+{
+	clientrender::TextCanvasCreateInfo textCanvasCreateInfo;
+	textCanvasCreateInfo.uid = Next8B;
+	textCanvasCreateInfo.font=Next8B;
+	textCanvasCreateInfo.size=Next4B;
+	textCanvasCreateInfo.lineHeight=NextFloat;
+	textCanvasCreateInfo.width=NextFloat;
+	textCanvasCreateInfo.height=NextFloat;
+	copy<char>((char*)&textCanvasCreateInfo.colour, geometryDecodeData.data.data(), geometryDecodeData.offset, sizeof(textCanvasCreateInfo.colour));
+
+	size_t len=Next8B;
+	// Maximum 1 million chars.
+	if(len>1024*1024)
+		return avs::Result::Failed;
+	textCanvasCreateInfo.text.resize(len);
+	copy<char>(textCanvasCreateInfo.text.data(),  geometryDecodeData.data.data(), geometryDecodeData.offset, len);
+	geometryDecodeData.target->CreateTextCanvas(textCanvasCreateInfo);
 	return avs::Result::OK;
 }
 

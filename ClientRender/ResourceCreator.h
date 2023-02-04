@@ -19,6 +19,8 @@
 #include "ResourceManager.h"
 #include "Skin.h"
 #include "GeometryCache.h"
+#include "FontAtlas.h"
+#include "TextCanvas.h"
 
 namespace clientrender
 {
@@ -57,6 +59,9 @@ namespace clientrender
 		void CreateTexture(avs::uid id, const avs::Texture& texture) override;
 		void CreateMaterial(avs::uid id, const avs::Material& material) override;
 		void CreateNode(avs::uid id, avs::Node& node) override;
+		void CreateFontAtlas(avs::uid id,teleport::FontAtlas &fontAtlas);
+		void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
+
 		void CreateSkin(avs::uid id, avs::Skin& skin) override;
 		void CreateAnimation(avs::uid id, avs::Animation& animation) override;
 
@@ -76,7 +81,7 @@ namespace clientrender
 		void CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin);
 		void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo);
 		void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo& materialInfo);
-		void CompleteMeshNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
+		void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
 		void CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone);
 		void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 

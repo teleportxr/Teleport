@@ -9,7 +9,9 @@
 #include "ServerSettings.h"
 
 #include "TeleportCore/ErrorHandling.h"
-#include <GeometryStore.h>
+#include "TeleportCore/TextCanvas.h"
+#include "GeometryStreamingService.h"
+#include "GeometryStore.h"
 
 
 //Clear a passed vector of UIDs that are believed to have already been sent to the client.
@@ -36,13 +38,13 @@ size_t GetNewUIDs(std::vector<avs::uid> & outUIDs, avs::GeometryRequesterBackend
 
 namespace teleport
 {
-	GeometryEncoder::GeometryEncoder(const ServerSettings* settings)
-		:settings(settings), prevBufferSize(0)
+	GeometryEncoder::GeometryEncoder(const ServerSettings* settings,GeometryStreamingService *srv)
+		:settings(settings), prevBufferSize(0),geometryStreamingService(srv)
 	{}
 
-	avs::Result GeometryEncoder::encode(uint64_t timestamp,  avs::GeometryRequesterBackendInterface* req)
+	avs::Result GeometryEncoder::encode(uint64_t timestamp,  avs::GeometryRequesterBackendInterface* )
 	{
-		if(!req||req->getClientAxesStandard()==avs::AxesStandard::NotInitialized)
+		if(!geometryStreamingService||geometryStreamingService->getClientAxesStandard()==avs::AxesStandard::NotInitialized)
 			return avs::Result::Failed;
 		queuedBuffer.clear();
 		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
@@ -60,15 +62,18 @@ namespace teleport
 			std::vector<avs::uid> nodeIDsToStream;
 			std::vector<avs::MeshNodeResources> meshNodeResources;
 			std::vector<avs::LightNodeResources> lightNodeResources;
+			std::vector<avs::uid> textCanvas_uids;
+			std::vector<avs::uid> font_uids;
 			std::set<avs::uid> genericTexturesToStream;
 
-			req->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream, minimumPriority);
+			geometryStreamingService->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream
+				,textCanvas_uids,font_uids, minimumPriority);
 
 			for(avs::uid nodeID : nodeIDsToStream)
 			{
-				if(!req->hasResource(nodeID))
+				if(!geometryStreamingService->hasResource(nodeID))
 				{
-					encodeNodes( req, {nodeID});
+					encodeNodes( geometryStreamingService, {nodeID});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -81,9 +86,9 @@ namespace teleport
 			//Encode mesh nodes first, as they should be sent before lighting data.
 			for(avs::MeshNodeResources meshResourceInfo : meshNodeResources)
 			{
-				if(!req->hasResource(meshResourceInfo.mesh_uid))
+				if(!geometryStreamingService->hasResource(meshResourceInfo.mesh_uid))
 				{
-					encodeMeshes( req, {meshResourceInfo.mesh_uid});
+					encodeMeshes( geometryStreamingService, {meshResourceInfo.mesh_uid});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -93,9 +98,9 @@ namespace teleport
 				}
 				if(meshResourceInfo.skinID != 0)
 				{
-					if(!req->hasResource(meshResourceInfo.skinID))
+					if(!geometryStreamingService->hasResource(meshResourceInfo.skinID))
 					{
-						encodeSkin( req, meshResourceInfo.skinID);
+						encodeSkin( geometryStreamingService, meshResourceInfo.skinID);
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
@@ -107,9 +112,9 @@ namespace teleport
 
 				for(avs::uid animationID : meshResourceInfo.animationIDs)
 				{
-					if(!req->hasResource(animationID))
+					if(!geometryStreamingService->hasResource(animationID))
 					{
-						encodeAnimation( req, animationID);
+						encodeAnimation( geometryStreamingService, animationID);
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
@@ -125,20 +130,20 @@ namespace teleport
 
 				for(avs::MaterialResources material : meshResourceInfo.materials)
 				{
-					if (!req->hasResource(material.material_uid))
+					if (!geometryStreamingService->hasResource(material.material_uid))
 					{
-						encodeMaterials( req, { material.material_uid });
+						encodeMaterials( geometryStreamingService, { material.material_uid });
 						keepQueueing = attemptQueueData();
 						if (!keepQueueing)
 						{
 							break;
 						}
 					}
-					if(GetNewUIDs(material.texture_uids, req) != 0)
+					if(GetNewUIDs(material.texture_uids, geometryStreamingService) != 0)
 					{
 						for(avs::uid textureID : material.texture_uids)
 						{
-							encodeTextures( req, {textureID});
+							encodeTextures( geometryStreamingService, {textureID});
 							keepQueueing = attemptQueueData();
 							if(!keepQueueing)
 							{
@@ -156,9 +161,9 @@ namespace teleport
 					break;
 				}
 
-				if(!req->hasResource(meshResourceInfo.node_uid))
+				if(!geometryStreamingService->hasResource(meshResourceInfo.node_uid))
 				{
-					encodeNodes(req, {meshResourceInfo.node_uid});
+					encodeNodes(geometryStreamingService, {meshResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -172,9 +177,9 @@ namespace teleport
 			{
 				if(lightResourceInfo.shadowmap_uid)
 				{
-					if(!req->hasResource(lightResourceInfo.shadowmap_uid))
+					if(!geometryStreamingService->hasResource(lightResourceInfo.shadowmap_uid))
 					{
-						encodeTextures(req, {lightResourceInfo.shadowmap_uid});
+						encodeTextures(geometryStreamingService, {lightResourceInfo.shadowmap_uid});
 
 						keepQueueing = attemptQueueData();
 						if(!keepQueueing)
@@ -184,9 +189,9 @@ namespace teleport
 					}
 				}
 
-				if(!req->hasResource(lightResourceInfo.node_uid))
+				if(!geometryStreamingService->hasResource(lightResourceInfo.node_uid))
 				{
-					encodeNodes(req, {lightResourceInfo.node_uid});
+					encodeNodes(geometryStreamingService, {lightResourceInfo.node_uid});
 
 					keepQueueing = attemptQueueData();
 					if(!keepQueueing)
@@ -195,19 +200,42 @@ namespace teleport
 					}
 				}
 			}
-
+			
 			//Encode mesh nodes first, as they should be sent before lighting data.
 			for(avs::uid texture_uid : genericTexturesToStream)
 			{
-				if(req->hasResource(texture_uid))
+				if(geometryStreamingService->hasResource(texture_uid))
 					continue;
-				encodeTextures(req, {texture_uid});
+				encodeTextures(geometryStreamingService, {texture_uid});
 				keepQueueing = attemptQueueData();
 				if(!keepQueueing)
 				{
 					break;
 				}
 			}
+			for(avs::uid font_uid : font_uids)
+			{
+				if(geometryStreamingService->hasResource(font_uid))
+					continue;
+				encodeFontAtlas(font_uid);
+				keepQueueing = attemptQueueData();
+				if(!keepQueueing)
+				{
+					break;
+				}
+			}
+			for(avs::uid canvas_uid : textCanvas_uids)
+			{
+				if(geometryStreamingService->hasResource(canvas_uid))
+					continue;
+				encodeTextCanvas(canvas_uid);
+				keepQueueing = attemptQueueData();
+				if(!keepQueueing)
+				{
+					break;
+				}
+			}
+			
 		}
 
 		return avs::Result::OK;
@@ -237,7 +265,7 @@ namespace teleport
 		for(avs::uid uid : missingUIDs)
 		{
 			size_t oldBufferSize = buffer.size();
-			const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, req->getClientAxesStandard());
+			const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
 			putPayload(avs::GeometryPayloadType::Mesh);
 			put((size_t)1);
 			put(uid);
@@ -277,7 +305,7 @@ namespace teleport
 			}
 			if(compressedMesh&& compressedMesh->meshCompressionType== avs::MeshCompressionType::NONE)
 			{
-				avs::Mesh* mesh = geometryStore->getMesh(uid, req->getClientAxesStandard());
+				avs::Mesh* mesh = geometryStore->getMesh(uid, geometryStreamingService->getClientAxesStandard());
 				if (!mesh)
 				{
 					TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
@@ -350,7 +378,7 @@ namespace teleport
 			// Actual size is now known so update payload size
 			putPayloadSize();
 
-			req->encodedResource(uid);
+			geometryStreamingService->encodedResource(uid);
 		}
 		return avs::Result::OK;
 	}
@@ -385,8 +413,8 @@ namespace teleport
 
 			avs::Transform localTransform = node->localTransform;
 			avs::Transform globalTransform = node->globalTransform;
-			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), localTransform);
-			avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), globalTransform);
+			avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
+			avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), globalTransform);
 
 			if(node->parentID)
 				put(localTransform);
@@ -434,9 +462,13 @@ namespace teleport
 				put(node->lightRadius);
 				put(node->lightRange);
 				avs::vec3 lightDirection = node->lightDirection;
-				avs::ConvertPosition(settings->serverAxesStandard, req->getClientAxesStandard(), lightDirection);
+				avs::ConvertPosition(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
 				put(lightDirection);
 				put(node->lightType);
+			}
+			if(node->data_type==avs::NodeDataType::TextCanvas)
+			{
+				// nothing node-specific to add at present.
 			}
 			put(node->childrenIDs.size());
 			for(avs::uid id : node->childrenIDs)
@@ -444,7 +476,7 @@ namespace teleport
 				put(id);
 			}
 
-			req->encodedResource(uid);
+			geometryStreamingService->encodedResource(uid);
 		}
 
 		// Actual size is now known so update payload size
@@ -453,12 +485,12 @@ namespace teleport
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface* req, avs::uid skinID)
+	avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface* , avs::uid skinID)
 	{
 		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
 		putPayload(avs::GeometryPayloadType::Skin);
 
-		const avs::Skin* skin = geometryStore->getSkin(skinID, req->getClientAxesStandard());
+		const avs::Skin* skin = geometryStore->getSkin(skinID, geometryStreamingService->getClientAxesStandard());
 		if(skin)
 		{
 			put(skinID);
@@ -499,7 +531,7 @@ namespace teleport
 			{
 				avs::Node* node = geometryStore->getNode(skin->boneIDs[i]);
 				avs::Transform localTransform = node->localTransform;
-				avs::ConvertTransform(settings->serverAxesStandard, req->getClientAxesStandard(), localTransform);
+				avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
 				//put(skin->boneIDs[i]);
 				uint16_t parentIndex=findIndex(skin->boneIDs,node->parentID);
 				put(parentIndex);
@@ -520,16 +552,16 @@ namespace teleport
 			put(skin->skinTransform);
 
 			putPayloadSize();
-			req->encodedResource(skinID);
+			geometryStreamingService->encodedResource(skinID);
 		}
 
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterface* req, avs::uid animationID)
+	avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterface* , avs::uid animationID)
 	{
 		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
-		const avs::Animation* animation = geometryStore->getAnimation(animationID, req->getClientAxesStandard());
+		const avs::Animation* animation = geometryStore->getAnimation(animationID, geometryStreamingService->getClientAxesStandard());
 		if(animation)
 		{
 			putPayload(avs::GeometryPayloadType::Animation);
@@ -551,7 +583,7 @@ namespace teleport
 			}
 
 			putPayloadSize();
-			req->encodedResource(animationID);
+			geometryStreamingService->encodedResource(animationID);
 		}
 
 		return avs::Result::OK;
@@ -584,19 +616,84 @@ namespace teleport
 		prevBufferSize = 0;
 	}
 
-	avs::Result GeometryEncoder::encodeTextures(avs::GeometryRequesterBackendInterface *req
-												,std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeFontAtlas(avs::uid uid)
 	{
 		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
-		encodeTexturesBackend(req, missingUIDs);
+		const teleport::FontAtlas* fontAtlas= geometryStore->getFontAtlas(uid);
+
+		if (!fontAtlas)
+			return avs::Result::Failed;
+		putPayload(avs::GeometryPayloadType::FontAtlas);
+		put(uid);
+		put(fontAtlas->font_texture_uid);
+		if(!fontAtlas->fontMaps.size()>255)
+		{
+			return avs::Result::Failed;
+		}
+		uint8_t numMaps=fontAtlas->fontMaps.size();
+		put(numMaps);
+		for(auto m:fontAtlas->fontMaps)
+		{
+			put(m.first);
+			auto &fontMap=m.second;
+			put(fontMap.lineHeight);
+			uint16_t numGlyphs=(uint16_t)fontMap.glyphs.size();
+			if((size_t)numGlyphs!=fontMap.glyphs.size())
+			{
+				return avs::Result::Failed;
+			}
+			put(numGlyphs);
+			for(size_t j=0;j<fontMap.glyphs.size();j++)
+			{
+				auto &glyph=fontMap.glyphs[j];
+				put(glyph);
+			}
+		}
+		// Actual size is now known so update payload size
+		putPayloadSize();
+		//Flag we have encoded the material.
+		geometryStreamingService->encodedResource(uid);
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterface *req
+	avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
+	{
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
+		const teleport::TextCanvas* textCanvas= geometryStore->getTextCanvas(uid);
+
+		if (!textCanvas)
+			return avs::Result::Failed;
+		putPayload(avs::GeometryPayloadType::TextCanvas);
+		put(uid);
+		put(textCanvas->font_uid);
+		put(textCanvas->size);
+		put(textCanvas->lineHeight);
+		put(textCanvas->width);
+		put(textCanvas->height);
+		put(textCanvas->colour);
+		put(textCanvas->text.length());
+		put((const uint8_t* )textCanvas->text.data(),textCanvas->text.length());
+		// Actual size is now known so update payload size
+		putPayloadSize();
+		//Flag we have encoded the material.
+		geometryStreamingService->encodedResource(uid);
+		return avs::Result::OK;
+	}
+
+
+	avs::Result GeometryEncoder::encodeTextures(avs::GeometryRequesterBackendInterface *
 												,std::vector<avs::uid> missingUIDs)
 	{
 		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
-		auto renderingFeatures=req->getClientRenderingFeatures();
+		encodeTexturesBackend(geometryStreamingService, missingUIDs);
+		return avs::Result::OK;
+	}
+
+	avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterface *
+												,std::vector<avs::uid> missingUIDs)
+	{
+		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
+		auto renderingFeatures=geometryStreamingService->getClientRenderingFeatures();
 		//Push amount of materials.
 		for (avs::uid uid : missingUIDs)
 		{
@@ -694,7 +791,7 @@ namespace teleport
 				materialTexture_uids.erase(std::remove(materialTexture_uids.begin(), materialTexture_uids.end(), 0), materialTexture_uids.end());
 
 				//Only send textures that we have not already sent to the client.
-				GetNewUIDs(materialTexture_uids, req);
+				GetNewUIDs(materialTexture_uids, geometryStreamingService);
 
 				//Push amount of textures we are sending.
 				put(materialTexture_uids.size());
@@ -705,24 +802,24 @@ namespace teleport
 				if (materialTexture_uids.size() != 0)
 				{
 					//Push textures.
-					encodeTexturesBackend(req, materialTexture_uids);
+					encodeTexturesBackend(geometryStreamingService, materialTexture_uids);
 				}
 
 				//Flag we have encoded the material.
-				req->encodedResource(uid);
+				geometryStreamingService->encodedResource(uid);
 			}
 		}
 
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeShadowMaps(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
+	avs::Result GeometryEncoder::encodeShadowMaps(avs::GeometryRequesterBackendInterface* , std::vector<avs::uid> missingUIDs)
 	{
-		encodeTexturesBackend(req, missingUIDs, true);
+		encodeTexturesBackend(geometryStreamingService, missingUIDs, true);
 		return avs::Result::OK;
 	}
 
-	avs::Result GeometryEncoder::encodeTexturesBackend( avs::GeometryRequesterBackendInterface * req, std::vector<avs::uid> missingUIDs, bool )
+	avs::Result GeometryEncoder::encodeTexturesBackend( avs::GeometryRequesterBackendInterface * , std::vector<avs::uid> missingUIDs, bool )
 	{
 		GeometryStore *geometryStore=&(GeometryStore::GetInstance());
 		for (avs::uid uid : missingUIDs)
@@ -784,7 +881,7 @@ namespace teleport
 				putPayloadSize();
 
 				//Flag we have encoded the texture.
-				req->encodedResource(uid);
+				geometryStreamingService->encodedResource(uid);
 			}
 			else
 			{

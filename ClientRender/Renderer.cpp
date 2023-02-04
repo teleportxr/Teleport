@@ -347,6 +347,7 @@ void Renderer::RecompileShaders()
 	text3DRenderer.RecompileShaders();
 	renderState.hDRRenderer->RecompileShaders();
 	gui.RecompileShaders();
+	TextCanvas::RecompileShaders();
 	delete renderState.pbrEffect;
 	delete renderState.cubemapClearEffect;
 	renderState.pbrEffect			= renderPlatform->CreateEffect("pbr");

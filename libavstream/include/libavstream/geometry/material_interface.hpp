@@ -166,7 +166,7 @@ namespace avs
 
 		TextureFormat format;
 		TextureCompression compression;
-    
+		bool compressed=false;
 		uint32_t dataSize;
 		unsigned char *data;
 

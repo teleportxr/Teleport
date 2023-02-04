@@ -4,7 +4,7 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files TeleportCore.cpp ErrorHandling.cpp Input.cpp)
+set(src_files TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp )
 file(GLOB header_files *.h)
 
 if(ANDROID)

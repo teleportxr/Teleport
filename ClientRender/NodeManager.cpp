@@ -21,7 +21,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetChildrenIDs(avsNode.childrenIDs);
 	// if !always_render...?
 	{
+		rootNodes_mutex.lock();
 		rootNodes.push_back(node);
+		rootNodes_mutex.unlock();
 		distanceSortedRootNodes.push_back(node);
 	}
 	nodeLookup_mutex.lock();
@@ -127,7 +129,9 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 	//Remove from root nodes, if the node had no parent.
 	else
 	{
+		rootNodes_mutex.lock();
 		rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), node));
+		rootNodes_mutex.unlock();
 		distanceSortedRootNodes.erase(std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), node));
 	}
 	// If it's in the transparent list, erase it from there.
@@ -142,7 +146,9 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 		std::shared_ptr<Node> child = childPtr.lock();
 		if (child)
 		{
+			rootNodes_mutex.lock();
 			rootNodes.push_back(child);
+			rootNodes_mutex.unlock();
 			distanceSortedRootNodes.push_back(child);
 			//Remove parent
 			child->SetParent(nullptr);
@@ -223,6 +229,8 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 			if(M->GetMaterialCreateInfo().materialMode==avs::MaterialMode::TRANSPARENT_MATERIAL)
 				transparent=true;
 		}
+		if(n->get()->GetTextCanvas())
+			transparent=true;
 		if(!unknown)
 		{
 			if(transparent)
@@ -428,12 +436,13 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 
 void NodeManager::Update(float deltaTime)
 {
-	nodeLookup_mutex.lock();
+	rootNodes_mutex.lock();
 	nodeList_t expiredNodes;
 	for(const std::shared_ptr<Node> node : rootNodes)
 	{
 		node->Update(deltaTime);
 	}
+	rootNodes_mutex.unlock();
 	for(const avs::uid u : hiddenNodes)
 	{
 		auto n=nodeLookup.find(u);
@@ -453,7 +462,6 @@ void NodeManager::Update(float deltaTime)
 		RemoveNode(node);
 		removed_node_uids.insert(node->id);
 	}
-	nodeLookup_mutex.unlock();
 }
 
 const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
@@ -463,7 +471,9 @@ const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
 
 void NodeManager::Clear()
 {
+	rootNodes_mutex.lock();
 	rootNodes.clear();
+	rootNodes_mutex.unlock();
 	distanceSortedRootNodes.clear();
 	nodeLookup.clear();
 
@@ -520,6 +530,7 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 		child->SetParent(parent);
 		if (parent == nullptr)
 		{
+	rootNodes_mutex.lock();
 			// put in root nodes list.
 			auto r = std::find(rootNodes.begin(), rootNodes.end(), child);
 			if (r == rootNodes.end())
@@ -527,6 +538,7 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 			auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
 			if (f == distanceSortedRootNodes.end())
 				distanceSortedRootNodes.push_back(child);
+	rootNodes_mutex.unlock();
 		}
 	}
 	//Do nothing if we couldn't find one of the nodes; likely due to the parent being removed before the child was received.
@@ -541,7 +553,10 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 		distanceSortedRootNodes.erase(f);
 	//Erase child from the root nodes list, as they now have a parent.
 	// TODO: ONLY do this if it was unparented before.....
+	
+	rootNodes_mutex.lock();
 	auto r=std::find(rootNodes.begin(), rootNodes.end(), child);
 	if(r!=rootNodes.end())
 		rootNodes.erase(r);
+	rootNodes_mutex.unlock();
 }

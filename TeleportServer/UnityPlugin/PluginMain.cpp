@@ -11,7 +11,7 @@
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
 #include "TeleportServer/ClientData.h"
-#include "TeleportServer/DefaultDiscoveryService.h"
+#include "TeleportServer/DiscoveryService.h"
 #include "TeleportServer/DefaultHTTPService.h"
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/GeometryStreamingService.h"
@@ -66,7 +66,7 @@ typedef void(__stdcall* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data,
 
 static avs::Context avsContext;
 
-static std::shared_ptr<DefaultDiscoveryService> discoveryService = std::make_shared<DefaultDiscoveryService>();
+static std::shared_ptr<DiscoveryService> discoveryService = std::make_shared<DiscoveryService>();
 static std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
 
 std::map<avs::uid, ClientData> clientServices;
@@ -1395,9 +1395,45 @@ TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, BSTR path, std::time_
 	teleport::GeometryStore::GetInstance().storeMaterial(id, guid, path, lastModified, avs::Material(material));
 }
 
-TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
+TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR relative_asset_path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	teleport::GeometryStore::GetInstance().storeTexture(id, guid, path, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	teleport::GeometryStore::GetInstance().storeTexture(id, guid, relative_asset_path, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+}
+
+TELEPORT_EXPORT avs::uid StoreFont( BSTR ttf_path,BSTR relative_asset_path,std::time_t lastModified, int size)
+{
+	return teleport::GeometryStore::GetInstance().storeFont(ttf_path,relative_asset_path,lastModified,size);
+}
+
+TELEPORT_EXPORT avs::uid StoreTextCanvas( BSTR relative_asset_path, const InteropTextCanvas *interopTextCanvas)
+{
+	avs::uid u=teleport::GeometryStore::GetInstance().storeTextCanvas(relative_asset_path,interopTextCanvas);
+	if(u)
+	{
+		for(auto& clientPair : clientServices)
+		{
+			ClientData& clientData = clientPair.second;
+			if(clientData.clientMessaging->GetGeometryStreamingService().hasResource(u))
+				clientData.clientMessaging->GetGeometryStreamingService().requestResource(u);
+		}
+	}
+	return u;
+}
+
+// TODO: This is a really basic resend/update function. Must make better.
+TELEPORT_EXPORT void ResendNode(avs::uid u)
+{
+	for(auto& clientPair : clientServices)
+	{
+		ClientData& clientData = clientPair.second;
+		if(clientData.clientMessaging->GetGeometryStreamingService().hasResource(u))
+			clientData.clientMessaging->GetGeometryStreamingService().requestResource(u);
+	}
+}
+
+TELEPORT_EXPORT bool GetFontAtlas( BSTR ttf_path,  InteropFontAtlas *interopFontAtlas)
+{
+	return teleport::Font::GetInstance().GetInteropFontAtlas(avs::convertToByteString(ttf_path),interopFontAtlas);
 }
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture shadowMap)
@@ -1455,7 +1491,7 @@ TELEPORT_EXPORT uint64_t GetNumberOfTexturesWaitingForCompression()
 ///TODO: Free memory of allocated string, or use passed in string to return message.
 TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
-	const avs::Texture* texture = teleport::GeometryStore::GetInstance().getNextCompressedTexture();
+	const avs::Texture* texture = teleport::GeometryStore::GetInstance().getNextTextureToCompress();
 
 	std::wstringstream messageStream;
 	//Write compression message to wide string stream.

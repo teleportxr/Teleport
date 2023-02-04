@@ -6,7 +6,9 @@
 
 #include "libavstream/common.hpp"
 #include "TeleportCore/AnimationInterface.h"
+#include "TeleportCore/TextCanvas.h"
 #include "libavstream/geometry/mesh_interface.hpp"
+#include <wtypes.h>
 
 //! Interop struct to receive nodes from external code.
 struct InteropNode
@@ -224,21 +226,22 @@ struct InteropMaterial
 
 struct InteropTexture
 {
-	BSTR name;
-	BSTR path;
+	BSTR name=nullptr;
+	BSTR path=nullptr;
 
-	uint32_t width;
-	uint32_t height;
-	uint32_t depth;
-	uint32_t bytesPerPixel;
-	uint32_t arrayCount;
-	uint32_t mipCount;
+	uint32_t width=0;
+	uint32_t height=0;
+	uint32_t depth=0;
+	uint32_t bytesPerPixel=0;
+	uint32_t arrayCount=0;
+	uint32_t mipCount=0;
 
 	avs::TextureFormat format;
 	avs::TextureCompression compression;
+	bool compressed=false;
 
-	uint32_t dataSize;
-	unsigned char* data;
+	uint32_t dataSize=0;
+	unsigned char* data=nullptr;
 
 	avs::uid sampler_uid = 0;
 
@@ -258,6 +261,7 @@ struct InteropTexture
 			mipCount,
 			format,
 			compression,
+			compressed,
 			dataSize,
 			data,
 			sampler_uid,
@@ -269,13 +273,13 @@ struct InteropTexture
 
 struct InteropTransformKeyframe
 {
-	size_t boneIndex;
+	size_t boneIndex=0;
 
-	int numPositions;
-	avs::Vector3Keyframe* positionKeyframes;
+	int numPositions=0;
+	avs::Vector3Keyframe* positionKeyframes=nullptr;
 
-	int numRotations;
-	avs::Vector4Keyframe* rotationKeyframes;
+	int numRotations=0;
+	avs::Vector4Keyframe* rotationKeyframes=nullptr;
 
 	operator avs::TransformKeyframeList() const
 	{
@@ -293,7 +297,7 @@ struct InteropTransformAnimation
 	BSTR name;
 	BSTR path;
 	int64_t boneCount;
-	InteropTransformKeyframe* boneKeyframes;
+	InteropTransformKeyframe* boneKeyframes=nullptr;
 
 	operator avs::Animation() const
 	{
@@ -303,4 +307,35 @@ struct InteropTransformAnimation
 			{boneKeyframes, boneKeyframes + boneCount}
 		};
 	}
+};
+
+struct InteropTextCanvas
+{
+	BSTR text=nullptr;
+	BSTR font=nullptr;
+	int size=0;
+	float lineHeight=0.0f;
+	float width=0;
+	float height=0;
+	avs::vec4 colour;
+};
+
+namespace teleport
+{
+	struct Glyph;
+}
+
+struct InteropFontMap
+{
+	int size=0;
+	int numGlyphs=0;
+	teleport::Glyph *fontGlyphs=nullptr;
+};
+
+//! Struct to pass a font atlas back to the engine.
+struct InteropFontAtlas
+{
+	BSTR font_path=nullptr;
+	int numMaps=0;
+	InteropFontMap *fontMaps=nullptr;
 };

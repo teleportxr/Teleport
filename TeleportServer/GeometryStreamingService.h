@@ -29,9 +29,12 @@ namespace teleport
 		virtual void confirmResource(avs::uid resourceID) override;
 
 		void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
-		, std::vector<avs::MeshNodeResources>& outMeshResources
-		, std::vector<avs::LightNodeResources>& outLightResources
-		,std::set<avs::uid>& genericTextureUids,int32_t minimumPriority) const override;
+			, std::vector<avs::MeshNodeResources>& outMeshResources
+			, std::vector<avs::LightNodeResources>& outLightResources
+			,std::set<avs::uid>& genericTextureUids
+			,std::vector<avs::uid> &textCanvases
+			,std::vector<avs::uid> &fontAtlases
+			,int32_t minimumPriority) const;
 
 		virtual avs::AxesStandard getClientAxesStandard() const override;
 		virtual avs::RenderingFeatures getClientRenderingFeatures() const override;

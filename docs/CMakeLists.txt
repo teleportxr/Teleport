@@ -100,6 +100,12 @@ add_custom_target(Sphinx ALL
 					SOURCES ${ALL_RST_FILES})
 set_target_properties( Sphinx PROPERTIES FOLDER Docs)
 
+set_target_properties( Sphinx PROPERTIES 
+		VS_DEBUGGER_COMMAND "C:/Program Files/Google/Chrome/Application/chrome.exe" 
+		)
+
+set_target_properties( Sphinx PROPERTIES 
+		VS_DEBUGGER_COMMAND_ARGUMENTS "${CMAKE_CURRENT_BINARY_DIR}/sphinx/index.html")
 
 if(NOT "${TELEPORT_DOXYGEN_UNITY_INPUT_DIR}" STREQUAL "")
 	add_dependencies(Sphinx DoxygenUnity Doxygen)

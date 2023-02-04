@@ -1,0 +1,133 @@
+// Copyright (c) 2023 Simul Software Ltd. All rights reserved.
+#include "shader_platform.sl"
+#include "../SL/common.sl"
+#include "../SL/render_states.sl"
+#include "../SL/camera_constants.sl"
+#include "../SL/depth.sl"
+#include "../SL/text_constants.sl"
+
+uniform StructuredBuffer<FontChar> fontChars;
+uniform Texture2D fontTexture;
+
+// We will send 6 times (number of chars). Each group will be two triangles.
+// The FontChar structure will contain a texcoord quad which
+// indicates what part of the fontTexture it will show. It also has text_rect,
+// which is scaled (-1,1) in the x and y. These are then transformed by the worldViewProj
+// into projection coords.
+shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
+{
+	uint char_index=IN.vertex_id/6;
+	uint vert_index=IN.vertex_id-(6*char_index);
+	uint ids[]={0,1,2,2,3,1};
+	FontChar f=fontChars[char_index];
+	uint vertex_id=ids[vert_index];
+	
+	#ifdef  SFX_OPENGL
+	f.text_rect.y *= -1;
+	f.text_rect.y -= f.text_rect.w;
+	#endif
+	
+	posTexVertexOutput OUT;
+	vec2 poss[4];
+	poss[0]			=vec2(1.0, 0.0);
+	poss[1]			=vec2(1.0, 1.0);
+	poss[2]			=vec2(0.0, 0.0);
+	poss[3]			=vec2(0.0, 1.0);
+	vec2 pos		=poss[vertex_id];
+	vec4 localPos	=vec4(background_rect[0].xy+(f.text_rect.xy+f.text_rect.zw*pos)*background_rect[0].zw,0.0,1.0);
+	//vec4 localPos	=vec4(background_rect[0].xy+background_rect[0].zw*pos,0.0,1.0);
+	OUT.texCoords	=f.texc.xy+f.texc.zw*pos.xy;
+#ifdef SFX_OPENGL
+	OUT.texCoords.y =1.0 - OUT.texCoords.y;
+#endif
+
+	vec4 opos		=vec4(localPos.xyz,1.0);
+	OUT.hPosition	=mul(opos,worldViewProj);
+
+	return OUT;
+}
+
+shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
+{
+	uint char_index=IN.vertex_id/6;
+	uint vert_index=IN.vertex_id-(6*char_index);
+	uint ids[]={0,1,2,2,3,1};
+	FontChar f=fontChars[char_index];
+	uint vertex_id=ids[vert_index];
+	
+	#ifdef  SFX_OPENGL
+	f.text_rect.y *= -1;
+	f.text_rect.y -= f.text_rect.w;
+	#endif
+	
+	posTexVertexOutput OUT;
+	vec2 poss[4];
+	poss[0]			=vec2(1.0, 0.0);
+	poss[1]			=vec2(1.0, 1.0);
+	poss[2]			=vec2(0.0, 0.0);
+	poss[3]			=vec2(0.0, 1.0);
+	vec2 pos		=poss[vertex_id];
+	vec4 localPos	=vec4(f.text_rect.xy+f.text_rect.zw*pos,0.0,1.0);
+	OUT.texCoords	=f.texc.xy+f.texc.zw*pos.xy;
+#ifdef SFX_OPENGL
+	OUT.texCoords.y =1.0 - OUT.texCoords.y;
+#endif
+
+	vec4 wpos			=mul(localPos, viewID == 0 ? leftWorld : rightWorld);
+	vec4 viewspace_pos = mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
+	OUT.hPosition		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
+
+	return OUT;
+}
+ 
+shader vec4 PS_CanvasText(posTexVertexOutput IN) : SV_TARGET
+{
+	vec2 tc		=IN.texCoords;
+	vec4 lookup	= colour*vec4(1.0,1.0,1.0,texture_clamp_lod(fontTexture,tc,0).r);
+	return lookup;
+}
+
+BlendState AlphaBlendRGB
+{
+	BlendEnable[0]		= TRUE;
+	SrcBlend			= SRC_ALPHA;
+	DestBlend			= INV_SRC_ALPHA;
+	BlendOp				= ADD;
+	SrcBlendAlpha		= ZERO;
+	DestBlendAlpha		= ZERO;
+	BlendOpAlpha		= ADD;
+	RenderTargetWriteMask[0] = 7;
+};
+
+BlendState AddBlendRGB
+{
+	BlendEnable[0]	=TRUE;
+	BlendEnable[1]	=TRUE;
+	SrcBlend		=ONE;
+	DestBlend		=ONE;
+	RenderTargetWriteMask[0] = 7;
+};
+
+technique text
+{
+	pass multiview
+	{
+		SetRasterizerState( RenderNoCull );
+		SetTopology( TriangleList );
+		SetDepthStencilState( TestReverseDepth, 0 );
+		SetBlendState(AlphaBlendRGB,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_6_1, VS_CanvasText_MV()));
+		SetPixelShader(CompileShader(ps_4_0, PS_CanvasText()));
+	}
+	pass singleview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetTopology(TriangleList);
+		SetDepthStencilState(TestReverseDepth, 0);
+		SetBlendState(AlphaBlendRGB, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_4_0, VS_CanvasText_SV()));
+		SetPixelShader(CompileShader(ps_4_0, PS_CanvasText()));
+	}
+}

@@ -11,16 +11,17 @@
 #include "Mesh.h"
 #include "NodeComponents/AnimationComponent.h"
 #include "NodeComponents/VisibilityComponent.h"
+#include "TextCanvas.h"
 #include "Skin.h"
 #include "SkinInstance.h"
 #include "Transform.h"
+#include "ResourceManager.h"
 
 namespace clientrender
 {
-	class Node
+	class Node: public IncompleteNode
 	{
 	public:
-		const avs::uid id;
 		const std::string name;
 
 		// distance from the viewer - so we can sort nodes from front to back.
@@ -70,6 +71,9 @@ namespace clientrender
 		virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
 		std::shared_ptr<Mesh> GetMesh() const { return mesh; }
 
+		void SetTextCanvas(std::shared_ptr<TextCanvas> t) { this->textCanvas = t; }
+		std::shared_ptr<TextCanvas> GetTextCanvas() const { return textCanvas; }
+		
 		virtual void SetSkin(std::shared_ptr<Skin> skin) { skinInstance.reset(new SkinInstance(skin)); }
 		const std::shared_ptr<SkinInstance> GetSkinInstance() const { return skinInstance; }
 		std::shared_ptr<SkinInstance> GetSkinInstance() { return skinInstance; }
@@ -163,6 +167,7 @@ namespace clientrender
 	protected:
 		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
+		std::shared_ptr<TextCanvas> textCanvas;
 		std::shared_ptr<SkinInstance> skinInstance;
 		std::vector<std::shared_ptr<Material>> materials;
 		avs::vec4 lightmapScaleOffset;

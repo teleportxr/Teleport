@@ -119,5 +119,6 @@ namespace clientrender
 		//Links the node with the passed ID to it's parent. If the node doesn't exist, then it doesn't do anything.
 		void LinkToParentNode(avs::uid nodeID);
 		mutable std::mutex nodeLookup_mutex;
+		mutable std::mutex rootNodes_mutex;
 	};
 }

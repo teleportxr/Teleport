@@ -11,6 +11,7 @@
 
 #include "libavstream/geometry/material_interface.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
+#include "Font.h"
 
 namespace teleport
 {
@@ -145,13 +146,11 @@ namespace teleport
 		{
 			return texture.name;
 		}
-		_bstr_t guid;
 		//! The path to the asset, which is both the relative path from the cache directory, and the URI
 		//! relative to the server.
 		_bstr_t path;
 		std::time_t lastModified;
 		avs::Texture texture;
-		float valueScale=1.0f;
 		bool Verify(const ExtractedTexture &t) const
 		{
 			return true;
@@ -161,23 +160,17 @@ namespace teleport
 		{
 			std::wstring pathAsString={textureData.path, SysStringLen(textureData.path)};
 			std::replace(pathAsString.begin(),pathAsString.end(),' ','%');
-
-			out << std::wstring{textureData.guid, SysStringLen(textureData.guid)};
+			out << std::wstring(L"");//std::wstring{textureData.guid, SysStringLen(textureData.guid)};
 			out << " " << pathAsString;
 			out << " " << textureData.lastModified;
 			out << "\n";
 			out << textureData.texture;
-			out << " " << textureData.valueScale << "\n";
 			return out;
 		}
 		
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, ExtractedTexture& textureData)
 		{
-			std::wstring guidAsString;
-			in >> guidAsString;
-			textureData.guid = _bstr_t(guidAsString.data());
-			
 			std::wstring pathAsString;
 			in >> pathAsString;
 			std::replace(pathAsString.begin(),pathAsString.end(),'%',' ');
@@ -185,23 +178,49 @@ namespace teleport
 
 			in >> textureData.lastModified;
 			in >> textureData.texture;
-			in >> textureData.valueScale;
 			return in;
 		}
 	};
-
-	//Resource that has been loaded off disk, and needs a new ID.
+	
+	//! Each font size represented has a FontMap.
+	struct ExtractedFontAtlas
+	{
+		FontAtlas fontAtlas;
+		
+		template<typename OutStream>
+		friend OutStream& operator<< (OutStream& out, const ExtractedFontAtlas& extractedFontAtlas)
+		{
+			out << extractedFontAtlas.fontAtlas;
+			return out;
+		}
+		
+		template<typename InStream>
+		friend InStream& operator>> (InStream& in, ExtractedFontAtlas& extractedFontAtlas)
+		{
+			in >> extractedFontAtlas.fontAtlas;
+			return in;
+		}
+		bool Verify(const ExtractedFontAtlas &t) const
+		{
+			return (fontAtlas.Verify(t.fontAtlas));
+		}
+	};
+	//! Each font size represented has a FontMap.
+	struct ExtractedText
+	{
+		std::string text;
+	};
+	//Resource that has been loaded from disk.
 	struct LoadedResource
 	{
 		avs::uid id;	// The id of the resource in this session.
-		BSTR guid;		// Uniquely identifying string that the engine uses to identify assets.
 		BSTR path;		// Uniquely identifying string that the engine uses to identify assets.
 		BSTR name;		// Name of the asset to tell it apart from assets with the GUID; i.e. they come from the same source file.
 		std::time_t lastModified;
 
 		LoadedResource() = default;
-		LoadedResource(avs::uid uid, _bstr_t gud, _bstr_t pth, BSTR name, std::time_t lastModified)
-			:id(uid), guid(gud), path(pth), name(name), lastModified(lastModified)
+		LoadedResource(avs::uid uid,  _bstr_t pth, BSTR name, std::time_t lastModified)
+			:id(uid),  path(pth), name(name), lastModified(lastModified)
 		{}
 	};
 

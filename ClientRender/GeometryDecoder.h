@@ -17,6 +17,10 @@ namespace draco
 {
 	class Mesh;
 }
+namespace clientrender
+{
+	class ResourceCreator;
+}
 
 /*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.
 */
@@ -33,10 +37,10 @@ private:
 		std::vector<uint8_t>					data		= {};
 		size_t									offset		= 0;
 		avs::GeometryPayloadType				type		= avs::GeometryPayloadType::Invalid;
-		avs::GeometryTargetBackendInterface*	target		= nullptr;
+		clientrender::ResourceCreator*	target		= nullptr;
 		bool									saveToDisk	= false;
 
-		GeometryDecodeData(const void* ptr, size_t size, avs::GeometryPayloadType type_, avs::GeometryTargetBackendInterface* target_, bool saveToDisk_)
+		GeometryDecodeData(const void* ptr, size_t size, avs::GeometryPayloadType type_, clientrender::ResourceCreator* target_, bool saveToDisk_)
 			: data(size), type(type_), target(target_), saveToDisk(saveToDisk_) 
 		{
 			memcpy(data.data(), ptr, size);
@@ -52,7 +56,7 @@ public:
 	//! Inherited via GeometryDecoderBackendInterface
 	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
 	//! Treat the file as buffer input and decode.
-	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface *intf);
+	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf);
 
 	inline void WaitFromDecodeThread()
 	{
@@ -65,7 +69,7 @@ private:
 	avs::Result decodeInternal(GeometryDecodeData& geometryDecodeData);
 	
 	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry& dg, const avs::CompressedMesh& compressedMesh);
-	avs::Result CreateMeshesFromDecodedGeometry(avs::GeometryTargetBackendInterface* target, DecodedGeometry& dg, const std::string& name);
+	avs::Result CreateMeshesFromDecodedGeometry(clientrender::ResourceCreator* target, DecodedGeometry& dg, const std::string& name);
 
 	avs::Result decodeMesh(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeMaterial(GeometryDecodeData& geometryDecodeData);
@@ -74,6 +78,8 @@ private:
 	avs::Result decodeAnimation(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeNode(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeSkin(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeFontAtlas(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeTextCanvas(GeometryDecodeData& geometryDecodeData);
 
 	avs::Result decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::FloatKeyframe>& keyframes);
 	avs::Result decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector3Keyframe>& keyframes);

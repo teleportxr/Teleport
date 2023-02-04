@@ -675,53 +675,6 @@ namespace avs
 		uid shadowmap_uid=0;
 	};
 
-	//! Common mesh backend interface.
-	//! Mesh backend abstracts mesh definition.
-	//! We aim to follow the glTF format as a starting point https://www.khronos.org/gltf/
-	/*class AVSTREAM_API GeometrySourceBackendInterface : public UseInternalAllocator
-	{
-	public:
-		virtual ~GeometrySourceBackendInterface() = default;
-
-		//Get IDs of all meshes stored.
-		virtual std::vector<uid> getMeshIDs() const = 0;
-		virtual const avs::CompressedMesh* getCompressedMesh(avs::uid meshID, avs::AxesStandard standard) const =0;
-		//Get mesh with passed ID.
-		//	meshID : Indentifier of the mesh.
-		//Returns the mesh if successfully found, otherwise nullptr.
-		virtual Mesh* getMesh(uid meshID, avs::AxesStandard standard) = 0;
-		virtual const Mesh* getMesh(uid meshID, avs::AxesStandard standard) const = 0;
-
-		virtual avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) = 0;
-		virtual const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const = 0;
-
-		virtual avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) = 0;
-		virtual const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const = 0;
-
-		//Get IDs of all textures stored in this geometry source.
-		virtual std::vector<uid> getTextureIDs() const = 0;
-		//Get texture with passed ID.
-		//	textureID : Indentifier of the texture.
-		//Returns the texture if successfully found, otherwise nullptr.
-		virtual Texture* getTexture(uid textureID) = 0;
-		virtual const Texture* getTexture(uid textureID) const = 0;
-
-		//Get IDs of all materials stored in this geometry source.
-		virtual std::vector<uid> getMaterialIDs() const = 0;
-		//Get material with passed ID.
-		//	materialID : Indentifier of the material.
-		//Returns the material if successfully found, otherwise nullptr.
-		virtual Material* getMaterial(uid materialID) = 0;
-		virtual const Material* getMaterial(uid materialID) const = 0;
-
-		//Get IDs of all shadow maps stored in this geometry source.
-		virtual std::vector<uid> getShadowMapIDs() const = 0;
-		//Get shadow map with passed ID.
-		//	shadowID : Indentifier of the shadow map.
-		//Returns the shadow map if successfully found, otherwise nullptr.
-		virtual Texture* getShadowMap(uid shadowID) = 0;
-		virtual const Texture* getShadowMap(uid shadowID) const = 0;
-	};*/
 	//! This tells the Geometry Source node what it wants from the Geometry Source backend
 	//! so the node can acquire the data to be sent for encoding.
 	class AVSTREAM_API GeometryRequesterBackendInterface : public UseInternalAllocator
@@ -736,16 +689,6 @@ namespace avs
 		virtual void requestResource(uid resourceID) = 0;
 		//Flags the resources as having been received; prevents the resource being resent after a set amount of time.
 		virtual void confirmResource(uid resourceID) = 0;
-
-		//Get resources to stream on a per node basis.
-		//	outNodeIDs : IDs of nodes to stream with no dependencies on sub-resources.
-		//	outMeshResources : Resources to stream for mesh nodes.
-		//	outLightResources : Resources to stream for light nodes.
-		//	genericTextureUids : Textures that are not specific members of materials, e.g. lightmaps.
-		virtual void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
-										,std::vector<MeshNodeResources>& outMeshResources
-										,std::vector<LightNodeResources>& outLightResources
-										,std::set<avs::uid>& genericTextureUids, int32_t minimumPriority) const = 0;
 
 		//Returns the axes standard used by the client.
 		virtual AxesStandard getClientAxesStandard() const = 0;

@@ -11,6 +11,7 @@
 
 #include "NodeManager.h"
 #include "ResourceManager.h"
+#include "TeleportCore/FontAtlas.h"
 
 namespace clientrender
 {
@@ -22,27 +23,7 @@ namespace clientrender
 namespace clientrender
 {
 	typedef unsigned long long geometry_cache_uid;
-	struct IncompleteResource
-	{
-		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
-			:id(id), type(type)
-		{}
-
-		const avs::uid id;
-		const avs::GeometryPayloadType type;
-	};
-
-	struct MissingResource
-	{
-		const avs::uid id; //ID of the missing resource.
-		avs::GeometryPayloadType resourceType; //String indicating missing resource's type.
-		//Resources that can't be completed without this missing resource.
-		std::set<std::shared_ptr<IncompleteResource>> waitingResources;
-
-		MissingResource(avs::uid id, avs::GeometryPayloadType r)
-			:id(id), resourceType(r)
-		{}
-	};
+	
 	struct IncompleteMaterial : IncompleteResource
 	{
 		IncompleteMaterial(avs::uid id, avs::GeometryPayloadType type)
@@ -52,30 +33,6 @@ namespace clientrender
 		clientrender::Material::MaterialCreateInfo materialInfo;
 		std::set<avs::uid> missingTextureUids; //<ID of the texture, slot the texture should be placed into>.
 	};
-
-	struct IncompleteNode : IncompleteResource
-	{
-		IncompleteNode(avs::uid id, avs::GeometryPayloadType type)
-			:IncompleteResource(id, type)
-		{}
-
-		std::shared_ptr<clientrender::Node> node;
-
-		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
-		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
-	};
-
-	struct IncompleteSkin : IncompleteResource
-	{
-		IncompleteSkin(avs::uid id, avs::GeometryPayloadType type)
-			:IncompleteResource(id, type)
-		{}
-
-		std::shared_ptr<clientrender::Skin> skin;
-
-		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
-	};
-
 	struct UntranscodedTexture
 	{
 		avs::uid texture_uid;
@@ -85,6 +42,7 @@ namespace clientrender
 		avs::TextureCompression fromCompressionFormat;
 		float valueScale;	// scale on transcode.
 	};
+
 	//! A container for geometry sent from servers and cached locally.
 	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 	class GeometryCache : public avs::GeometryCacheBackendInterface
@@ -129,6 +87,8 @@ namespace clientrender
 			//mLightManager.Update(timeElapsed_s);
 			mBoneManager.Update(timeElapsed_s);
 			mAnimationManager.Update(timeElapsed_s);
+			mTextCanvasManager.Update(timeElapsed_s);
+			mFontAtlasManager.Update(timeElapsed_s);
 		}
 		void setCacheFolder(const std::string &f);
 		void SaveNodeTree(const std::shared_ptr<clientrender::Node>& n) const;
@@ -151,7 +111,11 @@ namespace clientrender
 			resourceIDs.insert(resourceIDs.end(), b.begin(), b.end());
 			const auto& a = mAnimationManager.GetAllIDs();
 			resourceIDs.insert(resourceIDs.end(), a.begin(), a.end());
-
+			
+			const auto& c = mTextCanvasManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), c.begin(), c.end());
+			const auto& f = mFontAtlasManager.GetAllIDs();
+			resourceIDs.insert(resourceIDs.end(), f.begin(), f.end());
 			return resourceIDs;
 
 			/*
@@ -179,6 +143,8 @@ namespace clientrender
 			mLightManager.Clear();
 			mBoneManager.Clear();
 			mAnimationManager.Clear();
+			mTextCanvasManager.Clear();
+			mFontAtlasManager.Clear();
 		}
 		
 		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
@@ -202,7 +168,9 @@ namespace clientrender
 		ResourceManager<avs::uid,clientrender::Light>			mLightManager;
 		ResourceManager<uint64_t,clientrender::Bone>			mBoneManager;
 		ResourceManager<avs::uid,clientrender::Animation>		mAnimationManager;
-
+		
+		ResourceManager<avs::uid,clientrender::TextCanvas>		mTextCanvasManager;
+		ResourceManager<avs::uid,clientrender::FontAtlas>			mFontAtlasManager;
 		// Buffers used in meshes do not have server-unique id's, their id's are generated clientside.
 		ResourceManager<geometry_cache_uid,clientrender::IndexBuffer>	mIndexBufferManager;
 		ResourceManager<geometry_cache_uid,clientrender::VertexBuffer>	mVertexBufferManager;

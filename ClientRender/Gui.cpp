@@ -485,7 +485,8 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
 	const ImVec2 regionSize = {512.f,512.f};// ImGui::GetContentRegionAvail();
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
-	const ImVec2 size = ImVec2(std::min(regionSize.x, textureSize.x), std::min(regionSize.x, textureSize.x) * aspect);
+	int showWidth=std::min(regionSize.x, textureSize.x);
+	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 	ImTextureID imTextureID = (ImTextureID)&tv;
 	
 	static ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
@@ -883,7 +884,9 @@ const char *stringof(avs::GeometryPayloadType t)
 		"Animation",
 		"Node",
 		"Skin",
-		"Bone"
+		"Bone",
+		"FontAtlas",
+		"TextCanvas",
 	};
 	return txt[(size_t)t];
 }
@@ -966,6 +969,7 @@ void Gui::GeometryOSD()
 
 	LinePrint(platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache->mMeshManager.GetCache(cacheLock).size(),
 					geometryCache->mLightManager.GetCache(cacheLock).size()), white);
+	LinePrint(platform::core::QuickFormat("Transparent Nodes: %d", geometryCache->mNodeManager->GetSortedTransparentNodes().size()), white);
 					
 	Scene();
 
@@ -976,7 +980,7 @@ void Gui::GeometryOSD()
 		for(const auto& missingPair : missing)
 		{
 			const clientrender::MissingResource& missingResource = missingPair.second;
-			std::string txt= platform::core::QuickFormat("\t%s %d from ", stringof(missingResource.resourceType), missingResource.id);
+			std::string txt= fmt::format("\t{0} {1} from ", stringof(missingResource.resourceType), missingResource.id);
 			for(auto &u:missingResource.waitingResources)
 			{
 				auto type= u.get()->type;
@@ -988,13 +992,13 @@ void Gui::GeometryOSD()
 					if(n)
 						txt += n->name;
 				}
-				txt+=platform::core::QuickFormat("%d, ",(uint64_t)id);
+				txt+=fmt::format("{0}, ",(uint64_t)id);
 			}
 			LinePrint( txt.c_str());
 		}
 	}
 	const auto &req=geometryCache->GetResourceRequests();
-	LinePrint(platform::core::QuickFormat("%d Requests",req.size()));
+	LinePrint(fmt::format("{0} Requests",req.size()).c_str());
 	if(req.size())
 	{
 		std::string lst;
@@ -1005,7 +1009,7 @@ void Gui::GeometryOSD()
 		LinePrint(lst.c_str());
 	}
 	const auto &sent_req=sessionClient->GetSentResourceRequests();
-	LinePrint(platform::core::QuickFormat("%d Requests Sent",sent_req.size()));
+	LinePrint(fmt::format("{0} Requests Sent",sent_req.size()).c_str());
 	if(sent_req.size())
 	{
 		std::string lst;

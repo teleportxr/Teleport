@@ -8,9 +8,11 @@
 #include "libavstream/geometry/mesh_interface.hpp"
 
 #include "ExtractedTypes.h"
+struct InteropTextCanvas;
 
 namespace teleport
 {
+	struct TextCanvas;
 	//! Singleton for storing geometry data and managing the geometry file cache.
 	class GeometryStore
 	{
@@ -65,6 +67,9 @@ namespace teleport
 		virtual std::vector<avs::uid> getShadowMapIDs() const;
 		virtual avs::Texture* getShadowMap(avs::uid shadowID);
 		virtual const avs::Texture* getShadowMap(avs::uid shadowID) const;
+		
+		const teleport::TextCanvas* getTextCanvas(avs::uid u) const;
+		const teleport::FontAtlas* getFontAtlas(avs::uid u) const;
 
 		//Returns a list of all light nodes that need to be streamed to the client.
 		const std::map<avs::uid,avs::LightNodeResources>& getLightNodes() const;
@@ -86,6 +91,8 @@ namespace teleport
 		void storeMesh(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
 		void storeMaterial(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Material& newMaterial);
 		void storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC,bool forceOverwrite);
+		avs::uid storeFont(_bstr_t ttf_path_utf8,_bstr_t relative_asset_path_utf8,std::time_t lastModified,int size=32);
+		avs::uid storeTextCanvas( _bstr_t relative_asset_path, const InteropTextCanvas *interopTextCanvas);
 		void storeShadowMap(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& shadowMap);
 
 		void removeNode(avs::uid id);
@@ -95,7 +102,7 @@ namespace teleport
 		//Returns amount of textures waiting to be compressed.
 		size_t getNumberOfTexturesWaitingForCompression() const;
 		//Returns the texture that will be compressed next.
-		const avs::Texture* getNextCompressedTexture() const;
+		const avs::Texture* getNextTextureToCompress() const;
 		//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
 		void compressNextTexture();
 		
@@ -105,6 +112,11 @@ namespace teleport
 		bool CheckForErrors() const;
 		//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.
 		avs::uid GetOrGenerateUid(const std::string &path);
+		//! Get the current session uid corresponding to the given resource/asset path.
+		avs::uid PathToUid(std::string p) const;
+		//! Get the resource/asset path corresponding to the current session uid.
+		std::string UidToPath(avs::uid u) const;
+
 	private:
 		std::string cachePath;
 		//Stores data on a texture that is to be compressed.
@@ -123,20 +135,30 @@ namespace teleport
 		uint8_t compressionStrength = 1;
 		uint8_t compressionQuality = 1;
 
+		// Mutable, non-resource assets.
 		std::map<avs::uid, avs::Node> nodes;
+		std::map<avs::uid, TextCanvas> textCanvases;
+
+		// Static, resource assets.
 		std::map<avs::AxesStandard, std::map<avs::uid, avs::Skin>> skins;
 		std::map<avs::AxesStandard, std::map<avs::uid, avs::Animation>> animations;
 		std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> meshes;
 		std::map<avs::uid, ExtractedMaterial> materials;
 		std::map<avs::uid, ExtractedTexture> textures;
 		std::map<avs::uid, ExtractedTexture> shadowMaps;
+		std::map<avs::uid, ExtractedFontAtlas> fontAtlases;
 
 		std::map<avs::uid, PrecompressedTexture> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
 		std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
 		
 		template<typename ExtractedResource>
-		bool saveResource(const std::string file_name, avs::uid uid, const ExtractedResource& resource) const;
+		bool saveResourceBinary(const std::string file_name, const ExtractedResource& resource) const;
+		template<typename ExtractedResource>
+		bool loadResourceBinary(const std::string file_name,const std::string &path_root, ExtractedResource &esource);
+
+		template<typename ExtractedResource>
+		bool saveResource(const std::string file_name,  const ExtractedResource& resource) const;
 		template<typename ExtractedResource>
 		avs::uid loadResource(const std::string file_name,const std::string &path_root,std::map<avs::uid, ExtractedResource>& resourceMap);
 
@@ -145,18 +167,9 @@ namespace teleport
 
 		template<typename ExtractedResource>
 		void loadResources(const std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
-		#if TELEPORT_SERVER_USE_GUIDS
-		avs::uid GuidToUid(avs::guid g) const;
-		avs::guid UidToGuid(avs::uid u) const;
 
-		std::map<avs::uid,avs::guid> uid_to_guid;
-		std::map<avs::guid,avs::uid> guid_to_uid;
-		#else
-		avs::uid PathToUid(std::string p) const;
-		std::string UidToPath(avs::uid u) const;
 
 		std::map<avs::uid,std::string> uid_to_path;
 		std::map<std::string,avs::uid> path_to_uid;
-		#endif
 	};
 }

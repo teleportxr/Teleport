@@ -1,0 +1,6 @@
+namespace teleport
+{
+	namespace core
+	{
+	}
+}

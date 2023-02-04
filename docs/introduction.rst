@@ -30,10 +30,12 @@ At any time, each connected client has partial information on the simulation sta
    * - Node
      - An object positioned in 3D Space. A node may have child nodes, forming a hierarchy.
    * - Resource
-     - A read-only data object that is used for rendering: a mesh, texture, material, etc.
+     - A read-only, unchanging data object that is used for rendering: a mesh, texture, material, etc.
+   * - Mutable Asset
+     - A data object that may be expected to change during the simulation runtime: a Node is a Mutable Asset, for example.
 
 
-The server tells the client which nodes it needs to keep track of, and which resources it needs. The server will send the client the node states and resource data.
+The server tells the client which nodes it needs to keep track of, and which assets and resources it needs. The server will send the client the asset states and resource data.
 
 Clients generally keep only a part of the world state at any time. Two clients connected to the same server could use completely different nodes and resources, or could share some. But the server should send
 only the data any client needs at a given time. In Teleport, "worlds" or "levels" are not downloaded wholesale to the client, so connection is instantaneous.

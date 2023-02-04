@@ -22,6 +22,8 @@ set(src
 	DiscoveryService.cpp
 	DiscoveryService.h 
 	ExtractedTypes.h
+	Font.h
+	Font.cpp
 	GeometryEncoder.cpp
 	GeometryEncoder.h
 	GeometryStore.cpp
@@ -32,8 +34,6 @@ set(src
 	NetworkPipeline.h
 	SourceNetworkPipeline.cpp
 	SourceNetworkPipeline.h
-	DefaultDiscoveryService.cpp
-	DefaultDiscoveryService.h
 	VideoEncodePipeline.cpp
 	VideoEncodePipeline.h	
 	AudioEncoder.cpp
@@ -80,6 +80,7 @@ SetTeleportDefaults( TeleportServer )
 
 #Include its root directory
 target_include_directories(TeleportServer PUBLIC .)
+target_include_directories(TeleportServer PUBLIC .. )
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
 #Include TeleportCore
@@ -99,6 +100,8 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/openssl/include)
 target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 #Include Platform - for pure header functions only.sr
 target_include_directories(TeleportServer PUBLIC ../firstparty)
+# stb truetype
+target_include_directories(TeleportServer PUBLIC ../firstparty/Platform/External/stb)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
@@ -108,7 +111,7 @@ endif()
 
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MT)
 
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp winmm d3d12 draco libssl libcrypto )
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp winmm d3d12 draco libssl libcrypto fmt)
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_link_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/lib)
 	target_link_libraries(TeleportServer webrtc.lib)

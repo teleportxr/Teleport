@@ -12,11 +12,13 @@ struct Vector4Keyframe;
 namespace teleport
 {
 	class GeometryStore;
+	class GeometryStreamingService;
 	//! Backend implementation of the geometry encoder.
 	class GeometryEncoder: public avs::GeometryEncoderBackendInterface
 	{
+		GeometryStreamingService *geometryStreamingService=nullptr;
 	public:
-		GeometryEncoder(const struct ServerSettings* settings);
+		GeometryEncoder(const struct ServerSettings* settings,GeometryStreamingService *srv);
 		~GeometryEncoder() = default;
 
 		// Inherited via GeometryEncoderBackendInterface
@@ -66,6 +68,8 @@ namespace teleport
 		avs::Result encodeVector3Keyframes(const std::vector<avs::Vector3Keyframe>& keyframes);
 		avs::Result encodeVector4Keyframes(const std::vector<avs::Vector4Keyframe>& keyframes);
 
+		avs::Result encodeFontAtlas(avs::uid u);
+		avs::Result encodeTextCanvas(avs::uid u);
 		//Moves the data from buffer into queuedBuffer; keeping in mind the recommended buffer cutoff size.
 		//Data will usually not be queued if it would cause it to exceed the recommended size, but the data may have been queued anyway.
 		//This happens when not queueing it would have left queuedBuffer empty.

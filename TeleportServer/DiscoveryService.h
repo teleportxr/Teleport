@@ -1,18 +1,41 @@
 #pragma once
 
-#include <cstdint>
+#include <map>
+
+#include <enet/enet.h>
 #include <string>
+
+#include "TeleportServer/UnityPlugin/Export.h"
 
 namespace teleport
 {
-	//! Generic discover interface.
+	//! Discover service for establishing connections with clients.
 	class DiscoveryService
 	{
 	public:
-		virtual bool initialize(uint16_t inDiscoveryPort = 0, uint16_t inServicePort = 0, std::string desiredIP = "") = 0;
-		virtual void shutdown() = 0;
-		virtual void tick() = 0;
-		virtual void sendResponseToClient(uint64_t clientID) = 0;
-		virtual void discoveryCompleteForClient(uint64_t clientID) = 0;
+		~DiscoveryService()
+		{
+			shutdown();
+		}
+		bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "") ;
+
+		void shutdown() ;
+
+		void tick() ;
+
+		void sendResponseToClient(uint64_t clientID) ;
+
+		void discoveryCompleteForClient(uint64_t clientID) ;
+	protected:
+		//List of clientIDs we want to attempt to connect to.
+		std::map<uint64_t, ENetAddress> newClients;
+
+		ENetSocket discoverySocket{};
+		ENetAddress address{};
+
+		uint16_t discoveryPort = 0;
+		uint16_t servicePort = 0;
+		std::string desiredIP;
+	public:
 	};
 }

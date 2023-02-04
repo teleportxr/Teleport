@@ -174,8 +174,11 @@ namespace clientrender
 
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,const std::shared_ptr<clientrender::Node> node
-			,bool force=false
-			,bool include_children=true);
+			,bool force
+			,bool include_children
+			,bool transparent_pass);
+
+		void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false);

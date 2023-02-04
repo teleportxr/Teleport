@@ -593,6 +593,7 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 	case avs::NodeDataType::Invalid:
 		TELEPORT_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
 		break;
+	case avs::NodeDataType::TextCanvas:
 	case avs::NodeDataType::None:
 		CreateMeshNode(id, node);
 		break;
@@ -610,6 +611,96 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 		break;
 	}
 }
+
+void ResourceCreator::CreateFontAtlas(avs::uid id,teleport::FontAtlas &fontAtlas)
+{
+	std::shared_ptr<clientrender::FontAtlas> f = std::make_shared<clientrender::FontAtlas>(id);
+	clientrender::FontAtlas &F=*f;
+	*(static_cast<teleport::FontAtlas*>(&F))=fontAtlas;
+	geometryCache->mFontAtlasManager.Add(id, f);
+	geometryCache->ReceivedResource(id);
+
+	const std::shared_ptr<clientrender::Texture> texture = geometryCache->mTextureManager.Get(fontAtlas.font_texture_uid);
+	// The texture hasn't arrived yet. Mark it as missing.
+	if (!texture)
+	{
+		RESOURCECREATOR_DEBUG_COUT( "FontAtlas {0} missing Texture {1}",id,f->font_texture_uid);
+		clientrender::MissingResource& missing=geometryCache->GetMissingResource(f->font_texture_uid, avs::GeometryPayloadType::Texture);
+		std::shared_ptr<IncompleteFontAtlas> i = f;
+		missing.waitingResources.insert(i);
+		f->missingTextureUid=fontAtlas.font_texture_uid;
+	}
+	// Was this resource being awaited?
+	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::FontAtlas);
+	if(missingResource)
+	for(auto it = missingResource->waitingResources.begin(); it != missingResource->waitingResources.end(); it++)
+	{
+		if(it->get()->type!=avs::GeometryPayloadType::TextCanvas)
+		{
+			TELEPORT_CERR<<"Waiting resource is not a TextCanvas, it's "<<int(it->get()->type)<<std::endl;
+			continue;
+		}
+		std::shared_ptr<IncompleteTextCanvas> incompleteTextCanvas = std::static_pointer_cast<IncompleteTextCanvas>(*it);
+		incompleteTextCanvas->missingFontAtlasUid=0;
+		std::shared_ptr<TextCanvas> textCanvas = std::static_pointer_cast<TextCanvas>(*it);
+		textCanvas->SetFontAtlas(f);
+		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteNode->id,"",id,"");
+		// The TextCanvas is complete
+		geometryCache->m_MissingResources.erase(id);
+	}
+}
+
+void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo)
+{
+	std::shared_ptr<clientrender::TextCanvas> textCanvas=geometryCache->mTextCanvasManager.Get(textCanvasCreateInfo.uid);
+	if(!textCanvas)
+	{
+		textCanvas = std::make_shared<clientrender::TextCanvas>(textCanvasCreateInfo);
+		geometryCache->mTextCanvasManager.Add(textCanvas->textCanvasCreateInfo.uid, textCanvas);
+	}
+	textCanvas->textCanvasCreateInfo=textCanvasCreateInfo;
+
+	geometryCache->ReceivedResource(textCanvas->textCanvasCreateInfo.uid);
+	
+	const std::shared_ptr<clientrender::FontAtlas> fontAtlas = geometryCache->mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
+	// The fontAtlas hasn't arrived yet. Mark it as missing.
+	if (!fontAtlas)
+	{
+		RESOURCECREATOR_DEBUG_COUT( "TextCanvas {0} missing fontAtlas {1}",id,textCanvas->textCanvasCreateInfo.font);
+		clientrender::MissingResource& missing=geometryCache->GetMissingResource(textCanvas->textCanvasCreateInfo.font, avs::GeometryPayloadType::FontAtlas);
+		std::shared_ptr<IncompleteTextCanvas> i = textCanvas;
+		missing.waitingResources.insert(i);
+		textCanvas->missingFontAtlasUid=textCanvas->textCanvasCreateInfo.font;
+	}
+	else
+		textCanvas->SetFontAtlas(fontAtlas);
+
+	// Was this resource being awaited?
+	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(textCanvas->textCanvasCreateInfo.uid, avs::GeometryPayloadType::TextCanvas);
+	if(missingResource)
+	for(auto it = missingResource->waitingResources.begin(); it != missingResource->waitingResources.end(); it++)
+	{
+		if(it->get()->type!=avs::GeometryPayloadType::Node)
+		{
+			TELEPORT_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
+			continue;
+		}
+		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+		incompleteNode->SetTextCanvas(textCanvas);
+		// MOdified "material" - add to transparent list.
+		geometryCache->mNodeManager->NotifyModifiedMaterials(incompleteNode);
+		RESOURCECREATOR_DEBUG_COUT( "Waiting Node {0}({1}) got Canvas {2}({3})" , incompleteNode->id,incompleteNode->name,textCanvas->textCanvasCreateInfo.uid,"");
+
+		//If only this mesh and this function are pointing to the node, then it is complete.
+		if(it->use_count() == 2)
+		{
+			CompleteNode(incompleteNode->id, incompleteNode);
+		}
+	}
+	//Resource has arrived, so we are no longer waiting for it.
+	geometryCache->m_MissingResources.erase(textCanvas->textCanvasCreateInfo.uid);
+}
+
 
 void ResourceCreator::CreateSkin(avs::uid id, avs::Skin& skin)
 {
@@ -702,70 +793,84 @@ void ResourceCreator::CreateAnimation(avs::uid id, avs::Animation& animation)
 	CompleteAnimation(id, completeAnimation);
 }
 
-void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
+void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& avsNode)
 {
+	std::shared_ptr<Node> node;
 	if (geometryCache->mNodeManager->HasNode(id))
 	{
-		TELEPORT_CERR << "CreateMeshNode(" << id << ", " << node.name << "). Already created! "<<(node.stationary?"static":"mobile")<<"\n";
+		TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
 		//leaves nodes with no children. why?
 		auto n=geometryCache->mNodeManager->GetNode(id);
-		if (n->GetChildrenIDs().size() != node.childrenIDs.size())
+		if (n->GetChildrenIDs().size() != avsNode.childrenIDs.size())
 		{
-			TELEPORT_CERR << "recreating node " << n->id << " with " << node.childrenIDs.size() << " children." << std::endl;
+			TELEPORT_CERR << "recreating avsNode " << n->id << " with " << avsNode.childrenIDs.size() << " children." << std::endl;
 		}
-		return;
+		node=geometryCache->mNodeManager->GetNode(id);
 	}
-	//RESOURCECREATOR_DEBUG_COUT( "CreateMeshNode(" << id << ", " << node.name;
-	//if (node.childrenIDs.size())
-	//	std::cout << ", " << node.childrenIDs.size() << " children";
-	//std::cout<< ") " << (node.stationary ? "static" : "mobile") << "\n";
-
-	std::shared_ptr<IncompleteNode> newNode = std::make_shared<IncompleteNode>(id, avs::GeometryPayloadType::Node);
+	else
+	{
+		node = geometryCache->mNodeManager->CreateNode(id, avsNode);
+	}
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
 
-	newNode->node = geometryCache->mNodeManager->CreateNode(id, node);
 
-	if (node.data_uid != 0)
+	if (avsNode.data_uid != 0)
 	{
-		newNode->node->SetMesh(geometryCache->mMeshManager.Get(node.data_uid));
-		if (!newNode->node->GetMesh())
+		if(avsNode.data_type==avs::NodeDataType::Mesh)
 		{
-			//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << node.name << ") missing Mesh_" << node.data_uid << std::endl;
+			node->SetMesh(geometryCache->mMeshManager.Get(avsNode.data_uid));
+			if (!node->GetMesh())
+			{
+			//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << avsNode.name << ") missing Mesh_" << avsNode.data_uid << std::endl;
 
-			isMissingResources = true;
-			geometryCache->GetMissingResource(node.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(newNode);
+				isMissingResources = true;
+				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(node);
+			}
+		}
+		if(avsNode.data_type==avs::NodeDataType::TextCanvas)
+		{
+			node->SetTextCanvas(geometryCache->mTextCanvasManager.Get(avsNode.data_uid));
+			if (!node->GetTextCanvas())
+			{
+			//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << avsNode.name << ") missing Mesh_" << avsNode.data_uid << std::endl;
+
+				isMissingResources = true;
+				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::TextCanvas).waitingResources.insert(node);
+			}
+			else
+				geometryCache->mNodeManager->NotifyModifiedMaterials(node);
 		}
 	}
 
-	if (node.skinID != 0)
+	if (avsNode.skinID != 0)
 	{
-		auto skin=geometryCache->mSkinManager.Get(node.skinID);
-		newNode->node->SetSkin(skin);
+		auto skin=geometryCache->mSkinManager.Get(avsNode.skinID);
+		node->SetSkin(skin);
 		if (!skin)
 		{
-			//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << node.name << ") missing Skin_" << node.skinID << std::endl;
+			//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << avsNode.name << ") missing Skin_" << avsNode.skinID << std::endl;
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.skinID, avs::GeometryPayloadType::Skin).waitingResources.insert(newNode);
+			geometryCache->GetMissingResource(avsNode.skinID, avs::GeometryPayloadType::Skin).waitingResources.insert(node);
 		}
 	}
 
-	for (size_t i = 0; i < node.animations.size(); i++)
+	for (size_t i = 0; i < avsNode.animations.size(); i++)
 	{
-		avs::uid animationID = node.animations[i];
+		avs::uid animationID = avsNode.animations[i];
 		std::shared_ptr<clientrender::Animation> animation = geometryCache->mAnimationManager.Get(animationID);
 
 		if (animation)
 		{
-			newNode->node->animationComponent.addAnimation(animationID, animation);
+			node->animationComponent.addAnimation(animationID, animation);
 		}
 		else
 		{
-			RESOURCECREATOR_DEBUG_COUT( "MeshNode {0}({1} missing Animation {2})",id,node.name,animationID);
+			RESOURCECREATOR_DEBUG_COUT( "MeshNode {0}({1} missing Animation {2})",id,avsNode.name,animationID);
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(animationID, avs::GeometryPayloadType::Animation).waitingResources.insert(newNode);
+			geometryCache->GetMissingResource(animationID, avs::GeometryPayloadType::Animation).waitingResources.insert(node);
 		}
 	}
 
@@ -779,46 +884,47 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& node)
 		materialCreateInfo.emissive.texture = m_DummyGreen;
 		placeholderMaterial = std::make_shared<clientrender::Material>(renderPlatform,materialCreateInfo);
 	}
-	if(node.renderState.globalIlluminationUid>0)
+	if(avsNode.renderState.globalIlluminationUid>0)
 	{
-		std::shared_ptr<clientrender::Texture> gi_texture = geometryCache->mTextureManager.Get(node.renderState.globalIlluminationUid);
+		std::shared_ptr<clientrender::Texture> gi_texture = geometryCache->mTextureManager.Get(avsNode.renderState.globalIlluminationUid);
 		if(!gi_texture)
 		{
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.insert(newNode);
+			geometryCache->GetMissingResource(avsNode.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.insert(node);
 		}
 	}
-	for (size_t i = 0; i < node.materials.size(); i++)
+	for (size_t i = 0; i < avsNode.materials.size(); i++)
 	{
-		auto mat_uid=node.materials[i];
+		auto mat_uid=avsNode.materials[i];
 		std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(mat_uid);
 
 		if (material)
 		{
-			newNode->node->SetMaterial(i, material);
-			geometryCache->mNodeManager->NotifyModifiedMaterials(newNode->node);
+			node->SetMaterial(i, material);
+			geometryCache->mNodeManager->NotifyModifiedMaterials(node);
 		}
 		else if(mat_uid!=0)
 		{
 			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
-			newNode->node->SetMaterial(i, placeholderMaterial);
+			node->SetMaterial(i, placeholderMaterial);
 
-			TELEPORT_CERR << "MeshNode_" << id << "(" << node.name << ") missing Material_" << node.materials[i] << std::endl;
+			TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material_" << avsNode.materials[i] << std::endl;
 
 			isMissingResources = true;
-			geometryCache->GetMissingResource(node.materials[i], avs::GeometryPayloadType::Material).waitingResources.insert(newNode);
-			newNode->materialSlots[node.materials[i]].push_back(i);
+			geometryCache->GetMissingResource(avsNode.materials[i], avs::GeometryPayloadType::Material).waitingResources.insert(node);
+			node->materialSlots[avsNode.materials[i]].push_back(i);
 		}
 		else
 		{
 			// but if the material is uid 0, this means *no* material.
 		}
 	}
+			
 
 	//Complete node now, if we aren't missing any resources.
 	if (!isMissingResources)
 	{
-		CompleteMeshNode(id, newNode->node);
+		CompleteNode(id, node);
 	}
 }
 
@@ -895,14 +1001,14 @@ void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCr
 			TELEPORT_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
 			continue;
 		}
-		std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-		incompleteNode->node->SetMesh(mesh);
-		RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Mesh {2}({3})" , incompleteNode->id,incompleteNode->node->name,id,meshInfo.name);
+		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+		incompleteNode->SetMesh(mesh);
+		RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Mesh {2}({3})" , incompleteNode->id,incompleteNode->name,id,meshInfo.name);
 
 		//If only this mesh and this function are pointing to the node, then it is complete.
 		if(it->use_count() == 2)
 		{
-			CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+			CompleteNode(incompleteNode->id, incompleteNode);
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
@@ -921,14 +1027,14 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 	{
 		for(auto it = missingSkin->waitingResources.begin(); it != missingSkin->waitingResources.end(); it++)
 		{
-			std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-			incompleteNode->node->SetSkin(completeSkin->skin);
-			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Skin {0}({1})",incompleteNode->id,incompleteNode->node->name,id,completeSkin->skin->name);
+			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+			incompleteNode->SetSkin(completeSkin->skin);
+			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Skin {0}({1})",incompleteNode->id,incompleteNode->name,id,completeSkin->skin->name);
 
 			//If only this resource and this skin are pointing to the node, then it is complete.
 			if(it->use_count() == 2)
 			{
-				CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+				CompleteNode(incompleteNode->id, incompleteNode);
 			}
 		}
 
@@ -953,6 +1059,14 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 		{
 			switch((*it)->type)
 			{
+				case avs::GeometryPayloadType::FontAtlas:
+					{
+						std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
+						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})",incompleteNode->id,id,textureInfo.name);
+
+						geometryCache->m_MissingResources.erase(incompleteFontAtlas->id);
+					}
+					break;
 				case avs::GeometryPayloadType::Material:
 					{
 						std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::static_pointer_cast<IncompleteMaterial>(*it);
@@ -982,13 +1096,13 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 					break;
 				case avs::GeometryPayloadType::Node:
 					{
-						std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-						RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Texture {2}({3})",incompleteNode->id,incompleteNode->node->name.c_str(),id,textureInfo.name);
+						std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+						RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Texture {2}({3})",incompleteNode->id,incompleteNode->name.c_str(),id,textureInfo.name);
 
 						//If only this material and function are pointing to the MeshNode, then it is complete.
 						if(incompleteNode.use_count() == 2)
 						{
-							CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+							CompleteNode(incompleteNode->id, incompleteNode);
 						}
 					}
 					break;
@@ -1013,7 +1127,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 	{
 		for(auto it = missingMaterial->waitingResources.begin(); it != missingMaterial->waitingResources.end(); it++)
 		{
-			std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
+			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 
 			const auto &indexesPair = incompleteNode->materialSlots.find(id);
 			if (indexesPair == incompleteNode->materialSlots.end())
@@ -1023,14 +1137,14 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 			}
 			for(size_t materialIndex : indexesPair->second)
 			{
-				incompleteNode->node->SetMaterial(materialIndex, material);
+				incompleteNode->SetMaterial(materialIndex, material);
 			}
-			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Material {2}({3})",incompleteNode->id,incompleteNode->node->name,id,materialInfo.name);
+			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Material {2}({3})",incompleteNode->id,incompleteNode->name,id,materialInfo.name);
 
 			//If only this material and function are pointing to the MeshNode, then it is complete.
 			if(incompleteNode.use_count() == 2)
 			{
-				CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+				CompleteNode(incompleteNode->id, incompleteNode);
 			}
 		}
 
@@ -1039,7 +1153,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 	}
 }
 
-void ResourceCreator::CompleteMeshNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
+void ResourceCreator::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
 {
 //	RESOURCECREATOR_DEBUG_COUT( "CompleteMeshNode(ID: ",id,", node: ",node->name,")\n";
 
@@ -1092,14 +1206,14 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrende
 	{
 		for(auto it = missingAnimation->waitingResources.begin(); it != missingAnimation->waitingResources.end(); it++)
 		{
-			std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-			incompleteNode->node->animationComponent.addAnimation(id, animation);
-			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Animation {2}({3})",incompleteNode->id,incompleteNode->node->name,id,animation->name);
+			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+			incompleteNode->animationComponent.addAnimation(id, animation);
+			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Animation {2}({3})",incompleteNode->id,incompleteNode->name,id,animation->name);
 
 			//If only this bone, and the loop, are pointing at the skin, then it is complete.
 			if(incompleteNode.use_count() == 2)
 			{
-				CompleteMeshNode(incompleteNode->id, incompleteNode->node);
+				CompleteNode(incompleteNode->id, incompleteNode);
 			}
 		}
 
@@ -1268,11 +1382,11 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				{
 					// Convert from Png to raw data:
 					int num_channels=0;
-					unsigned char *target = teleport::stbi_load_from_memory(basePtr+imageOffsets[i],(int) imageSizes[i], &mipWidth, &mipHeight, &num_channels,(int)4);
-					if(num_channels ==4 && mipWidth > 0 && mipHeight > 0&&target&&transcoding.data.size()>2)
+					unsigned char *target = teleport::stbi_load_from_memory(basePtr+imageOffsets[i],(int) imageSizes[i], &mipWidth, &mipHeight, &num_channels,(int)0);
+					if( mipWidth > 0 && mipHeight > 0&&target&&transcoding.data.size()>2)
 					{
 						// this is for 8-bits-per-channel textures:
-						size_t outDataSize = (size_t)(mipWidth * mipHeight * 4);
+						size_t outDataSize = (size_t)(mipWidth * mipHeight * num_channels);
 						transcoding.scrTexture->images[i].resize(outDataSize);
 						memcpy(transcoding.scrTexture->images[i].data(), target, outDataSize);
 						transcoding.scrTexture->valueScale=transcoding.valueScale;
@@ -1290,7 +1404,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				else
 				{
-					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, but was a valid basis file." << std::endl;
+					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, no images found." << std::endl;
 				}
 			}
 			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)

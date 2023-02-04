@@ -10,6 +10,70 @@
 #include <algorithm> //std::remove
 #include "MemoryUtil.h"
 
+namespace clientrender
+{
+	typedef unsigned long long geometry_cache_uid;
+	class Node;
+	class Skin;
+	class Material;
+	struct IncompleteResource
+	{
+		IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
+			:id(id), type(type)
+		{}
+
+		const avs::uid id;
+		const avs::GeometryPayloadType type;
+	};
+	
+	struct MissingResource
+	{
+		const avs::uid id; //ID of the missing resource.
+		avs::GeometryPayloadType resourceType; //String indicating missing resource's type.
+		//Resources that can't be completed without this missing resource.
+		std::set<std::shared_ptr<IncompleteResource>> waitingResources;
+
+		MissingResource(avs::uid id, avs::GeometryPayloadType r)
+			:id(id), resourceType(r)
+		{}
+	};
+	struct IncompleteFontAtlas : IncompleteResource
+	{
+		IncompleteFontAtlas(avs::uid id)
+			:IncompleteResource(id,avs::GeometryPayloadType::FontAtlas)
+		{}
+		avs::uid missingTextureUid=0;
+	};
+	struct IncompleteTextCanvas : IncompleteResource
+	{
+		IncompleteTextCanvas(avs::uid id)
+			:IncompleteResource(id,avs::GeometryPayloadType::TextCanvas)
+		{}
+		avs::uid missingFontAtlasUid=0;
+	};
+
+	struct IncompleteNode : IncompleteResource
+	{
+		IncompleteNode(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
+		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
+	};
+
+	struct IncompleteSkin : IncompleteResource
+	{
+		IncompleteSkin(avs::uid id, avs::GeometryPayloadType type)
+			:IncompleteResource(id, type)
+		{}
+
+		std::shared_ptr<clientrender::Skin> skin;
+
+		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
+	};
+
+}
 typedef unsigned long long uid; //Unique identifier for a resource.
 
 //A class for managing resources that are destroyed after a set amount of time.

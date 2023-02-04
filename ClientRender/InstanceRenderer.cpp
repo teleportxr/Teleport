@@ -381,15 +381,14 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
-		RenderNode(deviceContext,node);
+		RenderNode(deviceContext,node,false,true,false);
 	}
 	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache.mNodeManager->GetSortedTransparentNodes();
 	for(const std::shared_ptr<clientrender::Node>& node : transparentList)
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
-		RenderNode(deviceContext
-		,node,false,false);
+		RenderNode(deviceContext,node,false,false,true);
 	}
 	if(renderState.show_node_overlays)
 	for (const std::shared_ptr<clientrender::Node>& node : nodeList)
@@ -402,7 +401,8 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext
 	,const std::shared_ptr<clientrender::Node> node
 	,bool force
-	,bool include_children)
+	,bool include_children
+	,bool transparent_pass)
 {
 	auto renderPlatform=deviceContext.renderPlatform;
 	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
@@ -422,6 +422,33 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	if(node->IsVisible()&&(renderState.show_only == 0 || renderState.show_only == node->id))
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
+		const std::shared_ptr<TextCanvas> textCanvas=transparent_pass?node->GetTextCanvas():nullptr;
+		crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
+		mat4 model;
+		if(mesh||textCanvas)
+		{
+			const mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
+			model = reinterpret_cast<const float*>(&globalTransformMatrix);
+			static bool override_model=false;
+			if(override_model)
+			{
+				model=mat4::identity();
+			}
+
+			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+			{
+				crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+				mat4::mul(renderState.stereoCameraConstants.leftWorldViewProj, *((mat4*)&mgdc.viewStructs[0].viewProj), model);
+				renderState.stereoCameraConstants.leftWorld = model;
+				mat4::mul(renderState.stereoCameraConstants.rightWorldViewProj, *((mat4*)&mgdc.viewStructs[1].viewProj), model);
+				renderState.stereoCameraConstants.rightWorld = model;
+			}
+			//else
+			{
+				mat4::mul(renderState.cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
+				renderState.cameraConstants.world = model;
+			}
+		}
 		if(mesh)
 		{
 			const auto& meshInfo	= mesh->GetMeshCreateInfo();
@@ -435,7 +462,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					continue;
 				const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
 				bool transparent	=(matInfo.materialMode==avs::MaterialMode::TRANSPARENT_MATERIAL);
-				if(transparent==include_children)
+				if(transparent!=transparent_pass)
 					continue;
 				bool double_sided=false;
 				auto* vb = meshInfo.vb[element].get();
@@ -445,29 +472,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				if(!v[0])
 					continue;
 				crossplatform::Layout* layout = vb->GetLayout();
-
-				mat4 model;
-				const mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
-				model = reinterpret_cast<const float*>(&globalTransformMatrix);
-				static bool override_model=false;
-				if(override_model)
-				{
-					model=mat4::identity();
-				}
-
-				if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-				{
-					crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-					mat4::mul(renderState.stereoCameraConstants.leftWorldViewProj, *((mat4*)&mgdc.viewStructs[0].viewProj), model);
-					renderState.stereoCameraConstants.leftWorld = model;
-					mat4::mul(renderState.stereoCameraConstants.rightWorldViewProj, *((mat4*)&mgdc.viewStructs[1].viewProj), model);
-					renderState.stereoCameraConstants.rightWorld = model;
-				}
-				//else
-				{
-					mat4::mul(renderState.cameraConstants.worldViewProj, *((mat4*)&deviceContext.viewStruct.viewProj), model);
-					renderState.cameraConstants.world = model;
-				}
 				// TODO: Improve this.
 				auto sc=node->GetGlobalScale();
 				bool negative_scale=(sc.x*sc.y*sc.z)<0.0f;
@@ -475,7 +479,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				bool anim=skinInstance!=nullptr;
 				if (skinInstance)
 				{
-					mat4* scr_matrices = skinInstance->GetBoneMatrices(globalTransformMatrix);
+					mat4* scr_matrices = skinInstance->GetBoneMatrices(model);
 					BoneMatrices *b=static_cast<BoneMatrices*>(&renderState.boneMatrices);
 					memcpy(b, scr_matrices, sizeof(mat4) * clientrender::Skin::MAX_BONES);
 
@@ -483,7 +487,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					//usedPassName = "anim_" + usedPassName;
 				}
 
-				crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 				bool highlight=node->IsHighlighted()||force_highlight;
 				
 				highlight|= (renderState.selected_uid == material->id);
@@ -576,6 +579,10 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				layout->Unapply(deviceContext);
 			}
 		}
+		if(textCanvas)
+		{
+			RenderTextCanvas(deviceContext,textCanvas);
+		}
 	}
 	if(!include_children)
 		return;
@@ -584,11 +591,21 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderNode(deviceContext,child,false);
+			RenderNode(deviceContext,child,false,include_children,transparent_pass);
 		}
 	}
 }
 
+void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas)
+{
+	auto fontAtlas=geometryCache.mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
+	if(!fontAtlas)
+		return;
+	auto fontTexture=geometryCache.mTextureManager.Get(fontAtlas->font_texture_uid);
+	if(!fontTexture)
+		return;
+	textCanvas->Render(deviceContext,renderState.cameraConstants,fontTexture->GetSimulTexture());
+}
 
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext
 	,const std::shared_ptr<clientrender::Node> node

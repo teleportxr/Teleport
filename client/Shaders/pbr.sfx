@@ -172,7 +172,7 @@ shader vertexOutput VS_Solid(vertexInput IN)
 
 	//wpos.xyz		-= videoCamPosition;
 	OUT.view			=normalize(wpos.xyz-viewPosition);
-	vec4 viewspace_pos	=mul( view, vec4(wpos.xyz, 1.0));
+	vec4 viewspace_pos	=mul(view,vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);

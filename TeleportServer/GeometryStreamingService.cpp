@@ -5,6 +5,7 @@
 #include "ServerSettings.h"
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/TextCanvas.h"
 
 using namespace teleport;
 ClientStoppedRenderingNodeFn PluginGeometryStreamingService::callback_clientStoppedRenderingNode=nullptr;
@@ -19,7 +20,7 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 
 
 GeometryStreamingService::GeometryStreamingService(const ServerSettings* settings)
-	:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings)
+	:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings,this)
 {
 }
 
@@ -54,8 +55,13 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 	sentResources[resource_uid] = true;
 }
 
-void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs, std::vector<avs::MeshNodeResources>& outMeshResources
-, std::vector<avs::LightNodeResources>& outLightResources,std::set<avs::uid>& genericTextureUids,int32_t minimumPriority) const
+void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs
+		,std::vector<avs::MeshNodeResources>& outMeshResources
+		,std::vector<avs::LightNodeResources>& outLightResources
+		,std::set<avs::uid>& genericTextureUids
+		,std::vector<avs::uid> &textCanvases
+		,std::vector<avs::uid> &fontAtlases
+		,int32_t minimumPriority) const
 {
 	for(const auto &r:streamedGenericTextureUids)
 	{
@@ -82,6 +88,24 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 				if(node->renderState.globalIlluminationUid>0)
 				{
 					genericTextureUids.insert(node->renderState.globalIlluminationUid);
+				}
+			}
+			break;
+		case avs::NodeDataType::TextCanvas:
+			if(node->data_uid)
+			{
+				const teleport::TextCanvas *c=geometryStore->getTextCanvas(node->data_uid);
+				if(c&&c->font_uid)
+				{
+					const teleport::FontAtlas *f=geometryStore->getFontAtlas(c->font_uid);
+					if(f)
+					{
+						textCanvases.push_back(node->data_uid);
+						fontAtlases.push_back(c->font_uid);
+						avs::uid texture_uid=f->font_texture_uid;
+						genericTextureUids.insert(texture_uid);
+						outNodeIDs.push_back(nodeID);
+					}
 				}
 			}
 			break;

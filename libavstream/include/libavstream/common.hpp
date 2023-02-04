@@ -242,7 +242,9 @@ namespace avs
 		Animation,
 		Node,
 		Skin,
-		Bone
+		Bone,
+		FontAtlas,
+		TextCanvas,
 	};
 	inline const char *stringOf(GeometryPayloadType t)
 	{

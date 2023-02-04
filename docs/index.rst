@@ -8,9 +8,9 @@ Teleport VR
 	:caption: Contents:
 
 	introduction
+	unity/index
 	protocol
 	reference/index
-	unity/index
 
 Indices and tables
 ==================

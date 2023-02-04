@@ -25,14 +25,16 @@ set( src_root
 	Bone.h
 	Camera.cpp
 	Camera.h
+	FontAtlas.cpp
+	FontAtlas.h
 	GeometryCache.cpp
 	GeometryCache.h
 	GeometryDecoder.cpp
 	GeometryDecoder.h
-	InstanceRenderer.cpp
-	InstanceRenderer.h
 	Gui.cpp
 	Gui.h
+	InstanceRenderer.cpp
+	InstanceRenderer.h
 	Light.cpp
 	Light.h
 	Material.cpp
@@ -56,6 +58,8 @@ set( src_root
 	SkinInstance.h
 	Transform.cpp
 	Transform.h
+	TextCanvas.cpp
+	TextCanvas.h
 	MemoryUtil.cpp
 	MemoryUtil.h
 	Tests.cpp

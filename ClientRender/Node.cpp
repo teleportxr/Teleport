@@ -9,7 +9,7 @@ using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason
 using namespace clientrender;
 
 Node::Node(avs::uid id, const std::string& name)
-	:id(id), name(name), isStatic(false)
+	:IncompleteNode(id,avs::GeometryPayloadType::Node), name(name), isStatic(false)
 {}
 
 void Node::SetStatic(bool s)
@@ -182,7 +182,7 @@ void Node::SetLocalTransform(const Transform& transform)
 {
 	if(abs(transform.m_Scale.x) < 0.0001f)
 	{
-		TELEPORT_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
+		//TELEPORT_CERR << "Failed to update local transform of Node_" << id << "(" << name.c_str() << ")! Scale.x is zero!\n";
 		return;
 	}
 	localTransform = transform;
