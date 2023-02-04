@@ -393,7 +393,6 @@ platform::crossplatform::GraphicsDeviceContext& OpenXR::GetDeviceContext(size_t 
 	size_t i = GetCommandBufferIndex(swapchainIndex, imageIndex);
 	CmdBuffer& commandBuffer = cmdBuffers[i];
 	deviceContext.platform_context = (void*)&commandBuffer.buf;
-	commandBuffer.Wait();
 	commandBuffer.Reset();
 	commandBuffer.Begin();
 	return deviceContext;
@@ -414,6 +413,7 @@ void OpenXR::FinishDeviceContext(size_t swapchainIndex, size_t imageIndex)
 	CmdBuffer &commandBuffer=cmdBuffers[i];
 	commandBuffer.End();
 	commandBuffer.Exec(vulkanQueue.operator VkQueue());
+	commandBuffer.Wait();
 }
 
 void OpenXR::EndFrame() 

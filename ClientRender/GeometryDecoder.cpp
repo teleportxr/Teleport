@@ -16,6 +16,8 @@
 #include "draco/compression/decode.h"
 #include <TeleportCore/FontAtlas.h>
 
+#define TELEPORT_GEOMETRY_DECODER_ASYNC 1
+
 #define Next8B get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define Next4B get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define Next2B get<uint16_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
@@ -61,6 +63,10 @@ void GeometryDecoder::setCacheFolder(const std::string& f)
 avs::Result GeometryDecoder::decode(const void* buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target)
 {
 	decodeData.emplace(buffer, bufferSizeInBytes, type, (clientrender::ResourceCreator*)target, true);
+#if !TELEPORT_GEOMETRY_DECODER_ASYNC
+	decodeInternal(decodeData.front());
+	decodeData.pop();
+#endif
 	return avs::Result::OK;
 }
 
@@ -74,6 +80,10 @@ avs::Result GeometryDecoder::decodeFromFile(const std::string& filename, avs::Ge
 	unsigned int sz=0;
 	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
 	decodeData.emplace(ptr, sz, type, target, false);
+#if !TELEPORT_GEOMETRY_DECODER_ASYNC
+	decodeInternal(decodeData.front());
+	decodeData.pop();
+#endif
 	fileLoader->ReleaseFileContents(ptr);
 	return avs::Result::OK;
 }
@@ -83,11 +93,13 @@ void GeometryDecoder::decodeAsync()
 	SetThisThreadName("GeometryDecoder::decodeAsync");
 	while (decodeThreadActive)
 	{
+#if TELEPORT_GEOMETRY_DECODER_ASYNC
 		if (!decodeData.empty())
 		{
 			decodeInternal(decodeData.front());
 			decodeData.pop();
 		}
+#endif
 		std::this_thread::yield();
 	}
 }

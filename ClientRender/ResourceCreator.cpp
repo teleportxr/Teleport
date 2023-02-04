@@ -507,28 +507,20 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	texInfo->bytesPerPixel	=texture.bytesPerPixel;
 	texInfo->arrayCount		=texture.arrayCount;
 	texInfo->mipCount		=texture.mipCount;
-	//texInfo->slot			=clientrender::Texture::Slot::UNKNOWN;
 	texInfo->type			=texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
 	texInfo->format			=textureFormatFromAVSTextureFormat(texture.format);
 	texInfo->sampleCount	=clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT; //Assumed
-	
 	texInfo->compression	=(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED;
-	
 
-	//Copy the data out of the buffer, so it can be transcoded or used as-is (uncompressed).
-	std::vector<unsigned char> data = std::vector<unsigned char>(texture.dataSize);
-	memcpy(data.data(), texture.data, texture.dataSize);
-
-	//RESOURCECREATOR_DEBUG_COUT( "CreateTexture(" << id << ", " << texture.name << ") ";
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(UntranscodedTexture{ id, std::move(data), texInfo, texture.name,texture.compression,texture.valueScale });
-		//std::cout << "will transcode with "<<(texture.compression==avs::TextureCompression::BASIS_COMPRESSED?"Basis":"Png")<<"\n";
+		texturesToTranscode.emplace_back(id, texture.data, texture.dataSize, texInfo, texture.name, texture.compression, texture.valueScale);
 	}
 	else
 	{
-		texInfo->images.emplace_back(std::move(data));
+		texInfo->images.emplace_back(texture.dataSize);
+		memcpy(texInfo->images.back().data(), texture.data, texture.dataSize);
 
 		//std::cout << "Uncompressed, completing.\n";
 		CompleteTexture(id, *texInfo);
@@ -1354,7 +1346,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 
 		for (UntranscodedTexture& transcoding : texturesToTranscode_Internal)
 		{
-			if (transcoding.fromCompressionFormat == avs::TextureCompression::PNG)
+			if (transcoding.compressionFormat == avs::TextureCompression::PNG)
 			{
 				RESOURCECREATOR_DEBUG_COUT("Transcoding  {0}with PNG",transcoding.name.c_str());
 				int mipWidth=0, mipHeight=0;
@@ -1377,7 +1369,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				{
 					imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
 				}
-				transcoding.scrTexture->images.resize(num_images);
+				transcoding.textureCI->images.resize(num_images);
 				for(int i=0;i<num_images;i++)
 				{
 					// Convert from Png to raw data:
@@ -1387,9 +1379,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					{
 						// this is for 8-bits-per-channel textures:
 						size_t outDataSize = (size_t)(mipWidth * mipHeight * num_channels);
-						transcoding.scrTexture->images[i].resize(outDataSize);
-						memcpy(transcoding.scrTexture->images[i].data(), target, outDataSize);
-						transcoding.scrTexture->valueScale=transcoding.valueScale;
+						transcoding.textureCI->images[i].resize(outDataSize);
+						memcpy(transcoding.textureCI->images[i].data(), target, outDataSize);
+						transcoding.textureCI->valueScale=transcoding.valueScale;
 
 					}
 					else
@@ -1398,16 +1390,16 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					teleport::stbi_image_free(target);
 				}
-				if (transcoding.scrTexture->images.size() != 0)
+				if (transcoding.textureCI->images.size() != 0)
 				{
-					CompleteTexture(transcoding.texture_uid, *(transcoding.scrTexture));
+					CompleteTexture(transcoding.texture_uid, *(transcoding.textureCI));
 				}
 				else
 				{
 					TELEPORT_CERR << "Texture \"" << transcoding.name << "\" failed to transcode, no images found." << std::endl;
 				}
 			}
-			else if(transcoding.fromCompressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
+			else if(transcoding.compressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
 			{
 				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with BASIS",transcoding.name.c_str());
 				//We need a new transcoder for every .basis file.
@@ -1421,12 +1413,8 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				BasisValidate(basis_transcoder, fileinfo,transcoding.data);
 				if (basis_transcoder.start_transcoding(transcoding.data.data(), (uint32_t)transcoding.data.size()))
 				{
-					transcoding.scrTexture->mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
-					//transcoding.scrTexture->arrayCount = basis_transcoder.get_total_images(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
-					transcoding.scrTexture->images.resize(transcoding.scrTexture->mipCount*transcoding.scrTexture->arrayCount);
-					//basist::basis_tex_format format=basis_transcoder.get_tex_format(transcoding.data, transcoding.dataSize);
-					// choose a transcoder format based on this:
-					//basist::transcoder_texture_format basis_transcoder_textureFormat= transcoderFormatFromBasisTextureFormat(format);
+					transcoding.textureCI->mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
+					transcoding.textureCI->images.resize(transcoding.textureCI->mipCount*transcoding.textureCI->arrayCount);
 
 					if (!basis_is_format_supported(basis_transcoder_textureFormat, fileinfo.m_tex_format))
 					{
@@ -1434,15 +1422,15 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						continue;
 					}
 					int imageIndex=0;
-					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.scrTexture->arrayCount; arrayIndex++)
+					for (uint32_t arrayIndex = 0; arrayIndex < transcoding.textureCI->arrayCount; arrayIndex++)
 					{
-						for (uint32_t mipIndex = 0; mipIndex < transcoding.scrTexture->mipCount; mipIndex++)
+						for (uint32_t mipIndex = 0; mipIndex < transcoding.textureCI->mipCount; mipIndex++)
 						{
 							uint32_t basisWidth, basisHeight, basisBlocks;
 
 							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
 							uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
-							auto &img=transcoding.scrTexture->images[imageIndex];
+							auto &img=transcoding.textureCI->images[imageIndex];
 							img.resize(outDataSize);
 							if (!basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(),arrayIndex, mipIndex, img.data(), basisBlocks, basis_transcoder_textureFormat))
 							{
@@ -1452,9 +1440,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						}
 					}
 
-					if (transcoding.scrTexture->images.size() != 0)
+					if (transcoding.textureCI->images.size() != 0)
 					{
-						CompleteTexture(transcoding.texture_uid, *(transcoding.scrTexture));
+						CompleteTexture(transcoding.texture_uid, *(transcoding.textureCI));
 					}
 					else
 					{

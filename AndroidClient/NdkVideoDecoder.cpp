@@ -13,7 +13,6 @@
 #include <Platform/External/magic_enum/include/magic_enum.hpp>
 
 #include <iostream>
-#include <sys/prctl.h>
 #include <android/hardware_buffer_jni.h>
 #include <android/native_window.h>
 #include "ThisPlatform/Threads.h"
@@ -39,11 +38,6 @@ void BitwiseDecrement(std::atomic<_Ty>& status, const _Ty& value)
 		uint32_t decrementValue = static_cast<uint32_t>(value) / 0xF;
 		status = static_cast<_Ty>(static_cast<uint32_t>(status.load()) - decrementValue);
 	}
-}
-
-void SetThreadName(const char* threadName)
-{
-	prctl(PR_SET_NAME, threadName, 0, 0, 0);
 }
 
 #if NDK_VIDEO_DECODER_LOG
@@ -642,7 +636,7 @@ const char* NdkVideoDecoder::GetCodecMimeType()
 //Processing thread
 void NdkVideoDecoder::processBuffersOnThread()
 {
-	SetThreadName("processBuffersOnThread");
+	SetThisThreadName("NdkVideoDecoder::processBuffersOnThread");
 	while (!stopProcessBuffersThread)
 	{
 		buffers_mutex.lock();
