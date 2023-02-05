@@ -42,7 +42,18 @@ Then build the Teleport_Server_Unity.sln solution. You can run Unity as normal, 
 
 Configuration
 =============
-The global settings for the plugin are found in the *Edit* menu, under *Project Settings...*. In the Project Settings panel, select *Teleport VR*.
+First, select the Teleport render pipeline. This adds functionality for video streaming and lighting generation. In the *Edit* menu, under *Project Settings...*, select *Graphics*. Set the Scriptable Render Pipeline Settings
+object to point to the Default Teleport Render Pipeline, found in Teleport/Resources.
+
+.. image:: RenderPipelineAsset.png
+  :width: 600
+  :alt: Activate the Teleport render pipeline in the Project Settings/Graphics panel.
+
+**Graphics Project Settings panel**
+
+You can also create a Teleport Render Pipeline asset in the Content window with Create/Rendering/Teleport Render Pipeline Asset.
+
+For global settings for the plugin, in the Project Settings panel, select *Teleport VR*.
 
 .. image:: /images/unity/ProjectSettings.png
   :width: 600
