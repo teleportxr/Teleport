@@ -129,7 +129,6 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		maxw = std::max(W, maxw);
 	}
 	float ht = float(textCanvasCreateInfo.lineHeight);
-	//renderPlatform->SetStandardRenderState(deviceContext,crossplatform::STANDARD_ALPHA_BLENDING);
 
 	uint n = 0;
 
