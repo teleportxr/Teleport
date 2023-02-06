@@ -161,12 +161,13 @@ function(add_teleport_static_executable targname)
 	SetTeleportDefaults( ${targname} )
 endfunction()
 
-add_subdirectory(firstparty/Platform/External/fmt)
 #set_target_properties(zlib PROPERTIES FOLDER thirdparty/zlib)
 
 add_subdirectory(TeleportCore)
 
 if(TELEPORT_SERVER OR TELEPORT_BUILD_DOCS)
+	# Server doesn't include Platform, so load fmt separately.
+	add_subdirectory(firstparty/Platform/External/fmt)
 	add_subdirectory(TeleportServer)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "")

@@ -14,10 +14,10 @@
 using namespace teleport;
 
 
-bool teleport::Font::ExtractFont(FontAtlas &fontAtlas,const char *ttf_path_utf8,const char *asset_path_utf8,const char *atlas_chars,avs::Texture &avsTexture
+bool teleport::Font::ExtractFont(FontAtlas &fontAtlas,const char *ttf_path_utf8,const char *generate_texture_path_utf8,const char *atlas_chars,avs::Texture &avsTexture
 	,std::vector<int> sizes)
 {
-	fontAtlas.font_texture_path=asset_path_utf8;
+	fontAtlas.font_texture_path=generate_texture_path_utf8;
 	using namespace std;
 	size_t numSizes=sizes.size();
     /* load font file */
@@ -123,7 +123,7 @@ bool teleport::Font::ExtractFont(FontAtlas &fontAtlas,const char *ttf_path_utf8,
 	avsTexture.format=avs::TextureFormat::G8;
 	avsTexture.compression=avs::TextureCompression::PNG;
 	avsTexture.compressed=true;
-    stbi_write_png(asset_path_utf8, width, height, 1, bitmap, 0);
+    stbi_write_png(generate_texture_path_utf8, width, height, 1, bitmap, 0);
 
 	int len=0;
 	unsigned char *png = stbi_write_png_to_mem(bitmap, 0, width, height, 1, &len);
@@ -131,7 +131,7 @@ bool teleport::Font::ExtractFont(FontAtlas &fontAtlas,const char *ttf_path_utf8,
 		return false;
 
 
-	//std::ifstream ifs_png(asset_path_utf8, std::ios::in | std::ios::binary);
+	//std::ifstream ifs_png(generate_texture_path_utf8, std::ios::in | std::ios::binary);
 	//std::vector<uint8_t> contents((std::istreambuf_iterator<char>(ifs_png)), std::istreambuf_iterator<char>());
 
 

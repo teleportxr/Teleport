@@ -63,8 +63,8 @@ void TeleportLogUnsafe(const char* fmt, ...);
 #define TELEPORT_INTERNAL_BREAK_ONCE(msg)
 #define TELEPORT_INTERNAL_LOG_UNSAFE(a,...)
 #endif
-#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn("{0} ({1}): warning: " #txt, __FILE__,__LINE__,##__VA_ARGS__)
-#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo("{0} ({1}): info: " #txt, __FILE__,__LINE__,##__VA_ARGS__)
+#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn((fmt::format("{0} ({1}): warning: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
+#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo((fmt::format("{0} ({1}): error: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
 
 #define TELEPORT_ASSERT(c)\
 	if(!c){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}

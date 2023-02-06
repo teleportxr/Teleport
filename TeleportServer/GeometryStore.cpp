@@ -45,7 +45,9 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 		r+="/";
 	p=std::regex_replace( p, std::regex(r), "" );
 	size_t last_dot_pos=p.find_last_of('.');
-	if(last_dot_pos<p.length())
+	size_t last_slash_pos=p.find_last_of('/');
+	// Knock off the extension if it's the extension of the filename, not just a dot in a pathname...
+	if(last_dot_pos<p.length()&&(last_slash_pos>=p.length()||last_slash_pos<last_dot_pos))
 		p=p.substr(0,last_dot_pos);
 	return p;
 }
@@ -700,15 +702,8 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		subMesh.buffer.resize(dracoEncoderBuffer.size());
 		memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
 		compressedSize+= subMesh.buffer.size();
-
-	/*	std::string test_str="C:\\temp\\test";
-		test_str +=char('0')+(char)i;
-		test_str +=".drc";
-		std::ofstream saveFile(test_str.c_str(), std::ofstream::out | std::ofstream::binary);
-		saveFile.write(dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
-		saveFile.close();*/
 	}
-	TELEPORT_INTERNAL_LOG_UNSAFE("Compressed from %uk to %uk\n",(sourceSize+1023)/1024,(compressedSize +1023)/1024);
+	TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
 	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO;
 /*
 	draco::Decoder dracoDecoder;
@@ -1606,13 +1601,13 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 
 avs::uid GeometryStore::PathToUid(std::string p) const
 {
+	p=StandardizePath(p,"");
 	if(p.size()<2)
 		return 0;
 	auto i=path_to_uid.find(p);
 	if(i==path_to_uid.end())
 	{
 		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
-		return 0;
 		//TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
 		return 0;
 	}
