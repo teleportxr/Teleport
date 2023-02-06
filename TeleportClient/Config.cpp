@@ -27,6 +27,7 @@ void Config::LoadConfigFromIniFile()
 	SI_Error rc = ini.LoadData(str);
 	if(rc == SI_OK)
 	{
+		pause_for_debugger = ini.GetLongValue("", "PAUSE", pause_for_debugger);
 		enable_vr = ini.GetLongValue("", "ENABLE_VR", enable_vr);
 		dev_mode = ini.GetLongValue("", "DEV_MODE", dev_mode);
 		log_filename = ini.GetValue("", "LOG_FILE", "TeleportClient.log");
@@ -35,6 +36,10 @@ void Config::LoadConfigFromIniFile()
 	{
 		TELEPORT_CERR<<"Create client.ini in pc_client directory to specify settings."<<std::endl;
 	}
+	#ifdef _MSC_VER
+	if(pause_for_debugger)
+		Sleep(10000);
+	#endif
 }
 
 const std::vector<Bookmark> &Config::GetBookmarks() const
