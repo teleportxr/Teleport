@@ -41,7 +41,9 @@ namespace clientrender
 		~TextCanvas();
 		TextCanvasCreateInfo textCanvasCreateInfo;
 		
-		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext,platform::crossplatform::ConstantBuffer<CameraConstants> &cameraConstants
+		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext
+				,platform::crossplatform::ConstantBuffer<CameraConstants> &cameraConstants
+				,platform::crossplatform::ConstantBuffer<StereoCameraConstants> &stereoCameraConstants
 				,platform::crossplatform::Texture *fontTexture);
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 		void InvalidateDeviceObjects();

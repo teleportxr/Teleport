@@ -86,6 +86,7 @@ void TextCanvas::Recompile()
 }
 
 void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplatform::ConstantBuffer<CameraConstants> &cameraConstants
+	,platform::crossplatform::ConstantBuffer<StereoCameraConstants> &stereoCameraConstants
 	,platform::crossplatform::Texture *fontTexture)
 {
 	if(!renderPlatform)
@@ -167,7 +168,7 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		float ytexel = 1.0f;
 		// start at 0,1. Don't set x size yet.
 		vec4 text_rect = vec4(0, 0, 0, lineHeight);
-		float _y=0.0f;
+		float _y=lineHeight;
 		float _x = 0.0f;
 		for (int i = 0; i < fontChars.count; i++)
 		{
@@ -211,6 +212,8 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		renderPlatform->ApplyPass(deviceContext,pass);
 		effect->SetConstantBuffer(deviceContext, &textConstants);
 		effect->SetConstantBuffer(deviceContext, &cameraConstants);
+		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+			effect->SetConstantBuffer(deviceContext, &stereoCameraConstants);
 		renderPlatform->SetVertexBuffers(deviceContext, 0, 0, nullptr, nullptr);
 		fontChars.Apply(deviceContext, effect, _fontChars);
 		renderPlatform->SetTopology(deviceContext, Topology::TRIANGLELIST);

@@ -377,14 +377,14 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	}
 
 	const clientrender::NodeManager::nodeList_t& nodeList = geometryCache.mNodeManager->GetSortedRootNodes();
-	for(const std::shared_ptr<clientrender::Node>& node : nodeList)
+	for(const std::shared_ptr<clientrender::Node> node : nodeList)
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
 		RenderNode(deviceContext,node,false,true,false);
 	}
 	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache.mNodeManager->GetSortedTransparentNodes();
-	for(const std::shared_ptr<clientrender::Node>& node : transparentList)
+	for(const std::shared_ptr<clientrender::Node> node : transparentList)
 	{
 		if(renderState.show_only!=0&&renderState.show_only!=node->id)
 			continue;
@@ -604,7 +604,7 @@ void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& de
 	auto fontTexture=geometryCache.mTextureManager.Get(fontAtlas->font_texture_uid);
 	if(!fontTexture)
 		return;
-	textCanvas->Render(deviceContext,renderState.cameraConstants,fontTexture->GetSimulTexture());
+	textCanvas->Render(deviceContext,renderState.cameraConstants,renderState.stereoCameraConstants,fontTexture->GetSimulTexture());
 }
 
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext

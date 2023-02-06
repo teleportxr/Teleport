@@ -10,6 +10,7 @@
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "Platform/Core/FileLoader.h"
 #include "Platform/Core/StringToWString.h"
+#include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Gui.h"
 #include "Light.h"
 #include "IconsForkAwesome.h"
@@ -468,6 +469,19 @@ void Gui::LinePrint(const char* txt,const float *clr)
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), "%s",txt);
 }
 std::map<uint64_t,ImGui_ImplPlatform_TextureView> drawTextures;
+void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,int mip,int slice)
+{
+	platform::crossplatform::Texture *t=texture;
+	auto vp=renderPlatform->GetViewport(deviceContext,0);
+	if(texture->IsCubemap())
+	{
+		renderPlatform->DrawCubemap(deviceContext,texture,0.f,0.f,1.0f,1.0f,1.0f,(float)mip);
+	}
+	else
+	{
+		renderPlatform->DrawTexture(deviceContext,0,0,vp.w,vp.h,t,1.0f,false,1.0f,false,{0,0},{0,0},(float)mip,slice);
+	}
+}
 
 void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 {
@@ -475,15 +489,23 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 		return;
 	if (!texture->IsValid())
 		return;
+	const int width = texture->width;
+	const int height = texture->length;
+	const float aspect = static_cast<float>(width) / static_cast<float>(height);
+	const ImVec2 regionSize =  ImGui::GetContentRegionAvail();
+	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
+	float showWidth=std::min(regionSize.x, textureSize.x);
+	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
+		
+	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),mip,slice);
+	ImGui_ImplPlatform_DrawTexture(nullptr,mip, slice,drawTexture,(int)showWidth,(int)size.y);
+	
+	#if 0
 	uint64_t u=(uint64_t)texture+mip*1000+slice;
 	auto &tv=drawTextures[u];
 	tv.texture=const_cast<Texture*>(texture);
 	tv.mip=mip;
 	tv.slice=slice;
-	const int width = texture->width;
-	const int height = texture->length;
-	const float aspect = static_cast<float>(width) / static_cast<float>(height);
-	const ImVec2 regionSize = {512.f,512.f};// ImGui::GetContentRegionAvail();
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
 	float showWidth=std::min(regionSize.x, textureSize.x);
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
@@ -494,6 +516,7 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 	static ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 	static ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 	ImGui::Image(imTextureID, size, uv_min, uv_max, tint_col, border_col);
+	#endif
 }
 
 static void DoRow(const char* title, const char* text, ...)

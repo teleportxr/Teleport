@@ -47,6 +47,7 @@
     <ClCompile Include="..\..\ClientRender\Bone.cpp" />
     <ClCompile Include="..\..\ClientRender\Camera.cpp" />
     <ClCompile Include="..\..\ClientRender\Common.cpp" />
+    <ClCompile Include="..\..\ClientRender\FontAtlas.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryCache.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryDecoder.cpp" />
     <ClCompile Include="..\..\ClientRender\Gui.cpp" />
@@ -67,6 +68,7 @@
     <ClCompile Include="..\..\ClientRender\Skin.cpp" />
     <ClCompile Include="..\..\ClientRender\SkinInstance.cpp" />
     <ClCompile Include="..\..\ClientRender\Tests.cpp" />
+    <ClCompile Include="..\..\ClientRender\TextCanvas.cpp" />
     <ClCompile Include="..\..\ClientRender\Texture.cpp" />
     <ClCompile Include="..\..\ClientRender\Transform.cpp" />
     <ClCompile Include="..\..\ClientRender\UniformBuffer.cpp" />
@@ -85,6 +87,7 @@
     <ClInclude Include="..\..\ClientRender\Camera.h" />
     <ClInclude Include="..\..\ClientRender\Common.h" />
     <ClInclude Include="..\..\ClientRender\DeviceContext.h" />
+    <ClInclude Include="..\..\ClientRender\FontAtlas.h" />
     <ClInclude Include="..\..\ClientRender\GeometryCache.h" />
     <ClInclude Include="..\..\ClientRender\GeometryDecoder.h" />
     <ClInclude Include="..\..\ClientRender\Gui.h" />
@@ -107,6 +110,7 @@
     <ClInclude Include="..\..\ClientRender\Skin.h" />
     <ClInclude Include="..\..\ClientRender\SkinInstance.h" />
     <ClInclude Include="..\..\ClientRender\Tests.h" />
+    <ClInclude Include="..\..\ClientRender\TextCanvas.h" />
     <ClInclude Include="..\..\ClientRender\Texture.h" />
     <ClInclude Include="..\..\ClientRender\Transform.h" />
     <ClInclude Include="..\..\ClientRender\UniformBuffer.h" />

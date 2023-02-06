@@ -234,7 +234,30 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 		if(!unknown)
 		{
 			if(transparent)
-				distanceSortedTransparentNodes.push_back(*n);
+			{
+				bool alreadyPresent=false;
+				for(auto i=distanceSortedTransparentNodes.begin();i!=distanceSortedTransparentNodes.end();i++)
+				{
+					if(*i==*n)
+					{
+						alreadyPresent=true;
+						break;
+					}
+				}
+				if(!alreadyPresent)
+					distanceSortedTransparentNodes.push_back(*n);
+			}
+			else
+			{
+				for(auto i=distanceSortedTransparentNodes.begin();i!=distanceSortedTransparentNodes.end();i++)
+				{
+					if(*i==*n)
+					{
+						distanceSortedTransparentNodes.erase(i);
+						break;
+					}
+				}
+			}
 			nodesWithModifiedMaterials.erase(n);
 			break;
 		}
@@ -475,6 +498,7 @@ void NodeManager::Clear()
 	rootNodes.clear();
 	rootNodes_mutex.unlock();
 	distanceSortedRootNodes.clear();
+	distanceSortedTransparentNodes.clear();
 	nodeLookup.clear();
 
 	parentLookup.clear();

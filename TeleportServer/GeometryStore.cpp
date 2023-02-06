@@ -44,11 +44,11 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 	if(r.size()&&r[r.size()-1]!='/')
 		r+="/";
 	p=std::regex_replace( p, std::regex(r), "" );
-	size_t last_dot_pos=p.find_last_of('.');
-	size_t last_slash_pos=p.find_last_of('/');
+	//size_t last_dot_pos=p.find_last_of('.');
+	//size_t last_slash_pos=p.find_last_of('/');
 	// Knock off the extension if it's the extension of the filename, not just a dot in a pathname...
-	if(last_dot_pos<p.length()&&(last_slash_pos>=p.length()||last_slash_pos<last_dot_pos))
-		p=p.substr(0,last_dot_pos);
+	//if(last_dot_pos<p.length()&&(last_slash_pos>=p.length()||last_slash_pos<last_dot_pos))
+	//	p=p.substr(0,last_dot_pos);
 	return p;
 }
 

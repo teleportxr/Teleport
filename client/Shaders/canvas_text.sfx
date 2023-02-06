@@ -67,7 +67,7 @@ shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
 	poss[2]			=vec2(0.0, 0.0);
 	poss[3]			=vec2(0.0, 1.0);
 	vec2 pos		=poss[vertex_id];
-	vec4 localPos	=vec4(f.text_rect.xy+f.text_rect.zw*pos,0.0,1.0);
+	vec4 localPos	=vec4(background_rect[0].xy+(f.text_rect.xy+f.text_rect.zw*pos)*background_rect[0].zw,0.0,1.0);
 	OUT.texCoords	=f.texc.xy+f.texc.zw*pos.xy;
 #ifdef SFX_OPENGL
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;

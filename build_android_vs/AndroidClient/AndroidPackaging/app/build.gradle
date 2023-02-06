@@ -23,7 +23,7 @@ android {
 		}
 	}
     defaultConfig {
-        applicationId "com.simul.teleportvrquestclientagde"
+        applicationId "com.simul.teleportvr"
         minSdkVersion MSBUILD_MIN_SDK_VERSION
         targetSdkVersion 29
         versionCode 1

@@ -23,14 +23,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\TeleportCore\ErrorHandling.cpp" />
+    <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp" />
     <ClCompile Include="..\..\TeleportCore\Input.cpp" />
     <ClCompile Include="..\..\TeleportCore\TeleportCore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\CommonNetworking.h" />
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h" />
+    <ClInclude Include="..\..\TeleportCore\FontAtlas.h" />
     <ClInclude Include="..\..\TeleportCore\Input.h" />
     <ClInclude Include="..\..\TeleportCore\TeleportUtility.h" />
+    <ClInclude Include="..\..\TeleportCore\TextCanvas.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\firstparty\Platform\External\fmt\fmt.vcxproj">

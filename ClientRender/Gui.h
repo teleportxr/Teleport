@@ -91,6 +91,8 @@ namespace teleport
 		// Replaces Windows GetCursorPos if necessary.
 		static int GetCursorPos(long p[2]) ;
 	protected:
+		void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,int mip,int slice);
+
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
 		const clientrender::GeometryCache *geometryCache=nullptr;

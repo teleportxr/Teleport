@@ -853,6 +853,10 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 {
 	RecordCurrentBindings();
 	auto &server		=openXRServers[server_uid];
+// TODO: is this the right place to reset the mappings?
+	server.nodePoseMappings.clear();
+	server.unboundPoses.clear();
+
 	server.inputDefinitions=inputDefinitions_;
 	auto &inputMappings	=server.inputMappings;
 	inputMappings.clear();

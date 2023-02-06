@@ -55,17 +55,20 @@ namespace teleport
 #define TELEPORT_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
 
 #if TELEPORT_INTERNAL_CHECKS
-#define TELEPORT_INTERNAL_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
-void TeleportLogUnsafe(const char* fmt, ...);
-#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
-    { TeleportLogUnsafe(__VA_ARGS__); }
-#else
-#define TELEPORT_INTERNAL_BREAK_ONCE(msg)
-#define TELEPORT_INTERNAL_LOG_UNSAFE(a,...)
-#endif
-#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn((fmt::format("{0} ({1}): warning: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
-#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo((fmt::format("{0} ({1}): error: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
+	#define TELEPORT_INTERNAL_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
+	void TeleportLogUnsafe(const char* fmt, ...);
+	#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
+		{ TeleportLogUnsafe(__VA_ARGS__); }
+	#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn((fmt::format("{0} ({1}): warning: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
+	#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo((fmt::format("{0} ({1}): info: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
 
+#else
+	#define TELEPORT_INTERNAL_BREAK_ONCE(msg)
+	#define TELEPORT_INTERNAL_LOG_UNSAFE(a,...)
+	#define TELEPORT_INTERNAL_CERR(txt, ...)
+	#define TELEPORT_INTERNAL_COUT(txt, ...)
+
+#endif
 #define TELEPORT_ASSERT(c)\
 	if(!c){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
 

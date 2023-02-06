@@ -89,6 +89,7 @@ install(TARGETS pc_client
 		COMPONENT client)
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\pc_client.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
 install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\pc_client.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
 install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
 install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )

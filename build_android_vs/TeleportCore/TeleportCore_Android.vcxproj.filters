@@ -10,6 +10,7 @@
     <ClCompile Include="..\..\TeleportCore\Input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h">
@@ -24,6 +25,8 @@
     <ClInclude Include="..\..\TeleportCore\CommonNetworking.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\TeleportCore\FontAtlas.h" />
+    <ClInclude Include="..\..\TeleportCore\TextCanvas.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
