@@ -136,9 +136,11 @@ endfunction()
 
 function(SetTeleportDefaults targname)
 	set_target_properties( ${targname} PROPERTIES PREFIX "" )
+	set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR ON)
 	add_definitions(-DUNICODE -D_UNICODE)
 	if(MSVC)
-		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /JMC)
+	# Treat angle-brackets as representing external headers. Minimal warnings for external headers.
+		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /JMC /external:anglebrackets /external:W0)
 	else()
 		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror )
 	endif()

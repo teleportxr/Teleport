@@ -107,8 +107,8 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 	textConstants.colour = textCanvasCreateInfo.colour;
 	textConstants.background_rect[0] = {-textCanvasCreateInfo.width/2.0f,textCanvasCreateInfo.height/2.0f,textCanvasCreateInfo.width,-textCanvasCreateInfo.height};
 	// Calc width and draw background:
-	int W = 0;
-	int maxw = 0;
+	float W = 0;
+	float maxw = 0;
 	int lines = 1;
 	for (int i = 0; i < max_chars; i++)
 	{
@@ -125,7 +125,7 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		if (idx < 0 || idx>100)
 			continue;
 		const teleport::Glyph& glyph = fontMap.glyphs[idx];
-		W += glyph.xAdvance + 1;
+		W += glyph.xAdvance + 1.0f;
 		maxw = std::max(W, maxw);
 	}
 	float ht = float(textCanvasCreateInfo.lineHeight);

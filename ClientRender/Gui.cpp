@@ -485,7 +485,7 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
 	const ImVec2 regionSize = {512.f,512.f};// ImGui::GetContentRegionAvail();
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
-	int showWidth=std::min(regionSize.x, textureSize.x);
+	float showWidth=std::min(regionSize.x, textureSize.x);
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 	ImTextureID imTextureID = (ImTextureID)&tv;
 	
@@ -917,44 +917,44 @@ void Gui::CubemapOSD(crossplatform::Texture *videoTexture)
 void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray
 	,VideoTagDataCube videoTagDataCube[])
 {
-		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
-		const char *name="";
-		LinePrint("Tags\n");
-		for(int i=0;i<videoTagDataCubeArray.size();i++)
+	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	auto& cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
+	const char *name="";
+	LinePrint("Tags\n");
+	for(int i=0;i<videoTagDataCubeArray.size();i++)
+	{
+		auto &tag=videoTagDataCubeArray[i];
+		LinePrint(platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
+
+		auto *gpu_tag_buffer=videoTagDataCube;
+		if(gpu_tag_buffer)
+		for(int j=0;j<tag.lights.size();j++)
 		{
-			auto &tag=videoTagDataCubeArray[i];
-			LinePrint(platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
-
-			auto *gpu_tag_buffer=videoTagDataCube;
-			if(gpu_tag_buffer)
-			for(int j=0;j<tag.lights.size();j++)
+			auto &l=tag.lights[j];
+			auto &t=gpu_tag_buffer[j];
+			const LightTag &lightTag=t.lightTags[j];
+			vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
+			 
+			auto C = cachedLights.find(l.uid);
+			auto &c=C->second;
+			if (c.resource)
 			{
-				auto &l=tag.lights[j];
-				auto &t=gpu_tag_buffer[j];
-				const LightTag &lightTag=t.lightTags[j];
-				vec4 clr={l.color.x,l.color.y,l.color.z,1.0f};
-				 
-				auto C = cachedLights.find(l.uid);
-				auto &c=C->second;
-				if (c.resource)
-				{
-					auto& lcr =c.resource->GetLightCreateInfo();
-					name=lcr.name.c_str();
-				}
-				if(l.lightType==clientrender::LightType::Directional)
-					LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((clientrender::Light::Type)l.lightType)
-						,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
-						,l.color.x,l.color.y,l.color.z),clr);
-				else
-					LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((clientrender::Light::Type)l.lightType)
-						,lightTag.position.x
-						,lightTag.position.y
-						,lightTag.position.z
-						,l.color.x,l.color.y,l.color.z),clr);
-
+				auto& lcr =c.resource->GetLightCreateInfo();
+				name=lcr.name.c_str();
 			}
+			if(l.lightType==clientrender::LightType::Directional)
+				LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid,name,ToString((clientrender::Light::Type)l.lightType)
+					,lightTag.direction.x,lightTag.direction.y,lightTag.direction.z
+					,l.color.x,l.color.y,l.color.z),clr);
+			else
+				LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",l.uid, name, ToString((clientrender::Light::Type)l.lightType)
+					,lightTag.position.x
+					,lightTag.position.y
+					,lightTag.position.z
+					,l.color.x,l.color.y,l.color.z),clr);
+
 		}
+	}
 }
 
 void Gui::GeometryOSD()

@@ -626,11 +626,11 @@ namespace teleport
 		putPayload(avs::GeometryPayloadType::FontAtlas);
 		put(uid);
 		put(fontAtlas->font_texture_uid);
-		if(!fontAtlas->fontMaps.size()>255)
+		if(fontAtlas->fontMaps.size()>255)
 		{
 			return avs::Result::Failed;
 		}
-		uint8_t numMaps=fontAtlas->fontMaps.size();
+		uint8_t numMaps=(uint8_t)fontAtlas->fontMaps.size();
 		put(numMaps);
 		for(auto m:fontAtlas->fontMaps)
 		{

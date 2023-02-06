@@ -13,13 +13,18 @@
 
 #include "TeleportCore/AnimationInterface.h"
 #include "TeleportCore/TextCanvas.h"
+#ifdef _MSC_VER
+// disable Google's compiler warning.
+#pragma warning(disable:4018)
+#endif
 #include "draco/compression/encode.h"
 #include "draco/compression/decode.h"
+
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Font.h"
 #include "UnityPlugin/InteropStructures.h"
 
-using std::literals::string_literals::operator""s;
+using namespace std::string_literals;
 using namespace teleport;
 
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
