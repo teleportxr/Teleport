@@ -33,15 +33,14 @@ or if you have already cloned the main repo,
 	* You may retarget the projects to a more recent version of the build tools.
 2. In firstparty/Platform, run Setup.py to build required libraries fmt and glfw.
 3. Using CMakeGUI:
-    * Set src: (Teleport Folder) and bin: (Teleport Folder)/build_pc_client
+    * Set source code location to (Teleport Folder) and build the binaries at (Teleport Folder)/build_pc_client
     * Configure for x64 platform with default native compiler
     * In the Advanced CMake config settings, search for CXX_FLAGS and ensure that the configurations use the /MT and /MTd runtimes.
     * Uncheck 'BUILD_SHARED_LIBS', and 'USE_DYNAMIC_RUNTIME'.
     * Uncheck 'LIBAV_BUILD_SHARED_LIBS', and 'LIBAV_USE_DYNAMIC_RUNTIME'.
     * Uncheck 'ENABLE_ENCRYPTION' option from srt.
-    * Uncheck LIBAV_USE_DYNAMIC_RUNTIME.
-    * Set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to the correct installed Cuda version
-4. Generate, open and build the Visual Studio project.
+    * Set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to your installed Cuda version
+4. Configure, generate, open and build the Visual Studio project *in Release Configuration first*.
 
 ## Building Unity plugin
 
@@ -60,18 +59,6 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 3. Set TeleportServer as startup project.
 	* Right-click TeleportServer project in 'Solution Explorer' pane.
 	* Click "Set as Startup Project".
-
-## Building the Legacy Android Client application with Android Studio
-
-1. Follow [Oculus Mobile SDK software setup guide](https://developer.oculus.com/documentation/mobilesdk/latest/concepts/mobile-studio-setup-android/).
-2. [Generate an osig file](https://dashboard.oculus.com/tools/osig-generator/) for your device and place it in `client\TeleportClient\assets` directory.
-3. Connect your Android device to your PC and make sure that ADB debugging is enabled and the PC is authorized.
-4. (old method) Go to `client/VrProjects/Native/RemotePlayClient/Projects/Android` and run `build.bat` to build and deploy.
-5. New method: In Android Studio open RemotePlay/build.gradle.
-6. On the top right, click the Sync Project with Gradle Files button (has a shark icon) to load the config for your device.
-7. In Android Studio, go to Build->Generate Signed Bundle / APK and generate a key named android.debug.keystore in your RemotePlay/client/TeleportClient directory.
-8. Go to File->Project Structure->Modules->client->TeleportClient->Signing Configs and in debug config, put in the details of the key you created. 
-9. Click the build icon to compile and then you should be able to run.
 
 ## Building the Android Vulkan OpenXR Client with Visual Studio
 

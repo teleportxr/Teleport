@@ -8,7 +8,8 @@
 // C RunTime Header Files
 #include <stdlib.h>
 #include <filesystem>
-
+//#include <Shlobj.h>
+#include <Shlobj_core.h>
 #include "Resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
@@ -56,7 +57,8 @@ platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 client::ClientApp clientApp;
 Gui gui;
-
+std::string teleport_path;
+std::string storage_folder;
 // Need ONE global instance of this:
 avs::Context context;
 
@@ -113,9 +115,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	clientApp.Initialize();
 	auto &config=client::Config::GetInstance();
+	// Get a folder we can write to:
+	
+	char szPath[MAX_PATH];
+
+	HRESULT hResult = SHGetFolderPathA(NULL,
+		CSIDL_PERSONAL | CSIDL_FLAG_CREATE,
+		NULL,
+		0,
+		szPath);
+	if(hResult==S_OK)
+	{
+		storage_folder = std::string(szPath)+"/TeleportVR";
+	}
+	
+	config.SetStorageFolder(storage_folder.c_str());
 	gui.SetServerIPs(config.recent_server_urls);
-	if(config.log_filename.size()>0)
+	if (config.log_filename.size() > 0)
+	{
+		size_t pos = config.log_filename.find(':');
+		if ( pos== config.log_filename.length())
+		{
+			config.log_filename = storage_folder + "/"s + config.log_filename;
+		}
 		debug_buffer.setLogFile(config.log_filename.c_str());
+	}
 	errno=0;
     // Initialize global strings
     MyRegisterClass(hInstance);
@@ -167,6 +191,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 			}
 		}
 	}
+	teleport_path = fs::current_path().parent_path().string();
 
 	// replacing Windows' broken resource system, just load our icon from a png:
 	const char filename[]="textures\\teleportvr.png";
@@ -246,6 +271,11 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 #endif
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
+	if (teleport_path != "")
+	{
+		src_dir = teleport_path;
+		build_dir = teleport_path+"/build_pc_client";
+	}
 	// Create an instance of our simple clientRenderer class defined above:
 	{
 		// Whether run from the project directory or from the executable location, we want to be
@@ -276,22 +306,21 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
 		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath("assets/shaders/directx12");
 #endif
 #if TELEPORT_CLIENT_USE_D3D11
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath((build_dir + "/Platform/DirectX11/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath("assets/shaders/directx11");
 #endif
 #if TELEPORT_CLIENT_USE_VULKAN
+		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Vulkan/HLSL").c_str());
+		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/Vulkan/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
 #endif
 
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
-	//renderPlatformDx12.SetCommandList((ID3D12GraphicsCommandList*)direct3D12Manager.GetImmediateCommandList());
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	// Now renderPlatform is initialized, can init OpenXR:
 	if (try_init_vr)
@@ -304,8 +333,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	}
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
-	clientRenderer->Init(renderPlatform,&useOpenXR,(teleport::PlatformWindow*)GetActiveWindow());
 	auto &config=client::Config::GetInstance();
+	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());
 	if(config.recent_server_urls.size())
 		client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
