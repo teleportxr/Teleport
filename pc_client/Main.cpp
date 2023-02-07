@@ -277,11 +277,16 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
 		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/Platform/DirectX12/shaderbin").c_str());
-
-#else
+		renderPlatform->PushShaderBinaryPath("assets/shaders/directx12");
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/Platform/DirectX11/shaderbin").c_str());
+		renderPlatform->PushShaderBinaryPath("assets/shaders/directx11");
+#endif
+#if TELEPORT_CLIENT_USE_VULKAN
+		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
 #endif
 
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);

@@ -38,7 +38,7 @@ void Config::LoadConfigFromIniFile()
 	}
 	#ifdef _MSC_VER
 	if(pause_for_debugger)
-		Sleep(10000);
+		Sleep(pause_for_debugger*1000);
 	#endif
 }
 

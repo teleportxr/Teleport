@@ -116,6 +116,8 @@ else()
 	option(STATIC "" ON)
 	set(CMAKE_CXX_FLAGS_RELEASE "/MT /Od /Ob0 /Zi /DNDEBUG /DNOMINMAX")
 	set(CMAKE_CXX_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
+	set(CMAKE_C_FLAGS_RELEASE "/MT  /O2 /Ob2 /DNDEBUG /DNOMINMAX")
+	set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
 		#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
 endif()
 

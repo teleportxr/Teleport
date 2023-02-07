@@ -49,7 +49,7 @@ namespace teleport
 			static Config &GetInstance();
 			void LoadConfigFromIniFile();
 			std::vector<std::string> recent_server_urls;
-			bool pause_for_debugger=false;
+			int pause_for_debugger=0;
 			bool enable_vr = true;
 #if TELEPORT_INTERNAL_CHECKS
 			bool dev_mode=true;
