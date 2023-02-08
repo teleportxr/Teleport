@@ -269,17 +269,20 @@ void InputSession::SessionInit(XrInstance xr_instance,XrSession &xr_session)
 void InteractionProfile::Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings)
 {
 	name			=pr;
-	profilePath		=MakeXrPath(xr_instance, pr);
+	if(xr_instance)
+		profilePath		=MakeXrPath(xr_instance, pr);
 	xrActionSuggestedBindings.reserve(bindings.size());
 	bindingPaths.reserve(bindings.size());
 	size_t i = 0;
 	for (auto elem : bindings)
 	{
 		XrPath p;
-		p= MakeXrPath(xr_instance, elem.complete_path);
-		if(elem.action&&p)
+		if(xr_instance)
+			p= MakeXrPath(xr_instance, elem.complete_path);
+		if(elem.action)
 		{
-			xrActionSuggestedBindings.push_back( {elem.action, p});
+			if(p)
+				xrActionSuggestedBindings.push_back( {elem.action, p});
 			bindingPaths.push_back(elem.complete_path);
 			i++;
 		}
@@ -436,6 +439,7 @@ bool OpenXR::InitInstance(const char *app_name)
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,app_name);
 	xrCreateInstance(&createInfo, &xr_instance);
+	CreateMouseAndKeyboardProfile();
 	return (xr_instance!=nullptr);
 }
 
@@ -492,6 +496,33 @@ bool OpenXR::Init(crossplatform::RenderPlatform *r)
 
 const char* left = "user/hand/left";
 const char* right = "user/hand/right";
+void OpenXR::CreateMouseAndKeyboardProfile()
+{
+	MOUSE_KEYBOARD_PROFILE_INDEX = 0;
+	if (interactionProfiles.size() <= MOUSE_KEYBOARD_PROFILE_INDEX)
+	{
+		interactionProfiles.resize(MOUSE_KEYBOARD_PROFILE_INDEX + 1);
+		InteractionProfile& mouseAndKeyboard = interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
+		mouseAndKeyboard.Init(xr_instance
+			, "/interaction_profiles/simul/mouse_and_keyboard_ext"
+			, {
+				 {xr_input_session.actionDefinitions[ActionId::MOUSE_LEFT_BUTTON].xrAction	,"/input/mouse/left/click"}
+				,{xr_input_session.actionDefinitions[ActionId::MOUSE_RIGHT_BUTTON].xrAction	,"/input/mouse/right/click"}
+			});
+		// keyboard:
+#ifdef _MSC_VER
+		for (size_t i = ActionId::MAX_ACTIONS; i < xr_input_session.actionDefinitions.size(); i++)
+		{
+			std::string path = "/input/keyboard/";
+			const auto& def = xr_input_session.actionDefinitions[i];
+			path += def.name[0];
+			mouseAndKeyboard.Add(xr_instance, xr_input_session.actionDefinitions[i].xrAction, path.c_str());
+		}
+#endif
+		// No need to SuggestBind: OpenXR doesn't know what to do with this!
+	}
+}
+
 void OpenXR::MakeActions()
 {
 	XrActionSetCreateInfo actionset_info = { XR_TYPE_ACTION_SET_CREATE_INFO };
@@ -528,11 +559,9 @@ void OpenXR::MakeActions()
 		XR_CHECK(xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds));
 #endif
 	};
-	InteractionProfile &khrSimpleIP			=interactionProfiles[0];
-	InteractionProfile &valveIndexIP		=interactionProfiles[1];
-	InteractionProfile &oculusTouch			=interactionProfiles[2];
-	MOUSE_KEYBOARD_PROFILE_INDEX=3;
-	InteractionProfile &mouseAndKeyboard	=interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
+	InteractionProfile &khrSimpleIP			=interactionProfiles[1];
+	InteractionProfile &valveIndexIP		=interactionProfiles[2];
+	InteractionProfile &oculusTouch			=interactionProfiles[3];
 	khrSimpleIP.Init(xr_instance
 			,"/interaction_profiles/khr/simple_controller"
 			,{
@@ -591,23 +620,6 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(oculusTouch);
-	mouseAndKeyboard.Init(xr_instance
-		, "/interaction_profiles/simul/mouse_and_keyboard_ext"
-		, {
-			 {xr_input_session.actionDefinitions[ActionId::MOUSE_LEFT_BUTTON].xrAction	,"/input/mouse/left/click"}
-			,{xr_input_session.actionDefinitions[ActionId::MOUSE_RIGHT_BUTTON].xrAction	,"/input/mouse/right/click"}
-		});
-	// keyboard:
-	#ifdef _MSC_VER
-	for(size_t i=ActionId::MAX_ACTIONS;i<xr_input_session.actionDefinitions.size();i++)
-	{
-		std::string path="/input/keyboard/";
-		const auto &def=xr_input_session.actionDefinitions[i];
-		path+=def.name[0];
-		mouseAndKeyboard.Add(xr_instance,xr_input_session.actionDefinitions[i].xrAction,path.c_str());
-	}
-	#endif
-	// No need to SuggestBind: OpenXR doesn't know what to do with this!
 	
 	// Attach the action set we just made to the session
 	XrSessionActionSetsAttachInfo attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };

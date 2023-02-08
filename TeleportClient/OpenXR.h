@@ -231,6 +231,7 @@ namespace teleport
 			bool InitInstance(const char* app_name);
 			bool Init(platform::crossplatform::RenderPlatform* renderPlatform);
 			virtual bool TryInitDevice()=0;
+			void CreateMouseAndKeyboardProfile();
 			void MakeActions();
 			void PollActions();
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
