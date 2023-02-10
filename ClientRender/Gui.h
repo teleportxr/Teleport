@@ -41,7 +41,7 @@ namespace teleport
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
 		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		void DrawTexture(const platform::crossplatform::Texture* texture,int mip=0,int slice=0);
+		void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
 		void LinePrint(const char* txt,const float *clr=nullptr);
 		void Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager);
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
@@ -55,6 +55,7 @@ namespace teleport
 		void EndTab();
 		// Unitless,relative to debug gui size, [-1,+1]
 		void SetDebugGuiMouse(vec2 m,bool leftButton);
+		void OnKeyboard(unsigned wParam, bool bKeyDown);
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void setGeometryCache(const clientrender::GeometryCache *g)
@@ -91,7 +92,7 @@ namespace teleport
 		// Replaces Windows GetCursorPos if necessary.
 		static int GetCursorPos(long p[2]) ;
 	protected:
-		void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,int mip,int slice);
+		void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice);
 
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);

@@ -135,9 +135,12 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 		distanceSortedRootNodes.erase(std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), node));
 	}
 	// If it's in the transparent list, erase it from there.
-	auto f=std::find(distanceSortedTransparentNodes.begin(), distanceSortedTransparentNodes.end(), node);
-	if(f!=distanceSortedTransparentNodes.end())
-		distanceSortedTransparentNodes.erase(f);
+	{
+		std::scoped_lock l(distanceSortedTransparentNodes_mutex);
+		auto f = std::find(distanceSortedTransparentNodes.begin(), distanceSortedTransparentNodes.end(), node);
+		if (f != distanceSortedTransparentNodes.end())
+			distanceSortedTransparentNodes.erase(f);
+	}
 
 	//Attach children to world root.
 	std::vector<std::weak_ptr<Node>> children = node->GetChildren();
@@ -201,6 +204,7 @@ const NodeManager::nodeList_t& NodeManager::GetRootNodes() const
 
 const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
 {
+	std::scoped_lock lock(distanceSortedRootNodes_mutex);
 	std::sort
 	(
 		distanceSortedRootNodes.begin(),
@@ -236,6 +240,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 			if(transparent)
 			{
 				bool alreadyPresent=false;
+				std::scoped_lock l(distanceSortedTransparentNodes_mutex);
 				for(auto i=distanceSortedTransparentNodes.begin();i!=distanceSortedTransparentNodes.end();i++)
 				{
 					if(*i==*n)
@@ -249,6 +254,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 			}
 			else
 			{
+				std::scoped_lock l(distanceSortedTransparentNodes_mutex);
 				for(auto i=distanceSortedTransparentNodes.begin();i!=distanceSortedTransparentNodes.end();i++)
 				{
 					if(*i==*n)
@@ -262,16 +268,18 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 			break;
 		}
 	}
-	std::sort
-	(
-		distanceSortedTransparentNodes.begin(),
-		distanceSortedTransparentNodes.end(),
-		[](std::shared_ptr<Node> a, std::shared_ptr<Node> b)
-		{
-			return a->distance < b->distance;
-		}
-	);
-
+	{
+		std::scoped_lock l(distanceSortedTransparentNodes_mutex);
+		std::sort
+		(
+			distanceSortedTransparentNodes.begin(),
+			distanceSortedTransparentNodes.end(),
+			[](std::shared_ptr<Node> a, std::shared_ptr<Node> b)
+			{
+				return a->distance < b->distance;
+			}
+		);
+	}
 	return distanceSortedTransparentNodes;
 }
 
@@ -480,7 +488,7 @@ void NodeManager::Update(float deltaTime)
 	}
 	removed_node_uids.clear();
 	//Delete nodes that have been invisible for too long.
-	for(const std::shared_ptr<Node>& node : expiredNodes)
+	for(const std::shared_ptr<Node> node : expiredNodes)
 	{
 		RemoveNode(node);
 		removed_node_uids.insert(node->id);
@@ -497,8 +505,14 @@ void NodeManager::Clear()
 	rootNodes_mutex.lock();
 	rootNodes.clear();
 	rootNodes_mutex.unlock();
-	distanceSortedRootNodes.clear();
-	distanceSortedTransparentNodes.clear();
+	{
+		std::scoped_lock lock(distanceSortedRootNodes_mutex);
+		distanceSortedRootNodes.clear();
+	}
+	{
+		std::scoped_lock lock(distanceSortedTransparentNodes_mutex);
+		distanceSortedTransparentNodes.clear();
+	}
 	nodeLookup.clear();
 
 	parentLookup.clear();
@@ -559,9 +573,11 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 			auto r = std::find(rootNodes.begin(), rootNodes.end(), child);
 			if (r == rootNodes.end())
 				rootNodes.push_back(child);
+			distanceSortedRootNodes_mutex.lock();
 			auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
 			if (f == distanceSortedRootNodes.end())
 				distanceSortedRootNodes.push_back(child);
+			distanceSortedRootNodes_mutex.unlock();
 	rootNodes_mutex.unlock();
 		}
 	}
@@ -572,9 +588,12 @@ void NodeManager::LinkToParentNode(avs::uid childID)
 	}
 
 	parent->AddChild(child);
-	auto f= std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
-	if(f!= distanceSortedRootNodes.end())
-		distanceSortedRootNodes.erase(f);
+	{
+		std::scoped_lock l(distanceSortedRootNodes_mutex);
+		auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
+		if (f != distanceSortedRootNodes.end())
+			distanceSortedRootNodes.erase(f);
+	}
 	//Erase child from the root nodes list, as they now have a parent.
 	// TODO: ONLY do this if it was unparented before.....
 	

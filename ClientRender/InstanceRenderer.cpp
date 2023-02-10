@@ -87,9 +87,9 @@ void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& 
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect,renderState.cubemapClearEffect_TagDataCubeBuffer);
 	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.globalPose.position) - videoPos;
-	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.globalPose.position);
-	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientServerState.headPose.globalPose.orientation);
+	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.localPose.position) - videoPos;
+	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.localPose.position);
+	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientServerState.headPose.localPose.orientation);
 	renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 	renderState.cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
 	renderState.cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);
@@ -174,7 +174,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 {
 	auto renderPlatform=deviceContext.renderPlatform;
 
-		clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
+	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
@@ -259,16 +259,6 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 						RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
 					}
 				}
-			}
-			else
-			{
-				std::string passName = (int)config.options.lobbyView ? "neon" : "white";
-				if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
-					passName += "_multiview";
-
-				renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-				renderPlatform->DrawQuad(deviceContext);
-				renderState.cubemapClearEffect->Unapply(deviceContext);
 			}
 		}
 		vec4 white={1.f,1.f,1.f,1.f};
@@ -503,7 +493,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture	,combined ? combined->GetSimulTexture() : nullptr);
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture	,emissive ? emissive->GetSimulTexture() : nullptr);
 				
-				ShaderPassSetup * shaderPassSetup = mvgdc?(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnimMultiview:&renderState.pbrEffect_solidMultiview))
+				ShaderPassSetup * shaderPassSetup = mvgdc?(transparent?&renderState.pbrEffect_transparentMultiview:(anim?&renderState.pbrEffect_solidAnimMultiview:&renderState.pbrEffect_solidMultiview))
 																			:(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnim:&renderState.pbrEffect_solid));
 
 				// Pass used for rendering geometry.

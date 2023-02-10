@@ -109,7 +109,6 @@ namespace clientrender
 		avs::uid hand_skin_uid=0;
 		vec3 index_finger_offset;
 
-		int RenderMode=0;
 		std::shared_ptr<clientrender::Material> mFlatColourMaterial;
 
 		//avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
@@ -126,13 +125,6 @@ namespace clientrender
 		const avs::InputId local_menu_input_id=0;
 		const avs::InputId local_cycle_osd_id=1;
 		const avs::InputId local_cycle_shader_id=2;
-	
-		bool show_video = false;
-
-		bool render_from_video_centre	= false;
-		//bool show_textures				= false;
-		bool show_cubemaps				=false;
-	
 		teleport::Gui &gui;
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;

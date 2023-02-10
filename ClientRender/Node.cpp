@@ -110,7 +110,9 @@ void Node::Update(float deltaTime_ms)
 
 	for(std::weak_ptr<Node> child : children)
 	{
-		child.lock()->Update(deltaTime_ms);
+		std::shared_ptr n = child.lock();
+		if(n)
+			n->Update(deltaTime_ms);
 	}
 }
 

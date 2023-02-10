@@ -120,5 +120,7 @@ namespace clientrender
 		void LinkToParentNode(avs::uid nodeID);
 		mutable std::mutex nodeLookup_mutex;
 		mutable std::mutex rootNodes_mutex;
+		mutable std::mutex distanceSortedRootNodes_mutex;
+		mutable std::mutex distanceSortedTransparentNodes_mutex;
 	};
 }

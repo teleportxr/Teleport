@@ -11,7 +11,9 @@
       <Filter>Shaders</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\..\..\build_pc_client\CMakeFiles\9705d267972308b2efa3ea393da5c190\VulkanShaders.rule" />
-    <CustomBuild Include="../../../../client/Shaders/canvas_text.sfx" />
+    <CustomBuild Include="../../../../client/Shaders/canvas_text.sfx">
+      <Filter>Shaders</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="../../../../client/Shaders/video_types.sl">

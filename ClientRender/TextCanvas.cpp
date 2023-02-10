@@ -93,7 +93,8 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		RestoreDeviceObjects(deviceContext.renderPlatform);
 	if(!fontAtlas)
 		return;
-	auto&fontMap=fontAtlas->fontMaps[textCanvasCreateInfo.size];
+	auto f= fontAtlas->fontMaps.find(textCanvasCreateInfo.size);
+	const auto &fontMap=f->second;
 
 	int max_chars = (int)textCanvasCreateInfo.text.length();
 	
@@ -182,7 +183,7 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 				continue;
 			}
 			int idx = (int)c - 32;
-			if (idx < 0 || idx>fontMap.glyphs.size())
+			if (idx < 0 || idx>=fontMap.glyphs.size())
 				continue;
 			const teleport::Glyph& g = fontMap.glyphs[idx];
 			if (idx > 0)
@@ -201,7 +202,7 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 				}
 				n++;
 			}
-			_x += (g.xAdvance  + 1)*pixelHeight;
+			_x += (g.xAdvance  + 1)*pixelWidth;
 		}
 	}
 	n /= static_cast<uint>(viewCount);

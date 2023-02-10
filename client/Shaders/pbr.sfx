@@ -461,7 +461,7 @@ vec3 ConvertCubemapLookup(vec3 d)
 
 vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
 {
-	float roughness_mip		= MipFromRoughness(surfaceProperties.roughness, roughestMip);
+	float roughness_mip = roughestMip;// MipFromRoughness(surfaceProperties.roughness, roughestMip);
 	// Sample the environment maps:
 	//vec3 diffuse_env		=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceProperties.normal.z));//diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
 	//vec3 env				=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
@@ -476,6 +476,7 @@ vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo.rgb*diffuse_env;
 	//diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+ specular;
+
 	return colour;
 }
 
@@ -614,7 +615,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	emissive			*=	emissiveOutputScalar.rgb;
 	vec4 u				=	vec4(c+emissive,alpha);
 	//if(lightmap)
-	//u.rgb=normal.xyz;
+	//u.rgb=view.xyz;
 	//u.rgb=viewPosition.xyz;
 	return u;
 }

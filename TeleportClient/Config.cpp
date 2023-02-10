@@ -5,6 +5,7 @@
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include <fmt/core.h>
 #include <sstream>
+#include <filesystem>
 
 using namespace teleport;
 using namespace client;
@@ -213,8 +214,10 @@ void Config::StoreRecentURL(const char *r)
 
 void Config::SetStorageFolder(const char *f)
 {
-	storageFolder=f;
+	std::filesystem::path p(f);
+	storageFolder = p.generic_string();
 }
+
 const std::string &Config::GetStoragePath() const
 {
 	if(!storageFolder.length())

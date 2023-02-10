@@ -11,7 +11,6 @@ namespace teleport
 			AndroidDiscoveryService();
 			virtual ~AndroidDiscoveryService();
 
-			virtual uint64_t Discover1(std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote) ;
 		};
 	}
 }

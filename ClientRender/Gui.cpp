@@ -428,6 +428,132 @@ void Gui::SetDebugGuiMouse(vec2 m,bool leftButton)
 	mouse=m;
 	mouseButtons[0]=leftButton;
 }
+#define VK_KEYPAD_ENTER      (VK_RETURN + 256)
+
+int VirtualKeyToChar(unsigned long long key)
+{
+#ifdef _MSC_VER
+#if 0
+	std::wstring out;
+	int scan;
+	WCHAR buff[32];
+	UINT size = 32;
+
+	scan = MapVirtualKeyEx((unsigned)key, 0, GetKeyboardLayout(0));
+	BYTE m_keys[32];
+	int numChars = ToUnicodeEx((unsigned)key, scan, m_keys, buff, size, 0, GetKeyboardLayout(0));
+	return buff[0];
+#else
+	switch (key)
+	{
+	case VK_TAB: 
+	case VK_LEFT: 
+	case VK_RIGHT: 
+	case VK_UP: 
+	case VK_DOWN: 
+	case VK_PRIOR: 
+	case VK_NEXT: 
+	case VK_HOME: 
+	case VK_END: 
+	case VK_INSERT: 
+	case VK_DELETE: 
+	case VK_BACK: 
+	case VK_SPACE: 
+	case VK_RETURN: 
+	case VK_ESCAPE: 
+	case VK_OEM_7: 
+	case VK_OEM_COMMA: 
+	case VK_OEM_MINUS: 
+	case VK_OEM_PERIOD: 
+	case VK_OEM_2: 
+	case VK_OEM_1: 
+	case VK_OEM_PLUS: 
+	case VK_OEM_4: 
+	case VK_OEM_5: 
+	case VK_OEM_6: 
+	case VK_OEM_3: 
+	case VK_CAPITAL: 
+	case VK_SCROLL: 
+	case VK_NUMLOCK: 
+	case VK_SNAPSHOT: 
+	case VK_PAUSE: 
+	case VK_NUMPAD0: 
+	case VK_NUMPAD1: 
+	case VK_NUMPAD2: 
+	case VK_NUMPAD3: 
+	case VK_NUMPAD4: 
+	case VK_NUMPAD5: 
+	case VK_NUMPAD6: 
+	case VK_NUMPAD7: 
+	case VK_NUMPAD8: 
+	case VK_NUMPAD9: 
+	case VK_DECIMAL: 
+	case VK_DIVIDE: 
+	case VK_MULTIPLY: 
+	case VK_SUBTRACT: 
+	case VK_ADD: 
+	case VK_KEYPAD_ENTER:
+	case VK_LSHIFT: 
+	case VK_LCONTROL: 
+	case VK_LMENU: 
+	case VK_LWIN: 
+	case VK_RSHIFT: 
+	case VK_RCONTROL: 
+	case VK_RMENU: 
+	case VK_RWIN: 
+	case VK_APPS: 
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+	case 'A':
+	case 'B':
+	case 'C':
+	case 'D':
+	case 'E':
+	case 'F':
+	case 'G':
+	case 'H':
+	case 'I':
+	case 'J':
+	case 'K':
+	case 'L':
+	case 'M':
+	case 'N':
+	case 'O':
+	case 'P':
+	case 'Q':
+	case 'R':
+	case 'S':
+	case 'T':
+	case 'U':
+	case 'V':
+	case 'W':
+	case 'X':
+	case 'Y':
+	case 'Z':
+	default:
+		break;
+	}
+#endif
+	return (int)key;
+#endif
+}
+void Gui::OnKeyboard(unsigned wParam, bool bKeyDown)
+{
+	if (!bKeyDown)
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		int k = VirtualKeyToChar(wParam);
+		keys_pressed.push_back(tolower(k));
+	}
+}
 
 void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 {
@@ -469,26 +595,33 @@ void Gui::LinePrint(const char* txt,const float *clr)
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), "%s",txt);
 }
 std::map<uint64_t,ImGui_ImplPlatform_TextureView> drawTextures;
-void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,int mip,int slice)
+void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice)
 {
 	platform::crossplatform::Texture *t=texture;
 	auto vp=renderPlatform->GetViewport(deviceContext,0);
 	if(texture->IsCubemap())
 	{
-		renderPlatform->DrawCubemap(deviceContext,texture,0.f,0.f,1.0f,1.0f,1.0f,(float)mip);
+		renderPlatform->DrawCubemap(deviceContext,texture,0.f,0.f,1.0f,1.0f,1.0f,mip);
 	}
 	else
 	{
-		renderPlatform->DrawTexture(deviceContext,0,0,vp.w,vp.h,t,1.0f,false,1.0f,false,{0,0},{0,0},(float)mip,slice);
+		renderPlatform->DrawTexture(deviceContext,0,0,vp.w,vp.h,t,1.0f,false,1.0f,false,{0,0},{0,0},mip,slice);
 	}
 }
 
-void Gui::DrawTexture(const Texture* texture,int mip,int slice)
+void Gui::DrawTexture(const Texture* texture,float m,int slice)
 {
 	if (!texture)
 		return;
 	if (!texture->IsValid())
 		return;
+	static float mip = 0;
+	if (m < 0)
+	{
+		ImGui::SliderFloat("Mip", &mip, 0.f, 10.0f);
+		m = mip;
+	}
+
 	const int width = texture->width;
 	const int height = texture->length;
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
@@ -497,26 +630,9 @@ void Gui::DrawTexture(const Texture* texture,int mip,int slice)
 	float showWidth=std::min(regionSize.x, textureSize.x);
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 		
-	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),mip,slice);
-	ImGui_ImplPlatform_DrawTexture(nullptr,mip, slice,drawTexture,(int)showWidth,(int)size.y);
+	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),m,slice);
+	ImGui_ImplPlatform_DrawTexture(nullptr,m, slice,drawTexture,(int)showWidth,(int)size.y);
 	
-	#if 0
-	uint64_t u=(uint64_t)texture+mip*1000+slice;
-	auto &tv=drawTextures[u];
-	tv.texture=const_cast<Texture*>(texture);
-	tv.mip=mip;
-	tv.slice=slice;
-	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
-	float showWidth=std::min(regionSize.x, textureSize.x);
-	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
-	ImTextureID imTextureID = (ImTextureID)&tv;
-	
-	static ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
-	static ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
-	static ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
-	static ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
-	ImGui::Image(imTextureID, size, uv_min, uv_max, tint_col, border_col);
-	#endif
 }
 
 static void DoRow(const char* title, const char* text, ...)
@@ -578,13 +694,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
 	if (ImGuiBegin("Keyboard", nullptr, window_flags))
 	{
-		ImGui::Text("K: Connect/Disconnect\n"
+		ImGui::Text(
 			"O: Toggle OSD\n"
-			"V: Show video\n"
-			"C: Toggle render from centre\n"
-			"T: Toggle Textures\n"
+			"K: Connect/Disconnect\n"
 			"N: Toggle Node Overlays\n"
-			"M: Change rendermode\n"
 			"R: Recompile shaders\n"
 			"NUM 0: PBR\n"
 			"NUM 1: Albedo\n"
@@ -760,7 +873,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				static int mip_current = 0;
 				ImGui::Combo("Mip", &mip_current, mips, IM_ARRAYSIZE(mips));
 				const clientrender::Texture* pct = static_cast<const clientrender::Texture*>(selected_texture.get());
-				DrawTexture(selected_texture->GetSimulTexture(),mip_current,0);
+				DrawTexture(selected_texture->GetSimulTexture(),(float)mip_current,0);
 			}
 			else if(selected_animation.get())
 			{
@@ -1182,8 +1295,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				if(k==VK_BACK)
 				{
 					KeysDown[k] = true;
-					//io.KeysDown[ImGuiKey_Backspace] = true;
-					//io.AddInputCharacter(ImGuiKey_Backspace);
 					io.AddKeyEvent(ImGuiKey_Backspace, true);
 				}
 				else
@@ -1199,7 +1310,7 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 		if(show_options)
 		{
             ImGui::Spacing();
-            ImGui::SameLine(ImGui::GetWindowWidth()-70);
+            ImGui::SameLine(ImGui::GetWindowWidth()-80);
     //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);
 			if(ImGui::Button(ICON_FK_ARROW_LEFT,ImVec2(64,32)))
 			{
@@ -1210,43 +1321,46 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 			{
 				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f); // Default to 100.0f
 				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f); // Default to 200.0f
-                ImGui::TableNextRow();
+				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::LabelText("##LobbyView","Lobby View");
+				ImGui::LabelText("##LobbyView", "Lobby View");
 				ImGui::TableNextColumn();
 				int e = (int)config.options.lobbyView;
 				ImGui::RadioButton("White", &e, 0);
 				ImGui::SameLine();
 				ImGui::RadioButton("Neon", &e, 1);
-				if((client::LobbyView)e!=config.options.lobbyView)
+				if ((client::LobbyView)e != config.options.lobbyView)
 				{
-					config.options.lobbyView=(client::LobbyView)e;
+					config.options.lobbyView = (client::LobbyView)e;
 				}
-                ImGui::TableNextRow();
+				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
 				ImGui::PushItemWidth(300.0f);
-				ImGui::LabelText("##StartupConnection","Startup Connection");
+				ImGui::LabelText("##StartupConnection", "Startup Connection");
 				ImGui::TableNextColumn();
-				auto conn=magic_enum::enum_entries<teleport::client::StartupConnectOption>();
-				int c= (int)config.options.startupConnectOption;
-				int i=0;
-				for(const auto &e:conn)
+				auto conn = magic_enum::enum_entries<teleport::client::StartupConnectOption>();
+				int c = (int)config.options.startupConnectOption;
+				int i = 0;
+				for (const auto& e : conn)
 				{
-					std::string ename=fmt::format("{0}",e.second);
+					std::string ename = fmt::format("{0}", e.second);
 					ImGui::RadioButton(ename.c_str(), &c, i++);
 					ImGui::SameLine();
 				}
-				if((client::StartupConnectOption)c!=config.options.startupConnectOption)
+				if ((client::StartupConnectOption)c != config.options.startupConnectOption)
 				{
-					config.options.startupConnectOption=(client::StartupConnectOption)c;
+					config.options.startupConnectOption = (client::StartupConnectOption)c;
 				}
 
-				#if TELEPORT_INTERNAL_CHECKS
-                ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::LabelText("##labelGeometryOffline","Geometry Visible Offline");
-				ImGui::TableNextColumn();
-				ImGui::Checkbox("##showGeometryOffline",&config.options.showGeometryOffline);
+#if TELEPORT_INTERNAL_CHECKS
+				if (config.dev_mode)
+				{
+					ImGui::TableNextRow();
+					ImGui::TableNextColumn();
+					ImGui::LabelText("##labelGeometryOffline", "Geometry Visible Offline");
+					ImGui::TableNextColumn();
+					ImGui::Checkbox("##showGeometryOffline", &config.options.showGeometryOffline);
+				}
 				#endif
 				ImGui::EndTable();
 			}
@@ -1376,7 +1490,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 					if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
 					{
 						 refocus=0;
-						// keys_pressed.push_back(ImGuiKey_Backspace);
 						 keys_pressed.push_back(VK_BACK);
 					}
 					ImGui::PopFont();

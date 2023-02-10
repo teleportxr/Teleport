@@ -58,9 +58,10 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		}
 		m_data->pollid = srt_epoll_create();
 		int yes = 1;
+		int hundred = 100;
 		int ten_thousand = 10000;	
-		srt_setsockflag(m_data->m_socket, SRTO_SNDTIMEO, &ten_thousand, sizeof ten_thousand);
-		srt_setsockflag(m_data->m_socket, SRTO_RCVTIMEO, &ten_thousand, sizeof ten_thousand);
+		srt_setsockflag(m_data->m_socket, SRTO_SNDTIMEO, &hundred, sizeof hundred);
+		srt_setsockflag(m_data->m_socket, SRTO_RCVTIMEO, &hundred, sizeof hundred);
 
 		srt_setsockflag(m_data->m_socket, SRTO_PEERIDLETIMEO, &params.connectionTimeout, sizeof params.connectionTimeout);
 
@@ -282,6 +283,9 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		if (res)
 		{
 			CHECK_SRT_ERROR(res);
+			// Try to reset the socket.
+			closeSocket();
+			return avs::Result::Failed;
 		}
 	}
 

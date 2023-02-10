@@ -538,8 +538,34 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs.resize(1);
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
+	auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 	{
 		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+		// TODO: This should render only if no background clients are connected.
+		if (!sessionClient->IsConnected())
+		{
+			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+			{
+				crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+				renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+				renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+				renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
+				renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
+			}
+			//else
+			{
+				renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+				renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+				renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+			}
+			std::string passName = (int)config.options.lobbyView ? "neon" : "white";
+			if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
+				passName += "_multiview";
+
+			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+			renderPlatform->DrawQuad(deviceContext);
+			renderState.cubemapClearEffect->Unapply(deviceContext);
+		}
 		// Init the viewstruct in global space - i.e. with the server offsets.
 		avs::Pose origin_pose;
 		std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
@@ -607,7 +633,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	
 	gui.Render(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
-	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 	if (!sessionClient->IsConnected()||gui.HasFocus()||config.options.showGeometryOffline)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
@@ -821,37 +846,33 @@ void Renderer::OnMouseMove(int xPos
 
 void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 {
-	switch (wParam) 
+	if (gui_shown)
+		gui.OnKeyboard(wParam, bKeyDown);
+	else
 	{
-#ifdef _MSC_VER
-		case VK_LEFT: 
-		case VK_RIGHT: 
-		case VK_UP: 
-		case VK_DOWN:
-			return;
-#endif
-		default:
-			int  k = tolower(wParam);
-			if (k > 255)
+		switch (wParam) 
+		{
+	#ifdef _MSC_VER
+			case VK_LEFT: 
+			case VK_RIGHT: 
+			case VK_UP: 
+			case VK_DOWN:
 				return;
-			keydown[k] = bKeyDown ? 1 : 0;
-		break; 
+	#endif
+			default:
+				int  k = tolower(wParam);
+				if (k > 255)
+					return;
+				keydown[k] = bKeyDown ? 1 : 0;
+			break; 
+		}
 	}
 	if (!bKeyDown)
 	{
 		switch (wParam)
 		{
-		case 'V':
-			show_video = !show_video;
-			break;
 		case 'O':
 			show_osd =!show_osd;
-			break;
-		case 'C':
-			render_from_video_centre = !render_from_video_centre;
-			break;
-		case 'U':
-			show_cubemaps = !show_cubemaps;
 			break;
 		case 'H':
 			WriteHierarchies(server_uid);
@@ -865,10 +886,6 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 				if(sc->IsConnected())
 					sc->Disconnect(0);
 			}
-			break;
-		case 'M':
-			RenderMode++;
-			RenderMode = RenderMode % 2;
 			break;
 		case 'R':
 			RecompileShaders();
@@ -1057,12 +1074,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	renderState.hdrFramebuffer->Activate(deviceContext);
 	renderState.hdrFramebuffer->Clear(deviceContext, 0.5f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
 
-	vec3 true_pos = camera.GetPosition();
-/*	if (render_from_video_centre)
-	{
-		vec3 pos = videoPosDecoded ? videoPos : vec3(0, 0, 0);
-		camera.SetPosition(pos);
-	};*/
 	float aspect = (float)viewport.w / (float)viewport.h;
 	if (reverseDepth)
 		deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
@@ -1094,11 +1105,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	}
 
 	vec4 white(1.f, 1.f, 1.f, 1.f);
-	if (render_from_video_centre)
-	{
-		camera.SetPosition(true_pos);
-		renderPlatform->Print(deviceContext, viewport.w - 16, viewport.h - 16, "C", white);
-	}
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
 	static int lod = 0;
@@ -1111,35 +1117,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	lod = lod % 8;
 	auto instanceRenderer=GetInstanceRenderer(server_uid);
 	auto &geometryCache=instanceRenderer->geometryCache;
-	if(show_cubemaps)
-	{
-		int x=50,y=50;
-		static int r=100,R=120;
-		renderPlatform->DrawCubemap(deviceContext, renderState.videoTexture,		  x+=R, y, R, 1.f, 1.f, 0.0f);
-		renderPlatform->Print(deviceContext,x,y,fmt::format("video").c_str());
-		renderPlatform->DrawCubemap(deviceContext, renderState.diffuseCubemapTexture, x+=r, y, r, 1.f, 1.f, static_cast<float>(lod));
-		renderPlatform->Print(deviceContext,x,y,fmt::format("v diffuse\n{0}",lod).c_str());
-		renderPlatform->DrawCubemap(deviceContext, renderState.specularCubemapTexture, x+=r,y, r, 1.f, 1.f, static_cast<float>(lod));
-		renderPlatform->Print(deviceContext,x,y,fmt::format("v specular\n{0}",lod).c_str());
-		auto t = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.diffuseCubemapTexture);
-		if(t&&t->GetSimulTexture())
-		{
-			renderPlatform->DrawCubemap(deviceContext, t->GetSimulTexture(), x+=R, y, R, 1.f, 1.f, static_cast<float>(lod));
-			renderPlatform->Print(deviceContext,x,y,fmt::format("diffuse\n{0}",lod).c_str());
-		}
-		auto s = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
-		if(s&&s->GetSimulTexture())
-		{
-			static int s_lod=0;
-			if (!tt)
-			{
-				s_lod++;
-				s_lod=s_lod%s->GetSimulTexture()->mips;
-			}
-			renderPlatform->DrawCubemap(deviceContext, s->GetSimulTexture(), x+=R, y, R, 1.f, 1.f, static_cast<float>(s_lod));
-			renderPlatform->Print(deviceContext,x,y,fmt::format("specular\n{0}",s_lod).c_str());
-		}
-	}
 	if (!tt)
 	{
 		tt=1000;
@@ -1321,6 +1298,12 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 				gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
 				gui.DrawTexture(ti->texture);
 			}
+			gui.LinePrint(platform::core::QuickFormat("Specular"), white);
+			gui.DrawTexture(renderState.specularCubemapTexture);
+			gui.LinePrint(platform::core::QuickFormat("DiffuseC"), white);
+			gui.DrawTexture(renderState.diffuseCubemapTexture);
+			gui.LinePrint(platform::core::QuickFormat("Lighting"), white);
+			gui.DrawTexture(renderState.lightingCubemapTexture);
 		}
 		gui.EndTab();
 	}

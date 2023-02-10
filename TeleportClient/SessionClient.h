@@ -181,7 +181,7 @@ namespace teleport
 			double mTimeSinceLastServerComm = 0;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
-			ConnectionStatus connectionRequest = ConnectionStatus::CONNECTED;
+			ConnectionStatus connectionRequest = ConnectionStatus::UNCONNECTED;
 		};
 	}
 }

@@ -113,14 +113,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				std::filesystem::current_path(current_path);
 		}
 	}
-	clientApp.Initialize();
 	auto &config=client::Config::GetInstance();
 	// Get a folder we can write to:
 	
 	char szPath[MAX_PATH];
 
 	HRESULT hResult = SHGetFolderPathA(NULL,
-		CSIDL_PERSONAL | CSIDL_FLAG_CREATE,
+		CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE,
 		NULL,
 		0,
 		szPath);
@@ -130,6 +129,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	
 	config.SetStorageFolder(storage_folder.c_str());
+	clientApp.Initialize();
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)
 	{
@@ -428,7 +428,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 	}
-	if (!ui_handled && !gui.HasFocus())
+	if (!ui_handled )
 	{
 		switch (message)
 		{
@@ -442,24 +442,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
+		default:
+			break;
+		}
+	}
+
+	if (!ui_handled && !gui.HasFocus())
+	{
+		switch (message)
+		{
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:
@@ -474,7 +483,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 	}
-
 	switch (message)
 	{
     case WM_COMMAND:

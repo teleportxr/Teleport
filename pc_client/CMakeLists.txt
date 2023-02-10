@@ -40,7 +40,7 @@ endif()
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
 
-add_static_executable( pc_client WIN32 SOURCES ${srcs} ${shaders} ${inifiles} )
+add_static_executable( pc_client WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
 
 
 target_include_directories(pc_client PRIVATE 

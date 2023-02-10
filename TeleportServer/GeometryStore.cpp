@@ -1551,6 +1551,9 @@ template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const 
 {
 	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
 	std::string p=StandardizePath(file_name,path_root);
+	size_t ext_pos = p.find(ExtractedResource::fileExtension());
+	if (ext_pos < p.length())
+		p = p.substr(0, ext_pos);
 	auto write_time= std::filesystem::last_write_time(file_name);
 	// If there's a duplicate, use the newer file.
 	// This guid might already exist!
@@ -1633,6 +1636,7 @@ std::set<avs::uid> GeometryStore::GetClashingUids() const
 		std::set<avs::uid> mesh_uids;
 		std::map<avs::Accessor::ComponentType,std::set<avs::uid>> component_uids;
 		avs::AxesStandard axesStandard=m.first;
+#if 0
 		for(const auto &mesh:m.second)
 		{
 			for(const auto &mesh2:m.second)
@@ -1648,6 +1652,7 @@ std::set<avs::uid> GeometryStore::GetClashingUids() const
 				}
 			}
 		}
+#endif
 	}
 	return clash_uids;
 }

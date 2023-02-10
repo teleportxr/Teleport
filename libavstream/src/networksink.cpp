@@ -332,7 +332,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 
 	m_data->m_packetsSent = 0;
 
-	m_data->m_maxPacketsAllowed = deltaTime * 0.001 * m_data->m_maxPacketsAllowedPerSecond;
+	m_data->m_maxPacketsAllowed = size_t((double)deltaTime * 0.001 * (double)m_data->m_maxPacketsAllowedPerSecond);
 
 	for (int i = 0; i < (int)getNumInputSlots(); ++i)
 	{
@@ -433,7 +433,7 @@ void NetworkSink::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 
 		if (m_data->m_counters.avgBandwidthUsed > 0 && m_data->m_counters.avgBandwidthUsed < m_data->m_minBandwidthUsed)
 		{
-			m_data->m_minBandwidthUsed = m_data->m_counters.avgBandwidthUsed;
+			m_data->m_minBandwidthUsed = (uint32_t)(m_data->m_counters.avgBandwidthUsed);
 			m_data->m_counters.minBandwidthUsed = m_data->m_minBandwidthUsed;
 		}
 
@@ -516,7 +516,7 @@ void NetworkSink::sendData(const std::vector<uint8_t> &subPacket)
 
 	SRT_MSGCTRL mctrl;
 	srt_msgctrl_init(&mctrl);
-	int r = srt_sendmsg2(m_data->m_remote_socket, buffer, bufferSize, &mctrl);
+	int r = srt_sendmsg2(m_data->m_remote_socket, buffer, (int)bufferSize, &mctrl);
 	if (r < 0)
 	{
 		closeConnection();
