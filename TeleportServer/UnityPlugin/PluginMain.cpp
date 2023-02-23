@@ -735,8 +735,7 @@ TELEPORT_EXPORT avs::uid GetOrGenerateUid(BSTR path)
 {
 	if(!path)
 		return 0;
-	_bstr_t p=path;
-	std::string str(p);
+	std::string str=WStringToString(path);
 	return teleport::GeometryStore::GetInstance().GetOrGenerateUid(str);
 }
 
@@ -1387,27 +1386,27 @@ TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransf
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
-	teleport::GeometryStore::GetInstance().storeMesh(id, guid, path, lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
+	teleport::GeometryStore::GetInstance().storeMesh(id, WStringToString(guid), WStringToString(path), lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
 }
 
 TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropMaterial material)
 {
-	teleport::GeometryStore::GetInstance().storeMaterial(id, guid, path, lastModified, avs::Material(material));
+	teleport::GeometryStore::GetInstance().storeMaterial(id, WStringToString(guid), WStringToString(path), lastModified, avs::Material(material));
 }
 
 TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR relative_asset_path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	teleport::GeometryStore::GetInstance().storeTexture(id, guid, relative_asset_path, lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	teleport::GeometryStore::GetInstance().storeTexture(id, WStringToString(guid), WStringToString(relative_asset_path), lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT avs::uid StoreFont( BSTR ttf_path,BSTR relative_asset_path,std::time_t lastModified, int size)
 {
-	return teleport::GeometryStore::GetInstance().storeFont(ttf_path,relative_asset_path,lastModified,size);
+	return teleport::GeometryStore::GetInstance().storeFont(WStringToString(ttf_path), WStringToString(relative_asset_path),lastModified,size);
 }
 
 TELEPORT_EXPORT avs::uid StoreTextCanvas( BSTR relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 {
-	avs::uid u=teleport::GeometryStore::GetInstance().storeTextCanvas(relative_asset_path,interopTextCanvas);
+	avs::uid u=teleport::GeometryStore::GetInstance().storeTextCanvas(WStringToString(relative_asset_path),interopTextCanvas);
 	if(u)
 	{
 		for(auto& clientPair : clientServices)
@@ -1438,7 +1437,7 @@ TELEPORT_EXPORT bool GetFontAtlas( BSTR ttf_path,  InteropFontAtlas *interopFont
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture shadowMap)
 {
-	teleport::GeometryStore::GetInstance().storeShadowMap(id, guid, path, lastModified, avs::Texture(shadowMap));
+	teleport::GeometryStore::GetInstance().storeShadowMap(id, avs::convertToByteString(guid), avs::convertToByteString(path), lastModified, avs::Texture(shadowMap));
 }
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)

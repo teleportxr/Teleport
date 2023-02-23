@@ -88,12 +88,12 @@ namespace teleport
 		void storeNode(avs::uid id, avs::Node& newNode);
 		void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
 		void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
-		void storeMesh(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
-		void storeMaterial(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Material& newMaterial);
-		void storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC,bool forceOverwrite);
-		avs::uid storeFont(_bstr_t ttf_path_utf8,_bstr_t relative_asset_path_utf8,std::time_t lastModified,int size=32);
-		avs::uid storeTextCanvas( _bstr_t relative_asset_path, const InteropTextCanvas *interopTextCanvas);
-		void storeShadowMap(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& shadowMap);
+		void storeMesh(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard,bool compress=false,bool verify=false);
+		void storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial);
+		void storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation,  bool genMips, bool highQualityUASTC,bool forceOverwrite);
+		avs::uid storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size=32);
+		avs::uid storeTextCanvas( std::string relative_asset_path, const InteropTextCanvas *interopTextCanvas);
+		void storeShadowMap(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& shadowMap);
 
 		void removeNode(avs::uid id);
 

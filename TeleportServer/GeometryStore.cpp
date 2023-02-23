@@ -52,20 +52,20 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 	return p;
 }
 
-static avs::guid bstr_to_guid(_bstr_t b)
+static avs::guid bstr_to_guid(std::string b)
 {
 	avs::guid g;
-	strncpy_s(g.txt,(const char*)b,48);
+	strncpy_s(g.txt,(const char*)b.c_str(),48);
 	g.txt[48]=0;
 	return g;
 }
 
-static _bstr_t guid_to_bstr(const avs::guid &g)
+static std::string guid_to_bstr(const avs::guid &g)
 {
 	char txt[49];
 	strncpy_s(txt,g.txt,48);
 	txt[48]=0;
-	_bstr_t b(txt);
+	std::string b(txt);
 	return b;
 }
 
@@ -178,7 +178,10 @@ void GeometryStore::verify()
 	loadResources(cachePath , materials);
 }
 
-void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshes, size_t& numTextures, LoadedResource*& loadedTextures, size_t& numMaterials, LoadedResource*& loadedMaterials)
+void GeometryStore::loadFromDisk(size_t& numMeshes
+	,LoadedResource*& loadedMeshes, size_t& numTextures
+	,LoadedResource*& loadedTextures, size_t& numMaterials
+	,LoadedResource*& loadedMaterials)
 {
 	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
 	loadResources(cachePath + "/" , textures);
@@ -195,8 +198,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshe
 	loadedMeshes = new LoadedResource[numMeshes];
 	for(auto& meshDataPair : meshes.at(avs::AxesStandard::EngineeringStyle))
 	{
-		BSTR meshName = _com_util::ConvertStringToBSTR(meshDataPair.second.mesh.name.c_str());
-		loadedMeshes[i] = LoadedResource(meshDataPair.first, meshDataPair.second.path, meshName, meshDataPair.second.lastModified);
+		loadedMeshes[i] = LoadedResource(meshDataPair.first, meshDataPair.second.guid.c_str(),  meshDataPair.second.path.c_str(), meshDataPair.second.mesh.name.c_str(), meshDataPair.second.lastModified);
 
 		++i;
 	}
@@ -205,8 +207,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshe
 	loadedTextures = new LoadedResource[numTextures];
 	for(auto& textureDataPair : textures)
 	{
-		BSTR textureName = _com_util::ConvertStringToBSTR(textureDataPair.second.texture.name.c_str());
-		loadedTextures[i] = LoadedResource(textureDataPair.first, textureDataPair.second.path, textureName, textureDataPair.second.lastModified);
+		loadedTextures[i] = LoadedResource(textureDataPair.first, textureDataPair.second.guid.c_str(), textureDataPair.second.path.c_str(), textureDataPair.second.texture.name.c_str(), textureDataPair.second.lastModified);
 
 		++i;
 	}
@@ -215,8 +216,8 @@ void GeometryStore::loadFromDisk(size_t& numMeshes, LoadedResource*& loadedMeshe
 	loadedMaterials = new LoadedResource[numMaterials];
 	for(auto& materialDataPair : materials)
 	{
-		BSTR materialName = _com_util::ConvertStringToBSTR(materialDataPair.second.material.name.c_str());
-		loadedMaterials[i] = LoadedResource(materialDataPair.first, materialDataPair.second.path, materialName, materialDataPair.second.lastModified);
+		loadedMaterials[i] = LoadedResource(materialDataPair.first, 
+			materialDataPair.second.guid.c_str(), materialDataPair.second.path.c_str(), materialDataPair.second.material.name.c_str(), materialDataPair.second.lastModified);
 
 		++i;
 
@@ -937,39 +938,6 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 	return true;
 }
 
-// Here we implement special cases of std::wofstream and wifstream that are able to convert guid_to_uid to guids and vice versa.
-std::string WStringToString(const std::wstring &text)
-{
-	size_t origsize = text.length()+ 1;
-	const size_t newsize = origsize;
-	char *cstring=new char[newsize];
-	
-#ifdef _MSC_VER
-			size_t convertedChars = 0;
-			wcstombs_s(&convertedChars, cstring, (size_t)origsize, text.c_str(), (size_t)newsize );
-#else
-			wcstombs(cstring, text.c_str(), (size_t)newsize );
-#endif
-	std::string str;
-	str=std::string(cstring);
-	delete [] cstring;
-	return str;
-}
-std::wstring StringToWString(const std::string &text)
-{
-	size_t origsize = strlen(text.c_str()) + 1;
-	const size_t newsize = origsize;
-	wchar_t *wcstring=new wchar_t[newsize+2];
-#ifdef _MSC_VER
-			size_t convertedChars = 0;
-			mbstowcs_s(&convertedChars, wcstring, origsize, text.c_str(), _TRUNCATE);
-#else
-			mbstowcs(wcstring,text.c_str(),origsize);
-#endif
-	std::wstring str(wcstring);
-	delete [] wcstring;
-	return str;
-}
 
 class resource_ofstream:public std::wofstream
 {
@@ -1025,7 +993,7 @@ public:
 	}
 };
 
-void GeometryStore::storeMesh(avs::uid id, _bstr_t guid, _bstr_t path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
+void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
 {
 	std::string p=std::string(path);
 	standardize_path(p);
@@ -1060,7 +1028,7 @@ template<typename ExtractedResource> std::string MakeResourceFilename(ExtractedR
 		return file_name;
 }
 
-void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Material& newMaterial)
+void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
 {
 	std::string p=std::string(path);
 	standardize_path(p);
@@ -1069,7 +1037,7 @@ void GeometryStore::storeMaterial(avs::uid id, _bstr_t guid,_bstr_t path, std::t
  	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& newTexture, std::string cacheFilePath, bool genMips
+void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string cacheFilePath, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	auto p=std::string(path);
@@ -1156,10 +1124,10 @@ void GeometryStore::storeTexture(avs::uid id, _bstr_t guid,_bstr_t path, std::ti
 		}
 	}
 
-	textures[id] = ExtractedTexture{ path, lastModified, newTexture };
+	textures[id] = ExtractedTexture{ guid, path, lastModified, newTexture };
 }
 
-avs::uid GeometryStore::storeFont(_bstr_t ttf_path_utf8,_bstr_t relative_asset_path_utf8,std::time_t lastModified,int size)
+avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
 {
 	avs::Texture avsTexture;
 	std::string cacheFontFilePath=relative_asset_path_utf8+".font";
@@ -1177,11 +1145,11 @@ avs::uid GeometryStore::storeFont(_bstr_t ttf_path_utf8,_bstr_t relative_asset_p
 	return font_atlas_uid;
 }
 
-avs::uid GeometryStore::storeTextCanvas( _bstr_t relative_asset_path, const InteropTextCanvas *interopTextCanvas)
+avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 {
 	if(!interopTextCanvas||!interopTextCanvas->text)
 		return 0;
-	avs::uid canvas_uid=GetOrGenerateUid(avs::convertToByteString(relative_asset_path.GetBSTR()));
+	avs::uid canvas_uid=GetOrGenerateUid(relative_asset_path);
 	teleport::TextCanvas &textCanvas=textCanvases[canvas_uid];
 
 	textCanvas.text=avs::convertToByteString(interopTextCanvas->text);
@@ -1201,9 +1169,9 @@ avs::uid GeometryStore::storeTextCanvas( _bstr_t relative_asset_path, const Inte
 	return canvas_uid;
 }
 
-void GeometryStore::storeShadowMap(avs::uid id, _bstr_t guid,_bstr_t path, std::time_t lastModified, avs::Texture& newShadowMap)
+void GeometryStore::storeShadowMap(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newShadowMap)
 {
-	shadowMaps[id] = ExtractedTexture{ path, lastModified, newShadowMap};
+	shadowMaps[id] = ExtractedTexture{ guid,path, lastModified, newShadowMap};
 }
 
 void GeometryStore::removeNode(avs::uid id)

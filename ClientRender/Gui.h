@@ -94,8 +94,8 @@ namespace teleport
 	protected:
 		void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice);
 
-		void BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text); 
-		void TreeNode(const std::shared_ptr<clientrender::Node>& node,const char *search_text);
+		void BoneTreeNode(const std::shared_ptr<clientrender::Bone> n, const char* search_text); 
+		void TreeNode(const std::shared_ptr<clientrender::Node> node,const char *search_text);
 		const clientrender::GeometryCache *geometryCache=nullptr;
 		const teleport::client::SessionClient *sessionClient=nullptr;
 		platform::crossplatform::RenderPlatform* renderPlatform=nullptr;

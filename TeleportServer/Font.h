@@ -21,9 +21,9 @@ namespace teleport
 		//! Extract and save the font at ttf_path_utf8 to the asset path
 		//! at asset_path_utf8 with the given sizes. Also write the avsTexture with the atlas
 		//! bitmap.
-			static bool ExtractFont(FontAtlas &fontAtlas,const char *ttf_path_utf8
-										,const char *asset_path_utf8
-										,const char *atlas_chars
+			static bool ExtractFont(FontAtlas &fontAtlas, std::string ttf_path_utf8
+										, std::string asset_path_utf8
+										, std::string atlas_chars
 										,avs::Texture &avsTexture
 										,std::vector<int> sizes);
 		//! Free the memory that was allocated.

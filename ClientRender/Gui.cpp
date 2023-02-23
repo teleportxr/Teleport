@@ -359,7 +359,7 @@ void Gui::ShowFont()
 	}
 }
 
-void Gui::TreeNode(const std::shared_ptr<clientrender::Node>& n,const char *search_text)
+void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n,const char *search_text)
 {
 	const clientrender::Node *node=n.get();
 	bool has_children	=node->GetChildren().size()!=0;
@@ -909,7 +909,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
 
-void Gui::BoneTreeNode(const std::shared_ptr<clientrender::Bone>& n, const char* search_text)
+void Gui::BoneTreeNode(const std::shared_ptr<clientrender::Bone> n, const char* search_text)
 {
 	const clientrender::Bone* bone = n.get();
 	bool has_children = bone->GetChildren().size() != 0;
