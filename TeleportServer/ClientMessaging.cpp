@@ -11,6 +11,7 @@
 #include "ClientManager.h"
 
 using namespace teleport;
+using namespace server;
 
 ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 std::shared_ptr<DiscoveryService> discoveryService,
@@ -32,7 +33,7 @@ ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 	, reportHandshake(reportHandshakeFn)
 	, clientManager(clientManager)
 	, peer(nullptr)
-	, casterContext(nullptr)
+	, clientNetworkContext(nullptr)
 	, clientID(0)
 	, startingSession(false)
 	, timeStartingSession(0)
@@ -55,9 +56,9 @@ void ClientMessaging::unInitialise()
 	initialized = false;
 }
 
-void ClientMessaging::initialise(CasterContext* context, CaptureDelegates captureDelegates)
+void ClientMessaging::initialise(ClientNetworkContext* context, CaptureDelegates captureDelegates)
 {
-	casterContext = context;
+	clientNetworkContext = context;
 	captureComponentDelegates = captureDelegates;
 	initialized = true;
 }
@@ -125,7 +126,7 @@ void ClientMessaging::tick(float deltaTime)
 		return;
 
 	
-	if (peer && casterContext->NetworkPipeline && !casterContext->NetworkPipeline->isProcessingEnabled())
+	if (peer && clientNetworkContext->NetworkPipeline && !clientNetworkContext->NetworkPipeline->isProcessingEnabled())
 	{
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
 		Disconnect();
@@ -167,9 +168,9 @@ void ClientMessaging::tick(float deltaTime)
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
-	if (settings->isReceivingAudio && casterContext->sourceNetworkPipeline)
+	if (settings->isReceivingAudio && clientNetworkContext->sourceNetworkPipeline)
 	{
-		casterContext->sourceNetworkPipeline->process();
+		clientNetworkContext->sourceNetworkPipeline->process();
 	}
 }
 
@@ -318,15 +319,15 @@ void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 
 void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose)
 {
-	avs::ConvertRotation(settings->serverAxesStandard, casterContext->axesStandard, relPose.orientation);
-	avs::ConvertPosition(settings->serverAxesStandard, casterContext->axesStandard, relPose.position);
+	avs::ConvertRotation(settings->serverAxesStandard, clientNetworkContext->axesStandard, relPose.orientation);
+	avs::ConvertPosition(settings->serverAxesStandard, clientNetworkContext->axesStandard, relPose.position);
 	teleport::core::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
 	sendCommand(command);
 }
 
 void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPosePath)
 {
-	teleport::core::UpdateNodeSubtypeCommand command(nodeID, (uint16_t)regexPosePath.size());
+	teleport::core::AssignNodePosePathCommand command(nodeID, (uint16_t)regexPosePath.size());
 	std::vector<char> chars;
 	chars.resize(regexPosePath.size());
 	memcpy(chars.data(),regexPosePath.data(),chars.size());
@@ -364,7 +365,7 @@ bool ClientMessaging::hasPeer() const
 
 bool ClientMessaging::hasReceivedHandshake() const
 {
-	return casterContext->axesStandard != avs::AxesStandard::NotInitialized;
+	return clientNetworkContext->axesStandard != avs::AxesStandard::NotInitialized;
 }
 
 // Same as clientIP
@@ -430,9 +431,9 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 
 	memcpy(&handshake, packet->data, handShakeSize);
 
-	casterContext->axesStandard = handshake.axesStandard;
+	clientNetworkContext->axesStandard = handshake.axesStandard;
 
-	if (!casterContext->NetworkPipeline)
+	if (!clientNetworkContext->NetworkPipeline)
 	{
 		std::string multibyteClientIP = getClientIP();
 		size_t ipLength = strlen(multibyteClientIP.data());
@@ -451,19 +452,19 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 			static_cast<int32_t>(disconnectTimeout)
 		};
 
-		casterContext->NetworkPipeline.reset(new NetworkPipeline(settings));
-		casterContext->NetworkPipeline->initialise(networkSettings, casterContext->ColorQueue.get(), casterContext->TagDataQueue.get(), casterContext->GeometryQueue.get(), casterContext->AudioQueue.get());
+		clientNetworkContext->NetworkPipeline.reset(new NetworkPipeline(settings));
+		clientNetworkContext->NetworkPipeline->initialise(networkSettings, clientNetworkContext->ColorQueue.get(), clientNetworkContext->TagDataQueue.get(), clientNetworkContext->GeometryQueue.get(), clientNetworkContext->AudioQueue.get());
 	}
 
-	if (settings->isReceivingAudio && !casterContext->sourceNetworkPipeline)
+	if (settings->isReceivingAudio && !clientNetworkContext->sourceNetworkPipeline)
 	{
 		avs::NetworkSourceParams sourceParams;
 		sourceParams.connectionTimeout = disconnectTimeout;
 		sourceParams.remoteIP = clientIP.c_str();
 		sourceParams.remotePort = handshake.clientStreamingPort;
 
-		casterContext->sourceNetworkPipeline.reset(new SourceNetworkPipeline(settings));
-		casterContext->sourceNetworkPipeline->initialize(sourceParams, casterContext->sourceAudioQueue.get(), casterContext->audioDecoder.get(), casterContext->audioTarget.get());
+		clientNetworkContext->sourceNetworkPipeline.reset(new SourceNetworkPipeline(settings));
+		clientNetworkContext->sourceNetworkPipeline->initialize(sourceParams, clientNetworkContext->sourceAudioQueue.get(), clientNetworkContext->audioDecoder.get(), clientNetworkContext->audioTarget.get());
 	}
 
 	CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
@@ -482,8 +483,8 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		geometryStreamingService.confirmResource(clientResources[i]);
 	}
 
-	captureComponentDelegates.startStreaming(casterContext);
-	geometryStreamingService.startStreaming(casterContext, handshake);
+	captureComponentDelegates.startStreaming(clientNetworkContext);
+	geometryStreamingService.startStreaming(clientNetworkContext, handshake);
 	receivedHandshake = true;
 
 	//Client has nothing, thus can't show nodes.
@@ -506,7 +507,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 {
 	teleport::core::SetStageSpaceOriginNodeCommand setp;
-	if (casterContext->axesStandard != avs::AxesStandard::NotInitialized)
+	if (clientNetworkContext->axesStandard != avs::AxesStandard::NotInitialized)
 	{
 		setp.origin_node=originNode;
 		setp.valid_counter = valid_counter;
@@ -620,8 +621,8 @@ void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
 	avs::Pose headPose;
 	memcpy(&headPose, packet->data, packet->dataLength);
 
-	avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, headPose.orientation);
-	avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, headPose.position);
+	avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, headPose.orientation);
+	avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, headPose.position);
 	setHeadPose(clientID, &headPose);
 }
 
@@ -670,8 +671,8 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 			TELEPORT_CERR << "Bad packet size.\n";
 			return;
 		}
-		avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, message.headPose.orientation);
-		avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, message.headPose.position);
+		avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, message.headPose.orientation);
+		avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, message.headPose.position);
 		setHeadPose(clientID, &message.headPose);
 		uint8_t *src=packet->data+sizeof(message);
 		for (int i = 0; i < message.numPoses; i++)
@@ -680,10 +681,10 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 			memcpy(&nodePose,src,sizeof(nodePose));
 			src+=sizeof(nodePose);
 			avs::PoseDynamic &nodePoseDynamic=nodePose.poseDynamic;
-			avs::ConvertRotation(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
-			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
-			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
-			avs::ConvertPosition(casterContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
+			avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
+			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
+			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
+			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
 			setControllerPose(clientID, int(nodePose.uid), &nodePoseDynamic);
 		}
 	}

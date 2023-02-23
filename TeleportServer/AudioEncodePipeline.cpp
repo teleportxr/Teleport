@@ -10,6 +10,7 @@
 #include <libavstream/audio/audio_interface.h>
 
 using namespace teleport;
+using namespace server;
 
 AudioEncodePipeline::~AudioEncodePipeline()
 {
@@ -74,7 +75,7 @@ Result AudioEncodePipeline::configure(const ServerSettings& serverSettings, cons
 		return Result::Code::EncoderAlreadyConfigured;
 	}
 
-	Result result = teleport::AudioEncodePipeline::initialize(serverSettings, audioSettings, audioQueue);
+	Result result = AudioEncodePipeline::initialize(serverSettings, audioSettings, audioQueue);
 	if (result)
 	{
 		configured = true;
@@ -90,5 +91,5 @@ Result AudioEncodePipeline::sendAudio(const uint8_t* data, size_t dataSize)
 		return Result::Code::EncoderNotConfigured;
 	}
 
-	return teleport::AudioEncodePipeline::process(data, dataSize);
+	return AudioEncodePipeline::process(data, dataSize);
 }

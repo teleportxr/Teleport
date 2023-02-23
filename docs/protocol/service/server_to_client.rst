@@ -4,9 +4,10 @@ Commands from Server to Client
 The **Server** sends all of its commands to the **Client** in the **Client's** local units and standard.
 
 
-Set Origin
-----------
-Reference implementation: :cpp:struct:`avs::SetPositionCommand`
+Set StageSpace Origin Node
+--------------------------
+
+Reference implementation: :cpp:struct:`teleport::core::SetStageSpaceOriginNodeCommand`
 
 .. list-table:: Set Origin
 	:widths: 5 10 30
@@ -15,18 +16,26 @@ Reference implementation: :cpp:struct:`avs::SetPositionCommand`
 	* - Bytes
 	  - Type
 	  - Description
-	* - 12
-	  - 3-vector of floats
-	  - position
-	* - 16
-	  - 4-vector of floats
-	  - orientation
+	* - 8
+	  - uid
+	  - origin_node
 	* - 8
 	  - uint64_t
 	  - validity counter
-	* - 1
-	  - uint8_t
-	  - set relative position?
-	* - 12
-	  - 3-vector of floats
-	  - relative position.
+
+	  
+Reference implementation: :cpp:struct:`teleport::core::AcknowledgeHandshakeCommand`
+	  
+.. list-table:: Acknowledge Handshake
+	:widths: 5 10 30
+	:header-rows: 1
+
+	* - Bytes
+	  - Type
+	  - Description
+	* - 8
+	  - size_t
+	  - visibleNodeCount
+	* - 8*visibleNodeCount
+	  - uid[]
+	  - uid's of visible nodes

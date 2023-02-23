@@ -1,8 +1,9 @@
 #include "TeleportServer/ClientData.h"
+#include "TeleportServer/GeometryStore.h"
 using namespace teleport;
 using namespace server;
 
-ClientData::ClientData(  std::shared_ptr<teleport::ClientMessaging> clientMessaging)
+ClientData::ClientData(  std::shared_ptr<ClientMessaging> clientMessaging)
 	:   clientMessaging(clientMessaging)
 {
 	videoEncodePipeline = std::make_shared<VideoEncodePipeline>();
@@ -10,8 +11,8 @@ ClientData::ClientData(  std::shared_ptr<teleport::ClientMessaging> clientMessag
 	memset(&clientSettings,0,sizeof(clientSettings));
 }
 
-void ClientData::StartStreaming(const teleport::ServerSettings& serverSettings
-	,const teleport::CasterEncoderSettings& encoderSettings
+void ClientData::StartStreaming(const ServerSettings& serverSettings
+	,const CasterEncoderSettings& encoderSettings
 	,uint32_t connectionTimeout
 	,avs::uid serverID
 	,GetUnixTimestampFn getUnixTimestamp
@@ -136,7 +137,7 @@ bool ClientData::isConnected() const
 {
 	if(! clientMessaging->hasPeer())
 		return false;
-	if(!casterContext.NetworkPipeline)
+	if(!clientNetworkContext.NetworkPipeline)
 		return false;
 	return true;
 }

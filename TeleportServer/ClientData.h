@@ -7,13 +7,12 @@
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/AudioEncodePipeline.h"
-class PluginDiscoveryService;
-class VideoEncodePipeline;
-class AudioEncodePipeline;
 namespace teleport
 {
 	namespace server
 	{
+		class VideoEncodePipeline;
+		class AudioEncodePipeline;
 		typedef int64_t(__stdcall* GetUnixTimestampFn)();
 		enum class ReflectedStateStatus
 		{
@@ -36,8 +35,9 @@ namespace teleport
 		class ClientData
 		{
 		public:
-			ClientData(  std::shared_ptr<teleport::ClientMessaging> clientMessaging);
-			void StartStreaming(const teleport::ServerSettings &casterSettings, const teleport::CasterEncoderSettings &encoderSettings
+			ClientData(  std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
+			void StartStreaming(const ServerSettings &casterSettings
+				, const CasterEncoderSettings &encoderSettings
 				, uint32_t connectionTimeout
 				, avs::uid serverID
 				, GetUnixTimestampFn getUnixTimestamp
@@ -45,14 +45,14 @@ namespace teleport
 			void setNodePosePath(avs::uid nodeID, const std::string &regexPosePath);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
 			// client settings from engine-side:
-			teleport::ClientSettings clientSettings;
+			ClientSettings clientSettings;
 			avs::ClientDynamicLighting clientDynamicLighting;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
-			teleport::CasterContext casterContext;
+			teleport::server::ClientNetworkContext clientNetworkContext;
 
 			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;
 			std::shared_ptr<AudioEncodePipeline> audioEncodePipeline;
-			std::shared_ptr<teleport::ClientMessaging> clientMessaging;
+			std::shared_ptr<teleport::server::ClientMessaging> clientMessaging;
 
 			bool isStreaming = false;
 			bool validClientSettings = false;

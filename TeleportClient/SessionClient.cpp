@@ -420,8 +420,8 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 		case teleport::core::CommandPayloadType::UpdateNodeStructure:
 			ReceiveUpdateNodeStructureCommand(packet);
 			break;
-		case teleport::core::CommandPayloadType::UpdateNodeSubtype:
-			ReceiveUpdateNodeSubtypeCommand(packet);
+		case teleport::core::CommandPayloadType::AssignNodePosePath:
+			ReceiveAssignNodePosePathCommand(packet);
 			break;
 		default:
 			break;
@@ -927,24 +927,24 @@ void SessionClient::ReceiveUpdateNodeStructureCommand(const ENetPacket* packet)
 	mCommandInterface->UpdateNodeStructure(updateNodeStructureCommand);
 }
 
-void SessionClient::ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet)
+void SessionClient::ReceiveAssignNodePosePathCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(teleport::core::UpdateNodeSubtypeCommand);
+	size_t commandSize = sizeof(teleport::core::AssignNodePosePathCommand);
 	if(packet->dataLength<commandSize)
 	{
 		TELEPORT_CERR << "Bad packet." << std::endl;
 		return;
 	}
 	//Copy command out of packet.
-	teleport::core::UpdateNodeSubtypeCommand updateNodeSubtypeCommand;
-	memcpy(static_cast<void*>(&updateNodeSubtypeCommand), packet->data, commandSize);
-	if(packet->dataLength!=commandSize+updateNodeSubtypeCommand.pathLength)
+	teleport::core::AssignNodePosePathCommand assignNodePosePathCommand;
+	memcpy(static_cast<void*>(&assignNodePosePathCommand), packet->data, commandSize);
+	if(packet->dataLength!=commandSize+ assignNodePosePathCommand.pathLength)
 	{
 		TELEPORT_CERR << "Bad packet." << std::endl;
 		return;
 	}
 	std::string str;
-	str.resize(updateNodeSubtypeCommand.pathLength);
-	memcpy(static_cast<void*>(str.data()), packet->data+commandSize,updateNodeSubtypeCommand.pathLength);
-	mCommandInterface->UpdateNodeSubtype(updateNodeSubtypeCommand,str);
+	str.resize(assignNodePosePathCommand.pathLength);
+	memcpy(static_cast<void*>(str.data()), packet->data+commandSize, assignNodePosePathCommand.pathLength);
+	mCommandInterface->AssignNodePosePath(assignNodePosePathCommand,str);
 }

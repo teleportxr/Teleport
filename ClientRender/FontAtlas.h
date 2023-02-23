@@ -16,10 +16,10 @@ namespace clientrender
 {
 	class Texture;
 	//! A font atlas.
-	class FontAtlas:public teleport::FontAtlas, public IncompleteFontAtlas
+	class FontAtlas:public teleport::core::FontAtlas, public IncompleteFontAtlas
 	{
 	public:
-		FontAtlas(avs::uid u=0):teleport::FontAtlas(u),IncompleteFontAtlas(u){}
+		FontAtlas(avs::uid u=0):teleport::core::FontAtlas(u),IncompleteFontAtlas(u){}
 		std::shared_ptr<clientrender::Texture> fontTexture;
 	};
 }

@@ -164,6 +164,8 @@ FULL_PATH_NAMES        = YES
 
 STRIP_FROM_PATH        =
 
+SHOW_HEADERFILE        = YES
+
 # The STRIP_FROM_INC_PATH tag can be used to strip a user-defined part of the
 # path mentioned in the documentation of a class, which tells the reader which
 # header file to include in order to use a class. If left blank only the name of

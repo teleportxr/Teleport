@@ -12,9 +12,9 @@
 #include <GeometryStore.h>
 
 using namespace teleport;
+using namespace server;
 
-
-bool teleport::Font::ExtractFont(FontAtlas &fontAtlas,std::string ttf_path_utf8, std::string generate_texture_path_utf8, std::string atlas_chars,avs::Texture &avsTexture
+bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_utf8, std::string generate_texture_path_utf8, std::string atlas_chars,avs::Texture &avsTexture
 	,std::vector<int> sizes)
 {
 	fontAtlas.font_texture_path=generate_texture_path_utf8;
@@ -181,19 +181,19 @@ bool teleport::Font::ExtractFont(FontAtlas &fontAtlas,std::string ttf_path_utf8,
     return 0;
 }
 	
-void teleport::Font::Free(avs::Texture &avsTexture)
+void server::Font::Free(avs::Texture &avsTexture)
 {
 	delete [] avsTexture.data;
 	avsTexture.data=0;
 }
 
-teleport::Font &teleport::Font::GetInstance()
+server::Font &server::Font::GetInstance()
 {
 	static Font font;
 	return font;
 }
 
-teleport::Font::~Font()
+server::Font::~Font()
 {
 	for(auto a:interopFontAtlases)
 	{
@@ -207,9 +207,9 @@ teleport::Font::~Font()
 	interopFontAtlases.clear();
 }
 
-bool teleport::Font::GetInteropFontAtlas(std::string path,InteropFontAtlas *interopFontAtlas)
+bool server::Font::GetInteropFontAtlas(std::string path,InteropFontAtlas *interopFontAtlas)
 {
-	avs::uid uid=teleport::GeometryStore::GetInstance().PathToUid(path);
+	avs::uid uid=GeometryStore::GetInstance().PathToUid(path);
 	if(!uid)
 		return false;
 	InteropFontAtlas *sourceAtlas=nullptr;
@@ -217,7 +217,7 @@ bool teleport::Font::GetInteropFontAtlas(std::string path,InteropFontAtlas *inte
 	if(f==interopFontAtlases.end())
 	{
 		sourceAtlas=&(interopFontAtlases[path]);
-		const FontAtlas *fontAtlas=teleport::GeometryStore::GetInstance().getFontAtlas(uid);
+		const core::FontAtlas *fontAtlas=GeometryStore::GetInstance().getFontAtlas(uid);
 		sourceAtlas->numMaps=(int)fontAtlas->fontMaps.size();
 		sourceAtlas->fontMaps=new InteropFontMap[sourceAtlas->numMaps];
 		int i=0;
@@ -225,8 +225,8 @@ bool teleport::Font::GetInteropFontAtlas(std::string path,InteropFontAtlas *inte
 		{
 			sourceAtlas->fontMaps[i].size=m.first;
 			sourceAtlas->fontMaps[i].numGlyphs=(int)m.second.glyphs.size();
-			sourceAtlas->fontMaps[i].fontGlyphs=new Glyph[m.second.glyphs.size()];
-			memcpy(sourceAtlas->fontMaps[i].fontGlyphs,m.second.glyphs.data(),sizeof(Glyph)*m.second.glyphs.size());
+			sourceAtlas->fontMaps[i].fontGlyphs=new core::Glyph[m.second.glyphs.size()];
+			memcpy(sourceAtlas->fontMaps[i].fontGlyphs,m.second.glyphs.data(),sizeof(core::Glyph)*m.second.glyphs.size());
 			i++;
 		}
 	}

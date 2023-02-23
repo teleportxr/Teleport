@@ -63,7 +63,7 @@ namespace teleport
 			SetNodeAnimationSpeed,
 			SetupLighting,
 			UpdateNodeStructure,
-			UpdateNodeSubtype,
+			AssignNodePosePath,
 			SetupInputs,
 		};
 
@@ -230,11 +230,12 @@ namespace teleport
 			{
 				return sizeof(SetStageSpaceOriginNodeCommand);
 			}
-			avs::uid		origin_node=0;
-			//!< A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
+			avs::uid		origin_node=0;		//!< The session uid of the node to use as the origin.
+			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 			uint64_t		valid_counter = 0;
 		} AVS_PACKED;
 
+		//! The setup information sent by the server on connection to a given client.
 		struct SetupCommand : public Command
 		{
 			SetupCommand() : Command(CommandPayloadType::Setup) {}
@@ -243,26 +244,26 @@ namespace teleport
 			{
 				return sizeof(SetupCommand);
 			}
-			int32_t			server_streaming_port = 0;
-			int32_t			server_http_port = 0;
-			uint32_t		debug_stream = 0;
-			uint32_t		do_checksums = 0;
-			uint32_t		debug_network_packets = 0;
-			int32_t			requiredLatencyMs = 0;
-			uint32_t		idle_connection_timeout = 5000;
-			avs::uid				server_id = 0;
-			ControlModel	control_model = ControlModel::NONE;
-			avs::VideoConfig		video_config;
-			float			draw_distance = 0.0f;
-			avs::vec3			bodyOffsetFromHead_DEPRECATED;
-			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;
-			uint8_t			audio_input_enabled = 0;
-			bool			using_ssl = true;
-			int64_t			startTimestamp_utc_unix_ms = 0; //UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+			int32_t				server_streaming_port = 0;			//!< 
+			int32_t				server_http_port = 0;				//!< 
+			uint32_t			debug_stream = 0;					//!< 
+			uint32_t			do_checksums = 0;					//!< 
+			uint32_t			debug_network_packets = 0;			//!<
+			int32_t				requiredLatencyMs = 0;				//!<
+			uint32_t			idle_connection_timeout = 5000;		//!<
+			avs::uid			server_id = 0;						//!< The server's id: not unique on a client.
+			ControlModel		control_model = ControlModel::NONE;	//!< Not in use
+			avs::VideoConfig	video_config;						//!< Video setup structure.
+			float				draw_distance = 0.0f;				//!< Maximum distance in metres to render locally.
+			avs::vec3			bodyOffsetFromHead_DEPRECATED;		//!< Not in use.
+			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's.
+			uint8_t				audio_input_enabled = 0;			//!< Server accepts audio stream from client.
+			bool				using_ssl = true;					//!< Not in use, for later.
+			int64_t				startTimestamp_utc_unix_ms = 0;		//!< UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
-			BackgroundMode	backgroundMode;
-			avs::vec4			backgroundColour;
-			avs::ClientDynamicLighting clientDynamicLighting;
+			BackgroundMode	backgroundMode;							//!< Whether the server supplies a background, and of which type.
+			avs::vec4			backgroundColour;					//!< If the background is of the COLOUR type, which colour to use.
+			avs::ClientDynamicLighting clientDynamicLighting;		//!< Setup for dynamic object lighting.
 		} AVS_PACKED;
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
@@ -277,7 +278,7 @@ namespace teleport
 			{
 				return sizeof(SetupLightingCommand);
 			}
-			// If this is nonzero, implicitly gi should be enabled.
+			//! If this is nonzero, implicitly gi should be enabled.
 			uint8_t num_gi_textures=0;
 		} AVS_PACKED;
 
@@ -290,6 +291,7 @@ namespace teleport
 			std::string regexPath;
 		} AVS_PACKED;
 
+		//! The netpacket version of InputDefinition, to be followed by pathLength utf8 characters.
 		struct InputDefinitionNetPacket
 		{
 			avs::InputId inputId;
@@ -312,7 +314,7 @@ namespace teleport
 			//! The number of inputs to follow the command.
 			uint16_t numInputs = 0;
 		} AVS_PACKED;
-
+		//! Instructs the client to accept a new video configuration, e.g. if bandwidth requires a change of resolution.
 		struct ReconfigureVideoCommand : public Command
 		{
 			ReconfigureVideoCommand() : Command(CommandPayloadType::ReconfigureVideo) {}
@@ -321,10 +323,11 @@ namespace teleport
 			{
 				return sizeof(ReconfigureVideoCommand);
 			}
-
+			//! The configuration to use.
 			avs::VideoConfig video_config;
 		} AVS_PACKED;
 
+		//! Instructs the client to close the connection.
 		struct ShutdownCommand : public Command
 		{
 			ShutdownCommand() : Command(CommandPayloadType::Shutdown) {}
@@ -335,6 +338,7 @@ namespace teleport
 			}
 		} AVS_PACKED;
 
+		//! Instructs the client to show or hide the specified nodes.
 		struct NodeVisibilityCommand : public Command
 		{
 			size_t nodesShowCount;
@@ -354,9 +358,10 @@ namespace teleport
 			}
 		} AVS_PACKED;
 
+		//! Instructs the client to modify the motion of the specified nodes.
 		struct UpdateNodeMovementCommand : public Command
 		{
-			size_t updatesCount;
+			size_t updatesCount;	//!< How many updates are included.
 
 			UpdateNodeMovementCommand()
 				:UpdateNodeMovementCommand(0)
@@ -371,10 +376,11 @@ namespace teleport
 				return sizeof(UpdateNodeMovementCommand);
 			}
 		} AVS_PACKED;
-	
+
+		//! Instructs the client to modify the enabled state of the specified nodes.
 		struct UpdateNodeEnabledStateCommand : public Command
 		{
-			size_t updatesCount;
+			size_t updatesCount;	//!< How many updates are included.
 
 			UpdateNodeEnabledStateCommand()
 				:UpdateNodeEnabledStateCommand(0)
@@ -389,8 +395,8 @@ namespace teleport
 				return sizeof(UpdateNodeEnabledStateCommand);
 			}
 		} AVS_PACKED;
-	
 
+		//! Instructs the client to modify the highlighted state of the specified nodes.
 		struct SetNodeHighlightedCommand : public Command
 		{
 			avs::uid nodeID = 0;
@@ -410,11 +416,12 @@ namespace teleport
 			}
 		} AVS_PACKED;
 
+		//! Instructs the client to reparent the specified node.
 		struct UpdateNodeStructureCommand : public Command
 		{
-			avs::uid nodeID = 0;
-			avs::uid parentID = 0;
-			avs::Pose relativePose;
+			avs::uid nodeID = 0;		//!< Which node to reparent.
+			avs::uid parentID = 0;		//!< The new parent uid.
+			avs::Pose relativePose;		//!< The new relative pose of the child node.
 			UpdateNodeStructureCommand()
 				:UpdateNodeStructureCommand(0, 0,avs::Pose())
 			{}
@@ -431,27 +438,28 @@ namespace teleport
 		} AVS_PACKED;
 
 		//! A command to set the locally-tracked pose of a node, for example, a node can here be linked to a regex path for an OpenXR pose control.
-		//! If pathLength>0, followed by a number of chars given in pathLength for the utf8 regex path. The nodeSubType is no longer used.
-		struct UpdateNodeSubtypeCommand : public Command
+		//! If pathLength>0, followed by a number of chars given in pathLength for the utf8 regex path.
+		//! If pathLength==0, control of the node is returned to the server.
+		struct AssignNodePosePathCommand : public Command
 		{
 			avs::uid nodeID = 0;
-			avs::NodeSubtype_deprecated nodeSubtype=avs::NodeSubtype_deprecated::None;
 			//! A regular expression that will be used to match the full component path of a client-side pose.
 			uint16_t pathLength;
-			UpdateNodeSubtypeCommand()
-				:UpdateNodeSubtypeCommand(0, 0)
+			AssignNodePosePathCommand()
+				:AssignNodePosePathCommand(0, 0)
 			{}
 
-			UpdateNodeSubtypeCommand(avs::uid n,uint16_t pathl)
-				:Command(CommandPayloadType::UpdateNodeSubtype), nodeID(n),nodeSubtype(avs::NodeSubtype_deprecated::None), pathLength(pathl)
+			AssignNodePosePathCommand(avs::uid n,uint16_t pathl)
+				:Command(CommandPayloadType::AssignNodePosePath), nodeID(n), pathLength(pathl)
 			{}
 
 			static size_t getCommandSize()
 			{
-				return sizeof(UpdateNodeSubtypeCommand);
+				return sizeof(AssignNodePosePathCommand);
 			}
 		} AVS_PACKED;
 	
+		//! Update the animation state of the specified nodes.
 		struct UpdateNodeAnimationCommand : public Command
 		{
 			ApplyAnimation animationUpdate;

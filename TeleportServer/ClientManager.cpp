@@ -12,9 +12,10 @@
 
 #include "DiscoveryService.h"
 #include "TeleportCore/ErrorHandling.h"
+using namespace teleport;
+using namespace server;
 
-namespace teleport
-{
+
 	ClientManager::ClientManager()
 		: mHost(nullptr)
 		, mAsyncNetworkDataProcessingActive(false)
@@ -260,12 +261,10 @@ namespace teleport
 		{
 			if (client->receivedHandshake)
 			{
-				if (!client->casterContext->NetworkPipeline->process())
+				if (!client->clientNetworkContext->NetworkPipeline->process())
 				{
 					mAsyncNetworkDataProcessingFailed = true;
 				}
 			}
 		}
 	}
-}
-

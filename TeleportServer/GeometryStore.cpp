@@ -26,6 +26,7 @@
 
 using namespace std::string_literals;
 using namespace teleport;
+using namespace server;
 
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
 #if _MSC_VER < 1920
@@ -425,7 +426,7 @@ const avs::Texture* GeometryStore::getShadowMap(avs::uid shadowID) const
 	return (shadowMapData ? &shadowMapData->texture : nullptr);
 }
 
-const teleport::TextCanvas* GeometryStore::getTextCanvas(avs::uid u) const
+const teleport::core::TextCanvas* GeometryStore::getTextCanvas(avs::uid u) const
 {
 	auto t=textCanvases.find(u);
 	if(t==textCanvases.end())
@@ -433,7 +434,7 @@ const teleport::TextCanvas* GeometryStore::getTextCanvas(avs::uid u) const
 	return &t->second;
 }
 
-const teleport::FontAtlas* GeometryStore::getFontAtlas(avs::uid u) const
+const teleport::core::FontAtlas* GeometryStore::getFontAtlas(avs::uid u) const
 {
 	auto t=fontAtlases.find(u);
 	if(t==fontAtlases.end())
@@ -1150,7 +1151,7 @@ avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const 
 	if(!interopTextCanvas||!interopTextCanvas->text)
 		return 0;
 	avs::uid canvas_uid=GetOrGenerateUid(relative_asset_path);
-	teleport::TextCanvas &textCanvas=textCanvases[canvas_uid];
+	teleport::core::TextCanvas &textCanvas=textCanvases[canvas_uid];
 
 	textCanvas.text=avs::convertToByteString(interopTextCanvas->text);
 	std::string cacheFontFilePath=avs::convertToByteString(interopTextCanvas->font)+".font";

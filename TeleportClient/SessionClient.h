@@ -40,7 +40,7 @@ namespace teleport
 			virtual void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &) =0;
 			virtual void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) =0;
 			virtual void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& ) =0;
-			virtual void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &,const std::string &)=0;
+			virtual void AssignNodePosePath(const teleport::core::AssignNodePosePathCommand &,const std::string &)=0;
 			virtual void SetOrigin(unsigned long long ctr,avs::uid origin_node_uid)=0;
 
 			virtual std::vector<avs::uid> GetGeometryResources() = 0;
@@ -152,7 +152,7 @@ namespace teleport
 			void ReceiveSetupLightingCommand(const ENetPacket* packet);
 			void ReceiveSetupInputsCommand(const ENetPacket* packet);
 			void ReceiveUpdateNodeStructureCommand(const ENetPacket* packet);
-			void ReceiveUpdateNodeSubtypeCommand(const ENetPacket* packet);
+			void ReceiveAssignNodePosePathCommand(const ENetPacket* packet);
 			static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
 			avs::uid lastServerID = 0; //UID of the server we last connected to.

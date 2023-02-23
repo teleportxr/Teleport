@@ -126,7 +126,7 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		int idx = (int)textCanvasCreateInfo.text[i] - 32;
 		if (idx < 0 || idx>100)
 			continue;
-		const teleport::Glyph& glyph = fontMap.glyphs[idx];
+		const teleport::core::Glyph& glyph = fontMap.glyphs[idx];
 		W += glyph.xAdvance + 1.0f;
 		maxw = std::max(W, maxw);
 	}
@@ -185,7 +185,7 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 			int idx = (int)c - 32;
 			if (idx < 0 || idx>=fontMap.glyphs.size())
 				continue;
-			const teleport::Glyph& g = fontMap.glyphs[idx];
+			const teleport::core::Glyph& g = fontMap.glyphs[idx];
 			if (idx > 0)
 			{
 				if (charList != nullptr)

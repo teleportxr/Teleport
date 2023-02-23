@@ -11,7 +11,7 @@ set(DEBUG_CONFIGURATIONS Debug)
 set(src
 	CasterTypes.h
 	CaptureDelegates.h
-	CasterContext.h
+	ClientNetworkContext.h
 	ServerSettings.h
 	ClientData.cpp
 	ClientData.h

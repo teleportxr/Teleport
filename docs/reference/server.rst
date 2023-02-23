@@ -9,62 +9,50 @@ TeleportServer is a library that provides server functionality in conjunction wi
 Classes
 -------
 
-.. doxygenclass:: teleport::AudioEncodePipeline
+.. doxygenclass:: teleport::server::AudioEncodePipeline
 	:members:
 
-.. doxygenclass:: teleport::AudioEncoder
+.. doxygenclass:: teleport::server::AudioEncoder
 	:members:
 
-.. doxygenclass:: teleport::CaptureDelegates
+.. doxygenstruct:: teleport::server::ClientNetworkContext
 	:members:
 
-.. doxygenclass:: teleport::CasterContext
+.. doxygenclass:: teleport::server::ClientData
 	:members:
 
-.. doxygenclass:: teleport::Result
+.. doxygenclass:: teleport::server::ClientManager
 	:members:
 
-.. doxygenclass:: teleport::ClientData
+.. doxygenclass:: teleport::server::ClientMessaging
 	:members:
 
-.. doxygenclass:: teleport::ClientManager
+.. doxygenclass:: teleport::server::DiscoveryService
 	:members:
 
-.. doxygenclass:: teleport::ClientMessaging
+.. doxygenclass:: teleport::server::GeometryEncoder
 	:members:
 
-.. doxygenclass:: teleport::DefaultDiscoveryService
+.. doxygenclass:: teleport::server::GeometryStore
 	:members:
 
-.. doxygenclass:: teleport::DefaultHTTPService
+.. doxygenclass:: teleport::server::GeometryStreamingService
 	:members:
 
-.. doxygenclass:: teleport::DiscoveryService
+.. doxygenclass:: teleport::server::HTTPService
 	:members:
 
-.. doxygenclass:: teleport::GeometryEncoder
+.. doxygenclass:: teleport::server::DefaultHTTPService
 	:members:
 
-.. doxygenclass:: teleport::GeometryStore
+.. doxygenclass:: teleport::server::NetworkPipeline
 	:members:
 
-.. doxygenclass:: teleport::GeometryStreamingService
+.. doxygenclass:: teleport::server::ServerSettings
 	:members:
 
-.. doxygenclass:: teleport::HTTPService
+.. doxygenclass:: teleport::server::SourceNetworkPipeline
 	:members:
 
-.. doxygenclass:: teleport::NetworkPipeline
-	:members:
-
-.. doxygenclass:: teleport::ServerSettings
-	:members:
-
-.. doxygenclass:: teleport::SourceNetworkPipeline
-	:members:
-
-.. doxygenclass:: teleport::VideoEncodePipeline
-	:members:
-
-.. doxygenclass:: teleport::VisualStudioDebugOutput
+.. doxygenclass:: teleport::server::VideoEncodePipeline
 	:members:

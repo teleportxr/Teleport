@@ -200,7 +200,7 @@ namespace clientrender
 		bool OnNodeLeftBounds(avs::uid nodeID) override;
 	
 		void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand) override;
-		void UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
+		void AssignNodePosePath(const teleport::core::AssignNodePosePathCommand &updateNodeSubtypeCommand,const std::string &regexPath) override;
 
 		void SetVisibleNodes(const std::vector<avs::uid>& visibleNodes) override;
 		void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList) override;

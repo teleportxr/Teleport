@@ -6,6 +6,7 @@ namespace teleport
 {
 	namespace client
 	{
+		//! A static-only class to hold and manage server timestamps.
 		class ServerTimestamp
 		{
 		public:

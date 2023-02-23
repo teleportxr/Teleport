@@ -9,33 +9,36 @@
 
 namespace teleport
 {
-	//! Discover service for establishing connections with clients.
-	class DiscoveryService
+	namespace server
 	{
-	public:
-		~DiscoveryService()
+		//! Discover service for establishing connections with clients.
+		class DiscoveryService
 		{
-			shutdown();
-		}
-		bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "") ;
+		public:
+			~DiscoveryService()
+			{
+				shutdown();
+			}
+			bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "");
 
-		void shutdown() ;
+			void shutdown();
 
-		void tick() ;
+			void tick();
 
-		void sendResponseToClient(uint64_t clientID) ;
+			void sendResponseToClient(uint64_t clientID);
 
-		void discoveryCompleteForClient(uint64_t clientID) ;
-	protected:
-		//List of clientIDs we want to attempt to connect to.
-		std::map<uint64_t, ENetAddress> newClients;
+			void discoveryCompleteForClient(uint64_t clientID);
+		protected:
+			//List of clientIDs we want to attempt to connect to.
+			std::map<uint64_t, ENetAddress> newClients;
 
-		ENetSocket discoverySocket{};
-		ENetAddress address{};
+			ENetSocket discoverySocket{};
+			ENetAddress address{};
 
-		uint16_t discoveryPort = 0;
-		uint16_t servicePort = 0;
-		std::string desiredIP;
-	public:
-	};
+			uint16_t discoveryPort = 0;
+			uint16_t servicePort = 0;
+			std::string desiredIP;
+		public:
+		};
+	}
 }

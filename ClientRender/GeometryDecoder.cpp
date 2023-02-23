@@ -828,7 +828,7 @@ avs::Result GeometryDecoder::decodeSkin(GeometryDecodeData& geometryDecodeData)
 avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeData)
 {
 	avs::uid fontAtlasUid = Next8B;
-	teleport::FontAtlas fontAtlas(fontAtlasUid);
+	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
 	fontAtlas.font_texture_uid= Next8B;
 	int numMaps=NextB;
 	for(int i=0;i<numMaps;i++)

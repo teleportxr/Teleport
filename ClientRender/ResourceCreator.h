@@ -59,7 +59,7 @@ namespace clientrender
 		void CreateTexture(avs::uid id, const avs::Texture& texture) override;
 		void CreateMaterial(avs::uid id, const avs::Material& material) override;
 		void CreateNode(avs::uid id, avs::Node& node) override;
-		void CreateFontAtlas(avs::uid id,teleport::FontAtlas &fontAtlas);
+		void CreateFontAtlas(avs::uid id,teleport::core::FontAtlas &fontAtlas);
 		void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
 		void CreateSkin(avs::uid id, avs::Skin& skin) override;

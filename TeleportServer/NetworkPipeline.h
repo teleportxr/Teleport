@@ -10,37 +10,40 @@
 
 namespace teleport
 {
-	struct CasterNetworkSettings;
-	struct ServerSettings;
-	
-//! Network pipeline.
-	class NetworkPipeline
+	namespace server
 	{
-	public:
-		NetworkPipeline(const ServerSettings* settings);
-		virtual ~NetworkPipeline();
+		struct CasterNetworkSettings;
+		struct ServerSettings;
 
-		void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
+		//! Network pipeline.
+		class NetworkPipeline
+		{
+		public:
+			NetworkPipeline(const ServerSettings* settings);
+			virtual ~NetworkPipeline();
 
-		virtual void release();
-		virtual bool process();
+			void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
 
-		virtual avs::Pipeline* getAvsPipeline() const;
+			virtual void release();
+			virtual bool process();
 
-		avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
+			virtual avs::Pipeline* getAvsPipeline() const;
 
-		void setProcessingEnabled(bool enable);
-		bool isProcessingEnabled() const;
+			avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
 
-	private:
-		const ServerSettings* mSettings;
+			void setProcessingEnabled(bool enable);
+			bool isProcessingEnabled() const;
 
-		std::unique_ptr<avs::Pipeline> mPipeline;
-		std::unique_ptr<avs::NetworkSink> mNetworkSink;
-		avs::Result mPrevProcResult;
+		private:
+			const ServerSettings* mSettings;
+
+			std::unique_ptr<avs::Pipeline> mPipeline;
+			std::unique_ptr<avs::NetworkSink> mNetworkSink;
+			avs::Result mPrevProcResult;
 
 #if WITH_REMOTEPLAY_STATS
-		avs::Timestamp mLastTimestamp;
+			avs::Timestamp mLastTimestamp;
 #endif // WITH_REMOTEPLAY_STATS
-	};
+		};
+	}
 }

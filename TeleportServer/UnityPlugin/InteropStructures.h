@@ -322,14 +322,17 @@ struct InteropTextCanvas
 
 namespace teleport
 {
-	struct Glyph;
+	namespace core
+	{
+		struct Glyph;
+	}
 }
 
 struct InteropFontMap
 {
 	int size=0;
 	int numGlyphs=0;
-	teleport::Glyph *fontGlyphs=nullptr;
+	teleport::core::Glyph *fontGlyphs=nullptr;
 };
 
 //! Struct to pass a font atlas back to the engine.

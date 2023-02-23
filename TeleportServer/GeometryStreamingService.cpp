@@ -8,6 +8,7 @@
 #include "TeleportCore/TextCanvas.h"
 
 using namespace teleport;
+using namespace server;
 ClientStoppedRenderingNodeFn PluginGeometryStreamingService::callback_clientStoppedRenderingNode=nullptr;
 ClientStartedRenderingNodeFn PluginGeometryStreamingService::callback_clientStartedRenderingNode=nullptr;
 //Remove duplicates, and 0s, from passed vector of UIDs.
@@ -18,9 +19,8 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-
 GeometryStreamingService::GeometryStreamingService(const ServerSettings* settings)
-	:geometryStore(nullptr), settings(settings), casterContext(nullptr), geometryEncoder(settings,this)
+	:geometryStore(nullptr), settings(settings), clientNetworkContext(nullptr), geometryEncoder(settings,this)
 {
 }
 
@@ -94,10 +94,10 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 		case avs::NodeDataType::TextCanvas:
 			if(node->data_uid)
 			{
-				const teleport::TextCanvas *c=geometryStore->getTextCanvas(node->data_uid);
+				const teleport::core::TextCanvas *c=geometryStore->getTextCanvas(node->data_uid);
 				if(c&&c->font_uid)
 				{
-					const teleport::FontAtlas *f=geometryStore->getFontAtlas(c->font_uid);
+					const teleport::core::FontAtlas *f=geometryStore->getFontAtlas(c->font_uid);
 					if(f)
 					{
 						textCanvases.push_back(node->data_uid);
@@ -118,7 +118,7 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 
 avs::AxesStandard GeometryStreamingService::getClientAxesStandard() const
 {
-	return casterContext->axesStandard;
+	return clientNetworkContext->axesStandard;
 }
 
 avs::RenderingFeatures GeometryStreamingService::getClientRenderingFeatures() const
@@ -126,14 +126,14 @@ avs::RenderingFeatures GeometryStreamingService::getClientRenderingFeatures() co
 	return handshake.renderingFeatures;
 }
 
-void GeometryStreamingService::startStreaming(teleport::CasterContext* context, const teleport::core::Handshake& h)
+void GeometryStreamingService::startStreaming(server::ClientNetworkContext* context, const teleport::core::Handshake& h)
 {
-	if (casterContext == context)
+	if (clientNetworkContext == context)
 	{
 		return;
 	}
 	handshake=h;
-	casterContext = context;
+	clientNetworkContext = context;
 
  	avsPipeline.reset(new avs::Pipeline);
 	avsGeometrySource.reset(new avs::GeometrySource);
@@ -141,7 +141,7 @@ void GeometryStreamingService::startStreaming(teleport::CasterContext* context, 
 	avsGeometrySource->configure( this);
 	avsGeometryEncoder->configure(&geometryEncoder);
 
-	avsPipeline->link({ avsGeometrySource.get(), avsGeometryEncoder.get(), casterContext->GeometryQueue.get() });
+	avsPipeline->link({ avsGeometrySource.get(), avsGeometryEncoder.get(), clientNetworkContext->GeometryQueue.get() });
 }
 
 void GeometryStreamingService::stopStreaming()
@@ -159,7 +159,7 @@ void GeometryStreamingService::stopStreaming()
 		avsGeometryEncoder->deconfigure();
 	}
 	avsPipeline.reset();
-	casterContext = nullptr;
+	clientNetworkContext = nullptr;
 
 	reset();
 }
@@ -204,7 +204,7 @@ void GeometryStreamingService::setNodeVisible(avs::uid clientID, avs::uid nodeID
 	}
 }
 
-bool teleport::GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
+bool GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 {
 	return clientRenderingNodes.find(nodeID) != clientRenderingNodes.end();
 }

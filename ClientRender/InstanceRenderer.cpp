@@ -686,7 +686,7 @@ void InstanceRenderer::UpdateNodeStructure(const teleport::core::UpdateNodeStruc
 	geometryCache.mNodeManager->ReparentNode(updateNodeStructureCommand);
 }
 
-void InstanceRenderer::UpdateNodeSubtype(const teleport::core::UpdateNodeSubtypeCommand &updateNodeStructureCommand,const std::string &regexPath)
+void InstanceRenderer::AssignNodePosePath(const teleport::core::AssignNodePosePathCommand &updateNodeStructureCommand,const std::string &regexPath)
 {
 	if(regexPath.size())
 	{

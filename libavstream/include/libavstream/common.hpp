@@ -277,16 +277,6 @@ namespace avs
 		TextCanvas
 	};
 
-	//! Identifies special use-cases for a locally-controlled node, used in UpdateNodeSubtypeCommand.
-	enum class NodeSubtype_deprecated : uint8_t
-	{
-		None=0,
-		Pose,
-		Body,
-		LeftHand,
-		RightHand
-	};
-
 	//! Information on the resolution of a client's display.
 	struct DisplayInfo
 	{

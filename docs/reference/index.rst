@@ -11,6 +11,7 @@ Simul provides reference code for the Teleport VR server and client in the Telep
 
 	libavstream
 	libavstream_example
+	teleportcore
 	clientrenderer
 	teleportclient
 	server

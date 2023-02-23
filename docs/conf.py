@@ -53,3 +53,4 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 breathe_default_project = "TeleportVR"
+breathe_show_include = True

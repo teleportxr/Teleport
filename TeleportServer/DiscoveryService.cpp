@@ -9,7 +9,7 @@ using namespace teleport;
 using namespace server;
 
 extern std::map<avs::uid, ClientData> clientServices;
-extern teleport::ServerSettings casterSettings;
+extern ServerSettings casterSettings;
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 

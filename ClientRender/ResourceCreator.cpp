@@ -604,11 +604,11 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 	}
 }
 
-void ResourceCreator::CreateFontAtlas(avs::uid id,teleport::FontAtlas &fontAtlas)
+void ResourceCreator::CreateFontAtlas(avs::uid id,teleport::core::FontAtlas &fontAtlas)
 {
 	std::shared_ptr<clientrender::FontAtlas> f = std::make_shared<clientrender::FontAtlas>(id);
 	clientrender::FontAtlas &F=*f;
-	*(static_cast<teleport::FontAtlas*>(&F))=fontAtlas;
+	*(static_cast<teleport::core::FontAtlas*>(&F))=fontAtlas;
 	geometryCache->mFontAtlasManager.Add(id, f);
 	geometryCache->ReceivedResource(id);
 

@@ -71,9 +71,9 @@ static std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<Defaul
 
 std::map<avs::uid, ClientData> clientServices;
 
-teleport::ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
+ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-teleport::AudioSettings audioSettings;
+AudioSettings audioSettings;
 
 static SetHeadPoseFn setHeadPose;
 static SetControllerPoseFn setControllerPose;
@@ -161,14 +161,14 @@ TELEPORT_EXPORT void DeleteUnmanagedArray(void** unmanagedArray)
 ///MEMORY-MANAGEMENT END
 
 ///PLUGIN-SPECIFIC START
-TELEPORT_EXPORT void UpdateServerSettings(const teleport::ServerSettings newSettings)
+TELEPORT_EXPORT void UpdateServerSettings(const ServerSettings newSettings)
 {
 	serverSettings = newSettings;
 }
 
 TELEPORT_EXPORT bool SetCachePath(const char* path)
 {
-	return teleport::GeometryStore::GetInstance().SetCachePath(path);
+	return GeometryStore::GetInstance().SetCachePath(path);
 }
 
 TELEPORT_EXPORT void SetClientStoppedRenderingNodeDelegate(ClientStoppedRenderingNodeFn clientStoppedRenderingNode)
@@ -374,7 +374,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
 	{
-		std::shared_ptr<teleport::ClientMessaging> clientMessaging = std::make_shared<teleport::ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
+		std::shared_ptr<ClientMessaging> clientMessaging = std::make_shared<ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
 		ClientData newClientData(  clientMessaging);
 
 		if(newClientData.clientMessaging->startSession(clientID, clientIP))
@@ -405,43 +405,43 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	}
 
 	// Sending
-	newClient.casterContext.ColorQueue.reset(new avs::Queue);
-	newClient.casterContext.TagDataQueue.reset(new avs::Queue);
-	newClient.casterContext.GeometryQueue.reset(new avs::Queue);
-	newClient.casterContext.AudioQueue.reset(new avs::Queue);
+	newClient.clientNetworkContext.ColorQueue.reset(new avs::Queue);
+	newClient.clientNetworkContext.TagDataQueue.reset(new avs::Queue);
+	newClient.clientNetworkContext.GeometryQueue.reset(new avs::Queue);
+	newClient.clientNetworkContext.AudioQueue.reset(new avs::Queue);
 
-	newClient.casterContext.ColorQueue->configure(200000, 16,"ColorQueue");
-	newClient.casterContext.TagDataQueue->configure(200, 16, "TagDataQueue");
-	newClient.casterContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
-	newClient.casterContext.AudioQueue->configure(8192, 120, "AudioQueue");
+	newClient.clientNetworkContext.ColorQueue->configure(200000, 16,"ColorQueue");
+	newClient.clientNetworkContext.TagDataQueue->configure(200, 16, "TagDataQueue");
+	newClient.clientNetworkContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
+	newClient.clientNetworkContext.AudioQueue->configure(8192, 120, "AudioQueue");
 
 	// Receiving
 	if (serverSettings.isReceivingAudio)
 	{
-		newClient.casterContext.sourceAudioQueue.reset(new avs::Queue);
-		newClient.casterContext.audioDecoder.reset(new avs::AudioDecoder); 
-		newClient.casterContext.audioTarget.reset(new avs::AudioTarget); 
-		newClient.casterContext.audioStreamTarget.reset(new sca::CustomAudioStreamTarget(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2)));
+		newClient.clientNetworkContext.sourceAudioQueue.reset(new avs::Queue);
+		newClient.clientNetworkContext.audioDecoder.reset(new avs::AudioDecoder); 
+		newClient.clientNetworkContext.audioTarget.reset(new avs::AudioTarget); 
+		newClient.clientNetworkContext.audioStreamTarget.reset(new sca::CustomAudioStreamTarget(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2)));
 
-		newClient.casterContext.sourceAudioQueue->configure( 8192, 120, "SourceAudioQueue");
-		newClient.casterContext.audioDecoder->configure(100);
-		newClient.casterContext.audioTarget->configure(newClient.casterContext.audioStreamTarget.get());
+		newClient.clientNetworkContext.sourceAudioQueue->configure( 8192, 120, "SourceAudioQueue");
+		newClient.clientNetworkContext.audioDecoder->configure(100);
+		newClient.clientNetworkContext.audioTarget->configure(newClient.clientNetworkContext.audioStreamTarget.get());
 	}
 
 	///TODO: Initialize real delegates for capture component.
-	teleport::CaptureDelegates delegates;
-	delegates.startStreaming = [](teleport::CasterContext* context){};
+	CaptureDelegates delegates;
+	delegates.startStreaming = [](ClientNetworkContext* context){};
 	delegates.requestKeyframe = [&newClient]()
 	{
 		newClient.videoKeyframeRequired = true;
 	};
-	delegates.getClientCameraInfo = []()->teleport::CameraInfo&
+	delegates.getClientCameraInfo = []()->CameraInfo&
 	{
-		static teleport::CameraInfo c;
+		static CameraInfo c;
 		return c;
 	};
 
-	newClient.clientMessaging->initialise(&newClient.casterContext, delegates);
+	newClient.clientMessaging->initialise(&newClient.clientNetworkContext, delegates);
 
 	discoveryService->sendResponseToClient(clientID);
 
@@ -560,9 +560,9 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 
 	clientData.clientMessaging->ConfirmSessionStarted();
 
-	//clientData.geometryStreamingService->startStreaming(&clientData.casterContext,handshake);
+	//clientData.geometryStreamingService->startStreaming(&clientData.clientNetworkContext,handshake);
 
-	teleport::CasterEncoderSettings encoderSettings{};
+	CasterEncoderSettings encoderSettings{};
 
 	encoderSettings.frameWidth = clientData.clientSettings.videoTextureSize[0];
 	encoderSettings.frameHeight = clientData.clientSettings.videoTextureSize[1];
@@ -736,7 +736,7 @@ TELEPORT_EXPORT avs::uid GetOrGenerateUid(BSTR path)
 	if(!path)
 		return 0;
 	std::string str=WStringToString(path);
-	return teleport::GeometryStore::GetInstance().GetOrGenerateUid(str);
+	return GeometryStore::GetInstance().GetOrGenerateUid(str);
 }
 
 //! Add the specified texture to be sent to the client.
@@ -841,7 +841,7 @@ TELEPORT_EXPORT bool GetVideoEncodeCapabilities(avs::EncodeCapabilities& capabil
 		return false;
 	};
 
-	if (teleport::VideoEncodePipeline::getEncodeCapabilities(serverSettings, params, capabilities))
+	if (VideoEncodePipeline::getEncodeCapabilities(serverSettings, params, capabilities))
 	{
 		return true;
 	}
@@ -849,7 +849,7 @@ TELEPORT_EXPORT bool GetVideoEncodeCapabilities(avs::EncodeCapabilities& capabil
 	return false;
 }
 
-TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, teleport::VideoEncodeParams& videoEncodeParams)
+TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams& videoEncodeParams)
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
@@ -861,8 +861,8 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, teleport::VideoEn
 	}
 
 	ClientData& clientData = clientPair->second;
-	avs::Queue* cq = clientData.casterContext.ColorQueue.get();
-	avs::Queue* tq = clientData.casterContext.TagDataQueue.get();
+	avs::Queue* cq = clientData.clientNetworkContext.ColorQueue.get();
+	avs::Queue* tq = clientData.clientNetworkContext.TagDataQueue.get();
 	Result result = clientData.videoEncodePipeline->configure(serverSettings,videoEncodeParams, cq, tq);
 	if(!result)
 	{
@@ -870,7 +870,7 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, teleport::VideoEn
 	}
 }
 
-TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoEncodeParams& videoEncodeParams)
+TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParams& videoEncodeParams)
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
@@ -890,7 +890,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoE
 	}
 
 	///TODO: Need to retrieve encoder settings from unity.
-	teleport::CasterEncoderSettings encoderSettings
+	CasterEncoderSettings encoderSettings
 	{
 		videoEncodeParams.encodeWidth,
 		videoEncodeParams.encodeHeight,
@@ -901,7 +901,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, teleport::VideoE
 		true,
 		10000
 	};
-	teleport::core::ReconfigureVideoCommand cmd;
+	core::ReconfigureVideoCommand cmd;
 	avs::VideoConfig& videoConfig = cmd.video_config;
 	videoConfig.video_width = encoderSettings.frameWidth;
 	videoConfig.video_height = encoderSettings.frameHeight;
@@ -960,7 +960,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 struct EncodeVideoParamsWrapper
 {
 	avs::uid clientID;
-	teleport::VideoEncodeParams videoEncodeParams;
+	VideoEncodeParams videoEncodeParams;
 };
 
 static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
@@ -1002,7 +1002,7 @@ TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 ///VideoEncodePipeline END
 
 ///AudioEncodePipeline START
-TELEPORT_EXPORT void SetAudioSettings(const teleport::AudioSettings& newAudioSettings)
+TELEPORT_EXPORT void SetAudioSettings(const AudioSettings& newAudioSettings)
 {
 	audioSettings = newAudioSettings;
 }
@@ -1030,7 +1030,7 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 		Result result = Result(Result::Code::OK);
 		if (!clientData.audioEncodePipeline->isConfigured())
 		{
-			result = clientData.audioEncodePipeline->configure(serverSettings, audioSettings, clientData.casterContext.AudioQueue.get());
+			result = clientData.audioEncodePipeline->configure(serverSettings, audioSettings, clientData.clientNetworkContext.AudioQueue.get());
 			if (!result)
 			{
 				TELEPORT_CERR << "Failed to configure audio encoder pipeline for Client " << clientID << "!\n";
@@ -1086,11 +1086,11 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core
 	{
 		updateList[i] = updates[i];
 
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].position);
-		avs::ConvertRotation(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].rotation);
-		avs::ConvertScale(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].scale);
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].velocity);
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.casterContext.axesStandard, updateList[i].angularVelocityAxis);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].position);
+		avs::ConvertRotation(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].rotation);
+		avs::ConvertScale(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].scale);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].velocity);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].angularVelocityAxis);
 	}
 
 	clientPair->second.clientMessaging->updateNodeMovement(updateList);
@@ -1291,7 +1291,7 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 		return false;
 	}
 
-	if (!clientData.casterContext.NetworkPipeline)
+	if (!clientData.clientNetworkContext.NetworkPipeline)
 	{
 		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! NetworkPipeline is null!\n";
 		failed=true;
@@ -1303,7 +1303,7 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 		failed=false;
 	}
 	// Thread safe
-	clientData.casterContext.NetworkPipeline->getCounters(counters);
+	clientData.clientNetworkContext.NetworkPipeline->getCounters(counters);
 
 	return true;
 }
@@ -1340,73 +1340,73 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 ///GeometryStore START
 TELEPORT_EXPORT void SaveGeometryStore()
 {
-	teleport::GeometryStore::GetInstance().saveToDisk();
-	teleport::GeometryStore::GetInstance().verify();
+	GeometryStore::GetInstance().saveToDisk();
+	GeometryStore::GetInstance().verify();
 }
 
 TELEPORT_EXPORT bool CheckGeometryStoreForErrors()
 {
-	return teleport::GeometryStore::GetInstance().CheckForErrors();
+	return GeometryStore::GetInstance().CheckForErrors();
 }
 
 TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
 {
-	teleport::GeometryStore::GetInstance().loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
+	GeometryStore::GetInstance().loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
 }
 
 TELEPORT_EXPORT void ClearGeometryStore()
 {
-	teleport::GeometryStore::GetInstance().clear(true);
+	GeometryStore::GetInstance().clear(true);
 }
 
 TELEPORT_EXPORT void SetDelayTextureCompression(bool willDelay)
 {
-	teleport::GeometryStore::GetInstance().willDelayTextureCompression = willDelay;
+	GeometryStore::GetInstance().willDelayTextureCompression = willDelay;
 }
 
 TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
 {
-	teleport::GeometryStore::GetInstance().setCompressionLevels(compressionStrength, compressionQuality);
+	GeometryStore::GetInstance().setCompressionLevels(compressionStrength, compressionQuality);
 }
 
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
-	teleport::GeometryStore::GetInstance().storeNode(id, avs::Node(node));
+	GeometryStore::GetInstance().storeNode(id, avs::Node(node));
 }
 
 TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
 {
-	teleport::GeometryStore::GetInstance().storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
+	GeometryStore::GetInstance().storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
 {
-	teleport::GeometryStore::GetInstance().storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
+	GeometryStore::GetInstance().storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
-	teleport::GeometryStore::GetInstance().storeMesh(id, WStringToString(guid), WStringToString(path), lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
+	GeometryStore::GetInstance().storeMesh(id, WStringToString(guid), WStringToString(path), lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
 }
 
 TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropMaterial material)
 {
-	teleport::GeometryStore::GetInstance().storeMaterial(id, WStringToString(guid), WStringToString(path), lastModified, avs::Material(material));
+	GeometryStore::GetInstance().storeMaterial(id, WStringToString(guid), WStringToString(path), lastModified, avs::Material(material));
 }
 
 TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR relative_asset_path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	teleport::GeometryStore::GetInstance().storeTexture(id, WStringToString(guid), WStringToString(relative_asset_path), lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	GeometryStore::GetInstance().storeTexture(id, WStringToString(guid), WStringToString(relative_asset_path), lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT avs::uid StoreFont( BSTR ttf_path,BSTR relative_asset_path,std::time_t lastModified, int size)
 {
-	return teleport::GeometryStore::GetInstance().storeFont(WStringToString(ttf_path), WStringToString(relative_asset_path),lastModified,size);
+	return GeometryStore::GetInstance().storeFont(WStringToString(ttf_path), WStringToString(relative_asset_path),lastModified,size);
 }
 
 TELEPORT_EXPORT avs::uid StoreTextCanvas( BSTR relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 {
-	avs::uid u=teleport::GeometryStore::GetInstance().storeTextCanvas(WStringToString(relative_asset_path),interopTextCanvas);
+	avs::uid u=GeometryStore::GetInstance().storeTextCanvas(WStringToString(relative_asset_path),interopTextCanvas);
 	if(u)
 	{
 		for(auto& clientPair : clientServices)
@@ -1432,65 +1432,65 @@ TELEPORT_EXPORT void ResendNode(avs::uid u)
 
 TELEPORT_EXPORT bool GetFontAtlas( BSTR ttf_path,  InteropFontAtlas *interopFontAtlas)
 {
-	return teleport::Font::GetInstance().GetInteropFontAtlas(avs::convertToByteString(ttf_path),interopFontAtlas);
+	return teleport::server::Font::GetInstance().GetInteropFontAtlas(avs::convertToByteString(ttf_path),interopFontAtlas);
 }
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture shadowMap)
 {
-	teleport::GeometryStore::GetInstance().storeShadowMap(id, avs::convertToByteString(guid), avs::convertToByteString(path), lastModified, avs::Texture(shadowMap));
+	GeometryStore::GetInstance().storeShadowMap(id, avs::convertToByteString(guid), avs::convertToByteString(path), lastModified, avs::Texture(shadowMap));
 }
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
 {
-	const avs::Node* node = teleport::GeometryStore::GetInstance().getNode(id);
+	const avs::Node* node = GeometryStore::GetInstance().getNode(id);
 	return node != nullptr;
 }
 
 TELEPORT_EXPORT bool IsSkinStored(avs::uid id)
 {
 	//NOTE: Assumes we always are storing animations in the engineering axes standard.
-	const avs::Skin* skin = teleport::GeometryStore::GetInstance().getSkin(id, avs::AxesStandard::EngineeringStyle);
+	const avs::Skin* skin = GeometryStore::GetInstance().getSkin(id, avs::AxesStandard::EngineeringStyle);
 	return skin != nullptr;
 }
 
 TELEPORT_EXPORT bool IsMeshStored(avs::uid id)
 {
 	//NOTE: Assumes we always are storing meshes in the engineering axes standard.
-	const avs::Mesh* mesh = teleport::GeometryStore::GetInstance().getMesh(id, avs::AxesStandard::EngineeringStyle);
+	const avs::Mesh* mesh = GeometryStore::GetInstance().getMesh(id, avs::AxesStandard::EngineeringStyle);
 	return mesh != nullptr;
 }
 
 TELEPORT_EXPORT bool IsMaterialStored(avs::uid id)
 {
-	const avs::Material* material = teleport::GeometryStore::GetInstance().getMaterial(id);
+	const avs::Material* material = GeometryStore::GetInstance().getMaterial(id);
 	return material != nullptr;
 }
 
 TELEPORT_EXPORT bool IsTextureStored(avs::uid id)
 {
-	const avs::Texture* texture = teleport::GeometryStore::GetInstance().getTexture(id);
+	const avs::Texture* texture = GeometryStore::GetInstance().getTexture(id);
 	return texture != nullptr;
 }
 
 TELEPORT_EXPORT void RemoveNode(avs::uid nodeID)
 {
-	teleport::GeometryStore::GetInstance().removeNode(nodeID);
+	GeometryStore::GetInstance().removeNode(nodeID);
 }
 
 TELEPORT_EXPORT avs::Node* getNode(avs::uid nodeID)
 {
-	return teleport::GeometryStore::GetInstance().getNode(nodeID);
+	return GeometryStore::GetInstance().getNode(nodeID);
 }
 
 TELEPORT_EXPORT uint64_t GetNumberOfTexturesWaitingForCompression()
 {
-	return static_cast<int64_t>(teleport::GeometryStore::GetInstance().getNumberOfTexturesWaitingForCompression());
+	return static_cast<int64_t>(GeometryStore::GetInstance().getNumberOfTexturesWaitingForCompression());
 }
 
 ///TODO: Free memory of allocated string, or use passed in string to return message.
 TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures)
 {
-	const avs::Texture* texture = teleport::GeometryStore::GetInstance().getNextTextureToCompress();
+	const avs::Texture* texture = GeometryStore::GetInstance().getNextTextureToCompress();
 
 	std::wstringstream messageStream;
 	//Write compression message to wide string stream.
@@ -1502,7 +1502,7 @@ TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, u
 
 TELEPORT_EXPORT void CompressNextTexture()
 {
-	teleport::GeometryStore::GetInstance().compressNextTexture();
+	GeometryStore::GetInstance().compressNextTexture();
 }
 ///GeometryStore END
 

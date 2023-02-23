@@ -12,24 +12,27 @@ namespace httplib
 
 namespace teleport
 {
-	//! Default service for HTTP download of resources from the Teleport server.
-	class DefaultHTTPService : public HTTPService
+	namespace server
 	{
-	public:
-		DefaultHTTPService();
-		~DefaultHTTPService();
+		//! Default service for HTTP download of resources from the Teleport server.
+		class DefaultHTTPService : public HTTPService
+		{
+		public:
+			DefaultHTTPService();
+			~DefaultHTTPService();
 
-		bool initialize(std::string mountDirectory, std::string certPath, std::string privateKeyPath, int32_t port) override;
+			bool initialize(std::string mountDirectory, std::string certPath, std::string privateKeyPath, int32_t port) override;
 
-		void shutdown() override;
+			void shutdown() override;
 
-		void tick() override;
+			void tick() override;
 
-		bool isUsingSSL() const { return mUsingSSL; }
+			bool isUsingSSL() const { return mUsingSSL; }
 
-	private:
-		std::unique_ptr<httplib::Server> mServer;
-		std::thread mThread;
-		bool mUsingSSL;
-	};
+		private:
+			std::unique_ptr<httplib::Server> mServer;
+			std::thread mThread;
+			bool mUsingSSL;
+		};
+	}
 }

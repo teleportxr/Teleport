@@ -5,14 +5,15 @@ set(pc_client_HEADER_DIRS ${CMAKE_SOURCE_DIR}/pc_client)
 set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream/encoders 
 ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream/decoders ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio 
 ${CMAKE_SOURCE_DIR}/libavstream/src/encoders ${CMAKE_SOURCE_DIR}/libavstream/src/decoders)
-set(teleportclient_DIR TeleportClient SOURCE_DIR)
+
 set(teleportclient_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportClient)
-message("teleportclient_HEADER_DIR ${teleportclient_HEADER_DIRS}")
+set(teleportcore_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportCore)
+
 set(teleportrenderer_DIR	${CMAKE_SOURCE_DIR}/ClientRender)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR} ${teleportrenderer_DIR}/NodeComponents ${teleportrenderer_DIR}/AVParser)
 
 set(teleportserver_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportServer ${CMAKE_SOURCE_DIR}/TeleportServer/UnityPlugin)
-set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS} ${teleportserver_HEADER_DIRS})
+set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportcore_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS} ${teleportserver_HEADER_DIRS})
 #message("DOXYGEN_INPUT_DIR ${DOXYGEN_INPUT_DIR}")
 string (REPLACE ";" "\",\"" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
 string (REPLACE "/" "\\" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
@@ -71,7 +72,7 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/firstparty/Platform/CMake" ${CMAKE_
 find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-file(GLOB RST_FILES "*.rst" )
+file(GLOB RST_FILES "*.rst" ) 
 file(GLOB RST_REF_FILES "reference/*.rst" )
 file(GLOB RST_PROTOCOL_FILES "protocol/*.rst" )
 file(GLOB RST_PROTOCOL_SERVICE_FILES "protocol/service/*.rst" )
