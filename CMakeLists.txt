@@ -256,7 +256,10 @@ target_compile_options(enet PRIVATE -fPIC)
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
 # TODO: fix basis compile on Linux, remove when possible.
-target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
+
+if(TELEPORT_UNIX)
+	target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
+endif()
 
 add_subdirectory(thirdparty/draco)
 # Here we will put all the draco targets into the thirdparty/draco solution folder:
