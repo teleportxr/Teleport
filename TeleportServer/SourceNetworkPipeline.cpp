@@ -40,7 +40,7 @@ void SourceNetworkPipeline::initialize(const avs::NetworkSourceParams& sourcePar
 
 	std::vector<avs::NetworkSourceStream> streams;
 
-	for (int32_t i = 0; i < audioPipes.size(); ++i)
+	for (int32_t i = 0; i < (int32_t)audioPipes.size(); ++i)
 	{
 		avs::NetworkSourceStream stream;
 		stream.id = 100 + i;
@@ -56,7 +56,7 @@ void SourceNetworkPipeline::initialize(const avs::NetworkSourceParams& sourcePar
 
 	pipeline->add(networkSource.get());
 
-	for (int32_t i = 0; i < audioPipes.size(); ++i)
+	for (int32_t i = 0; i < (int32_t)audioPipes.size(); ++i)
 	{
 		auto& pipe = audioPipes[i];
 		if (!avs::PipelineNode::link(*networkSource, *pipe->queue))

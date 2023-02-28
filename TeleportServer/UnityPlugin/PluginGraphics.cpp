@@ -5,6 +5,8 @@
 #include <d3d12.h>
 #include "IUnityGraphicsD3D11.h"
 #include "IUnityGraphicsD3D12.h"
+#else
+#include "IUnityGraphicsVulkan.h"
 #endif
 
 //#include "IUnityGraphicsVulkan.h"
@@ -25,7 +27,7 @@ namespace teleport
             std::cout << "Texture conversion only supported for D3D11 currently" << "\n";
             return nullptr;
         }
-        
+#ifdef PLATFORM_WINDOWS
         ID3D11Device* device = (ID3D11Device*)mGraphicsDevice;
         ID3D11Texture2D* source = (ID3D11Texture2D*)sourceTexture;
 
@@ -46,10 +48,14 @@ namespace teleport
         device->CreateTexture2D(&desc, NULL, &copy);
        
         return copy;
+		#else
+		return nullptr;
+		#endif
     }
 
     void GraphicsManager::CopyResource(void* target, void* source)
     {
+#ifdef PLATFORM_WINDOWS
         if (kUnityGfxRendererD3D11 != mRendererType)
         {
             std::cout << "Texture conversion only supported for D3D11 currently" << "\n";
@@ -64,19 +70,24 @@ namespace teleport
         context->CopyResource((ID3D11Resource*)target, (ID3D11Resource*)source);
 
         context->Release();
+#endif
     }
 
     void GraphicsManager::ReleaseResource(void* resource)
     {
+#ifdef PLATFORM_WINDOWS
         if (resource)
         {
             ((IUnknown*)resource)->Release();
         }
+#endif
     }
 
     void GraphicsManager::AddResourceRef(void* resource)
     {    
+#ifdef PLATFORM_WINDOWS
         ((IUnknown*)resource)->AddRef();
+#endif
     }
 }
 
@@ -135,6 +146,7 @@ static void AssignGraphicsDevice()
 {
     switch (SGM::mRendererType)
     {
+#ifdef PLATFORM_WINDOWS
         case kUnityGfxRendererD3D11:
         {
             SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsD3D11>()->GetDevice();
@@ -145,10 +157,11 @@ static void AssignGraphicsDevice()
             SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsD3D12>()->GetDevice();
             break;
         }
+	#endif
         case kUnityGfxRendererVulkan:
         {
-            //Uncomment this when we support Vulkan. It would require addition of vulkan include paths.
-            //SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsVulkan>()->Instance().device;
+            //Uncomment this when we support Vulkan. It would require addition of vulkan include paths
+           	SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsVulkan>()->Instance().device;
             break;
         }
         default:

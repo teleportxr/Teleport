@@ -5,10 +5,27 @@
 
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
+		std::string WStringToString(const std::wstring &text)
+		{
+			size_t origsize = text.length()+ 1;
+			const size_t newsize = origsize;
+			char *cstring=new char[newsize];
+			
+#ifdef _MSC_VER
+			size_t convertedChars = 0;
+			wcstombs_s(&convertedChars, cstring, (size_t)origsize, text.c_str(), (size_t)newsize );
+#else
+			wcstombs(cstring, text.c_str(), (size_t)newsize );
+#endif
+			std::string str;
+			str=std::string(cstring);
+			delete [] cstring;
+			return str;
+		}
 
 namespace
 {
-	constexpr double networkPipelineStatInterval = 60000000.0; // 1s
+	//constexpr double networkPipelineStatInterval = 60000000.0; // 1s
 	constexpr int networkPipelineSocketBufferSize = 16 * 1024 * 1024; // 16MiB
 }
 
@@ -38,11 +55,11 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 	mNetworkSink.reset(new avs::NetworkSink);
 
 
-	char remoteIP[20];
-	size_t stringLength = wcslen(inNetworkSettings.remoteIP);
+	//char remoteIP[20];
+	//size_t stringLength = wcslen(inNetworkSettings.remoteIP);
 	//Convert wide character string to multibyte string.
-	wcstombs_s(&stringLength, remoteIP, inNetworkSettings.remoteIP, 20);
-
+	//wcstombs_s(&stringLength, remoteIP, inNetworkSettings.remoteIP, 20);
+	std::string remoteIP=WStringToString(inNetworkSettings.remoteIP);
 	std::vector<avs::NetworkSinkStream> streams;
 
 	// Video
@@ -97,7 +114,7 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 		streams.emplace_back(std::move(stream));
 	}
 
-	if (!mNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP, inNetworkSettings.remotePort, SinkParams))
+	if (!mNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
 	{
 		TELEPORT_CERR << "Failed to configure network sink!" << "\n";
 		return;
@@ -146,7 +163,7 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 	mPipeline->add(mNetworkSink.get());
 
 #if WITH_REMOTEPLAY_STATS
-	mLastTimestamp = avs::PlatformWindows::getTimestamp();
+	mLastTimestamp = avs::Platform::getTimestamp();
 #endif // WITH_REMOTEPLAY_STATS
 
 	mPrevProcResult = avs::Result::OK;
@@ -177,8 +194,8 @@ bool NetworkPipeline::process()
 	mPrevProcResult = result;
 
 #if 0
-	avs::Timestamp timestamp = avs::PlatformWindows::getTimestamp();
-	if (avs::PlatformWindows::getTimeElapsed(lastTimestamp, timestamp) >= networkPipelineStatInterval)
+	avs::Timestamp timestamp = avs::Platform::getTimestamp();
+	if (avs::Platform::getTimeElapsed(lastTimestamp, timestamp) >= networkPipelineStatInterval)
 	{
 		const avs::NetworkSinkCounters counters = mNetworkSink->getCounterValues();
 		TELEPORT_COUT << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << "\n";

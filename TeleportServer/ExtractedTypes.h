@@ -14,44 +14,12 @@
 #include "libavstream/geometry/material_interface.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "Font.h"
+#include "StringFunctions.h"
 
 namespace teleport
 {
 	namespace server
 	{
-		// Here we implement special cases of std::wofstream and wifstream that are able to convert guid_to_uid to guids and vice versa.
-		inline std::string WStringToString(const std::wstring& text)
-		{
-			size_t origsize = text.length() + 1;
-			const size_t newsize = origsize;
-			char* cstring = new char[newsize];
-
-#ifdef _MSC_VER
-			size_t convertedChars = 0;
-			wcstombs_s(&convertedChars, cstring, (size_t)origsize, text.c_str(), (size_t)newsize);
-#else
-			wcstombs(cstring, text.c_str(), (size_t)newsize);
-#endif
-			std::string str;
-			str = std::string(cstring);
-			delete[] cstring;
-			return str;
-		}
-		inline std::wstring StringToWString(const std::string& text)
-		{
-			size_t origsize = strlen(text.c_str()) + 1;
-			const size_t newsize = origsize;
-			wchar_t* wcstring = new wchar_t[newsize + 2];
-#ifdef _MSC_VER
-			size_t convertedChars = 0;
-			mbstowcs_s(&convertedChars, wcstring, origsize, text.c_str(), _TRUNCATE);
-#else
-			mbstowcs(wcstring, text.c_str(), origsize);
-#endif
-			std::wstring str(wcstring);
-			delete[] wcstring;
-			return str;
-		}
 		struct ExtractedMesh
 		{
 			static const char* fileExtension()

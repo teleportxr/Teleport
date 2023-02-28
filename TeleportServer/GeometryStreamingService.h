@@ -91,8 +91,8 @@ namespace teleport
 			void GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
 		};
 
-		typedef bool(__stdcall* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
-		typedef bool(__stdcall* ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
+		typedef bool(TELEPORT_STDCALL* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
+		typedef bool(TELEPORT_STDCALL* ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 		class PluginGeometryStreamingService : public GeometryStreamingService
 		{
 		public:

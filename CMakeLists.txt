@@ -73,6 +73,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(CMAKE_USE_PTHREADS_INIT 1)
 	set(THREADS_PREFER_PTHREAD_FLAG ON)
 	set(TELEPORT_UNIX ON)
+	# fix linkage for lots of libraries:
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
 endif()
 message("TELEPORT_UNIX ${TELEPORT_UNIX}")
 
@@ -167,8 +169,19 @@ function(SetTeleportDefaults targname)
 	if(MSVC)
 	# Treat angle-brackets as representing external headers. Minimal warnings for external headers.
 		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /JMC /external:anglebrackets /external:W0)
+		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=__stdcall)
 	else()
-		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
+	#TODO: -Wno-deprecated-copy should be removed when possible.
+		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
+		# these options are intended to minimize the necessary changes to build on Linux, and should be removed when possible:
+		target_compile_options(${targname} PRIVATE -Wno-missing-field-initializers -Wno-unused-variable -Wno-deprecated-copy)
+
+		# TODO: fix basisu compile on Linux, remove when possible.
+		target_compile_options(${targname} PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
+		# TODO: This is a fix for errors of the form
+		# relocation R_X86_64_32S against `.rodata' can not be used when making a shared object; recompile with -fPIC
+		target_compile_options(${targname} PRIVATE -fPIC)
+		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=)
 	endif()
 	target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)
 	#message("target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)")
@@ -239,9 +252,11 @@ endif()
 
 add_subdirectory(thirdparty/enet)
 set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
-
+target_compile_options(enet PRIVATE -fPIC)
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
+# TODO: fix basis compile on Linux, remove when possible.
+target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 
 add_subdirectory(thirdparty/draco)
 # Here we will put all the draco targets into the thirdparty/draco solution folder:
@@ -262,6 +277,8 @@ foreach(targ ${targets})
 endforeach()
 
 add_subdirectory(thirdparty/srt)
+target_compile_options(srt_virtual PRIVATE -fPIC)
+target_compile_options(srt_static PRIVATE -fPIC)
 if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 	set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
 endif()

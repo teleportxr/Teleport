@@ -40,7 +40,7 @@ size_t GetNewUIDs(std::vector<avs::uid>& outUIDs, avs::GeometryRequesterBackendI
 }
 
 GeometryEncoder::GeometryEncoder(const ServerSettings* settings, GeometryStreamingService* srv)
-	:settings(settings), prevBufferSize(0), geometryStreamingService(srv)
+	: geometryStreamingService(srv),settings(settings)
 {}
 
 avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBackendInterface*)
@@ -48,7 +48,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 	if (!geometryStreamingService || geometryStreamingService->getClientAxesStandard() == avs::AxesStandard::NotInitialized)
 		return avs::Result::Failed;
 	queuedBuffer.clear();
-	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
+//	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	// The source backend will give us the data to encode.
 	// What data it provides depends on the contents of the avs::GeometryRequesterBackendInterface object.
 
@@ -265,7 +265,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
 	for (avs::uid uid : missingUIDs)
 	{
-		size_t oldBufferSize = buffer.size();
+	//	size_t oldBufferSize = buffer.size();
 		const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
 		putPayload(avs::GeometryPayloadType::Mesh);
 		put((size_t)1);
@@ -275,7 +275,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 			uint64_t lowest_accessor = 0xFFFFFFFFFFFFFFFF, highest_accessor = 0;
 			compressedMesh->GetAccessorRange(lowest_accessor, highest_accessor);
 			uint64_t accessor_subtract = lowest_accessor;
-			uint64_t accessor_add = 0;
+			//uint64_t accessor_add = 0;
 			put(compressedMesh->meshCompressionType);
 			static const int32_t DRACO_COMPRESSED_MESH_VERSION_NUMBER = 1;
 			put(DRACO_COMPRESSED_MESH_VERSION_NUMBER);
@@ -389,7 +389,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
 	//Place payload type onto the buffer.
 	putPayload(avs::GeometryPayloadType::Node);
-	for (int i = 0; i < missingUIDs.size(); i++)
+	for (int i = 0; i < (int)missingUIDs.size(); i++)
 	{
 		avs::uid uid = missingUIDs[i];
 		avs::Node* node = geometryStore->getNode(uid);
@@ -503,7 +503,7 @@ avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*,
 		put((uint8_t*)skin->name.data(), nameLength);
 
 		put(skin->inverseBindMatrices.size());
-		for (int i = 0; i < skin->inverseBindMatrices.size(); i++)
+		for (int i = 0; i < (int)skin->inverseBindMatrices.size(); i++)
 		{
 			put(skin->inverseBindMatrices[i]);
 		}
@@ -528,7 +528,7 @@ avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*,
 			return index;
 		};
 		put(skin->boneIDs.size());
-		for (int i = 0; i < skin->boneIDs.size(); i++)
+		for (int i = 0; i <(int) skin->boneIDs.size(); i++)
 		{
 			avs::Node* node = geometryStore->getNode(skin->boneIDs[i]);
 			avs::Transform localTransform = node->localTransform;
@@ -544,7 +544,7 @@ avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*,
 		}
 		put(skin->jointIDs.size());
 		// which bones are joints?
-		for (int i = 0; i < skin->jointIDs.size(); i++)
+		for (int i = 0; i < (int)skin->jointIDs.size(); i++)
 		{
 			uint16_t jointIndex = findIndex(skin->boneIDs, skin->jointIDs[i]);
 			put(jointIndex);
@@ -685,7 +685,7 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 avs::Result GeometryEncoder::encodeTextures(avs::GeometryRequesterBackendInterface*
 	, std::vector<avs::uid> missingUIDs)
 {
-	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
+	//GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	encodeTexturesBackend(geometryStreamingService, missingUIDs);
 	return avs::Result::OK;
 }
@@ -835,7 +835,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 				TELEPORT_CERR << "Trying to send uncompressed texture. Never do this!\n";
 				continue;
 			}
-			size_t oldBufferSize = buffer.size();
+			//size_t oldBufferSize = buffer.size();
 
 			//Place payload type onto the buffer.
 			putPayload(avs::GeometryPayloadType::Texture);

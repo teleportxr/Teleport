@@ -30,6 +30,9 @@
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, "teleport_server.log", 128);
+#else
+#include "../UnixDebugOutput.h"
+DebugOutput debug_buffer(true, "teleport_server.log", 128);
 #endif
 
 using namespace teleport;
@@ -899,7 +902,11 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParam
 		false,
 		true,
 		true,
-		10000
+		10000,
+		0
+		,0
+		,0
+		,0
 	};
 	core::ReconfigureVideoCommand cmd;
 	avs::VideoConfig& videoConfig = cmd.video_config;
@@ -1010,7 +1017,7 @@ TELEPORT_EXPORT void SetAudioSettings(const AudioSettings& newAudioSettings)
 TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 {
 	// Only continue processing if the main thread hasn't hung.
-	double elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(clientManager.getLastTickTimestamp(), avs::PlatformWindows::getTimestamp());
+	double elapsedTime = avs::Platform::getTimeElapsedInSeconds(clientManager.getLastTickTimestamp(), avs::Platform::getTimestamp());
 	if (elapsedTime > 0.15f)
 	{
 		return;
@@ -1234,7 +1241,7 @@ TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const telepor
 	return clientPair->second.clientMessaging->sendCommand(avsCommand, appendedList);
 }
 
-TELEPORT_EXPORT const DWORD WINAPI Client_GetClientIP(avs::uid clientID, __in DWORD bufferLength, __out char* lpBuffer)
+TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int bufferLength,  char* lpBuffer)
 {
 	static std::string str;
 
@@ -1255,7 +1262,7 @@ TELEPORT_EXPORT const DWORD WINAPI Client_GetClientIP(avs::uid clientID, __in DW
 		memcpy(reinterpret_cast<void*>(lpBuffer), str.c_str(), final_len);
 		lpBuffer[final_len] = 0;
 	}
-	return static_cast<DWORD>(final_len);
+	return static_cast<unsigned int>(final_len);
 }
 
 TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)
@@ -1371,32 +1378,38 @@ TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t c
 
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
-	GeometryStore::GetInstance().storeNode(id, avs::Node(node));
+	avs::Node avsNode(node);
+	GeometryStore::GetInstance().storeNode(id, avsNode);
 }
 
 TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
 {
-	GeometryStore::GetInstance().storeSkin(id, avs::Skin(skin), avs::AxesStandard::UnityStyle);
+	avs::Skin avsSkin(skin);
+	GeometryStore::GetInstance().storeSkin(id, avsSkin, avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
 {
-	GeometryStore::GetInstance().storeAnimation(animationID, avs::Animation(*animation), avs::AxesStandard::UnityStyle);
+	avs::Animation avsAnimation(*animation);
+	GeometryStore::GetInstance().storeAnimation(animationID, avsAnimation, avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
-	GeometryStore::GetInstance().storeMesh(id, WStringToString(guid), WStringToString(path), lastModified, avs::Mesh(*mesh), extractToStandard,compress,verify);
+	avs::Mesh avsMesh(*mesh);
+	GeometryStore::GetInstance().storeMesh(id, WStringToString(guid), WStringToString(path), lastModified, avsMesh, extractToStandard,compress,verify);
 }
 
 TELEPORT_EXPORT void StoreMaterial(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropMaterial material)
 {
-	GeometryStore::GetInstance().storeMaterial(id, WStringToString(guid), WStringToString(path), lastModified, avs::Material(material));
+	avs::Material avsMaterial(material);
+	GeometryStore::GetInstance().storeMaterial(id, WStringToString(guid), WStringToString(path), lastModified, avsMaterial);
 }
 
 TELEPORT_EXPORT void StoreTexture(avs::uid id, BSTR guid, BSTR relative_asset_path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
-	GeometryStore::GetInstance().storeTexture(id, WStringToString(guid), WStringToString(relative_asset_path), lastModified, avs::Texture(texture), basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	avs::Texture avsTexture(texture);
+	GeometryStore::GetInstance().storeTexture(id, WStringToString(guid), WStringToString(relative_asset_path), lastModified, avsTexture, basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT avs::uid StoreFont( BSTR ttf_path,BSTR relative_asset_path,std::time_t lastModified, int size)
@@ -1437,7 +1450,8 @@ TELEPORT_EXPORT bool GetFontAtlas( BSTR ttf_path,  InteropFontAtlas *interopFont
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, BSTR guid, BSTR path, std::time_t lastModified, InteropTexture shadowMap)
 {
-	GeometryStore::GetInstance().storeShadowMap(id, avs::convertToByteString(guid), avs::convertToByteString(path), lastModified, avs::Texture(shadowMap));
+	avs::Texture avsTexture(shadowMap);
+	GeometryStore::GetInstance().storeShadowMap(id, avs::convertToByteString(guid), avs::convertToByteString(path), lastModified, avsTexture);
 }
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
@@ -1497,7 +1511,11 @@ TELEPORT_EXPORT BSTR GetMessageForNextCompressedTexture(uint64_t textureIndex, u
 	messageStream << "Compressing texture " << textureIndex << "/" << totalTextures << " (" << texture->name.data() << " [" << texture->width << " x " << texture->height << "])";
 
 	//Convert to binary string.
+	#ifdef _MSC_VER
 	return SysAllocString(messageStream.str().data());
+	#else
+	return nullptr;
+	#endif
 }
 
 TELEPORT_EXPORT void CompressNextTexture()

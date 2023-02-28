@@ -13,7 +13,7 @@ namespace teleport
 	{
 		class VideoEncodePipeline;
 		class AudioEncodePipeline;
-		typedef int64_t(__stdcall* GetUnixTimestampFn)();
+		typedef int64_t(* GetUnixTimestampFn)();	// was __stdcall*
 		enum class ReflectedStateStatus
 		{
 			UNSENT=0,SENT,CONFIRMED

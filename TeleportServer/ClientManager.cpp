@@ -17,14 +17,8 @@ using namespace server;
 
 
 	ClientManager::ClientManager()
-		: mHost(nullptr)
-		, mAsyncNetworkDataProcessingActive(false)
-		, mAsyncNetworkDataProcessingFailed(false)
-		, mInitialized(false)
-		, mListenPort(0)
-		, mMaxClients(0)
 	{
-		mLastTickTimestamp = avs::PlatformWindows::getTimestamp();
+		mLastTickTimestamp = avs::Platform::getTimestamp();
 	}
 
 	ClientManager::~ClientManager()
@@ -95,7 +89,7 @@ using namespace server;
 	void ClientManager::tick(float deltaTime)
 	{
 		std::lock_guard<std::mutex> guard(mDataMutex);
-		mLastTickTimestamp = avs::PlatformWindows::getTimestamp();
+		mLastTickTimestamp = avs::Platform::getTimestamp();
 	}
 
 	void ClientManager::addClient(ClientMessaging* client)
@@ -108,7 +102,7 @@ using namespace server;
 		std::lock_guard<std::mutex> lock(mNetworkMutex);
 		
 		uint16_t port = mHost->address.port + 2;
-		for (int i = 0; i < mPorts.size(); ++i)
+		for (int i = 0; i < (int)mPorts.size(); ++i)
 		{
 			if (!mPorts[i])
 			{
@@ -123,7 +117,7 @@ using namespace server;
 	void ClientManager::removeClient(ClientMessaging* client)
 	{
 		std::lock_guard<std::mutex> lock(mNetworkMutex);
-		for (int i = 0; i < mClients.size(); ++i)
+		for (int i = 0; i < (int)mClients.size(); ++i)
 		{
 			if (mClients[i]->clientID == client->clientID)
 			{
@@ -158,7 +152,7 @@ using namespace server;
 
 	uint16_t ClientManager::getServerPort() const
 	{
-		assert(host);
+		assert(mHost);
 
 		return mHost->address.port;
 	}
@@ -176,7 +170,7 @@ using namespace server;
 			mAsyncNetworkDataProcessingActive = true;
 			if (!mNetworkThread.joinable())
 			{
-				mLastTickTimestamp = avs::PlatformWindows::getTimestamp();
+				mLastTickTimestamp = avs::Platform::getTimestamp();
 				mNetworkThread = std::thread(&ClientManager::processNetworkDataAsync, this);
 			}
 		}
@@ -207,10 +201,10 @@ using namespace server;
 		while (mAsyncNetworkDataProcessingActive)
 		{
 			// Only continue processing if the main thread hasn't hung.
-			timestamp = avs::PlatformWindows::getTimestamp();
+			timestamp = avs::Platform::getTimestamp();
 			{
 				std::lock_guard<std::mutex> lock(mDataMutex);
-				elapsedTime = avs::PlatformWindows::getTimeElapsedInSeconds(mLastTickTimestamp, timestamp);
+				elapsedTime = avs::Platform::getTimeElapsedInSeconds(mLastTickTimestamp, timestamp);
 			}
 
 			// Proceed only if the main thread hasn't hung.

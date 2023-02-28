@@ -9,8 +9,12 @@
 
 #if defined ( _WIN32 )
 #include <sys/stat.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/param.h>
+#include <unistd.h>
 #endif
-
 #include "TeleportCore/AnimationInterface.h"
 #include "TeleportCore/TextCanvas.h"
 #ifdef _MSC_VER
@@ -23,14 +27,17 @@
 #include "Platform/Shaders/SL/CppSl.sl"
 #include "Font.h"
 #include "UnityPlugin/InteropStructures.h"
-
+#include "StringFunctions.h"
 using namespace std::string_literals;
 using namespace teleport;
 using namespace server;
-
+#ifdef _MSC_VER
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
 #if _MSC_VER < 1920
 namespace filesystem = std::experimental::filesystem;
+#else
+namespace filesystem = std::filesystem;
+#endif
 #else
 namespace filesystem = std::filesystem;
 #endif
@@ -52,7 +59,7 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 	//	p=p.substr(0,last_dot_pos);
 	return p;
 }
-
+#ifdef _MSC_VER
 static avs::guid bstr_to_guid(std::string b)
 {
 	avs::guid g;
@@ -69,7 +76,7 @@ static std::string guid_to_bstr(const avs::guid &g)
 	std::string b(txt);
 	return b;
 }
-
+#endif
 template<class T>
 std::vector<avs::uid> getVectorOfIDs(const std::map<avs::uid, T>& resourceMap)
 {
@@ -108,10 +115,20 @@ std::time_t GetFileWriteTime(const std::filesystem::path& filename)
 		return fileInfo.st_mtime;
 	}
 #else
-	{
-		auto fsTime = std::filesystem::last_write_time(filename);
-		return decltype (fsTime)::clock::to_time_t(fsTime);
-	}
+
+#ifdef CPP20
+	auto write_time=fs::last_write_time(filename.c_str());
+	const auto systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
+	const auto time = std::chrono::system_clock::to_time_t(systemTime);
+    return time;
+#else
+	struct stat buf;
+	stat(filename.c_str(), &buf);
+	buf.st_mtime;
+	time_t t = buf.st_mtime;
+	return t;
+#endif
+
 #endif
 }
 
@@ -663,7 +680,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		const avs::BufferView& indicesBufferView = sourceMesh.bufferViews[indices_accessor.bufferView];
 		sourceSize += indicesBufferView.byteLength;
 		const avs::GeometryBuffer& indicesBuffer = sourceMesh.buffers[indicesBufferView.buffer];
-		size_t componentSize = avs::GetComponentSize(indices_accessor.componentType);
+		//size_t componentSize = avs::GetComponentSize(indices_accessor.componentType);
 		size_t triangleCount= indices_accessor.count / 3;
 		if(indicesBufferView.byteStride==4)
 		{
@@ -731,6 +748,7 @@ static bool VecCompare(avs::vec2 a, avs::vec2 b)
 	float A=sqrt(a.x*a.x+a.y*a.y);
 	float B=sqrt(b.x*b.x+b.y*b.y);
 	float m = std::max(B, 1.0f);
+	m=std::max(m,A);
 	avs::vec2 diff = a - b;
 	float dif_rel = abs(diff.x+diff.y)/ m;
 	if (dif_rel > 0.1f)
@@ -815,34 +833,52 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 					const int *compare=nullptr;
 					switch(sz)
 					{
-					case 1:
-						compare = ((const int *)&(attr->GetValue<int, 1>(draco::AttributeValueIndex(i))));
-						if (!IntCompare<1>(compare, (const int*)src_data))
+						case 1:
 						{
-							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-							break;
+							auto val=(attr->GetValue<int, 1>(draco::AttributeValueIndex(i)));
+							compare = ((const int *)&val);
+							if (!IntCompare<1>(compare, (const int*)src_data))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
 						}
-					case 2:
-						compare = ((const int*)&(attr->GetValue<int, 2>(draco::AttributeValueIndex(i))));
-						if (!IntCompare<1>(compare, (const int*)src_data))
+								break;
+						case 2:
+							{
+								auto val=attr->GetValue<int, 2>(draco::AttributeValueIndex(i));
+								compare = ((const int*)&(val));
+								if (!IntCompare<1>(compare, (const int*)src_data))
+								{
+									TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+									break;
+								}
+							}
+								break;
+						case 3:
 						{
-							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-							break;
+							auto val=attr->GetValue<int, 3>(draco::AttributeValueIndex(i));
+							compare = ((const int*)&(val));
+							if (!IntCompare<1>(compare, (const int*)src_data))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
 						}
-					case 3:
-						compare = ((const int*)&(attr->GetValue<int, 3>(draco::AttributeValueIndex(i))));
-						if (!IntCompare<1>(compare, (const int*)src_data))
+								break;
+						case 4:
 						{
-							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-							break;
+							auto val=attr->GetValue<int, 4>(draco::AttributeValueIndex(i));
+							compare = ((const int*)&(val));
+							if (!IntCompare<1>(compare, (const int*)src_data))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
 						}
-					case 4:
-						compare = ((const int*)&(attr->GetValue<int, 4>(draco::AttributeValueIndex(i))));
-						if (!IntCompare<1>(compare, (const int*)src_data))
-						{
-							TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-							break;
-						}
+								break;
+						default:
+						break;
 					}
 					src_data+=sz*sizeof(int);
 				}
@@ -1214,7 +1250,7 @@ void GeometryStore::compressNextTexture()
 	if(texturesToCompress.size() == 0)
 		return;
 	auto compressionPair = texturesToCompress.begin();
-	auto& foundTexture = textures.find(compressionPair->first);
+	auto foundTexture = textures.find(compressionPair->first);
 	assert(foundTexture != textures.end());
 
 	avs::Texture& newTexture = foundTexture->second.texture;
@@ -1434,7 +1470,7 @@ template<typename ExtractedResource> bool GeometryStore::loadResourceBinary(cons
 	//auto write_time= std::filesystem::last_write_time(file_name);
 	try
 	{
-		resourceFile >> newResource;
+		resourceFile >> resource;
 	}
 	catch(...)
 	{

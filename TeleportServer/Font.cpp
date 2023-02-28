@@ -73,10 +73,10 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
     vector<float> descents(numSizes);
     vector<float> linegaps(numSizes);
 
-    for (int i = 0; i < numSizes; i++)
+    for (int i = 0; i <(int) numSizes; i++)
 	{
     	float size = ranges[i].font_size;
-        float scale = stbtt_ScaleForPixelHeight(&info, ranges[i].font_size);
+        float scale = stbtt_ScaleForPixelHeight(&info, size);
         int a, d, l;
         stbtt_GetFontVMetrics(&info, &a, &d, &l);
         
@@ -91,7 +91,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
     // calculate fill rate and crop the bitmap
     int filled = 0;
     int height = 0;
-    for (int i = 0; i < numSizes; i++)
+    for (int i = 0; i <(int) numSizes; i++)
 	{
 		auto &fontMap=fontAtlas.fontMaps[sizes[i]];
 		
@@ -213,7 +213,7 @@ bool server::Font::GetInteropFontAtlas(std::string path,InteropFontAtlas *intero
 	if(!uid)
 		return false;
 	InteropFontAtlas *sourceAtlas=nullptr;
-	auto &f=interopFontAtlases.find(path);
+	const auto &f=interopFontAtlases.find(path);
 	if(f==interopFontAtlases.end())
 	{
 		sourceAtlas=&(interopFontAtlases[path]);

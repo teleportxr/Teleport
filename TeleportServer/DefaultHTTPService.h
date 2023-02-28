@@ -19,7 +19,7 @@ namespace teleport
 		{
 		public:
 			DefaultHTTPService();
-			~DefaultHTTPService();
+			virtual ~DefaultHTTPService();
 
 			bool initialize(std::string mountDirectory, std::string certPath, std::string privateKeyPath, int32_t port) override;
 

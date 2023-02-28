@@ -64,8 +64,10 @@ bool DiscoveryService::initialize(uint16_t discovPort, uint16_t servPort, std::s
 	address = { ENET_HOST_ANY, discoveryPort };
 	if (enet_socket_bind(discoverySocket, &address) != 0)
 	{
+		#ifdef _MSC_VER
 		int err= WSAGetLastError();
 		TELEPORT_CERR << "Failed to bind discovery socket on port: " << address.port << " with error "<<err<<"\n";
+		#endif
 		enet_socket_destroy(discoverySocket);
 		discoverySocket = 0;
 		return false;
@@ -80,17 +82,22 @@ void DiscoveryService::shutdown()
 	discoverySocket = 0;
 	newClients.clear();
 }
-
+// ENet reverses the order of the ENetBuffer struct between unix and Windows.
+#ifdef _MSC_VER
+#define CREATE_ENET_BUFFER(size,ptr) { size, ptr }
+#else
+#define CREATE_ENET_BUFFER(size,ptr) { ptr,size}
+#endif
 void DiscoveryService::tick()
 {
 	if (!discoverySocket || discoveryPort == 0 || servicePort == 0)
 	{
-		printf_s("Attempted to call tick on client discovery service without initalizing!");
+		TELEPORT_INTERNAL_CERR("Attempted to call tick on client discovery service without initalizing!",0);
 		return;
 	}
 
 	avs::uid clientID = 0; //Newly received ID.
-	ENetBuffer buffer = { sizeof(clientID), &clientID }; //Buffer to retrieve client ID with.
+	ENetBuffer buffer = CREATE_ENET_BUFFER(sizeof(clientID), &clientID ); //Buffer to retrieve client ID with.
 
 	ENetAddress addr;
 	//Retrieve all packets received since last call, and add any new clients.
@@ -175,7 +182,7 @@ void DiscoveryService::sendResponseToClient(uint64_t clientID)
 {
 	if(!discoverySocket || discoveryPort == 0 || servicePort == 0)
 	{
-		printf_s("Attempted to call sendResponseToClient on client discovery service without initalising!");
+		TELEPORT_CERR<<"Attempted to call sendResponseToClient on client discovery service without initalising!\n";
 		return;
 	}
 
@@ -189,7 +196,7 @@ void DiscoveryService::sendResponseToClient(uint64_t clientID)
 	// Send response, containing port to connect on, to all clients we want to host.
 	ENetAddress addr = clientPair->second;
 	teleport::core::ServiceDiscoveryResponse response = {clientID, servicePort};
-	ENetBuffer buffer = {sizeof(response), &response};
+	ENetBuffer buffer = CREATE_ENET_BUFFER(sizeof(response), &response );
 	enet_socket_send(discoverySocket, &addr, &buffer, 1);
 }
 

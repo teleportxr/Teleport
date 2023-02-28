@@ -17,11 +17,11 @@
 #include "TeleportCore/Input.h"
 #include "enet/enet.h"
 
-typedef void(__stdcall* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
-typedef void(__stdcall* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
-typedef void(__stdcall* ProcessNewInputFn) (avs::uid uid, const teleport::core::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
-typedef void(__stdcall* DisconnectFn) (avs::uid uid);
-typedef void(__stdcall* ReportHandshakeFn) (avs::uid clientID,const teleport::core::Handshake *h);
+typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
+typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
+typedef void(TELEPORT_STDCALL* ProcessNewInputFn) (avs::uid uid, const teleport::core::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
+typedef void(TELEPORT_STDCALL* DisconnectFn) (avs::uid uid);
+typedef void(TELEPORT_STDCALL* ReportHandshakeFn) (avs::uid clientID,const teleport::core::Handshake *h);
 
 //typedef struct _ENetPeer ENetPeer;
 //typedef struct _ENetPacket ENetPacket;
@@ -222,13 +222,13 @@ namespace teleport
 			avs::ThreadSafeQueue<ENetEvent> eventQueue;
 			teleport::core::Handshake handshake;
 			static bool asyncNetworkDataProcessingFailed;
-			avs::uid clientID;
+			avs::uid clientID=0;
 			std::string clientIP;
 			bool initialized = false;
-			bool startingSession;
-			float timeStartingSession;
-			float timeSinceLastClientComm;
-			const ServerSettings* settings;
+			bool startingSession=false;
+			float timeStartingSession=0.0f;
+			float timeSinceLastClientComm=0.0f;
+			const ServerSettings* settings=nullptr;
 			std::shared_ptr<DiscoveryService> discoveryService;
 			PluginGeometryStreamingService geometryStreamingService;
 			ClientManager* clientManager;
@@ -238,10 +238,10 @@ namespace teleport
 			DisconnectFn onDisconnect; //Delegate called when the peer disconnects.
 			ReportHandshakeFn reportHandshake;
 
-			uint32_t disconnectTimeout;
-			uint16_t streamingPort;
+			uint32_t disconnectTimeout=0;
+			uint16_t streamingPort=0;
 
-			ClientNetworkContext* clientNetworkContext;
+			ClientNetworkContext* clientNetworkContext=nullptr;
 			CaptureDelegates captureComponentDelegates;
 
 			ENetPeer* peer = nullptr;

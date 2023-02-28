@@ -170,7 +170,8 @@ void GeometryStreamingService::clientStartedRenderingNode(avs::uid clientID, avs
 	if (nodePair != streamedNodeIDs.end())
 	{
 		bool result=clientStartedRenderingNode_Internal(clientID, nodeID);
-		clientRenderingNodes.insert(nodeID);
+		if(result)
+			clientRenderingNodes.insert(nodeID);
 	}
 	else
 	{

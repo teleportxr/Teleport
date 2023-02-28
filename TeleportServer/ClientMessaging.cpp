@@ -9,6 +9,7 @@
 #include "DiscoveryService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ClientManager.h"
+#include "StringFunctions.h"
 
 using namespace teleport;
 using namespace server;
@@ -25,20 +26,13 @@ ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 	: settings(settings)
 	, discoveryService(discoveryService)
 	, geometryStreamingService(settings)
+	, clientManager(clientManager)
 	, setHeadPose(setHeadPose)
 	, setControllerPose(setControllerPose)
 	, processNewInput(processNewInput)
 	, onDisconnect(onDisconnect)
-	, disconnectTimeout(disconnectTimeout)
 	, reportHandshake(reportHandshakeFn)
-	, clientManager(clientManager)
-	, peer(nullptr)
-	, clientNetworkContext(nullptr)
-	, clientID(0)
-	, startingSession(false)
-	, timeStartingSession(0)
-	, timeSinceLastClientComm(0)
-	, streamingPort(0)
+	, disconnectTimeout(disconnectTimeout)
 {}
 
 ClientMessaging::~ClientMessaging()
@@ -217,6 +211,8 @@ void ClientMessaging::handleEvents(float deltaTime)
 			{
 				receive(event);
 			}
+			break;
+		default:
 			break;
 		}
 		if (event.packet)
@@ -436,15 +432,13 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	if (!clientNetworkContext->NetworkPipeline)
 	{
 		std::string multibyteClientIP = getClientIP();
-		size_t ipLength = strlen(multibyteClientIP.data());
+		//size_t ipLength = strlen(multibyteClientIP.data());
 
-		wchar_t clientIP[20];
-		mbstowcs_s(&ipLength, clientIP, multibyteClientIP.data(), 20);
-
+		std::wstring clientIP=StringToWString(multibyteClientIP);
 		CasterNetworkSettings networkSettings =
 		{
 			static_cast<int32_t>(streamingPort),
-			clientIP,
+			clientIP.c_str(),
 			static_cast<int32_t>(handshake.clientStreamingPort),
 			static_cast<int32_t>(handshake.maxBandwidthKpS),
 			static_cast<int32_t>(handshake.udpBufferSize),

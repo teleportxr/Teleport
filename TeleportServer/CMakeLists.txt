@@ -44,6 +44,7 @@ set(src
 	HTTPService.h 
 	DefaultHTTPService.cpp
 	DefaultHTTPService.h 
+	UnixDebugOutput.h 
 )
 
 #Whether to build dynamic runtime libraries.
@@ -109,11 +110,18 @@ if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
 endif()
 #Include CUDA library location.
-#target_link_directories(TeleportServer PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
-
+if(UNIX)
+	target_link_directories(TeleportServer PUBLIC ${LIBAV_CUDA_DIR}/lib64 /usr/lib/x86_64-linux-gnu)
+	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
+endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MT)
 
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp winmm d3d12 draco libssl libcrypto fmt)
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp fmt)
+if(WIN32)
+target_link_libraries(TeleportServer draco winmm d3d12 libssl libcrypto)
+else()
+target_link_libraries(TeleportServer draco_static ssl crypto)
+endif()
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_link_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/lib)
 	target_link_libraries(TeleportServer webrtc.lib)

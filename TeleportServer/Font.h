@@ -29,7 +29,7 @@ namespace teleport
 				, avs::Texture& avsTexture
 				, std::vector<int> sizes);
 			//! Free the memory that was allocated.
-			static void Font::Free(avs::Texture& avsTexture);
+			static void Free(avs::Texture& avsTexture);
 			//! Interop
 			bool GetInteropFontAtlas(std::string path, InteropFontAtlas* interopFontAtlas);
 		};

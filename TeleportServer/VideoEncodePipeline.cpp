@@ -4,12 +4,13 @@
 #include <algorithm>
 #include <set>
 
-#include <libavstream/platforms/platform_windows.hpp>
+#include <libavstream/platforms/this_platform.h>
 #include <libavstream/libavstream.hpp>
 #include <libavstream/common.hpp>
+#ifdef _MSC_VER
 #include <libavstream/surfaces/surface_dx11.hpp>
 #include <libavstream/surfaces/surface_dx12.hpp>
-
+#endif
 
 using namespace teleport;
 using namespace server;
@@ -37,6 +38,10 @@ Result VideoEncodePipeline::initialize(const ServerSettings& settings, const Vid
 			avsSurfaceBackend = new avs::SurfaceDX12(reinterpret_cast<ID3D12Resource*>(resource));
 		}
 #endif
+		 if (deviceType == GraphicsDeviceType::Vulkan)
+		{
+			// TODO: Implement
+		}
 		else if (deviceType == GraphicsDeviceType::OpenGL)
 		{
 			// TODO: Implement

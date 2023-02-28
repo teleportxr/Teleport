@@ -45,8 +45,8 @@ namespace teleport
 				memcpy(buffer.data() + pos, &data, sizeof(T));
 			}
 		private:
-			const struct ServerSettings* settings;
-			size_t prevBufferSize;
+			const struct ServerSettings* settings=nullptr;
+			size_t prevBufferSize=0;
 			int32_t minimumPriority = 0;
 			void putPayload(avs::GeometryPayloadType t);
 			void putPayloadSize();
