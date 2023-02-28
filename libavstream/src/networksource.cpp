@@ -4,8 +4,8 @@
 #include <iostream>
 #include "networksource_p.hpp"
 #include <ElasticFrameProtocol.h>
-#include <libavstream\queue.hpp>
-#include <libavstream\timer.hpp>
+#include <libavstream/queue.hpp>
+#include <libavstream/timer.hpp>
 
 #ifdef __ANDROID__
 #include <pthread.h>

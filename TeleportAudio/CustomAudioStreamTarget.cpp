@@ -15,7 +15,7 @@ namespace sca
 		return avs::Result::OK;
 	}
 
-	avs::Result CustomAudioStreamTarget::process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType payloadType)
+	avs::Result CustomAudioStreamTarget::process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType )
 	{
 		const auto data = (uint8_t*)(buffer);
 		mPlayCallback(data, bufferSizeInBytes);

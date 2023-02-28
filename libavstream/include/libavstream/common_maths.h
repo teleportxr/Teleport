@@ -87,7 +87,7 @@ namespace avs
 
 		float Length() const
 		{
-			return std::sqrtf(x * x + y * y);
+			return sqrtf(x * x + y * y);
 		}
 
 		vec2 Normalised() const
@@ -102,7 +102,7 @@ namespace avs
 
 		vec2 GetAbsolute() const
 		{
-			return vec2(abs(x), abs(y));
+			return vec2(fabs(x), fabs(y));
 		}
 
 		template<typename OutStream>
@@ -229,7 +229,7 @@ namespace avs
 	}
 	inline vec3 abs(const vec3 &v)
 	{
-		vec3 result={::abs(v.x), ::abs(v.y), ::abs(v.z)};
+		vec3 result={::fabsf(v.x), ::fabsf(v.y), ::fabsf(v.z)};
 		return result;
 	}
 	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec3& vec)

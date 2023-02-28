@@ -1,6 +1,7 @@
 // (c) Copyright 2018-2022 Simul Software Ltd
 
 #include "stream/parser_geo.hpp"
+#include <string.h>
 
 
 namespace avs

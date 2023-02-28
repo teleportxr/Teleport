@@ -6,6 +6,14 @@
 #include <time.h>
 #include <libavstream/common.hpp>
 #include <libavstream/platforms/platform_common.hpp>
+#include <cstring>
+
+inline void memcpy_s(void *targ, size_t size1,void* src,size_t size2)
+{
+	assert(size1<=size2);
+	size1;
+	memcpy(targ,src,size2);
+}
 
 namespace avs
 {

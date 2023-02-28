@@ -5,19 +5,20 @@
 
 #include <algorithm>
 #include <map>
+#include <math.h>
 
 #include "common_p.hpp"
 #include <encoders/enc_nvidia.hpp>
-
+#ifdef _MSC_VER
 #include <libavstream/surfaces/surface_dx11.hpp>
 #include <libavstream/surfaces/surface_dx12.hpp>
-
+#endif
 /**
 	Low-latency use cases like game-streaming, video conferencing etc.
 
 	1. Ultra-low latency or low latency Tuning Info
 	2. Rate control mode = CBR
-	3. Multi Pass – Quarter/Full (evaluate and decide)
+	3. Multi Pass ï¿½ Quarter/Full (evaluate and decide)
 	4. Very low VBV buffer size (e.g. single frame = bitrate/framerate)
 	5. No B Frames
 	6. Infinite GOP length
@@ -27,6 +28,18 @@
 	10. Non-reference P frames***
 	11. Force IDR***
 */
+
+#ifndef _MSC_VER
+bool operator==(GUID a,GUID b)
+{
+	auto c=memcmp(&a,&b,sizeof(GUID));
+	return c==0;
+}
+bool operator!=(GUID a,GUID b)
+{
+	return !(operator==(a,b));
+}
+#endif
 
 namespace
 {
@@ -150,7 +163,7 @@ namespace avs
 #if !defined(PLATFORM_WINDOWS)
 			AVSLOG(Error) << "EncoderNV: DirectX 11 is only supported on Windows platform";
 			return Result::EncoderBackend_InvalidDevice;
-#endif
+#else
 			if (!device)
 			{
 				AVSLOG(Error) << "EncoderNV: Invalid DirectX 11 device";
@@ -164,12 +177,13 @@ namespace avs
 					return Result::EncoderBackend_InvalidDevice;
 				}
 			}
+#endif
 			break;
 		case DeviceType::Direct3D12:
 #if !defined(PLATFORM_WINDOWS)
 			AVSLOG(Error) << "EncoderNV: DirectX 12 is only supported on Windows platform";
 			return Result::EncoderBackend_InvalidDevice;
-#endif
+#else
 			if (!device)
 			{
 				AVSLOG(Error) << "EncoderNV: Invalid DirectX 12 device";
@@ -186,6 +200,7 @@ namespace avs
 			}
 #endif
 			m_gResourceSupport = false;
+#endif
 			break;
 		case DeviceType::OpenGL:
 			// TODO: Implement getting CUDA device.
@@ -858,6 +873,8 @@ namespace avs
 			else if (surfaceFormat == SurfaceFormat::ABGR16)
 				ppKernel = m_kCopyPixels16;
 			break;
+		default:
+			break;
 		}
 		if (!ppKernel)
 		{
@@ -917,8 +934,8 @@ namespace avs
 		};
 
 		const unsigned int blockDim = 16;
-		const unsigned int gridDimX = (unsigned int)std::ceilf(float(frameWidth) / blockDim / gridDimDivisor);
-		const unsigned int gridDimY = (unsigned int)std::ceilf(float(frameHeight) / blockDim / gridDimDivisor);
+		const unsigned int gridDimX = (unsigned int)ceilf(float(frameWidth) / blockDim / gridDimDivisor);
+		const unsigned int gridDimY = (unsigned int)ceilf(float(frameHeight) / blockDim / gridDimDivisor);
 
 		Result result = Result::OK;
 		if (CUFAILED(cuLaunchKernel(ppKernel, gridDimX, gridDimY, 1, blockDim, blockDim, 1, 0, 0, ppKernelParams, nullptr)))
@@ -977,7 +994,10 @@ namespace avs
 		const auto& bd = m_bufferData[bufferIndex];
 
 		// wait for 1 second which is a lot in terms of gpu time.
+#if defined(PLATFORM_WINDOWS)
 		if (WaitForSingleObject(bd.completionEvent, 1000) == WAIT_FAILED)
+#else
+#endif
 		{
 			m_bufferIndexQueue.pop();
 			return Result::EncoderBackend_EncodeFailed;

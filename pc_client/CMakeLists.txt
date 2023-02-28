@@ -34,7 +34,8 @@ if(WIN32)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
 else()
-	message(FATAL_ERROR "Unsupported platform!")
+	message("Unsupported platform for pc_client!")
+	return()
 endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
@@ -105,3 +106,56 @@ message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
 
 
 install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
+
+
+# Create an installer for the client:
+#set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+#include(InstallRequiredSystemLibraries)
+#install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+#        DESTINATION programs
+#        COMPONENT applications)
+set(CPACK_PACKAGE_NAME "TeleportClientInstaller")
+set(CPACK_PACKAGE_VENDOR "Simul")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for the TeleportVR PC CLient")
+
+# get commit id from a file:
+file(TOUCH "teleport_commit.properties")
+file(READ "teleport_commit.properties" ver)
+if(NOT( "${ver}" STREQUAL ""))
+	message(${ver})
+	string(REGEX MATCH "TELEPORT_COMMIT= ([a-zA-Z0-9]+)" _ ${ver})
+endif()
+set(TELEPORT_COMMIT ${CMAKE_MATCH_1})
+set(CPACK_PACKAGE_VERSION_MAJOR "${TELEPORT_COMMIT}")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+message("TELEPORT_COMMIT ${TELEPORT_COMMIT}")
+if("${TELEPORT_COMMIT}" STREQUAL "")
+	message("Test installer build.")
+	message("CPACK_PACKAGING_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX}")
+	#C:/TestInstallTeleport)
+endif()
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "TeleportVR")
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${TELEPORT_COMMIT}-x64")
+message("CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME}")
+file(WRITE "build_pc_client/installer_filename.properties" "TELEPORT_CLIENT_INSTALLER_FILENAME=${CPACK_PACKAGE_FILE_NAME}.exe")
+#
+set(CPACK_GENERATOR "NSIS")
+set(CPACK_COMPONENTS_ALL client )
+
+#set(CPACK_COMPONENT_CTDATA_GROUP "data")
+#set(CPACK_COMPONENT_INSTRUCTIONDATA_GROUP "data")
+#
+#set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "applications (hello & world)")
+#set(CPACK_COMPONENT_GROUP_DATA_DESCRIPTION "data (CT and instructions)")
+#
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportClientLicence.md")
+##Create an icon which will be displayed inside the installation wizard, and an icon for the installer and uninstaller. Tell CPack about these icons.
+set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
+set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
+set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
+##Set the programs, directories and files, displayed under the Start menu shortcut.
+set(CPACK_NSIS_MENU_LINKS "build_pc_client\\\\bin\\\\Release\\\\pc_client" "Teleport VR Client")
+
+include(CPack)

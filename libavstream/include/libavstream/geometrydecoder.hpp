@@ -82,7 +82,7 @@ namespace avs
 		std::unique_ptr<GeometryParserInterface> m_parser;
 		std::vector<uint8_t> m_buffer;
 		bool m_configured = false;
-		int m_streamId = 0;;
+		int m_streamId = 0;
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
 		void   onOutputUnlink(int slot, PipelineNode* node) override;

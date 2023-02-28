@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstring>	// for memcpy
 #include <cstdint>
+#include <vector>
 
 namespace avs
 {

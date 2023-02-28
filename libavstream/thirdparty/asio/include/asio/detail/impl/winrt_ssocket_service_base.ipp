@@ -249,7 +249,7 @@ asio::error_code winrt_ssocket_service_base::do_set_option(
       if (optlen == sizeof(int))
       {
         int value = 0;
-        std::memcpy(&value, optval, optlen);
+        memcpy(&value, optval, optlen);
         impl.socket_->Control->KeepAlive = !!value;
         ec = asio::error_code();
       }
@@ -264,7 +264,7 @@ asio::error_code winrt_ssocket_service_base::do_set_option(
       if (optlen == sizeof(int))
       {
         int value = 0;
-        std::memcpy(&value, optval, optlen);
+        memcpy(&value, optval, optlen);
         impl.socket_->Control->NoDelay = !!value;
         ec = asio::error_code();
       }
@@ -306,7 +306,7 @@ void winrt_ssocket_service_base::do_get_option(
       if (*optlen >= sizeof(int))
       {
         int value = impl.socket_->Control->KeepAlive ? 1 : 0;
-        std::memcpy(optval, &value, sizeof(int));
+        memcpy(optval, &value, sizeof(int));
         *optlen = sizeof(int);
         ec = asio::error_code();
       }
@@ -321,7 +321,7 @@ void winrt_ssocket_service_base::do_get_option(
       if (*optlen >= sizeof(int))
       {
         int value = impl.socket_->Control->NoDelay ? 1 : 0;
-        std::memcpy(optval, &value, sizeof(int));
+        memcpy(optval, &value, sizeof(int));
         *optlen = sizeof(int);
         ec = asio::error_code();
       }

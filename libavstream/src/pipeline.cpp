@@ -3,6 +3,7 @@
 
 #include "node_p.hpp"
 #include "libavstream/pipeline.hpp"
+#include <algorithm>
 
 using namespace avs;
 
@@ -29,11 +30,19 @@ uint64_t Pipeline::GetTimestamp() const
 
 void Pipeline::add(PipelineNode* node)
 {
+	#ifdef _MSC_VER
 	if (std::find(std::begin(m_nodes), std::end(m_nodes), node) == m_nodes.end())
+	#else
+	for(auto n:m_nodes)
+	{
+		if(n==node)
+			return;
+	}
+	#endif
 	{
 		m_nodes.push_back(node);
 	}
-	else
+	//else
 	{
 		//AVSLOG(Warning) << "Pipeline: trying to add node that's already in this pipeline.\n";
 		// Not a problem.

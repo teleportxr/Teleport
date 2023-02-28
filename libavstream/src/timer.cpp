@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2022 Simul Software Ltd
 
 #include <libavstream/timer.hpp>
+#include <string.h>
 
 namespace avs 
 {

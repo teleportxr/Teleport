@@ -7,6 +7,7 @@
 #include "platform.hpp"
 #include "logger.hpp"
 #include <iostream>
+#include <cmath>
 
 namespace {
 #include "dec_nvidia.cubin.inl"
@@ -25,16 +26,16 @@ namespace {
 }
 
 // CUVID API
-static tcuvidCreateVideoParser* cuvidCreateVideoParser;
-static tcuvidParseVideoData* cuvidParseVideoData;
-static tcuvidDestroyVideoParser* cuvidDestroyVideoParser;
-static tcuvidGetDecoderCaps* cuvidGetDecoderCaps;
-static tcuvidCreateDecoder* cuvidCreateDecoder;
-static tcuvidDestroyDecoder* cuvidDestroyDecoder;
-static tcuvidReconfigureDecoder* cuvidReconfigureDecoder;
-static tcuvidDecodePicture* cuvidDecodePicture;
-static tcuvidMapVideoFrame* cuvidMapVideoFrame;
-static tcuvidUnmapVideoFrame* cuvidUnmapVideoFrame;
+tcuvidCreateVideoParser* cuvidCreateVideoParser;
+tcuvidParseVideoData* cuvidParseVideoData;
+tcuvidDestroyVideoParser* cuvidDestroyVideoParser;
+tcuvidGetDecoderCaps* cuvidGetDecoderCaps;
+tcuvidCreateDecoder* cuvidCreateDecoder;
+tcuvidDestroyDecoder* cuvidDestroyDecoder;
+tcuvidReconfigureDecoder* cuvidReconfigureDecoder;
+tcuvidDecodePicture* cuvidDecodePicture;
+tcuvidMapVideoFrame* cuvidMapVideoFrame;
+tcuvidUnmapVideoFrame* cuvidUnmapVideoFrame;
 
 static const unsigned long numDecodeSurfaces = 20; // 20 is Worst case for H264/HEVC.
 
@@ -72,7 +73,7 @@ namespace avs
 			1.0f, -wb * (1.0f - wb) / 0.5f / (1 - wb - wr), -wr * (1 - wr) / 0.5f / (1 - wb - wr),
 			1.0f, (1.0f - wb) / 0.5f, 0.0f,
 		};
-		char* standard = "";
+		const char* standard = "";
 		switch (iMatrix)
 		{
 		case ColorSpaceStandard_BT709:
@@ -184,7 +185,11 @@ namespace avs
 #endif
 			m_gResourceSupport = false;
 			break;
+		case DeviceType::Vulkan:
+			AVSLOG(Error) << "DecoderNV: Vulkan device support is not implemented.";
+			return Result::DecoderBackend_InvalidDevice;
 		case DeviceType::OpenGL:
+		default:
 			AVSLOG(Error) << "DecoderNV: OpenGL device support is not implemented.";
 			return Result::DecoderBackend_InvalidDevice;
 		}
@@ -481,6 +486,7 @@ namespace avs
 				m_colorKernel = m_kNV12toR16;
 				break;
 			case SurfaceFormat::NV12:
+			default:
 				/* Not implemented yet. */
 				break;
 		}
@@ -624,8 +630,8 @@ namespace avs
 		const unsigned int blockDimX = 32;
 		const unsigned int blockDimY = 2;
 		const float dimYDiv = m_params.useYUV444ChromaFormat ? 1.f : 2.f;
-		const unsigned int gridDimX = (unsigned int)std::ceilf(float(m_frameWidth) / blockDimX / 2.f);
-		const unsigned int gridDimY = (unsigned int)std::ceilf(float(m_frameHeight) / blockDimY / dimYDiv);
+		const unsigned int gridDimX = (unsigned int)ceilf(float(m_frameWidth) / blockDimX / 2.f);
+		const unsigned int gridDimY = (unsigned int)ceilf(float(m_frameHeight) / blockDimY / dimYDiv);
 		
 		void* kernelParams[] = 
 		{

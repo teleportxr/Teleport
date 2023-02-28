@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <set>
 
-#include <libavstream/platforms/platform_windows.hpp>
+#include <libavstream/platforms/this_platform.h>
 #include <libavstream/libavstream.hpp>
 #include <libavstream/common.hpp>
 #include <libavstream/audio/audio_interface.h>

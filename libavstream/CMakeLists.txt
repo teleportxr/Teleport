@@ -227,7 +227,6 @@ if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601 INIT_CUDA_D3D11=1)
 	find_program(xxd NAMES xxd.exe HINTS tools/win32)
 	
-
 # Android platform
 elseif(ANDROID)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Og -DNDEBUG")
@@ -237,8 +236,17 @@ elseif(ANDROID)
 		src/platforms/platform_posix.hpp
 	)
 	set(def_platform PLATFORM_ANDROID)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Og -DNDEBUG")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Og -D_DEBUG -DDEBUG")
+	set(src_platform
+		src/platforms/platform_posix.cpp
+	)
+	set(def_platform PLATFORM_LINUX)
+	find_program(xxd NAMES xxd)
 else()
-	message(FATAL_ERROR "Unsupported platform!")
+message("Unsupported platform for libavstream!")
+return()
 endif() 
 
 # CUDA kernels
@@ -260,7 +268,8 @@ add_custom_target(
 )
 set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
 
-
+set(CMAKE_CXX_STANDARD 17 )
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(libavstream STATIC ${hdr_private} ${src_private} ${hdr_public} ${src_platform})
 #set_target_runtime(libavstream static)
 set_target_properties(libavstream PROPERTIES PREFIX "")

@@ -8,7 +8,7 @@
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <libavstream/stream/parser_interface.hpp>
 
-#include <libavstream\timer.hpp>
+#include <libavstream/timer.hpp>
 
 
 using namespace avs;

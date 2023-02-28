@@ -81,7 +81,7 @@ namespace avs
 			return Result::IO_Retry;
 		}
 
-		std::memcpy(buffer, front, frontSize);
+		memcpy(buffer, front, frontSize);
 		bytesRead = frontSize;
 		pop();
 

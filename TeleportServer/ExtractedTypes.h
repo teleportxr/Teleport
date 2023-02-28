@@ -7,7 +7,9 @@
 #include <ctime>
 #include <algorithm>
 
+#ifdef _MSC_VER
 #include "comdef.h"
+#endif
 
 #include "libavstream/geometry/material_interface.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"

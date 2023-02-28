@@ -53,13 +53,13 @@ namespace avs {
 		{
 			if (d().m_readCursor < d().m_writeCursor)
 			{
-				std::memcpy(buffer, &d().m_buffer[d().m_readCursor], bytesRead);
+				memcpy(buffer, &d().m_buffer[d().m_readCursor], bytesRead);
 			}
 			else {
 				const size_t N1 = bufferCapacity - d().m_readCursor;
 				const size_t N2 = bytesRead - N1;
-				std::memcpy(buffer, &d().m_buffer[d().m_readCursor], N1);
-				std::memcpy(static_cast<char*>(buffer) + N1, &d().m_buffer[0], N2);
+				memcpy(buffer, &d().m_buffer[d().m_readCursor], N1);
+				memcpy(static_cast<char*>(buffer) + N1, &d().m_buffer[0], N2);
 			}
 			d().m_readCursor = (d().m_readCursor + bytesRead) % bufferCapacity;
 			d().m_bytesAvailable -= bytesRead;
@@ -84,11 +84,11 @@ namespace avs {
 			{
 				const size_t N1 = bufferCapacity - d().m_writeCursor;
 				const size_t N2 = bytesWritten - N1;
-				std::memcpy(&d().m_buffer[d().m_writeCursor], buffer, N1);
-				std::memcpy(&d().m_buffer[0], static_cast<const char*>(buffer) + N1, N2);
+				memcpy(&d().m_buffer[d().m_writeCursor], buffer, N1);
+				memcpy(&d().m_buffer[0], static_cast<const char*>(buffer) + N1, N2);
 			}
 			else {
-				std::memcpy(&d().m_buffer[d().m_writeCursor], buffer, bytesWritten);
+				memcpy(&d().m_buffer[d().m_writeCursor], buffer, bytesWritten);
 			}
 			d().m_writeCursor = (d().m_writeCursor + bytesWritten) % bufferCapacity;
 			d().m_bytesAvailable += bytesWritten;

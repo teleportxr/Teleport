@@ -31,7 +31,7 @@ namespace avs {
 			return Result::Node_InvalidConfiguration;
 		}
 
-		d().m_file.open(filename, openMode);
+		d().m_file.open(filename, (std::ios_base::openmode)openMode);
 		if (!d().m_file.is_open())
 		{
 			setNumSlots(0, 0);

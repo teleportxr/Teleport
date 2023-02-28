@@ -4,12 +4,16 @@
  */
 #pragma once
 
-#include "libavstream/common.hpp"
+#include <libavstream/common.hpp>
+#include <libavstream/platforms/this_platform.h>
 #include "TeleportCore/AnimationInterface.h"
 #include "TeleportCore/TextCanvas.h"
 #include "libavstream/geometry/mesh_interface.hpp"
+#ifdef _MSC_VER
 #include <wtypes.h>
+#endif
 
+typedef wchar_t *BSTR;
 //! Interop struct to receive nodes from external code.
 struct InteropNode
 {
@@ -197,7 +201,7 @@ struct InteropMaterial
 		std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> convertedExtensions;
 
 		//Stitch extension map together.
-		for(int i = 0; i < extensionCount; i++)
+		for(int i = 0; i < (int)extensionCount; i++)
 		{
 			avs::MaterialExtensionIdentifier extensionID = extensionIDs[i];
 

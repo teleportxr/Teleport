@@ -3,7 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include <libavstream/platforms/platform_windows.hpp>
+#include <libavstream/platforms/this_platform.h>
+
 #include <libavstream/libavstream.hpp>
 
 #define WITH_REMOTEPLAY_STATS 1
