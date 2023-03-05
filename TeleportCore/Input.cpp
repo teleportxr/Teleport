@@ -4,7 +4,9 @@
 using namespace teleport;
 using namespace core;
 static uint32_t nextEventID = 0;
-
+#ifdef _MSC_VER
+#define isnanf isnan
+#endif
 
 void Input::clearEvents()
 {

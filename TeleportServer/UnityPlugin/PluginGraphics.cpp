@@ -9,7 +9,6 @@
 #include "IUnityGraphicsVulkan.h"
 #endif
 
-//#include "IUnityGraphicsVulkan.h"
 
 #include <iostream>
 
@@ -146,6 +145,7 @@ static void AssignGraphicsDevice()
 {
     switch (SGM::mRendererType)
     {
+// TODO: Vulkan support for Windows
 #ifdef PLATFORM_WINDOWS
         case kUnityGfxRendererD3D11:
         {
@@ -157,13 +157,13 @@ static void AssignGraphicsDevice()
             SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsD3D12>()->GetDevice();
             break;
         }
-	#endif
+#else
         case kUnityGfxRendererVulkan:
         {
-            //Uncomment this when we support Vulkan. It would require addition of vulkan include paths
            	SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsVulkan>()->Instance().device;
             break;
         }
+#endif
         default:
             SGM::mGraphicsDevice = nullptr;
             break;
