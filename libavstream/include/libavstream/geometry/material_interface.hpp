@@ -61,6 +61,11 @@ namespace avs
 
 		return byteString;
 	}
+	static inline std::string convertToByteString(const char *txt)
+	{
+		std::string byteString(txt);
+		return byteString;
+	}
 	
 	struct guid
 	{

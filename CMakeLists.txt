@@ -253,13 +253,11 @@ endif()
 
 add_subdirectory(thirdparty/enet)
 set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
-target_compile_options(enet PRIVATE -fPIC)
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
-# TODO: fix basis compile on Linux, remove when possible.
-#target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 
 if(TELEPORT_UNIX)
+	target_compile_options(enet PRIVATE -fPIC)
 	target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 endif()
 

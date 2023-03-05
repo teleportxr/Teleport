@@ -734,7 +734,7 @@ TELEPORT_EXPORT avs::uid GenerateUid()
 }
 ///libavstream END
 
-TELEPORT_EXPORT avs::uid GetOrGenerateUid(BSTR path)
+TELEPORT_EXPORT avs::uid GetOrGenerateUid(const char *path)
 {
 	if(!path)
 		return 0;
