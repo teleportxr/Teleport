@@ -1060,9 +1060,9 @@ void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,st
 
 template<typename ExtractedResource> std::string MakeResourceFilename(ExtractedResource& resource)
 {
-		std::string file_name;
-		file_name+=resource.path+resource.fileExtension();
-		return file_name;
+	std::string file_name;
+	file_name+=resource.path+resource.fileExtension();
+	return file_name;
 }
 
 void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
@@ -1189,8 +1189,8 @@ avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const 
 	avs::uid canvas_uid=GetOrGenerateUid(relative_asset_path);
 	teleport::core::TextCanvas &textCanvas=textCanvases[canvas_uid];
 
-	textCanvas.text=avs::convertToByteString(interopTextCanvas->text);
-	std::string cacheFontFilePath=avs::convertToByteString(interopTextCanvas->font)+".font";
+	textCanvas.text=interopTextCanvas->text;
+	std::string cacheFontFilePath=std::string(interopTextCanvas->font)+".font";
 	avs::uid font_uid=PathToUid(cacheFontFilePath);
 	if(!font_uid)
 		return 0;
@@ -1544,6 +1544,8 @@ template<typename ExtractedResource> bool GeometryStore::saveResources(const std
 	std::filesystem::create_directories(fspath);
 	for(const auto& resourceData : resourceMap)
 	{
+		if(resourceData.second.path.length()==0)
+			continue;
 		std::string file_name=(path+"/")+MakeResourceFilename(resourceData.second);
 		if(!saveResource(file_name,resourceData.second))
 			return false;

@@ -76,6 +76,12 @@ if(TELEPORT_UNITY)
 		)
 	#Include Unity's native plugin interface headers
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_UNITY_EDITOR_DIR}/Data/PluginAPI)
+
+	set_target_properties(TeleportServer PROPERTIES
+		ARCHIVE_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
+		LIBRARY_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
+		RUNTIME_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
+		)
 else()
 	add_library(TeleportServer STATIC ${src})
 endif()
@@ -120,7 +126,7 @@ target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet
 if(WIN32)
 target_link_libraries(TeleportServer draco winmm d3d12 libssl libcrypto)
 else()
-target_link_libraries(TeleportServer draco_static ssl crypto)
+target_link_libraries(TeleportServer draco_static ssl crypto cuda cudart)
 endif()
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_link_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/lib)

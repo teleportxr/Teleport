@@ -30,7 +30,6 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	{
 		return Result::Node_InvalidConfiguration;
 	}
-
 	try
 	{
 		srt_startup();

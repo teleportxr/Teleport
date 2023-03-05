@@ -13,11 +13,11 @@
 #include <wtypes.h>
 #endif
 
-typedef wchar_t *BSTR;
+
 //! Interop struct to receive nodes from external code.
 struct InteropNode
 {
-	BSTR name;
+	char* name;
 
 	avs::Transform localTransform;
 	avs::Transform globalTransform;
@@ -53,7 +53,7 @@ struct InteropNode
 	{
 		return
 		{
-			avs::convertToByteString(name),
+			name,
 
 			localTransform,
 			globalTransform,
@@ -87,8 +87,8 @@ struct InteropNode
 
 struct InteropSkin
 {
-	BSTR name;
-	BSTR path;
+	char* name;
+	char* path;
 
 	size_t numInverseBindMatrices;
 	avs::Mat4x4* inverseBindMatrices;
@@ -105,7 +105,7 @@ struct InteropSkin
 	{
 		return
 		{
-			avs::convertToByteString(name),
+			name,
 			{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
 			{boneIDs, boneIDs + numBones},
 			{jointIDs, jointIDs + numJoints},
@@ -120,8 +120,8 @@ struct InteropSkin
 
 struct InteropMesh
 {
-	BSTR name;
-	BSTR path;
+	const char * name;
+	const char * path;
 
 	int64_t primitiveArrayCount;
 	avs::PrimitiveArray* primitiveArrays;
@@ -141,7 +141,7 @@ struct InteropMesh
 	operator avs::Mesh() const
 	{
 		avs::Mesh newMesh;
-		newMesh.name = avs::convertToByteString(name);
+		newMesh.name = name;
 
 		//Create vector in-place with pointer.
 		newMesh.primitiveArrays = {primitiveArrays, primitiveArrays + primitiveArrayCount};
@@ -180,8 +180,8 @@ struct InteropMesh
 
 struct InteropMaterial
 {
-	BSTR name;
-	BSTR path;
+	const char* name;
+	const char* path;
 	avs::MaterialMode materialMode;
 	avs::PBRMetallicRoughness pbrMetallicRoughness;
 	avs::TextureAccessor normalTexture;
@@ -230,8 +230,8 @@ struct InteropMaterial
 
 struct InteropTexture
 {
-	BSTR name=nullptr;
-	BSTR path=nullptr;
+	const char* name=nullptr;
+	const char* path=nullptr;
 
 	uint32_t width=0;
 	uint32_t height=0;
@@ -256,7 +256,7 @@ struct InteropTexture
 	{
 		return
 		{
-			avs::convertToByteString(name),
+			name,
 			width,
 			height,
 			depth,
@@ -298,8 +298,8 @@ struct InteropTransformKeyframe
 
 struct InteropTransformAnimation
 {
-	BSTR name;
-	BSTR path;
+	const char *name;
+	const char * path;
 	int64_t boneCount;
 	InteropTransformKeyframe* boneKeyframes=nullptr;
 
@@ -307,7 +307,7 @@ struct InteropTransformAnimation
 	{
 		return
 		{
-			avs::convertToByteString(name),
+			name,
 			{boneKeyframes, boneKeyframes + boneCount}
 		};
 	}
@@ -315,8 +315,8 @@ struct InteropTransformAnimation
 
 struct InteropTextCanvas
 {
-	BSTR text=nullptr;
-	BSTR font=nullptr;
+	char* text=nullptr;
+	char* font=nullptr;
 	int size=0;
 	float lineHeight=0.0f;
 	float width=0;
@@ -342,7 +342,7 @@ struct InteropFontMap
 //! Struct to pass a font atlas back to the engine.
 struct InteropFontAtlas
 {
-	BSTR font_path=nullptr;
+	const char * font_path=nullptr;
 	int numMaps=0;
 	InteropFontMap *fontMaps=nullptr;
 };

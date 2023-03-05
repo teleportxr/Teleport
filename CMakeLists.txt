@@ -121,10 +121,12 @@ set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 
-if(TELEPORT_UNITY)
-	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${TELEPORT_UNITY_PLUGINS_DIR} )
-else()
-	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+if(TELEPORT_WINDOWS)
+	if(TELEPORT_UNITY)
+		set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${TELEPORT_UNITY_PLUGINS_DIR} )
+	else()
+		set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+	endif()
 endif()
 
 if(TELEPORT_WINDOWS)
@@ -138,7 +140,7 @@ endif()
 if(TELEPORT_UNIX)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
-
+	add_compile_definitions(PRIVATE _GLIBCXX_DEBUG)
 endif()
 #defaults for basisu
 if(TELEPORT_SERVER)
@@ -181,7 +183,8 @@ function(SetTeleportDefaults targname)
 		# TODO: This is a fix for errors of the form
 		# relocation R_X86_64_32S against `.rodata' can not be used when making a shared object; recompile with -fPIC
 		target_compile_options(${targname} PRIVATE -fPIC)
-		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=)
+		# dummy for stdcall, PLUS make Clang show debug info for strings and other stl stuff:
+		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL= _GLIBCXX_DEBUG)
 	endif()
 	target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)
 	#message("target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)")
@@ -256,7 +259,7 @@ target_compile_options(enet PRIVATE -fPIC)
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
 # TODO: fix basis compile on Linux, remove when possible.
-target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
+#target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 
 add_subdirectory(thirdparty/draco)
 # Here we will put all the draco targets into the thirdparty/draco solution folder:

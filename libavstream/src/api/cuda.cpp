@@ -1,6 +1,6 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
-#if defined(PLATFORM_WINDOWS)
+#if defined(LIBAV_USE_CUDA)
 
 #include <api/cuda.hpp>
 #include <libraryloader.hpp>

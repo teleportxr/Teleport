@@ -8,7 +8,7 @@ option(LIBAV_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 option(LIBAV_BUILD_SHARED_LIBS "Build shared library" OFF)
 option(LIBAV_USE_SRT "Use SRT?" ON)
 option(LIBAV_USE_EFP "Use EFP?" ON)
-
+option(LIBAV_USE_CUDA "Use CUDA for encoding?" ON)
 set(LIBAVS)
 if(NOT ANDROID)
 	option(LIBAV_BUILD_TESTS "Build tests" OFF)
@@ -292,22 +292,12 @@ if(LIBAV_USE_EFP)
 endif()
 
 if(NOT TELEPORT_SERVER)
-	
-	
     set(BUILD_CURL_EXE OFF CACHE BOOL "")
     set(CURL_STATIC_CRT ON CACHE BOOL "")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 	set(BUILD_TESTING OFF CACHE BOOL "")
 	# SCHANNEL is for native windows SSL.
 	set(CURL_USE_SCHANNEL ON CACHE BOOL "")
-	#set(CURL_USE_OPENSSL ON CACHE BOOL "")
-	# curl fails to find Wldap32 lib for some reason if openssl is enabled and LDAP is not diabled.
-	#set(CURL_DISABLE_LDAP ON CACHE BOOL "")
-	#set(CURL_DISABLE_LDAPS ON CACHE BOOL "")
-	#set(USE_WIN32_LDAP OFF CACHE BOOL "")
-	#set(CMAKE_LDAP_LIB "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64/Wldap32" CACHE STRING "")
-	#set(CMAKE_LBER_LIB ${CMAKE_LDAP_LIB} CACHE STRING "")
-	#add_definitions(-DCURL_STATICLIB)
     add_subdirectory(thirdparty/curl)
 	set_target_properties(libcurl PROPERTIES FOLDER AVStream/thirdparty/curl)
 	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1) 
@@ -329,6 +319,7 @@ if(LIBAV_USE_SRT)
 else()
 	target_compile_definitions(libavstream PRIVATE LIBAV_USE_SRT=0)
 endif()
+target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}>)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(libavstream PRIVATE PLATFORM_64BIT)
@@ -346,8 +337,9 @@ endif()
 
 #Include CUDA library location.
 target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
+target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib64")
 
-target_link_libraries(libavstream cudart asio nv srt_static efp ${curl_libraries})
+target_link_libraries(libavstream cuda cudart asio nv srt_static efp ${curl_libraries})
 
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)
