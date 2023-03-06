@@ -213,6 +213,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="../../../../firstparty\Platform\Math\Vector3.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\Math\VirtualVector.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\Math\mmxrand.cpp" />
+    <ClCompile Include="..\..\..\..\firstparty\Platform\Math\Float16.cpp" />
     <ClInclude Include="../../../../firstparty\Platform\Math\Align.h" />
     <ClInclude Include="../../../../firstparty\Platform\Math\Decay.h" />
     <ClInclude Include="../../../../firstparty\Platform\Math\Export.h" />
@@ -239,6 +240,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="../../../../firstparty\Platform\Math\afxres.h" />
     <ClInclude Include="../../../../firstparty\Platform\Math\mmxrand.h" />
     <ClInclude Include="../../../../firstparty\Platform\Math\resource.h" />
+    <ClInclude Include="..\..\..\..\firstparty\Platform\Math\Float16.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

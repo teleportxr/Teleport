@@ -624,6 +624,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 
 	const int width = texture->width;
 	const int height = texture->length;
+	const char* name = texture->GetName();
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
 	const ImVec2 regionSize =  ImGui::GetContentRegionAvail();
 	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
@@ -631,7 +632,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 		
 	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),m,slice);
-	ImGui_ImplPlatform_DrawTexture(nullptr,m, slice,drawTexture,(int)showWidth,(int)size.y);
+	ImGui_ImplPlatform_DrawTexture(drawTexture, "",m, slice,(int)showWidth,(int)size.y);
 	
 }
 
