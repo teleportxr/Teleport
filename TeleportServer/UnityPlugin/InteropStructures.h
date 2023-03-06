@@ -266,11 +266,11 @@ struct InteropTexture
 			format,
 			compression,
 			compressed,
-			dataSize,
-			data,
 			sampler_uid,
 			valueScale,
-			cubemap
+			cubemap,
+			dataSize,
+			data
 		};
 	}
 };

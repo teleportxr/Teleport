@@ -160,6 +160,11 @@ namespace avs
 
 	struct Texture 
 	{
+		~Texture()
+		{
+			if(own_data)
+				delete[] data;
+		}
 		std::string name;
 
 		uint32_t width;
@@ -172,101 +177,55 @@ namespace avs
 		TextureFormat format;
 		TextureCompression compression;
 		bool compressed=false;
-		uint32_t dataSize;
-		unsigned char *data;
 
 		uid sampler_uid = 0;
 
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
 
 		bool cubemap=false;
+		uint32_t dataSize;
+		unsigned char* data = nullptr;
+		bool own_data = false;
 
+		bool operator==(const Texture& t) const
+		{
+			if (t.name != name)
+				return false;
+			const unsigned char* start1 = (const unsigned char*)&width;
+			const unsigned char* end1 = (const unsigned char*)&data;
+			const unsigned char* start2 = (const unsigned char*)&t.width;
+			const unsigned char* end2 = (const unsigned char*)&t.data;
+			auto c = memcmp(start1, start2, size_t(end1 - start1));
+			if (c != 0)
+				return false;
+			auto d = memcmp(data, t.data, dataSize);
+			if (d != 0)
+				return false;
+			return true;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Texture& texture)
 		{
 			//Name needs its own line, so spaces can be included.
-			out<< std::wstring{texture.name.begin(), texture.name.end()} << std::endl;
-
-			out.operator<<((unsigned int)texture.width);
-			out	<<" " << texture.height;
-			out	<<" " << texture.depth;
-			out	<<" " << texture.bytesPerPixel;
-			out	<<" " << texture.arrayCount;
-			out	<<" " << texture.mipCount;
-			out	<<" " << static_cast<uint32_t>(texture.format);
-			out	<<" " << static_cast<uint32_t>(texture.compression);
-			if(texture.sampler_uid!=0)
-				out	<<" ";
-			out	<<texture.sampler_uid;
-			
-			out	<<" " << texture.dataSize
-				<<" " << texture.valueScale
-				<<" " << int(texture.cubemap?1:0)
-				<< std::endl;
-
-			size_t characterCount = texture.dataSize;
-			wchar_t* dataBuffer = new wchar_t[characterCount];
-			for(size_t i = 0; i < characterCount; i++)
-			{
-				dataBuffer[i] = texture.data[i];
-			}
-
-			out.write(dataBuffer, characterCount);
-
-			delete[] dataBuffer;
-
+			out<< texture.name;
+			const unsigned char*start=(const unsigned char*)&texture.width;
+			const unsigned char* end = (const unsigned char*)&texture.data;
+			out.write((const char*)start,(size_t)(end -start));
+			out.write((const char*)texture.data, texture.dataSize);
 			return out;
 		}
 		
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, Texture& texture)
 		{
-			//Step past new line that may be next in buffer.
-			if(in.peek() == '\n') in.get();
-
-			//Read name with spaces included.
-			std::wstring wideName;
-			std::getline(in, wideName);
-
-			texture.name = convertToByteString(wideName);
-
-			uint32_t format, compression;
-
-			in >> texture.width;
-			in >> texture.height;
-			in >> texture.depth;
-			in >> texture.bytesPerPixel;
-			in >> texture.arrayCount;
-			in >> texture.mipCount;
-			in >> format;
-			in >> compression;
-			in >> texture.sampler_uid;
-			in >> texture.dataSize;
-			in >> texture.valueScale;
-			int c=0;
-			in >> c;
-			texture.cubemap=c!=0;
-
-			{
-				//Discard new line.
-				in.get();
-
-				size_t characterCount = texture.dataSize;
-				wchar_t* dataBuffer = new wchar_t[characterCount];
-				in.read(dataBuffer, characterCount);
-
-				texture.data = new unsigned char[texture.dataSize];
-				for(size_t i = 0; i < characterCount; i++)
-				{
-					texture.data[i] = static_cast<unsigned char>(dataBuffer[i]);
-				}				
-
-				delete[] dataBuffer;
-			}
-
-			texture.format = static_cast<TextureFormat>(format);
-			texture.compression = static_cast<TextureCompression>(compression);
-
+			in>>texture.name;
+			 unsigned char* start = ( unsigned char*)&texture.width;
+			 const unsigned char* end = (const unsigned char*)&texture.data;
+			in.read((char*)start, (size_t)(end - start));
+			delete[]texture.data;
+			texture.data = new unsigned char[texture.dataSize];
+			texture.own_data = true;
+			in.read((char*)texture.data, texture.dataSize);
 			return in;
 		}
 	};

@@ -159,17 +159,16 @@ namespace teleport
 			avs::Texture texture;
 			bool Verify(const ExtractedTexture& t) const
 			{
-				return true;
+				return texture==t.texture;
 			}
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedTexture& textureData)
 			{
-				std::wstring pathAsString = StringToWString(textureData.path);
+				out << textureData.guid;
+				std::string pathAsString = textureData.path;
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
-				out << StringToWString(textureData.guid);
-				out << " " << pathAsString;
-				out << " " << textureData.lastModified;
-				out << "\n";
+				out << pathAsString;
+				out.write((char*)&textureData.lastModified,sizeof(textureData.lastModified));
 				out << textureData.texture;
 				return out;
 			}
@@ -177,15 +176,12 @@ namespace teleport
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedTexture& textureData)
 			{
-				std::wstring wguid;
-				in >> wguid;
-				textureData.guid = WStringToString(wguid);
-				std::wstring pathAsString;
+				in >> textureData.guid;
+				std::string pathAsString;
 				in >> pathAsString;
 				std::replace(pathAsString.begin(), pathAsString.end(), '%', ' ');
-				textureData.path = WStringToString(pathAsString);
-
-				in >> textureData.lastModified;
+				textureData.path = pathAsString;
+				in.read((char*)&textureData.lastModified, sizeof(textureData.lastModified));
 				in >> textureData.texture;
 				return in;
 			}

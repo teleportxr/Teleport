@@ -161,6 +161,8 @@ namespace teleport
 			bool saveResourceBinary(const std::string file_name, const ExtractedResource& resource) const;
 			template<typename ExtractedResource>
 			bool loadResourceBinary(const std::string file_name, const std::string& path_root, ExtractedResource& esource);
+			template<typename ExtractedResource>
+			avs::uid loadResourceBinary(const std::string file_name, const std::string& path_root, std::map<avs::uid, ExtractedResource>& resourceMap);
 
 			template<typename ExtractedResource>
 			bool saveResource(const std::string file_name, const ExtractedResource& resource) const;
@@ -173,6 +175,12 @@ namespace teleport
 			template<typename ExtractedResource>
 			void loadResources(const std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
 
+			template<typename ExtractedResource>
+			bool saveResourcesBinary(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;
+
+			template<typename ExtractedResource>
+			void loadResourcesBinary(const std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
+			
 
 			std::map<avs::uid, std::string> uid_to_path;
 			std::map<std::string, avs::uid> path_to_uid;

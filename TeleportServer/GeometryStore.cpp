@@ -171,7 +171,7 @@ GeometryStore::~GeometryStore()
 
 bool GeometryStore::saveToDisk() const
 {
-	if(!saveResources(cachePath + "/" , textures))
+	if(!saveResourcesBinary(cachePath + "/" , textures))
 		return false;
 	if(!saveResources(cachePath + "/" , materials))
 		return false;
@@ -202,7 +202,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	,LoadedResource*& loadedMaterials)
 {
 	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
-	loadResources(cachePath + "/" , textures);
+	loadResourcesBinary(cachePath + "/" , textures);
 	loadResources(cachePath + "/" , materials);
 	loadResources(cachePath + "/engineering/" , meshes.at(avs::AxesStandard::EngineeringStyle));
 	loadResources(cachePath + "/gl/", meshes.at(avs::AxesStandard::GlStyle));
@@ -976,17 +976,17 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 }
 
 
-class resource_ofstream:public std::wofstream
+class resource_wofstream:public std::wofstream
 {
 protected:
 	std::function<std::string(avs::uid)> uid_to_path;
 public:
-	resource_ofstream(const char *filename,std::function<std::string(avs::uid)> f)
+	resource_wofstream(const char *filename,std::function<std::string(avs::uid)> f)
 		:std::wofstream(filename, std::wofstream::out | std::wofstream::binary)
 		,uid_to_path(f)
 	{
 	}
-	friend resource_ofstream& operator<<(resource_ofstream& stream, avs::uid u)
+	friend resource_wofstream& operator<<(resource_wofstream& stream, avs::uid u)
 	{
 		if(!u)
 		{
@@ -1004,22 +1004,85 @@ public:
 	}
 };
 
-void standardize_path(std::string &p)
+void standardize_path(std::string& p)
 {
-	std::replace(p.begin(),p.end(),' ','%');
+	std::replace(p.begin(), p.end(), ' ', '%');
 }
 
-class resource_ifstream:public std::wifstream
+class resource_ofstream :public std::ofstream
+{
+protected:
+	std::function<std::string(avs::uid)> uid_to_path;
+public:
+	resource_ofstream(const char* filename, std::function<std::string(avs::uid)> f)
+		:std::ofstream(filename, std::wofstream::out | std::wofstream::binary)
+		, uid_to_path(f)
+	{
+		unsetf(std::ios_base::skipws);
+	}
+	friend resource_ofstream& operator<<(resource_ofstream& stream, avs::uid u)
+	{
+		if (!u)
+		{
+			stream << L". ";
+		}
+		else
+		{
+			std::string p = stream.uid_to_path(u);
+			std::replace(p.begin(), p.end(), ' ', '%');
+			std::replace(p.begin(), p.end(), '\\', '/');
+			stream << p;
+		}
+		return stream;
+	}
+	friend resource_ofstream& operator<<(resource_ofstream& stream, const std::string &s)
+	{
+		size_t sz = s.length();;
+		stream.write((char*)&sz, sizeof(sz)); 
+		stream.write(s.data(), s.length());
+		return stream;
+	}
+};
+class resource_ifstream :public std::ifstream
 {
 protected:
 	std::function<avs::uid(std::string)> path_to_uid;
 public:
-	resource_ifstream(const char *filename,std::function<avs::uid(std::string)> f)
-		:std::wifstream(filename, resource_ifstream::in | resource_ifstream::binary)
+	resource_ifstream(const char* filename, std::function<avs::uid(std::string)> f)
+		:std::ifstream(filename, resource_ifstream::in | resource_ifstream::binary)
+		, path_to_uid(f)
+	{
+		unsetf(std::ios_base::skipws);
+	}
+	friend resource_ifstream& operator>>(resource_ifstream& stream, avs::uid& u)
+	{
+		std::string p;
+		stream >> p;
+		standardize_path(p);
+		u = stream.path_to_uid(p);
+		return stream;
+	}
+	friend resource_ifstream& operator>>(resource_ifstream& stream, std::string& s)
+	{
+		size_t sz = 0;
+		stream.read((char*)&sz, sizeof(sz));
+		s.resize(sz);
+		stream.read(s.data(), s.length());
+		return stream;
+	}
+};
+
+class resource_wifstream:public std::wifstream
+{
+protected:
+	std::function<avs::uid(std::string)> path_to_uid;
+public:
+	resource_wifstream(const char *filename,std::function<avs::uid(std::string)> f)
+		:std::wifstream(filename, resource_wifstream::in | resource_wifstream::binary)
 		,path_to_uid(f)
 	{
 	}
-	friend resource_ifstream& operator>>(resource_ifstream& stream, avs::uid &u)
+	friend resource_wifstream& operator>>(resource_wifstream& stream, avs::uid &u)
 	{
 		std::wstring w;
 		stream>>w;
@@ -1029,6 +1092,7 @@ public:
 		return stream;
 	}
 };
+
 
 void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
 {
@@ -1045,11 +1109,11 @@ void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,st
 			//Save data to new file.
 			{
 				auto f=std::bind(&GeometryStore::UidToPath,this,std::placeholders::_1);
-				resource_ofstream saveFile("verify.mesh", f);
+				resource_wofstream saveFile("verify.mesh", f);
 				saveFile << mesh << "\n";
 				saveFile.close();
 			}
-			resource_ifstream loadFile("verify.mesh", std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
+			resource_wifstream loadFile("verify.mesh", std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
 		
 			ExtractedMesh testMesh;
 			loadFile >> testMesh;
@@ -1176,6 +1240,7 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 	Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,(cachePath+"/"s+cacheTextureFilePath).c_str(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes);
 	std::filesystem::path p=std::string(ttf_path_utf8);
 	saveResourceBinary(cacheFontFilePath,fa);
+	loadResourceBinary(cacheFontFilePath, "",fa);
 	storeTexture(font_texture_uid,"",relative_asset_path_utf8, std::time_t(), avsTexture,cachePath+"/"s+cacheTextureFilePath, true,	 true,true);
 	fa.fontAtlas.font_texture_uid=font_texture_uid;
 	//Font::Free(avsTexture);
@@ -1419,8 +1484,9 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 		std::filesystem::create_directories(p);
 	}
 	//Save data to new file.
-	std::ofstream resourceFile(file_name.c_str(), std::ios::binary);
-	resourceFile.unsetf(std::ios_base::skipws);
+	auto UidToPath = std::bind(&GeometryStore::UidToPath, this, std::placeholders::_1);
+	auto PathToUid = std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1);
+	resource_ofstream resourceFile(file_name.c_str(), UidToPath);
 	try
 	{
 		resourceFile << resource;
@@ -1436,8 +1502,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 	resourceFile.close();
 	// verify:
 	{
-		std::ifstream verifyFile(file_name.c_str(), std::ios::binary);
-		verifyFile.unsetf(std::ios_base::skipws);
+		resource_ifstream verifyFile(file_name.c_str(), PathToUid);
 		ExtractedResource verifyResource;
 		verifyFile>>verifyResource;
 		verifyFile.close();
@@ -1445,15 +1510,13 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
 			teleport::DebugBreak();
-			std::ifstream verifyFile(file_name.c_str(), std::ios::binary);
-			verifyFile.unsetf(std::ios_base::skipws);
+			resource_ifstream verifyFile(file_name.c_str(), PathToUid);
 			ExtractedResource  verifyResource2;
 			verifyFile>>verifyResource2;
 			verifyFile.close();
 			
-			std::ofstream saveFile(file_name.c_str(), std::ios::binary);
+			resource_ofstream saveFile(file_name.c_str(), UidToPath);
 			saveFile << resource;
-			saveFile << "\n";
 			return false;
 		}
 	}
@@ -1463,14 +1526,50 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 	return true;
 }
 
+template<typename ExtractedResource>
+avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const std::string& path_root, std::map<avs::uid, ExtractedResource>& resourceMap)
+{
+	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
+	std::string p = StandardizePath(file_name, path_root);
+	size_t ext_pos = p.find(ExtractedResource::fileExtension());
+	if (ext_pos < p.length())
+		p = p.substr(0, ext_pos);
+	auto write_time = std::filesystem::last_write_time(file_name);
+	// If there's a duplicate, use the newer file.
+	// This guid might already exist!
+	avs::uid newID = 0;
+	auto u = path_to_uid.find(p);
+	if (u != path_to_uid.end())
+	{
+		newID = u->second;
+	}
+	else
+	{
+		newID = avs::GenerateUid();
+	}
+	ExtractedResource& newResource = resourceMap[newID];
+	try
+	{
+		resourceFile >> newResource;
+		//TELEPORT_COUT<<"Loaded Resource "<<newResource.getName().c_str()<<" from file "<<file_name.c_str()<<"\n";
+	}
+	catch (...)
+	{
+		TELEPORT_CERR << "Failed to load " << file_name.c_str() << "\n";
+		return 0;
+	}
+	standardize_path(p);
+	uid_to_path[newID] = p;
+	path_to_uid[p] = newID;
+	return newID;
+}
 template<typename ExtractedResource> bool GeometryStore::loadResourceBinary(const std::string file_name,const std::string &path_root, ExtractedResource &resource)
 {
-	std::ifstream resourceFile(file_name.c_str(), std::ios::binary);
-	resourceFile.unsetf(std::ios_base::skipws);
+	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 	//auto write_time= std::filesystem::last_write_time(file_name);
 	try
 	{
-		resourceFile >> resource;
+		operator>>(resourceFile,resource);
 	}
 	catch(...)
 	{
@@ -1495,7 +1594,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 	}
 	//Save data to new file.
 	auto f=std::bind(&GeometryStore::UidToPath,this,std::placeholders::_1);
-	resource_ofstream resourceFile(file_name.c_str(), f);
+	resource_wofstream resourceFile(file_name.c_str(), f);
 	try
 	{
 		resourceFile << resource;
@@ -1512,7 +1611,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 	resourceFile.close();
 	// verify:
 	{
-		resource_ifstream verifyFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
+		resource_wifstream verifyFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
 		ExtractedResource  verifyResource;
 		verifyFile>>verifyResource;
 		verifyFile.close();
@@ -1520,12 +1619,12 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
 			teleport::DebugBreak();
-			resource_ifstream verifyFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
+			resource_wifstream verifyFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
 			ExtractedResource  verifyResource2;
 			verifyFile>>verifyResource2;
 			verifyFile.close();
 			
-			resource_ofstream saveFile(file_name.c_str(), f);
+			resource_wofstream saveFile(file_name.c_str(), f);
 			saveFile << resource;
 			saveFile << "\n";
 			return false;
@@ -1537,6 +1636,21 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 	return true;
 }
 
+
+template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(const std::string path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
+{
+	const std::filesystem::path fspath{ path.c_str() };
+	std::filesystem::create_directories(fspath);
+	for (const auto& resourceData : resourceMap)
+	{
+		if (resourceData.second.path.length() == 0)
+			continue;
+		std::string file_name = (path + "/") + MakeResourceFilename(resourceData.second);
+		if (!saveResourceBinary(file_name, resourceData.second))
+			return false;
+	}
+	return true;
+}
 
 template<typename ExtractedResource> bool GeometryStore::saveResources(const std::string path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
 {
@@ -1556,7 +1670,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResources(const std
 
 template<typename ExtractedResource> avs::uid GeometryStore::loadResource(const std::string file_name,const std::string &path_root,std::map<avs::uid, ExtractedResource>& resourceMap)
 {
-	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
+	resource_wifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
 	std::string p=StandardizePath(file_name,path_root);
 	size_t ext_pos = p.find(ExtractedResource::fileExtension());
 	if (ext_pos < p.length())
@@ -1606,6 +1720,24 @@ template<typename ExtractedResource> void GeometryStore::loadResources(const std
 		{
 			loadResource(file_name,path,resourceMap);
 		}
+	}
+}
+
+template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(const std::string path, std::map<avs::uid, ExtractedResource>& resourceMap)
+{
+	//Load resources if the file exists.
+	const std::filesystem::path fspath{ path.c_str() };
+	std::filesystem::create_directories(fspath);
+	std::string search_str = ExtractedResource::fileExtension();
+	std::map<avs::uid, std::filesystem::file_time_type> timestamps;
+	for (auto const& dir_entry : std::filesystem::recursive_directory_iterator{ fspath })
+	{
+		std::string file_name = dir_entry.path().string();
+		if (file_name.find(search_str) < file_name.length())
+			if (filesystem::exists(file_name))
+			{
+				loadResourceBinary(file_name, path, resourceMap);
+			}
 	}
 }
 
