@@ -526,6 +526,8 @@ TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int num
 
 TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID, ClientSettings clientSettings)
 {
+	size_t sz=sizeof(ClientSettings);
+	TELEPORT_INTERNAL_COUT("sizeof ClientSettings is {0}",sz)
 	auto clientPair = clientServices.find(clientID);
 	if (clientPair == clientServices.end())
 	{

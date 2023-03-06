@@ -269,10 +269,10 @@ namespace avs
 		SMOOTHNESS
 	};
 
-	template<typename istream> istream& operator>>( istream  &is, RoughnessMode &obj )
+	template<typename istream> istream& operator>>( istream  &in, RoughnessMode &obj )
 	{
 		in.readChunk(obj);
-		return is;            
+		return in;
 	}
 
 	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec4& vec)

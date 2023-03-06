@@ -90,18 +90,16 @@ namespace teleport
     }
 }
 
-using SGM = teleport::GraphicsManager;
-
 static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
 static void AssignGraphicsDevice();
 
 // Unity plugin load event
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces * unityInterfaces)
 {
-    SGM::mUnityInterfaces = unityInterfaces;
-    SGM::mGraphics = unityInterfaces->Get<IUnityGraphics>();
+    teleport::GraphicsManager::mUnityInterfaces = unityInterfaces;
+    teleport::GraphicsManager::mGraphics = unityInterfaces->Get<IUnityGraphics>();
 
-    SGM::mGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
+    teleport::GraphicsManager::mGraphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
 
     // Run OnGraphicsDeviceEvent(initialize) manually on plugin load
     // to not miss the event in case the graphics device is already initialized
@@ -111,7 +109,13 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnit
 // Unity plugin unload event
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
 {
-    SGM::mGraphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent);
+    teleport::GraphicsManager::mGraphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent);
+}
+
+// Unity tries to call this, even though it's an old API that shouldn't exist.
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnitySetGraphicsDevice(void* device, int deviceType, int eventType)
+{
+	std::cerr<<"Unity calls UnitySetGraphicsDevice\n";
 }
 
 static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType)
@@ -120,13 +124,13 @@ static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType ev
     {
         case kUnityGfxDeviceEventInitialize:
         {
-            SGM::mRendererType = SGM::mGraphics->GetRenderer();
+            teleport::GraphicsManager::mRendererType = teleport::GraphicsManager::mGraphics->GetRenderer();
             AssignGraphicsDevice();
             break;
         }
         case kUnityGfxDeviceEventShutdown:
         {
-            SGM::mRendererType = kUnityGfxRendererNull;
+            teleport::GraphicsManager::mRendererType = kUnityGfxRendererNull;
             AssignGraphicsDevice();
             break;
         }
@@ -143,29 +147,30 @@ static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType ev
 
 static void AssignGraphicsDevice()
 {
-    switch (SGM::mRendererType)
+    switch (teleport::GraphicsManager::mRendererType)
     {
 // TODO: Vulkan support for Windows
 #ifdef PLATFORM_WINDOWS
         case kUnityGfxRendererD3D11:
         {
-            SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsD3D11>()->GetDevice();
+            teleport::GraphicsManager::mGraphicsDevice = teleport::GraphicsManager::mUnityInterfaces->Get<IUnityGraphicsD3D11>()->GetDevice();
             break;
         }
         case kUnityGfxRendererD3D12:
         {
-            SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsD3D12>()->GetDevice();
+            teleport::GraphicsManager::mGraphicsDevice = teleport::GraphicsManager::mUnityInterfaces->Get<IUnityGraphicsD3D12>()->GetDevice();
             break;
         }
 #else
         case kUnityGfxRendererVulkan:
         {
-           	SGM::mGraphicsDevice = SGM::mUnityInterfaces->Get<IUnityGraphicsVulkan>()->Instance().device;
+			auto v=teleport::GraphicsManager::mUnityInterfaces->Get<IUnityGraphicsVulkan>();
+           	teleport::GraphicsManager::mGraphicsDevice = v->Instance().device;
             break;
         }
 #endif
         default:
-            SGM::mGraphicsDevice = nullptr;
+            teleport::GraphicsManager::mGraphicsDevice = nullptr;
             break;
     };
 }

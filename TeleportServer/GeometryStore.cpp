@@ -1038,7 +1038,7 @@ public:
 		unsetf(std::ios_base::skipws);
 	}
 	template<typename T>
-	void readChunk(const T& t)
+	void readChunk(T& t)
 	{
 		read((char*)&t, sizeof(t));
 	}
@@ -1214,7 +1214,8 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 	avs::uid font_texture_uid=GetOrGenerateUid(cacheTextureFilePath);
 	ExtractedFontAtlas &fa=fontAtlases[font_atlas_uid];
 	std::vector<int> sizes={size};
-	Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,(cachePath+"/"s+cacheTextureFilePath).c_str(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes);
+	if(!Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,(cachePath+"/"s+cacheTextureFilePath).c_str(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes))
+		return 0;
 	std::filesystem::path p=std::string(ttf_path_utf8);
 	saveResourceBinary(cacheFontFilePath,fa);
 	loadResourceBinary(cacheFontFilePath, "",fa);

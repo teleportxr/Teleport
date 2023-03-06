@@ -178,7 +178,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
     delete[] fontBuffer;
     delete[] bitmap;
     
-    return 0;
+    return true;
 }
 	
 void server::Font::Free(avs::Texture &avsTexture)

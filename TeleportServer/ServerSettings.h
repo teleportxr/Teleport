@@ -85,7 +85,7 @@ namespace teleport
 			int32_t defaultShadowmapSize = 0;
 
 			teleport::core::ControlModel controlModel = teleport::core::ControlModel::SERVER_ORIGIN_CLIENT_LOCAL;
-		};
+		} AVS_PACKED;
 		struct ClientSettings
 		{
 			int32_t videoTextureSize[2];
@@ -98,7 +98,7 @@ namespace teleport
 			teleport::core::BackgroundMode backgroundMode;
 			avs::vec4 backgroundColour;
 			float drawDistance;
-		};
+		} AVS_PACKED;
 		struct InputDefinitionInterop
 		{
 			avs::InputId inputId;
@@ -115,7 +115,7 @@ namespace teleport
 			int32_t clientBufferSize;
 			int32_t requiredLatencyMs;
 			int32_t connectionTimeout;
-		};
+		} AVS_PACKED;
 
 		struct CasterEncoderSettings
 		{
@@ -131,6 +131,6 @@ namespace teleport
 			int32_t roughCubemapSize;
 			int32_t diffuseCubemapSize;
 			int32_t lightCubemapSize;
-		};
+		} AVS_PACKED;
 	}
 }
