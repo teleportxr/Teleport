@@ -219,8 +219,8 @@ namespace avs
 		friend InStream& operator>> (InStream& in, Texture& texture)
 		{
 			in>>texture.name;
-			 unsigned char* start = ( unsigned char*)&texture.width;
-			 const unsigned char* end = (const unsigned char*)&texture.data;
+			unsigned char* start = ( unsigned char*)&texture.width;
+			const unsigned char* end = (const unsigned char*)&texture.data;
 			in.read((char*)start, (size_t)(end - start));
 			delete[]texture.data;
 			texture.data = new unsigned char[texture.dataSize];
@@ -246,27 +246,19 @@ namespace avs
 		template<typename OutStream>
 		friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
 		{
-			//wchar_t tc=(wchar_t)textureAccessor.texCoord;
 			out<<textureAccessor.index;
- 			//out.write(&tc,1);
-			out	<< textureAccessor.tiling
-				<< " " << textureAccessor.scale;
+			out.writeChunk(textureAccessor.tiling);
+			out.writeChunk(textureAccessor.scale);
 			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
 		{
-			//guid g;
-			//wchar_t tc=0;
 			in>>textureAccessor.index;
-			//in.read(&tc,1);
-			//in>>textureAccessor.texCoord;
-			in>> textureAccessor.tiling
-				>> textureAccessor.scale;
-			
+			in.readChunk(textureAccessor.tiling);
+			in.readChunk(textureAccessor.scale);
 			textureAccessor.texCoord=(uint8_t)0;
-			//textureAccessor.index g=OutStream.uid_to_guid(g);
 			return in;
 		}
 	};
@@ -278,22 +270,20 @@ namespace avs
 	};
 
 	template<typename istream> istream& operator>>( istream  &is, RoughnessMode &obj )
-	{ 
-		is>>*((char*)&obj);
+	{
+		in.readChunk(obj);
 		return is;            
 	}
 
 	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec4& vec)
 	{
-		std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
-		o << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+		out.writeChunk(vec);
 		return out;
 	}
 	
 	template<typename InStream> InStream& operator>> (InStream& in, vec4& vec)
 	{
-		std::basic_istream<wchar_t,std::char_traits<wchar_t>> &i=in;
-		i >> vec.x >> vec.y >> vec.z >> vec.w;
+		in.readChunk(vec);
 		return in;
 	}
 	enum class MaterialMode: uint8_t
@@ -315,30 +305,29 @@ namespace avs
 		friend OutStream& operator<< (OutStream& out, const PBRMetallicRoughness& metallicRoughness)
 		{
 			out << metallicRoughness.baseColorTexture;
-			out<< " " ;
 			out << metallicRoughness.baseColorFactor;
-			out<< " " ;
 			out << metallicRoughness.metallicRoughnessTexture;
-			out<< " "  << metallicRoughness.metallicFactor;
-			out<< " "  << metallicRoughness.roughnessMultiplier;
-			out<< " " << metallicRoughness.roughnessOffset;
-				// TODO: roughnessMode not implemented here.
-			 return out;
+			out << metallicRoughness.metallicFactor;
+			out << metallicRoughness.roughnessMultiplier;
+			out << metallicRoughness.roughnessOffset;
+			// TODO: roughnessMode not implemented here.
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, PBRMetallicRoughness& metallicRoughness)
 		{
-			in>> metallicRoughness.baseColorTexture;
-			in>> metallicRoughness.baseColorFactor;
-			in>> metallicRoughness.metallicRoughnessTexture;
-			in>> metallicRoughness.metallicFactor;
-			in>> metallicRoughness.roughnessMultiplier;
-			in>> metallicRoughness.roughnessOffset;
+			in >> metallicRoughness.baseColorTexture;
+			in >> metallicRoughness.baseColorFactor;
+			in >> metallicRoughness.metallicRoughnessTexture;
+			in >> metallicRoughness.metallicFactor;
+			in >> metallicRoughness.roughnessMultiplier;
+			in >> metallicRoughness.roughnessOffset;
 				
-				return in;
+			return in;
 		}
 	};
+
 	template<> inline bool verify(const TextureAccessor& t1,const TextureAccessor& t2)
 	{
 		TELEPORT_VERIFY(t1.index,t2.index);
@@ -347,6 +336,7 @@ namespace avs
 		TELEPORT_VERIFY(t1.scale,t2.scale);
 		return true;
 	}
+
 	template<> inline bool verify(const PBRMetallicRoughness& t1,const PBRMetallicRoughness& t2)
 	{
 		TELEPORT_VERIFY(t1.baseColorTexture,t2.baseColorTexture);
@@ -357,6 +347,7 @@ namespace avs
 		TELEPORT_VERIFY(t1.roughnessOffset,t2.roughnessOffset);
 		return true;
 	}
+
 	struct Material
 	{
 		std::string name;
@@ -401,40 +392,27 @@ namespace avs
 		friend OutStream& operator<< (OutStream& out, const Material& material)
 		{
 			//Name needs its own line, so spaces can be included.
-			out << std::wstring{material.name.begin(), material.name.end()} << std::endl;
+			out << material.name;
 
-			out << material.pbrMetallicRoughness<< " ";
-			out << material.normalTexture<< " ";
-			out << material.occlusionTexture<< " ";
-			out << material.emissiveTexture<< " ";
+			out << material.pbrMetallicRoughness;
+			out << material.normalTexture;
+			out << material.occlusionTexture;
+			out << material.emissiveTexture;
 			out << material.emissiveFactor;
-			int m=((int)material.materialMode);
-			out<< " "<<m;
-			out<< " ";
+			out.writeChunk(material.materialMode);
 			return out;
 		}
 		
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, Material& material)
 		{
-			//Step past new line that may be next in buffer.
-			if(in.peek() == '\n')
-				in.get(); 
-
-			//Read name with spaces included.
-			std::wstring wideName;
-			std::getline(in, wideName);
-
-			material.name = convertToByteString(wideName);
-
+			in >> material.name;
 			in >> material.pbrMetallicRoughness;
 			in >> material.normalTexture;
 			in >> material.occlusionTexture;
 			in >> material.emissiveTexture;
 			in >> material.emissiveFactor;
-			int m=0;
-			in >> m;
-			material.materialMode=(avs::MaterialMode)m;
+			in.readChunk(material.materialMode);
 			return in;
 		}
 	};

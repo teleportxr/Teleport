@@ -173,7 +173,7 @@ bool GeometryStore::saveToDisk() const
 {
 	if(!saveResourcesBinary(cachePath + "/" , textures))
 		return false;
-	if(!saveResources(cachePath + "/" , materials))
+	if(!saveResourcesBinary(cachePath + "/" , materials))
 		return false;
 	if(!saveResources(cachePath + "/engineering/" , meshes.at(avs::AxesStandard::EngineeringStyle)))
 		return false;
@@ -203,7 +203,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 {
 	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
 	loadResourcesBinary(cachePath + "/" , textures);
-	loadResources(cachePath + "/" , materials);
+	loadResourcesBinary(cachePath + "/" , materials);
 	loadResources(cachePath + "/engineering/" , meshes.at(avs::AxesStandard::EngineeringStyle));
 	loadResources(cachePath + "/gl/", meshes.at(avs::AxesStandard::GlStyle));
 	
@@ -1020,6 +1020,11 @@ public:
 	{
 		unsetf(std::ios_base::skipws);
 	}
+	template<typename T>
+	void writeChunk(const T& t)
+	{
+		write((const char*)&t, sizeof(t));
+	}
 	friend resource_ofstream& operator<<(resource_ofstream& stream, avs::uid u)
 	{
 		if (!u)
@@ -1053,6 +1058,11 @@ public:
 		, path_to_uid(f)
 	{
 		unsetf(std::ios_base::skipws);
+	}
+	template<typename T>
+	void readChunk(const T& t)
+	{
+		read((char*)&t, sizeof(t));
 	}
 	friend resource_ifstream& operator>>(resource_ifstream& stream, avs::uid& u)
 	{
@@ -1654,7 +1664,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(con
 	return true;
 }
 
-template<typename ExtractedResource> bool GeometryStore::saveResources(const std::string path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
+template<typename ExtractedResource> bool GeometryStore::saveResources(std::string path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
 {
 	const std::filesystem::path fspath{ path.c_str() };
 	std::filesystem::create_directories(fspath);

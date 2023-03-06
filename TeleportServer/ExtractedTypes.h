@@ -112,30 +112,22 @@ namespace teleport
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedMaterial& materialData)
 			{
-				std::wstring pathAsString = StringToWString(materialData.path);
+				std::string pathAsString = StringToWString(materialData.path);
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
-				out << StringToWString(materialData.guid)
-					<< " " << pathAsString
-					<< " " << materialData.lastModified
-					<< "\n";
+				out << materialData.guid
+					<< pathAsString;
+				out.writeChunk(materialData.lastModified);
 				out << materialData.material;
-				out << "\n";
 				return out;
 			}
 
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedMaterial& materialData)
 			{
-				std::wstring guidAsString;
-				in >> guidAsString;
-				materialData.guid = WStringToString(guidAsString);
-
-				std::wstring pathAsString;
-				in >> pathAsString;
-				std::replace(pathAsString.begin(), pathAsString.end(), '%', ' ');
-				materialData.path = WStringToString(pathAsString);
-
-				in >> materialData.lastModified;
+				in >> materialData.guid;
+				in >> materialData.path;
+				std::replace(materialData.path.begin(), materialData.path.end(), '%', ' ');
+				in.readChunk(materialData.lastModified);
 				in >> materialData.material;
 				return in;
 			}
@@ -168,7 +160,7 @@ namespace teleport
 				std::string pathAsString = textureData.path;
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
 				out << pathAsString;
-				out.write((char*)&textureData.lastModified,sizeof(textureData.lastModified));
+				out.writeChunk(textureData.lastModified);
 				out << textureData.texture;
 				return out;
 			}
@@ -181,7 +173,7 @@ namespace teleport
 				in >> pathAsString;
 				std::replace(pathAsString.begin(), pathAsString.end(), '%', ' ');
 				textureData.path = pathAsString;
-				in.read((char*)&textureData.lastModified, sizeof(textureData.lastModified));
+				in.readChunk(textureData.lastModified);
 				in >> textureData.texture;
 				return in;
 			}
