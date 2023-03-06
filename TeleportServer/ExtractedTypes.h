@@ -37,9 +37,19 @@ namespace teleport
 			std::time_t lastModified;
 			avs::Mesh mesh;
 			avs::CompressedMesh compressedMesh;
+			bool operator==(const ExtractedMesh& t) const
+			{
+				if (guid != t.guid)
+					return false;
+				if (path != t.path)
+					return false;
+				if (!(mesh == t.mesh))
+					return false;
+				return compressedMesh ==t.compressedMesh;
+			}
 			bool Verify(const ExtractedMesh& t) const
 			{
-				return true;
+				return operator==(t);
 			}
 			void GetAccessorRange(uint64_t& lowest, uint64_t& highest) const
 			{
@@ -59,29 +69,24 @@ namespace teleport
 			template<class OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedMesh& meshData)
 			{
-				std::wstring pathAsString = StringToWString(meshData.path);
+				std::string pathAsString = meshData.path;
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
-				out << StringToWString(meshData.guid)
-					<< " " << pathAsString
-					<< " " << meshData.lastModified
-					<< "\n" << meshData.mesh
-					<< "\n" << meshData.compressedMesh << "\n";
+				out << meshData.guid
+					<< pathAsString;
+				out.writeChunk(meshData.lastModified);
+				out << meshData.mesh
+					<< meshData.compressedMesh;
 				return out;
 			}
 
 			template<class InStream>
 			friend InStream& operator>> (InStream& in, ExtractedMesh& meshData)
 			{
-				std::wstring guidAsString;
-				in >> guidAsString;
-				meshData.guid = WStringToString(guidAsString.data());
-
-				std::wstring pathAsString;
-				in >> pathAsString;
-				std::replace(pathAsString.begin(), pathAsString.end(), '%', ' ');
-				meshData.path = WStringToString(pathAsString.data());
-
-				in >> meshData.lastModified >> meshData.mesh >> meshData.compressedMesh;
+				in >> meshData.guid;
+				in >> meshData.path;
+				std::replace(meshData.path.begin(), meshData.path.end(), '%', ' ');
+				in.readChunk(meshData.lastModified);
+				in >> meshData.mesh >> meshData.compressedMesh;
 				// having loaded, now rescale the uid's:
 				meshData.ResetAccessorRange();
 				return in;
@@ -112,7 +117,7 @@ namespace teleport
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedMaterial& materialData)
 			{
-				std::string pathAsString = StringToWString(materialData.path);
+				std::string pathAsString = materialData.path;
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
 				out << materialData.guid
 					<< pathAsString;

@@ -105,19 +105,6 @@ namespace avs
 			return vec2(fabs(x), fabs(y));
 		}
 
-		template<typename OutStream>
-		friend OutStream& operator<< (OutStream& out, const vec2& vec)
-		{
-			out << " "<<vec.x << " " << vec.y;
-			return out;
-		}
-
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, vec2& vec)
-		{
-			in >> vec.x >> vec.y;
-			return in;
-		}
 	};
 
 	struct vec3
@@ -232,19 +219,6 @@ namespace avs
 		vec3 result={::fabsf(v.x), ::fabsf(v.y), ::fabsf(v.z)};
 		return result;
 	}
-	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec3& vec)
-	{
-		std::basic_ostream<wchar_t,std::char_traits<wchar_t>> &o=out;
-		o << vec.x << " " << vec.y << " " << vec.z;
-		return out;
-	}
-
-	template<typename InStream> InStream& operator>> (InStream& in, vec3& vec)
-	{
-		in >> vec.x >> vec.y >> vec.z;
-		return in;
-	}
-
 	struct vec4
 	{
 		float x, y, z, w;

@@ -307,9 +307,9 @@ namespace avs
 			out << metallicRoughness.baseColorTexture;
 			out << metallicRoughness.baseColorFactor;
 			out << metallicRoughness.metallicRoughnessTexture;
-			out << metallicRoughness.metallicFactor;
-			out << metallicRoughness.roughnessMultiplier;
-			out << metallicRoughness.roughnessOffset;
+			out.writeChunk(metallicRoughness.metallicFactor);
+			out.writeChunk(metallicRoughness.roughnessMultiplier);
+			out.writeChunk(metallicRoughness.roughnessOffset);
 			// TODO: roughnessMode not implemented here.
 			return out;
 		}
@@ -320,9 +320,9 @@ namespace avs
 			in >> metallicRoughness.baseColorTexture;
 			in >> metallicRoughness.baseColorFactor;
 			in >> metallicRoughness.metallicRoughnessTexture;
-			in >> metallicRoughness.metallicFactor;
-			in >> metallicRoughness.roughnessMultiplier;
-			in >> metallicRoughness.roughnessOffset;
+			in.readChunk(metallicRoughness.metallicFactor);
+			in.readChunk(metallicRoughness.roughnessMultiplier);
+			in.readChunk(metallicRoughness.roughnessOffset);
 				
 			return in;
 		}
@@ -398,7 +398,7 @@ namespace avs
 			out << material.normalTexture;
 			out << material.occlusionTexture;
 			out << material.emissiveTexture;
-			out << material.emissiveFactor;
+			out.writeChunk(material.emissiveFactor);
 			out.writeChunk(material.materialMode);
 			return out;
 		}
@@ -411,7 +411,7 @@ namespace avs
 			in >> material.normalTexture;
 			in >> material.occlusionTexture;
 			in >> material.emissiveTexture;
-			in >> material.emissiveFactor;
+			in.readChunk(material.emissiveFactor);
 			in.readChunk(material.materialMode);
 			return in;
 		}

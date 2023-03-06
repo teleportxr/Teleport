@@ -300,6 +300,11 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 					put((uint8_t)a.second);
 				}
 				size_t bufferSize = subMesh.buffer.size();
+				if (bufferSize == 0)
+				{
+					TELEPORT_INTERNAL_CERR("Empty submesh buffer for {0}", compressedMesh->name.c_str());
+				}
+
 				put(bufferSize);
 				put((uint8_t*)subMesh.buffer.data(), bufferSize);
 			}

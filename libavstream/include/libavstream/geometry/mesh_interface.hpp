@@ -65,24 +65,44 @@ namespace avs
 	{
 		AttributeSemantic semantic;
 		uint64_t accessor;
-
+		bool operator==(const Attribute& a) const
+		{
+			if (semantic != a.semantic)
+				return false;
+			if (accessor != a.accessor)
+				return false;
+			return true;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Attribute& attribute)
 		{
-			return out << static_cast<uint32_t>(attribute.semantic) << " " << attribute.accessor;
+			out.writeChunk(attribute.semantic);
+			out.writeChunk(attribute.accessor);
+			return out ;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, Attribute& attribute)
 		{
-			uint32_t semantic;
-
-			in >> semantic >> attribute.accessor;
-			attribute.semantic = static_cast<AttributeSemantic>(semantic);
-
+			in.readChunk(attribute.semantic);
+			in.readChunk(attribute.accessor);
 			return in;
 		}
 	};
+	inline bool CompareMemory(const void* a, const void* b, size_t s)
+	{
+		uint8_t* A = (uint8_t*)a;
+		uint8_t* B = (uint8_t*)b;
+		for (size_t i = 0; i < s; i++)
+		{
+			if (A[i] != B[i])
+			{
+				// failed at i.
+				return false;
+			}
+		}
+		return true;
+	}
 	struct PrimitiveArray
 	{
 		size_t attributeCount;
@@ -90,37 +110,50 @@ namespace avs
 		uint64_t indices_accessor;
 		uid material;
 		PrimitiveMode primitiveMode;
-
+		bool operator==(const PrimitiveArray& p) const
+		{
+			if (attributeCount != p.attributeCount)
+				return false;
+			if (indices_accessor != p.indices_accessor)
+				return false;
+			if (material != p.material)
+				return false;
+			if (primitiveMode != p.primitiveMode)
+				return false;
+			for (size_t i = 0; i < attributeCount; i++)
+			{
+				if (!(attributes[i] == p.attributes[i]))
+					return false;
+			}
+			return true;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const PrimitiveArray& primitiveArray)
 		{
-			out << primitiveArray.attributeCount;
+			out.writeChunk(primitiveArray.attributeCount);
 			for(size_t i = 0; i < primitiveArray.attributeCount; i++)
 			{
-				out << " " << primitiveArray.attributes[i];
+				out <<  primitiveArray.attributes[i];
 			}
 
-			return out << " " << primitiveArray.indices_accessor
-				<< " " << primitiveArray.material
-				<< " " << static_cast<uint32_t>(primitiveArray.primitiveMode);
+			out.writeChunk(primitiveArray.indices_accessor);
+			out << primitiveArray.material;
+			out.writeChunk(primitiveArray.primitiveMode);
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, PrimitiveArray& primitiveArray)
 		{
-			in >> primitiveArray.attributeCount;
+			in.readChunk(primitiveArray.attributeCount);
 			primitiveArray.attributes = new Attribute[primitiveArray.attributeCount];
 			for(size_t i = 0; i < primitiveArray.attributeCount; i++)
 			{
 				in >> primitiveArray.attributes[i];
 			}
-
-			in >> primitiveArray.indices_accessor >> primitiveArray.material;
-
-			uint32_t primitiveMode;
-			in >> primitiveMode;
-			primitiveArray.primitiveMode = static_cast<PrimitiveMode>(primitiveMode);
-
+			in.readChunk(primitiveArray.indices_accessor);
+			in >> primitiveArray.material;
+			in.readChunk(primitiveArray.primitiveMode);
 			return in;
 		}
 	};
@@ -131,34 +164,28 @@ namespace avs
 		size_t byteLength=0;
 		uint8_t* data=nullptr;
 
+		bool operator==(const GeometryBuffer& b) const
+		{
+			if (byteLength != b.byteLength)
+				return false;
+			if (memcmp(data, b.data, byteLength) != 0)
+				return false;
+			return true;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const GeometryBuffer& buffer)
 		{
-			out << buffer.byteLength << std::endl;
-
-			for(size_t i = 0; i < buffer.byteLength; i++)
-			{
-				out.put(out.widen(buffer.data[i]));
-			}
-
+			out.writeChunk(buffer.byteLength);
+			out.write((const char*)buffer.data, buffer.byteLength);
 			return out;
 		}
 		
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, GeometryBuffer& buffer)
 		{
-			in >> buffer.byteLength;
-
-			{
-				//Discard new line.
-				in.get();
-
-				buffer.data = new uint8_t[buffer.byteLength];
-				for(size_t i = 0; i < buffer.byteLength; i++)
-				{
-					buffer.data[i] = in.narrow(in.get(), '\000');
-				}
-			}
+			in.readChunk(buffer.byteLength);
+			buffer.data = new uint8_t[buffer.byteLength];
+			in.read((char*)buffer.data, buffer.byteLength);
 
 			return in;
 		}
@@ -171,17 +198,24 @@ namespace avs
 		size_t byteOffset;
 		size_t byteLength;
 		size_t byteStride;
-
+		bool operator==(const BufferView& b) const
+		{
+			if (memcmp(this, &b, sizeof(BufferView)) != 0)
+				return false;
+			return true;
+		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const BufferView& bufferView)
 		{
-			return out << bufferView.buffer << " " << bufferView.byteOffset << " " << bufferView.byteLength << " " << bufferView.byteStride;
+			out.writeChunk(bufferView);
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, BufferView& bufferView)
 		{
-			return in >> bufferView.buffer >> bufferView.byteOffset >> bufferView.byteLength >> bufferView.byteStride;
+			in.readChunk(bufferView);
+			return in ;
 		}
 	};
 
@@ -211,26 +245,32 @@ namespace avs
 		size_t count;
 		uint64_t bufferView;
 		size_t byteOffset;
+		bool operator==(const Accessor& a) const
+		{
+			if (memcmp(this, &a, sizeof(Accessor)) != 0)
+				return false;
+			return true;
+		}
 
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Accessor& accessor)
 		{
-			return out << static_cast<uint32_t>(accessor.type)
-				<< " " << static_cast<uint32_t>(accessor.componentType)
-				<< " " << accessor.count
-				<< " " << accessor.bufferView
-				<< " " << accessor.byteOffset;
+			out.writeChunk(accessor.type);
+			out.writeChunk(accessor.componentType);
+			out.writeChunk(accessor.count);
+			out.writeChunk(accessor.bufferView);
+			out.writeChunk(accessor.byteOffset);
+			return out;
 		}
 
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, Accessor& accessor)
 		{
-			uint32_t type, componentType;
-
-			in >> type >> componentType >> accessor.count >> accessor.bufferView >> accessor.byteOffset;
-			accessor.type = static_cast<DataType>(type);
-			accessor.componentType = static_cast<ComponentType>(componentType);
-
+			in.readChunk(accessor.type);
+			in.readChunk(accessor.componentType);
+			in.readChunk(accessor.count);
+			in.readChunk(accessor.bufferView);
+			in.readChunk(accessor.byteOffset);
 			return in;
 		}
 	};
@@ -369,7 +409,33 @@ namespace avs
 			return convertedSkin;
 		}
 	};
-
+	template<typename U,typename T>
+	bool operator==(const std::map<U, T>& m1, const std::map<U, T>& m2)
+	{
+		if (m1.size() != m2.size())
+			return false;
+		for (auto a : m1)
+		{
+			auto b = m2.find(a.first);
+			if (b == m2.end())
+				return false;
+			if (!(a.second==b->second))
+				return false;
+		}
+		return true;
+	}
+	template< typename T>
+	bool operator==(const std::vector<T> &m1, const std::vector<T> &m2)
+	{
+		if (m1.size() != m2.size())
+			return false;
+		for (size_t i=0;i<m1.size();i++)
+		{
+			if (!(m1[i] ==m2[i]))
+				return false;
+		}
+		return true;
+	}
 	struct Mesh
 	{
 		std::string name;
@@ -378,6 +444,24 @@ namespace avs
 		std::unordered_map<uint64_t, Accessor> accessors;
 		std::map<uint64_t, BufferView> bufferViews;
 		std::map<uint64_t, GeometryBuffer> buffers;
+		bool operator==(const Mesh& m) const
+		{
+			if (primitiveArrays != m.primitiveArrays)
+				return false;
+			for (auto a : accessors)
+			{
+				auto b = m.accessors.find(a.first);
+				if (b == m.accessors.end())
+					return false;
+				if (!a.second.operator==(b->second))
+					return false;
+			}
+			if (bufferViews != m.bufferViews)
+				return false;
+			if (buffers != m.buffers)
+				return false;
+			return true;
+		}
 		void ResetAccessors(uint64_t subtract)
 		{
 			for(auto &a:primitiveArrays)
@@ -436,30 +520,31 @@ namespace avs
 		friend OutStream& operator<< (OutStream& out, const Mesh& mesh)
 		{
 			//Name needs its own line, so spaces can be included.
-			out << std::wstring{mesh.name.begin(), mesh.name.end()} << std::endl;
+			out << mesh.name;
 
-			out << mesh.primitiveArrays.size();
+			out.writeChunk(mesh.primitiveArrays.size());
 			for(size_t i = 0; i < mesh.primitiveArrays.size(); i++)
 			{
-				out << " " << mesh.primitiveArrays[i];
+				out  << mesh.primitiveArrays[i];
 			}
-
-			out << " " << mesh.accessors.size();
+			out.writeChunk(mesh.accessors.size());
 			for(auto& accessorPair : mesh.accessors)
 			{
-				out << " " << accessorPair.first << " " << accessorPair.second;
+				out.writeChunk(accessorPair.first);
+				out<< accessorPair.second;
 			}
 
-			out << " " << mesh.bufferViews.size();
+			out.writeChunk(mesh.bufferViews.size());
 			for(auto& bufferViewPair : mesh.bufferViews)
 			{
-				out << " " << bufferViewPair.first << " " << bufferViewPair.second;
+				out.writeChunk(bufferViewPair.first);
+				out <<  bufferViewPair.second;
 			}
-
-			out << " " << mesh.buffers.size();
+			out.writeChunk(mesh.buffers.size());
 			for(auto& bufferPair : mesh.buffers)
 			{
-				out << " " << bufferPair.first << " " << bufferPair.second;
+				out.writeChunk(bufferPair.first);
+				out << bufferPair.second;
 			}
 			return out;
 		}
@@ -467,57 +552,47 @@ namespace avs
 		template<typename InStream>
 		friend InStream& operator>> (InStream& in, Mesh& mesh)
 		{
-			//Step past new line that may be next in buffer.
-			if(in.peek() == '\n')
-				in.get();
-
-			//Read name with spaces included.
-			std::wstring wideName;
-			std::getline(in, wideName);
-
-			mesh.name = convertToByteString(wideName);
+			in>>mesh.name;
 
 			size_t primitiveArrayCount;
-			in >> primitiveArrayCount;
+			in.readChunk(primitiveArrayCount);
 			mesh.primitiveArrays.resize(primitiveArrayCount);
 			for(size_t i = 0; i < primitiveArrayCount; i++)
 			{
 				in >> mesh.primitiveArrays[i];
 			}
-
 			size_t accessorCount;
-			in >> accessorCount;
+			in.readChunk(accessorCount);
 			for(size_t i = 0; i < accessorCount; i++)
 			{
-				avs::uid id;
+				uint64_t id;
 				avs::Accessor accessor;
-
-				in >> id >> accessor;
+				in.readChunk(id);
+				in >> accessor;
 				mesh.accessors[id] = accessor;
 			}
 
 			size_t bufferViewCount;
-			in >> bufferViewCount;
+			in.readChunk(bufferViewCount);
 			for(size_t i = 0; i < bufferViewCount; i++)
 			{
-				avs::uid id;
+				uint64_t id;
 				avs::BufferView bufferView;
-
-				in >> id >> bufferView;
+				in.readChunk(id);
+				in >>  bufferView;
 				mesh.bufferViews[id] = bufferView;
 			}
 
 			size_t bufferCount;
-			in >> bufferCount;
+			in.readChunk(bufferCount);
 			for(size_t i = 0; i < bufferCount; i++)
 			{
-				avs::uid id;
+				uint64_t id;
 				avs::GeometryBuffer buffer;
-
-				in >> id >> buffer;
+				in.readChunk(id);
+				in >>  buffer;
 				mesh.buffers[id] = buffer;
 			}
-
 			return in;
 		}
 	};
@@ -535,8 +610,24 @@ namespace avs
 		std::map<int32_t, AttributeSemantic> attributeSemantics;
 		// Raw data buffer of draco (or other) encoded mesh.
 		std::vector<uint8_t> buffer;
-		//uint8_t subMeshAttributeIndex=0;		// which attribute is the subMesh index if any.
-		
+		bool operator==(const CompressedSubMesh& m) const
+		{
+			if (indices_accessor != m.indices_accessor)
+				return false;
+			if (material != m.material)
+				return false;
+			if (first_index != m.first_index)
+				return false;
+			if (num_indices != m.num_indices)
+				return false;
+			if (attributeSemantics != m.attributeSemantics)
+				return false;
+			if (buffer.size() != m.buffer.size())
+				return false;
+			if (memcmp(buffer.data(), m.buffer.data(), buffer.size()) != 0)
+				return false;
+			return true;
+		}
 		void ResetAccessors(uint64_t subtract)
 		{
 			indices_accessor=indices_accessor-subtract;
@@ -552,7 +643,21 @@ namespace avs
 		MeshCompressionType meshCompressionType;
 		std::string name;
 		std::vector<CompressedSubMesh> subMeshes;
-		
+		bool operator==(const CompressedMesh& m) const
+		{
+			if (meshCompressionType != m.meshCompressionType)
+				return false;
+			if (name != m.name)
+				return false;
+			if (subMeshes.size() != m.subMeshes.size())
+				return false;
+			for (size_t i=0;i<subMeshes.size();i++)
+			{
+				if (!(subMeshes[i] == m.subMeshes[i]))
+					return false;
+			}
+			return true;
+		}
 		void ResetAccessors(uint64_t subtract)
 		{
 			for( auto &subMesh:subMeshes)
@@ -570,85 +675,54 @@ namespace avs
 		template<typename OutStream> friend OutStream& operator<< (OutStream& out, const CompressedMesh& compressedMesh)
 		{
 			//Name needs its own line, so spaces can be included.
-			out << std::wstring{ compressedMesh.name.begin(), compressedMesh.name.end() } << std::endl;
-
-			out << (uint32_t)compressedMesh.meshCompressionType;
-			//out << " " << (uint32_t)compressedMesh.subMeshAttributeIndex;
-			out << " " << compressedMesh.subMeshes.size(); 
+			out <<  compressedMesh.name;
+			out.writeChunk(compressedMesh.meshCompressionType);
+			out.writeChunk(compressedMesh.subMeshes.size());
 			for (size_t i = 0; i < compressedMesh.subMeshes.size(); i++)
 			{
 				const auto &subMesh= compressedMesh.subMeshes[i];
-				out << " " << subMesh.indices_accessor;
-				out << " " << subMesh.material;
-				out << " " << subMesh.first_index;
-				out << " " << subMesh.num_indices;
-				out << " " << subMesh.attributeSemantics.size() << std::endl;
+				out.writeChunk(subMesh.indices_accessor);
+				out<<subMesh.material;
+				out.writeChunk(subMesh.first_index);
+				out.writeChunk(subMesh.num_indices);
+				out.writeChunk(subMesh.attributeSemantics.size());
 				for (const auto &a: subMesh.attributeSemantics)
 				{
-					out << " " << a.first;
-					out << " " << (int32_t)a.second;
+					out.writeChunk(a.first);
+					out.writeChunk(a.second);
 				}
-				out << " " << subMesh.buffer.size() << std::endl;
-
-				size_t num_c= subMesh.buffer.size() ;
-				// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
-				for(size_t i=0;i<num_c;i++)
-				{
-					out.put(out.widen(subMesh.buffer[i]));
-				}
+				out.writeChunk(subMesh.buffer.size());
+				out.write((const char*)subMesh.buffer.data(), subMesh.buffer.size());
 			}
 			return out;
 		}
 
 		template<typename InStream>	friend InStream& operator>> (InStream& in, CompressedMesh& compressedMesh)
 		{
-			//Step past new line that may be next in buffer.
-			if (in.peek() == '\n')
-				in.get();
-			//Read name with spaces included.
-			std::wstring wideName;
-			std::getline(in, wideName);
-			compressedMesh.name = convertToByteString(wideName);
-			uint32_t type=0;
-			in >> type;
-			compressedMesh.meshCompressionType=(MeshCompressionType)type;
-			//uint32_t subMesh = 0;
-			//in >> subMesh;
-			//compressedMesh.subMeshAttributeIndex= (uint8_t)subMesh;
-			size_t numSubMeshes=0;
-			in >> numSubMeshes;
+			in>>compressedMesh.name;
+			in.readChunk(compressedMesh.meshCompressionType);
+			size_t numSubMeshes = 0;
+			in.readChunk(numSubMeshes);
 			compressedMesh.subMeshes.resize(numSubMeshes);
 			for (size_t i = 0; i < compressedMesh.subMeshes.size(); i++)
 			{
 				auto& subMesh = compressedMesh.subMeshes[i];
-				in >> subMesh.indices_accessor;
-				in >> subMesh.material;
-				in >> subMesh.first_index;
-				in >> subMesh.num_indices;
-				size_t numAttrSem = 0;
-				in >> numAttrSem ;
-				//Discard new line.
-				in.get();
-				for (size_t i=0;i< numAttrSem;i++)
+				in.readChunk(subMesh.indices_accessor);
+				in>> subMesh.material;
+				in.readChunk(subMesh.first_index);
+				in.readChunk(subMesh.num_indices);
+				size_t numSem=0;
+				in.readChunk(numSem);
+				for (size_t j=0;j< numSem;j++)
 				{
-					int32_t attr= 0;
-					int32_t semantic=0;
-					in >> attr;
-					in >> semantic;
-					subMesh.attributeSemantics[attr]= (AttributeSemantic)semantic;
+					int32_t s = 0;
+					in.readChunk(s);
+					in.readChunk(subMesh.attributeSemantics[s]);
 				}
-				size_t bufferSize=0;
-				in >> bufferSize; 
-				//Discard new line.
-				in.get();
+				size_t bufferSize = 0;
+				in.readChunk(bufferSize);
 				subMesh.buffer.resize(bufferSize);
-				size_t num_c = subMesh.buffer.size();
-				// have to do this because of dumb decision to use wchar_t instead of bytes. Change this!
-				for (size_t i = 0; i < num_c; i++)
-				{
-					// I mean honestly:
-					subMesh.buffer[i]= in.narrow(in.get(), '\000');
-				}
+				in.read((char*)subMesh.buffer.data(), bufferSize);
 			}
 			return in;
 		}
