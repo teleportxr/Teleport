@@ -278,23 +278,23 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 }
 
 void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
-			,avs::uid this_server_uid)
+	, avs::uid this_server_uid)
 {
-	auto renderPlatform=deviceContext.renderPlatform;
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(this_server_uid);
-		// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
-	if(renderState.openXR)
+	auto renderPlatform = deviceContext.renderPlatform;
+	auto& clientServerState = teleport::client::ClientServerState::GetClientServerState(this_server_uid);
+	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
+	if (renderState.openXR)
 	{
-		avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
+		avs::uid root_node_uid = renderState.openXR->GetRootNode(this_server_uid);
 	}
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-		renderState.stereoCameraConstants.stereoViewPosition =renderState.cameraConstants.viewPosition;// ((const float*)&clientServerState.headPose.globalPose.position);
+		renderState.stereoCameraConstants.stereoViewPosition = renderState.cameraConstants.viewPosition;// ((const float*)&clientServerState.headPose.globalPose.position);
 	//renderState.cameraConstants.viewPosition = ((const float*)&clientServerState.headPose.globalPose.position);
-	
+
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
-		if(cachedLights.size()>renderState.lightsBuffer.count)
+		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
+		if (cachedLights.size() > renderState.lightsBuffer.count)
 		{
 			renderState.lightsBuffer.InvalidateDeviceObjects();
 			renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
@@ -326,8 +326,8 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
-		if(cachedLights.size()>renderState.lightsBuffer.count)
+		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
+		if (cachedLights.size() > renderState.lightsBuffer.count)
 		{
 			renderState.lightsBuffer.InvalidateDeviceObjects();
 			renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
@@ -335,28 +335,28 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		renderState.pbrConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
-	if(renderState.openXR)
+	if (renderState.openXR)
 	{
-	/*	avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
-		if(root_node_uid!=0)
-		{
-			std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(root_node_uid);
-			if(node)
+		/*	avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
+			if(root_node_uid!=0)
 			{
-				auto pose=sessionClient->GetOriginPose();
-				node->SetLocalPosition(pose.position);
-				node->SetLocalRotation(pose.orientation);
-			}
-		}*/
-	// The node pose states are in the space whose origin is the VR device's playspace origin.
-		const auto &nodePoseStates=renderState.openXR->GetNodePoseStates(this_server_uid,renderPlatform->GetFrameNumber());
-		for(auto &n:nodePoseStates)
+				std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(root_node_uid);
+				if(node)
+				{
+					auto pose=sessionClient->GetOriginPose();
+					node->SetLocalPosition(pose.position);
+					node->SetLocalRotation(pose.orientation);
+				}
+			}*/
+			// The node pose states are in the space whose origin is the VR device's playspace origin.
+		const auto& nodePoseStates = renderState.openXR->GetNodePoseStates(this_server_uid, renderPlatform->GetFrameNumber());
+		for (auto& n : nodePoseStates)
 		{
 			// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
-			std::shared_ptr<clientrender::Node> node=geometryCache.mNodeManager->GetNode(n.first);
-			if(node)
+			std::shared_ptr<clientrender::Node> node = geometryCache.mNodeManager->GetNode(n.first);
+			if (node)
 			{
-			// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
+				// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
 				node->SetLocalPosition(n.second.pose_footSpace.pose.position);
 				node->SetLocalRotation(n.second.pose_footSpace.pose.orientation);
 				node->SetLocalVelocity(*((vec3*)&n.second.pose_footSpace.velocity));
@@ -367,25 +367,32 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	}
 
 	const clientrender::NodeManager::nodeList_t& nodeList = geometryCache.mNodeManager->GetSortedRootNodes();
-	for(const std::shared_ptr<clientrender::Node> node : nodeList)
+	for (size_t i = 0; i < nodeList.size(); i++)
 	{
-		if(renderState.show_only!=0&&renderState.show_only!=node->id)
+		std::shared_ptr<clientrender::Node> node = nodeList[i];
+		if (renderState.show_only != 0 && renderState.show_only != node->id)
 			continue;
-		RenderNode(deviceContext,node,false,true,false);
+		RenderNode(deviceContext, node, false, true, false);
 	}
 	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache.mNodeManager->GetSortedTransparentNodes();
-	for(const std::shared_ptr<clientrender::Node> node : transparentList)
+
+	for (size_t i = 0; i < transparentList.size(); i++)
 	{
-		if(renderState.show_only!=0&&renderState.show_only!=node->id)
+		const std::shared_ptr<clientrender::Node> node = transparentList[i];
+		if (renderState.show_only != 0 && renderState.show_only != node->id)
 			continue;
-		RenderNode(deviceContext,node,false,false,true);
+		RenderNode(deviceContext, node, false, false, true);
 	}
-	if(renderState.show_node_overlays)
-	for (const std::shared_ptr<clientrender::Node>& node : nodeList)
+	if (renderState.show_node_overlays)
 	{
-		RenderNodeOverlay(deviceContext, node);
+		for (size_t i = 0; i < nodeList.size(); i++)
+		{
+			std::shared_ptr<clientrender::Node> node = nodeList[i];
+			RenderNodeOverlay(deviceContext, node);
+		}
 	}
 }
+
 
 //[thread=RenderThread]
 void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext

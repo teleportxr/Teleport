@@ -65,6 +65,9 @@ if(TELEPORT_UNITY)
 		UnityPlugin/InteropStructures.h
 		UnityPlugin/PluginGraphics.h
 		UnityPlugin/PluginGraphics.cpp
+		UnityPlugin/PluginClient.h
+		UnityPlugin/PluginClient.cpp
+		UnityPlugin/PluginMain.h
 		UnityPlugin/PluginMain.cpp
 	)
 

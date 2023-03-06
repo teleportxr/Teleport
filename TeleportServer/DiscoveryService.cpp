@@ -3,12 +3,13 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/ServerSettings.h"    
-#include "TeleportUtility.h"
+#include "TeleportUtility.h" 
+#include "UnityPlugin/PluginMain.h"
+#include "UnityPlugin/PluginClient.h"
 
 using namespace teleport;
 using namespace server;
 
-extern std::map<avs::uid, ClientData> clientServices;
 extern ServerSettings casterSettings;
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
