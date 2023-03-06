@@ -1608,6 +1608,8 @@ template<typename ExtractedResource> bool GeometryStore::saveResource(const std:
 		filesystem::rename(file_name+ ".bak", file_name );
 		return false;
 	}
+	auto pos=resourceFile.tellp();
+	TELEPORT_COUT<<file_name.c_str()<<" pos "<<pos<<"\n";
 	resourceFile.close();
 	// verify:
 	{
@@ -1656,11 +1658,14 @@ template<typename ExtractedResource> bool GeometryStore::saveResources(const std
 {
 	const std::filesystem::path fspath{ path.c_str() };
 	std::filesystem::create_directories(fspath);
+	if(path.length()!=0&&path[path.length()-1]!='/')
+		path+="/";
 	for(const auto& resourceData : resourceMap)
 	{
 		if(resourceData.second.path.length()==0)
 			continue;
-		std::string file_name=(path+"/")+MakeResourceFilename(resourceData.second);
+		
+		std::string file_name=path+MakeResourceFilename(resourceData.second);
 		if(!saveResource(file_name,resourceData.second))
 			return false;
 	}
