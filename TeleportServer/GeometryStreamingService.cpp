@@ -219,7 +219,7 @@ void GeometryStreamingService::tick(float deltaTime)
 	// Each frame we manage a view of which streamable geometries should or shouldn't be rendered on our client.
 
 	//Increment time for unconfirmed resources, if they pass the max time then they are flagged to be sent again.
-	for (auto it = unconfirmedResourceTimes.begin(); it != unconfirmedResourceTimes.end(); it++)
+	for (auto it = unconfirmedResourceTimes.begin(); it != unconfirmedResourceTimes.end(); )
 	{
 		it->second += deltaTime;
 
@@ -228,8 +228,13 @@ void GeometryStreamingService::tick(float deltaTime)
 			TELEPORT_COUT << "Resource " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
 			sentResources[it->first] = false;
+			auto next_it=it;
+			next_it++;
 			it = unconfirmedResourceTimes.erase(it);
+			it=next_it;
+			continue;
 		}
+		it++;
 	}
 
 	// For this client's POSITION and OTHER PROPERTIES,

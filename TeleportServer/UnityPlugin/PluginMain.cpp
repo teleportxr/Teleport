@@ -291,6 +291,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 	if (!result)
 	{
+		TELEPORT_CERR<<"An error occurred while attempting to initalise discoveryService!\n";
 		return false;
 	}
 
@@ -298,6 +299,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 	if (!result)
 	{
+		TELEPORT_CERR<<"An error occurred while attempting to initalise clientManager!\n";
 		return false;
 	}
 
