@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include "network/webrtc_networksink.h"
 
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
@@ -52,7 +53,7 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 	SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
 	mPipeline.reset(new avs::Pipeline);
-	mNetworkSink.reset(new avs::NetworkSink);
+	mNetworkSink.reset(new avs::WebRtcNetworkSink);
 
 
 	//char remoteIP[20];
@@ -113,8 +114,9 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 		stream.dataType = avs::NetworkDataType::Geometry;
 		streams.emplace_back(std::move(stream));
 	}
-
-	if (!mNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
+	avs::PipelineNode* s = mNetworkSink.get();
+	avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(s);
+	if (!webRtcNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
 	{
 		TELEPORT_CERR << "Failed to configure network sink!" << "\n";
 		return;
@@ -218,7 +220,8 @@ avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) con
 {
 	if (mNetworkSink)
 	{
-		counters = mNetworkSink->getCounters();
+		avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
+		counters = webRtcNetworkSink->getCounters();
 	}
 	else
 	{
@@ -230,13 +233,15 @@ avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) con
 
 void NetworkPipeline::setProcessingEnabled(bool enable)
 {
-	if (mNetworkSink)
-		mNetworkSink->setProcessingEnabled(enable);
+	avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
+	if (webRtcNetworkSink)
+		webRtcNetworkSink->setProcessingEnabled(enable);
 }
 
 bool NetworkPipeline::isProcessingEnabled() const
 {
-	if (mNetworkSink)
-		return mNetworkSink->isProcessingEnabled();
+	avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
+	if (webRtcNetworkSink)
+		return webRtcNetworkSink->isProcessingEnabled();
 	return false;
 }

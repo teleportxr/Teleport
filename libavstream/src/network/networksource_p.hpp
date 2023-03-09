@@ -8,8 +8,6 @@
 #include <queue>
 #include <unordered_map>
 
-#include <asio.hpp>
-
 #include "common_p.hpp"
 #include "node_p.hpp"
 #include <network/packetformat.hpp>
@@ -19,10 +17,12 @@
 #include <util/misc.hpp>
 #include <util/ringbuffer.hpp>
 
-#include <libavstream/networksource.hpp>
+#include "libavstream/network/srt_efp_networksource.h"
 
 #if LIBAV_USE_SRT
 #include <srt.h>
+#else
+#include <asio.hpp>
 #endif
 #include <thread>
 #include "ElasticFrameProtocol.h"
@@ -77,9 +77,9 @@ namespace avs
 		uint32_t size:11;
 		//uint32_t sent_ack:1;
 	};
-	struct NetworkSource::Private final : public PipelineNode::Private
+	struct SrtEfpNetworkSource::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(NetworkSource, PipelineNode)
+		AVSTREAM_PRIVATEINTERFACE(SrtEfpNetworkSource, PipelineNode)
 			
 #if LIBAV_USE_SRT
 		SRTSOCKET m_socket;

@@ -14,6 +14,11 @@ namespace teleport
 		class VideoEncodePipeline;
 		class AudioEncodePipeline;
 		typedef int64_t(* GetUnixTimestampFn)();	// was __stdcall*
+		enum ConnectionState
+		{
+			UNCONNECTED,
+			CONNECTED
+		};
 		enum class ReflectedStateStatus
 		{
 			UNSENT=0,SENT,CONFIRMED
@@ -54,6 +59,15 @@ namespace teleport
 			std::shared_ptr<AudioEncodePipeline> audioEncodePipeline;
 			std::shared_ptr<teleport::server::ClientMessaging> clientMessaging;
 
+			void SetConnectionState(ConnectionState c)
+			{
+				connectionState = c;
+			}
+			ConnectionState GetConnectionState() const
+			{
+				return connectionState;
+			}
+
 			bool isStreaming = false;
 			bool validClientSettings = false;
 			bool videoKeyframeRequired = false;
@@ -68,7 +82,9 @@ namespace teleport
 			{
 				return global_illumination_texture_uids;
 			}
+			ENetAddress eNetAddress;
 		protected:
+			ConnectionState connectionState = UNCONNECTED;
 			mutable bool _hasOrigin=false;
 			avs::uid originClientHas=0;
 			std::vector<avs::uid> global_illumination_texture_uids;
@@ -77,7 +93,6 @@ namespace teleport
 				std::string regexPath;
 			};
 			ReflectedStateMap<NodeSubtypeState> nodeSubTypes;
-			ENetAddress address = {};
 		};
 		struct ClientStatus
 		{

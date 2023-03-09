@@ -35,10 +35,15 @@ set(src_private_root
 	src/forwarder.cpp
 	src/packetizer.cpp
 	src/nullsink.cpp
-	src/networksink.cpp
-	src/networksource.cpp
 	src/libraryloader.cpp
 	src/timer.cpp
+)
+set(src_private_network
+	src/network/networksink.cpp
+	src/network/srt_efp_networksink.cpp
+	src/network/webrtc_networksink.cpp
+	src/network/networksource.cpp
+	src/network/srt_efp_networksource.cpp
 )
 set(src_private_api
 	src/api/cuda.cpp
@@ -74,8 +79,6 @@ set(hdr_private_root
 	src/file_p.hpp
 	src/forwarder_p.hpp
 	src/packetizer_p.hpp
-	src/networksink_p.hpp
-	src/networksource_p.hpp
 	src/libraryloader.hpp)
 
 set(hdr_private_api 
@@ -89,6 +92,8 @@ set(hdr_private_parsers
 	src/parsers/nalu_parser_h264.hpp
 	src/parsers/nalu_parser_h265.hpp)
 set(hdr_private_network
+	src/network/networksink_p.hpp
+	src/network/networksource_p.hpp
 	src/network/packetformat.hpp
 	src/network/serial.hpp)
 set(hdr_private_decoders
@@ -108,6 +113,7 @@ set(src_private_audio
 	src/audio/audiotarget.cpp)
 
 source_group("Source Files\\api" src FILES ${src_private_api} )
+source_group("Source Files\\network" src FILES ${src_private_network} )
 source_group("Source Files\\stream" src FILES ${src_private_stream} )
 source_group("Source Files\\util" src FILES ${src_private_util} )
 source_group("Source Files\\audio" src FILES ${src_private_audio} )
@@ -144,8 +150,12 @@ set(src_public_root
 	include/libavstream/libavstream.hpp
 	include/libavstream/memory.hpp
 	include/libavstream/mesh.hpp
-	include/libavstream/networksink.hpp
-	include/libavstream/networksource.hpp
+	include/libavstream/network/networksink.h
+	include/libavstream/network/srt_efp_networksink.h
+	include/libavstream/network/webrtc_networksink.h
+	include/libavstream/network/webrtc_observers.h
+	include/libavstream/network/networksource.h
+	include/libavstream/network/srt_efp_networksource.h
 	include/libavstream/node.hpp
 	include/libavstream/nullsink.hpp
 	include/libavstream/packetizer.hpp
@@ -196,7 +206,7 @@ source_group("Public Headers\\platforms" src FILES ${src_public_platforms} )
 source_group("Public Headers\\geometry" src FILES ${hdr_public_geometry} )
 source_group("Public Headers\\audio" src FILES ${hdr_public_audio} )
 
-set(src_private ${src_private_root} ${src_private_api} ${src_private_stream} ${src_private_util} ${src_private_audio})
+set(src_private ${src_private_root} ${src_private_api} ${src_private_network} ${src_private_stream} ${src_private_util} ${src_private_audio})
 
 # Windows platform
 if(WIN32)
@@ -256,6 +266,7 @@ add_custom_command(
 	COMMAND ${xxd} -i enc_nvidia.cubin enc_nvidia.cubin.inl
 	DEPENDS src/encoders/enc_nvidia.cu
 )
+
 add_custom_command(
 	OUTPUT dec_nvidia.cubin dec_nvidia.cubin.inl
 	COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin
@@ -271,11 +282,40 @@ set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
 set(CMAKE_CXX_STANDARD 17 )
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(libavstream STATIC ${hdr_private} ${src_private} ${hdr_public} ${src_platform})
-target_compile_options(libavstream PRIVATE -fPIC)
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	target_compile_options(libavstream PRIVATE -fPIC)
+endif()
 #set_target_runtime(libavstream static)
 set_target_properties(libavstream PROPERTIES PREFIX "")
 set_target_properties(libavstream PROPERTIES FOLDER AVStream)
-target_compile_definitions(libavstream PRIVATE ${def_platform})
+
+# WebRTC is VERY SENSITIVE to these settings. Having the wrong settings can cause bizarre runtime memory-trashing.
+set(def_webrtc   
+						  _WEBSOCKETPP_CPP11_INTERNAL_
+                            #USE_AURA=1
+							_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
+							_CRT_SECURE_NO_DEPRECATE
+                            _SCL_SECURE_NO_DEPRECATE
+							_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+							_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
+                            PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
+                            WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
+                            NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
+                            NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
+							WEBRTC_ENABLE_PROTOBUF=0
+                            WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
+                            WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
+                            WEBRTC_WIN
+							ABSL_ALLOCATOR_NOTHROW=1
+							ABSL_USES_STD_OPTIONAL=0
+							HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
+)
+target_compile_definitions(libavstream PRIVATE ${def_platform} )
+target_compile_definitions(libavstream PRIVATE ${def_webrtc})
+set(webrtc_include_paths ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include
+	${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include/third_party/libyuv/include
+	${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include/third_party/abseil-cpp)
 if(LIBAV_USE_SRT)
 	set(srt_include_paths "${SRT_SOURCE_DIR}/common" "${SRT_SOURCE_DIR}/srtcore" ${SRT_BINARY_DIR})
 	#message(WARNING srt_include_paths ${srt_include_paths})
@@ -305,7 +345,15 @@ if(NOT TELEPORT_SERVER)
 	set(curl_libraries libcurl)
 	target_compile_definitions(libavstream PUBLIC IS_CLIENT=1) 
 endif()
-target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${srt_include_paths} ${efp_include_paths} ${curl_include_paths} include ${PTHREAD_INCLUDE_DIR} PUBLIC include/libavstream)
+target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
+														${CMAKE_CURRENT_BINARY_DIR}
+														${webrtc_include_paths}
+														${srt_include_paths}
+														${efp_include_paths}
+														${curl_include_paths}
+														include
+														${PTHREAD_INCLUDE_DIR}
+														PUBLIC include/libavstream)
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
 if(LIBAV_BUILD_SHARED_LIBS)
@@ -315,9 +363,9 @@ if(LIBAV_BUILD_SHARED_LIBS)
 	)
 endif()
 if(LIBAV_USE_SRT)
-	target_compile_definitions(libavstream PRIVATE LIBAV_USE_SRT=1)
+	target_compile_definitions(libavstream PUBLIC LIBAV_USE_SRT=1)
 else()
-	target_compile_definitions(libavstream PRIVATE LIBAV_USE_SRT=0)
+	target_compile_definitions(libavstream PUBLIC LIBAV_USE_SRT=0)
 endif()
 target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}>)
 

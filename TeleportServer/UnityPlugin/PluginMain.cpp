@@ -373,6 +373,10 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 
 			clientData.clientMessaging->tick(deltaTime);
 		}
+		else
+		{
+			// The peer has not yet been created.
+		}
 	}
 
 	discoveryService->tick();

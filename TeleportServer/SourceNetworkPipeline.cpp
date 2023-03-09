@@ -7,6 +7,7 @@
 #include "ServerSettings.h"
 
 #include "AudioStreamTarget.h"
+#include "libavstream/network/srt_efp_networksource.h"
 
 using namespace teleport;
 using namespace server;
@@ -24,7 +25,7 @@ SourceNetworkPipeline::~SourceNetworkPipeline()
 void SourceNetworkPipeline::initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget)
 {
 	pipeline.reset(new avs::Pipeline);
-	networkSource.reset(new avs::NetworkSource);
+	networkSource.reset(new avs::SrtEfpNetworkSource);
 
 	if (audioQueue)
 	{

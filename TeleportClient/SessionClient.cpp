@@ -64,7 +64,7 @@ void SessionClient::ConnectButtonHandler(avs::uid server_uid,const std::string& 
 void SessionClient::CancelConnectButtonHandler(avs::uid server_uid)
 {
 	auto sc=GetSessionClient(server_uid);
-	sc->connectionRequest= client::ConnectionStatus::UNCONNECTED;
+	sc->connectionStatus= client::ConnectionStatus::UNCONNECTED;
 }
 
 SessionClient::SessionClient(avs::uid s)
@@ -78,11 +78,14 @@ SessionClient::~SessionClient()
 
 void SessionClient::RequestConnection(const std::string &ip,int port)
 {
-	connectionRequest= client::ConnectionStatus::CONNECTED;
-	if(server_ip==ip&&server_discovery_port==port&&(mServerPeer))
+	if (connectionStatus != client::ConnectionStatus::UNCONNECTED)
 		return;
-	SetServerIP(ip);
-	SetServerDiscoveryPort(port);
+	if (server_ip != ip || server_discovery_port != port || !mServerPeer)
+	{
+		SetServerIP(ip);
+		SetServerDiscoveryPort(port);
+	}
+	connectionStatus = client::ConnectionStatus::OFFERING;
 }
 
 void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
@@ -101,8 +104,7 @@ bool SessionClient::HandleConnections()
 	{
 		auto &config=Config::GetInstance();
 		ENetAddress remoteEndpoint; 
-		bool canConnect = connectionRequest == client::ConnectionStatus::CONNECTED;
-		if (canConnect)
+		if (connectionStatus == client::ConnectionStatus::OFFERING)
 		{
 			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
 			if(cl_id!=0&&Connect(remoteEndpoint, config.options.connectionTimeout,cl_id))
@@ -129,7 +131,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	if(!mClientHost)
 	{
 		TELEPORT_CLIENT_FAIL("Failed to create ENET client host");
-		connectionRequest=ConnectionStatus::UNCONNECTED;
+		connectionStatus=ConnectionStatus::UNCONNECTED;
 		remoteIP="";
 		return false;
 	}
@@ -138,7 +140,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	if(!mServerPeer)
 	{
 		TELEPORT_CLIENT_WARN("Failed to initiate connection to the server");
-		connectionRequest=ConnectionStatus::UNCONNECTED;
+		connectionStatus=ConnectionStatus::UNCONNECTED;
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
 		remoteIP="";
@@ -146,7 +148,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	}
 
 	ENetEvent event;
-	if(enet_host_service(mClientHost, &event, timeout) > 0 && event.type == ENET_EVENT_TYPE_CONNECT)
+	if((enet_host_service(mClientHost, &event, timeout) > 0)&& event.type == ENET_EVENT_TYPE_CONNECT)
 	{
 		mServerEndpoint = remote;
 
@@ -154,11 +156,12 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
 		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d", remote_ip, remote.port);
 		remoteIP=remote_ip;
+		connectionStatus = ConnectionStatus::HANDSHAKING;
 		return true;
 	}
 
 	TELEPORT_CLIENT_WARN("Failed to connect to remote session server");
-	connectionRequest=ConnectionStatus::UNCONNECTED;
+	connectionStatus=ConnectionStatus::UNCONNECTED;
 
 	enet_host_destroy(mClientHost);
 	mClientHost = nullptr;
@@ -215,7 +218,7 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 		mClientHost = nullptr;
 	}
 
-	handshakeAcknowledged = false;
+	connectionStatus = ConnectionStatus::UNCONNECTED;
 	receivedInitialPos = 0;
 	if (resetClientID)
 	{
@@ -246,7 +249,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 
 	if(mClientHost && mServerPeer)
 	{
-		if(handshakeAcknowledged)
+		//if(connectionStatus==ConnectionStatus::CONNECTED)
 		{
 			SendDisplayInfo(displayInfo);
 			if(poseValidCounter)
@@ -276,6 +279,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 					DispatchEvent(event);
 					break;
 				case ENET_EVENT_TYPE_DISCONNECT:
+					TELEPORT_INTERNAL_COUT("ENet disconnected due to internal timeout. Should reconnect here.");
 					mTimeSinceLastServerComm = 0;
 					Disconnect(0);
 					return;
@@ -340,19 +344,19 @@ std::string SessionClient::GetServerIP() const
 
 ConnectionStatus SessionClient::GetConnectionStatus() const
 {
-	return mServerPeer?ConnectionStatus::CONNECTED:ConnectionStatus::UNCONNECTED;
+	return connectionStatus;
 }
 
 bool SessionClient::IsConnecting() const
 {
-	if(connectionRequest==ConnectionStatus::CONNECTED&&mServerPeer==nullptr)
+	if(connectionStatus==ConnectionStatus::OFFERING|| connectionStatus== ConnectionStatus::HANDSHAKING)
 		return true;
 	return false;
 }
 
 bool SessionClient::IsConnected() const
 {
-	return (mServerPeer!=nullptr);
+	return (connectionStatus == ConnectionStatus::CONNECTED|| connectionStatus == ConnectionStatus::HANDSHAKING);
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)
@@ -703,6 +707,11 @@ void SessionClient::SendHandshake(const teleport::core::Handshake& handshake, co
 
 void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 {
+	if (connectionStatus != ConnectionStatus::HANDSHAKING)
+	{
+		TELEPORT_INTERNAL_CERR("Received handshake acknowledgement, but not in HANDSHAKING mode.\n");
+		return;
+	}
 	size_t commandSize = sizeof(teleport::core::AcknowledgeHandshakeCommand);
 
 	//Extract command from packet.
@@ -715,7 +724,7 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 	mCommandInterface->SetVisibleNodes(visibleNodes);
 
-	handshakeAcknowledged = true;
+	connectionStatus = ConnectionStatus::CONNECTED;
 }
 
 void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)

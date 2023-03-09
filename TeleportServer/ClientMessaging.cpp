@@ -103,6 +103,7 @@ void ClientMessaging::stopSession()
 		{
 			enet_peer_reset(peer);
 		}*/
+		TELEPORT_COUT << "Stopping session." << std::endl;
 		enet_peer_reset(peer);
 		peer = nullptr;
 	}
@@ -191,14 +192,14 @@ void ClientMessaging::handleEvents(float deltaTime)
 			peer = event.peer;
 			enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
 			discoveryService->discoveryCompleteForClient(clientID);
-			TELEPORT_COUT << "Client connected: " << getClientIP() << ":" << getClientPort() << "\n";
+			TELEPORT_COUT << clientID<<": Client Enet connected: " << getClientIP() << ":" << getClientPort() << "\n";
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
 			assert(peer == event.peer);
 			timeSinceLastClientComm = 0;
 			if (!startingSession)
 			{
-				TELEPORT_COUT << "Client disconnected: " << getClientIP() << ":" << getClientPort() << "\n";
+				TELEPORT_COUT << clientID << ": Client Enet disconnected: " << getClientIP() << ":" << getClientPort() << "\n";
 				enet_packet_destroy(event.packet);
 				eventQueue.pop();
 				Disconnect();
@@ -449,6 +450,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		clientNetworkContext->NetworkPipeline.reset(new NetworkPipeline(settings));
 		clientNetworkContext->NetworkPipeline->initialise(networkSettings, clientNetworkContext->ColorQueue.get(), clientNetworkContext->TagDataQueue.get(), clientNetworkContext->GeometryQueue.get(), clientNetworkContext->AudioQueue.get());
 	}
+	TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
 
 	if (settings->isReceivingAudio && !clientNetworkContext->sourceNetworkPipeline)
 	{
@@ -485,6 +487,8 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	if (handshake.resourceCount == 0)
 	{
 		teleport::core::AcknowledgeHandshakeCommand ack;
+		TELEPORT_COUT << "Sending handshake acknowledgement to clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
+
 		sendCommand(ack);
 	}
 	// Client may have required resources, as they are reconnecting; tell them to show streamed nodes.

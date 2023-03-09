@@ -66,6 +66,8 @@ namespace teleport
 		enum class ConnectionStatus : uint8_t
 		{
 			UNCONNECTED,
+			OFFERING,
+			HANDSHAKING,
 			CONNECTED
 		};
 		class SessionClient
@@ -94,7 +96,6 @@ namespace teleport
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					bool requestKeyframe, double time, double deltaTime);
 					
-			ConnectionStatus GetConnectionRequest() const { return connectionRequest; }
 			ConnectionStatus GetConnectionStatus() const;
 			bool IsConnecting() const;
 			bool IsConnected() const;
@@ -165,7 +166,6 @@ namespace teleport
 			ENetPeer* mServerPeer = nullptr;
 			ENetAddress mServerEndpoint{};
 
-			bool handshakeAcknowledged = false;
 			/// Requests the session client has discovered need to be made.
 			std::vector<avs::uid> mQueuedResourceRequests;			
 			std::map<avs::uid, double> mSentResourceRequests;	/// <ID of requested resource, time we sent the request> Resource requests we have received, but have yet to receive confirmation of their receipt.
@@ -181,7 +181,7 @@ namespace teleport
 			double mTimeSinceLastServerComm = 0;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
-			ConnectionStatus connectionRequest = ConnectionStatus::UNCONNECTED;
+			ConnectionStatus connectionStatus = ConnectionStatus::UNCONNECTED;
 		};
 	}
 }

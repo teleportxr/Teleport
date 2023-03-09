@@ -223,8 +223,11 @@ using namespace server;
 		try
 		{
 		// TODO: Can hang in enet_host_service. Why?
-			while (enet_host_service(mHost, &event, 0) > 0)
+			int res = 0;
+			do
 			{
+				res = enet_host_service(mHost, &event, 0);
+				if(res>0)
 				if (event.type != ENET_EVENT_TYPE_NONE)
 				{
 					for (auto client : mClients)
@@ -242,7 +245,14 @@ using namespace server;
 						}
 					}
 				}
-			}
+				if (res < 0)
+				{
+#ifdef _MSC_VER
+					int err = WSAGetLastError();
+					TELEPORT_CERR << "enet_host_service failed with error " << err << "\n";
+#endif
+				}
+			} while (res > 0);
 		}
 		catch (...)
 		{

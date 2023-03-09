@@ -11,7 +11,7 @@ using namespace teleport;
 using namespace server;
 
 extern ServerSettings casterSettings;
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP);
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP, int discovery_port);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
 bool DiscoveryService::initialize(uint16_t discovPort, uint16_t servPort, std::string desIP)
@@ -121,6 +121,13 @@ void DiscoveryService::tick()
 		{
 			continue;
 		}
+		for (const auto& svc : clientServices)
+		{
+			if (svc.second.eNetAddress.host == addr.host)
+			{
+				clientID = svc.first;
+			}
+		}
 
 		if (clientID == 0)
 		{
@@ -131,12 +138,15 @@ void DiscoveryService::tick()
 			//Skip clients we have already added.
 			if (newClients.find(clientID) != newClients.end())
 				continue;
-
-			if (clientServices.find(clientID) != clientServices.end())
+			auto s = clientServices.find(clientID);
+			if (s != clientServices.end())
 			{
 				// ok, we've received a connection request from a client that WE think we already have.
 				// Apparently the CLIENT thinks they've disconnected.
-				TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them.\n";
+				TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them."<<std::endl;
+				// It may be just that the connection request was already in flight when we accepted its predecessor.
+				sendResponseToClient(clientID);
+				continue;
 			}
 		}
 		
@@ -160,21 +170,19 @@ void DiscoveryService::tick()
 		}
 	}
 
-	for (auto c = newClients.cbegin(); c != newClients.cend();)
+	for(auto c=newClients.cbegin(); c!=newClients.cend();)
 	{
 		auto clientID = c->first;
 		auto addr = c->second;
-
 		char clientIP[20];
 		enet_address_get_host_ip(&addr, clientIP, sizeof(clientIP));
-
-		if(Client_StartSession(clientID, std::string(clientIP)))
+		if(Client_StartSession(clientID, std::string(clientIP), addr.port))
 		{
-			++c;
+			c = newClients.erase(c);
 		}
 		else
 		{
-			c = newClients.erase(c);
+			++c;
 		}
 	}
 }
@@ -187,30 +195,32 @@ void DiscoveryService::sendResponseToClient(uint64_t clientID)
 		return;
 	}
 
-	auto clientPair = newClients.find(clientID);
-	if(clientPair == newClients.end())
+	auto clientPair = clientServices.find(clientID);
+	if(clientPair == clientServices.end())
 	{
 		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
 		return;
 	}
 
 	// Send response, containing port to connect on, to all clients we want to host.
-	ENetAddress addr = clientPair->second;
 	teleport::core::ServiceDiscoveryResponse response = {clientID, servicePort};
 	ENetBuffer buffer = CREATE_ENET_BUFFER(sizeof(response), &response );
-	enet_socket_send(discoverySocket, &addr, &buffer, 1);
+	TELEPORT_COUT << "Sending server discovery response to client ID: " << clientID << std::endl;
+	enet_socket_send(discoverySocket, &clientPair->second.eNetAddress, &buffer, 1);
 }
 
 void DiscoveryService::discoveryCompleteForClient(uint64_t clientID)
 {
-	auto i = newClients.find(clientID);
-	if (i == newClients.end())
+	auto i = clientServices.find(clientID);
+	if (i == clientServices.end())
 	{
-		TELEPORT_CERR << "Client had already completed discovery\n";
+		
 	}
 	else
 	{
-		newClients.erase(i);
+		if (i->second.GetConnectionState() == CONNECTED)
+			return;
+		i->second.SetConnectionState(CONNECTED);
 		AddUnlinkedClientID(clientID);
 	}
 }

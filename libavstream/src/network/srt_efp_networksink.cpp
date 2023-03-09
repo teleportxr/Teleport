@@ -11,11 +11,13 @@
 
 using namespace avs;
 
-NetworkSink::NetworkSink()
-	: PipelineNode(new NetworkSink::Private(this)), m_data((NetworkSink::Private*)(m_d))
-{}
+SrtEfpNetworkSink::SrtEfpNetworkSink()
+	: NetworkSink(new SrtEfpNetworkSink::Private(this))
+{
+	m_data=(SrtEfpNetworkSink::Private*)(m_d);
+}
 
-Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params)
+Result SrtEfpNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params)
 {
 	size_t numInputs = streams.size();
 	if (numInputs == 0 || localPort == 0 || remotePort == 0)
@@ -84,7 +86,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	}
 	catch (const std::exception& e)
 	{
-		AVSLOG(Error) << "NetworkSink: Failed to bind to UDP socket: " << e.what();
+		AVSLOG(Error) << "SrtEfpNetworkSink: Failed to bind to UDP socket: " << e.what();
 		return Result::Network_BindFailed;
 	}
 
@@ -95,7 +97,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	// Called by the parser interface if the stream uses one
 	auto onPacketParsed = [](PipelineNode* node, uint32_t inputNodeIndex, const char* buffer, size_t dataSize, size_t dataOffset, bool isLastPayload)->Result
 	{
-		NetworkSink* ns = static_cast<NetworkSink*>(node);
+		SrtEfpNetworkSink* ns = static_cast<SrtEfpNetworkSink*>(node);
 		return ns->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
 	};
 	if(m_data->m_streams.size()>=INT_MAX)
@@ -116,7 +118,7 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 
 	m_data->m_EFPSender.reset(new ElasticFrameProtocolSender(PacketFormat::MaxPacketSize));
 	// The callback will be called on the same thread calling 'packAndSendFromPtr'
-	m_data->m_EFPSender->sendCallback = std::bind(&NetworkSink::sendOrCacheData, this, std::placeholders::_1);
+	m_data->m_EFPSender->sendCallback = std::bind(&SrtEfpNetworkSink::sendOrCacheData, this, std::placeholders::_1);
 
 	// 6 MB (48 mb) per second limit
 	m_data->m_maxPacketsAllowedPerSecond = 6000000 / PacketFormat::MaxPacketSize;
@@ -133,12 +135,12 @@ Result NetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const ch
 	return Result::OK;
 }
 
-NetworkSink::~NetworkSink()
+SrtEfpNetworkSink::~SrtEfpNetworkSink()
 {
 	deconfigure();
 }
 
-Result NetworkSink::deconfigure()
+Result SrtEfpNetworkSink::deconfigure()
 {
 	while (!m_data->m_dataQueue.empty())
 	{
@@ -178,7 +180,7 @@ Result NetworkSink::deconfigure()
 	return Result::OK;
 }
 
-Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
+Result SrtEfpNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (getNumInputSlots() == 0 || !m_data->m_socket)
 	{
@@ -353,7 +355,7 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			{
 				if (result != Result::IO_Empty)
 				{
-					AVSLOG(Error) << "NetworkSink: Failed to read from input node: " << i << "\n";
+					AVSLOG(Error) << "SrtEfpNetworkSink: Failed to read from input node: " << i << "\n";
 					continue;
 				}
 			}
@@ -382,23 +384,23 @@ Result NetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 	}
 
-	updateCounters(timestamp, deltaTime);
+	updateCounters(timestamp, (uint32_t)deltaTime);
 
 	return Result::OK;
 }
 
-void NetworkSink::setProcessingEnabled(bool enable)
+void SrtEfpNetworkSink::setProcessingEnabled(bool enable)
 {
 	m_data->m_processingEnabled = enable;
 }
 
-bool NetworkSink::isProcessingEnabled() const
+bool SrtEfpNetworkSink::isProcessingEnabled() const
 {
 	return m_data->m_processingEnabled;
 }
 
 
-void NetworkSink::updateCounters(uint64_t timestamp, uint32_t deltaTime)
+void SrtEfpNetworkSink::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 {
 	if (m_data->m_params.bandwidthInterval == 0)
 	{
@@ -443,7 +445,7 @@ void NetworkSink::updateCounters(uint64_t timestamp, uint32_t deltaTime)
 	}
 }
 
-Result NetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
+Result SrtEfpNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
 {
 	uint32_t code = 0;
 	ElasticFrameContent dataContent;
@@ -466,7 +468,7 @@ Result NetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t 
 		dataContent = ElasticFrameContent::h265;
 		break;
 	default:
-		AVSLOG(Error) << "NetworkSink: Invalid stream data type. Cannot send data. \n";
+		AVSLOG(Error) << "SrtEfpNetworkSink: Invalid stream data type. Cannot send data. \n";
 		return Result::NetworkSink_InvalidStreamDataType;
 	}
 
@@ -484,14 +486,14 @@ Result NetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t 
 
 	if (efpResult != ElasticFrameMessages::noError)
 	{
-		AVSLOG(Error) << "NetworkSink: An error occured in EFP trying to pack data. \n";
+		AVSLOG(Error) << "SrtEfpNetworkSink: An error occured in EFP trying to pack data. \n";
 		return Result::NetworkSink_PackingDataFailed;
 	}
 
 	return Result::OK;
 }
 
-void NetworkSink::sendOrCacheData(const std::vector<uint8_t>& subPacket)
+void SrtEfpNetworkSink::sendOrCacheData(const std::vector<uint8_t>& subPacket)
 {
 	uint8_t id = subPacket[1];
 	auto index = m_data->m_streamIndices[id];
@@ -508,7 +510,7 @@ void NetworkSink::sendOrCacheData(const std::vector<uint8_t>& subPacket)
 	sendData(subPacket);
 }
 
-void NetworkSink::sendData(const std::vector<uint8_t> &subPacket)
+void SrtEfpNetworkSink::sendData(const std::vector<uint8_t> &subPacket)
 {
 	const char* buffer = (const char*)subPacket.data();
 	const size_t bufferSize = subPacket.size();
@@ -525,7 +527,7 @@ void NetworkSink::sendData(const std::vector<uint8_t> &subPacket)
 	m_data->m_packetsSent++;
 }
 
-void NetworkSink::closeConnection()
+void SrtEfpNetworkSink::closeConnection()
 {
 	if (m_data->bConnected)
 	{
@@ -535,28 +537,28 @@ void NetworkSink::closeConnection()
 	}
 }
 
-NetworkSinkCounters NetworkSink::getCounters() const
+NetworkSinkCounters SrtEfpNetworkSink::getCounters() const
 {
 	std::lock_guard<std::mutex> lock(m_data->m_countersMutex);
 	return m_data->m_counters;
 }
 
-void NetworkSink::setDebugStream(uint32_t s)
+void SrtEfpNetworkSink::setDebugStream(uint32_t s)
 {
 	m_data->debugStream = s;
 }
 
-void NetworkSink::setDoChecksums(bool s)
+void SrtEfpNetworkSink::setDoChecksums(bool s)
 {
 	m_data->doChecksums = s;
 }
 
-void NetworkSink::setDebugNetworkPackets(bool s)
+void SrtEfpNetworkSink::setDebugNetworkPackets(bool s)
 {
 	m_data->mDebugNetworkPackets = s;
 }
 
-void NetworkSink::setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency)
+void SrtEfpNetworkSink::setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency)
 {
 	m_data->estimatedDecodingFrequency = estimatedDecodingFrequency;
 }

@@ -8,7 +8,7 @@
 #include "DefaultHTTPService.h"
 #include "DiscoveryService.h"
 
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP);
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP, int discovery_port);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
 TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID);

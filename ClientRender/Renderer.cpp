@@ -374,11 +374,11 @@ void Renderer::RecompileShaders()
 
 std::shared_ptr<InstanceRenderer> Renderer::GetInstanceRenderer(avs::uid server_uid)
 {
-	auto sc=client::SessionClient::GetSessionClient(server_uid);
+	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 	auto i=instanceRenderers.find(server_uid);
 	if(i==instanceRenderers.end())
 	{
-		auto r=std::make_shared<InstanceRenderer>(server_uid,config,geometryDecoder,renderState,sc.get());
+		auto r=std::make_shared<InstanceRenderer>(server_uid,config,geometryDecoder,renderState,sessionClient.get());
 		instanceRenderers[server_uid]=r;
 		r->RestoreDeviceObjects(renderPlatform);
 		return r;
@@ -786,9 +786,9 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			clientServerState.input,instanceRenderer->clientPipeline.decoder.idrRequired(),fTime, time_step);
 
 		avs::Result result = instanceRenderer->clientPipeline.pipeline.process();
-		if (result == avs::Result::Network_Disconnection 
-			|| sessionClient->GetConnectionRequest() == client::ConnectionStatus::UNCONNECTED)
+		if (result == avs::Result::Network_Disconnection)
 		{
+			TELEPORT_INTERNAL_CERR("Got avs::Result::Network_Disconnection. We should try to reconnect here.\n");
 			sessionClient->Disconnect(0);
 			return;
 		}
@@ -882,9 +882,9 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 		case 'K':
 			{
-				auto sc=client::SessionClient::GetSessionClient(server_uid);
-				if(sc->IsConnected())
-					sc->Disconnect(0);
+				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+				if(sessionClient->IsConnected())
+					sessionClient->Disconnect(0);
 			}
 			break;
 		case 'R':
@@ -892,8 +892,8 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 		case 'Y':
 			{
-				auto sc=client::SessionClient::GetSessionClient(server_uid);
-				if (sc->IsConnected())
+				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+				if (sessionClient->IsConnected())
 					GetInstanceRenderer(server_uid)->clientPipeline.decoder.toggleShowAlphaAsColor();
 			}
 			break;
@@ -1201,8 +1201,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	auto instanceRenderer=GetInstanceRenderer(server_uid);
 	auto &geometryCache=instanceRenderer->geometryCache;
 	gui.setGeometryCache(&geometryCache);
-	auto sc=client::SessionClient::GetSessionClient(server_uid);
-	gui.setSessionClient(sc.get());
+	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+	gui.setSessionClient(sessionClient.get());
 	if(renderState.openXR)
 	{
 		avs::Pose p=renderState.openXR->GetActionPose(client::RIGHT_AIM_POSE);
@@ -1236,14 +1236,19 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	const avs::NetworkSourceCounters counters = instanceRenderer->clientPipeline.source.getCounterValues();
 	const avs::DecoderStats vidStats = instanceRenderer->clientPipeline.decoder.GetStats();
-	bool canConnect = (sc->GetConnectionStatus()!=client::ConnectionStatus::CONNECTED)
-		&&(sc->GetConnectionRequest() == client::ConnectionStatus::CONNECTED);
+	auto status = sessionClient->GetConnectionStatus();
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
-	gui.LinePrint(sc->IsConnected()? platform::core::QuickFormat("Client %d connected to: %s, port %d"
-		, sc->GetClientID(),sc->GetServerIP().c_str(),sc->GetPort()):
-		(canConnect?platform::core::QuickFormat("Not connected. Discovering %s port %d", sc->GetServerIP().c_str(), sc->GetServerDiscoveryPort()):"Offline"),white);
+	gui.LinePrint(fmt::format("Server {0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
+	if(status==client::ConnectionStatus::UNCONNECTED)
+		gui.LinePrint("Unconnected",white);
+	if(status==client::ConnectionStatus::OFFERING)
+		gui.LinePrint("Discovering",white);
+	if (status == client::ConnectionStatus::HANDSHAKING)
+		gui.LinePrint("Handshaking", white);
+	if (status == client::ConnectionStatus::CONNECTED)
+		gui.LinePrint("Connected", white);
 	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
 	
 	if(gui.Tab("Debug"))

@@ -1,7 +1,7 @@
 #pragma once
 #include <libavstream/common.hpp>
 #include <libavstream/pipeline.hpp>
-#include <libavstream/networksource.hpp>
+#include <libavstream/network/srt_efp_networksource.h>
 #include <libavstream/surface.hpp>
 #include <libavstream/queue.hpp>
 #include <libavstream/decoder.hpp>
@@ -26,7 +26,7 @@ namespace teleport
 			// Pipeline and nodes:
 			avs::Pipeline pipeline;
 
-			avs::NetworkSource source;
+			avs::SrtEfpNetworkSource source;
 			avs::Queue videoQueue;
 			avs::Decoder decoder;
 			avs::Surface surface;

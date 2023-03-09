@@ -4,7 +4,8 @@
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/ServerSettings.h"
 
-#define CPPHTTPLIB_OPENSSL_SUPPORT
+// Doesn't link properly when WebRTC is linked...
+//#define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
 
 using namespace teleport;
@@ -38,12 +39,14 @@ bool DefaultHTTPService::initialize(std::string mountDirectory, std::string cert
 	if (certPath.size() > 0 && privateKeyPath.size() > 0)
 	{
 		TELEPORT_COUT << "SSL certificate and key provided. Usng HTTPS server." << "\n";
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 		mServer.reset(new httplib::SSLServer(certPath.c_str(), privateKeyPath.c_str()));
 		mUsingSSL = true;
+#endif
 	}
 	else
 	{
-		TELEPORT_COUT << "SSL certificate and key provided. Usng HTTP server." << "\n";
+		TELEPORT_COUT << "SSL certificate and key not provided. Usng HTTP server." << "\n";
 		mServer.reset(new httplib::Server());
 		mUsingSSL = false;
 	}

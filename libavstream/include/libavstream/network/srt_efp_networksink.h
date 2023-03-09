@@ -1,92 +1,35 @@
-// libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
-
 #pragma once
+// (c) Copyright 2018-2023 Simul Software Ltd
 
+#include "networksink.h"
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
 #include <libavstream/stream/parser_interface.hpp>
-#if LIBAV_USE_SRT
-#include <srt.h>
-#endif
-
 
 namespace avs
 {
-	/*! Network sink parameters. */
-	struct NetworkSinkParams
-	{
-		/*!
-		 * Operating system socket send buffer size.
-		 */
-		int socketBufferSize = 1024 * 1024;
-		uint64_t throttleToRateKpS;
-		uint32_t requiredLatencyMs;
-		uint32_t connectionTimeout = 5000;
-		uint32_t bandwidthInterval = 10000;
-	};
-
-	/*! Network sink counters. */
-	struct NetworkSinkCounters
-	{
-		/*! Total bytes sent. */
-		uint64_t bytesSent = 0;
-		/*! Number of sent network packets. */
-		uint64_t networkPacketsSent = 0;
-		/*! Available bandwidth  */
-		double bandwidth = 0;
-		/*! Average bandwidth used */
-		double avgBandwidthUsed = 0;
-		/*! Minimum bandwidth used */
-		double minBandwidthUsed = 0;
-		/*! Maximum bandwidth used */
-		double maxBandwidthUsed = 0;
-	};
-
-	/*! Network sink stream data. */
-	struct NetworkSinkStream
-	{
-		/*! Stream index */
-		uint64_t counter = 0;
-		/*! Max size of the buffer */
-		size_t chunkSize = 0;
-		/*! id */
-		uint32_t id = 0;
-		/*! Stream parser type */
-		StreamParserType parserType;
-		/*! Data type */
-		NetworkDataType dataType = NetworkDataType::HEVC;
-		/* Whether to use a parser */
-		bool useParser = false;
-		/*! Whether there is a data limit per frame on this stream */
-		bool isDataLimitPerFrame = false;
-		/*! Buffer of data to be sent */
-		std::vector<uint8_t> buffer;
-	};
-	
-
 	/*!
 	 * Network sink node `[passive, 0/1]`
 	 *
 	 * Reads data for each stream from a corresponding avs::Queue input node
 	 * , assembles the data into payloads of network packets and sends the data
 	 * to the client.
-	 * 
-	 * If data throttling is enabled for a stream, the seding of data may be spread 
+	 *
+	 * If data throttling is enabled for a stream, the seding of data may be spread
 	 * over time to reduce network congestion.
 	 */
-	class AVSTREAM_API NetworkSink final : public PipelineNode
+	class AVSTREAM_API SrtEfpNetworkSink final : public NetworkSink
 	{
-		AVSTREAM_PUBLICINTERFACE(NetworkSink)
+		AVSTREAM_PUBLICINTERFACE(SrtEfpNetworkSink)
 
-		NetworkSink::Private *m_data;
+		SrtEfpNetworkSink::Private * m_data;
 	public:
-		NetworkSink();
-		virtual ~NetworkSink();
+		SrtEfpNetworkSink();
+		virtual ~SrtEfpNetworkSink();
 
 		/*!
 		 * Configure network sink and bind to local UDP endpoint.
-		 * \param streams Collection of configurations for each stream. 
+		 * \param streams Collection of configurations for each stream.
 		 * \param localPort Local UDP endpoint port number.
 		 * \param remote Remote UDP endpoint name or IP address.
 		 * \param remotePort Remote UDP endpoint port number.
@@ -114,25 +57,19 @@ namespace avs
 		 */
 		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
-		/*!
-		 * Get node display name (for reporting & profiling).
-		 */
-		const char* getDisplayName() const override { return "NetworkSink"; }
+		//! Get node display name (for reporting & profiling).
+		const char* getDisplayName() const override { return "SrtEfpNetworkSink"; }
 
-		/*!
-		 * Get current counter values.
-		 */
-		NetworkSinkCounters getCounters() const;
+		//! Get current counter values.
+		NetworkSinkCounters getCounters() const override;
 
-		/*!
-		* Debug a particular stream.
-		*/
+		//! Debug a particular stream.
 		void setDebugStream(uint32_t);
 		void setDebugNetworkPackets(bool);
 		void setDoChecksums(bool);
-		void setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency);	
-		void setProcessingEnabled(bool enable);
-		bool isProcessingEnabled() const;
+		void setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency);
+		void setProcessingEnabled(bool enable) override;
+		bool isProcessingEnabled() const override;
 	protected:
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendData(const std::vector<uint8_t>& subPacket);

@@ -21,13 +21,13 @@ using namespace avs;
 #define EFPFAILED(x) \
 	((x) != ElasticFrameMessages::noError)
 
-NetworkSource::NetworkSource()
-	: PipelineNode(new NetworkSource::Private(this))
+SrtEfpNetworkSource::SrtEfpNetworkSource()
+	: NetworkSource(new SrtEfpNetworkSource::Private(this))
 {
-	m_data = static_cast<NetworkSource::Private*>(m_d);
+	m_data = static_cast<SrtEfpNetworkSource::Private*>(m_d);
 }
 
-Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)
+Result SrtEfpNetworkSource::configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)
 {
 	size_t numOutputs = streams.size();
 
@@ -88,7 +88,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 	}
 	catch (const std::exception& e)
 	{
-		AVSLOG(Error) << "NetworkSource: Failed to bind to UDP socket: " << e.what();
+		AVSLOG(Error) << "SrtEfpNetworkSource: Failed to bind to UDP socket: " << e.what();
 		return Result::Network_BindFailed;
 	}
 
@@ -145,7 +145,7 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 		auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
 		if (!outputNode)
 		{
-			AVSLOG(Warning) << "NetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+			AVSLOG(Warning) << "SrtEfpNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
 			return;
 		}
 
@@ -154,13 +154,13 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 
 		if (!result)
 		{
-			AVSLOG(Warning) << "NetworkSource EFP Callback: Failed to write to output node.";
+			AVSLOG(Warning) << "SrtEfpNetworkSource EFP Callback: Failed to write to output node.";
 			return;
 		}
 
 		if (numBytesWrittenToOutput < bufferSize)
 		{
-			AVSLOG(Warning) << "NetworkSource EFP Callback: Incomplete frame written to output node.";
+			AVSLOG(Warning) << "SrtEfpNetworkSource EFP Callback: Incomplete frame written to output node.";
 		}
 	};
 
@@ -170,21 +170,21 @@ Result NetworkSource::configure(std::vector<NetworkSourceStream>&& streams, cons
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
 	httpUtilConfig.maxConnections = params.maxHTTPConnections;
 	httpUtilConfig.useSSL = params.useSSL;
-	auto f = std::bind(&NetworkSource::receiveHTTPFile, this, std::placeholders::_1, std::placeholders::_2);
+	auto f = std::bind(&SrtEfpNetworkSource::receiveHTTPFile, this, std::placeholders::_1, std::placeholders::_2);
 	return m_data->m_httpUtil.initialize(httpUtilConfig, std::move(f));
 #else
 	return Result::OK;
 #endif
 }
 
-void NetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
+void SrtEfpNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 {
 	int nodeIndex = m_data->m_streamNodeMap[m_data->m_params.httpStreamID];
 
 	auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
 	if (!outputNode)
 	{
-		AVSLOG(Warning) << "NetworkSource HTTP Callback: Invalid output node. Should be an avs::Queue.";
+		AVSLOG(Warning) << "SrtEfpNetworkSource HTTP Callback: Invalid output node. Should be an avs::Queue.";
 		return;
 	}
 
@@ -193,13 +193,13 @@ void NetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 
 	if (!result)
 	{
-		AVSLOG(Warning) << "NetworkSource HTTP Callback: Failed to write to output node.";
+		AVSLOG(Warning) << "SrtEfpNetworkSource HTTP Callback: Failed to write to output node.";
 		return;
 	}
 
 	if (numBytesWrittenToOutput < bufferSize)
 	{
-		AVSLOG(Warning) << "NetworkSource HTTP Callback: Incomplete payload written to output node.";
+		AVSLOG(Warning) << "SrtEfpNetworkSource HTTP Callback: Incomplete payload written to output node.";
 		return;
 	}
 
@@ -209,7 +209,7 @@ void NetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 	}
 }
 
-Result NetworkSource::deconfigure()
+Result SrtEfpNetworkSource::deconfigure()
 {
 	if (getNumOutputSlots() <= 0)
 	{
@@ -255,7 +255,7 @@ Result NetworkSource::deconfigure()
 #endif
 }
 
-void NetworkSource::closeSocket()
+void SrtEfpNetworkSource::closeSocket()
 {
 	std::lock_guard<std::mutex> guard(m_data->m_networkMutex);
 
@@ -270,7 +270,7 @@ void NetworkSource::closeSocket()
 	m_data->m_socket=0;
 }
 
-Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
+Result SrtEfpNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 {
 	if (getNumOutputSlots() == 0 || !m_data->m_socket)
 	{
@@ -374,7 +374,7 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	if (!m_data->m_receiveThread.joinable() && !m_data->m_receivingPackets)
 	{
 		m_data->m_receivingPackets = true;
-		m_data->m_receiveThread = std::thread(&NetworkSource::asyncReceivePackets, this);
+		m_data->m_receiveThread = std::thread(&SrtEfpNetworkSource::asyncReceivePackets, this);
 #ifdef __ANDROID__
 		pthread_setname_np(m_data->m_receiveThread .native_handle(), "receive_packets_thread");
 		sched_param sch_params;
@@ -390,7 +390,7 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	}
 	else if (!m_data->m_processThread.joinable())
 	{
-		m_data->m_processThread = std::thread(&NetworkSource::asyncProcessPackets, this);
+		m_data->m_processThread = std::thread(&SrtEfpNetworkSource::asyncProcessPackets, this);
 #ifdef __ANDROID__
 		pthread_setname_np(m_data->m_processThread.native_handle(), "process_packets_thread");
 		sched_param sch_params;
@@ -406,27 +406,27 @@ Result NetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 #endif
 }
 
-NetworkSourceCounters NetworkSource::getCounterValues() const
+NetworkSourceCounters SrtEfpNetworkSource::getCounterValues() const
 {
 	return m_data->m_counters;
 }
 
-void NetworkSource::setDebugStream(uint32_t s)
+void SrtEfpNetworkSource::setDebugStream(uint32_t s)
 {
 	m_data->debugStream = s;
 }
 
-void NetworkSource::setDoChecksums(bool s)
+void SrtEfpNetworkSource::setDoChecksums(bool s)
 {
 	m_data->bDoChecksums = s;
 }
 
-void NetworkSource::setDebugNetworkPackets(bool s)
+void SrtEfpNetworkSource::setDebugNetworkPackets(bool s)
 {
 	m_data->mDebugNetworkPackets = s;
 }
 
-void NetworkSource::sendAck(NetworkPacket &packet)
+void SrtEfpNetworkSource::sendAck(NetworkPacket &packet)
 {
 	NetworkPacket ackPacket;
 	ByteBuffer buffer;
@@ -437,7 +437,7 @@ void NetworkSource::sendAck(NetworkPacket &packet)
 __attribute__((optnone))
 #endif
 
-void NetworkSource::asyncReceivePackets()
+void SrtEfpNetworkSource::asyncReceivePackets()
 {
 #ifdef __ANDROID__
 	const char *newName="asyncReceivePackets";
@@ -470,7 +470,7 @@ void NetworkSource::asyncReceivePackets()
 	}
 }
 
-void NetworkSource::asyncProcessPackets()
+void SrtEfpNetworkSource::asyncProcessPackets()
 {
 	while (m_data->m_receivingPackets)
 	{
@@ -479,7 +479,7 @@ void NetworkSource::asyncProcessPackets()
 	}
 }
 
-void NetworkSource::processPackets()
+void SrtEfpNetworkSource::processPackets()
 {
 	RawPacket rawPacket;
 	while (!m_data->m_recvBuffer.empty())
@@ -500,13 +500,13 @@ void NetworkSource::processPackets()
 	}
 }
 
-size_t NetworkSource::getSystemBufferSize() const
+size_t SrtEfpNetworkSource::getSystemBufferSize() const
 {
 	return 100000;
 }
 
 #if IS_CLIENT
-std::queue<HTTPPayloadRequest>& NetworkSource::GetHTTPRequestQueue()
+std::queue<HTTPPayloadRequest>& SrtEfpNetworkSource::GetHTTPRequestQueue()
 {
 	return m_data->m_httpUtil.GetRequestQueue();
 }

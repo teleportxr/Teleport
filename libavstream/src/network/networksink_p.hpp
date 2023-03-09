@@ -10,24 +10,26 @@
 #include <map>
 #include <unordered_map>
 
-#include <asio.hpp>
-
 #include "common_p.hpp"
 #include "node_p.hpp"
 #include <network/packetformat.hpp>
 #include <util/bytebuffer.hpp>
-#include <libavstream/networksink.hpp>
+#include "libavstream/network/srt_efp_networksink.h"
 #if LIBAV_USE_SRT
 #include <srt.h>
+#else
+#include <asio.hpp>
 #endif
 #include <ElasticFrameProtocol.h>
 
 namespace avs
 {
+#if !LIBAV_USE_SRT
 	using asio::ip::udp;
-	struct NetworkSink::Private final : public PipelineNode::Private
+#endif
+	struct SrtEfpNetworkSink::Private final : public PipelineNode::Private
 	{
-		AVSTREAM_PRIVATEINTERFACE(NetworkSink, PipelineNode)
+		AVSTREAM_PRIVATEINTERFACE(SrtEfpNetworkSink, PipelineNode)
 #if LIBAV_USE_SRT
 		SRTSOCKET m_socket=0;
 		SRTSOCKET m_remote_socket=0;

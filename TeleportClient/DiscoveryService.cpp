@@ -9,8 +9,14 @@ using namespace client;
 static teleport::client::DiscoveryService *discoveryService=nullptr;
 teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInstance()
 {
-	if(!discoveryService)
-		discoveryService=new teleport::client::DiscoveryService;
+	if (!discoveryService)
+	{
+		if (enet_initialize() != 0)
+		{
+			TELEPORT_CERR << "An error occurred while attempting to initalise ENet!\n";
+		}
+		discoveryService = new teleport::client::DiscoveryService;
+	}
 	return *discoveryService;
 }
 void teleport::client::DiscoveryService::ShutdownInstance()
@@ -73,7 +79,13 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 	}
 	if (enet_socket_bind(socket, &bindAddress) != 0)
 	{
-		TELEPORT_CLIENT_FAIL("Failed to bind to service discovery UDP socket");
+		TELEPORT_INTERNAL_CERR("Failed to bind to service discovery UDP socket");
+#ifdef _MSC_VER
+		int err = WSAGetLastError();
+		TELEPORT_CERR << "enet_socket_bind failed with error " << err << std::endl;
+#else
+		TELEPORT_CERR << "enet_socket_bind failed with error " << result << std::endl;
+#endif
 		enet_socket_destroy(socket);
 		socket = 0;
 		return 0;
@@ -132,6 +144,8 @@ uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscove
 	{
 		serviceDiscoverySocket = CreateDiscoverySocket(clientIP, clientDiscoveryPort);
 	}
+	if (!serviceDiscoverySocket)
+		return 0;
 	// Poor show: ENet reverses the order of size and pointer in ENetBuffer, between Win32 and Unix.
 	ENetBuffer buffer = MAKE_ENET_BUFFER(clientID);
 	teleport::core::ServiceDiscoveryResponse response = {};

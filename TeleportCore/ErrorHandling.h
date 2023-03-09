@@ -1,5 +1,9 @@
 #pragma once
-#define WIN32_LEAN_AND_MEAN 
+#ifdef _MSC_VER
+	#ifndef WIN32_LEAN_AND_MEAN
+		#define WIN32_LEAN_AND_MEAN 
+	#endif
+#endif
 #include <string>
 #include <string.h>
 #include <iostream>

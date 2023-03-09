@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "AudioCommon.h"
+#include "libavstream/network/srt_efp_networksink.h"
 
 namespace
 {
@@ -32,7 +33,7 @@ namespace sca
 		SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
 		pipeline.reset(new avs::Pipeline);
-		networkSink.reset(new avs::NetworkSink);
+		networkSink.reset(new avs::SrtEfpNetworkSink);
 
 		if(audioQueue)
 		{

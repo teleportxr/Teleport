@@ -57,10 +57,11 @@ using namespace server;
 
 void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize);
 
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP)
+TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP,int discovery_port)
 {
 	if (!clientID || clientIP.size() == 0)
 		return false;
+	TELEPORT_COUT << "Started session for clientID" << clientID << " at IP "<<clientIP.c_str()<< std::endl;
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 
@@ -93,6 +94,10 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	}
 
 	ClientData& newClient = clientPair->second;
+	newClient.SetConnectionState(UNCONNECTED);
+	if (enet_address_set_host_ip(&newClient.eNetAddress, clientIP.c_str()))
+		return false;
+	newClient.eNetAddress.port = discovery_port;
 	if(newClient.clientMessaging->isInitialised())
 	{
 		newClient.clientMessaging->unInitialise();

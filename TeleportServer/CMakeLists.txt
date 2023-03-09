@@ -118,16 +118,18 @@ target_include_directories(TeleportServer PUBLIC ../firstparty/Platform/External
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
 endif()
+
+target_include_directories(TeleportServer PUBLIC ../thirdparty/webrtc/include)
 #Include CUDA library location.
 if(UNIX)
 	target_link_directories(TeleportServer PUBLIC ${LIBAV_CUDA_DIR}/lib64 /usr/lib/x86_64-linux-gnu)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/lib/MT)
-
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp fmt)
+target_link_directories(TeleportServer PUBLIC ../thirdparty/webrtc/lib)
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp fmt webrtc)
 if(WIN32)
-target_link_libraries(TeleportServer draco winmm d3d12 libssl libcrypto)
+target_link_libraries(TeleportServer draco winmm d3d12 Secur32.lib)#libssl libcrypto)
 else()
 target_link_libraries(TeleportServer draco_static ssl crypto cuda cudart)
 endif()
