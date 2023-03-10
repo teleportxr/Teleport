@@ -70,6 +70,8 @@ namespace avs
 		void setEstimatedDecodingFrequency(uint8_t estimatedDecodingFrequency);
 		void setProcessingEnabled(bool enable) override;
 		bool isProcessingEnabled() const override;
+
+		bool getNextSetupMessage(std::string& s) override { return false; }
 	protected:
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		void sendData(const std::vector<uint8_t>& subPacket);

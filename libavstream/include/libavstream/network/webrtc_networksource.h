@@ -7,19 +7,35 @@
 #include <libavstream/node.hpp>
 #include <optional>
 #include "networksource.h"
+#include <unordered_map>
+#if IS_CLIENT
+#include <libavstream/httputil.hpp>
+#endif
+
+namespace webrtc
+{
+	class DataChannelInterface;
+	class IceCandidateInterface;
+	struct DataBuffer;
+	class SessionDescriptionInterface;
+	class PeerConnectionInterface;
+	class DataChannelInterface;
+}
 
 namespace avs
 {
+	class WebRtcNetworkSource;
 	/*!
 	 * Network source node `[passive, 0/1]`
 	 *
 	 * Receives video stream from a remote UDP endpoint.
 	 */
-	class AVSTREAM_API SrtEfpNetworkSource final : public NetworkSource
+	class AVSTREAM_API WebRtcNetworkSource final : public NetworkSource
 	{
-		AVSTREAM_PUBLICINTERFACE(SrtEfpNetworkSource)
+		AVSTREAM_PUBLICINTERFACE(WebRtcNetworkSource)
+		WebRtcNetworkSource::Private * m_data = nullptr;
 	public:
-		SrtEfpNetworkSource();
+		WebRtcNetworkSource();
 
 		/*!
 		 * Configure network source and bind to local UDP endpoint.
@@ -54,30 +70,39 @@ namespace avs
 		/*!
 		 * Get node display name (for reporting & profiling).
 		 */
-		const char* getDisplayName() const override { return "SrtEfpNetworkSource"; }
+		const char* getDisplayName() const override { return "WebRtcNetworkSource"; }
 
 		/*!
 		 * Get current counter values.
 		 */
 		NetworkSourceCounters getCounterValues() const override;
 
-		void setDebugStream(uint32_t) override;
-		void setDoChecksums(bool) override;
-		void setDebugNetworkPackets(bool s) override;
-		size_t getSystemBufferSize() const override;
+
+		// std::function
+		void OnAnswerCreated(webrtc::SessionDescriptionInterface* desc);
 #if IS_CLIENT
 		std::queue<HTTPPayloadRequest>& GetHTTPRequestQueue();
 #endif
 
-	private:
-		Private *m_data; 
-
-		void sendAck(avs::NetworkPacket &packet);
-		void asyncReceivePackets();
-		void asyncProcessPackets();
-		void processPackets();
-		void closeSocket();
+		void setDebugStream(uint32_t)override {}
+		void setDoChecksums(bool)override {}
+		void setDebugNetworkPackets(bool s)override {}
+		size_t getSystemBufferSize() const override {
+			return 0;
+		}
+	protected:
+		class CreateSessionDescriptionObserver* create_session_description_observer = nullptr;
+		class SetSessionDescriptionObserver* set_session_description_observer = nullptr;
+		std::vector<NetworkSourceStream> m_streams;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
+#if IS_CLIENT
+		HTTPUtil m_httpUtil;
+#endif
+		std::unordered_map<uint32_t, int> m_streamNodeMap;
+		NetworkSourceParams m_params;
+		NetworkSourceCounters m_counters;
+		mutable std::mutex m_networkMutex;
+		mutable std::mutex m_dataMutex;
 	};
 
 } // avs

@@ -158,6 +158,12 @@ namespace avs
 		Code m_code;
 	};
 
+	enum class StreamingTransportLayer : uint8_t
+	{
+		NONE = 0,
+		SRT_EFP=1,
+		WEBRTC=2
+	};
 	/*! Log severity class. */
 	enum class LogSeverity
 	{

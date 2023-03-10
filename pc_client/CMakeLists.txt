@@ -53,6 +53,8 @@ else()
 	target_link_libraries(pc_client SimulDirectX11_MT)
 	target_link_libraries(pc_client d3d12)
 endif()
+target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
+target_link_libraries(pc_client webrtc.lib Secur32.lib)
 target_compile_definitions(pc_client PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
 
 SetTeleportDefaults(pc_client)

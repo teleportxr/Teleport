@@ -13,7 +13,7 @@ namespace teleport
 {
 	namespace server
 	{
-		struct CasterNetworkSettings;
+		struct ServerNetworkSettings;
 		struct ServerSettings;
 
 		//! Network pipeline.
@@ -23,7 +23,7 @@ namespace teleport
 			NetworkPipeline(const ServerSettings* settings);
 			virtual ~NetworkPipeline();
 
-			void initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
+			void initialise(const ServerNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
 
 			virtual void release();
 			virtual bool process();
@@ -35,6 +35,7 @@ namespace teleport
 			void setProcessingEnabled(bool enable);
 			bool isProcessingEnabled() const;
 
+			bool getNextSetupMessage(std::string &str);
 		private:
 			const ServerSettings* mSettings;
 

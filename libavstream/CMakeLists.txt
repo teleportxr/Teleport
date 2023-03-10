@@ -44,6 +44,9 @@ set(src_private_network
 	src/network/webrtc_networksink.cpp
 	src/network/networksource.cpp
 	src/network/srt_efp_networksource.cpp
+	src/network/webrtc_networksource.cpp
+	src/network/webrtc_common.cpp
+	src/network/webrtc_common.h
 )
 set(src_private_api
 	src/api/cuda.cpp
@@ -130,7 +133,7 @@ source_group("Private Headers\\encoders" src FILES ${hdr_private_encoders} )
 source_group("Private Headers\\util" src FILES ${hdr_private_util} )
 
 # Public source
-set(src_public_root
+set(hdr_public_root
 	include/libavstream/abi.hpp
 	include/libavstream/audiodecoder.h
 	include/libavstream/audioencoder.h
@@ -150,12 +153,6 @@ set(src_public_root
 	include/libavstream/libavstream.hpp
 	include/libavstream/memory.hpp
 	include/libavstream/mesh.hpp
-	include/libavstream/network/networksink.h
-	include/libavstream/network/srt_efp_networksink.h
-	include/libavstream/network/webrtc_networksink.h
-	include/libavstream/network/webrtc_observers.h
-	include/libavstream/network/networksource.h
-	include/libavstream/network/srt_efp_networksource.h
 	include/libavstream/node.hpp
 	include/libavstream/nullsink.hpp
 	include/libavstream/packetizer.hpp
@@ -164,6 +161,14 @@ set(src_public_root
 	include/libavstream/surface.hpp
 	include/libavstream/timer.hpp
 	)
+set(hdr_public_network
+	include/libavstream/network/networksink.h
+	include/libavstream/network/srt_efp_networksink.h
+	include/libavstream/network/webrtc_networksink.h
+	include/libavstream/network/webrtc_observers.h
+	include/libavstream/network/networksource.h
+	include/libavstream/network/srt_efp_networksource.h
+	include/libavstream/network/webrtc_networksource.h)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)
 set(src_public_decoders
@@ -192,12 +197,12 @@ set(hdr_public_audio
 )
 	
 if(NOT TELEPORT_SERVER)
-	set(src_public_root ${src_public_root} include/libavstream/httputil.hpp)
+	set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)
 	set(src_private_root ${src_private_root} src/httputil.cpp)
 endif()
 
-set(hdr_public ${src_public_root} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio})
-source_group("Public Headers" src FILES ${src_public_root} )
+set(hdr_public ${hdr_public_root} ${hdr_public_network} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio})
+source_group("Public Headers" src FILES ${hdr_public_root} )
 source_group("Public Headers\\stream" src FILES ${src_public_stream} )
 source_group("Public Headers\\decoders" src FILES ${src_public_decoders} )
 source_group("Public Headers\\encoders" src FILES ${src_public_encoders} )
@@ -205,6 +210,7 @@ source_group("Public Headers\\surfaces" src FILES ${src_public_surfaces} )
 source_group("Public Headers\\platforms" src FILES ${src_public_platforms} )
 source_group("Public Headers\\geometry" src FILES ${hdr_public_geometry} )
 source_group("Public Headers\\audio" src FILES ${hdr_public_audio} )
+source_group("Public Headers\\network" src FILES ${hdr_public_network} )
 
 set(src_private ${src_private_root} ${src_private_api} ${src_private_network} ${src_private_stream} ${src_private_util} ${src_private_audio})
 

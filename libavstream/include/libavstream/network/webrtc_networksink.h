@@ -85,6 +85,9 @@ namespace avs
 		void setProcessingEnabled(bool enable);
 		bool isProcessingEnabled() const;
 
+		//! IF there is a message to send reliably to the peer, this will fill it in.
+		bool getNextSetupMessage(std::string &msg) override;
+
 		// std::function targets
 		void OnDataChannelMessage(uint64_t data_stream_index, const webrtc::DataBuffer& buffer);
 	protected:
@@ -94,17 +97,18 @@ namespace avs
 		NetworkSinkCounters m_counters;
 		mutable std::mutex m_countersMutex;
 		bool enabled = true;
-		class PeerConnectionObserver * peer_connection_observer=nullptr;
-		class CreateSessionDescriptionObserver *create_session_description_observer = nullptr;
-		class SetSessionDescriptionObserver* set_session_description_observer = nullptr;
-
+		class PeerConnectionObserver			*peer_connection_observer=nullptr;
+		class CreateSessionDescriptionObserver	*create_session_description_observer = nullptr;
+		class SetSessionDescriptionObserver		*set_session_description_observer = nullptr;
 		rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer_connection;
 
 		// map from the stream indices to the channels.
 		std::unordered_map<uint64_t, DataChannel> dataChannels;
 		void OnDataChannelCreated(webrtc::DataChannelInterface* channel);
 		void OnIceCandidate(const webrtc::IceCandidateInterface* candidate);
-		void OnAnswerCreated(webrtc::SessionDescriptionInterface* desc);
+		void OnSessionDescriptionCreated(webrtc::SessionDescriptionInterface* desc);
+
+		std::vector<SetupMessage> m_setupMessages;
 	};
 
 } // avs

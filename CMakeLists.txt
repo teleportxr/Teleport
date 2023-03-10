@@ -170,27 +170,27 @@ function(SetTeleportDefaults targname)
 	# Treat angle-brackets as representing external headers. Minimal warnings for external headers.
 		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /JMC /external:anglebrackets /external:W0)
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=__stdcall)
-	# attempting to get WebRTC not to crash:
-	#target_compile_definitions(${targname} PRIVATE   
-	#					  _WEBSOCKETPP_CPP11_INTERNAL_
-    #                        #USE_AURA=1
-	#						_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
-	#						_CRT_SECURE_NO_DEPRECATE
-    #                        _SCL_SECURE_NO_DEPRECATE
-	#						_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-	#						#_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
-    #                        #PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
-    #                        #WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
-    #                        #NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
-    #                        #NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
-	#						WEBRTC_ENABLE_PROTOBUF=0
-    #                        WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
-    #                        WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
-    #                        WEBRTC_WIN
-	#						ABSL_ALLOCATOR_NOTHROW=1
-	#						ABSL_USES_STD_OPTIONAL=0
-	#						HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
-	#)
+	 #attempting to get WebRTC not to crash:
+	target_compile_definitions(${targname} PRIVATE   
+						  _WEBSOCKETPP_CPP11_INTERNAL_
+                            #USE_AURA=1
+							_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
+							_CRT_SECURE_NO_DEPRECATE
+                            _SCL_SECURE_NO_DEPRECATE
+							_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+							#_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
+                            #PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
+                            #WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
+                            #NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
+                            #NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
+							WEBRTC_ENABLE_PROTOBUF=0
+                            WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
+                            WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
+                            WEBRTC_WIN
+							ABSL_ALLOCATOR_NOTHROW=1
+							ABSL_USES_STD_OPTIONAL=0
+							HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
+	)
 	else()
 	#TODO: -Wno-deprecated-copy should be removed when possible.
 		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)

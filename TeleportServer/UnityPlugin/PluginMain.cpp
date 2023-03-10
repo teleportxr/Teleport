@@ -371,11 +371,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 				Client_StartStreaming(clientPair.first);
 			}
 
-			clientData.clientMessaging->tick(deltaTime);
-		}
-		else
-		{
-			// The peer has not yet been created.
+			clientData.tick(deltaTime);
 		}
 	}
 

@@ -53,6 +53,7 @@ namespace teleport
 			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
 			virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
+			virtual void OnTextCommand(const std::string& str) = 0;
 		};
 		
 		enum class WebspaceLocation : uint8_t
@@ -154,6 +155,7 @@ namespace teleport
 			void ReceiveSetupInputsCommand(const ENetPacket* packet);
 			void ReceiveUpdateNodeStructureCommand(const ENetPacket* packet);
 			void ReceiveAssignNodePosePathCommand(const ENetPacket* packet);
+			void ReceiveTextCommand(const ENetPacket* packet);
 			static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
 			avs::uid lastServerID = 0; //UID of the server we last connected to.

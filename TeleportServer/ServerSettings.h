@@ -106,7 +106,7 @@ namespace teleport
 		} AVS_PACKED;
 #pragma pack(pop)
 
-		struct CasterNetworkSettings
+		struct ServerNetworkSettings
 		{
 			int32_t localPort;
 			const wchar_t* remoteIP;
@@ -115,6 +115,7 @@ namespace teleport
 			int32_t clientBufferSize;
 			int32_t requiredLatencyMs;
 			int32_t connectionTimeout;
+			avs::StreamingTransportLayer streamingTransportLayer= avs::StreamingTransportLayer::NONE;
 		} AVS_PACKED;
 
 		struct CasterEncoderSettings

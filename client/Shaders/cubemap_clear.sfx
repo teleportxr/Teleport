@@ -140,6 +140,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 			lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0).rgba;
 		}
 	}
+	lookup.rgb += vec3(0.005, 0.005, 0.005);
 	return lookup;
 }
 shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET

@@ -4,6 +4,7 @@
 #include <api/jsep.h>
 
 #include <functional>
+#include <iostream>
 namespace avs
 {
     // PeerConnection events.
@@ -15,13 +16,22 @@ namespace avs
             on_data_channel{ on_data_channel }, on_ice_candidate{ on_ice_candidate } {}
 
         // Override signaling change.
-        void OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState /* new_state */) {}
+        void OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState  new_state )
+        {
+            std::cerr << "OnSignalingChange\n";
+        }
 
         // Override adding a stream.
-        void OnAddStream(webrtc::MediaStreamInterface* /* stream */) {}
+        void OnAddStream(webrtc::MediaStreamInterface*  stream )
+        {
+            std::cerr << "OnAddStream\n";
+        }
 
         // Override removing a stream.
-        void OnRemoveStream(webrtc::MediaStreamInterface* /* stream */) {}
+        void OnRemoveStream(webrtc::MediaStreamInterface* stream )
+        {
+            std::cerr << "OnRemoveStream\n";
+        }
 
         // Override data channel change.
         void OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel) {
@@ -29,16 +39,25 @@ namespace avs
         }
 
         // Override renegotiation.
-        void OnRenegotiationNeeded() {}
+        void OnRenegotiationNeeded()
+        {
+            std::cerr << "OnRenegotiationNeeded\n";
+        }
 
         // Override ICE connection change.
-        void OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState /* new_state */) {}
+        void OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState  new_state) {
+            std::cerr << "OnIceConnectionChange\n";
+        
+        }
 
         // Override ICE gathering change.
-        void OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState /* new_state */) {}
+        void OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState  new_state ) {
+            std::cerr << "OnIceGatheringChange\n";
+        }
 
         // Override ICE candidate.
         void OnIceCandidate(const webrtc::IceCandidateInterface* candidate) {
+            std::cerr << "OnIceCandidate\n";
             on_ice_candidate(candidate);
         }
 

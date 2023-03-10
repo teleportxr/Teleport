@@ -42,7 +42,6 @@ target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/
 target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 
 if(WIN32)
-# Removed circular dependency
 elseif(ANDROID)
 	#Include OpenGL ES 3.0
 	target_include_directories(TeleportClient PUBLIC ../client/VrApi/Include) 

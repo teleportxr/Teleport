@@ -22,7 +22,7 @@
 #include "TeleportClient/Config.h"
 #include "TeleportAudio/AudioStreamTarget.h"
 #include "TeleportAudio/AudioCommon.h"
-#ifdef _MSC_VER
+#if TELEPORT_PC_AUDIO_PLAYER
 #include "TeleportAudio/PC_AudioPlayer.h"
 #endif
 #include "TeleportAudio/NetworkPipeline.h"
@@ -134,7 +134,7 @@ namespace clientrender
 		// determined by the stream setup command:
 		vec4 colourOffsetScale;
 		vec4 depthOffsetScale;
-#ifdef _MSC_VER
+#if TELEPORT_PC_AUDIO_PLAYER
 		sca::PC_AudioPlayer audioPlayer;
 #endif
 		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
@@ -215,5 +215,6 @@ namespace clientrender
 		void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l) override;
 		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
 		void SetOrigin(unsigned long long ctr,avs::uid oorigin_uid) override;
+		void OnTextCommand(const std::string& str) override;
 	};
 }

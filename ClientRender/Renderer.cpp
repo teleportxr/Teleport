@@ -792,14 +792,17 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			sessionClient->Disconnect(0);
 			return;
 		}
-
-		static short c = 0;
-		if (!(c--))
+		// Source might not yet be configured...
+		if (instanceRenderer->clientPipeline.source)
 		{
-			const avs::NetworkSourceCounters Counters = instanceRenderer->clientPipeline.source.getCounterValues();
-			std::cout << "Network packets dropped: " << 100.0f*Counters.networkDropped << "%"
-				<< "\nDecoder packets dropped: " << 100.0f*Counters.decoderDropped << "%"
-				<< std::endl;
+			static short c = 0;
+			if (!(c--))
+			{
+				const avs::NetworkSourceCounters Counters = instanceRenderer->clientPipeline.source->getCounterValues();
+				std::cout << "Network packets dropped: " << 100.0f * Counters.networkDropped << "%"
+					<< "\nDecoder packets dropped: " << 100.0f * Counters.decoderDropped << "%"
+					<< std::endl;
+			}
 		}
 	}
 
@@ -1234,7 +1237,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
-	const avs::NetworkSourceCounters counters = instanceRenderer->clientPipeline.source.getCounterValues();
+	const avs::NetworkSourceCounters counters = instanceRenderer->clientPipeline.source->getCounterValues();
 	const avs::DecoderStats vidStats = instanceRenderer->clientPipeline.decoder.GetStats();
 	auto status = sessionClient->GetConnectionStatus();
 

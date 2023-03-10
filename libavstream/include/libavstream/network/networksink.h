@@ -59,6 +59,11 @@ namespace avs
 		/*! Buffer of data to be sent */
 		std::vector<uint8_t> buffer;
 	};
+	//! A message sent by the reliable (Enet/Websockets) channel.
+	struct SetupMessage
+	{
+		std::string text;
+	};
 	class AVSTREAM_API NetworkSink : public PipelineNode
 	{
 	public:
@@ -69,5 +74,29 @@ namespace avs
 		virtual NetworkSinkCounters getCounters() const=0;
 		virtual void setProcessingEnabled(bool enable)=0;
 		virtual bool isProcessingEnabled() const=0;
+		virtual bool getNextSetupMessage(std::string& ) =0;
+	};
+ 	class AVSTREAM_API NullNetworkSink final: public NetworkSink
+	{
+	public:
+		NullNetworkSink() :NetworkSink(nullptr) {}
+		virtual ~NullNetworkSink() {}
+		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) override { return avs::Result::OK; }
+		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) override  { return avs::Result::OK; }
+		NetworkSinkCounters getCounters() const override {
+			return NetworkSinkCounters();
+		}
+		void setProcessingEnabled (bool enable) override
+		{
+		}
+		bool isProcessingEnabled() const override
+		{
+			return false;
+		}
+		const char* getDisplayName() const override { return "NullNetworkSink"; }
+		virtual bool getNextSetupMessage(std::string&)
+		{
+			return false;
+			}
 	};
 }

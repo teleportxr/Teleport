@@ -65,6 +65,7 @@ namespace teleport
 			UpdateNodeStructure,
 			AssignNodePosePath,
 			SetupInputs,
+			Text,
 		};
 
 		//! The payload type, or how to interpret the client's message.
@@ -516,6 +517,24 @@ namespace teleport
 			}
 		} AVS_PACKED;
 
+		//! A command to send textual data.
+		struct TextCommand : public Command
+		{
+			//! size of the data to follow.
+			uint16_t stringLength;
+			TextCommand()
+				:TextCommand(0)
+			{}
+
+			TextCommand( uint16_t s)
+				:Command(CommandPayloadType::Text), stringLength(s)
+			{}
+
+			static size_t getCommandSize()
+			{
+				return sizeof(TextCommand);
+			}
+		} AVS_PACKED;
 		/// A message from a client to a server.
 		struct ClientMessage
 		{

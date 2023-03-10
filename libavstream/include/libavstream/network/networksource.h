@@ -70,6 +70,10 @@ namespace avs
 		NetworkSource(PipelineNode::Private* d_ptr);
 		virtual Result configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)=0;
 		virtual NetworkSourceCounters getCounterValues() const=0;
+		virtual void setDebugStream(uint32_t) = 0;
+		virtual void setDoChecksums(bool) = 0;
+		virtual void setDebugNetworkPackets(bool s) = 0;
+		virtual size_t getSystemBufferSize() const =0;
 	};
 
 } // avs

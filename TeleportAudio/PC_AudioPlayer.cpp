@@ -56,9 +56,7 @@ namespace sca
 		{
 			return Result::AudioPlayerAlreadyInitialized;
 		}
-
 		mInitResult = std::async(std::launch::async, &PC_AudioPlayer::asyncInitializeAudioDevice, this);
-
 		return Result::OK;
 	}
 

@@ -86,11 +86,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	else
 	{
 		teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
-	/*	std::vector<avs::InputDefinition> inputDefinitionsV;
-		for (auto &it = inputDefinitions.begin(); it != inputDefinitions.end(); ++it)
-		{
-			inputDefinitionsV.push_back(it->second);
-		}*/
+	
 		clientMessaging->sendCommand(setupInputsCommand, inputDefinitions);
 	}
 	isStreaming = true;
@@ -186,3 +182,9 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 	}
 	
 }
+
+void ClientData::tick(float deltaTime)
+{
+	clientMessaging->tick(deltaTime);
+}
+

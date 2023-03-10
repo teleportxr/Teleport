@@ -53,7 +53,7 @@ InstanceRenderer::InstanceRenderer(avs::uid server,teleport::client::Config &c,G
 {
 	server_uid=server;
 	resourceCreator.SetGeometryCache(&geometryCache);
-#ifdef _MSC_VER
+#if TELEPORT_PC_AUDIO_PLAYER
 	audioPlayer.initializeAudioDevice();
 #endif
 }
@@ -903,21 +903,21 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	sourceParams.useSSL = setupCommand.using_ssl;
 
 	// Configure for video stream, tag data stream, audio stream and geometry stream.
-	if (!clientPipeline.source.configure(std::move(streams), sourceParams))
+	if (!clientPipeline.source->configure(std::move(streams), sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
 		return false;
 	}
 
-	clientPipeline.source.setDebugStream(setupCommand.debug_stream);
-	clientPipeline.source.setDoChecksums(setupCommand.do_checksums);
-	clientPipeline.source.setDebugNetworkPackets(setupCommand.debug_network_packets);
+	clientPipeline.source->setDebugStream(setupCommand.debug_stream);
+	clientPipeline.source->setDoChecksums(setupCommand.do_checksums);
+	clientPipeline.source->setDebugNetworkPackets(setupCommand.debug_network_packets);
 
 	//test
 	//avs::HTTPPayloadRequest req;
 	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
 	//req.type = avs::FilePayloadType::Mesh;
-	//clientPipeline.source.GetHTTPRequestQueue().emplace(std::move(req));
+	//clientPipeline.source->GetHTTPRequestQueue().emplace(std::move(req));
 
 	clientPipeline.decoderParams.deferDisplay = false;
 	clientPipeline.decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
@@ -940,8 +940,8 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 #endif
 
 	clientPipeline.pipeline.reset();
-	// Top of the clientPipeline.pipeline, we have the network clientPipeline.source.
-	clientPipeline.pipeline.add(&clientPipeline.source);
+	// Top of the clientPipeline.pipeline, we have the network clientPipeline.source->
+	clientPipeline.pipeline.add(clientPipeline.source.get());
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(instanceRenderState.avsTexture.get());
 	if (ti)
@@ -1001,7 +1001,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 	clientPipeline.videoQueue.configure(300000, 16, "VideoQueue");
 
-	avs::PipelineNode::link(clientPipeline.source, clientPipeline.videoQueue);
+	avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.videoQueue);
 	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
 	clientPipeline.pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
 	
@@ -1015,7 +1015,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
 
-		avs::PipelineNode::link(clientPipeline.source, clientPipeline.tagDataQueue);
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.tagDataQueue);
 		clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
 	}
 
@@ -1029,15 +1029,15 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		audioSettings.sampleRate = 48000;
 		audioSettings.bitsPerSample = 32;
 		// This will be deconfigured automatically when the clientPipeline.pipeline is deconfigured.
-		#ifdef _MSC_VER
+#if TELEPORT_PC_AUDIO_PLAYER
 		audioPlayer.configure(audioSettings);
 		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
-		#endif
+#endif
 		clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
 
 		clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
 
-		avs::PipelineNode::link(clientPipeline.source, clientPipeline.audioQueue);
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.audioQueue);
 		avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
 		clientPipeline.pipeline.link({ &clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget });
 
@@ -1066,10 +1066,10 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 					audioInputNetworkPipeline->process();
 				}
 			};
-		#ifdef _MSC_VER
+#if TELEPORT_PC_AUDIO_PLAYER
 			// The audio player will stop recording automatically when deconfigured. 
 			audioPlayer.startRecording(f);
-		#endif
+#endif
 		}
 	}
 
@@ -1081,7 +1081,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 		clientPipeline.geometryQueue.configure(600000, 200, "clientPipeline.geometryQueue");
 
-		avs::PipelineNode::link(clientPipeline.source, clientPipeline.geometryQueue);
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
 		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
@@ -1093,7 +1093,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	handshake.FOV = 90.0f;
 	handshake.isVR = false;
 	handshake.framerate = 60;
-	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source.getSystemBufferSize());
+	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source->getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
 	handshake.clientStreamingPort = setupCommand.server_streaming_port + 1;
@@ -1179,4 +1179,9 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 	}
 	
 	renderState.lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
+}
+
+void InstanceRenderer::OnTextCommand(const std::string& str)
+{
+
 }

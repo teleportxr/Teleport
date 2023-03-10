@@ -427,6 +427,9 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 		case teleport::core::CommandPayloadType::AssignNodePosePath:
 			ReceiveAssignNodePosePathCommand(packet);
 			break;
+		case teleport::core::CommandPayloadType::Text:
+			ReceiveTextCommand(packet);
+			break;
 		default:
 			break;
 	};
@@ -956,4 +959,26 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const ENetPacket* packet)
 	str.resize(assignNodePosePathCommand.pathLength);
 	memcpy(static_cast<void*>(str.data()), packet->data+commandSize, assignNodePosePathCommand.pathLength);
 	mCommandInterface->AssignNodePosePath(assignNodePosePathCommand,str);
+}
+
+void SessionClient::ReceiveTextCommand(const ENetPacket* packet)
+{
+	size_t commandSize = sizeof(teleport::core::TextCommand);
+	if (packet->dataLength < commandSize)
+	{
+		TELEPORT_CERR << "Bad packet." << std::endl;
+		return;
+	}
+	//Copy command out of packet.
+	teleport::core::TextCommand textCommand;
+	memcpy(static_cast<void*>(&textCommand), packet->data, commandSize);
+	if (packet->dataLength != commandSize + textCommand.stringLength)
+	{
+		TELEPORT_CERR << "Bad packet." << std::endl;
+		return;
+	}
+	std::string str;
+	str.resize(textCommand.stringLength);
+	memcpy(static_cast<void*>(str.data()), packet->data + commandSize, textCommand.stringLength);
+	mCommandInterface->OnTextCommand( str); 
 }

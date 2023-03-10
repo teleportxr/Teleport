@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include "network/webrtc_networksink.h"
+#include "network/srt_efp_networksink.h"
 
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
@@ -43,7 +44,7 @@ NetworkPipeline::~NetworkPipeline()
 	release();
 }
 
-void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue)
+void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue)
 {
 	avs::NetworkSinkParams SinkParams = {};
 	SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
@@ -53,8 +54,20 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 	SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
 	mPipeline.reset(new avs::Pipeline);
-	mNetworkSink.reset(new avs::WebRtcNetworkSink);
 
+	// What transport protocol will we use to stream data?
+	switch (inNetworkSettings.streamingTransportLayer )
+	{
+	case avs::StreamingTransportLayer::SRT_EFP:
+		mNetworkSink.reset(new avs::SrtEfpNetworkSink);
+		break;
+	case avs::StreamingTransportLayer::WEBRTC:
+		mNetworkSink.reset(new avs::WebRtcNetworkSink);
+		break;
+	default:
+		mNetworkSink.reset(new avs::NullNetworkSink);
+		break;
+	}
 
 	//char remoteIP[20];
 	//size_t stringLength = wcslen(inNetworkSettings.remoteIP);
@@ -114,9 +127,8 @@ void NetworkPipeline::initialise(const CasterNetworkSettings& inNetworkSettings,
 		stream.dataType = avs::NetworkDataType::Geometry;
 		streams.emplace_back(std::move(stream));
 	}
-	avs::PipelineNode* s = mNetworkSink.get();
-	avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(s);
-	if (!webRtcNetworkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
+	avs::NetworkSink* networkSink = mNetworkSink.get();
+	if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
 	{
 		TELEPORT_CERR << "Failed to configure network sink!" << "\n";
 		return;
@@ -220,8 +232,7 @@ avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) con
 {
 	if (mNetworkSink)
 	{
-		avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
-		counters = webRtcNetworkSink->getCounters();
+		counters = mNetworkSink->getCounters();
 	}
 	else
 	{
@@ -233,15 +244,20 @@ avs::Result NetworkPipeline::getCounters(avs::NetworkSinkCounters& counters) con
 
 void NetworkPipeline::setProcessingEnabled(bool enable)
 {
-	avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
-	if (webRtcNetworkSink)
-		webRtcNetworkSink->setProcessingEnabled(enable);
+	if (mNetworkSink)
+		mNetworkSink->setProcessingEnabled(enable);
 }
 
 bool NetworkPipeline::isProcessingEnabled() const
 {
-	avs::WebRtcNetworkSink* webRtcNetworkSink = static_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
-	if (webRtcNetworkSink)
-		return webRtcNetworkSink->isProcessingEnabled();
+	if (mNetworkSink)
+		return mNetworkSink->isProcessingEnabled();
+	return false;
+}
+
+bool NetworkPipeline::getNextSetupMessage(std::string &str)
+{
+	if (mNetworkSink)
+		return mNetworkSink->getNextSetupMessage(str);
 	return false;
 }

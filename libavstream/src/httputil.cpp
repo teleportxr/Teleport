@@ -27,7 +27,7 @@ namespace avs
 	{
 		if (mInitialized)
 		{
-			return Result::HTTPUtil_AlreadyInitialized;
+			return Result::OK;
 		}
 
 		curl_global_init(CURL_GLOBAL_DEFAULT);

@@ -70,7 +70,6 @@ if(TELEPORT_UNITY)
 		UnityPlugin/PluginMain.h
 		UnityPlugin/PluginMain.cpp
 	)
-
 	add_library(TeleportServer SHARED ${src} ${src_plugin})
 	set_target_properties( TeleportServer PROPERTIES 
 		VS_DEBUGGER_COMMAND ${TELEPORT_UNITY_EDITOR_DIR}/${TELEPORT_UNITY_EDITOR_EXE}
@@ -88,6 +87,7 @@ if(TELEPORT_UNITY)
 else()
 	add_library(TeleportServer STATIC ${src})
 endif()
+
 SetTeleportDefaults( TeleportServer )
 
 #Include its root directory

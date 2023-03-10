@@ -116,19 +116,26 @@ void ClientMessaging::stopSession()
 
 void ClientMessaging::tick(float deltaTime)
 {
-	//Don't stream geometry to the client before we've received the handshake.
+	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
 
-	
 	if (peer && clientNetworkContext->NetworkPipeline && !clientNetworkContext->NetworkPipeline->isProcessingEnabled())
 	{
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
 		Disconnect();
 		return;
 	}
-	
-
+	std::string msg;
+	if (clientNetworkContext->NetworkPipeline && clientNetworkContext->NetworkPipeline->getNextSetupMessage(msg))
+	{
+		// messages to be sent as text e.g. WebRTC config.
+		teleport::core::TextCommand command((uint16_t)msg.size());
+		std::vector<char> chars;
+		chars.resize(msg.size());
+		memcpy(chars.data(), msg.data(), msg.size());
+		sendCommand(command, chars);
+	}
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
 
@@ -436,7 +443,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		//size_t ipLength = strlen(multibyteClientIP.data());
 
 		std::wstring clientIP=StringToWString(multibyteClientIP);
-		CasterNetworkSettings networkSettings =
+		ServerNetworkSettings networkSettings =
 		{
 			static_cast<int32_t>(streamingPort),
 			clientIP.c_str(),
@@ -445,6 +452,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 			static_cast<int32_t>(handshake.udpBufferSize),
 			settings->requiredLatencyMs,
 			static_cast<int32_t>(disconnectTimeout)
+			,avs::StreamingTransportLayer::WEBRTC
 		};
 
 		clientNetworkContext->NetworkPipeline.reset(new NetworkPipeline(settings));

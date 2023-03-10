@@ -6,26 +6,22 @@
 //#define _HAS_CXX20 0
 #include "network/webrtc_networksink.h"
 #include "network/webrtc_observers.h"
-#include <network/packetformat.hpp>
+#include "network/packetformat.hpp"
 
 #include <util/srtutil.h>
 
 #include <iostream>
 #include <cmath>
 #include <api/peer_connection_interface.h>
-#include <api/create_peerconnection_factory.h>
-#include <api/audio_codecs/builtin_audio_decoder_factory.h>
-#include <api/audio_codecs/builtin_audio_encoder_factory.h>
-#include <media/engine/multiplex_codec_factory.h>
-#include <media/engine/internal_encoder_factory.h>
-#include <media/engine/internal_decoder_factory.h>
-#include "network/webrtc_observers.h"
+#include "network/webrtc_common.h"
 #include <functional>
 
 //rtc
-#include <rtc_base/physical_socket_server.h>
 #include <rtc_base/ssl_adapter.h>
 #include <rtc_base/thread.h>
+#include <ios>
+#include "network/webrtc_observers.h"
+
 #pragma optimize("",off)
 using namespace avs;
 namespace avs
@@ -53,33 +49,6 @@ DataChannel::~DataChannel()
 	delete data_channel_observer;
 }
 
-static rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> g_peer_connection_factory;
-// The socket that the signaling thread and worker thread communicate on.
-rtc::PhysicalSocketServer socket_server;
-// The separate thread where all of the WebRTC code runs
-std::unique_ptr<rtc::Thread> g_worker_thread;
-std::unique_ptr<rtc::Thread> g_signaling_thread;
-void CreatePeerConnectionFactory()
-{
-	if (g_peer_connection_factory == nullptr)
-	{
-		rtc::LogMessage::LogToDebug(rtc::LS_INFO);
-		g_worker_thread.reset(new rtc::Thread(&socket_server));
-		g_worker_thread->Start();
-		g_signaling_thread.reset(new rtc::Thread(&socket_server));
-		g_signaling_thread->Start();
-		// No audio or video decoders: for now, all streams will be treated as plain data.
-		// But WebRTC requires non-null factories:
-		g_peer_connection_factory = webrtc::CreatePeerConnectionFactory(
-			g_worker_thread.get(), g_worker_thread.get(), g_signaling_thread.get(),
-			nullptr, webrtc::CreateBuiltinAudioEncoderFactory(),
-			webrtc::CreateBuiltinAudioDecoderFactory(),
-			std::unique_ptr<webrtc::VideoEncoderFactory>(new webrtc::MultiplexEncoderFactory(absl::make_unique<webrtc::InternalEncoderFactory>())),
-			std::unique_ptr<webrtc::VideoDecoderFactory>(new webrtc::MultiplexDecoderFactory(absl::make_unique<webrtc::InternalDecoderFactory>())),
-			nullptr, nullptr);
-	}
-}
-
 WebRtcNetworkSink::WebRtcNetworkSink()
 	: NetworkSink(new WebRtcNetworkSink::Private(this))
 {
@@ -92,7 +61,7 @@ WebRtcNetworkSink::WebRtcNetworkSink()
 		,std::bind(&WebRtcNetworkSink::OnIceCandidate, this, std::placeholders::_1)
 	));
 	create_session_description_observer=(new CreateSessionDescriptionObserver(
-		std::bind(&WebRtcNetworkSink::OnAnswerCreated, this, std::placeholders::_1)
+		std::bind(&WebRtcNetworkSink::OnSessionDescriptionCreated, this, std::placeholders::_1)
 		));
 	set_session_description_observer=(new SetSessionDescriptionObserver());
 }
@@ -113,39 +82,56 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 	{
 		return Result::Node_InvalidConfiguration;
 	}
+
 	webrtc::PeerConnectionInterface::IceServer ice_server;
 	ice_server.uri = "stun:stun.l.google.com:19302";
 	// Just DECLARING this on the stack crashes the program. Unless webrtc.lib is recompiled with ABSL_OPTION_USE_STD_OPTIONAL=0
 	// to force it to use the absl::optional implementation globally, instead of sometimes treating absl::optional as absl::optional
 	// and sometimes treating it as std::optional.
 	webrtc::PeerConnectionInterface::RTCConfiguration rtcConfiguration;
+	// should use this:?
+//rtcConfiguration.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
+	// DTLS SRTP has to be disabled for loopback to work.
+//rtcConfiguration.enable_dtls_srtp = false;
 	rtcConfiguration.servers.push_back(ice_server);
 	
-	rtc::scoped_refptr<webrtc::PeerConnectionInterface> ptr(g_peer_connection_factory->CreatePeerConnection(rtcConfiguration, webrtc::PeerConnectionDependencies(peer_connection_observer)));
-	peer_connection = ptr;
+	peer_connection = g_peer_connection_factory->CreatePeerConnection(rtcConfiguration, nullptr, nullptr, peer_connection_observer);
+	//peer_connection = ptr;
 	priv->data_channel_config.ordered = false;
 	priv->data_channel_config.maxRetransmits = 0;
 	dataChannels.clear();
 	for (size_t i = 0; i < streams.size(); i++)
 	{
 		assert(i == streams[i].id);
-		dataChannels.emplace(streams[i].id, DataChannel(streams[i].id, this));
-		DataChannel& d = dataChannels[streams[i].id];
-		d.data_channel_interface = peer_connection->CreateDataChannel("dc", &priv->data_channel_config);
-		d.data_channel_interface->RegisterObserver(d.data_channel_observer);
+		dataChannels.try_emplace(streams[i].id, streams[i].id, this);
+		DataChannel& dataChannel = dataChannels[streams[i].id];
+		webrtc::DataChannelInit data_channel_config;
+		data_channel_config.ordered = false;
+		data_channel_config.maxRetransmits = 0;
+		dataChannel.data_channel_interface = peer_connection->CreateDataChannel("dc", &data_channel_config);
+		if(dataChannel.data_channel_interface)
+			dataChannel.data_channel_interface->RegisterObserver(dataChannel.data_channel_observer);
 	}
 	webrtc::SdpParseError error;
 	//webrtc::SessionDescriptionInterface* session_description(webrtc::CreateSessionDescription("offer", sdp, &error));
+
+	webrtc::PeerConnectionInterface::RTCOfferAnswerOptions rtcOfferAnswerOptions;// (0, 0, false, true, true);
+
+	// Create the "Offer". Ask STUN for "candidates" representing our network status, and create
+	// an "offer" object to send to the client.
+	// At this point, we need have no idea where the client is, what its address is etc.
+	peer_connection->CreateOffer(create_session_description_observer, rtcOfferAnswerOptions);
+	
 	//peer_connection->SetRemoteDescription(set_session_description_observer.get(), session_description);
 	//peer_connection->CreateAnswer(create_session_description_observer.get(), ebrtc::PeerConnectionInterface::RTCOfferAnswerOptions());
-	//peer_connection->onicecandidate = onIceCandidate;
-	webrtc::PeerConnectionInterface::RTCOfferAnswerOptions o(0, 0, false, true, true);
-	peer_connection->CreateOffer(create_session_description_observer,o);
 
 	setNumInputSlots(numInputs);
 
 	m_streams = std::move(streams);
 
+	// Having completed the above, we are not yet ready to actually send data.
+	// We await the "offer" from webrtc locally and the "candidates" from the STUN server.
+	// Then we must send these using the messaging channel (Websockets or Enet) to the client.
 	return Result::OK;
 }
 
@@ -268,22 +254,48 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
 {
 	webrtc::DataBuffer db(rtc::CopyOnWriteBuffer(buffer, bufferSize),true);
-	dataChannels[inputNodeIndex].data_channel_interface->Send(db);
+	if(dataChannels[inputNodeIndex].data_channel_interface)
+		dataChannels[inputNodeIndex].data_channel_interface->Send(db);
 	return Result::OK;
 }
 
 void WebRtcNetworkSink::OnDataChannelCreated(webrtc::DataChannelInterface* channel)
 {
+	dataChannels.begin()->second.data_channel_interface= channel;
+	channel->RegisterObserver(dataChannels.begin()->second.data_channel_observer);
+	std::cerr << "OnDataChannelCreated\n";
+	std::cerr << channel->id() << std::endl;
 }
 
 void WebRtcNetworkSink::OnIceCandidate(const webrtc::IceCandidateInterface* candidate)
 {
+	std::cerr << "OnIceCandidate\n";
+	std::cerr <<candidate->server_url().c_str() << std::endl;
+	m_setupMessages.push_back({ candidate->candidate().ToString() });
 }
 
 void WebRtcNetworkSink::OnDataChannelMessage(uint64_t data_stream_index,const webrtc::DataBuffer& buffer)
 {
+	dataChannels[data_stream_index].data_channel_interface->Send(buffer);
 }
 
-void WebRtcNetworkSink::OnAnswerCreated(webrtc::SessionDescriptionInterface* desc)
+void WebRtcNetworkSink::OnSessionDescriptionCreated(webrtc::SessionDescriptionInterface* desc)
 {
+	std::cerr << "OnSessionDescriptionCreated\n";
+	// This call sets-off the OnIceCandidate() callbacks:
+	peer_connection->SetLocalDescription(set_session_description_observer, desc);
+	std::string str;
+	if (desc->ToString(&str))
+	{
+		std::cerr << str.c_str() << std::endl;
+		m_setupMessages.push_back({ str });
+	}
+}
+bool WebRtcNetworkSink::getNextSetupMessage(std::string& msg)
+{
+	if (!m_setupMessages.size())
+		return false;
+	msg=m_setupMessages[0].text;
+	m_setupMessages.erase(m_setupMessages.begin());
+	return true;
 }

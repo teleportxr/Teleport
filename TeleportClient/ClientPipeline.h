@@ -26,7 +26,7 @@ namespace teleport
 			// Pipeline and nodes:
 			avs::Pipeline pipeline;
 
-			avs::SrtEfpNetworkSource source;
+			std::shared_ptr<avs::NetworkSource> source;
 			avs::Queue videoQueue;
 			avs::Decoder decoder;
 			avs::Surface surface;
