@@ -215,6 +215,6 @@ namespace clientrender
 		void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l) override;
 		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
 		void SetOrigin(unsigned long long ctr,avs::uid oorigin_uid) override;
-		void OnTextCommand(const std::string& str) override;
+		void OnStreamingControlMessage(const std::string& str) override;
 	};
 }

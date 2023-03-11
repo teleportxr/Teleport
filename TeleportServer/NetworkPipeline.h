@@ -35,7 +35,8 @@ namespace teleport
 			void setProcessingEnabled(bool enable);
 			bool isProcessingEnabled() const;
 
-			bool getNextSetupMessage(std::string &str);
+			bool getNextStreamingControlMessage(std::string &str);
+			void receiveStreamingControlMessage(const std::string& str);
 		private:
 			const ServerSettings* mSettings;
 

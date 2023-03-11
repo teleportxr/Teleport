@@ -114,6 +114,20 @@ void ClientMessaging::stopSession()
 	eventQueue.clear();
 }
 
+void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
+{
+	// messages to be sent as text e.g. WebRTC config.
+	uint16_t len = (uint16_t)msg.size();
+	if ((size_t)len == msg.size())
+	{
+		size_t sz = sizeof(len);
+		ENetPacket* packet = enet_packet_create(nullptr, msg.size() + sz, ENET_PACKET_FLAG_RELIABLE);
+		memcpy(packet->data, &len, sz);
+		memcpy((packet->data + sz), msg.data(), len);
+		if (packet)
+			enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl), packet);
+	}
+}
 void ClientMessaging::tick(float deltaTime)
 {
 	//Don't stream to the client before we've received the handshake.
@@ -127,14 +141,9 @@ void ClientMessaging::tick(float deltaTime)
 		return;
 	}
 	std::string msg;
-	if (clientNetworkContext->NetworkPipeline && clientNetworkContext->NetworkPipeline->getNextSetupMessage(msg))
+	if (clientNetworkContext->NetworkPipeline && clientNetworkContext->NetworkPipeline->getNextStreamingControlMessage(msg))
 	{
-		// messages to be sent as text e.g. WebRTC config.
-		teleport::core::TextCommand command((uint16_t)msg.size());
-		std::vector<char> chars;
-		chars.resize(msg.size());
-		memcpy(chars.data(), msg.data(), msg.size());
-		sendCommand(command, chars);
+		sendStreamingControlMessage(msg);
 	}
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
@@ -421,12 +430,30 @@ void ClientMessaging::receive(const ENetEvent& event)
 		receiveKeyframeRequest(event.packet);
 		break;
 	case teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage:
-		receiveClientMessage(event.packet);
+		receiveClientMessage(event.packet); 
+		break;
+	case teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl:
+		receiveStreamingControl(event.packet); 
 		break;
 	default:
 		TELEPORT_CERR << "Unhandled channel " << event.channelID << "\n";
 		break;
 	}
+}
+
+void ClientMessaging::receiveStreamingControl(const ENetPacket* packet)
+{
+	uint16_t strlen = 0;
+	memcpy(&strlen, packet->data, sizeof(strlen));
+	if (packet->dataLength != strlen + sizeof(strlen))
+	{
+		TELEPORT_CERR << "Bad packet.\n";
+		return;
+	}
+	std::string str;
+	str.resize(strlen);
+	memcpy(str.data(), packet->data + sizeof(strlen), strlen);
+	clientNetworkContext->NetworkPipeline->receiveStreamingControlMessage(str);
 }
 
 void ClientMessaging::receiveHandshake(const ENetPacket* packet)
@@ -756,6 +783,7 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	break;
 	};
 }
+
 
 uint16_t ClientMessaging::getServerPort() const
 {

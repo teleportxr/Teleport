@@ -218,7 +218,9 @@ namespace teleport
 			void receiveResourceRequest(const ENetPacket* packet);
 			void receiveKeyframeRequest(const ENetPacket* packet);
 			void receiveClientMessage(const ENetPacket* packet);
+			void receiveStreamingControl(const ENetPacket* packet);
 
+			void sendStreamingControlMessage(const std::string& msg);
 			avs::ThreadSafeQueue<ENetEvent> eventQueue;
 			teleport::core::Handshake handshake;
 			static bool asyncNetworkDataProcessingFailed;

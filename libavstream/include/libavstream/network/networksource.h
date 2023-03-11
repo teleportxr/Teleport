@@ -74,6 +74,10 @@ namespace avs
 		virtual void setDoChecksums(bool) = 0;
 		virtual void setDebugNetworkPackets(bool s) = 0;
 		virtual size_t getSystemBufferSize() const =0;
+		virtual void receiveStreamingControlMessage(const std::string &) {}
+		virtual bool getNextStreamingControlMessage(std::string& msg) {
+			return false;
+		}
 	};
 
 } // avs

@@ -53,7 +53,7 @@ namespace teleport
 			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
 			virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
-			virtual void OnTextCommand(const std::string& str) = 0;
+			virtual void OnStreamingControlMessage(const std::string& str) = 0;
 		};
 		
 		enum class WebspaceLocation : uint8_t
@@ -119,6 +119,7 @@ namespace teleport
 				return mSentResourceRequests;
 			};
 
+			void SendStreamingControlMessage(const std::string& str);
 		private:
 			template<typename MessageType> void SendClientMessage(const MessageType &message)
 			{

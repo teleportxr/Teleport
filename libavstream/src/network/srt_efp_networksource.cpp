@@ -164,7 +164,7 @@ Result SrtEfpNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 		}
 	};
 
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
 	httpUtilConfig.remoteIP = params.remoteIP;
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
@@ -248,7 +248,7 @@ Result SrtEfpNetworkSource::deconfigure()
 	// as socket is shut down.
 	closeSocket();
 
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 	return m_data->m_httpUtil.shutdown();
 #else
 	return Result::OK;
@@ -399,7 +399,7 @@ Result SrtEfpNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 #endif
 	}
 
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 	return m_data->m_httpUtil.process();
 #else
 	return Result::OK;
@@ -505,7 +505,7 @@ size_t SrtEfpNetworkSource::getSystemBufferSize() const
 	return 100000;
 }
 
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 std::queue<HTTPPayloadRequest>& SrtEfpNetworkSource::GetHTTPRequestQueue()
 {
 	return m_data->m_httpUtil.GetRequestQueue();

@@ -86,7 +86,8 @@ namespace avs
 		bool isProcessingEnabled() const;
 
 		//! IF there is a message to send reliably to the peer, this will fill it in.
-		bool getNextSetupMessage(std::string &msg) override;
+		bool getNextStreamingControlMessage(std::string &msg) override;
+		void receiveStreamingControlMessage(const std::string&) override;
 
 		// std::function targets
 		void OnDataChannelMessage(uint64_t data_stream_index, const webrtc::DataBuffer& buffer);
@@ -107,7 +108,8 @@ namespace avs
 		void OnDataChannelCreated(webrtc::DataChannelInterface* channel);
 		void OnIceCandidate(const webrtc::IceCandidateInterface* candidate);
 		void OnSessionDescriptionCreated(webrtc::SessionDescriptionInterface* desc);
-
+		void receiveAnswer(const std::string& answer);
+		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
 		std::vector<SetupMessage> m_setupMessages;
 	};
 

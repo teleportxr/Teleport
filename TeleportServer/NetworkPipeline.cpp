@@ -255,9 +255,15 @@ bool NetworkPipeline::isProcessingEnabled() const
 	return false;
 }
 
-bool NetworkPipeline::getNextSetupMessage(std::string &str)
+bool NetworkPipeline::getNextStreamingControlMessage(std::string &str)
 {
 	if (mNetworkSink)
-		return mNetworkSink->getNextSetupMessage(str);
+		return mNetworkSink->getNextStreamingControlMessage(str);
 	return false;
+}
+
+void NetworkPipeline::receiveStreamingControlMessage(const std::string& str)
+{
+	if (mNetworkSink)
+		return mNetworkSink->receiveStreamingControlMessage(str);
 }

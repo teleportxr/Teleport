@@ -65,10 +65,9 @@ namespace avs
 		void setDoChecksums(bool) override;
 		void setDebugNetworkPackets(bool s) override;
 		size_t getSystemBufferSize() const override;
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 		std::queue<HTTPPayloadRequest>& GetHTTPRequestQueue();
 #endif
-
 	private:
 		Private *m_data; 
 

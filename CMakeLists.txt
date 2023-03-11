@@ -1,21 +1,22 @@
 cmake_minimum_required(VERSION 3.8)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(TELEPORT_VERSION 1.0.0)
 if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
 	if(TELEPORT_BUILD_DOCS)
-		project(Teleport_Docs)
+		project(Teleport_Docs VERSION ${TELEPORT_VERSION})
 		set(VS_STARTUP_PROJECT Sphinx)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sphinx)
 	elseif(TELEPORT_UNITY)
-		project(Teleport_Server_Unity)
+		project(Teleport_Server_Unity VERSION ${TELEPORT_VERSION})
 	else()
 		if(TELEPORT_SERVER)
-			project(Teleport_Server)
+			project(Teleport_Server VERSION ${TELEPORT_VERSION})
 		else()
-			project(Teleport_Client)
+			project(Teleport_Client VERSION ${TELEPORT_VERSION})
 		endif()
 	endif()
 else()
-	project("${TELEPORT_SOLUTION_NAME}")
+	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
 set(PLATFORM_USE_FMT ON)
 set(TELEPORT_SOLUTION_NAME "" CACHE STRING "")
@@ -114,10 +115,31 @@ option(ENABLE_APPS "" OFF)
 option(ENABLE_SHARED "" OFF) 
 option(ENABLE_STATIC "" ON)
 
+if(TELEPORT_WINDOWS)
+	set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi /DNDEBUG /DNOMINMAX /MT")
+	set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1 /DNOMINMAX /MDd")
+	set(CMAKE_C_FLAGS_RELEASE "/MT  /O2 /Ob2 /DNDEBUG /DNOMINMAX")
+	set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
+	#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
+endif()
+
+# This must go before the openssl settings, or it won't generate:
+# Settings for libdatachannel:
+set(NO_WEBSOCKET ON)
+set(NO_MEDIA OFF)
+set(NO_EXAMPLES ON)
+set(NO_TESTS ON)
+add_subdirectory(thirdparty/libdatachannel)
+set_target_properties( datachannel PROPERTIES FOLDER thirdparty/datachannel)
+set_target_properties( datachannel-static PROPERTIES FOLDER thirdparty/datachannel)
+set_target_properties( juice-static PROPERTIES FOLDER thirdparty/datachannel)
+set_target_properties( srtp2 PROPERTIES FOLDER thirdparty/datachannel)
+set_target_properties( usrsctp PROPERTIES FOLDER thirdparty/datachannel)
+
 #openssl
 
-set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
-set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
+#set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
+#set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
 
 set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
 
@@ -127,24 +149,21 @@ else()
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
 endif()
 
-if(TELEPORT_WINDOWS)
-	set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi /DNDEBUG /DNOMINMAX /MT")
-	set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1 /DNOMINMAX /MDd")
-	set(CMAKE_C_FLAGS_RELEASE "/MT  /O2 /Ob2 /DNDEBUG /DNOMINMAX")
-	set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
-	#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
-endif()
-
 if(TELEPORT_UNIX)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
 	add_compile_definitions(PRIVATE _GLIBCXX_DEBUG)
 endif()
+
 #defaults for basisu
 if(TELEPORT_SERVER)
 	option(STATIC "" OFF)
+	set(TELEPORT_DATACHANNEL_WEBRTC OFF)
+	add_compile_definitions(PRIVATE TELEPORT_DATACHANNEL_WEBRTC=0) 
 else()
 	option(STATIC "" ON)
+	set(TELEPORT_DATACHANNEL_WEBRTC ON)
+	add_compile_definitions(PRIVATE TELEPORT_CLIENT=1 TELEPORT_DATACHANNEL_WEBRTC=1) 
 endif()
 
 option(BUILD_AS_LIBRARY "" ON) 
@@ -170,27 +189,27 @@ function(SetTeleportDefaults targname)
 	# Treat angle-brackets as representing external headers. Minimal warnings for external headers.
 		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /JMC /external:anglebrackets /external:W0)
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=__stdcall)
-	 #attempting to get WebRTC not to crash:
-	target_compile_definitions(${targname} PRIVATE   
-						  _WEBSOCKETPP_CPP11_INTERNAL_
-                            #USE_AURA=1
-							_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
-							_CRT_SECURE_NO_DEPRECATE
-                            _SCL_SECURE_NO_DEPRECATE
-							_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-							#_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
-                            #PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
-                            #WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
-                            #NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
-                            #NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
-							WEBRTC_ENABLE_PROTOBUF=0
-                            WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
-                            WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
-                            WEBRTC_WIN
-							ABSL_ALLOCATOR_NOTHROW=1
-							ABSL_USES_STD_OPTIONAL=0
-							HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
-	)
+	# attempting to get WebRTC not to crash:
+	#target_compile_definitions(${targname} PRIVATE   
+	#					  _WEBSOCKETPP_CPP11_INTERNAL_
+    #                        #USE_AURA=1
+	#						_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
+	#						_CRT_SECURE_NO_DEPRECATE
+    #                        _SCL_SECURE_NO_DEPRECATE
+	#						_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+	#						#_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
+    #                        #PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
+    #                        #WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
+    #                        #NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
+    #                        #NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
+	#						WEBRTC_ENABLE_PROTOBUF=0
+    #                        WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
+    #                        WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
+    #                        WEBRTC_WIN
+	#						ABSL_ALLOCATOR_NOTHROW=1
+	#						ABSL_USES_STD_OPTIONAL=0
+	#						HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
+	#)
 	else()
 	#TODO: -Wno-deprecated-copy should be removed when possible.
 		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
@@ -259,7 +278,6 @@ if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 	set(LIBAV_BUILD_SHARED_LIBS OFF CACHE BOOL "")
 	set(SA_BUILD_SHARED_LIB OFF CACHE BOOL "")
 endif()
-
 
 set(SA_BUILD_SHARED_LIB ${TELEPORT_SERVER})
 

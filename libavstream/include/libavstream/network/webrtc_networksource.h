@@ -8,23 +8,10 @@
 #include <optional>
 #include "networksource.h"
 #include <unordered_map>
-#if IS_CLIENT
-#include <libavstream/httputil.hpp>
-#endif
 
-namespace webrtc
-{
-	class DataChannelInterface;
-	class IceCandidateInterface;
-	struct DataBuffer;
-	class SessionDescriptionInterface;
-	class PeerConnectionInterface;
-	class DataChannelInterface;
-}
-
+#if TELEPORT_DATACHANNEL_WEBRTC
 namespace avs
 {
-	class WebRtcNetworkSource;
 	/*!
 	 * Network source node `[passive, 0/1]`
 	 *
@@ -77,10 +64,7 @@ namespace avs
 		 */
 		NetworkSourceCounters getCounterValues() const override;
 
-
-		// std::function
-		void OnAnswerCreated(webrtc::SessionDescriptionInterface* desc);
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 		std::queue<HTTPPayloadRequest>& GetHTTPRequestQueue();
 #endif
 
@@ -90,19 +74,23 @@ namespace avs
 		size_t getSystemBufferSize() const override {
 			return 0;
 		}
+
+		void receiveStreamingControlMessage(const std::string& str) override;
+		//! IF there is a message to send reliably to the peer, this will fill it in.
+		bool getNextStreamingControlMessage(std::string& msg) override;
 	protected:
-		class CreateSessionDescriptionObserver* create_session_description_observer = nullptr;
-		class SetSessionDescriptionObserver* set_session_description_observer = nullptr;
 		std::vector<NetworkSourceStream> m_streams;
+		std::vector<std::string> messagesToSend;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
-#if IS_CLIENT
-		HTTPUtil m_httpUtil;
-#endif
 		std::unordered_map<uint32_t, int> m_streamNodeMap;
 		NetworkSourceParams m_params;
 		NetworkSourceCounters m_counters;
 		mutable std::mutex m_networkMutex;
 		mutable std::mutex m_dataMutex;
+		void receiveOffer(const std::string& offer);
+		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
+		void SendConfigMessage(const std::string& str);
 	};
 
 } // avs
+#endif

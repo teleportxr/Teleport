@@ -53,8 +53,8 @@ else()
 	target_link_libraries(pc_client SimulDirectX11_MT)
 	target_link_libraries(pc_client d3d12)
 endif()
-target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
-target_link_libraries(pc_client webrtc.lib Secur32.lib)
+#target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
+target_link_libraries(pc_client )
 target_compile_definitions(pc_client PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
 
 SetTeleportDefaults(pc_client)
@@ -73,6 +73,11 @@ endif()
 target_link_libraries(pc_client debug openxr_loaderd optimized openxr_loader) 
 target_link_libraries(pc_client libavstream enet TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
 target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
+
+target_link_directories(pc_client PUBLIC "E:/Code/OpenSSL-Win64/lib/VC")
+target_link_libraries(pc_client LibDataChannel::LibDataChannelStatic usrsctp ws2_32.lib  libssl64MT.lib juice-static iphlpapi.lib  bcrypt.lib)
+
+
 target_link_libraries(pc_client -ignore:4711)
 
 target_link_options(pc_client PUBLIC /ignore:4711)

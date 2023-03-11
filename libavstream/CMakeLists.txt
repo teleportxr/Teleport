@@ -297,26 +297,27 @@ set_target_properties(libavstream PROPERTIES PREFIX "")
 set_target_properties(libavstream PROPERTIES FOLDER AVStream)
 
 # WebRTC is VERY SENSITIVE to these settings. Having the wrong settings can cause bizarre runtime memory-trashing.
-set(def_webrtc   
-						  _WEBSOCKETPP_CPP11_INTERNAL_
-                            #USE_AURA=1
-							_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
-							_CRT_SECURE_NO_DEPRECATE
-                            _SCL_SECURE_NO_DEPRECATE
-							_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-							_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
-                            PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
-                            WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
-                            NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
-                            NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
-							WEBRTC_ENABLE_PROTOBUF=0
-                            WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
-                            WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
-                            WEBRTC_WIN
-							ABSL_ALLOCATOR_NOTHROW=1
-							ABSL_USES_STD_OPTIONAL=0
-							HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
-)
+##set(def_webrtc   
+##						  _WEBSOCKETPP_CPP11_INTERNAL_
+##                           #USE_AURA=1
+##							_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
+##							_CRT_SECURE_NO_DEPRECATE
+##                           _SCL_SECURE_NO_DEPRECATE
+##							_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
+##							_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
+##                           PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
+##                           WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
+##                           NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
+##                           NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
+##							WEBRTC_ENABLE_PROTOBUF=0
+##                           WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
+##                           WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
+##                           WEBRTC_WIN
+##							ABSL_ALLOCATOR_NOTHROW=1
+##							ABSL_USES_STD_OPTIONAL=0
+##							HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
+##
+set(def_webrtc			  WEBRTC_WIN _CRT_SECURE_NO_DEPRECATE _SCL_SECURE_NO_DEPRECATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
 target_compile_definitions(libavstream PRIVATE ${def_platform} )
 target_compile_definitions(libavstream PRIVATE ${def_webrtc})
 set(webrtc_include_paths ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include
@@ -349,7 +350,7 @@ if(NOT TELEPORT_SERVER)
 	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1) 
 	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
 	set(curl_libraries libcurl)
-	target_compile_definitions(libavstream PUBLIC IS_CLIENT=1) 
+	target_compile_definitions(libavstream PUBLIC TELEPORT_CLIENT=1) 
 endif()
 target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${CMAKE_CURRENT_BINARY_DIR}
@@ -362,7 +363,7 @@ target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														PUBLIC include/libavstream)
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
-if(LIBAV_BUILD_SHARED_LIBS)
+if(LIBAAV_BUILD_SHARED_LIBS)
 	target_compile_definitions(libavstream
 		PUBLIC LIBAVSTREAM_SHARED
 		PRIVATE LIBAVSTREAM_EXPORTS
@@ -401,3 +402,12 @@ if(NOT ANDROID)
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
 endif()
+
+# linking with libdatachannel for alternative webrtc support
+target_compile_definitions(libavstream PRIVATE TELEPORT_DATACHANNEL_WEBRTC=$<BOOL:${TELEPORT_DATACHANNEL_WEBRTC}>)
+if(TELEPORT_DATACHANNEL_WEBRTC)
+	target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/include")
+	target_link_directories(libavstream PUBLIC "${CMAKE_BINARY_DIR}/thirdparty/libdatachannel/${CONFIG_NAME}")
+	target_link_libraries(libavstream datachannel-static legacy_stdio_definitions.lib)
+endif()
+target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")

@@ -1181,7 +1181,8 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 	renderState.lastSetupCommand.video_config = reconfigureVideoCommand.video_config;
 }
 
-void InstanceRenderer::OnTextCommand(const std::string& str)
+void InstanceRenderer::OnStreamingControlMessage(const std::string& str)
 {
-
+	if(clientPipeline.source)
+		clientPipeline.source->receiveStreamingControlMessage(str);
 }

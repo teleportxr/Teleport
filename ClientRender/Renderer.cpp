@@ -795,6 +795,11 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		// Source might not yet be configured...
 		if (instanceRenderer->clientPipeline.source)
 		{
+			std::string str;
+			if (instanceRenderer->clientPipeline.source->getNextStreamingControlMessage(str))
+			{
+				sessionClient->SendStreamingControlMessage(str);
+			}
 			static short c = 0;
 			if (!(c--))
 			{

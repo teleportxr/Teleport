@@ -12,30 +12,93 @@
 #include <sys/prctl.h>
 #endif
 
-#include <util/srtutil.h>
-#include <api/scoped_refptr.h>
-#include <api/peer_connection_interface.h>
-#include <api/create_peerconnection_factory.h>
-#include <api/audio_codecs/builtin_audio_decoder_factory.h>
-#include <api/audio_codecs/builtin_audio_encoder_factory.h>
-#include <media/engine/multiplex_codec_factory.h>
-#include <media/engine/internal_encoder_factory.h>
-#include <media/engine/internal_decoder_factory.h>
-#include "network/webrtc_common.h"
 #include <functional>
 
 //rtc
-#include <rtc_base/physical_socket_server.h>
-#include <rtc_base/ssl_adapter.h>
-#include <rtc_base/thread.h>
+#if TELEPORT_DATACHANNEL_WEBRTC
+#include <rtc/rtc.hpp>
+#include <nlohmann/json.hpp>
 #include "TeleportCore/ErrorHandling.h"
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 #include <libavstream/httputil.hpp>
 #endif
 #include <ios>
-#include "network/webrtc_observers.h"
+
+FILE _iob[] = { *stdin, *stdout, *stderr };
+
+extern "C" FILE * __cdecl __iob_func(void)
+{
+	return _iob;
+}
 
 #pragma optimize("",off)
+using namespace std;
+using nlohmann::json;
+
+shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration& config,
+	std::function<void(const std::string&)> sendMessage, std::string id)
+{
+	auto pc = std::make_shared<rtc::PeerConnection>(config);
+	
+	pc->onStateChange(
+		[](rtc::PeerConnection::State state)
+		{
+			std::cout << "State: " << state << std::endl;
+		});
+
+	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
+		{
+			std::cout << "Gathering State: " << state << std::endl;
+		});
+
+	pc->onLocalDescription([sendMessage,id](rtc::Description description)
+		{
+			// This is our answer.
+			json message = { {"id", id},
+						{"type", description.typeString()},
+						{"sdp",  std::string(description)} };
+
+			sendMessage(message.dump());
+		});
+
+	pc->onLocalCandidate([sendMessage, id](rtc::Candidate candidate)
+		{
+			json message = { {"id", id},
+						{"type", "candidate"},
+						{"candidate", std::string(candidate)},
+						{"mid", candidate.mid()} ,
+						{"mlineindex", 0} };
+
+			sendMessage(message.dump());
+		});
+
+	pc->onDataChannel([sendMessage,id](shared_ptr<rtc::DataChannel> dc)
+	{
+		std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\""<< std::endl;
+
+		dc->onOpen([sendMessage]()
+			{
+				sendMessage("Hello" );
+			});
+
+	dc->onClosed([id]() { std::cout << "DataChannel from " << id << " closed" << std::endl; });
+
+	dc->onMessage([id](auto data) {
+		// data holds either std::string or rtc::binary
+		if (std::holds_alternative<std::string>(data))
+		std::cout << "Message from " << id << " received: " << std::get<std::string>(data)
+			<< std::endl;
+		else
+			std::cout << "Binary message from " << id
+			<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
+		});
+
+			//dataChannelMap.emplace(id, dc);
+		});
+
+	//peerConnectionMap.emplace(id, pc);
+	return pc;
+};
 namespace avs
 {
 	struct SourceDataChannel
@@ -45,25 +108,16 @@ namespace avs
 		}
 		~SourceDataChannel()
 		{}
-		class DataChannelObserver* data_channel_observer = nullptr;
-		rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel_interface;
+		shared_ptr<rtc::DataChannel> rtcDataChannel;
 	};
-	struct WebRtcNetworkSource::Private final : public PipelineNode::Private, public webrtc::PeerConnectionObserver
+	struct WebRtcNetworkSource::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSource, PipelineNode)
-		webrtc::PeerConnectionInterface::RTCConfiguration rtcConfiguration;
-		webrtc::DataChannelInit data_channel_config;
 		std::unordered_map<uint64_t, SourceDataChannel> dataChannels;
-		rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer_connection;
-		// webrtc::PeerConnectionObserver.
-		void OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState /* new_state */);
-		void OnAddStream(webrtc::MediaStreamInterface* /* stream */);
-		void OnRemoveStream(webrtc::MediaStreamInterface* /* stream */);
-		void OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel);
-		void OnRenegotiationNeeded();
-		void OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState /* new_state */);
-		void OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState /* new_state */);
-		void OnIceCandidate(const webrtc::IceCandidateInterface* candidate);
+		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
+#if TELEPORT_CLIENT
+		HTTPUtil m_httpUtil;
+#endif
 	};
 }
 
@@ -74,12 +128,6 @@ WebRtcNetworkSource::WebRtcNetworkSource()
 	: NetworkSource(new WebRtcNetworkSource::Private(this))
 {
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
-	// ensure that the peer connection factory exists.
-	CreatePeerConnectionFactory();
-	create_session_description_observer = (new CreateSessionDescriptionObserver(
-		std::bind(&WebRtcNetworkSource::OnAnswerCreated, this, std::placeholders::_1)
-	));
-	set_session_description_observer = (new SetSessionDescriptionObserver());
 }
 
 Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)
@@ -94,65 +142,42 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 	{
 		return Result::Node_InvalidConfiguration;
 	}
-	try
-	{
-	}
-	catch (const std::exception& e)
-	{
-		AVSLOG(Error) << "WebRtcNetworkSource: Failed to configure: " << e.what();
-		return Result::Network_BindFailed;
-	}
 	m_params = params;
-	webrtc::PeerConnectionInterface::IceServer ice_server;
-	ice_server.uri = "stun:stun.l.google.com:19302";
-	// Just DECLARING this on the stack crashes the program. Unless webrtc.lib is recompiled with ABSL_OPTION_USE_STD_OPTIONAL=0
-	// to force it to use the absl::optional implementation globally, instead of sometimes treating absl::optional as absl::optional
-	// and sometimes treating it as std::optional.
-	webrtc::PeerConnectionInterface::RTCConfiguration rtcConfiguration;
-	rtcConfiguration.servers.push_back(ice_server);
-
-	return Result::OK;
-	// bind *this* as the peer_connection_observer.
-	rtc::scoped_refptr<webrtc::PeerConnectionInterface> ptr(g_peer_connection_factory->CreatePeerConnection(rtcConfiguration,webrtc::PeerConnectionDependencies(m_data)));
-	m_data->peer_connection = ptr;
-	m_data->data_channel_config.ordered = false;
-	m_data->data_channel_config.maxRetransmits = 0;
-	m_data->dataChannels.clear();
-	for (size_t i = 0; i < streams.size(); i++)
-	{
-		assert(i == streams[i].id);
-		m_data->dataChannels.emplace(streams[i].id, SourceDataChannel(streams[i].id, this));
-		SourceDataChannel& d = m_data->dataChannels[streams[i].id];
-		d.data_channel_interface = m_data->peer_connection->CreateDataChannel("dc", &m_data->data_channel_config);
-		d.data_channel_interface->RegisterObserver(d.data_channel_observer);
-	}
-	webrtc::SdpParseError error;
-	webrtc::PeerConnectionInterface::RTCOfferAnswerOptions o(0, 0, false, true, true);
-	m_data->peer_connection->CreateOffer(create_session_description_observer, o);
-
+	rtc::Configuration config;
+	std::string stunServer = "stun:stun.l.google.com:19302";
+	config.iceServers.emplace_back(stunServer);
+	m_data->rtcPeerConnection = createPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), "1");
+	
 	setNumOutputSlots(numOutputs);
 
 	m_streams = std::move(streams);
 
-	for (size_t i = 0; i < numOutputs; ++i)
+	/*for (size_t i = 0; i < numOutputs; ++i)
 	{
 		const auto& stream = m_streams[i];
 		m_streamNodeMap[stream.id] = i;
-	}
+	}*/
 
-
-
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
 	httpUtilConfig.remoteIP = params.remoteIP;
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
 	httpUtilConfig.maxConnections = params.maxHTTPConnections;
 	httpUtilConfig.useSSL = params.useSSL;
 	auto f = std::bind(&WebRtcNetworkSource::receiveHTTPFile, this, std::placeholders::_1, std::placeholders::_2);
-	return m_httpUtil.initialize(httpUtilConfig, std::move(f));
+	return m_data->m_httpUtil.initialize(httpUtilConfig, std::move(f));
 #else
 	return Result::OK;
 #endif
+}
+void WebRtcNetworkSource::receiveOffer(const std::string& offer)
+{
+	m_data->rtcPeerConnection->setRemoteDescription(offer);
+}
+
+void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const std::string& mid, int mlineindex)
+{
+	m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate,mid));
 }
 
 void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
@@ -199,8 +224,8 @@ Result WebRtcNetworkSource::deconfigure()
 	m_streamNodeMap.clear();
 	m_streams.clear();
 
-#if IS_CLIENT
-	return m_httpUtil.shutdown();
+#if TELEPORT_CLIENT
+	return m_data->m_httpUtil.shutdown();
 #else
 	return Result::OK;
 #endif
@@ -213,8 +238,8 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_NotConfigured;
 	}
 
-#if IS_CLIENT
-	return m_httpUtil.process();
+#if TELEPORT_CLIENT
+	return m_data->m_httpUtil.process();
 #else
 	return Result::OK;
 #endif
@@ -229,48 +254,58 @@ NetworkSourceCounters WebRtcNetworkSource::getCounterValues() const
 __attribute__((optnone))
 #endif
 
-#if IS_CLIENT
+#if TELEPORT_CLIENT
 std::queue<HTTPPayloadRequest>& WebRtcNetworkSource::GetHTTPRequestQueue()
 {
-	return m_httpUtil.GetRequestQueue();
+	return m_data->m_httpUtil.GetRequestQueue();
 }
 #endif
 
-//webrtc::PeerConnectionObserver
-// *****************************
-
-void WebRtcNetworkSource::Private::OnSignalingChange(webrtc::PeerConnectionInterface::SignalingState new_state)
+void WebRtcNetworkSource::SendConfigMessage(const std::string& str)
 {
+	messagesToSend.push_back(str);
 }
 
-void WebRtcNetworkSource::Private::OnAddStream(webrtc::MediaStreamInterface* stream)
+bool WebRtcNetworkSource::getNextStreamingControlMessage(std::string& msg)
 {
+	if (!messagesToSend.size())
+		return false;
+	msg = messagesToSend[0];
+	messagesToSend.erase(messagesToSend.begin());
+	return true;
 }
 
-void WebRtcNetworkSource::Private::OnRemoveStream(webrtc::MediaStreamInterface* stream)
+void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 {
+	json message = json::parse(str);
+	auto it = message.find("type");
+	if (it == message.end())
+		return;
+	try
+	{
+		auto &type=it->get<std::string>();
+		if (type == "offer")
+		{
+			auto o = message.find("sdp");
+			receiveOffer(o->get<std::string>());
+		}
+		else if (type == "candidate")
+		{
+			auto c = message.find("candidate");
+			string & candidate=c->get<std::string>();
+			auto m= message.find("mid");
+			std::string mid;
+			if (m != message.end())
+				mid = m->get<std::string>();
+			auto l = message.find("mlineindex");
+			int mlineindex;
+			if (l != message.end())
+				mlineindex = l->get<int>();
+			receiveCandidate(candidate,mid,mlineindex);
+		}
+	}
+	catch (...)
+	{
+	}
 }
-
-void WebRtcNetworkSource::Private::OnDataChannel(rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel)
-{
-}
-
-void WebRtcNetworkSource::Private::OnRenegotiationNeeded()
-{
-}
-
-void WebRtcNetworkSource::Private::OnIceConnectionChange(webrtc::PeerConnectionInterface::IceConnectionState new_state)
-{
-}
-
-void WebRtcNetworkSource::Private::OnIceGatheringChange(webrtc::PeerConnectionInterface::IceGatheringState new_state)
-{
-}
-
-void WebRtcNetworkSource::Private::OnIceCandidate(const webrtc::IceCandidateInterface* candidate)
-{
-}
-//*********************************
-void WebRtcNetworkSource::OnAnswerCreated(webrtc::SessionDescriptionInterface* desc)
-{
-}
+#endif

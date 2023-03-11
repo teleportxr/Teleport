@@ -1,9 +1,6 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
-// This prevents crashes - although defined as 2 in options.h, the lib appears to have been compiled using 0.
-//#define ABSL_OPTION_USE_STD_OPTIONAL 2
-//#define _HAS_CXX17 1
-//#define _HAS_CXX20 0
+// (c) Copyright 2018-2023 Simul Software Ltd
+
 #include "network/webrtc_networksink.h"
 #include "network/webrtc_observers.h"
 #include "network/packetformat.hpp"
@@ -20,10 +17,13 @@
 #include <rtc_base/ssl_adapter.h>
 #include <rtc_base/thread.h>
 #include <ios>
+#include <nlohmann/json.hpp>
+
 #include "network/webrtc_observers.h"
 
 #pragma optimize("",off)
-using namespace avs;
+using namespace std;
+using nlohmann::json;
 namespace avs
 {
 	// Unused mostly.
@@ -37,6 +37,7 @@ namespace avs
 		webrtc::DataChannelInit data_channel_config;
 	};
 }
+using namespace avs;
 
 DataChannel::DataChannel(uint64_t stream_index, WebRtcNetworkSink *webRtcNetworkSink)
 {
@@ -162,6 +163,7 @@ bool WebRtcNetworkSink::isProcessingEnabled() const
 
 Result WebRtcNetworkSink::deconfigure()
 {
+	peer_connection = nullptr;
 	m_parsers.clear();
 	m_streams.clear();
 
@@ -269,9 +271,15 @@ void WebRtcNetworkSink::OnDataChannelCreated(webrtc::DataChannelInterface* chann
 
 void WebRtcNetworkSink::OnIceCandidate(const webrtc::IceCandidateInterface* candidate)
 {
-	std::cerr << "OnIceCandidate\n";
-	std::cerr <<candidate->server_url().c_str() << std::endl;
-	m_setupMessages.push_back({ candidate->candidate().ToString() });
+	std::string candidate_str;
+	candidate->ToString(&candidate_str);
+	std::cerr << "OnIceCandidate: " << candidate_str.c_str() << "\n";
+	json message = {	{"type",		"candidate"},
+						{"candidate",	candidate_str},
+						{"mid",	candidate->sdp_mid()},
+						{"mlineindex", candidate->sdp_mline_index()}
+					};
+	m_setupMessages.push_back({ message.dump() });
 }
 
 void WebRtcNetworkSink::OnDataChannelMessage(uint64_t data_stream_index,const webrtc::DataBuffer& buffer)
@@ -284,18 +292,70 @@ void WebRtcNetworkSink::OnSessionDescriptionCreated(webrtc::SessionDescriptionIn
 	std::cerr << "OnSessionDescriptionCreated\n";
 	// This call sets-off the OnIceCandidate() callbacks:
 	peer_connection->SetLocalDescription(set_session_description_observer, desc);
-	std::string str;
-	if (desc->ToString(&str))
+	std::string sdp;
+	if (desc->ToString(&sdp))
 	{
-		std::cerr << str.c_str() << std::endl;
-		m_setupMessages.push_back({ str });
+		json message = { {"type", "offer"},
+							{"sdp", sdp} };
+		std::cerr << sdp.c_str() << std::endl;
+		m_setupMessages.push_back({ message.dump() });
 	}
 }
-bool WebRtcNetworkSink::getNextSetupMessage(std::string& msg)
+
+void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
+{
+	webrtc::SdpParseError error;
+	webrtc::SessionDescriptionInterface* session_description(webrtc::CreateSessionDescription("answer", sdp, &error));
+	peer_connection->SetRemoteDescription(set_session_description_observer, session_description);
+}
+
+void WebRtcNetworkSink::receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex)
+{
+	webrtc::SdpParseError error;
+	auto candidate_object = webrtc::CreateIceCandidate(mid, mlineindex, candidate, &error);
+	peer_connection->AddIceCandidate(candidate_object);
+}
+
+
+bool WebRtcNetworkSink::getNextStreamingControlMessage(std::string& msg)
 {
 	if (!m_setupMessages.size())
 		return false;
 	msg=m_setupMessages[0].text;
 	m_setupMessages.erase(m_setupMessages.begin());
 	return true;
+}
+
+void WebRtcNetworkSink::receiveStreamingControlMessage(const std::string& msg)
+{
+	json message = json::parse(msg);
+	auto it = message.find("type");
+	if (it == message.end())
+		return;
+	try
+	{
+		auto& type = it->get<std::string>();
+		if (type == "answer")
+		{
+			auto o = message.find("sdp");
+			receiveAnswer(o->get<std::string>());
+		}
+		else if (type == "candidate")
+		{
+			auto c = message.find("candidate");
+			string& candidate = c->get<std::string>();
+			auto m = message.find("mid");
+			std::string mid;
+			if (m != message.end())
+				mid = m->get<std::string>();
+			auto l = message.find("mlineindex");
+			int mlineindex;
+			if (l != message.end())
+				mlineindex = l->get<int>();
+			receiveCandidate(candidate, mid, mlineindex);
+		}
+	}
+	catch (...)
+	{
+	}
 }

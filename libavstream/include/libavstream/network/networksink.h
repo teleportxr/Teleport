@@ -74,7 +74,11 @@ namespace avs
 		virtual NetworkSinkCounters getCounters() const=0;
 		virtual void setProcessingEnabled(bool enable)=0;
 		virtual bool isProcessingEnabled() const=0;
-		virtual bool getNextSetupMessage(std::string& ) =0;
+		virtual bool getNextStreamingControlMessage(std::string&)
+		{
+			return false;
+		}
+		virtual void receiveStreamingControlMessage(const std::string&) {}
 	};
  	class AVSTREAM_API NullNetworkSink final: public NetworkSink
 	{
@@ -94,9 +98,5 @@ namespace avs
 			return false;
 		}
 		const char* getDisplayName() const override { return "NullNetworkSink"; }
-		virtual bool getNextSetupMessage(std::string&)
-		{
-			return false;
-			}
 	};
 }

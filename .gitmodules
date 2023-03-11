@@ -31,3 +31,6 @@
 [submodule "plugins/UnrealDemo"]
 	path = plugins/UnrealDemo
 	url = ../teleport-unreal.git
+[submodule "thirdparty/libdatachannel"]
+	path = thirdparty/libdatachannel
+	url = git@github.com:paullouisageneau/libdatachannel.git

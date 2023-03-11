@@ -366,6 +366,9 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 		case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control) :
 			ReceiveCommandPacket(event.packet);
 			break;
+		case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl):
+			ReceiveTextCommand(event.packet);
+			break;
 		default:
 			TELEPORT_CLIENT_WARN("Received packet on output-only channel: %d", event.channelID);
 			break;
@@ -426,9 +429,6 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 			break;
 		case teleport::core::CommandPayloadType::AssignNodePosePath:
 			ReceiveAssignNodePosePathCommand(packet);
-			break;
-		case teleport::core::CommandPayloadType::Text:
-			ReceiveTextCommand(packet);
 			break;
 		default:
 			break;
@@ -708,6 +708,21 @@ void SessionClient::SendHandshake(const teleport::core::Handshake& handshake, co
 	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Handshake), packet);
 }
 
+void SessionClient::SendStreamingControlMessage(const std::string& msg)
+{
+	// messages to be sent as text e.g. WebRTC config.
+	uint16_t len = (uint16_t)msg.size();
+	if ((size_t)len == msg.size())
+	{
+		size_t sz = sizeof(len);
+		ENetPacket* packet = enet_packet_create(nullptr, msg.size() + sz, ENET_PACKET_FLAG_RELIABLE);
+		memcpy(packet->data, &len, sz);
+		memcpy((packet->data + sz), msg.data(), len);
+		if (packet)
+			enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl), packet);
+	}
+}
+
 void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 {
 	if (connectionStatus != ConnectionStatus::HANDSHAKING)
@@ -963,22 +978,22 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const ENetPacket* packet)
 
 void SessionClient::ReceiveTextCommand(const ENetPacket* packet)
 {
-	size_t commandSize = sizeof(teleport::core::TextCommand);
+	size_t commandSize = sizeof(uint16_t);
 	if (packet->dataLength < commandSize)
 	{
 		TELEPORT_CERR << "Bad packet." << std::endl;
 		return;
 	}
 	//Copy command out of packet.
-	teleport::core::TextCommand textCommand;
-	memcpy(static_cast<void*>(&textCommand), packet->data, commandSize);
-	if (packet->dataLength != commandSize + textCommand.stringLength)
+	uint16_t count = 0;
+	memcpy(static_cast<void*>(&count), packet->data, commandSize);
+	if (packet->dataLength != commandSize + count)
 	{
 		TELEPORT_CERR << "Bad packet." << std::endl;
 		return;
 	}
 	std::string str;
-	str.resize(textCommand.stringLength);
-	memcpy(static_cast<void*>(str.data()), packet->data + commandSize, textCommand.stringLength);
-	mCommandInterface->OnTextCommand( str); 
+	str.resize(count);
+	memcpy(static_cast<void*>(str.data()), packet->data + commandSize, count);
+	mCommandInterface->OnStreamingControlMessage( str);
 }
