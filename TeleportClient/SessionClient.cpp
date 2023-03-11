@@ -305,7 +305,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		double timeSinceSent = time - sentResource.second;
 		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
 		{
-			TELEPORT_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
+//			TELEPORT_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
 			mQueuedResourceRequests.push_back(sentResource.first);
 		}
 	}

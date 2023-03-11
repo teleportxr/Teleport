@@ -42,7 +42,9 @@ using namespace avs;
 DataChannel::DataChannel(uint64_t stream_index, WebRtcNetworkSink *webRtcNetworkSink)
 {
 	data_channel_observer = (new DataChannelObserver(
-		std::bind(&WebRtcNetworkSink::OnDataChannelMessage, webRtcNetworkSink, stream_index,std::placeholders::_1)));
+		std::bind(&WebRtcNetworkSink::OnDataChannelStateChange, webRtcNetworkSink, stream_index),
+		std::bind(&WebRtcNetworkSink::OnDataChannelMessage, webRtcNetworkSink, stream_index, std::placeholders::_1),
+		std::bind(&WebRtcNetworkSink::OnDataChannelBufferedAmountChange, webRtcNetworkSink, stream_index,std::placeholders::_1)));
 }
 
 DataChannel::~DataChannel()
@@ -86,32 +88,41 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 
 	webrtc::PeerConnectionInterface::IceServer ice_server;
 	ice_server.uri = "stun:stun.l.google.com:19302";
-	// Just DECLARING this on the stack crashes the program. Unless webrtc.lib is recompiled with ABSL_OPTION_USE_STD_OPTIONAL=0
+	// webrtc.lib is recompiled with ABSL_OPTION_USE_STD_OPTIONAL=0
 	// to force it to use the absl::optional implementation globally, instead of sometimes treating absl::optional as absl::optional
-	// and sometimes treating it as std::optional.
+	// and sometimes as std::optional.
 	webrtc::PeerConnectionInterface::RTCConfiguration rtcConfiguration;
 	// should use this:?
-//rtcConfiguration.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
+	//rtcConfiguration.sdp_semantics = webrtc::SdpSemantics::kUnifiedPlan;
 	// DTLS SRTP has to be disabled for loopback to work.
-//rtcConfiguration.enable_dtls_srtp = false;
+	//rtcConfiguration.enable_dtls_srtp = false;
 	rtcConfiguration.servers.push_back(ice_server);
 	
 	peer_connection = g_peer_connection_factory->CreatePeerConnection(rtcConfiguration, nullptr, nullptr, peer_connection_observer);
-	//peer_connection = ptr;
-	priv->data_channel_config.ordered = false;
-	priv->data_channel_config.maxRetransmits = 0;
+
+	//priv->data_channel_config.ordered = false;
+	//priv->data_channel_config.maxRetransmits = 0;
 	dataChannels.clear();
 	for (size_t i = 0; i < streams.size(); i++)
 	{
-		assert(i == streams[i].id);
 		dataChannels.try_emplace(streams[i].id, streams[i].id, this);
-		DataChannel& dataChannel = dataChannels[streams[i].id];
-		webrtc::DataChannelInit data_channel_config;
-		data_channel_config.ordered = false;
-		data_channel_config.maxRetransmits = 0;
-		dataChannel.data_channel_interface = peer_connection->CreateDataChannel("dc", &data_channel_config);
-		if(dataChannel.data_channel_interface)
-			dataChannel.data_channel_interface->RegisterObserver(dataChannel.data_channel_observer);
+	}
+	// Now ensure data channels are initialized...
+
+	for (auto& d : dataChannels)
+	{
+		int id = (int)d.first;
+		DataChannel& dataChannel = d.second;
+		if (!dataChannel.data_channel_interface)
+		{
+			webrtc::DataChannelInit data_channel_config;
+			//data_channel_config.ordered = true;
+			//	data_channel_config.maxRetransmits = 0;
+			std::string dcLabel = std::to_string(id);
+			dataChannel.data_channel_interface = peer_connection->CreateDataChannel(dcLabel, &data_channel_config);
+			if (dataChannel.data_channel_interface)
+				dataChannel.data_channel_interface->RegisterObserver(dataChannel.data_channel_observer);
+		}
 	}
 	webrtc::SdpParseError error;
 	//webrtc::SessionDescriptionInterface* session_description(webrtc::CreateSessionDescription("offer", sdp, &error));
@@ -181,7 +192,13 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
-
+	webrtc::PeerConnectionInterface::SignalingState signalingState = peer_connection->signaling_state();
+	webrtc::PeerConnectionInterface::IceGatheringState iceGatheringState = peer_connection->ice_gathering_state();
+	if (signalingState != webrtc::PeerConnectionInterface::SignalingState::kStable
+		|| iceGatheringState != webrtc::PeerConnectionInterface::kIceGatheringComplete)
+	{
+		return Result::Node_NotReady;
+	}
 	// Called to get the data from the input nodes
 	auto readInput = [this](uint32_t inputNodeIndex, size_t& numBytesRead) -> Result
 	{
@@ -242,7 +259,7 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 		else
 		{
-			res = packData(stream.buffer.data(), numBytesRead, i);
+			res = packData(stream.buffer.data(), numBytesRead,m_streams[i].id);
 		}
 		if (!res)
 		{
@@ -256,8 +273,20 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
 {
 	webrtc::DataBuffer db(rtc::CopyOnWriteBuffer(buffer, bufferSize),true);
-	if(dataChannels[inputNodeIndex].data_channel_interface)
-		dataChannels[inputNodeIndex].data_channel_interface->Send(db);
+	auto c = dataChannels[inputNodeIndex].data_channel_interface;
+	if (c)
+	{
+		webrtc::DataChannelInterface::DataState state = c->state();
+		if(state==webrtc::DataChannelInterface::DataState::kOpen)
+		if (!c->Send(db))
+		{
+			std::cerr << "Failed to send\n";
+			if (!dataChannels[inputNodeIndex].data_channel_interface->kOpen)
+			{
+				std::cerr << "Channel isn't open.\n";
+			}
+		}
+	}
 	return Result::OK;
 }
 
@@ -282,10 +311,24 @@ void WebRtcNetworkSink::OnIceCandidate(const webrtc::IceCandidateInterface* cand
 	m_setupMessages.push_back({ message.dump() });
 }
 
-void WebRtcNetworkSink::OnDataChannelMessage(uint64_t data_stream_index,const webrtc::DataBuffer& buffer)
+void WebRtcNetworkSink::OnDataChannelStateChange(uint64_t data_stream_index)
 {
+	webrtc::DataChannelInterface::DataState state=dataChannels[data_stream_index].data_channel_interface->state();
+	std::cout << "OnDataChannelStateChange " << data_stream_index << " in state " << webrtc::DataChannelInterface::DataStateString(state)
+		<< std::endl;
+}
+
+void WebRtcNetworkSink::OnDataChannelMessage(uint64_t data_stream_index, const webrtc::DataBuffer& buffer)
+{
+	std::cout << "OnDataChannelMessage\n";
 	dataChannels[data_stream_index].data_channel_interface->Send(buffer);
 }
+
+void WebRtcNetworkSink::OnDataChannelBufferedAmountChange(uint64_t data_stream_index, uint64_t previous)
+{
+	std::cout << "OnDataChannelMessage\n";
+}
+
 
 void WebRtcNetworkSink::OnSessionDescriptionCreated(webrtc::SessionDescriptionInterface* desc)
 {
@@ -304,16 +347,46 @@ void WebRtcNetworkSink::OnSessionDescriptionCreated(webrtc::SessionDescriptionIn
 
 void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
 {
+	std::cerr << "WebRtcNetworkSink::receiveAnswer "<<sdp.c_str()<<std::endl;
 	webrtc::SdpParseError error;
 	webrtc::SessionDescriptionInterface* session_description(webrtc::CreateSessionDescription("answer", sdp, &error));
-	peer_connection->SetRemoteDescription(set_session_description_observer, session_description);
+	try
+	{
+		peer_connection->SetRemoteDescription(set_session_description_observer, session_description);
+	}
+	catch (std::logic_error err)
+	{
+		if (err.what())
+			std::cerr << err.what() << std::endl;
+		else
+			std::cerr << "std::logic_error." << std::endl;
+	}
+	catch (...)
+	{
+		std::cerr << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
+	}
 }
 
 void WebRtcNetworkSink::receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex)
 {
+	std::cerr << "WebRtcNetworkSink::receiveCandidate " << candidate.c_str() << std::endl;
 	webrtc::SdpParseError error;
 	auto candidate_object = webrtc::CreateIceCandidate(mid, mlineindex, candidate, &error);
-	peer_connection->AddIceCandidate(candidate_object);
+	try
+	{
+		peer_connection->AddIceCandidate(candidate_object);
+	}
+	catch (std::logic_error err)
+	{
+		if (err.what())
+			std::cerr << err.what() << std::endl;
+		else
+			std::cerr << "std::logic_error." << std::endl;
+	}
+	catch (...)
+	{
+		std::cerr << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
+	}
 }
 
 
@@ -355,7 +428,15 @@ void WebRtcNetworkSink::receiveStreamingControlMessage(const std::string& msg)
 			receiveCandidate(candidate, mid, mlineindex);
 		}
 	}
+	catch (std::invalid_argument inv)
+	{
+		if (inv.what())
+			std::cerr << inv.what() << std::endl;
+		else
+			std::cerr << "std::invalid_argument." << std::endl;
+	}
 	catch (...)
 	{
+		std::cerr << "receiveStreamingControlMessage exception." << std::endl;
 	}
 }

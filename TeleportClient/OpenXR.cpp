@@ -327,8 +327,10 @@ bool OpenXR::CheckXrResult(XrInstance xr_instance,XrResult res)
 	if(res == XR_SUCCESS)
 		return true;
 	char str[XR_MAX_RESULT_STRING_SIZE];
-	xrResultToString(xr_instance, res, str);
-	std::cerr << "CheckXrResult: " << str << std::endl;
+	if(xrResultToString(xr_instance, res, str)== XrResult::XR_SUCCESS)
+		std::cerr << "CheckXrResult: " << str << std::endl;
+	else
+		std::cerr << "CheckXrResult: No string found, but result was " << (int)res << std::endl;
 	return false;
 }
 
@@ -899,8 +901,8 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 					std::cout<<"\t\t\tMatches.\n";
 					matches=true;
 				}
-				else
-					std::cout<<"\t\t\tX\n";
+				//else
+				//	std::cout<<"\t\t\tX\n";
 			}
 			if(matches)
 			{

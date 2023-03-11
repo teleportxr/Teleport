@@ -70,22 +70,37 @@ namespace avs
     class DataChannelObserver : public webrtc::DataChannelObserver {
     public:
         // Constructor taking a callback.
-        DataChannelObserver(std::function<void(const webrtc::DataBuffer&)> on_message) :
-            on_message{ on_message } {}
+        DataChannelObserver(std::function<void()> on_state_change
+        , std::function<void(const webrtc::DataBuffer&)> on_message
+        , std::function<void(uint64_t)> on_buffered_amount_change) :
+            on_state_change{ on_state_change }
+        , on_message{ on_message } 
+        , on_buffered_amount_change{ on_buffered_amount_change } {}
 
         // Change in state of the Data Channel.
-        void OnStateChange() {}
+        void OnStateChange()
+        {
+            on_state_change();
+        }
 
         // Message received.
         void OnMessage(const webrtc::DataBuffer& buffer) {
-            on_message(buffer);
+            if(on_message)
+                on_message(buffer);
+            else
+                std::cerr << "OnMessage\n";
         }
 
         // Buffered amount change.
-        void OnBufferedAmountChange(uint64_t /* previous_amount */) {}
+        void OnBufferedAmountChange(uint64_t prev)
+        {
+            on_buffered_amount_change(prev);
+        }
 
     private:
+        std::function<void()> on_state_change;
         std::function<void(const webrtc::DataBuffer&)> on_message;
+        std::function<void(uint64_t)> on_buffered_amount_change;
     };
 
     // Create SessionDescription events.

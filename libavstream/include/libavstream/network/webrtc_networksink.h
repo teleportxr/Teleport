@@ -90,7 +90,10 @@ namespace avs
 		void receiveStreamingControlMessage(const std::string&) override;
 
 		// std::function targets
+		void OnDataChannelStateChange(uint64_t data_stream_index);
 		void OnDataChannelMessage(uint64_t data_stream_index, const webrtc::DataBuffer& buffer);
+		void OnDataChannelBufferedAmountChange(uint64_t data_stream_index, uint64_t previous);
+
 	protected:
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		std::vector<NetworkSinkStream> m_streams;

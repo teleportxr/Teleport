@@ -36,7 +36,8 @@ using namespace std;
 using nlohmann::json;
 
 shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration& config,
-	std::function<void(const std::string&)> sendMessage, std::string id)
+	std::function<void(const std::string&)> sendMessage,
+	std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannel,std::string id)
 {
 	auto pc = std::make_shared<rtc::PeerConnection>(config);
 	
@@ -72,29 +73,10 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration& c
 			sendMessage(message.dump());
 		});
 
-	pc->onDataChannel([sendMessage,id](shared_ptr<rtc::DataChannel> dc)
+	pc->onDataChannel([onDataChannel, id](shared_ptr<rtc::DataChannel> dc)
 	{
-		std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\""<< std::endl;
-
-		dc->onOpen([sendMessage]()
-			{
-				sendMessage("Hello" );
+		onDataChannel(dc);
 			});
-
-	dc->onClosed([id]() { std::cout << "DataChannel from " << id << " closed" << std::endl; });
-
-	dc->onMessage([id](auto data) {
-		// data holds either std::string or rtc::binary
-		if (std::holds_alternative<std::string>(data))
-		std::cout << "Message from " << id << " received: " << std::get<std::string>(data)
-			<< std::endl;
-		else
-			std::cout << "Binary message from " << id
-			<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
-		});
-
-			//dataChannelMap.emplace(id, dc);
-		});
 
 	//peerConnectionMap.emplace(id, pc);
 	return pc;
@@ -115,6 +97,7 @@ namespace avs
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSource, PipelineNode)
 		std::unordered_map<uint64_t, SourceDataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
+		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
 #if TELEPORT_CLIENT
 		HTTPUtil m_httpUtil;
 #endif
@@ -146,17 +129,24 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 	rtc::Configuration config;
 	std::string stunServer = "stun:stun.l.google.com:19302";
 	config.iceServers.emplace_back(stunServer);
-	m_data->rtcPeerConnection = createPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), "1");
+	m_data->rtcPeerConnection = createPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1),"1");
 	
 	setNumOutputSlots(numOutputs);
 
 	m_streams = std::move(streams);
 
-	/*for (size_t i = 0; i < numOutputs; ++i)
+	for (size_t i = 0; i < numOutputs; ++i)
 	{
 		const auto& stream = m_streams[i];
 		m_streamNodeMap[stream.id] = i;
-	}*/
+
+		m_data->dataChannels.try_emplace(stream.id, stream.id, this);
+		SourceDataChannel& dataChannel = m_data->dataChannels[stream.id];
+		//rtc::DataChannelInit dataChannelInit;
+		//dataChannelInit.id = stream.id;
+		//std::string dcLabel = std::to_string(stream.id);
+		//dataChannel.rtcDataChannel = m_data->rtcPeerConnection->createDataChannel(dcLabel, dataChannelInit);
+	}
 
 #if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
@@ -172,12 +162,27 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 }
 void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 {
-	m_data->rtcPeerConnection->setRemoteDescription(offer);
+	rtc::Description rtcDescription(offer,"offer");
+	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
 
 void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const std::string& mid, int mlineindex)
 {
-	m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate,mid));
+	try
+	{
+		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate));
+	}
+	catch (std::logic_error err)
+	{
+		if (err.what())
+			std::cerr << err.what() << std::endl;
+		else
+			std::cerr << "std::logic_error." << std::endl;
+	}
+	catch (...)
+	{
+		std::cerr << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
+	}
 }
 
 void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
@@ -287,7 +292,8 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 		if (type == "offer")
 		{
 			auto o = message.find("sdp");
-			receiveOffer(o->get<std::string>());
+			string sdp= o->get<std::string>();
+			receiveOffer(sdp);
 		}
 		else if (type == "candidate")
 		{
@@ -304,8 +310,45 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 			receiveCandidate(candidate,mid,mlineindex);
 		}
 	}
+	catch (std::invalid_argument inv)
+	{
+		if(inv.what())
+			std::cerr << inv.what() << std::endl;
+		else
+			std::cerr << "std::invalid_argument." << std::endl;
+	}
 	catch (...)
 	{
+		std::cerr << "receiveStreamingControlMessage exception." << std::endl;
 	}
+}
+
+void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
+{
+	if (!dc->id().has_value())
+		return;
+	uint16_t id = dc->id().value();
+	auto &dataChannel=dataChannels[id];
+	dataChannel.rtcDataChannel = dc;
+	std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
+
+	dc->onOpen([]()
+		{
+			std::cout << "DataChannel opened" << std::endl;
+		});
+
+	dc->onClosed([id]() { std::cout << "DataChannel from " << id << " closed" << std::endl; });
+
+	dc->onMessage([id](auto data) {
+		// data holds either std::string or rtc::binary
+		if (std::holds_alternative<std::string>(data))
+		std::cout << "Message from " << id << " received: " << std::get<std::string>(data)
+			<< std::endl;
+		else
+			std::cout << "Binary message from " << id
+			<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
+		});
+
+	//dataChannelMap.emplace(id, dc);
 }
 #endif

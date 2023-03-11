@@ -10,6 +10,10 @@
 #include <unordered_map>
 
 #if TELEPORT_DATACHANNEL_WEBRTC
+namespace rtc
+{
+	class DataChannel;
+}
 namespace avs
 {
 	/*!

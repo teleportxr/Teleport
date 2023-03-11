@@ -225,7 +225,7 @@ void GeometryStreamingService::tick(float deltaTime)
 
 		if (it->second > settings->confirmationWaitTime)
 		{
-			TELEPORT_COUT << "Resource " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
+		//	TELEPORT_COUT << "Resource " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
 			sentResources[it->first] = false;
 			auto next_it=it;
