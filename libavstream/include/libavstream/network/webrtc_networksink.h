@@ -9,27 +9,8 @@
 #include <libavstream/stream/parser_interface.hpp>
 #include <api/scoped_refptr.h>
 
-namespace webrtc
-{
-	class DataChannelInterface;
-	class IceCandidateInterface;
-	struct DataBuffer;
-	class SessionDescriptionInterface;
-	class PeerConnectionInterface;
-	class DataChannelInterface;
-}
-
 namespace avs
 {
-	struct WebRtcNetworkInternal;
-	class WebRtcNetworkSink;
-	struct DataChannel
-	{
-		DataChannel(uint64_t stream_index=0, WebRtcNetworkSink* webRtcNetworkSink=nullptr);
-		~DataChannel();
-		class DataChannelObserver* data_channel_observer = nullptr;
-		rtc::scoped_refptr<webrtc::DataChannelInterface> data_channel_interface;
-	};
 	/*!
 	 * Network sink node `[passive, 0/1]`
 	 *
@@ -43,7 +24,7 @@ namespace avs
 	class AVSTREAM_API WebRtcNetworkSink final : public NetworkSink
 	{
 		AVSTREAM_PUBLICINTERFACE(WebRtcNetworkSink)
-		WebRtcNetworkInternal* priv = nullptr;
+		Private* m_data = nullptr;
 	public:
 		WebRtcNetworkSink();
 		virtual ~WebRtcNetworkSink();
@@ -91,9 +72,10 @@ namespace avs
 
 		// std::function targets
 		void OnDataChannelStateChange(uint64_t data_stream_index);
-		void OnDataChannelMessage(uint64_t data_stream_index, const webrtc::DataBuffer& buffer);
 		void OnDataChannelBufferedAmountChange(uint64_t data_stream_index, uint64_t previous);
 
+		void SendConfigMessage(const std::string& str);
+		
 	protected:
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
 		std::vector<NetworkSinkStream> m_streams;
@@ -101,19 +83,13 @@ namespace avs
 		NetworkSinkCounters m_counters;
 		mutable std::mutex m_countersMutex;
 		bool enabled = true;
-		class PeerConnectionObserver			*peer_connection_observer=nullptr;
-		class CreateSessionDescriptionObserver	*create_session_description_observer = nullptr;
-		class SetSessionDescriptionObserver		*set_session_description_observer = nullptr;
-		rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer_connection;
 
 		// map from the stream indices to the channels.
-		std::unordered_map<uint64_t, DataChannel> dataChannels;
-		void OnDataChannelCreated(webrtc::DataChannelInterface* channel);
-		void OnIceCandidate(const webrtc::IceCandidateInterface* candidate);
-		void OnSessionDescriptionCreated(webrtc::SessionDescriptionInterface* desc);
 		void receiveAnswer(const std::string& answer);
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
-		std::vector<SetupMessage> m_setupMessages;
+		std::vector<std::string> messagesToSend;
+		std::unordered_map<uint32_t, int> m_streamNodeMap;
+		NetworkSinkParams  m_params;
 	};
 
 } // avs

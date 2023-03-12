@@ -940,10 +940,12 @@ size_t GeometryEncoder::put(const uint8_t* data, size_t count)
 	size_t pos = buffer.size();
 	buffer.resize(buffer.size() + count);
 	memcpy(buffer.data() + pos, data, count);
+#if TELEPORT_DEBUG_GEOMETRY_MESSAGES
 	if (count >= settings->geometryBufferCutoffSize)
 	{
 		TELEPORT_CERR << "Data too big for geometry buffer cutoff size.\n";
 	}
+#endif
 	return pos;
 }
 

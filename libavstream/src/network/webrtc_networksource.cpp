@@ -76,26 +76,26 @@ shared_ptr<rtc::PeerConnection> createPeerConnection(const rtc::Configuration& c
 	pc->onDataChannel([onDataChannel, id](shared_ptr<rtc::DataChannel> dc)
 	{
 		onDataChannel(dc);
-			});
+	});
 
 	//peerConnectionMap.emplace(id, pc);
 	return pc;
 };
 namespace avs
 {
-	struct SourceDataChannel
+	struct DataChannel
 	{
-		SourceDataChannel(uint64_t stream_index = 0, WebRtcNetworkSource* webRtcNetworkSink = nullptr)
+		DataChannel(uint64_t stream_index = 0, WebRtcNetworkSource* webRtcNetworkSink = nullptr)
 		{
 		}
-		~SourceDataChannel()
+		~DataChannel()
 		{}
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
 	};
 	struct WebRtcNetworkSource::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSource, PipelineNode)
-		std::unordered_map<uint64_t, SourceDataChannel> dataChannels;
+		std::unordered_map<uint64_t, DataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
 #if TELEPORT_CLIENT
@@ -110,6 +110,7 @@ using namespace avs;
 WebRtcNetworkSource::WebRtcNetworkSource()
 	: NetworkSource(new WebRtcNetworkSource::Private(this))
 {
+	rtc::InitLogger(rtc::LogLevel::Info);
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
 }
 
@@ -126,10 +127,6 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 		return Result::Node_InvalidConfiguration;
 	}
 	m_params = params;
-	rtc::Configuration config;
-	std::string stunServer = "stun:stun.l.google.com:19302";
-	config.iceServers.emplace_back(stunServer);
-	m_data->rtcPeerConnection = createPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1),"1");
 	
 	setNumOutputSlots(numOutputs);
 
@@ -141,7 +138,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 		m_streamNodeMap[stream.id] = i;
 
 		m_data->dataChannels.try_emplace(stream.id, stream.id, this);
-		SourceDataChannel& dataChannel = m_data->dataChannels[stream.id];
+		DataChannel& dataChannel = m_data->dataChannels[stream.id];
 		//rtc::DataChannelInit dataChannelInit;
 		//dataChannelInit.id = stream.id;
 		//std::string dcLabel = std::to_string(stream.id);
@@ -163,6 +160,10 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 {
 	rtc::Description rtcDescription(offer,"offer");
+	rtc::Configuration config;
+	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
+	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
+	m_data->rtcPeerConnection = createPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1");
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
 
@@ -170,7 +171,7 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 {
 	try
 	{
-		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate));
+		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate, mid));
 	}
 	catch (std::logic_error err)
 	{

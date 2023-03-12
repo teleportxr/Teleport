@@ -95,12 +95,16 @@ namespace avs
 		{
 			auto oldsize=m_maxBuffers;
 			increaseBufferCount();
+#if LIBAVSTREAM_DEBUG_MESSAGES
 			std::cerr << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
+#endif
 		}
 		if (bufferSize > m_maxBufferSize)
 		{
 			increaseBufferSize(bufferSize);
+#if LIBAVSTREAM_DEBUG_MESSAGES
 			std::cerr << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<" Have "<<m_numElements<<" buffers.\n";
+#endif
 		}
 		
 		push(buffer, bufferSize);

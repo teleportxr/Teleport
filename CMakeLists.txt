@@ -125,7 +125,7 @@ endif()
 
 # This must go before the openssl settings, or it won't generate:
 # Settings for libdatachannel:
-set(NO_WEBSOCKET ON)
+set(NO_WEBSOCKET OFF)
 set(NO_MEDIA OFF)
 set(NO_EXAMPLES ON)
 set(NO_TESTS ON)
@@ -158,8 +158,8 @@ endif()
 #defaults for basisu
 if(TELEPORT_SERVER)
 	option(STATIC "" OFF)
-	set(TELEPORT_DATACHANNEL_WEBRTC OFF)
-	add_compile_definitions(PRIVATE TELEPORT_DATACHANNEL_WEBRTC=0) 
+	set(TELEPORT_DATACHANNEL_WEBRTC ON)
+	add_compile_definitions(PRIVATE TELEPORT_DATACHANNEL_WEBRTC=1) 
 else()
 	option(STATIC "" ON)
 	set(TELEPORT_DATACHANNEL_WEBRTC ON)
