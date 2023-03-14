@@ -465,7 +465,7 @@ bool OpenXR::Init(crossplatform::RenderPlatform *r)
 	// may be more useful for other runtimes?
 	// Here's some extra information about the message types and severities:
 	// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
-#if TELEPORT_INTERNAL_CHECKS
+#if TELEPORT_DEBUG_OPENXR
 	XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 	debug_info.messageTypes =
 		XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
@@ -547,7 +547,7 @@ void OpenXR::MakeActions()
 		XrInteractionProfileSuggestedBinding suggested_binds = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 		suggested_binds.interactionProfile = p.profilePath;
 		suggested_binds.suggestedBindings = p.xrActionSuggestedBindings.data();
-#if TELEPORT_INTERNAL_CHECKS
+#if TELEPORT_DEBUG_OPENXR
 		for(suggested_binds.countSuggestedBindings=1;suggested_binds.countSuggestedBindings<=p.xrActionSuggestedBindings.size();suggested_binds.countSuggestedBindings++)
 		{
 			XrResult res=xrSuggestInteractionProfileBindings(xr_instance, &suggested_binds);

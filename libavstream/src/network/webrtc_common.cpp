@@ -1,6 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
+#if GOOGLE_WEBRTC
 #include "network/webrtc_common.h"
 #include <api/peer_connection_interface.h>
 #include <api/create_peerconnection_factory.h>
@@ -47,3 +48,4 @@ void avs::CreatePeerConnectionFactory()
 			nullptr, nullptr);
 	}
 }
+#endif

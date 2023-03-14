@@ -159,7 +159,6 @@ namespace clientrender
 		//Returns the resources the ResourceCreator needs, and clears the list.
 		std::vector<avs::uid> GetResourceRequests() const override;
 		void ClearResourceRequests() override;
-		void ReceivedResource(avs::uid id);
 		//Returns a list of resource IDs corresponding to the resources the client has received, and clears the list.
 		std::vector<avs::uid> GetReceivedResources() const override;
 		void ClearReceivedResources() override;
@@ -183,12 +182,18 @@ namespace clientrender
 		ResourceManager<geometry_cache_uid,clientrender::VertexBuffer>	mVertexBufferManager;
 
 		std::vector<avs::uid> m_CompletedNodes; //List of IDs of nodes that have been fully received, and have yet to be confirmed to the server.
-		std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 
 		const std::vector<avs::uid> &GetResourceRequests();
+		const std::unordered_map<avs::uid, MissingResource>& GetMissingResources() const
+		{
+			return m_MissingResources;
+		}
+		void ReceivedResource(avs::uid u);
+		void CompleteResource(avs::uid id);
 	protected:
 		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 		std::vector<avs::uid> m_ReceivedResources; //Resources received.
 		std::string cacheFolder;
+		std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 	};
 }

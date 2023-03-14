@@ -634,6 +634,33 @@ shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 	return Solid(IN, false, true, 0);
 }
 
+float hash(vec3 p)
+{
+	vec3 p3 = frac(vec3(p.xyz) * .1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return frac((p3.x + p3.y) * p3.z);
+}
+
+shader vec4 PS_Digitizing(vertexOutput IN) : SV_TARGET
+{
+	vec3 diff = IN.wpos.xyz - viewPosition;
+	if (length(diff) > drawDistance)
+		discard;
+	float t = float(frameNumber) * 0.01;
+
+	float scale = 0.1 + 0.2*rezzing;
+	vec3 pos = IN.wpos/scale ;
+	vec3 mid = pos - frac(pos);
+	mid += vec3(0.5, 0.5, 0.5);// vec3(hash(mid), hash(mid * 2), hash(mid * 3));
+	float r = 0.1 + sin(t) * 0.3;
+	if (rezzing > 0.95)
+		mid += vec3(0, 0,t);
+	vec3 offset = abs(pos - mid);
+	float l =min( min(offset.x, offset.y), offset.z);
+	float g = exp(-l*20.0)/(1.0+ rezzing);
+	return vec4(0,g,0,0.5);
+}
+
 shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
 {
 	float dotp=saturate(IN.normal.z);
@@ -810,6 +837,7 @@ VertexShader vs_anim = CompileShader(vs_5_0, VS_Animation());
 
 PixelShader ps_solid_lightmap = CompileShader(ps_5_0, PS_Solid_Lightmap());
 PixelShader ps_solid_nolightmap = CompileShader(ps_5_0, PS_Solid_NoLightmap());
+PixelShader ps_digitizing = CompileShader(ps_5_0, PS_Digitizing());
 
 
 PixelShader ps_transparent_lightmap		= CompileShader(ps_5_0, PS_Transparent_Lightmap());
@@ -897,6 +925,14 @@ technique solid
 		SetVertexShader(vs_solid);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_nolightmap);
+	}
+	pass digitizing
+	{
+		SetDepthStencilState(ReverseDepth,0);
+		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_digitizing);
 	}
 	pass albedo_only
 	{

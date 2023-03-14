@@ -707,8 +707,8 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 
 		if (material)
 		{
-			//UIDs used by textures in material.
-			std::vector<avs::uid> materialTexture_uids = material->GetTextureUids();
+			//UIDs used by textures in material. DON'T SEND THESE HERE!
+			std::vector<avs::uid> materialTexture_uids;// = material->GetTextureUids();
 			for (auto u : materialTexture_uids)
 			{
 				if (!geometryStore->getTexture(u))
@@ -966,7 +966,7 @@ bool GeometryEncoder::attemptQueueData()
 
 		return false;
 	}
-	else
+	else if (buffer.size())
 	{
 		size_t position = queuedBuffer.size();
 		queuedBuffer.resize(queuedBuffer.size() + buffer.size());
@@ -976,4 +976,5 @@ bool GeometryEncoder::attemptQueueData()
 
 		return true;
 	}
+	return true;
 }

@@ -82,4 +82,29 @@ namespace clientrender
 	private:
 		void UpdateLightSpaceTransform();
 	};
+	static const char* ToString(Light::Type type)
+	{
+		const char* lightTypeName = "";
+		switch (type)
+		{
+		case Light::Type::POINT:
+			lightTypeName = "Point";
+			break;
+		case Light::Type::DIRECTIONAL:
+			lightTypeName = "  Dir";
+			break;
+		case Light::Type::SPOT:
+			lightTypeName = " Spot";
+			break;
+		case Light::Type::AREA:
+			lightTypeName = " Area";
+			break;
+		case Light::Type::DISC:
+			lightTypeName = " Disc";
+			break;
+		default:
+			break;
+		};
+		return lightTypeName;
+	}
 }

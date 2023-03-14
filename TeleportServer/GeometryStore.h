@@ -135,6 +135,7 @@ namespace teleport
 				bool genMips;	// if false, numMips tells how many are in the data already.
 				bool highQualityUASTC;
 				avs::TextureCompression textureCompression = avs::TextureCompression::UNCOMPRESSED;
+				avs::TextureFormat format = avs::TextureFormat::INVALID;
 			};
 
 			uint8_t compressionStrength = 1;

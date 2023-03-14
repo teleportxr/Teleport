@@ -7,7 +7,6 @@
 #include <libavstream/node.hpp>
 #include <unordered_map>
 #include <libavstream/stream/parser_interface.hpp>
-#include <api/scoped_refptr.h>
 
 namespace avs
 {
@@ -78,8 +77,8 @@ namespace avs
 		
 	protected:
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
+		Result sendData(const std::vector<uint8_t>& subPacket);
 		std::vector<NetworkSinkStream> m_streams;
-		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		NetworkSinkCounters m_counters;
 		mutable std::mutex m_countersMutex;
 		bool enabled = true;
@@ -88,7 +87,8 @@ namespace avs
 		void receiveAnswer(const std::string& answer);
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
 		std::vector<std::string> messagesToSend;
-		std::unordered_map<uint32_t, int> m_streamNodeMap;
+		mutable std::mutex messagesMutex;
+	//	std::unordered_map<uint32_t, int> m_streamNodeMap;
 		NetworkSinkParams  m_params;
 	};
 

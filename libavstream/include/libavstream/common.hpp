@@ -252,6 +252,7 @@ namespace avs
 		FontAtlas,
 		TextCanvas,
 	};
+
 	inline const char *stringOf(GeometryPayloadType t)
 	{
 		switch(t)

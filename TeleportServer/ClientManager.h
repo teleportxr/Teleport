@@ -62,7 +62,7 @@ namespace teleport
 			std::thread mNetworkThread;
 			std::mutex mNetworkMutex;
 			mutable std::mutex mDataMutex;
-			avs::Timestamp mLastTickTimestamp;
+			std::atomic<avs::Timestamp> mLastTickTimestamp;
 			uint32_t mMaxClients = 0;
 			std::vector<bool> mPorts;
 

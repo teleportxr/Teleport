@@ -521,7 +521,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				}
 				else
 				{
-					static uint64_t retry_wait=256;
+					static uint64_t retry_wait= 16384;
 					static uint64_t c=1;
 					c--;
 					if(!c)
@@ -535,7 +535,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						else
 						{
 							c=retry_wait;
-							if(retry_wait<16384)
+							if(retry_wait< 16384*16384)
 								retry_wait*=2;
 						}
 					}

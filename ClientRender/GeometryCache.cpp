@@ -32,6 +32,7 @@ clientrender::MissingResource& GeometryCache::GetMissingResource(avs::uid id, av
 	{
 		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 		m_ResourceRequests.push_back(id);
+		TELEPORT_INTERNAL_COUT("Requested resource {0} of type {1}",id, stringOf(resourceType));
 	}
 	if(resourceType!=missingPair->second.resourceType)
 	{
@@ -58,10 +59,16 @@ void GeometryCache::ClearResourceRequests()
 void GeometryCache::ReceivedResource(avs::uid id)
 {
 	m_ReceivedResources.push_back(id);
-	if(id==64)
-	{
-		TELEPORT_COUT<<"Received Resource "<<(long long)id<<std::endl;
-	}
+	auto r = std::find(m_ResourceRequests.begin(), m_ResourceRequests.end(), id);
+	if (r != m_ResourceRequests.end())
+		m_ResourceRequests.erase(r);
+}
+
+void GeometryCache::CompleteResource(avs::uid id)
+{
+	auto m = m_MissingResources.find(id);
+	if(m!= m_MissingResources.end())
+		m_MissingResources.erase(m);
 }
 
 std::vector<avs::uid> GeometryCache::GetReceivedResources() const

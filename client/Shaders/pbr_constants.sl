@@ -8,8 +8,6 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float drawDistance;
 	float roughestMip;
 
-	vec4 lightmapScaleOffset;
-
 	vec4 depthToLinFadeDistParams;
 
 	vec4 diffuseOutputScalar;
@@ -37,12 +35,17 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	vec2 emissiveTexCoordsScalar_A;
 
 	vec3 u_SpecularColour;
-	float _pad;
+	float pad135;
 
 	float u_DiffuseTexCoordIndex;
 	float u_NormalTexCoordIndex;
 	float u_CombinedTexCoordIndex;
 	float u_EmissiveTexCoordIndex;
+SIMUL_CONSTANT_BUFFER_END
+
+SIMUL_CONSTANT_BUFFER(PerNodeConstants, 11)
+vec4 lightmapScaleOffset;
+float rezzing;
 SIMUL_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)

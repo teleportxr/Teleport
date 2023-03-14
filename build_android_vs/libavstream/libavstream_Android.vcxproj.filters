@@ -58,12 +58,6 @@
     <ClCompile Include="..\..\libavstream\src\mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libavstream\src\networksink.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\libavstream\src\networksource.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\libavstream\src\node.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -104,6 +98,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\libavstream\src\timer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libavstream\src\network\networksink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libavstream\src\network\networksource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libavstream\src\network\webrtc_common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libavstream\src\network\webrtc_networksink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libavstream\src\network\webrtc_networksource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -229,6 +238,39 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libavstream\src\platform.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\src\network\networksink_p.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\src\network\networksource_p.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\src\network\webrtc_common.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\networksink.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\networksource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\serial.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\srt_efp_networksink.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\srt_efp_networksource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_networksink.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_networksource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_observers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

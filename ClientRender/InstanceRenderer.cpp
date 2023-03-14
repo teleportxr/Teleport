@@ -78,8 +78,6 @@ void InstanceRenderer::InvalidateDeviceObjects()
 	}
 }
 
-
-
 void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
 {
 	bool multiview = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
@@ -178,103 +176,104 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 		clientrender::AVSTexture& tx = *th;
 		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
-		if (ti)
+	if (ti)
+	{
+		// This will apply to both rendering methods
+		renderState.cubemapClearEffect->SetTexture(deviceContext,renderState.plainTexture, ti->texture);
+		renderState.tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, renderState.cubemapClearEffect, renderState._RWTagDataIDBuffer);
+		renderState.cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
+		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
+		renderState.cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
+		renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
+		renderState.cubemapClearEffect->Unapply(deviceContext);
+		renderState.cubemapClearEffect->UnbindTextures(deviceContext);
+
+		renderState.tagDataIDBuffer.CopyToReadBuffer(deviceContext);
+		const uint4* videoIDBuffer = renderState.tagDataIDBuffer.OpenReadBuffer(deviceContext);
+		if (videoIDBuffer && videoIDBuffer[0].x < 32 && videoIDBuffer[0].w == 110) // sanity check
 		{
-			// This will apply to both rendering methods
-			renderState.cubemapClearEffect->SetTexture(deviceContext,renderState.plainTexture, ti->texture);
-			renderState.tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, renderState.cubemapClearEffect, renderState._RWTagDataIDBuffer);
-			renderState.cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
-			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-			renderState.cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
-			renderPlatform->DispatchCompute(deviceContext, 1, 1, 1);
-			renderState.cubemapClearEffect->Unapply(deviceContext);
-			renderState.cubemapClearEffect->UnbindTextures(deviceContext);
+			int tagDataID = videoIDBuffer[0].x;
 
-			renderState.tagDataIDBuffer.CopyToReadBuffer(deviceContext);
-			const uint4* videoIDBuffer = renderState.tagDataIDBuffer.OpenReadBuffer(deviceContext);
-			if (videoIDBuffer && videoIDBuffer[0].x < 32 && videoIDBuffer[0].w == 110) // sanity check
-			{
-				int tagDataID = videoIDBuffer[0].x;
+			const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
+			videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
 
-				const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
-				videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
-
-				videoPosDecoded = true;
-			}
-			renderState.tagDataIDBuffer.CloseReadBuffer(deviceContext);
-			UpdateTagDataBuffers(deviceContext);
-			if (sessionClient->IsConnected())
-			{
-				if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
-				{
-					if (renderState.videoTexture->IsCubemap())
-					{
-						const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
-						RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
-					}
-					else
-					{
-						const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
-						RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
-					}
-				}
-			}
-			RecomposeCubemap(deviceContext, ti->texture, renderState.diffuseCubemapTexture, renderState.diffuseCubemapTexture->mips, int2(renderState.lastSetupCommand.clientDynamicLighting.diffusePos[0], renderState.lastSetupCommand.clientDynamicLighting.diffusePos[1]));
-			RecomposeCubemap(deviceContext, ti->texture, renderState.specularCubemapTexture, renderState.specularCubemapTexture->mips, int2(renderState.lastSetupCommand.clientDynamicLighting.specularPos[0], renderState.lastSetupCommand.clientDynamicLighting.specularPos[1]));
+			videoPosDecoded = true;
 		}
-
-		// Draw the background. If unconnected, we show a grid and horizon.
-		// If connected, we show the server's chosen background: video, texture or colour.
+		renderState.tagDataIDBuffer.CloseReadBuffer(deviceContext);
+		UpdateTagDataBuffers(deviceContext);
+		if (sessionClient->IsConnected())
 		{
-			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+			if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
 			{
-				crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-				renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
-				renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
-				renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-				renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-			}
-			//else
-			{
-				renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-				renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-				renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-			}
-			if (sessionClient->IsConnected())
-			{
-				if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::COLOUR)
+				if (renderState.videoTexture->IsCubemap())
 				{
-					renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(renderState.lastSetupCommand.backgroundColour));
+					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
+					RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
 				}
-				else if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
+				else
 				{
-					if (renderState.videoTexture->IsCubemap())
-					{
-						RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_cubemap", "cubemapTexture");
-					}
-					else
-					{
-						math::Matrix4x4 projInv;
-						deviceContext.viewStruct.proj.Inverse(projInv);
-						RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
-					}
+					const char* technique = clientPipeline.videoConfig.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
+					RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
 				}
 			}
 		}
-		vec4 white={1.f,1.f,1.f,1.f};
-		renderState.pbrConstants.drawDistance = renderState.lastSetupCommand.draw_distance;
-		if(renderState.specularCubemapTexture)
-			renderState.pbrConstants.roughestMip=float(renderState.specularCubemapTexture->mips-1);
-		if(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
+		RecomposeCubemap(deviceContext, ti->texture, renderState.diffuseCubemapTexture, renderState.diffuseCubemapTexture->mips, int2(renderState.lastSetupCommand.clientDynamicLighting.diffusePos[0], renderState.lastSetupCommand.clientDynamicLighting.diffusePos[1]));
+		RecomposeCubemap(deviceContext, ti->texture, renderState.specularCubemapTexture, renderState.specularCubemapTexture->mips, int2(renderState.lastSetupCommand.clientDynamicLighting.specularPos[0], renderState.lastSetupCommand.clientDynamicLighting.specularPos[1]));
+	}
+
+	// Draw the background. If unconnected, we show a grid and horizon.
+	// If connected, we show the server's chosen background: video, texture or colour.
+	{
+		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
-			auto t = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
-			if(t&&t->GetSimulTexture())
+			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+			renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+			renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
+			renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
+		}
+		//else
+		{
+			renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+		}
+		renderState.cameraConstants.frameNumber = (int)renderPlatform->GetFrameNumber();
+		if (sessionClient->IsConnected())
+		{
+			if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::COLOUR)
 			{
-				renderState.pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
+				renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(renderState.lastSetupCommand.backgroundColour));
+			}
+			else if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
+			{
+				if (renderState.videoTexture->IsCubemap())
+				{
+					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_cubemap", "cubemapTexture");
+				}
+				else
+				{
+					math::Matrix4x4 projInv;
+					deviceContext.viewStruct.proj.Inverse(projInv);
+					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
+				}
 			}
 		}
-		if (sessionClient->IsConnected()||config.options.showGeometryOffline)
-			RenderLocalNodes(deviceContext,server_uid);
+	}
+	vec4 white={1.f,1.f,1.f,1.f};
+	renderState.pbrConstants.drawDistance = renderState.lastSetupCommand.draw_distance;
+	if(renderState.specularCubemapTexture)
+		renderState.pbrConstants.roughestMip=float(renderState.specularCubemapTexture->mips-1);
+	if(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture!=0)
+	{
+		auto t = geometryCache.mTextureManager.Get(renderState.lastSetupCommand.clientDynamicLighting.specularCubemapTexture);
+		if(t&&t->GetSimulTexture())
+		{
+			renderState.pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
+		}
+	}
+	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
+		RenderLocalNodes(deviceContext,server_uid);
 }
 
 void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
@@ -413,6 +412,31 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	if(node->GetGlobalIlluminationTextureUid() )
 		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
+	// Is the material/lighting incomplete?
+	bool material_incomplete = false;
+	if (node->IsStatic())
+	{
+		// need a lightmap.
+		if (!globalIlluminationTexture)
+		{
+			material_incomplete = true;
+		}
+	}
+	else
+	{
+		if(!renderState.pbrEffect_diffuseCubemap.valid)
+		{
+			material_incomplete = true;
+		}
+	}
+	bool rezzing = material_incomplete;
+	if (material_incomplete)
+		node->countdown = 1.0f;
+	else if (node->countdown > 0.0f)
+	{
+		node->countdown -= 0.01f;
+		rezzing = true;
+	}
 	bool force_highlight = force||(renderState.selected_uid== node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
@@ -448,6 +472,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		}
 		if(mesh)
 		{
+			renderState.perNodeConstants.lightmapScaleOffset = *(const vec4*)(&(node->GetLightmapScaleOffset()));
+			renderState.perNodeConstants.rezzing = node->countdown;
 			const auto& meshInfo	= mesh->GetMeshCreateInfo();
 			static int mat_select	= -1;
 			for(size_t element=0; element<node->GetMaterials().size() && element<meshInfo.ib.size(); element++)
@@ -489,7 +515,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				highlight|= (renderState.selected_uid == material->id);
 				const clientrender::Material::MaterialData& md = material->GetMaterialData();
 				memcpy(&renderState.pbrConstants.diffuseOutputScalar, &md, sizeof(md));
-				renderState.pbrConstants.lightmapScaleOffset=*(const vec4*)(&(node->GetLightmapScaleOffset()));
 				std::shared_ptr<clientrender::Texture> diffuse	= matInfo.diffuse.texture;
 				std::shared_ptr<clientrender::Texture> normal	= matInfo.normal.texture;
 				std::shared_ptr<clientrender::Texture> combined = matInfo.combined.texture;
@@ -509,7 +534,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					pass=shaderPassSetup->overridePass;
 				else
 				{
-					if(node->IsStatic())
+					if(rezzing)
+						pass=shaderPassSetup->digitizingPass;
+					else if(node->IsStatic())
 						pass=shaderPassSetup->lightmapPass;
 					else
 						pass=shaderPassSetup->noLightmapPass;
@@ -559,6 +586,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
 				//else
 					renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+				renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
+					
 				if(double_sided)
 					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
 				else if(negative_scale)

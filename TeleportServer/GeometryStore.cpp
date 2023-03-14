@@ -1172,6 +1172,7 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			pct.genMips=genMips;
 			pct.highQualityUASTC=highQualityUASTC;
 			pct.textureCompression=newTexture.compression;
+			pct.format = newTexture.format;
 			for(size_t i=0;i<imageSizes.size();i++)
 			{
 				size_t offset=(size_t)imageOffsets[i];

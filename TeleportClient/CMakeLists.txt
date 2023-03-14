@@ -26,6 +26,7 @@ set(src_files
 
 #For MT runtime
 add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore)
+SetTeleportDefaults(TeleportClient)
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
 #Include its root directory

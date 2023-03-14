@@ -56,6 +56,7 @@ namespace clientrender
 		platform::crossplatform::EffectPass			*lightmapPass			=nullptr;
 		platform::crossplatform::EffectPass			*noLightmapPass			=nullptr;
 		platform::crossplatform::EffectPass			*overridePass			=nullptr;
+		platform::crossplatform::EffectPass			*digitizingPass			=nullptr;
 	};
 	struct RenderState
 	{
@@ -107,6 +108,7 @@ namespace clientrender
 		platform::crossplatform::ConstantBuffer<StereoCameraConstants> stereoCameraConstants;
 		platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 		platform::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
+		platform::crossplatform::ConstantBuffer<PerNodeConstants> perNodeConstants;
 		platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
 		platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 		platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;

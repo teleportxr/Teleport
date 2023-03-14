@@ -88,7 +88,6 @@ using namespace server;
 
 	void ClientManager::tick(float deltaTime)
 	{
-		std::lock_guard<std::mutex> guard(mDataMutex);
 		mLastTickTimestamp = avs::Platform::getTimestamp();
 	}
 
@@ -159,7 +158,6 @@ using namespace server;
 
 	avs::Timestamp ClientManager::getLastTickTimestamp() const
 	{
-		std::lock_guard<std::mutex> guard(mDataMutex);
 		return mLastTickTimestamp;
 	}
 
@@ -203,7 +201,7 @@ using namespace server;
 			// Only continue processing if the main thread hasn't hung.
 			timestamp = avs::Platform::getTimestamp();
 			{
-				std::lock_guard<std::mutex> lock(mDataMutex);
+				//std::lock_guard<std::mutex> lock(mDataMutex);
 				elapsedTime = avs::Platform::getTimeElapsedInSeconds(mLastTickTimestamp, timestamp);
 			}
 

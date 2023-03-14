@@ -26,7 +26,7 @@ namespace clientrender
 
 		// distance from the viewer - so we can sort nodes from front to back.
 		float distance=1.0f;
-
+		mutable float countdown = 2.0f;
 		VisibilityComponent visibility;
 		AnimationComponent animationComponent;
 

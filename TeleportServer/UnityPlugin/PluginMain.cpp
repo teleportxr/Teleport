@@ -240,7 +240,7 @@ TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
 {
 	if(msgh)
 	{
-		debug_buffer.setToOutputWindow(false);
+		debug_buffer.setToOutputWindow(true);
 		messageHandler=msgh;
 		avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr); 
 		debug_buffer.setOutputCallback(&passOnOutput);

@@ -181,6 +181,8 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 
 	renderState.pbrConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.pbrConstants.LinkToEffect(renderState.pbrEffect,"pbrConstants");
+	renderState.perNodeConstants.RestoreDeviceObjects(renderPlatform);
+	renderState.perNodeConstants.LinkToEffect(renderState.pbrEffect, "perNodeConstants");
 	renderState.cubemapConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.cubemapConstants.LinkToEffect(renderState.cubemapClearEffect, "CubemapConstants");
 	renderState.cameraConstants.RestoreDeviceObjects(renderPlatform);
@@ -325,6 +327,7 @@ void Renderer::UpdateShaderPasses()
 			shaderPassSetup.technique		=renderState.pbrEffect->GetTechniqueByName(techname);
 			shaderPassSetup.noLightmapPass	=shaderPassSetup.technique->GetPass("pbr_nolightmap");
 			shaderPassSetup.lightmapPass	=shaderPassSetup.technique->GetPass("pbr_lightmap");
+			shaderPassSetup.digitizingPass = shaderPassSetup.technique->GetPass("digitizing");
 			shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
 			return shaderPassSetup;
 		};
@@ -607,10 +610,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		avs::Pose handPose	= l->second.pose_footSpace.pose;
 		avs::vec3 pos		= LocalToGlobal(handPose,*((avs::vec3*)&index_finger_offset));
 		//Clang can't handle overloaded functions, where a parameter could be upcast to another overload. Hence split the function calls.
-		if (multiview) 
+	/*	if (multiview) 
 			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
 		else
-			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);
+			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);*/
 		vec4 pos4;
 		pos4.xyz			= (const float*)&pos;
 		pos4.w				= 0.0f;
@@ -664,6 +667,10 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
 			renderState.overridePassName = "normal_vertexnormals";
+			break;
+		case ShaderMode::REZZING:
+			renderState.overridePassName = "digitizing";
+			break;
 		default:
 			renderState.overridePassName = "";
 			break;
@@ -926,6 +933,9 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 		case VK_NUMPAD2: //Display normals swizzled for matching Unity output.
 			ChangePass(clientrender::ShaderMode::NORMAL_VERTEXNORMALS);
+			break;
+		case VK_NUMPAD7: //.
+			ChangePass(clientrender::ShaderMode::REZZING);
 			break;
 			#endif
 		default:

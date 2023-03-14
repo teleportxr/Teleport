@@ -130,7 +130,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 	if(!mClientHost)
 	{
-		TELEPORT_CLIENT_FAIL("Failed to create ENET client host");
+		TELEPORT_CLIENT_FAIL("Failed to create ENET client host\n");
 		connectionStatus=ConnectionStatus::UNCONNECTED;
 		remoteIP="";
 		return false;
@@ -139,7 +139,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 	mServerPeer = enet_host_connect(mClientHost, &remote, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0);
 	if(!mServerPeer)
 	{
-		TELEPORT_CLIENT_WARN("Failed to initiate connection to the server");
+		TELEPORT_CLIENT_WARN("Failed to initiate connection to the server\n");
 		connectionStatus=ConnectionStatus::UNCONNECTED;
 		enet_host_destroy(mClientHost);
 		mClientHost = nullptr;
@@ -154,13 +154,13 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 
 		char remote_ip[20];
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
-		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d", remote_ip, remote.port);
+		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d\n", remote_ip, remote.port);
 		remoteIP=remote_ip;
 		connectionStatus = ConnectionStatus::HANDSHAKING;
 		return true;
 	}
 
-	TELEPORT_CLIENT_WARN("Failed to connect to remote session server");
+	TELEPORT_CLIENT_WARN("Failed to connect to remote session server\n");
 	connectionStatus=ConnectionStatus::UNCONNECTED;
 
 	enet_host_destroy(mClientHost);
@@ -370,7 +370,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 			ReceiveTextCommand(event.packet);
 			break;
 		default:
-			TELEPORT_CLIENT_WARN("Received packet on output-only channel: %d", event.channelID);
+			TELEPORT_CLIENT_WARN("Received packet on output-only channel: %d\n", event.channelID);
 			break;
 	}
 
@@ -448,7 +448,7 @@ void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::
 	message.numPoses=(uint16_t)poses.size();
 	if(isnan(headPose.position.x))
 	{
-		TELEPORT_CLIENT_WARN("Trying to send NaN");
+		TELEPORT_CLIENT_WARN("Trying to send NaN\n");
 		return;
 	}
 	size_t messageSize = sizeof(teleport::core::ControllerPosesMessage)+message.numPoses*sizeof(teleport::core::NodePose);
@@ -607,10 +607,10 @@ void SessionClient::SendResourceRequests()
 	geometryCache->ClearResourceRequests();
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
 	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
-	resourceRequests.clear();
 
 	if(mQueuedResourceRequests.size() != 0)
 	{
+		resourceRequests.clear();
 		size_t resourceCount = mQueuedResourceRequests.size();
 		ENetPacket* packet = enet_packet_create(&resourceCount, sizeof(size_t) , ENET_PACKET_FLAG_RELIABLE);
 
@@ -642,6 +642,7 @@ void SessionClient::SendReceivedResources()
 			auto sentRequestIt = mSentResourceRequests.find(id);
 			if(sentRequestIt != mSentResourceRequests.end())
 			{
+				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
 				mSentResourceRequests.erase(sentRequestIt);
 			}
 		}

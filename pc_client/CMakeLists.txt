@@ -74,8 +74,8 @@ target_link_libraries(pc_client debug openxr_loaderd optimized openxr_loader)
 target_link_libraries(pc_client libavstream enet TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
 target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
 
-target_link_directories(pc_client PUBLIC "E:/Code/OpenSSL-Win64/lib/VC")
-target_link_libraries(pc_client LibDataChannel::LibDataChannelStatic usrsctp ws2_32.lib  libssl64MT.lib juice-static iphlpapi.lib  bcrypt.lib)
+target_link_directories(pc_client PUBLIC ../thirdparty/openssl/x64/lib)
+target_link_libraries(pc_client LibDataChannel::LibDataChannelStatic usrsctp ws2_32.lib  libssl.lib juice-static iphlpapi.lib  bcrypt.lib)
 
 
 target_link_libraries(pc_client -ignore:4711)

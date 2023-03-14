@@ -1,7 +1,7 @@
 #pragma once
 #include <libavstream/common.hpp>
 #include <libavstream/pipeline.hpp>
-#include <libavstream/network/srt_efp_networksource.h>
+#include <libavstream/network/networksource.h>
 #include <libavstream/surface.hpp>
 #include <libavstream/queue.hpp>
 #include <libavstream/decoder.hpp>

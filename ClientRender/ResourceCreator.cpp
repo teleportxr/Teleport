@@ -107,10 +107,8 @@ void ResourceCreator::Clear()
 	mutex_texturesToTranscode.unlock();
 
 	geometryCache->ClearResourceRequests();
-	//geometryCache->m_ResourceRequests.clear();
 	geometryCache->ClearReceivedResources();
 	geometryCache->m_CompletedNodes.clear();
-	geometryCache->m_MissingResources.clear();
 }
 
 void ResourceCreator::Update(float deltaTime)
@@ -522,7 +520,6 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 		texInfo->images.emplace_back(texture.dataSize);
 		memcpy(texInfo->images.back().data(), texture.data, texture.dataSize);
 
-		//std::cout << "Uncompressed, completing.\n";
 		CompleteTexture(id, *texInfo);
 	}
 }
@@ -638,7 +635,6 @@ void ResourceCreator::CreateFontAtlas(avs::uid id,teleport::core::FontAtlas &fon
 		textCanvas->SetFontAtlas(f);
 		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteNode->id,"",id,"");
 		// The TextCanvas is complete
-		geometryCache->m_MissingResources.erase(id);
 	}
 }
 
@@ -690,7 +686,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
-	geometryCache->m_MissingResources.erase(textCanvas->textCanvasCreateInfo.uid);
+	geometryCache->ReceivedResource(textCanvas->textCanvasCreateInfo.uid);
 }
 
 
@@ -1004,7 +1000,7 @@ void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCr
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
-	geometryCache->m_MissingResources.erase(id);
+	geometryCache->ReceivedResource(id);
 }
 
 void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin)
@@ -1029,9 +1025,8 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
 		}
-
 		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->m_MissingResources.erase(id);
+		geometryCache->ReceivedResource(id);
 	}
 }
 
@@ -1056,7 +1051,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 						std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
 						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})",incompleteNode->id,id,textureInfo.name);
 
-						geometryCache->m_MissingResources.erase(incompleteFontAtlas->id);
+						geometryCache->ReceivedResource(incompleteFontAtlas->id);
 					}
 					break;
 				case avs::GeometryPayloadType::Material:
@@ -1102,9 +1097,9 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 					break;
 			}
 		}
-		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->m_MissingResources.erase(id);
 	}
+	//Resource has arrived, so we are no longer waiting for it.
+	geometryCache->CompleteResource(id);
 }
 
 void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo& materialInfo)
@@ -1141,7 +1136,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 		}
 
 		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->m_MissingResources.erase(id);
+		geometryCache->CompleteResource(id);
 	}
 }
 
@@ -1180,7 +1175,7 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bo
 		}
 
 		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->m_MissingResources.erase(id);
+		geometryCache->CompleteResource(id);
 	}
 }
 
@@ -1210,7 +1205,7 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrende
 		}
 
 		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->m_MissingResources.erase(id);
+		geometryCache->CompleteResource(id);
 	}
 }
 

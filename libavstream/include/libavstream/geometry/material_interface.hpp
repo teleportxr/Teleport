@@ -147,7 +147,8 @@ namespace avs
 	{
 		UNCOMPRESSED = 0,
 		BASIS_COMPRESSED,
-		PNG
+		PNG,
+		KTX
 	};
 
 	struct Sampler 

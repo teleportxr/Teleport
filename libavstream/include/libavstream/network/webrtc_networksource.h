@@ -9,7 +9,6 @@
 #include "networksource.h"
 #include <unordered_map>
 
-#if TELEPORT_DATACHANNEL_WEBRTC
 namespace avs
 {
 	/*!
@@ -84,13 +83,13 @@ namespace avs
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
 		std::unordered_map<uint32_t, int> m_streamNodeMap;
 		NetworkSourceParams m_params;
-		NetworkSourceCounters m_counters;
 		mutable std::mutex m_networkMutex;
 		mutable std::mutex m_dataMutex;
+		std::vector<char> m_tempBuffer;
+		mutable std::mutex messagesMutex;
 		void receiveOffer(const std::string& offer);
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
 		void SendConfigMessage(const std::string& str);
 	};
 
 } // avs
-#endif

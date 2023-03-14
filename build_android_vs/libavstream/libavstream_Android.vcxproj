@@ -15,6 +15,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\libavstream\include\libavstream\common.hpp" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\networksink.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\networksource.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\serial.hpp" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\srt_efp_networksink.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\srt_efp_networksource.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_networksink.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_networksource.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_observers.h" />
     <ClInclude Include="..\..\libavstream\src\abi_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\api\cuda.hpp" />
     <ClInclude Include="..\..\libavstream\src\api\cuda_dx12.hpp" />
@@ -36,8 +44,11 @@
     <ClInclude Include="..\..\libavstream\src\mesh_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\networksink_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\networksource_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\network\networksink_p.hpp" />
+    <ClInclude Include="..\..\libavstream\src\network\networksource_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\network\packetformat.hpp" />
     <ClInclude Include="..\..\libavstream\src\network\serial.hpp" />
+    <ClInclude Include="..\..\libavstream\src\network\webrtc_common.h" />
     <ClInclude Include="..\..\libavstream\src\node_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\packetizer_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\parsers\nalu_parser_h264.hpp" />
@@ -76,8 +87,11 @@
     <ClCompile Include="..\..\libavstream\src\libraryloader.cpp" />
     <ClCompile Include="..\..\libavstream\src\memory.cpp" />
     <ClCompile Include="..\..\libavstream\src\mesh.cpp" />
-    <ClCompile Include="..\..\libavstream\src\networksink.cpp" />
-    <ClCompile Include="..\..\libavstream\src\networksource.cpp" />
+    <ClCompile Include="..\..\libavstream\src\network\networksink.cpp" />
+    <ClCompile Include="..\..\libavstream\src\network\networksource.cpp" />
+    <ClCompile Include="..\..\libavstream\src\network\webrtc_common.cpp" />
+    <ClCompile Include="..\..\libavstream\src\network\webrtc_networksink.cpp" />
+    <ClCompile Include="..\..\libavstream\src\network\webrtc_networksource.cpp" />
     <ClCompile Include="..\..\libavstream\src\node.cpp" />
     <ClCompile Include="..\..\libavstream\src\nullsink.cpp" />
     <ClCompile Include="..\..\libavstream\src\packetizer.cpp" />
@@ -141,13 +155,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../libavstream/thirdparty/curl/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

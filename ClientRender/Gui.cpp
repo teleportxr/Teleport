@@ -362,6 +362,8 @@ void Gui::ShowFont()
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n,const char *search_text)
 {
 	const clientrender::Node *node=n.get();
+	if (!node)
+		return;
 	bool has_children	=node->GetChildren().size()!=0;
 	std::string str		=(std::to_string(n->id)+" ")+ node->name;
 	bool open			= false;
@@ -632,7 +634,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 		
 	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),m,slice);
-	ImGui_ImplPlatform_DrawTexture(const_cast<Texture*>(texture), m, slice, drawTexture,(int)showWidth,(int)size.y);
+	ImGui_ImplPlatform_DrawTexture(nullptr, m, slice, drawTexture,(int)showWidth,(int)size.y);
 }
 
 static void DoRow(const char* title, const char* text, ...)
@@ -982,50 +984,6 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 	ImGui::EndGroup();
 }
 
-static const char* ToString(clientrender::Light::Type type)
-{
-	const char* lightTypeName = "";
-	switch (type)
-	{
-	case clientrender::Light::Type::POINT:
-		lightTypeName = "Point";
-		break;
-	case clientrender::Light::Type::DIRECTIONAL:
-		lightTypeName = "  Dir";
-		break;
-	case clientrender::Light::Type::SPOT:
-		lightTypeName = " Spot";
-		break;
-	case clientrender::Light::Type::AREA:
-		lightTypeName = " Area";
-		break;
-	default:
-	case clientrender::Light::Type::DISC:
-		lightTypeName = " Disc";
-		break;
-		break;
-	};
-	return lightTypeName;
-}
-
-const char *stringof(avs::GeometryPayloadType t)
-{
-	static const char *txt[]=
-	{
-		"Invalid", 
-		"Mesh",
-		"Material",
-		"MaterialInstance",
-		"Texture",
-		"Animation",
-		"Node",
-		"Skin",
-		"Bone",
-		"FontAtlas",
-		"TextCanvas",
-	};
-	return txt[(size_t)t];
-}
 
 void Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
 {
@@ -1109,14 +1067,14 @@ void Gui::GeometryOSD()
 					
 	Scene();
 
-	auto &missing=geometryCache->m_MissingResources;
+	const auto &missing=geometryCache->GetMissingResources();
 	if(missing.size())
 	{
 		LinePrint(platform::core::QuickFormat("Missing Resources"));
 		for(const auto& missingPair : missing)
 		{
 			const clientrender::MissingResource& missingResource = missingPair.second;
-			std::string txt= fmt::format("\t{0} {1} from ", stringof(missingResource.resourceType), missingResource.id);
+			std::string txt= fmt::format("\t{0} {1} from ", stringOf(missingResource.resourceType), missingResource.id);
 			for(auto &u:missingResource.waitingResources)
 			{
 				auto type= u.get()->type;

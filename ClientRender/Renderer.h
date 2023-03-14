@@ -34,7 +34,7 @@ namespace clientrender
 
 	enum class ShaderMode
 	{
-		DEFAULT,PBR, ALBEDO, NORMALS, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS,NUM
+		DEFAULT,PBR, ALBEDO, NORMALS, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS, REZZING,NUM
 	};
 	//! Timestamp of when the system started.
 	extern avs::Timestamp platformStartTimestamp;	

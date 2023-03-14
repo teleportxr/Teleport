@@ -84,7 +84,7 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 		int err = WSAGetLastError();
 		TELEPORT_CERR << "enet_socket_bind failed with error " << err << std::endl;
 #else
-		TELEPORT_CERR << "enet_socket_bind failed with error " << result << std::endl;
+		TELEPORT_CERR << "enet_socket_bind failed with error " <<std::endl;
 #endif
 		enet_socket_destroy(socket);
 		socket = 0;

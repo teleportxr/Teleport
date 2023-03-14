@@ -137,12 +137,9 @@ set_target_properties( srtp2 PROPERTIES FOLDER thirdparty/datachannel)
 set_target_properties( usrsctp PROPERTIES FOLDER thirdparty/datachannel)
 
 #openssl
-
-#set(SSL_EAY_DEBUG ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
-#set(SSL_EAY_RELEASE ${CMAKE_SOURCE_DIR}/thirdparty/openssl/libssl_MT.lib)
-
-set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
-
+if(TELEPORT_WINDOWS)
+	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include)
+endif()
 if(TELEPORT_UNITY)
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${TELEPORT_UNITY_PLUGINS_DIR} )
 else()
@@ -225,7 +222,6 @@ function(SetTeleportDefaults targname)
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL= _GLIBCXX_DEBUG)
 	endif()
 	target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)
-	#message("target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)")
 endfunction()
 
 function(add_teleport_static_library targname)
@@ -333,3 +329,9 @@ set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 if(TELEPORT_BUILD_DOCS)
 	add_subdirectory ("docs")
 endif()
+
+set(KTX_FEATURE_GL_UPLOAD Off)
+set(KTX_FEATURE_STATIC_LIBRARY On)
+set(KTX_FEATURE_TESTS Off)
+set(KTX_FEATURE_TOOLS Off)
+set(KTX_FEATURE_Vulkan On)
