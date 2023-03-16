@@ -11,7 +11,7 @@ Teleport is a top-level application-layer protocol. It can use various means of 
 .. list-table:: Network Layers
    :widths: 5 30
    :header-rows: 0
-
+    
    * - Teleport VR
      - Real-time client-server interface of a virtual world. 
    * - WebRTC/libavstream/UDP-based transport
