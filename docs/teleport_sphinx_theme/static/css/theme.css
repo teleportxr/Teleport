@@ -6094,6 +6094,10 @@ html
     font-weight: 400;
     color: hsla(0,0%,100%,.3)
 }
+.search-label
+{
+    color:#fff;
+}
 
 .wy-nav .wy-menu-vertical header
 {
