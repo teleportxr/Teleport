@@ -123,12 +123,27 @@ if(TELEPORT_WINDOWS)
 	#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
 endif()
 
+#openssl
+if(TELEPORT_WINDOWS)
+	set(OPENSSL_APPLINK_SOURCE "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include/openssl/applink.c" CACHE STRING "" )
+	set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64 CACHE STRING "" )
+	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include CACHE STRING "" )
+	set(OPENSSL_LIBRARIES ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib CACHE STRING "" )
+	set(OPENSSL_CRYPTO_LIBRARY libcrypto.lib CACHE STRING "" )
+	set(SSL_EAY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
+	set(SSL_EAY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
+	set(SSL_EAY_LIBRARY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
+	set(SSL_EAY_LIBRARY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
+	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
+endif()
+
 # This must go before the openssl settings, or it won't generate:
 # Settings for libdatachannel:
 set(NO_WEBSOCKET OFF)
 set(NO_MEDIA OFF)
 set(NO_EXAMPLES ON)
 set(NO_TESTS ON)
+
 add_subdirectory(thirdparty/libdatachannel)
 set_target_properties( datachannel PROPERTIES FOLDER thirdparty/datachannel)
 set_target_properties( datachannel-static PROPERTIES FOLDER thirdparty/datachannel)
@@ -136,10 +151,6 @@ set_target_properties( juice-static PROPERTIES FOLDER thirdparty/datachannel)
 set_target_properties( srtp2 PROPERTIES FOLDER thirdparty/datachannel)
 set_target_properties( usrsctp PROPERTIES FOLDER thirdparty/datachannel)
 
-#openssl
-if(TELEPORT_WINDOWS)
-	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include)
-endif()
 if(TELEPORT_UNITY)
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${TELEPORT_UNITY_PLUGINS_DIR} )
 else()
@@ -259,7 +270,7 @@ if(TELEPORT_SERVER)
 endif()
 
 if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
-	set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openssl)
+	set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openssl/x64)
 	set(OPENSSL_USE_STATIC_LIBS TRUE)
 	set(OPENSSL_MSVC_STATIC_RT TRUE)
 	add_subdirectory(firstparty/Platform)

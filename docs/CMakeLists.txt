@@ -73,18 +73,23 @@ find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 file(GLOB RST_FILES "*.rst" ) 
+file(GLOB THEME_FILES "teleport_sphinx_theme/*.html" ) 
+file(GLOB THEME_CSS_FILES "teleport_sphinx_theme/static/css/*.css" ) 
+message("THEME_CSS_FILES ${THEME_CSS_FILES}")
 file(GLOB RST_REF_FILES "reference/*.rst" )
 file(GLOB RST_PROTOCOL_FILES "protocol/*.rst" )
 file(GLOB RST_PROTOCOL_SERVICE_FILES "protocol/service/*.rst" )
 file(GLOB RST_UNITY_FILES "unity/*.rst" )
 
 message("teleportrenderer_HEADER_DIRS ${teleportrenderer_HEADER_DIRS}")
+source_group("Theme" FILES ${THEME_FILES} )
+source_group("Theme/Css" FILES ${THEME_CSS_FILES} )
 source_group("Documentation" FILES ${RST_FILES} )
 source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
 source_group("Documentation/Protocol" FILES ${RST_PROTOCOL_FILES} )
 source_group("Documentation/Protocol/Service" FILES ${RST_PROTOCOL_SERVICE_FILES} )
 source_group("Documentation/Unity" FILES ${RST_UNITY_FILES} )
-set(ALL_RST_FILES ${RST_FILES} ${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES} ${RST_UNITY_FILES})
+set(ALL_RST_FILES ${RST_FILES} ${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES} ${RST_UNITY_FILES} ${THEME_FILES} ${THEME_CSS_FILES})
 add_custom_target(Sphinx ALL
 					COMMAND
 					${SPHINX_EXECUTABLE} -b html
@@ -92,7 +97,7 @@ add_custom_target(Sphinx ALL
 					${FIND_DOXYGEN_OUTPUTS}
 					${SPHINX_SOURCE} ${SPHINX_BUILD}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-					DEPENDS ${ALL_RST_FILES}
+					DEPENDS ${ALL_RST_FILES} 
 					# Other docs files you want to track should go here (or in some variable)
 					${CMAKE_CURRENT_SOURCE_DIR}/index.rst 
 					${DOXYGEN_INDEX_FILE}
