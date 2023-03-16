@@ -208,7 +208,6 @@ using namespace server;
 			// Proceed only if the main thread hasn't hung.
 			if (elapsedTime < 1.0)
 			{
-				std::lock_guard<std::mutex> lock(mNetworkMutex);
 				handleMessages();
 				handleStreaming();
 			}
@@ -228,6 +227,7 @@ using namespace server;
 				if(res>0)
 				if (event.type != ENET_EVENT_TYPE_NONE)
 				{
+					std::lock_guard<std::mutex> lock(mNetworkMutex);
 					for (auto client : mClients)
 					{
 						if(event.peer==client->peer||(event.type==ENET_EVENT_TYPE_CONNECT&&client->peer==nullptr))
@@ -259,6 +259,7 @@ using namespace server;
 
 	void ClientManager::handleStreaming()
 	{
+		std::lock_guard<std::mutex> lock(mNetworkMutex);
 		for (auto client : mClients)
 		{
 			if (client->receivedHandshake)

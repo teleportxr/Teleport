@@ -2,15 +2,14 @@
 
 #include "AudioPlayer.h"
 
-namespace sca
+using namespace teleport::audio;
+
+AudioPlayer::AudioPlayer()
+	: mInitialized(false)
+	, mConfigured(false)
+	, mRecording(false)
+	, mRecordingAllowed(false)
+	, mInputDeviceAvailable(false)
+	, mLastResult(Result::OK)
 {
-	AudioPlayer::AudioPlayer()
-		: mInitialized(false)
-		, mConfigured(false)
-		, mRecording(false)
-		, mRecordingAllowed(false)
-		, mInputDeviceAvailable(false)
-		, mLastResult(Result::OK) {}
 }
-
-

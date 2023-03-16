@@ -30,75 +30,79 @@ extern void log_print(const char* source,const char *format, ...);
 #define SCA_LOG(fmt,...) log_print( "SCA", fmt, __VA_ARGS__);
 #endif
 
-namespace sca
+namespace teleport
 {
-	/*!
-	 * Result type.
-	 */
-	struct Result
+	namespace audio
 	{
-		/*! Result code enumeration. */
-		enum Code
+		/*!
+		 * Result type.
+		 */
+		struct Result
 		{
-			OK = 0,
-			UnknownError,
-			AudioPlayerIsNull,
-			AudioDeviceInitializationError,
-			AudioMasteringVoiceCreationError,
-			AudioSourceVoiceCreationError,
-			AudioPlayingError,
-			AudioPlayerAlreadyInitialized,
-			AudioPlayerNotInitialized,
-			AudioPlayerAlreadyConfigured,
-			AudioPlayerNotConfigured,
-			AudioPlayerBufferSubmissionError,
-            AudioStreamCreationError,
-            AudioStreamConfigurationError,
-			AudioCloseStreamError,
-			AudioResourceDeletionError,
-			AudioOutputMixerInitializationError,
-            AudioBufferInitializationError,
-			AudioWriteError,
-			AudioSetStateError,
-			AudioRecorderCreationError,
-			AudioRecorderInitializationError,
-			AudioRecordingNotPermitted,
-			AudioRecorderStartError,
-			NoAudioInputDeviceFound,
-			AudioProcessingError
+			/*! Result code enumeration. */
+			enum Code
+			{
+				OK = 0,
+				UnknownError,
+				AudioPlayerIsNull,
+				AudioDeviceInitializationError,
+				AudioMasteringVoiceCreationError,
+				AudioSourceVoiceCreationError,
+				AudioPlayingError,
+				AudioPlayerAlreadyInitialized,
+				AudioPlayerNotInitialized,
+				AudioPlayerAlreadyConfigured,
+				AudioPlayerNotConfigured,
+				AudioPlayerBufferSubmissionError,
+				AudioStreamCreationError,
+				AudioStreamConfigurationError,
+				AudioCloseStreamError,
+				AudioResourceDeletionError,
+				AudioOutputMixerInitializationError,
+				AudioBufferInitializationError,
+				AudioWriteError,
+				AudioSetStateError,
+				AudioRecorderCreationError,
+				AudioRecorderInitializationError,
+				AudioRecordingNotPermitted,
+				AudioRecorderStartError,
+				NoAudioInputDeviceFound,
+				AudioProcessingError
+			};
+
+			Result() : m_code(Code::OK)
+			{}
+			Result(Code code) : m_code(code)
+			{}
+			//! if(Result) returns true only if m_code == OK i.e. is ZERO.
+			operator bool() const { return m_code == OK; }
+			bool operator!() const { return m_code != OK; }
+			operator Code() const { return m_code; }
+			bool operator ==(const Code& c) const { return m_code == c; }
+			bool operator !=(const Code& c) const { return m_code != c; }
+			bool operator ==(const Result& r) const { return m_code == r.m_code; }
+			bool operator !=(const Result& r) const { return m_code != r.m_code; }
+		private:
+			Code m_code;
 		};
 
-		Result() : m_code(Code::OK) 
-		{}
-		Result(Code code) : m_code(code)
-		{}
-		//! if(Result) returns true only if m_code == OK i.e. is ZERO.
-		operator bool() const { return m_code == OK; }
-		operator Code() const { return m_code; }
-		bool operator ==(const Code & c) const { return m_code == c; }
-		bool operator !=(const Code & c) const { return m_code != c; }
-		bool operator ==(const Result& r) const { return m_code == r.m_code; }
-		bool operator !=(const Result& r) const { return m_code != r.m_code; }
-	private:
-		Code m_code;
-	};
-
-	enum class AudioCodec
-	{
-		Any = 0,
-		Invalid = 0,
-		PCM
-	};
-	struct AudioSettings
-	{
-		AudioCodec codec = AudioCodec::PCM;
-		uint32_t sampleRate = 44100;
-		uint32_t bitsPerSample = 16;
-		uint32_t numChannels = 2;
-	};
+		enum class AudioCodec
+		{
+			Any = 0,
+			Invalid = 0,
+			PCM
+		};
+		struct AudioSettings
+		{
+			AudioCodec codec = AudioCodec::PCM;
+			uint32_t sampleRate = 44100;
+			uint32_t bitsPerSample = 16;
+			uint32_t numChannels = 2;
+		};
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(p) { if(p) { delete p; (p)=NULL; } }
 #endif
 
+	}
 }

@@ -120,7 +120,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 		newClient.clientNetworkContext.sourceAudioQueue.reset(new avs::Queue);
 		newClient.clientNetworkContext.audioDecoder.reset(new avs::AudioDecoder); 
 		newClient.clientNetworkContext.audioTarget.reset(new avs::AudioTarget); 
-		newClient.clientNetworkContext.audioStreamTarget.reset(new sca::CustomAudioStreamTarget(std::bind(&Client_ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2)));
+		newClient.clientNetworkContext.audioStreamTarget.reset(new audio::CustomAudioStreamTarget(std::bind(&Client_ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2)));
 
 		newClient.clientNetworkContext.sourceAudioQueue->configure( 8192, 120, "SourceAudioQueue");
 		newClient.clientNetworkContext.audioDecoder->configure(100);
@@ -322,7 +322,7 @@ TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 	lostClients.push_back(clientID);
 }
 
-TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter,avs::uid originNode)
+TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,avs::uid originNode)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -331,6 +331,8 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,uint64_t validCounter,av
 		return false;
 	}
 	ClientData& clientData = clientPair->second;
+	static uint64_t validCounter = 0;
+	validCounter++;
 	return clientData.setOrigin(validCounter, originNode);
 }
 

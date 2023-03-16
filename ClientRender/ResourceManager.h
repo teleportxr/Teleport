@@ -28,8 +28,8 @@ namespace clientrender
 	
 	struct MissingResource
 	{
-		const avs::uid id; //ID of the missing resource.
-		avs::GeometryPayloadType resourceType; //String indicating missing resource's type.
+		const avs::uid id;						//ID of the missing resource.
+		avs::GeometryPayloadType resourceType;	// missing resource's type.
 		//Resources that can't be completed without this missing resource.
 		std::set<std::shared_ptr<IncompleteResource>> waitingResources;
 

@@ -30,7 +30,7 @@ namespace teleport
 			std::unique_ptr<avs::Queue> sourceAudioQueue;
 			std::unique_ptr<avs::AudioDecoder> audioDecoder;
 			std::unique_ptr<avs::AudioTarget> audioTarget;
-			std::unique_ptr<sca::CustomAudioStreamTarget> audioStreamTarget;
+			std::unique_ptr<audio::CustomAudioStreamTarget> audioStreamTarget;
 
 			bool isCapturingDepth = false;
 			avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;

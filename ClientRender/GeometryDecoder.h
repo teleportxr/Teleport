@@ -37,11 +37,11 @@ private:
 		std::vector<uint8_t>					data		= {};
 		size_t									offset		= 0;
 		avs::GeometryPayloadType				type		= avs::GeometryPayloadType::Invalid;
-		clientrender::ResourceCreator*	target		= nullptr;
+		clientrender::ResourceCreator*			target		= nullptr;
 		bool									saveToDisk	= false;
-
-		GeometryDecodeData(const void* ptr, size_t size, avs::GeometryPayloadType type_, clientrender::ResourceCreator* target_, bool saveToDisk_)
-			: data(size), type(type_), target(target_), saveToDisk(saveToDisk_) 
+		avs::uid								uid = 0;
+		GeometryDecodeData(const void* ptr, size_t size, avs::GeometryPayloadType type_, clientrender::ResourceCreator* target_, bool saveToDisk_,avs::uid u)
+			: data(size), type(type_), target(target_), saveToDisk(saveToDisk_) , uid (u)
 		{
 			memcpy(data.data(), ptr, size);
 		}
@@ -53,10 +53,10 @@ public:
 
 	void setCacheFolder(const std::string &f);
 
-	//! Inherited via GeometryDecoderBackendInterface
-	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target) override;
-	//! Treat the file as buffer input and decode.
-	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf);
+	//! Inherited via GeometryDecoderBackendInterface.
+	virtual avs::Result decode(const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target, avs::uid resource_uid) override;
+	//! Treat the file as buffer input and decode. Note: uid must be supplied, as against in decode, where it is read from the first 8 bytes.
+	avs::Result decodeFromFile(const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf,avs::uid uid);
 
 	inline void WaitFromDecodeThread()
 	{

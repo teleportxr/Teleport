@@ -30,7 +30,7 @@ namespace teleport
 			virtual void requestResource(avs::uid resourceID) override;
 			virtual void confirmResource(avs::uid resourceID) override;
 
-			void getResourcesToStream(std::vector<avs::uid>& outNodeIDs
+			void getResourcesToStream(std::set<avs::uid>& outNodeIDs
 				, std::vector<avs::MeshNodeResources>& outMeshResources
 				, std::vector<avs::LightNodeResources>& outLightResources
 				, std::set<avs::uid>& genericTextureUids
@@ -58,13 +58,15 @@ namespace teleport
 			{
 				return streamedNodeIDs;
 			}
-
+			// The origin node for the client - must have this in order to stream geometry.
+			void setOriginNode(avs::uid nodeID);
 			void addNode(avs::uid nodeID);
 			void removeNode(avs::uid nodeID);
 			bool isStreamingNode(avs::uid nodeID);
 
 			void addGenericTexture(avs::uid id);
 		protected:
+			avs::uid originNodeId = 0;
 			GeometryStore* geometryStore = nullptr;
 
 			virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;

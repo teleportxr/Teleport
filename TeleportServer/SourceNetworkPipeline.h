@@ -5,13 +5,13 @@
 
 #include <libavstream/libavstream.hpp>
 
-namespace sca
-{
-	class AudioStreamTarget;
-}
 
 namespace teleport
 {
+	namespace audio
+	{
+		class AudioStreamTarget;
+	}
 	namespace server
 	{
 		struct ServerSettings;

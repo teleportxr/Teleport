@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'TeleportVR'
-copyright = '2018-2022, Simul Software Ltd'
+copyright = '2018-2023, Simul Software Ltd'
 author = 'Roderick Kennedy'
 
 

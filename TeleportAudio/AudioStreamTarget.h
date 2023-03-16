@@ -4,31 +4,32 @@
 #include <libavstream/node.hpp>
 #include <libavstream/audio/audio_interface.h>
 
-
-namespace sca
+namespace teleport
 {
-	class AudioPlayer;
-
-	/*! A class to receive streamed audio and play it
-	*/
-	class AudioStreamTarget final : public avs::AudioTargetBackendInterface
+	namespace audio
 	{
-	public:
-		AudioStreamTarget(AudioPlayer* ap);
+		class AudioPlayer;
 
-		~AudioStreamTarget();
-
-		avs::Result process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType payloadType) override;
-
-		avs::Result deconfigure() override;
-
-		AudioPlayer* GetAudioPlayer() const
+		/*! A class to receive streamed audio and play it
+		*/
+		class AudioStreamTarget final : public avs::AudioTargetBackendInterface
 		{
-			return player;
-		}
+		public:
+			AudioStreamTarget(AudioPlayer* ap);
 
-	private:
-		AudioPlayer* player;
-	};
+			~AudioStreamTarget();
+
+			avs::Result process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType payloadType) override;
+
+			avs::Result deconfigure() override;
+
+			AudioPlayer* GetAudioPlayer() const
+			{
+				return player;
+			}
+
+		private:
+			AudioPlayer* player;
+		};
+	}
 }
-

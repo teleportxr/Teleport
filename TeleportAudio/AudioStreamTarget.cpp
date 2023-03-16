@@ -1,8 +1,7 @@
 #include "AudioStreamTarget.h"
 #include "AudioPlayer.h"
 
-namespace sca
-{
+using namespace teleport::audio;
 	AudioStreamTarget::AudioStreamTarget(AudioPlayer* ap)
 		: player(ap) {}
 
@@ -36,4 +35,3 @@ namespace sca
 		}
 		return avs::Result::OK;
 	}
-}

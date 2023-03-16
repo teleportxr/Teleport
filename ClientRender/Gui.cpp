@@ -585,6 +585,11 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 		in_debug_gui++;
 }
 
+void Gui::LinePrint(const std::string& str, const float* clr)
+{
+	LinePrint(str.c_str());
+}
+
 void Gui::LinePrint(const char* txt,const float *clr)
 {
 	if (in_debug_gui != 1)
@@ -596,6 +601,7 @@ void Gui::LinePrint(const char* txt,const float *clr)
 	else
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4*>(clr)), "%s",txt);
 }
+
 std::map<uint64_t,ImGui_ImplPlatform_TextureView> drawTextures;
 void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice)
 {
@@ -984,6 +990,24 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 	ImGui::EndGroup();
 }
 
+void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
+{
+	const avs::NetworkSourceCounters counters = clientPipeline.source->getCounterValues();
+	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
+	clientPipeline.source->GetStreamStatus();
+	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
+	LinePrint(platform::core::QuickFormat("Current timestamp: %d", clientPipeline.pipeline.GetTimestamp()));
+	LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
+	LinePrint(platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
+	LinePrint(platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
+	LinePrint(platform::core::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
+	LinePrint(platform::core::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped));
+	LinePrint(platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
+	LinePrint(platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
+	LinePrint(platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
+	LinePrint(platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
+	LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
+}
 
 void Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
 {
@@ -1070,7 +1094,7 @@ void Gui::GeometryOSD()
 	const auto &missing=geometryCache->GetMissingResources();
 	if(missing.size())
 	{
-		LinePrint(platform::core::QuickFormat("Missing Resources"));
+		LinePrint(fmt::format("Missing Resources: {0}",missing.size()).c_str());
 		for(const auto& missingPair : missing)
 		{
 			const clientrender::MissingResource& missingResource = missingPair.second;
@@ -1079,14 +1103,14 @@ void Gui::GeometryOSD()
 			{
 				auto type= u.get()->type;
 				avs::uid id=u.get()->id;
+				std::string name;
 				if(type==avs::GeometryPayloadType::Node)
 				{
-					txt+="Node ";
 					auto n = geometryCache->mNodeManager->GetNode(id);
 					if(n)
-						txt += n->name;
+						name = fmt::format(" ({0})",n->name);
 				}
-				txt+=fmt::format("{0}, ",(uint64_t)id);
+				txt+=fmt::format("{0}{1} {2}, ", stringOf(type),name,(uint64_t)id);
 			}
 			LinePrint( txt.c_str());
 		}

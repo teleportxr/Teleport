@@ -395,7 +395,7 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 			ReceiveVideoReconfigureCommand(packet);
 			break;
 		case teleport::core::CommandPayloadType::SetStageSpaceOriginNode:
-			ReceivePositionUpdate(packet);
+			ReceiveStageSpaceOriginNodeId(packet);
 			break;
 		case teleport::core::CommandPayloadType::NodeVisibility:
 			ReceiveNodeVisibilityUpdate(packet);
@@ -785,17 +785,21 @@ void SessionClient::ReceiveVideoReconfigureCommand(const ENetPacket* packet)
 	mCommandInterface->OnReconfigureVideo(reconfigureCommand);
 }
 
-void SessionClient::ReceivePositionUpdate(const ENetPacket* packet)
+void SessionClient::ReceiveStageSpaceOriginNodeId(const ENetPacket* packet)
 {
 	size_t commandSize = sizeof(teleport::core::SetStageSpaceOriginNodeCommand);
 
 	teleport::core::SetStageSpaceOriginNodeCommand command;
 	memcpy(static_cast<void*>(&command), packet->data, commandSize);
-
 	if(command.valid_counter > receivedInitialPos)
 	{
+		TELEPORT_INTERNAL_COUT("Received origin node {0} with counter {1}.", command.origin_node, command.valid_counter);
 		receivedInitialPos = command.valid_counter;
 		mCommandInterface->SetOrigin(command.valid_counter,command.origin_node);
+	}
+	else
+	{
+		TELEPORT_INTERNAL_CERR("Received out-of-date origin node {0}, counter was {1}, but last update was {2}.",command.origin_node,command.valid_counter,receivedInitialPos);
 	}
 }
 

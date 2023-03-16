@@ -1,7 +1,6 @@
 #include "CustomAudioStreamTarget.h"
 
-namespace sca
-{
+using namespace teleport::audio;
 	CustomAudioStreamTarget::CustomAudioStreamTarget(std::function<void(const uint8_t * data, size_t dataSize)> playCallback)
 		: mPlayCallback(playCallback) {}
 
@@ -22,4 +21,3 @@ namespace sca
 
 		return avs::Result::OK;
 	}
-}

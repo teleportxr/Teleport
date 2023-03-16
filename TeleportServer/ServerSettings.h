@@ -19,9 +19,6 @@ namespace teleport
 			int32_t detectionSphereBufferDistance = 0;
 			int64_t throttleKpS = 0;
 
-			teleport::core::BackgroundMode backgroundMode = teleport::core::BackgroundMode::COLOUR;
-			avs::vec4 backgroundColour = { 0,0,1.0f,0.f };
-
 			bool enableGeometryStreaming = false;
 			uint32_t geometryTicksPerSecond = 0;
 			int32_t geometryBufferCutoffSize = 0;	// Size we stop encoding nodes at.

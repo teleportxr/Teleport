@@ -94,7 +94,7 @@ using namespace avs;
 WebRtcNetworkSink::WebRtcNetworkSink()
 	: NetworkSink(new WebRtcNetworkSink::Private(this))
 {
-	rtc::InitLogger(rtc::LogLevel::Info);
+	rtc::InitLogger(rtc::LogLevel::Warning);
 	m_data = static_cast<WebRtcNetworkSink::Private*>(m_d);
 }
 
@@ -233,7 +233,7 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			numBytesRead = std::min(bufferSize, numBytesRead);
 			if (result == Result::OK)
 			{
-				std::cout << ".";
+				//std::cout << ".";
 				//memcpy(stream.buffer.data(), &streamPayloadInfo, infoSize);
 			}
 
@@ -276,7 +276,7 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 		else
 		{
-			res = packData(stream.buffer.data(), numBytesRead, m_streams[i].id);
+			res = packData(stream.buffer.data(), numBytesRead, i);
 		}
 		if (!res)
 		{

@@ -22,8 +22,10 @@
 #include "TeleportClient/Config.h"
 #include "TeleportAudio/AudioStreamTarget.h"
 #include "TeleportAudio/AudioCommon.h"
-#if TELEPORT_PC_AUDIO_PLAYER
+#if _MSC_VER
 #include "TeleportAudio/PC_AudioPlayer.h"
+#else
+#include "TeleportAudio/AndroidAudioPlayer.h"
 #endif
 #include "TeleportAudio/NetworkPipeline.h"
 
@@ -131,16 +133,16 @@ namespace clientrender
 		InstanceRenderState instanceRenderState;
 		teleport::client::Config &config;
 		GeometryDecoder &geometryDecoder;
-		static constexpr bool AudioStream	= true;
-		static constexpr bool GeoStream		= true;
 		// determined by the stream setup command:
 		vec4 colourOffsetScale;
 		vec4 depthOffsetScale;
-#if TELEPORT_PC_AUDIO_PLAYER
-		sca::PC_AudioPlayer audioPlayer;
+#ifdef _MSC_VER
+		teleport::audio::PC_AudioPlayer audioPlayer;
+#else
+		teleport::audio::AndroidAudioPlayer audioPlayer;
 #endif
-		std::unique_ptr<sca::AudioStreamTarget> audioStreamTarget;
-		std::unique_ptr<sca::NetworkPipeline> audioInputNetworkPipeline;
+		std::unique_ptr<teleport::audio::AudioStreamTarget> audioStreamTarget;
+		std::unique_ptr<teleport::audio::NetworkPipeline> audioInputNetworkPipeline;
 		avs::Queue audioInputQueue;
 		static constexpr uint32_t NominalJitterBufferLength = 0;
 		static constexpr uint32_t MaxJitterBufferLength = 50;
@@ -155,7 +157,6 @@ namespace clientrender
 		bool videoPosDecoded=false;
 		vec3 videoPos;
 		unsigned long long receivedInitialPos = 0;
-	//	unsigned long long receivedRelativePos = 0;
 		InstanceRenderState &GetInstanceRenderState()
 		{
 			return instanceRenderState;

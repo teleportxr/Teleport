@@ -469,7 +469,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		std::string multibyteClientIP = getClientIP();
 		//size_t ipLength = strlen(multibyteClientIP.data());
 
-		std::wstring clientIP=StringToWString(multibyteClientIP);
+		std::wstring clientIP=teleport::core::StringToWString(multibyteClientIP);
 		ServerNetworkSettings networkSettings =
 		{
 			static_cast<int32_t>(streamingPort),
@@ -522,30 +522,31 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	if (handshake.resourceCount == 0)
 	{
 		teleport::core::AcknowledgeHandshakeCommand ack;
-		TELEPORT_COUT << "Sending handshake acknowledgement to clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
+		TELEPORT_LOG("Sending handshake acknowledgement to clientID {0} at IP {1}  .\n", clientID, clientIP);
 
 		sendCommand(ack);
 	}
 	// Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
 	else
 	{
+		TELEPORT_LOG("Sending handshake acknowledgement to clientID {0} at IP {1} with {2} nodes .\n", clientID, clientIP, handshake.resourceCount);
 		const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService.getStreamedNodeIDs();
 		teleport::core::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 		sendCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 	}
 	reportHandshake(this->clientID, &handshake);
-	TELEPORT_COUT << "RemotePlay: Started streaming to " << getClientIP() << ":" << streamingPort << "\n";
+	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}:{2}.\n", clientID, clientIP,streamingPort);
 }
 
 bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 {
+	geometryStreamingService.setOriginNode(originNode);
 	teleport::core::SetStageSpaceOriginNodeCommand setp;
-	if (clientNetworkContext->axesStandard != avs::AxesStandard::NotInitialized)
-	{
-		setp.origin_node=originNode;
-		setp.valid_counter = valid_counter;
-		return sendCommand(setp);
-	}
+	
+	setp.origin_node=originNode;
+	setp.valid_counter = valid_counter;
+	TELEPORT_LOG("Send origin node {0} with counter {1} to clientID {2}.\n", originNode, valid_counter, clientID);
+	return sendCommand(setp);
 	return false;
 }
 

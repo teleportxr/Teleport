@@ -686,7 +686,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
-	geometryCache->ReceivedResource(textCanvas->textCanvasCreateInfo.uid);
+	geometryCache->CompleteResource(textCanvas->textCanvasCreateInfo.uid);
 }
 
 
@@ -981,26 +981,28 @@ void ResourceCreator::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCr
 
 	//Add mesh to nodes waiting for mesh.
 	MissingResource* missingMesh = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Mesh);
-	if(missingMesh)
-	for(auto it = missingMesh->waitingResources.begin(); it != missingMesh->waitingResources.end(); it++)
+	if (missingMesh)
 	{
-		if(it->get()->type!=avs::GeometryPayloadType::Node)
+		for (auto it = missingMesh->waitingResources.begin(); it != missingMesh->waitingResources.end(); it++)
 		{
-			TELEPORT_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
-			continue;
-		}
-		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
-		incompleteNode->SetMesh(mesh);
-		RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Mesh {2}({3})" , incompleteNode->id,incompleteNode->name,id,meshInfo.name);
+			if (it->get()->type != avs::GeometryPayloadType::Node)
+			{
+				TELEPORT_CERR << "Waiting resource is not a node, it's " << int(it->get()->type) << std::endl;
+				continue;
+			}
+			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+			incompleteNode->SetMesh(mesh);
+			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got Mesh {2}({3})", incompleteNode->id, incompleteNode->name, id, meshInfo.name);
 
-		//If only this mesh and this function are pointing to the node, then it is complete.
-		if(it->use_count() == 2)
-		{
-			CompleteNode(incompleteNode->id, incompleteNode);
+			//If only this mesh and this function are pointing to the node, then it is complete.
+			if (it->use_count() == 2)
+			{
+				CompleteNode(incompleteNode->id, incompleteNode);
+			}
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
-	geometryCache->ReceivedResource(id);
+	geometryCache->CompleteResource(id);
 }
 
 void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin)
@@ -1025,9 +1027,9 @@ void ResourceCreator::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> 
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
 		}
-		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->ReceivedResource(id);
 	}
+	//Resource has arrived, so we are no longer waiting for it.
+	geometryCache->CompleteResource(id);
 }
 
 void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo)
@@ -1051,7 +1053,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 						std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
 						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})",incompleteNode->id,id,textureInfo.name);
 
-						geometryCache->ReceivedResource(incompleteFontAtlas->id);
+						geometryCache->CompleteResource(incompleteFontAtlas->id);
 					}
 					break;
 				case avs::GeometryPayloadType::Material:
@@ -1134,10 +1136,9 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
 		}
-
-		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->CompleteResource(id);
 	}
+	//Resource has arrived, so we are no longer waiting for it.
+	geometryCache->CompleteResource(id);
 }
 
 void ResourceCreator::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
@@ -1173,10 +1174,10 @@ void ResourceCreator::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bo
 				}
 			}
 		}
-
-		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->CompleteResource(id);
 	}
+
+	//Resource has arrived, so we are no longer waiting for it.
+	geometryCache->CompleteResource(id);
 }
 
 void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)
@@ -1204,9 +1205,9 @@ void ResourceCreator::CompleteAnimation(avs::uid id, std::shared_ptr<clientrende
 			}
 		}
 
-		//Resource has arrived, so we are no longer waiting for it.
-		geometryCache->CompleteResource(id);
 	}
+	//Resource has arrived, so we are no longer waiting for it.
+	geometryCache->CompleteResource(id);
 }
 
 void ResourceCreator::AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,

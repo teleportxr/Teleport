@@ -6,9 +6,40 @@
 #include <Windows.h>
 #include <audioclient.h>
 #include <mmdeviceapi.h>
+#include <comdef.h>
+#include <fmt/format.h>
+#include <xaudio2.h>
+#include "TeleportCore/StringFunctions.h"
 
-namespace sca
+
+using namespace teleport;
+using namespace audio;
+std::string teleport::audio::GetMessageForHresult(long h)
 {
+	HRESULT hr = (HRESULT)h;
+	switch (hr)
+	{
+	case XAUDIO2_E_INVALID_CALL: return "XAUDIO2_E_INVALID_CALL";
+			//Returned by XAudio2 for certain API usage errors(invalid calls and so on)
+			//that are hard to avoid completely and should be handled by a title at runtime.
+			//(API usage errors that are completely avoidable, such as invalid parameters,
+			//	cause an ASSERT in debug builds and undefined behavior in retail builds,
+			//	so no error code is defined for them.)
+	case XAUDIO2_E_XMA_DECODER_ERROR: return "XAUDIO2_E_XMA_DECODER_ERROR";
+			//The Xbox 360 XMA hardware suffered an unrecoverable error.
+	case XAUDIO2_E_XAPO_CREATION_FAILED: return "XAUDIO2_E_XAPO_CREATION_FAILED";
+			//An effect failed to instantiate.
+	case XAUDIO2_E_DEVICE_INVALIDATED: return "XAUDIO2_E_DEVICE_INVALIDATED";
+		default:
+			break;
+	}
+	_com_error error(hr);
+	std::string cs;
+	std::wstring wstr = error.ErrorMessage();
+	cs=fmt::format("Error 0x{0:x}: {1}", (long long)hr,teleport::core::WStringToString(wstr));
+	return cs;
+}
+
 	PC_AudioCapture::PC_AudioCapture()
 	{
 		
@@ -23,16 +54,21 @@ namespace sca
 	{
 		Microsoft::WRL::ComPtr<IMMDeviceEnumerator> enumerator;
 
-		if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)enumerator.GetAddressOf())))
+		HRESULT hr;
+		hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)enumerator.GetAddressOf());
+		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to create instance of device enumerator." << std::endl;
-			return sca::Result::AudioRecorderCreationError;
+			std::string message = std::system_category().message(hr);
+			TELEPORT_INTERNAL_CERR("CoCreateInstance Error: {0}\n", message);
+			return Result::AudioRecorderCreationError;
 		}
 
-		if (FAILED(enumerator->GetDefaultAudioEndpoint(eCapture, eCommunications, mDevice.GetAddressOf())))
+		hr = enumerator->GetDefaultAudioEndpoint(eCapture, eCommunications, mDevice.GetAddressOf());
+		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to get default audio endpoint." << std::endl;
-			return sca::Result::AudioRecorderCreationError;
+			std::string message = std::system_category().message(hr);
+			TELEPORT_INTERNAL_CERR("GetDefaultAudioEndpoint Error: {0}\n", message);
+			return Result::AudioRecorderCreationError;
 		}
 
 		if (!mDevice.Get())
@@ -40,10 +76,12 @@ namespace sca
 			return Result::NoAudioInputDeviceFound;
 		}
 
-		if (FAILED(mDevice->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, NULL, (void**)mAudioClient.GetAddressOf())))
+		hr = mDevice->Activate(__uuidof(IAudioClient3), CLSCTX_ALL, NULL, (void**)mAudioClient.GetAddressOf());
+		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to get handle to audio client." << std::endl;
-			return sca::Result::AudioRecorderCreationError;
+			std::string message = std::system_category().message(hr);
+			TELEPORT_INTERNAL_CERR("mDevice->Activate Error: {0}\n", message);
+			return Result::AudioRecorderCreationError;
 		}
 
 		mAudioClient->GetService(__uuidof(IAudioCaptureClient), (void**)mAudioCaptureClient.GetAddressOf());
@@ -53,7 +91,7 @@ namespace sca
 		return Result::OK;
 	}
 
-	Result PC_AudioCapture::configure(const sca::AudioSettings& audioSettings)
+	Result PC_AudioCapture::configure(const AudioSettings& audioSettings)
 	{
 		WAVEFORMATEX format;
 		format.wFormatTag = WAVE_FORMAT_PCM;
@@ -68,9 +106,15 @@ namespace sca
 			SCA_CERR << "PC_AudioCapture::configure: mAudioClient is null." << std::endl;
 			return Result::AudioRecorderInitializationError;
 		}
-		if (FAILED(mAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, 200000, 0, &format, nullptr)))
+		HRESULT hr = mAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, 200000, 0, &format, nullptr);
+		if (hr == AUDCLNT_E_UNSUPPORTED_FORMAT)
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to initialize audio client." << std::endl;
+			TELEPORT_INTERNAL_CERR("AUDCLNT_E_UNSUPPORTED_FORMAT\n");
+		}
+		if (FAILED(hr))
+		{
+			std::string message = GetMessageForHresult(hr);
+			TELEPORT_INTERNAL_CERR("PC_AudioCapture: mAudioClient->Initialize Error: {0}\n",message);
 			return Result::AudioRecorderInitializationError;
 		}
 
@@ -84,7 +128,8 @@ namespace sca
 		HRESULT hr = mAudioClient->Start();
 		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to start the audio client." << std::endl;
+			std::string message = std::system_category().message(hr);
+			TELEPORT_INTERNAL_CERR("PC_AudioCapture: mAudioClient->Start Error: {0}\n", message);
 			return Result::AudioRecorderStartError;
 		}
 
@@ -177,6 +222,3 @@ namespace sca
 			std::this_thread::yield();
 		}
 	}
-}
-
-

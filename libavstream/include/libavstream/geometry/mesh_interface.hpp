@@ -848,6 +848,6 @@ namespace avs
 	{
 	public:
 		virtual ~GeometryDecoderBackendInterface() = default;
-		virtual Result decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface *target) = 0;
+		virtual Result decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface *target,avs::uid uid) = 0;
 	};
 } // avs

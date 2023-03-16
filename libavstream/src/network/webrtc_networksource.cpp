@@ -114,7 +114,7 @@ using namespace avs;
 WebRtcNetworkSource::WebRtcNetworkSource()
 	: NetworkSource(new WebRtcNetworkSource::Private(this))
 {
-	rtc::InitLogger(rtc::LogLevel::Info);
+	rtc::InitLogger(rtc::LogLevel::Warning);
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
 }
 
@@ -283,13 +283,14 @@ Result WebRtcNetworkSource::deconfigure()
 	{
 		return Result::Node_NotConfigured;
 	}
-	m_data->m_EFPReceiver.reset();
 	setNumOutputSlots(0);
-
+	m_data->rtcPeerConnection = nullptr;
+	m_streams.clear();
 	m_data->m_counters = {};
 	m_streamNodeMap.clear();
 	m_streams.clear();
 
+	m_data->m_EFPReceiver.reset();
 #if TELEPORT_CLIENT
 	return m_data->m_httpUtil.shutdown();
 #else
@@ -303,7 +304,12 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
-
+	// update the stream stats.
+	for (auto dc : m_data->dataChannels)
+	{
+		int i=m_streamNodeMap[dc.first];
+		streamStatus[i].bandwidthKps=dc
+	}
 #if TELEPORT_CLIENT
 	return m_data->m_httpUtil.process();
 #else

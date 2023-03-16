@@ -11,41 +11,43 @@ struct IMMDevice;
 struct IAudioClient3;
 struct IAudioCaptureClient;
 
-namespace sca
+namespace teleport
 {
-	/*! A class to capture audio for PC
-	*/
-	class PC_AudioCapture 
+	namespace audio
 	{
-	public:
-		PC_AudioCapture();
-		~PC_AudioCapture();
+		extern std::string GetMessageForHresult(long h);
+		/*! A class to capture audio for PC
+		*/
+		class PC_AudioCapture
+		{
+		public:
+			PC_AudioCapture();
+			~PC_AudioCapture();
 
-		Result initializeAudioDevice();
+			Result initializeAudioDevice();
 
-		Result configure(const sca::AudioSettings& audioSettings);
+			Result configure(const AudioSettings& audioSettings);
 
-		Result startRecording(std::function<void(const uint8_t* data, size_t dataSize)> recordingCallback, bool async = false);
+			Result startRecording(std::function<void(const uint8_t* data, size_t dataSize)> recordingCallback, bool async = false);
 
-		Result processRecordedAudio();
+			Result processRecordedAudio();
 
-		Result stopRecording();
+			Result stopRecording();
 
-		Result deconfigure();
+			Result deconfigure();
 
-	private:
-		void asyncCaptureAudio();
-		Result captureAudio();
+		private:
+			void asyncCaptureAudio();
+			Result captureAudio();
 
-		Microsoft::WRL::ComPtr<IMMDevice> mDevice;
-		Microsoft::WRL::ComPtr<IAudioClient3> mAudioClient;
-		Microsoft::WRL::ComPtr<IAudioCaptureClient> mAudioCaptureClient;
-		std::function<void(const uint8_t* data, size_t dataSize)> mRecordingCallback;
-		//HANDLE mAudioReceivedEvent = nullptr;
-		std::thread mCaptureThread;
-		std::atomic_bool mAsyncCapturingAudio = false;
-		bool mAsync = false;
-	};
+			Microsoft::WRL::ComPtr<IMMDevice> mDevice;
+			Microsoft::WRL::ComPtr<IAudioClient3> mAudioClient;
+			Microsoft::WRL::ComPtr<IAudioCaptureClient> mAudioCaptureClient;
+			std::function<void(const uint8_t* data, size_t dataSize)> mRecordingCallback;
+			//HANDLE mAudioReceivedEvent = nullptr;
+			std::thread mCaptureThread;
+			std::atomic_bool mAsyncCapturingAudio = false;
+			bool mAsync = false;
+		};
+	}
 }
-
-

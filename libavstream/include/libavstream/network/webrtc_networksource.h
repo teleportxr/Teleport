@@ -11,6 +11,7 @@
 
 namespace avs
 {
+
 	/*!
 	 * Network source node `[passive, 0/1]`
 	 *

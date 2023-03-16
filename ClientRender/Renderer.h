@@ -67,6 +67,7 @@ namespace clientrender
 	protected:
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
 		virtual std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid server_uid);
+		void InitLocalGeometry();
 		void RemoveInstanceRenderer(avs::uid);
 		void InvalidateDeviceObjects();
 		void CreateTexture(clientrender::AVSTextureHandle &th,int width, int height);

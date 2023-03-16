@@ -126,12 +126,13 @@ bool ClientData::setOrigin(uint64_t ctr,avs::uid uid)
 			return true;
 		}
 	}
+	TELEPORT_INTERNAL_CERR("Can't set origin - no handshake yet.\n");
 	return false;
 }
 
 bool ClientData::isConnected() const
 {
-	if(! clientMessaging->hasPeer())
+	if(!clientMessaging->hasPeer())
 		return false;
 	if(!clientNetworkContext.NetworkPipeline)
 		return false;

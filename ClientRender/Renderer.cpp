@@ -124,51 +124,51 @@ Renderer::~Renderer()
 	InvalidateDeviceObjects(); 
 }
 
-void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window)
+void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
 {
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
-	renderState.openXR=u;
+	renderState.openXR = u;
 
 	renderPlatform->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 
 	renderState.hDRRenderer = new crossplatform::HdrRenderer();
 
-	renderState.hdrFramebuffer	=renderPlatform->CreateFramebuffer();
+	renderState.hdrFramebuffer = renderPlatform->CreateFramebuffer();
 	renderState.hdrFramebuffer->SetFormat(crossplatform::RGBA_16_FLOAT);
 	renderState.hdrFramebuffer->SetDepthFormat(crossplatform::D_32_FLOAT);
 	renderState.hdrFramebuffer->SetAntialiasing(1);
-	camera.SetPositionAsXYZ(0.f,0.f,2.f);
-	vec3 look(0.f,1.f,0.f),up(0.f,0.f,1.f);
-	camera.LookInDirection(look,up);
+	camera.SetPositionAsXYZ(0.f, 0.f, 2.f);
+	vec3 look(0.f, 1.f, 0.f), up(0.f, 0.f, 1.f);
+	camera.LookInDirection(look, up);
 
 	camera.SetHorizontalFieldOfViewDegrees(HFOV);
 
 	// Automatic vertical fov - depends on window shape:
 	camera.SetVerticalFieldOfViewDegrees(0.f);
-	
+
 	//const float aspect = renderState.hdrFramebuffer->GetWidth() / renderState.hdrFramebuffer->GetHeight();
 	//cubemapConstants.localHorizFOV = HFOV * clientrender::DEG_TO_RAD;
 	//cubemapConstants.localVertFOV = clientrender::GetVerticalFOVFromHorizontal(cubemapConstants.localHorizFOV, aspect);
 
 	crossplatform::CameraViewStruct vs;
-	vs.exposure=1.f;
-	vs.farZ=3000.f;
-	vs.nearZ=0.01f;
-	vs.gamma=1.0f;
-	vs.InfiniteFarPlane=true;
-	vs.projection=crossplatform::DEPTH_REVERSE;
-	
+	vs.exposure = 1.f;
+	vs.farZ = 3000.f;
+	vs.nearZ = 0.01f;
+	vs.gamma = 1.0f;
+	vs.InfiniteFarPlane = true;
+	vs.projection = crossplatform::DEPTH_REVERSE;
+
 	camera.SetCameraViewStruct(vs);
 
-	memset(keydown,0,sizeof(keydown));
+	memset(keydown, 0, sizeof(keydown));
 	text3DRenderer.PushFontPath("assets/fonts");
 	text3DRenderer.RestoreDeviceObjects(renderPlatform);
 	renderState.hDRRenderer->RestoreDeviceObjects(renderPlatform);
 	renderState.hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
-	gui.RestoreDeviceObjects(renderPlatform,active_window);
-	auto connectButtonHandler = std::bind(&client::SessionClient::ConnectButtonHandler, 1,std::placeholders::_1);
+	gui.RestoreDeviceObjects(renderPlatform, active_window);
+	auto connectButtonHandler = std::bind(&client::SessionClient::ConnectButtonHandler, 1, std::placeholders::_1);
 	gui.SetConnectHandler(connectButtonHandler);
 	auto cancelConnectHandler = std::bind(&client::SessionClient::CancelConnectButtonHandler, 1);
 	gui.SetCancelConnectHandler(cancelConnectHandler);
@@ -176,11 +176,11 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	renderState.specularCubemapTexture = renderPlatform->CreateTexture();
 	renderState.diffuseCubemapTexture = renderPlatform->CreateTexture();
 	renderState.lightingCubemapTexture = renderPlatform->CreateTexture();
-	errno=0;
+	errno = 0;
 	RecompileShaders();
 
 	renderState.pbrConstants.RestoreDeviceObjects(renderPlatform);
-	renderState.pbrConstants.LinkToEffect(renderState.pbrEffect,"pbrConstants");
+	renderState.pbrConstants.LinkToEffect(renderState.pbrEffect, "pbrConstants");
 	renderState.perNodeConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.perNodeConstants.LinkToEffect(renderState.pbrEffect, "perNodeConstants");
 	renderState.cubemapConstants.RestoreDeviceObjects(renderPlatform);
@@ -188,52 +188,44 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	renderState.cameraConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.stereoCameraConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
-	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform,RenderState::maxTagDataSize, false, true);
-	renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform,10,false,true);
+	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
+	renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
 	renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
 	renderState.boneMatrices.LinkToEffect(renderState.pbrEffect, "boneMatrices");
 
-	avs::Context::instance()->setMessageHandler(msgHandler,nullptr);
+	avs::Context::instance()->setMessageHandler(msgHandler, nullptr);
+
+	geometryDecoder.setCacheFolder(config.GetStorageFolder());
+	auto localInstanceRenderer = GetInstanceRenderer(0);
+	auto& localGeometryCache = localInstanceRenderer->geometryCache;
+	localGeometryCache.setCacheFolder("assets/localGeometryCache");
+
+	client::SessionClient::GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
+
+	InitLocalGeometry();
+}
+
+void Renderer::InitLocalGeometry()
+{
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localResourceCreator=localInstanceRenderer->resourceCreator;
 	// initialize the default local geometry:
-	geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator);
-	geometryDecoder.decodeFromFile("assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator);
-	geometryDecoder.decodeFromFile("assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator);
+	avs::uid hand_mesh_uid = avs::GenerateUid();
+	hand_skin_uid = avs::GenerateUid();
+	avs::uid point_anim_uid = avs::GenerateUid();
+	geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator,hand_mesh_uid);
+	geometryDecoder.decodeFromFile("assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator, hand_skin_uid);
+	geometryDecoder.decodeFromFile("assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator, point_anim_uid);
 	geometryDecoder.WaitFromDecodeThread();
 	
 	localResourceCreator.Update(0.0f);
-	avs::uid hand_uid = 11;
+	// Generate local uid's for the nodes and resources.
+	avs::uid left_root_node_uid = 0;
+	left_root_node_uid = avs::GenerateUid();
+	avs::uid right_root_node_uid = 0;
+	right_root_node_uid = avs::GenerateUid();
+
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
-	auto uids=localGeometryCache.mMeshManager.GetAllIDs();
-	if (uids.size())
-	{
-		hand_uid = uids[0];
-	}
-	else
-	{
-		TELEPORT_BREAK_ONCE("Hand mesh not found");
-	}
-	uids=localGeometryCache.mSkinManager.GetAllIDs();
-	hand_skin_uid=0;
-	if (uids.size())
-	{
-		hand_skin_uid = uids[0];
-	}
-	else
-	{
-		TELEPORT_BREAK_ONCE("Skin not found");
-	}
-	uids=localGeometryCache.mAnimationManager.GetAllIDs();
-	avs::uid point_anim_uid=0;
-	if (uids.size())
-	{
-		point_anim_uid = uids[0];
-	}
-	else
-	{
-		TELEPORT_BREAK_ONCE("Anim not found");
-	}
 	{
 		avs::Material avsMaterial;
 		avsMaterial.name="local material";
@@ -254,14 +246,16 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	avs::Node avsNode;
 	avsNode.data_type=avs::NodeDataType::None;
 	avsNode.data_uid=0;
+
+
 	avsNode.name = "local Left Root";
-	localResourceCreator.CreateNode(1,avsNode);
+	localResourceCreator.CreateNode(left_root_node_uid,avsNode);
 	avsNode.name = "local Right Root";
-	localResourceCreator.CreateNode(2,avsNode);
+	localResourceCreator.CreateNode(right_root_node_uid,avsNode);
 
 	avsNode.data_type=avs::NodeDataType::Mesh;
 	
-	avsNode.data_uid=hand_uid;
+	avsNode.data_uid=hand_mesh_uid;
 	avsNode.materials.push_back(15);
 	avsNode.materials.push_back(14);
 	
@@ -269,7 +263,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	avsNode.skinID=hand_skin_uid;
 	avsNode.animations.push_back(point_anim_uid);
 	avsNode.materials[0]=15;
-	avsNode.parentID=1;
+	avsNode.parentID= left_root_node_uid;
 	avsNode.localTransform.rotation={0.707f,0,0,0.707f};
 	avsNode.localTransform.scale={-1.f,1.f,1.f};
 	// 10cm forward, because root of hand is at fingers.
@@ -279,7 +273,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 
 	avsNode.name="local Right Hand";
 	avsNode.materials[0]=16;
-	avsNode.parentID=2;
+	avsNode.parentID= right_root_node_uid;
 	avsNode.localTransform.scale={1.f,1.f,1.f};
 	// 10cm forward, because root of hand is at fingers.
 	avsNode.localTransform.position={0.f,0.1f,0.f};
@@ -290,17 +284,14 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	{
 		renderState.openXR->SetFallbackBinding(client::LEFT_AIM_POSE,"left/input/aim/pose");
 		renderState.openXR->SetFallbackBinding(client::RIGHT_AIM_POSE,"right/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid,1,"left/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid,2,"right/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, left_root_node_uid,"left/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, right_root_node_uid,"right/input/aim/pose");
 		
 		renderState.openXR->SetFallbackBinding(client::LEFT_GRIP_POSE,"left/input/grip/pose");
 		renderState.openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE,"right/input/grip/pose");
 		
 		renderState.openXR->SetFallbackBinding(client::MOUSE_LEFT_BUTTON,"mouse/left/click");
 		renderState.openXR->SetFallbackBinding(client::MOUSE_RIGHT_BUTTON,"mouse/right/click");
-
-	/*	renderState.openXR->MapNodeToPose(local_server_uid,1,"left/input/grip/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid,2,"right/input/grip/pose");*/
 
 		// Hard-code the menu button
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
@@ -312,11 +303,6 @@ void Renderer::Init(crossplatform::RenderPlatform *r,teleport::client::OpenXR *u
 	palm_to_hand_r=rightHand->GetLocalTransform();
 	auto leftHand=localGeometryCache.mNodeManager->GetNode(local_left_hand_uid);
 	palm_to_hand_l=leftHand->GetLocalTransform();
-
-	geometryDecoder.setCacheFolder(config.GetStorageFolder());
-	localGeometryCache.setCacheFolder(config.GetStorageFolder());
-
-	client::SessionClient::GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
 }
 
 void Renderer::UpdateShaderPasses()
@@ -1252,8 +1238,6 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
-	const avs::NetworkSourceCounters counters = instanceRenderer->clientPipeline.source->getCounterValues();
-	const avs::DecoderStats vidStats = instanceRenderer->clientPipeline.decoder.GetStats();
 	auto status = sessionClient->GetConnectionStatus();
 
 	deviceContext.framePrintX = 8;
@@ -1276,18 +1260,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Network"))
 	{
-		gui.LinePrint(platform::core::QuickFormat("Start timestamp: %d", instanceRenderer->clientPipeline.pipeline.GetStartTimestamp()));
-		gui.LinePrint(platform::core::QuickFormat("Current timestamp: %d",instanceRenderer->clientPipeline.pipeline.GetTimestamp()));
-		gui.LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
-		gui.LinePrint(platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-		gui.LinePrint(platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
-		gui.LinePrint(platform::core::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
-		gui.LinePrint(platform::core::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped)); 
-		gui.LinePrint(platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
-		gui.LinePrint(platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
-		gui.LinePrint(platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		gui.LinePrint(platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
-		gui.LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
+		gui.NetworkPanel(instanceRenderer->clientPipeline);
 		gui.EndTab();
 	}
 	if(gui.Tab("Camera"))

@@ -9,18 +9,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\TeleportAudio\AudioCommon.h" />
-    <ClInclude Include="..\..\TeleportAudio\AudioPlayer.h" />
-    <ClInclude Include="..\..\TeleportAudio\AudioStreamTarget.h" />
-    <ClInclude Include="..\..\TeleportAudio\CustomAudioStreamTarget.h" />
-    <ClInclude Include="..\..\TeleportAudio\NetworkPipeline.h" />
     <ClInclude Include="..\..\TeleportAudio\Error.h" />
+    <ClInclude Include="..\..\TeleportAudio\AndroidAudioPlayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportAudio\AudioCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportAudio\AudioPlayer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportAudio\AudioStreamTarget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportAudio\CustomAudioStreamTarget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportAudio\NetworkPipeline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\TeleportAudio\AudioCommon.cpp" />
-    <ClCompile Include="..\..\TeleportAudio\AudioPlayer.cpp" />
-    <ClCompile Include="..\..\TeleportAudio\AudioStreamTarget.cpp" />
-    <ClCompile Include="..\..\TeleportAudio\CustomAudioStreamTarget.cpp" />
     <ClCompile Include="..\..\TeleportAudio\NetworkPipeline.cpp" />
+    <ClCompile Include="..\..\TeleportAudio\CustomAudioStreamTarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\TeleportAudio\AndroidAudioPlayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\TeleportAudio\AudioCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\TeleportAudio\AudioPlayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\TeleportAudio\AudioStreamTarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

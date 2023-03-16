@@ -48,7 +48,7 @@ namespace teleport
 			const struct ServerSettings* settings=nullptr;
 			size_t prevBufferSize=0;
 			int32_t minimumPriority = 0;
-			void putPayload(avs::GeometryPayloadType t);
+			void putPayloadType(avs::GeometryPayloadType t,avs::uid u);
 			void putPayloadSize();
 
 			//Following functions push the data from the source onto the buffer, depending on what the requester needs.

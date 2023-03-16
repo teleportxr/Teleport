@@ -59,6 +59,10 @@ namespace avs
 		double decoderPacketsReceivedPerSec = 0.0;
 	};
 
+	struct StreamStatus
+	{
+		float bandwidthKps = 0.0f;
+	};
 	/*!
 	 * Network source node `[passive, 0/1]`
 	 *
@@ -78,6 +82,12 @@ namespace avs
 		virtual bool getNextStreamingControlMessage(std::string& msg) {
 			return false;
 		}
+		const std::vector<StreamStatus>& GetStreamStatus()
+		{
+			return streamStatus;
+		}
+	protected:
+		std::vector<StreamStatus> streamStatus;
 	};
 
 } // avs

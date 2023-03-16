@@ -60,7 +60,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 	bool keepQueueing = attemptQueueData();
 	if (keepQueueing)
 	{
-		std::vector<avs::uid> nodeIDsToStream;
+		std::set<avs::uid> nodeIDsToStream;
 		std::vector<avs::MeshNodeResources> meshNodeResources;
 		std::vector<avs::LightNodeResources> lightNodeResources;
 		std::vector<avs::uid> textCanvas_uids;
@@ -267,9 +267,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 	{
 	//	size_t oldBufferSize = buffer.size();
 		const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
-		putPayload(avs::GeometryPayloadType::Mesh);
-		put((size_t)1);
-		put(uid);
+		putPayloadType(avs::GeometryPayloadType::Mesh,uid);
 		if (compressedMesh && compressedMesh->meshCompressionType != avs::MeshCompressionType::NONE)
 		{
 			uint64_t lowest_accessor = 0xFFFFFFFFFFFFFFFF, highest_accessor = 0;
@@ -393,7 +391,6 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 {
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
 	//Place payload type onto the buffer.
-	putPayload(avs::GeometryPayloadType::Node);
 	for (int i = 0; i < (int)missingUIDs.size(); i++)
 	{
 		avs::uid uid = missingUIDs[i];
@@ -405,12 +402,10 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 			i--;
 		}
 	}
-	put(missingUIDs.size());
 	for (const avs::uid& uid : missingUIDs)
 	{
 		avs::Node* node = geometryStore->getNode(uid);
-		put(uid);
-
+		putPayloadType(avs::GeometryPayloadType::Node,uid);
 		//Push name length.
 		size_t nameLength = node->name.length();
 		put(nameLength);
@@ -494,12 +489,11 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*, avs::uid skinID)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
-	putPayload(avs::GeometryPayloadType::Skin);
 
 	const avs::Skin* skin = geometryStore->getSkin(skinID, geometryStreamingService->getClientAxesStandard());
 	if (skin)
 	{
-		put(skinID);
+		putPayloadType(avs::GeometryPayloadType::Skin,skinID);
 
 		//Push name length.
 		size_t nameLength = skin->name.length();
@@ -570,8 +564,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterf
 	const avs::Animation* animation = geometryStore->getAnimation(animationID, geometryStreamingService->getClientAxesStandard());
 	if (animation)
 	{
-		putPayload(avs::GeometryPayloadType::Animation);
-		put(animationID);
+		putPayloadType(avs::GeometryPayloadType::Animation,animationID);
 
 		//Push name length.
 		size_t nameLength = animation->name.length();
@@ -595,7 +588,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterf
 	return avs::Result::OK;
 }
 
-void GeometryEncoder::putPayload(avs::GeometryPayloadType t)
+void GeometryEncoder::putPayloadType(avs::GeometryPayloadType t,avs::uid uid)
 {
 	prevBufferSize = buffer.size();
 
@@ -604,6 +597,7 @@ void GeometryEncoder::putPayload(avs::GeometryPayloadType t)
 
 	// Place payload type onto the buffer.
 	put(t);
+	put(uid);
 }
 
 void GeometryEncoder::putPayloadSize()
@@ -629,8 +623,7 @@ avs::Result GeometryEncoder::encodeFontAtlas(avs::uid uid)
 
 	if (!fontAtlas)
 		return avs::Result::Failed;
-	putPayload(avs::GeometryPayloadType::FontAtlas);
-	put(uid);
+	putPayloadType(avs::GeometryPayloadType::FontAtlas,uid);
 	put(fontAtlas->font_texture_uid);
 	if (fontAtlas->fontMaps.size() > 255)
 	{
@@ -669,8 +662,7 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 
 	if (!textCanvas)
 		return avs::Result::Failed;
-	putPayload(avs::GeometryPayloadType::TextCanvas);
-	put(uid);
+	putPayloadType(avs::GeometryPayloadType::TextCanvas,uid);
 	put(textCanvas->font_uid);
 	put(textCanvas->size);
 	put(textCanvas->lineHeight);
@@ -700,7 +692,7 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	auto renderingFeatures = geometryStreamingService->getClientRenderingFeatures();
-	//Push amount of materials.
+	
 	for (avs::uid uid : missingUIDs)
 	{
 		avs::Material* material = geometryStore->getMaterial(uid);
@@ -717,9 +709,7 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 					continue;
 				}
 			}
-			putPayload(avs::GeometryPayloadType::Material);
-			put((size_t)1);
-			put(uid);
+			putPayloadType(avs::GeometryPayloadType::Material,uid);
 
 			size_t nameLength = material->name.length();
 
@@ -843,11 +833,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 			//size_t oldBufferSize = buffer.size();
 
 			//Place payload type onto the buffer.
-			putPayload(avs::GeometryPayloadType::Texture);
-			//Push amount of textures we are sending.
-			put((size_t)1);
-			//Push identifier.
-			put(uid);
+			putPayloadType(avs::GeometryPayloadType::Texture,uid);
 
 			size_t nameLength = texture->name.length();
 

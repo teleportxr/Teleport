@@ -405,7 +405,6 @@ namespace avs
 	struct FilePayloadInfo : PayloadInfo
 	{
 		FilePayloadType httpPayloadType=FilePayloadType::Invalid;
-
 		FilePayloadInfo() : PayloadInfo(PayloadInfoType::File) {}
 	} AVS_PACKED;
 

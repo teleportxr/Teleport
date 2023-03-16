@@ -144,7 +144,7 @@ namespace teleport
 			void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
 			void ReceiveSetupCommand(const ENetPacket* packet);
 			void ReceiveVideoReconfigureCommand(const ENetPacket* packet);
-			void ReceivePositionUpdate(const ENetPacket* packet);
+			void ReceiveStageSpaceOriginNodeId(const ENetPacket* packet);
 			void ReceiveNodeVisibilityUpdate(const ENetPacket* packet);
 			void ReceiveNodeMovementUpdate(const ENetPacket* packet);
 			void ReceiveNodeEnabledStateUpdate(const ENetPacket* packet);

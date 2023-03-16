@@ -34,3 +34,6 @@
 [submodule "thirdparty/libdatachannel"]
 	path = thirdparty/libdatachannel
 	url = git@github.com:paullouisageneau/libdatachannel.git
+[submodule "thirdparty/oboe"]
+	path = thirdparty/oboe
+	url = git@github.com:google/oboe.git

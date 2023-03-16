@@ -1220,7 +1220,7 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 	std::filesystem::path p=std::string(ttf_path_utf8);
 	saveResourceBinary(cacheFontFilePath,fa);
 	loadResourceBinary(cacheFontFilePath, "",fa);
-	storeTexture(font_texture_uid,"",relative_asset_path_utf8, std::time_t(), avsTexture,cachePath+"/"s+cacheTextureFilePath, true,	 true,true);
+	storeTexture(font_texture_uid,"",relative_asset_path_utf8,lastModified, avsTexture,cachePath+"/"s+cacheTextureFilePath, true,	 true,true);
 	fa.fontAtlas.font_texture_uid=font_texture_uid;
 	//Font::Free(avsTexture);
 	return font_atlas_uid;

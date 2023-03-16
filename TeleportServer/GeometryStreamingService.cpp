@@ -55,7 +55,7 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 	sentResources[resource_uid] = true;
 }
 
-void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNodeIDs
+void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeIDs
 		,std::vector<avs::MeshNodeResources>& outMeshResources
 		,std::vector<avs::LightNodeResources>& outLightResources
 		,std::set<avs::uid>& genericTextureUids
@@ -67,6 +67,8 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 	{
 		genericTextureUids.insert(r);
 	}
+	if(originNodeId)
+		outNodeIDs.insert(originNodeId);
 	for (avs::uid nodeID : streamedNodeIDs)
 	{
 		avs::Node* node = geometryStore->getNode(nodeID);
@@ -74,12 +76,12 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 		{
 			continue;
 		}
+		outNodeIDs.insert(nodeID);
 
 		switch (node->data_type)
 		{
 		case avs::NodeDataType::None:
 		case avs::NodeDataType::Light:
-			outNodeIDs.push_back(nodeID);
 			break;
 		case avs::NodeDataType::Mesh:
 			if(node->priority>=minimumPriority)
@@ -104,7 +106,6 @@ void GeometryStreamingService::getResourcesToStream(std::vector<avs::uid>& outNo
 						fontAtlases.push_back(c->font_uid);
 						avs::uid texture_uid=f->font_texture_uid;
 						genericTextureUids.insert(texture_uid);
-						outNodeIDs.push_back(nodeID);
 					}
 				}
 			}
@@ -166,8 +167,8 @@ void GeometryStreamingService::stopStreaming()
 
 void GeometryStreamingService::clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID)
 {
-	auto nodePair = streamedNodeIDs.find(nodeID);
-	if (nodePair != streamedNodeIDs.end())
+	auto n = streamedNodeIDs.find(nodeID);
+	if (n!= streamedNodeIDs.end())
 	{
 		bool result=clientStartedRenderingNode_Internal(clientID, nodeID);
 		if(result)
@@ -252,6 +253,11 @@ void GeometryStreamingService::reset()
 	clientRenderingNodes.clear();
 }
 
+void GeometryStreamingService::setOriginNode(avs::uid nodeID)
+{
+	originNodeId = nodeID;
+}
+
 void GeometryStreamingService::addNode(avs::uid nodeID)
 {
 	if (nodeID != 0)
@@ -267,7 +273,7 @@ void GeometryStreamingService::removeNode(avs::uid nodeID)
 
 bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 {
-	return streamedNodeIDs.find(nodeID) != streamedNodeIDs.end();
+	return streamedNodeIDs.find(nodeID) != streamedNodeIDs.end()||nodeID==originNodeId;
 }
 
 void GeometryStreamingService::addGenericTexture(avs::uid id)

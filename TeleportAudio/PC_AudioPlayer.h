@@ -10,47 +10,48 @@ interface IXAudio2;
 interface IXAudio2MasteringVoice;
 interface IXAudio2SourceVoice;
 
-namespace sca
+namespace teleport
 {
-	/*! A class to play audio from streams and files for PC
-	*/
-	class PC_AudioPlayer final : public AudioPlayer
+	namespace audio
 	{
-	public:
-		PC_AudioPlayer();
-		~PC_AudioPlayer();
+		/*! A class to play audio from streams and files for PC
+		*/
+		class PC_AudioPlayer final : public AudioPlayer
+		{
+		public:
+			PC_AudioPlayer();
+			~PC_AudioPlayer();
 
-		Result initializeAudioDevice() override;
+			Result initializeAudioDevice() override;
 
-		Result configure(const sca::AudioSettings& audioSettings) override;
+			Result configure(const AudioSettings& audioSettings) override;
 
-		Result playStream(const uint8_t* data, size_t dataSize) override;
+			Result playStream(const uint8_t* data, size_t dataSize) override;
 
-		Result startRecording(std::function<void(const uint8_t * data, size_t dataSize)> recordingCallback) override;
+			Result startRecording(std::function<void(const uint8_t* data, size_t dataSize)> recordingCallback) override;
 
-		Result processRecordedAudio() override;
+			Result processRecordedAudio() override;
 
-		Result stopRecording() override;
+			Result stopRecording() override;
 
-		Result deconfigure() override;
+			Result deconfigure() override;
 
-		void onAudioProcessed() override;
+			void onAudioProcessed() override;
 
-	private:
-		Result asyncInitializeAudioDevice();
+		private:
+			Result asyncInitializeAudioDevice();
 
-		std::future<sca::Result> mInitResult;
+			std::future<Result> mInitResult;
 
-		Microsoft::WRL::ComPtr<IXAudio2> mDevice;
-		IXAudio2MasteringVoice* mMasteringVoice;
-		IXAudio2SourceVoice* mSourceVoice;
+			Microsoft::WRL::ComPtr<IXAudio2> mDevice;
+			IXAudio2MasteringVoice* mMasteringVoice;
+			IXAudio2SourceVoice* mSourceVoice;
 
-		std::unique_ptr<class VoiceCallback> mVoiceCallback;
+			std::unique_ptr<class VoiceCallback> mVoiceCallback;
 
-		avs::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
+			avs::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
 
-		std::unique_ptr<class PC_AudioCapture> mAudioCapture;
-	};
+			std::unique_ptr<class PC_AudioCapture> mAudioCapture;
+		};
+	}
 }
-
-

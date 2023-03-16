@@ -52,10 +52,8 @@ InstanceRenderer::InstanceRenderer(avs::uid server,teleport::client::Config &c,G
 	,geometryCache(new clientrender::NodeManager)
 {
 	server_uid=server;
-	resourceCreator.SetGeometryCache(&geometryCache);
-#if TELEPORT_PC_AUDIO_PLAYER
 	audioPlayer.initializeAudioDevice();
-#endif
+	resourceCreator.SetGeometryCache(&geometryCache);
 }
 
 InstanceRenderer::~InstanceRenderer()
@@ -336,17 +334,6 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
 	if (renderState.openXR)
 	{
-		/*	avs::uid root_node_uid=renderState.openXR->GetRootNode(this_server_uid);
-			if(root_node_uid!=0)
-			{
-				std::shared_ptr<clientrender::Node> node=g.mNodeManager->GetNode(root_node_uid);
-				if(node)
-				{
-					auto pose=sessionClient->GetOriginPose();
-					node->SetLocalPosition(pose.position);
-					node->SetLocalRotation(pose.orientation);
-				}
-			}*/
 			// The node pose states are in the space whose origin is the VR device's playspace origin.
 		const auto& nodePoseStates = renderState.openXR->GetNodePoseStates(this_server_uid, renderPlatform->GetFrameNumber());
 		for (auto& n : nodePoseStates)
@@ -408,21 +395,19 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	if (!node)
 		return;
 
-	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
-	if(node->GetGlobalIlluminationTextureUid() )
-		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
-
 	// Is the material/lighting incomplete?
 	bool material_incomplete = false;
-	if (node->IsStatic())
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
+	avs::uid gi_texture_id = node->GetGlobalIlluminationTextureUid();
+	if (gi_texture_id)
 	{
-		// need a lightmap.
-		if (!globalIlluminationTexture)
+		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		if ( !globalIlluminationTexture)
 		{
 			material_incomplete = true;
 		}
 	}
-	else
+	if (!node->IsStatic())
 	{
 		if(!renderState.pbrEffect_diffuseCubemap.valid)
 		{
@@ -912,15 +897,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	sessionClient->SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	const uint32_t geoStreamID = 80;
-	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } };
-	if (AudioStream)
-	{
-		streams.push_back({ 60 });
-	}
-	if (GeoStream)
-	{
-		streams.push_back({ geoStreamID });
-	}
+	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } ,{ 60 },{ geoStreamID } };
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
@@ -1049,19 +1026,15 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	}
 
 	// Audio
-	if (AudioStream)
 	{
 		clientPipeline.avsAudioDecoder.configure(60);
-		sca::AudioSettings audioSettings;
-		audioSettings.codec = sca::AudioCodec::PCM;
+		audio::AudioSettings audioSettings;
+		audioSettings.codec = audio::AudioCodec::PCM;
 		audioSettings.numChannels = 1;
 		audioSettings.sampleRate = 48000;
 		audioSettings.bitsPerSample = 32;
-		// This will be deconfigured automatically when the clientPipeline.pipeline is deconfigured.
-#if TELEPORT_PC_AUDIO_PLAYER
 		audioPlayer.configure(audioSettings);
-		audioStreamTarget.reset(new sca::AudioStreamTarget(&audioPlayer));
-#endif
+		audioStreamTarget.reset(new audio::AudioStreamTarget(&audioPlayer));
 		clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
 
 		clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
@@ -1073,7 +1046,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		// Audio Input
 		if (setupCommand.audio_input_enabled)
 		{
-			sca::NetworkSettings networkSettings =
+			audio::NetworkSettings networkSettings =
 			{
 					setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
 					, static_cast<int32_t>(handshake.maxBandwidthKpS)
@@ -1082,7 +1055,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 					, (int32_t)setupCommand.idle_connection_timeout
 			};
 
-			audioInputNetworkPipeline.reset(new sca::NetworkPipeline());
+			audioInputNetworkPipeline.reset(new audio::NetworkPipeline());
 			audioInputQueue.configure(4096, 120, "AudioInputQueue");
 			audioInputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
 
@@ -1095,15 +1068,12 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 					audioInputNetworkPipeline->process();
 				}
 			};
-#if TELEPORT_PC_AUDIO_PLAYER
 			// The audio player will stop recording automatically when deconfigured. 
 			audioPlayer.startRecording(f);
-#endif
 		}
 	}
 
 	// We will add a GEOMETRY PIPE
-	if(GeoStream)
 	{
 		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);

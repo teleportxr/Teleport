@@ -11,8 +11,8 @@ namespace
 	constexpr int networkPipelineSocketBufferSize = 16 * 1024 * 1024; // 16MiB
 }
 
-namespace sca
-{
+using namespace teleport::audio;
+
 	NetworkPipeline::NetworkPipeline()
 		: prevProcResult(avs::Result::OK)
 	{
@@ -62,7 +62,7 @@ namespace sca
 
 		if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, inNetworkSettings.remoteIP, inNetworkSettings.remotePort, SinkParams))
 		{
-			SCA_CERR << "Failed to configure network sink!" << std::endl;
+			TELEPORT_INTERNAL_CERR( "Failed to configure network sink!\n");
 			return;
 		}
 
@@ -71,7 +71,7 @@ namespace sca
 			auto& pipe = audioPipes[i];
 			if (!avs::PipelineNode::link(*pipe->sourceQueue, *networkSink))
 			{
-				SCA_CERR << "Failed to configure network pipeline for audio!" << std::endl;
+				TELEPORT_INTERNAL_CERR("Failed to configure network pipeline for audio!\n");
 				return;
 			}
 			pipeline->add(pipe->sourceQueue);
@@ -101,7 +101,7 @@ namespace sca
 		{
 			if (result != prevProcResult)
 			{
-				SCA_CERR << "Network pipeline processing encountered an error!" << std::endl;
+				TELEPORT_INTERNAL_CERR("Network pipeline processing encountered an error!\n");
 				prevProcResult = result;
 			}
 			return false;
@@ -124,9 +124,8 @@ namespace sca
 		}
 		else
 		{
-			SCA_CERR << "Can't return counters because network sink is null." << std::endl;
+			TELEPORT_INTERNAL_CERR( "Can't return counters because network sink is null.\n");
 			return avs::Result::Node_Null;
 		}
 		return avs::Result::OK;
 	}
-}
