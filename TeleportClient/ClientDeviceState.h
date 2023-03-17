@@ -26,7 +26,7 @@ namespace teleport
 			LocalGlobalPose headPose;
 			teleport::core::Input input;
 			void TransformPose(LocalGlobalPose &p);
-			void SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q);
+			void SetHeadPose_StageSpace(vec3 pos,clientrender::quat q);
 			void SetInputs(const teleport::core::Input& st);
 
 			//! From the stored relative poses, update the global ones to correspond.

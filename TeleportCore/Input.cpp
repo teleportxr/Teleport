@@ -36,7 +36,7 @@ void Input::addAnalogueEvent( avs::InputId inputID, float strength)
 	analogueEvents.push_back(analogueEvent);
 }
 
-void Input::addMotionEvent( avs::InputId inputID, avs::vec2 motion)
+void Input::addMotionEvent( avs::InputId inputID, vec2 motion)
 {
 	avs::InputEventMotion motionEvent;
 	motionEvent.eventID = nextEventID++;

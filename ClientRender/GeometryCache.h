@@ -191,6 +191,9 @@ namespace clientrender
 		void ReceivedResource(avs::uid u);
 		void CompleteResource(avs::uid id);
 	protected:
+		mutable std::mutex receivedResourcesMutex;
+		mutable std::mutex resourceRequestsMutex;
+		mutable std::mutex missingResourcesMutex;
 		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 		std::vector<avs::uid> m_ReceivedResources; //Resources received.
 		std::string cacheFolder;

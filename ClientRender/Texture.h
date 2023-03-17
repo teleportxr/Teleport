@@ -172,7 +172,7 @@ namespace clientrender
 			}
 		};
 
-		static const avs::vec3 DUMMY_DIMENSIONS; //X = Width, Y = Height, Z = Depth
+		static const vec3 DUMMY_DIMENSIONS; //X = Width, Y = Height, Z = Depth
 
 	protected:
 		TextureCreateInfo m_CI;

@@ -637,7 +637,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		const clientrender::AnimationComponent& anim = node->animationComponent;
-		avs::vec3 pos = node->GetGlobalPosition();
+		vec3 pos = node->GetGlobalPosition();
 		mat4 m=node->GetGlobalTransform().GetTransformMatrix();
 		renderPlatform->DrawAxes(deviceContext,m,0.1f);
 	
@@ -793,8 +793,8 @@ void InstanceRenderer::UpdateTagDataBuffers(crossplatform::GraphicsDeviceContext
 				t.shadowTexCoordScale.x=float(l.textureSize)/float(renderState.lastSetupCommand.video_config.video_width);
 				t.shadowTexCoordScale.y=float(l.textureSize)/float(renderState.lastSetupCommand.video_config.video_height);
 				// Tag data has been properly transformed in advance:
-				avs::vec3 position		=l.position;
-				avs::vec4 orientation	=l.orientation;
+				vec3 position		=l.position;
+				vec4 orientation	=l.orientation;
 				t.position=*((vec3*)&position);
 				crossplatform::Quaternionf q((const float*)&orientation);
 				t.direction=q*vec3(0,0,1.0f);
@@ -897,7 +897,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	sessionClient->SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 	const uint32_t geoStreamID = 80;
-	std::vector<avs::NetworkSourceStream> streams = { { 20 }, { 40 } ,{ 60 },{ geoStreamID } };
+	std::vector<avs::NetworkSourceStream> streams = { { 20,"video"}, { 40,"frame tags"} ,{ 60,"audio"},{ geoStreamID,"geometry"} };
 
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;

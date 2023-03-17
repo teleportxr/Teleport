@@ -93,6 +93,7 @@ namespace avs
 		~DataChannel()
 		{}
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
+		atomic<size_t> bytesReceived = 0;
 	};
 	struct WebRtcNetworkSource::Private final : public PipelineNode::Private
 	{
@@ -193,6 +194,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 	setNumOutputSlots(numOutputs);
 
 	m_streams = std::move(streams);
+	streamStatus.resize(m_streams.size());
 
 	for (size_t i = 0; i < numOutputs; ++i)
 	{
@@ -304,11 +306,16 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
+	static float intro = 0.01f;
 	// update the stream stats.
-	for (auto dc : m_data->dataChannels)
+	if(deltaTime>0)
+	for (auto &dc : m_data->dataChannels)
 	{
 		int i=m_streamNodeMap[dc.first];
-		streamStatus[i].bandwidthKps=dc
+		size_t b = dc.second.bytesReceived;
+		dc.second.bytesReceived= 0;
+		streamStatus[i].bandwidthKps *=1.0f-intro;
+		streamStatus[i].bandwidthKps+=intro* (float)b / float(deltaTime)*(1000.0f/1024.0f);
 	}
 #if TELEPORT_CLIENT
 	return m_data->m_httpUtil.process();
@@ -413,7 +420,7 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		});
 
-	dc->onMessage([this,id](auto data) {
+	dc->onMessage([this, &dataChannel,id](auto data) {
 
 		// data holds either std::string or rtc::binary
 		if (std::holds_alternative<std::string>(data))
@@ -424,6 +431,7 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			auto& b = std::get<rtc::binary>(data);
 			int nodeIndex = q_ptr()->m_streamNodeMap[id];
 			Queue* outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(nodeIndex));
+			dataChannel.bytesReceived += b.size();
 			//size_t numBytesWrittenToOutput;
 			//auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 

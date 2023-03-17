@@ -46,7 +46,8 @@ namespace teleport
 			}
 
 		private:
-			void handleMessages();
+			void handleStoppedClients();
+			void receiveMessages();
 			void handleStreaming();
 			void processNetworkDataAsync();
 

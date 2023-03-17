@@ -50,8 +50,8 @@ namespace teleport
 			avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard);
 			const avs::Skin* getSkin(avs::uid skinID, avs::AxesStandard standard) const;
 
-			avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard);
-			const avs::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const;
+			teleport::core::Animation* getAnimation(avs::uid id, avs::AxesStandard standard);
+			const teleport::core::Animation* getAnimation(avs::uid id, avs::AxesStandard standard) const;
 
 			std::vector<avs::uid> getMeshIDs() const;
 
@@ -92,7 +92,7 @@ namespace teleport
 
 			void storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
-			void storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard);
+			void storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard);
 			void storeMesh(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress = false, bool verify = false);
 			void storeMaterial(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Material& newMaterial);
 			void storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC, bool forceOverwrite);
@@ -147,7 +147,7 @@ namespace teleport
 
 			// Static, resource assets.
 			std::map<avs::AxesStandard, std::map<avs::uid, avs::Skin>> skins;
-			std::map<avs::AxesStandard, std::map<avs::uid, avs::Animation>> animations;
+			std::map<avs::AxesStandard, std::map<avs::uid, teleport::core::Animation>> animations;
 			std::map<avs::AxesStandard, std::map<avs::uid, ExtractedMesh>> meshes;
 			std::map<avs::uid, ExtractedMaterial> materials;
 			std::map<avs::uid, ExtractedTexture> textures;

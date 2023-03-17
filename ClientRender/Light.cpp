@@ -69,7 +69,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	}
 }
 
-void Light::UpdatePosition(const avs::vec3& position) 
+void Light::UpdatePosition(const vec3& position) 
 {
 	m_CI.position = position;
 	UpdateLightSpaceTransform();
@@ -87,10 +87,10 @@ void Light::UpdateLightSpaceTransform()
 	{
 		auto &light=s_LightData[m_LightID];
 		// We consider lights to shine in the Z direction.
-		//avs::vec3 defaultDirection(0,0,1.0f);
+		//vec3 defaultDirection(0,0,1.0f);
 		light.position = m_CI.position;
 		light.direction = ((m_CI.orientation * m_CI.direction) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
-		avs::vec3 scale(m_CI.lightRadius,m_CI.lightRadius,m_CI.lightRadius);
+		vec3 scale(m_CI.lightRadius,m_CI.lightRadius,m_CI.lightRadius);
 		light.lightSpaceTransform = mat4_deprecated::Translation(m_CI.position) * mat4_deprecated::Rotation(m_CI.orientation)*mat4_deprecated::Scale(scale);
 	}
 }

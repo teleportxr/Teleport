@@ -90,10 +90,10 @@ namespace teleport
 			int32_t shadowmapSize;
 			int32_t webcamPos[2];
 			int32_t webcamSize[2];
-			avs::vec3 bodyOffsetFromHead;
+			vec3 bodyOffsetFromHead;
 			int32_t captureCubeTextureSize;
 			teleport::core::BackgroundMode backgroundMode;
-			avs::vec4 backgroundColour;
+			vec4 backgroundColour;
 			float drawDistance;
 		} AVS_PACKED;
 		struct InputDefinitionInterop

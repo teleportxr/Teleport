@@ -36,6 +36,7 @@ namespace teleport
 		//! Per-client messaging handler.
 		class ClientMessaging
 		{
+			bool stopped = false;
 		public:
 			ClientMessaging(const struct ServerSettings* settings,
 				std::shared_ptr<DiscoveryService> discoveryService,
@@ -55,6 +56,7 @@ namespace teleport
 
 			bool startSession(avs::uid clientID, std::string clientIP);
 			void stopSession();
+			bool isStopped() const;
 			bool restartSession(avs::uid clientID, std::string clientIP);
 			bool isStartingSession() { return startingSession; }
 			void tick(float deltaTime);

@@ -30,7 +30,7 @@ namespace teleport
 			//! Add an analogue [0,1.0] or [-1.0,1.0] event for the specified inputID.
 			void addAnalogueEvent( avs::InputId inputID, float strength);
 			//! Add a notion (xy) event for the specified inputID.
-			void addMotionEvent( avs::InputId inputID, avs::vec2 motion);
+			void addMotionEvent( avs::InputId inputID, vec2 motion);
 			//! Set a binary state for the specified inputID.
 			void setBinaryState(uint16_t inputID, bool activated);
 			//! Set an analogue state for the specified inputID.

@@ -28,10 +28,10 @@ void Config::LoadConfigFromIniFile()
 	SI_Error rc = ini.LoadData(str);
 	if(rc == SI_OK)
 	{
-		pause_for_debugger = ini.GetLongValue("", "PAUSE", pause_for_debugger);
-		enable_vr = ini.GetLongValue("", "ENABLE_VR", enable_vr);
-		dev_mode = ini.GetLongValue("", "DEV_MODE", dev_mode);
-		log_filename = ini.GetValue("", "LOG_FILE", "TeleportClient.log");
+		pause_for_debugger	= ini.GetLongValue("", "PAUSE", pause_for_debugger);
+		enable_vr			= ini.GetLongValue("", "ENABLE_VR", enable_vr);
+		dev_mode			= ini.GetLongValue("", "DEV_MODE", dev_mode);
+		log_filename		= ini.GetValue("", "LOG_FILE", "TeleportClient.log");
 	}
 	else
 	{
@@ -166,7 +166,8 @@ void Config::LoadOptions()
 		std::string c=ini.GetValue("", "StartupConnectOption","");
 		auto C=magic_enum::enum_cast<StartupConnectOption>(c);
 		if(C.has_value())
-			options.startupConnectOption = C.value(); 
+			options.startupConnectOption = C.value();
+		options.gui2D = ini.GetBoolValue("", "Gui2D", "");
 	}
 }
 
@@ -177,6 +178,7 @@ void Config::SaveOptions()
 		string str;
 		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
 		str+=fmt::format("\nStartupConnectOption={0}",magic_enum::enum_name(options.startupConnectOption));
+		str += fmt::format("\nGui2D={0}", options.gui2D);
 		std::string filename=GetStoragePath()+"config/options.txt"s;
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 		LoadOptions();

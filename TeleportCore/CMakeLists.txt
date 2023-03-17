@@ -26,4 +26,6 @@ target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 #Include enet
 target_include_directories(TeleportCore PRIVATE ../thirdparty/enet/include)
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
+#Include Platform - only for CppSl.sl
+target_include_directories(TeleportCore PRIVATE ../firstparty)
  

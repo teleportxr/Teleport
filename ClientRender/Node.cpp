@@ -41,7 +41,7 @@ bool Node::IsStatic() const
 	return isStatic;
 }
 
-void Node::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
+void Node::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
 	if(ShouldUseGlobalTransform())
 	{
@@ -85,7 +85,7 @@ void Node::TickExtrapolatedTransform(float deltaTime)
 	deltaTime /= 1000;
 	const Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
 
-	avs::vec3 newTranslation = transform.m_Translation;// + (lastReceivedMovement.velocity * deltaTime);
+	vec3 newTranslation = transform.m_Translation;// + (lastReceivedMovement.velocity * deltaTime);
 
 	clientrender::quat newRotation = transform.m_Rotation;
 /*	if(lastReceivedMovement.angularVelocityAngle != 0)
@@ -199,7 +199,7 @@ void Node::SetGlobalTransform(const Transform& transform)
 	RequestChildrenUpdateTransforms();
 }
 
-void Node::SetLocalPosition(const avs::vec3& value)
+void Node::SetLocalPosition(const vec3& value)
 {
 	localTransform.m_Translation = value;
 	RequestTransformUpdate();
@@ -216,7 +216,7 @@ void Node::SetLocalVelocity(const vec3& value)
 	localTransform.m_Velocity = value;
 }
 
-void Node::SetLocalScale(const avs::vec3& value)
+void Node::SetLocalScale(const vec3& value)
 {
 	localTransform.m_Scale = value;
 	RequestTransformUpdate();

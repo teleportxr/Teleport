@@ -40,7 +40,7 @@ namespace clientrender
 		avs::uid GetHolderClientId() const;
 		void SetPriority(int p);
 		int GetPriority() const;
-		void UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale);
+		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
 		// force update of model matrices - should not be necessary, but is.
 		void UpdateModelMatrix();
 		//Requests global transform of node, and node's children, be recalculated.
@@ -131,9 +131,9 @@ namespace clientrender
 			return globalTransform;
 		}
 
-		void SetLocalPosition(const avs::vec3& pos);
-		const avs::vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
-		const avs::vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
+		void SetLocalPosition(const vec3& pos);
+		const vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
+		const vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
 		const vec3& GetGlobalVelocity() const { return GetGlobalTransform().m_Velocity; }
 
 		void SetLocalRotation(const clientrender::quat& rot);
@@ -141,18 +141,18 @@ namespace clientrender
 		const clientrender::quat& GetLocalRotation() const { return GetLocalTransform().m_Rotation; }
 		const clientrender::quat& GetGlobalRotation() const { return GetGlobalTransform().m_Rotation; }
 
-		void SetLocalScale(const avs::vec3& scale);
-		const avs::vec3& GetLocalScale() const { return GetLocalTransform().m_Scale; }
-		const avs::vec3& GetGlobalScale() const { return GetGlobalTransform().m_Scale; }
+		void SetLocalScale(const vec3& scale);
+		const vec3& GetLocalScale() const { return GetLocalTransform().m_Scale; }
+		const vec3& GetGlobalScale() const { return GetGlobalTransform().m_Scale; }
 
 		virtual void SetHighlighted(bool highlighted);
 		bool IsHighlighted() const { return isHighlighted; }
 
-		void SetLightmapScaleOffset(const avs::vec4& lso)
+		void SetLightmapScaleOffset(const vec4& lso)
 		{
 			lightmapScaleOffset=lso;
 		}
-		const avs::vec4 & GetLightmapScaleOffset() const
+		const vec4 & GetLightmapScaleOffset() const
 		{
 			return lightmapScaleOffset;
 		}
@@ -170,7 +170,7 @@ namespace clientrender
 		std::shared_ptr<TextCanvas> textCanvas;
 		std::shared_ptr<SkinInstance> skinInstance;
 		std::vector<std::shared_ptr<Material>> materials;
-		avs::vec4 lightmapScaleOffset;
+		vec4 lightmapScaleOffset;
 		Transform localTransform;
 
 		std::vector<avs::uid> childIDs;

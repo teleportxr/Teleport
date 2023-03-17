@@ -78,40 +78,16 @@ bool ClientMessaging::startSession(avs::uid clientID, std::string clientIP)
 
 void ClientMessaging::stopSession()
 {
-	clientManager->removeClient(this);
-
-	if (peer)
-	{
-		/*enet_peer_disconnect(peer, 0);
-
-		bool bIsPeerConnected = true;
-		while (bIsPeerConnected && !eventQueue.empty())
-		{
-			ENetEvent& event = eventQueue.front();
-			switch (event.type)
-			{
-			case ENET_EVENT_TYPE_RECEIVE:
-				enet_packet_destroy(event.packet);
-				break;
-			case ENET_EVENT_TYPE_DISCONNECT:
-				bIsPeerConnected = false;
-				break;
-			}
-			eventQueue.pop();
-		}
-		if (bIsPeerConnected)
-		{
-			enet_peer_reset(peer);
-		}*/
-		TELEPORT_COUT << "Stopping session." << std::endl;
-		enet_peer_reset(peer);
-		peer = nullptr;
-	}
 
 	receivedHandshake = false;
 	geometryStreamingService.reset();
 
 	eventQueue.clear();
+	stopped = true;
+}
+bool ClientMessaging::isStopped() const
+{
+	return stopped;
 }
 
 void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
@@ -185,7 +161,8 @@ void ClientMessaging::tick(float deltaTime)
 	}
 }
 
-
+// This handles the event queue that the ClientManager's processNetworkDataAsync thread has accumulated.
+//But we need to lock to prevent these two threads conflicting.
 void ClientMessaging::handleEvents(float deltaTime)
 {
 	timeSinceLastClientComm += deltaTime;
@@ -203,8 +180,6 @@ void ClientMessaging::handleEvents(float deltaTime)
 		case ENET_EVENT_TYPE_CONNECT:
 			assert(!peer);
 			timeSinceLastClientComm = 0;
-			char address[20];
-			enet_address_get_host_ip(&event.peer->address, address, sizeof(address));
 			peer = event.peer;
 			enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
 			discoveryService->discoveryCompleteForClient(clientID);
@@ -297,7 +272,7 @@ bool ClientMessaging::timedOutStartingSession() const
 void ClientMessaging::Disconnect()
 {
 	onDisconnect(clientID);
-	peer = nullptr;
+	stopped = true;
 }
 
 void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)

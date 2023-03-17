@@ -28,9 +28,9 @@ namespace clientrender
 	void Tests::RunConversionEquivalenceTest(avs::AxesStandard fromStandard, avs::AxesStandard toStandard)
 	{
 		avs::Transform transformAVS;
-		transformAVS.position = avs::vec3(1.0f, 2.0f, 3.0f);
+		transformAVS.position = vec3(1.0f, 2.0f, 3.0f);
 		transformAVS.rotation = {4.0f, 5.0f, 6.0f, 7.0f};
-		transformAVS.scale = avs::vec3(8.0f, 9.0f, 10.0f);
+		transformAVS.scale = vec3(8.0f, 9.0f, 10.0f);
 
 		avs::Transform convertedTransformAVS(transformAVS);
 		avs::ConvertTransform(fromStandard, toStandard, convertedTransformAVS);

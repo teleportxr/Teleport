@@ -37,11 +37,28 @@ using namespace teleport;
 using namespace platform;
 using namespace platform;
 using namespace crossplatform;
+ImFont *defaultFont = nullptr;
 ImFont *smallFont=nullptr;
 ImFont *symbolFont=nullptr;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
-PlatformWindow *platformWindow=nullptr;
+PlatformWindow* platformWindow = nullptr;
+
+#define TIMED_TOOLTIP(txt)\
+		{if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
+			ImGui::SetTooltip(txt);}\
+
+#define TIMED_TOOLTIP2(txt)\
+	{\
+		static int timer=1200;\
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
+			timer--; \
+		else\
+			timer = 1200;\
+		if(timer<=0)\
+			ImGui::SetTooltip(txt);\
+	}
+
 void Gui::SetPlatformWindow(PlatformWindow *w)
 {
 #ifndef _MSC_VER
@@ -87,6 +104,104 @@ static inline ImVec4 ImLerp(const ImVec4& a, const ImVec4& b, float t)
 	return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
 }
 
+void Gui::LightStyle()
+{
+	if (style == ColourStyle::LIGHT_STYLE)
+		return;
+	style = ColourStyle::LIGHT_STYLE;
+	ImGui::StyleColorsLight();
+	auto& style = ImGui::GetStyle();
+	ImVec4* colors = style.Colors;
+	colors[ImGuiCol_Button]			= ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+	colors[ImGuiCol_ButtonHovered]	= ImVec4(0.7f, 0.7f, 0.7f, 1.00f);
+	colors[ImGuiCol_ButtonActive]	= ImVec4(0.8f, 0.8f, 0.8f, 1.00f);
+	colors[ImGuiCol_Border]			= ImVec4(0.00f, 0.00f, 0.00f, 0.3f);
+	colors[ImGuiCol_BorderShadow]	= ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_FrameBg]		= ImVec4(0.8f, 0.8f, 0.8f, 1.00f);
+	style.GrabRounding = 1.f;
+	style.WindowRounding = 12.f;
+	style.ScrollbarRounding = 3.f;
+	style.FrameRounding = 12.f;
+	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+	style.FramePadding = ImVec2(8.f, 4.f);
+	style.FrameBorderSize = 1.f;
+	style.WindowPadding = ImVec2(20.f, 14.f);
+}
+
+void Gui::DarkStyle()
+{
+	if (style == ColourStyle::DARK_STYLE)
+		return;
+	style = ColourStyle::DARK_STYLE;
+	ImGui::StyleColorsDark();
+
+	auto& style = ImGui::GetStyle();
+
+	style.GrabRounding = 1.f;
+	style.WindowRounding = 12.f;
+	style.ScrollbarRounding = 3.f;
+	style.FrameRounding = 12.f;
+	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+	style.FramePadding = ImVec2(4.f, 2.f);
+	style.FramePadding.x = 4.f;
+	style.FrameBorderSize = 2.f;
+	style.WindowPadding = ImVec2(20.f, 14.f);
+	ImVec4* colors = style.Colors;
+	ImVec4 imWhite(1.00f, 1.00f, 1.00f, 1.00f);
+	colors[ImGuiCol_Text] = imWhite;
+	colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
+	colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+	colors[ImGuiCol_Border] = ImVec4(0.43f, 0.43f, 0.43f, 0.50f);
+	colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_FrameBg] = ImVec4(0.29f, 0.29f, 0.29f, 0.54f);
+	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.45f, 0.45f, 0.45f, 0.40f);
+	colors[ImGuiCol_FrameBgActive] = ImVec4(0.65f, 0.65f, 0.65f, 0.67f);
+	colors[ImGuiCol_TitleBg] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+	colors[ImGuiCol_TitleBgActive] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+	colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
+	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
+	colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_SliderGrab] = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
+	colors[ImGuiCol_SliderGrabActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_Button] = ImVec4(0.30f, 0.30f, 0.30f, 0.40f);
+	colors[ImGuiCol_ButtonHovered] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_ButtonActive] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+	colors[ImGuiCol_Header] = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
+	colors[ImGuiCol_HeaderHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
+	colors[ImGuiCol_HeaderActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_Separator] = colors[ImGuiCol_Border];
+	colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
+	colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
+	colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
+	colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+	colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+	colors[ImGuiCol_Tab] = ImLerp(colors[ImGuiCol_Header], colors[ImGuiCol_TitleBgActive], 0.80f);
+	colors[ImGuiCol_TabHovered] = colors[ImGuiCol_HeaderHovered];
+	colors[ImGuiCol_TabActive] = ImLerp(colors[ImGuiCol_HeaderActive], colors[ImGuiCol_TitleBgActive], 0.60f);
+	colors[ImGuiCol_TabUnfocused] = ImLerp(colors[ImGuiCol_Tab], colors[ImGuiCol_TitleBg], 0.80f);
+	colors[ImGuiCol_TabUnfocusedActive] = ImLerp(colors[ImGuiCol_TabActive], colors[ImGuiCol_TitleBg], 0.40f);
+	colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+	colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+	colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+	colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);   // Prefer using Alpha=1.0 here
+	colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);   // Prefer using Alpha=1.0 here
+	colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+	colors[ImGuiCol_TextSelectedBg] = ImVec4(0.65f, 0.65f, 0.65f, 0.35f);
+	colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+	colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+}
 void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 {
 	renderPlatform=r;
@@ -99,74 +214,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGui::StyleColorsDark();
-	
-	auto& style = ImGui::GetStyle();
-
-	style.GrabRounding = 1.f;
-	style.WindowRounding = 12.f;
-	style.ScrollbarRounding = 3.f;
-	style.FrameRounding = 12.f;
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.FramePadding = ImVec2(8.f,2.f);
-	style.FramePadding.x=4.f;
-	style.FrameBorderSize=2.f;
-	style.WindowPadding=ImVec2(20.f,14.f);
-	ImVec4* colors = style.Colors;
-	ImVec4 imWhite(1.00f, 1.00f, 1.00f, 1.00f);
-	colors[ImGuiCol_Text]                   = imWhite;
-	colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	colors[ImGuiCol_WindowBg]               = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
-	colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
-	colors[ImGuiCol_Border]                 = ImVec4(0.43f, 0.43f, 0.43f, 0.50f);
-	colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_FrameBg]                = ImVec4(0.29f, 0.29f, 0.29f, 0.54f);
-	colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.45f, 0.45f, 0.45f, 0.40f);
-	colors[ImGuiCol_FrameBgActive]          = ImVec4(0.65f, 0.65f, 0.65f, 0.67f);
-	colors[ImGuiCol_TitleBg]                = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
-	colors[ImGuiCol_TitleBgActive]          = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
-	colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
-	colors[ImGuiCol_MenuBarBg]              = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
-	colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
-	colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
-	colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
-	colors[ImGuiCol_CheckMark]              = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_SliderGrab]             = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
-	colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_Button]                 = ImVec4(0.30f, 0.30f, 0.30f, 0.40f);
-	colors[ImGuiCol_ButtonHovered]          = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	colors[ImGuiCol_ButtonActive]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-	colors[ImGuiCol_Header]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
-	colors[ImGuiCol_HeaderHovered]          = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
-	colors[ImGuiCol_HeaderActive]           = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_Separator]              = colors[ImGuiCol_Border];
-	colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
-	colors[ImGuiCol_SeparatorActive]        = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
-	colors[ImGuiCol_ResizeGrip]             = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
-	colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
-	colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-	colors[ImGuiCol_Tab]                    = ImLerp(colors[ImGuiCol_Header],       colors[ImGuiCol_TitleBgActive], 0.80f);
-	colors[ImGuiCol_TabHovered]             = colors[ImGuiCol_HeaderHovered];
-	colors[ImGuiCol_TabActive]              = ImLerp(colors[ImGuiCol_HeaderActive], colors[ImGuiCol_TitleBgActive], 0.60f);
-	colors[ImGuiCol_TabUnfocused]           = ImLerp(colors[ImGuiCol_Tab],          colors[ImGuiCol_TitleBg], 0.80f);
-	colors[ImGuiCol_TabUnfocusedActive]     = ImLerp(colors[ImGuiCol_TabActive],    colors[ImGuiCol_TitleBg], 0.40f);
-	colors[ImGuiCol_PlotLines]              = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-	colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
-	colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-	colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-	colors[ImGuiCol_TableHeaderBg]          = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
-	colors[ImGuiCol_TableBorderStrong]      = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);   // Prefer using Alpha=1.0 here
-	colors[ImGuiCol_TableBorderLight]       = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);   // Prefer using Alpha=1.0 here
-	colors[ImGuiCol_TableRowBg]             = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_TableRowBgAlt]          = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-	colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.65f, 0.65f, 0.65f, 0.35f);
-	colors[ImGuiCol_DragDropTarget]         = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-	colors[ImGuiCol_NavHighlight]           = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-	colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+	DarkStyle();
 	SetPlatformWindow(w);
 
 #ifdef _MSC_VER
@@ -200,10 +248,10 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		fileLoader->AcquireFileContents(ttf_data,ttf_size,full_path.c_str(),false);
 		return io.Fonts->AddFontFromMemoryTTF(ttf_data,ttf_size,size_pixels,config,ranges);
 	};
-	AddFont("Exo-SemiBold.ttf");
+	defaultFont=AddFont("Exo-SemiBold.ttf");
 	// NOTE: imgui expects the ranges pointer to be VERY persistent. Not clear how persistent exactly, but it is used out of the scope of
 	// this function. So we have to have a persistent variable for it!
-	static ImVector<ImWchar> glyph_ranges;
+	static ImVector<ImWchar> glyph_ranges1;
 	{
 		ImFontConfig config;
 		config.MergeMode = true;
@@ -221,14 +269,37 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
 		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);									
-		builder.BuildRanges(&glyph_ranges);							// Build the final result (ordered ranges with all the unique characters submitted)
-		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges.Data);
+		builder.BuildRanges(&glyph_ranges1);							// Build the final result (ordered ranges with all the unique characters submitted)
+		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges1.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	{
-		smallFont=AddFont("Inter-SemiBold.otf",16.f);
+		smallFont=AddFont("Inter-Medium.ttf",18.f);
+	}
+	static ImVector<ImWchar> glyph_ranges2;
+	{
+		ImFontConfig config;
+		config.MergeMode = true;
+		config.GlyphMinAdvanceX = 20.0f;
+		ImFontGlyphRangesBuilder builder;
+		builder.AddChar('a');
+		builder.AddText(ICON_FK_SEARCH);
+		builder.AddText(ICON_FK_LONG_ARROW_LEFT);
+		builder.AddText(ICON_FK_BOOK);
+		builder.AddText(ICON_FK_BOOKMARK);
+		builder.AddText(ICON_FK_FOLDER_O);
+		builder.AddText(ICON_FK_FOLDER_OPEN_O);
+		builder.AddText(ICON_FK_COG);
+		builder.AddText(ICON_FK_TIMES);
+		builder.AddText(ICON_FK_RENREN);
+		builder.AddText(ICON_FK_ARROW_LEFT);
+		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);
+		builder.BuildRanges(&glyph_ranges2);							// Build the final result (ordered ranges with all the unique characters submitted)
+		symbolFont = AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2.Data);
+		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	io.ConfigFlags|=ImGuiConfigFlags_IsTouchScreen;// VR more like a touch screen.
+	io.HoverDelayNormal = 1.0f;
 }
 
 void Gui::InvalidateDeviceObjects()
@@ -289,7 +360,7 @@ void Gui::Hide()
 
 void Gui::SetScaleMetres()
 {
-	visible = false;
+//	visible = false;
 }
 
 void Gui::ShowFont()
@@ -563,6 +634,7 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	{
 		return;
 	}
+	DarkStyle();
 	// POSSIBLY can't use ImGui's own Win32 NewFrame as we may want to override the mousepos.
 #ifdef _MSC_VER
 	ImGui_ImplWin32_NewFrame();
@@ -750,16 +822,16 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			std::shared_ptr<const clientrender::Animation> selected_animation	=geometryCache->mAnimationManager.Get(selected_uid);
 			if (selected_node.get())
 			{
-				avs::vec3 pos = selected_node->GetLocalPosition();
-				avs::vec3 gpos = selected_node->GetGlobalPosition();
-				avs::vec3 sc = selected_node->GetLocalScale();
+				vec3 pos = selected_node->GetLocalPosition();
+				vec3 gpos = selected_node->GetGlobalPosition();
+				vec3 sc = selected_node->GetLocalScale();
 				vec4 q = selected_node->GetLocalRotation();
 				vec4 gq = selected_node->GetGlobalRotation();
 				
 				vec3 v=selected_node->GetGlobalVelocity();
 		//const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
 		//auto j=nodePoses.find(node->id);
-				avs::vec3 gs = selected_node->GetGlobalScale();
+				vec3 gs = selected_node->GetGlobalScale();
 				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
@@ -994,8 +1066,15 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 {
 	const avs::NetworkSourceCounters counters = clientPipeline.source->getCounterValues();
 	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
-	clientPipeline.source->GetStreamStatus();
-	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
+	const auto& streams = clientPipeline.source->GetStreams();
+	const auto & streamStatus=clientPipeline.source->GetStreamStatus();
+	for (size_t i = 0; i < streamStatus.size(); i++)
+	{
+		float kps = streamStatus[i].bandwidthKps;
+		const auto& s = streams[i];
+		LinePrint(fmt::format("Channel {0} {1} bandwidth {2:.1f}", i,s.name,kps));
+	}
+/*	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
 	LinePrint(platform::core::QuickFormat("Current timestamp: %d", clientPipeline.pipeline.GetTimestamp()));
 	LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
 	LinePrint(platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
@@ -1006,7 +1085,7 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 	LinePrint(platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
 	LinePrint(platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
 	LinePrint(platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
-	LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));
+	LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));*/
 }
 
 void Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
@@ -1043,7 +1122,8 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 	{
 		auto &tag=videoTagDataCubeArray[i];
 		LinePrint(platform::core::QuickFormat("%d lights",tag.coreData.lightCount));
-
+		vec3 pos = tag.coreData.cameraTransform.position;
+		LinePrint(fmt::format("\t{0},{1},{2}", pos.x, pos.y, pos.z));
 		auto *gpu_tag_buffer=videoTagDataCube;
 		if(gpu_tag_buffer)
 		for(int j=0;j<tag.lights.size();j++)
@@ -1195,12 +1275,304 @@ void Gui::Update(const std::vector<vec4>& h,bool have_vr)
 	have_vr_device = have_vr;
 }
 
+bool Gui::BeginMainMenuBar()
+{
+	ImGuiContext& g = *(ImGui::GetCurrentContext());
+
+	// For the main menu bar, which cannot be moved, we honor g.Style.DisplaySafeAreaPadding to ensure text can be visible on a TV set.
+	// FIXME: This could be generalized as an opt-in way to clamp window->DC.CursorStartPos to avoid SafeArea?
+	// FIXME: Consider removing support for safe area down the line... it's messy. Nowadays consoles have support for TV calibration in OS settings.
+	//g.NextWindowData.MenuBarOffsetMinVal = ImVec2(g.Style.DisplaySafeAreaPadding.x, 4.f);
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	float height = ImGui::GetFrameHeight();
+	ImVec2 window_pos= ImVec2(0, 0), window_pos_pivot= ImVec2(0, 0);
+	float w = ImGui::GetMainViewport()->Size.x;
+	ImGui::SetNextWindowSize(ImVec2(w,48.f));
+	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always, window_pos_pivot);
+	//g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowViewport(viewport->ID);
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	bool res=ImGui::Begin("menu",0,window_flags);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.f);
+	return res;
+}
+
+void Gui::EndMainMenuBar()
+{
+	ImGui::PopStyleVar(1);
+	ImGui::End();
+	ImGui::PopStyleVar(1);
+}
+
+void Gui::ShowSettings2D()
+{
+	auto& config = client::Config::GetInstance();
+	ImGui::SetNextWindowPos(ImVec2(40, 60));						  // always at the window origin
+	float w = ImGui::GetMainViewport()->Size.x-80.0f;
+	ImGui::SetNextWindowSize(ImVec2(w, ImGui::GetWindowHeight()-80));
+	ImGui::SetNextItemWidth(w);
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGui::SameLine(ImGui::GetWindowWidth() - 80);
+	ImGui::Begin("Settings", 0, window_flags);
+	ImGui::PushFont(defaultFont);
+	ImGui::LabelText("##Settings","Settings");
+	ImGui::PopFont();
+	/*ImGui::Spacing();
+	ImGui::SameLine(ImGui::GetWindowWidth() - 40);
+
+	.if (ImGui::Button(ICON_FK_ARROW_LEFT, ImVec2(36, 24)))
+	{
+		config.SaveOptions();
+		show_options = false;
+	}*/
+	if (ImGui::BeginTable("options", 2))
+	{
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f);
+		MainOptions();
+#if TELEPORT_INTERNAL_CHECKS
+		if (config.dev_mode)
+			DevModeOptions();
+#endif
+		ImGui::EndTable();
+	}
+}
+
+void Gui::ListBookmarks()
+{
+	auto& config = client::Config::GetInstance();
+	const std::vector<client::Bookmark>& bookmarks = config.GetBookmarks();
+	auto BookmarkEntry = [this](const std::string& url, const std::string& title)
+	{
+		if (ImGui::TreeNodeEx(url.c_str(), ImGuiTreeNodeFlags_Leaf, "%s", title.c_str()))
+		{
+			if (ImGui::IsItemClicked())
+			{
+				selected_url = url;
+			}
+			else if (!ImGui::IsMouseDown(0) && selected_url == url)
+			{
+				current_url = url;
+				memcpy(url_buffer, current_url.c_str(), std::min((size_t)499, current_url.size()));
+				connectHandler(url);
+				show_bookmarks = false;
+			}
+			ImGui::TreePop();
+		}
+	};
+	const std::vector<std::string>& recent = config.GetRecent();
+	for (int i = 0; i < recent.size(); i++)
+	{
+		const std::string& r = recent[i];
+		BookmarkEntry(r, r);
+	}
+	for (int i = 0; i < bookmarks.size(); i++)
+	{
+		const client::Bookmark& b = bookmarks[i];
+		BookmarkEntry(b.url, b.title);
+	}
+}
+
+void Gui::MenuBar2D()
+{
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.00f, 0.00f, 0.0f));
+	if (ImGui::Button(ICON_FK_RENREN, ImVec2(36, 24)))
+	{
+		cancelConnectHandler();
+	}
+	if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		TIMED_TOOLTIP("Return to lobby");
+	auto& config = client::Config::GetInstance();
+	{
+		// TODO: Temporary
+		avs::uid server_uid = 1;
+		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+		bool connecting = sessionClient->IsConnecting();
+		bool connected = sessionClient->IsConnected();
+		ImGui::SameLine();
+		ImGui::PushItemWidth(ImGui::GetWindowWidth() - 5*40-8);
+		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
+		{
+			current_url = url_buffer;
+		}
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		if (!connecting)
+		{
+			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(36, 24)))
+			{
+				current_url = url_buffer;
+				connectHandler(current_url);
+			}
+			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+				TIMED_TOOLTIP("Connect");
+		}
+		else
+		{
+			if (ImGui::Button(ICON_FK_TIMES, ImVec2(36, 24)))
+			{
+				cancelConnectHandler();
+			}
+			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+				TIMED_TOOLTIP("Cancel connection");
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(36, 24)))
+		{
+			show_bookmarks = !show_bookmarks;
+			selected_url = "";
+			if (show_bookmarks)
+			{
+				show_options = false;
+				ImVec2 pos=ImGui::GetCursorScreenPos();
+				bookmarks_pos = { ImGui::GetWindowWidth(),pos.y };
+			}
+		}
+		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			TIMED_TOOLTIP("Bookmarks");
+		ImGui::SameLine();
+		if (ImGui::Button(ICON_FK_COG, ImVec2(36, 24)))
+		{
+			show_options = !show_options;
+			if (!show_options)
+			{
+				show_bookmarks = false;
+				config.SaveOptions();
+			}
+		}
+		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			TIMED_TOOLTIP("Settings");
+	}
+	ImGui::PopStyleColor();
+}
+
+void Gui::Render2D(GraphicsDeviceContext& deviceContext)
+{
+	LightStyle();
+#ifdef _MSC_VER
+	ImGui_ImplWin32_NewFrame();
+#endif
+#ifdef __ANDROID__
+	ImGui_ImplAndroid_NewFrame();
+#endif
+	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
+	ImGui::NewFrame();
+#ifdef __ANDROID__
+	ImGuiIO& io = ImGui::GetIO();
+	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
+	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
+	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
+#endif
+	ImGui::PushFont(smallFont);
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	
+	//ImGuiBegin("Teleport VR", nullptr, window_flags);
+	static bool show_demo_window = false;
+	if(show_demo_window)
+		ImGui::ShowDemoWindow(&show_demo_window);
+	BeginMainMenuBar();
+	{
+		MenuBar2D();
+	}
+	EndMainMenuBar();
+	ImGui::End();
+	if (show_options)
+	{
+		ShowSettings2D();
+	}
+	else if(show_bookmarks)
+	{
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar
+										|ImGuiWindowFlags_NoDecoration
+										|ImGuiWindowFlags_AlwaysAutoResize
+										|ImGuiWindowFlags_NoSavedSettings
+										|ImGuiWindowFlags_NoFocusOnAppearing
+										|ImGuiWindowFlags_NoNav;
+
+		static float bookmarks_width = 0.0f;
+		ImVec2 pos = { bookmarks_pos.x - bookmarks_width ,bookmarks_pos.y };
+		ImGui::SetNextWindowPos(pos);
+
+		ImGui::Begin("Bookmarks", 0, window_flags);
+		bookmarks_width = ImGui::GetWindowWidth();
+		ListBookmarks();
+		ImGui::End();
+	}
+	//ImGuiEnd();
+	ImGui::PopFont();
+	ImGuiIO& io			= ImGui::GetIO();
+	ImVec2 mouse_pos	= io.MousePos;
+	//ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+	ImGui::Render();
+	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+}
+
+void Gui::MainOptions()
+{
+	auto& config = client::Config::GetInstance();
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::LabelText("##LobbyView", "Lobby View");
+	ImGui::TableNextColumn();
+	int e = (int)config.options.lobbyView;
+	ImGui::RadioButton("White", &e, 0);
+	ImGui::SameLine();
+	ImGui::RadioButton("Neon", &e, 1);
+	if ((client::LobbyView)e != config.options.lobbyView)
+	{
+		config.options.lobbyView = (client::LobbyView)e;
+	}
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::PushItemWidth(300.0f);
+	ImGui::LabelText("##StartupConnection", "Startup Connection");
+	ImGui::TableNextColumn();
+	auto conn = magic_enum::enum_entries<teleport::client::StartupConnectOption>();
+	int c = (int)config.options.startupConnectOption;
+	int i = 0;
+	for (const auto& e : conn)
+	{
+		std::string ename = fmt::format("{0}", e.second);
+		ImGui::RadioButton(ename.c_str(), &c, i++);
+		ImGui::SameLine();
+	}
+	if ((client::StartupConnectOption)c != config.options.startupConnectOption)
+	{
+		config.options.startupConnectOption = (client::StartupConnectOption)c;
+	}
+}
+
+void Gui::DevModeOptions()
+{
+	auto& config = client::Config::GetInstance();
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::LabelText("##labelGeometryOffline", "Geometry Visible Offline");
+	ImGui::TableNextColumn();
+	ImGui::Checkbox("##showGeometryOffline", &config.options.showGeometryOffline);
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::LabelText("##labelGui2D", "2D User Interface");
+	ImGui::TableNextColumn();
+	ImGui::Checkbox("##Gui2D", &config.options.gui2D);
+}
 void Gui::Render(GraphicsDeviceContext& deviceContext)
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;
 	if(!visible)
 		return;
+	auto& config = client::Config::GetInstance();
+	if (config.options.gui2D)
+	{
+		Render2D(deviceContext);
+		return;
+	}
+	DarkStyle();
 	// Start the Dear ImGui frame
 #ifdef _MSC_VER
 	ImGui_ImplWin32_NewFrame();
@@ -1286,14 +1658,11 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				keys_pressed.erase(keys_pressed.begin());
 			}
 		}
-		auto &config=client::Config::GetInstance();
-		static bool show_bookmarks=false;
-		static bool show_options=false;
 		if(show_options)
 		{
             ImGui::Spacing();
             ImGui::SameLine(ImGui::GetWindowWidth()-80);
-    //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);
+
 			if(ImGui::Button(ICON_FK_ARROW_LEFT,ImVec2(64,32)))
 			{
 				config.SaveOptions();
@@ -1301,48 +1670,13 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 			}
 			if (ImGui::BeginTable("options", 2))
 			{
-				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f); // Default to 100.0f
-				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f); // Default to 200.0f
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::LabelText("##LobbyView", "Lobby View");
-				ImGui::TableNextColumn();
-				int e = (int)config.options.lobbyView;
-				ImGui::RadioButton("White", &e, 0);
-				ImGui::SameLine();
-				ImGui::RadioButton("Neon", &e, 1);
-				if ((client::LobbyView)e != config.options.lobbyView)
-				{
-					config.options.lobbyView = (client::LobbyView)e;
-				}
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::PushItemWidth(300.0f);
-				ImGui::LabelText("##StartupConnection", "Startup Connection");
-				ImGui::TableNextColumn();
-				auto conn = magic_enum::enum_entries<teleport::client::StartupConnectOption>();
-				int c = (int)config.options.startupConnectOption;
-				int i = 0;
-				for (const auto& e : conn)
-				{
-					std::string ename = fmt::format("{0}", e.second);
-					ImGui::RadioButton(ename.c_str(), &c, i++);
-					ImGui::SameLine();
-				}
-				if ((client::StartupConnectOption)c != config.options.startupConnectOption)
-				{
-					config.options.startupConnectOption = (client::StartupConnectOption)c;
-				}
+				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f);
+				MainOptions();
 
 #if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)
-				{
-					ImGui::TableNextRow();
-					ImGui::TableNextColumn();
-					ImGui::LabelText("##labelGeometryOffline", "Geometry Visible Offline");
-					ImGui::TableNextColumn();
-					ImGui::Checkbox("##showGeometryOffline", &config.options.showGeometryOffline);
-				}
+					DevModeOptions();
 				#endif
 				ImGui::EndTable();
 			}
@@ -1365,37 +1699,8 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				ImGui::SameLine();
 				ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 				ImGui::BeginChild("Bookmarks", ImVec2(-1,-1), true, window_flags);
-
+				ListBookmarks();
 				
-				auto BookmarkEntry = [this](const std::string &url,const std::string &title)
-				{
-					if(ImGui::TreeNodeEx(url.c_str(), ImGuiTreeNodeFlags_Leaf,"%s",title.c_str()))
-					{
-						if (ImGui::IsItemClicked())
-						{
-							selected_url=url;
-						}
-						else if(!ImGui::IsMouseDown(0)&&selected_url==url)
-						{
-							current_url=url;
-							memcpy(url_buffer,current_url.c_str(),std::min((size_t)499,current_url.size()));
-							connectHandler(url);
-							show_bookmarks=false;
-						}
-						ImGui::TreePop();
-					}
-				};
-				const std::vector<std::string> &recent=config.GetRecent();
-				for (int i = 0; i < recent.size(); i++)
-				{
-					const std::string &r=recent[i];
-					BookmarkEntry(r,r);
-				}
-				for (int i = 0; i < bookmarks.size(); i++)
-				{
-					const client::Bookmark &b=bookmarks[i];
-					BookmarkEntry(b.url,b.title);
-				}
 				ImGui::EndChild();
 			}
 			else
@@ -1497,9 +1802,6 @@ void Gui::Render(GraphicsDeviceContext& deviceContext)
 				}
 			}
 		}
-		//ShowFont();
-		//ImGui_ImplPlatform_DebugInfo();
-		//hasFocus = ImGui::IsAnyItemFocused(); Note: does not work.
 		ImGuiEnd();
 	}
 	

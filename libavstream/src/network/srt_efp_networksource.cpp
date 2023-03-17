@@ -94,11 +94,11 @@ Result SrtEfpNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 
 	setNumOutputSlots(numOutputs);
 
-	m_data->m_streams = std::move(streams);
+	m_streams = std::move(streams);
 
 	for (size_t i = 0; i < numOutputs; ++i)
 	{
-		const auto& stream = m_data->m_streams[i];
+		const auto& stream = m_streams[i];
 		m_data->m_streamNodeMap[stream.id] = i;
 	}
 
@@ -237,7 +237,7 @@ Result SrtEfpNetworkSource::deconfigure()
 	m_data->m_counters = {};
 	m_data->m_remote = {};
 	m_data->m_streamNodeMap.clear();
-	m_data->m_streams.clear();
+	m_streams.clear();
 
 	m_data->m_tempBuffer.clear();
 

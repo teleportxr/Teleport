@@ -37,9 +37,9 @@ namespace clientrender
 			:i(i), j(j), k(k), s(s)
 		{}
 		
-		quat(float angle, const avs::vec3& axis)
+		quat(float angle, const vec3& axis)
 		{
-			avs::vec3 scaledAxis = axis * sinf(angle / 2.0f);
+			vec3 scaledAxis = axis * sinf(angle / 2.0f);
 			s = cosf(angle / 2.0f);
 			i = scaledAxis.x;
 			j = scaledAxis.y;
@@ -47,10 +47,6 @@ namespace clientrender
 
 			Normalise();
 		}
-
-		quat(avs::vec4 vec)
-			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
-		{}
 
 		quat(vec4 vec)
 			:i(vec.x), j(vec.y), k(vec.z), s(vec.w)
@@ -78,9 +74,9 @@ namespace clientrender
 			return quat(i / length, j / length, k / length, s / length);
 		}
 
-		void ToAxisAngle(avs::vec3& outAxis, float& outAngle) const
+		void ToAxisAngle(vec3& outAxis, float& outAngle) const
 		{
-			avs::vec3 result = avs::vec3(i, j, k);
+			vec3 result = vec3(i, j, k);
 
 			float theta = 2 * acosf(s);
 			if(theta > 0)
@@ -92,14 +88,14 @@ namespace clientrender
 			outAngle = theta;
 		}
 
-		avs::vec3 GetIJK() const
+		vec3 GetIJK() const
 		{
-			return normalize(avs::vec3(i, j, k));
+			return normalize(vec3(i, j, k));
 		}
 
-		avs::vec3 RotateVector(const avs::vec3 rhs) const
+		vec3 RotateVector(const vec3 rhs) const
 		{
-			avs::vec3 quatVec(i, j, k);
+			vec3 quatVec(i, j, k);
 
 			return
 				quatVec * 2.0f * dot(quatVec,rhs) +
@@ -165,7 +161,7 @@ namespace clientrender
 			);
 		}
 
-		quat operator*(const avs::vec3& other) const
+		quat operator*(const vec3& other) const
 		{
 			return quat(
 				(+(s * other.x) + (j * other.z) - (k * other.y)),	//I
@@ -185,12 +181,12 @@ namespace clientrender
 			*this = *this * other;
 		}
 
-		void operator*=(const avs::vec3& other)
+		void operator*=(const vec3& other)
 		{
 			*this = *this * other;
 		}
 
-		const quat &operator=(const avs::vec4 &vec)
+		const quat &operator=(const vec4 &vec)
 		{
 			s = vec.w;
 			i = vec.x;
@@ -311,7 +307,7 @@ namespace clientrender
 			)
 		{}
 
-		mat4_deprecated(const avs::vec4& a, const avs::vec4& b, const avs::vec4& c, const avs::vec4& d)
+		mat4_deprecated(const vec4& a, const vec4& b, const vec4& c, const vec4& d)
 			:mat4_deprecated
 			(a.x, a.y, a.z, a.w,
 			 b.x, b.y, b.z, b.w,
@@ -386,9 +382,9 @@ namespace clientrender
 			vec4 output(transform_i * input.x + transform_j * input.y + transform_k * input.z + transform_l * input.w);
 			return output;
 		}
-		static avs::vec3 GetTranslation(const mat4& m) 
+		static vec3 GetTranslation(const mat4& m) 
 		{
-			return avs::vec3(m._m03, m._m13, m._m23);
+			return vec3(m._m03, m._m13, m._m23);
 		}
 
 		static clientrender::quat GetRotation(const mat4 &m) 
@@ -397,13 +393,13 @@ namespace clientrender
 			return clientrender::quat(0,0,0,1.0f);
 		}
 
-		static avs::vec3 GetScale(const mat4 &m) 
+		static vec3 GetScale(const mat4 &m) 
 		{
-			avs::vec3 x(m._m00,m._m10,m._m20);
-			avs::vec3 y(m._m01,m._m11,m._m21);
-			avs::vec3 z(m._m02,m._m12,m._m22);
+			vec3 x(m._m00,m._m10,m._m20);
+			vec3 y(m._m01,m._m11,m._m21);
+			vec3 z(m._m02,m._m12,m._m22);
 
-			return avs::vec3(length(x), length(y), length(z));
+			return vec3(length(x), length(y), length(z));
 		} 
 
 
@@ -427,7 +423,7 @@ namespace clientrender
 			};
 		}
 
-		static mat4 Translation(const avs::vec3& translation)
+		static mat4 Translation(const vec3& translation)
 		{
 			return 
 			{
@@ -448,7 +444,7 @@ namespace clientrender
 			};
 		}
 
-		static mat4 Rotation(float angle, const avs::vec3& axis)
+		static mat4 Rotation(float angle, const vec3& axis)
 		{
 			mat4 result;
 			float c_angle = static_cast<float>(cos(angle));
@@ -482,7 +478,7 @@ namespace clientrender
 			return result;
 		}
 
-		static mat4 Scale(const avs::vec3& scale)
+		static mat4 Scale(const vec3& scale)
 		{
 			return {
 				scale.x, 0.0f, 0.0f, 0.0f,
@@ -544,9 +540,9 @@ namespace clientrender
 	{
 		return GetVerticalFOVFromHorizontal(horizontal * DEG_TO_RAD, aspect) * RAD_TO_DEG;
 	}
-	inline avs::vec3 LocalToGlobal(const avs::Pose &pose,const avs::vec3& local)
+	inline vec3 LocalToGlobal(const avs::Pose &pose,const vec3& local)
 	{
-		avs::vec3 ret = pose.position;
+		vec3 ret = pose.position;
 		quat *q=(clientrender::quat*)&pose.orientation;
 		ret+=q->RotateVector(local);
 		return ret;

@@ -5,10 +5,10 @@
 using namespace clientrender;
 
 Transform::Transform()
-	: Transform(avs::vec3(), quat(0, 0, 0, 1.0f), avs::vec3(1.0f, 1.0f, 1.0f))
+	: Transform(vec3(), quat(0, 0, 0, 1.0f), vec3(1.0f, 1.0f, 1.0f))
 {}
 
-Transform::Transform(avs::vec3 translation, quat rotation, avs::vec3 scale)
+Transform::Transform(vec3 translation, quat rotation, vec3 scale)
 	: m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
 {
 	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_VERTEX);
@@ -58,16 +58,16 @@ Transform& Transform::operator= (const Transform& transform)
 
 Transform Transform::operator*(const Transform& other) const
 {
-	avs::vec3 scale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
+	vec3 scale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
 	quat rotation = other.m_Rotation * m_Rotation;
-	avs::vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * abs(other.m_Scale));
+	vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * abs(other.m_Scale));
 
 	return Transform(translation, rotation, scale);
 }
 
-avs::vec3 Transform::LocalToGlobal(const avs::vec3& local)
+vec3 Transform::LocalToGlobal(const vec3& local)
 {
-	avs::vec3 ret = m_Translation;
+	vec3 ret = m_Translation;
 	ret+=m_Rotation.RotateVector(local);
 	return ret;
 }
@@ -77,7 +77,7 @@ void Transform::UpdateModelMatrix()
 	m_ModelMatrix = mat4_deprecated::Translation(m_Translation) * mat4_deprecated::Rotation(m_Rotation) * mat4_deprecated::Scale(m_Scale);
 }
 
-bool Transform::UpdateModelMatrix(const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
+bool Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
 	// zero scale is valid.
 	/*if (abs(scale.x) < 0.0001f)

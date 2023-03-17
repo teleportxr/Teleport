@@ -15,8 +15,10 @@ namespace avs
 	/*! Network source stream data. */
 	struct NetworkSourceStream
 	{
-		/*! id */
+		//! id to match with incoming channels.
 		uint32_t id = UINT32_MAX;
+		//! Name for debugging.
+		std::string name;
 	};
 
 	/*! Network source parameters. */
@@ -86,8 +88,13 @@ namespace avs
 		{
 			return streamStatus;
 		}
+		const std::vector<NetworkSourceStream>& GetStreams()
+		{
+			return m_streams;
+		}
 	protected:
 		std::vector<StreamStatus> streamStatus;
+		std::vector<NetworkSourceStream> m_streams;
 	};
 
 } // avs

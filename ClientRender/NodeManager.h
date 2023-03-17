@@ -49,7 +49,7 @@ namespace clientrender
 		//Make all nodes in the passed list visible, while hiding the nodes that are absent.
 		void SetVisibleNodes(const std::vector<avs::uid> visibleNodes);
 
-		bool UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const clientrender::quat& rotation, const avs::vec3& scale);
+		bool UpdateNodeTransform(avs::uid nodeID, const vec3& translation, const clientrender::quat& rotation, const vec3& scale);
 
 		void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
 		void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);

@@ -55,3 +55,5 @@ html_static_path = ['_static']
 
 breathe_default_project = "TeleportVR"
 breathe_show_include = True
+
+cpp_index_common_prefix = ['avs::','teleport::','teleport::core','teleport::server','teleport::client','teleport::clientrender']

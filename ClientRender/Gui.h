@@ -17,9 +17,16 @@ namespace clientrender
 }
 namespace teleport
 {
+	enum class ColourStyle
+	{
+		NONE,
+		LIGHT_STYLE,
+		DARK_STYLE
+	};
 	namespace client
 	{
 		class SessionClient;
+		class ClientPipeline;
 	}
 	#ifdef _MSC_VER
 	typedef void* PlatformWindow;
@@ -29,6 +36,8 @@ namespace teleport
 	#endif
 	class Gui
 	{
+		bool BeginMainMenuBar();
+		void EndMainMenuBar();
 	public:
 		Gui()
 		{
@@ -41,6 +50,7 @@ namespace teleport
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
 		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void Render2D(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
 		void LinePrint(const std::string& str, const float* clr = nullptr);
 		void LinePrint(const char* txt,const float *clr=nullptr);
@@ -76,7 +86,7 @@ namespace teleport
 		void Show();
 		void Hide();
 		void SetScaleMetres();
-		bool HasFocus() const
+		bool IsVisible() const
 		{
 			return visible;
 		}
@@ -95,6 +105,14 @@ namespace teleport
 		// Replaces Windows GetCursorPos if necessary.
 		static int GetCursorPos(long p[2]) ;
 	protected:
+		void LightStyle();
+		void DarkStyle();
+		void ShowSettings2D();
+		void MenuBar2D();
+		void MainOptions();
+		void ListBookmarks();
+		void DevModeOptions();
+		ColourStyle style= ColourStyle::NONE;
 		void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice);
 
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone> n, const char* search_text); 
@@ -105,6 +123,7 @@ namespace teleport
 		vec3 view_pos;
 		vec3 view_dir;
 		vec3 menu_pos;
+		vec2 bookmarks_pos;
 		bool in_tabs=false;
 		float azimuth=0.0f, tilt = 0.0f;
 		std::string current_url;
@@ -125,5 +144,7 @@ namespace teleport
 		bool show_inspector=false;
 		std::vector<vec4> hand_pos_press;
 		std::string selected_url;
+		bool show_bookmarks = false;
+		bool show_options = false;
 	};
 }

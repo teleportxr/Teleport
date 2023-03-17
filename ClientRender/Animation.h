@@ -19,16 +19,16 @@ public:
 
 	size_t boneIndex = -1; //Index of the bone used in the bones list.
 
-	std::vector<avs::Vector3Keyframe> positionKeyframes;
-	std::vector<avs::Vector4Keyframe> rotationKeyframes;
+	std::vector<teleport::core::Vector3Keyframe> positionKeyframes;
+	std::vector<teleport::core::Vector4Keyframe> rotationKeyframes;
 
 	void seekTime(std::shared_ptr<Bone> bone, float time) const;
 private:
-	void setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes) const;
-	void setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes) const;
+	void setPositionToTime(float time, vec3& bonePosition, const std::vector<teleport::core::Vector3Keyframe>& keyframes) const;
+	void setRotationToTime(float time, quat& boneRotation, const std::vector<teleport::core::Vector4Keyframe>& keyframes) const;
 
-	size_t getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes) const;
-	size_t getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes) const;
+	size_t getNextKeyframeIndex(float time, const std::vector<teleport::core::Vector3Keyframe>& keyframes) const;
+	size_t getNextKeyframeIndex(float time, const std::vector<teleport::core::Vector4Keyframe>& keyframes) const;
 	float getTimeBlend(float currentTime, float previousTime, float nextTime) const;
 };
 

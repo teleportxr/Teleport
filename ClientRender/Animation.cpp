@@ -22,7 +22,7 @@ namespace clientrender
 		bone->SetLocalTransform(transform);
 	}
 
-	void BoneKeyframeList::setPositionToTime(float time, avs::vec3& bonePosition, const std::vector<avs::Vector3Keyframe>& keyframes) const
+	void BoneKeyframeList::setPositionToTime(float time, vec3& bonePosition, const std::vector<teleport::core::Vector3Keyframe>& keyframes) const
 	{
 		if(keyframes.size() == 0)
 		{
@@ -36,15 +36,15 @@ namespace clientrender
 		}
 
 		size_t nextKeyframeIndex = getNextKeyframeIndex(time, keyframes);
-		const avs::Vector3Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
-		const avs::Vector3Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
+		const teleport::core::Vector3Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
+		const teleport::core::Vector3Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
 
 		//Linear interpolation between previous keyframe and next keyframe.
 		float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
 		bonePosition = (1.0f - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
 	}
 
-	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<avs::Vector4Keyframe>& keyframes) const
+	void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<teleport::core::Vector4Keyframe>& keyframes) const
 	{
 		if(keyframes.size() == 0)
 		{
@@ -58,8 +58,8 @@ namespace clientrender
 		}
 
 		size_t nextKeyframeIndex = getNextKeyframeIndex(time, keyframes);
-		const avs::Vector4Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
-		const avs::Vector4Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
+		const teleport::core::Vector4Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
+		const teleport::core::Vector4Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
 
 		//Linear interpolation between previous keyframe and next keyframe.
 		float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
@@ -69,7 +69,7 @@ namespace clientrender
 		//boneRotation = quat::Slerp(previousKeyframe.value, nextKeyframe.value, timeBlend);
 	}
 
-	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector3Keyframe>& keyframes) const
+	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<teleport::core::Vector3Keyframe>& keyframes) const
 	{
 		for(size_t i = 1; i < keyframes.size(); i++)
 		{
@@ -82,7 +82,7 @@ namespace clientrender
 		return keyframes.size() - 1;
 	}
 
-	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<avs::Vector4Keyframe>& keyframes) const
+	size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<teleport::core::Vector4Keyframe>& keyframes) const
 	{
 		for(size_t i = 1; i < keyframes.size(); i++)
 		{

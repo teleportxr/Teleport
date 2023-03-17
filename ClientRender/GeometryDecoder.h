@@ -6,7 +6,7 @@
 #include <map>
 #include <thread>
 
-namespace avs
+namespace teleport::core
 {
 	struct FloatKeyframe;
 	struct Vector3Keyframe;
@@ -81,9 +81,9 @@ private:
 	avs::Result decodeFontAtlas(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeTextCanvas(GeometryDecodeData& geometryDecodeData);
 
-	avs::Result decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::FloatKeyframe>& keyframes);
-	avs::Result decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector3Keyframe>& keyframes);
-	avs::Result decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector4Keyframe>& keyframes);
+	avs::Result decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::FloatKeyframe>& keyframes);
+	avs::Result decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector3Keyframe>& keyframes);
+	avs::Result decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector4Keyframe>& keyframes);
 	
 	void saveBuffer(GeometryDecodeData& geometryDecodeData, const std::string& name);
 
