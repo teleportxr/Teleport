@@ -40,7 +40,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numInputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {});
+		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) override;
 
 		/*!
 		 * Deconfigure network sink and release all associated resources.
@@ -61,9 +61,9 @@ namespace avs
 		//! Get node display name (for reporting & profiling).
 		const char* getDisplayName() const override { return "WebRtcNetworkSink"; }
 
-		NetworkSinkCounters getCounters() const;
-		void setProcessingEnabled(bool enable);
-		bool isProcessingEnabled() const;
+		NetworkSinkCounters getCounters() const override;
+		void setProcessingEnabled(bool enable) override;
+		bool isProcessingEnabled() const override;
 
 		//! IF there is a message to send reliably to the peer, this will fill it in.
 		bool getNextStreamingControlMessage(std::string &msg) override;
@@ -76,7 +76,7 @@ namespace avs
 		void SendConfigMessage(const std::string& str);
 		
 	protected:
-		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex);
+		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) override;
 		Result sendData(const std::vector<uint8_t>& subPacket);
 		std::vector<NetworkSinkStream> m_streams;
 		NetworkSinkCounters m_counters;

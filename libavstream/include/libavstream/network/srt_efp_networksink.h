@@ -39,7 +39,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numInputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {});
+		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) override;
 
 		/*!
 		 * Deconfigure network sink and release all associated resources.

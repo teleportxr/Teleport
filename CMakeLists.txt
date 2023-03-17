@@ -143,6 +143,11 @@ set(NO_WEBSOCKET OFF)
 set(NO_MEDIA OFF)
 set(NO_EXAMPLES ON)
 set(NO_TESTS ON)
+if(TELEPORT_UNIX)
+#following libdatachannel's build instructions for Linux:
+	set(USE_GNUTLS OFF)
+	set(USE_NICE OFF)
+endif()
 
 add_subdirectory(thirdparty/libdatachannel)
 set_target_properties( datachannel PROPERTIES FOLDER thirdparty/datachannel)
