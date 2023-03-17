@@ -136,11 +136,11 @@ This qualifier refers to the how the data is organised in memory.
 
 .. image:: https://gist.githubusercontent.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb/raw/656de03d44d16517f9067943111c0a30bfa8ae05/YUV_formats.png
   :width: 800
-  :alt:
+  :alt: Layouts of alternative colour formats.
 
 .. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Yuv420.svg/800px-Yuv420.svg.png
   :width: 800
-  :alt:
+  :alt: Layout of a YUV420 image.
 
 Reference: `Video LAN Wiki YUV <https://wiki.videolan.org/YUV>`_
 

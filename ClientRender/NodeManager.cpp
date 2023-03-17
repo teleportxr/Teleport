@@ -326,7 +326,7 @@ void NodeManager::SetVisibleNodes(const std::vector<avs::uid> visibleNodes)
 	}
 }
 
-bool NodeManager::UpdateNodeTransform(avs::uid nodeID, const avs::vec3& translation, const quat& rotation, const avs::vec3& scale)
+bool NodeManager::UpdateNodeTransform(avs::uid nodeID, const vec3& translation, const quat& rotation, const vec3& scale)
 {
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())

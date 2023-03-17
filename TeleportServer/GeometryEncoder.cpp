@@ -462,7 +462,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 			put(node->lightColour);
 			put(node->lightRadius);
 			put(node->lightRange);
-			avs::vec3 lightDirection = node->lightDirection;
+			vec3 lightDirection = node->lightDirection;
 			avs::ConvertPosition(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
 			put(lightDirection);
 			put(node->lightType);
@@ -561,7 +561,7 @@ avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*,
 avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterface*, avs::uid animationID)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
-	const avs::Animation* animation = geometryStore->getAnimation(animationID, geometryStreamingService->getClientAxesStandard());
+	const teleport::core::Animation* animation = geometryStore->getAnimation(animationID, geometryStreamingService->getClientAxesStandard());
 	if (animation)
 	{
 		putPayloadType(avs::GeometryPayloadType::Animation,animationID);
@@ -573,7 +573,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterf
 		put((uint8_t*)animation->name.data(), nameLength);
 
 		put(animation->boneKeyframes.size());
-		for (const avs::TransformKeyframeList& transformKeyframe : animation->boneKeyframes)
+		for (const teleport::core::TransformKeyframeList& transformKeyframe : animation->boneKeyframes)
 		{
 			put(transformKeyframe.boneIndex);
 
@@ -885,10 +885,10 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<avs::FloatKeyframe>& keyframes)
+avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
 	put(keyframes.size());
-	for (const avs::FloatKeyframe& keyframe : keyframes)
+	for (const teleport::core::FloatKeyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
 		put(keyframe.value);
@@ -897,10 +897,10 @@ avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<avs::FloatKe
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<avs::Vector3Keyframe>& keyframes)
+avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
 	put(keyframes.size());
-	for (const avs::Vector3Keyframe& keyframe : keyframes)
+	for (const teleport::core::Vector3Keyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
 		put(keyframe.value);
@@ -909,10 +909,10 @@ avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<avs::Vecto
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeVector4Keyframes(const std::vector<avs::Vector4Keyframe>& keyframes)
+avs::Result GeometryEncoder::encodeVector4Keyframes(const std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
 	put(keyframes.size());
-	for (const avs::Vector4Keyframe& keyframe : keyframes)
+	for (const teleport::core::Vector4Keyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
 		put(keyframe.value);

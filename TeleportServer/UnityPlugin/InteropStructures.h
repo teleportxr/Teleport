@@ -30,8 +30,8 @@ struct InteropNode
 	avs::uid dataID;
 	avs::uid skinID;
 
-	avs::vec4 lightColour;
-	avs::vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
+	vec4 lightColour;
+	vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
 	float lightRadius;				// i.e. light is a sphere, where lightColour is the irradiance on its surface.
 	float lightRange;
 	uint8_t lightType;
@@ -187,7 +187,7 @@ struct InteropMaterial
 	avs::TextureAccessor normalTexture;
 	avs::TextureAccessor occlusionTexture;
 	avs::TextureAccessor emissiveTexture;
-	avs::vec3 emissiveFactor;
+	vec3 emissiveFactor;
 
 	size_t extensionCount;
 	avs::MaterialExtensionIdentifier* extensionIDs;
@@ -280,12 +280,12 @@ struct InteropTransformKeyframe
 	size_t boneIndex=0;
 
 	int numPositions=0;
-	avs::Vector3Keyframe* positionKeyframes=nullptr;
+	teleport::core::Vector3Keyframe* positionKeyframes=nullptr;
 
 	int numRotations=0;
-	avs::Vector4Keyframe* rotationKeyframes=nullptr;
+	teleport::core::Vector4Keyframe* rotationKeyframes=nullptr;
 
-	operator avs::TransformKeyframeList() const
+	operator teleport::core::TransformKeyframeList() const
 	{
 		return
 		{
@@ -303,7 +303,7 @@ struct InteropTransformAnimation
 	int64_t boneCount;
 	InteropTransformKeyframe* boneKeyframes=nullptr;
 
-	operator avs::Animation() const
+	operator teleport::core::Animation() const
 	{
 		return
 		{
@@ -321,7 +321,7 @@ struct InteropTextCanvas
 	float lineHeight=0.0f;
 	float width=0;
 	float height=0;
-	avs::vec4 colour;
+	vec4 colour;
 };
 
 namespace teleport

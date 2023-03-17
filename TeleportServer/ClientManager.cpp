@@ -115,11 +115,16 @@ using namespace server;
 
 	void ClientManager::removeClient(ClientMessaging* client)
 	{
-		std::lock_guard<std::mutex> lock(mNetworkMutex);
 		for (int i = 0; i < (int)mClients.size(); ++i)
 		{
 			if (mClients[i]->clientID == client->clientID)
 			{
+				if (mClients[i]->peer)
+				{
+					TELEPORT_COUT << "Stopping session." << std::endl;
+					enet_peer_reset(mClients[i]->peer);
+					mClients[i]->peer = nullptr;
+				}
 				mClients.erase(mClients.begin() + i);
 				int index = client->streamingPort - (mHost->address.port + 2);
 				if (index >= 0)
@@ -204,17 +209,27 @@ using namespace server;
 				//std::lock_guard<std::mutex> lock(mDataMutex);
 				elapsedTime = avs::Platform::getTimeElapsedInSeconds(mLastTickTimestamp, timestamp);
 			}
-
+			handleStoppedClients();
 			// Proceed only if the main thread hasn't hung.
 			if (elapsedTime < 1.0)
 			{
-				handleMessages();
+				receiveMessages();
 				handleStreaming();
 			}
 		}
 	}
-
-	void ClientManager::handleMessages()
+	void ClientManager::handleStoppedClients()
+	{
+		std::lock_guard<std::mutex> lock(mNetworkMutex);
+		for (auto client : mClients)
+		{
+			if (client->isStopped())
+			{
+				removeClient(client);
+			}
+		}
+	}
+	void ClientManager::receiveMessages()
 	{
 		ENetEvent event;
 		try
@@ -237,6 +252,7 @@ using namespace server;
 							// Was the message from this client?
 							if (client->clientIP == std::string(peerIP))
 							{
+								// thread-safe queue
 								client->eventQueue.push(event);
 								break;
 							}

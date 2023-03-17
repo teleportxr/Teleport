@@ -12,8 +12,8 @@ namespace teleport
 
 		struct CameraInfo
 		{
-			avs::vec4 orientation = { 0, 0, 0, 1 };
-			avs::vec3 position = { 0, 0, 0 };
+			vec4 orientation = { 0, 0, 0, 1 };
+			vec3 position = { 0, 0, 0 };
 			float fov = 90;
 			float width = 1920;
 			float height = 1080;

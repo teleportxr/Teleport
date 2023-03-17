@@ -15,7 +15,7 @@ namespace teleport
 			float lineHeight = 0.0f;
 			float width = 0.0f;
 			float height = 0.0f;
-			avs::vec4 colour = { 1.f,1.f,1.f,1.f };
+			vec4 colour = { 1.f,1.f,1.f,1.f };
 			std::string text;
 		};
 	}

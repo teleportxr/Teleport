@@ -78,8 +78,8 @@ namespace clientrender
 			vec3 view_dir;
 			float angle = 0.0f;
 			vec3 pos_offset[2];
-			avs::vec3 position[2];
-			avs::vec4 orientation[2];
+			vec3 position[2];
+			vec4 orientation[2];
 		};
 		ControllerSim controllerSim;
 		platform::crossplatform::Camera			camera;
@@ -103,16 +103,19 @@ namespace clientrender
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
 		bool using_vr = true;
-		avs::uid local_left_hand_uid=0;
-		clientrender::Transform palm_to_hand_l;
-		avs::uid local_right_hand_uid=0;
-		clientrender::Transform palm_to_hand_r;
-		avs::uid hand_skin_uid=0;
-		vec3 index_finger_offset;
 
-		std::shared_ptr<clientrender::Material> mFlatColourMaterial;
-
-		//avs::vec3 bodyOffsetFromHead; //Offset of player body from head pose.
+		struct LobbyGeometry
+		{
+			avs::uid left_root_node_uid = 0;
+			avs::uid right_root_node_uid = 0;
+			avs::uid local_left_hand_uid = 0;
+			clientrender::Transform palm_to_hand_l;
+			avs::uid local_right_hand_uid = 0;
+			clientrender::Transform palm_to_hand_r;
+			avs::uid hand_skin_uid = 0;
+			vec3 index_finger_offset;
+		};
+		LobbyGeometry lobbyGeometry;
 
 		static constexpr float HFOV = 90;
 		float gamma=0.44f;

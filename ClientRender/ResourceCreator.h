@@ -63,7 +63,7 @@ namespace clientrender
 		void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
 		void CreateSkin(avs::uid id, avs::Skin& skin) override;
-		void CreateAnimation(avs::uid id, avs::Animation& animation) override;
+		void CreateAnimation(avs::uid id, teleport::core::Animation& animation) override;
 
 		std::shared_ptr<clientrender::Texture> m_DummyWhite;
 		std::shared_ptr<clientrender::Texture> m_DummyNormal;

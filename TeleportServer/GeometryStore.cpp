@@ -353,12 +353,12 @@ const avs::Skin* GeometryStore::getSkin(avs::uid skinID, avs::AxesStandard stand
 	return getResource(skins.at(standard), skinID);
 }
 
-avs::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard)
+teleport::core::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard)
 {
 	return getResource(animations.at(standard), id);
 }
 
-const avs::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard) const
+const teleport::core::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard) const
 {
 	return getResource(animations.at(standard), id);
 }
@@ -525,10 +525,10 @@ void GeometryStore::storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard
 	skins[avs::AxesStandard::GlStyle][id] = avs::Skin::convertToStandard(newSkin, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
-void GeometryStore::storeAnimation(avs::uid id, avs::Animation& animation, avs::AxesStandard sourceStandard)
+void GeometryStore::storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
 {
-	animations[avs::AxesStandard::EngineeringStyle][id] = avs::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
-	animations[avs::AxesStandard::GlStyle][id] = avs::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
+	animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
+	animations[avs::AxesStandard::GlStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
 draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
@@ -748,24 +748,24 @@ static bool FloatCompare(float a,float b)
 	return true;
 }
 
-static bool VecCompare(avs::vec2 a, avs::vec2 b)
+static bool VecCompare(vec2 a, vec2 b)
 {
 	float A=sqrt(a.x*a.x+a.y*a.y);
 	float B=sqrt(b.x*b.x+b.y*b.y);
 	float m = std::max(B, 1.0f);
 	m=std::max(m,A);
-	avs::vec2 diff = a - b;
+	vec2 diff = a - b;
 	float dif_rel = abs(diff.x+diff.y)/ m;
 	if (dif_rel > 0.1f)
 		return false;
 	return true;
 }
 
-static bool VecCompare(avs::vec3 a, avs::vec3 b)
+static bool VecCompare(vec3 a, vec3 b)
 {
 	float B = sqrt(b.x * b.x + b.y * b.y + b.z * b.z);
 	float m = std::max(B, 1.0f);
-	avs::vec3 diff = a - b;
+	vec3 diff = a - b;
 	float dif_rel = abs(diff.x + diff.y + diff.z) / m;
 	if (dif_rel > 0.1f)
 		return false;
@@ -904,8 +904,8 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 						case avs::Accessor::DataType::VEC2:
 						{
 							auto c= attr->GetValue<float, 2>(draco::AttributeValueIndex(i));
-							avs::vec2 compare = *((const avs::vec2*)&c);
-							if (!VecCompare(compare,*((const avs::vec2*)src_data)))
+							vec2 compare = *((const vec2*)&c);
+							if (!VecCompare(compare,*((const vec2*)src_data)))
 							{
 								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
 								break;
@@ -915,8 +915,8 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 						case avs::Accessor::DataType::VEC3:
 						{
 							auto c = attr->GetValue<float, 3>(draco::AttributeValueIndex(i));
-							avs::vec3 compare = *((const avs::vec3*)&c);
-							if (!VecCompare(compare, *((const avs::vec3*)src_data)))
+							vec3 compare = *((const vec3*)&c);
+							if (!VecCompare(compare, *((const vec3*)src_data)))
 							{
 								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
 								break;

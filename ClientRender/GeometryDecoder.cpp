@@ -23,8 +23,8 @@
 #define Next2B get<uint16_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextB get<uint8_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextFloat get<float>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
-#define NextVec4 get<avs::vec4>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
-#define NextVec3 get<avs::vec3>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextVec4 get<vec4>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextVec3 get<vec3>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextChunk(T) get<T>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 
 using std::string;
@@ -364,7 +364,7 @@ avs::Result GeometryDecoder::CreateMeshesFromDecodedGeometry(clientrender::Resou
 				{
 				case avs::AttributeSemantic::POSITION:
 					meshElementCreate.m_VertexCount = vertexCount = accessor.count;
-					meshElementCreate.m_Vertices = reinterpret_cast<const avs::vec3*>(data);
+					meshElementCreate.m_Vertices = reinterpret_cast<const vec3*>(data);
 					continue;
 				case avs::AttributeSemantic::TANGENTNORMALXZ:
 				{
@@ -375,43 +375,43 @@ avs::Result GeometryDecoder::CreateMeshesFromDecodedGeometry(clientrender::Resou
 					continue;
 				}
 				case avs::AttributeSemantic::NORMAL:
-					meshElementCreate.m_Normals = reinterpret_cast<const avs::vec3*>(data);
+					meshElementCreate.m_Normals = reinterpret_cast<const vec3*>(data);
 					if (accessor.count != vertexCount)
 					{
 						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
 					}
 					continue;
 				case avs::AttributeSemantic::TANGENT:
-					meshElementCreate.m_Tangents = reinterpret_cast<const avs::vec4*>(data);
+					meshElementCreate.m_Tangents = reinterpret_cast<const vec4*>(data);
 					if (accessor.count != vertexCount)
 					{
 						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
 					}
 					continue;
 				case avs::AttributeSemantic::TEXCOORD_0:
-					meshElementCreate.m_UV0s = reinterpret_cast<const avs::vec2*>(data);
+					meshElementCreate.m_UV0s = reinterpret_cast<const vec2*>(data);
 					if (accessor.count != vertexCount)
 					{
 						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
 					}
 					continue;
 				case avs::AttributeSemantic::TEXCOORD_1:
-					meshElementCreate.m_UV1s = reinterpret_cast<const avs::vec2*>(data);
+					meshElementCreate.m_UV1s = reinterpret_cast<const vec2*>(data);
 					if (accessor.count != vertexCount)
 					{
 						TELEPORT_CERR << "Accessor count mismatch in " << name.c_str() << "\n";
 					}
 					continue;
 				case avs::AttributeSemantic::COLOR_0:
-					meshElementCreate.m_Colors = reinterpret_cast<const avs::vec4*>(data);
+					meshElementCreate.m_Colors = reinterpret_cast<const vec4*>(data);
 					assert(accessor.count == vertexCount);
 					continue;
 				case avs::AttributeSemantic::JOINTS_0:
-					meshElementCreate.m_Joints = reinterpret_cast<const avs::vec4*>(data);
+					meshElementCreate.m_Joints = reinterpret_cast<const vec4*>(data);
 					assert(accessor.count == vertexCount);
 					continue;
 				case avs::AttributeSemantic::WEIGHTS_0:
-					meshElementCreate.m_Weights = reinterpret_cast<const avs::vec4*>(data);
+					meshElementCreate.m_Weights = reinterpret_cast<const vec4*>(data);
 					assert(accessor.count == vertexCount);
 					continue;
 				default:
@@ -694,7 +694,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 	{
 		geometryDecodeData.data.erase(geometryDecodeData.data.begin(), geometryDecodeData.data.begin() + skip);
 	}
-	avs::Animation animation;
+	teleport::core::Animation animation;
 	avs::uid animationID = geometryDecodeData.uid;
 	size_t nameLength = Next8B;
 	animation.name.resize(nameLength);
@@ -705,7 +705,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 	animation.boneKeyframes.resize(Next8B);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
-		avs::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
+		teleport::core::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
 		transformKeyframe.boneIndex = Next8B;
 
 		decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes);
@@ -873,7 +873,7 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecode
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::FloatKeyframe>& keyframes)
+avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
 	for(size_t i = 0; i < keyframes.size(); i++)
@@ -885,25 +885,25 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDe
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector3Keyframe>& keyframes)
+avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
-		keyframes[i].value = NextChunk(avs::vec3);
+		keyframes[i].value = NextChunk(vec3);
 	}
 
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<avs::Vector4Keyframe>& keyframes)
+avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
 	keyframes.resize(Next8B);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
-		keyframes[i].value = NextChunk(avs::vec4);
+		keyframes[i].value = NextChunk(vec4);
 	}
 
 	return avs::Result::OK;

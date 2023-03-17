@@ -79,7 +79,6 @@ namespace avs
 		//! IF there is a message to send reliably to the peer, this will fill it in.
 		bool getNextStreamingControlMessage(std::string& msg) override;
 	protected:
-		std::vector<NetworkSourceStream> m_streams;
 		std::vector<std::string> messagesToSend;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
 		std::unordered_map<uint32_t, int> m_streamNodeMap;

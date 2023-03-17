@@ -39,6 +39,7 @@ namespace teleport
 			bool showGeometryOffline = false;
 			StartupConnectOption startupConnectOption = StartupConnectOption::LAST;
 			unsigned int connectionTimeout=TELEPORT_TIMEOUT;
+			bool gui2D = false;
 		};
 		class Config
 		{

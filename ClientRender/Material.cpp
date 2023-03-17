@@ -36,7 +36,7 @@ void Material::SetMaterialCreateInfo( platform::crossplatform::RenderPlatform* r
 	m_MaterialData.emissiveTexCoordsScalar_B	= m_CI.emissive.texCoordsScalar[2];
 	m_MaterialData.emissiveTexCoordsScalar_A	= m_CI.emissive.texCoordsScalar[3];
 
-	m_MaterialData.u_SpecularColour 			= avs::vec3(1, 1 ,1);
+	m_MaterialData.u_SpecularColour 			= vec3(1, 1 ,1);
 
 	m_MaterialData.u_DiffuseTexCoordIndex		= m_CI.diffuse.texCoordIndex;
 	m_MaterialData.u_NormalTexCoordIndex		= m_CI.normal.texCoordIndex;

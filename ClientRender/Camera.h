@@ -21,7 +21,7 @@ namespace clientrender
 			platform::crossplatform::RenderPlatform* renderPlatform;
 			ProjectionType type;
 			quat orientation;
-			avs::vec3 position;
+			vec3 position;
 			float drawDistance;
 		};
 
@@ -31,7 +31,7 @@ namespace clientrender
 			mat4 m_ProjectionMatrix;
 			mat4 m_ViewMatrix;
 			quat m_Orientation;
-			avs::vec3 m_Position;
+			vec3 m_Position;
 			float m_DrawDistance;
 		} m_CameraData;
 
@@ -46,7 +46,7 @@ namespace clientrender
 	public:
 		Camera(CameraCreateInfo* pCameraCreateInfo);
 
-		void UpdatePosition(const avs::vec3& position);
+		void UpdatePosition(const vec3& position);
 		void UpdateOrientation(const quat& orientation);
 		void UpdateDrawDistance(float distance);
 		void UpdateView();
@@ -58,6 +58,6 @@ namespace clientrender
 
 		const ShaderResource& GetShaderResource() const;
 
-		inline const avs::vec3& GetPosition() const { return m_CameraData.m_Position; }
+		inline const vec3& GetPosition() const { return m_CameraData.m_Position; }
 	};
 };

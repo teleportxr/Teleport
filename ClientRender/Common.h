@@ -111,12 +111,12 @@ namespace clientrender
 #pragma pack(push, 1)
 #endif
 		avs::Transform worldTransform;
-		avs::vec4 color;
+		vec4 color;
 		float range;
 		float spotAngle;
 		LightType lightType;
-		avs::vec3 position;
-		avs::vec4 orientation;
+		vec3 position;
+		vec4 orientation;
 		float shadowProjectionMatrix[4][4];
 		float worldToShadowMatrix[4][4];
 		int texturePosition[2];

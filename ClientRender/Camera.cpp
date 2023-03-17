@@ -40,7 +40,7 @@ Camera::Camera(CameraCreateInfo* pCameraCreateInfo)
 	m_ShaderResource.AddBuffer( ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 0, "u_CameraData", { s_UB.get(), 0, sizeof(CameraData) });
 }
 
-void Camera::UpdatePosition(const avs::vec3& position)
+void Camera::UpdatePosition(const vec3& position)
 {
 	m_CameraData.m_Position = position;
 }

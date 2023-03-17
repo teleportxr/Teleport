@@ -406,12 +406,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(false, true, false, 0);
 			break;
 		case WM_RBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(false, true, false, 0);
 			break;
 		case WM_MOUSEMOVE:
@@ -435,13 +435,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (message)
 		{
 		case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.HasFocus());
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.IsVisible());
+			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.HasFocus());
-			if(!gui.HasFocus()&&!clientRenderer->OSDVisible())
+			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.IsVisible());
+			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
 		default:
@@ -449,28 +449,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	if (!ui_handled && !gui.HasFocus())
+	if (!ui_handled && !gui.IsVisible())
 	{
 		switch (message)
 		{
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
+			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
+			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
+			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-			if (!gui.HasFocus() && !clientRenderer->OSDVisible())
+			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
 				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:

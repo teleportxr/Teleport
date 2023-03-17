@@ -110,7 +110,7 @@ Mapping types
 Different control types can be mapped to each other. If a path match is found, it is possible for a boolean ("click") action, which is only on or off, to be mapped to an Analogue input.
 
 +-------------------------+--------------------------+---------------------+-----------------+
-|                         |        OpenXR Boolean    |      OpenXR float   |     OpenXR pose |
+| Teleport / OpenXR       |        OpenXR Boolean    |      OpenXR float   |     OpenXR pose |
 +=========================+==========================+=====================+=================+
 | Teleport Boolean        |    Yes                   | Yes, client decides |      No         |
 +-------------------------+--------------------------+---------------------+-----------------+
@@ -126,6 +126,7 @@ XR devices such as headsets, handsets and trackers report their state as a "pose
 
 .. image:: /images/unity/TeleportController.png
   :width: 600
+  :alt: Inspector properties of a teleport Controller component.
 
 ==Teleport controller component in Unity Inspector==
 
@@ -137,6 +138,7 @@ Player Session Hierarchy
 Typically, the Unity Game Objects would be arranged as follows in Unity:
 
 .. image:: /images/unity/PlayerHierarchy.png
+  :alt: Example player prefab hierarchy.
   :width: 400
 
 ==Typical session and player hierarchy in Unity==

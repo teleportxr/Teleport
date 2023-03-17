@@ -15,8 +15,8 @@ namespace clientrender
 		{
 			avs::uid texture_uid=0;
 			std::shared_ptr<Texture> texture;	//Texture Reference.
-			avs::vec2 texCoordsScalar[4] = { {1, 1}, {1, 1}, {1, 1}, {1, 1} };		//Scales the texture co-ordinates for tiling; one per channel.
-			avs::vec4 textureOutputScalar = { 1, 1, 1, 1 };		//Scales the output of the texture per channel.
+			vec2 texCoordsScalar[4] = { {1, 1}, {1, 1}, {1, 1}, {1, 1} };		//Scales the texture co-ordinates for tiling; one per channel.
+			vec4 textureOutputScalar = { 1, 1, 1, 1 };		//Scales the output of the texture per channel.
 			float texCoordIndex = 0.0f; //Selects which texture co-ordinates to use in sampling.
 		};
 
@@ -35,31 +35,31 @@ namespace clientrender
 
 		struct MaterialData //Layout conformant to GLSL std140
 		{
-			avs::vec4 diffuseOutputScalar;
-			avs::vec2 diffuseTexCoordsScalar_R;
-			avs::vec2 diffuseTexCoordsScalar_G;
-			avs::vec2 diffuseTexCoordsScalar_B;
-			avs::vec2 diffuseTexCoordsScalar_A;
+			vec4 diffuseOutputScalar;
+			vec2 diffuseTexCoordsScalar_R;
+			vec2 diffuseTexCoordsScalar_G;
+			vec2 diffuseTexCoordsScalar_B;
+			vec2 diffuseTexCoordsScalar_A;
 			
-			avs::vec4 normalOutputScalar;
-			avs::vec2 normalTexCoordsScalar_R;
-			avs::vec2 normalTexCoordsScalar_G;
-			avs::vec2 normalTexCoordsScalar_B;
-			avs::vec2 normalTexCoordsScalar_A;
+			vec4 normalOutputScalar;
+			vec2 normalTexCoordsScalar_R;
+			vec2 normalTexCoordsScalar_G;
+			vec2 normalTexCoordsScalar_B;
+			vec2 normalTexCoordsScalar_A;
 			
-			avs::vec4 combinedOutputScalarRoughMetalOcclusion;
-			avs::vec2 combinedTexCoordsScalar_R;
-			avs::vec2 combinedTexCoordsScalar_G;
-			avs::vec2 combinedTexCoordsScalar_B;
-			avs::vec2 combinedTexCoordsScalar_A;
+			vec4 combinedOutputScalarRoughMetalOcclusion;
+			vec2 combinedTexCoordsScalar_R;
+			vec2 combinedTexCoordsScalar_G;
+			vec2 combinedTexCoordsScalar_B;
+			vec2 combinedTexCoordsScalar_A;
 
-			avs::vec4 emissiveOutputScalar;
-			avs::vec2 emissiveTexCoordsScalar_R;
-			avs::vec2 emissiveTexCoordsScalar_G;
-			avs::vec2 emissiveTexCoordsScalar_B;
-			avs::vec2 emissiveTexCoordsScalar_A;
+			vec4 emissiveOutputScalar;
+			vec2 emissiveTexCoordsScalar_R;
+			vec2 emissiveTexCoordsScalar_G;
+			vec2 emissiveTexCoordsScalar_B;
+			vec2 emissiveTexCoordsScalar_A;
 			
-			avs::vec3 u_SpecularColour;
+			vec3 u_SpecularColour;
 			float _pad;
 
 			float u_DiffuseTexCoordIndex;

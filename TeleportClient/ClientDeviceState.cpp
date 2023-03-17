@@ -26,19 +26,19 @@ void ClientServerState::TransformPose(LocalGlobalPose &p)
 /*	clientrender::quat stickRotateQ = originPose.orientation;
 	clientrender::quat localQ=*((clientrender::quat*)(&p.localPose.orientation));
 	clientrender::quat globalQ=(stickRotateQ*localQ);
-	p.globalPose.orientation=*((avs::vec4*)&globalQ);
+	p.globalPose.orientation=*((vec4*)&globalQ);
 
-	avs::vec3 relp=p.localPose.position;
+	vec3 relp=p.localPose.position;
 	clientrender::quat localP=*((clientrender::quat*)(&(relp)));
 	localP.s=0;
 	clientrender::quat globalP=(stickRotateQ*localP)*(stickRotateQ.Conjugate());
-	p.globalPose.position=avs::vec3(globalP.i,globalP.j,globalP.k);
+	p.globalPose.position=vec3(globalP.i,globalP.j,globalP.k);
 	p.globalPose.position+=originPose.position;*/
 }
 
-void ClientServerState::SetHeadPose_StageSpace(avs::vec3 pos,clientrender::quat q)
+void ClientServerState::SetHeadPose_StageSpace(vec3 pos,clientrender::quat q)
 {
-	headPose.localPose.orientation=*((const avs::vec4 *)(&q));
+	headPose.localPose.orientation=*((const vec4 *)(&q));
 	headPose.localPose.position=pos;
 	//TransformPose(headPose);
 }

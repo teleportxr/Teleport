@@ -1698,8 +1698,8 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stage
 	pos += *((vec3*)&stagePose_worldSpace.position);
 
 	crossplatform::Quaternionf rot=orig_rot*ori_e;
-	pose.position=*((avs::vec3*)&pos);
-	pose.orientation=*((avs::vec4*)&rot);
+	pose.position=*((vec3*)&pos);
+	pose.orientation=*((vec4*)&rot);
 	return pose;
 }
 
@@ -1710,8 +1710,8 @@ avs::Pose OpenXR::ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &xrpose)
 	vec3 pos_e							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&xrpose.position));
  	crossplatform::Quaternionf ori_e	= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&xrpose.orientation));
 
-	pose.position=*((avs::vec3*)&pos_e);
-	pose.orientation=*((avs::vec4*)&ori_e);
+	pose.position=*((vec3*)&pos_e);
+	pose.orientation=*((vec4*)&ori_e);
 	return pose;
 }
 vec3 OpenXR::ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const

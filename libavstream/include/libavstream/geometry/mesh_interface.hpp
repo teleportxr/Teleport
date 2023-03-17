@@ -13,9 +13,14 @@
 
 #include "material_interface.hpp"
 
-namespace avs
+// TODO: don't forward-reference any teleport::core things from avs.
+namespace teleport::core
 {
 	struct Animation;
+}
+
+namespace avs
+{
 
 	template<typename T> struct Vec2
 	{
@@ -829,7 +834,7 @@ namespace avs
 		virtual void CreateMaterial(uid id, const Material& material) = 0;
 		virtual void CreateNode(uid id, Node& node) = 0;
 		virtual void CreateSkin(avs::uid id, avs::Skin& skin) = 0;
-		virtual void CreateAnimation(avs::uid id, avs::Animation& animation) = 0;
+		virtual void CreateAnimation(avs::uid id, teleport::core::Animation& animation) = 0;
 	};
 
 	class AVSTREAM_API GeometryCacheBackendInterface : public UseInternalAllocator

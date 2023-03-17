@@ -121,12 +121,12 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			avs::vec3 position={0,0,0};
-			avs::vec4 rotation={0,0,0,0};
-			avs::vec3 scale={0,0,0};
+			vec3 position={0,0,0};
+			vec4 rotation={0,0,0,0};
+			vec3 scale={0,0,0};
 
-			avs::vec3 velocity={0,0,0};
-			avs::vec3 angularVelocityAxis={0,0,0};
+			vec3 velocity={0,0,0};
+			vec3 angularVelocityAxis={0,0,0};
 			float angularVelocityAngle = 0.0f;
 		} AVS_PACKED;
 
@@ -137,8 +137,8 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			avs::vec3 position;
-			avs::vec3 velocity;
+			vec3 position;
+			vec3 velocity;
 		} AVS_PACKED;
 
 		//TODO: Use instead of MovementUpdate for bandwidth.
@@ -148,8 +148,8 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			avs::vec4 rotation;
-			avs::vec3 angularVelocityAxis;
+			vec4 rotation;
+			vec3 angularVelocityAxis;
 			float angularVelocityAngle = 0.0f;
 		} AVS_PACKED;
 
@@ -160,8 +160,8 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			avs::vec3 scale;
-			avs::vec3 velocity;
+			vec3 scale;
+			vec3 velocity;
 		} AVS_PACKED;
 
 		struct NodeUpdateEnabledState
@@ -255,14 +255,14 @@ namespace teleport
 			ControlModel		control_model = ControlModel::NONE;	//!< Not in use
 			avs::VideoConfig	video_config;						//!< Video setup structure.
 			float				draw_distance = 0.0f;				//!< Maximum distance in metres to render locally.
-			avs::vec3			bodyOffsetFromHead_DEPRECATED;		//!< Not in use.
+			vec3			bodyOffsetFromHead_DEPRECATED;		//!< Not in use.
 			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's.
 			uint8_t				audio_input_enabled = 0;			//!< Server accepts audio stream from client.
 			bool				using_ssl = true;					//!< Not in use, for later.
 			int64_t				startTimestamp_utc_unix_ms = 0;		//!< UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode	backgroundMode;							//!< Whether the server supplies a background, and of which type.
-			avs::vec4			backgroundColour;					//!< If the background is of the COLOUR type, which colour to use.
+			vec4			backgroundColour;					//!< If the background is of the COLOUR type, which colour to use.
 			avs::ClientDynamicLighting clientDynamicLighting;		//!< Setup for dynamic object lighting.
 		} AVS_PACKED;
 

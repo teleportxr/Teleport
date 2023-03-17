@@ -46,15 +46,15 @@ TELEPORT_EXPORT void ConvertTransform(avs::AxesStandard fromStandard, avs::AxesS
 {
 	avs::ConvertTransform(fromStandard,toStandard,transform);
 }
-TELEPORT_EXPORT void ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::vec4 &rotation)
+TELEPORT_EXPORT void ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation)
 {
 	avs::ConvertRotation(fromStandard,toStandard,rotation);
 }
-TELEPORT_EXPORT void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::vec3 &position)
+TELEPORT_EXPORT void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position)
 {
 	avs::ConvertPosition(fromStandard,toStandard,position);
 }
-TELEPORT_EXPORT void ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::vec3 &scale)
+TELEPORT_EXPORT void ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale)
 {
 	avs::ConvertScale(fromStandard,toStandard,scale);
 }
@@ -714,8 +714,8 @@ TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
 
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
 {
-	avs::Animation avsAnimation(*animation);
-	GeometryStore::GetInstance().storeAnimation(animationID, avsAnimation, avs::AxesStandard::UnityStyle);
+	teleport::core::Animation a(*animation);
+	GeometryStore::GetInstance().storeAnimation(animationID, a, avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, const char *  guid, const char *  path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)

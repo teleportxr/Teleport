@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cmath>
 #include <iostream>
-//#include "Platform/Shaders/SL/CppSl.sl"
+#include "../../firstparty/Platform/Shaders/SL/CppSl.sl"
 namespace avs
 {
 	enum class AxesStandard : uint8_t
@@ -27,217 +27,6 @@ namespace avs
 	{
 		return (AxesStandard)((uint8_t)a & (uint8_t)b);
 	}
-
-	struct vec2
-	{
-		float x, y;
-
-		vec2()
-			:vec2(0.0f, 0.0f)
-		{}
-
-		constexpr vec2(float x, float y)
-			:x(x), y(y)
-		{}
-
-		vec2 operator-() const
-		{
-			return vec2(-x, -y);
-		}
-
-		vec2 operator+(const vec2& rhs) const
-		{
-			return vec2(x + rhs.x, y + rhs.y);
-		}
-
-		vec2 operator-(const vec2& rhs) const
-		{
-			return vec2(x - rhs.x, y - rhs.y);
-		}
-
-		vec2 operator*(float rhs) const
-		{
-			return vec2(x * rhs, y * rhs);
-		}
-
-		vec2 operator/(float rhs) const
-		{
-			return vec2(x / rhs, y / rhs);
-		}
-
-		void operator+=(const vec2& rhs)
-		{
-			*this = *this + rhs;
-		}
-
-		void operator-=(const vec2& rhs)
-		{
-			*this = *this - rhs;
-		}
-
-		void operator*=(const float& rhs)
-		{
-			*this = *this * rhs;
-		}
-
-		void operator/=(const float& rhs)
-		{
-			*this = *this / rhs;
-		}
-
-		float Length() const
-		{
-			return sqrtf(x * x + y * y);
-		}
-
-		vec2 Normalised() const
-		{
-			return *this / Length();
-		}
-
-		float Dot(const vec2& other) const
-		{
-			return x * other.x + y * other.y;
-		}
-
-		vec2 GetAbsolute() const
-		{
-			return vec2(fabs(x), fabs(y));
-		}
-
-	};
-
-	struct vec3
-	{
-		float x, y, z;
-
-		vec3()
-			:vec3(0.0f, 0.0f, 0.0f)
-		{}
-
-		constexpr vec3(float x, float y, float z)
-			:x(x), y(y), z(z)
-		{}
-		bool operator==(const vec3& v)
-		{
-			return x == v.x && y == v.y && z == v.z;
-		}
-		bool operator!=(const vec3& v)
-		{
-			return x != v.x || y != v.y || z != v.z;
-		}
-
-		vec3 operator-() const
-		{
-			return vec3(-x, -y, -z);
-		}
-
-		const float* operator()() const
-		{
-			return &x;
-		}
-
-		void operator=(const float* v)
-		{
-			x = v[0];
-			y = v[1];
-			z = v[2];
-		}
-
-		vec3 operator+(const vec3& rhs) const
-		{
-			return vec3(x + rhs.x, y + rhs.y, z + rhs.z);
-		}
-
-		vec3 operator-(const vec3& rhs) const
-		{
-			return vec3(x - rhs.x, y - rhs.y, z - rhs.z);
-		}
-
-		vec3 operator*(float rhs) const
-		{
-			return vec3(x * rhs, y * rhs, z * rhs);
-		}
-
-		vec3 operator/(float rhs) const
-		{
-			return vec3(x / rhs, y / rhs, z / rhs);
-		}
-
-		void operator+=(const vec3& rhs)
-		{
-			*this = *this + rhs;
-		}
-
-		void operator-=(const vec3& rhs)
-		{
-			*this = *this - rhs;
-		}
-
-		void operator*=(float rhs)
-		{
-			*this = *this * rhs;
-		}
-
-		void operator/=(float rhs)
-		{
-			*this = *this / rhs;
-		}
-
-		vec3 operator*(vec3 rhs) const
-		{
-			return vec3(x * rhs.x, y * rhs.y, z * rhs.z);
-		}
-
-		void operator*=(vec3 rhs)
-		{
-			*this = *this * rhs;
-		}
-	};
-	
-	inline float dot(const vec3& a,const vec3& b)
-	{
-		return a.x*b.x + a.y*b.y + a.z*b.z;
-	}
-
-	inline float length(const vec3& v)
-	{
-		return sqrt(dot(v,v));
-	}
-	
-
-	inline vec3 normalize(const vec3& v)
-	{
-		return v / length(v);
-	}
-	inline vec3 cross(const vec3& a,const vec3& rhs)
-	{
-		return vec3(a.y * rhs.z - a.z * rhs.y, a.z * rhs.x - a.x * rhs.z, a.x * rhs.y - a.y * rhs.x);
-	}
-	inline vec3 abs(const vec3 &v)
-	{
-		vec3 result={::fabsf(v.x), ::fabsf(v.y), ::fabsf(v.z)};
-		return result;
-	}
-	struct vec4
-	{
-		float x, y, z, w;
-	};
-
-	inline vec2 operator*(float lhs, const vec2& rhs)
-	{
-		return vec2(rhs.x * lhs, rhs.y * lhs);
-	}
-
-	inline vec3 operator*(float lhs, const vec3& rhs)
-	{
-		return vec3(rhs.x * lhs, rhs.y * lhs, rhs.z * lhs);
-	}
-
-	struct int3
-	{
-		int v1, v2, v3;
-	};
 
 	struct Mat4x4
 	{
@@ -378,13 +167,13 @@ namespace avs
 
 	struct Pose
 	{
-		avs::vec4 orientation = { 0, 0, 0, 1 };
-		avs::vec3 position = { 0, 0, 0 };
+		vec4 orientation = { 0, 0, 0, 1 };
+		vec3 position = { 0, 0, 0 };
 	};
 	struct PoseDynamic
 	{
 		Pose pose;
-		avs::vec3 velocity;
-		avs::vec3 angularVelocity;
+		vec3 velocity;
+		vec3 angularVelocity;
 	};
 } //namespace avs

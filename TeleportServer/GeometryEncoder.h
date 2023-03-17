@@ -2,7 +2,7 @@
 
 #include "libavstream/geometry/mesh_interface.hpp"
 
-namespace avs
+namespace teleport::core
 {
 struct FloatKeyframe;
 struct Vector3Keyframe;
@@ -66,9 +66,9 @@ namespace teleport
 			//The actual implementation of encode textures that can be used by encodeMaterials to package textures with it.
 			avs::Result encodeTexturesBackend(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs, bool isShadowMap = false);
 
-			avs::Result encodeFloatKeyframes(const std::vector<avs::FloatKeyframe>& keyframes);
-			avs::Result encodeVector3Keyframes(const std::vector<avs::Vector3Keyframe>& keyframes);
-			avs::Result encodeVector4Keyframes(const std::vector<avs::Vector4Keyframe>& keyframes);
+			avs::Result encodeFloatKeyframes(const std::vector<teleport::core::FloatKeyframe>& keyframes);
+			avs::Result encodeVector3Keyframes(const std::vector<teleport::core::Vector3Keyframe>& keyframes);
+			avs::Result encodeVector4Keyframes(const std::vector<teleport::core::Vector4Keyframe>& keyframes);
 
 			avs::Result encodeFontAtlas(avs::uid u);
 			avs::Result encodeTextCanvas(avs::uid u);

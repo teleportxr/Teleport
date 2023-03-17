@@ -17,6 +17,7 @@ GeometryCache::~GeometryCache()
 
 clientrender::MissingResource* GeometryCache::GetMissingResourceIfMissing(avs::uid id, avs::GeometryPayloadType resourceType)
 {
+	std::lock_guard g(missingResourcesMutex);
 	auto missingPair = m_MissingResources.find(id);
 	if (missingPair == m_MissingResources.end())
 	{
@@ -27,6 +28,8 @@ clientrender::MissingResource* GeometryCache::GetMissingResourceIfMissing(avs::u
 
 clientrender::MissingResource& GeometryCache::GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType)
 {
+	std::lock_guard g(resourceRequestsMutex);
+	std::lock_guard g2(missingResourcesMutex);
 	auto missingPair = m_MissingResources.find(id);
 	if (missingPair == m_MissingResources.end())
 	{
@@ -43,6 +46,7 @@ clientrender::MissingResource& GeometryCache::GetMissingResource(avs::uid id, av
 
 std::vector<avs::uid> GeometryCache::GetResourceRequests() const
 {
+	std::lock_guard g(resourceRequestsMutex);
 	std::vector<avs::uid> resourceRequests = m_ResourceRequests;
 	//Remove duplicates.
 	std::sort(resourceRequests.begin(), resourceRequests.end());
@@ -53,11 +57,14 @@ std::vector<avs::uid> GeometryCache::GetResourceRequests() const
 
 void GeometryCache::ClearResourceRequests()
 {
+	std::lock_guard g(resourceRequestsMutex);
 	m_ResourceRequests.clear();
 }
 
 void GeometryCache::ReceivedResource(avs::uid id)
 {
+	std::lock_guard g(receivedResourcesMutex);
+	std::lock_guard g2(resourceRequestsMutex);
 	m_ReceivedResources.push_back(id);
 	auto r = std::find(m_ResourceRequests.begin(), m_ResourceRequests.end(), id);
 	if (r != m_ResourceRequests.end())
@@ -66,6 +73,7 @@ void GeometryCache::ReceivedResource(avs::uid id)
 
 void GeometryCache::CompleteResource(avs::uid id)
 {
+	std::lock_guard g(missingResourcesMutex);
 	auto m = m_MissingResources.find(id);
 	if(m!= m_MissingResources.end())
 		m_MissingResources.erase(m);
@@ -73,11 +81,13 @@ void GeometryCache::CompleteResource(avs::uid id)
 
 std::vector<avs::uid> GeometryCache::GetReceivedResources() const
 {
+	std::lock_guard g(receivedResourcesMutex);
 	return m_ReceivedResources;
 }
 
 void GeometryCache::ClearReceivedResources()
 {
+	std::lock_guard g(receivedResourcesMutex);
 	m_ReceivedResources.clear();
 }
 

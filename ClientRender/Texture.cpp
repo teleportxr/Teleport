@@ -7,7 +7,7 @@
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
 using namespace clientrender;
 
-const avs::vec3 Texture::DUMMY_DIMENSIONS = {1, 1, 1};
+const vec3 Texture::DUMMY_DIMENSIONS = {1, 1, 1};
 
 
 platform::crossplatform::PixelFormat ToSimulPixelFormat(clientrender::Texture::Format f)
