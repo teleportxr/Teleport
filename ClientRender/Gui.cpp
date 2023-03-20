@@ -712,7 +712,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 		
 	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),m,slice);
-	ImGui_ImplPlatform_DrawTexture(nullptr, m, slice, drawTexture,(int)showWidth,(int)size.y);
+	ImGui_ImplPlatform_DrawTexture(drawTexture, texture->GetName(), m, slice, (int)showWidth,(int)size.y);
 }
 
 static void DoRow(const char* title, const char* text, ...)
