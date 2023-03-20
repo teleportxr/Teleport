@@ -40,12 +40,20 @@ namespace teleport
 #endif
 }
 #define DEBUG_BREAK_ONCE {static bool done=false;if(!done){ done=true;teleport::DebugBreak();}}
+
 #ifndef TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_INTERNAL_CHECKS 0
 #endif
+
+#if TELEPORT_INTERNAL_CHECKS
+#define TELEPORT_LOG(txt, ...)\
+	teleport::InternalInfo((fmt::format("{0} ({1}): info: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
+#else
+#define TELEPORT_LOG(txt, ...)
+#endif
+
 #define TELEPORT_COUT\
 	std::cout<<__FILE__<<"("<<std::dec<<__LINE__<<"): info: "
-#define TELEPORT_LOG(txt, ...) teleport::InternalInfo((fmt::format("{0} ({1}): info: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
 
 #define TELEPORT_CERR\
 	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
