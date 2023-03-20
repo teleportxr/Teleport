@@ -1461,8 +1461,8 @@ void Gui::Render2D(GraphicsDeviceContext& deviceContext)
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
-#ifdef __ANDROID__
 	ImGuiIO& io = ImGui::GetIO();
+#ifdef __ANDROID__
 	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
 	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
@@ -1504,7 +1504,6 @@ void Gui::Render2D(GraphicsDeviceContext& deviceContext)
 	}
 	//ImGuiEnd();
 	ImGui::PopFont();
-	ImGuiIO& io			= ImGui::GetIO();
 	ImVec2 mouse_pos	= io.MousePos;
 	//ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
 	ImGui::Render();
