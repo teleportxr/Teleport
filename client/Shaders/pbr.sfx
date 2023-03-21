@@ -869,28 +869,6 @@ RasterizerState PbrDontCull
 };
 
 
-technique transparent
-{
-	pass pbr_lightmap 
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_transparent_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_transparent_nolightmap);
-	}
-}
-
 technique solid
 {
 	pass local
@@ -1037,6 +1015,14 @@ technique solid_anim
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_nolightmap);
 	}
+	pass digitizing
+	{
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_anim);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_digitizing);
+	}
 	pass local_hand
 	{
 		SetRasterizerState(RenderNoCull);
@@ -1131,6 +1117,14 @@ technique solid_multiview
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_nolightmap);
 	}
+	pass digitizing
+	{
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_digitizing);
+	}
 	pass albedo_only
 	{
 		
@@ -1196,27 +1190,6 @@ technique solid_multiview
 	}
 }
 
-technique transparent_multiview
-{
-	pass pbr_lightmap 
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_nolightmap);
-	}
-}
 technique solid_anim_multiview
 {
 	pass debug_lightmaps
@@ -1254,6 +1227,14 @@ technique solid_anim_multiview
 		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_solid_nolightmap);
+	}
+	pass digitizing
+	{
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_anim_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_digitizing);
 	}
 	pass local_hand
 	{
@@ -1308,6 +1289,68 @@ technique solid_anim_multiview
 		SetVertexShader(vs_anim_mv);
 		SetGeometryShader(NULL);
 		SetPixelShader(ps_debug_normal_vertexnormals);
+	}
+}
+
+technique transparent
+{
+	pass pbr_lightmap 
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_transparent_lightmap);
+	}
+	pass pbr_nolightmap
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_transparent_nolightmap);
+	}
+	pass digitizing
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth, 0);
+		SetBlendState(AlphaBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_digitizing);
+	}
+}
+
+technique transparent_multiview
+{
+	pass pbr_lightmap 
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_solid_lightmap);
+	}
+	pass pbr_nolightmap
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth,0);
+		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_solid_nolightmap);
+	}
+	pass digitizing
+	{
+		SetRasterizerState(PbrDontCull);
+		SetDepthStencilState(TestReverseDepth, 0);
+		SetBlendState(AlphaBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
+		SetVertexShader(vs_solid_mv);
+		SetGeometryShader(NULL);
+		SetPixelShader(ps_digitizing);
 	}
 }
 
