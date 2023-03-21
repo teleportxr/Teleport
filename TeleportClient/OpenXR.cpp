@@ -766,6 +766,10 @@ void OpenXR::RecordCurrentBindings()
 	}
 	// On a desktop machine? add mouse/keyboard profile.
 	#ifdef _MSC_VER
+	if (MOUSE_KEYBOARD_PROFILE_INDEX >= interactionProfiles.size())
+	{
+		CreateMouseAndKeyboardProfile();
+	}
 	InteractionProfile &mouseAndKeyboard	=interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
 	activeInteractionProfilePaths.push_back(mouseAndKeyboard.profilePath);
 	#endif

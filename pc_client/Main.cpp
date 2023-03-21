@@ -159,7 +159,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
        // if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
         {
-          //  TranslateMessage(&msg);
+            TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
     }
