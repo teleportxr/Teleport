@@ -306,8 +306,9 @@ void Renderer::UpdateShaderPasses()
 			shaderPassSetup.technique		=renderState.pbrEffect->GetTechniqueByName(techname);
 			shaderPassSetup.noLightmapPass	=shaderPassSetup.technique->GetPass("pbr_nolightmap");
 			shaderPassSetup.lightmapPass	=shaderPassSetup.technique->GetPass("pbr_lightmap");
-			shaderPassSetup.digitizingPass = shaderPassSetup.technique->GetPass("digitizing");
-			shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
+			shaderPassSetup.digitizingPass	=shaderPassSetup.technique->GetPass("digitizing");
+			if (!renderState.overridePassName.empty())
+				shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
 			return shaderPassSetup;
 		};
 	renderState.pbrEffect_solid					=SetPasses("solid");

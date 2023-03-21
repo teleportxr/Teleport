@@ -712,7 +712,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 		
 	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),m,slice);
-	ImGui_ImplPlatform_DrawTexture(drawTexture, "",m, slice,(int)showWidth,(int)size.y);
+	ImGui_ImplPlatform_DrawTexture(drawTexture, texture->GetName(), m, slice, (int)showWidth,(int)size.y);
 }
 
 static void DoRow(const char* title, const char* text, ...)
@@ -1461,8 +1461,8 @@ void Gui::Render2D(GraphicsDeviceContext& deviceContext)
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
-#ifdef __ANDROID__
 	ImGuiIO& io = ImGui::GetIO();
+#ifdef __ANDROID__
 	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
 	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
@@ -1504,7 +1504,6 @@ void Gui::Render2D(GraphicsDeviceContext& deviceContext)
 	}
 	//ImGuiEnd();
 	ImGui::PopFont();
-	ImGuiIO& io			= ImGui::GetIO();
 	ImVec2 mouse_pos	= io.MousePos;
 	//ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
 	ImGui::Render();
