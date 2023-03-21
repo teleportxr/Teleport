@@ -1,6 +1,7 @@
 #if TELEPORT_CLIENT_USE_D3D12
 #include <d3d12.h>
 #define XR_USE_GRAPHICS_API_D3D12
+#include "Platform/DirectX12/RenderPlatform.h"
 #else
 #include <d3d11.h>
 #define XR_USE_GRAPHICS_API_D3D11
@@ -90,6 +91,11 @@ bool UseOpenXR::TryInitDevice()
 	// This does not start the session, for that, you'll need a call to xrBeginSession, which we do in openxr_poll_events
 	XrGraphicsBindingD3D12KHR binding = { XR_TYPE_GRAPHICS_BINDING_D3D12_KHR };
 	binding.device = renderPlatform->AsD3D12Device();
+	auto *rp12=(platform::dx12::RenderPlatform*)renderPlatform;
+	binding.queue = rp12->GetCommandQueue();
+	rp12->ExecuteCommandList(nullptr,nullptr);
+			rp12-> FlushImmediateCommandList();
+			rp12-> ResetImmediateCommandList() ;
 #else
 	PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR = nullptr;
 	xrGetInstanceProcAddr(xr_instance, "xrGetD3D11GraphicsRequirementsKHR", (PFN_xrVoidFunction*)(&ext_xrGetD3D11GraphicsRequirementsKHR));
@@ -103,7 +109,8 @@ bool UseOpenXR::TryInitDevice()
 	XrSessionCreateInfo sessionInfo = { XR_TYPE_SESSION_CREATE_INFO };
 	sessionInfo.next = &binding;
 	sessionInfo.systemId = xr_system_id;
-	if (!CheckXrResult(xr_instance,xrCreateSession(xr_instance, &sessionInfo, &xr_session)))
+	XrResult res=xrCreateSession(xr_instance, &sessionInfo, &xr_session);
+	if (!CheckXrResult(xr_instance,res))
 	{
 		std::cerr<<fmt::format("Failed to create XR Session\n").c_str() << std::endl;
 		return false;
@@ -142,7 +149,7 @@ bool UseOpenXR::TryInitDevice()
 	int64_t swapchain_format = 0;
 	// Find out what format to use:
 	uint32_t formatCount = 0;
-	XrResult res = xrEnumerateSwapchainFormats(
+	 res = xrEnumerateSwapchainFormats(
 		xr_session,
 		0,
 		&formatCount,

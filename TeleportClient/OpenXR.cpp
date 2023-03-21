@@ -1351,6 +1351,8 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 	spacewarp_views.resize(view_count);
 
 	// And render to the viewpoints via Multiview!
+
+	// Roderick: There appears to be no consideration at all here of what to do if Multiview is not supported.
 	{
 		swapchain_t& main_view_xr_swapchain = xr_swapchains[MAIN_SWAPCHAIN];
 
@@ -1554,16 +1556,17 @@ void OpenXR::PollEvents(bool& exit)
 					(XrEventDataSessionStateChanged*)(baseEventHeader);
 				std::cout<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "
-					<<session_state_changed_event->state<<
+					<<to_string(session_state_changed_event->state)<<
 					" for session "<<(void*)session_state_changed_event->session<<
 					" time "<<(session_state_changed_event->time)<<std::endl;
 
-				switch (session_state_changed_event->state) {
+				switch (session_state_changed_event->state)
+				{
 					case XR_SESSION_STATE_FOCUSED:
-				std::cout<<	"Focused = true";
+						std::cout<<	"Focused = true"<<std::endl;
 						break;
 					case XR_SESSION_STATE_VISIBLE:
-				std::cout<<	"Focused = false";
+						std::cout<<	"Focused = false"<<std::endl;
 						break;
 					case XR_SESSION_STATE_READY:
 					case XR_SESSION_STATE_STOPPING:
@@ -1852,7 +1855,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 	vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
 	if(frame_state.shouldRender)
 	{
-		// Execute any code that's dependant on the predicted time, such as updating the location of
+		// Execute any code that's dependent on the predicted time, such as updating the location of
 		// controller models.
 		openxr_poll_predicted(frame_state.predictedDisplayTime);
 		app_update_predicted();
@@ -1877,7 +1880,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 
-		static bool add_overlay=true;
+		static bool add_overlay=false;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
