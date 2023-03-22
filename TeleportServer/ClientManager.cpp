@@ -12,7 +12,7 @@
 
 #include "DiscoveryService.h"
 #include "TeleportCore/ErrorHandling.h"
-#include "ThisPlatform/Threads.h"
+#include "TeleportCore/Threads.h"
 
 using namespace teleport;
 using namespace server;
