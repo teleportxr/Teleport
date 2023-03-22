@@ -234,7 +234,7 @@ TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID,const ClientSett
 	clientData.clientSettings = clientSettings;
 	clientData.validClientSettings = true;
 }
-TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, avs::ClientDynamicLighting clientDynamicLighting)
+TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const avs::ClientDynamicLighting &clientDynamicLighting)
 {
 	auto clientPair = clientServices.find(clientID);
 	if (clientPair == clientServices.end())

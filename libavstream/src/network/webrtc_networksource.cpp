@@ -419,16 +419,11 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		{
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		});
-
-	dc->onMessage([this, &dataChannel,id](auto data) {
+	dc->onMessage([this, &dataChannel,id](rtc::binary b) {
 
 		// data holds either std::string or rtc::binary
-		if (std::holds_alternative<std::string>(data))
-		std::cout << "Message from " << id << " received: " << std::get<std::string>(data)
-			<< std::endl;
-		else
+		
 		{
-			auto& b = std::get<rtc::binary>(data);
 			int nodeIndex = q_ptr()->m_streamNodeMap[id];
 			Queue* outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(nodeIndex));
 			dataChannel.bytesReceived += b.size();
@@ -443,7 +438,6 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			//std::cout << "Binary message from " << id
 			//	<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
 		}
-		});
-
+		},[this, &dataChannel,id](rtc::string s) {});
 	//dataChannelMap.emplace(id, dc);
 }

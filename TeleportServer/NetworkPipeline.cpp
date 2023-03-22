@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <iostream>
 #include "network/webrtc_networksink.h"
+#if TELEPORT_SUPPORT_SRT
 #include "network/srt_efp_networksink.h"
-
+#endif
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
 		std::string WStringToString(const std::wstring &text)
@@ -58,9 +59,11 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings,
 	// What transport protocol will we use to stream data?
 	switch (inNetworkSettings.streamingTransportLayer )
 	{
+#if TELEPORT_SUPPORT_SRT
 	case avs::StreamingTransportLayer::SRT_EFP:
 		mNetworkSink.reset(new avs::SrtEfpNetworkSink);
 		break;
+		#endif
 	case avs::StreamingTransportLayer::WEBRTC:
 		mNetworkSink.reset(new avs::WebRtcNetworkSink);
 		break;

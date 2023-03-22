@@ -76,8 +76,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(TELEPORT_UNIX ON)
 	# fix linkage for lots of libraries:
 	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
+	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Linux)
 endif()
-message("TELEPORT_UNIX ${TELEPORT_UNIX}")
 
 if(TELEPORT_UNITY)
 	get_filename_component(PROJECT_DIR ${CMAKE_BINARY_DIR} DIRECTORY)
@@ -135,6 +135,7 @@ if(TELEPORT_WINDOWS)
 	set(SSL_EAY_LIBRARY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
 	set(SSL_EAY_LIBRARY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
+	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
 endif()
 
 # This must go before the openssl settings, or it won't generate:
@@ -158,6 +159,7 @@ set_target_properties( usrsctp PROPERTIES FOLDER thirdparty/datachannel)
 
 if(TELEPORT_UNITY)
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${TELEPORT_UNITY_PLUGINS_DIR} )
+	message("Outputting to ${TELEPORT_UNITY_PLUGINS_DIR}")
 else()
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
 endif()
@@ -165,7 +167,7 @@ endif()
 if(TELEPORT_UNIX)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
-	add_compile_definitions(PRIVATE _GLIBCXX_DEBUG)
+	# Either use everywhere or not at all: add_compile_definitions(PRIVATE _GLIBCXX_DEBUG)
 endif()
 
 #defaults for basisu
@@ -235,7 +237,7 @@ function(SetTeleportDefaults targname)
 		# relocation R_X86_64_32S against `.rodata' can not be used when making a shared object; recompile with -fPIC
 		target_compile_options(${targname} PRIVATE -fPIC)
 		# dummy for stdcall, PLUS make Clang show debug info for strings and other stl stuff:
-		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL= _GLIBCXX_DEBUG)
+		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL= )
 	endif()
 	target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)
 endfunction()

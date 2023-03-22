@@ -20,3 +20,5 @@ keystore.properties
 *.sfxb
 build_docs
 build_pc_client
+
+.vscode/

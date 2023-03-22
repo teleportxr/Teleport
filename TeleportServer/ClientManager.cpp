@@ -12,6 +12,8 @@
 
 #include "DiscoveryService.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "ThisPlatform/Threads.h"
+
 using namespace teleport;
 using namespace server;
 
@@ -197,6 +199,7 @@ using namespace server;
 
 	void ClientManager::processNetworkDataAsync()
 	{
+		SetThisThreadName("TeleportServer_processNetworkDataAsync");
 		mAsyncNetworkDataProcessingFailed = false;
 		// Elapsed time since the main thread last ticked (seconds).
 		avs::Timestamp timestamp;

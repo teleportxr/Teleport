@@ -238,6 +238,7 @@ void PipeOutMessages()
 
 TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
 {
+	std::lock_guard<std::mutex> lock(messagesMutex);
 	if(msgh)
 	{
 		debug_buffer.setToOutputWindow(true);
@@ -844,11 +845,20 @@ TELEPORT_EXPORT void CompressNextTexture()
 }
 ///GeometryStore END
 
-TELEPORT_EXPORT size_t SizeOf(const char *str)
+TELEPORT_EXPORT size_t SizeOf(const char* str)
 {
-	if(strcmp(str,"ServerSettings")==0)
+	std::string n=str;
+	if(n=="ServerSettings")
 	{
 		return sizeof(ServerSettings);
+	}
+	if(n=="ClientSettings")
+	{
+		return sizeof(teleport::server::ClientSettings);
+	}
+	if(n=="ClientDynamicLighting")
+	{
+		return sizeof(avs::ClientDynamicLighting);
 	}
 	TELEPORT_CERR<<"Unknown type for SizeOf: "<<str<<"\n";
 	return 0;
