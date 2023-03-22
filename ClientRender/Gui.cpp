@@ -618,14 +618,60 @@ int VirtualKeyToChar(unsigned long long key)
 	return (int)key;
 #endif
 }
-void Gui::OnKeyboard(unsigned wParam, bool bKeyDown)
+static bool IsVkDown(int vk)
 {
-	if (!bKeyDown)
+	return (::GetKeyState(vk) & 0x8000) != 0;
+}
+// There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
+#define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)
+void Gui::OnKeyboard(unsigned wParam, bool is_key_down)
+{
+	ImGuiIO& io = ImGui::GetIO();
+	if (!is_key_down)
 	{
-		ImGuiIO& io = ImGui::GetIO();
 		int k = VirtualKeyToChar(wParam);
 		keys_pressed.push_back(tolower(k));
 	}
+	auto& config = client::Config::GetInstance();
+#if 0
+	if (config.options.gui2D)
+	{
+		if (wParam < 256)
+		{
+			// Submit modifiers
+			io.AddKeyEvent(ImGuiMod_Ctrl, IsVkDown(VK_CONTROL));
+			io.AddKeyEvent(ImGuiMod_Shift, IsVkDown(VK_SHIFT));
+			io.AddKeyEvent(ImGuiMod_Alt, IsVkDown(VK_MENU));
+			io.AddKeyEvent(ImGuiMod_Super, IsVkDown(VK_APPS));
+
+			// Obtain virtual key code
+			int vk = (int)wParam;
+
+			// Submit key event
+			const ImGuiKey key = ImGui_ImplWin32_VirtualKeyToImGuiKey(vk);
+			if (key != ImGuiKey_None)
+				io.AddKeyEvent(key, is_key_down);
+
+			// Submit individual left/right modifier events
+			if (vk == VK_SHIFT)
+			{
+				// Important: Shift keys tend to get stuck when pressed together, missing key-up events are corrected in ImGui_ImplWin32_ProcessKeyEventsWorkarounds()
+				if (IsVkDown(VK_LSHIFT) == is_key_down) { io.AddKeyEvent(ImGuiKey_LeftShift, is_key_down ); }
+				if (IsVkDown(VK_RSHIFT) == is_key_down) { io.AddKeyEvent(ImGuiKey_RightShift, is_key_down ); }
+			}
+			else if (vk == VK_CONTROL)
+			{
+				if (IsVkDown(VK_LCONTROL) == is_key_down) { io.AddKeyEvent(ImGuiKey_LeftCtrl, is_key_down); }
+				if (IsVkDown(VK_RCONTROL) == is_key_down) { io.AddKeyEvent(ImGuiKey_RightCtrl, is_key_down); }
+			}
+			else if (vk == VK_MENU)
+			{
+				if (IsVkDown(VK_LMENU) == is_key_down) { io.AddKeyEvent(ImGuiKey_LeftAlt, is_key_down); }
+				if (IsVkDown(VK_RMENU) == is_key_down) { io.AddKeyEvent(ImGuiKey_RightAlt, is_key_down); }
+			}
+		}
+	}
+#endif
 }
 
 void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)

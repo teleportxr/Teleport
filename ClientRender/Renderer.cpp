@@ -306,8 +306,9 @@ void Renderer::UpdateShaderPasses()
 			shaderPassSetup.technique		=renderState.pbrEffect->GetTechniqueByName(techname);
 			shaderPassSetup.noLightmapPass	=shaderPassSetup.technique->GetPass("pbr_nolightmap");
 			shaderPassSetup.lightmapPass	=shaderPassSetup.technique->GetPass("pbr_lightmap");
-			shaderPassSetup.digitizingPass = shaderPassSetup.technique->GetPass("digitizing");
-			shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
+			shaderPassSetup.digitizingPass	=shaderPassSetup.technique->GetPass("digitizing");
+			if (!renderState.overridePassName.empty())
+				shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
 			return shaderPassSetup;
 		};
 	renderState.pbrEffect_solid					=SetPasses("solid");
@@ -521,7 +522,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
 	auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-	
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	// TODO: This should render only if no background clients are connected.
 	if (!sessionClient->IsConnected())
@@ -530,7 +530,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		{
 			ShowHideGui();
 		}
-
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
 			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -546,7 +545,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
 		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
 			passName += "_multiview";
-
 		renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
 		renderPlatform->DrawQuad(deviceContext);
 		renderState.cubemapClearEffect->Unapply(deviceContext);
@@ -560,14 +558,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		origin_pose.orientation=*((vec4*)&origin_node->GetGlobalRotation());
 		SetRenderPose(deviceContext,GetOriginPose(server_uid));
 		GetInstanceRenderer(server_uid)->RenderView(deviceContext);
-
 		if(debugOptions.showAxes)
 		{
 			renderPlatform->DrawAxes(deviceContext,mat4::identity(),2.0f);
 		}
-
 	}
-	
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	SetRenderPose(deviceContext, avs::Pose());

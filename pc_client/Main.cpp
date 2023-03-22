@@ -159,7 +159,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     {
        // if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
         {
-          //  TranslateMessage(&msg);
+            TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
     }
@@ -251,12 +251,6 @@ void ShutdownRenderer(HWND hWnd)
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
 
-void InitXR()
-{
-	useOpenXR.TryInitDevice();
-	// Make the actions, even without a device. Because we treat mouse/kb as virtual devices.
-	useOpenXR.MakeActions();
-}
 
 void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 {
@@ -267,7 +261,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-	gdi->Initialize(true, false, false);
+static bool use_debug=false;
+	gdi->Initialize(use_debug, false, false);
 #else
 	gdi->Initialize(false, false, false);
 #endif
@@ -330,7 +325,6 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		if(useOpenXR.InitInstance("Teleport Client"))
 		{
 			useOpenXR.Init(renderPlatform);
-			InitXR();
 		}
 	}
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);

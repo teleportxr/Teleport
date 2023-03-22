@@ -344,7 +344,6 @@ namespace teleport
 			XrPath userHandLeftActiveProfile;
 			XrPath userHandRightActiveProfile;
 			
-
 			std::vector<XrPath> activeInteractionProfilePaths;
 			std::map<uint16_t, uint16_t> mapActionIndexToInputId;
 			std::vector<InteractionProfile> interactionProfiles;
