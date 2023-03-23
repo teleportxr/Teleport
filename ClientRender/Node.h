@@ -40,7 +40,7 @@ namespace clientrender
 		avs::uid GetHolderClientId() const;
 		void SetPriority(int p);
 		int GetPriority() const;
-		void UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale);
+		void UpdateModelMatrix(vec3 translation, quat rotation, vec3 scale);
 		// force update of model matrices - should not be necessary, but is.
 		void UpdateModelMatrix();
 		//Requests global transform of node, and node's children, be recalculated.

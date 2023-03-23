@@ -7,17 +7,60 @@
 #include "libavstream/common_maths.h"
 #include "libavstream/common_input.h"
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 namespace teleport
 {
 	namespace core
 	{
-	#ifdef _MSC_VER
-	#pragma pack(push, 1)
-	#endif
+		struct vec2_packed
+		{
+			float x,y;
+			operator const vec2() const{
+				return *((const vec2*)this);
+			}
+		} AVS_PACKED;
+		struct vec3_packed
+		{
+			float x,y,z;
+			operator const vec3() const{
+				return *((const vec3*)this);
+			}
+		} AVS_PACKED;
+		struct vec4_packed
+		{
+			float x,y,z,w;
+			operator const vec4() const{
+				return *((const vec4*)this);
+			}
+		} AVS_PACKED;
 		enum class BackgroundMode : uint8_t
 		{
 			NONE = 0, COLOUR, TEXTURE, VIDEO
-		};
+		} AVS_PACKED;
+		struct Pose_packed
+		{
+			void operator=(const avs::Pose &p)
+			{
+				orientation=*((const vec4_packed*)&p.orientation);
+				position=*((const vec3_packed*)&p.position);
+			}
+			vec4_packed orientation = { 0, 0, 0, 1 };
+			vec3_packed position = { 0, 0, 0 };
+		} AVS_PACKED;
+		struct PoseDynamic_packed
+		{
+			void operator=(const avs::PoseDynamic &p)
+			{
+				pose=p.pose;
+				velocity=*((const vec3_packed*)&p.velocity);
+				angularVelocity=*((const vec3_packed*)&p.angularVelocity);
+			}
+			Pose_packed pose;
+			vec3_packed velocity;
+			vec3_packed angularVelocity;
+		} AVS_PACKED;
 		enum class RemotePlaySessionChannel : unsigned char //enet_uint8
 		{
 			RPCH_Handshake = 0,
@@ -29,13 +72,13 @@ namespace teleport
 			RPCH_ClientMessage = 6,
 			RPCH_StreamingControl= 7,
 			RPCH_NumChannels
-		};
+		} AVS_PACKED;
 
 		enum class ControlModel : uint32_t
 		{
 			NONE=0,
 			SERVER_ORIGIN_CLIENT_LOCAL=2
-		};
+		} AVS_PACKED;
 
 		enum class NodeStatus : uint8_t
 		{
@@ -43,7 +86,7 @@ namespace teleport
 			Drawn,
 			WantToRelease,
 			Released
-		};
+		} AVS_PACKED;
 	
 		//! The payload type, or how to interpret the server's message.
 		enum class CommandPayloadType : uint8_t
@@ -65,7 +108,7 @@ namespace teleport
 			UpdateNodeStructure,
 			AssignNodePosePath,
 			SetupInputs
-		};
+		} AVS_PACKED;
 
 		//! The payload type, or how to interpret the client's message.
 		enum class ClientMessagePayloadType : uint8_t
@@ -74,7 +117,7 @@ namespace teleport
 			NodeStatus,
 			ReceivedResources,
 			ControllerPoses
-		};
+		} AVS_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
 		//! The server assigns the client an ID which is unique for that server.
@@ -121,12 +164,12 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			vec3 position={0,0,0};
-			vec4 rotation={0,0,0,0};
-			vec3 scale={0,0,0};
+			vec3_packed position={0,0,0};
+			vec4_packed rotation={0,0,0,0};
+			vec3_packed scale={0,0,0};
 
-			vec3 velocity={0,0,0};
-			vec3 angularVelocityAxis={0,0,0};
+			vec3_packed velocity={0,0,0};
+			vec3_packed angularVelocityAxis={0,0,0};
 			float angularVelocityAngle = 0.0f;
 		} AVS_PACKED;
 
@@ -137,8 +180,8 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			vec3 position;
-			vec3 velocity;
+			vec3_packed position;
+			vec3_packed velocity;
 		} AVS_PACKED;
 
 		//TODO: Use instead of MovementUpdate for bandwidth.
@@ -148,8 +191,8 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			vec4 rotation;
-			vec3 angularVelocityAxis;
+			vec4_packed rotation;
+			vec3_packed angularVelocityAxis;
 			float angularVelocityAngle = 0.0f;
 		} AVS_PACKED;
 
@@ -160,8 +203,8 @@ namespace teleport
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
-			vec3 scale;
-			vec3 velocity;
+			vec3_packed scale;
+			vec3_packed velocity;
 		} AVS_PACKED;
 
 		struct NodeUpdateEnabledState
@@ -179,12 +222,12 @@ namespace teleport
 
 		// TODO: These enumerations are placeholder; in the future we want a more flexible system.
 		//! Controls what is used as the current time of the animation.
-		enum class AnimationTimeControl
+		enum class AnimationTimeControl:uint32_t
 		{
 			ANIMATION_TIME=0,				//< Default; animation is controlled by time since animation started.
 			CONTROLLER_0_TRIGGER,
 			CONTROLLER_1_TRIGGER
-		};
+		} AVS_PACKED;
 
 		struct NodeUpdateAnimationControl
 		{
@@ -200,7 +243,6 @@ namespace teleport
 		{
 		//! What type of command this is, how to interpret it.
 			CommandPayloadType commandPayloadType;
-
 			Command(CommandPayloadType t) : commandPayloadType(t) {}
 
 		} AVS_PACKED;
@@ -234,7 +276,6 @@ namespace teleport
 			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 			uint64_t		valid_counter = 0;
 		} AVS_PACKED;
-
 		//! The setup information sent by the server on connection to a given client.
 		struct SetupCommand : public Command
 		{
@@ -244,26 +285,26 @@ namespace teleport
 			{
 				return sizeof(SetupCommand);
 			}
-			int32_t				server_streaming_port = 0;			//!< 
-			int32_t				server_http_port = 0;				//!< 
-			uint32_t			debug_stream = 0;					//!< 
-			uint32_t			do_checksums = 0;					//!< 
-			uint32_t			debug_network_packets = 0;			//!<
-			int32_t				requiredLatencyMs = 0;				//!<
-			uint32_t			idle_connection_timeout = 5000;		//!<
-			avs::uid			server_id = 0;						//!< The server's id: not unique on a client.
-			ControlModel		control_model = ControlModel::NONE;	//!< Not in use
-			avs::VideoConfig	video_config;						//!< Video setup structure.
-			float				draw_distance = 0.0f;				//!< Maximum distance in metres to render locally.
-			vec3			bodyOffsetFromHead_DEPRECATED;		//!< Not in use.
-			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's.
-			uint8_t				audio_input_enabled = 0;			//!< Server accepts audio stream from client.
-			bool				using_ssl = true;					//!< Not in use, for later.
-			int64_t				startTimestamp_utc_unix_ms = 0;		//!< UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+			int32_t				server_streaming_port = 0;			//!< 5
+			int32_t				server_http_port = 0;				//!< 9
+			uint32_t			debug_stream = 0;					//!< 13
+			uint32_t			do_checksums = 0;					//!< 17
+			uint32_t			debug_network_packets = 0;			//!< 21
+			int32_t				requiredLatencyMs = 0;				//!< 25
+			uint32_t			idle_connection_timeout = 5000;		//!< 29
+			avs::uid			server_id = 0;						//!< The server's id: not unique on a client.	37 bytes
+			ControlModel		control_model = ControlModel::NONE;	//!< Not in use 41b to here
+			avs::VideoConfig	video_config;						//!< Video setup structure. 41+89=130 bytes
+			float				draw_distance = 0.0f;				//!< Maximum distance in metres to render locally. 134
+			vec3_packed			bodyOffsetFromHead_DEPRECATED;		//!< Not in use. 146
+			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's. 147
+			uint8_t				audio_input_enabled = 0;			//!< 148 Server accepts audio stream from client.
+			bool				using_ssl = true;					//!< 147 Not in use, for later.
+			int64_t				startTimestamp_utc_unix_ms = 0;		//!< 157 UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
-			BackgroundMode	backgroundMode;							//!< Whether the server supplies a background, and of which type.
-			vec4			backgroundColour;					//!< If the background is of the COLOUR type, which colour to use.
-			avs::ClientDynamicLighting clientDynamicLighting;		//!< Setup for dynamic object lighting.
+			BackgroundMode		backgroundMode;							//!< 158 Whether the server supplies a background, and of which type.
+			vec4_packed			backgroundColour;						//!< 174 If the background is of the COLOUR type, which colour to use.
+			avs::ClientDynamicLighting clientDynamicLighting;		//!< Setup for dynamic object lighting. 174+57=231 bytes
 		} AVS_PACKED;
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
@@ -421,15 +462,16 @@ namespace teleport
 		{
 			avs::uid nodeID = 0;		//!< Which node to reparent.
 			avs::uid parentID = 0;		//!< The new parent uid.
-			avs::Pose relativePose;		//!< The new relative pose of the child node.
+			Pose_packed relativePose;		//!< The new relative pose of the child node.
 			UpdateNodeStructureCommand()
 				:UpdateNodeStructureCommand(0, 0,avs::Pose())
 			{}
 
 			UpdateNodeStructureCommand(avs::uid n, avs::uid p,avs::Pose relPose)
 				:Command(CommandPayloadType::UpdateNodeStructure), nodeID(n), parentID(p)
-				,relativePose(relPose)
-			{}
+			{
+				relativePose={*((vec4_packed*)&relPose.orientation),*((vec3_packed*)&relPose.position)};
+			}
 
 			static size_t getCommandSize()
 			{
@@ -562,14 +604,14 @@ namespace teleport
 		struct NodePose
 		{
 			avs::uid uid;
-			avs::PoseDynamic poseDynamic;// in stage space.
+			PoseDynamic_packed poseDynamic;// in stage space.
 		} AVS_PACKED;
 
 		//! Message info struct containing head and other node poses. followed by numPoses NodePose structs.
 		struct ControllerPosesMessage : public ClientMessage
 		{
 		//! The headset's pose.
-			avs::Pose headPose;
+			Pose_packed headPose;
 		//! Poses of the  controllers.
 			uint16_t numPoses=0;
 
@@ -577,9 +619,9 @@ namespace teleport
 				:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 			{}
 		} AVS_PACKED;
-	#ifdef _MSC_VER
-	#pragma pack(pop)
-	#endif
 	} //namespace 
 
 }
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif

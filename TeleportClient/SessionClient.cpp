@@ -749,7 +749,11 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 {
 	size_t commandSize= sizeof(teleport::core::SetupCommand);
-
+	if(packet->dataLength!=commandSize)
+	{
+		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet->dataLength);
+		return;
+	}
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);
 
