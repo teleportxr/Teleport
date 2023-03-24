@@ -167,7 +167,7 @@ void Config::LoadOptions()
 		auto C=magic_enum::enum_cast<StartupConnectOption>(c);
 		if(C.has_value())
 			options.startupConnectOption = C.value();
-		options.gui2D = ini.GetBoolValue("", "Gui2D", "");
+		options.gui2D = ini.GetBoolValue("", "Gui2D", options.gui2D);
 	}
 }
 

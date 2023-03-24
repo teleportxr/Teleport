@@ -38,16 +38,25 @@ set(src_private_root
 	src/libraryloader.cpp
 	src/timer.cpp
 )
+
 set(src_private_network
 	src/network/networksink.cpp
-	src/network/srt_efp_networksink.cpp
 	src/network/webrtc_networksink.cpp
 	src/network/networksource.cpp
-	src/network/srt_efp_networksource.cpp
 	src/network/webrtc_networksource.cpp
 	src/network/webrtc_common.cpp
 	src/network/webrtc_common.h
 )
+
+if(LIBAV_USE_SRT)
+
+set(src_private_network
+	${src_private_network}
+	src/network/srt_efp_networksink.cpp
+	src/network/srt_efp_networksource.cpp
+	)
+endif()
+
 set(src_private_api
 	src/api/cuda.cpp
 	src/api/cuda_dx12.cpp
@@ -95,10 +104,17 @@ set(hdr_private_parsers
 	src/parsers/nalu_parser_h264.hpp
 	src/parsers/nalu_parser_h265.hpp)
 set(hdr_private_network
-	src/network/networksink_p.hpp
-	src/network/networksource_p.hpp
 	src/network/packetformat.hpp
 	src/network/serial.hpp)
+
+if(LIBAV_SRT)
+	set(hdr_private_network
+		${hdr_private_network}
+		src/network/networksink_p.hpp
+		src/network/networksource_p.hpp
+		)
+endif()
+
 set(hdr_private_decoders
 	src/decoders/dec_nvidia.hpp)
 set(hdr_private_encoders
@@ -394,8 +410,11 @@ endif()
 target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib64")
 
-target_link_libraries(libavstream cuda cudart asio nv srt_static efp ${curl_libraries})
+target_link_libraries(libavstream cuda cudart asio nv efp ${curl_libraries})
 
+if(LIBAV_USE_SRT)
+target_link_libraries(libavstream srt_static)
+endif()
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)
 	add_dependencies(libavstream cuda_kernels)
@@ -408,6 +427,9 @@ target_compile_definitions(libavstream PRIVATE TELEPORT_DATACHANNEL_WEBRTC=$<BOO
 if(TELEPORT_DATACHANNEL_WEBRTC)
 	target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/include")
 	target_link_directories(libavstream PUBLIC "${CMAKE_BINARY_DIR}/thirdparty/libdatachannel/${CONFIG_NAME}")
-	target_link_libraries(libavstream datachannel-static legacy_stdio_definitions.lib)
+	target_link_libraries(libavstream datachannel-static )
+	if(TELEPORT_WINDOWS)
+		target_link_libraries(libavstream legacy_stdio_definitions.lib)
+	endif()
 endif()
 target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")

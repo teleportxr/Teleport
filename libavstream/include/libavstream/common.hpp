@@ -18,7 +18,7 @@
 
 #ifndef AVS_PACKED
 	#if defined(__GNUC__) || defined(__clang__)
-		#define AVS_PACKED __attribute__ ((packed))
+		#define AVS_PACKED __attribute__ ((packed,aligned(1)))
 	#else
 		#define AVS_PACKED
 	#endif
@@ -318,7 +318,7 @@ namespace avs
 		int32_t		shadowmap_x=0;
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
-	} AVS_PACKED;
+	} AVS_PACKED;	// 89 bytes
 
 	
 	enum class LightingMode : uint8_t
@@ -337,7 +337,7 @@ namespace avs
 		uid specularCubemapTexture=0;
 		uid diffuseCubemapTexture=0;
 		LightingMode lightingMode = LightingMode::TEXTURE;
-	} AVS_PACKED;
+	} AVS_PACKED;	// 57 bytes
 
 	struct AudioConfig
 	{

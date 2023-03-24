@@ -579,8 +579,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 
 	const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 		=renderState.openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
-	auto l=nodePoseStates.find(1);
-		vec4 white={1.f,1.f,1.f,1.f};
+	auto l=nodePoseStates.find(lobbyGeometry.left_root_node_uid);
+	vec4 white={1.f,1.f,1.f,1.f};
 	std::vector<vec4> hand_pos_press;
 	if(l!=nodePoseStates.end())
 	{
@@ -597,7 +597,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		hand_pos_press.push_back(pos4);
 	}
 
-	auto r=nodePoseStates.find(2);
+	auto r=nodePoseStates.find(lobbyGeometry.right_root_node_uid);
 	if(r!=nodePoseStates.end())
 	{
 		avs::Pose rightHand = r->second.pose_footSpace.pose;

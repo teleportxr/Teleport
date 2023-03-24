@@ -766,6 +766,10 @@ void OpenXR::RecordCurrentBindings()
 	}
 	// On a desktop machine? add mouse/keyboard profile.
 	#ifdef _MSC_VER
+	if (MOUSE_KEYBOARD_PROFILE_INDEX >= interactionProfiles.size())
+	{
+		CreateMouseAndKeyboardProfile();
+	}
 	InteractionProfile &mouseAndKeyboard	=interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
 	activeInteractionProfilePaths.push_back(mouseAndKeyboard.profilePath);
 	#endif
@@ -1880,7 +1884,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 
-		static bool add_overlay=false;
+		static bool add_overlay=true;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);

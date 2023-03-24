@@ -41,7 +41,7 @@ bool Node::IsStatic() const
 	return isStatic;
 }
 
-void Node::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
+void Node::UpdateModelMatrix(vec3 translation, quat rotation, vec3 scale)
 {
 	if(ShouldUseGlobalTransform())
 	{
@@ -76,7 +76,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	lastReceivedMovement = update;
 
 	//Set transform, then tick based on difference in time since the update was sent and now.
-	UpdateModelMatrix(update.position, update.rotation, update.scale);
+	UpdateModelMatrix(update.position, (vec4)update.rotation, update.scale);
 	TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - update.timestamp));
 }
 

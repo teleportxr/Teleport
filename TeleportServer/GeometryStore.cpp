@@ -1406,15 +1406,17 @@ void GeometryStore::compressNextTexture()
 		{
 			basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
 		}
+
+		if(!basisu::g_library_initialized)
+			basisu::basisu_encoder_init(false,false);
+		if(!basisu::g_library_initialized)
+		{
+			TELEPORT_CERR << "basisu_encoder_init failed.\n";
+			return ;
+		}
 		basisu::basis_compressor basisCompressor;
 		basisu::enable_debug_printf(true);
-
 		bool ok = basisCompressor.init(basisCompressorParams);
-		if(!ok)
-		{
-			basisu::basisu_encoder_init(false,false);
-			ok = basisCompressor.init(basisCompressorParams);
-		}
 		if (ok)
 		{
 			basisu::basis_compressor::error_code result = basisCompressor.process();

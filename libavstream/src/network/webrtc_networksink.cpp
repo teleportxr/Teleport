@@ -316,8 +316,17 @@ Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uin
 
 	// Total number of EFP superframes created since the start for this stream.
 	stream.counter++;
-
-	auto efpResult = m_data->m_EFPSender->packAndSendFromPtr(buffer,
+	/*static uint8_t test_data[1000];
+	static bool init=false;
+	if(!init)
+	{
+		uint8_t u8=0;
+		for(size_t i=0;i<1000;i++)
+			test_data[i]=u8++;
+		init=true;
+	}*/
+	auto efpResult = m_data->m_EFPSender->packAndSendFromPtr(
+		buffer,
 		bufferSize,
 		dataContent,
 		stream.counter, // pts
@@ -513,15 +522,11 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 
 	dc->onClosed([id]() { std::cout << "DataChannel from " << id << " closed" << std::endl; });
 
-	dc->onMessage([id](auto data) {
-		// data holds either std::string or rtc::binary
-		if (std::holds_alternative<std::string>(data))
-		std::cout << "Message from " << id << " received: " << std::get<std::string>(data)
-			<< std::endl;
-		else
-			std::cout << "Binary message from " << id
-			<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
-		});
+	//c->onMessage([id](rtc::binary b) {
+	//	// data holds either std::string or rtc::binary
+	//	std::cout << "Binary message from " << id
+	//		<< " received, size=" << b.size() << std::endl;
+	//	},[this, &dataChannel,id](rtc::string s) {});
 
 	//dataChannelMap.emplace(id, dc);
 }
