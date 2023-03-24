@@ -13,6 +13,7 @@ using namespace platform;
 template<typename T1, typename T2> T1 ConvertVec2(const T2& value) { return T1(value.x, value.y); }
 template<typename T1, typename T2> T1 ConvertVec3(const T2& value) { return T1(value.x, value.y, value.z); }
 template<typename T1, typename T2> T1 ConvertVec4(const T2& value) { return T1(value.x, value.y, value.z, value.w); }
+
 mat4 ConvertMat4(const float value[4][4]) 
 {
 	mat4 result;
@@ -241,7 +242,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 		{
 			if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::COLOUR)
 			{
-				renderPlatform->Clear(deviceContext, ConvertVec4<vec4>(renderState.lastSetupCommand.backgroundColour));
+				renderPlatform->Clear(deviceContext, (renderState.lastSetupCommand.backgroundColour));
 			}
 			else if (renderState.lastSetupCommand.backgroundMode == teleport::core::BackgroundMode::VIDEO)
 			{

@@ -5,6 +5,7 @@
 #include "libavstream/common_maths.h"
 
 #include "Platform/Shaders/SL/CppSl.sl"
+#include "TeleportCore/CommonNetworking.h"
 
 //TODO: Placeholder! Find maths library!
 namespace clientrender
@@ -35,6 +36,10 @@ namespace clientrender
 
 		quat(float i, float j, float k, float s)
 			:i(i), j(j), k(k), s(s)
+		{}
+
+		quat(const teleport::core::vec4_packed &s)
+			:i(s.x), j(s.y), k(s.z), s(s.w)
 		{}
 		
 		quat(float angle, const vec3& axis)

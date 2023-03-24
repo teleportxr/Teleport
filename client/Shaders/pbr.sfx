@@ -199,7 +199,7 @@ shader vertexOutput VS_Solid_MV(vertexInput IN, uint viewID : SV_ViewID)
 
 	//wpos.xyz		-= videoCamPosition;
 	OUT.view			=normalize(wpos.xyz-stereoViewPosition);
-	vec4 viewspace_pos = mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
+	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	//OUT.clip_pos	=mul( opos, worldViewProj);
@@ -209,11 +209,11 @@ shader vertexOutput VS_Solid_MV(vertexInput IN, uint viewID : SV_ViewID)
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
 #else
-	OUT.normal			= mul(vec4(IN.normal.xyz, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
-	OUT.tangent			= mul(vec4(IN.tangent.xyz,0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
+	OUT.normal			=mul(vec4(IN.normal.xyz, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
+	OUT.tangent			=mul(vec4(IN.tangent.xyz,0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
 #endif
 	OUT.hPosition		=OUT.clip_pos;
-	OUT.debug_colour	= vec4(IN.position.xyz, 0);
+	OUT.debug_colour	=vec4(IN.position.xyz, 0);
 	return OUT;
 }
 

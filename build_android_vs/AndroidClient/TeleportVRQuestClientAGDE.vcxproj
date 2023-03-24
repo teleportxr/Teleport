@@ -194,9 +194,6 @@
     <ProjectReference Include="..\firstparty\Platform\Vulkan\SimulVulkan_MT.vcxproj">
       <Project>{97036138-28ed-340a-82bf-867c6d8f0330}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\firstparty\Platform\Vulkan\VulkanCoreShaders.vcxproj">
-      <Project>{d023754d-ff4e-36bd-8630-fd0581b1b55d}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\libavstream\libavstream_Android.vcxproj">
       <Project>{6f52b627-c756-44dd-ae24-a9370c3dbddc}</Project>
     </ProjectReference>

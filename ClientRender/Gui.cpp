@@ -615,13 +615,15 @@ int VirtualKeyToChar(unsigned long long key)
 		break;
 	}
 #endif
-	return (int)key;
 #endif
+	return (int)key;
 }
+#ifdef _MSC_VER
 static bool IsVkDown(int vk)
 {
 	return (::GetKeyState(vk) & 0x8000) != 0;
 }
+#endif
 // There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
 #define IM_VK_KEYPAD_ENTER      (VK_RETURN + 256)
 void Gui::OnKeyboard(unsigned wParam, bool is_key_down)
