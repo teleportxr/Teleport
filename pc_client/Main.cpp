@@ -573,9 +573,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
 						useOpenXR.RenderFrame(renderDelegate, overlayDelegate);
 						if(useOpenXR.IsXRDeviceActive())
-						{
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-						}
 						else
 							clientRenderer->SetExternalTexture(nullptr);
 					}

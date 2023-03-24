@@ -244,6 +244,9 @@ bool UseOpenXR::TryInitDevice()
 	swapchain_info.mipCount		= 1;
 	AddXrSwapchain(swapchain_info);
 
+	OVERLAY_SWAPCHAIN = (int)xr_swapchains.size();
+	AddXrSwapchain(swapchain_info);
+
 	haveXRDevice = true;
 	return true;
 }
