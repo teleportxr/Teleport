@@ -5,6 +5,7 @@
 #else
 #include <d3d11.h>
 #define XR_USE_GRAPHICS_API_D3D11
+#include "Platform/DirectX11/RenderPlatform.h"
 #endif
 #define XR_USE_PLATFORM_WIN32
 #include "UseOpenXR.h"
@@ -35,30 +36,40 @@ const char *UseOpenXR::GetOpenXRGraphicsAPIExtensionName() const
 #endif
 }
 
-swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlatform,XrBaseInStructure& swapchain_img,int64_t d3d_swapchain_fmt)
+swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlatform,XrBaseInStructure& swapchain_img, XrSwapchainCreateInfo swapchain_info)
 {
 	swapchain_surfdata_t result = {};
 
 	// Get information about the swapchain image that OpenXR made for us!
 #if TELEPORT_CLIENT_USE_D3D12
 	XrSwapchainImageD3D12KHR& d3d_swapchain_img = (XrSwapchainImageD3D12KHR&)swapchain_img;
+	platform::crossplatform::PixelFormat pixelFormat = platform::dx12::RenderPlatform::FromDxgiFormat((DXGI_FORMAT)swapchain_info.format);
 #else
 	XrSwapchainImageD3D11KHR& d3d_swapchain_img = (XrSwapchainImageD3D11KHR&)swapchain_img;
+	platform::crossplatform::PixelFormat pixelFormat = platform::dx11::RenderPlatform::FromDxgiFormat((DXGI_FORMAT)swapchain_info.format);
 #endif
-	result.target_view				= renderPlatform->CreateTexture("swapchain target");
-	result.target_view->InitFromExternalTexture2D(renderPlatform, d3d_swapchain_img.texture, nullptr,0,0,platform::crossplatform::UNKNOWN,true);
-	result.depth_view				= renderPlatform->CreateTexture("swapchain depth");
+
 	platform::crossplatform::TextureCreate textureCreate = {};
-	textureCreate.numOfSamples		= std::max(1,result.target_view->GetSampleCount());
-	textureCreate.mips				= 1;
+	textureCreate.external_texture	= d3d_swapchain_img.texture;
+	textureCreate.w					= swapchain_info.width;
+	textureCreate.l					= swapchain_info.height;
+	textureCreate.arraysize			= swapchain_info.arraySize;
+	textureCreate.make_rt			= true;
+	textureCreate.computable		= false;
+	textureCreate.f					= pixelFormat;
+	textureCreate.numOfSamples		= std::max((uint32_t)1, swapchain_info.sampleCount);
+	result.target_view				= renderPlatform->CreateTexture("swapchain target");
+	result.target_view->InitFromExternalTexture(renderPlatform, &textureCreate);
+
+	textureCreate.external_texture	= nullptr;
 	textureCreate.w					= result.target_view->width;
 	textureCreate.l					= result.target_view->length;
-	textureCreate.arraysize			= 1;
 	textureCreate.f					= platform::crossplatform::PixelFormat::D_32_FLOAT;
+	textureCreate.make_rt			= false;
 	textureCreate.setDepthStencil	= true;
-	textureCreate.computable		= false;
+	textureCreate.numOfSamples		= std::max(1,result.target_view->GetSampleCount());
+	result.depth_view				= renderPlatform->CreateTexture("swapchain depth");
 	result.depth_view->EnsureTexture(renderPlatform, &textureCreate);
-
 	return result;
 }
 
@@ -93,9 +104,6 @@ bool UseOpenXR::TryInitDevice()
 	binding.device = renderPlatform->AsD3D12Device();
 	auto *rp12=(platform::dx12::RenderPlatform*)renderPlatform;
 	binding.queue = rp12->GetCommandQueue();
-	rp12->ExecuteCommandList(nullptr,nullptr);
-			rp12-> FlushImmediateCommandList();
-			rp12-> ResetImmediateCommandList() ;
 #else
 	PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR = nullptr;
 	xrGetInstanceProcAddr(xr_instance, "xrGetD3D11GraphicsRequirementsKHR", (PFN_xrVoidFunction*)(&ext_xrGetD3D11GraphicsRequirementsKHR));
@@ -106,6 +114,7 @@ bool UseOpenXR::TryInitDevice()
 	XrGraphicsBindingD3D11KHR binding = { XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
 	binding.device = renderPlatform->AsD3D11Device();
 #endif
+
 	XrSessionCreateInfo sessionInfo = { XR_TYPE_SESSION_CREATE_INFO };
 	sessionInfo.next = &binding;
 	sessionInfo.systemId = xr_system_id;
@@ -139,6 +148,7 @@ bool UseOpenXR::TryInitDevice()
 	xr_config_views.resize(view_count, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
 	xr_views.resize(view_count, { XR_TYPE_VIEW });
 	xrEnumerateViewConfigurationViews(xr_instance, xr_system_id, app_config_view, view_count, &view_count, xr_config_views.data());
+	
 	// Can we override this stuff?
 	static int samples=1;
 	for (uint32_t i = 0; i < view_count; i++)
@@ -146,54 +156,45 @@ bool UseOpenXR::TryInitDevice()
 		xr_config_views[i].maxSwapchainSampleCount=samples;
 		xr_config_views[i].recommendedSwapchainSampleCount=samples;
 	}
-	int64_t swapchain_format = 0;
+
+	// Check the two eyes for stereo are the same
+	XrViewConfigurationView& config_view = xr_config_views[0];
+	if (app_config_view == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO && xr_config_views.size() == 2)
+	{
+		SIMUL_ASSERT(xr_config_views[0].recommendedImageRectWidth == xr_config_views[1].recommendedImageRectWidth)
+		SIMUL_ASSERT(xr_config_views[0].recommendedImageRectHeight == xr_config_views[1].recommendedImageRectHeight)
+	}
+
 	// Find out what format to use:
+	int64_t swapchain_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	constexpr int64_t SupportedColorSwapchainFormats[] = { DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM };
 	uint32_t formatCount = 0;
-	 res = xrEnumerateSwapchainFormats(
-		xr_session,
-		0,
-		&formatCount,
-		nullptr);
+	res = xrEnumerateSwapchainFormats(xr_session, 0, &formatCount, nullptr);
 	if (!formatCount)
 		return false;
+
 	std::vector<int64_t> formats(formatCount);
-	res = xrEnumerateSwapchainFormats(
-		xr_session,
-		formatCount,
-		&formatCount,
-		formats.data());
+	res = xrEnumerateSwapchainFormats(xr_session, formatCount, &formatCount, formats.data());
+#if 0
 	std::cout<<"xrEnumerateSwapchainFormats:\n";
 	for(auto f:formats)
 	{
 		DXGI_FORMAT F=(DXGI_FORMAT)f;
 		std::cout<<"    "<<F<<std::endl;
 	}
-	if (std::find(formats.begin(), formats.end(), swapchain_format) == formats.end())
+#endif
+	auto swapchainFormatIt = std::find_first_of(formats.begin(), formats.end(), std::begin(SupportedColorSwapchainFormats), std::end(SupportedColorSwapchainFormats));
+	if (swapchainFormatIt == formats.end())
 	{
-		swapchain_format = formats[0];
+		throw("No runtime swapchain format supported for color swapchain");
 	}
+	swapchain_format = *swapchainFormatIt;
 
-	for (uint32_t i = 0; i < view_count; i++)
+	//Add XR Swapchain Lambda
+	auto AddXrSwapchain = [&, this](XrSwapchainCreateInfo swapchain_info) -> void
 	{
-		// Create a swapchain for this viewpoint! A swapchain is a set of texture buffers used for displaying to screen,
-		// typically this is a backbuffer and a front buffer, one for rendering data to, and one for displaying on-screen.
-		// A note about swapchain image format here! OpenXR doesn't create a concrete image format for the texture, like 
-		// DXGI_FORMAT_R8G8B8A8_UNORM. Instead, it switches to the TYPELESS variant of the provided texture format, like 
-		// DXGI_FORMAT_R8G8B8A8_TYPELESS. When creating an ID3D11RenderTargetView for the swapchain texture, we must specify
-		// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
-		// we do need to store the format separately and remember it later.
-		XrViewConfigurationView& view = xr_config_views[i];
-		XrSwapchainCreateInfo    swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
-		XrSwapchain              handle;
-		swapchain_info.arraySize = 1;
-		swapchain_info.mipCount		= 1;
-		swapchain_info.faceCount	= 1;
-		swapchain_info.format		= swapchain_format;
-		swapchain_info.width		= view.recommendedImageRectWidth;
-		swapchain_info.height		= view.recommendedImageRectHeight;
-		swapchain_info.sampleCount	= view.recommendedSwapchainSampleCount;
-		swapchain_info.usageFlags	= XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-		xrCreateSwapchain(xr_session, &swapchain_info, &handle);
+		XrSwapchain handle;
+		XR_CHECK(xrCreateSwapchain(xr_session, &swapchain_info, &handle));
 
 		// Find out how many textures were generated for the swapchain
 		uint32_t surface_count = 0;
@@ -201,7 +202,7 @@ bool UseOpenXR::TryInitDevice()
 
 		// We'll want to track our own information about the swapchain, so we can draw stuff onto it! We'll also create
 		// a depth buffer for each generated texture here as well with make_surfacedata.
-		swapchain_t swapchain = {};
+		client::swapchain_t swapchain = {};
 		swapchain.width = swapchain_info.width;
 		swapchain.height = swapchain_info.height;
 		swapchain.handle = handle;
@@ -212,14 +213,36 @@ bool UseOpenXR::TryInitDevice()
 		vector<XrSwapchainImageD3D11KHR> surface_images;
 		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
 #endif
+
 		swapchain.surface_data.resize(surface_count);
 		xrEnumerateSwapchainImages(swapchain.handle, surface_count, &surface_count, (XrSwapchainImageBaseHeader*)surface_images.data());
 		for (uint32_t i = 0; i < surface_count; i++)
 		{
-			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform,(XrBaseInStructure&)surface_images[i],swapchain_format);
+			swapchain.surface_data[i] = CreateSurfaceData(renderPlatform, (XrBaseInStructure&)surface_images[i], swapchain_info);
 		}
 		xr_swapchains.push_back(swapchain);
-	}
+	};
+
+	//Main view swapchain:
+	// Create a swapchain for this viewpoint! A swapchain is a set of texture buffers used for displaying to screen,
+	// typically this is a backbuffer and a front buffer, one for rendering data to, and one for displaying on-screen.
+	// A note about swapchain image format here! OpenXR doesn't create a concrete image format for the texture, like 
+	// DXGI_FORMAT_R8G8B8A8_UNORM. Instead, it switches to the TYPELESS variant of the provided texture format, like 
+	// DXGI_FORMAT_R8G8B8A8_TYPELESS. When creating an ID3D11RenderTargetView for the swapchain texture, we must specify
+	// a concrete type like DXGI_FORMAT_R8G8B8A8_UNORM, as attempting to create a TYPELESS view will throw errors, so 
+	// we do need to store the format separately and remember it later.
+	MAIN_SWAPCHAIN = (int)xr_swapchains.size();
+	XrSwapchainCreateInfo swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
+	swapchain_info.createFlags	= 0;
+	swapchain_info.usageFlags	= XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchain_info.format		= swapchain_format;
+	swapchain_info.sampleCount	= config_view.recommendedSwapchainSampleCount;
+	swapchain_info.width		= config_view.recommendedImageRectWidth;
+	swapchain_info.height		= config_view.recommendedImageRectHeight;
+	swapchain_info.faceCount	= 1;
+	swapchain_info.arraySize	= view_count;
+	swapchain_info.mipCount		= 1;
+	AddXrSwapchain(swapchain_info);
 
 	haveXRDevice = true;
 	return true;
