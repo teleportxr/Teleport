@@ -29,7 +29,7 @@ static shared_ptr<rtc::PeerConnection> createServerPeerConnection(const rtc::Con
 	pc->onStateChange(
 		[](rtc::PeerConnection::State state)
 		{
-			std::cout << "State: " << state << std::endl;
+			std::cout << "PeerConnection State changed to: " << state << std::endl;
 		});
 
 	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)

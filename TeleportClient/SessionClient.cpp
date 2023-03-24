@@ -623,7 +623,7 @@ void SessionClient::SendResourceRequests()
 		for(avs::uid id : mQueuedResourceRequests)
 		{
 			mSentResourceRequests[id] = time;
-			TELEPORT_INTERNAL_COUT("SessionClient::SendResourceRequests Requested {0}",id);
+//			TELEPORT_INTERNAL_COUT("SessionClient::SendResourceRequests Requested {0}",id);
 		}
 		mQueuedResourceRequests.clear();
 	}

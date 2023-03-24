@@ -184,13 +184,13 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		layout->CalculateStride();
 		layout->m_PackingStyle = this->m_PackingStyle;
 
-		size_t constructedVBSize = layout->m_Stride * meshElementCreate.m_VertexCount;
-		size_t indicesSize = meshElementCreate.m_IndexCount * meshElementCreate.m_IndexSize;
+		size_t constructedVBByteSize = layout->m_Stride * meshElementCreate.m_VertexCount;
+		size_t indicesByteSize = meshElementCreate.m_IndexCount * meshElementCreate.m_IndexSize;
 
-		std::unique_ptr<float[]> constructedVB = std::make_unique<float[]>(constructedVBSize);
-		std::unique_ptr<uint8_t[]> _indices = std::make_unique<uint8_t[]>(indicesSize);
+		std::shared_ptr<std::vector<uint8_t>> constructedVB = std::make_shared<std::vector<uint8_t>>(constructedVBByteSize);
+		std::shared_ptr<std::vector<uint8_t>> _indices = std::make_unique<std::vector<uint8_t>>(indicesByteSize);
 
-		memcpy(_indices.get(), meshElementCreate.m_Indices, indicesSize);
+		memcpy(_indices->data(), meshElementCreate.m_Indices, indicesByteSize);
 
 		if (layout->m_PackingStyle == clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED)
 		{
@@ -199,7 +199,8 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				size_t intraStrideOffset = 0;
 				if (meshElementCreate.m_Vertices)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Vertices + j, sizeof(vec3)); intraStrideOffset += 3;
+					memcpy(constructedVB->data() + (layout->m_Stride * j) + intraStrideOffset, meshElementCreate.m_Vertices + j, sizeof(vec3));
+					intraStrideOffset += sizeof(vec3);
 				}
 				if (meshElementCreate.m_TangentNormals)
 				{
@@ -231,48 +232,48 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 						normal.y = float(n8.y) / 32767.0f;
 						normal.z = float(n8.z) / 32767.0f;
 					}
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &normal, sizeof(vec3));
-					intraStrideOffset += 3;
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, &tangent, sizeof(vec4));
-					intraStrideOffset += 4;
+					memcpy(constructedVB->data() + (layout->m_Stride * j) + intraStrideOffset, &normal, sizeof(vec3));
+					intraStrideOffset += sizeof(vec3);
+					memcpy(constructedVB->data() + (layout->m_Stride * j) + intraStrideOffset, &tangent, sizeof(vec4));
+					intraStrideOffset += sizeof(vec4);
 				}
 				else
 				{
 					if (meshElementCreate.m_Normals)
 					{
-						memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Normals + j, sizeof(vec3));
-						intraStrideOffset += 3;
+						memcpy(constructedVB->data() + (layout->m_Stride * j) + intraStrideOffset, meshElementCreate.m_Normals + j, sizeof(vec3));
+						intraStrideOffset += sizeof(vec3);
 					}
 					if (meshElementCreate.m_Tangents)
 					{
-						memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Tangents + j, sizeof(vec4));
-						intraStrideOffset += 4;
+						memcpy(constructedVB->data() + (layout->m_Stride * j) + intraStrideOffset, meshElementCreate.m_Tangents + j, sizeof(vec4));
+						intraStrideOffset += sizeof(vec4);
 					}
 				}
 				if (meshElementCreate.m_UV0s)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_UV0s + j, sizeof(vec2));
-					intraStrideOffset += 2;
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_UV0s + j, sizeof(vec2));
+					intraStrideOffset += sizeof(vec2);
 				}
 				if (meshElementCreate.m_UV1s)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_UV1s + j, sizeof(vec2));
-					intraStrideOffset += 2;
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_UV1s + j, sizeof(vec2));
+					intraStrideOffset += sizeof(vec2);
 				}
 				if (meshElementCreate.m_Colors)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Colors + j, sizeof(vec4));
-					intraStrideOffset += 4;
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_Colors + j, sizeof(vec4));
+					intraStrideOffset += sizeof(vec4);
 				}
 				if (meshElementCreate.m_Joints)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Joints + j, sizeof(vec4));
-					intraStrideOffset += 4;
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_Joints + j, sizeof(vec4));
+					intraStrideOffset += sizeof(vec4);
 				}
 				if (meshElementCreate.m_Weights)
 				{
-					memcpy(constructedVB.get() + (layout->m_Stride / 4 * j) + intraStrideOffset, meshElementCreate.m_Weights + j, sizeof(vec4));
-					intraStrideOffset += 4;
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_Weights + j, sizeof(vec4));
+					intraStrideOffset += sizeof(vec4);
 				}
 			}
 		}
@@ -283,7 +284,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			{
 				size_t size = sizeof(vec3) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
-				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Vertices, size);
+				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Vertices, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_TangentNormals)
@@ -321,12 +322,12 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 
 					size_t size = sizeof(vec3);
 					assert(constructedVBSize >= vertexBufferOffset + size);
-					memcpy(constructedVB.get() + vertexBufferOffset, &normal, size);
+					memcpy(constructedVB->data() + vertexBufferOffset, &normal, size);
 					vertexBufferOffset += size;
 
 					size = sizeof(vec4);
 					assert(constructedVBSize >= vertexBufferOffset + size);
-					memcpy(constructedVB.get() + vertexBufferOffset, &tangent, size);
+					memcpy(constructedVB->data() + vertexBufferOffset, &tangent, size);
 					vertexBufferOffset += size;
 				}
 			}
@@ -336,14 +337,14 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				{
 					size_t size = sizeof(vec3) * meshElementCreate.m_VertexCount;
 					assert(constructedVBSize >= vertexBufferOffset + size);
-					memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Normals, size);
+					memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Normals, size);
 					vertexBufferOffset += size;
 				}
 				if (meshElementCreate.m_Tangents)
 				{
 					size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 					assert(constructedVBSize >= vertexBufferOffset + size);
-					memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Tangents, size);
+					memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Tangents, size);
 					vertexBufferOffset += size;
 				}
 			}
@@ -351,35 +352,35 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			{
 				size_t size = sizeof(vec2) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
-				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_UV0s, size);
+				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_UV0s, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_UV1s)
 			{
 				size_t size = sizeof(vec2) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
-				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_UV1s, size);
+				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_UV1s, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Colors)
 			{
 				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
-				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Colors, size);
+				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Colors, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Joints)
 			{
 				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
-				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Joints, size);
+				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Joints, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Weights)
 			{
 				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
 				assert(constructedVBSize >= vertexBufferOffset + size);
-				memcpy(constructedVB.get() + vertexBufferOffset, meshElementCreate.m_Weights, size);
+				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Weights, size);
 				vertexBufferOffset += size;
 			}
 		}
@@ -389,7 +390,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
-		if (constructedVBSize == 0 || constructedVB == nullptr || meshElementCreate.m_IndexCount == 0 || meshElementCreate.m_Indices == nullptr)
+		if (constructedVBByteSize == 0 || constructedVB == nullptr || meshElementCreate.m_IndexCount == 0 || meshElementCreate.m_Indices == nullptr)
 		{
 			TELEPORT_CERR << "Unable to construct vertex and index buffers." << std::endl;
 			return avs::Result::GeometryDecoder_ClientRendererError;
@@ -400,8 +401,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		vb_ci.layout = layout;
 		vb_ci.usage = BufferUsageBit::STATIC_BIT | BufferUsageBit::DRAW_BIT;
 		vb_ci.vertexCount = meshElementCreate.m_VertexCount;
-		vb_ci.size = constructedVBSize;
-		vb_ci.data = (const void*)constructedVB.get();
+		vb_ci.data = constructedVB;
 		vb->Create(&vb_ci);
 
 		std::shared_ptr<IndexBuffer> ib = std::make_shared<clientrender::IndexBuffer>(renderPlatform);
@@ -409,7 +409,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		ib_ci.usage = BufferUsageBit::STATIC_BIT | BufferUsageBit::DRAW_BIT;
 		ib_ci.indexCount = meshElementCreate.m_IndexCount;
 		ib_ci.stride = meshElementCreate.m_IndexSize;
-		ib_ci.data = _indices.get();
+		ib_ci.data = _indices;
 		ib->Create(&ib_ci);
 
 		geometryCache->mVertexBufferManager.Add(geometryCache->GenerateUid(meshElementCreate.vb_id), vb);

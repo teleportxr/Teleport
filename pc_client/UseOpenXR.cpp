@@ -93,9 +93,9 @@ bool UseOpenXR::TryInitDevice()
 	binding.device = renderPlatform->AsD3D12Device();
 	auto *rp12=(platform::dx12::RenderPlatform*)renderPlatform;
 	binding.queue = rp12->GetCommandQueue();
-	rp12->ExecuteCommandList(nullptr,nullptr);
-			rp12-> FlushImmediateCommandList();
-			rp12-> ResetImmediateCommandList() ;
+	//rp12->ExecuteCommandList(nullptr,nullptr);
+	//		rp12-> FlushImmediateCommandList();
+		//	rp12-> ResetImmediateCommandList() ;
 #else
 	PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR = nullptr;
 	xrGetInstanceProcAddr(xr_instance, "xrGetD3D11GraphicsRequirementsKHR", (PFN_xrVoidFunction*)(&ext_xrGetD3D11GraphicsRequirementsKHR));

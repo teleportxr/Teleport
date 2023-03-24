@@ -22,7 +22,7 @@ namespace clientrender
 			BufferUsageBit usage = BufferUsageBit::UNKNOWN_BIT;
 			size_t indexCount = 0;
 			size_t stride = 0;
-			const uint8_t* data = nullptr;
+			std::shared_ptr<std::vector<uint8_t>> data;
 		};
 
 	protected:

@@ -46,7 +46,7 @@ static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Con
 	pc->onStateChange(
 		[](rtc::PeerConnection::State state)
 		{
-			std::cout << "State: " << state << std::endl;
+			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
 		});
 
 	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
@@ -419,17 +419,14 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		{
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		});
-	dc->onMessage([this, &dataChannel,id](rtc::binary b) {
-
-		// data holds either std::string or rtc::binary
-		
+	dc->onMessage([this, &dataChannel,id](rtc::binary b)
 		{
+			// data holds either std::string or rtc::binary
 			int nodeIndex = q_ptr()->m_streamNodeMap[id];
 			Queue* outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(nodeIndex));
 			dataChannel.bytesReceived += b.size();
 			//size_t numBytesWrittenToOutput;
 			//auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
-
 			auto val = m_EFPReceiver->receiveFragmentFromPtr((const uint8_t * )b.data(), b.size(), 0);
 			if (val!= ElasticFrameMessages::noError)
 			{
@@ -437,7 +434,6 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			}
 			//std::cout << "Binary message from " << id
 			//	<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
-		}
 		},[this, &dataChannel,id](rtc::string s) {});
 	//dataChannelMap.emplace(id, dc);
 }
