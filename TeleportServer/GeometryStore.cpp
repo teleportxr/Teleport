@@ -1202,8 +1202,12 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			TELEPORT_WARN << "Texture \"" << newTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << newTexture.dataSize << "B(" << newTexture.dataSize / 1048576.0f << "MB).\n";
 		}
 	}
-
 	textures[id] = ExtractedTexture{ guid, path, lastModified, newTexture };
+	if (newTexture.compressed)
+	{
+		std::string file_name = (cachePath + "/") + MakeResourceFilename(textures[id]);
+		saveResourceBinary(file_name, textures[id]);
+	}
 }
 
 avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
@@ -1296,8 +1300,8 @@ void GeometryStore::compressNextTexture()
 	auto compressionPair = texturesToCompress.begin();
 	auto foundTexture = textures.find(compressionPair->first);
 	assert(foundTexture != textures.end());
-
-	avs::Texture& newTexture = foundTexture->second.texture;
+	ExtractedTexture& extractedTexture = foundTexture->second;
+	avs::Texture& avsTexture = extractedTexture.texture;
 	PrecompressedTexture& compressionData = compressionPair->second;
 	if (compressionData.textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
@@ -1319,8 +1323,8 @@ void GeometryStore::compressNextTexture()
 			return;
 		}
 		size_t n=0;
-		int w=newTexture.width;
-		int h=newTexture.height;
+		int w=avsTexture.width;
+		int h=avsTexture.height;
 		//compressionData.numMips=std::min((size_t)2,compressionData.numMips);
 		for(size_t m=0;m<compressionData.numMips;m++)
 		{
@@ -1398,7 +1402,7 @@ void GeometryStore::compressNextTexture()
 			basisCompressorParams.m_mip_smallest_dimension = 4; // ???
 		}
 		basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
-		if(newTexture.cubemap)
+		if(avsTexture.cubemap)
 		{
 			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexTypeCubemapArray;
 		}
@@ -1425,28 +1429,32 @@ void GeometryStore::compressNextTexture()
 			{
 				basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
 
-			//	delete[] newTexture.data;
+			//	delete[] avsTexture.data;
 
-				newTexture.dataSize = basisCompressor.get_basis_file_size();
-				newTexture.data = new unsigned char[newTexture.dataSize];
-				memcpy(newTexture.data, basisTex.data(), newTexture.dataSize);
+				avsTexture.dataSize = basisCompressor.get_basis_file_size();
+				avsTexture.data = new unsigned char[avsTexture.dataSize];
+				memcpy(avsTexture.data, basisTex.data(), avsTexture.dataSize);
 			}
 			else
 			{
-				TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"!\n";
+				TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"!\n";
 			}
 		}
 		else
 		{
-			TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
+			TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
 		}
 		delete basisCompressorParams.m_pJob_pool;
 		basisCompressorParams.m_pJob_pool = nullptr;
+		{
+			std::string file_name = (cachePath + "/") + MakeResourceFilename(extractedTexture);
+			saveResourceBinary(file_name, extractedTexture);
+		}
 	}
 	else
 	{
 		// TODO: just store?
-		TELEPORT_CERR << "Failed to compress texture \"" << newTexture.name << "\"!\n";
+		TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"!\n";
 	}
 	texturesToCompress.erase(texturesToCompress.begin());
 }
@@ -1569,8 +1577,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(con
 		if (resourceData.second.path.length() == 0)
 			continue;
 		std::string file_name = (path + "/") + MakeResourceFilename(resourceData.second);
-		if (!saveResourceBinary(file_name, resourceData.second))
-			return false;
+		saveResourceBinary(file_name, resourceData.second);
 	}
 	return true;
 }
