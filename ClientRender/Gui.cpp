@@ -1451,6 +1451,8 @@ void Gui::MenuBar2D()
 		{
 			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(36, 24)))
 			{
+				show_bookmarks = false;
+				show_options = false;
 				current_url = url_buffer;
 				connectHandler(current_url);
 			}

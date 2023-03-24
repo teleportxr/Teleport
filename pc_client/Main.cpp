@@ -548,7 +548,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
 				fTime+=time_step;
 				errno=0;
-				platform::crossplatform::GraphicsDeviceContext	deviceContext;
+				platform::crossplatform::MultiviewGraphicsDeviceContext	deviceContext;
 				deviceContext.renderPlatform = renderPlatform;
 				// This context is active. So we will use it.
 				deviceContext.platform_context = w->GetPlatformDeviceContext();
@@ -571,7 +571,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						// Note we do this even when the device is inactive.
 						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
-						useOpenXR.RenderFrame( renderDelegate,overlayDelegate);
+						useOpenXR.RenderFrame(renderDelegate, overlayDelegate);
 						if(useOpenXR.IsXRDeviceActive())
 						{
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
