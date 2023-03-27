@@ -65,9 +65,11 @@ YCbCr Colour Space
 
 YCbCr is favoured over RGB for video broadcssting and streaming as the format implicitly compresses the video data, saving on bandwidth. YCbCr is based on the YUV standard for broadcast television, wherein the video signal is split into a luma (Y) and two chroma (Cb/Cr) components. It is vital to remember that the chroma components are defined to be the difference between the original colour and the luma signal, and therefore the chroma components are signed values ranging from -0.5 to 0.5, whereas the luma component ranges from 0.0 to 1.0, in a signed normalised co-ordinate space.
 
-.. image:: https://upload.wikimedia.org/wikipedia/commons/b/b8/YCbCr.GIF
+.. image:: /images/reference/YCbCr.GIF
   :width: 800
   :alt: The YCbCr colour space.
+
+Reference: `Wikipedia YCbCr <https://en.wikipedia.org/wiki/YCbCr>`_.
 
 Chroma Subsampling
 ------------------
@@ -82,7 +84,7 @@ Further compression of the video data can be achieved by downsampling the chroma
   :width: 800
   :alt: Chroma Subsampling types.
 
-`Wikipedia Chroma subsampling <https://en.wikipedia.org/wiki/Chroma_subsampling>`_
+`Wikipedia Chroma subsampling <https://en.wikipedia.org/wiki/Chroma_subsampling>`_.
 
 Interleaved, Planar and Semi Planar
 -----------------------------------
@@ -134,15 +136,15 @@ This qualifier refers to the how the data is organised in memory.
 +------+-------------+-------------------------------------------------------------------------------------------------------------------------+
 
 
-.. image:: https://gist.githubusercontent.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb/raw/656de03d44d16517f9067943111c0a30bfa8ae05/YUV_formats.png
+.. image:: /images/reference/YUV_formats.png
   :width: 800
   :alt: Layouts of alternative colour formats.
 
-.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Yuv420.svg/800px-Yuv420.svg.png
+.. image:: /images/reference/800px-Yuv420.svg.png
   :width: 800
   :alt: Layout of a YUV420 image.
 
-Reference: `Video LAN Wiki YUV <https://wiki.videolan.org/YUV>`_
+Reference: `Video LAN Wiki YUV <https://wiki.videolan.org/YUV>`_.
 
 Reference: `About YUV formats <https://gist.github.com/Jim-Bar/3cbba684a71d1a9d468a6711a6eddbeb>`_.
 
