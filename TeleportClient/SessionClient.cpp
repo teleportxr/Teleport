@@ -127,6 +127,8 @@ bool SessionClient::Connect(const char* remote_ip, uint16_t remotePort, uint tim
 
 bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_id)
 {
+	// TODO: don't reset this if reconnecting.
+	ResetSessionState();
 	mClientHost = enet_host_create(nullptr, 1, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
 	if(!mClientHost)
 	{
@@ -377,6 +379,19 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 	enet_packet_destroy(event.packet);
 }
 
+avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
+{
+	if (!buffer || bufferSizeInBytes < 1)
+		return avs::Result::Failed;
+	ENetPacket packet;
+	packet.data = ((enet_uint8*)buffer);
+	packet.dataLength = bufferSizeInBytes;
+	//packet.
+	//teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<const teleport::core::CommandPayloadType*>(buffer));
+	ReceiveCommandPacket(&packet);
+	return avs::Result::OK;
+}
+
 void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 {
 	teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<teleport::core::CommandPayloadType*>(packet->data));
@@ -431,6 +446,8 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 			ReceiveAssignNodePosePathCommand(packet);
 			break;
 		default:
+			TELEPORT_CERR << "Invalid CommandPayloadType.\n";
+			TELEPORT_INTERNAL_BREAK_ONCE("Invalid payload");
 			break;
 	};
 }
@@ -982,6 +999,8 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const ENetPacket* packet)
 	std::string str;
 	str.resize(assignNodePosePathCommand.pathLength);
 	memcpy(static_cast<void*>(str.data()), packet->data+commandSize, assignNodePosePathCommand.pathLength);
+	nodePosePaths[assignNodePosePathCommand.nodeID] = str;
+	TELEPORT_INTERNAL_COUT("Received pose for node {0}: {1}", assignNodePosePathCommand.nodeID, str);
 	mCommandInterface->AssignNodePosePath(assignNodePosePathCommand,str);
 }
 
@@ -1005,4 +1024,12 @@ void SessionClient::ReceiveTextCommand(const ENetPacket* packet)
 	str.resize(count);
 	memcpy(static_cast<void*>(str.data()), packet->data + commandSize, count);
 	mCommandInterface->OnStreamingControlMessage( str);
+}
+//! Reset the session state when connecting to a new server, or when reconnecting without preserving the session:
+void SessionClient::ResetSessionState()
+{
+	memset(&setupCommand,0,sizeof(setupCommand));
+	memset(&setupLightingCommand, 0, sizeof(setupLightingCommand));
+	inputDefinitions.clear();
+	nodePosePaths.clear();
 }

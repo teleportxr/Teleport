@@ -11,6 +11,7 @@
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
 #include <libavstream/libavstream.hpp>
+#include <libavstream/genericdecoder.h>
 
 #include "TeleportCore/Input.h"
 #include "TeleportClient/basic_linear_algebra.h"
@@ -71,7 +72,7 @@ namespace teleport
 			HANDSHAKING,
 			CONNECTED
 		};
-		class SessionClient
+		class SessionClient:public avs::GenericTargetInterface
 		{
 			avs::uid server_uid=0;
 			std::string server_ip;
@@ -80,6 +81,8 @@ namespace teleport
 			static std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
 			static void ConnectButtonHandler(avs::uid server_uid,const std::string& url);
 			static void CancelConnectButtonHandler(avs::uid server_uid);
+			// Implementing avs::GenericTargetInterface:
+			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		public:
 			SessionClient(avs::uid server_uid);
 			~SessionClient();
@@ -120,6 +123,20 @@ namespace teleport
 			};
 
 			void SendStreamingControlMessage(const std::string& str);
+			teleport::core::SetupCommand lastSetupCommand;
+			teleport::core::SetupLightingCommand lastSetupLightingCommand;
+			const std::vector<teleport::core::InputDefinition>& GetInputDefinitions() const
+			{
+				return inputDefinitions;
+			}
+			void SetInputDefinitions(const std::vector<teleport::core::InputDefinition>& d)
+			{
+				inputDefinitions=d;
+			}
+			const std::map<avs::uid, std::string>& GetNodePosePaths() const
+			{
+				return nodePosePaths;
+			}
 		private:
 			template<typename MessageType> void SendClientMessage(const MessageType &message)
 			{
@@ -178,11 +195,17 @@ namespace teleport
 			uint64_t clientID=0;
 
 			double time=0.0;
+
+			// State received from server.
 			teleport::core::SetupCommand setupCommand;
 			teleport::core::SetupLightingCommand setupLightingCommand;
+			std::vector<teleport::core::InputDefinition> inputDefinitions;
+			std::map<avs::uid, std::string> nodePosePaths;
+			//! Reset the session state when connecting to a new server, or when reconnecting without preserving the session:
+			void ResetSessionState();
+
 			std::string remoteIP;
 			double mTimeSinceLastServerComm = 0;
-			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
 			ConnectionStatus connectionStatus = ConnectionStatus::UNCONNECTED;
 		};

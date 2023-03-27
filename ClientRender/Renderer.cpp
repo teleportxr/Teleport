@@ -725,7 +725,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		if (have_headset)
 		{
 			const avs::Pose &headPose_stageSpace=renderState.openXR->GetHeadPose_StageSpace();
-			clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, headPose_stageSpace.orientation);
+			clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, *((quat*)&headPose_stageSpace.orientation));
 		}
 	}
 	if (!have_headset)
@@ -784,14 +784,14 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			{
 				sessionClient->SendStreamingControlMessage(str);
 			}
-			static short c = 0;
+		/*	static short c = 0;
 			if (!(c--))
 			{
 				const avs::NetworkSourceCounters Counters = instanceRenderer->clientPipeline.source->getCounterValues();
 				std::cout << "Network packets dropped: " << 100.0f * Counters.networkDropped << "%"
 					<< "\nDecoder packets dropped: " << 100.0f * Counters.decoderDropped << "%"
-					<< std::endl;
-			}
+					<< std*::endl;
+			}*/
 		}
 	}
 
@@ -1339,6 +1339,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Controllers"))
 	{
+		gui.NodeMapping(sessionClient.get());
 		gui.LinePrint( "CONTROLS\n");
 		if(renderState.openXR)
 		{

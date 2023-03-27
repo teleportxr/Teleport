@@ -14,6 +14,37 @@
 using namespace teleport;
 using namespace server;
 
+void CommandStack::PushBuffer(std::shared_ptr<std::vector<uint8_t>> b)
+{
+	std::lock_guard l(mutex);
+	buffers.push_back(b);
+}
+
+bool CommandStack::mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes)
+{
+	mutex.lock();
+	if (!buffers.size())
+	{
+		mutex.unlock();
+		return false;
+	}
+	std::shared_ptr<std::vector<uint8_t>> b = buffers[0];
+	bufferPtr = b->data();
+	bufferSizeInBytes = b->size();
+	if(!bufferSizeInBytes)
+	{
+		mutex.unlock();
+		return false;
+	}
+	return true;
+}
+
+void CommandStack::unmapOutputBuffer()
+{
+	buffers.erase(buffers.begin());
+	mutex.unlock();
+}
+
 ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 std::shared_ptr<DiscoveryService> discoveryService,
 								 SetHeadPoseFn setHeadPose,
@@ -104,12 +135,14 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 			enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl), packet);
 	}
 }
+
 void ClientMessaging::tick(float deltaTime)
 {
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
-
+	if (commandPipeline)
+		commandPipeline->process();
 	if (peer && clientNetworkContext->NetworkPipeline && !clientNetworkContext->NetworkPipeline->isProcessingEnabled())
 	{
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
@@ -290,19 +323,19 @@ void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
 void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
 	teleport::core::UpdateNodeMovementCommand command(updateList.size());
-	sendCommand<>(command, updateList);
+	sendCommand2<>(command, updateList);
 }
 
 void ClientMessaging::updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
 	teleport::core::UpdateNodeEnabledStateCommand command(updateList.size());
-	sendCommand<>(command, updateList);
+	sendCommand2<>(command, updateList);
 }
 
 void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
 	teleport::core::SetNodeHighlightedCommand command(nodeID, isHighlighted);
-	sendCommand(command);
+	sendCommand2(command);
 }
 
 void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose)
@@ -310,7 +343,7 @@ void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Po
 	avs::ConvertRotation(settings->serverAxesStandard, clientNetworkContext->axesStandard, relPose.orientation);
 	avs::ConvertPosition(settings->serverAxesStandard, clientNetworkContext->axesStandard, relPose.position);
 	teleport::core::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
-	sendCommand(command);
+	sendCommand2(command);
 }
 
 void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPosePath)
@@ -319,19 +352,20 @@ void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPo
 	std::vector<char> chars;
 	chars.resize(regexPosePath.size());
 	memcpy(chars.data(),regexPosePath.data(),chars.size());
-	sendCommand(command,chars);
+	TELEPORT_INTERNAL_COUT("Sent pose for node {0}: {1}", nodeID, regexPosePath);
+	sendCommand2(command,chars);
 }
 
 void ClientMessaging::updateNodeAnimation(teleport::core::ApplyAnimation update)
 {
 	teleport::core::UpdateNodeAnimationCommand command(update);
-	sendCommand(command);
+	sendCommand2(command);
 }
 
 void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update)
 {
 	teleport::core::SetAnimationControlCommand command(update);
-	sendCommand(command);
+	sendCommand2(command);
 }
 
 
@@ -343,12 +377,22 @@ void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState
 void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
 	teleport::core::SetNodeAnimationSpeedCommand command(nodeID, animationID, speed);
-	sendCommand(command);
+	sendCommand2(command);
 }
 
 bool ClientMessaging::hasPeer() const
 {
 	return peer;
+}
+
+bool ClientMessaging::SendCommand(const void* c, size_t sz) const
+{
+	if (sz > 16384)
+		return false;
+	auto b=std::make_shared<std::vector<uint8_t>>(sz);
+	memcpy(b->data(), c, sz);
+	commandStack.PushBuffer(b);
+	return true;
 }
 
 bool ClientMessaging::hasReceivedHandshake() const
@@ -458,7 +502,9 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		};
 
 		clientNetworkContext->NetworkPipeline.reset(new NetworkPipeline(settings));
-		clientNetworkContext->NetworkPipeline->initialise(networkSettings, clientNetworkContext->ColorQueue.get(), clientNetworkContext->TagDataQueue.get(), clientNetworkContext->GeometryQueue.get(), clientNetworkContext->AudioQueue.get());
+		clientNetworkContext->NetworkPipeline->initialise(networkSettings, clientNetworkContext->ColorQueue.get(), clientNetworkContext->TagDataQueue.get(), clientNetworkContext->GeometryQueue.get()
+			, clientNetworkContext->AudioQueue.get()
+			, clientNetworkContext->CommandQueue.get());
 	}
 	TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
 
@@ -491,6 +537,14 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 
 	captureComponentDelegates.startStreaming(clientNetworkContext);
 	geometryStreamingService.startStreaming(clientNetworkContext, handshake);
+	{
+		commandPipeline.reset(new avs::Pipeline);
+		commandEncoder.reset(new avs::GenericEncoder);
+		commandEncoder->configure(&commandStack);
+
+		commandPipeline->link({ commandEncoder.get(), clientNetworkContext->CommandQueue.get() });
+
+	}
 	receivedHandshake = true;
 
 	//Client has nothing, thus can't show nodes.
@@ -521,8 +575,8 @@ bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 	setp.origin_node=originNode;
 	setp.valid_counter = valid_counter;
 	TELEPORT_LOG("Send origin node {0} with counter {1} to clientID {2}.\n", originNode, valid_counter, clientID);
-	return sendCommand(setp);
-	return false;
+	bool result=sendCommand2(setp);
+	return result;
 }
 
 void ClientMessaging::receiveInput(const ENetPacket* packet)
@@ -682,14 +736,14 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 		}
 		avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, message.headPose.orientation);
 		avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, message.headPose.position);
-		setHeadPose(clientID, &message.headPose);
+		setHeadPose(clientID, (avs::Pose*)&message.headPose);
 		uint8_t *src=packet->data+sizeof(message);
 		for (int i = 0; i < message.numPoses; i++)
 		{
 			teleport::core::NodePose nodePose;
 			memcpy(&nodePose,src,sizeof(nodePose));
 			src+=sizeof(nodePose);
-			avs::PoseDynamic &nodePoseDynamic=nodePose.poseDynamic;
+			avs::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
 			avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
 			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
 			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);

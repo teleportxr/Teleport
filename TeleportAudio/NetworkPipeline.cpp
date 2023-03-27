@@ -56,7 +56,7 @@ using namespace teleport::audio;
 			stream.counter = 0;
 			stream.chunkSize = 2048;
 			stream.id = 100 + (uint32_t)i;
-			stream.dataType = avs::NetworkDataType::Audio;
+			stream.dataType = avs::NetworkDataType::Generic;
 			streams.emplace_back(std::move(stream));
 		}
 

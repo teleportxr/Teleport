@@ -16,6 +16,7 @@ namespace teleport
 	namespace server
 	{
 		//! Wrapper for the network pipeline objects for a given client.
+		//! //
 		struct ClientNetworkContext
 		{
 			// Sending
@@ -24,6 +25,7 @@ namespace teleport
 			std::unique_ptr<avs::Queue> TagDataQueue;
 			std::unique_ptr<avs::Queue> GeometryQueue;
 			std::unique_ptr<avs::Queue> AudioQueue;
+			std::unique_ptr<avs::Queue> CommandQueue;
 
 			// Receiving
 			std::unique_ptr<SourceNetworkPipeline> sourceNetworkPipeline;

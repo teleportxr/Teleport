@@ -454,9 +454,7 @@ Result SrtEfpNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uin
 
 	switch (stream.dataType)
 	{
-	case NetworkDataType::Geometry:
-	case NetworkDataType::Audio:
-	case NetworkDataType::VideoTagData:
+	case NetworkDataType::Generic:
 		dataContent = ElasticFrameContent::privatedata;
 		break;
 	case NetworkDataType::H264:

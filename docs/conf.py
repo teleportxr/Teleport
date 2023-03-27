@@ -63,3 +63,6 @@ breathe_default_project = "TeleportVR"
 breathe_show_include = True
 
 cpp_index_common_prefix = ['avs::','teleport::','teleport::core','teleport::server','teleport::client','teleport::clientrender']
+
+mermaid_output_format ='png'
+mermaid_cmd='C:\\Users\\roder\\AppData\\Roaming\\npm\\mmdc.cmd'

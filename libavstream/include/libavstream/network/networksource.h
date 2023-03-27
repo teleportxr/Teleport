@@ -18,7 +18,8 @@ namespace avs
 		//! id to match with incoming channels.
 		uint32_t id = UINT32_MAX;
 		//! Name for debugging.
-		std::string name;
+		std::string label;
+		bool framed = false;
 	};
 
 	/*! Network source parameters. */

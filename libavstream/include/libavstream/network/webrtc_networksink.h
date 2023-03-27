@@ -78,7 +78,8 @@ namespace avs
 	protected:
 		void CreatePeerConnection();
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) override;
-		Result sendData(const std::vector<uint8_t>& subPacket);
+		Result sendEfpData(const std::vector<uint8_t>& subPacket);
+		Result sendData(uint8_t id, const uint8_t* packet, size_t sz);
 		std::vector<NetworkSinkStream> m_streams;
 		NetworkSinkCounters m_counters;
 		mutable std::mutex m_countersMutex;

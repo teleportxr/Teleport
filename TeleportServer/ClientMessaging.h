@@ -16,6 +16,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Input.h"
 #include "enet/enet.h"
+#include <libavstream/genericencoder.h>
 
 typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
@@ -23,20 +24,28 @@ typedef void(TELEPORT_STDCALL* ProcessNewInputFn) (avs::uid uid, const teleport:
 typedef void(TELEPORT_STDCALL* DisconnectFn) (avs::uid uid);
 typedef void(TELEPORT_STDCALL* ReportHandshakeFn) (avs::uid clientID,const teleport::core::Handshake *h);
 
-//typedef struct _ENetPeer ENetPeer;
-//typedef struct _ENetPacket ENetPacket;
-//typedef struct _ENetEvent ENetEvent;
-
 namespace teleport
 {
 	namespace server
 	{
 		class DiscoveryService;
 		class ClientManager;
+		//! A container for server-to-client commands, where they will be stored before being retrieved by the avs::Queue called
+		//! commandQueue - likely on a different thread.
+		class CommandStack :public avs::GenericEncoderBackendInterface
+		{
+		public:
+			void PushBuffer(std::shared_ptr<std::vector<uint8_t>> b);
+			bool mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) override;
+			void unmapOutputBuffer() override;
+			std::vector< std::shared_ptr<std::vector<uint8_t>>> buffers;
+			std::mutex mutex;
+		};
 		//! Per-client messaging handler.
 		class ClientMessaging
 		{
 			bool stopped = false;
+			mutable CommandStack commandStack;
 		public:
 			ClientMessaging(const struct ServerSettings* settings,
 				std::shared_ptr<DiscoveryService> discoveryService,
@@ -98,6 +107,11 @@ namespace teleport
 
 				return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 			}
+			template<typename C> bool sendCommand2(const C& command) const
+			{
+				return SendCommand(&command,sizeof(command));
+			}
+			bool SendCommand(const void* c, size_t sz) const;
 
 			uint16_t getServerPort() const;
 
@@ -127,6 +141,18 @@ namespace teleport
 				memcpy(packet->data + commandSize, appendedList.data(), listSize);
 
 				return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
+			}
+
+			template<typename C, typename T> bool sendCommand2(const C& command, const std::vector<T>& appendedList) const
+			{
+				size_t commandSize = sizeof(C);
+				size_t listSize = sizeof(T) * appendedList.size();
+				size_t totalSize = commandSize + listSize;
+				std::vector<uint8_t> buffer(totalSize);
+				memcpy(buffer.data() , &command, commandSize);
+				memcpy(buffer.data()+ commandSize, appendedList.data(), listSize);
+
+				return SendCommand(buffer.data(), totalSize) ;
 			}
 			template <> bool sendCommand<teleport::core::SetupInputsCommand, teleport::core::InputDefinition>(const teleport::core::SetupInputsCommand& command, const std::vector<teleport::core::InputDefinition>& appendedInputDefinitions) const
 			{
@@ -211,6 +237,11 @@ namespace teleport
 				return geometryStreamingService;
 			}
 		private:
+
+			// The following MIGHT be moved later to a separate Pipeline class:
+			std::unique_ptr<avs::Pipeline> commandPipeline;
+			std::unique_ptr<avs::GenericEncoder> commandEncoder;
+
 			friend class ClientManager;
 			void receive(const ENetEvent& event);
 			void receiveHandshake(const ENetPacket* packet);

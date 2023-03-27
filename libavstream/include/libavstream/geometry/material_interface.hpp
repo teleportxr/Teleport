@@ -223,7 +223,7 @@ namespace avs
 			unsigned char* start = ( unsigned char*)&texture.width;
 			const unsigned char* end = (const unsigned char*)&texture.data;
 			in.read((char*)start, (size_t)(end - start));
-			delete[]texture.data;
+			delete[] texture.data;
 			texture.data = new unsigned char[texture.dataSize];
 			texture.own_data = true;
 			in.read((char*)texture.data, texture.dataSize);

@@ -31,6 +31,7 @@ namespace avs
 		{}
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
 		bool closed= false;
+		bool readyToSend = false;
 	};
 	// Unused mostly.
 	struct WebRtcNetworkSink::Private final : public PipelineNode::Private
@@ -123,7 +124,7 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 	}
 
 	m_data->m_EFPSender.reset(new ElasticFrameProtocolSender(65535));
-	m_data->m_EFPSender->sendCallback = std::bind(&WebRtcNetworkSink::sendData, this, std::placeholders::_1);
+	m_data->m_EFPSender->sendCallback = std::bind(&WebRtcNetworkSink::sendEfpData, this, std::placeholders::_1);
 	m_params = params;
 	m_streams = std::move(streams);
 	CreatePeerConnection();
@@ -137,8 +138,8 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 void WebRtcNetworkSink::CreatePeerConnection()
 {
 	rtc::Configuration config;
-	std::string stunServer = "stun:stun.l.google.com:19302";
-	config.iceServers.emplace_back(stunServer);
+	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
+	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannel, m_data, std::placeholders::_1), "1");
 
 	// Now ensure data channels are initialized...
@@ -166,9 +167,9 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		rtc::DataChannelInit dataChannelInit;
 		// ensure oddness for the channel creator:
 		dataChannelInit.id = ODD_ID(stream.id);
-		std::string dcLabel = std::to_string(stream.id);
+		std::string dcLabel = stream.label;
 		dataChannel.rtcDataChannel = m_data->rtcPeerConnection->createDataChannel(dcLabel, dataChannelInit);
-		dataChannel.rtcDataChannel->isClosed();
+		dataChannel.readyToSend = true;
 		// We DO NOT get a callback from creating a dc locally.
 		m_data->onDataChannel(dataChannel.rtcDataChannel);
 	}
@@ -264,6 +265,10 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	for (int i = 0; i < (int)getNumInputSlots(); ++i)
 	{
 		const NetworkSinkStream& stream = m_streams[i];
+		// If channel is backed-up in WebRTC, don't grab data off the queue.
+		const DataChannel& dataChannel= m_data->dataChannels[stream.id];
+		if (!dataChannel.readyToSend)
+			continue;
 		size_t numBytesRead = 0;
 		try
 		{
@@ -312,9 +317,10 @@ Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uin
 
 	switch (stream.dataType)
 	{
-	case NetworkDataType::Geometry:
-	case NetworkDataType::Audio:
-	case NetworkDataType::VideoTagData:
+	case NetworkDataType::Generic:
+		dataContent = ElasticFrameContent::unknown;
+		break;
+	case NetworkDataType::Framed:
 		dataContent = ElasticFrameContent::privatedata;
 		break;
 	case NetworkDataType::H264:
@@ -332,39 +338,44 @@ Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uin
 
 	// Total number of EFP superframes created since the start for this stream.
 	stream.counter++;
-	/*static uint8_t test_data[1000];
-	static bool init=false;
-	if(!init)
+	if (dataContent == ElasticFrameContent::unknown)
 	{
-		uint8_t u8=0;
-		for(size_t i=0;i<1000;i++)
-			test_data[i]=u8++;
-		init=true;
-	}*/
-	auto efpResult = m_data->m_EFPSender->packAndSendFromPtr(
-		buffer,
-		bufferSize,
-		dataContent,
-		stream.counter, // pts
-		stream.counter, // dts
-		code,
-		stream.id,
-		NO_FLAGS);
-
-	if (efpResult != ElasticFrameMessages::noError)
-	{
-		AVSLOG(Error) << "WebRtcNetworkSink: An error occured in EFP trying to pack data. \n";
-		return Result::NetworkSink_PackingDataFailed;
+		// This data will NOT be framed
+		sendData(stream.id, buffer, bufferSize);
 	}
+	else
+	{
+		auto efpResult = m_data->m_EFPSender->packAndSendFromPtr(
+			buffer,
+			bufferSize,
+			dataContent,
+			stream.counter, // pts
+			stream.counter, // dts
+			code,
+			stream.id,
+			NO_FLAGS);
 
+		if (efpResult != ElasticFrameMessages::noError)
+		{
+			AVSLOG(Error) << "WebRtcNetworkSink: An error occured in EFP trying to pack data. \n";
+			return Result::NetworkSink_PackingDataFailed;
+		}
+	}
 	return Result::OK;
 }
-Result WebRtcNetworkSink::sendData(const std::vector<uint8_t>& subPacket)
+
+Result WebRtcNetworkSink::sendEfpData(const std::vector<uint8_t>& subPacket)
 {
 	// streamID is second byte for all EFP packet types
 	uint8_t id = subPacket[1];
+	return sendData(id,subPacket.data(), subPacket.size());
+}
+
+Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
+{
 	auto index = m_data->m_streamIndices[id];
-	auto c = m_data->dataChannels[id].rtcDataChannel;
+	auto &dataChannel = m_data->dataChannels[id];
+	auto c = dataChannel.rtcDataChannel;
 	if (c)
 	{
 		try
@@ -380,22 +391,31 @@ Result WebRtcNetworkSink::sendData(const std::vector<uint8_t>& subPacket)
 				// So, it's important to use buffered_amount() and OnBufferedAmountChange to
 				// ensure the data channel is used efficiently but without filling this
 				// buffer.
-				if (c->bufferedAmount() + subPacket.size() >= 1024 * 1024 * 16)
+				if (c->bufferedAmount() + sz >= 1024 * 1024 * 16)
 				{
-					
-					std::cerr << "WebRTC: failed to send packet of size "<< subPacket.size() <<" as it would overflow the webrtc buffer.\n";
+					dataChannel.readyToSend = false;
+					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size "<< sz <<" as it would overflow the webrtc buffer.\n";
 					return Result::OK;
 				}
 				// Can't send a buffer greater than 262144. even 64k is dodgy:
-				if (subPacket.size() >= c->maxMessageSize())
+				if (sz >= c->maxMessageSize())
 				{
-					std::cerr << "WebRTC: failed to send packet of size " << subPacket.size() << " as it is too large for a webrtc data channel.\n";
+					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
 					return Result::OK;
 				}
-				if (!c->send((std::byte*)subPacket.data(), subPacket.size()))
+				if (!c->send((std::byte*)packet, sz))
 				{
-					std::cerr << "WebRTC: failed to send packet of size " << subPacket.size() << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					dataChannel.readyToSend = false;
+					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
 				}
+				else if (id == 100)
+				{
+					std::cout << "WebRTC: channel " << (int)id << ", sent packet of size " << sz << "\n";
+				}
+			}
+			else
+			{
+				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
 			}
 		}
 		catch (std::runtime_error err)
@@ -526,14 +546,18 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 	if (!dc->id().has_value())
 		return;
 	uint16_t id = (dc->id().value());
-	 id = EVEN_ID(id);
-	 DataChannel& dataChannel = dataChannels[id];
+	id = EVEN_ID(id);
+	DataChannel& dataChannel = dataChannels[id];
 	dataChannel.rtcDataChannel = dc;
-	std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
+	// Wait for the onOpen callback before sending.
+	dataChannel.readyToSend = false;
+	std::cout << "DataChannel from " << id << " created with label \"" << dc->label() << "\"" << std::endl;
 
-	dc->onOpen([]()
+	dc->onOpen([this, id]()
 		{
-			std::cout << "DataChannel opened" << std::endl;
+			DataChannel& dataChannel = dataChannels[id];
+			dataChannel.readyToSend = true;
+			std::cout << "DataChannel "<<id<<"opened" << std::endl;
 		});
 
 	dc->onClosed([dataChannel,id]()
@@ -541,7 +565,13 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		//	dataChannel.closed = true;
 		});
+	dc->onBufferedAmountLow([this, id]()
+		{
+			DataChannel& dataChannel = dataChannels[id];
+			dataChannel.readyToSend = true;
+			std::cerr << "WebRTC: channel " << id << ", buffered amount is low.\n";
 
+		});
 	//c->onMessage([id](rtc::binary b) {
 	//	// data holds either std::string or rtc::binary
 	//	std::cout << "Binary message from " << id

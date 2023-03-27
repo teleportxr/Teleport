@@ -56,6 +56,8 @@ namespace avs
 		bool useParser = false;
 		/*! Whether there is a data limit per frame on this stream */
 		bool isDataLimitPerFrame = false;
+		//! The unique text label, used to match streams.
+		std::string label;
 		/*! Buffer of data to be sent */
 		std::vector<uint8_t> buffer;
 	};

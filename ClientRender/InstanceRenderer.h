@@ -67,8 +67,6 @@ namespace clientrender
 		avs::uid selected_uid=0;
 		bool show_node_overlays			=false;
 		static constexpr int maxTagDataSize = 32;
-		teleport::core::SetupCommand lastSetupCommand;
-		teleport::core::SetupLightingCommand lastSetupLightingCommand;
 		std::string overridePassName;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		/// A framebuffer to store the colour and depth textures for the view.
@@ -185,8 +183,7 @@ namespace clientrender
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false);
-			
-		void ConfigureVideo(const avs::VideoConfig &vc);
+		
 
 		teleport::client::ClientPipeline clientPipeline;
 		clientrender::GeometryCache geometryCache;

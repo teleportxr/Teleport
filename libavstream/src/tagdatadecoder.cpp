@@ -109,7 +109,7 @@ Result TagDataDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 
 		// Check if data was lost or corrupted
-		if (frame.broken || frame.dataSize == 0)
+		if (frame.broken || frame.dataSize == 0||frame.dataSize>bufferSize)
 		{
 			continue;
 		}

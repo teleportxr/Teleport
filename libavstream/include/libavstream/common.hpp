@@ -232,10 +232,9 @@ namespace avs
 	enum class NetworkDataType : uint8_t
 	{
 		H264 = 0,
-		HEVC,
-		Geometry,
-		Audio,
-		VideoTagData
+		HEVC = 1,
+		Framed = 2,
+		Generic=3
 	};
 
 	enum class GeometryPayloadType : uint8_t
@@ -265,6 +264,8 @@ namespace avs
 			case GeometryPayloadType::Node:				return "Node";
 			case GeometryPayloadType::Skin:				return "Skin";
 			case GeometryPayloadType::Bone:				return "Bone";
+			case GeometryPayloadType::FontAtlas:		return "FontAtlas";
+			case GeometryPayloadType::TextCanvas:		return "TextCanvas";
 			default:
 				return "Invalid";
 		}

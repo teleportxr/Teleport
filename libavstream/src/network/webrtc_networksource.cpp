@@ -87,18 +87,18 @@ namespace avs
 {
 	struct DataChannel
 	{
-		DataChannel(uint64_t stream_index = 0, WebRtcNetworkSource* webRtcNetworkSink = nullptr)
+		DataChannel() {}
+		DataChannel(const DataChannel& dc)
 		{
+			rtcDataChannel = dc.rtcDataChannel;
 		}
-		~DataChannel()
-		{}
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
 		atomic<size_t> bytesReceived = 0;
 	};
 	struct WebRtcNetworkSource::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSource, PipelineNode)
-		std::unordered_map<uint64_t, DataChannel> dataChannels;
+		std::vector<DataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 		NetworkSourceCounters m_counters;
@@ -166,8 +166,9 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 
 		memcpy(m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
 		memcpy(&m_tempBuffer[sizeof(StreamPayloadInfo)], rPacket->pFrameData, rPacket->mFrameSize);
-
-		int nodeIndex = m_streamNodeMap[rPacket->mStreamID];
+		// The mStreamID is encoded sender-side within the EFP wrapper.
+		
+		int nodeIndex = m_streamNodeMap[rPacket->mStreamID];// streamID is 20,40,60, etc
 
 		auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
 		if (!outputNode)
@@ -196,13 +197,16 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 	m_streams = std::move(streams);
 	streamStatus.resize(m_streams.size());
 
+	// This will map from the stream id's - 20,40,60,80 etc 
+	// to the index of outputs, 0,1,2,3,4 etc.
+	m_data->dataChannels.reserve(numOutputs);
+	m_data->dataChannels.resize(0);
 	for (size_t i = 0; i < numOutputs; ++i)
 	{
 		const auto& stream = m_streams[i];
-		int id = EVEN_ID(stream.id);
-		m_streamNodeMap[id] = i;
-
-		m_data->dataChannels.try_emplace(id, id, this);
+		m_data->dataChannels.emplace_back();
+		uint32_t id = EVEN_ID(stream.id);
+		m_streamNodeMap[id] = numOutputs;
 	}
 
 #if TELEPORT_CLIENT
@@ -309,11 +313,11 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	static float intro = 0.01f;
 	// update the stream stats.
 	if(deltaTime>0)
-	for (auto &dc : m_data->dataChannels)
+	for (int i=0;i<m_data->dataChannels.size();i++)
 	{
-		int i=m_streamNodeMap[dc.first];
-		size_t b = dc.second.bytesReceived;
-		dc.second.bytesReceived= 0;
+		DataChannel& dc = m_data->dataChannels[i];
+		size_t b = dc.bytesReceived;
+		dc.bytesReceived= 0;
 		streamStatus[i].bandwidthKps *=1.0f-intro;
 		streamStatus[i].bandwidthKps+=intro* (float)b / float(deltaTime)*(1000.0f/1024.0f);
 	}
@@ -405,8 +409,23 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		return;
 	// make the id even.
 	uint16_t id = EVEN_ID(dc->id().value());
-
-	auto &dataChannel=dataChannels[id];
+	// find the dataChannel whose label matches this channel's label.
+	int dcIndex = -1;
+	for (int i = 0; i < dataChannels.size(); i++)
+	{
+		auto& stream = q_ptr()->m_streams[i];
+		if (stream.label == dc->label())
+		{
+			dcIndex = i;
+		}
+	}
+	if (dcIndex < 0)
+	{
+		// TODO: Inform the server that a channel has not been recognized - don't send data on it.
+		return;
+	}
+	q_ptr()->m_streamNodeMap[id] = dcIndex;
+	DataChannel& dataChannel = dataChannels[dcIndex];
 	dataChannel.rtcDataChannel = dc;
 	std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
 
@@ -419,25 +438,38 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		{
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		});
-	dc->onMessage([this, &dataChannel,id](rtc::binary b) {
-
-		// data holds either std::string or rtc::binary
-		
+	dc->onMessage([this,&dataChannel,id](rtc::binary b)
 		{
+		// data holds either std::string or rtc::binary
 			int nodeIndex = q_ptr()->m_streamNodeMap[id];
-			Queue* outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(nodeIndex));
 			dataChannel.bytesReceived += b.size();
-			//size_t numBytesWrittenToOutput;
-			//auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
-
-			auto val = m_EFPReceiver->receiveFragmentFromPtr((const uint8_t * )b.data(), b.size(), 0);
-			if (val!= ElasticFrameMessages::noError)
+			auto & stream=q_ptr()->m_streams[nodeIndex];
+			if (!stream.framed)
 			{
-				std::cerr<< "EFP Error: Invalid data fragment received" << "\n";
+				size_t numBytesWrittenToOutput;
+				auto outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(nodeIndex));
+				if (!outputNode)
+				{
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+					return;
+				}
+				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+				if (numBytesWrittenToOutput!=b.size())
+				{
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: failed to write all to output Node.";
+					return;
+				}
+			}
+			else
+			{
+				auto val = m_EFPReceiver->receiveFragmentFromPtr((const uint8_t*)b.data(), b.size(), 0);
+				if (val != ElasticFrameMessages::noError)
+				{
+					std::cerr << "EFP Error: Invalid data fragment received" << "\n";
+				}
 			}
 			//std::cout << "Binary message from " << id
 			//	<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
-		}
 		},[this, &dataChannel,id](rtc::string s) {});
 	//dataChannelMap.emplace(id, dc);
 }

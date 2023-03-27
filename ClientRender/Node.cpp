@@ -76,7 +76,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	lastReceivedMovement = update;
 
 	//Set transform, then tick based on difference in time since the update was sent and now.
-	UpdateModelMatrix(update.position, (vec4)update.rotation, update.scale);
+	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
 	TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - update.timestamp));
 }
 

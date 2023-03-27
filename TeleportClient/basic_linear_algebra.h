@@ -37,11 +37,11 @@ namespace clientrender
 		quat(float i, float j, float k, float s)
 			:i(i), j(j), k(k), s(s)
 		{}
-
-		quat(const teleport::core::vec4_packed &s)
-			:i(s.x), j(s.y), k(s.z), s(s.w)
+#ifndef _MSC_VER
+		quat(const vec4_packed &v)
+			:i(v.x), j(v.y), k(v.z), s(v.w)
 		{}
-		
+#endif		
 		quat(float angle, const vec3& axis)
 		{
 			vec3 scaledAxis = axis * sinf(angle / 2.0f);
@@ -123,7 +123,8 @@ namespace clientrender
 			static const double DOT_THRESHOLD = 0.9995f;
 			if(static_cast<double>(dot_product) > DOT_THRESHOLD)
 			{
-				quat result = (unitSource * time) + (unitTarget - unitSource);
+				vec4 r = (unitSource * time) + (unitTarget - unitSource);
+				quat result = *((quat*)&r);
 				return result.Normalise();
 			}
 
@@ -135,7 +136,9 @@ namespace clientrender
 			float s0 = cos(theta) - dot_product * sin_theta / sin_theta_0;
 			float s1 = sin_theta / sin_theta_0;
 
-			return (s0 * unitSource) + (s1 * unitTarget);
+			vec4 aa=(s0 * unitSource) + (s1 * unitTarget);
+			quat qr = *((quat*)&aa);
+			return qr;
 		}
 
 		quat Slerp(const clientrender::quat& rhs, float time) const

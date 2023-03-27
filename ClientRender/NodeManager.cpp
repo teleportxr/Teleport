@@ -458,7 +458,7 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 	if (oldp)
 		oldp->RemoveChild(node);
 	node->SetLocalPosition(updateNodeStructureCommand.relativePose.position);
-	node->SetLocalRotation(updateNodeStructureCommand.relativePose.orientation);
+	node->SetLocalRotation(*((quat*)&updateNodeStructureCommand.relativePose.orientation));
 	// TODO: Force an update. SHOULD NOT be necessary.
 	node->GetGlobalTransform();
 	LinkToParentNode(updateNodeStructureCommand.nodeID);

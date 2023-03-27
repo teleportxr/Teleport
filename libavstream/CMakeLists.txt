@@ -21,6 +21,8 @@ set(src_private_root
 	src/node.cpp
 	src/decoder.cpp
 	src/tagdatadecoder.cpp
+	src/genericdecoder.cpp
+	src/genericencoder.cpp
 	src/geometrydecoder.cpp
 	src/encoder.cpp
 	src/geometryencoder.cpp
@@ -163,6 +165,8 @@ set(hdr_public_root
 	include/libavstream/encoder.hpp
 	include/libavstream/file.hpp
 	include/libavstream/forwarder.hpp
+	include/libavstream/genericdecoder.h
+	include/libavstream/genericencoder.h
 	include/libavstream/geometrydecoder.hpp
 	include/libavstream/geometryencoder.hpp
 	include/libavstream/interfaces.hpp

@@ -775,7 +775,7 @@ namespace avs
 		//! Returns the rendering features the client supports.
 		virtual RenderingFeatures getClientRenderingFeatures() const=0; 
 	};
-	//! A Geometry decoder backend converts a 
+	//! A Geometry decoder backend provides geometry packets to a geometryencoder.
 	class AVSTREAM_API GeometryEncoderBackendInterface : public UseInternalAllocator
 	{
 	public:

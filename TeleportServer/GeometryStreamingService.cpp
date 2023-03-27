@@ -27,8 +27,6 @@ GeometryStreamingService::GeometryStreamingService(const ServerSettings* setting
 GeometryStreamingService::~GeometryStreamingService()
 {
 	stopStreaming();
-	if (avsPipeline)
-		avsPipeline->deconfigure();
 }
 
 bool GeometryStreamingService::hasResource(avs::uid resource_uid) const

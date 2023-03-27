@@ -6,6 +6,20 @@ Introduction
 
 TeleportServer is a library that provides server functionality in conjunction with a real-time game or simulation engine.
 
+Networking
+----------
+
+
+.. mermaid::
+
+	flowchart LR
+		A(Video Queue) -->|1| H(Network Sink)
+		B(Tag Queue) -->|2| H
+		C(Audio Queue) -->|3| H
+		D(Geometry Queue) -->|4| H
+		E(Command Queue) -->|5| H
+		F(Geometry Encoder) --> D
+
 Classes
 -------
 

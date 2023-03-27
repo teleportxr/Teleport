@@ -108,11 +108,13 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	newClient.clientNetworkContext.TagDataQueue.reset(new avs::Queue);
 	newClient.clientNetworkContext.GeometryQueue.reset(new avs::Queue);
 	newClient.clientNetworkContext.AudioQueue.reset(new avs::Queue);
+	newClient.clientNetworkContext.CommandQueue.reset(new avs::Queue);
 
 	newClient.clientNetworkContext.ColorQueue->configure(200000, 16,"ColorQueue");
 	newClient.clientNetworkContext.TagDataQueue->configure(200, 16, "TagDataQueue");
 	newClient.clientNetworkContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
 	newClient.clientNetworkContext.AudioQueue->configure(8192, 120, "AudioQueue");
+	newClient.clientNetworkContext.CommandQueue->configure(8192,120, "CommandQueue");
 
 	// Receiving
 	if (serverSettings.isReceivingAudio)
@@ -260,8 +262,6 @@ TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
 		return;
 
 	clientData.clientMessaging->ConfirmSessionStarted();
-
-	//clientData.geometryStreamingService->startStreaming(&clientData.clientNetworkContext,handshake);
 
 	CasterEncoderSettings encoderSettings{};
 

@@ -9,7 +9,9 @@
 #include <libavstream/mesh.hpp>
 #include <libavstream/tagdatadecoder.hpp>
 #include <libavstream/audiodecoder.h>
+#include <libavstream/genericdecoder.h>
 #include <libavstream/audio/audiotarget.h>
+#include "TeleportCore/CommonNetworking.h"
 
 namespace teleport
 {
@@ -21,6 +23,7 @@ namespace teleport
 		public:
 			ClientPipeline();
 			~ClientPipeline();
+			bool Init(const teleport::core::SetupCommand& setupCommand, const char* server_ip);
 			void Shutdown();
 
 			// Pipeline and nodes:
@@ -41,6 +44,9 @@ namespace teleport
 			avs::Queue audioQueue;
 			avs::AudioDecoder avsAudioDecoder;
 			avs::AudioTarget avsAudioTarget;
+
+			avs::Queue commandQueue;
+			avs::GenericDecoder commandDecoder;
 
 			avs::DecoderParams decoderParams = {};
 			avs::VideoConfig videoConfig;

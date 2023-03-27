@@ -1110,6 +1110,15 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 	ImGui::EndGroup();
 }
 
+void Gui::NodeMapping(client::SessionClient *sessionClient)
+{
+	const auto &m=sessionClient->GetNodePosePaths();
+	for (auto p : m)
+	{
+		LinePrint(fmt::format("{0}:{1}", p.first, p.second));
+	}
+}
+
 void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 {
 	const avs::NetworkSourceCounters counters = clientPipeline.source->getCounterValues();
@@ -1120,7 +1129,7 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 	{
 		float kps = streamStatus[i].bandwidthKps;
 		const auto& s = streams[i];
-		LinePrint(fmt::format("Channel {0} {1} bandwidth {2:.1f}", i,s.name,kps));
+		LinePrint(fmt::format("Channel {0} {1} bandwidth {2:.1f}", i,s.label,kps));
 	}
 /*	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
 	LinePrint(platform::core::QuickFormat("Current timestamp: %d", clientPipeline.pipeline.GetTimestamp()));

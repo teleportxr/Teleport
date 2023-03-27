@@ -23,7 +23,9 @@ namespace teleport
 			NetworkPipeline(const ServerSettings* settings);
 			virtual ~NetworkPipeline();
 
-			void initialise(const ServerNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue);
+			void initialise(const ServerNetworkSettings& inNetworkSettings
+				, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue
+				, avs::Queue* commandQueue);
 
 			virtual void release();
 			virtual bool process();

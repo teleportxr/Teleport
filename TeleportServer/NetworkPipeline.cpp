@@ -7,24 +7,8 @@
 #include "network/srt_efp_networksink.h"
 #endif
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/StringFunctions.h"
 #include "ServerSettings.h"
-		std::string WStringToString(const std::wstring &text)
-		{
-			size_t origsize = text.length()+ 1;
-			const size_t newsize = origsize;
-			char *cstring=new char[newsize];
-			
-#ifdef _MSC_VER
-			size_t convertedChars = 0;
-			wcstombs_s(&convertedChars, cstring, (size_t)origsize, text.c_str(), (size_t)newsize );
-#else
-			wcstombs(cstring, text.c_str(), (size_t)newsize );
-#endif
-			std::string str;
-			str=std::string(cstring);
-			delete [] cstring;
-			return str;
-		}
 
 namespace
 {
@@ -45,7 +29,9 @@ NetworkPipeline::~NetworkPipeline()
 	release();
 }
 
-void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue)
+void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings
+	, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue
+	, avs::Queue* commandQueue)
 {
 	avs::NetworkSinkParams SinkParams = {};
 	SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
@@ -72,16 +58,13 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings,
 		break;
 	}
 
-	//char remoteIP[20];
-	//size_t stringLength = wcslen(inNetworkSettings.remoteIP);
-	//Convert wide character string to multibyte string.
-	//wcstombs_s(&stringLength, remoteIP, inNetworkSettings.remoteIP, 20);
-	std::string remoteIP=WStringToString(inNetworkSettings.remoteIP);
+	std::string remoteIP=core::WStringToString(inNetworkSettings.remoteIP);
 	std::vector<avs::NetworkSinkStream> streams;
 
 	// Video
 	{
 		avs::NetworkSinkStream stream;
+		stream.label = "video";
 		stream.parserType = avs::StreamParserType::AVC_AnnexB;
 		//stream.useParser = false; default
 //			stream.isDataLimitPerFrame = false;
@@ -95,39 +78,56 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings,
 	// Tag Data
 	{
 		avs::NetworkSinkStream stream;
+		stream.label = "video_tags";
 		stream.parserType = avs::StreamParserType::None;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = false;
 		stream.counter = 0;
 		stream.chunkSize = 200;
 		stream.id = 40;
-		stream.dataType = avs::NetworkDataType::VideoTagData;
+		stream.dataType = avs::NetworkDataType::Framed;
 		streams.emplace_back(std::move(stream));
 	}
 
 	// Audio
 	{
 		avs::NetworkSinkStream stream;
+		stream.label = "audio_server_to_client";
 		stream.parserType = avs::StreamParserType::Audio;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = false;
 		stream.counter = 0;
 		stream.chunkSize = 2048;
 		stream.id = 60;
-		stream.dataType = avs::NetworkDataType::Audio;
+		stream.dataType = avs::NetworkDataType::Framed;
 		streams.emplace_back(std::move(stream));
 	}
 
 	// Geometry
 	{
 		avs::NetworkSinkStream stream;
+		stream.label = "geometry";
 		stream.parserType = avs::StreamParserType::Geometry;
 		stream.useParser = true;
 		stream.isDataLimitPerFrame = true;
 		stream.counter = 0;
 		stream.chunkSize = 64 * 1024;
 		stream.id = 80;
-		stream.dataType = avs::NetworkDataType::Geometry;
+		stream.dataType = avs::NetworkDataType::Framed;
+		streams.emplace_back(std::move(stream));
+	}
+
+	// Commands
+	{
+		avs::NetworkSinkStream stream;
+		stream.label = "command";
+		stream.parserType = avs::StreamParserType::None;
+		stream.useParser = false;
+		stream.isDataLimitPerFrame = true;
+		stream.counter = 0;
+		stream.chunkSize = 64 * 1024;
+		stream.id = 100;
+		stream.dataType = avs::NetworkDataType::Generic;
 		streams.emplace_back(std::move(stream));
 	}
 	avs::NetworkSink* networkSink = mNetworkSink.get();
@@ -175,6 +175,16 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings,
 			return;
 		}
 		mPipeline->add(geometryQueue);
+	}
+
+	// Command
+	{
+		if (!avs::PipelineNode::link(*commandQueue, *mNetworkSink))
+		{
+			TELEPORT_CERR << "Failed to configure network pipeline for commands!" << "\n";
+			return;
+		}
+		mPipeline->add(commandQueue);
 	}
 
 	mPipeline->add(mNetworkSink.get());

@@ -60,6 +60,7 @@ namespace teleport
 		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
 		void TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
 
+		void NodeMapping(client::SessionClient* sessionClient);
 		void NetworkPanel(const teleport::client::ClientPipeline& clientPipeline);
 		void DebugPanel(clientrender::DebugOptions &debugOptions);
 		void GeometryOSD();

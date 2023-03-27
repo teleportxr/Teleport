@@ -9,36 +9,44 @@
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
+typedef vec2 vec2_packed;
+typedef vec3 vec3_packed;
+typedef vec4 vec4_packed;
+#else
+struct vec2_packed
+{
+	float x, y;
+	operator const vec2() const {
+		return *((const vec2*)this);
+	}
+} AVS_PACKED;
+struct vec3_packed
+{
+	float x, y, z;
+	operator const vec3() const {
+		return *((const vec3*)this);
+	}
+} AVS_PACKED;
+struct vec4_packed
+{
+	float x, y, z, w;
+	operator const vec4() const {
+		return *((const vec4*)this);
+	}
+} AVS_PACKED;
 #endif
 namespace teleport
 {
 	namespace core
 	{
-		struct vec2_packed
-		{
-			float x,y;
-			operator const vec2() const{
-				return *((const vec2*)this);
-			}
-		} AVS_PACKED;
-		struct vec3_packed
-		{
-			float x,y,z;
-			operator const vec3() const{
-				return *((const vec3*)this);
-			}
-		} AVS_PACKED;
-		struct vec4_packed
-		{
-			float x,y,z,w;
-			operator const vec4() const{
-				return *((const vec4*)this);
-			}
-		} AVS_PACKED;
 		enum class BackgroundMode : uint8_t
 		{
 			NONE = 0, COLOUR, TEXTURE, VIDEO
 		} AVS_PACKED;
+#ifdef _MSC_VER
+		typedef avs::Pose Pose_packed;
+		typedef avs::PoseDynamic PoseDynamic_packed;
+#else
 		struct Pose_packed
 		{
 			void operator=(const avs::Pose &p)
@@ -61,6 +69,7 @@ namespace teleport
 			vec3_packed velocity;
 			vec3_packed angularVelocity;
 		} AVS_PACKED;
+#endif
 		enum class RemotePlaySessionChannel : unsigned char //enet_uint8
 		{
 			RPCH_Handshake = 0,

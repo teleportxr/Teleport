@@ -43,7 +43,7 @@ namespace teleport
 
 			virtual void startStreaming(ClientNetworkContext* context, const teleport::core::Handshake& handshake);
 			//Stop streaming to client.
-			virtual void stopStreaming();
+			void stopStreaming();
 
 			void clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID);
 			void clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID);
