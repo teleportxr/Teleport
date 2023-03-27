@@ -261,7 +261,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-static bool use_debug=false;
+static bool use_debug=true;
 	gdi->Initialize(use_debug, false, false);
 #else
 	gdi->Initialize(false, false, false);
@@ -573,9 +573,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
 						useOpenXR.RenderFrame(renderDelegate, overlayDelegate);
 						if(useOpenXR.IsXRDeviceActive())
-						{
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-						}
 						else
 							clientRenderer->SetExternalTexture(nullptr);
 					}

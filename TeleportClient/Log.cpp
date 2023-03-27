@@ -67,13 +67,13 @@ void RedirectStdCoutCerr()
 	if (oldout != &androidCout)
 	{
 		__android_log_write(ANDROID_LOG_DEBUG, "TeleportVR", "redirected cout");
-		std::cout<<"Testing cout redirect."<<std::endl;
 	}
+	std::cout<<"Testing cout redirect."<<std::endl;
 	if (olderr != &androidCerr)
 	{
 		__android_log_write(ANDROID_LOG_DEBUG, "TeleportVR", "redirected cerr");
-		std::cerr<<"Testing cerr redirect."<<std::endl;
 	}
+	std::cerr<<"Testing cerr redirect."<<std::endl;
 }
 #endif
 

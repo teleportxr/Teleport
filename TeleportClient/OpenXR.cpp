@@ -1399,11 +1399,13 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 		deviceContext.viewStruct.view_id = MAIN_SWAPCHAIN;
 		deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 
+		renderPlatform->BeginEvent(deviceContext, "Main View");
 		// Call the rendering callback with our view and swapchain info
 		RenderLayerView(deviceContext, projection_views, main_view_xr_swapchain.surface_data[img_id], renderDelegate);
-		
-		FinishDeviceContext(MAIN_SWAPCHAIN, img_id);
+		renderPlatform->EndEvent(deviceContext);
 	
+		FinishDeviceContext(MAIN_SWAPCHAIN, img_id);
+
 		// And tell OpenXR we're done with rendering to this one!
 		XrSwapchainImageReleaseInfo release_info = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 		XR_CHECK(xrReleaseSwapchainImage(main_view_xr_swapchain.handle, &release_info));
@@ -1926,14 +1928,20 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelega
 	deviceContext.viewStruct.view_id = OVERLAY_SWAPCHAIN;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
 
+	renderPlatform->BeginEvent(deviceContext, "Overlays");
 	// Set up where on the render target we want to draw, the view has a 
 	crossplatform::Viewport viewport{ (int)0, (int)0, (int)overlay_xr_swapchain.width, (int)overlay_xr_swapchain.height };
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
-
+	renderPlatform->ActivateRenderTargets(deviceContext, 1, &overlay_xr_swapchain.surface_data[img_id].target_view, overlay_xr_swapchain.surface_data[img_id].depth_view);
+	
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	static float clear[] = { 0.0f, 1.0f, 0.0f, 1.0f };
 	renderPlatform->Clear(deviceContext, clear);
 	overlayDelegate(deviceContext);
+
+	renderPlatform->DeactivateRenderTargets(deviceContext);
+	renderPlatform->EndEvent(deviceContext);
+
 	FinishDeviceContext(OVERLAY_SWAPCHAIN, img_id);
 	XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
 	XR_CHECK(xrReleaseSwapchainImage(overlay_xr_swapchain.handle, &releaseInfo));
@@ -1992,11 +2000,9 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
     quad_layer.subImage.imageRect.offset.y = 0;
 	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
-    quad_layer.subImage.imageArrayIndex = 0;
-   // quad_layer.pose = xr_pose_identity;
-   overlay.pose.orientation =        XrQuaternionf_CreateFromVectorAngle({0,1.0f,0},-90.0f * 3.14159f / 180.0f);
+    quad_layer.subImage.imageArrayIndex = (uint32_t)i;
+    overlay.pose.orientation =        XrQuaternionf_CreateFromVectorAngle({0,1.0f,0},-90.0f * 3.14159f / 180.0f);
     quad_layer.pose = overlay.pose;
-
     quad_layer.size = overlay.size;
 	return true;
 }

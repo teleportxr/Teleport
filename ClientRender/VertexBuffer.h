@@ -24,7 +24,7 @@ namespace clientrender
 			BufferUsageBit usage = BufferUsageBit::UNKNOWN_BIT;
 			size_t vertexCount = 0;
 			size_t size = 0;
-			const void* data = nullptr;
+			std::shared_ptr<std::vector<uint8_t>> data;
 		};
 
     protected:
