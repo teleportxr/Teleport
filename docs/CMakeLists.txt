@@ -117,6 +117,34 @@ set_target_properties( Sphinx PROPERTIES
 		VS_DEBUGGER_COMMAND_ARGUMENTS "${CMAKE_CURRENT_BINARY_DIR}/sphinx/index.html")
 
 if(NOT "${TELEPORT_DOXYGEN_UNITY_INPUT_DIR}" STREQUAL "")
-	add_dependencies(Sphinx DoxygenUnity Doxygen)
+	#add_dependencies(Sphinx DoxygenUnity Doxygen)
 endif()
 
+# see http://www.html-tidy.org/
+set(TELEPORT_DOCS_TIDY_EXECUTABLE "C:/Program Files/tidy 5.8.0/bin/tidy.exe" CACHE FILEPATH "path to tidy.exe for htmltidy")
+
+if(TELEPORT_DOCS_TIDY_EXECUTABLE)
+	add_custom_target(Tidy ALL
+					COMMAND 
+					${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
+					MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat"
+					COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat" "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
+					SOURCES tidy_files.bat ${ALL_HTML_FILES})
+	#add_dependencies(Validator Sphinx)
+set_target_properties( Tidy PROPERTIES FOLDER Docs)
+endif() 
+
+# see https://validator.github.io/validator/
+set(TELEPORT_DOCS_VALIDATOR_EXECUTABLE "C:/Program Files/vnu-runtime-image/bin/vnu.bat" CACHE FILEPATH "path to vnu.bat")
+
+set(ALL_HTML_FILES ${SPHINX_BUILD})
+if(TELEPORT_DOCS_VALIDATOR_EXECUTABLE)
+	add_custom_target(Validator ALL
+					COMMAND
+					${TELEPORT_DOCS_VALIDATOR_EXECUTABLE} --format gnu --asciiquotes --skip-non-html ${ALL_HTML_FILES}
+					WORKING_DIRECTORY ${SPHINX_BUILD}
+					COMMENT "Validating documentation nu validator"
+					SOURCES ${ALL_HTML_FILES})
+	#add_dependencies(Validator Sphinx)
+set_target_properties( Validator PROPERTIES FOLDER Docs)
+endif()

@@ -24,8 +24,10 @@ Classes
 
 .. doxygenclass:: avs::Pipeline
 	:members:
+
 .. doxygenclass:: avs::Timer
 	:members:
+
 .. doxygenclass:: avs::UseInternalAllocator
 	:members:
 

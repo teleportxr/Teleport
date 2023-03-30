@@ -63,7 +63,7 @@ namespace avs
 
 		/*!
 		 * Set custom decoder backend.
-		 * \note Decoder node does not take ownership of the backend instance.
+		 * Decoder node does not take ownership of the backend instance.
 		 * \param backend Custom decoder backend instance.
 		 * \return
 		 *  - Result::OK on success.

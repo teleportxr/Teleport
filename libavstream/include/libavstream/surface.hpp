@@ -29,7 +29,7 @@ public:
 	 *  - Result::Node_AlreadyConfigured if surface has already been configured with a backend.
 	 *  - Result::Surface_InvalidBackend if surfaceBackend is nullptr.
 	 *
-	 * \note Surface node takes ownership of its backend.
+	 * Surface node takes ownership of its backend.
 	 */
 	Result configure(SurfaceBackendInterface* surfaceBackend, SurfaceBackendInterface* alphaSurfaceBackend = nullptr);
 

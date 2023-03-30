@@ -46,19 +46,18 @@ public:
 	 */
 	void add(PipelineNode* node);
 
-	/*!
-	 * Add multiple nodes to the end of the pipeline in order specified.
-	 */
+	//! Add multiple nodes to the end of the pipeline in the order specified.
 	void add(const std::initializer_list<PipelineNode*>& nodes);
 
 	/*!
 	 * Link multiple nodes and add them at the end of the pipeline.
-	 * \note First added node is *not* automatically linked with the node previously at the end of the pipeline.
-	 * \note This function can be used to build whole pipelines in a single function call.
-	 * \return
-	 *  - Result::OK on success.
-	 *  - Any error result returned by PipelineNode::link() function.
-	 * \sa Pipeline::add()
+	 * The first added node is *not* automatically linked with the node previously at the end of the pipeline.
+	 * This function can be used to build whole pipelines in a single function call.
+	 * Returns
+	 *  Result::OK on success.
+	 *  Any error result returned by PipelineNode::link() function.
+	 * 
+	 * See also Pipeline::add()
 	 */
 	Result link(const std::initializer_list<PipelineNode*>& nodes);
 
@@ -80,11 +79,11 @@ public:
 	/*!
 	 * Process pipeline.
 	 * Calls PipelineNode::process() on each node in pipeline order providing consistent timestamp to each invocation.
-	 * \return
+	 * Returns:
 	 *  - Result::OK on success.
 	 *  - An error result returned by a failing node (pipeline processing is immediately aborted on first PipelineNode::process() failure).
 	 *
-	 * \note Pipeline time starts when process() is called first and is backed up by platform's high resolution monotonic clock.
+	 * Pipeline time starts when process() is called first and is backed up by platform's high resolution monotonic clock.
 	 */
 	Result process();
 	

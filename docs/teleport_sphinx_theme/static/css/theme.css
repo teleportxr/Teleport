@@ -7506,3 +7506,11 @@ span[id*=MathJax-Span]
     src: url(fonts/Roboto-Slab-Bold.woff2?9984f4a9bda09be08e83f2506954adbe) format("woff2"),url(fonts/Roboto-Slab-Bold.woff?bed5564a116b05148e3b3bea6fb1162a) format("woff");
     font-display: block
 }
+
+
+.red {color:#FF0000}
+.grn {color:#00CC00}
+.blu {color:#0000FF}
+.cyn {color:#00CCFF}
+.mag {color:#FF33FF}
+.yel {color:#FFCC00}

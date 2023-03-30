@@ -43,7 +43,7 @@ public:
 	/*! 
 	 * Get native surface handle (graphics API specific).
 	 *
-	 * \note Can return nullptr for surfaces that do not support querying for handle).
+	 * Can return nullptr for surfaces that do not support querying for handle).
 	 */
 	virtual void* getResource() const = 0;
 };

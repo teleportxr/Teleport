@@ -35,7 +35,7 @@ public:
 
 	/*!
 	 * Constructor.
-	 * \note Encoder node takes ownership of the backend instance.
+	 * Encoder node takes ownership of the backend instance.
 	 * \param backend Custom encoder backend instance.
 	 */
 	explicit AudioEncoder(AudioEncoderBackendInterface* backend);
@@ -102,7 +102,7 @@ public:
 
 	/*!
 	 * Set custom encoder backend.
-	 * \note Encoder node takes ownership of the backend instance.
+	 * Encoder node takes ownership of the backend instance.
 	 * \param backend Custom encoder backend instance.
 	 * \return
 	 *  - Result::OK on success.

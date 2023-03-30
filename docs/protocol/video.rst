@@ -68,14 +68,6 @@ The video texture should be in the following form:
 |                                   |                  |        |Tag ID |
 +-----------------------------------+------------------+--------+-------+
 
-.. raw:: html
-
-    <style> .red {color:#FF0000} </style>
-    <style> .grn {color:#00CC00} </style>
-    <style> .blu {color:#0000FF} </style>
-    <style> .cyn {color:#00CCFF} </style>
-    <style> .mag {color:#FF33FF} </style>
-    <style> .yel {color:#FFCC00} </style>
 
 .. role:: red
 .. role:: grn

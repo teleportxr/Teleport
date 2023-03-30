@@ -2,7 +2,7 @@
 Introduction
 ############
 
-Teleport is an :ref:`application level<https://www.bbc.co.uk/bitesize/guides/zr3yb82/revision/6> protocol and SDK for client-server virtual, augmented and mixed reality (collectively, XR).
+Teleport is an `application level <https://www.bbc.co.uk/bitesize/guides/zr3yb82/revision/6>`_ protocol and SDK for client-server virtual, augmented and mixed reality (collectively, XR).
 
 Think of Teleport in analogy to the World Wide Web: instead of a Web Browser, you have a Metaverse Browser (i.e. the Teleport Client);
 instead of a Website, you have a Virtual World (operated by a Teleport Server).

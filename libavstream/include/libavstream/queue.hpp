@@ -14,7 +14,7 @@ namespace avs
  *
  * A thread-safe, nonblocking, producer-consumer queue of byte buffers.
  *
- * \note Sharing an instance of this node is the recommended way to link two pipelines running on different threads.
+ * Sharing an instance of this node is the recommended way to link two pipelines running on different threads.
  */
 	class AVSTREAM_API Queue final : public PipelineNode
 		, public IOInterface

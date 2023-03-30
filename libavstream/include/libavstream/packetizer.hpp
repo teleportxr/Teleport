@@ -15,7 +15,7 @@ namespace avs
  * Accepts bitstream as input and broadcasts discrete packets to all its outputs.
  * Expected bitstream format and output packets payload is defined by the selected stream parser.
  *
- * \note When used with AVC_AnnexB parser it accepts AVC Annex B bitstream input and outputs individual NAL units.
+ * When used with AVC_AnnexB parser it accepts AVC Annex B bitstream input and outputs individual NAL units.
  *
  * - Compatible outputs: Any node implementing PacketInterface.
  */
@@ -36,7 +36,7 @@ public:
 
 	/*!
 	 * Configure packetizer.
-	 * \note Packetizer node takes ownerhip of the parser instance.
+	 * Packetizer node takes ownerhip of the parser instance.
 	 * \param numOutputs Number of output slots.
 	 * \return
 	 *  - Result::OK on success.
@@ -46,7 +46,7 @@ public:
 
 	/*!
 	 * Deconfigure packetizer.
-	 * \note This function performs an implicit flush.
+	 * This function performs an implicit flush.
 	 * \return Always returns Result::OK.
 	 */
 	Result deconfigure() override;

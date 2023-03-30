@@ -4,7 +4,7 @@ Service
 
 Initialization
 ^^^^^^^^^^^^^^
-After a **Connecting Client** is discovered and accepted, the Server creates the Service Connection, a nonblocking connection bound to the **Server Service Port**. The **Service Connection** uses enet ([http://enet.bespin.org/](http://enet.bespin.org/)), a thin UDP manager, to ensure packet reliability and in-order delivery. The connection has eight channels: *Handshake, Control, DisplayInfo, HeadPose, ResourceRequest, KeyframeRequest, ClientMessage* and *Origin*.
+After a **Connecting Client** is discovered and accepted, the Server creates the Service Connection, a nonblocking connection bound to the **Server Service Port**. The **Service Connection** uses `enet <http://enet.bespin.org/>`_, a thin UDP manager, to ensure packet reliability and in-order delivery. The connection has eight channels: *Handshake, Control, DisplayInfo, HeadPose, ResourceRequest, KeyframeRequest, ClientMessage* and *Origin*.
 
 The **Connecting Client** on receiving its **Service Discovery Response** opens the enet connection on its **Client Service Socket** as nonblocking, bound to the **Client Service Port**. This connects to the **Server** on the **Server Service Port**.
 

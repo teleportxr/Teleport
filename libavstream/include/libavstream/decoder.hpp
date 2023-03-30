@@ -72,7 +72,7 @@ namespace avs
 
 		/*!
 		 * Constructor.
-		 * \note Decoder node takes ownership of the backend instance.
+		 * Decoder node takes ownership of the backend instance.
 		 * \param backend Custom decoder backend instance.
 		 */
 		explicit Decoder(DecoderBackendInterface* backend);
@@ -144,7 +144,7 @@ namespace avs
 
 		/*!
 		 * Set custom decoder backend.
-		 * \note Decoder node takes ownership of the backend instance.
+		 * Decoder node takes ownership of the backend instance.
 		 * \param backend Custom decoder backend instance.
 		 * \return
 		 *  - Result::OK on success.

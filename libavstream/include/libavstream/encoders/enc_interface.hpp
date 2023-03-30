@@ -125,7 +125,7 @@ public:
 	/*!
 	 * Register surface as source for pictures (video frames) to encode.
 	 * The surface must be compatible with the graphics API device handle passed to initialize().
-	 * \note Encoder backend does not take ownership of the registered surface.
+	 * Encoder backend does not take ownership of the registered surface.
 	 * \param surface Surface backend to register as input.
 	 * \return
 	 *  - Result::OK on success.

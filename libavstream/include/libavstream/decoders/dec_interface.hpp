@@ -131,7 +131,7 @@ public:
 	/*!
 	 * Register surface as destination for decoded video frames.
 	 * The surface must be compatible with the graphics API device handle passed to initialize().
-	 * \note Decoder backend does not take ownership of the registered surface.
+	 * Decoder backend does not take ownership of the registered surface.
 	 * \param surface Surface backend to register as output.
 	 * \param alphaSurface Separate surface backend to register as output for alpha only.
 	 * \return

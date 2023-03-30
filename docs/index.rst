@@ -23,7 +23,7 @@ the official :doc:`specification </protocol>` of the Teleport Protocol.
 	protocol
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

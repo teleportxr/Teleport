@@ -19,7 +19,7 @@ namespace avs
 	//! Global library context.
 	//! 
 	//! Context object managing application-global state.
-	//! \note A single instance of this class must be instantiated by the application before accessing any other library functionality.
+	//! A single instance of this class must be instantiated by the application before accessing any other library functionality.
 	class AVSTREAM_API Context final
 	{
 		AVSTREAM_PUBLICINTERFACE_FINAL(Context)
@@ -37,7 +37,7 @@ namespace avs
 
 		/*!
 		 * Set custom message handler.
-		 * \note Default (library provided) message handler prints to standard output.
+		 * Default (library provided) message handler prints to standard output.
 		 * \param handler Message handler function; if nullptr, default message handler is restored.
 		 * \param userData Pointer to user supplied data passed to message handler function (never dereferenced, may be nullptr).
 		 */

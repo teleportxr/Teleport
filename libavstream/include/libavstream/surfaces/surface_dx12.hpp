@@ -14,7 +14,7 @@ namespace avs
 	/*!
 	 * Direct3D12 texture surface.
 	 *
-	 * \note Instance of this class holds reference on the underlying ID3D12Resource object.
+	 * Instance of this class holds reference on the underlying ID3D12Resource object.
 	 */
 	class AVSTREAM_API SurfaceDX12 final : public SurfaceBackendInterface
 	{

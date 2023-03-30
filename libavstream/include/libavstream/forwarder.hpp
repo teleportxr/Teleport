@@ -17,7 +17,7 @@ namespace avs
  * - Compatible inputs: Any node implementing either PacketInterface or IOInterface.
  * - Compatible outputs: Any node implementing either PacketInterface or IOInterface.
  *
- * \note If an input or an output of a Forwarder node implements both PacketInterface and IOInterface
+ * If an input or an output of a Forwarder node implements both PacketInterface and IOInterface
  *       then PacketInterface is used by the forwarder node to read or write data.
  */
 class AVSTREAM_API Forwarder final : public PipelineNode
