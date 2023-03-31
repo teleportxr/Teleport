@@ -96,7 +96,7 @@ namespace avs
 		/*!
 		 * Get node display name (for reporting & profiling).
 		 */
-		const char* getDisplayName() const override { return "Queue"; }
+		const char* getDisplayName() const override { return name.c_str(); }
 	};
 
 } // avs

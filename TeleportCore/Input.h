@@ -15,7 +15,10 @@ namespace teleport
 		//! A class to store current input states.
 		class Input
 		{
-		public:			
+			//! These are NOT sent to the server, but record the last event for each InputId.
+			mutable std::vector<avs::InputEventBinary> lastBinaryEvents;
+			mutable std::vector<avs::InputEventAnalogue> lastAnalogueEvents;
+		public:	
 			std::vector<avs::InputEventBinary> binaryEvents;
 			std::vector<avs::InputEventAnalogue> analogueEvents;
 			std::vector<avs::InputEventMotion> motionEvents;
@@ -35,6 +38,11 @@ namespace teleport
 			void setBinaryState(uint16_t inputID, bool activated);
 			//! Set an analogue state for the specified inputID.
 			void setAnalogueState(uint16_t inputID, float strength);
+
+			//! For debugging only: get the last event at this id.
+			const avs::InputEventAnalogue& getLastAnalogueEvent(uint16_t inputID) const;
+			//! For debugging only: get the last event at this id.
+			const avs::InputEventBinary& getLastBinaryEvent(uint16_t inputID) const;
 		};
 	}
 }

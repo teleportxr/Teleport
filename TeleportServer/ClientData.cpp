@@ -30,7 +30,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	setupCommand.control_model = serverSettings.controlModel;
-	//setupCommand.bodyOffsetFromHead = clientSettings.bodyOffsetFromHead;
 	setupCommand.startTimestamp_utc_unix_ms = getUnixTimestamp();
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings.backgroundMode;
@@ -134,8 +133,6 @@ bool ClientData::isConnected() const
 {
 	if(!clientMessaging->hasPeer())
 		return false;
-	if(!clientNetworkContext.NetworkPipeline)
-		return false;
 	return true;
 }
 
@@ -184,8 +181,4 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 	
 }
 
-void ClientData::tick(float deltaTime)
-{
-	clientMessaging->tick(deltaTime);
-}
 

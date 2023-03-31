@@ -27,6 +27,7 @@ namespace teleport
 	{
 		class SessionClient;
 		class ClientPipeline;
+		class OpenXR;
 	}
 	#ifdef _MSC_VER
 	typedef void* PlatformWindow;
@@ -60,7 +61,7 @@ namespace teleport
 		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
 		void TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
 
-		void NodeMapping(client::SessionClient* sessionClient);
+		void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
 		void NetworkPanel(const teleport::client::ClientPipeline& clientPipeline);
 		void DebugPanel(clientrender::DebugOptions &debugOptions);
 		void GeometryOSD();

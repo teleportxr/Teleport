@@ -767,32 +767,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 			clientServerState.SetInputs(inputs);
 		}
 		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
-			clientServerState.input,instanceRenderer->clientPipeline.decoder.idrRequired(),fTime, time_step);
+			clientServerState.input,fTime, time_step);
 
-		avs::Result result = instanceRenderer->clientPipeline.pipeline.process();
-		if (result == avs::Result::Network_Disconnection)
-		{
-			TELEPORT_INTERNAL_CERR("Got avs::Result::Network_Disconnection. We should try to reconnect here.\n");
-			sessionClient->Disconnect(0);
-			return;
-		}
-		// Source might not yet be configured...
-		if (instanceRenderer->clientPipeline.source)
-		{
-			std::string str;
-			if (instanceRenderer->clientPipeline.source->getNextStreamingControlMessage(str))
-			{
-				sessionClient->SendStreamingControlMessage(str);
-			}
-		/*	static short c = 0;
-			if (!(c--))
-			{
-				const avs::NetworkSourceCounters Counters = instanceRenderer->clientPipeline.source->getCounterValues();
-				std::cout << "Network packets dropped: " << 100.0f * Counters.networkDropped << "%"
-					<< "\nDecoder packets dropped: " << 100.0f * Counters.decoderDropped << "%"
-					<< std*::endl;
-			}*/
-		}
 	}
 
 	gui.SetVideoDecoderStatus(ir->GetVideoDecoderStatus());
@@ -886,7 +862,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			{
 				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 				if (sessionClient->IsConnected())
-					GetInstanceRenderer(server_uid)->clientPipeline.decoder.toggleShowAlphaAsColor();
+					sessionClient->GetClientPipeline().decoder.toggleShowAlphaAsColor();
 			}
 			break;
 			#ifdef _MSC_VER
@@ -1248,7 +1224,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Network"))
 	{
-		gui.NetworkPanel(instanceRenderer->clientPipeline);
+		gui.NetworkPanel(sessionClient->GetClientPipeline());
 		gui.EndTab();
 	}
 	if(gui.Tab("Camera"))
@@ -1312,7 +1288,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		gui.LinePrint(" ", white);
 
 		gui.LinePrint("Decoder Parameters:", white);
-		const avs::DecoderParams& params = instanceRenderer->clientPipeline.decoderParams;
+		const avs::DecoderParams& params = sessionClient->GetClientPipeline().decoderParams;
 		const auto& videoCodecNames = magic_enum::enum_names<avs::VideoCodec>();
 		const auto& decoderFrequencyNames = magic_enum::enum_names<avs::DecodeFrequency>();
 		gui.LinePrint(platform::core::QuickFormat("Video Codec: %s", videoCodecNames[size_t(params.codec)]));
@@ -1339,7 +1315,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Controllers"))
 	{
-		gui.NodeMapping(sessionClient.get());
+		gui.InputsPanel(server_uid,sessionClient.get(), renderState.openXR);
+#if 0
 		gui.LinePrint( "CONTROLS\n");
 		if(renderState.openXR)
 		{
@@ -1356,6 +1333,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 			gui.LinePrint(platform::core::QuickFormat("     Mouse: %d %d %3.3d",mouseCameraInput.MouseX,mouseCameraInput.MouseY,mouseCameraState.right_left_spd));
 			gui.LinePrint(platform::core::QuickFormat("      btns: %d",mouseCameraInput.MouseButtons));
 		}
+#endif
 		gui.EndTab();
 	}
 	gui.EndDebugGui(deviceContext);

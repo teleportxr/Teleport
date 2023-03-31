@@ -24,12 +24,20 @@ namespace avs
 {
 	struct DataChannel
 	{
-		DataChannel(uint64_t stream_index = 0, WebRtcNetworkSink* webRtcNetworkSink = nullptr)
+		DataChannel()
 		{
 		}
+		DataChannel(const DataChannel& dc)
+		{
+			rtcDataChannel = dc.rtcDataChannel;
+		}
 		~DataChannel()
-		{}
+		{
+			rtcDataChannel->close();
+			rtcDataChannel = nullptr;
+		}
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
+		atomic<size_t> bytesReceived = 0;
 		bool closed= false;
 		bool readyToSend = false;
 	};
@@ -38,22 +46,26 @@ namespace avs
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSink, PipelineNode)
 		std::unordered_map<uint64_t, DataChannel> dataChannels;
-		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
+		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
+			void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
-		std::unordered_map<int, uint32_t> m_streamIndices;
+		std::unordered_map<int, uint32_t> idToStreamIndex;
+		std::unordered_map<int, int> idToOutputIndex;
 		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		bool recreateConnection = false;
+		rtc::PeerConnection::State currentState = rtc::PeerConnection::State::New;
 		shared_ptr<rtc::PeerConnection> createServerPeerConnection(const rtc::Configuration& config,
 			std::function<void(const std::string&)> sendMessage,
-			std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannel, std::string id)
+			std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannelReceived, std::string id)
 		{
 			auto pc = std::make_shared<rtc::PeerConnection>(config);
 
 			pc->onStateChange(
 				[this](rtc::PeerConnection::State state)
 				{
-					if (state == rtc::PeerConnection::State::Failed)
+					currentState = state;
+					if (state == rtc::PeerConnection::State::Failed|| state == rtc::PeerConnection::State::Closed)
 					{
 						recreateConnection = true;
 					}
@@ -86,9 +98,9 @@ namespace avs
 			sendMessage(message.dump());
 				});
 
-			pc->onDataChannel([onDataChannel, id](shared_ptr<rtc::DataChannel> dc)
+			pc->onDataChannel([onDataChannelReceived, id](shared_ptr<rtc::DataChannel> dc)
 				{
-					onDataChannel(dc);
+					onDataChannelReceived(dc);
 				});
 			recreateConnection = false;
 			//peerConnectionMap.emplace(id, pc);
@@ -127,6 +139,17 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 	m_data->m_EFPSender->sendCallback = std::bind(&WebRtcNetworkSink::sendEfpData, this, std::placeholders::_1);
 	m_params = params;
 	m_streams = std::move(streams);
+	size_t numOutputs = 0;
+	for (size_t i = 0; i < m_streams.size(); ++i)
+	{
+		auto& stream = m_streams[i];
+		if (stream.canReceive)
+		{
+			numOutputs++;
+		}
+	}
+	setNumInputSlots(m_streams.size());
+	setNumOutputSlots(numOutputs);
 	CreatePeerConnection();
 
 	// Having completed the above, we are not yet ready to actually send data.
@@ -140,7 +163,7 @@ void WebRtcNetworkSink::CreatePeerConnection()
 	rtc::Configuration config;
 	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
 	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
-	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannel, m_data, std::placeholders::_1), "1");
+	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1), "1");
 
 	// Now ensure data channels are initialized...
 
@@ -150,11 +173,12 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		WebRtcNetworkSink* ns = static_cast<WebRtcNetworkSink*>(node);
 		return ns->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
 	};
+	int outputIndex = 0;
 	for (size_t i = 0; i < m_streams.size(); ++i)
 	{
 		auto& stream = m_streams[i];
 		stream.buffer.resize(stream.chunkSize);
-		m_data->m_streamIndices.emplace(stream.id, i);
+		m_data->idToStreamIndex.emplace(stream.id, i);
 
 		if (stream.useParser)
 		{
@@ -162,18 +186,24 @@ void WebRtcNetworkSink::CreatePeerConnection()
 			parser->configure(this, onPacketParsed, i);
 			m_data->m_parsers[i] = std::move(parser);
 		}
-		m_data->dataChannels.try_emplace(stream.id, stream.id, this);
+		if (stream.canReceive)
+		{
+		//	m_data->idToOutputIndex[stream.id] = outputIndex++; no, match-up by name.
+		}
+		m_data->dataChannels.try_emplace(stream.id);
 		DataChannel& dataChannel = m_data->dataChannels[stream.id];
 		rtc::DataChannelInit dataChannelInit;
+		dataChannelInit.reliability.type =  rtc::Reliability::Type::Rexmit;
+		dataChannelInit.reliability.unordered = true;
+		dataChannelInit.reliability.rexmit = int(0);
 		// ensure oddness for the channel creator:
 		dataChannelInit.id = ODD_ID(stream.id);
 		std::string dcLabel = stream.label;
 		dataChannel.rtcDataChannel = m_data->rtcPeerConnection->createDataChannel(dcLabel, dataChannelInit);
-		dataChannel.readyToSend = true;
+		dataChannel.readyToSend = false;
 		// We DO NOT get a callback from creating a dc locally.
 		m_data->onDataChannel(dataChannel.rtcDataChannel);
 	}
-	setNumInputSlots(m_streams.size());
 }
 
 WebRtcNetworkSink::~WebRtcNetworkSink()
@@ -200,6 +230,15 @@ bool WebRtcNetworkSink::isProcessingEnabled() const
 Result WebRtcNetworkSink::deconfigure()
 {
 	m_data->m_EFPSender.reset();
+	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
+	m_data->dataChannels.clear();
+	if (m_data->rtcPeerConnection)
+	{
+		m_data->rtcPeerConnection->close();
+		while (m_data->rtcPeerConnection->state() != rtc::PeerConnection::State::Closed)
+		{
+		}
+	}
 	m_data->rtcPeerConnection = nullptr;
 	m_data->m_parsers.clear();
 	m_streams.clear();
@@ -207,7 +246,7 @@ Result WebRtcNetworkSink::deconfigure()
 	if (getNumInputSlots() <= 0)
 		return Result::OK;
 	setNumInputSlots(0);
-
+	setNumOutputSlots(0);
 
 	return Result::OK;
 }
@@ -373,7 +412,7 @@ Result WebRtcNetworkSink::sendEfpData(const std::vector<uint8_t>& subPacket)
 
 Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 {
-	auto index = m_data->m_streamIndices[id];
+	auto index = m_data->idToStreamIndex[id];
 	auto &dataChannel = m_data->dataChannels[id];
 	auto c = dataChannel.rtcDataChannel;
 	if (c)
@@ -410,7 +449,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 				}
 				else if (id == 100)
 				{
-					std::cout << "WebRTC: channel " << (int)id << ", sent packet of size " << sz << "\n";
+				//..	std::cout << "WebRTC: channel " << (int)id << ", sent packet of size " << sz << "\n";
 				}
 			}
 			else
@@ -487,6 +526,23 @@ void WebRtcNetworkSink::SendConfigMessage(const std::string& str)
 }
 
 
+Result WebRtcNetworkSink::onInputLink(int slot, PipelineNode* node)
+{
+	return Result::OK;
+}
+
+Result WebRtcNetworkSink::onOutputLink(int slot, PipelineNode* node)
+{
+	std::string name = node->getDisplayName();
+	for (int i = 0; i < m_streams.size(); i++)
+	{
+		auto& stream = m_streams[i];
+		if (stream.label == name)
+			m_data->idToOutputIndex[stream.id]=slot;
+	}
+	return Result::OK;
+}
+
 bool WebRtcNetworkSink::getNextStreamingControlMessage(std::string& msg)
 {
 	std::lock_guard<std::mutex> lock(messagesMutex);
@@ -541,6 +597,15 @@ void WebRtcNetworkSink::receiveStreamingControlMessage(const std::string& msg)
 }
 
 
+void WebRtcNetworkSink::Private::onDataChannelReceived(shared_ptr<rtc::DataChannel> dc)
+{
+	if (!dc->id().has_value())
+		return;
+	uint16_t id = (dc->id().value());
+	id = EVEN_ID(id);
+	std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
+}
+
 void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 {
 	if (!dc->id().has_value())
@@ -560,8 +625,9 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 			std::cout << "DataChannel "<<id<<"opened" << std::endl;
 		});
 
-	dc->onClosed([dataChannel,id]()
+	dc->onClosed([this,id]()
 		{
+			DataChannel& dataChannel = dataChannels[id];
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		//	dataChannel.closed = true;
 		});
@@ -572,11 +638,61 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 			std::cerr << "WebRTC: channel " << id << ", buffered amount is low.\n";
 
 		});
-	//c->onMessage([id](rtc::binary b) {
+	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
+	if(stream.canReceive)
+	dc->onMessage([this,  id](rtc::binary b)
+		{
+			DataChannel& dataChannel = dataChannels[id];
 	//	// data holds either std::string or rtc::binary
-	//	std::cout << "Binary message from " << id
-	//		<< " received, size=" << b.size() << std::endl;
-	//	},[this, &dataChannel,id](rtc::string s) {});
+			//std::cout << "Binary message from " << id	<< " received, size=" << b.size() << std::endl;
+			auto o = idToOutputIndex.find(id);
+			if (o == idToOutputIndex.end())
+				return;
+			int outputIndex = o->second;
+			dataChannel.bytesReceived += b.size();
+			auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
+			if (!stream.framed)
+			{
+				size_t numBytesWrittenToOutput;
+				auto outputNode = dynamic_cast<IOInterface*>(q_ptr()->getOutput(outputIndex));
+				if (!outputNode)
+				{
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+					return;
+				}
+				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+				if (numBytesWrittenToOutput != b.size())
+				{
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: failed to write all to output Node.";
+					return;
+				}
+			}
+		},[this, &dataChannel,id](rtc::string s) {});
 
 	//dataChannelMap.emplace(id, dc);
+}
+
+ConnectionState WebRtcNetworkSink::getConnectionState() const
+{
+	if (m_data->rtcPeerConnection)
+	{
+		switch (m_data->currentState)
+		{
+		case rtc::PeerConnection::State::New:
+			return ConnectionState::NEW_UNCONNECTED;
+		case rtc::PeerConnection::State::Connecting:
+			return ConnectionState::CONNECTING;
+		case rtc::PeerConnection::State::Connected:
+			return ConnectionState::CONNECTED;
+		case rtc::PeerConnection::State::Disconnected:
+			return ConnectionState::DISCONNECTED;
+		case rtc::PeerConnection::State::Failed:
+			return ConnectionState::FAILED;
+		case rtc::PeerConnection::State::Closed:
+			return ConnectionState::CLOSED;
+		default:
+			return ConnectionState::ERROR_STATE;
+		}
+	}
+	return ConnectionState::UNINITIALIZED;
 }

@@ -34,7 +34,22 @@ namespace avs
 		ReleaseEvent = IsInteger | IsEvent | IsReleaseEvent,
 		FloatEvent = IsFloat | IsEvent
 	};
-	
+	inline const char* stringof(InputType t)
+	{
+		switch (t)
+		{
+		case InputType::IsEvent			:return "Incomplete";
+		case InputType::IsReleaseEvent	:return "Incomplete";
+		case InputType::IntegerState 	:return "IntegerState";
+		case InputType::FloatState		:return "FloatState";
+		case InputType::IntegerEvent	:return "IntegerEvent";
+		case InputType::ReleaseEvent	:return "ReleaseEvent";
+		case InputType::FloatEvent		:return "FloatEvent";
+		case InputType::Invalid:
+		default:
+			return "Invalid";
+		};
+	}
 	inline InputType operator|(const InputType& a, const InputType& b)
 	{
 		return (InputType)((uint8_t)a | (uint8_t)b);

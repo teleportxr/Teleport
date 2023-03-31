@@ -26,6 +26,7 @@
 #endif
 #include "Platform/Core/StringFunctions.h"
 #include "TeleportClient/SessionClient.h"
+#include "TeleportClient/OpenXR.h"
 
 #ifdef __ANDROID__
 #define VK_BACK           0x01
@@ -1110,12 +1111,60 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 	ImGui::EndGroup();
 }
 
-void Gui::NodeMapping(client::SessionClient *sessionClient)
+void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,teleport::client::OpenXR *openXR)
 {
-	const auto &m=sessionClient->GetNodePosePaths();
-	for (auto p : m)
+	if (ImGui::BeginTable("controls", 4))
 	{
-		LinePrint(fmt::format("{0}:{1}", p.first, p.second));
+		ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+		ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+		ImGui::TableSetupColumn("Mapped", ImGuiTableColumnFlags_WidthStretch, 200.0f);
+		ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		const auto &M=openXR->GetServerInputMappings(server_uid);
+		const auto& I= openXR->GetServerInputs(server_uid,0);
+		std::string val;
+		for (const auto& m : M)
+		{
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##clientActionId", teleport::client::stringof(m.clientActionId));
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##inputType", avs::stringof(m.serverInputDefinition.inputType));
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##inputType", m.serverInputDefinition.regexPath.c_str());
+			ImGui::TableNextColumn();
+			switch (m.serverInputDefinition.inputType)
+			{
+			case avs::InputType::FloatState:
+				val = fmt::format("{0}", I.analogueStates[m.serverInputDefinition.inputId]);
+				break;
+			case avs::InputType::IntegerState:
+				val = fmt::format("{0}", I.binaryStates[m.serverInputDefinition.inputId]);
+				break;
+			case avs::InputType::FloatEvent:
+				val = fmt::format("{0}", fmt::format("{0}", I.getLastAnalogueEvent(m.serverInputDefinition.inputId).strength));
+				break;
+			case avs::InputType::IntegerEvent:
+				val = fmt::format("{0}", I.getLastBinaryEvent(m.serverInputDefinition.inputId).activated);
+				break;
+			};
+			ImGui::LabelText("##inputVal", val.c_str());
+		}
+		ImGui::EndTable();
+	}
+	if (ImGui::BeginTable("poses", 2))
+	{
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, 200.0f);
+		const auto &m=sessionClient->GetNodePosePaths();
+		for (auto p : m)
+		{
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##frst", fmt::format("{0}", p.first).c_str());
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##second", fmt::format("{0}", p.second).c_str());
+		}
+		ImGui::EndTable();
 	}
 }
 
@@ -1125,12 +1174,33 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
 	const auto& streams = clientPipeline.source->GetStreams();
 	const auto & streamStatus=clientPipeline.source->GetStreamStatus();
-	for (size_t i = 0; i < streamStatus.size(); i++)
+
+
+	if (ImGui::BeginTable("bandwidth", 4))
 	{
-		float kps = streamStatus[i].bandwidthKps;
-		const auto& s = streams[i];
-		LinePrint(fmt::format("Channel {0} {1} bandwidth {2:.1f}", i,s.label,kps));
+		ImGui::TableSetupColumn("Ch.", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 200.0f);
+		ImGui::TableSetupColumn("In", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+		ImGui::TableSetupColumn("Out", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+		for (size_t i = 0; i < streamStatus.size(); i++)
+		{
+			float kps_in = streamStatus[i].inwardBandwidthKps;
+			float kps_out = streamStatus[i].outwardBandwidthKps;
+			const auto& s = streams[i];
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##chnl", fmt::format("{0}", i).c_str());
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##slabel", s.label.c_str());
+			ImGui::TableNextColumn();
+			ImGui::LabelText("##kps_in", fmt::format("{0:.1f}", kps_in).c_str());
+			ImGui::TableNextColumn();
+			if(kps_out>0)
+				ImGui::LabelText("##kps_out", fmt::format("{0:.1f}", kps_out).c_str());
+		}
+		ImGui::EndTable();
 	}
+
 /*	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
 	LinePrint(platform::core::QuickFormat("Current timestamp: %d", clientPipeline.pipeline.GetTimestamp()));
 	LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));

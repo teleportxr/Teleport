@@ -23,7 +23,10 @@ namespace avs
 		WebRtcNetworkSource::Private * m_data = nullptr;
 	public:
 		WebRtcNetworkSource();
-
+		virtual ~WebRtcNetworkSource()
+		{
+			deconfigure();
+		}
 		/*!
 		 * Configure network source and bind to local UDP endpoint.
 		 * \param numOutputs Number of output slots. This determines maximum number of multiplexed streams the node will support.
@@ -36,7 +39,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numOutputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params) override;
+		Result configure(std::vector<NetworkSourceStream>&& in_streams, const NetworkSourceParams& params) override;
 
 		/*!
 		 * Deconfigure network source and release all associated resources.
@@ -78,10 +81,11 @@ namespace avs
 		void receiveStreamingControlMessage(const std::string& str) override;
 		//! IF there is a message to send reliably to the peer, this will fill it in.
 		bool getNextStreamingControlMessage(std::string& msg) override;
+		Result onInputLink(int slot, PipelineNode* node) override;
+		Result onOutputLink(int slot, PipelineNode* node) override;
 	protected:
 		std::vector<std::string> messagesToSend;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
-		std::unordered_map<uint32_t, int> m_streamNodeMap;
 		NetworkSourceParams m_params;
 		mutable std::mutex m_networkMutex;
 		mutable std::mutex m_dataMutex;

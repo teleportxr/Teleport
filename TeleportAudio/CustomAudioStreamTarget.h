@@ -10,21 +10,24 @@ namespace teleport
 {
 	namespace audio
 	{
+		typedef std::function<void(const uint8_t* data, size_t dataSize)> PlayCallback;
 		/*! A class to receive streamed audio and play it through a callback
 		*/
 		class CustomAudioStreamTarget final : public avs::AudioTargetBackendInterface
 		{
 		public:
-			CustomAudioStreamTarget(std::function<void(const uint8_t* data, size_t dataSize)> playCallback);
+			CustomAudioStreamTarget();
 
 			~CustomAudioStreamTarget();
+
+			void SetPlayCallback(PlayCallback c);
 
 			avs::Result process(const void* buffer, size_t bufferSizeInBytes, avs::AudioPayloadType payloadType) override;
 
 			avs::Result deconfigure() override;
 
 		private:
-			std::function<void(const uint8_t* data, size_t dataSize)> mPlayCallback;
+			PlayCallback mPlayCallback;
 		};
 	}
 }

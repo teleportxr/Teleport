@@ -14,37 +14,6 @@
 using namespace teleport;
 using namespace server;
 
-void CommandStack::PushBuffer(std::shared_ptr<std::vector<uint8_t>> b)
-{
-	std::lock_guard l(mutex);
-	buffers.push_back(b);
-}
-
-bool CommandStack::mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes)
-{
-	mutex.lock();
-	if (!buffers.size())
-	{
-		mutex.unlock();
-		return false;
-	}
-	std::shared_ptr<std::vector<uint8_t>> b = buffers[0];
-	bufferPtr = b->data();
-	bufferSizeInBytes = b->size();
-	if(!bufferSizeInBytes)
-	{
-		mutex.unlock();
-		return false;
-	}
-	return true;
-}
-
-void CommandStack::unmapOutputBuffer()
-{
-	buffers.erase(buffers.begin());
-	mutex.unlock();
-}
-
 ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 std::shared_ptr<DiscoveryService> discoveryService,
 								 SetHeadPoseFn setHeadPose,
@@ -81,9 +50,8 @@ void ClientMessaging::unInitialise()
 	initialized = false;
 }
 
-void ClientMessaging::initialise(ClientNetworkContext* context, CaptureDelegates captureDelegates)
+void ClientMessaging::initialize( CaptureDelegates captureDelegates)
 {
-	clientNetworkContext = context;
 	captureComponentDelegates = captureDelegates;
 	initialized = true;
 }
@@ -141,16 +109,16 @@ void ClientMessaging::tick(float deltaTime)
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
-	if (commandPipeline)
-		commandPipeline->process();
-	if (peer && clientNetworkContext->NetworkPipeline && !clientNetworkContext->NetworkPipeline->isProcessingEnabled())
+	commandPipeline.process();
+	messagePipeline.process();
+	if (peer &&  !clientNetworkContext.NetworkPipeline.isProcessingEnabled())
 	{
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
 		Disconnect();
 		return;
 	}
 	std::string msg;
-	if (clientNetworkContext->NetworkPipeline && clientNetworkContext->NetworkPipeline->getNextStreamingControlMessage(msg))
+	if ( clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
 	{
 		sendStreamingControlMessage(msg);
 	}
@@ -188,9 +156,9 @@ void ClientMessaging::tick(float deltaTime)
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
-	if (settings->isReceivingAudio && clientNetworkContext->sourceNetworkPipeline)
+	if (settings->isReceivingAudio )
 	{
-		clientNetworkContext->sourceNetworkPipeline->process();
+		clientNetworkContext.sourceNetworkPipeline.process();
 	}
 }
 
@@ -204,6 +172,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 	{
 		timeStartingSession += deltaTime;
 	}
+
 	size_t eventCount = eventQueue.size();
 	for(int i = 0; i < eventCount; ++i)
 	{
@@ -340,8 +309,8 @@ void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 
 void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose)
 {
-	avs::ConvertRotation(settings->serverAxesStandard, clientNetworkContext->axesStandard, relPose.orientation);
-	avs::ConvertPosition(settings->serverAxesStandard, clientNetworkContext->axesStandard, relPose.position);
+	avs::ConvertRotation(settings->serverAxesStandard, clientNetworkContext.axesStandard, relPose.orientation);
+	avs::ConvertPosition(settings->serverAxesStandard, clientNetworkContext.axesStandard, relPose.position);
 	teleport::core::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
 	sendCommand2(command);
 }
@@ -397,7 +366,7 @@ bool ClientMessaging::SendCommand(const void* c, size_t sz) const
 
 bool ClientMessaging::hasReceivedHandshake() const
 {
-	return clientNetworkContext->axesStandard != avs::AxesStandard::NotInitialized;
+	return clientNetworkContext.axesStandard != avs::AxesStandard::NotInitialized;
 }
 
 // Same as clientIP
@@ -425,6 +394,16 @@ uint16_t ClientMessaging::getClientPort() const
 	return peer->address.port;
 }
 
+avs::Result ClientMessaging::decode(const void* buffer, size_t bufferSizeInBytes)
+{
+	ENetPacket eNetPacket;
+	eNetPacket.data = (enet_uint8*)buffer;
+	eNetPacket.dataLength = bufferSizeInBytes;
+	
+	receiveClientMessage(&eNetPacket);
+	return avs::Result::OK;
+}
+
 void ClientMessaging::receive(const ENetEvent& event)
 {
 	switch(static_cast<teleport::core::RemotePlaySessionChannel>(event.channelID))
@@ -433,23 +412,11 @@ void ClientMessaging::receive(const ENetEvent& event)
 		//Delay the actual start of streaming until we receive a confirmation from the client that they are ready.
 		receiveHandshake(event.packet);
 		break;
-	case teleport::core::RemotePlaySessionChannel::RPCH_Control:
-		receiveInput(event.packet);
-		break;
 	case teleport::core::RemotePlaySessionChannel::RPCH_DisplayInfo:
 		receiveDisplayInfo(event.packet);
 		break;
-	case teleport::core::RemotePlaySessionChannel::RPCH_HeadPose:
-		receiveHeadPose(event.packet);
-		break;
-	case teleport::core::RemotePlaySessionChannel::RPCH_ResourceRequest:
-		receiveResourceRequest(event.packet);
-		break;
 	case teleport::core::RemotePlaySessionChannel::RPCH_KeyframeRequest:
 		receiveKeyframeRequest(event.packet);
-		break;
-	case teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage:
-		receiveClientMessage(event.packet); 
 		break;
 	case teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl:
 		receiveStreamingControl(event.packet); 
@@ -472,53 +439,58 @@ void ClientMessaging::receiveStreamingControl(const ENetPacket* packet)
 	std::string str;
 	str.resize(strlen);
 	memcpy(str.data(), packet->data + sizeof(strlen), strlen);
-	clientNetworkContext->NetworkPipeline->receiveStreamingControlMessage(str);
+	clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(str);
 }
 
 void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 {
+	if (receivedHandshake)
+		return;
 	size_t handShakeSize = sizeof(teleport::core::Handshake);
 
 	memcpy(&handshake, packet->data, handShakeSize);
 
-	clientNetworkContext->axesStandard = handshake.axesStandard;
+	clientNetworkContext.axesStandard = handshake.axesStandard;
 
-	if (!clientNetworkContext->NetworkPipeline)
+	if (!clientNetworkContext.NetworkPipeline.isInitialized())
 	{
-		std::string multibyteClientIP = getClientIP();
-		//size_t ipLength = strlen(multibyteClientIP.data());
-
-		std::wstring clientIP=teleport::core::StringToWString(multibyteClientIP);
-		ServerNetworkSettings networkSettings =
 		{
-			static_cast<int32_t>(streamingPort),
-			clientIP.c_str(),
-			static_cast<int32_t>(handshake.clientStreamingPort),
-			static_cast<int32_t>(handshake.maxBandwidthKpS),
-			static_cast<int32_t>(handshake.udpBufferSize),
-			settings->requiredLatencyMs,
-			static_cast<int32_t>(disconnectTimeout)
-			,avs::StreamingTransportLayer::WEBRTC
-		};
+			std::string multibyteClientIP = getClientIP();
+			//size_t ipLength = strlen(multibyteClientIP.data());
 
-		clientNetworkContext->NetworkPipeline.reset(new NetworkPipeline(settings));
-		clientNetworkContext->NetworkPipeline->initialise(networkSettings, clientNetworkContext->ColorQueue.get(), clientNetworkContext->TagDataQueue.get(), clientNetworkContext->GeometryQueue.get()
-			, clientNetworkContext->AudioQueue.get()
-			, clientNetworkContext->CommandQueue.get());
+			std::wstring clientIP = teleport::core::StringToWString(multibyteClientIP);
+			ServerNetworkSettings networkSettings =
+			{
+				static_cast<int32_t>(streamingPort),
+				clientIP.c_str(),
+				static_cast<int32_t>(handshake.clientStreamingPort),
+				static_cast<int32_t>(handshake.maxBandwidthKpS),
+				static_cast<int32_t>(handshake.udpBufferSize),
+				settings->requiredLatencyMs,
+				static_cast<int32_t>(disconnectTimeout)
+				,avs::StreamingTransportLayer::WEBRTC
+			};
+
+			clientNetworkContext.NetworkPipeline.initialise(settings, networkSettings);
+
+			MessageDecoder.configure(this);
+			messagePipeline.link({ &clientNetworkContext.NetworkPipeline.MessageQueue,&MessageDecoder });
+		}
+		TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
+
+		if (settings->isReceivingAudio)
+		{
+			avs::NetworkSourceParams sourceParams;
+			sourceParams.connectionTimeout = disconnectTimeout;
+			sourceParams.remoteIP = clientIP.c_str();
+			sourceParams.remotePort = handshake.clientStreamingPort;
+
+			clientNetworkContext.sourceNetworkPipeline.initialize(settings, sourceParams
+				, &clientNetworkContext.sourceAudioQueue
+				, &clientNetworkContext.audioDecoder
+				, &clientNetworkContext.audioTarget);
+		}
 	}
-	TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
-
-	if (settings->isReceivingAudio && !clientNetworkContext->sourceNetworkPipeline)
-	{
-		avs::NetworkSourceParams sourceParams;
-		sourceParams.connectionTimeout = disconnectTimeout;
-		sourceParams.remoteIP = clientIP.c_str();
-		sourceParams.remotePort = handshake.clientStreamingPort;
-
-		clientNetworkContext->sourceNetworkPipeline.reset(new SourceNetworkPipeline(settings));
-		clientNetworkContext->sourceNetworkPipeline->initialize(sourceParams, clientNetworkContext->sourceAudioQueue.get(), clientNetworkContext->audioDecoder.get(), clientNetworkContext->audioTarget.get());
-	}
-
 	CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
 	cameraInfo.width = static_cast<float>(handshake.startDisplayInfo.width);
 	cameraInfo.height = static_cast<float>(handshake.startDisplayInfo.height);
@@ -534,18 +506,14 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 	{
 		geometryStreamingService.confirmResource(clientResources[i]);
 	}
-
-	captureComponentDelegates.startStreaming(clientNetworkContext);
-	geometryStreamingService.startStreaming(clientNetworkContext, handshake);
+	captureComponentDelegates.startStreaming(&clientNetworkContext);
+	geometryStreamingService.startStreaming(&clientNetworkContext, handshake);
 	{
-		commandPipeline.reset(new avs::Pipeline);
-		commandEncoder.reset(new avs::GenericEncoder);
-		commandEncoder->configure(&commandStack);
+		commandEncoder.configure(&commandStack);
 
-		commandPipeline->link({ commandEncoder.get(), clientNetworkContext->CommandQueue.get() });
+		commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.CommandQueue });
 
 	}
-	receivedHandshake = true;
 
 	//Client has nothing, thus can't show nodes.
 	if (handshake.resourceCount == 0)
@@ -563,6 +531,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		teleport::core::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 		sendCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 	}
+	receivedHandshake = true;
 	reportHandshake(this->clientID, &handshake);
 	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}:{2}.\n", clientID, clientIP,streamingPort);
 }
@@ -581,45 +550,46 @@ bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 
 void ClientMessaging::receiveInput(const ENetPacket* packet)
 {
-	size_t inputStateSize = sizeof(teleport::core::InputState);
+	size_t InputsMessageSize = sizeof(teleport::core::InputsMessage);
 
-	if (packet->dataLength < inputStateSize)
+	if (packet->dataLength < InputsMessageSize)
 	{
-		TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; less than minimum size of " << inputStateSize << "!\n";
+		TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; less than minimum size of " << InputsMessageSize << "!\n";
 		return;
 	}
 
-	teleport::core::InputState receivedInputState;
+	teleport::core::InputsMessage msg;
 	//Copy newest input state into member variable.
-	memcpy(&receivedInputState, packet->data, inputStateSize);
+	memcpy(&msg, packet->data, InputsMessageSize);
 	
-	size_t binaryStateSize		= receivedInputState.numBinaryStates;
-	size_t analogueStateSize	= sizeof(float)*receivedInputState.numAnalogueStates;
-	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * receivedInputState.numBinaryEvents;
-	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * receivedInputState.numAnalogueEvents;
-	size_t motionEventSize		= sizeof(avs::InputEventMotion) * receivedInputState.numMotionEvents;
+	size_t binaryStateSize		= msg.inputState.numBinaryStates;
+	size_t analogueStateSize	= sizeof(float)* msg.inputState.numAnalogueStates;
+	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * msg.inputState.numBinaryEvents;
+	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * msg.inputState.numAnalogueEvents;
+	size_t motionEventSize		= sizeof(avs::InputEventMotion) * msg.inputState.numMotionEvents;
+	size_t totalSize = InputsMessageSize + binaryStateSize + analogueStateSize + binaryEventSize + analogueEventSize + motionEventSize;
 
-	if (packet->dataLength != inputStateSize +binaryStateSize+analogueStateSize+ binaryEventSize + analogueEventSize + motionEventSize)
+	if (packet->dataLength != totalSize)
 	{
-		TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; expected size of " << inputStateSize + binaryEventSize + analogueEventSize + motionEventSize << "!\n" <<
-			"     InputState Size: " << inputStateSize << "\n" <<
-			"  Binary States Size:" << binaryStateSize << "(" << receivedInputState.numBinaryStates << ")\n" <<
-			"Analogue States Size:" << analogueStateSize << "(" << receivedInputState.numAnalogueStates << ")\n" <<
-			"  Binary Events Size:" << binaryEventSize << "(" << receivedInputState.numBinaryEvents << ")\n" <<
-			"Analogue Events Size:" << analogueEventSize << "(" << receivedInputState.numAnalogueEvents << ")\n" <<
-			"  Motion Events Size:" << motionEventSize << "(" << receivedInputState.numMotionEvents << ")\n";
+		TELEPORT_CERR << "Error on receive input for Client_" << clientID << "! Received malformed InputState packet of length " << packet->dataLength << "; expected size of " << totalSize << "!\n" <<
+			"     InputsMessage Size: " << InputsMessageSize << "\n" <<
+			"  Binary States Size:" << binaryStateSize << "(" << msg.inputState.numBinaryStates << ")\n" <<
+			"Analogue States Size:" << analogueStateSize << "(" << msg.inputState.numAnalogueStates << ")\n" <<
+			"  Binary Events Size:" << binaryEventSize << "(" << msg.inputState.numBinaryEvents << ")\n" <<
+			"Analogue Events Size:" << analogueEventSize << "(" << msg.inputState.numAnalogueEvents << ")\n" <<
+			"  Motion Events Size:" << motionEventSize << "(" << msg.inputState.numMotionEvents << ")\n";
 
 		return;
 	}
-	latestInputStateAndEvents.analogueStates.resize(receivedInputState.numAnalogueStates);
+	latestInputStateAndEvents.analogueStates.resize(msg.inputState.numAnalogueStates);
 	latestInputStateAndEvents.binaryStates.resize(binaryStateSize);
-	uint8_t *src=packet->data+inputStateSize;
-	if(receivedInputState.numBinaryStates != 0)
+	uint8_t *src=packet->data+ InputsMessageSize;
+	if(msg.inputState.numBinaryStates != 0)
 	{
 		memcpy(latestInputStateAndEvents.binaryStates.data(), src, binaryStateSize);
 		src+=binaryStateSize;
 	}
-	if(receivedInputState.numAnalogueStates != 0)
+	if(msg.inputState.numAnalogueStates != 0)
 	{
 		memcpy(latestInputStateAndEvents.analogueStates.data(), src, analogueStateSize);
 		src+=analogueStateSize;
@@ -633,16 +603,20 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 			}
 		}
 	}
-	if(receivedInputState.numBinaryEvents != 0)
+	if(msg.inputState.numBinaryEvents != 0)
 	{
 		avs::InputEventBinary* binaryData = reinterpret_cast<avs::InputEventBinary*>(src);
-		latestInputStateAndEvents.binaryEvents.insert(latestInputStateAndEvents.binaryEvents.end(), binaryData, binaryData + receivedInputState.numBinaryEvents);
+		latestInputStateAndEvents.binaryEvents.insert(latestInputStateAndEvents.binaryEvents.end(), binaryData, binaryData + msg.inputState.numBinaryEvents);
 		src+=binaryEventSize;
 	}
-	if(receivedInputState.numAnalogueEvents != 0)
+	else if (latestInputStateAndEvents.binaryEvents.size())
+	{
+	//	TELEPORT_CERR << "... " <<  std::endl;
+	}
+	if(msg.inputState.numAnalogueEvents != 0)
 	{
 		avs::InputEventAnalogue* analogueData = reinterpret_cast<avs::InputEventAnalogue*>(src);
-		latestInputStateAndEvents.analogueEvents.insert(latestInputStateAndEvents.analogueEvents.end(), analogueData, analogueData + receivedInputState.numAnalogueEvents);
+		latestInputStateAndEvents.analogueEvents.insert(latestInputStateAndEvents.analogueEvents.end(), analogueData, analogueData + msg.inputState.numAnalogueEvents);
 		for (auto c : latestInputStateAndEvents.analogueEvents)
 		{
 			TELEPORT_COUT << "Analogue: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
@@ -650,10 +624,14 @@ void ClientMessaging::receiveInput(const ENetPacket* packet)
 		src+=analogueEventSize;
 	}
 
-	if(receivedInputState.numMotionEvents != 0)
+	if(msg.inputState.numMotionEvents != 0)
 	{
 		avs::InputEventMotion* motionData = reinterpret_cast<avs::InputEventMotion*>(src);
-		latestInputStateAndEvents.motionEvents.insert(latestInputStateAndEvents.motionEvents.end(), motionData, motionData + receivedInputState.numMotionEvents);
+		latestInputStateAndEvents.motionEvents.insert(latestInputStateAndEvents.motionEvents.end(), motionData, motionData + msg.inputState.numMotionEvents);
+	}
+	if (src - packet->data != totalSize)
+	{
+		TELEPORT_CERR << "Bad input size\n";
 	}
 }
 
@@ -673,29 +651,22 @@ void ClientMessaging::receiveDisplayInfo(const ENetPacket* packet)
 	cameraInfo.height = static_cast<float>(displayInfo.height);
 }
 
-void ClientMessaging::receiveHeadPose(const ENetPacket* packet)
-{
-	if (packet->dataLength != sizeof(avs::Pose))
-	{
-		TELEPORT_COUT << "Session: Received malformed head pose packet of length: " << packet->dataLength << "\n";
-		return;
-	}
-
-	avs::Pose headPose;
-	memcpy(&headPose, packet->data, packet->dataLength);
-
-	avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, headPose.orientation);
-	avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, headPose.position);
-	setHeadPose(clientID, &headPose);
-}
-
 void ClientMessaging::receiveResourceRequest(const ENetPacket* packet)
 {
-	size_t resourceCount;
-	memcpy(&resourceCount, packet->data, sizeof(size_t));
-
-	std::vector<avs::uid> resourceRequests(resourceCount);
-	memcpy(resourceRequests.data(), packet->data + sizeof(size_t), sizeof(avs::uid) * resourceCount);
+	core::ResourceRequestMessage msg;
+	if (packet->dataLength <sizeof(core::ResourceRequestMessage))
+	{
+		TELEPORT_COUT << "Session: Received malformed ResourceRequest packet of length: " << packet->dataLength << "\n";
+		return;
+	}
+	memcpy(&msg, packet->data, sizeof(msg));
+	if (packet->dataLength < sizeof(core::ResourceRequestMessage)+msg.resourceCount*sizeof(avs::uid))
+	{
+		TELEPORT_COUT << "Session: Received malformed ResourceRequest packet of length: " << packet->dataLength << "\n";
+		return;
+	}
+	std::vector<avs::uid> resourceRequests(msg.resourceCount);
+	memcpy(resourceRequests.data(), packet->data + sizeof(msg), sizeof(avs::uid) * msg.resourceCount);
 
 	for (avs::uid id : resourceRequests)
 	{
@@ -720,97 +691,105 @@ void ClientMessaging::receiveClientMessage(const ENetPacket* packet)
 	teleport::core::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<teleport::core::ClientMessagePayloadType*>(packet->data));
 	switch (clientMessagePayloadType)
 	{
-	case teleport::core::ClientMessagePayloadType::ControllerPoses:
-	{
-		teleport::core::ControllerPosesMessage message;
-		if(packet->dataLength<sizeof(message))
+		case teleport::core::ClientMessagePayloadType::ControllerPoses:
 		{
-			TELEPORT_CERR << "Bad packet size.\n";
-			return;
+			teleport::core::ControllerPosesMessage message;
+			if(packet->dataLength<sizeof(message))
+			{
+				TELEPORT_CERR << "Bad packet size.\n";
+				return;
+			}
+			memcpy(&message, packet->data, sizeof(message));
+			std::cout << "timestamp_unix_ms: "<<(message.timestamp_unix_ms/1000.0) << std::endl;
+			if(packet->dataLength!=sizeof(message)+sizeof(teleport::core::NodePose)*message.numPoses)
+			{
+				TELEPORT_CERR << "Bad packet size.\n";
+				return;
+			}
+			avs::ConvertRotation(clientNetworkContext.axesStandard, settings->serverAxesStandard, message.headPose.orientation);
+			avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, message.headPose.position);
+			setHeadPose(clientID, (avs::Pose*)&message.headPose);
+			uint8_t *src=packet->data+sizeof(message);
+			for (int i = 0; i < message.numPoses; i++)
+			{
+				teleport::core::NodePose nodePose;
+				memcpy(&nodePose,src,sizeof(nodePose));
+				src+=sizeof(nodePose);
+				avs::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
+				avs::ConvertRotation(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
+				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
+				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
+				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
+				setControllerPose(clientID, int(nodePose.uid), &nodePoseDynamic);
+			}
 		}
-		memcpy(&message, packet->data, sizeof(message));
-		if(packet->dataLength!=sizeof(message)+sizeof(teleport::core::NodePose)*message.numPoses)
+			break;
+		case teleport::core::ClientMessagePayloadType::NodeStatus:
 		{
-			TELEPORT_CERR << "Bad packet size.\n";
-			return;
+			size_t messageSize = sizeof(teleport::core::NodeStatusMessage);
+			teleport::core::NodeStatusMessage message;
+			memcpy(&message, packet->data, messageSize);
+			size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnCount;
+			if(messageSize+drawnSize>packet->dataLength)
+			{
+				TELEPORT_CERR<<"Bad packet.\n";
+				return;
+			}
+			std::vector<avs::uid> drawn(message.nodesDrawnCount);
+			memcpy(drawn.data(), packet->data + messageSize, drawnSize);
+
+			size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseCount;
+			if(messageSize+drawnSize+toReleaseSize>packet->dataLength)
+			{
+				TELEPORT_CERR<<"Bad packet.\n";
+				return;
+			}
+			std::vector<avs::uid> toRelease(message.nodesWantToReleaseCount);
+			memcpy(toRelease.data(), packet->data + messageSize + drawnSize, toReleaseSize);
+
+			for (avs::uid nodeID : drawn)
+			{
+				geometryStreamingService.clientStartedRenderingNode(clientID, nodeID);
+			}
+
+			for (avs::uid nodeID : toRelease)
+			{
+				geometryStreamingService.clientStoppedRenderingNode(clientID, nodeID);
+			}
+
 		}
-		avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, message.headPose.orientation);
-		avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, message.headPose.position);
-		setHeadPose(clientID, (avs::Pose*)&message.headPose);
-		uint8_t *src=packet->data+sizeof(message);
-		for (int i = 0; i < message.numPoses; i++)
+			break;
+		case teleport::core::ClientMessagePayloadType::ReceivedResources:
 		{
-			teleport::core::NodePose nodePose;
-			memcpy(&nodePose,src,sizeof(nodePose));
-			src+=sizeof(nodePose);
-			avs::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
-			avs::ConvertRotation(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
-			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
-			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
-			avs::ConvertPosition(clientNetworkContext->axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
-			setControllerPose(clientID, int(nodePose.uid), &nodePoseDynamic);
+			size_t messageSize = sizeof(teleport::core::ReceivedResourcesMessage);
+			teleport::core::ReceivedResourcesMessage message;
+			memcpy(&message, packet->data, messageSize);
+
+			size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesCount;
+			std::vector<avs::uid> confirmedResources(message.receivedResourcesCount);
+			if(messageSize+confirmedResourcesSize>packet->dataLength)
+			{
+				TELEPORT_CERR<<"Bad packet.\n";
+				return;
+			}
+			memcpy(confirmedResources.data(), packet->data + messageSize, confirmedResourcesSize);
+
+			for (avs::uid id : confirmedResources)
+			{
+				geometryStreamingService.confirmResource(id);
+			}
 		}
-	}
 		break;
-	case teleport::core::ClientMessagePayloadType::NodeStatus:
-	{
-		size_t messageSize = sizeof(teleport::core::NodeStatusMessage);
-		teleport::core::NodeStatusMessage message;
-		memcpy(&message, packet->data, messageSize);
-		size_t drawnSize = sizeof(avs::uid) * message.nodesDrawnCount;
-		if(messageSize+drawnSize>packet->dataLength)
-		{
-			TELEPORT_CERR<<"Bad packet.\n";
-			return;
-		}
-		std::vector<avs::uid> drawn(message.nodesDrawnCount);
-		memcpy(drawn.data(), packet->data + messageSize, drawnSize);
-
-		size_t toReleaseSize = sizeof(avs::uid) * message.nodesWantToReleaseCount;
-		if(messageSize+drawnSize+toReleaseSize>packet->dataLength)
-		{
-			TELEPORT_CERR<<"Bad packet.\n";
-			return;
-		}
-		std::vector<avs::uid> toRelease(message.nodesWantToReleaseCount);
-		memcpy(toRelease.data(), packet->data + messageSize + drawnSize, toReleaseSize);
-
-		for (avs::uid nodeID : drawn)
-		{
-			geometryStreamingService.clientStartedRenderingNode(clientID, nodeID);
-		}
-
-		for (avs::uid nodeID : toRelease)
-		{
-			geometryStreamingService.clientStoppedRenderingNode(clientID, nodeID);
-		}
-
-	}
+		case teleport::core::ClientMessagePayloadType::ResourceRequest:
+			receiveResourceRequest(packet);
+			break;
+		case teleport::core::ClientMessagePayloadType::Inputs:
+			receiveInput(packet);
+			break;
+			
+		default:
+			TELEPORT_CERR<<"Unknown client message: "<<(int)clientMessagePayloadType<<"\n";
 		break;
-	case teleport::core::ClientMessagePayloadType::ReceivedResources:
-	{
-		size_t messageSize = sizeof(teleport::core::ReceivedResourcesMessage);
-		teleport::core::ReceivedResourcesMessage message;
-		memcpy(&message, packet->data, messageSize);
-
-		size_t confirmedResourcesSize = sizeof(avs::uid) * message.receivedResourcesCount;
-		std::vector<avs::uid> confirmedResources(message.receivedResourcesCount);
-		if(messageSize+confirmedResourcesSize>packet->dataLength)
-		{
-			TELEPORT_CERR<<"Bad packet.\n";
-			return;
-		}
-		memcpy(confirmedResources.data(), packet->data + messageSize, confirmedResourcesSize);
-
-		for (avs::uid id : confirmedResources)
-		{
-			geometryStreamingService.confirmResource(id);
-		}
-	}
-	break;
-	default:
-		TELEPORT_CERR<<"Unknown client message: "<<(int)clientMessagePayloadType<<"\n";
-	break;
 	};
 }
 
@@ -827,4 +806,9 @@ uint16_t ClientMessaging::getStreamingPort() const
 	return streamingPort;
 }
 
-
+avs::ConnectionState ClientMessaging::getConnectionState() const
+{
+	if (clientNetworkContext.NetworkPipeline.mNetworkSink)
+		return clientNetworkContext.NetworkPipeline.mNetworkSink->getConnectionState();
+	return avs::ConnectionState::UNINITIALIZED;
+};

@@ -27,6 +27,7 @@ namespace avs
 	public:
 		WebRtcNetworkSink();
 		virtual ~WebRtcNetworkSink();
+		virtual ConnectionState getConnectionState() const override;
 
 		/*!
 		 * Configure network sink and bind to local UDP endpoint.
@@ -74,7 +75,9 @@ namespace avs
 		void OnDataChannelBufferedAmountChange(uint64_t data_stream_index, uint64_t previous);
 
 		void SendConfigMessage(const std::string& str);
-		
+
+		Result onInputLink(int slot, PipelineNode* node) override;
+		Result onOutputLink(int slot, PipelineNode* node) override;
 	protected:
 		void CreatePeerConnection();
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) override;

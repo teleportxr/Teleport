@@ -12,6 +12,7 @@ set(src
 	CasterTypes.h
 	CaptureDelegates.h
 	ClientNetworkContext.h
+	ClientNetworkContext.cpp
 	ServerSettings.h
 	ClientData.cpp
 	ClientData.h

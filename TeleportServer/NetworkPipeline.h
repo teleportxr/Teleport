@@ -6,6 +6,7 @@
 #include <libavstream/platforms/this_platform.h>
 
 #include <libavstream/libavstream.hpp>
+#include <genericdecoder.h>
 
 #define WITH_REMOTEPLAY_STATS 1
 
@@ -20,16 +21,17 @@ namespace teleport
 		class NetworkPipeline
 		{
 		public:
-			NetworkPipeline(const ServerSettings* settings);
+			NetworkPipeline();
 			virtual ~NetworkPipeline();
 
-			void initialise(const ServerNetworkSettings& inNetworkSettings
-				, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue
-				, avs::Queue* commandQueue);
+			void initialise(const ServerSettings* settings,const ServerNetworkSettings& inNetworkSettings);
 
 			virtual void release();
 			virtual bool process();
-
+			bool isInitialized() const
+			{
+				return initialized;
+			}
 			virtual avs::Pipeline* getAvsPipeline() const;
 
 			avs::Result getCounters(avs::NetworkSinkCounters& counters) const;
@@ -39,12 +41,20 @@ namespace teleport
 
 			bool getNextStreamingControlMessage(std::string &str);
 			void receiveStreamingControlMessage(const std::string& str);
+
+			avs::Queue ColorQueue;
+			avs::Queue TagDataQueue;
+			avs::Queue GeometryQueue;
+			avs::Queue AudioQueue;
+			avs::Queue CommandQueue;
+			avs::Queue MessageQueue;
+			std::unique_ptr<avs::NetworkSink> mNetworkSink;
 		private:
-			const ServerSettings* mSettings;
+			bool initialized = false;
+			const ServerSettings* mSettings=nullptr;
 
 			std::unique_ptr<avs::Pipeline> mPipeline;
-			std::unique_ptr<avs::NetworkSink> mNetworkSink;
-			avs::Result mPrevProcResult;
+			avs::Result mPrevProcResult = avs::Result::OK;
 
 #if WITH_REMOTEPLAY_STATS
 			avs::Timestamp mLastTimestamp;

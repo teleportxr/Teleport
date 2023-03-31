@@ -94,6 +94,10 @@ namespace avs
 		}
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
 		atomic<size_t> bytesReceived = 0;
+		atomic<size_t> bytesSent = 0;
+		bool closed = false;
+		bool readyToSend = false;
+		std::vector<uint8_t> sendBuffer;
 	};
 	struct WebRtcNetworkSource::Private final : public PipelineNode::Private
 	{
@@ -103,6 +107,9 @@ namespace avs
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 		NetworkSourceCounters m_counters;
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
+		std::unordered_map<uint32_t, int> idToStreamIndex;
+		std::unordered_map<int, int> inputToStreamIndex;
+		Result sendData(uint8_t id, const uint8_t* packet, size_t sz);
 #if TELEPORT_CLIENT
 		HTTPUtil m_httpUtil;
 #endif
@@ -119,10 +126,9 @@ WebRtcNetworkSource::WebRtcNetworkSource()
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
 }
 
-Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)
+Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams, const NetworkSourceParams& params)
 {
-	size_t numOutputs = streams.size();
-
+	size_t numOutputs = in_streams.size();
 	if (numOutputs == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
@@ -168,7 +174,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 		memcpy(&m_tempBuffer[sizeof(StreamPayloadInfo)], rPacket->pFrameData, rPacket->mFrameSize);
 		// The mStreamID is encoded sender-side within the EFP wrapper.
 		
-		int nodeIndex = m_streamNodeMap[rPacket->mStreamID];// streamID is 20,40,60, etc
+		int nodeIndex = m_data->idToStreamIndex[rPacket->mStreamID];// streamID is 20,40,60, etc
 
 		auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
 		if (!outputNode)
@@ -194,20 +200,26 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 
 	setNumOutputSlots(numOutputs);
 
-	m_streams = std::move(streams);
+	m_streams = std::move(in_streams);
 	streamStatus.resize(m_streams.size());
 
 	// This will map from the stream id's - 20,40,60,80 etc 
 	// to the index of outputs, 0,1,2,3,4 etc.
 	m_data->dataChannels.reserve(numOutputs);
 	m_data->dataChannels.resize(0);
-	for (size_t i = 0; i < numOutputs; ++i)
+	size_t numInputs = 0;
+	for (uint32_t i = 0; i < numOutputs; ++i)
 	{
 		const auto& stream = m_streams[i];
+		if (stream.outgoing)
+		{
+			numInputs++;
+		}
 		m_data->dataChannels.emplace_back();
 		uint32_t id = EVEN_ID(stream.id);
-		m_streamNodeMap[id] = numOutputs;
+		m_data->idToStreamIndex[id] = numOutputs;
 	}
+	setNumInputSlots(numInputs);
 
 #if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
@@ -220,6 +232,23 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 #else
 	return Result::OK;
 #endif
+}
+
+Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
+{
+	std::string name=node->getDisplayName();
+	for (int i=0;i<m_streams.size();i++)
+	{
+		auto& stream = m_streams[i];
+		if(stream.label==name)
+			m_data->inputToStreamIndex[slot] = i;
+	}
+	return Result::OK;
+}
+
+Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
+{
+	return Result::OK;
 }
 
 void WebRtcNetworkSource::receiveOffer(const std::string& offer)
@@ -253,7 +282,7 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 
 void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 {
-	int nodeIndex = m_streamNodeMap[m_params.httpStreamID];
+	int nodeIndex = m_data->idToStreamIndex[m_params.httpStreamID];
 
 	auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
 	if (!outputNode)
@@ -290,10 +319,12 @@ Result WebRtcNetworkSource::deconfigure()
 		return Result::Node_NotConfigured;
 	}
 	setNumOutputSlots(0);
+	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
+	m_data->dataChannels.clear();
 	m_data->rtcPeerConnection = nullptr;
 	m_streams.clear();
 	m_data->m_counters = {};
-	m_streamNodeMap.clear();
+	m_data->idToStreamIndex.clear();
 	m_streams.clear();
 
 	m_data->m_EFPReceiver.reset();
@@ -310,6 +341,95 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
+	// receiving data from the network is handled elsewhere.
+	// Here we only handle receiving data from inputs to be sent onward.
+
+	// Called to get the data from the input nodes
+	auto readInput = [this](uint32_t inputNodeIndex,
+		std::vector<uint8_t> &buffer,size_t& numBytesRead) -> Result
+	{
+		PipelineNode* node = getInput(inputNodeIndex);
+		//if (inputNodeIndex >= m_streams.size())
+		//	return Result::Failed;
+		int streamIndex = m_data->inputToStreamIndex[inputNodeIndex];
+		auto& stream = m_streams[inputNodeIndex];
+		const DataChannel& dataChannel = m_data->dataChannels[stream.id];
+
+		assert(node);
+		assert(buffer.size() >= stream.chunkSize);
+		static uint64_t frameID = 0;
+		if (IOInterface* nodeIO = dynamic_cast<IOInterface*>(node))
+		{
+			size_t bufferSize = buffer.size();
+			Result result = nodeIO->read(this, buffer.data(), bufferSize, numBytesRead);
+			if (result == Result::IO_Retry)
+			{
+				buffer.resize(bufferSize);
+				result = nodeIO->read(this, buffer.data(), bufferSize, numBytesRead);
+			}
+			numBytesRead = std::min(bufferSize, numBytesRead);
+			if (result == Result::OK)
+			{
+				//std::cout << ".";
+				//memcpy(stream.buffer.data(), &streamPayloadInfo, infoSize);
+			}
+
+			return result;
+		}
+		else
+		{
+			assert(false);
+			return Result::Node_Incompatible;
+		}
+	};
+	for (uint32_t i = 0; i < (uint32_t)getNumInputSlots(); ++i)
+	{
+		uint32_t streamIndex = m_data->inputToStreamIndex[i];
+		if (streamIndex >= m_streams.size())
+			continue;
+		PipelineNode* node = getInput(i);
+		if (!node)
+			continue;
+		const auto& stream = m_streams[streamIndex];
+		DataChannel& dataChannel = m_data->dataChannels[streamIndex];
+		// If channel is backed-up in WebRTC, don't grab data off the queue.
+		if (!dataChannel.readyToSend)
+			continue;
+		size_t numBytesRead = 0;
+		try
+		{
+			Result result = readInput(i, dataChannel.sendBuffer, numBytesRead);
+			if (result != Result::OK)
+			{
+				if (result != Result::IO_Empty)
+				{
+					AVSLOG(Error) << "WebRtcNetworkSink: Failed to read from input node: " << i << "\n";
+					continue;
+				}
+			}
+		}
+		catch (const std::bad_alloc&)
+		{
+			return Result::IO_OutOfMemory;
+		}
+		if (numBytesRead == 0)
+		{
+			continue;
+		}
+		Result res = Result::OK;
+		//if (stream.useParser && m_data->m_parsers.find(i) != m_data->m_parsers.end())
+		//{
+		//res = m_data->m_parsers[i]->parse(((const char*)stream.buffer.data()), numBytesRead);
+		//}
+		//else
+		{
+			res = m_data->sendData(stream.id, dataChannel.sendBuffer.data(), numBytesRead);
+		}
+		if (!res)
+		{
+			return res;
+		}
+	}
 	static float intro = 0.01f;
 	// update the stream stats.
 	if(deltaTime>0)
@@ -318,8 +438,15 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		DataChannel& dc = m_data->dataChannels[i];
 		size_t b = dc.bytesReceived;
 		dc.bytesReceived= 0;
-		streamStatus[i].bandwidthKps *=1.0f-intro;
-		streamStatus[i].bandwidthKps+=intro* (float)b / float(deltaTime)*(1000.0f/1024.0f);
+		size_t o = dc.bytesSent;
+		dc.bytesSent = 0;
+		streamStatus[i].inwardBandwidthKps *=1.0f-intro;
+		streamStatus[i].inwardBandwidthKps +=intro* (float)b / float(deltaTime)*(1000.0f/1024.0f);
+		if (m_streams[i].outgoing)
+		{
+			streamStatus[i].outwardBandwidthKps *= 1.0f - intro;
+			streamStatus[i].outwardBandwidthKps += intro * (float)o / float(deltaTime) * (1000.0f / 1024.0f);
+		}
 	}
 #if TELEPORT_CLIENT
 	return m_data->m_httpUtil.process();
@@ -424,16 +551,24 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		// TODO: Inform the server that a channel has not been recognized - don't send data on it.
 		return;
 	}
-	q_ptr()->m_streamNodeMap[id] = dcIndex;
+	idToStreamIndex[id] = dcIndex;
 	DataChannel& dataChannel = dataChannels[dcIndex];
+	dataChannel.readyToSend = false;
 	dataChannel.rtcDataChannel = dc;
 	std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
 
-	dc->onOpen([]()
+	dc->onOpen([this,dcIndex]()
 		{
+			DataChannel& dataChannel = dataChannels[dcIndex];
+			dataChannel.readyToSend = true;
 			std::cout << "DataChannel opened" << std::endl;
 		});
-
+	dc->onBufferedAmountLow([this, dcIndex]()
+		{
+			DataChannel& dataChannel = dataChannels[dcIndex];
+			dataChannel.readyToSend = true;
+			std::cout << "DataChannel onBufferedAmountLow" << std::endl;
+		});
 	dc->onClosed([id]()
 		{
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
@@ -441,7 +576,7 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	dc->onMessage([this,&dataChannel,id](rtc::binary b)
 		{
 		// data holds either std::string or rtc::binary
-			int nodeIndex = q_ptr()->m_streamNodeMap[id];
+			int nodeIndex = idToStreamIndex[id];
 			dataChannel.bytesReceived += b.size();
 			auto & stream=q_ptr()->m_streams[nodeIndex];
 			if (!stream.framed)
@@ -472,4 +607,71 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			//	<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
 		},[this, &dataChannel,id](rtc::string s) {});
 	//dataChannelMap.emplace(id, dc);
+}
+
+Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet, size_t sz)
+{
+	auto index = idToStreamIndex[id];
+	auto& dataChannel = dataChannels[idToStreamIndex[id]];
+	auto c = dataChannel.rtcDataChannel;
+	if (c)
+	{
+		try
+		{
+			if (c->isOpen())
+			{
+				// From Google's comments - assume the same applies to libdatachannel.
+				// Send() sends |data| to the remote peer. If the data can't be sent at the SCTP
+				// level (due to congestion control), it's buffered at the data channel level,
+				// up to a maximum of 16MB. If Send is called while this buffer is full, the
+				// data channel will be closed abruptly.
+				//
+				// So, it's important to use buffered_amount() and OnBufferedAmountChange to
+				// ensure the data channel is used efficiently but without filling this
+				// buffer.
+				if (c->bufferedAmount() + sz >= 1024 * 1024 * 16)
+				{
+					dataChannel.readyToSend = false;
+					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it would overflow the webrtc buffer.\n";
+					return Result::OK;
+				}
+				// Can't send a buffer greater than 262144. even 64k is dodgy:
+				if (sz >= c->maxMessageSize())
+				{
+					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
+					return Result::OK;
+				}
+				if (!c->send((std::byte*)packet, sz))
+				{
+					dataChannel.readyToSend = false;
+					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+				}
+				else if (id == 100)
+				{
+					//std::cout << "WebRTC: channel " << (int)id << ", sent packet of size " << sz << "\n";
+				}
+				dataChannel.bytesSent += sz;
+			}
+			else
+			{
+				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+			}
+		}
+		catch (std::runtime_error err)
+		{
+			if (err.what())
+				std::cerr << err.what() << std::endl;
+			else
+				std::cerr << "std::runtime_error." << std::endl;
+		}
+		catch (std::logic_error err)
+		{
+			if (err.what())
+				std::cerr << err.what() << std::endl;
+			else
+				std::cerr << "std::logic_error." << std::endl;
+		}
+
+	}
+	return Result::OK;
 }
