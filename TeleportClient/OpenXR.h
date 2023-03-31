@@ -80,6 +80,7 @@ namespace teleport
 			MOUSE_RIGHT_BUTTON,
 			MAX_ACTIONS
 		};
+		const char* stringof(ActionId a);
 		//! Defines a mapping between an Input Definition from the server, 
 		//! and an action on the client.
 		struct InputMapping
@@ -257,7 +258,10 @@ namespace teleport
 			//! Remove the mapping of the specified node - it has perhaps been unmapped or destroyed.
 			void RemoveNodePoseMapping(avs::uid server_uid,avs::uid uid);
 			const teleport::core::Input& GetServerInputs(avs::uid server_uid,unsigned long long framenumber);
-			
+			//! Get the currently bound input mappings for the server.
+			const std::vector<InputMapping> &GetServerInputMappings(avs::uid server_uid);
+			//! Get the currently bound pose mappings for the server.
+			const std::map<avs::uid, NodePoseMapping >& OpenXR::GetServerNodePoseMappings(avs::uid server_uid);
 			// Force input mapping to a particular setting - normally for local controls.
 			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 

@@ -53,7 +53,6 @@ namespace teleport
 			ClientSettings clientSettings;
 			avs::ClientDynamicLighting clientDynamicLighting;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
-			teleport::server::ClientNetworkContext clientNetworkContext;
 
 			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;
 			std::shared_ptr<AudioEncodePipeline> audioEncodePipeline;
@@ -83,7 +82,6 @@ namespace teleport
 				return global_illumination_texture_uids;
 			}
 			ENetAddress eNetAddress;
-			void tick(float deltaTime);
 		protected:
 			ConnectionState connectionState = UNCONNECTED;
 			mutable bool _hasOrigin=false;

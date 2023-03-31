@@ -30,22 +30,11 @@ namespace teleport
 	{
 		class DiscoveryService;
 		class ClientManager;
-		//! A container for server-to-client commands, where they will be stored before being retrieved by the avs::Queue called
-		//! commandQueue - likely on a different thread.
-		class CommandStack :public avs::GenericEncoderBackendInterface
-		{
-		public:
-			void PushBuffer(std::shared_ptr<std::vector<uint8_t>> b);
-			bool mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) override;
-			void unmapOutputBuffer() override;
-			std::vector< std::shared_ptr<std::vector<uint8_t>>> buffers;
-			std::mutex mutex;
-		};
 		//! Per-client messaging handler.
-		class ClientMessaging
+		class ClientMessaging:public avs::GenericTargetInterface
 		{
 			bool stopped = false;
-			mutable CommandStack commandStack;
+			mutable avs::ClientServerMessageStack commandStack;
 		public:
 			ClientMessaging(const struct ServerSettings* settings,
 				std::shared_ptr<DiscoveryService> discoveryService,
@@ -59,8 +48,11 @@ namespace teleport
 
 			virtual ~ClientMessaging();
 
+
+			avs::ConnectionState getConnectionState() const;
+
 			bool isInitialised() const;
-			void initialise(ClientNetworkContext* context, CaptureDelegates captureDelegates);
+			void initialize( CaptureDelegates captureDelegates);
 			void unInitialise();
 
 			bool startSession(avs::uid clientID, std::string clientIP);
@@ -223,9 +215,9 @@ namespace teleport
 
 			uint16_t getClientPort() const;
 
-			ClientNetworkContext* getContext() const
+			 ClientNetworkContext* getClientNetworkContext()
 			{
-				return clientNetworkContext;
+				return &clientNetworkContext;
 			}
 
 			bool timedOutStartingSession() const;
@@ -236,11 +228,17 @@ namespace teleport
 			{
 				return geometryStreamingService;
 			}
+
+			// Generic target
+			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		private:
 
 			// The following MIGHT be moved later to a separate Pipeline class:
-			std::unique_ptr<avs::Pipeline> commandPipeline;
-			std::unique_ptr<avs::GenericEncoder> commandEncoder;
+			avs::Pipeline commandPipeline;
+			avs::GenericEncoder commandEncoder;
+			// A pipeline on the main thread to receive messages.
+			avs::GenericDecoder MessageDecoder;
+			avs::Pipeline messagePipeline;
 
 			friend class ClientManager;
 			void receive(const ENetEvent& event);
@@ -276,7 +274,8 @@ namespace teleport
 			uint32_t disconnectTimeout=0;
 			uint16_t streamingPort=0;
 
-			ClientNetworkContext* clientNetworkContext=nullptr;
+			ClientNetworkContext clientNetworkContext;
+
 			CaptureDelegates captureComponentDelegates;
 
 			ENetPeer* peer = nullptr;

@@ -75,10 +75,7 @@ namespace teleport
 			RPCH_Handshake = 0,
 			RPCH_Control = 1,
 			RPCH_DisplayInfo = 2,
-			RPCH_HeadPose = 3,
-			RPCH_ResourceRequest = 4,
 			RPCH_KeyframeRequest = 5,
-			RPCH_ClientMessage = 6,
 			RPCH_StreamingControl= 7,
 			RPCH_NumChannels
 		} AVS_PACKED;
@@ -125,7 +122,9 @@ namespace teleport
 			Invalid,
 			NodeStatus,
 			ReceivedResources,
-			ControllerPoses
+			ControllerPoses,
+			ResourceRequest,
+			Inputs
 		} AVS_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
@@ -572,6 +571,7 @@ namespace teleport
 		{
 			/// Specifies what type of client message this is.
 			ClientMessagePayloadType clientMessagePayloadType;
+			uint64_t timestamp_unix_ms = 0;
 			ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
 		} AVS_PACKED;
@@ -628,6 +628,30 @@ namespace teleport
 				:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 			{}
 		} AVS_PACKED;
+
+
+		//! Message info struct containing a request for resources, to be followed by the list of uid's.
+		struct ResourceRequestMessage : public ClientMessage
+		{
+			//! Poses of the  controllers.
+			uint16_t resourceCount = 0;
+
+			ResourceRequestMessage()
+				:ClientMessage(ClientMessagePayloadType::ResourceRequest)
+			{}
+		} AVS_PACKED;
+
+		//! Message info struct containing a request for resources, to be followed by the list of uid's.
+		struct InputsMessage : public ClientMessage
+		{
+			//! Poses of the  controllers.
+			InputState inputState = {};
+
+			InputsMessage()
+				:ClientMessage(ClientMessagePayloadType::Inputs)
+			{}
+		} AVS_PACKED;
+		
 	} //namespace 
 
 }

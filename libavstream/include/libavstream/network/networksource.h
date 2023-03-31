@@ -20,6 +20,7 @@ namespace avs
 		//! Name for debugging.
 		std::string label;
 		bool framed = false;
+		bool outgoing = false;
 	};
 
 	/*! Network source parameters. */
@@ -64,7 +65,8 @@ namespace avs
 
 	struct StreamStatus
 	{
-		float bandwidthKps = 0.0f;
+		float inwardBandwidthKps = 0.0f;
+		float outwardBandwidthKps = 0.0f;
 	};
 	/*!
 	 * Network source node `[passive, 0/1]`

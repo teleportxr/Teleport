@@ -15,6 +15,15 @@ namespace avs
 		virtual bool mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual void unmapOutputBuffer() = 0;
 	};
+	class AVSTREAM_API ClientServerMessageStack :public avs::GenericEncoderBackendInterface
+	{
+	public:
+		void PushBuffer(std::shared_ptr<std::vector<uint8_t>> b);
+		bool mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) override;
+		void unmapOutputBuffer() override;
+		std::vector< std::shared_ptr<std::vector<uint8_t>>> buffers;
+		std::mutex mutex;
+	};
 	/*!
 	 * Video encoder node `[input-active, output-active, 1/1]`
 	 *

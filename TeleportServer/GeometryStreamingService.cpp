@@ -140,7 +140,7 @@ void GeometryStreamingService::startStreaming(server::ClientNetworkContext* cont
 	avsGeometrySource->configure( this);
 	avsGeometryEncoder->configure(&geometryEncoder);
 
-	avsPipeline->link({ avsGeometrySource.get(), avsGeometryEncoder.get(), clientNetworkContext->GeometryQueue.get() });
+	avsPipeline->link({ avsGeometrySource.get(), avsGeometryEncoder.get(), &clientNetworkContext->NetworkPipeline.GeometryQueue });
 }
 
 void GeometryStreamingService::stopStreaming()

@@ -25,7 +25,37 @@ namespace avs
 } // avs
 
 using namespace avs;
- 
+
+void ClientServerMessageStack::PushBuffer(std::shared_ptr<std::vector<uint8_t>> b)
+{
+	std::lock_guard l(mutex);
+	buffers.push_back(b);
+}
+
+bool ClientServerMessageStack::mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes)
+{
+	mutex.lock();
+	if (!buffers.size())
+	{
+		mutex.unlock();
+		return false;
+	}
+	std::shared_ptr<std::vector<uint8_t>> b = buffers[0];
+	bufferPtr = b->data();
+	bufferSizeInBytes = b->size();
+	if (!bufferSizeInBytes)
+	{
+		mutex.unlock();
+		return false;
+	}
+	return true;
+}
+
+void ClientServerMessageStack::unmapOutputBuffer()
+{
+	buffers.erase(buffers.begin());
+	mutex.unlock();
+}
 GenericEncoder::GenericEncoder()
 	: PipelineNode(new GenericEncoder::Private(this))
 {

@@ -184,8 +184,6 @@ namespace clientrender
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false);
 		
-
-		teleport::client::ClientPipeline clientPipeline;
 		clientrender::GeometryCache geometryCache;
 		clientrender::ResourceCreator resourceCreator;
 		
@@ -212,7 +210,6 @@ namespace clientrender
 		bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand &setupCommand, teleport::core::Handshake& handshake) override;
 		void OnVideoStreamClosed() override;
 		void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) override;
-		void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &l) override;
 		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
 		void SetOrigin(unsigned long long ctr,avs::uid oorigin_uid) override;
 		void OnStreamingControlMessage(const std::string& str) override;
