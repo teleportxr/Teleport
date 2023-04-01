@@ -27,7 +27,7 @@ author = 'Roderick Kennedy'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [ "breathe","myst_parser","sphinxcontrib.mermaid", "sphinx.ext.graphviz"]
+extensions = [ "breathe","myst_parser","sphinxcontrib.mermaid", "sphinx.ext.graphviz","sphinxcontrib.jquery"]
 
 mermaid1_output_format='png'
 
@@ -45,6 +45,8 @@ html_theme_options = {
     'logo_only': False,
     'display_version': False,
 }
+
+html_favicon = 'favicon.ico'
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -65,4 +67,4 @@ breathe_show_include = True
 cpp_index_common_prefix = ['avs::','teleport::','teleport::core','teleport::server','teleport::client','teleport::clientrender']
 
 mermaid_output_format ='png'
-mermaid_cmd='C:/Teleport/docs/mmdc.cmd'
+mermaid_cmd='mmdc.cmd'
