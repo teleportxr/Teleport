@@ -28,73 +28,76 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	}
 	nodeLookup_mutex.lock();
 	nodeLookup[node->id] = node;
+	avs::uid node_id = node->id;
 	nodeLookup_mutex.unlock();
 	if(avsNode.parentID)
-		parentLookup[node->id]=avsNode.parentID;
+		parentLookup[node_id]=avsNode.parentID;
 	//Link new node to parent.
-	LinkToParentNode(node->id);
+	LinkToParentNode(node_id);
 
 	//Link node's children to this node.
 	for(avs::uid childID : node->GetChildrenIDs())
 	{
-		parentLookup[childID] = node->id;
+		parentLookup[childID] = node_id;
 		LinkToParentNode(childID);
 	}
 
 	//Set last movement, if a movement update was received early.
-	auto movementIt = earlyMovements.find(node->id);
-	if(movementIt != earlyMovements.end())
 	{
-		node->SetLastMovement(movementIt->second);
-		earlyMovements.erase(movementIt);
-	}
-
-	//Set enabled state, if a enabled state update was received early.
-	auto enabledIt = earlyEnabledUpdates.find(node->id);
-	if(enabledIt != earlyEnabledUpdates.end())
-	{
-		node->visibility.setVisibility(enabledIt->second.enabled, InvisibilityReason::DISABLED);
-		earlyEnabledUpdates.erase(enabledIt);
-	}
-
-	//Set correct highlighting for node, if a highlight update was received early.
-	auto highlightIt = earlyNodeHighlights.find(node->id);
-	if(highlightIt != earlyNodeHighlights.end())
-	{
-		node->SetHighlighted(highlightIt->second);
-		earlyNodeHighlights.erase(highlightIt);
-	}
-
-	//Set playing animation, if an animation update was received early.
-	auto animationIt = earlyAnimationUpdates.find(node->id);
-	if(animationIt != earlyAnimationUpdates.end())
-	{
-		node->animationComponent.setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
-		earlyAnimationUpdates.erase(animationIt);
-	}
-
-	//Set playing animation, if an animation control update was received early.
-	auto animationControlIt = earlyAnimationControlUpdates.find(node->id);
-	if(animationControlIt != earlyAnimationControlUpdates.end())
-	{
-		for(const EarlyAnimationControl& earlyControlUpdate : animationControlIt->second)
+		std::lock_guard<std::mutex> lock(early_mutex);
+		auto movementIt = earlyMovements.find(node_id);
+		if (movementIt != earlyMovements.end())
 		{
-			node->animationComponent.setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
+			node->SetLastMovement(movementIt->second);
+			earlyMovements.erase(movementIt);
 		}
-		earlyAnimationControlUpdates.erase(animationControlIt);
-	}
 
-	//Set animation speed, if an animation speed update was received early.
-	auto animationSpeedIt = earlyAnimationSpeedUpdates.find(node->id);
-	if(animationSpeedIt != earlyAnimationSpeedUpdates.end())
-	{
-		for(const EarlyAnimationSpeed& earlySpeedUpdate : animationSpeedIt->second)
+		//Set enabled state, if a enabled state update was received early.
+		auto enabledIt = earlyEnabledUpdates.find(node_id);
+		if (enabledIt != earlyEnabledUpdates.end())
 		{
-			node->animationComponent.setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
+			node->visibility.setVisibility(enabledIt->second.enabled, InvisibilityReason::DISABLED);
+			earlyEnabledUpdates.erase(enabledIt);
 		}
-		earlyAnimationSpeedUpdates.erase(animationSpeedIt);
-	}
 
+		//Set correct highlighting for node, if a highlight update was received early.
+		auto highlightIt = earlyNodeHighlights.find(node_id);
+		if (highlightIt != earlyNodeHighlights.end())
+		{
+			node->SetHighlighted(highlightIt->second);
+			earlyNodeHighlights.erase(highlightIt);
+		}
+
+		//Set playing animation, if an animation update was received early.
+		auto animationIt = earlyAnimationUpdates.find(node_id);
+		if (animationIt != earlyAnimationUpdates.end())
+		{
+			node->animationComponent.setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
+			earlyAnimationUpdates.erase(animationIt);
+		}
+
+		//Set playing animation, if an animation control update was received early.
+		auto animationControlIt = earlyAnimationControlUpdates.find(node_id);
+		if (animationControlIt != earlyAnimationControlUpdates.end())
+		{
+			for (const EarlyAnimationControl& earlyControlUpdate : animationControlIt->second)
+			{
+				node->animationComponent.setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
+			}
+			earlyAnimationControlUpdates.erase(animationControlIt);
+		}
+
+		//Set animation speed, if an animation speed update was received early.
+		auto animationSpeedIt = earlyAnimationSpeedUpdates.find(node_id);
+		if (animationSpeedIt != earlyAnimationSpeedUpdates.end())
+		{
+			for (const EarlyAnimationSpeed& earlySpeedUpdate : animationSpeedIt->second)
+			{
+				node->animationComponent.setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
+			}
+			earlyAnimationSpeedUpdates.erase(animationSpeedIt);
+		}
+	}
 	if(avsNode.stationary)
 		node->SetGlobalTransform(static_cast<Transform>(avsNode.globalTransform));
 	else
@@ -340,7 +343,7 @@ bool NodeManager::UpdateNodeTransform(avs::uid nodeID, const vec3& translation, 
 
 void NodeManager::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
-	earlyMovements.clear();
+	//earlyMovements.clear();
 
 	for(teleport::core::MovementUpdate update : updateList)
 	{
@@ -351,6 +354,7 @@ void NodeManager::UpdateNodeMovement(const std::vector<teleport::core::MovementU
 		}
 		else
 		{
+			std::lock_guard<std::mutex> lock(early_mutex);
 			earlyMovements[update.nodeID] = update;
 		}
 	}
@@ -358,8 +362,7 @@ void NodeManager::UpdateNodeMovement(const std::vector<teleport::core::MovementU
 
 void NodeManager::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
-	earlyEnabledUpdates.clear();
-
+	//earlyEnabledUpdates.clear();
 	for(teleport::core::NodeUpdateEnabledState update : updateList)
 	{
 		std::shared_ptr<Node> node = GetNode(update.nodeID);
@@ -369,6 +372,7 @@ void NodeManager::UpdateNodeEnabledState(const std::vector<teleport::core::NodeU
 		}
 		else
 		{
+			std::lock_guard<std::mutex> lock(early_mutex);
 			earlyEnabledUpdates[update.nodeID] = update;
 		}
 	}
@@ -383,6 +387,7 @@ void NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	}
 	else
 	{
+		std::lock_guard<std::mutex> lock(early_mutex);
 		earlyNodeHighlights[nodeID] = isHighlighted;
 	}
 }
@@ -396,6 +401,7 @@ void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& anim
 	}
 	else
 	{
+		std::lock_guard<std::mutex> lock(early_mutex);
 		earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
 	}
 }
@@ -409,6 +415,7 @@ void NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animation
 	}
 	else
 	{
+		std::lock_guard<std::mutex> lock(early_mutex);
 		std::vector<EarlyAnimationControl>& earlyControlUpdates = earlyAnimationControlUpdates[nodeID];
 		earlyControlUpdates.emplace_back(EarlyAnimationControl{animationID, animationTimeOverride, overrideMaximum});
 	}
@@ -423,6 +430,7 @@ void NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, f
 	}
 	else
 	{
+		std::lock_guard<std::mutex> lock(early_mutex);
 		std::vector<EarlyAnimationSpeed>& earlySpeedUpdates = earlyAnimationSpeedUpdates[nodeID];
 		earlySpeedUpdates.emplace_back(EarlyAnimationSpeed{animationID, speed});
 	}
@@ -517,6 +525,7 @@ void NodeManager::Clear()
 
 	parentLookup.clear();
 
+	std::lock_guard<std::mutex> lock(early_mutex);
 	earlyMovements.clear();
 	earlyEnabledUpdates.clear();
 	earlyNodeHighlights.clear();

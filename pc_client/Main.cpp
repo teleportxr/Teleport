@@ -588,6 +588,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
+		client::SessionClient::DestroySessionClients();
 		ShutdownRenderer(hWnd);
         PostQuitMessage(0);
         break;

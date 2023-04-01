@@ -245,13 +245,15 @@ void PipelineNode::setNumSlots(size_t numInputSlots, size_t numOutputSlots)
 
 PipelineNode* PipelineNode::getInput(int slot) const
 {
-	assert(size_t(slot) < d().m_inputs.size());
+	if (size_t(slot) >= d().m_inputs.size())
+		return nullptr;
 	return d().m_inputs[slot].targetNode;
 }
 
 PipelineNode* PipelineNode::getOutput(int slot) const
 {
-	assert(size_t(slot) < d().m_outputs.size());
+	if(size_t(slot) >= d().m_outputs.size())
+		return nullptr;
 	return d().m_outputs[slot].targetNode;
 }
 

@@ -16,6 +16,42 @@
 #include "Log.h"
 
 #include <regex>
+
+
+const char* teleport::client::stringof(ActionId a)
+{
+	switch(a)
+	{
+		case SELECT				  : return "SELECT";
+		case SHOW_MENU			  : return "SHOW_MENU";
+		case A					  : return "A";
+		case B					  : return "B";
+		case X					  : return "X";
+		case Y					  : return "Y";
+		case HEAD_POSE			  : return "HEAD_POSE";
+		case LEFT_TRIGGER		  : return "LEFT_TRIGGER";
+		case RIGHT_TRIGGER		  : return "RIGHT_TRIGGER";
+		case LEFT_SQUEEZE		  : return "LEFT_SQUEEZE";
+		case RIGHT_SQUEEZE		  : return "RIGHT_SQUEEZE";
+		case LEFT_GRIP_POSE		  : return "LEFT_GRIP_POSE";
+		case RIGHT_GRIP_POSE	  : return "RIGHT_GRIP_POSE";
+		case LEFT_AIM_POSE		  : return "LEFT_AIM_POSE";
+		case RIGHT_AIM_POSE		  : return "RIGHT_AIM_POSE";
+		case LEFT_STICK_X		  : return "LEFT_STICK_X";
+		case RIGHT_STICK_X		  : return "RIGHT_STICK_X";
+		case LEFT_STICK_Y		  : return "LEFT_STICK_Y";
+		case RIGHT_STICK_Y		  : return "RIGHT_STICK_Y";
+		case LEFT_HAPTIC		  : return "LEFT_HAPTIC";
+		case RIGHT_HAPTIC		  : return "RIGHT_HAPTIC";
+		case MOUSE_LEFT_BUTTON	  : return "MOUSE_LEFT_BUTTON";
+		case MOUSE_RIGHT_BUTTON	  : return "MOUSE_RIGHT_BUTTON";
+		case MAX_ACTIONS		  : return "MAX_ACTIONS";
+		case INVALID:
+	default:
+		return "INVALID";
+	};
+}
+
 static std::string letters_numbers="abcdefghijklmnopqrstuvwxyz0123456789 ";
 
 bool Match(const std::string& full_string, const std::string& substring)
@@ -1183,15 +1219,27 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 
 const teleport::core::Input &OpenXR::GetServerInputs(avs::uid server_uid,unsigned long long framenumber)
 {
+	if(framenumber)
 	UpdateServerState(server_uid, framenumber);
 	auto &server=openXRServers[server_uid];
 	return server.inputs;
 }
+const std::vector<InputMapping>& OpenXR::GetServerInputMappings(avs::uid server_uid)
+{
+	auto& server = openXRServers[server_uid];
+	return server.inputMappings;
+}
+
+const std::map<avs::uid, NodePoseMapping >& OpenXR::GetServerNodePoseMappings(avs::uid server_uid)
+{
+	auto& server = openXRServers[server_uid];
+	return server.nodePoseMappings;
+}
+
 avs::uid OpenXR::GetRootNode(avs::uid server_uid)
 {
 	return openXRServers[server_uid].rootNode;
 }
-
 
 const std::map<avs::uid,avs::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
 {

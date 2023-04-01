@@ -310,7 +310,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	return result;
 }
 
-TELEPORT_EXPORT void Shutdown()
+TELEPORT_EXPORT void Teleport_Shutdown()
 {
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
@@ -371,8 +371,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 			{
 				Client_StartStreaming(clientPair.first);
 			}
-
-			clientData.tick(deltaTime);
+			clientData.clientMessaging->tick(deltaTime);
 		}
 	}
 
@@ -479,8 +478,8 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams
 	}
 
 	ClientData& clientData = clientPair->second;
-	avs::Queue* cq = clientData.clientNetworkContext.ColorQueue.get();
-	avs::Queue* tq = clientData.clientNetworkContext.TagDataQueue.get();
+	avs::Queue* cq = &clientData.clientMessaging->getClientNetworkContext()->NetworkPipeline.ColorQueue;
+	avs::Queue* tq = &clientData.clientMessaging->getClientNetworkContext()->NetworkPipeline.TagDataQueue;
 	Result result = clientData.videoEncodePipeline->configure(serverSettings,videoEncodeParams, cq, tq);
 	if(!result)
 	{
@@ -560,7 +559,12 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 		TELEPORT_COUT << "Failed to encode video frame for Client " << clientID << "! Client has no peer!\n";
 		return;
 	}
-
+	if (!clientData.clientMessaging->hasReceivedHandshake())
+	{
+		return;
+	}
+	if (!clientData.clientMessaging->getClientNetworkContext()->NetworkPipeline.isInitialized())
+		return;
 	Result result = clientData.videoEncodePipeline->encode(tagData, tagDataSize, clientData.videoKeyframeRequired);
 	if(result)
 	{
@@ -648,11 +652,14 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 		{
 			continue;
 		}
-
+		// If handshake hasn't been received, the network pipeline is not set up yet, and can't receive packets from the AudioQueue.
+		if (!clientData.clientMessaging->hasReceivedHandshake())
+			continue;
 		Result result = Result(Result::Code::OK);
 		if (!clientData.audioEncodePipeline->isConfigured())
 		{
-			result = clientData.audioEncodePipeline->configure(serverSettings, audioSettings, clientData.clientNetworkContext.AudioQueue.get());
+			result = clientData.audioEncodePipeline->configure(serverSettings
+				, audioSettings,&clientData.clientMessaging->getClientNetworkContext()->NetworkPipeline.AudioQueue);
 			if (!result)
 			{
 				TELEPORT_CERR << "Failed to configure audio encoder pipeline for Client " << clientID << "!\n";

@@ -19,17 +19,15 @@ ClientPipeline::~ClientPipeline()
 
 bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, const char* server_ip)
 {
-	videoConfig = setupCommand.video_config;
-
 	const uint32_t geoStreamID = 80;
 	//TODO: these id's do NOT need to match the ones in the server. Only the labels need match.
 	std::vector<avs::NetworkSourceStream> streams =
 			{
-				{ 20,"video",true}
-				, { 40,"video_tags",true}
-				,{ 60,"audio_server_to_client",true}
-				,{ geoStreamID,"geometry",true}
-				,{100,"command",false}
+				{20,"video",true,false}
+				,{40,"video_tags",true,false}
+				,{60,"audio_server_to_client",true,true}	// 2-way
+				,{geoStreamID,"geometry",true,false}
+				,{100,"command",false,true}				// 2-way
 			};
 
 	avs::NetworkSourceParams sourceParams;
@@ -60,10 +58,10 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 
 	decoderParams.deferDisplay = false;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;
-	decoderParams.codec = videoConfig.videoCodec;
-	decoderParams.use10BitDecoding = videoConfig.use_10_bit_decoding;
-	decoderParams.useYUV444ChromaFormat = videoConfig.use_yuv_444_decoding;
-	decoderParams.useAlphaLayerDecoding = videoConfig.use_alpha_layer_decoding;
+	decoderParams.codec = setupCommand.video_config.videoCodec;
+	decoderParams.use10BitDecoding = setupCommand.video_config.use_10_bit_decoding;
+	decoderParams.useYUV444ChromaFormat = setupCommand.video_config.use_yuv_444_decoding;
+	decoderParams.useAlphaLayerDecoding = setupCommand.video_config.use_alpha_layer_decoding;
 
 	pipeline.reset();
 	// Top of the pipeline, we have the network source->

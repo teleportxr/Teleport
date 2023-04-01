@@ -19,10 +19,10 @@ namespace teleport
 		class SourceNetworkPipeline
 		{
 		public:
-			SourceNetworkPipeline(const ServerSettings* inSettings);
+			SourceNetworkPipeline();
 			virtual ~SourceNetworkPipeline();
 
-			void initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget);
+			void initialize(const ServerSettings* inSettings,const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget);
 
 			virtual void release();
 			virtual bool process();
@@ -44,7 +44,7 @@ namespace teleport
 			std::unique_ptr<avs::Pipeline> pipeline;
 			std::vector<std::unique_ptr<AudioPipe>> audioPipes;
 			std::unique_ptr<avs::NetworkSource> networkSource;
-			avs::Result prevProcResult;
+			avs::Result prevProcResult= avs::Result::OK;
 		};
 	}
 }

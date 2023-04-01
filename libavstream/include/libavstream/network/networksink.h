@@ -58,6 +58,9 @@ namespace avs
 		bool isDataLimitPerFrame = false;
 		//! The unique text label, used to match streams.
 		std::string label;
+		//! Whether the stream should be assembled into frames with EFP.
+		bool framed = false;
+		bool canReceive = false;
 		/*! Buffer of data to be sent */
 		std::vector<uint8_t> buffer;
 	};
@@ -66,11 +69,25 @@ namespace avs
 	{
 		std::string text;
 	};
+	enum class ConnectionState:uint8_t
+	{
+		UNINITIALIZED = 0,
+		NEW_UNCONNECTED,
+		CONNECTING,
+		CONNECTED,
+		DISCONNECTED,
+		FAILED,
+		CLOSED,
+		ERROR_STATE
+	};
 	class AVSTREAM_API NetworkSink : public PipelineNode
 	{
 	public:
 		NetworkSink(PipelineNode::Private* d_ptr):PipelineNode(d_ptr) {}
 		virtual ~NetworkSink() {}
+		virtual ConnectionState getConnectionState() const {
+			return ConnectionState::UNINITIALIZED;
+		}
 		virtual Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) = 0;
 		virtual Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) = 0;
 		virtual NetworkSinkCounters getCounters() const=0;

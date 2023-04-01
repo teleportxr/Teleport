@@ -12,9 +12,11 @@
 #include "TeleportCore/CommonNetworking.h"
 #include <libavstream/libavstream.hpp>
 #include <libavstream/genericdecoder.h>
+#include <libavstream/genericencoder.h>
 
 #include "TeleportCore/Input.h"
 #include "TeleportClient/basic_linear_algebra.h"
+#include "ClientPipeline.h"
 
 typedef unsigned int uint;
 
@@ -38,7 +40,6 @@ namespace teleport
 
 			virtual bool OnNodeEnteredBounds(avs::uid node_uid) = 0;
 			virtual bool OnNodeLeftBounds(avs::uid node_uid) = 0;
-			virtual void OnLightingSetupChanged(const teleport::core::SetupLightingCommand &) =0;
 			virtual void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) =0;
 			virtual void UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand& ) =0;
 			virtual void AssignNodePosePath(const teleport::core::AssignNodePosePathCommand &,const std::string &)=0;
@@ -77,8 +78,15 @@ namespace teleport
 			avs::uid server_uid=0;
 			std::string server_ip;
 			int server_discovery_port=0;
+
+			teleport::client::ClientPipeline clientPipeline;
+			mutable avs::ClientServerMessageStack messageToServerStack;
+			// The following MIGHT be moved later to a separate Pipeline class:
+			avs::Pipeline messageToServerPipeline;
+			avs::GenericEncoder messageToServerEncoder;
 		public:
 			static std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
+			static void DestroySessionClients();
 			static void ConnectButtonHandler(avs::uid server_uid,const std::string& url);
 			static void CancelConnectButtonHandler(avs::uid server_uid);
 			// Implementing avs::GenericTargetInterface:
@@ -98,7 +106,7 @@ namespace teleport
 			void Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
-					bool requestKeyframe, double time, double deltaTime);
+					double time, double deltaTime);
 					
 			ConnectionStatus GetConnectionStatus() const;
 			bool IsConnecting() const;
@@ -123,8 +131,6 @@ namespace teleport
 			};
 
 			void SendStreamingControlMessage(const std::string& str);
-			teleport::core::SetupCommand lastSetupCommand;
-			teleport::core::SetupLightingCommand lastSetupLightingCommand;
 			const std::vector<teleport::core::InputDefinition>& GetInputDefinitions() const
 			{
 				return inputDefinitions;
@@ -136,6 +142,18 @@ namespace teleport
 			const std::map<avs::uid, std::string>& GetNodePosePaths() const
 			{
 				return nodePosePaths;
+			}
+			const teleport::core::SetupCommand& GetSetupCommand() const
+			{
+				return setupCommand;
+			}
+			const teleport::core::SetupLightingCommand& GetSetupLightingCommand() const
+			{
+				return setupLightingCommand;
+			}
+			teleport::client::ClientPipeline &GetClientPipeline()
+			{
+				return clientPipeline;
 			}
 		private:
 			template<typename MessageType> void SendClientMessage(const MessageType &message)
@@ -154,6 +172,24 @@ namespace teleport
 			void SendReceivedResources();
 			void SendNodeUpdates();
 			void SendKeyframeRequest();
+
+			// WebRTC:
+			template<typename C> bool sendMessageToServer(const C& command) const
+			{
+				return SendMessageToServer(&command, sizeof(command));
+			}
+			template<typename M, typename T> bool sendMessageToServer(const M& msg, const std::vector<T>& appendedList) const
+			{
+				size_t messageSize = sizeof(M);
+				size_t listSize = sizeof(T) * appendedList.size();
+				size_t totalSize = commandSize + listSize;
+				std::vector<uint8_t> buffer(totalSize);
+				memcpy(buffer.data(), &command, commandSize);
+				memcpy(buffer.data() + commandSize, appendedList.data(), listSize);
+
+				return SendMessageToServer(buffer.data(), totalSize);
+			}
+			bool SendMessageToServer(const void* c, size_t sz) const;
 			//Tell server we are ready to receive geometry payloads.
 			void SendHandshake(const teleport::core::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
 			void sendAcknowledgeRemovedNodesMessage(const std::vector<avs::uid> &uids);

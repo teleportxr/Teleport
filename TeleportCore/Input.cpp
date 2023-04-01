@@ -14,6 +14,19 @@ void Input::clearEvents()
 	analogueEvents.clear();
 	motionEvents.clear();
 }
+const avs::InputEventAnalogue& Input::getLastAnalogueEvent(uint16_t inputID) const
+{
+	if (inputID >= lastAnalogueEvents.size())
+		lastAnalogueEvents.resize((size_t)inputID + 1);
+	return lastAnalogueEvents[inputID];
+}
+
+const avs::InputEventBinary& Input::getLastBinaryEvent(uint16_t inputID) const
+{
+	if (inputID >= lastBinaryEvents.size())
+		lastBinaryEvents.resize((size_t)inputID + 1);
+	return lastBinaryEvents[inputID];
+}
 
 void Input::addBinaryEvent( avs::InputId inputID, bool activated)
 {
@@ -23,6 +36,10 @@ void Input::addBinaryEvent( avs::InputId inputID, bool activated)
 	binaryEvent.activated = activated;
 
 	binaryEvents.push_back(binaryEvent);
+
+	if(inputID>= lastBinaryEvents.size())
+		lastBinaryEvents.resize((size_t)inputID+1);
+	lastBinaryEvents[inputID]=binaryEvent;
 }
 
 void Input::addAnalogueEvent( avs::InputId inputID, float strength)
@@ -34,6 +51,9 @@ void Input::addAnalogueEvent( avs::InputId inputID, float strength)
 	analogueEvent.strength = strength;
 
 	analogueEvents.push_back(analogueEvent);
+	if (inputID >= lastAnalogueEvents.size())
+		lastAnalogueEvents.resize((size_t)inputID + 1);
+	lastAnalogueEvents[inputID]=analogueEvent;
 }
 
 void Input::addMotionEvent( avs::InputId inputID, vec2 motion)

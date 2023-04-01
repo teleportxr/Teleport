@@ -12,8 +12,7 @@
 using namespace teleport;
 using namespace server;
 
-SourceNetworkPipeline::SourceNetworkPipeline(const ServerSettings* inSettings)
-	: settings(inSettings), prevProcResult(avs::Result::OK)
+SourceNetworkPipeline::SourceNetworkPipeline()
 {
 }
 
@@ -22,8 +21,9 @@ SourceNetworkPipeline::~SourceNetworkPipeline()
 	release();
 }
 
-void SourceNetworkPipeline::initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget)
+void SourceNetworkPipeline::initialize(const ServerSettings* inSettings,const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget)
 {
+	settings=inSettings;
 	pipeline.reset(new avs::Pipeline);
 	networkSource.reset(new avs::WebRtcNetworkSource);
 

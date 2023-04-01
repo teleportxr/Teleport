@@ -19,20 +19,17 @@ namespace teleport
 		//! //
 		struct ClientNetworkContext
 		{
+			ClientNetworkContext();
+			void Init(avs::uid clientID,bool receive_audio);
 			// Sending
-			std::unique_ptr<NetworkPipeline> NetworkPipeline;
-			std::unique_ptr<avs::Queue> ColorQueue;
-			std::unique_ptr<avs::Queue> TagDataQueue;
-			std::unique_ptr<avs::Queue> GeometryQueue;
-			std::unique_ptr<avs::Queue> AudioQueue;
-			std::unique_ptr<avs::Queue> CommandQueue;
+			NetworkPipeline NetworkPipeline;
 
 			// Receiving
-			std::unique_ptr<SourceNetworkPipeline> sourceNetworkPipeline;
-			std::unique_ptr<avs::Queue> sourceAudioQueue;
-			std::unique_ptr<avs::AudioDecoder> audioDecoder;
-			std::unique_ptr<avs::AudioTarget> audioTarget;
-			std::unique_ptr<audio::CustomAudioStreamTarget> audioStreamTarget;
+			SourceNetworkPipeline sourceNetworkPipeline;
+			avs::Queue sourceAudioQueue;
+			avs::AudioDecoder audioDecoder;
+			avs::AudioTarget audioTarget;
+			audio::CustomAudioStreamTarget audioStreamTarget;
 
 			bool isCapturingDepth = false;
 			avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;

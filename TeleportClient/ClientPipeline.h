@@ -29,6 +29,7 @@ namespace teleport
 			// Pipeline and nodes:
 			avs::Pipeline pipeline;
 
+			avs::Queue messageToServerQueue;
 			std::shared_ptr<avs::NetworkSource> source;
 			avs::Queue videoQueue;
 			avs::Decoder decoder;
@@ -49,7 +50,6 @@ namespace teleport
 			avs::GenericDecoder commandDecoder;
 
 			avs::DecoderParams decoderParams = {};
-			avs::VideoConfig videoConfig;
 		};
 	}
 }

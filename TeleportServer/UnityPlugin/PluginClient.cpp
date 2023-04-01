@@ -55,7 +55,6 @@ namespace teleport
 using namespace teleport;
 using namespace server;
 
-void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize);
 
 TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP,int discovery_port)
 {
@@ -102,32 +101,8 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	{
 		newClient.clientMessaging->unInitialise();
 	}
+	newClient.clientMessaging->getClientNetworkContext()->Init(clientID,serverSettings.isReceivingAudio);
 
-	// Sending
-	newClient.clientNetworkContext.ColorQueue.reset(new avs::Queue);
-	newClient.clientNetworkContext.TagDataQueue.reset(new avs::Queue);
-	newClient.clientNetworkContext.GeometryQueue.reset(new avs::Queue);
-	newClient.clientNetworkContext.AudioQueue.reset(new avs::Queue);
-	newClient.clientNetworkContext.CommandQueue.reset(new avs::Queue);
-
-	newClient.clientNetworkContext.ColorQueue->configure(200000, 16,"ColorQueue");
-	newClient.clientNetworkContext.TagDataQueue->configure(200, 16, "TagDataQueue");
-	newClient.clientNetworkContext.GeometryQueue->configure(200000, 16, "GeometryQueue");
-	newClient.clientNetworkContext.AudioQueue->configure(8192, 120, "AudioQueue");
-	newClient.clientNetworkContext.CommandQueue->configure(8192,120, "CommandQueue");
-
-	// Receiving
-	if (serverSettings.isReceivingAudio)
-	{
-		newClient.clientNetworkContext.sourceAudioQueue.reset(new avs::Queue);
-		newClient.clientNetworkContext.audioDecoder.reset(new avs::AudioDecoder); 
-		newClient.clientNetworkContext.audioTarget.reset(new avs::AudioTarget); 
-		newClient.clientNetworkContext.audioStreamTarget.reset(new audio::CustomAudioStreamTarget(std::bind(&Client_ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2)));
-
-		newClient.clientNetworkContext.sourceAudioQueue->configure( 8192, 120, "SourceAudioQueue");
-		newClient.clientNetworkContext.audioDecoder->configure(100);
-		newClient.clientNetworkContext.audioTarget->configure(newClient.clientNetworkContext.audioStreamTarget.get());
-	}
 
 	///TODO: Initialize real delegates for capture component.
 	CaptureDelegates delegates;
@@ -142,7 +117,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 		return c;
 	};
 
-	newClient.clientMessaging->initialise(&newClient.clientNetworkContext, delegates);
+	newClient.clientMessaging->initialize( delegates);
 
 	discoveryService->sendResponseToClient(clientID);
 
@@ -461,7 +436,7 @@ TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
 	clientPair->second.clientMessaging->nodeLeftBounds(nodeID);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core::MovementUpdate* updates, int updateAmount)
+TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core::MovementUpdate* updates, int numUpdates)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -470,22 +445,23 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core
 		return;
 	}
 
-	std::vector<teleport::core::MovementUpdate> updateList(updateAmount);
-	for(int i = 0; i < updateAmount; i++)
+	std::vector<teleport::core::MovementUpdate> updateList(numUpdates);
+	auto axesStandard = clientPair->second.clientMessaging->getClientNetworkContext()->axesStandard;
+	for(int i = 0; i < numUpdates; i++)
 	{
 		updateList[i] = updates[i];
 
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].position);
-		avs::ConvertRotation(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].rotation);
-		avs::ConvertScale(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].scale);
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].velocity);
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, clientPair->second.clientNetworkContext.axesStandard, updateList[i].angularVelocityAxis);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].position);
+		avs::ConvertRotation(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].rotation);
+		avs::ConvertScale	(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].scale);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].velocity);
+		avs::ConvertPosition(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].angularVelocityAxis);
 	}
 
 	clientPair->second.clientMessaging->updateNodeMovement(updateList);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::core::NodeUpdateEnabledState* updates, int updateAmount)
+TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::core::NodeUpdateEnabledState* updates, int numUpdates)
 {
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
@@ -494,7 +470,7 @@ TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::
 		return;
 	}
 
-	std::vector<teleport::core::NodeUpdateEnabledState> updateList(updates, updates + updateAmount);
+	std::vector<teleport::core::NodeUpdateEnabledState> updateList(updates, updates + numUpdates);
 	clientPair->second.clientMessaging->updateNodeEnabledState(updateList);
 }
 
@@ -680,19 +656,13 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 		return false;
 	}
 
-	if (!clientData.clientNetworkContext.NetworkPipeline)
-	{
-		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! NetworkPipeline is null!\n";
-		failed=true;
-		return false;
-	}
 	if(failed)
 	{
 		TELEPORT_COUT << "Retrieved network stats of Client " << clientID << ".\n";
 		failed=false;
 	}
 	// Thread safe
-	clientData.clientNetworkContext.NetworkPipeline->getCounters(counters);
+	clientData.clientMessaging->getClientNetworkContext()->NetworkPipeline.getCounters(counters);
 
 	return true;
 }
@@ -729,4 +699,17 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize)
 {
 	processAudioInput(clientID, data, dataSize);
+}
+
+TELEPORT_EXPORT avs::ConnectionState Client_GetConnectionState(avs::uid clientID)
+{
+	auto clientPair = clientServices.find(clientID);
+	if (clientPair == clientServices.end())
+	{
+		TELEPORT_CERR << "Failed to retrieve connection state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return avs::ConnectionState::ERROR_STATE;
+	}
+	if(!clientPair->second.clientMessaging)
+		return avs::ConnectionState::ERROR_STATE;
+	return clientPair->second.clientMessaging->getConnectionState();
 }

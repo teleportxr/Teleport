@@ -19,20 +19,35 @@ namespace
 using namespace teleport;
 using namespace server;
 
-NetworkPipeline::NetworkPipeline(const ServerSettings* settings)
-	: mSettings(settings), mPrevProcResult(avs::Result::OK)
+NetworkPipeline::NetworkPipeline()
 {
+	ColorQueue.configure(200000, 16, "ColorQueue");
+	TagDataQueue.configure(200, 16, "TagDataQueue");
+	GeometryQueue.configure(200000, 16, "GeometryQueue");
+	AudioQueue.configure(8192, 120, "AudioQueue");
+	CommandQueue.configure(8192, 120, "command");
+	MessageQueue.configure(8192, 120, "command");
 }
+
 
 NetworkPipeline::~NetworkPipeline()
 {
+	ColorQueue.deconfigure();
+	TagDataQueue.deconfigure();
+	GeometryQueue.deconfigure();
+	AudioQueue.deconfigure();
+	CommandQueue.deconfigure();
+	MessageQueue.deconfigure();
 	release();
 }
 
-void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings
-	, avs::Queue* videoQueue, avs::Queue* tagDataQueue, avs::Queue* geometryQueue, avs::Queue* audioQueue
-	, avs::Queue* commandQueue)
+void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetworkSettings& inNetworkSettings)
 {
+	// Sending
+	if (initialized)
+		return;
+	mSettings = settings;
+
 	avs::NetworkSinkParams SinkParams = {};
 	SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
 	SinkParams.throttleToRateKpS = std::min(mSettings->throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
@@ -99,6 +114,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings
 		stream.counter = 0;
 		stream.chunkSize = 2048;
 		stream.id = 60;
+		stream.canReceive = true;
 		stream.dataType = avs::NetworkDataType::Framed;
 		streams.emplace_back(std::move(stream));
 	}
@@ -127,6 +143,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings
 		stream.counter = 0;
 		stream.chunkSize = 64 * 1024;
 		stream.id = 100;
+		stream.canReceive = true;
 		stream.dataType = avs::NetworkDataType::Generic;
 		streams.emplace_back(std::move(stream));
 	}
@@ -134,59 +151,74 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings
 	if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
 	{
 		TELEPORT_CERR << "Failed to configure network sink!" << "\n";
+		initialized = false;
 		return;
 	}
 
 	// Video
 	{
-		if (!avs::PipelineNode::link(*videoQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(ColorQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for video!" << "\n";
+			initialized = false;
 			return;
 		}
-		mPipeline->add(videoQueue);
+		mPipeline->add(&ColorQueue);
 	}
 
 	// Tag Data
 	{
-		if (!avs::PipelineNode::link(*tagDataQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(TagDataQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for video tag data!" << "\n";
+			initialized = false;
 			return;
 		}
-		mPipeline->add(tagDataQueue);
+		mPipeline->add(&TagDataQueue);
 	}
 
 	// Audio
 	{
-		if (!avs::PipelineNode::link(*audioQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(AudioQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for audio!" << "\n";
+			initialized = false;
 			return;
 		}
-		mPipeline->add(audioQueue);
+		mPipeline->add(&AudioQueue);
 	}
 
 	// Geometry
 	{
-		if (!avs::PipelineNode::link(*geometryQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(GeometryQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for geometry!" << "\n";
+			initialized = false;
 			return;
 		}
-		mPipeline->add(geometryQueue);
+		mPipeline->add(&GeometryQueue);
 	}
 
 	// Command
 	{
-		if (!avs::PipelineNode::link(*commandQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(CommandQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for commands!" << "\n";
+			initialized = false;
 			return;
 		}
-		mPipeline->add(commandQueue);
+		mPipeline->add(&CommandQueue);
 	}
-
+	// Messages
+	{
+		if (!avs::PipelineNode::link(*mNetworkSink, MessageQueue))
+		{
+			TELEPORT_CERR << "Failed to configure network pipeline for messages!" << "\n";
+			initialized = false;
+			return;
+		}
+		mPipeline->add(&MessageQueue);
+	}
 	mPipeline->add(mNetworkSink.get());
 
 #if WITH_REMOTEPLAY_STATS
@@ -194,6 +226,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings
 #endif // WITH_REMOTEPLAY_STATS
 
 	mPrevProcResult = avs::Result::OK;
+	initialized = true;
 }
 
 void NetworkPipeline::release()
@@ -202,6 +235,7 @@ void NetworkPipeline::release()
 	if (mNetworkSink)
 		mNetworkSink->deconfigure();
 	mNetworkSink.reset();
+	initialized = false;
 }
 
 bool NetworkPipeline::process()

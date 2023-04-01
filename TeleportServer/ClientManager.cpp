@@ -283,7 +283,7 @@ using namespace server;
 		{
 			if (client->receivedHandshake)
 			{
-				if (!client->clientNetworkContext->NetworkPipeline->process())
+				if (!client->clientNetworkContext.NetworkPipeline.process())
 				{
 					mAsyncNetworkDataProcessingFailed = true;
 				}
