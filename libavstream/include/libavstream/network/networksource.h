@@ -19,6 +19,8 @@ namespace avs
 		uint32_t id = UINT32_MAX;
 		//! Name for debugging.
 		std::string label;
+		std::string inputName;
+		std::string outputName;
 		bool framed = false;
 		bool outgoing = false;
 	};
@@ -77,7 +79,7 @@ namespace avs
 	{
 	public:
 		NetworkSource(PipelineNode::Private* d_ptr);
-		virtual Result configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)=0;
+		virtual Result configure(std::vector<NetworkSourceStream>&& streams,int numputs, const NetworkSourceParams& params)=0;
 		virtual NetworkSourceCounters getCounterValues() const=0;
 		virtual void setDebugStream(uint32_t) = 0;
 		virtual void setDoChecksums(bool) = 0;

@@ -106,7 +106,8 @@ struct InitialiseState
 	ClientStartedRenderingNodeFn clientStartedRenderingNode;
 	SetHeadPoseFn headPoseSetter;
 	SetControllerPoseFn controllerPoseSetter;
-	ProcessNewInputFn newInputProcessing;
+	ProcessNewInputStateFn newInputStateProcessing;
+	ProcessNewInputEventsFn newInputEventsProcessing;
 	DisconnectFn disconnect;
 	avs::MessageHandlerFunc messageHandler;
 	ReportHandshakeFn reportHandshake;
@@ -169,9 +170,14 @@ TELEPORT_EXPORT void SetHeadPoseSetterDelegate(SetHeadPoseFn headPoseSetter)
 	setHeadPose = headPoseSetter;
 }
 
-TELEPORT_EXPORT void SetNewInputProcessingDelegate(ProcessNewInputFn newInputProcessing)
+TELEPORT_EXPORT void SetNewInputStateProcessingDelegate(ProcessNewInputStateFn newInputProcessing)
 {
-	processNewInput = newInputProcessing;
+	processNewInputState = newInputProcessing;
+}
+
+TELEPORT_EXPORT void SetNewInputEventsProcessingDelegate(ProcessNewInputEventsFn newInputProcessing)
+{
+	processNewInputEvents = newInputProcessing;
 }
 
 TELEPORT_EXPORT void SetDisconnectDelegate(DisconnectFn disconnect)
@@ -273,7 +279,8 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	SetHeadPoseSetterDelegate(initialiseState->headPoseSetter);
 
 	setControllerPose = initialiseState->controllerPoseSetter;
-	SetNewInputProcessingDelegate(initialiseState->newInputProcessing);
+	SetNewInputStateProcessingDelegate(initialiseState->newInputStateProcessing);
+	SetNewInputEventsProcessingDelegate(initialiseState->newInputEventsProcessing);
 	SetDisconnectDelegate(initialiseState->disconnect);
 	SetMessageHandlerDelegate(initialiseState->messageHandler);
 	SetProcessAudioInputDelegate(initialiseState->processAudioInput);
@@ -346,7 +353,8 @@ TELEPORT_EXPORT void Teleport_Shutdown()
 
 	setHeadPose = nullptr;
 	setControllerPose = nullptr;
-	processNewInput = nullptr;
+	processNewInputState = nullptr;
+	processNewInputEvents = nullptr;
 }
 
 TELEPORT_EXPORT void Tick(float deltaTime)
@@ -539,7 +547,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParam
 	videoConfig.videoCodec = serverSettings.videoCodec;
 	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
 
-	clientData.clientMessaging->sendCommand(cmd);
+	clientData.clientMessaging->sendCommand2(cmd);
 }
 
 TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData, size_t tagDataSize)

@@ -25,8 +25,8 @@ NetworkPipeline::NetworkPipeline()
 	TagDataQueue.configure(200, 16, "TagDataQueue");
 	GeometryQueue.configure(200000, 16, "GeometryQueue");
 	AudioQueue.configure(8192, 120, "AudioQueue");
-	CommandQueue.configure(8192, 120, "command");
-	MessageQueue.configure(8192, 120, "command");
+	CommandQueue.configure(8192, 120, "Reliable in");
+	MessageQueue.configure(8192, 120, "Unreliable out");
 }
 
 
@@ -41,16 +41,15 @@ NetworkPipeline::~NetworkPipeline()
 	release();
 }
 
-void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetworkSettings& inNetworkSettings)
+void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 {
 	// Sending
 	if (initialized)
 		return;
-	mSettings = settings;
 
 	avs::NetworkSinkParams SinkParams = {};
 	SinkParams.socketBufferSize = networkPipelineSocketBufferSize;
-	SinkParams.throttleToRateKpS = std::min(mSettings->throttleKpS, static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit));// Assuming 60Hz on the other size. k per sec
+	SinkParams.throttleToRateKpS = static_cast<int64_t>(inNetworkSettings.clientBandwidthLimit);// Assuming 60Hz on the other size. k per sec
 	SinkParams.socketBufferSize = inNetworkSettings.clientBufferSize;
 	SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
 	SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
@@ -73,13 +72,13 @@ void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetw
 		break;
 	}
 
-	std::string remoteIP=core::WStringToString(inNetworkSettings.remoteIP);
 	std::vector<avs::NetworkSinkStream> streams;
 
 	// Video
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "video";
+		stream.inputName = "ColorQueue";
 		stream.parserType = avs::StreamParserType::AVC_AnnexB;
 		//stream.useParser = false; default
 //			stream.isDataLimitPerFrame = false;
@@ -94,6 +93,7 @@ void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetw
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "video_tags";
+		stream.inputName = "TagDataQueue";
 		stream.parserType = avs::StreamParserType::None;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = false;
@@ -108,6 +108,7 @@ void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetw
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "audio_server_to_client";
+		stream.inputName = "AudioQueue";
 		stream.parserType = avs::StreamParserType::Audio;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = false;
@@ -123,6 +124,7 @@ void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetw
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "geometry";
+		stream.inputName = "GeometryQueue";
 		stream.parserType = avs::StreamParserType::Geometry;
 		stream.useParser = true;
 		stream.isDataLimitPerFrame = true;
@@ -133,10 +135,12 @@ void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetw
 		streams.emplace_back(std::move(stream));
 	}
 
-	// Commands
+	// Reliable Commands and responses
 	{
 		avs::NetworkSinkStream stream;
-		stream.label = "command";
+		stream.label = "reliable";
+		stream.inputName = "Reliable in";
+		stream.outputName = "Reliable out";
 		stream.parserType = avs::StreamParserType::None;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = true;
@@ -147,8 +151,25 @@ void NetworkPipeline::initialise(const ServerSettings *settings,const ServerNetw
 		stream.dataType = avs::NetworkDataType::Generic;
 		streams.emplace_back(std::move(stream));
 	}
+	// Unreliable messaging
+	{
+		avs::NetworkSinkStream stream;
+		stream.label = "unreliable";
+		stream.inputName = "Unreliable in";
+		stream.outputName = "Unreliable out";
+		stream.parserType = avs::StreamParserType::None;
+		stream.useParser = false;
+		stream.isDataLimitPerFrame = true;
+		stream.counter = 0;
+		stream.chunkSize = 64 * 1024;
+		stream.id = 120;
+		stream.canReceive = true;
+		stream.reliable = false;
+		stream.dataType = avs::NetworkDataType::Generic;
+		streams.emplace_back(std::move(stream));
+	}
 	avs::NetworkSink* networkSink = mNetworkSink.get();
-	if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, remoteIP.c_str(), inNetworkSettings.remotePort, SinkParams))
+	if (!networkSink->configure(std::move(streams), nullptr, 0, nullptr, 0, SinkParams))
 	{
 		TELEPORT_CERR << "Failed to configure network sink!" << "\n";
 		initialized = false;
@@ -254,19 +275,6 @@ bool NetworkPipeline::process()
 
 	mPrevProcResult = result;
 
-#if 0
-	avs::Timestamp timestamp = avs::Platform::getTimestamp();
-	if (avs::Platform::getTimeElapsed(lastTimestamp, timestamp) >= networkPipelineStatInterval)
-	{
-		const avs::NetworkSinkCounters counters = mNetworkSink->getCounterValues();
-		TELEPORT_COUT << "DP: " << counters.decoderPacketsQueued << " | NP: " << counters.networkPacketsSent << " | BYTES: " << counters.bytesSent << "\n";
-		lastTimestamp = timestamp;
-	}
-	mNetworkSink->setDebugStream(mSettings->debugStream);
-	mNetworkSink->setDebugNetworkPackets(mSettings->enableDebugNetworkPackets);
-	mNetworkSink->setDoChecksums(mSettings->enableChecksums);
-	mNetworkSink->setEstimatedDecodingFrequency(mSettings->estimatedDecodingFrequency);
-#endif // WITH_REMOTEPLAY_STATS
 	return true;
 }
 

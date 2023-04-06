@@ -24,7 +24,7 @@ namespace teleport
 			NetworkPipeline();
 			virtual ~NetworkPipeline();
 
-			void initialise(const ServerSettings* settings,const ServerNetworkSettings& inNetworkSettings);
+			void initialise(const ServerNetworkSettings& inNetworkSettings);
 
 			virtual void release();
 			virtual bool process();
@@ -51,7 +51,6 @@ namespace teleport
 			std::unique_ptr<avs::NetworkSink> mNetworkSink;
 		private:
 			bool initialized = false;
-			const ServerSettings* mSettings=nullptr;
 
 			std::unique_ptr<avs::Pipeline> mPipeline;
 			avs::Result mPrevProcResult = avs::Result::OK;

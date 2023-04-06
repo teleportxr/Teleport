@@ -49,7 +49,7 @@ void SourceNetworkPipeline::initialize(const ServerSettings* inSettings,const av
 	}
 
 	// Configure for num video streams + 1 audio stream + 1 geometry stream
-	if (!networkSource->configure(std::move(streams), sourceParams))
+	if (!networkSource->configure(std::move(streams),1, sourceParams))
 	{
 		TELEPORT_CERR << "Failed to configure network source!" << "\n";
 		return;

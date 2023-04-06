@@ -41,7 +41,8 @@ namespace teleport
 		std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
 		SetHeadPoseFn setHeadPose;
 		SetControllerPoseFn setControllerPose;
-		ProcessNewInputFn processNewInput;
+		ProcessNewInputStateFn processNewInputState;
+		ProcessNewInputEventsFn processNewInputEvents;
 		DisconnectFn onDisconnect;
 		ProcessAudioInputFn processAudioInput;
 		GetUnixTimestampFn getUnixTimestamp;
@@ -68,7 +69,7 @@ TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP
 	auto clientPair = clientServices.find(clientID);
 	if(clientPair == clientServices.end())
 	{
-		std::shared_ptr<ClientMessaging> clientMessaging = std::make_shared<ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInput, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
+		std::shared_ptr<ClientMessaging> clientMessaging = std::make_shared<ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInputState,processNewInputEvents, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
 		ClientData newClientData(  clientMessaging);
 
 		if(newClientData.clientMessaging->startSession(clientID, clientIP))
@@ -577,27 +578,6 @@ TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 	return clientPair->second.clientMessaging->hasPeer();
 }
 
-TELEPORT_EXPORT bool Client_SendCommand(avs::uid clientID, const teleport::core::Command& avsCommand)
-{
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to send command to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return false;
-	}
-	return clientPair->second.clientMessaging->sendCommand(avsCommand);
-}
-
-TELEPORT_EXPORT bool Client_SendCommandWithList(avs::uid clientID, const teleport::core::Command& avsCommand, std::vector<avs::uid>& appendedList)
-{
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		TELEPORT_CERR << "Failed to send command to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return false;
-	}
-	return clientPair->second.clientMessaging->sendCommand(avsCommand, appendedList);
-}
 
 TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int bufferLength,  char* lpBuffer)
 {

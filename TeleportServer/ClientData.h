@@ -82,6 +82,7 @@ namespace teleport
 				return global_illumination_texture_uids;
 			}
 			ENetAddress eNetAddress;
+			void tick(float deltaTime);
 		protected:
 			ConnectionState connectionState = UNCONNECTED;
 			mutable bool _hasOrigin=false;

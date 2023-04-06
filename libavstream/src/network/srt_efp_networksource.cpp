@@ -27,7 +27,7 @@ SrtEfpNetworkSource::SrtEfpNetworkSource()
 	m_data = static_cast<SrtEfpNetworkSource::Private*>(m_d);
 }
 
-Result SrtEfpNetworkSource::configure(std::vector<NetworkSourceStream>&& streams, const NetworkSourceParams& params)
+Result SrtEfpNetworkSource::configure(std::vector<NetworkSourceStream>&& streams,int numputs, const NetworkSourceParams& params)
 {
 	size_t numOutputs = streams.size();
 

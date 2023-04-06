@@ -39,7 +39,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numOutputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSourceStream>&& in_streams, const NetworkSourceParams& params) override;
+		Result configure(std::vector<NetworkSourceStream>&& in_streams,int numputs, const NetworkSourceParams& params) override;
 
 		/*!
 		 * Deconfigure network source and release all associated resources.

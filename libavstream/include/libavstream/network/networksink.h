@@ -56,11 +56,16 @@ namespace avs
 		bool useParser = false;
 		/*! Whether there is a data limit per frame on this stream */
 		bool isDataLimitPerFrame = false;
-		//! The unique text label, used to match streams.
+		//! The unique text label, used to identify streams across the network.
 		std::string label;
+		//! The name of the queue that the stream's inputs will come from.
+		std::string inputName;
+		//! The name of the queue that the stream's outputs will go to, if this stream has any.
+		std::string outputName;
 		//! Whether the stream should be assembled into frames with EFP.
 		bool framed = false;
 		bool canReceive = false;
+		bool reliable=true;
 		/*! Buffer of data to be sent */
 		std::vector<uint8_t> buffer;
 	};

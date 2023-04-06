@@ -49,8 +49,9 @@ namespace avs
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
 			void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
-		std::unordered_map<int, uint32_t> idToStreamIndex;
-		std::unordered_map<int, int> idToOutputIndex;
+		std::unordered_map<int, uint8_t> idToStreamIndex;
+		std::unordered_map<uint8_t, uint8_t> streamIndexToInputIndex;
+		std::unordered_map<uint8_t, uint8_t> streamIndexToOutputIndex;
 		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		bool recreateConnection = false;
@@ -119,14 +120,10 @@ WebRtcNetworkSink::WebRtcNetworkSink()
 }
 
 // configure() is called when we have agreed to connect with a specific client.
-Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params)
+Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* , uint16_t , const char* , uint16_t , const NetworkSinkParams& params)
 {
 	size_t numInputs = streams.size();
-	if (numInputs == 0 || localPort == 0 || remotePort == 0)
-	{
-		return Result::Node_InvalidConfiguration;
-	}
-	if (!remote || !remote[0])
+	if (numInputs == 0 )
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -140,9 +137,11 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 	m_params = params;
 	m_streams = std::move(streams);
 	size_t numOutputs = 0;
-	for (size_t i = 0; i < m_streams.size(); ++i)
+	m_data->idToStreamIndex.clear();
+	for (uint8_t i = 0; i < (uint8_t)m_streams.size(); ++i)
 	{
 		auto& stream = m_streams[i];
+		m_data->idToStreamIndex[stream.id] = i;
 		if (stream.canReceive)
 		{
 			numOutputs++;
@@ -174,28 +173,30 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		return ns->packData((const uint8_t*)buffer + dataOffset, dataSize, inputNodeIndex);
 	};
 	int outputIndex = 0;
-	for (size_t i = 0; i < m_streams.size(); ++i)
+	for (uint8_t i = 0; i < (uint8_t)m_streams.size(); ++i)
 	{
 		auto& stream = m_streams[i];
 		stream.buffer.resize(stream.chunkSize);
-		m_data->idToStreamIndex.emplace(stream.id, i);
-
 		if (stream.useParser)
 		{
 			auto parser = std::unique_ptr<StreamParserInterface>(avs::StreamParserInterface::Create(stream.parserType));
 			parser->configure(this, onPacketParsed, i);
 			m_data->m_parsers[i] = std::move(parser);
 		}
-		if (stream.canReceive)
-		{
-		//	m_data->idToOutputIndex[stream.id] = outputIndex++; no, match-up by name.
-		}
 		m_data->dataChannels.try_emplace(stream.id);
 		DataChannel& dataChannel = m_data->dataChannels[stream.id];
 		rtc::DataChannelInit dataChannelInit;
-		dataChannelInit.reliability.type =  rtc::Reliability::Type::Rexmit;
-		dataChannelInit.reliability.unordered = true;
-		dataChannelInit.reliability.rexmit = int(0);
+		if (stream.reliable)
+		{
+			dataChannelInit.reliability.type = rtc::Reliability::Type::Reliable;
+			dataChannelInit.reliability.unordered = false;
+		}
+		else
+		{
+			dataChannelInit.reliability.type = rtc::Reliability::Type::Rexmit;
+			dataChannelInit.reliability.unordered = true;
+			dataChannelInit.reliability.rexmit = int(0);
+		}
 		// ensure oddness for the channel creator:
 		dataChannelInit.id = ODD_ID(stream.id);
 		std::string dcLabel = stream.label;
@@ -267,12 +268,12 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_NotReady;
 	}
 	// Called to get the data from the input nodes
-	auto readInput = [this](uint32_t inputNodeIndex, size_t& numBytesRead) -> Result
+	auto readInput = [this](uint8_t inputNodeIndex, uint8_t streamIndex, size_t& numBytesRead) -> Result
 	{
 		PipelineNode* node = getInput(inputNodeIndex);
-		if (inputNodeIndex >= m_streams.size())
+		if (streamIndex >= m_streams.size())
 			return Result::Failed;
-		auto& stream = m_streams[inputNodeIndex];
+		auto& stream = m_streams[streamIndex];
 
 		assert(node);
 		assert(stream.buffer.size() >= stream.chunkSize);
@@ -292,7 +293,11 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 				//std::cout << ".";
 				//memcpy(stream.buffer.data(), &streamPayloadInfo, infoSize);
 			}
-
+			if (numBytesRead >stream.buffer.size())
+			{
+				assert(false);
+				return Result::Failed;
+			}
 			return result;
 		}
 		else
@@ -301,8 +306,12 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			return Result::Node_Incompatible;
 		}
 	};
-	for (int i = 0; i < (int)getNumInputSlots(); ++i)
+	for (uint32_t i = 0; i <m_streams.size(); ++i)
 	{
+		auto inp = m_data->streamIndexToInputIndex.find(i);
+		if (inp == m_data->streamIndexToInputIndex.end())
+			continue;
+		uint8_t inputIndex = inp->second;
 		const NetworkSinkStream& stream = m_streams[i];
 		// If channel is backed-up in WebRTC, don't grab data off the queue.
 		const DataChannel& dataChannel= m_data->dataChannels[stream.id];
@@ -311,7 +320,7 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		size_t numBytesRead = 0;
 		try
 		{
-			Result result = readInput(i, numBytesRead);
+			Result result = readInput(inputIndex, i, numBytesRead);
 			if (result != Result::OK)
 			{
 				if (result != Result::IO_Empty)
@@ -327,6 +336,11 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 		if (numBytesRead == 0)
 		{
+			continue;
+		}
+		if (numBytesRead > stream.buffer.size())
+		{
+			AVSLOG(Error) << "WebRtcNetworkSink: Bad byte count: " << numBytesRead << "\n";
 			continue;
 		}
 		Result res = Result::OK;
@@ -347,12 +361,12 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 	return Result::OK;
 }
 
-Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex)
+Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uint32_t streamIndex)
 {
 	uint32_t code = 0;
 	ElasticFrameContent dataContent;
 
-	auto& stream = m_streams[inputNodeIndex];
+	auto& stream = m_streams[streamIndex];
 
 	switch (stream.dataType)
 	{
@@ -412,6 +426,15 @@ Result WebRtcNetworkSink::sendEfpData(const std::vector<uint8_t>& subPacket)
 
 Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 {
+	static int only_id = 0;
+	if (only_id != 0 && id != only_id)
+		return Result::OK;
+	auto i = m_data->idToStreamIndex.find(id);
+	if (i == m_data->idToStreamIndex.end())
+	{
+		AVSLOG(Error) << "WebRtcNetworkSink: sendData with bad id. \n";
+		return Result::Failed;
+	}
 	auto index = m_data->idToStreamIndex[id];
 	auto &dataChannel = m_data->dataChannels[id];
 	auto c = dataChannel.rtcDataChannel;
@@ -528,6 +551,13 @@ void WebRtcNetworkSink::SendConfigMessage(const std::string& str)
 
 Result WebRtcNetworkSink::onInputLink(int slot, PipelineNode* node)
 {
+	std::string name = node->getDisplayName();
+	for (int i = 0; i < m_streams.size(); i++)
+	{
+		auto& stream = m_streams[i];
+		if (stream.inputName == name)
+			m_data->streamIndexToInputIndex[i] = uint8_t(slot);
+	}
 	return Result::OK;
 }
 
@@ -537,8 +567,8 @@ Result WebRtcNetworkSink::onOutputLink(int slot, PipelineNode* node)
 	for (int i = 0; i < m_streams.size(); i++)
 	{
 		auto& stream = m_streams[i];
-		if (stream.label == name)
-			m_data->idToOutputIndex[stream.id]=slot;
+		if (stream.outputName == name)
+			m_data->streamIndexToOutputIndex[i]=uint8_t(slot);
 	}
 	return Result::OK;
 }
@@ -612,6 +642,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		return;
 	uint16_t id = (dc->id().value());
 	id = EVEN_ID(id);
+	uint8_t streamIndex = idToStreamIndex[id];
 	DataChannel& dataChannel = dataChannels[id];
 	dataChannel.rtcDataChannel = dc;
 	// Wait for the onOpen callback before sending.
@@ -640,14 +671,17 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		});
 	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
 	if(stream.canReceive)
-	dc->onMessage([this,  id](rtc::binary b)
+	dc->onMessage([this,  id, streamIndex](rtc::binary b)
 		{
 			DataChannel& dataChannel = dataChannels[id];
 	//	// data holds either std::string or rtc::binary
 			//std::cout << "Binary message from " << id	<< " received, size=" << b.size() << std::endl;
-			auto o = idToOutputIndex.find(id);
-			if (o == idToOutputIndex.end())
+			auto o = streamIndexToOutputIndex.find(streamIndex);
+			if (o == streamIndexToOutputIndex.end())
+			{
+				AVSLOG(Warning) << "WebRtcNetworkSource onMessage: outputIndex not found.\n";
 				return;
+			}
 			int outputIndex = o->second;
 			dataChannel.bytesReceived += b.size();
 			auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];

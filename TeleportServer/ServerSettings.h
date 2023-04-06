@@ -105,9 +105,6 @@ namespace teleport
 
 		struct ServerNetworkSettings
 		{
-			int32_t localPort;
-			const wchar_t* remoteIP;
-			int32_t remotePort;
 			int32_t clientBandwidthLimit;
 			int32_t clientBufferSize;
 			int32_t requiredLatencyMs;

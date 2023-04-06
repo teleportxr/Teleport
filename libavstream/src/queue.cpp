@@ -90,6 +90,11 @@ namespace avs
 
 	Result Queue::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
+		if (!m_maxBuffers)
+		{
+			AVSLOG("Queue::write error: no buffers, unconfigured?\n");
+			return Result::Failed;
+		}
 		std::lock_guard<std::mutex> lock(m_mutex);
 		if (m_numElements == m_maxBuffers)
 		{
@@ -197,6 +202,11 @@ namespace avs
 		if (m_numElements == 0)
 		{
 			m_front = 0;
+		}
+		if (!m_maxBuffers)
+		{
+			AVSLOG("Queue error: no buffers, unconfigured?\n");
+			return;
 		}
 		const int64_t index = (m_front + m_numElements) % m_maxBuffers;
 		memcpy(&m_mem[index * m_maxBufferSize], buffer, bufferSize);

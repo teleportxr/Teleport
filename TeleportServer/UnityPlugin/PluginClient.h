@@ -28,7 +28,8 @@ namespace teleport
 		extern std::unique_ptr<DefaultHTTPService> httpService;
 		extern SetHeadPoseFn setHeadPose;
 		extern SetControllerPoseFn setControllerPose;
-		extern ProcessNewInputFn processNewInput;
+		extern ProcessNewInputStateFn processNewInputState;
+		extern ProcessNewInputEventsFn processNewInputEvents;
 		extern DisconnectFn onDisconnect;
 		extern ProcessAudioInputFn processAudioInput;
 		extern GetUnixTimestampFn getUnixTimestamp;

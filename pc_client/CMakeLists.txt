@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(pc_client)
+project(TeleportPCClient)
 
 option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
 if( ${TELEPORT_CLIENT_USE_D3D12})
@@ -34,85 +34,85 @@ if(WIN32)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
 else()
-	message("Unsupported platform for pc_client!")
+	message("Unsupported platform for TeleportPCClient!")
 	return()
 endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
 
-add_static_executable( pc_client WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
+add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
 
 
-target_include_directories(pc_client PRIVATE 
+target_include_directories(TeleportPCClient PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
 
 if(TELEPORT_CLIENT_USE_D3D12)
-	target_link_libraries(pc_client SimulDirectX12_MT)
+	target_link_libraries(TeleportPCClient SimulDirectX12_MT)
 else()
-	target_link_libraries(pc_client SimulDirectX11_MT)
-	target_link_libraries(pc_client d3d12)
+	target_link_libraries(TeleportPCClient SimulDirectX11_MT)
+	target_link_libraries(TeleportPCClient d3d12)
 endif()
-#target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
-target_link_libraries(pc_client )
-target_compile_definitions(pc_client PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
+#target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
+target_link_libraries(TeleportPCClient )
+target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
 
-SetTeleportDefaults(pc_client)
-set_target_properties( pc_client PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
-set_target_properties( pc_client PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-set_target_properties( pc_client PROPERTIES FOLDER Client)
-set_target_properties( pc_client PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
-target_include_directories(pc_client PUBLIC ../thirdparty/enet/Include ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
-target_compile_features(pc_client PRIVATE cxx_std_17)
-target_link_directories(pc_client PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
-#target_link_direc tories(pc_client PUBLIC "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64")
+SetTeleportDefaults(TeleportPCClient)
+set_target_properties( TeleportPCClient PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
+set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+set_target_properties( TeleportPCClient PROPERTIES FOLDER Client)
+set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=C:/Program Files (x86)/Windows Kits/10/bin/10.0.19041.0/x86;$(PATH)"	 )		
+target_include_directories(TeleportPCClient PUBLIC ../thirdparty/enet/Include ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
+target_compile_features(TeleportPCClient PRIVATE cxx_std_17)
+target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
+#target_link_direc tories(TeleportPCClient PUBLIC "C:/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	target_compile_definitions(pc_client PRIVATE PLATFORM_64BIT)
+	target_compile_definitions(TeleportPCClient PRIVATE PLATFORM_64BIT)
 endif()
 
-target_link_libraries(pc_client debug openxr_loaderd optimized openxr_loader) 
-target_link_libraries(pc_client libavstream enet TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
-target_link_libraries(pc_client Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
+target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader) 
+target_link_libraries(TeleportPCClient libavstream enet TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
+target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
 
-target_link_directories(pc_client PUBLIC ../thirdparty/openssl/x64/lib)
-target_link_libraries(pc_client LibDataChannel::LibDataChannelStatic usrsctp ws2_32.lib  libssl.lib juice-static iphlpapi.lib  bcrypt.lib)
+target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)
+target_link_libraries(TeleportPCClient LibDataChannel::LibDataChannelStatic usrsctp ws2_32.lib  libssl.lib juice-static iphlpapi.lib  bcrypt.lib)
 
 
-target_link_libraries(pc_client -ignore:4711)
+target_link_libraries(TeleportPCClient -ignore:4711)
 
-target_link_options(pc_client PUBLIC /ignore:4711)
-target_compile_options(pc_client PRIVATE /wd4711)
+target_link_options(TeleportPCClient PUBLIC /ignore:4711)
+target_compile_options(TeleportPCClient PRIVATE /wd4711)
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
-    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\pc_client..exe' '-log'"
+    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient..exe' '-log'"
 )
 LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
     "Delete '$INSTDIR\\\\TeleportClient.lnk'"
 )
-install(TARGETS pc_client
+install(TARGETS TeleportPCClient
 		RUNTIME
 		DESTINATION build_pc_client/bin/Release
 		COMPONENT client)
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\pc_client.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\pc_client.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
-install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
-install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx12 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
+install(FILES ${INSTALL_TEXTURES} DESTINATION TeleportPCClient/textures COMPONENT client )
+install(FILES ${INSTALL_FONTS} DESTINATION TeleportPCClient/assets/fonts COMPONENT client )
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION TeleportPCClient/assets COMPONENT client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION TeleportPCClient/assets RENAME client.ini COMPONENT client OPTIONAL)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx12 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/vulkan COMPONENT client)
 
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx11 COMPONENT client)
 
-message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
+message("FILES ${shaders} DESTINATION TeleportPCClient\\\\Shaders COMPONENT client")
 
 
-install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
+install(FILES ${shaders} DESTINATION TeleportPCClient\\\\Shaders COMPONENT client)
 
 
 # Create an installer for the client:
@@ -163,6 +163,6 @@ set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 ##Set the programs, directories and files, displayed under the Start menu shortcut.
-set(CPACK_NSIS_MENU_LINKS "build_pc_client\\\\bin\\\\Release\\\\pc_client" "Teleport VR Client")
+set(CPACK_NSIS_MENU_LINKS "build_pc_client\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
 
 include(CPack)

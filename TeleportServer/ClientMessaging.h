@@ -20,7 +20,8 @@
 
 typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
 typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
-typedef void(TELEPORT_STDCALL* ProcessNewInputFn) (avs::uid uid, const teleport::core::InputState*,const uint8_t **,const float **,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
+typedef void(TELEPORT_STDCALL* ProcessNewInputStateFn) (avs::uid uid, const teleport::core::InputState*, const uint8_t**, const float**);
+typedef void(TELEPORT_STDCALL* ProcessNewInputEventsFn) (avs::uid uid, uint16_t,uint16_t,uint16_t,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
 typedef void(TELEPORT_STDCALL* DisconnectFn) (avs::uid uid);
 typedef void(TELEPORT_STDCALL* ReportHandshakeFn) (avs::uid clientID,const teleport::core::Handshake *h);
 
@@ -40,7 +41,8 @@ namespace teleport
 				std::shared_ptr<DiscoveryService> discoveryService,
 				SetHeadPoseFn setHeadPose,
 				SetControllerPoseFn setControllerPose,
-				ProcessNewInputFn processNewInput,
+				ProcessNewInputStateFn processNewInputState,
+				ProcessNewInputEventsFn processNewInputEvents,
 				DisconnectFn onDisconnect,
 				uint32_t disconnectTimeout,
 				ReportHandshakeFn reportHandshakeFn,
@@ -56,6 +58,8 @@ namespace teleport
 			void unInitialise();
 
 			bool startSession(avs::uid clientID, std::string clientIP);
+
+			void ensureStreamingPipeline();
 			void stopSession();
 			bool isStopped() const;
 			bool restartSession(avs::uid clientID, std::string clientIP);
@@ -243,7 +247,8 @@ namespace teleport
 			friend class ClientManager;
 			void receive(const ENetEvent& event);
 			void receiveHandshake(const ENetPacket* packet);
-			void receiveInput(const ENetPacket* packet);
+			void receiveInputStates(const ENetPacket* packet);
+			void receiveInputEvents(const ENetPacket* packet); 
 			void receiveDisplayInfo(const ENetPacket* packet);
 			void receiveHeadPose(const ENetPacket* packet);
 			void receiveResourceRequest(const ENetPacket* packet);
@@ -267,7 +272,8 @@ namespace teleport
 			ClientManager* clientManager;
 			SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.
 			SetControllerPoseFn setControllerPose; //Delegate called when a head pose is received.
-			ProcessNewInputFn processNewInput; //Delegate called when new input is received.
+			ProcessNewInputStateFn processNewInputState; //Delegate called when new input is received.
+			ProcessNewInputEventsFn processNewInputEvents; //Delegate called when new input is received.
 			DisconnectFn onDisconnect; //Delegate called when the peer disconnects.
 			ReportHandshakeFn reportHandshake;
 

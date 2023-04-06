@@ -961,7 +961,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 			TELEPORT_CERR << "Failed to configure video tag data decoder node!\n";
 		}
 
-		clientPipeline.tagDataQueue.configure(200, 16, "clientPipeline.tagDataQueue");
+		clientPipeline.tagDataQueue.configure(200, 16, "VideoTagQueue");
 
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.tagDataQueue);
 		clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
@@ -1020,22 +1020,31 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
-		clientPipeline.geometryQueue.configure(600000, 200, "clientPipeline.geometryQueue");
+		clientPipeline.geometryQueue.configure(600000, 200, "GeometryQueue");
 
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
 		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
 	{
-		clientPipeline.commandQueue.configure(3000, 64, "command");
+		clientPipeline.commandQueue.configure(3000, 64, "Reliable out");
 		clientPipeline.commandDecoder.configure(sessionClient);
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.commandQueue);
 		clientPipeline.pipeline.link({ &clientPipeline.commandQueue, &clientPipeline.commandDecoder });
 	}
-	// And the queue for messages TO the server:
+	// And the generic queue for messages TO the server:
 	{
-		clientPipeline.messageToServerQueue.configure(3000, 64, "command");
+		clientPipeline.messageToServerQueue.configure(3000, 64, "Unreliable in");
 		avs::PipelineNode::link(clientPipeline.messageToServerQueue, *(clientPipeline.source.get()));
+	}
+	// Tow special-purpose queues for time-sensitive messages TO the server:
+	{
+		// TODO: better default buffer sizes, esp input state buffer.
+		clientPipeline.nodePosesQueue.configure(3000,"Unreliable in");
+		clientPipeline.inputStateQueue.configure(3000,"Unreliable in");
+		// Both connect to the source as inputs, and both feed directly to the "unreliable in" stream.
+		avs::PipelineNode::link(clientPipeline.nodePosesQueue, *(clientPipeline.source.get()));
+		avs::PipelineNode::link(clientPipeline.inputStateQueue, *(clientPipeline.source.get()));
 	}
 	handshake.startDisplayInfo.width = renderState.hdrFramebuffer->GetWidth();
 	handshake.startDisplayInfo.height = renderState.hdrFramebuffer->GetHeight();

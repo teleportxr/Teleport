@@ -36,6 +36,7 @@ set(src_private_root
 	src/memory.cpp
 	src/forwarder.cpp
 	src/packetizer.cpp
+	src/singlequeue.cpp
 	src/nullsink.cpp
 	src/libraryloader.cpp
 	src/timer.cpp
@@ -178,6 +179,7 @@ set(hdr_public_root
 	include/libavstream/packetizer.hpp
 	include/libavstream/pipeline.hpp
 	include/libavstream/queue.hpp
+	include/libavstream/singlequeue.h
 	include/libavstream/surface.hpp
 	include/libavstream/timer.hpp
 	)

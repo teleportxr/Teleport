@@ -47,6 +47,12 @@ void TextCanvas::InvalidateCommonDeviceObjects()
 	if(!renderPlatform)
 		return;
 	renderPlatform=nullptr;
+	SAFE_DELETE(effect);
+	SAFE_DELETE(tech);
+	SAFE_DELETE(singleViewPass);
+	SAFE_DELETE(multiViewPass);
+				
+	textConstants.InvalidateDeviceObjects();
 }
 
 void TextCanvas::RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r)
@@ -60,6 +66,7 @@ void TextCanvas::InvalidateDeviceObjects()
 {
 	if(!renderPlatform)
 		return;
+	fontChars.InvalidateDeviceObjects();
 	count--;
 	if(!count)
 		InvalidateCommonDeviceObjects();

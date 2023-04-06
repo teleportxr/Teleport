@@ -397,12 +397,12 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 {
 	switch(event.channelID)
 	{
-		case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control) :
-			ReceiveCommandPacket(event.packet);
-			break;
-		case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl):
-			ReceiveTextCommand(event.packet);
-			break;
+	case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control):
+		ReceiveCommandPacket(event.packet);
+		break;
+	case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl):
+		ReceiveTextCommand(event.packet);
+		break;
 		default:
 			TELEPORT_CLIENT_WARN("Received packet on output-only channel: %d\n", event.channelID);
 			break;
@@ -484,10 +484,12 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 	};
 }
 
-void SessionClient::SendDisplayInfo (const avs::DisplayInfo &displayInfo)
+void SessionClient::SendDisplayInfo(const avs::DisplayInfo &displayInfo)
 {
-	ENetPacket* packet = enet_packet_create(&displayInfo, sizeof(avs::DisplayInfo), 0);
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_DisplayInfo), packet);
+	core::DisplayInfoMessage displayInfoMessage;
+	displayInfoMessage.displayInfo = displayInfo;
+
+	SendMessageToServer(&displayInfoMessage, sizeof(displayInfoMessage));
 }
 
 void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses)
@@ -496,7 +498,15 @@ void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::
 
 	auto ts = avs::Platform::getTimestamp();
 	message.timestamp_unix_ms=(uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
-	std::cout << "timestamp_unix_ms: " << (message.timestamp_unix_ms / 1000.0) << std::endl;
+#if 0
+	static uint8_t c = 0;
+	c--;
+	if (!c)
+	{
+		std::cout << "SendNodePoses: " << double(message.timestamp_unix_ms)/ 1000.0 << std::endl;
+		std::cout << "messageToServerStack: " << messageToServerStack.buffers.size() << "\n";
+	}
+#endif
 	message.headPose=headPose;
 	message.numPoses=(uint16_t)poses.size();
 	if(isnan(headPose.position.x))
@@ -517,8 +527,8 @@ void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::
 		memcpy(target,&nodePose,sizeof(nodePose));
 		target+=sizeof(nodePose);
 	}
-	SendMessageToServer(packet->data, messageSize);
-	//enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
+	// This is a special type of message, with its own queue.
+	clientPipeline.nodePosesQueue.push(packet->data, messageSize);
 }
 
 
@@ -532,49 +542,55 @@ static void copy_and_increment(uint8_t *&target,const void *source,size_t size)
 
 void SessionClient::SendInput(const core::Input& input)
 {
-	teleport::core::InputsMessage inputsMessage;
+	teleport::core::InputStatesMessage inputStatesMessage;
+	teleport::core::InputEventsMessage inputEventsMessage;
+	auto ts = avs::Platform::getTimestamp();
+	inputStatesMessage.timestamp_unix_ms = (uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
+	inputEventsMessage.timestamp_unix_ms = inputStatesMessage.timestamp_unix_ms;
 	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 	//Set event amount.
 	if(input.analogueEvents.size()>50)
 	{
 		TELEPORT_BREAK_ONCE("That's a lot of events.");
 	}
-	inputsMessage.inputState.numBinaryStates	= static_cast<uint32_t>(input.binaryStates.size());
-	inputsMessage.inputState.numAnalogueStates	= static_cast<uint32_t>(input.analogueStates.size());
-	inputsMessage.inputState.numBinaryEvents	= static_cast<uint32_t>(input.binaryEvents.size());
-	inputsMessage.inputState.numAnalogueEvents	= static_cast<uint32_t>(input.analogueEvents.size());
-	inputsMessage.inputState.numMotionEvents	= static_cast<uint32_t>(input.motionEvents.size());
+	inputStatesMessage.inputState.numBinaryStates	= static_cast<uint32_t>(input.binaryStates.size());
+	inputStatesMessage.inputState.numAnalogueStates	= static_cast<uint32_t>(input.analogueStates.size());
+	inputEventsMessage.numBinaryEvents	= static_cast<uint32_t>(input.binaryEvents.size());
+	inputEventsMessage.numAnalogueEvents	= static_cast<uint32_t>(input.analogueEvents.size());
+	inputEventsMessage.numMotionEvents	= static_cast<uint32_t>(input.motionEvents.size());
 	//Calculate sizes for memory copy operations.
-	size_t inputStateSize		= sizeof(inputsMessage);
-	size_t binaryStateSize		= inputsMessage.inputState.numBinaryStates;
-	size_t analogueStateSize	= sizeof(float)* inputsMessage.inputState.numAnalogueStates;
-	size_t binaryEventSize		= sizeof(avs::InputEventBinary) * inputsMessage.inputState.numBinaryEvents;
-	size_t analogueEventSize	= sizeof(avs::InputEventAnalogue) * inputsMessage.inputState.numAnalogueEvents;
-	size_t motionEventSize		= sizeof(avs::InputEventMotion) * inputsMessage.inputState.numMotionEvents;
+	size_t inputStateSize		= sizeof(inputStatesMessage);
+	size_t binaryStateSize		= inputStatesMessage.inputState.numBinaryStates;
+	size_t analogueStateSize	= sizeof(float)* inputStatesMessage.inputState.numAnalogueStates;
 
-	size_t packetSize=inputStateSize +binaryStateSize+ binaryEventSize +analogueStateSize+ analogueEventSize + motionEventSize;
-	//std::cout<<"SendInput size "<<packetSize<<" with "<<inputState.numAnalogueStates<<" states.\n";
-	//Size packet to final size, but initially only put the InputState struct inside.
-	ENetPacket* packet = enet_packet_create(nullptr, packetSize, packetFlags);
-
+	size_t statesPacketSize = inputStateSize + binaryStateSize + analogueStateSize;
 	//Copy events into packet.
-	uint8_t *target=packet->data;
-	copy_and_increment(target,&inputsMessage,inputStateSize);
-	copy_and_increment(target,input.binaryStates.data(),binaryStateSize);
-	if(input.analogueStates.size()>0&&input.analogueStates[0]!=0)
 	{
-		copy_and_increment(target,input.analogueStates.data(),analogueStateSize);
+		std::vector<uint8_t> buffer(statesPacketSize);
+		uint8_t* target = buffer.data();
+		copy_and_increment(target, &inputStatesMessage, inputStateSize);
+		copy_and_increment(target, input.binaryStates.data(), binaryStateSize);
+		copy_and_increment(target, input.analogueStates.data(), analogueStateSize);
+		// This is a special type of message, with its own queue.
+		clientPipeline.inputStateQueue.push(buffer.data(), statesPacketSize);
 	}
-	else
 	{
-		copy_and_increment(target,input.analogueStates.data(),analogueStateSize);
+		size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputEventsMessage.numBinaryEvents;
+		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputEventsMessage.numAnalogueEvents;
+		size_t motionEventSize = sizeof(avs::InputEventMotion) * inputEventsMessage.numMotionEvents;
+
+		size_t inputEventsSize = sizeof(inputEventsMessage);
+		size_t eventsPacketSize = sizeof(inputEventsMessage) + binaryEventSize + analogueEventSize + motionEventSize;
+
+
+		std::vector<uint8_t> buffer(eventsPacketSize);
+		uint8_t* target = buffer.data();
+		copy_and_increment(target, &inputEventsMessage, inputEventsSize);
+		copy_and_increment(target, input.binaryEvents.data(), binaryEventSize);
+		copy_and_increment(target, input.analogueEvents.data(), analogueEventSize);
+		copy_and_increment(target, input.motionEvents.data(), motionEventSize);
+		SendMessageToServer(buffer.data(), eventsPacketSize);
 	}
-	copy_and_increment(target,input.binaryEvents.data(),binaryEventSize);
-	copy_and_increment(target,input.analogueEvents.data(),analogueEventSize);
-	copy_and_increment(target,input.motionEvents.data(),motionEventSize);
-#if FIX_BROKEN
-	SendMessageToServer(packet->data, packet->dataLength);
-#endif
 }
 
 void SessionClient::SendResourceRequests()
@@ -599,11 +615,9 @@ void SessionClient::SendResourceRequests()
 		size_t totalSize = sizeof(resourceRequestMessage) + sizeof(avs::uid) * resourceRequestMessage.resourceCount;
 		enet_packet_resize(packet, totalSize);
 		memcpy(packet->data + sizeof(resourceRequestMessage), mQueuedResourceRequests.data(), sizeof(avs::uid)*resourceRequestMessage.resourceCount);
-#if FIX_BROKEN
+#ifndef FIX_BROKEN
 		SendMessageToServer(packet->data, totalSize);
 #endif
-		//enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ResourceRequest), packet);
-
 		//Store sent resource requests, so we can resend them if it has been too long since the request.
 		for(avs::uid id : mQueuedResourceRequests)
 		{
@@ -641,10 +655,7 @@ void SessionClient::SendReceivedResources()
 		enet_packet_resize(packet, messageSize + receivedResourcesSize);
 		memcpy(packet->data + messageSize, receivedResources.data(), receivedResourcesSize);
 
-#if FIX_BROKEN
 		SendMessageToServer(packet->data, messageSize + receivedResourcesSize);
-#endif
-		//enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
 	}
 }
 
@@ -670,9 +681,7 @@ void SessionClient::SendNodeUpdates()
 		memcpy(packet->data + messageSize, mReceivedNodes.data(), receivedSize);
 		memcpy(packet->data + messageSize + receivedSize, mLostNodes.data(), lostSize);
 
-		//enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
-
-#if FIX_BROKEN
+#ifndef FIX_BROKEN
 		SendMessageToServer(packet->data, messageSize + receivedSize + lostSize);
 #endif
 		mReceivedNodes.clear();
@@ -682,8 +691,8 @@ void SessionClient::SendNodeUpdates()
 
 void SessionClient::SendKeyframeRequest()
 {
-	ENetPacket* packet = enet_packet_create(0x0, sizeof(size_t), ENET_PACKET_FLAG_RELIABLE);
-	enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_KeyframeRequest), packet);
+	teleport::core::KeyframeRequestMessage msg;
+	SendMessageToServer(&msg, sizeof(msg));
 }
 
 bool SessionClient::SendMessageToServer(const void* c, size_t sz) const
@@ -765,7 +774,6 @@ void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 		return;
 	if(!mCommandInterface->OnSetupCommandReceived(server_ip, setupCommand, handshake))
 		return;
-
 
 	messageToServerEncoder.configure(&messageToServerStack);
 

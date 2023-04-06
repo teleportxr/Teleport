@@ -4,6 +4,7 @@
 #include <libavstream/network/networksource.h>
 #include <libavstream/surface.hpp>
 #include <libavstream/queue.hpp>
+#include <libavstream/singlequeue.h>
 #include <libavstream/decoder.hpp>
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/mesh.hpp>
@@ -30,6 +31,8 @@ namespace teleport
 			avs::Pipeline pipeline;
 
 			avs::Queue messageToServerQueue;
+			avs::SingleQueue nodePosesQueue;
+			avs::SingleQueue inputStateQueue;
 			std::shared_ptr<avs::NetworkSource> source;
 			avs::Queue videoQueue;
 			avs::Decoder decoder;

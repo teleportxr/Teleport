@@ -107,8 +107,11 @@ namespace avs
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 		NetworkSourceCounters m_counters;
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
-		std::unordered_map<uint32_t, int> idToStreamIndex;
-		std::unordered_map<int, int> inputToStreamIndex;
+		std::unordered_map<uint32_t, uint8_t> idToStreamIndex;
+		//! Map input nodes to streams outgoing. Many to one relation.
+		std::unordered_map<uint8_t, uint8_t> inputToStreamIndex;
+		//! Map input nodes to streams outgoing. One to one relation.
+		std::unordered_map<uint8_t, uint8_t> streamIndexToOutput;
 		Result sendData(uint8_t id, const uint8_t* packet, size_t sz);
 #if TELEPORT_CLIENT
 		HTTPUtil m_httpUtil;
@@ -126,7 +129,7 @@ WebRtcNetworkSource::WebRtcNetworkSource()
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
 }
 
-Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams, const NetworkSourceParams& params)
+Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams,int numInputs, const NetworkSourceParams& params)
 {
 	size_t numOutputs = in_streams.size();
 	if (numOutputs == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
@@ -174,9 +177,9 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 		memcpy(&m_tempBuffer[sizeof(StreamPayloadInfo)], rPacket->pFrameData, rPacket->mFrameSize);
 		// The mStreamID is encoded sender-side within the EFP wrapper.
 		
-		int nodeIndex = m_data->idToStreamIndex[rPacket->mStreamID];// streamID is 20,40,60, etc
-
-		auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
+		uint8_t streamIndex = m_data->idToStreamIndex[rPacket->mStreamID];// streamID is 20,40,60, etc
+		uint8_t outputNodeIndex = m_data->streamIndexToOutput[streamIndex];
+		auto outputNode = dynamic_cast<Queue*>(getOutput(outputNodeIndex));
 		if (!outputNode)
 		{
 			AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
@@ -198,6 +201,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 		}
 	};
 
+	setNumInputSlots(numInputs);
 	setNumOutputSlots(numOutputs);
 
 	m_streams = std::move(in_streams);
@@ -205,21 +209,8 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 
 	// This will map from the stream id's - 20,40,60,80 etc 
 	// to the index of outputs, 0,1,2,3,4 etc.
-	m_data->dataChannels.reserve(numOutputs);
-	m_data->dataChannels.resize(0);
-	size_t numInputs = 0;
-	for (uint32_t i = 0; i < numOutputs; ++i)
-	{
-		const auto& stream = m_streams[i];
-		if (stream.outgoing)
-		{
-			numInputs++;
-		}
-		m_data->dataChannels.emplace_back();
-		uint32_t id = EVEN_ID(stream.id);
-		m_data->idToStreamIndex[id] = numOutputs;
-	}
-	setNumInputSlots(numInputs);
+	m_data->dataChannels.resize(m_streams.size());
+	m_data->idToStreamIndex.clear();
 
 #if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
@@ -240,7 +231,7 @@ Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 	for (int i=0;i<m_streams.size();i++)
 	{
 		auto& stream = m_streams[i];
-		if(stream.label==name)
+		if(stream.inputName==name)
 			m_data->inputToStreamIndex[slot] = i;
 	}
 	return Result::OK;
@@ -248,6 +239,13 @@ Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 
 Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
 {
+	std::string name = node->getDisplayName();
+	for (int i = 0; i < m_streams.size(); i++)
+	{
+		auto& stream = m_streams[i];
+		if (stream.outputName == name)
+			m_data->streamIndexToOutput[i] = slot;
+	}
 	return Result::OK;
 }
 
@@ -282,7 +280,8 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 
 void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 {
-	int nodeIndex = m_data->idToStreamIndex[m_params.httpStreamID];
+	uint8_t streamIndex = m_data->idToStreamIndex[m_params.httpStreamID];
+	uint8_t nodeIndex = m_data->streamIndexToOutput[streamIndex];
 
 	auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
 	if (!outputNode)
@@ -345,14 +344,13 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	// Here we only handle receiving data from inputs to be sent onward.
 
 	// Called to get the data from the input nodes
-	auto readInput = [this](uint32_t inputNodeIndex,
+	auto readInput = [this](uint8_t inputNodeIndex, uint8_t streamIndex,
 		std::vector<uint8_t> &buffer,size_t& numBytesRead) -> Result
 	{
 		PipelineNode* node = getInput(inputNodeIndex);
 		//if (inputNodeIndex >= m_streams.size())
 		//	return Result::Failed;
-		int streamIndex = m_data->inputToStreamIndex[inputNodeIndex];
-		auto& stream = m_streams[inputNodeIndex];
+		auto& stream = m_streams[streamIndex];
 		const DataChannel& dataChannel = m_data->dataChannels[stream.id];
 
 		assert(node);
@@ -368,12 +366,6 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 				result = nodeIO->read(this, buffer.data(), bufferSize, numBytesRead);
 			}
 			numBytesRead = std::min(bufferSize, numBytesRead);
-			if (result == Result::OK)
-			{
-				//std::cout << ".";
-				//memcpy(stream.buffer.data(), &streamPayloadInfo, infoSize);
-			}
-
 			return result;
 		}
 		else
@@ -396,38 +388,42 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		if (!dataChannel.readyToSend)
 			continue;
 		size_t numBytesRead = 0;
-		try
+		Result result = Result::OK;
+		while (result == Result::OK)
 		{
-			Result result = readInput(i, dataChannel.sendBuffer, numBytesRead);
-			if (result != Result::OK)
+			try
 			{
-				if (result != Result::IO_Empty)
+				result = readInput(i, streamIndex, dataChannel.sendBuffer, numBytesRead);
+				if (result != Result::OK)
 				{
-					AVSLOG(Error) << "WebRtcNetworkSink: Failed to read from input node: " << i << "\n";
-					continue;
+					if (result != Result::IO_Empty)
+					{
+						AVSLOG(Error) << "WebRtcNetworkSink: Failed to read from input node: " << i << "\n";
+						break;
+					}
 				}
 			}
-		}
-		catch (const std::bad_alloc&)
-		{
-			return Result::IO_OutOfMemory;
-		}
-		if (numBytesRead == 0)
-		{
-			continue;
-		}
-		Result res = Result::OK;
-		//if (stream.useParser && m_data->m_parsers.find(i) != m_data->m_parsers.end())
-		//{
-		//res = m_data->m_parsers[i]->parse(((const char*)stream.buffer.data()), numBytesRead);
-		//}
-		//else
-		{
-			res = m_data->sendData(stream.id, dataChannel.sendBuffer.data(), numBytesRead);
-		}
-		if (!res)
-		{
-			return res;
+			catch (const std::bad_alloc&)
+			{
+				return Result::IO_OutOfMemory;
+			}
+			if (numBytesRead == 0)
+			{
+				break;
+			}
+			Result res = Result::OK;
+			//if (stream.useParser && m_data->m_parsers.find(i) != m_data->m_parsers.end())
+			//{
+			//res = m_data->m_parsers[i]->parse(((const char*)stream.buffer.data()), numBytesRead);
+			//}
+			//else
+			{
+				res = m_data->sendData(stream.id, dataChannel.sendBuffer.data(), numBytesRead);
+			}
+			if (!res)
+			{
+				break;
+			}
 		}
 	}
 	static float intro = 0.01f;
@@ -576,13 +572,17 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	dc->onMessage([this,&dataChannel,id](rtc::binary b)
 		{
 		// data holds either std::string or rtc::binary
-			int nodeIndex = idToStreamIndex[id];
+			uint8_t streamIndex = idToStreamIndex[id];
+			auto o = streamIndexToOutput.find(streamIndex);
+			if (o == streamIndexToOutput.end())
+				return;
+			uint8_t outputNodeIndex = o->second;
 			dataChannel.bytesReceived += b.size();
-			auto & stream=q_ptr()->m_streams[nodeIndex];
+			auto & stream=q_ptr()->m_streams[streamIndex];
 			if (!stream.framed)
 			{
 				size_t numBytesWrittenToOutput;
-				auto outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(nodeIndex));
+				auto outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(outputNodeIndex));
 				if (!outputNode)
 				{
 					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
@@ -645,10 +645,6 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 				{
 					dataChannel.readyToSend = false;
 					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
-				}
-				else if (id == 100)
-				{
-					//std::cout << "WebRTC: channel " << (int)id << ", sent packet of size " << sz << "\n";
 				}
 				dataChannel.bytesSent += sz;
 			}

@@ -74,8 +74,6 @@ namespace teleport
 		{
 			RPCH_Handshake = 0,
 			RPCH_Control = 1,
-			RPCH_DisplayInfo = 2,
-			RPCH_KeyframeRequest = 5,
 			RPCH_StreamingControl= 7,
 			RPCH_NumChannels
 		} AVS_PACKED;
@@ -119,12 +117,15 @@ namespace teleport
 		//! The payload type, or how to interpret the client's message.
 		enum class ClientMessagePayloadType : uint8_t
 		{
-			Invalid,
+			Invalid=0,
 			NodeStatus,
 			ReceivedResources,
 			ControllerPoses,
 			ResourceRequest,
-			Inputs
+			InputStates,
+			InputEvents,
+			DisplayInfo,
+			KeyframeRequest
 		} AVS_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
@@ -160,9 +161,6 @@ namespace teleport
 		{
 			uint16_t numBinaryStates = 0;
 			uint16_t numAnalogueStates= 0;
-			uint16_t numBinaryEvents = 0;
-			uint16_t numAnalogueEvents= 0;
-			uint16_t numMotionEvents= 0;
 		} AVS_PACKED;
 
 		//Contains information to update the transform of a node.
@@ -642,13 +640,37 @@ namespace teleport
 		} AVS_PACKED;
 
 		//! Message info struct containing a request for resources, to be followed by the list of uid's.
-		struct InputsMessage : public ClientMessage
+		struct InputStatesMessage : public ClientMessage
 		{
-			//! Poses of the  controllers.
+			//! Poses of the controllers.
 			InputState inputState = {};
+			InputStatesMessage()
+				:ClientMessage(ClientMessagePayloadType::InputStates)
+			{}
+		} AVS_PACKED;
 
-			InputsMessage()
-				:ClientMessage(ClientMessagePayloadType::Inputs)
+		struct InputEventsMessage : public ClientMessage
+		{
+			uint16_t numBinaryEvents = 0;
+			uint16_t numAnalogueEvents = 0;
+			uint16_t numMotionEvents = 0;
+			InputEventsMessage()
+				:ClientMessage(ClientMessagePayloadType::InputEvents)
+			{}
+		} AVS_PACKED;
+
+		struct DisplayInfoMessage : public ClientMessage
+		{
+			avs::DisplayInfo displayInfo;
+			DisplayInfoMessage()
+				:ClientMessage(ClientMessagePayloadType::DisplayInfo)
+			{}
+		} AVS_PACKED;
+
+		struct KeyframeRequestMessage:public ClientMessage
+		{
+			KeyframeRequestMessage()
+				:ClientMessage(ClientMessagePayloadType::KeyframeRequest)
 			{}
 		} AVS_PACKED;
 		

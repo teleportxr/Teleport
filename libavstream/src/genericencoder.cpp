@@ -151,7 +151,7 @@ Result GenericEncoder::Private::writeOutput(IOInterface* outputNode)
 	assert(m_backend);
 	void*  mappedBuffer;
 	size_t mappedBufferSize;
-	if( m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize))
+	while( m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize))
 	{
 		size_t numBytesWrittenToOutput;
 		Result result = outputNode->write(q_ptr(), mappedBuffer, mappedBufferSize, numBytesWrittenToOutput);

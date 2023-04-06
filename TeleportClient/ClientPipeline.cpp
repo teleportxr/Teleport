@@ -23,11 +23,12 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	//TODO: these id's do NOT need to match the ones in the server. Only the labels need match.
 	std::vector<avs::NetworkSourceStream> streams =
 			{
-				{20,"video",true,false}
-				,{40,"video_tags",true,false}
-				,{60,"audio_server_to_client",true,true}	// 2-way
-				,{geoStreamID,"geometry",true,false}
-				,{100,"command",false,true}				// 2-way
+				{20,"video"					,""				,"VideoQueue"	,true	,false}
+				,{40,"video_tags"			,""				,"VideoTagQueue",true	,false}
+				,{60,"audio_server_to_client",""			,"AudioQueue"	,true	,true}		// 2-way
+				,{geoStreamID,"geometry"	,""				,"GeometryQueue",true	,false}
+				,{100,"reliable"				,""				,"Reliable out"	,false	,false}		// 2-way
+				,{120,"unreliable"				,"Unreliable in",""				,false	,true}					// 2-way
 			};
 
 	avs::NetworkSourceParams sourceParams;
@@ -40,7 +41,7 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	sourceParams.useSSL = setupCommand.using_ssl;
 
 	// Configure for video stream, tag data stream, audio stream and geometry stream.
-	if (!source->configure(std::move(streams), sourceParams))
+	if (!source->configure(std::move(streams), 3,sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
 		return false;

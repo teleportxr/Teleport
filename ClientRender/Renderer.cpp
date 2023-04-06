@@ -608,12 +608,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		hand_pos_press.push_back(pos4);
 	}
 	static bool override_have_vr_device=false;
-	gui.Update(hand_pos_press, have_vr_device|override_have_vr_device);
+	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
 
 	
 	gui.Render(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
-	if (!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline)
+	if ((have_vr_device || override_have_vr_device )&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
