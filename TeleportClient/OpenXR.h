@@ -261,7 +261,7 @@ namespace teleport
 			//! Get the currently bound input mappings for the server.
 			const std::vector<InputMapping> &GetServerInputMappings(avs::uid server_uid);
 			//! Get the currently bound pose mappings for the server.
-			const std::map<avs::uid, NodePoseMapping >& OpenXR::GetServerNodePoseMappings(avs::uid server_uid);
+			const std::map<avs::uid, NodePoseMapping >& GetServerNodePoseMappings(avs::uid server_uid);
 			// Force input mapping to a particular setting - normally for local controls.
 			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
 

@@ -922,7 +922,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
-	clientPipeline.decoder.setBackend(CreateVideoDecoder());
+	sessionClient->GetClientPipeline().decoder.setBackend(CreateVideoDecoder());
 #endif
 
 	avs::DeviceHandle dev;

@@ -113,7 +113,6 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 Result GenericDecoder::processPayload(const uint8_t* buffer, size_t bufferSize)
 {
-	assert(m_backend);
 	Result result = Result::UnknownError;
 
 	if (m_target && bufferSize)
@@ -140,7 +139,6 @@ Result GenericDecoder::onOutputLink(int slot, PipelineNode* node)
 		AVSLOG(Error) << "GenericDecoder: PipelineNode needs to be configured before it can accept output";
 		return Result::Node_NotConfigured;
 	}
-	assert(m_backend);
 
 	GenericTargetInterface* m = dynamic_cast<GenericTargetInterface*>(node);
 	if (!m)
@@ -161,7 +159,6 @@ void GenericDecoder::onOutputUnlink(int slot, PipelineNode* node)
 	GenericTargetInterface* m = dynamic_cast<GenericTargetInterface*>(node);
 	if (m)
 	{
-		assert(m_backend);
 		//m_backend->unregisterSurface(surface->getBackendSurface());
 	}
 }

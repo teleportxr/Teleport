@@ -15,6 +15,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\libavstream\include\libavstream\common.hpp" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\genericdecoder.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\genericencoder.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\networksink.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\networksource.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\serial.hpp" />
@@ -23,6 +25,7 @@
     <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_networksink.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_networksource.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_observers.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\singlequeue.h" />
     <ClInclude Include="..\..\libavstream\src\abi_p.hpp" />
     <ClInclude Include="..\..\libavstream\src\api\cuda.hpp" />
     <ClInclude Include="..\..\libavstream\src\api\cuda_dx12.hpp" />
@@ -81,6 +84,8 @@
     <ClCompile Include="..\..\libavstream\src\encoders\enc_nvidia.cpp" />
     <ClCompile Include="..\..\libavstream\src\file.cpp" />
     <ClCompile Include="..\..\libavstream\src\forwarder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\genericdecoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\genericencoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\geometrydecoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\geometryencoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\httputil.cpp" />
@@ -98,6 +103,7 @@
     <ClCompile Include="..\..\libavstream\src\pipeline.cpp" />
     <ClCompile Include="..\..\libavstream\src\platforms\platform_posix.cpp" />
     <ClCompile Include="..\..\libavstream\src\queue.cpp" />
+    <ClCompile Include="..\..\libavstream\src\singlequeue.cpp" />
     <ClCompile Include="..\..\libavstream\src\stream\parser.cpp" />
     <ClCompile Include="..\..\libavstream\src\stream\parser_avc.cpp" />
     <ClCompile Include="..\..\libavstream\src\stream\parser_geo.cpp" />

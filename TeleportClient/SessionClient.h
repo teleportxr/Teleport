@@ -156,12 +156,6 @@ namespace teleport
 				return clientPipeline;
 			}
 		private:
-			template<typename MessageType> void SendClientMessage(const MessageType &message)
-			{
-				size_t messageSize = sizeof(MessageType);
-				ENetPacket* packet = enet_packet_create(&message, messageSize, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
-				enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_ClientMessage), packet);
-			}
 			void DispatchEvent(const ENetEvent& event);
 			void ReceiveCommandPacket(ENetPacket* packet);
 
@@ -182,10 +176,10 @@ namespace teleport
 			{
 				size_t messageSize = sizeof(M);
 				size_t listSize = sizeof(T) * appendedList.size();
-				size_t totalSize = commandSize + listSize;
+				size_t totalSize = messageSize + listSize;
 				std::vector<uint8_t> buffer(totalSize);
-				memcpy(buffer.data(), &command, commandSize);
-				memcpy(buffer.data() + commandSize, appendedList.data(), listSize);
+				memcpy(buffer.data(), &msg, messageSize);
+				memcpy(buffer.data() + messageSize, appendedList.data(), listSize);
 
 				return SendMessageToServer(buffer.data(), totalSize);
 			}

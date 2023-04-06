@@ -354,7 +354,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		const DataChannel& dataChannel = m_data->dataChannels[stream.id];
 
 		assert(node);
-		assert(buffer.size() >= stream.chunkSize);
+		//assert(buffer.size() >= stream.chunkSize);
 		static uint64_t frameID = 0;
 		if (IOInterface* nodeIO = dynamic_cast<IOInterface*>(node))
 		{

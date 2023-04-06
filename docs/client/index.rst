@@ -5,9 +5,19 @@ The "Reference" Teleport Client application is available for Windows PC (with op
 and Meta Quest headsets. It's available from https://teleportvr.io/downloads.
 
 On launching the client, you will be presented with an address bar. In desktop mode, this will appear
-at the top of the window, just as in a web browser. In XR mode, it will float in front of you, atop a
+at the top of the window, just as in a web browser.
+
+.. image:: DesktopClient.png
+  :width: 600
+  :alt: The desktop PC Client is shown, with an address bar and connect button at the top.
+
+In XR mode, it will float in front of you, atop a
 virtual keyboard for typing. You can connect to any Teleport server by entering its address here and clicking
 the connect button.
+
+.. image:: VRClient.png
+  :width: 600
+  :alt: The XR Client is shown, with an address bar and virtual keyboard in front of the viewer.
 
 In XR mode, the address bar disappears when the connection is accepted. You can recall the address bar
 by clicking the default "Menu" button for your XR device.

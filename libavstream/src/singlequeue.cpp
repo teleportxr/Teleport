@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <singlequeue.h>
+#include <libavstream/singlequeue.h>
 
 #define SAFE_DELETE_ARRAY(p)		{ if(p) { delete[] p; (p)=nullptr; } }
 

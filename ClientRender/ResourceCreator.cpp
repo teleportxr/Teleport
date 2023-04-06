@@ -283,7 +283,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			if (meshElementCreate.m_Vertices)
 			{
 				size_t size = sizeof(vec3) * meshElementCreate.m_VertexCount;
-				assert(constructedVBSize >= vertexBufferOffset + size);
+				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Vertices, size);
 				vertexBufferOffset += size;
 			}
@@ -321,12 +321,12 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 					}
 
 					size_t size = sizeof(vec3);
-					assert(constructedVBSize >= vertexBufferOffset + size);
+					assert(constructedVBByteSize >= vertexBufferOffset + size);
 					memcpy(constructedVB->data() + vertexBufferOffset, &normal, size);
 					vertexBufferOffset += size;
 
 					size = sizeof(vec4);
-					assert(constructedVBSize >= vertexBufferOffset + size);
+					assert(constructedVBByteSize >= vertexBufferOffset + size);
 					memcpy(constructedVB->data() + vertexBufferOffset, &tangent, size);
 					vertexBufferOffset += size;
 				}
@@ -336,14 +336,14 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				if (meshElementCreate.m_Normals)
 				{
 					size_t size = sizeof(vec3) * meshElementCreate.m_VertexCount;
-					assert(constructedVBSize >= vertexBufferOffset + size);
+					assert(constructedVBByteSize >= vertexBufferOffset + size);
 					memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Normals, size);
 					vertexBufferOffset += size;
 				}
 				if (meshElementCreate.m_Tangents)
 				{
 					size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
-					assert(constructedVBSize >= vertexBufferOffset + size);
+					assert(constructedVBByteSize >= vertexBufferOffset + size);
 					memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Tangents, size);
 					vertexBufferOffset += size;
 				}
@@ -351,35 +351,35 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			if (meshElementCreate.m_UV0s)
 			{
 				size_t size = sizeof(vec2) * meshElementCreate.m_VertexCount;
-				assert(constructedVBSize >= vertexBufferOffset + size);
+				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_UV0s, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_UV1s)
 			{
 				size_t size = sizeof(vec2) * meshElementCreate.m_VertexCount;
-				assert(constructedVBSize >= vertexBufferOffset + size);
+				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_UV1s, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Colors)
 			{
 				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
-				assert(constructedVBSize >= vertexBufferOffset + size);
+				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Colors, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Joints)
 			{
 				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
-				assert(constructedVBSize >= vertexBufferOffset + size);
+				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Joints, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Weights)
 			{
 				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
-				assert(constructedVBSize >= vertexBufferOffset + size);
+				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Weights, size);
 				vertexBufferOffset += size;
 			}

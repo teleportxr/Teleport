@@ -115,6 +115,9 @@
     <ClCompile Include="..\..\libavstream\src\network\webrtc_networksource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\libavstream\src\genericdecoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\genericencoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\singlequeue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\libavstream\src\abi_p.hpp">
@@ -273,6 +276,9 @@
     <ClInclude Include="..\..\libavstream\include\libavstream\network\webrtc_observers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\libavstream\include\libavstream\singlequeue.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\genericdecoder.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\genericencoder.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\libavstream\src\decoders\dec_nvidia.cu" />
