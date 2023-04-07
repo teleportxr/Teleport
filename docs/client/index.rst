@@ -8,16 +8,20 @@ On launching the client, you will be presented with an address bar. In desktop m
 at the top of the window, just as in a web browser.
 
 .. image:: DesktopClient.png
-  :width: 600
-  :alt: The desktop PC Client is shown, with an address bar and connect button at the top.
+	:width: 600
+	:alt: The desktop PC Client is shown, with an address bar and connect button at the top.
+	
+	The desktop PC Client has an address bar and connect button at the top.
 
 In XR mode, it will float in front of you, atop a
 virtual keyboard for typing. You can connect to any Teleport server by entering its address here and clicking
 the connect button.
 
 .. image:: VRClient.png
-  :width: 600
-  :alt: The XR Client is shown, with an address bar and virtual keyboard in front of the viewer.
+	:width: 600
+	:alt: The XR Client is shown, with an address bar and virtual keyboard in front of the viewer.
+	
+	The desktop PC Client has a virtual keyboard, with an address bar and connect button.
 
 In XR mode, the address bar disappears when the connection is accepted. You can recall the address bar
 by clicking the default "Menu" button for your XR device.

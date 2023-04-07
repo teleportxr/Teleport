@@ -11,9 +11,10 @@ A pipeline operates on a single thread, while queues allow threads to exchange d
 LibAVStream uses Enet for UDP datagram control. It uses SRT and EFP over UDP for data stream reliability and deliverability.
 
 .. image:: /images/reference/ExamplePipeline.png
-  :width: 800
-  :alt: Two pipelines operating on separate threads are connected using a avs::Queue.
+	:width: 800
+	:alt: Two pipelines operating on separate threads are connected using an avs::Queue.
 
+	Two pipelines operating on separate threads are connected using an avs::Queue.
 
 Classes
 -------
