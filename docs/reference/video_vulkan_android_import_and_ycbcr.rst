@@ -74,7 +74,7 @@ Reference: `Wikipedia YCbCr <https://en.wikipedia.org/wiki/YCbCr>`_.
 Chroma Subsampling
 ------------------
 
-Further compression of the video data can be achieved by downsampling the chroma components without affect the colour perspection. This is because the human eye is less sensitive to high frequency changes in colour data. Chroma Subsampling is expressed by three-part ratio J:a:b, such as 4:2:2.
+Further compression of the video data can be achieved by downsampling the chroma components without affecting the colour perspection. This is because the human eye is less sensitive to high frequency changes in colour data. Chroma Subsampling is expressed by three-part ratio J:a:b, such as 4:2:2.
 
 * J: horizontal sampling reference (width of the conceptual region). Usually, 4.
 * a: number of chrominance samples (Cb, Cr) in the first row of J pixels.
@@ -153,11 +153,11 @@ Reference: `Wikipedia Y′UV420p (and Y′V12 or YV12) to RGB888 conversion <htt
 ITU Colour Spaces and Encoding Ranges
 -------------------------------------
 
-As YCbCr is the digital version of the analogue television standard YUV, the ITU (International Telecommunication Union) has defined both the colour spaces for quantisations the three colour space standards.
+As YCbCr is the digital version of the analogue television standard YUV, the ITU (International Telecommunication Union) has defined both the colour spaces and the quantisations the three colour space standards.
 
 The primaries below can be used to create a 3 x 3 matrix that can convert to and from RGB to YCbCr colour spaces. The primaries in the table below are just the luma (Y) component of these colour standards based in the CIE xyY colour space. See reference: `Wikipedia CIE 1931 color space: CIE xy chromaticity diagram and the CIE xyY color space <https://en.wikipedia.org/wiki/CIE_1931_color_space#CIE_xy_chromaticity_diagram_and_the_CIE_xyY_color_space>`_. 
 
-The terms of the encoding range, the ITU reserved regions at the begin and end of each 'representable integer range for rounding errors and for signal control data'. These reversed regions mean that the video data has a *narrow range* encoding, and their absence means that the video source has *full range* encoding. Currently, only BT.2100 requires full range encoding: All others use the narrow range encoding.
+In terms of the encoding range, the ITU reserved regions at the beginning and end of each 'representable integer range for rounding errors and for signal control data'. These reversed regions mean that the video data has a *narrow range* encoding, and their absence means that the video source has *full range* encoding. Currently, only BT.2100 requires full range encoding: All others use the narrow range encoding.
 
 +--------------+-----------+-------------+---------------+--------------+
 | ITU Standard | TV Format | Red Primary | Green Primary | Blue Primary |
