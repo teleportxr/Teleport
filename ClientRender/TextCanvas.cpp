@@ -48,9 +48,8 @@ void TextCanvas::InvalidateCommonDeviceObjects()
 		return;
 	renderPlatform=nullptr;
 	SAFE_DELETE(effect);
-	SAFE_DELETE(tech);
-	SAFE_DELETE(singleViewPass);
-	SAFE_DELETE(multiViewPass);
+	//SAFE_DELETE(singleViewPass);
+//	SAFE_DELETE(multiViewPass);
 				
 	textConstants.InvalidateDeviceObjects();
 }

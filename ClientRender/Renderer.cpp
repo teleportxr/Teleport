@@ -632,7 +632,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	else
 		gui.Render2DGUI(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
-	if ((have_vr_device || override_have_vr_device )&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
+	if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
