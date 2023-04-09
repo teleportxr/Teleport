@@ -64,6 +64,7 @@ namespace clientrender
 		{
 			return show_osd;
 		}
+
 	protected:
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
 		virtual std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid server_uid);
@@ -86,6 +87,7 @@ namespace clientrender
 		platform::crossplatform::MouseCameraState	mouseCameraState;
 		platform::crossplatform::MouseCameraInput	mouseCameraInput;
 		
+		bool start_xr_session=false,end_xr_session=false;
 		/// It is better to use a reversed depth buffer format, i.e. the near plane is z=1 and the far plane is z=0. This
 		/// distributes numerical precision to where it is better used.
 		static const bool reverseDepth = true;

@@ -40,7 +40,7 @@ namespace teleport
 		bool BeginMainMenuBar();
 		void EndMainMenuBar();
 	public:
-		Gui()
+		Gui(client::OpenXR &o):openXR(o)
 		{
 		}
 		~Gui()
@@ -50,8 +50,8 @@ namespace teleport
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r,PlatformWindow *w);
 		void InvalidateDeviceObjects();
 		void RecompileShaders();
-		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		void Render2D(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void Render3DGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void Render2DGUI(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
 		void LinePrint(const std::string& str, const float* clr = nullptr);
 		void LinePrint(const char* txt,const float *clr=nullptr);
@@ -83,6 +83,14 @@ namespace teleport
 		}
 		void SetConnectHandler(std::function<void(const std::string&)> fn);
 		void SetCancelConnectHandler(std::function<void()> fn);
+		void SetStartXRSessionHandler(std::function<void()> fn)
+		{
+			startXRSessionHandler = fn;
+		}
+		void SetEndXRSessionHandler(std::function<void()> fn)
+		{
+			endXRSessionHandler = fn;
+		}
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void ShowHide();
 		void Show();
@@ -107,6 +115,7 @@ namespace teleport
 		// Replaces Windows GetCursorPos if necessary.
 		static int GetCursorPos(long p[2]) ;
 	protected:
+		client::OpenXR &openXR;
 		void LightStyle();
 		void DarkStyle();
 		void ShowSettings2D();
@@ -132,6 +141,8 @@ namespace teleport
 		std::vector<std::string> server_ips;
 		std::function<void(const std::string&)> connectHandler;
 		std::function<void()> cancelConnectHandler;
+		std::function<void()> startXRSessionHandler;
+		std::function<void()> endXRSessionHandler;
 		bool visible = false;
 		avs::DecoderStatus videoStatus;
 		float width_m=0.6f;
@@ -148,5 +159,6 @@ namespace teleport
 		std::string selected_url;
 		bool show_bookmarks = false;
 		bool show_options = false;
+		platform::crossplatform::Texture *vrHeadsetIconTexture=nullptr;
 	};
 }

@@ -168,6 +168,18 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	gui.SetConnectHandler(connectButtonHandler);
 	auto cancelConnectHandler = std::bind(&client::SessionClient::CancelConnectButtonHandler, 1);
 	gui.SetCancelConnectHandler(cancelConnectHandler);
+	
+	auto startSessionHandler = [this](){
+		start_xr_session=true;
+		end_xr_session=false;
+	};
+	gui.SetStartXRSessionHandler(startSessionHandler);
+	auto endSessionHandler = [this](){
+		start_xr_session=false;
+		end_xr_session=true;
+	};
+	gui.SetEndXRSessionHandler(endSessionHandler);
+
 	renderState.videoTexture = renderPlatform->CreateTexture();
 	renderState.specularCubemapTexture = renderPlatform->CreateTexture();
 	renderState.diffuseCubemapTexture = renderPlatform->CreateTexture();
@@ -526,10 +538,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	// TODO: This should render only if no background clients are connected.
 	if (!sessionClient->IsConnected())
 	{
-		if (!gui.IsVisible())
-		{
-			ShowHideGui();
-		}
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
 			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -610,8 +618,19 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
 
-	
-	gui.Render(deviceContext);
+	if(renderState.openXR->IsSessionActive())
+	{
+		gui.Render3DGUI(deviceContext);
+		if (!sessionClient->IsConnected())
+		{
+			if (!gui.IsVisible())
+			{
+				ShowHideGui();
+			}
+		}
+	}
+	else
+		gui.Render2DGUI(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
 	if ((have_vr_device || override_have_vr_device )&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
 	{	
@@ -673,6 +692,39 @@ void Renderer::Update(double timestamp_ms)
 		}
 	}
 	previousTimestamp = timestamp_ms;
+	if(start_xr_session)
+	{
+		renderState.openXR->StartSession();
+		{
+			renderState.openXR->MakeActions();
+		}
+		start_xr_session=false;
+		end_xr_session=false;
+	}
+	else if(end_xr_session)
+	{
+		renderState.openXR->EndSession();
+		start_xr_session=false;
+		end_xr_session=false;
+	}
+				/*	static uint64_t retry_wait= 16384;
+					static uint64_t c=1;
+					c--;
+					if(!c)
+					{
+						if(useOpenXR.StartSession())
+						{
+							useOpenXR.MakeActions();
+							retry_wait=256;
+							c=retry_wait;
+						}
+						else
+						{
+							c=retry_wait;
+							if(retry_wait< 16384*16384)
+								retry_wait*=2;
+						}
+					}*/
 }
 
 

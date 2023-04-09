@@ -51,14 +51,14 @@ clientrender::Renderer *clientRenderer=nullptr;
 teleport::client::SessionClient *sessionClient=nullptr;
 platform::crossplatform::RenderDelegate renderDelegate;
 platform::crossplatform::RenderDelegate overlayDelegate;
-UseOpenXR useOpenXR;
+UseOpenXR useOpenXR("Teleport PC Client");
+Gui gui(useOpenXR);
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 
 platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 client::ClientApp clientApp;
-Gui gui;
 std::string teleport_path;
 std::string storage_folder;
 // Need ONE global instance of this:
@@ -320,13 +320,8 @@ static bool use_debug=false;
 	}
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	// Now renderPlatform is initialized, can init OpenXR:
-	if (try_init_vr)
-	{
-		if(useOpenXR.InitInstance("Teleport Client"))
-		{
-			useOpenXR.Init(renderPlatform);
-		}
-	}
+
+	useOpenXR.SetRenderPlatform(renderPlatform);
 	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
 	auto &config=client::Config::GetInstance();
@@ -502,38 +497,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-			//	PAINTSTRUCT ps;
-				//BeginPaint(hWnd, &ps);
+				// PAINTSTRUCT ps;
+				// BeginPaint(hWnd, &ps);
 				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 
 				clientRenderer->Update(timestamp_ms);
-				bool quit = false;
-				if (useOpenXR.HaveXRDevice())
-				{
-					useOpenXR.PollEvents(quit);
-					useOpenXR.PollActions();
-				}
-				else
-				{
-					static uint64_t retry_wait= 16384;
-					static uint64_t c=1;
-					c--;
-					if(!c)
-					{
-						if(useOpenXR.TryInitDevice())
-						{
-							useOpenXR.MakeActions();
-							retry_wait=256;
-							c=retry_wait;
-						}
-						else
-						{
-							c=retry_wait;
-							if(retry_wait< 16384*16384)
-								retry_wait*=2;
-						}
-					}
-				}
+				useOpenXR.Tick();
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
@@ -572,7 +541,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
 						useOpenXR.RenderFrame(renderDelegate, overlayDelegate);
-						if(useOpenXR.IsXRDeviceActive())
+						if(useOpenXR.IsXRDeviceRendering())
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
 						else
 							clientRenderer->SetExternalTexture(nullptr);

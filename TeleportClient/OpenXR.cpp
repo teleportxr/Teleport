@@ -336,7 +336,7 @@ void InteractionProfile::Init(XrInstance &xr_instance,const char *pr,std::initia
 	}
 }
 
-void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char *complete_path)
+void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char *complete_path,bool virtual_binding)
 {
 	XrPath p;
 	p= MakeXrPath(xr_instance, complete_path);
@@ -351,7 +351,7 @@ void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char 
 		{
 			TELEPORT_CERR<<"InteractionProfile: "<<name.c_str()<<": Failed to create suggested binding as path "<<complete_path<<" was invalid."<<std::endl;
 		}
-		if(!action)
+		if(!virtual_binding&&!action)
 		{
 			TELEPORT_CERR<<"InteractionProfile: "<<name.c_str()<<": Failed to create suggested binding "<<complete_path<<" as action is null."<<std::endl;
 		}
@@ -379,50 +379,31 @@ vector<std::string> OpenXR::GetRequiredExtensions() const
 	return str;
 }
 
-bool OpenXR::InitInstance(const char *app_name)
+bool OpenXR::InitInstance()
 {
-// Define the actions first - we don't need an XR instance for this.
-	xr_input_session.SetActions( {
-		// Create an action to track the position and orientation of the hands! This is
-		// the controller location, or the center of the palms for actual hands.
-		 // Create an action for listening to the select action! This is primary trigger
-		 // on controllers, and an airtap on HoloLens
-		 {ActionId::SELECT				,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::SHOW_MENU			,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::A					,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::B					,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::X					,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::Y					,"y"					,"Y"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		// Action for left controller
-		,{ActionId::LEFT_GRIP_POSE		,"left_grip_pose"		,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::LEFT_AIM_POSE		,"left_aim_pose"		,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::LEFT_TRIGGER		,"left_trigger"			,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_SQUEEZE		,"left_squeeze"			,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_STICK_X		,"left_thumbstick_x"	,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_STICK_Y		,"left_thumbstick_y"	,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_HAPTIC			,"left_haptic"			,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
-		// Action for right controller
-		,{ActionId::RIGHT_GRIP_POSE		,"right_grip_pose"		,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::RIGHT_AIM_POSE		,"right_aim_pose"		,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::RIGHT_TRIGGER		,"right_trigger"		,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_SQUEEZE		,"right_squeeze"		,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_STICK_X		,"right_thumbstick_x"	,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_STICK_Y		,"right_thumbstick_y"	,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_HAPTIC		,"right_haptic"			,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
-		// Pseudo-actions for desktop mode:
-		,{ActionId::MOUSE_LEFT_BUTTON	,"mouse_left"			,"Left Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::MOUSE_RIGHT_BUTTON	,"mouse_right"			,"Right Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		});
-	#ifdef _MSC_VER
-	// Add keyboard keys:
-	for(size_t i=0;i<letters_numbers.size();i++)
-	{
-		std::string name;
-		name+=letters_numbers[i];
-		name+="_key";
-		xr_input_session.AddAction(name.c_str(),name.c_str(),XR_ACTION_TYPE_BOOLEAN_INPUT);
-	}
-	#endif
+	if(xr_instance)
+		return true;
+	if(initInstanceThreadState!=ThreadState::INACTIVE)
+		return false;
+	
+	initInstanceThreadState=ThreadState::STARTING;
+	bool res=internalInitInstance();
+	initInstanceThreadState=ThreadState::INACTIVE;
+	return res;
+}
+
+bool OpenXR::threadedInitInstance()
+{
+	std::lock_guard<std::mutex> lock(instanceMutex);
+	// This should only ever block for a short time.
+	while(initInstanceThreadState!=ThreadState::STARTING);
+	return internalInitInstance();
+}
+
+bool OpenXR::internalInitInstance()
+{
+	initInstanceThreadState=ThreadState::RUNNING;
+//std::cout<<"OpenXR::InitInstance\n";
 	// OpenXR will fail to initialize if we ask for an extension that OpenXR
 	// can't provide! So we need to check our all extensions before 
 	// initializing OpenXR with them. Note that even if the extension is 
@@ -445,10 +426,10 @@ bool OpenXR::InitInstance(const char *app_name)
 		vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
 		xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_exts.data());
 
-		std::cout<<"OpenXR extensions available:\n";
+		//std::cout<<"OpenXR extensions available:\n";
 		for (size_t i = 0; i < xr_exts.size(); i++)
 		{
-			std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
+			//std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
 
 			// Check if we're asking for this extensions, and add it to our use 
 			// list!
@@ -468,68 +449,69 @@ bool OpenXR::InitInstance(const char *app_name)
 			{
 				return strcmp(ext, GetOpenXRGraphicsAPIExtensionName()) == 0;
 			}))
+	{
+		initInstanceThreadState=ThreadState::FINISHED;
 		return false;
+	}
 
 	// Initialize OpenXR with the extensions we've found!
 	XrInstanceCreateInfo createInfo = { XR_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.enabledExtensionCount =(uint32_t) use_extensions.size();
 	createInfo.enabledExtensionNames = use_extensions.data();
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
-	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,app_name);
-	xrCreateInstance(&createInfo, &xr_instance);
+	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,applicationName.c_str());
+	XR_CHECK(xrCreateInstance(&createInfo, &xr_instance));
 	CreateMouseAndKeyboardProfile();
+	if(xr_instance)
+	{
+		// Load extension methods that we'll need for this application! There are
+		// couple of ways to do this, and this is a fairly manual one. See this
+		// file for another way to do it:
+		// https://github.com/maluoi/StereoKit/blob/master/StereoKitC/systems/platform/openxr_extensions.h
+		xrGetInstanceProcAddr(xr_instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrCreateDebugUtilsMessengerEXT));
+		xrGetInstanceProcAddr(xr_instance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrDestroyDebugUtilsMessengerEXT));
+
+		// Set up a really verbose debug log! Great for dev, but turn this off or
+		// down for final builds. WMR doesn't produce much output here, but it
+		// may be more useful for other runtimes?
+		// Here's some extra information about the message types and severities:
+		// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
+	#if TELEPORT_DEBUG_OPENXR
+		XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+		debug_info.messageTypes =
+			XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
+		debug_info.messageSeverities =
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debug_info.userCallback = [](XrDebugUtilsMessageSeverityFlagsEXT severity, XrDebugUtilsMessageTypeFlagsEXT types, const XrDebugUtilsMessengerCallbackDataEXT* msg, void* user_data) {
+			// Print the debug message we got! There's a bunch more info we could
+			// add here too, but this is a pretty good start, and you can always
+			// add a breakpoint this line!
+			std::cout<<fmt::format("{}: {}\n", msg->functionName, msg->message).c_str()<<std::endl;
+
+			// Output to debug window
+			std::cout<<fmt::format( "{}: {}", msg->functionName, msg->message).c_str() << std::endl;
+
+			// Returning XR_TRUE here will force the calling function to fail
+			return (XrBool32)XR_FALSE;
+		};
+		// Start up the debug utils!
+		if (ext_xrCreateDebugUtilsMessengerEXT)
+			ext_xrCreateDebugUtilsMessengerEXT(xr_instance, &debug_info, &xr_debug);
+	#endif
+	}
+	initInstanceThreadState=ThreadState::FINISHED;
 	return (xr_instance!=nullptr);
 }
 
-bool OpenXR::Init(crossplatform::RenderPlatform *r)
+void OpenXR::SetRenderPlatform(crossplatform::RenderPlatform *r)
 {
-	// Check if OpenXR is on this system, if this is null here, the user 
-	// needs to install an OpenXR runtime and ensure it's active!
-	if (xr_instance == nullptr)
-		return false;
 	renderPlatform = r;
-
-	// Load extension methods that we'll need for this application! There's a
-	// couple ways to do this, and this is a fairly manual one. Chek out this
-	// file for another way to do it:
-	// https://github.com/maluoi/StereoKit/blob/master/StereoKitC/systems/platform/openxr_extensions.h
-	xrGetInstanceProcAddr(xr_instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrCreateDebugUtilsMessengerEXT));
-	xrGetInstanceProcAddr(xr_instance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrDestroyDebugUtilsMessengerEXT));
-
-	// Set up a really verbose debug log! Great for dev, but turn this off or
-	// down for final builds. WMR doesn't produce much output here, but it
-	// may be more useful for other runtimes?
-	// Here's some extra information about the message types and severities:
-	// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
-#if TELEPORT_DEBUG_OPENXR
-	XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-	debug_info.messageTypes =
-		XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
-	debug_info.messageSeverities =
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debug_info.userCallback = [](XrDebugUtilsMessageSeverityFlagsEXT severity, XrDebugUtilsMessageTypeFlagsEXT types, const XrDebugUtilsMessengerCallbackDataEXT* msg, void* user_data) {
-		// Print the debug message we got! There's a bunch more info we could
-		// add here too, but this is a pretty good start, and you can always
-		// add a breakpoint this line!
-		std::cout<<fmt::format("{}: {}\n", msg->functionName, msg->message).c_str()<<std::endl;
-
-		// Output to debug window
-		std::cout<<fmt::format( "{}: {}", msg->functionName, msg->message).c_str() << std::endl;
-
-		// Returning XR_TRUE here will force the calling function to fail
-		return (XrBool32)XR_FALSE;
-	};
-	// Start up the debug utils!
-	if (ext_xrCreateDebugUtilsMessengerEXT)
-		ext_xrCreateDebugUtilsMessengerEXT(xr_instance, &debug_info, &xr_debug);
-#endif
-	return true;
 }
 
 const char* left = "user/hand/left";
@@ -554,7 +536,7 @@ void OpenXR::CreateMouseAndKeyboardProfile()
 			std::string path = "/input/keyboard/";
 			const auto& def = xr_input_session.actionDefinitions[i];
 			path += def.name[0];
-			mouseAndKeyboard.Add(xr_instance, xr_input_session.actionDefinitions[i].xrAction, path.c_str());
+			mouseAndKeyboard.Add(xr_instance, xr_input_session.actionDefinitions[i].xrAction, path.c_str(),true);
 		}
 #endif
 		// No need to SuggestBind: OpenXR doesn't know what to do with this!
@@ -672,6 +654,24 @@ void OpenXR::MakeActions()
 	}
 }
 
+void OpenXR::Tick()
+{
+	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
+	{
+		initInstanceThreadState=ThreadState::STARTING;
+		initInstanceThread = std::thread(&OpenXR::threadedInitInstance, this);
+	}
+	else if(initInstanceThreadState==ThreadState::FINISHED)
+	{
+		initInstanceThread.join();
+		initInstanceThreadState=ThreadState::INACTIVE;
+	}
+	else if (HaveXRDevice())
+	{
+		PollEvents();
+		PollActions();
+	}
+}
 
 void OpenXR::PollActions()
 {
@@ -1078,7 +1078,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			XrSpaceLocation space_location {XR_TYPE_SPACE_LOCATION, &space_velocity};
 			space_velocity.velocityFlags=XR_SPACE_VELOCITY_LINEAR_VALID_BIT |XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
 			auto space=xr_input_session.actionDefinitions[def.actionId].space;
-			if(space)
+			if (xr_session&& space)
 			{
 				XrResult		res = xrLocateSpace(space, xr_app_space, lastTime, &space_location);
 				if (XR_UNQUALIFIED_SUCCESS(res) &&
@@ -1260,6 +1260,53 @@ const std::map<avs::uid,NodePoseState> &OpenXR::GetNodePoseStates(avs::uid serve
 	return nodePoseStates;
 }
 
+OpenXR::OpenXR(const char *app_name)
+{
+	applicationName=app_name;
+// Define the actions first - we don't need an XR instance for this.
+	xr_input_session.SetActions( {
+		// Create an action to track the position and orientation of the hands! This is
+		// the controller location, or the center of the palms for actual hands.
+		 // Create an action for listening to the select action! This is primary trigger
+		 // on controllers, and an airtap on HoloLens
+		 {ActionId::SELECT				,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::SHOW_MENU			,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::A					,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::B					,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::X					,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::Y					,"y"					,"Y"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		// Action for left controller
+		,{ActionId::LEFT_GRIP_POSE		,"left_grip_pose"		,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::LEFT_AIM_POSE		,"left_aim_pose"		,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::LEFT_TRIGGER		,"left_trigger"			,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_SQUEEZE		,"left_squeeze"			,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_STICK_X		,"left_thumbstick_x"	,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_STICK_Y		,"left_thumbstick_y"	,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_HAPTIC			,"left_haptic"			,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
+		// Action for right controller
+		,{ActionId::RIGHT_GRIP_POSE		,"right_grip_pose"		,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::RIGHT_AIM_POSE		,"right_aim_pose"		,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::RIGHT_TRIGGER		,"right_trigger"		,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_SQUEEZE		,"right_squeeze"		,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_STICK_X		,"right_thumbstick_x"	,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_STICK_Y		,"right_thumbstick_y"	,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_HAPTIC		,"right_haptic"			,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
+		// Pseudo-actions for desktop mode:
+		,{ActionId::MOUSE_LEFT_BUTTON	,"mouse_left"			,"Left Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::MOUSE_RIGHT_BUTTON	,"mouse_right"			,"Right Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		});
+	#ifdef _MSC_VER
+	// Add keyboard keys:
+	for(size_t i=0;i<letters_numbers.size();i++)
+	{
+		std::string name;
+		name+=letters_numbers[i];
+		name+="_key";
+		xr_input_session.AddAction(name.c_str(),name.c_str(),XR_ACTION_TYPE_BOOLEAN_INPUT);
+	}
+	#endif
+}
+
 void OpenXR::openxr_poll_predicted(XrTime predicted_time)
 {
 	if (xr_session_state != XR_SESSION_STATE_FOCUSED)
@@ -1375,7 +1422,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 		case XR_SESSION_STATE_STOPPING:
 			{
 				xr_session_running = false;
-				xrEndSession(xr_session);
+				EndSession();
 			}
 			break;
 			default:
@@ -1550,9 +1597,8 @@ void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCom
 	previousState.XrSpacePoseInWorld=state.XrSpacePoseInWorld;
 }
 
-void OpenXR::PollEvents(bool& exit)
+void OpenXR::PollEvents()
 {
-	exit = false;
 	XrEventDataBuffer event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
 	//XrResult res;
 	XrEventDataBaseHeader* baseEventHeader = (XrEventDataBaseHeader*)(&event_buffer);
@@ -1613,23 +1659,8 @@ void OpenXR::PollEvents(bool& exit)
 					<<to_string(session_state_changed_event->state)<<
 					" for session "<<(void*)session_state_changed_event->session<<
 					" time "<<(session_state_changed_event->time)<<std::endl;
-
-				switch (session_state_changed_event->state)
-				{
-					case XR_SESSION_STATE_FOCUSED:
-						std::cout<<	"Focused = true"<<std::endl;
-						break;
-					case XR_SESSION_STATE_VISIBLE:
-						std::cout<<	"Focused = false"<<std::endl;
-						break;
-					case XR_SESSION_STATE_READY:
-					case XR_SESSION_STATE_STOPPING:
-						HandleSessionStateChanges( session_state_changed_event->state);
-						break;
-					default:
-						break;
-				}
-				xr_session_state=session_state_changed_event->state;
+					
+				HandleSessionStateChanges( session_state_changed_event->state);
 			} break;
 			default:
 				std::cout<<"xrPollEvent: Unknown event"<<std::endl;
@@ -1680,7 +1711,7 @@ void OpenXR::PollEvents(bool& exit)
 			{
 	RedirectStdCoutCerr();
 				XrEventDataSessionStateChanged* changed = (XrEventDataSessionStateChanged*)&event_buffer;
-				xr_session_state = changed->state;
+					xr_session_state = changed->state;
 				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "<<changed->state
 					<<" for session "<<(void*)changed->session<<" at time "<<changed->time<<std::endl;
 				HandleSessionStateChanges(xr_session_state);
@@ -1709,11 +1740,36 @@ bool OpenXR::HaveXRDevice() const
 	return OpenXR::haveXRDevice;
 }
 
-bool OpenXR::IsXRDeviceActive() const
+bool OpenXR::IsXRDeviceRendering() const
 {
 	if(!OpenXR::haveXRDevice)
 		return false;
 	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
+}
+
+bool OpenXR::CanStartSession() const
+{
+	if(IsXRDeviceRendering())
+		return false;
+	if(xr_session!=XR_NULL_HANDLE)
+		return false;
+	if(xr_system_id==XR_NULL_SYSTEM_ID)
+	{
+		if(xr_instance==XR_NULL_HANDLE)
+			return false;
+		// Request a form factor from the device (HMD, Handheld, etc.)
+		// If the device is not on, not connected, or its app is not running, this may fail here:
+		XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
+		systemInfo.formFactor = app_config_form;
+		if (!CheckXrResult(xr_instance,xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
+		{
+			TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
+			return false;
+		}
+	}
+	if(xr_system_id!=XR_NULL_SYSTEM_ID)
+		return true;
+	return false;
 }
 
 const avs::Pose& OpenXR::GetHeadPose_StageSpace() const
@@ -2057,6 +2113,15 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 
 void OpenXR::Shutdown()
 {
+	EndSession();
+	if (xr_debug != XR_NULL_HANDLE)
+		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);
+	if (xr_instance != XR_NULL_HANDLE)
+		xrDestroyInstance(xr_instance);
+}
+
+void OpenXR::EndSession()
+{
 	haveXRDevice = false;
 	// We used a graphics API to initialize the swapchain data, so we'll
 	// give it a chance to release anythig here!
@@ -2082,11 +2147,9 @@ void OpenXR::Shutdown()
 		xrDestroySpace(xr_app_space);
 	if (xr_session != XR_NULL_HANDLE)
 		xrDestroySession(xr_session);
-	if (xr_debug != XR_NULL_HANDLE)
-		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);
-	if (xr_instance != XR_NULL_HANDLE)
-		xrDestroyInstance(xr_instance);
+	xr_session=0;
 }
+
 
 static const char *stringOf(XrSessionState s)
 {

@@ -41,6 +41,7 @@ using namespace crossplatform;
 ImFont *defaultFont = nullptr;
 ImFont *smallFont=nullptr;
 ImFont *symbolFont=nullptr;
+ImFont *smallSymbolFont=nullptr;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 PlatformWindow* platformWindow = nullptr;
@@ -59,7 +60,8 @@ PlatformWindow* platformWindow = nullptr;
 		if(timer<=0)\
 			ImGui::SetTooltip(txt);\
 	}
-
+	
+ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
 void Gui::SetPlatformWindow(PlatformWindow *w)
 {
 #ifndef _MSC_VER
@@ -203,11 +205,19 @@ void Gui::DarkStyle()
 	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
+
 void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 {
 	renderPlatform=r;
 	if(!r)
 		return;
+	SAFE_DELETE(vrHeadsetIconTexture);
+	vrHeadsetIconTexture=renderPlatform->CreateTexture("headsetIconLine.png");
+	imgui_vrHeadsetIconTexture.height=20;
+	imgui_vrHeadsetIconTexture.width=20;
+	imgui_vrHeadsetIconTexture.mip=0;
+	imgui_vrHeadsetIconTexture.slice=0;
+	imgui_vrHeadsetIconTexture.texture=vrHeadsetIconTexture;
 	for(uint16_t i=0;i<VK_MAX;i++)
 	{
 		KeysDown[i]=false;
@@ -296,7 +306,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_ARROW_LEFT);
 		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);
 		builder.BuildRanges(&glyph_ranges2);							// Build the final result (ordered ranges with all the unique characters submitted)
-		symbolFont = AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2.Data);
+		smallSymbolFont = AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	io.ConfigFlags|=ImGuiConfigFlags_IsTouchScreen;// VR more like a touch screen.
@@ -312,7 +322,10 @@ void Gui::InvalidateDeviceObjects()
 	#endif
 		ImGui_ImplPlatform_Shutdown();
 		ImGui::DestroyContext();
+		imgui_vrHeadsetIconTexture.texture=0;
+		SAFE_DELETE(vrHeadsetIconTexture);
 		renderPlatform=nullptr;
+
 	}
 }
 
@@ -1189,14 +1202,14 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 			const auto& s = streams[i];
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##chnl", fmt::format("{0}", i).c_str());
+			ImGui::LabelText("##chnl", "%d",i);
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##slabel", s.label.c_str());
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##kps_in", fmt::format("{0:.1f}", kps_in).c_str());
+			ImGui::LabelText("##kps_in", "%3.1f",kps_in);
 			ImGui::TableNextColumn();
 			if(kps_out>0)
-				ImGui::LabelText("##kps_out", fmt::format("{0:.1f}", kps_out).c_str());
+				ImGui::LabelText("##kps_out", "%3.1f",kps_out);
 		}
 		ImGui::EndTable();
 	}
@@ -1560,6 +1573,15 @@ void Gui::MenuBar2D()
 				bookmarks_pos = { ImGui::GetWindowWidth(),pos.y };
 			}
 		}
+		ImGui::SameLine();
+		ImGui::BeginDisabled(!openXR.CanStartSession());
+		if(ImGui::ImageButton("##start_vr", &imgui_vrHeadsetIconTexture, ImVec2(20, 20),ImVec2(0,0),ImVec2(1,1),ImVec4(0,0,0,0),ImVec4(0,0,0,1.0f)))
+		{
+			startXRSessionHandler();
+		}
+		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			TIMED_TOOLTIP("Activate VR");
+		ImGui::EndDisabled();
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 			TIMED_TOOLTIP("Bookmarks");
 		ImGui::SameLine();
@@ -1578,7 +1600,7 @@ void Gui::MenuBar2D()
 	ImGui::PopStyleColor();
 }
 
-void Gui::Render2D(GraphicsDeviceContext& deviceContext)
+void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 {
 	LightStyle();
 #ifdef _MSC_VER
@@ -1684,22 +1706,17 @@ void Gui::DevModeOptions()
 	ImGui::Checkbox("##showGeometryOffline", &config.options.showGeometryOffline);
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::LabelText("##labelGui2D", "2D User Interface");
+	ImGui::LabelText("##labelAlwaysShow3dGui", "Force 3D User Interface");
 	ImGui::TableNextColumn();
-	ImGui::Checkbox("##Gui2D", &config.options.gui2D);
+	ImGui::Checkbox("##AlwaysShow3dGui", &config.options.alwaysShow3dGui);
 }
-void Gui::Render(GraphicsDeviceContext& deviceContext)
+void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;
+	auto& config = client::Config::GetInstance();
 	if(!visible)
 		return;
-	auto& config = client::Config::GetInstance();
-	if (config.options.gui2D)
-	{
-		Render2D(deviceContext);
-		return;
-	}
 	DarkStyle();
 	// Start the Dear ImGui frame
 #ifdef _MSC_VER
