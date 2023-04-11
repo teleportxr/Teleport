@@ -641,7 +641,7 @@ void SessionClient::SendReceivedResources()
 			auto sentRequestIt = mSentResourceRequests.find(id);
 			if(sentRequestIt != mSentResourceRequests.end())
 			{
-				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
+//				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
 				mSentResourceRequests.erase(sentRequestIt);
 			}
 		}

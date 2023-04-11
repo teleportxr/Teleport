@@ -896,7 +896,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& avsNode)
 			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 			node->SetMaterial(i, placeholderMaterial);
 
-			TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material_" << avsNode.materials[i] << std::endl;
+//			TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material_" << avsNode.materials[i] << std::endl;
 
 			isMissingResources = true;
 			geometryCache->GetMissingResource(avsNode.materials[i], avs::GeometryPayloadType::Material).waitingResources.insert(node);

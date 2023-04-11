@@ -35,7 +35,7 @@ clientrender::MissingResource& GeometryCache::GetMissingResource(avs::uid id, av
 	{
 		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 		m_ResourceRequests.push_back(id);
-		TELEPORT_INTERNAL_COUT("Requested resource {0} of type {1}",id, stringOf(resourceType));
+//		TELEPORT_INTERNAL_COUT("Requested resource {0} of type {1}",id, stringOf(resourceType));
 	}
 	if(resourceType!=missingPair->second.resourceType)
 	{

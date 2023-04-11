@@ -1109,7 +1109,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		RenderView(deviceContext);
 	}
 	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
-	if(!gui.IsVisible())
+	if(!gui.IsVisible()&&!show_osd)
 		gui.Render2DGUI(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	// We must deactivate the depth buffer here, in order to use it as a texture:
