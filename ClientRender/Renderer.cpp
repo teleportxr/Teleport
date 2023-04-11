@@ -299,7 +299,7 @@ void Renderer::InitLocalGeometry()
 		renderState.openXR->SetFallbackBinding(client::MOUSE_RIGHT_BUTTON	,"mouse/right/click");
 
 		// Hard-code the menu button
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
+		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
 	}
@@ -513,6 +513,12 @@ avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
 	return origin_pose;
 }
 
+void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
+{
+	RenderView(deviceContext);
+	gui.Render3DGUI(deviceContext);
+}
+
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
@@ -618,19 +624,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
 
-	if(renderState.openXR->IsSessionActive())
-	{
-		gui.Render3DGUI(deviceContext);
-		if (!sessionClient->IsConnected())
-		{
-			if (!gui.IsVisible())
-			{
-				ShowHideGui();
-			}
-		}
-	}
-	else
-		gui.Render2DGUI(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
 	if ((have_vr_device || override_have_vr_device )&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
 	{	
@@ -707,24 +700,6 @@ void Renderer::Update(double timestamp_ms)
 		start_xr_session=false;
 		end_xr_session=false;
 	}
-				/*	static uint64_t retry_wait= 16384;
-					static uint64_t c=1;
-					c--;
-					if(!c)
-					{
-						if(useOpenXR.StartSession())
-						{
-							useOpenXR.MakeActions();
-							retry_wait=256;
-							c=retry_wait;
-						}
-						else
-						{
-							c=retry_wait;
-							if(retry_wait< 16384*16384)
-								retry_wait*=2;
-						}
-					}*/
 }
 
 
@@ -744,6 +719,16 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		sessionClient->SetGeometryCache(&ir->geometryCache);
 		config.StoreRecentURL(fmt::format("{0}:{1}",sessionClient->GetServerIP(),sessionClient->GetServerDiscoveryPort()).c_str());
 		gui.Hide();
+	}
+	if(renderState.openXR->IsSessionActive())
+	{
+		if (!sessionClient->IsConnected())
+		{
+			if (!gui.IsVisible())
+			{
+				ShowHideGui();
+			}
+		}
 	}
 	using_vr = have_headset;
 	vec2 clientspace_input;
@@ -1123,7 +1108,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	{
 		RenderView(deviceContext);
 	}
-
+	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
+	if(!gui.IsVisible())
+		gui.Render2DGUI(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);

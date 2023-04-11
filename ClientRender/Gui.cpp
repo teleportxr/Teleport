@@ -24,6 +24,7 @@
 #include <direct.h>
 #include <Windows.h>
 #endif
+using namespace std::string_literals;
 #include "Platform/Core/StringFunctions.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/OpenXR.h"
@@ -352,13 +353,7 @@ void Gui::Show()
 	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 #endif
 	visible			= true;
-	menu_pos		= view_pos;
-	static float z_offset = -.3f;
-	static float distance = 0.4f;
-	azimuth			= atan2f(-view_dir.x, view_dir.y);
-	tilt			= 3.1415926536f / 4.0f;
-	vec3 menu_offset = { distance * -sin(azimuth),distance * cos(azimuth),z_offset };
-	menu_pos		+= menu_offset;
+	reset_menu_pos	=true;
 	keys_pressed.clear();
 }
 
@@ -1573,15 +1568,6 @@ void Gui::MenuBar2D()
 				bookmarks_pos = { ImGui::GetWindowWidth(),pos.y };
 			}
 		}
-		ImGui::SameLine();
-		ImGui::BeginDisabled(!openXR.CanStartSession());
-		if(ImGui::ImageButton("##start_vr", &imgui_vrHeadsetIconTexture, ImVec2(20, 20),ImVec2(0,0),ImVec2(1,1),ImVec4(0,0,0,0),ImVec4(0,0,0,1.0f)))
-		{
-			startXRSessionHandler();
-		}
-		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
-			TIMED_TOOLTIP("Activate VR");
-		ImGui::EndDisabled();
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 			TIMED_TOOLTIP("Bookmarks");
 		ImGui::SameLine();
@@ -1602,15 +1588,17 @@ void Gui::MenuBar2D()
 
 void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 {
+	view_pos = deviceContext.viewStruct.cam_pos;
+	view_dir = deviceContext.viewStruct.view_dir;
 	LightStyle();
+	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 #ifdef _MSC_VER
 	ImGui_ImplWin32_NewFrame();
 #endif
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
-	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
 	ImGuiIO& io = ImGui::GetIO();
 #ifdef __ANDROID__
@@ -1630,7 +1618,40 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 		MenuBar2D();
 	}
 	EndMainMenuBar();
-	ImGui::End();
+	{
+		auto& style = ImGui::GetStyle();
+		ImVec4 transp= ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+		ImGui::PushStyleColor(ImGuiCol_Button,style.Colors[ImGuiCol_WindowBg]);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg,transp);
+		ImGui::PushStyleColor(ImGuiCol_Border,transp);
+		
+		ImVec2 pos = { vp.w - 100.f ,vp.h-100.f };
+		ImGui::SetNextWindowPos(pos);
+
+		ImGui::Begin("btn",0,window_flags);
+			//ImGui::SameLine();
+		ImGui::BeginDisabled(!openXR.CanStartSession());
+		const char *systname=openXR.GetSystemName();
+		if(ImGui::ImageButton("##start_vr", &imgui_vrHeadsetIconTexture, ImVec2(40, 40),ImVec2(0,0),ImVec2(1,1),ImVec4(0,0,0,0),ImVec4(0,0,0,1.0f)))
+		{
+			startXRSessionHandler();
+		}
+		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		{
+			if(systname)
+			{
+				TIMED_TOOLTIP(("Activate VR: "s+systname).c_str());
+			}
+			else
+				TIMED_TOOLTIP("Activate VR");
+		}
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		ImGui::EndDisabled();
+		ImGui::End();
+	}
+	//ImGui::End();
 	if (show_options)
 	{
 		ShowSettings2D();
@@ -1717,6 +1738,22 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 	auto& config = client::Config::GetInstance();
 	if(!visible)
 		return;
+	vec3 pos_diff=view_pos-menu_pos;
+	if(length(pos_diff)>1.4f)
+	{
+		reset_menu_pos=true;
+	}
+	if(reset_menu_pos)
+	{
+		menu_pos		= view_pos;
+		static float z_offset = -.3f;
+		static float distance = 0.4f;
+		azimuth			= atan2f(-view_dir.x, view_dir.y);
+		tilt			= 3.1415926536f / 4.0f;
+		vec3 menu_offset = { distance * -sin(azimuth),distance * cos(azimuth),z_offset };
+		menu_pos		+= menu_offset;
+		reset_menu_pos=false;
+	}
 	DarkStyle();
 	// Start the Dear ImGui frame
 #ifdef _MSC_VER

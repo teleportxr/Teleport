@@ -144,6 +144,7 @@ namespace teleport
 		std::function<void()> startXRSessionHandler;
 		std::function<void()> endXRSessionHandler;
 		bool visible = false;
+		bool reset_menu_pos=false;
 		avs::DecoderStatus videoStatus;
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;

@@ -65,6 +65,7 @@ namespace teleport
 			INVALID=0,
 			SELECT,
 			SHOW_MENU,
+			SYSTEM,
 			A,
 			B,
 			X,
@@ -258,8 +259,9 @@ namespace teleport
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
 			void PollEvents();
 			bool HaveXRDevice() const;
+			const char * GetSystemName() const;
 			bool IsXRDeviceRendering() const;
-			bool CanStartSession() const;
+			bool CanStartSession() ;
 			bool RequestsQuit() const
 			{
 				return quit;
@@ -357,14 +359,14 @@ namespace teleport
 			XrViewConfigurationType					app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 			XrInstance								xr_instance = {};
-
+			 XrSystemProperties				xr_system_properties = {};	
 			XrSession								xr_session = {};
 			XrSessionState							xr_session_state = XR_SESSION_STATE_UNKNOWN;
 			bool									xr_session_running = false;
 			XrSpace									xr_app_space = {};
 			XrSpace									xr_head_space = {};
 			// Mutable because we store it for speed.
-			mutable XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
+			 XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
 			InputSession							xr_input_session = { };
 			XrEnvironmentBlendMode					xr_environment_blend = {XR_ENVIRONMENT_BLEND_MODE_OPAQUE};
 			XrDebugUtilsMessengerEXT				xr_debug = {};

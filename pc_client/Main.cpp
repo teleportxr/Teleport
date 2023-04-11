@@ -163,7 +163,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
-	ShutdownRenderer(msg.hwnd);
+//	ShutdownRenderer(msg.hwnd);
 	teleport::client::DiscoveryService::ShutdownInstance();
 	// Needed for asynchronous device creation in XAudio2
 	CoUninitialize();
@@ -322,7 +322,7 @@ static bool use_debug=false;
 	// Now renderPlatform is initialized, can init OpenXR:
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
-	renderDelegate = std::bind(&clientrender::Renderer::RenderView, clientRenderer, std::placeholders::_1);
+	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, clientRenderer, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
 	auto &config=client::Config::GetInstance();
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());

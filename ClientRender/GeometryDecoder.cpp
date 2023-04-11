@@ -29,7 +29,6 @@
 
 using std::string;
 using namespace std::string_literals;
-using namespace std::string_literals;
 
 template<typename T> T get(const uint8_t* data, size_t* offset)
 {

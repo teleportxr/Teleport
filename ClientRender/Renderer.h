@@ -58,6 +58,7 @@ namespace clientrender
 		}
 		void ChangePass(ShaderMode newShaderMode);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void RenderVRView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
 		bool OSDVisible() const

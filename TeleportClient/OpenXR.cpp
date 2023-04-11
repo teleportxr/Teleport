@@ -24,6 +24,7 @@ const char* teleport::client::stringof(ActionId a)
 	{
 		case SELECT				  : return "SELECT";
 		case SHOW_MENU			  : return "SHOW_MENU";
+		case SYSTEM				  : return "SYSTEM";
 		case A					  : return "A";
 		case B					  : return "B";
 		case X					  : return "X";
@@ -330,7 +331,7 @@ void InteractionProfile::Init(XrInstance &xr_instance,const char *pr,std::initia
 			}
 			if(!elem.action)
 			{
-				TELEPORT_CERR<<"InteractionProfile: "<<pr<<": Failed to create suggested binding "<<elem.complete_path<<" as action is null."<<std::endl;
+//				TELEPORT_CERR<<"InteractionProfile: "<<pr<<": Failed to create suggested binding "<<elem.complete_path<<" as action is null."<<std::endl;
 			}
 		}
 	}
@@ -557,7 +558,7 @@ void OpenXR::MakeActions()
 	// accessibility settings.
 	#define LEFT	"/user/hand/left"
 	#define RIGHT	"/user/hand/right"
-	interactionProfiles.resize(4);
+	interactionProfiles.resize(5);
 	
 	auto SuggestBind = [this](InteractionProfile &p)
 	{
@@ -582,6 +583,7 @@ void OpenXR::MakeActions()
 	InteractionProfile &khrSimpleIP			=interactionProfiles[1];
 	InteractionProfile &valveIndexIP		=interactionProfiles[2];
 	InteractionProfile &oculusTouch			=interactionProfiles[3];
+	InteractionProfile &oculusGo			=interactionProfiles[4];
 	khrSimpleIP.Init(xr_instance
 			,"/interaction_profiles/khr/simple_controller"
 			,{
@@ -640,6 +642,29 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(oculusTouch);
+	oculusGo.Init(xr_instance
+		, "/interaction_profiles/oculus/go_controller"
+		, {
+			 {xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction	,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction		, LEFT "/input/aim/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction		,RIGHT "/input/aim/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction			, LEFT "/input/menu/click" }
+			,{xr_input_session.actionDefinitions[ActionId::SYSTEM].xrAction				, LEFT "/input/system/click" }
+			,{xr_input_session.actionDefinitions[ActionId::A].xrAction					,RIGHT "/input/a/click" }
+			,{xr_input_session.actionDefinitions[ActionId::B].xrAction					,RIGHT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[ActionId::X].xrAction					, LEFT "/input/x/click" }
+			,{xr_input_session.actionDefinitions[ActionId::Y].xrAction					, LEFT "/input/y/click" }
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction		, LEFT "/input/trigger/value" }
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value" }
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction		, LEFT "/input/squeeze/value" }
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction		,RIGHT "/input/squeeze/value" }
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_X].xrAction		, LEFT "/input/thumbstick/x"	}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_Y].xrAction		, LEFT "/input/thumbstick/y"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
+		});
+	SuggestBind(oculusGo);
 	
 	// Attach the action set we just made to the session
 	XrSessionActionSetsAttachInfo attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
@@ -1271,6 +1296,7 @@ OpenXR::OpenXR(const char *app_name)
 		 // on controllers, and an airtap on HoloLens
 		 {ActionId::SELECT				,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::SHOW_MENU			,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::SYSTEM				,"system"				,"System"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::A					,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::B					,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::X					,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
@@ -1444,8 +1470,12 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 	locate_info.viewConfigurationType = app_config_view;
 	locate_info.displayTime = predictedTime;
 	locate_info.space = xr_app_space;
-	xrLocateViews(xr_session, &locate_info, &view_state, (uint32_t)xr_views.size(), &view_count, xr_views.data());
-
+	XrResult res=xrLocateViews(xr_session, &locate_info, &view_state, (uint32_t)xr_views.size(), &view_count, xr_views.data());
+	if(res!=XR_SUCCESS)
+	{
+		TELEPORT_COUT<<"xrLocateViews failed."<<std::endl;
+		return false;
+	}
 	projection_views.resize(view_count);
 	spacewarp_views.resize(view_count);
 
@@ -1747,7 +1777,7 @@ bool OpenXR::IsXRDeviceRendering() const
 	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
 }
 
-bool OpenXR::CanStartSession() const
+bool OpenXR::CanStartSession() 
 {
 	if(IsXRDeviceRendering())
 		return false;
@@ -1766,10 +1796,17 @@ bool OpenXR::CanStartSession() const
 			TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
 			return false;
 		}
+		xrGetSystemProperties(xr_instance,xr_system_id,&xr_system_properties);
+		TELEPORT_COUT<<"XR System found: "<<xr_system_properties.systemName<<std::endl;
 	}
 	if(xr_system_id!=XR_NULL_SYSTEM_ID)
 		return true;
 	return false;
+}
+
+const char * OpenXR::GetSystemName() const
+{
+	return xr_system_properties.systemName;
 }
 
 const avs::Pose& OpenXR::GetHeadPose_StageSpace() const
