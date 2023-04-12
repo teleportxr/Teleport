@@ -403,25 +403,30 @@ bool OpenXR::threadedInitInstance()
 
 bool OpenXR::internalInitInstance()
 {
-	initInstanceThreadState=ThreadState::RUNNING;
-//std::cout<<"OpenXR::InitInstance\n";
-	// OpenXR will fail to initialize if we ask for an extension that OpenXR
-	// can't provide! So we need to check our all extensions before 
-	// initializing OpenXR with them. Note that even if the extension is 
-	// present, it's still possible you may not be able to use it. For 
-	// example: the hand tracking extension may be present, but the hand
-	// sensor might not be plugged in or turned on. There are often 
-	// additional checks that should be made before using certain features!
+	initInstanceThreadState = ThreadState::RUNNING;
+	//std::cout<<"OpenXR::InitInstance\n";
+		// OpenXR will fail to initialize if we ask for an extension that OpenXR
+		// can't provide! So we need to check our all extensions before 
+		// initializing OpenXR with them. Note that even if the extension is 
+		// present, it's still possible you may not be able to use it. For 
+		// example: the hand tracking extension may be present, but the hand
+		// sensor might not be plugged in or turned on. There are often 
+		// additional checks that should be made before using certain features!
 	vector<const char*> use_extensions;
 	vector<std::string> ask_extensions;
-	ask_extensions=GetRequiredExtensions();
-	
+	ask_extensions = GetRequiredExtensions();
+
 	// We'll get a list of extensions that OpenXR provides using this 
 	// enumerate pattern. OpenXR often uses a two-call enumeration pattern 
 	// where the first call will tell you how much memory to allocate, and
 	// the second call will provide you with the actual data!
 	uint32_t ext_count = 0;
-	xrEnumerateInstanceExtensionProperties(nullptr, 0, &ext_count, nullptr);
+	XrResult res = xrEnumerateInstanceExtensionProperties(nullptr, 0, &ext_count, nullptr);
+	if (res != XR_SUCCESS)
+	{
+		initInstanceThreadState = ThreadState::FAILED;
+		return false;
+	}
 	if(ext_count)
 	{
 		vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });

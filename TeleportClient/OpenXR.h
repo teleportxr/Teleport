@@ -37,7 +37,8 @@ namespace teleport
 			INACTIVE,
 			STARTING,
 			RUNNING,
-			FINISHED
+			FINISHED,
+			FAILED
 		};
 		DECLARE_TO_STRING_FUNC(XrReferenceSpaceType);
 		DECLARE_TO_STRING_FUNC(XrViewConfigurationType);

@@ -153,7 +153,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
-    MSG msg;
+	MSG msg;
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
@@ -261,7 +261,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	displaySurfaceManager.Initialize(renderPlatform);
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-static bool use_debug=false;
+static bool use_debug=true;
 	gdi->Initialize(use_debug, false, false);
 #else
 	gdi->Initialize(false, false, false);
