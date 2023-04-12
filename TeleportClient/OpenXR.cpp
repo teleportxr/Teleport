@@ -395,10 +395,14 @@ bool OpenXR::InitInstance()
 
 bool OpenXR::threadedInitInstance()
 {
+#ifndef FIX_BROKEN
 	std::lock_guard<std::mutex> lock(instanceMutex);
 	// This should only ever block for a short time.
 	while(initInstanceThreadState!=ThreadState::STARTING);
 	return internalInitInstance();
+#else
+	return false;
+#endif
 }
 
 bool OpenXR::internalInitInstance()
@@ -684,6 +688,11 @@ void OpenXR::MakeActions()
 	}
 }
 
+OpenXR::~OpenXR()
+{
+	if(initInstanceThread.joinable())
+		initInstanceThread.join();
+}
 void OpenXR::Tick()
 {
 	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)

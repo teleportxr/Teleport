@@ -64,21 +64,25 @@ void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform* r, cli
 	};
 
 	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1) ;
+	tci.name = "whiteBGRA";
 	(*tci.images)[0].resize(sizeof(whiteBGRA));
 	memcpy((*tci.images)[0].data(), &whiteBGRA, sizeof(whiteBGRA));
 	m_DummyWhite->Create(tci);
 
 	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	tci.name = "normalRGBA";
 	(*tci.images)[0].resize(sizeof(normalRGBA));
 	memcpy((*tci.images)[0].data(), &normalRGBA, sizeof(normalRGBA));
 	m_DummyNormal->Create(tci);
 
 	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	tci.name = "combinedBGRA";
 	(*tci.images)[0].resize(sizeof(combinedBGRA));
 	memcpy((*tci.images)[0].data(), &combinedBGRA, sizeof(combinedBGRA));
 	m_DummyCombined->Create(tci);
 
 	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	tci.name = "blackBGRA";
 	(*tci.images)[0].resize(sizeof(blackBGRA));
 	memcpy((*tci.images)[0].data(), &blackBGRA, sizeof(blackBGRA));
 	m_DummyBlack->Create(tci);

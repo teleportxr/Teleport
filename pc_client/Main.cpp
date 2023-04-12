@@ -34,12 +34,10 @@ VisualStudioDebugOutput debug_buffer(true,nullptr, 128);
 #if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
-platform::dx12::RenderPlatform renderPlatformImpl;
 platform::dx12::DeviceManager deviceManager;
 #else
 #include "Platform/DirectX11/RenderPlatform.h"
 #include "Platform/DirectX11/DeviceManager.h"
-platform::dx11::RenderPlatform renderPlatformImpl;
 platform::dx11::DeviceManager deviceManager;
 #endif
 #include "UseOpenXR.h"
@@ -163,7 +161,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
-//	ShutdownRenderer(msg.hwnd);
+	ShutdownRenderer(msg.hwnd);
 	teleport::client::DiscoveryService::ShutdownInstance();
 	// Needed for asynchronous device creation in XAudio2
 	CoUninitialize();
@@ -247,6 +245,8 @@ void ShutdownRenderer(HWND hWnd)
 	clientRenderer=nullptr;
 	delete sessionClient;
 	sessionClient=nullptr;
+	delete renderPlatform;
+	renderPlatform = nullptr;
 }
 #define STRINGIFY(a) STRINGIFY2(a)
 #define STRINGIFY2(a) #a
@@ -257,7 +257,11 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	clientRenderer=new clientrender::Renderer(gui);
 	gdi = &deviceManager;
 	dsmi = &displaySurfaceManager;
-	renderPlatform = &renderPlatformImpl;
+#if TELEPORT_CLIENT_USE_D3D12
+	renderPlatform = new dx12::RenderPlatform();
+#else
+	renderPlatform = new dx11::RenderPlatform();
+#endif
 	displaySurfaceManager.Initialize(renderPlatform);
 
 	// Pass "true" for first argument to deviceManager to use API debugging:
@@ -346,23 +350,7 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y,int w,int h);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-#ifdef DEBUG_KEYS
-	switch (message)
-	{
-	case WM_KEYDOWN:
-		cout << "Key down" << std::endl;
-		break;
-	case WM_KEYUP:
-		cout << "Key up" << std::endl;
-		break;
-	case WM_LBUTTONDOWN:
-		cout << "Left button down" << std::endl;
-		break;
-	case WM_LBUTTONUP:
-		cout << "Left button up" << std::endl;
-		break;
-	};
-#endif
+	//return 0;
 	bool ui_handled=false;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{
@@ -499,12 +487,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-				// PAINTSTRUCT ps;
-				// BeginPaint(hWnd, &ps);
 				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
 
 				clientRenderer->Update(timestamp_ms);
 				useOpenXR.Tick();
+#ifndef FIX_BROKEN
 				static double fTime=0.0;
 				static platform::core::Timer t;
 				float time_step=t.UpdateTime()/1000.0f;
@@ -553,6 +540,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					cpuProfiler.EndFrame();
 					SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				}
+#endif
 				displaySurfaceManager.EndFrame();
 				renderPlatform->EndFrame();
 			}
@@ -560,7 +548,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_DESTROY:
 		client::SessionClient::DestroySessionClients();
-		ShutdownRenderer(hWnd);
+		//ShutdownRenderer(hWnd);
         PostQuitMessage(0);
         break;
     default:
