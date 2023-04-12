@@ -259,13 +259,15 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	dsmi = &displaySurfaceManager;
 	renderPlatform = &renderPlatformImpl;
 	displaySurfaceManager.Initialize(renderPlatform);
+
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-static bool use_debug=true;
-	gdi->Initialize(use_debug, false, false);
+	static bool use_debug=true;
 #else
-	gdi->Initialize(false, false, false);
+	static bool use_debug=false;
 #endif
+	gdi->Initialize(use_debug, false, false);
+
 	std::string src_dir = STRINGIFY(CMAKE_SOURCE_DIR);
 	std::string build_dir = STRINGIFY(CMAKE_BINARY_DIR);
 	if (teleport_path != "")
