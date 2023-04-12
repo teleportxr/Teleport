@@ -638,7 +638,7 @@ void ResourceCreator::CreateFontAtlas(avs::uid id,teleport::core::FontAtlas &fon
 		incompleteTextCanvas->missingFontAtlasUid=0;
 		std::shared_ptr<TextCanvas> textCanvas = std::static_pointer_cast<TextCanvas>(*it);
 		textCanvas->SetFontAtlas(f);
-		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteNode->id,"",id,"");
+		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteTextCanvas->id,"",id,"");
 		// The TextCanvas is complete
 	}
 }
@@ -659,7 +659,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 	// The fontAtlas hasn't arrived yet. Mark it as missing.
 	if (!fontAtlas)
 	{
-		RESOURCECREATOR_DEBUG_COUT( "TextCanvas {0} missing fontAtlas {1}",id,textCanvas->textCanvasCreateInfo.font);
+		RESOURCECREATOR_DEBUG_COUT( "TextCanvas {0} missing fontAtlas {1}", textCanvasCreateInfo.uid,textCanvas->textCanvasCreateInfo.font);
 		clientrender::MissingResource& missing=geometryCache->GetMissingResource(textCanvas->textCanvasCreateInfo.font, avs::GeometryPayloadType::FontAtlas);
 		std::shared_ptr<IncompleteTextCanvas> i = textCanvas;
 		missing.waitingResources.insert(i);
@@ -1056,7 +1056,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 				case avs::GeometryPayloadType::FontAtlas:
 					{
 						std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
-						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})",incompleteNode->id,id,textureInfo.name);
+						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})", incompleteFontAtlas->id,id,textureInfo.name);
 
 						geometryCache->CompleteResource(incompleteFontAtlas->id);
 					}
@@ -1354,7 +1354,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 		{
 			if (transcoding.compressionFormat == avs::TextureCompression::PNG)
 			{
-				RESOURCECREATOR_DEBUG_COUT("Transcoding  {0}with PNG",transcoding.name.c_str());
+				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with PNG",transcoding.name.c_str());
 				int mipWidth=0, mipHeight=0;
 				uint8_t *srcPtr=transcoding.data.data();
 				uint8_t *basePtr=srcPtr;
@@ -1399,6 +1399,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				if (transcoding.textureCI->images->size() != 0)
 				{
+					//TELEPORT_CERR << "Texture \"" << transcoding.name << "\" uid "<< transcoding.texture_uid<<", Type "<<int(transcoding.textureCI->type) << std::endl;
 					CompleteTexture(transcoding.texture_uid, *(transcoding.textureCI));
 				}
 				else

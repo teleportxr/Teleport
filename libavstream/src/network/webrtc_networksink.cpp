@@ -653,7 +653,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			std::cout << "DataChannel "<<id<<"opened" << std::endl;
+			std::cout << "DataChannel "<<id<<" opened" << std::endl;
 		});
 
 	dc->onClosed([this,id]()

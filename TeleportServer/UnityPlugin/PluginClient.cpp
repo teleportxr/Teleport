@@ -57,7 +57,7 @@ using namespace teleport;
 using namespace server;
 
 
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP,int discovery_port)
+bool Client_StartSession(avs::uid clientID, std::string clientIP,int discovery_port)
 {
 	if (!clientID || clientIP.size() == 0)
 		return false;
