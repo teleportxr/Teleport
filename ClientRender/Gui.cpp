@@ -1588,8 +1588,6 @@ void Gui::MenuBar2D()
 
 void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 {
-	view_pos = deviceContext.viewStruct.cam_pos;
-	view_dir = deviceContext.viewStruct.view_dir;
 	LightStyle();
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
