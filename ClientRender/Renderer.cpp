@@ -876,7 +876,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break; 
 		}
 	}
-	if (!bKeyDown)
+	if (!bKeyDown && ! gui.URLInputActive())
 	{
 		switch (wParam)
 		{
