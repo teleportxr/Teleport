@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2022 Simul Software Ltd
 
 #include <iostream>
+#include "network/webrtc_common.h"
 #include "libavstream/network/webrtc_networksource.h"
 #include <ElasticFrameProtocol.h>
 #include <libavstream/queue.hpp>
@@ -253,8 +254,15 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 {
 	rtc::Description rtcDescription(offer,"offer");
 	rtc::Configuration config;
-	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
-	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
+	for(size_t i=0;i<1000;i++)
+	{
+		const char *srv=iceServers[i];
+		if(!srv)
+			break;
+		config.iceServers.emplace_back(srv);
+	}
+	//"stun:stun.stunprotocol.org:3478");
+	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = createClientPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1");
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
