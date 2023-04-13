@@ -627,6 +627,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
+	gui.Render3DGUI(deviceContext);
 
 	renderState.selected_uid=gui.GetSelectedUid();
 	if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
