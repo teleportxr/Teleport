@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2023 Simul Software Ltd
 
 #include "libavstream/network/webrtc_networksink.h"
+#include "network/webrtc_common.h"
 #include "network/packetformat.hpp"
 
 #include <iostream>
@@ -160,8 +161,15 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 void WebRtcNetworkSink::CreatePeerConnection()
 {
 	rtc::Configuration config;
-	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
-	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
+	for(size_t i=0;i<1000;i++)
+	{
+		const char *srv=iceServers[i];
+		if(!srv)
+			break;
+		config.iceServers.emplace_back(srv);
+	}
+	//config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
+	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1), "1");
 
 	// Now ensure data channels are initialized...
