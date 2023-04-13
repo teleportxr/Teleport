@@ -42,7 +42,6 @@ platform::dx11::DeviceManager deviceManager;
 #endif
 #include "UseOpenXR.h"
 #include "Platform/CrossPlatform/GpuProfiler.cpp"
-#include "Platform/CrossPlatform/WinPixGpuCapturerLoader.h"
 
 using namespace teleport;
 
@@ -84,8 +83,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
-	crossplatform::WinPixGpuCapturerLoader::Load();
 
 	// Needed for asynchronous device creation in XAudio2
 	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED); 
@@ -168,8 +165,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	teleport::client::DiscoveryService::ShutdownInstance();
 	// Needed for asynchronous device creation in XAudio2
 	CoUninitialize();
-
-	crossplatform::WinPixGpuCapturerLoader::Unload();
 
     return (int) msg.wParam;
 }
