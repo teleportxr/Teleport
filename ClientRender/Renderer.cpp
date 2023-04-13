@@ -540,6 +540,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs.resize(1);
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
+
 	auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	// TODO: This should render only if no background clients are connected.
@@ -564,6 +565,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		renderPlatform->DrawQuad(deviceContext);
 		renderState.cubemapClearEffect->Unapply(deviceContext);
 	}
+
 	// Init the viewstruct in global space - i.e. with the server offsets.
 	avs::Pose origin_pose;
 	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
@@ -579,6 +581,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 	}
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
+
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	SetRenderPose(deviceContext, avs::Pose());
 	if(mvgdc)

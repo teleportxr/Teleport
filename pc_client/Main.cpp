@@ -532,8 +532,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						useOpenXR.RenderFrame(renderDelegate, overlayDelegate);
 						if(useOpenXR.IsXRDeviceRendering())
 							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-						else
-							clientRenderer->SetExternalTexture(nullptr);
+					}
+					else
+					{
+						clientRenderer->SetExternalTexture(nullptr);
 					}
 					errno = 0;
 					renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
