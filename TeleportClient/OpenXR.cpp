@@ -2041,7 +2041,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 
-		static bool add_overlay=false;
+		static bool add_overlay=true;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
@@ -2090,7 +2090,7 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelega
 	renderPlatform->ActivateRenderTargets(deviceContext, 1, &overlay_xr_swapchain.surface_data[img_id].target_view, overlay_xr_swapchain.surface_data[img_id].depth_view);
 	
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+	static float clear[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	renderPlatform->Clear(deviceContext, clear);
 	overlayDelegate(deviceContext);
 
@@ -2155,7 +2155,7 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
     quad_layer.subImage.imageRect.offset.y = 0;
 	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
-    quad_layer.subImage.imageArrayIndex = (uint32_t)i;
+	quad_layer.subImage.imageArrayIndex = 0; //AJR: Only composite the top layer image array, as the overlay quad will be rendered in 3D space.
     overlay.pose.orientation =        XrQuaternionf_CreateFromVectorAngle({0,1.0f,0},-90.0f * 3.14159f / 180.0f);
     quad_layer.pose = overlay.pose;
     quad_layer.size = overlay.size;

@@ -254,6 +254,15 @@ bool UseOpenXR::StartSession()
 	AddXrSwapchain(swapchain_info);
 
 	OVERLAY_SWAPCHAIN = (int)xr_swapchains.size();
+	swapchain_info.createFlags	= 0;
+	swapchain_info.usageFlags	= XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchain_info.format		= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	swapchain_info.sampleCount	= 1;
+	swapchain_info.width		= 1024;
+	swapchain_info.height		= 512;
+	swapchain_info.faceCount	= 1;
+	swapchain_info.arraySize	= 1;
+	swapchain_info.mipCount		= 1;
 	AddXrSwapchain(swapchain_info);
 
 	haveXRDevice = true;
