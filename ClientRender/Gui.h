@@ -100,6 +100,7 @@ namespace teleport
 		{
 			return visible;
 		}
+		bool URLInputActive() const { return url_input; }
 		void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
 		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
 		void SetServerIPs(const std::vector<std::string> &server_ips);
@@ -144,6 +145,7 @@ namespace teleport
 		std::function<void()> startXRSessionHandler;
 		std::function<void()> endXRSessionHandler;
 		bool visible = false;
+		static bool url_input;
 		bool reset_menu_pos=false;
 		avs::DecoderStatus videoStatus;
 		float width_m=0.6f;

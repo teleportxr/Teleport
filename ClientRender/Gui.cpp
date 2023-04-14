@@ -47,6 +47,8 @@ ImFont *smallSymbolFont=nullptr;
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 PlatformWindow* platformWindow = nullptr;
 
+bool Gui::url_input = false;
+
 #define TIMED_TOOLTIP(txt)\
 		{if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
 			ImGui::SetTooltip(txt);}\
@@ -1532,6 +1534,7 @@ void Gui::MenuBar2D()
 		{
 			current_url = url_buffer;
 		}
+		url_input = ImGui::IsItemActive();
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
 		if (!connecting)
