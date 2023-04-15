@@ -388,7 +388,7 @@ namespace teleport
 			const InteractionProfile *GetActiveBinding(XrPath p) const;
 			// InitInstance runs on a thread, because it takes a long time and blocks.
 			std::thread initInstanceThread;
-			ThreadState initInstanceThreadState=ThreadState::INACTIVE;
+			std::atomic<ThreadState> initInstanceThreadState=ThreadState::INACTIVE;
 			std::mutex instanceMutex;
 		};
 	}

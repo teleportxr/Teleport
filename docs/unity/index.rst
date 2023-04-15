@@ -59,7 +59,7 @@ For global settings for the plugin, in the Project Settings panel, select *Telep
   :width: 600
   :alt: Teleport has a page on the Project Settings panel.
 
-==Teleport Project Settings panel==
+**Teleport Project Settings panel**
 
 Usage
 =====
@@ -76,7 +76,7 @@ Here, you can specify the inputs you want to receive from connected clients.
   :width: 600
   :alt: Teleport has a page on the Project Settings panel.
 
-==Teleport Inputs Panel in Unity Editor==
+**Teleport Inputs Panel in Unity Editor**
 
 There are three elements to each input. The Name is arbitrary, but should be unique in the application. The Type specifies what kind of input this is. A Float input is floating-point, while a boolean is either on or off, true or false. A state input is updated continuously, whereas an Event input is only updated when it changes. Finally, the input's *Path* is how the client knows what to map it to.
 

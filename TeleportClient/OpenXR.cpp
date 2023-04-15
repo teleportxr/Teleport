@@ -14,6 +14,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "ThisPlatform/StringFunctions.h"
 #include "Log.h"
+#include "TeleportCore/Threads.h"
 
 #include <regex>
 
@@ -63,11 +64,11 @@ bool Match(const std::string& full_string, const std::string& substring)
 		std::smatch match;
 		if (std::regex_search(full_string, match, regex))
 		{
-			std::cout << "matches for '" << full_string << "'\n";
-			std::cout << "Prefix: '" << match.prefix() << "'\n";
+			TELEPORT_COUT << "matches for '" << full_string << "'\n";
+			TELEPORT_COUT << "Prefix: '" << match.prefix() << "'\n";
 			for (size_t i = 0; i < match.size(); ++i)
-				std::cout << i << ": " << match[i] << '\n';
-			std::cout << "Suffix: '" << match.suffix() << "\'\n\n";
+				TELEPORT_COUT << i << ": " << match[i] << '\n';
+			TELEPORT_COUT << "Suffix: '" << match.suffix() << "\'\n\n";
 			return true;
 		}
 	}
@@ -397,6 +398,8 @@ bool OpenXR::threadedInitInstance()
 {
 #ifndef FIX_BROKEN
 	std::lock_guard<std::mutex> lock(instanceMutex);
+	
+	SetThisThreadName("threadedInitInstance");
 	// This should only ever block for a short time.
 	while(initInstanceThreadState!=ThreadState::STARTING);
 	return internalInitInstance();
@@ -408,7 +411,7 @@ bool OpenXR::threadedInitInstance()
 bool OpenXR::internalInitInstance()
 {
 	initInstanceThreadState = ThreadState::RUNNING;
-	//std::cout<<"OpenXR::InitInstance\n";
+	TELEPORT_COUT<<"initInstanceThreadState = ThreadState::RUNNING\n";
 		// OpenXR will fail to initialize if we ask for an extension that OpenXR
 		// can't provide! So we need to check our all extensions before 
 		// initializing OpenXR with them. Note that even if the extension is 
@@ -429,6 +432,7 @@ bool OpenXR::internalInitInstance()
 	if (res != XR_SUCCESS)
 	{
 		initInstanceThreadState = ThreadState::FAILED;
+		TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FAILED\n";
 		return false;
 	}
 	if(ext_count)
@@ -436,10 +440,10 @@ bool OpenXR::internalInitInstance()
 		vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
 		xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_exts.data());
 
-		//std::cout<<"OpenXR extensions available:\n";
+		//TELEPORT_COUT<<"OpenXR extensions available:\n";
 		for (size_t i = 0; i < xr_exts.size(); i++)
 		{
-			//std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
+			//TELEPORT_COUT<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
 
 			// Check if we're asking for this extensions, and add it to our use 
 			// list!
@@ -461,6 +465,7 @@ bool OpenXR::internalInitInstance()
 			}))
 	{
 		initInstanceThreadState=ThreadState::FINISHED;
+		TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FAILED\n";
 		return false;
 	}
 
@@ -470,7 +475,17 @@ bool OpenXR::internalInitInstance()
 	createInfo.enabledExtensionNames = use_extensions.data();
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,applicationName.c_str());
-	XR_CHECK(xrCreateInstance(&createInfo, &xr_instance));
+	
+	TELEPORT_COUT<<"xrCreateInstance start"<<std::endl;
+	try
+	{
+		XR_CHECK(xrCreateInstance(&createInfo, &xr_instance));
+	}
+	catch(...)
+	{
+		TELEPORT_CERR<<"xrCreateInstance exception."<<std::endl;
+	}
+	TELEPORT_COUT<<"xrCreateInstance done"<<std::endl;
 	CreateMouseAndKeyboardProfile();
 	if(xr_instance)
 	{
@@ -502,10 +517,10 @@ bool OpenXR::internalInitInstance()
 			// Print the debug message we got! There's a bunch more info we could
 			// add here too, but this is a pretty good start, and you can always
 			// add a breakpoint this line!
-			std::cout<<fmt::format("{}: {}\n", msg->functionName, msg->message).c_str()<<std::endl;
+			TELEPORT_COUT<<fmt::format("{}: {}\n", msg->functionName, msg->message).c_str()<<std::endl;
 
 			// Output to debug window
-			std::cout<<fmt::format( "{}: {}", msg->functionName, msg->message).c_str() << std::endl;
+			TELEPORT_COUT<<fmt::format( "{}: {}", msg->functionName, msg->message).c_str() << std::endl;
 
 			// Returning XR_TRUE here will force the calling function to fail
 			return (XrBool32)XR_FALSE;
@@ -516,6 +531,7 @@ bool OpenXR::internalInitInstance()
 	#endif
 	}
 	initInstanceThreadState=ThreadState::FINISHED;
+	TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FINISHED\n";
 	return (xr_instance!=nullptr);
 }
 
@@ -690,9 +706,9 @@ void OpenXR::MakeActions()
 
 OpenXR::~OpenXR()
 {
-	if(initInstanceThread.joinable())
-		initInstanceThread.join();
+	
 }
+
 void OpenXR::Tick()
 {
 	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
@@ -828,11 +844,11 @@ void OpenXR::RecordCurrentBindings()
 		// for each action, what is the binding?
 		XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
 		if(interactionProfile.interactionProfile)
-			std::cout<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+			TELEPORT_COUT<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 		userHandLeftActiveProfile=interactionProfile.interactionProfile;
 		XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
 		if(interactionProfile.interactionProfile)
-			std::cout<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+			TELEPORT_COUT<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 		userHandRightActiveProfile=interactionProfile.interactionProfile;
 		if(userHandLeftActiveProfile)
 			activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
@@ -973,20 +989,20 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 				std::string path_str=GetBoundPath(actionDef);
 				if(!path_str.length())
 					continue;
-				//std::cout<<"\tChecking against: "<<path_str.c_str()<<std::endl;
+				//TELEPORT_COUT<<"\tChecking against: "<<path_str.c_str()<<std::endl;
 				// Now we try to match this path to the input serverInputDef.
 				if (std::regex_search(path_str, match, re))
 				{
-					std::cout<<"\t\t\tMatches.\n";
+					TELEPORT_COUT<<"\t\t\tMatches.\n";
 					matches=true;
 				}
 				//else
-				//	std::cout<<"\t\t\tX\n";
+				//	TELEPORT_COUT<<"\t\t\tX\n";
 			}
 			if(matches)
 			{
 				string matching=match.str(0);
-				std::cout<<"Binding matches: "<<serverInputDef.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
+				TELEPORT_COUT<<"Binding matches: "<<serverInputDef.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
 				
 				inputMappings.push_back(InputMapping());
 				inputStates.push_back(InputState());
@@ -1011,7 +1027,7 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 		}
 		else
 		{
-			std::cout<<"Found "<<found<<" matches for "<<serverInputDef.regexPath.c_str()<<"\n";
+			TELEPORT_COUT<<"Found "<<found<<" matches for "<<serverInputDef.regexPath.c_str()<<"\n";
 		}
 	}
 }
@@ -1073,7 +1089,7 @@ void OpenXR::BindUnboundPoses(avs::uid server_uid)
 		u++;
 	}
 	if(unboundPoses.size())
-		std::cout<<unboundPoses.size()<<" poses remain unbound."<<std::endl;
+		TELEPORT_COUT<<unboundPoses.size()<<" poses remain unbound."<<std::endl;
 }
 
 void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath)
@@ -1664,22 +1680,22 @@ void OpenXR::PollEvents()
 		switch (baseEventHeader->type)
 		{
 			case XR_TYPE_EVENT_DATA_EVENTS_LOST:
-				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_EVENTS_LOST event";
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_EVENTS_LOST event";
 				break;
 			case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
 				const XrEventDataInstanceLossPending* instance_loss_pending_event =
 					(XrEventDataInstanceLossPending*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING event: time "<<
 					(instance_loss_pending_event->lossTime)<<std::endl;
 			} break;
 			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
 				break;
 			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT: {
 				const XrEventDataPerfSettingsEXT* perf_settings_event =
 					(XrEventDataPerfSettingsEXT*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT event: type "
 					<<perf_settings_event->type<<" "
 					<<" subdomain "<<perf_settings_event->subDomain<<" "
@@ -1689,7 +1705,7 @@ void OpenXR::PollEvents()
 			case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING: {
 				XrEventDataReferenceSpaceChangePending* ref_space_change_event =
 					(XrEventDataReferenceSpaceChangePending*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING event: changed space: "
 					<<ref_space_change_event->referenceSpaceType
 					<<" for session "<<(void*)ref_space_change_event->session
@@ -1698,7 +1714,7 @@ void OpenXR::PollEvents()
 			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
 				const XrEventDataSessionStateChanged* session_state_changed_event =
 					(XrEventDataSessionStateChanged*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "
 					<<to_string(session_state_changed_event->state)<<
 					" for session "<<(void*)session_state_changed_event->session<<
@@ -1707,7 +1723,7 @@ void OpenXR::PollEvents()
 				HandleSessionStateChanges( session_state_changed_event->state);
 			} break;
 			default:
-				std::cout<<"xrPollEvent: Unknown event"<<std::endl;
+				TELEPORT_COUT<<"xrPollEvent: Unknown event"<<std::endl;
 				break;
 		}
 	}
@@ -1756,7 +1772,7 @@ void OpenXR::PollEvents()
 	RedirectStdCoutCerr();
 				XrEventDataSessionStateChanged* changed = (XrEventDataSessionStateChanged*)&event_buffer;
 					xr_session_state = changed->state;
-				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "<<changed->state
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "<<changed->state
 					<<" for session "<<(void*)changed->session<<" at time "<<changed->time<<std::endl;
 				HandleSessionStateChanges(xr_session_state);
 				switch(xr_session_state)
@@ -2164,6 +2180,12 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 
 void OpenXR::Shutdown()
 {
+	while(initInstanceThreadState==ThreadState::RUNNING)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	if(initInstanceThread.joinable())
+		initInstanceThread.join();
 	EndSession();
 	if (xr_debug != XR_NULL_HANDLE)
 		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);

@@ -2,9 +2,8 @@ find_package(Doxygen REQUIRED)
 
 # Find all the public headersc
 set(pc_client_HEADER_DIRS ${CMAKE_SOURCE_DIR}/pc_client)
-set(libavstream_HEADER_DIRS ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream/encoders 
-${CMAKE_SOURCE_DIR}/libavstream/include/libavstream/decoders ${CMAKE_SOURCE_DIR}/libavstream/src ${CMAKE_SOURCE_DIR}/libavstream/src/audio 
-${CMAKE_SOURCE_DIR}/libavstream/src/encoders ${CMAKE_SOURCE_DIR}/libavstream/src/decoders)
+set(AV ${CMAKE_SOURCE_DIR}/libavstream/include/libavstream)
+set(libavstream_HEADER_DIRS ${AV} ${AV}/audio ${AV}/decoders ${AV}/encoders ${AV}/geometry ${AV}/network ${AV}/platforms ${AV}/stream ${AV}/surfaces)
 
 set(teleportclient_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportClient)
 set(teleportcore_HEADER_DIRS ${CMAKE_SOURCE_DIR}/TeleportCore)
@@ -130,7 +129,7 @@ if(TELEPORT_DOCS_TIDY_EXECUTABLE)
 					MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat"
 					COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat" "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
 					SOURCES tidy_files.bat ${ALL_HTML_FILES})
-	#add_dependencies(Validator Sphinx)
+	add_dependencies(Tidy Sphinx)
 set_target_properties( Tidy PROPERTIES FOLDER Docs)
 endif() 
 
@@ -145,6 +144,6 @@ if(TELEPORT_DOCS_VALIDATOR_EXECUTABLE)
 					WORKING_DIRECTORY ${SPHINX_BUILD}
 					COMMENT "Validating documentation nu validator"
 					SOURCES ${ALL_HTML_FILES})
-	#add_dependencies(Validator Sphinx)
+	add_dependencies(Validator Tidy)
 set_target_properties( Validator PROPERTIES FOLDER Docs)
 endif()
