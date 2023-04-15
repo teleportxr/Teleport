@@ -76,7 +76,8 @@ void SessionClient::ConnectButtonHandler(avs::uid server_uid,const std::string& 
 void SessionClient::CancelConnectButtonHandler(avs::uid server_uid)
 {
 	auto sc=GetSessionClient(server_uid);
-	sc->connectionStatus= client::ConnectionStatus::UNCONNECTED;
+	if (sc->IsConnected())
+		sc->Disconnect(0);
 }
 
 SessionClient::SessionClient(avs::uid s)
@@ -641,7 +642,7 @@ void SessionClient::SendReceivedResources()
 			auto sentRequestIt = mSentResourceRequests.find(id);
 			if(sentRequestIt != mSentResourceRequests.end())
 			{
-				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
+//				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
 				mSentResourceRequests.erase(sentRequestIt);
 			}
 		}

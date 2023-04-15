@@ -135,7 +135,7 @@ client::swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform* re
 	return result;
 }
 
-OpenXR::OpenXR(JavaVM *vm,jobject clazz)
+OpenXR::OpenXR(JavaVM *vm,jobject clazz):client::OpenXR("Teleport VR")
 {
     PFN_xrInitializeLoaderKHR xrInitializeLoaderKHR;
     xrGetInstanceProcAddr(
@@ -195,6 +195,10 @@ std::vector<std::string> OpenXR::GetRequiredVulkanDeviceExtensions() const
 
 std::vector<std::string> OpenXR::GetRequiredVulkanInstanceExtensions() const
 {
+	if(!xr_instance)
+	{
+	TELEPORT_INTERNAL_CERR("No instance for GetRequiredVulkanInstanceExtensions\n");
+	}
 	std::vector<std::string> lst;
 	uint32_t capacity=0;
 	PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR = nullptr;
@@ -420,7 +424,7 @@ void OpenXR::EndFrame()
 {
 }
 
-bool OpenXR::TryInitDevice()
+bool OpenXR::StartSession()
 {
 	RedirectStdCoutCerr();
 	// Check what blend mode is valid for this device (opaque vs transparent displays)

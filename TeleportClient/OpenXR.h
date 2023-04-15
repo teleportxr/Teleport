@@ -7,6 +7,7 @@
 #include "TeleportCore/CommonNetworking.h"		// for avs::InputState
 #include "TeleportCore/Input.h"
 #include <openxr/openxr.h>
+#include <thread>
 
 #define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){teleport::client::ReportError(xr_instance,(int)res);}
 #include <openxr/openxr_reflection.h>
@@ -31,6 +32,14 @@ namespace teleport
 {
 	namespace client
 	{
+		enum class ThreadState
+		{
+			INACTIVE,
+			STARTING,
+			RUNNING,
+			FINISHED,
+			FAILED
+		};
 		DECLARE_TO_STRING_FUNC(XrReferenceSpaceType);
 		DECLARE_TO_STRING_FUNC(XrViewConfigurationType);
 		DECLARE_TO_STRING_FUNC(XrEnvironmentBlendMode);
@@ -57,6 +66,7 @@ namespace teleport
 			INVALID=0,
 			SELECT,
 			SHOW_MENU,
+			SYSTEM,
 			A,
 			B,
 			X,
@@ -192,8 +202,9 @@ namespace teleport
 		struct InteractionProfileBinding
 		{
 			XrAction action;
-			const char *complete_path;
-		};
+			const char *complete_path=nullptr;
+			bool virtual_action=false;
+			};
 
 		struct InteractionProfile
 		{
@@ -202,7 +213,8 @@ namespace teleport
 			std::vector<XrActionSuggestedBinding> xrActionSuggestedBindings;
 			std::vector<std::string> bindingPaths;
 			void Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings);
-			void Add(XrInstance &xr_instance,XrAction action,const char *complete_path);
+			//! virtual_binding  means that the binding is not a real OpenXR path, but e.g. mouse/keyboard.
+			void Add(XrInstance &xr_instance,XrAction action,const char *complete_path,bool virtual_binding);
 		};
 
 		struct FallbackBinding
@@ -225,21 +237,37 @@ namespace teleport
 			XrPosef pose={{0,0,0,1.0f},{2.0f, 1.8f,0.0f}};
 			XrExtent2Df size = {4.0f, 2.0f};
 		};
+		enum class OpenXRState
+		{
+			Uninitialized,
+			Initialized,
+			Running,
+			Stopped
+		};
 		class OpenXR
 		{
 		public:
-			OpenXR(){}
-			bool InitInstance(const char* app_name);
-			bool Init(platform::crossplatform::RenderPlatform* renderPlatform);
-			virtual bool TryInitDevice()=0;
+			OpenXR(const char *app_name);
+			virtual ~OpenXR();
+			bool InitInstance();
+			void SetRenderPlatform(platform::crossplatform::RenderPlatform* renderPlatform);
+			void Shutdown();
+			virtual bool StartSession()=0;
+			void EndSession();
 			void CreateMouseAndKeyboardProfile();
 			void MakeActions();
+			void Tick();
 			void PollActions();
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
-			void Shutdown();
-			void PollEvents(bool& exit);
+			void PollEvents();
 			bool HaveXRDevice() const;
-			bool IsXRDeviceActive() const;
+			const char * GetSystemName() const;
+			bool IsXRDeviceRendering() const;
+			bool CanStartSession() ;
+			bool RequestsQuit() const
+			{
+				return quit;
+			}
 			
 			//! Set a "virtual" pose binding - e.g. mouse emulation.
 			void SetFallbackBinding(ActionId actionId,std::string path);
@@ -289,6 +317,10 @@ namespace teleport
 			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const avs::Pose& pose);
 
 		protected:
+			bool threadedInitInstance();
+			bool internalInitInstance();
+			bool quit=false;
+			std::string applicationName;
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
 			std::map<avs::uid,FallbackBinding> fallbackBindings;
@@ -329,13 +361,14 @@ namespace teleport
 			XrViewConfigurationType					app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 			XrInstance								xr_instance = {};
-
+			 XrSystemProperties				xr_system_properties = {};	
 			XrSession								xr_session = {};
 			XrSessionState							xr_session_state = XR_SESSION_STATE_UNKNOWN;
 			bool									xr_session_running = false;
 			XrSpace									xr_app_space = {};
 			XrSpace									xr_head_space = {};
-			XrSystemId								xr_system_id = XR_NULL_SYSTEM_ID;
+			// Mutable because we store it for speed.
+			 XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
 			InputSession							xr_input_session = { };
 			XrEnvironmentBlendMode					xr_environment_blend = {XR_ENVIRONMENT_BLEND_MODE_OPAQUE};
 			XrDebugUtilsMessengerEXT				xr_debug = {};
@@ -345,14 +378,18 @@ namespace teleport
 			int MOTION_VECTOR_SWAPCHAIN=0;
 			int MOTION_DEPTH_SWAPCHAIN=0;
 			int OVERLAY_SWAPCHAIN=0;
-			XrPath userHandLeftActiveProfile;
-			XrPath userHandRightActiveProfile;
+			XrPath userHandLeftActiveProfile=0;
+			XrPath userHandRightActiveProfile=0;
 			
 			std::vector<XrPath> activeInteractionProfilePaths;
 			std::map<uint16_t, uint16_t> mapActionIndexToInputId;
 			std::vector<InteractionProfile> interactionProfiles;
 			size_t MOUSE_KEYBOARD_PROFILE_INDEX=0;
 			const InteractionProfile *GetActiveBinding(XrPath p) const;
+			// InitInstance runs on a thread, because it takes a long time and blocks.
+			std::thread initInstanceThread;
+			std::atomic<ThreadState> initInstanceThreadState=ThreadState::INACTIVE;
+			std::mutex instanceMutex;
 		};
 	}
 }

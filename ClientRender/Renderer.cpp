@@ -168,6 +168,18 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	gui.SetConnectHandler(connectButtonHandler);
 	auto cancelConnectHandler = std::bind(&client::SessionClient::CancelConnectButtonHandler, 1);
 	gui.SetCancelConnectHandler(cancelConnectHandler);
+	
+	auto startSessionHandler = [this](){
+		start_xr_session=true;
+		end_xr_session=false;
+	};
+	gui.SetStartXRSessionHandler(startSessionHandler);
+	auto endSessionHandler = [this](){
+		start_xr_session=false;
+		end_xr_session=true;
+	};
+	gui.SetEndXRSessionHandler(endSessionHandler);
+
 	renderState.videoTexture = renderPlatform->CreateTexture();
 	renderState.specularCubemapTexture = renderPlatform->CreateTexture();
 	renderState.diffuseCubemapTexture = renderPlatform->CreateTexture();
@@ -287,7 +299,7 @@ void Renderer::InitLocalGeometry()
 		renderState.openXR->SetFallbackBinding(client::MOUSE_RIGHT_BUTTON	,"mouse/right/click");
 
 		// Hard-code the menu button
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
+		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
 	}
@@ -307,7 +319,8 @@ void Renderer::UpdateShaderPasses()
 			shaderPassSetup.noLightmapPass	=shaderPassSetup.technique->GetPass("pbr_nolightmap");
 			shaderPassSetup.lightmapPass	=shaderPassSetup.technique->GetPass("pbr_lightmap");
 			shaderPassSetup.digitizingPass	=shaderPassSetup.technique->GetPass("digitizing");
-			if (!renderState.overridePassName.empty())
+			if (!renderState.overridePassName.empty() 
+				&& shaderPassSetup.technique->HasPass(renderState.overridePassName.c_str()))
 				shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
 			return shaderPassSetup;
 		};
@@ -501,6 +514,12 @@ avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
 	return origin_pose;
 }
 
+void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
+{
+	RenderView(deviceContext);
+	gui.Render3DGUI(deviceContext);
+}
+
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
@@ -521,15 +540,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs.resize(1);
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
+
 	auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	// TODO: This should render only if no background clients are connected.
 	if (!sessionClient->IsConnected())
 	{
-		if (!gui.IsVisible())
-		{
-			ShowHideGui();
-		}
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
 			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -549,6 +565,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		renderPlatform->DrawQuad(deviceContext);
 		renderState.cubemapClearEffect->Unapply(deviceContext);
 	}
+
 	// Init the viewstruct in global space - i.e. with the server offsets.
 	avs::Pose origin_pose;
 	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
@@ -564,6 +581,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 	}
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
+
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	SetRenderPose(deviceContext, avs::Pose());
 	if(mvgdc)
@@ -609,11 +627,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
+	gui.Render3DGUI(deviceContext);
 
-	
-	gui.Render(deviceContext);
 	renderState.selected_uid=gui.GetSelectedUid();
-	if ((have_vr_device || override_have_vr_device )&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
+	if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
@@ -673,6 +690,21 @@ void Renderer::Update(double timestamp_ms)
 		}
 	}
 	previousTimestamp = timestamp_ms;
+	if(start_xr_session)
+	{
+		renderState.openXR->StartSession();
+		{
+			renderState.openXR->MakeActions();
+		}
+		start_xr_session=false;
+		end_xr_session=false;
+	}
+	else if(end_xr_session)
+	{
+		renderState.openXR->EndSession();
+		start_xr_session=false;
+		end_xr_session=false;
+	}
 }
 
 
@@ -692,6 +724,16 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		sessionClient->SetGeometryCache(&ir->geometryCache);
 		config.StoreRecentURL(fmt::format("{0}:{1}",sessionClient->GetServerIP(),sessionClient->GetServerDiscoveryPort()).c_str());
 		gui.Hide();
+	}
+	if(renderState.openXR->IsSessionActive())
+	{
+		if (!sessionClient->IsConnected())
+		{
+			if (!gui.IsVisible())
+			{
+				ShowHideGui();
+			}
+		}
 	}
 	using_vr = have_headset;
 	vec2 clientspace_input;
@@ -835,7 +877,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break; 
 		}
 	}
-	if (!bKeyDown)
+	if (!bKeyDown && ! gui.URLInputActive())
 	{
 		switch (wParam)
 		{
@@ -1071,7 +1113,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	{
 		RenderView(deviceContext);
 	}
-
+	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
+	if(!gui.IsVisible()&&!show_osd)
+		gui.Render2DGUI(deviceContext);
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);

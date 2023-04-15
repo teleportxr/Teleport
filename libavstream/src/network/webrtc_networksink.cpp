@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2023 Simul Software Ltd
 
 #include "libavstream/network/webrtc_networksink.h"
+#include "network/webrtc_common.h"
 #include "network/packetformat.hpp"
 
 #include <iostream>
@@ -22,16 +23,16 @@ using nlohmann::json;
 
 namespace avs
 {
-	struct DataChannel
+	struct ServerDataChannel
 	{
-		DataChannel()
+		ServerDataChannel()
 		{
 		}
-		DataChannel(const DataChannel& dc)
+		ServerDataChannel(const ServerDataChannel& dc)
 		{
 			rtcDataChannel = dc.rtcDataChannel;
 		}
-		~DataChannel()
+		~ServerDataChannel()
 		{
 			rtcDataChannel->close();
 			rtcDataChannel = nullptr;
@@ -45,7 +46,7 @@ namespace avs
 	struct WebRtcNetworkSink::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSink, PipelineNode)
-		std::unordered_map<uint64_t, DataChannel> dataChannels;
+		std::unordered_map<uint64_t, ServerDataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
 			void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
@@ -160,8 +161,15 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 void WebRtcNetworkSink::CreatePeerConnection()
 {
 	rtc::Configuration config;
-	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
-	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
+	for(size_t i=0;i<1000;i++)
+	{
+		const char *srv=iceServers[i];
+		if(!srv)
+			break;
+		config.iceServers.emplace_back(srv);
+	}
+	//config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
+	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1), "1");
 
 	// Now ensure data channels are initialized...
@@ -184,7 +192,7 @@ void WebRtcNetworkSink::CreatePeerConnection()
 			m_data->m_parsers[i] = std::move(parser);
 		}
 		m_data->dataChannels.try_emplace(stream.id);
-		DataChannel& dataChannel = m_data->dataChannels[stream.id];
+		ServerDataChannel& dataChannel = m_data->dataChannels[stream.id];
 		rtc::DataChannelInit dataChannelInit;
 		if (stream.reliable)
 		{
@@ -314,7 +322,7 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 		uint8_t inputIndex = inp->second;
 		const NetworkSinkStream& stream = m_streams[i];
 		// If channel is backed-up in WebRTC, don't grab data off the queue.
-		const DataChannel& dataChannel= m_data->dataChannels[stream.id];
+		const ServerDataChannel& dataChannel= m_data->dataChannels[stream.id];
 		if (!dataChannel.readyToSend)
 			continue;
 		size_t numBytesRead = 0;
@@ -643,7 +651,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 	uint16_t id = (dc->id().value());
 	id = EVEN_ID(id);
 	uint8_t streamIndex = idToStreamIndex[id];
-	DataChannel& dataChannel = dataChannels[id];
+	ServerDataChannel& dataChannel = dataChannels[id];
 	dataChannel.rtcDataChannel = dc;
 	// Wait for the onOpen callback before sending.
 	dataChannel.readyToSend = false;
@@ -651,20 +659,20 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 
 	dc->onOpen([this, id]()
 		{
-			DataChannel& dataChannel = dataChannels[id];
+			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			std::cout << "DataChannel "<<id<<"opened" << std::endl;
+			std::cout << "DataChannel "<<id<<" opened" << std::endl;
 		});
 
 	dc->onClosed([this,id]()
 		{
-			DataChannel& dataChannel = dataChannels[id];
+			ServerDataChannel& dataChannel = dataChannels[id];
 			std::cout << "DataChannel from " << id << " closed" << std::endl;
 		//	dataChannel.closed = true;
 		});
 	dc->onBufferedAmountLow([this, id]()
 		{
-			DataChannel& dataChannel = dataChannels[id];
+			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
 			std::cerr << "WebRTC: channel " << id << ", buffered amount is low.\n";
 
@@ -673,7 +681,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 	if(stream.canReceive)
 	dc->onMessage([this,  id, streamIndex](rtc::binary b)
 		{
-			DataChannel& dataChannel = dataChannels[id];
+			ServerDataChannel& dataChannel = dataChannels[id];
 	//	// data holds either std::string or rtc::binary
 			//std::cout << "Binary message from " << id	<< " received, size=" << b.size() << std::endl;
 			auto o = streamIndexToOutputIndex.find(streamIndex);

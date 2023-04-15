@@ -11,3 +11,7 @@ namespace avs
 	extern void CreatePeerConnectionFactory();
 }
 #endif
+namespace avs
+{
+	extern const char *iceServers[];
+};

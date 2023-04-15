@@ -893,19 +893,23 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	size_t stream_width = setupCommand.video_config.video_width;
 	size_t stream_height = setupCommand.video_config.video_height;
 
+	std::shared_ptr<std::vector<std::vector<uint8_t>>> empty_data;
 	if (setupCommand.video_config.use_cubemap)
 	{
-		if(setupCommand.video_config.colour_cubemap_size)
+		if (setupCommand.video_config.colour_cubemap_size)
+		{
 			renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.colour_cubemap_size, setupCommand.video_config.colour_cubemap_size, 1, 1,
-				crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false, true);
+				crossplatform::PixelFormat::RGBA_16_FLOAT, empty_data,true, false, false, true);
+		}
 	}
 	else
 	{
 		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.perspective_width, setupCommand.video_config.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_16_FLOAT, true, false, false, false);
+			crossplatform::PixelFormat::RGBA_16_FLOAT, empty_data, true, false, false, false);
 	}
-	renderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM, true, false, false, true);
-	renderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, true, false, false, true);
+
+	renderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM,empty_data,true, false, false, true);
+	renderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, empty_data,true, false, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
 	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
@@ -1103,15 +1107,16 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 	size_t stream_width = videoConfig.video_width;
 	size_t stream_height = videoConfig.video_height;
 
+	std::shared_ptr<std::vector<std::vector<uint8_t>>> empty_data;
 	if (videoConfig.use_cubemap)
 	{
 		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false, true);
+			crossplatform::PixelFormat::RGBA_32_FLOAT, empty_data,true, false, false, true);
 	}
 	else
 	{
 		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
-			crossplatform::PixelFormat::RGBA_32_FLOAT, true, false, false, false);
+			crossplatform::PixelFormat::RGBA_32_FLOAT, empty_data,true, false, false, false);
 	}
 
 	colourOffsetScale.x = 0;

@@ -49,7 +49,6 @@ int kOverrideHeight = 900;
 extern "C" { void android_main(struct android_app* app); }
 DisplaySurfaceManager* displaySurfaceManager = nullptr;
 teleport::client::ClientApp clientApp;
-teleport::Gui gui;
 // Need ONE global instance of this:
 avs::Context context;
 bool g_WindowQuit;
@@ -57,6 +56,7 @@ struct AppState
 {
 	bool resumed=false;
 	ANativeWindow* nativeWindow = nullptr;
+	Gui *gui = nullptr;
 };
 AppState appState;
 
@@ -98,7 +98,7 @@ void handle_cmd(android_app* app, int32_t cmd)
 			std::cout<<"surfaceCreated()"<<std::endl;
 			std::cout<<"	APP_CMD_INIT_WINDOW"<<std::endl;
 			appState.nativeWindow = app->window;
-			gui.SetPlatformWindow(app->window);
+			appState.gui->SetPlatformWindow(app->window);
 			g_WindowQuit = false;
 			break;
 		}
@@ -113,17 +113,6 @@ void handle_cmd(android_app* app, int32_t cmd)
 }
 
 static bool x = false;
-
-void InitXR(teleport::android::OpenXR &openXR)
-{
-	if(openXR.TryInitDevice())
-	{
-		openXR.MakeActions();
-		//std::function<void()> showHideDelegate = std::bind(&teleport::Gui::ShowHide, &gui);
-		//if (openXR.HaveXRDevice())
-		//	openXR.SetMenuButtonHandler(showHideDelegate);
-	}
-}
 
 
 double GetTimeInSeconds()
@@ -145,7 +134,10 @@ void android_main(struct android_app* app)
 	(*app->activity->vm).AttachCurrentThread(&Env, NULL);
 	// Note that AttachCurrentThread will reset the thread name.
 	prctl(PR_SET_NAME, (long)"Teleport Main", 0, 0, 0);
-
+	
+	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
+	teleport::Gui gui(openXR);
+	appState.gui=&gui;
 	app->onAppCmd = handle_cmd;
 	int events;
 	android_poll_source* source;
@@ -164,7 +156,6 @@ void android_main(struct android_app* app)
 	auto &config=client::Config::GetInstance();
 	config.SetStorageFolder(app->activity->internalDataPath);
 	clientApp.Initialize();
-	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
 	gui.SetPlatformWindow(app->window);
 	
 	gui.SetServerIPs(config.recent_server_urls);
@@ -175,7 +166,7 @@ void android_main(struct android_app* app)
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
 
-	openXR.InitInstance("Teleport VR Client");
+	openXR.InitInstance();
 	openXR.InitSystem();
 	vulkan::DeviceManager vulkanDeviceManager;
 	RedirectStdCoutCerr();
@@ -208,8 +199,7 @@ void android_main(struct android_app* app)
 	androidRenderer->Init(renderPlatform,&openXR,app->window);
 	int MainThreadTid = gettid();
 	openXR.SetVulkanDeviceAndInstance(vulkanDeviceManager.GetVulkanDevice(),vulkanDeviceManager.GetVulkanInstance(),MainThreadTid,0);
-	openXR.Init(renderPlatform);
-	InitXR(openXR);
+	openXR.SetRenderPlatform(renderPlatform);
 	
 	while (!g_WindowQuit)
 	{
@@ -235,18 +225,13 @@ void android_main(struct android_app* app)
 				source->process(app, source);
 			}
 		}
-
-		if (openXR.HaveXRDevice())
+		openXR.Tick();
+		if(openXR.CanStartSession())
 		{
-			openXR.PollEvents(g_WindowQuit);
-			openXR.PollActions();
-		}
-		else
-		{
-			static char c=0;
-			c--;
-			if(!c)
-				InitXR(openXR);
+			if(openXR.StartSession())
+			{
+				openXR.MakeActions();
+			}
 		}
 		static int64_t frame = 0;
 		frame++;

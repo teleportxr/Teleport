@@ -58,29 +58,38 @@ void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform* r, cli
 		clientrender::Texture::Type::TEXTURE_2D,
 		clientrender::Texture::Format::RGBA8,
 		clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-		{{0,0,0,0}},
+		nullptr,
 		clientrender::Texture::CompressionFormat::UNCOMPRESSED,
 		false
 	};
 
-	tci.images[0] = std::vector<unsigned char>(sizeof(whiteBGRA));
-	memcpy(tci.images[0].data(), &whiteBGRA, sizeof(whiteBGRA));
+	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1) ;
+	tci.name = "whiteBGRA";
+	(*tci.images)[0].resize(sizeof(whiteBGRA));
+	memcpy((*tci.images)[0].data(), &whiteBGRA, sizeof(whiteBGRA));
 	m_DummyWhite->Create(tci);
 
-	tci.images[0] = std::vector<unsigned char>(sizeof(normalRGBA));
-	memcpy(tci.images[0].data(), &normalRGBA, sizeof(normalRGBA));
+	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	tci.name = "normalRGBA";
+	(*tci.images)[0].resize(sizeof(normalRGBA));
+	memcpy((*tci.images)[0].data(), &normalRGBA, sizeof(normalRGBA));
 	m_DummyNormal->Create(tci);
 
-	tci.images[0] = std::vector<unsigned char>(sizeof(combinedBGRA));
-	memcpy(tci.images[0].data(), &combinedBGRA, sizeof(combinedBGRA));
+	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	tci.name = "combinedBGRA";
+	(*tci.images)[0].resize(sizeof(combinedBGRA));
+	memcpy((*tci.images)[0].data(), &combinedBGRA, sizeof(combinedBGRA));
 	m_DummyCombined->Create(tci);
 
-	tci.images[0] = std::vector<unsigned char>(sizeof(blackBGRA));
-	memcpy(tci.images[0].data(), &blackBGRA, sizeof(blackBGRA));
+	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	tci.name = "blackBGRA";
+	(*tci.images)[0].resize(sizeof(blackBGRA));
+	memcpy((*tci.images)[0].data(), &blackBGRA, sizeof(blackBGRA));
 	m_DummyBlack->Create(tci);
 
 	const size_t GRID=128;
-	tci.images[0] = std::vector<unsigned char>(sizeof(uint32_t)*GRID*GRID);
+	tci.images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+	(*tci.images)[0].resize(sizeof(uint32_t)* GRID* GRID);
 	tci.width=tci.height=GRID;
 	size_t sz=GRID*GRID*sizeof(uint32_t);
 	
@@ -94,8 +103,7 @@ void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform* r, cli
 			green_grid[GRID*j+i]=greenBGRA;
 		}
 	}
-	tci.images[0] = std::vector<unsigned char>(sz);
-	memcpy(tci.images[0].data(), &green_grid, sizeof(green_grid));
+	memcpy((*tci.images)[0].data(), &green_grid, sizeof(green_grid));
 	m_DummyGreen->Create(tci);
 }
 
@@ -517,8 +525,9 @@ void ResourceCreator::CreateTexture(avs::uid id, const avs::Texture& texture)
 	}
 	else
 	{
-		texInfo->images.emplace_back(texture.dataSize);
-		memcpy(texInfo->images.back().data(), texture.data, texture.dataSize);
+		texInfo->images = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
+		(*texInfo->images)[0].resize(texture.dataSize);
+		memcpy((*texInfo->images)[0].data(), texture.data, texture.dataSize);
 
 		CompleteTexture(id, *texInfo);
 	}
@@ -633,7 +642,7 @@ void ResourceCreator::CreateFontAtlas(avs::uid id,teleport::core::FontAtlas &fon
 		incompleteTextCanvas->missingFontAtlasUid=0;
 		std::shared_ptr<TextCanvas> textCanvas = std::static_pointer_cast<TextCanvas>(*it);
 		textCanvas->SetFontAtlas(f);
-		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteNode->id,"",id,"");
+		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteTextCanvas->id,"",id,"");
 		// The TextCanvas is complete
 	}
 }
@@ -654,7 +663,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 	// The fontAtlas hasn't arrived yet. Mark it as missing.
 	if (!fontAtlas)
 	{
-		RESOURCECREATOR_DEBUG_COUT( "TextCanvas {0} missing fontAtlas {1}",id,textCanvas->textCanvasCreateInfo.font);
+		RESOURCECREATOR_DEBUG_COUT( "TextCanvas {0} missing fontAtlas {1}", textCanvasCreateInfo.uid,textCanvas->textCanvasCreateInfo.font);
 		clientrender::MissingResource& missing=geometryCache->GetMissingResource(textCanvas->textCanvasCreateInfo.font, avs::GeometryPayloadType::FontAtlas);
 		std::shared_ptr<IncompleteTextCanvas> i = textCanvas;
 		missing.waitingResources.insert(i);
@@ -896,7 +905,7 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& avsNode)
 			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 			node->SetMaterial(i, placeholderMaterial);
 
-			TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material_" << avsNode.materials[i] << std::endl;
+//			TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material_" << avsNode.materials[i] << std::endl;
 
 			isMissingResources = true;
 			geometryCache->GetMissingResource(avsNode.materials[i], avs::GeometryPayloadType::Material).waitingResources.insert(node);
@@ -1051,7 +1060,7 @@ void ResourceCreator::CompleteTexture(avs::uid id, const clientrender::Texture::
 				case avs::GeometryPayloadType::FontAtlas:
 					{
 						std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
-						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})",incompleteNode->id,id,textureInfo.name);
+						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})", incompleteFontAtlas->id,id,textureInfo.name);
 
 						geometryCache->CompleteResource(incompleteFontAtlas->id);
 					}
@@ -1108,6 +1117,11 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 {
 	RESOURCECREATOR_DEBUG_COUT( "CompleteMaterial {0}({1})",id,materialInfo.name);
 	std::shared_ptr<clientrender::Material> material = geometryCache->mMaterialManager.Get(id);
+	if (!material)
+	{
+		TELEPORT_INTERNAL_CERR("Trying to complete material {0}, but it hasn't been created.\n", id);
+		return;
+	}
 	// Update its properties:
 	material->SetMaterialCreateInfo(renderPlatform,materialInfo);
 	//Add material to nodes waiting for material.
@@ -1344,7 +1358,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 		{
 			if (transcoding.compressionFormat == avs::TextureCompression::PNG)
 			{
-				RESOURCECREATOR_DEBUG_COUT("Transcoding  {0}with PNG",transcoding.name.c_str());
+				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with PNG",transcoding.name.c_str());
 				int mipWidth=0, mipHeight=0;
 				uint8_t *srcPtr=transcoding.data.data();
 				uint8_t *basePtr=srcPtr;
@@ -1365,7 +1379,8 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				{
 					imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
 				}
-				transcoding.textureCI->images.resize(num_images);
+				transcoding.textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+				transcoding.textureCI->images->resize(num_images);
 				for(int i=0;i<num_images;i++)
 				{
 					// Convert from Png to raw data:
@@ -1375,8 +1390,8 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					{
 						// this is for 8-bits-per-channel textures:
 						size_t outDataSize = (size_t)(mipWidth * mipHeight * num_channels);
-						transcoding.textureCI->images[i].resize(outDataSize);
-						memcpy(transcoding.textureCI->images[i].data(), target, outDataSize);
+						(*transcoding.textureCI->images)[i].resize(outDataSize);
+						memcpy((*transcoding.textureCI->images)[i].data(), target, outDataSize);
 						transcoding.textureCI->valueScale=transcoding.valueScale;
 
 					}
@@ -1386,8 +1401,9 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					}
 					teleport::stbi_image_free(target);
 				}
-				if (transcoding.textureCI->images.size() != 0)
+				if (transcoding.textureCI->images->size() != 0)
 				{
+					//TELEPORT_CERR << "Texture \"" << transcoding.name << "\" uid "<< transcoding.texture_uid<<", Type "<<int(transcoding.textureCI->type) << std::endl;
 					CompleteTexture(transcoding.texture_uid, *(transcoding.textureCI));
 				}
 				else
@@ -1410,7 +1426,8 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				if (basis_transcoder.start_transcoding(transcoding.data.data(), (uint32_t)transcoding.data.size()))
 				{
 					transcoding.textureCI->mipCount = basis_transcoder.get_total_image_levels(transcoding.data.data(), (uint32_t)transcoding.data.size(), 0);
-					transcoding.textureCI->images.resize(transcoding.textureCI->mipCount*transcoding.textureCI->arrayCount);
+					transcoding.textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+					transcoding.textureCI->images->resize(transcoding.textureCI->mipCount*transcoding.textureCI->arrayCount);
 
 					if (!basis_is_format_supported(basis_transcoder_textureFormat, fileinfo.m_tex_format))
 					{
@@ -1426,7 +1443,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 
 							basis_transcoder.get_image_level_desc(transcoding.data.data(), (uint32_t)transcoding.data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
 							uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
-							auto &img=transcoding.textureCI->images[imageIndex];
+							auto &img=(*transcoding.textureCI->images)[imageIndex];
 							img.resize(outDataSize);
 							if (!basis_transcoder.transcode_image_level(transcoding.data.data(), (uint32_t)transcoding.data.size(),arrayIndex, mipIndex, img.data(), basisBlocks, basis_transcoder_textureFormat))
 							{
@@ -1436,7 +1453,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						}
 					}
 
-					if (transcoding.textureCI->images.size() != 0)
+					if (transcoding.textureCI->images->size() != 0)
 					{
 						CompleteTexture(transcoding.texture_uid, *(transcoding.textureCI));
 					}

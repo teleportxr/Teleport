@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2022 Simul Software Ltd
 
 #include <iostream>
+#include "network/webrtc_common.h"
 #include "libavstream/network/webrtc_networksource.h"
 #include <ElasticFrameProtocol.h>
 #include <libavstream/queue.hpp>
@@ -85,10 +86,10 @@ static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Con
 };
 namespace avs
 {
-	struct DataChannel
+	struct ClientDataChannel
 	{
-		DataChannel() {}
-		DataChannel(const DataChannel& dc)
+		ClientDataChannel() {}
+		ClientDataChannel(const ClientDataChannel& dc)
 		{
 			rtcDataChannel = dc.rtcDataChannel;
 		}
@@ -102,7 +103,7 @@ namespace avs
 	struct WebRtcNetworkSource::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSource, PipelineNode)
-		std::vector<DataChannel> dataChannels;
+		std::vector<ClientDataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 		NetworkSourceCounters m_counters;
@@ -253,8 +254,15 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 {
 	rtc::Description rtcDescription(offer,"offer");
 	rtc::Configuration config;
-	config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
-	config.iceServers.emplace_back("stun:stun.l.google.com:19302");
+	for(size_t i=0;i<1000;i++)
+	{
+		const char *srv=iceServers[i];
+		if(!srv)
+			break;
+		config.iceServers.emplace_back(srv);
+	}
+	//"stun:stun.stunprotocol.org:3478");
+	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = createClientPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1");
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
@@ -351,7 +359,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		//if (inputNodeIndex >= m_streams.size())
 		//	return Result::Failed;
 		auto& stream = m_streams[streamIndex];
-		const DataChannel& dataChannel = m_data->dataChannels[stream.id];
+		const ClientDataChannel& dataChannel = m_data->dataChannels[stream.id];
 
 		assert(node);
 		//assert(buffer.size() >= stream.chunkSize);
@@ -383,7 +391,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		if (!node)
 			continue;
 		const auto& stream = m_streams[streamIndex];
-		DataChannel& dataChannel = m_data->dataChannels[streamIndex];
+		ClientDataChannel& dataChannel = m_data->dataChannels[streamIndex];
 		// If channel is backed-up in WebRTC, don't grab data off the queue.
 		if (!dataChannel.readyToSend)
 			continue;
@@ -431,7 +439,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	if(deltaTime>0)
 	for (int i=0;i<m_data->dataChannels.size();i++)
 	{
-		DataChannel& dc = m_data->dataChannels[i];
+		ClientDataChannel& dc = m_data->dataChannels[i];
 		size_t b = dc.bytesReceived;
 		dc.bytesReceived= 0;
 		size_t o = dc.bytesSent;
@@ -548,20 +556,20 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		return;
 	}
 	idToStreamIndex[id] = dcIndex;
-	DataChannel& dataChannel = dataChannels[dcIndex];
+	ClientDataChannel& dataChannel = dataChannels[dcIndex];
 	dataChannel.readyToSend = false;
 	dataChannel.rtcDataChannel = dc;
-	std::cout << "DataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
+	std::cout << "ClientDataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
 
 	dc->onOpen([this,dcIndex]()
 		{
-			DataChannel& dataChannel = dataChannels[dcIndex];
+			ClientDataChannel& dataChannel = dataChannels[dcIndex];
 			dataChannel.readyToSend = true;
 			std::cout << "DataChannel opened" << std::endl;
 		});
 	dc->onBufferedAmountLow([this, dcIndex]()
 		{
-			DataChannel& dataChannel = dataChannels[dcIndex];
+			ClientDataChannel& dataChannel = dataChannels[dcIndex];
 			dataChannel.readyToSend = true;
 			std::cout << "DataChannel onBufferedAmountLow" << std::endl;
 		});

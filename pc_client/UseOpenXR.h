@@ -13,7 +13,10 @@ namespace teleport
 	class UseOpenXR: public client::OpenXR
 	{
 	public:
-		bool TryInitDevice() override;
+		UseOpenXR(const char* txt):OpenXR(txt)
+		{}
+
+		bool StartSession() override;
 		void SetCurrentFrameDeviceContext(platform::crossplatform::MultiviewGraphicsDeviceContext& d)
 		{
 			deviceContext = &d;

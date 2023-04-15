@@ -29,7 +29,6 @@
 
 using std::string;
 using namespace std::string_literals;
-using namespace std::string_literals;
 
 template<typename T> T get(const uint8_t* data, size_t* offset)
 {
@@ -587,7 +586,7 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 		copy<char>(material.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 		material.materialMode = (avs::MaterialMode)NextB;
 		material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
-		TELEPORT_INTERNAL_COUT("GeometryDecoder::decodeMaterial - {0}({1}) diffuse {2}",mat_uid,material.name.c_str(),material.pbrMetallicRoughness.baseColorTexture.index);
+//		TELEPORT_INTERNAL_COUT("GeometryDecoder::decodeMaterial - {0}({1}) diffuse {2}",mat_uid,material.name.c_str(),material.pbrMetallicRoughness.baseColorTexture.index);
 		material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 		material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;

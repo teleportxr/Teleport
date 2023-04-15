@@ -140,7 +140,7 @@ namespace clientrender
 			Format format = Format::FORMAT_UNKNOWN;
 			SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
 		
-			std::vector<std::vector<uint8_t>> images;
+			std::shared_ptr<std::vector<std::vector<uint8_t>>> images;
 
 			CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
 		

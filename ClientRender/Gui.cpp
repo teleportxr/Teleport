@@ -24,6 +24,7 @@
 #include <direct.h>
 #include <Windows.h>
 #endif
+using namespace std::string_literals;
 #include "Platform/Core/StringFunctions.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/OpenXR.h"
@@ -41,9 +42,12 @@ using namespace crossplatform;
 ImFont *defaultFont = nullptr;
 ImFont *smallFont=nullptr;
 ImFont *symbolFont=nullptr;
+ImFont *smallSymbolFont=nullptr;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 PlatformWindow* platformWindow = nullptr;
+
+bool Gui::url_input = false;
 
 #define TIMED_TOOLTIP(txt)\
 		{if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
@@ -59,7 +63,8 @@ PlatformWindow* platformWindow = nullptr;
 		if(timer<=0)\
 			ImGui::SetTooltip(txt);\
 	}
-
+	
+ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
 void Gui::SetPlatformWindow(PlatformWindow *w)
 {
 #ifndef _MSC_VER
@@ -203,11 +208,19 @@ void Gui::DarkStyle()
 	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
+
 void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 {
 	renderPlatform=r;
 	if(!r)
 		return;
+	SAFE_DELETE(vrHeadsetIconTexture);
+	vrHeadsetIconTexture=renderPlatform->CreateTexture("headsetIconLine.png");
+	imgui_vrHeadsetIconTexture.height=20;
+	imgui_vrHeadsetIconTexture.width=20;
+	imgui_vrHeadsetIconTexture.mip=0;
+	imgui_vrHeadsetIconTexture.slice=0;
+	imgui_vrHeadsetIconTexture.texture=vrHeadsetIconTexture;
 	for(uint16_t i=0;i<VK_MAX;i++)
 	{
 		KeysDown[i]=false;
@@ -296,7 +309,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_ARROW_LEFT);
 		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);
 		builder.BuildRanges(&glyph_ranges2);							// Build the final result (ordered ranges with all the unique characters submitted)
-		symbolFont = AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2.Data);
+		smallSymbolFont = AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	io.ConfigFlags|=ImGuiConfigFlags_IsTouchScreen;// VR more like a touch screen.
@@ -312,7 +325,10 @@ void Gui::InvalidateDeviceObjects()
 	#endif
 		ImGui_ImplPlatform_Shutdown();
 		ImGui::DestroyContext();
+		imgui_vrHeadsetIconTexture.texture=0;
+		SAFE_DELETE(vrHeadsetIconTexture);
 		renderPlatform=nullptr;
+
 	}
 }
 
@@ -339,13 +355,7 @@ void Gui::Show()
 	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
 #endif
 	visible			= true;
-	menu_pos		= view_pos;
-	static float z_offset = -.3f;
-	static float distance = 0.4f;
-	azimuth			= atan2f(-view_dir.x, view_dir.y);
-	tilt			= 3.1415926536f / 4.0f;
-	vec3 menu_offset = { distance * -sin(azimuth),distance * cos(azimuth),z_offset };
-	menu_pos		+= menu_offset;
+	reset_menu_pos	=true;
 	keys_pressed.clear();
 }
 
@@ -1189,14 +1199,14 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 			const auto& s = streams[i];
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##chnl", fmt::format("{0}", i).c_str());
+			ImGui::LabelText("##chnl", "%d",i);
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##slabel", s.label.c_str());
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##kps_in", fmt::format("{0:.1f}", kps_in).c_str());
+			ImGui::LabelText("##kps_in", "%3.1f",kps_in);
 			ImGui::TableNextColumn();
 			if(kps_out>0)
-				ImGui::LabelText("##kps_out", fmt::format("{0:.1f}", kps_out).c_str());
+				ImGui::LabelText("##kps_out", "%3.1f",kps_out);
 		}
 		ImGui::EndTable();
 	}
@@ -1524,6 +1534,7 @@ void Gui::MenuBar2D()
 		{
 			current_url = url_buffer;
 		}
+		url_input = ImGui::IsItemActive();
 		ImGui::PopItemWidth();
 		ImGui::SameLine();
 		if (!connecting)
@@ -1578,17 +1589,17 @@ void Gui::MenuBar2D()
 	ImGui::PopStyleColor();
 }
 
-void Gui::Render2D(GraphicsDeviceContext& deviceContext)
+void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 {
 	LightStyle();
+	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 #ifdef _MSC_VER
 	ImGui_ImplWin32_NewFrame();
 #endif
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
-	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
 	ImGuiIO& io = ImGui::GetIO();
 #ifdef __ANDROID__
@@ -1608,7 +1619,40 @@ void Gui::Render2D(GraphicsDeviceContext& deviceContext)
 		MenuBar2D();
 	}
 	EndMainMenuBar();
-	ImGui::End();
+	{
+		auto& style = ImGui::GetStyle();
+		ImVec4 transp= ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+		ImGui::PushStyleColor(ImGuiCol_Button,style.Colors[ImGuiCol_WindowBg]);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg,transp);
+		ImGui::PushStyleColor(ImGuiCol_Border,transp);
+		
+		ImVec2 pos = { vp.w - 100.f ,vp.h-100.f };
+		ImGui::SetNextWindowPos(pos);
+
+		ImGui::Begin("btn",0,window_flags);
+			//ImGui::SameLine();
+		ImGui::BeginDisabled(!openXR.CanStartSession());
+		const char *systname=openXR.GetSystemName();
+		if(ImGui::ImageButton("##start_vr", &imgui_vrHeadsetIconTexture, ImVec2(40, 40),ImVec2(0,0),ImVec2(1,1),ImVec4(0,0,0,0),ImVec4(0,0,0,1.0f)))
+		{
+			startXRSessionHandler();
+		}
+		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		{
+			if(systname)
+			{
+				TIMED_TOOLTIP(("Activate VR: "s+systname).c_str());
+			}
+			else
+				TIMED_TOOLTIP("Activate VR");
+		}
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		ImGui::PopStyleColor();
+		ImGui::EndDisabled();
+		ImGui::End();
+	}
+	//ImGui::End();
 	if (show_options)
 	{
 		ShowSettings2D();
@@ -1684,21 +1728,32 @@ void Gui::DevModeOptions()
 	ImGui::Checkbox("##showGeometryOffline", &config.options.showGeometryOffline);
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::LabelText("##labelGui2D", "2D User Interface");
+	ImGui::LabelText("##labelAlwaysShow3dGui", "Force 3D User Interface");
 	ImGui::TableNextColumn();
-	ImGui::Checkbox("##Gui2D", &config.options.gui2D);
+	ImGui::Checkbox("##AlwaysShow3dGui", &config.options.alwaysShow3dGui);
 }
-void Gui::Render(GraphicsDeviceContext& deviceContext)
+void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;
+	auto& config = client::Config::GetInstance();
 	if(!visible)
 		return;
-	auto& config = client::Config::GetInstance();
-	if (config.options.gui2D)
+	vec3 pos_diff=view_pos-menu_pos;
+	if(length(pos_diff)>1.4f)
 	{
-		Render2D(deviceContext);
-		return;
+		reset_menu_pos=true;
+	}
+	if(reset_menu_pos)
+	{
+		menu_pos		= view_pos;
+		static float z_offset = -.3f;
+		static float distance = 0.4f;
+		azimuth			= atan2f(-view_dir.x, view_dir.y);
+		tilt			= 3.1415926536f / 4.0f;
+		vec3 menu_offset = { distance * -sin(azimuth),distance * cos(azimuth),z_offset };
+		menu_pos		+= menu_offset;
+		reset_menu_pos=false;
 	}
 	DarkStyle();
 	// Start the Dear ImGui frame

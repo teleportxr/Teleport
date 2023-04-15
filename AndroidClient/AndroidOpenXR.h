@@ -31,7 +31,7 @@ namespace teleport
 			OpenXR(JavaVM *vm,jobject clazz);
 			bool InitSystem();
 			void SetVulkanDeviceAndInstance(vk::Device *vkDevice,vk::Instance *vkInstance,int MainThreadTid,int RenderThreadTid);
-			bool TryInitDevice() override;
+			bool StartSession() override;
 			std::vector<std::string> GetRequiredVulkanDeviceExtensions() const;
 			std::vector<std::string> GetRequiredVulkanInstanceExtensions() const;
 

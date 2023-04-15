@@ -151,7 +151,6 @@ void ClientMessaging::tick(float deltaTime)
 				memcpy(packet->data + commandSize + enteredBoundsSize, nodesLeftBounds.data(), leftBoundsSize);
 
 				SendCommand(packet->data,totalSize);
-//				//enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet);
 				enet_free(packet);
 				nodesEnteredBounds.clear();
 				nodesLeftBounds.clear();

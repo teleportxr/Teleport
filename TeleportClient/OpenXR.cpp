@@ -14,6 +14,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "ThisPlatform/StringFunctions.h"
 #include "Log.h"
+#include "TeleportCore/Threads.h"
 
 #include <regex>
 
@@ -24,6 +25,7 @@ const char* teleport::client::stringof(ActionId a)
 	{
 		case SELECT				  : return "SELECT";
 		case SHOW_MENU			  : return "SHOW_MENU";
+		case SYSTEM				  : return "SYSTEM";
 		case A					  : return "A";
 		case B					  : return "B";
 		case X					  : return "X";
@@ -62,11 +64,11 @@ bool Match(const std::string& full_string, const std::string& substring)
 		std::smatch match;
 		if (std::regex_search(full_string, match, regex))
 		{
-			std::cout << "matches for '" << full_string << "'\n";
-			std::cout << "Prefix: '" << match.prefix() << "'\n";
+			TELEPORT_COUT << "matches for '" << full_string << "'\n";
+			TELEPORT_COUT << "Prefix: '" << match.prefix() << "'\n";
 			for (size_t i = 0; i < match.size(); ++i)
-				std::cout << i << ": " << match[i] << '\n';
-			std::cout << "Suffix: '" << match.suffix() << "\'\n\n";
+				TELEPORT_COUT << i << ": " << match[i] << '\n';
+			TELEPORT_COUT << "Suffix: '" << match.suffix() << "\'\n\n";
 			return true;
 		}
 	}
@@ -330,13 +332,13 @@ void InteractionProfile::Init(XrInstance &xr_instance,const char *pr,std::initia
 			}
 			if(!elem.action)
 			{
-				TELEPORT_CERR<<"InteractionProfile: "<<pr<<": Failed to create suggested binding "<<elem.complete_path<<" as action is null."<<std::endl;
+//				TELEPORT_CERR<<"InteractionProfile: "<<pr<<": Failed to create suggested binding "<<elem.complete_path<<" as action is null."<<std::endl;
 			}
 		}
 	}
 }
 
-void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char *complete_path)
+void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char *complete_path,bool virtual_binding)
 {
 	XrPath p;
 	p= MakeXrPath(xr_instance, complete_path);
@@ -351,7 +353,7 @@ void InteractionProfile::Add(XrInstance &xr_instance,XrAction action,const char 
 		{
 			TELEPORT_CERR<<"InteractionProfile: "<<name.c_str()<<": Failed to create suggested binding as path "<<complete_path<<" was invalid."<<std::endl;
 		}
-		if(!action)
+		if(!virtual_binding&&!action)
 		{
 			TELEPORT_CERR<<"InteractionProfile: "<<name.c_str()<<": Failed to create suggested binding "<<complete_path<<" as action is null."<<std::endl;
 		}
@@ -379,76 +381,69 @@ vector<std::string> OpenXR::GetRequiredExtensions() const
 	return str;
 }
 
-bool OpenXR::InitInstance(const char *app_name)
+bool OpenXR::InitInstance()
 {
-// Define the actions first - we don't need an XR instance for this.
-	xr_input_session.SetActions( {
-		// Create an action to track the position and orientation of the hands! This is
-		// the controller location, or the center of the palms for actual hands.
-		 // Create an action for listening to the select action! This is primary trigger
-		 // on controllers, and an airtap on HoloLens
-		 {ActionId::SELECT				,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::SHOW_MENU			,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::A					,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::B					,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::X					,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::Y					,"y"					,"Y"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		// Action for left controller
-		,{ActionId::LEFT_GRIP_POSE		,"left_grip_pose"		,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::LEFT_AIM_POSE		,"left_aim_pose"		,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::LEFT_TRIGGER		,"left_trigger"			,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_SQUEEZE		,"left_squeeze"			,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_STICK_X		,"left_thumbstick_x"	,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_STICK_Y		,"left_thumbstick_y"	,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::LEFT_HAPTIC			,"left_haptic"			,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
-		// Action for right controller
-		,{ActionId::RIGHT_GRIP_POSE		,"right_grip_pose"		,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::RIGHT_AIM_POSE		,"right_aim_pose"		,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
-		,{ActionId::RIGHT_TRIGGER		,"right_trigger"		,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_SQUEEZE		,"right_squeeze"		,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_STICK_X		,"right_thumbstick_x"	,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_STICK_Y		,"right_thumbstick_y"	,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
-		,{ActionId::RIGHT_HAPTIC		,"right_haptic"			,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
-		// Pseudo-actions for desktop mode:
-		,{ActionId::MOUSE_LEFT_BUTTON	,"mouse_left"			,"Left Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		,{ActionId::MOUSE_RIGHT_BUTTON	,"mouse_right"			,"Right Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
-		});
-	#ifdef _MSC_VER
-	// Add keyboard keys:
-	for(size_t i=0;i<letters_numbers.size();i++)
-	{
-		std::string name;
-		name+=letters_numbers[i];
-		name+="_key";
-		xr_input_session.AddAction(name.c_str(),name.c_str(),XR_ACTION_TYPE_BOOLEAN_INPUT);
-	}
-	#endif
-	// OpenXR will fail to initialize if we ask for an extension that OpenXR
-	// can't provide! So we need to check our all extensions before 
-	// initializing OpenXR with them. Note that even if the extension is 
-	// present, it's still possible you may not be able to use it. For 
-	// example: the hand tracking extension may be present, but the hand
-	// sensor might not be plugged in or turned on. There are often 
-	// additional checks that should be made before using certain features!
+	if(xr_instance)
+		return true;
+	if(initInstanceThreadState!=ThreadState::INACTIVE)
+		return false;
+	
+	initInstanceThreadState=ThreadState::STARTING;
+	bool res=internalInitInstance();
+	initInstanceThreadState=ThreadState::INACTIVE;
+	return res;
+}
+
+bool OpenXR::threadedInitInstance()
+{
+#ifndef FIX_BROKEN
+	std::lock_guard<std::mutex> lock(instanceMutex);
+	
+	SetThisThreadName("threadedInitInstance");
+	// This should only ever block for a short time.
+	while(initInstanceThreadState!=ThreadState::STARTING);
+	return internalInitInstance();
+#else
+	return false;
+#endif
+}
+
+bool OpenXR::internalInitInstance()
+{
+	initInstanceThreadState = ThreadState::RUNNING;
+	TELEPORT_COUT<<"initInstanceThreadState = ThreadState::RUNNING\n";
+		// OpenXR will fail to initialize if we ask for an extension that OpenXR
+		// can't provide! So we need to check our all extensions before 
+		// initializing OpenXR with them. Note that even if the extension is 
+		// present, it's still possible you may not be able to use it. For 
+		// example: the hand tracking extension may be present, but the hand
+		// sensor might not be plugged in or turned on. There are often 
+		// additional checks that should be made before using certain features!
 	vector<const char*> use_extensions;
 	vector<std::string> ask_extensions;
-	ask_extensions=GetRequiredExtensions();
-	
+	ask_extensions = GetRequiredExtensions();
+
 	// We'll get a list of extensions that OpenXR provides using this 
 	// enumerate pattern. OpenXR often uses a two-call enumeration pattern 
 	// where the first call will tell you how much memory to allocate, and
 	// the second call will provide you with the actual data!
 	uint32_t ext_count = 0;
-	xrEnumerateInstanceExtensionProperties(nullptr, 0, &ext_count, nullptr);
+	XrResult res = xrEnumerateInstanceExtensionProperties(nullptr, 0, &ext_count, nullptr);
+	if (res != XR_SUCCESS)
+	{
+		initInstanceThreadState = ThreadState::FAILED;
+		TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FAILED\n";
+		return false;
+	}
 	if(ext_count)
 	{
 		vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
 		xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_exts.data());
 
-		std::cout<<"OpenXR extensions available:\n";
+		//TELEPORT_COUT<<"OpenXR extensions available:\n";
 		for (size_t i = 0; i < xr_exts.size(); i++)
 		{
-			std::cout<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
+			//TELEPORT_COUT<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
 
 			// Check if we're asking for this extensions, and add it to our use 
 			// list!
@@ -468,68 +463,81 @@ bool OpenXR::InitInstance(const char *app_name)
 			{
 				return strcmp(ext, GetOpenXRGraphicsAPIExtensionName()) == 0;
 			}))
+	{
+		initInstanceThreadState=ThreadState::FINISHED;
+		TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FAILED\n";
 		return false;
+	}
 
 	// Initialize OpenXR with the extensions we've found!
 	XrInstanceCreateInfo createInfo = { XR_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.enabledExtensionCount =(uint32_t) use_extensions.size();
 	createInfo.enabledExtensionNames = use_extensions.data();
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
-	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,app_name);
-	xrCreateInstance(&createInfo, &xr_instance);
+	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,applicationName.c_str());
+	
+	TELEPORT_COUT<<"xrCreateInstance start"<<std::endl;
+	try
+	{
+		XR_CHECK(xrCreateInstance(&createInfo, &xr_instance));
+	}
+	catch(...)
+	{
+		TELEPORT_CERR<<"xrCreateInstance exception."<<std::endl;
+	}
+	TELEPORT_COUT<<"xrCreateInstance done"<<std::endl;
 	CreateMouseAndKeyboardProfile();
+	if(xr_instance)
+	{
+		// Load extension methods that we'll need for this application! There are
+		// couple of ways to do this, and this is a fairly manual one. See this
+		// file for another way to do it:
+		// https://github.com/maluoi/StereoKit/blob/master/StereoKitC/systems/platform/openxr_extensions.h
+		xrGetInstanceProcAddr(xr_instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrCreateDebugUtilsMessengerEXT));
+		xrGetInstanceProcAddr(xr_instance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrDestroyDebugUtilsMessengerEXT));
+
+		// Set up a really verbose debug log! Great for dev, but turn this off or
+		// down for final builds. WMR doesn't produce much output here, but it
+		// may be more useful for other runtimes?
+		// Here's some extra information about the message types and severities:
+		// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
+	#if TELEPORT_DEBUG_OPENXR
+		XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+		debug_info.messageTypes =
+			XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
+		debug_info.messageSeverities =
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debug_info.userCallback = [](XrDebugUtilsMessageSeverityFlagsEXT severity, XrDebugUtilsMessageTypeFlagsEXT types, const XrDebugUtilsMessengerCallbackDataEXT* msg, void* user_data) {
+			// Print the debug message we got! There's a bunch more info we could
+			// add here too, but this is a pretty good start, and you can always
+			// add a breakpoint this line!
+			TELEPORT_COUT<<fmt::format("{}: {}\n", msg->functionName, msg->message).c_str()<<std::endl;
+
+			// Output to debug window
+			TELEPORT_COUT<<fmt::format( "{}: {}", msg->functionName, msg->message).c_str() << std::endl;
+
+			// Returning XR_TRUE here will force the calling function to fail
+			return (XrBool32)XR_FALSE;
+		};
+		// Start up the debug utils!
+		if (ext_xrCreateDebugUtilsMessengerEXT)
+			ext_xrCreateDebugUtilsMessengerEXT(xr_instance, &debug_info, &xr_debug);
+	#endif
+	}
+	initInstanceThreadState=ThreadState::FINISHED;
+	TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FINISHED\n";
 	return (xr_instance!=nullptr);
 }
 
-bool OpenXR::Init(crossplatform::RenderPlatform *r)
+void OpenXR::SetRenderPlatform(crossplatform::RenderPlatform *r)
 {
-	// Check if OpenXR is on this system, if this is null here, the user 
-	// needs to install an OpenXR runtime and ensure it's active!
-	if (xr_instance == nullptr)
-		return false;
 	renderPlatform = r;
-
-	// Load extension methods that we'll need for this application! There's a
-	// couple ways to do this, and this is a fairly manual one. Chek out this
-	// file for another way to do it:
-	// https://github.com/maluoi/StereoKit/blob/master/StereoKitC/systems/platform/openxr_extensions.h
-	xrGetInstanceProcAddr(xr_instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrCreateDebugUtilsMessengerEXT));
-	xrGetInstanceProcAddr(xr_instance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrDestroyDebugUtilsMessengerEXT));
-
-	// Set up a really verbose debug log! Great for dev, but turn this off or
-	// down for final builds. WMR doesn't produce much output here, but it
-	// may be more useful for other runtimes?
-	// Here's some extra information about the message types and severities:
-	// https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#debug-message-categorization
-#if TELEPORT_DEBUG_OPENXR
-	XrDebugUtilsMessengerCreateInfoEXT debug_info = { XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-	debug_info.messageTypes =
-		XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
-	debug_info.messageSeverities =
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debug_info.userCallback = [](XrDebugUtilsMessageSeverityFlagsEXT severity, XrDebugUtilsMessageTypeFlagsEXT types, const XrDebugUtilsMessengerCallbackDataEXT* msg, void* user_data) {
-		// Print the debug message we got! There's a bunch more info we could
-		// add here too, but this is a pretty good start, and you can always
-		// add a breakpoint this line!
-		std::cout<<fmt::format("{}: {}\n", msg->functionName, msg->message).c_str()<<std::endl;
-
-		// Output to debug window
-		std::cout<<fmt::format( "{}: {}", msg->functionName, msg->message).c_str() << std::endl;
-
-		// Returning XR_TRUE here will force the calling function to fail
-		return (XrBool32)XR_FALSE;
-	};
-	// Start up the debug utils!
-	if (ext_xrCreateDebugUtilsMessengerEXT)
-		ext_xrCreateDebugUtilsMessengerEXT(xr_instance, &debug_info, &xr_debug);
-#endif
-	return true;
 }
 
 const char* left = "user/hand/left";
@@ -554,7 +562,7 @@ void OpenXR::CreateMouseAndKeyboardProfile()
 			std::string path = "/input/keyboard/";
 			const auto& def = xr_input_session.actionDefinitions[i];
 			path += def.name[0];
-			mouseAndKeyboard.Add(xr_instance, xr_input_session.actionDefinitions[i].xrAction, path.c_str());
+			mouseAndKeyboard.Add(xr_instance, xr_input_session.actionDefinitions[i].xrAction, path.c_str(),true);
 		}
 #endif
 		// No need to SuggestBind: OpenXR doesn't know what to do with this!
@@ -575,7 +583,7 @@ void OpenXR::MakeActions()
 	// accessibility settings.
 	#define LEFT	"/user/hand/left"
 	#define RIGHT	"/user/hand/right"
-	interactionProfiles.resize(4);
+	interactionProfiles.resize(5);
 	
 	auto SuggestBind = [this](InteractionProfile &p)
 	{
@@ -600,6 +608,7 @@ void OpenXR::MakeActions()
 	InteractionProfile &khrSimpleIP			=interactionProfiles[1];
 	InteractionProfile &valveIndexIP		=interactionProfiles[2];
 	InteractionProfile &oculusTouch			=interactionProfiles[3];
+	InteractionProfile &oculusGo			=interactionProfiles[4];
 	khrSimpleIP.Init(xr_instance
 			,"/interaction_profiles/khr/simple_controller"
 			,{
@@ -658,6 +667,29 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(oculusTouch);
+	oculusGo.Init(xr_instance
+		, "/interaction_profiles/oculus/go_controller"
+		, {
+			 {xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction		, LEFT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction	,RIGHT "/input/grip/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction		, LEFT "/input/aim/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction		,RIGHT "/input/aim/pose"}
+			,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction			, LEFT "/input/menu/click" }
+			,{xr_input_session.actionDefinitions[ActionId::SYSTEM].xrAction				, LEFT "/input/system/click" }
+			,{xr_input_session.actionDefinitions[ActionId::A].xrAction					,RIGHT "/input/a/click" }
+			,{xr_input_session.actionDefinitions[ActionId::B].xrAction					,RIGHT "/input/b/click" }
+			,{xr_input_session.actionDefinitions[ActionId::X].xrAction					, LEFT "/input/x/click" }
+			,{xr_input_session.actionDefinitions[ActionId::Y].xrAction					, LEFT "/input/y/click" }
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction		, LEFT "/input/trigger/value" }
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction		,RIGHT "/input/trigger/value" }
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction		, LEFT "/input/squeeze/value" }
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction		,RIGHT "/input/squeeze/value" }
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_X].xrAction		, LEFT "/input/thumbstick/x"	}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_X].xrAction		,RIGHT "/input/thumbstick/x"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_Y].xrAction		, LEFT "/input/thumbstick/y"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
+		});
+	SuggestBind(oculusGo);
 	
 	// Attach the action set we just made to the session
 	XrSessionActionSetsAttachInfo attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
@@ -672,6 +704,29 @@ void OpenXR::MakeActions()
 	}
 }
 
+OpenXR::~OpenXR()
+{
+	
+}
+
+void OpenXR::Tick()
+{
+	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
+	{
+		initInstanceThreadState=ThreadState::STARTING;
+		initInstanceThread = std::thread(&OpenXR::threadedInitInstance, this);
+	}
+	else if(initInstanceThreadState==ThreadState::FINISHED)
+	{
+		initInstanceThread.join();
+		initInstanceThreadState=ThreadState::INACTIVE;
+	}
+	else if (HaveXRDevice())
+	{
+		PollEvents();
+		PollActions();
+	}
+}
 
 void OpenXR::PollActions()
 {
@@ -789,11 +844,11 @@ void OpenXR::RecordCurrentBindings()
 		// for each action, what is the binding?
 		XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
 		if(interactionProfile.interactionProfile)
-			std::cout<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+			TELEPORT_COUT<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 		userHandLeftActiveProfile=interactionProfile.interactionProfile;
 		XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
 		if(interactionProfile.interactionProfile)
-			std::cout<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
+			TELEPORT_COUT<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
 		userHandRightActiveProfile=interactionProfile.interactionProfile;
 		if(userHandLeftActiveProfile)
 			activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
@@ -934,20 +989,20 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 				std::string path_str=GetBoundPath(actionDef);
 				if(!path_str.length())
 					continue;
-				//std::cout<<"\tChecking against: "<<path_str.c_str()<<std::endl;
+				//TELEPORT_COUT<<"\tChecking against: "<<path_str.c_str()<<std::endl;
 				// Now we try to match this path to the input serverInputDef.
 				if (std::regex_search(path_str, match, re))
 				{
-					std::cout<<"\t\t\tMatches.\n";
+					TELEPORT_COUT<<"\t\t\tMatches.\n";
 					matches=true;
 				}
 				//else
-				//	std::cout<<"\t\t\tX\n";
+				//	TELEPORT_COUT<<"\t\t\tX\n";
 			}
 			if(matches)
 			{
 				string matching=match.str(0);
-				std::cout<<"Binding matches: "<<serverInputDef.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
+				TELEPORT_COUT<<"Binding matches: "<<serverInputDef.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
 				
 				inputMappings.push_back(InputMapping());
 				inputStates.push_back(InputState());
@@ -972,7 +1027,7 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 		}
 		else
 		{
-			std::cout<<"Found "<<found<<" matches for "<<serverInputDef.regexPath.c_str()<<"\n";
+			TELEPORT_COUT<<"Found "<<found<<" matches for "<<serverInputDef.regexPath.c_str()<<"\n";
 		}
 	}
 }
@@ -1034,7 +1089,7 @@ void OpenXR::BindUnboundPoses(avs::uid server_uid)
 		u++;
 	}
 	if(unboundPoses.size())
-		std::cout<<unboundPoses.size()<<" poses remain unbound."<<std::endl;
+		TELEPORT_COUT<<unboundPoses.size()<<" poses remain unbound."<<std::endl;
 }
 
 void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath)
@@ -1078,7 +1133,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			XrSpaceLocation space_location {XR_TYPE_SPACE_LOCATION, &space_velocity};
 			space_velocity.velocityFlags=XR_SPACE_VELOCITY_LINEAR_VALID_BIT |XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
 			auto space=xr_input_session.actionDefinitions[def.actionId].space;
-			if(space)
+			if (xr_session&& space)
 			{
 				XrResult		res = xrLocateSpace(space, xr_app_space, lastTime, &space_location);
 				if (XR_UNQUALIFIED_SUCCESS(res) &&
@@ -1260,6 +1315,54 @@ const std::map<avs::uid,NodePoseState> &OpenXR::GetNodePoseStates(avs::uid serve
 	return nodePoseStates;
 }
 
+OpenXR::OpenXR(const char *app_name)
+{
+	applicationName=app_name;
+// Define the actions first - we don't need an XR instance for this.
+	xr_input_session.SetActions( {
+		// Create an action to track the position and orientation of the hands! This is
+		// the controller location, or the center of the palms for actual hands.
+		 // Create an action for listening to the select action! This is primary trigger
+		 // on controllers, and an airtap on HoloLens
+		 {ActionId::SELECT				,"select"				,"Select"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::SHOW_MENU			,"menu"					,"Menu"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::SYSTEM				,"system"				,"System"		,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::A					,"a"					,"A"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::B					,"b"					,"B"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::X					,"x"					,"X"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::Y					,"y"					,"Y"			,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		// Action for left controller
+		,{ActionId::LEFT_GRIP_POSE		,"left_grip_pose"		,"Left Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::LEFT_AIM_POSE		,"left_aim_pose"		,"Left Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::LEFT_TRIGGER		,"left_trigger"			,"Left Trigger"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_SQUEEZE		,"left_squeeze"			,"Left Squeeze"			,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_STICK_X		,"left_thumbstick_x"	,"Left Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_STICK_Y		,"left_thumbstick_y"	,"Left Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::LEFT_HAPTIC			,"left_haptic"			,"Left Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
+		// Action for right controller
+		,{ActionId::RIGHT_GRIP_POSE		,"right_grip_pose"		,"Right Grip Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::RIGHT_AIM_POSE		,"right_aim_pose"		,"Right Aim Pose"		,XR_ACTION_TYPE_POSE_INPUT}
+		,{ActionId::RIGHT_TRIGGER		,"right_trigger"		,"Right Trigger"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_SQUEEZE		,"right_squeeze"		,"Right Squeeze"		,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_STICK_X		,"right_thumbstick_x"	,"Right Thumbstick X"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_STICK_Y		,"right_thumbstick_y"	,"Right Thumbstick Y"	,XR_ACTION_TYPE_FLOAT_INPUT}
+		,{ActionId::RIGHT_HAPTIC		,"right_haptic"			,"Right Haptic"			,XR_ACTION_TYPE_VIBRATION_OUTPUT}
+		// Pseudo-actions for desktop mode:
+		,{ActionId::MOUSE_LEFT_BUTTON	,"mouse_left"			,"Left Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		,{ActionId::MOUSE_RIGHT_BUTTON	,"mouse_right"			,"Right Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
+		});
+	#ifdef _MSC_VER
+	// Add keyboard keys:
+	for(size_t i=0;i<letters_numbers.size();i++)
+	{
+		std::string name;
+		name+=letters_numbers[i];
+		name+="_key";
+		xr_input_session.AddAction(name.c_str(),name.c_str(),XR_ACTION_TYPE_BOOLEAN_INPUT);
+	}
+	#endif
+}
+
 void OpenXR::openxr_poll_predicted(XrTime predicted_time)
 {
 	if (xr_session_state != XR_SESSION_STATE_FOCUSED)
@@ -1375,7 +1478,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 		case XR_SESSION_STATE_STOPPING:
 			{
 				xr_session_running = false;
-				xrEndSession(xr_session);
+				EndSession();
 			}
 			break;
 			default:
@@ -1397,8 +1500,12 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 	locate_info.viewConfigurationType = app_config_view;
 	locate_info.displayTime = predictedTime;
 	locate_info.space = xr_app_space;
-	xrLocateViews(xr_session, &locate_info, &view_state, (uint32_t)xr_views.size(), &view_count, xr_views.data());
-
+	XrResult res=xrLocateViews(xr_session, &locate_info, &view_state, (uint32_t)xr_views.size(), &view_count, xr_views.data());
+	if(res!=XR_SUCCESS)
+	{
+		TELEPORT_COUT<<"xrLocateViews failed."<<std::endl;
+		return false;
+	}
 	projection_views.resize(view_count);
 	spacewarp_views.resize(view_count);
 
@@ -1550,9 +1657,8 @@ void OpenXR::DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCom
 	previousState.XrSpacePoseInWorld=state.XrSpacePoseInWorld;
 }
 
-void OpenXR::PollEvents(bool& exit)
+void OpenXR::PollEvents()
 {
-	exit = false;
 	XrEventDataBuffer event_buffer = { XR_TYPE_EVENT_DATA_BUFFER };
 	//XrResult res;
 	XrEventDataBaseHeader* baseEventHeader = (XrEventDataBaseHeader*)(&event_buffer);
@@ -1574,22 +1680,22 @@ void OpenXR::PollEvents(bool& exit)
 		switch (baseEventHeader->type)
 		{
 			case XR_TYPE_EVENT_DATA_EVENTS_LOST:
-				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_EVENTS_LOST event";
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_EVENTS_LOST event";
 				break;
 			case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING: {
 				const XrEventDataInstanceLossPending* instance_loss_pending_event =
 					(XrEventDataInstanceLossPending*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING event: time "<<
 					(instance_loss_pending_event->lossTime)<<std::endl;
 			} break;
 			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
 				break;
 			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT: {
 				const XrEventDataPerfSettingsEXT* perf_settings_event =
 					(XrEventDataPerfSettingsEXT*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT event: type "
 					<<perf_settings_event->type<<" "
 					<<" subdomain "<<perf_settings_event->subDomain<<" "
@@ -1599,7 +1705,7 @@ void OpenXR::PollEvents(bool& exit)
 			case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING: {
 				XrEventDataReferenceSpaceChangePending* ref_space_change_event =
 					(XrEventDataReferenceSpaceChangePending*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING event: changed space: "
 					<<ref_space_change_event->referenceSpaceType
 					<<" for session "<<(void*)ref_space_change_event->session
@@ -1608,31 +1714,16 @@ void OpenXR::PollEvents(bool& exit)
 			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
 				const XrEventDataSessionStateChanged* session_state_changed_event =
 					(XrEventDataSessionStateChanged*)(baseEventHeader);
-				std::cout<<
+				TELEPORT_COUT<<
 					"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "
 					<<to_string(session_state_changed_event->state)<<
 					" for session "<<(void*)session_state_changed_event->session<<
 					" time "<<(session_state_changed_event->time)<<std::endl;
-
-				switch (session_state_changed_event->state)
-				{
-					case XR_SESSION_STATE_FOCUSED:
-						std::cout<<	"Focused = true"<<std::endl;
-						break;
-					case XR_SESSION_STATE_VISIBLE:
-						std::cout<<	"Focused = false"<<std::endl;
-						break;
-					case XR_SESSION_STATE_READY:
-					case XR_SESSION_STATE_STOPPING:
-						HandleSessionStateChanges( session_state_changed_event->state);
-						break;
-					default:
-						break;
-				}
-				xr_session_state=session_state_changed_event->state;
+					
+				HandleSessionStateChanges( session_state_changed_event->state);
 			} break;
 			default:
-				std::cout<<"xrPollEvent: Unknown event"<<std::endl;
+				TELEPORT_COUT<<"xrPollEvent: Unknown event"<<std::endl;
 				break;
 		}
 	}
@@ -1680,8 +1771,8 @@ void OpenXR::PollEvents(bool& exit)
 			{
 	RedirectStdCoutCerr();
 				XrEventDataSessionStateChanged* changed = (XrEventDataSessionStateChanged*)&event_buffer;
-				xr_session_state = changed->state;
-				std::cout<<"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "<<changed->state
+					xr_session_state = changed->state;
+				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: "<<changed->state
 					<<" for session "<<(void*)changed->session<<" at time "<<changed->time<<std::endl;
 				HandleSessionStateChanges(xr_session_state);
 				switch(xr_session_state)
@@ -1709,11 +1800,43 @@ bool OpenXR::HaveXRDevice() const
 	return OpenXR::haveXRDevice;
 }
 
-bool OpenXR::IsXRDeviceActive() const
+bool OpenXR::IsXRDeviceRendering() const
 {
 	if(!OpenXR::haveXRDevice)
 		return false;
 	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
+}
+
+bool OpenXR::CanStartSession() 
+{
+	if(IsXRDeviceRendering())
+		return false;
+	if(xr_session!=XR_NULL_HANDLE)
+		return false;
+	if(xr_system_id==XR_NULL_SYSTEM_ID)
+	{
+		if(xr_instance==XR_NULL_HANDLE)
+			return false;
+		// Request a form factor from the device (HMD, Handheld, etc.)
+		// If the device is not on, not connected, or its app is not running, this may fail here:
+		XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
+		systemInfo.formFactor = app_config_form;
+		if (!CheckXrResult(xr_instance,xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
+		{
+			TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
+			return false;
+		}
+		xrGetSystemProperties(xr_instance,xr_system_id,&xr_system_properties);
+		TELEPORT_COUT<<"XR System found: "<<xr_system_properties.systemName<<std::endl;
+	}
+	if(xr_system_id!=XR_NULL_SYSTEM_ID)
+		return true;
+	return false;
+}
+
+const char * OpenXR::GetSystemName() const
+{
+	return xr_system_properties.systemName;
 }
 
 const avs::Pose& OpenXR::GetHeadPose_StageSpace() const
@@ -1934,7 +2057,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 
-		static bool add_overlay=false;
+		static bool add_overlay=true;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
@@ -1983,7 +2106,7 @@ bool OpenXR::RenderOverlayLayer(XrTime predictedTime,crossplatform::RenderDelega
 	renderPlatform->ActivateRenderTargets(deviceContext, 1, &overlay_xr_swapchain.surface_data[img_id].target_view, overlay_xr_swapchain.surface_data[img_id].depth_view);
 	
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.0f, 1.0f, 0.0f, 1.0f };
+	static float clear[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	renderPlatform->Clear(deviceContext, clear);
 	overlayDelegate(deviceContext);
 
@@ -2048,7 +2171,7 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
     quad_layer.subImage.imageRect.offset.y = 0;
 	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
-    quad_layer.subImage.imageArrayIndex = (uint32_t)i;
+	quad_layer.subImage.imageArrayIndex = 0; //AJR: Only composite the top layer image array, as the overlay quad will be rendered in 3D space.
     overlay.pose.orientation =        XrQuaternionf_CreateFromVectorAngle({0,1.0f,0},-90.0f * 3.14159f / 180.0f);
     quad_layer.pose = overlay.pose;
     quad_layer.size = overlay.size;
@@ -2056,6 +2179,21 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 }
 
 void OpenXR::Shutdown()
+{
+	while(initInstanceThreadState==ThreadState::RUNNING)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	if(initInstanceThread.joinable())
+		initInstanceThread.join();
+	EndSession();
+	if (xr_debug != XR_NULL_HANDLE)
+		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);
+	if (xr_instance != XR_NULL_HANDLE)
+		xrDestroyInstance(xr_instance);
+}
+
+void OpenXR::EndSession()
 {
 	haveXRDevice = false;
 	// We used a graphics API to initialize the swapchain data, so we'll
@@ -2082,11 +2220,9 @@ void OpenXR::Shutdown()
 		xrDestroySpace(xr_app_space);
 	if (xr_session != XR_NULL_HANDLE)
 		xrDestroySession(xr_session);
-	if (xr_debug != XR_NULL_HANDLE)
-		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);
-	if (xr_instance != XR_NULL_HANDLE)
-		xrDestroyInstance(xr_instance);
+	xr_session=0;
 }
+
 
 static const char *stringOf(XrSessionState s)
 {

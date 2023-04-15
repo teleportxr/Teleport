@@ -73,22 +73,20 @@ swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlat
 	return result;
 }
 
-bool UseOpenXR::TryInitDevice()
+bool UseOpenXR::StartSession()
 {
-	// Request a form factor from the device (HMD, Handheld, etc.)
-	// If the device is not on, not connected, or its app is not running, this may fail here:
-	XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
-	systemInfo.formFactor = app_config_form;
-	if (!CheckXrResult(xr_instance,xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
-	{
-		TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
+	if(!CanStartSession())
 		return false;
-	}
 
 	// Check what blend mode is valid for this device (opaque vs transparent displays)
 	// We'll just take the first one available!
 	uint32_t blend_count = 0;
-	xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, 1, &blend_count, &xr_environment_blend);
+	XrResult res=xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, app_config_view, 1, &blend_count, &xr_environment_blend);
+	if(res!=XrResult::XR_SUCCESS)
+	{
+		xr_system_id=XR_NULL_SYSTEM_ID;
+		return false;
+	}
 
 	// OpenXR wants to ensure apps are using the correct graphics card, so this MUST be called 
 	// before xrCreateSession. This is crucial on devices that have multiple graphics cards, 
@@ -118,16 +116,21 @@ bool UseOpenXR::TryInitDevice()
 	XrSessionCreateInfo sessionInfo = { XR_TYPE_SESSION_CREATE_INFO };
 	sessionInfo.next = &binding;
 	sessionInfo.systemId = xr_system_id;
-	XrResult res=xrCreateSession(xr_instance, &sessionInfo, &xr_session);
+	res=xrCreateSession(xr_instance, &sessionInfo, &xr_session);
 	if (!CheckXrResult(xr_instance,res))
 	{
+		xr_system_id=XR_NULL_SYSTEM_ID;
 		std::cerr<<fmt::format("Failed to create XR Session\n").c_str() << std::endl;
 		return false;
 	}
 
 	// Unable to start a session, may not have an MR device attached or ready
 	if (xr_session == nullptr)
+	{
+		xr_system_id=XR_NULL_SYSTEM_ID;
 		return false;
+	}
+
 
 	// OpenXR uses a couple different types of reference frames for positioning content, we need to choose one for
 	// displaying our content! STAGE would be relative to the center of your guardian system's bounds, and LOCAL
@@ -171,7 +174,11 @@ bool UseOpenXR::TryInitDevice()
 	uint32_t formatCount = 0;
 	res = xrEnumerateSwapchainFormats(xr_session, 0, &formatCount, nullptr);
 	if (!formatCount)
+	{
+		xr_system_id=XR_NULL_SYSTEM_ID;
 		return false;
+	}
+
 
 	std::vector<int64_t> formats(formatCount);
 	res = xrEnumerateSwapchainFormats(xr_session, formatCount, &formatCount, formats.data());
@@ -186,7 +193,9 @@ bool UseOpenXR::TryInitDevice()
 	auto swapchainFormatIt = std::find_first_of(formats.begin(), formats.end(), std::begin(SupportedColorSwapchainFormats), std::end(SupportedColorSwapchainFormats));
 	if (swapchainFormatIt == formats.end())
 	{
+		xr_system_id=XR_NULL_SYSTEM_ID;
 		throw("No runtime swapchain format supported for color swapchain");
+		return false;
 	}
 	swapchain_format = *swapchainFormatIt;
 
@@ -245,8 +254,18 @@ bool UseOpenXR::TryInitDevice()
 	AddXrSwapchain(swapchain_info);
 
 	OVERLAY_SWAPCHAIN = (int)xr_swapchains.size();
+	swapchain_info.createFlags	= 0;
+	swapchain_info.usageFlags	= XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchain_info.format		= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	swapchain_info.sampleCount	= 1;
+	swapchain_info.width		= 1024;
+	swapchain_info.height		= 512;
+	swapchain_info.faceCount	= 1;
+	swapchain_info.arraySize	= 1;
+	swapchain_info.mipCount		= 1;
 	AddXrSwapchain(swapchain_info);
 
 	haveXRDevice = true;
 	return true;
 }
+
