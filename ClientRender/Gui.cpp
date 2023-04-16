@@ -1843,8 +1843,8 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 		}
 		if(show_options)
 		{
-            ImGui::Spacing();
-            ImGui::SameLine(ImGui::GetWindowWidth()-80);
+			ImGui::Spacing();
+			ImGui::SameLine(ImGui::GetWindowWidth()-80);
 
 			if(ImGui::Button(ICON_FK_ARROW_LEFT,ImVec2(64,32)))
 			{
@@ -1857,7 +1857,7 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f);
 				MainOptions();
 
-#if TELEPORT_INTERNAL_CHECKS
+				#if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)
 					DevModeOptions();
 				#endif
@@ -1956,7 +1956,7 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 					KeyboardLine("1234567890-");
 					ImGui::SameLine();
 					ImGui::PushFont(symbolFont);
-		//ImGui::Button(ICON_FK_SEARCH " Search");
+					//ImGui::Button(ICON_FK_SEARCH " Search");
 					if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
 					{
 						 refocus=0;
