@@ -71,13 +71,13 @@ void SessionClient::ConnectButtonHandler(avs::uid server_uid,const std::string& 
 	IpPort ipP=GetIpPort(url.c_str());
 	auto sc=GetSessionClient(server_uid);
 	sc->RequestConnection(ipP.ip,ipP.port?ipP.port:TELEPORT_SERVER_DISCOVERY_PORT);
+	sc->connected_url=url;	
 }
 
 void SessionClient::CancelConnectButtonHandler(avs::uid server_uid)
 {
 	auto sc=GetSessionClient(server_uid);
-	if (sc->IsConnected())
-		sc->Disconnect(0);
+	sc->Disconnect(0);
 }
 
 SessionClient::SessionClient(avs::uid s)
@@ -364,6 +364,11 @@ void SessionClient::SetServerDiscoveryPort(int p)
 	server_discovery_port=p;
 }
 
+std::string SessionClient::GetConnectionURL() const
+{
+		//fmt::format("{0}:{1}",sessionClient->GetServerIP(),sessionClient->GetServerDiscoveryPort()).c_str());
+	return connected_url;
+}
 
 int SessionClient::GetPort() const
 {

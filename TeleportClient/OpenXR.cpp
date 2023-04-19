@@ -14,6 +14,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "ThisPlatform/StringFunctions.h"
 #include "Log.h"
+#include "Config.h"
 #include "TeleportCore/Threads.h"
 
 #include <regex>
@@ -227,8 +228,22 @@ void swapchain_destroy(swapchain_t& swapchain)
 }
 
 // Function pointers for some OpenXR extension methods we'll use.
-PFN_xrCreateDebugUtilsMessengerEXT	ext_xrCreateDebugUtilsMessengerEXT = nullptr;
-PFN_xrDestroyDebugUtilsMessengerEXT   ext_xrDestroyDebugUtilsMessengerEXT = nullptr;
+PFN_xrCreateDebugUtilsMessengerEXT		ext_xrCreateDebugUtilsMessengerEXT		= nullptr;
+PFN_xrDestroyDebugUtilsMessengerEXT		ext_xrDestroyDebugUtilsMessengerEXT		= nullptr;
+PFN_xrCreatePassthroughFB				ext_xrCreatePassthroughFB				= nullptr;
+PFN_xrDestroyPassthroughFB				ext_xrDestroyPassthroughFB				= nullptr;
+PFN_xrPassthroughStartFB				ext_xrPassthroughStartFB				= nullptr;
+PFN_xrPassthroughPauseFB				ext_xrPassthroughPauseFB				= nullptr;
+PFN_xrCreatePassthroughLayerFB			ext_xrCreatePassthroughLayerFB			= nullptr;
+PFN_xrDestroyPassthroughLayerFB			ext_xrDestroyPassthroughLayerFB			= nullptr;
+PFN_xrPassthroughLayerPauseFB			ext_xrPassthroughLayerPauseFB			= nullptr;
+PFN_xrPassthroughLayerResumeFB			ext_xrPassthroughLayerResumeFB			= nullptr;
+PFN_xrPassthroughLayerSetStyleFB		ext_xrPassthroughLayerSetStyleFB		= nullptr;
+PFN_xrCreateGeometryInstanceFB			ext_xrCreateGeometryInstanceFB			= nullptr;
+PFN_xrDestroyGeometryInstanceFB			ext_xrDestroyGeometryInstanceFB			= nullptr;
+PFN_xrGeometryInstanceSetTransformFB	ext_xrGeometryInstanceSetTransformFB	= nullptr;
+
+
 
 struct app_transform_buffer_t
 {
@@ -372,11 +387,19 @@ bool OpenXR::CheckXrResult(XrInstance xr_instance,XrResult res)
 	return false;
 }
 
-vector<std::string> OpenXR::GetRequiredExtensions() const
+set<std::string> OpenXR::GetRequiredExtensions() const
 {
-	vector<std::string> str;
-	str.push_back(GetOpenXRGraphicsAPIExtensionName());
-	str.push_back(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	set<std::string> str;
+	str.insert(GetOpenXRGraphicsAPIExtensionName());
+	// Debug utils for extra info
+	return str;
+}
+set<std::string> OpenXR::GetOptionalExtensions() const
+{
+	set<std::string> str;
+	str.insert(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	str.insert("XR_FB_passthrough");
+	str.insert("XR_FB_triangle_mesh");
 	// Debug utils for extra info
 	return str;
 }
@@ -420,8 +443,10 @@ bool OpenXR::internalInitInstance()
 		// sensor might not be plugged in or turned on. There are often 
 		// additional checks that should be made before using certain features!
 	vector<const char*> use_extensions;
-	vector<std::string> ask_extensions;
-	ask_extensions = GetRequiredExtensions();
+	set<string> required_extensions;
+	set<string> optional_extensions;
+	required_extensions = GetRequiredExtensions();
+	optional_extensions = GetOptionalExtensions();
 
 	// We'll get a list of extensions that OpenXR provides using this 
 	// enumerate pattern. OpenXR often uses a two-call enumeration pattern 
@@ -432,40 +457,61 @@ bool OpenXR::internalInitInstance()
 	if (res != XR_SUCCESS)
 	{
 		initInstanceThreadState = ThreadState::FAILED;
-		TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FAILED\n";
+		TELEPORT_CERR<<"initInstanceThreadState = ThreadState::FAILED\n";
 		return false;
 	}
-	if(ext_count)
+	got_extensions.clear();
+	if(!ext_count)
 	{
-		vector<XrExtensionProperties> xr_exts(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
-		xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_exts.data());
+		initInstanceThreadState = ThreadState::FAILED;
+		TELEPORT_CERR<<"initInstanceThreadState = ThreadState::FAILED\n";
+		return false;
+	}
+	vector<XrExtensionProperties> xr_instance_extensions(ext_count, { XR_TYPE_EXTENSION_PROPERTIES });
+	xrEnumerateInstanceExtensionProperties(nullptr, ext_count, &ext_count, xr_instance_extensions.data());
 
-		//TELEPORT_COUT<<"OpenXR extensions available:\n";
-		for (size_t i = 0; i < xr_exts.size(); i++)
+	for (size_t i = 0; i < xr_instance_extensions.size(); i++)
+	{
+		const char * got_ext=xr_instance_extensions[i].extensionName;
+		got_extensions.insert(got_ext);
+	}
+	for (const auto &e: optional_extensions)
+	{
+		const char *this_ext=e.c_str();
+		auto match_ext=[this_ext](const std::string &ask_ext)
 		{
-			//TELEPORT_COUT<<fmt::format("- {}\n", xr_exts[i].extensionName).c_str();
-
-			// Check if we're asking for this extensions, and add it to our use 
-			// list!
-			for (int32_t ask = 0; ask < ask_extensions.size(); ask++) {
-				if (strcmp(ask_extensions[ask].c_str(), xr_exts[i].extensionName) == 0) {
-					use_extensions.push_back(ask_extensions[ask].c_str());
-					break;
-				}
-			}
+			return strcmp(ask_ext.c_str(), this_ext) == 0;
+		};
+		if (std::any_of(got_extensions.begin(), got_extensions.end(),match_ext))
+		{
+			use_extensions.push_back(this_ext);
+		}
+	}
+	bool missing_required_extension=false;
+	for (const auto &e: required_extensions)
+	{
+		const char *this_ext=e.c_str();
+		auto match_ext=[this_ext](const std::string &ask_ext)
+		{
+			return strcmp(ask_ext.c_str(), this_ext) == 0;
+		};
+		if (std::any_of(got_extensions.begin(), got_extensions.end(),match_ext))
+		{
+			use_extensions.push_back(this_ext);
+		}
+		else
+		{
+			missing_required_extension=true;
+			TELEPORT_CERR<<"InitInstance: missing required extension "<<"\n";
 		}
 	}
 	// If a required extension isn't present, you want to ditch out here!
 	// It's possible something like your rendering API might not be provided
 	// by the active runtime. APIs like OpenGL don't have universal support.
-	if (!std::any_of(use_extensions.begin(), use_extensions.end(),
-		[this](const char* ext)
-			{
-				return strcmp(ext, GetOpenXRGraphicsAPIExtensionName()) == 0;
-			}))
+	if (missing_required_extension)
 	{
 		initInstanceThreadState=ThreadState::FINISHED;
-		TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FAILED\n";
+		TELEPORT_CERR<<"initInstanceThreadState = ThreadState::FAILED\n";
 		return false;
 	}
 
@@ -495,7 +541,30 @@ bool OpenXR::internalInitInstance()
 		// https://github.com/maluoi/StereoKit/blob/master/StereoKitC/systems/platform/openxr_extensions.h
 		xrGetInstanceProcAddr(xr_instance, "xrCreateDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrCreateDebugUtilsMessengerEXT));
 		xrGetInstanceProcAddr(xr_instance, "xrDestroyDebugUtilsMessengerEXT", (PFN_xrVoidFunction*)(&ext_xrDestroyDebugUtilsMessengerEXT));
+	
+		XrResult result = xrGetInstanceProcAddr(xr_instance, "xrCreatePassthroughFB", (PFN_xrVoidFunction*)(&ext_xrCreatePassthroughFB));
+		#define GET_OPENXR_EXT_FUNCTION(name) {\
+			XrResult result = xrGetInstanceProcAddr(xr_instance, #name, (PFN_xrVoidFunction*)(&ext_##name));\
+			if (XR_FAILED(result)) {\
+			  TELEPORT_INTERNAL_COUT("Failed to obtain the function pointer for {0}.\n",#name);\
+			}\
+		}
+		GET_OPENXR_EXT_FUNCTION(xrCreateDebugUtilsMessengerEXT);
+		GET_OPENXR_EXT_FUNCTION(xrDestroyDebugUtilsMessengerEXT);
+		GET_OPENXR_EXT_FUNCTION(xrCreatePassthroughFB);
+		GET_OPENXR_EXT_FUNCTION(xrDestroyPassthroughFB);
+		GET_OPENXR_EXT_FUNCTION(xrPassthroughStartFB);
+		GET_OPENXR_EXT_FUNCTION(xrPassthroughPauseFB);
+		GET_OPENXR_EXT_FUNCTION(xrCreatePassthroughLayerFB);
+		GET_OPENXR_EXT_FUNCTION(xrDestroyPassthroughLayerFB);
+		GET_OPENXR_EXT_FUNCTION(xrPassthroughLayerPauseFB);
+		GET_OPENXR_EXT_FUNCTION(xrPassthroughLayerResumeFB);
+		GET_OPENXR_EXT_FUNCTION(xrPassthroughLayerSetStyleFB);
+		GET_OPENXR_EXT_FUNCTION(xrCreateGeometryInstanceFB);
+		GET_OPENXR_EXT_FUNCTION(xrDestroyGeometryInstanceFB	);
+		GET_OPENXR_EXT_FUNCTION(xrGeometryInstanceSetTransformFB);
 
+		
 		// Set up a really verbose debug log! Great for dev, but turn this off or
 		// down for final builds. WMR doesn't produce much output here, but it
 		// may be more useful for other runtimes?
@@ -711,6 +780,16 @@ OpenXR::~OpenXR()
 
 void OpenXR::Tick()
 {
+	auto& config = client::Config::GetInstance();
+	if(config.options.passThrough!=IsPassthroughActive())
+	{
+		if(!ActivatePassthrough(config.options.passThrough))
+		{
+			config.options.passThrough=IsPassthroughActive();
+		}
+	}
+
+				
 	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
 	{
 		initInstanceThreadState=ThreadState::STARTING;
@@ -1417,7 +1496,8 @@ void OpenXR::RenderLayerView(crossplatform::GraphicsDeviceContext &deviceContext
 	renderPlatform->SetViewports(deviceContext,1,&viewport);
 
 	// Wipe our swapchain color and depth target clean, and then set them up for rendering!
-	static float clear[] = { 0.9f, 0.1f, 0.2f, 1.0f };
+	float clearAlpha=(IsPassthroughActive()?0.0f:1.0f);
+	float clear[] = { 0.0f, 0.1f, 0.2f, clearAlpha };
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
 	renderPlatform->Clear(deviceContext, clear);
 	if (surface.depth_view)
@@ -1807,6 +1887,84 @@ bool OpenXR::IsXRDeviceRendering() const
 	return (xr_session_state == XR_SESSION_STATE_VISIBLE || xr_session_state == XR_SESSION_STATE_FOCUSED);
 }
 
+bool OpenXR::SystemSupportsPassthrough( XrFormFactor formFactor)
+{
+    XrSystemPassthroughProperties2FB passthroughSystemProperties{XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES2_FB};
+    XrSystemProperties systemProperties{XR_TYPE_SYSTEM_PROPERTIES, &passthroughSystemProperties};
+
+    XrSystemGetInfo systemGetInfo{XR_TYPE_SYSTEM_GET_INFO};
+    systemGetInfo.formFactor = formFactor;
+
+    XrSystemId systemId = XR_NULL_SYSTEM_ID;
+    xrGetSystem(xr_instance, &systemGetInfo, &systemId);
+    xrGetSystemProperties(xr_instance, systemId, &systemProperties);
+
+    return (passthroughSystemProperties.capabilities & XR_PASSTHROUGH_CAPABILITY_BIT_FB) == XR_PASSTHROUGH_CAPABILITY_BIT_FB;
+}
+
+bool OpenXR::ActivatePassthrough(bool on_off)
+{
+	if(!xr_session)
+		return false;
+	if(on_off)
+	{
+		if(!passthroughFeature)
+		{
+			// Start the feature manually
+			XrPassthroughCreateInfoFB xrPassThroughCreateInfoFB = {XR_TYPE_PASSTHROUGH_CREATE_INFO_FB};
+			xrPassThroughCreateInfoFB.flags=XR_PASSTHROUGH_IS_RUNNING_AT_CREATION_BIT_FB;
+			XrResult result = ext_xrCreatePassthroughFB(xr_session,&xrPassThroughCreateInfoFB,&passthroughFeature);
+			if (XR_FAILED(result)) {
+			  TELEPORT_INTERNAL_CERR("Failed to start a passthrough feature.\n");
+			  return false;
+			}
+		}
+		if(!passthroughLayer)
+		{
+			// Create and run passthrough layer
+			XrPassthroughLayerCreateInfoFB layerCreateInfo = {XR_TYPE_PASSTHROUGH_LAYER_CREATE_INFO_FB};
+			layerCreateInfo.passthrough = passthroughFeature;
+			layerCreateInfo.purpose = XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB;
+			layerCreateInfo.flags =XR_PASSTHROUGH_IS_RUNNING_AT_CREATION_BIT_FB;
+
+			XrResult result =ext_xrCreatePassthroughLayerFB(xr_session, &layerCreateInfo, &passthroughLayer);
+			if (XR_FAILED(result)) {
+			  TELEPORT_INTERNAL_CERR("Failed to create and start a passthrough layer");
+			  return false;
+			}
+		}
+		return true;
+	}
+	else
+	{
+		bool ok=true;
+		if(passthroughLayer)
+		{
+			XrResult result =ext_xrDestroyPassthroughLayerFB(passthroughLayer);
+			if (XR_FAILED(result)) {
+			  TELEPORT_INTERNAL_CERR("Failed to destroy a passthrough layer");
+			  ok= false;
+			}
+		}
+		if(passthroughFeature)
+		{
+			XrResult result =ext_xrDestroyPassthroughFB(passthroughFeature);
+			if (XR_FAILED(result)) {
+			  TELEPORT_INTERNAL_CERR("Failed to destroy a passthrough feature");
+			  ok= false;
+			}
+		}
+		passthroughLayer=nullptr;
+		passthroughFeature=nullptr;
+		return ok;
+	}
+}
+
+bool OpenXR::IsPassthroughActive() const
+{
+	return passthroughFeature!=nullptr;
+}
+
 bool OpenXR::CanStartSession() 
 {
 	if(IsXRDeviceRendering())
@@ -2005,6 +2163,7 @@ crossplatform::ViewStruct OpenXR::CreateViewStructFromXrCompositionLayerProjecti
 	return viewStruct;
 };
 
+
 void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplatform::RenderDelegate &overlayDelegate)
 {
 	if(!xr_session_running)
@@ -2027,11 +2186,19 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 	beginFrameDesc.next = NULL;
 	XR_CHECK(xrBeginFrame(xr_session, &beginFrameDesc));
 	int num_layers=0;
-	const XrCompositionLayerBaseHeader* layer_ptrs[4] = {};
+	const XrCompositionLayerBaseHeader* layer_ptrs[5] = {};
 	vector<XrCompositionLayerProjectionView> projection_views;
 	vector<XrCompositionLayerSpaceWarpInfoFB> spacewarp_views;
+	XrCompositionLayerPassthroughFB passthroughCompLayer = {XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
 	if(frame_state.shouldRender)
 	{
+		if(passthroughLayer)
+		{
+			passthroughCompLayer.layerHandle = passthroughLayer;
+			passthroughCompLayer.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+			passthroughCompLayer.space = XR_NULL_HANDLE;
+			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&passthroughCompLayer;
+		}
 		// Execute any code that's dependent on the predicted time, such as updating the location of
 		// controller models.
 		openxr_poll_predicted(frame_state.predictedDisplayTime);

@@ -268,6 +268,8 @@ namespace teleport
 			{
 				return quit;
 			}
+			bool ActivatePassthrough(bool on_off);
+			bool IsPassthroughActive() const;
 			
 			//! Set a "virtual" pose binding - e.g. mouse emulation.
 			void SetFallbackBinding(ActionId actionId,std::string path);
@@ -351,24 +353,26 @@ namespace teleport
 			std::vector<swapchain_t>				xr_swapchains;
 			// virtuals for platform-specific
 			virtual const char *GetOpenXRGraphicsAPIExtensionName() const=0;
-			virtual std::vector<std::string> GetRequiredExtensions() const;
+			virtual std::set<std::string> GetRequiredExtensions() const;
+			virtual std::set<std::string> GetOptionalExtensions() const;
 			virtual void HandleSessionStateChanges( XrSessionState state);
 			virtual platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(size_t swapchainIndex, size_t imageIndex)=0;
 			virtual void FinishDeviceContext(size_t swapchainIndex, size_t imageIndex) {}
 			virtual void EndFrame() {}
-
+			
+			virtual bool SystemSupportsPassthrough( XrFormFactor formFactor);
 			XrFormFactor							app_config_form = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 			XrViewConfigurationType					app_config_view = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 			XrInstance								xr_instance = {};
-			 XrSystemProperties				xr_system_properties = {};	
+			XrSystemProperties						xr_system_properties = {};	
 			XrSession								xr_session = {};
 			XrSessionState							xr_session_state = XR_SESSION_STATE_UNKNOWN;
 			bool									xr_session_running = false;
 			XrSpace									xr_app_space = {};
 			XrSpace									xr_head_space = {};
 			// Mutable because we store it for speed.
-			 XrSystemId						xr_system_id = XR_NULL_SYSTEM_ID;
+			XrSystemId								xr_system_id = XR_NULL_SYSTEM_ID;
 			InputSession							xr_input_session = { };
 			XrEnvironmentBlendMode					xr_environment_blend = {XR_ENVIRONMENT_BLEND_MODE_OPAQUE};
 			XrDebugUtilsMessengerEXT				xr_debug = {};
@@ -390,6 +394,9 @@ namespace teleport
 			std::thread initInstanceThread;
 			std::atomic<ThreadState> initInstanceThreadState=ThreadState::INACTIVE;
 			std::mutex instanceMutex;
+			std::set<std::string> got_extensions;
+			XrPassthroughFB passthroughFeature = XR_NULL_HANDLE;
+			XrPassthroughLayerFB passthroughLayer = XR_NULL_HANDLE;
 		};
 	}
 }

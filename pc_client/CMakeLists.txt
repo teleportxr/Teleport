@@ -27,6 +27,7 @@ set(srcs
 	targetver.h
 	../ClientApp/ClientApp.cpp
 	../ClientApp/ClientApp.h
+	CPackOptions.cmake
 )
 
 if(WIN32)
@@ -86,7 +87,7 @@ target_compile_options(TeleportPCClient PRIVATE /wd4711)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
-    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient..exe' '-log'"
+    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe' '-log'"
 )
 LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
     "Delete '$INSTDIR\\\\TeleportClient.lnk'"
@@ -99,20 +100,20 @@ file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
 install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
 install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
-install(FILES ${INSTALL_TEXTURES} DESTINATION TeleportPCClient/textures COMPONENT client )
-install(FILES ${INSTALL_FONTS} DESTINATION TeleportPCClient/assets/fonts COMPONENT client )
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION TeleportPCClient/assets COMPONENT client)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION TeleportPCClient/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx11 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx12 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/vulkan COMPONENT client)
+install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
+install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx12 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
 
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
 
-message("FILES ${shaders} DESTINATION TeleportPCClient\\\\Shaders COMPONENT client")
+message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
 
 
-install(FILES ${shaders} DESTINATION TeleportPCClient\\\\Shaders COMPONENT client)
+install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
 
 
 # Create an installer for the client:

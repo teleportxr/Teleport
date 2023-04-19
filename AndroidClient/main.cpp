@@ -51,7 +51,7 @@ DisplaySurfaceManager* displaySurfaceManager = nullptr;
 teleport::client::ClientApp clientApp;
 // Need ONE global instance of this:
 avs::Context context;
-bool g_WindowQuit;
+bool g_WindowQuit=false;
 struct AppState
 {
 	bool resumed=false;
@@ -105,8 +105,8 @@ void handle_cmd(android_app* app, int32_t cmd)
 		case APP_CMD_TERM_WINDOW: {
 			std::cout<<"surfaceDestroyed()"<<std::endl;
 			std::cout<<"	APP_CMD_TERM_WINDOW"<<std::endl;
-			appState.nativeWindow = nullptr;
-			g_WindowQuit = true;
+			//appState.nativeWindow = nullptr;
+			//g_WindowQuit = true;
 			break;
 		}
 	}
