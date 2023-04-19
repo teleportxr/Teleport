@@ -224,7 +224,9 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 		renderPlatform->SetVertexBuffers(deviceContext, 0, 0, nullptr, nullptr);
 		fontChars.Apply(deviceContext, effect, _fontChars);
 		renderPlatform->SetTopology(deviceContext, Topology::TRIANGLELIST);
+#if !defined(__ANDROID__)
 		renderPlatform->Draw(deviceContext, 6 * n, 0);
+#endif
 		effect->UnbindTextures(deviceContext);
 		renderPlatform->UnapplyPass(deviceContext);
 	}
