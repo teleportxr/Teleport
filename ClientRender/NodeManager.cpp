@@ -112,6 +112,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
 	
+	//nodeLookup[node->id] = node;
 }
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)

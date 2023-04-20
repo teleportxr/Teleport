@@ -4152,7 +4152,7 @@ big, small
 
 .rst-content .wy-alert-neutral.admonition-todo a, .rst-content .wy-alert-neutral.admonition a, .rst-content .wy-alert-neutral.attention a, .rst-content .wy-alert-neutral.caution a, .rst-content .wy-alert-neutral.danger a, .rst-content .wy-alert-neutral.error a, .rst-content .wy-alert-neutral.hint a, .rst-content .wy-alert-neutral.important a, .rst-content .wy-alert-neutral.note a, .rst-content .wy-alert-neutral.seealso a, .rst-content .wy-alert-neutral.tip a, .rst-content .wy-alert-neutral.warning a, .wy-alert.wy-alert-neutral a
 {
-    color: #1960a9
+    color: #3e6268
 }
 
 .rst-content .admonition-todo p:last-child, .rst-content .admonition p:last-child, .rst-content .attention p:last-child, .rst-content .caution p:last-child, .rst-content .danger p:last-child, .rst-content .error p:last-child, .rst-content .hint p:last-child, .rst-content .important p:last-child, .rst-content .note p:last-child, .rst-content .seealso p:last-child, .rst-content .tip p:last-child, .rst-content .warning p:last-child, .wy-alert p:last-child
@@ -4194,7 +4194,7 @@ big, small
 
 .wy-tray-container li.wy-tray-item-info
 {
-    background: #1960a9
+    background: #3e6268
 }
 
 .wy-tray-container li.wy-tray-item-warning
@@ -4334,7 +4334,7 @@ button[disabled]
 
 .btn-info
 {
-    background-color: #1960a9 !important
+    background-color: #3e6268 !important
 }
 
 .btn-info:hover
@@ -4402,7 +4402,7 @@ button[disabled]
 .btn-link
 {
     background-color: transparent !important;
-    color: #1960a9;
+    color: #3e6268;
     box-shadow: none;
     border-color: transparent !important
 }
@@ -4480,7 +4480,7 @@ button[disabled]
 
 .wy-dropdown-menu > dd > a:hover
 {
-    background: #1960a9;
+    background: #3e6268;
     color: #fff
 }
 
@@ -4539,7 +4539,7 @@ button[disabled]
 
 .wy-dropdown.wy-dropdown-bubble .wy-dropdown-menu a:hover
 {
-    background: #1960a9;
+    background: #3e6268;
     color: #fff
 }
 
@@ -5076,7 +5076,7 @@ input[type=checkbox][disabled], input[type=radio][disabled]
 
 .wy-inline-validate.wy-inline-validate-info .wy-input-context
 {
-    color: #1960a9
+    color: #3e6268
 }
 
 .rotate-90
@@ -5355,12 +5355,11 @@ input[type=checkbox][disabled], input[type=radio][disabled]
 
 .wy-table-responsive table td, .wy-table-responsive table th
 {
-    white-space: nowrap
 }
 
 a
 {
-    color: #1960a9;
+    color: #3e6268;
     text-decoration: none;
     cursor: pointer;
     font-weight: 700;
@@ -5442,7 +5441,7 @@ a.wy-text-warning:hover
 
 .wy-text-info
 {
-    color: #1960a9 !important
+    color: #3e6268 !important
 }
 
 a.wy-text-info:hover
@@ -6019,7 +6018,7 @@ html
 
 .wy-menu-vertical a:active
 {
-    background-color: #1960a9;
+    background-color: #3e6268;
     cursor: pointer;
     color: #fff
 }
@@ -6036,7 +6035,7 @@ html
     padding: .809em;
     margin-bottom: .809em;
     z-index: 200;
-    background-color: #1960a9;
+    background-color: #3e6268;
     text-align: center;
     color: #fcfcfc
 }
@@ -6055,7 +6054,7 @@ html
     margin: auto auto .809em;
     height: 45px;
     width: 45px;
-    background-color: #1960a9;
+    background-color: #3e6268;
     padding: 5px;
     border-radius: 100%
 }
@@ -6106,7 +6105,7 @@ html
 
 .wy-nav .wy-menu-vertical header
 {
-    color: #1960a9
+    color: #3e6268
 }
 
 .wy-nav .wy-menu-vertical a
@@ -6116,7 +6115,7 @@ html
 
 .wy-nav .wy-menu-vertical a:hover
 {
-    background-color: #1960a9;
+    background-color: #3e6268;
     color: #fff
 }
 
@@ -6192,7 +6191,7 @@ html
 .wy-nav-top
 {
     display: none;
-    background: #1960a9;
+    background: #3e6268;
     color: #fff;
     padding: .4045em .809em;
     position: relative;
@@ -6224,7 +6223,7 @@ html
     margin-right: 12px;
     height: 45px;
     width: 45px;
-    background-color: #1960a9;
+    background-color: #3e6268;
     padding: 5px;
     border-radius: 100%
 }
@@ -6442,7 +6441,7 @@ footer p
 
 .rst-versions a
 {
-    color: #1960a9;
+    color: #3e6268;
     text-decoration: none
 }
 
@@ -7247,7 +7246,7 @@ html.writer-html5 .rst-content table.docutils td > p, html.writer-html5 .rst-con
 
 .rst-content a code, .rst-content a tt
 {
-    color: #1960a9
+    color: #3e6268
 }
 
 .rst-content dl
@@ -7289,7 +7288,7 @@ html.writer-html4 .rst-content dl:not(.docutils) > dt, html.writer-html5 .rst-co
     font-size: 90%;
     line-height: normal;
     background: #e7f2fa;
-    color: #1960a9;
+    color: #3e6268;
     border-top: 3px solid #6ab0de;
     padding: 6px;
     position: relative

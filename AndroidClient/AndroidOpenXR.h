@@ -37,7 +37,7 @@ namespace teleport
 
 		protected:
 			const char* GetOpenXRGraphicsAPIExtensionName() const override;
-			std::vector<std::string> GetRequiredExtensions() const override;
+			std::set<std::string> GetRequiredExtensions() const override;
 			void HandleSessionStateChanges( XrSessionState state) override;
 			platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(size_t swapchainIndex, size_t imageIndex) override;
 			void FinishDeviceContext(size_t swapchainIndex, size_t imageIndex) override;

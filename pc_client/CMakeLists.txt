@@ -27,6 +27,7 @@ set(srcs
 	targetver.h
 	../ClientApp/ClientApp.cpp
 	../ClientApp/ClientApp.h
+	CPackOptions.cmake
 )
 
 if(WIN32)
@@ -86,7 +87,7 @@ target_compile_options(TeleportPCClient PRIVATE /wd4711)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
-    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient..exe' '-log'"
+    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe' '-log'"
 )
 LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
     "Delete '$INSTDIR\\\\TeleportClient.lnk'"
@@ -99,20 +100,20 @@ file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
 install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
 install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
-install(FILES ${INSTALL_TEXTURES} DESTINATION TeleportPCClient/textures COMPONENT client )
-install(FILES ${INSTALL_FONTS} DESTINATION TeleportPCClient/assets/fonts COMPONENT client )
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION TeleportPCClient/assets COMPONENT client)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION TeleportPCClient/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx11 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx12 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/vulkan COMPONENT client)
+install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
+install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx12 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
 
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION TeleportPCClient/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
 
-message("FILES ${shaders} DESTINATION TeleportPCClient\\\\Shaders COMPONENT client")
+message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
 
 
-install(FILES ${shaders} DESTINATION TeleportPCClient\\\\Shaders COMPONENT client)
+install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
 
 
 # Create an installer for the client:
@@ -125,30 +126,10 @@ set(CPACK_PACKAGE_NAME "TeleportClientInstaller")
 set(CPACK_PACKAGE_VENDOR "Simul")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for the TeleportVR PC CLient")
 
-# get commit id from a file:
-file(TOUCH "teleport_commit.properties")
-file(READ "teleport_commit.properties" ver)
-if(NOT( "${ver}" STREQUAL ""))
-	message(${ver})
-	string(REGEX MATCH "TELEPORT_COMMIT= ([a-zA-Z0-9]+)" _ ${ver})
-endif()
-set(TELEPORT_COMMIT ${CMAKE_MATCH_1})
-set(CPACK_PACKAGE_VERSION_MAJOR "${TELEPORT_COMMIT}")
-set(CPACK_PACKAGE_VERSION_MINOR "0")
-set(CPACK_PACKAGE_VERSION_PATCH "0")
-set(CPACK_PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
-message("TELEPORT_COMMIT ${TELEPORT_COMMIT}")
-if("${TELEPORT_COMMIT}" STREQUAL "")
-	message("Test installer build.")
-	message("CPACK_PACKAGING_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX}")
-	#C:/TestInstallTeleport)
-endif()
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "TeleportVR")
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${TELEPORT_COMMIT}-x64")
-message("CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME}")
-file(WRITE "build_pc_client/installer_filename.properties" "TELEPORT_CLIENT_INSTALLER_FILENAME=${CPACK_PACKAGE_FILE_NAME}.exe")
 #
 set(CPACK_GENERATOR "NSIS")
+set (CPACK_PROJECT_CONFIG_FILE "${CMAKE_SOURCE_DIR}/pc_client/CPackOptions.cmake")
 set(CPACK_COMPONENTS_ALL client )
 
 #set(CPACK_COMPONENT_CTDATA_GROUP "data")

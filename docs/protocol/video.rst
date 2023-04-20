@@ -83,8 +83,8 @@ The cubemap sub-layout should be in the following form:
 
 +-----------------------+-----------------------+-----------------------+
 |                       |                       |                       |
-|      Front Face       |      Back Face        |       Right Face      |
-|      :red:`+X`        |      :cyn:`-X`        |       :grn:`+Y`       |
+| Front Face            | Back Face             | Right Face            |
+| :red:`+X`             | :cyn:`-X`             | :grn:`+Y`             |
 | +Z :raw-html:`&larr;` | +Z :raw-html:`&rarr;` | +Z :raw-html:`&darr;` |
 |                       |                       |                       |
 +-----------------------+-----------------------+-----------------------+

@@ -75,7 +75,7 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND,bool,bool);
 void ShutdownRenderer(HWND);
-
+#include "Platform/Core/FileLoader.h"
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -83,7 +83,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
-
+	
+	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
+	fileLoader->SetRecordFilesLoaded(true);
 	// Needed for asynchronous device creation in XAudio2
 	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED); 
 	if (FAILED(hr))
@@ -161,6 +163,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
+	
+	if(fileLoader->GetRecordFilesLoaded())
+	{
+		auto l=fileLoader->GetFilesLoaded();
+		std::cout<<"Files loaded:"<<std::endl;
+		for(const auto &s:l)
+			std::cout<<s<<std::endl;
+	}
 	ShutdownRenderer(msg.hwnd);
 	teleport::client::DiscoveryService::ShutdownInstance();
 	// Needed for asynchronous device creation in XAudio2

@@ -40,6 +40,7 @@ namespace teleport
 			StartupConnectOption startupConnectOption = StartupConnectOption::LAST;
 			unsigned int connectionTimeout=TELEPORT_TIMEOUT;
 			bool alwaysShow3dGui = false;
+			bool passThrough=false;
 		};
 		class Config
 		{

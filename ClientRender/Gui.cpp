@@ -1528,11 +1528,16 @@ void Gui::MenuBar2D()
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 		bool connecting = sessionClient->IsConnecting();
 		bool connected = sessionClient->IsConnected();
+		bool connect_please=false;
+		bool cancel_please=false;
 		ImGui::SameLine();
 		ImGui::PushItemWidth(ImGui::GetWindowWidth() - 5*40-8);
-		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
+		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer),ImGuiInputTextFlags_EnterReturnsTrue))
 		{
 			current_url = url_buffer;
+			connect_please=true;
+			if(connecting)
+				cancel_please=true;
 		}
 		url_input = ImGui::IsItemActive();
 		ImGui::PopItemWidth();
@@ -1541,10 +1546,7 @@ void Gui::MenuBar2D()
 		{
 			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(36, 24)))
 			{
-				show_bookmarks = false;
-				show_options = false;
-				current_url = url_buffer;
-				connectHandler(current_url);
+				connect_please=true;
 			}
 			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 				TIMED_TOOLTIP("Connect");
@@ -1553,10 +1555,21 @@ void Gui::MenuBar2D()
 		{
 			if (ImGui::Button(ICON_FK_TIMES, ImVec2(36, 24)))
 			{
-				cancelConnectHandler();
+				cancel_please=true;
 			}
 			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 				TIMED_TOOLTIP("Cancel connection");
+		}
+		if(cancel_please)
+		{
+			cancelConnectHandler();
+		}
+		if(connect_please)
+		{
+			show_bookmarks = false;
+			show_options = false;
+			current_url = url_buffer;
+			connectHandler(current_url);
 		}
 
 		ImGui::SameLine();
@@ -1646,6 +1659,10 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 			else
 				TIMED_TOOLTIP("Activate VR");
 		}
+		else
+		{
+			TIMED_TOOLTIP("No OpenXR device found");
+		}
 		ImGui::PopStyleColor();
 		ImGui::PopStyleColor();
 		ImGui::PopStyleColor();
@@ -1686,6 +1703,18 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 void Gui::MainOptions()
 {
 	auto& config = client::Config::GetInstance();
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##Passthrough", "PassThrough");
+		ImGui::TableNextColumn();
+		bool e = config.options.passThrough;
+		ImGui::Checkbox("##passThrough", &e);
+		if(e!= config.options.passThrough)
+		{
+				config.options.passThrough =e;
+		}
+	}
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
 	ImGui::LabelText("##LobbyView", "Lobby View");
@@ -1843,8 +1872,8 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 		}
 		if(show_options)
 		{
-            ImGui::Spacing();
-            ImGui::SameLine(ImGui::GetWindowWidth()-80);
+			ImGui::Spacing();
+			ImGui::SameLine(ImGui::GetWindowWidth()-80);
 
 			if(ImGui::Button(ICON_FK_ARROW_LEFT,ImVec2(64,32)))
 			{
@@ -1857,7 +1886,7 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 				ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f);
 				MainOptions();
 
-#if TELEPORT_INTERNAL_CHECKS
+				#if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)
 					DevModeOptions();
 				#endif
@@ -1956,7 +1985,7 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 					KeyboardLine("1234567890-");
 					ImGui::SameLine();
 					ImGui::PushFont(symbolFont);
-		//ImGui::Button(ICON_FK_SEARCH " Search");
+					//ImGui::Button(ICON_FK_SEARCH " Search");
 					if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
 					{
 						 refocus=0;

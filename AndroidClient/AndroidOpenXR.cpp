@@ -664,16 +664,15 @@ const char* OpenXR::GetOpenXRGraphicsAPIExtensionName() const
 	return XR_KHR_VULKAN_ENABLE_EXTENSION_NAME;
 }
 
-std::vector<std::string> OpenXR::GetRequiredExtensions() const
+std::set<std::string> OpenXR::GetRequiredExtensions() const
 {
-	std::vector<std::string> str;
-	str.push_back(GetOpenXRGraphicsAPIExtensionName());
-	str.push_back(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	str.push_back(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
-	str.push_back(XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME);
-	str.push_back(XR_KHR_ANDROID_THREAD_SETTINGS_EXTENSION_NAME);
-	str.push_back(XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME);
-	str.push_back(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
+	std::set<std::string> str;
+	str.insert(GetOpenXRGraphicsAPIExtensionName());
+	str.insert(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
+	str.insert(XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME);
+	str.insert(XR_KHR_ANDROID_THREAD_SETTINGS_EXTENSION_NAME);
+	str.insert(XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME);
+	str.insert(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
 	//str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
 	return str;
 }

@@ -117,6 +117,7 @@ namespace teleport
 			int GetServerDiscoveryPort() const;
 			void SetServerIP(std::string) ;
 			void SetServerDiscoveryPort(int) ;
+			std::string GetConnectionURL() const;
 			int GetPort() const;
 
 			unsigned long long receivedInitialPos = 0;
@@ -223,7 +224,6 @@ namespace teleport
 			std::vector<avs::uid> mLostNodes;					/// Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
 
 			uint64_t clientID=0;
-
 			double time=0.0;
 
 			// State received from server.
@@ -235,6 +235,7 @@ namespace teleport
 			void ResetSessionState();
 
 			std::string remoteIP;
+			std::string connected_url;
 			double mTimeSinceLastServerComm = 0;
 
 			ConnectionStatus connectionStatus = ConnectionStatus::UNCONNECTED;

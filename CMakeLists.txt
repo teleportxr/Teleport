@@ -156,6 +156,9 @@ endif()
 option(NO_TESTS "" ON)
 
 add_subdirectory(thirdparty/libdatachannel)
+set_target_properties(datachannel PROPERTIES EXCLUDE_FROM_ALL ON)
+set_target_properties(datachannel PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+ 
 set(sctp_werror OFF)
 set_target_properties( datachannel PROPERTIES FOLDER thirdparty/datachannel)
 set_target_properties( datachannel-static PROPERTIES FOLDER thirdparty/datachannel)

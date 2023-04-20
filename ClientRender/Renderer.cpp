@@ -561,9 +561,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
 		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
 			passName += "_multiview";
-		renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-		renderPlatform->DrawQuad(deviceContext);
-		renderState.cubemapClearEffect->Unapply(deviceContext);
+		if(!renderState.openXR->IsPassthroughActive())
+		{
+			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+			renderPlatform->DrawQuad(deviceContext);
+			renderState.cubemapClearEffect->Unapply(deviceContext);
+		}
 	}
 
 	// Init the viewstruct in global space - i.e. with the server offsets.
@@ -627,7 +630,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	static bool override_have_vr_device=false;
 	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
-	gui.Render3DGUI(deviceContext);
+	if(have_vr_device || override_have_vr_device)
+		gui.Render3DGUI(deviceContext);
 
 	renderState.selected_uid=gui.GetSelectedUid();
 	if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
@@ -722,7 +726,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	{
 		auto ir=GetInstanceRenderer(server_uid);
 		sessionClient->SetGeometryCache(&ir->geometryCache);
-		config.StoreRecentURL(fmt::format("{0}:{1}",sessionClient->GetServerIP(),sessionClient->GetServerDiscoveryPort()).c_str());
+		config.StoreRecentURL(sessionClient->GetConnectionURL().c_str());
 		gui.Hide();
 	}
 	if(renderState.openXR->IsSessionActive())
