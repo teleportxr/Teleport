@@ -1600,66 +1600,9 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 	}
 }
 
-avs::uid GeometryStore::PathToUid(std::string p) const
-{
-	p=StandardizePath(p,"");
-	if(p.size()<2)
-		return 0;
-	auto i=path_to_uid.find(p);
-	if(i==path_to_uid.end())
-	{
-		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
-		//TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
-		return 0;
-	}
-	return i->second;
-}
-
-std::string GeometryStore::UidToPath(avs::uid u) const
-{
-	auto i=uid_to_path.find(u);
-	if(i==uid_to_path.end())
-	{
-		TELEPORT_INTERNAL_BREAK_ONCE("No path for this uid.");
-		return "";
-		//throw std::runtime_error("No path for this uid.");
-	}
-	return i->second;
-}
-std::set<avs::uid> GeometryStore::GetClashingUids() const
-{
-	std::set<avs::uid> clash_uids;
-	for(auto m:meshes)
-	{
-		std::set<avs::uid> mesh_uids;
-		std::map<avs::Accessor::ComponentType,std::set<avs::uid>> component_uids;
-		avs::AxesStandard axesStandard=m.first;
-#if 0
-		for(const auto &mesh:m.second)
-		{
-			for(const auto &mesh2:m.second)
-			{
-				for(const auto &a:mesh2.second.mesh.accessors)
-				{
-					if(mesh.first==a.first)
-					{
-						clash_uids.insert(mesh.first);
-						TELEPORT_CERR<<"UID clash, mesh "<<mesh.first<<" "<<mesh.second.getName().c_str()
-							<<" clashes with accessor in mesh "<<mesh2.first<<" "<<mesh2.second.getName().c_str()<<"\n";
-					}
-				}
-			}
-		}
-#endif
-	}
-	return clash_uids;
-}
 
 bool GeometryStore::CheckForErrors() const
 {
-	auto clashes=GetClashingUids();
-	if(clashes.size())
-		return false;
 	return true;
 }
 
@@ -1678,4 +1621,29 @@ avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 	uid_to_path[uid]=p;
 	path_to_uid[p]=uid;
 	return uid;
+}
+
+avs::uid GeometryStore::PathToUid(std::string p) const
+{
+	p = StandardizePath(p, "");
+	if (p.size() < 2)
+		return 0;
+	auto i = path_to_uid.find(p);
+	if (i == path_to_uid.end())
+	{
+		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
+		return 0;
+	}
+	return i->second;
+}
+
+std::string GeometryStore::UidToPath(avs::uid u) const
+{
+	auto i = uid_to_path.find(u);
+	if (i == uid_to_path.end())
+	{
+		TELEPORT_INTERNAL_BREAK_ONCE("No path for this uid.");
+		return "";
+	}
+	return i->second;
 }

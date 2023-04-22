@@ -217,13 +217,6 @@ void ClientMessaging::handleEvents(float deltaTime)
 		eventQueue.pop();
 	}
 
-	// We may stop debugging on client and not receive an ENET_EVENT_TYPE_DISCONNECT so this should handle it. 
-	if (peer && timeSinceLastClientComm > (disconnectTimeout / 1000.0f) + 2)
-	{
-		TELEPORT_COUT << "No message received in " << timeSinceLastClientComm << " seconds from " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
-		Disconnect();
-		return;
-	}
 
 	if (startingSession)
 	{

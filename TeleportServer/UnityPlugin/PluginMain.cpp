@@ -436,6 +436,25 @@ TELEPORT_EXPORT avs::uid GetOrGenerateUid(const char *path)
 	return GeometryStore::GetInstance().GetOrGenerateUid(str);
 }
 
+TELEPORT_EXPORT avs::uid PathToUid(const char* path)
+{
+	if (!path)
+		return 0;
+	std::string str = (path);
+	return GeometryStore::GetInstance().PathToUid(str);
+}
+
+TELEPORT_EXPORT size_t UidToPath(avs::uid u, char* const path, size_t len)
+{
+	std::string str = GeometryStore::GetInstance().UidToPath(u);
+	if (str.length() < len)
+	{
+		// copy path including null-terminator char.
+		memcpy(path, str.c_str(), str.length() + 1);
+	}
+	return str.length() + 1;
+}
+
 ///GeometryStreamingService END
 
 

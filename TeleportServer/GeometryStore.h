@@ -19,6 +19,8 @@ namespace teleport
 	namespace server
 	{
 		//! Singleton for storing geometry data and managing the geometry file cache.
+		//! The definitive geometry store is the file structure pointed to by SetCachePath().
+		//! The structure in  GeometryStore is the *session* structure, using uid's for quick reference.
 		class GeometryStore
 		{
 		public:
@@ -111,8 +113,6 @@ namespace teleport
 			//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
 			void compressNextTexture();
 
-			/// Debug: check for clashing uid's: this should never return a non-empty set.
-			std::set<avs::uid> GetClashingUids() const;
 			/// Check for errors - these should be resolved before using this store in a server.
 			bool CheckForErrors() const;
 			//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.

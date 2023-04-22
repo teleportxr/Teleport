@@ -3,7 +3,7 @@ project(TeleportServer)
 
 
 # Build options
-option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" ON)
+option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 
 set(DEBUG_CONFIGURATIONS Debug)
 
