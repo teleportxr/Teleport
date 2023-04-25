@@ -29,7 +29,7 @@ namespace teleport
 {
 	namespace server
 	{
-		class DiscoveryService;
+		class SignalingService;
 		class ClientManager;
 		//! Per-client messaging handler.
 		class ClientMessaging:public avs::GenericTargetInterface
@@ -38,7 +38,7 @@ namespace teleport
 			mutable avs::ClientServerMessageStack commandStack;
 		public:
 			ClientMessaging(const struct ServerSettings* settings,
-				std::shared_ptr<DiscoveryService> discoveryService,
+				SignalingService &discoveryService,
 				SetHeadPoseFn setHeadPose,
 				SetControllerPoseFn setControllerPose,
 				ProcessNewInputStateFn processNewInputState,
@@ -62,7 +62,6 @@ namespace teleport
 			void ensureStreamingPipeline();
 			void stopSession();
 			bool isStopped() const;
-			bool restartSession(avs::uid clientID, std::string clientIP);
 			bool isStartingSession() { return startingSession; }
 			void tick(float deltaTime);
 			void handleEvents(float deltaTime);
@@ -218,8 +217,8 @@ namespace teleport
 			std::string getPeerIP() const;
 
 			uint16_t getClientPort() const;
-
-			 ClientNetworkContext* getClientNetworkContext()
+			bool video_encoder_initialized = false;
+			ClientNetworkContext* getClientNetworkContext()
 			{
 				return &clientNetworkContext;
 			}
@@ -267,7 +266,7 @@ namespace teleport
 			float timeStartingSession=0.0f;
 			float timeSinceLastClientComm=0.0f;
 			const ServerSettings* settings=nullptr;
-			std::shared_ptr<DiscoveryService> discoveryService;
+			SignalingService &discoveryService;
 			PluginGeometryStreamingService geometryStreamingService;
 			ClientManager* clientManager;
 			SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.

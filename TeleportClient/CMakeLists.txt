@@ -42,6 +42,10 @@ target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/
 
 target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 
+#include libdatachannel
+target_include_directories(TeleportClient PRIVATE ../thirdparty/libdatachannel/include)
+target_include_directories(TeleportClient PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
+
 if(WIN32)
 elseif(ANDROID)
 	#Include OpenGL ES 3.0

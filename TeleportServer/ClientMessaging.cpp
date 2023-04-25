@@ -15,7 +15,7 @@ using namespace teleport;
 using namespace server;
 
 ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
-								 std::shared_ptr<DiscoveryService> discoveryService,
+								 SignalingService &discoveryService,
 								 SetHeadPoseFn setHeadPose,
 								 SetControllerPoseFn setControllerPose,
 								 ProcessNewInputStateFn processNewInputState,
@@ -58,13 +58,6 @@ void ClientMessaging::initialize( CaptureDelegates captureDelegates)
 	initialized = true;
 }
 
-bool ClientMessaging::restartSession(avs::uid clientID, std::string clientIP)
-{
-	stopSession();
-	
-	return startSession(clientID, clientIP);
-}
-
 bool ClientMessaging::startSession(avs::uid clientID, std::string clientIP)
 {
 	this->clientID = clientID;
@@ -72,7 +65,6 @@ bool ClientMessaging::startSession(avs::uid clientID, std::string clientIP)
 
 	startingSession = true;
 
-	clientManager->addClient(this);
 	ensureStreamingPipeline();
 	return true;
 }
@@ -93,6 +85,7 @@ bool ClientMessaging::isStopped() const
 
 void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 {
+	//discoveryService.sendToClient(clientID, msg);
 	// messages to be sent as text e.g. WebRTC config.
 	uint16_t len = (uint16_t)msg.size();
 	if ((size_t)len == msg.size())
@@ -108,6 +101,11 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 
 void ClientMessaging::tick(float deltaTime)
 {
+	std::string msg;
+	if (clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
+	{
+		sendStreamingControlMessage(msg);
+	}
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
@@ -118,11 +116,6 @@ void ClientMessaging::tick(float deltaTime)
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
 		Disconnect();
 		return;
-	}
-	std::string msg;
-	if ( clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
-	{
-		sendStreamingControlMessage(msg);
 	}
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
@@ -187,7 +180,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 			timeSinceLastClientComm = 0;
 			peer = event.peer;
 			enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
-			discoveryService->discoveryCompleteForClient(clientID);
+			discoveryService.discoveryCompleteForClient(clientID);
 			TELEPORT_COUT << clientID<<": Client Enet connected: " << getClientIP() << ":" << getClientPort() << "\n";
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
@@ -198,7 +191,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 				TELEPORT_COUT << clientID << ": Client Enet disconnected: " << getClientIP() << ":" << getClientPort() << "\n";
 				enet_packet_destroy(event.packet);
 				eventQueue.pop();
-				Disconnect();
+				//Disconnect();
 				return;
 			}
 			break;
@@ -366,7 +359,6 @@ bool ClientMessaging::hasReceivedHandshake() const
 	return clientNetworkContext.axesStandard != avs::AxesStandard::NotInitialized;
 }
 
-// Same as clientIP
 std::string ClientMessaging::getPeerIP() const
 {
 	assert(peer);
@@ -437,10 +429,6 @@ void ClientMessaging::ensureStreamingPipeline()
 	if (!clientNetworkContext.NetworkPipeline.isInitialized())
 	{
 		{
-			std::string multibyteClientIP = getClientIP();
-			//size_t ipLength = strlen(multibyteClientIP.data());
-
-			std::wstring clientIP = teleport::core::StringToWString(multibyteClientIP);
 			ServerNetworkSettings networkSettings =
 			{
 				static_cast<int32_t>(handshake.maxBandwidthKpS),

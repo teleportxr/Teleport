@@ -37,7 +37,6 @@ namespace teleport
 
 		ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
 
-		std::shared_ptr<DiscoveryService> discoveryService = std::make_shared<DiscoveryService>();
 		std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
 		SetHeadPoseFn setHeadPose;
 		SetControllerPoseFn setControllerPose;
@@ -59,90 +58,28 @@ using namespace server;
 
 bool Client_StartSession(avs::uid clientID, std::string clientIP,int discovery_port)
 {
-	if (!clientID || clientIP.size() == 0)
-		return false;
-	TELEPORT_COUT << "Started session for clientID" << clientID << " at IP "<<clientIP.c_str()<< std::endl;
-	std::lock_guard<std::mutex> videoLock(videoMutex);
-	std::lock_guard<std::mutex> audioLock(audioMutex);
-
-	//Check if we already have a session for a client with the passed ID.
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
-	{
-		std::shared_ptr<ClientMessaging> clientMessaging = std::make_shared<ClientMessaging>(&serverSettings, discoveryService,setHeadPose,  setControllerPose, processNewInputState,processNewInputEvents, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
-		ClientData newClientData(  clientMessaging);
-
-		if(newClientData.clientMessaging->startSession(clientID, clientIP))
-		{
-			clientServices.emplace(clientID, std::move(newClientData));
-		}
-		else
-		{
-			TELEPORT_CERR << "Failed to start session for Client " << clientID << "!\n";
-			return false;
-		}
-		clientPair = clientServices.find(clientID);
-	}
-	else
-	{
-		if (!clientPair->second.clientMessaging->isStartingSession() || clientPair->second.clientMessaging->timedOutStartingSession())
-		{
-			clientPair->second.clientMessaging->Disconnect();
-			return false;
-		}
-		return true;
-	}
-
-	ClientData& newClient = clientPair->second;
-	newClient.SetConnectionState(UNCONNECTED);
-	if (enet_address_set_host_ip(&newClient.eNetAddress, clientIP.c_str()))
-		return false;
-	newClient.eNetAddress.port = discovery_port;
-	if(newClient.clientMessaging->isInitialised())
-	{
-		newClient.clientMessaging->unInitialise();
-	}
-	newClient.clientMessaging->getClientNetworkContext()->Init(clientID,serverSettings.isReceivingAudio);
-
-
-	///TODO: Initialize real delegates for capture component.
-	CaptureDelegates delegates;
-	delegates.startStreaming = [](ClientNetworkContext* context){};
-	delegates.requestKeyframe = [&newClient]()
-	{
-		newClient.videoKeyframeRequired = true;
-	};
-	delegates.getClientCameraInfo = []()->CameraInfo&
-	{
-		static CameraInfo c;
-		return c;
-	};
-
-	newClient.clientMessaging->initialize( delegates);
-
-	discoveryService->sendResponseToClient(clientID);
-
+	clientManager.startSession();
 	return true;
 }
 
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 {
 	// Early-out if a client with this ID doesn't exist.
-	auto clientPair = clientServices.find(clientID);
-	if(clientPair == clientServices.end())
+	auto client = clientManager.GetClient(clientID);
+	if(!client)
 	{
 		TELEPORT_CERR << "Failed to stop session to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
 
 	// Shut-down connections to the client.
-	if(clientPair->second.isStreaming)
+	if(client->isStreaming)
 	{
 		// Will add to lost clients and call shutdown command
 		Client_StopStreaming(clientID);
 	}
 
-	RemoveClient(clientID);
+	clientManager.removeClient(clientID);
 
 	auto iter = lostClients.begin();
 	while(iter != lostClients.end())
@@ -161,8 +98,8 @@ TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 
 TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int numControls, const char** controlPaths,const InputDefinitionInterop *inputDefinitions)
 {
-	auto clientPair = clientServices.find(clientID);
-	if (clientPair == clientServices.end())
+	auto client = clientManager.GetClient(clientID);
+	if (!client)
 	{
 		TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;

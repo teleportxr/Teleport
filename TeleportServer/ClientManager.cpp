@@ -1,5 +1,6 @@
 #include "ClientManager.h"
 
+#include "ClientData.h"
 #include "ClientMessaging.h"
 
 #include <algorithm>
@@ -13,67 +14,70 @@
 #include "DiscoveryService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Threads.h"
+#include "UnityPlugin/PluginClient.h"
 
 using namespace teleport;
 using namespace server;
 
 
-	ClientManager::ClientManager()
+ClientManager::ClientManager()
+{
+	mLastTickTimestamp = avs::Platform::getTimestamp();
+}
+
+ClientManager::~ClientManager()
+{
+	
+}
+
+bool ClientManager::initialize(int32_t signalPort, int32_t servPort,std::string client_ip_match, uint32_t maxClients)
+{
+	if (mInitialized)
 	{
-		mLastTickTimestamp = avs::Platform::getTimestamp();
+		return false;
 	}
-
-	ClientManager::~ClientManager()
+	servicePort = servPort;
+	if(!signalingService.initialize(signalPort, servPort, client_ip_match))
 	{
-		
+		TELEPORT_CERR << "An error occurred while attempting to initalise signalingService!\n";
+		return false;
 	}
+	ENetAddress ListenAddress = {};
+	ListenAddress.host = ENET_HOST_ANY;
+	ListenAddress.port = servPort;
 
-	bool ClientManager::initialize(int32_t listenPort, uint32_t maxClients)
+	// ServerHost will live for the lifetime of the session.
+	if(!mHost)
+		mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+	if (!mHost)
 	{
-		if (mInitialized)
+		ListenAddress.port ++;
+		mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
+		if(mHost)
 		{
-			return false;
+			std::cerr << "Error: port "<< servPort <<" is in use.\n";
+			enet_host_destroy(mHost);
+			mHost = nullptr;
 		}
-
-		ENetAddress ListenAddress = {};
-		ListenAddress.host = ENET_HOST_ANY;
-		ListenAddress.port = listenPort;
-
-		// ServerHost will live for the lifetime of the session.
-		if(!mHost)
-			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-		if (!mHost)
-		{
-			ListenAddress.port ++;
-			mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-			if(mHost)
-			{
-				std::cerr << "Error: port "<<listenPort<<" is in use.\n";
-				enet_host_destroy(mHost);
-				mHost = nullptr;
-			}
-			std::cerr << "Session: Failed to create ENET server host!\n";
-			DEBUG_BREAK_ONCE;
-			return false;
-		}
-		
-		mPorts.resize(maxClients);
-		std::fill(mPorts.begin(), mPorts.end(), false);
-
-		mListenPort = listenPort;
-		mMaxClients = maxClients;
-
-		mInitialized = true;
-
-		return true;
+		std::cerr << "Session: Failed to create ENET server host!\n";
+		DEBUG_BREAK_ONCE;
+		return false;
 	}
+	
+	mPorts.clear();
 
-	bool ClientManager::shutdown()
+	mListenPort = servPort;
+	mMaxClients = maxClients;
+
+	mInitialized = true;
+
+	return true;
+}
+
+bool ClientManager::shutdown()
+{
+	if (mInitialized)
 	{
-		if (!mInitialized)
-		{
-			return false;
-		}
 
 		if (mHost)
 		{
@@ -81,212 +85,327 @@ using namespace server;
 			mHost = nullptr;
 		}
 
-		mClients.clear();
+		clients.clear();
 
 		mInitialized = false;
+	}
+	signalingService.shutdown();
+	return true;
+}
 
+void ClientManager::tick(float deltaTime)
+{
+	mLastTickTimestamp = avs::Platform::getTimestamp();
+
+	for (auto& c : clients)
+	{
+		c.second->clientMessaging->handleEvents(deltaTime);
+		std::string msg;
+		if (c.second->clientMessaging->clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
+		{
+			signalingService.sendToClient(c.first, msg);
+		}
+		if (signalingService.GetNextMessage(c.first, msg))
+			c.second->clientMessaging->clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(msg);
+		if (c.second->clientMessaging->hasPeer())
+		{
+			if (c.second->isStreaming == false)
+			{
+				Client_StartStreaming(c.first);
+			}
+		}
+		c.second->clientMessaging->tick(deltaTime);
+	}
+	signalingService.tick();
+	for (auto c : signalingService.getClientIds())
+	{
+		auto clientID = c;
+		auto discoveryClient = signalingService.getSignalingClient(clientID);
+		if (!discoveryClient)
+			continue;
+		if (discoveryClient->signalingState != SignalingState::ACCEPTED)
+			continue;
+		if (startSession(clientID, discoveryClient->address, servicePort))
+		{
+			discoveryClient->signalingState = SignalingState::OFFERING;
+		}
+	}
+}
+
+bool ClientManager::startSession(avs::uid clientID, std::string clientIP, int servicePort)
+{
+	if (!clientID || clientIP.size() == 0)
+		return false;
+	if (clients.size() >= mMaxClients)
+		return false;
+	TELEPORT_COUT << "Started session for clientID" << clientID << " at IP " << clientIP.c_str() << std::endl;
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
+
+	//Check if we already have a session for a client with the passed ID.
+	auto client = GetClient(clientID);
+	if (!client)
+	{
+		std::shared_ptr<ClientMessaging> clientMessaging
+			= std::make_shared<ClientMessaging>(&serverSettings, signalingService, setHeadPose, setControllerPose, processNewInputState, processNewInputEvents, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
+
+		client = std::make_shared<ClientData>(clientMessaging);
+
+		if (!clientMessaging->startSession(clientID, clientIP))
+		{
+			TELEPORT_CERR << "Failed to start session for Client " << clientID << "!\n";
+			return false;
+		}
+		{
+			std::lock_guard<std::mutex> lock(mNetworkMutex);
+			// find an unused port
+			uint16_t port = mHost->address.port + 2;
+			auto& p = mPorts.begin();
+			while (p != mPorts.end())
+			{
+				if (!p->second)
+				{
+					break;
+				}
+				port++;
+				p++;
+			}
+			client->clientMessaging->streamingPort = port;
+			mPorts[port] = true;
+			clients[clientID] = client;
+			clientIDs.insert(clientID);
+		}
+	}
+	else
+	{
+		if (!client->clientMessaging->isStartingSession() || client->clientMessaging->timedOutStartingSession())
+		{
+			client->clientMessaging->Disconnect();
+			return false;
+		}
 		return true;
 	}
 
-	void ClientManager::tick(float deltaTime)
+	client->SetConnectionState(UNCONNECTED);
+	if (enet_address_set_host_ip(&client->eNetAddress, clientIP.c_str()))
 	{
-		mLastTickTimestamp = avs::Platform::getTimestamp();
-	}
-
-	void ClientManager::addClient(ClientMessaging* client)
-	{
-		if (mClients.size() == mMaxClients)
-		{
-			return;
-		}
-
-		std::lock_guard<std::mutex> lock(mNetworkMutex);
-		
-		uint16_t port = mHost->address.port + 2;
-		for (int i = 0; i < (int)mPorts.size(); ++i)
-		{
-			if (!mPorts[i])
-			{
-				client->streamingPort = port + i;
-				mPorts[i] = true;
-				break;
-			}
-		}
-		mClients.push_back(client);
-	}
-
-	void ClientManager::removeClient(ClientMessaging* client)
-	{
-		for (int i = 0; i < (int)mClients.size(); ++i)
-		{
-			if (mClients[i]->clientID == client->clientID)
-			{
-				if (mClients[i]->peer)
-				{
-					TELEPORT_COUT << "Stopping session." << std::endl;
-					enet_peer_reset(mClients[i]->peer);
-					mClients[i]->peer = nullptr;
-				}
-				mClients.erase(mClients.begin() + i);
-				int index = client->streamingPort - (mHost->address.port + 2);
-				if (index >= 0)
-				{
-					mPorts[index] = false;
-					client->streamingPort = 0;
-				}
-				break;
-			}
-		}
-	}
-
-	bool ClientManager::hasClient(avs::uid clientID)
-	{
-		for (auto client : mClients)
-		{
-			if (client->clientID == clientID)
-			{
-				return true;
-			}
-		}
+		TELEPORT_CERR << "enet_address_set_host_ip failed for " << clientID << "!\n";
 		return false;
 	}
-
-	bool ClientManager::hasHost() const
+	client->eNetAddress.port = servicePort;
+	if (client->clientMessaging->isInitialised())
 	{
-		return mHost;
+		client->clientMessaging->unInitialise();
 	}
+	client->clientMessaging->getClientNetworkContext()->Init(clientID, serverSettings.isReceivingAudio);
 
-	uint16_t ClientManager::getServerPort() const
+	///TODO: Initialize real delegates for capture component.
+	CaptureDelegates delegates;
+	delegates.startStreaming = [](ClientNetworkContext* context) {};
+	delegates.requestKeyframe = [client]()
 	{
-		assert(mHost);
+		client->videoKeyframeRequired = true;
+	};
+	delegates.getClientCameraInfo = []()->CameraInfo&
+	{
+		static CameraInfo c;
+		return c;
+	};
 
-		return mHost->address.port;
+	client->clientMessaging->initialize(delegates);
+
+	signalingService.sendResponseToClient(clientID);
+
+	return true;
+}
+
+
+void ClientManager::removeClient(avs::uid clientID)
+{
+	std::lock_guard<std::mutex> videoLock(videoMutex);
+	std::lock_guard<std::mutex> audioLock(audioMutex);
+
+	// Early-out if a client with this ID doesn't exist.
+	auto client = GetClient(clientID);
+	if (!client)
+	{
+		TELEPORT_CERR << "Failed to remove client from server! No client exists with ID " << clientID << "!\n";
+		return;
 	}
-
-	avs::Timestamp ClientManager::getLastTickTimestamp() const
+	client->clientMessaging->stopSession();
+	if (client->clientMessaging->peer)
 	{
-		return mLastTickTimestamp;
+		TELEPORT_COUT << "Stopping session." << std::endl;
+		enet_peer_reset(client->clientMessaging->peer);
+		client->clientMessaging->peer = nullptr;
 	}
+	clientIDs.erase(clientID);
+	clients.erase(clientID);
+	
+	mPorts[client->clientMessaging->streamingPort] = false;
+}
 
-	void ClientManager::startAsyncNetworkDataProcessing()
+bool ClientManager::hasClient(avs::uid clientID)
+{
+	auto c = clients.find(clientID);
+	if (c == clients.end())
+		return false;
+	return true;
+}
+
+std::shared_ptr<ClientData> ClientManager::GetClient(avs::uid clientID)
+{
+	std::shared_ptr<ClientData> client;
+	auto c = clients.find(clientID);
+	if (c == clients.end())
+		return client;
+	client = c->second;
+	return client;
+}
+
+const std::set<avs::uid> &ClientManager::GetClientUids() const
+{
+	return clientIDs;
+}
+
+bool ClientManager::hasHost() const
+{
+	return mHost;
+}
+
+uint16_t ClientManager::getServerPort() const
+{
+	assert(mHost);
+
+	return mHost->address.port;
+}
+
+avs::Timestamp ClientManager::getLastTickTimestamp() const
+{
+	return mLastTickTimestamp;
+}
+
+void ClientManager::startAsyncNetworkDataProcessing()
+{
+	if (mInitialized && !mAsyncNetworkDataProcessingActive)
 	{
-		if (mInitialized && !mAsyncNetworkDataProcessingActive)
+		mAsyncNetworkDataProcessingActive = true;
+		if (!mNetworkThread.joinable())
 		{
-			mAsyncNetworkDataProcessingActive = true;
-			if (!mNetworkThread.joinable())
-			{
-				mLastTickTimestamp = avs::Platform::getTimestamp();
-				mNetworkThread = std::thread(&ClientManager::processNetworkDataAsync, this);
-			}
+			mLastTickTimestamp = avs::Platform::getTimestamp();
+			mNetworkThread = std::thread(&ClientManager::processNetworkDataAsync, this);
 		}
 	}
+}
 
-	void ClientManager::stopAsyncNetworkDataProcessing(bool killThread)
+void ClientManager::stopAsyncNetworkDataProcessing(bool killThread)
+{
+	if (mAsyncNetworkDataProcessingActive)
 	{
-		if (mAsyncNetworkDataProcessingActive)
-		{
-			mAsyncNetworkDataProcessingActive = false;
-			if (killThread && mNetworkThread.joinable())
-			{
-				mNetworkThread.join();
-			}
-		}
-		else if (mNetworkThread.joinable())
+		mAsyncNetworkDataProcessingActive = false;
+		if (killThread && mNetworkThread.joinable())
 		{
 			mNetworkThread.join();
 		}
 	}
+	else if (mNetworkThread.joinable())
+	{
+		mNetworkThread.join();
+	}
+}
 
-	void ClientManager::processNetworkDataAsync()
+void ClientManager::processNetworkDataAsync()
+{
+	SetThisThreadName("TeleportServer_processNetworkDataAsync");
+	mAsyncNetworkDataProcessingFailed = false;
+	// Elapsed time since the main thread last ticked (seconds).
+	avs::Timestamp timestamp;
+	double elapsedTime;
+	while (mAsyncNetworkDataProcessingActive)
 	{
-		SetThisThreadName("TeleportServer_processNetworkDataAsync");
-		mAsyncNetworkDataProcessingFailed = false;
-		// Elapsed time since the main thread last ticked (seconds).
-		avs::Timestamp timestamp;
-		double elapsedTime;
-		while (mAsyncNetworkDataProcessingActive)
+		// Only continue processing if the main thread hasn't hung.
+		timestamp = avs::Platform::getTimestamp();
 		{
-			// Only continue processing if the main thread hasn't hung.
-			timestamp = avs::Platform::getTimestamp();
-			{
-				//std::lock_guard<std::mutex> lock(mDataMutex);
-				elapsedTime = avs::Platform::getTimeElapsedInSeconds(mLastTickTimestamp, timestamp);
-			}
-			handleStoppedClients();
-			// Proceed only if the main thread hasn't hung.
-			if (elapsedTime < 1.0)
-			{
-				receiveMessages();
-				handleStreaming();
-			}
+			//std::lock_guard<std::mutex> lock(mDataMutex);
+			elapsedTime = avs::Platform::getTimeElapsedInSeconds(mLastTickTimestamp, timestamp);
+		}
+		handleStoppedClients();
+		// Proceed only if the main thread hasn't hung.
+		if (elapsedTime < 1.0)
+		{
+			receiveMessages();
+			handleStreaming();
 		}
 	}
-	void ClientManager::handleStoppedClients()
+}
+void ClientManager::handleStoppedClients()
+{
+	std::lock_guard<std::mutex> lock(mNetworkMutex);
+	for (auto c : clients)
 	{
-		std::lock_guard<std::mutex> lock(mNetworkMutex);
-		for (auto client : mClients)
+		if (c.second->clientMessaging->isStopped())
 		{
-			if (client->isStopped())
-			{
-				removeClient(client);
-			}
+			removeClient(c.first);
 		}
 	}
-	void ClientManager::receiveMessages()
+}
+void ClientManager::receiveMessages()
+{
+	ENetEvent event;
+	try
 	{
-		ENetEvent event;
-		try
+	// TODO: Can hang in enet_host_service. Why?
+		int res = 0;
+		do
 		{
-		// TODO: Can hang in enet_host_service. Why?
-			int res = 0;
-			do
+			res = enet_host_service(mHost, &event, 0);
+			if(res>0)
+			if (event.type != ENET_EVENT_TYPE_NONE)
 			{
-				res = enet_host_service(mHost, &event, 0);
-				if(res>0)
-				if (event.type != ENET_EVENT_TYPE_NONE)
+				std::lock_guard<std::mutex> lock(mNetworkMutex);
+				for (auto c: clients)
 				{
-					std::lock_guard<std::mutex> lock(mNetworkMutex);
-					for (auto client : mClients)
+					auto& client = c.second;
+					if(event.peer==client->clientMessaging->peer||(event.type==ENET_EVENT_TYPE_CONNECT&& client->clientMessaging->peer==nullptr))
 					{
-						if(event.peer==client->peer||(event.type==ENET_EVENT_TYPE_CONNECT&&client->peer==nullptr))
+						char peerIP[20];
+						enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
+						// Was the message from this client?
+						if (client->clientMessaging->clientIP == std::string(peerIP))
 						{
-							char peerIP[20];
-							enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
-							// Was the message from this client?
-							if (client->clientIP == std::string(peerIP))
-							{
-								// thread-safe queue
-								client->eventQueue.push(event);
-								break;
-							}
+							// thread-safe queue
+							client->clientMessaging->eventQueue.push(event);
+							break;
 						}
 					}
 				}
-				if (res < 0)
-				{
+			}
+			if (res < 0)
+			{
 #ifdef _MSC_VER
 					int err = WSAGetLastError();
 					TELEPORT_CERR << "enet_host_service failed with error " << err << "\n";
 #endif
-				}
-			} while (res > 0);
-		}
-		catch (...)
-		{
-		}
+			}
+		} while (res > 0);
 	}
-
-	void ClientManager::handleStreaming()
+	catch (...)
 	{
-		std::lock_guard<std::mutex> lock(mNetworkMutex);
-		for (auto client : mClients)
+	}
+}
+
+void ClientManager::handleStreaming()
+{
+	std::lock_guard<std::mutex> lock(mNetworkMutex);
+	for (auto &c : clients)
+	{
+		auto& client = c.second;
+		if (client->clientMessaging->receivedHandshake)
 		{
-			if (client->receivedHandshake)
+			if (!client->clientMessaging->clientNetworkContext.NetworkPipeline.process())
 			{
-				if (!client->clientNetworkContext.NetworkPipeline.process())
-				{
-					mAsyncNetworkDataProcessingFailed = true;
-				}
+				mAsyncNetworkDataProcessingFailed = true;
 			}
 		}
 	}
+}
