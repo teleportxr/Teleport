@@ -54,13 +54,6 @@ namespace teleport
 using namespace teleport;
 using namespace server;
 
-
-bool Client_StartSession(avs::uid clientID, std::string clientIP,int servport)
-{
-	clientManager.startSession(clientID, clientIP, servport);
-	return true;
-}
-
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 {
 	// Early-out if a client with this ID doesn't exist.

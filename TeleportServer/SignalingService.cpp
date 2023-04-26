@@ -16,18 +16,15 @@ using nlohmann::json;
 using namespace teleport;
 using namespace server;
 extern ServerSettings casterSettings;
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP, int discovery_port);
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
-bool SignalingService::initialize(uint16_t discovPort, uint16_t servPort, std::string desIP)
+bool SignalingService::initialize(uint16_t discovPort, uint16_t servePort, std::string desIP)
 {
 	if (discovPort != 0)
 		discoveryPort = discovPort;
-
 	if (discoveryPort == 0)
 	{
-		TELEPORT_CERR <<"Discovery port is not set.\n";
-		return false;
+		discoveryPort = 8080;
 	}
 
 	if (!webSocketServer)
@@ -38,60 +35,16 @@ bool SignalingService::initialize(uint16_t discovPort, uint16_t servPort, std::s
 		auto onWebSocketClient =std::bind(&SignalingService::OnWebSocket,this,std::placeholders::_1);
 		webSocketServer->onClient(onWebSocketClient);
 	}
-	if (servPort!= 0)
-		servicePort = servPort;
-
-	if (servicePort == 0)
-	{
-		TELEPORT_CERR <<"Service port is not set.\n";
-		return false;
-	}
-	if(discoverySocket!=0)
-	{
-		TELEPORT_CERR << "Discovery socket is already set.\n";
-		return false;
-	}
-	discoverySocket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);
-	if (discoverySocket <= 0)
-	{
-		TELEPORT_CERR <<"Failed to create discovery socket.\n";
-		return false;
-	}
-
+	if (servePort != 0)
+		servicePort = servePort;
 	desiredIP = desIP;
-	if (enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_NONBLOCK, 1)<0)
-	{
-		TELEPORT_CERR <<"Failed to set nonblock.\n";
-		return false;
-	}
-	if (enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_BROADCAST, 1)<0)
-	{
-		TELEPORT_CERR <<"Failed to set broadcast.\n";
-		return false;
-	}
-	if (enet_socket_set_option(discoverySocket, ENetSocketOption::ENET_SOCKOPT_REUSEADDR, 1)<0)
-	{
-		TELEPORT_CERR <<"Failed to set re-use address.\n";
-		return false;
-	}
-
-	address = { ENET_HOST_ANY, discoveryPort };
-	if (enet_socket_bind(discoverySocket, &address) != 0)
-	{
-		#ifdef _MSC_VER
-		int err= WSAGetLastError();
-		TELEPORT_CERR << "Failed to bind discovery socket on port: " << address.port << " with error "<<err<<"\n";
-		#endif
-		enet_socket_destroy(discoverySocket);
-		discoverySocket = 0;
-		return false;
-	}
 
 	return true;
 }
 
 void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string msg)
 {
+	TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
 	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
 	auto &c=signalingClients[clientID];
 	if(c)
@@ -114,11 +67,14 @@ bool SignalingService::GetNextMessage(avs::uid clientID, std::string& msg)
 	}
 	return false;
 }
+
+
 void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 {
+	TELEPORT_CERR << "SignalingService::OnWebSocket." << std::endl;
+
 	avs::uid clientID = TeleportUtility::GenerateID();
 	std::string addr = ws->remoteAddress().value();
-
 	std::regex re("([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)(:[0-9]+)?", std::regex_constants::icase | std::regex::extended);
 	std::smatch match;
 	std::string ip_addr_port;
@@ -132,31 +88,33 @@ void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 		return;
 	}
 	signalingClients[clientID] = std::make_shared<SignalingClient>();
-	clientUids.insert(clientID);
 	auto& c = signalingClients[clientID];
 	c->webSocket = ws;
 	c->address = ip_addr_port;
-	auto recv = [this, clientID](rtc::message_variant message) {
+	SetCallbacks(c, clientID);
+}
+void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient,avs::uid clientID)
+{
+	clientUids.insert(clientID);
+	signalingClient->webSocket->onMessage([this, clientID](rtc::message_variant message) {
 		if (std::holds_alternative<std::string>(message))
 		{
 			std::string msg = std::get<std::string>(message);
 			ReceiveWebSocketsMessage(clientID, msg);
 		}
-	};
-	ws->onMessage(recv);
-	ws->onError([this, clientID](std::string error)
+		});
+	signalingClient->webSocket->onError([this, clientID](std::string error)
 		{
 			TELEPORT_CERR << "Websocket err " << error << std::endl;
-	;});
+			; });
 }
+
 void SignalingService::shutdown()
 {
 	webSocketServer.reset();
-	enet_socket_destroy(discoverySocket);
-	discoverySocket = 0;
-	newClients.clear();
+	signalingClients.clear();
+	clientUids.clear();
 }
-
 
 void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<SignalingClient>& discoveryClient,json& content)
 {
@@ -179,10 +137,13 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			// identifies as a previous client. Discard the new client ID.
 			//TODO: we're taking the client's word for it that it is clientID. Some kind of token/hash?
 			signalingClients[clientID] = discoveryClient;
+			// The callbacks have to be changed to account for the modified clientID.
+			SetCallbacks(discoveryClient, clientID);
 			clientUids.insert(clientID);
 			if (uid != clientID)
 			{
 				signalingClients[uid] = nullptr;
+				clientUids.erase(uid);
 				uid = clientID;
 			}
 		}
@@ -193,8 +154,6 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 		//Skip clients we have already added.
 		if (discoveryClient->signalingState == SignalingState::START)
 			discoveryClient->signalingState = SignalingState::REQUESTED;
-		if (discoveryClient->signalingState != SignalingState::REQUESTED)
-			return;
 		// if signalingState is START, we should not have a client...
 		if (clientManager.hasClient(clientID))
 		{
@@ -208,6 +167,8 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			sendResponseToClient(clientID);
 			return;
 		}
+		if (discoveryClient->signalingState != SignalingState::REQUESTED)
+			return;
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
 		{
@@ -224,12 +185,6 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 	}
 }
 
-// ENet reverses the order of the ENetBuffer struct between unix and Windows.
-#ifdef _MSC_VER
-#define CREATE_ENET_BUFFER(size,ptr) { size, ptr }
-#else
-#define CREATE_ENET_BUFFER(size,ptr) { ptr,size}
-#endif
 void SignalingService::tick()
 {
 	if (discoveryPort == 0 )
@@ -239,91 +194,37 @@ void SignalingService::tick()
 	}
 
 	avs::uid clientID = 0; //Newly received ID.
-	ENetBuffer buffer = CREATE_ENET_BUFFER(sizeof(clientID), &clientID ); //Buffer to retrieve client ID with.
 
-	ENetAddress addr;
 	//Retrieve all packets received since last call, and add any new clients.
-	while (size_t packetsize = enet_socket_receive(discoverySocket, &addr, &buffer, 1) > 0)
+	for (auto &c : signalingClients)
 	{
-		//Retrieve IP of client that sent message, and convert to string.
-		char clientIPRaw[20];
-		enet_address_get_host_ip(&addr, clientIPRaw, 20);
-		TELEPORT_COUT << "Received connection request from " << clientIPRaw << " identifying as client "<<clientID<<" .\n";
-		bool ipConnecting = false;
-		for (const auto& client : newClients)
-		{
-			if (client.second.host == addr.host)
-			{
-				ipConnecting = true;
-				break;
-			}
-		}
-		if (ipConnecting)
-		{
+		std::shared_ptr<SignalingClient> discoveryClient = c.second;
+		if (!discoveryClient)
 			continue;
-		}
-		for (const auto& svc : clientManager.clients)
+		std::lock_guard lock(webSocketsMessagesMutex);
+		while (discoveryClient->messagesReceived.size())
 		{
-			if (svc.second->eNetAddress.host == addr.host)
-			{
-				clientID = svc.first;
-			}
-		}
-
-		if (clientID == 0)
-		{
-			clientID = TeleportUtility::GenerateID();
-		}
-		else
-		{
-			//Skip clients we have already added.
-			if (newClients.find(clientID) != newClients.end())
+			std::string msg = discoveryClient->messagesReceived[0];
+			discoveryClient->messagesReceived.erase(discoveryClient->messagesReceived.begin());
+			if (!msg.length())
 				continue;
-			auto s = clientManager.clients.find(clientID);
-			if (s != clientManager.clients.end())
-			{
-				// ok, we've received a connection request from a client that WE think we already have.
-				// Apparently the CLIENT thinks they've disconnected.
-				TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them."<<std::endl;
-				// It may be just that the connection request was already in flight when we accepted its predecessor.
-				sendResponseToClient(clientID);
+			json message = json::parse(msg);
+			if (!message.contains("teleport-signal-type"))
 				continue;
-			}
-		}
-		
-		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
-		if (desiredIP.length() != 0)
-		{
-			enet_address_get_host_ip(&addr, clientIPRaw, 20);
-
-			//Trying to use the pointer to the string's data results in an incorrect size, and incorrect iterators.
-			std::string clientIP = clientIPRaw;
-
-			//Create new wide-stringk with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
-			if (desiredIP.compare(0, clientIP.size(), { clientIP.begin(), clientIP.end() }) == 0)
-			{
-				newClients[clientID] = addr;
-			}
-		}
-		else
-		{
-			newClients[clientID] = addr;
+			if (message["teleport-signal-type"] == "request")
+				processInitialRequest(c.first, discoveryClient, message["content"]);
+			else
+				discoveryClient->messagesToPassOn.push(msg);
 		}
 	}
-
-	for(auto c=newClients.cbegin(); c!=newClients.cend();)
+	for (auto c : signalingClients)
 	{
-		auto clientID = c->first;
-		auto addr = c->second;
-		char clientIP[20];
-		enet_address_get_host_ip(&addr, clientIP, sizeof(clientIP));
-		if(Client_StartSession(clientID, std::string(clientIP), addr.port))
+		std::lock_guard lock(webSocketsMessagesMutex);
+		auto clientID = c.first;
+		if (!c.second)
 		{
-			c = newClients.erase(c);
-		}
-		else
-		{
-			++c;
+			signalingClients.erase(clientID);
+			clientUids.erase(clientID);
 		}
 	}
 }
@@ -346,18 +247,30 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 		return;
 	}
 
-	auto clientPair = clientManager.clients.find(clientID);
-	if(clientPair == clientManager.clients.end())
+	auto c = signalingClients.find(clientID);
+	if(c == signalingClients.end())
 	{
 		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
 		return;
 	}
-
-	// Send response, containing port to connect on, to all clients we want to host.
-	teleport::core::ServiceDiscoveryResponse response = {clientID, servicePort};
-	ENetBuffer buffer = CREATE_ENET_BUFFER(sizeof(response), &response );
+//	json message = { {"clientID", clientID},{"servicePort",servicePort} };
+	json message = {
+						{"teleport-signal-type","request-response"},
+						{"content",
+							{
+								{"clientID", clientID},
+								{"servicePort",servicePort}
+							}
+						}
+	};
+	try
+	{
+		signalingClients[clientID]->webSocket->send(message.dump());
+	}
+	catch (...)
+	{
+	}
 	TELEPORT_COUT << "Sending server discovery response to client ID: " << clientID << std::endl;
-	enet_socket_send(discoverySocket, &clientPair->second->eNetAddress, &buffer, 1);
 }
 
 void SignalingService::sendToClient(avs::uid clientID, std::string str)
@@ -386,16 +299,12 @@ void SignalingService::sendToClient(avs::uid clientID, std::string str)
 
 void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 {
-	auto i = clientManager.clients.find(clientID);
-	if (i == clientManager.clients.end())
+	auto c = clientManager.GetClient(clientID);
+	if (c)
 	{
-		
-	}
-	else
-	{
-		if (i->second->GetConnectionState() == CONNECTED)
+		if (c->GetConnectionState() == CONNECTED)
 			return;
-		i->second->SetConnectionState(CONNECTED);
+		c->SetConnectionState(CONNECTED);
 		AddUnlinkedClientID(clientID);
 	}
 }

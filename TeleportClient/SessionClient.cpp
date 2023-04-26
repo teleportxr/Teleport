@@ -732,6 +732,7 @@ void SessionClient::SendHandshake(const teleport::core::Handshake& handshake, co
 
 void SessionClient::SendStreamingControlMessage(const std::string& msg)
 {
+	teleport::client::DiscoveryService::GetInstance().Send(server_uid,msg);
 	// messages to be sent as text e.g. WebRTC config.
 	uint16_t len = (uint16_t)msg.size();
 	if ((size_t)len == msg.size())

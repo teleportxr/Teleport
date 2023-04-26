@@ -85,7 +85,7 @@ bool ClientMessaging::isStopped() const
 
 void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 {
-	//discoveryService.sendToClient(clientID, msg);
+	discoveryService.sendToClient(clientID, msg);
 	// messages to be sent as text e.g. WebRTC config.
 	uint16_t len = (uint16_t)msg.size();
 	if ((size_t)len == msg.size())
