@@ -120,7 +120,7 @@ bool SessionClient::HandleConnections()
 		ENetAddress remoteEndpoint; 
 		if (connectionStatus == client::ConnectionStatus::OFFERING)
 		{
-			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid,"", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
 			if(cl_id!=0&&Connect(remoteEndpoint, config.options.connectionTimeout,cl_id))
 			{
 				return true;
@@ -268,17 +268,20 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	bool requestKeyframe = clientPipeline.decoder.idrRequired();
 	if(mClientHost && mServerPeer)
 	{
-		SendDisplayInfo(displayInfo);
-		if(poseValidCounter)
+		if(connectionStatus==ConnectionStatus::CONNECTED)
 		{
-			SendNodePoses(headPose,nodePoses);
+			SendDisplayInfo(displayInfo);
+			if(poseValidCounter)
+			{
+				SendNodePoses(headPose,nodePoses);
+			}
+			SendInput(input);
+			SendResourceRequests();
+			SendReceivedResources();
+			SendNodeUpdates();
+			if(requestKeyframe)
+				SendKeyframeRequest();
 		}
-		SendInput(input);
-		SendResourceRequests();
-		SendReceivedResources();
-		SendNodeUpdates();
-		if(requestKeyframe)
-			SendKeyframeRequest();
 		
 		ENetEvent event;
 		while(enet_host_service(mClientHost, &event, 0) > 0)
@@ -404,6 +407,7 @@ void SessionClient::DispatchEvent(const ENetEvent& event)
 	switch(event.channelID)
 	{
 	case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control):
+		TELEPORT_INTERNAL_CERR("ReceiveCommandPacket via Enet. ");
 		ReceiveCommandPacket(event.packet);
 		break;
 	case static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl):
@@ -424,8 +428,7 @@ avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
 	ENetPacket packet;
 	packet.data = ((enet_uint8*)buffer);
 	packet.dataLength = bufferSizeInBytes;
-	//packet.
-	//teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<const teleport::core::CommandPayloadType*>(buffer));
+	TELEPORT_INTERNAL_CERR("ReceiveCommandPacket via WebRTC. " );
 	ReceiveCommandPacket(&packet);
 	return avs::Result::OK;
 }
@@ -433,6 +436,7 @@ avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
 void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 {
 	teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<teleport::core::CommandPayloadType*>(packet->data));
+	TELEPORT_INTERNAL_CERR("\tCommandPayloadType {0}.\n",teleport::core::StringOf(commandPayloadType));
 	switch(commandPayloadType)
 	{
 		case teleport::core::CommandPayloadType::Shutdown:
@@ -492,6 +496,8 @@ void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 
 void SessionClient::SendDisplayInfo(const avs::DisplayInfo &displayInfo)
 {
+	if(connectionStatus!=ConnectionStatus::CONNECTED)
+		return;
 	core::DisplayInfoMessage displayInfoMessage;
 	displayInfoMessage.displayInfo = displayInfo;
 
@@ -548,6 +554,8 @@ static void copy_and_increment(uint8_t *&target,const void *source,size_t size)
 
 void SessionClient::SendInput(const core::Input& input)
 {
+	if(connectionStatus!=ConnectionStatus::CONNECTED)
+		return;
 	teleport::core::InputStatesMessage inputStatesMessage;
 	teleport::core::InputEventsMessage inputEventsMessage;
 	auto ts = avs::Platform::getTimestamp();
@@ -713,6 +721,7 @@ bool SessionClient::SendMessageToServer(const void* c, size_t sz) const
 
 void SessionClient::SendHandshake(const teleport::core::Handshake& handshake, const std::vector<avs::uid>& clientResourceIDs)
 {
+	TELEPORT_CERR<<"Sending handshake via Enet"<<std::endl;
 	size_t handshakeSize = sizeof(teleport::core::Handshake);
 	size_t resourceListSize = sizeof(avs::uid) * clientResourceIDs.size();
 
@@ -742,6 +751,7 @@ void SessionClient::SendStreamingControlMessage(const std::string& msg)
 
 void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 {
+	TELEPORT_INTERNAL_CERR("Received handshake acknowledgement.\n");
 	if (connectionStatus != ConnectionStatus::HANDSHAKING)
 	{
 		TELEPORT_INTERNAL_CERR("Received handshake acknowledgement, but not in HANDSHAKING mode.\n");
@@ -764,6 +774,7 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 
 void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 {
+	TELEPORT_CERR<<"ReceiveSetupCommand via Enet"<<std::endl;
 	size_t commandSize= sizeof(teleport::core::SetupCommand);
 	if(packet->dataLength!=commandSize)
 	{
@@ -977,7 +988,7 @@ void SessionClient::ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet)
 void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 {
 	size_t commandSize = sizeof(teleport::core::SetupLightingCommand);
-	if (packet->dataLength != commandSize)
+	if (packet->dataLength < commandSize)
 	{
 		TELEPORT_INTERNAL_CERR("Bad packet size");
 		return;
@@ -985,7 +996,12 @@ void SessionClient::ReceiveSetupLightingCommand(const ENetPacket* packet)
 
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupLightingCommand), packet->data, commandSize);
-
+	size_t fullSize= commandSize + sizeof(avs::uid) * setupLightingCommand.num_gi_textures;
+	if (packet->dataLength != fullSize)
+	{
+		TELEPORT_INTERNAL_CERR("Bad packet size");
+		return;
+	}
 	std::vector<avs::uid> uidList((size_t)setupLightingCommand.num_gi_textures);
 	memcpy(uidList.data(), packet->data + commandSize, sizeof(avs::uid) * uidList.size());
 }

@@ -44,11 +44,6 @@ DiscoveryService::DiscoveryService()
 
 DiscoveryService::~DiscoveryService()
 {
-	if(serviceDiscoverySocket)
-	{
-		enet_socket_destroy(serviceDiscoverySocket);
-		serviceDiscoverySocket = 0;
-	}
 }
 
 void DiscoveryService::SetClientID(uint64_t inClientID)
@@ -72,7 +67,6 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 	//enet_socket_set_option(sock, ENET_SOCKOPT_SNDBUF, 0);
 	// We don't want to block, just check for packets.
 	enet_socket_set_option(socket, ENET_SOCKOPT_NONBLOCK, 1);
-
 
 	// Here we BIND the socket to the local address that we want to be identified with.
 	// e.g. our OWN local IP.
@@ -106,24 +100,131 @@ void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string 
 	messagesReceived.push(msg);
 }
 
-uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
+uint64_t DiscoveryService::Discover(uint64_t server_uid,std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
 {
+	std::lock_guard lock(mutex);
+	static int frame=1;
+	if (serverDiscoveryPort == 0)
+	{
+		serverDiscoveryPort = 8080;
+	}
 	bool serverDiscovered = false;
-
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	if(!ws)
+	{
+		rtc::WebSocket::Configuration config;
+		ws=websockets[server_uid] = std::make_shared<rtc::WebSocket>(config);
+		auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
+		{
+			if(std::holds_alternative<std::string>(message))
+			{
+				std::string msg = std::get<std::string>(message);
+				ReceiveWebSocketsMessage(server_uid,msg);
+			}
+		};
+		ws->onError([this,server_uid](std::string error)
+		{
+			TELEPORT_CERR << "Websocket error " << error << std::endl;
+			websockets.erase(server_uid);
+		});
+		ws->onMessage(receiveWebSocketMessage);
+		ws->onOpen([this,server_uid]()
+		{
+			TELEPORT_CERR << "Websocket onOpen " << std::endl;
+		});
+		TELEPORT_CERR << "Websocket open()" << std::endl;
+		if(serverDiscoveryPort)
+			ws->open(ip+fmt::format(":{0}",serverDiscoveryPort));
+		else
+			ws->open(ip);
+		frame = 2;
+	}
 	if (ip.empty())
 	{
 		ip = "255.255.255.255";
 	}
-	if (serverAddress.port != serverDiscoveryPort || serverAddress.host == ENET_HOST_ANY || ip != serverIP)
+	// Send our client id to the server on the discovery port. Once every 1000 frames.
+	frame--;
+	if(!frame)
 	{
-		serverIP = ip;
-		if (!awaiting)
+		if(ws->isOpen())
 		{
-			serverAddress.host = ENET_HOST_ANY;
-			serverAddress.port = serverDiscoveryPort;
-			fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
-			awaiting = true;
+			json message = { {"teleport-signal-type","request"},{"content",{ {"teleport","0.9"},{"clientID", clientID}}}};
+			//rtc::message_variant wsdata = fmt::format("{{\"clientID\":{}}}",clientID);
+			ws->send(message.dump());
+			TELEPORT_CERR << "Websocket send()" << std::endl;
+			TELEPORT_CERR << "webSocket->send: " << message.dump() << "  .\n";
+			frame = 1000;
 		}
+		else if(ws->readyState()==rtc::WebSocket::State::Closed)
+		{
+			TELEPORT_CERR << "Websocket open()" << std::endl;
+			if(serverDiscoveryPort)
+				ws->open(ip+fmt::format(":{0}",serverDiscoveryPort));
+			else
+				ws->open(ip);
+			frame = 2;
+		}
+		else
+		{
+			frame = 1;
+		}
+	}
+	if(ws->isOpen())
+	{
+		while(messagesToSend.size())
+		{
+			ws->send(messagesToSend.front());
+			TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
+			messagesToSend.pop();
+		}
+	}
+	static size_t bytesRecv;
+	while(messagesReceived.size())
+	{
+		std::string msg = messagesReceived.front();
+		messagesReceived.pop();
+		json message=json::parse(msg);
+		if(message.contains("teleport-signal-type"))
+		{
+			std::string type = message["teleport-signal-type"];
+			if(type=="request-response")
+			{
+				if(message.contains("content"))
+				{
+					json content = message["content"];
+					if(content.contains("clientID"))
+					{
+						uint64_t clid = content["clientID"];
+						if(clientID!=clid)
+							clientID=clid;
+						if(clientID!=0)
+						{
+							if(content.contains("servicePort"))
+							{
+								remotePort = content["servicePort"];
+								
+								serverIP = ip;
+								if (!awaiting)
+								{
+									serverAddress.host = ENET_HOST_ANY;
+									serverAddress.port = remotePort;
+									fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
+									awaiting = true;
+								}
+								
+								break;
+							}
+						}
+					}
+				}
+				messagesReceived.pop();
+			}
+			else
+				messagesToPassOn.push(msg);
+		}
+		else
+			messagesToPassOn.push(msg);
 	}
 	if(awaiting)
 	{
@@ -147,65 +248,21 @@ uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscove
 				return 0;
 			}
 			serverIP = ip;
+			remote = serverAddress;
+			remote.port = remotePort;
+			serverDiscovered = true;
 		}
 		else
 		{
 			return 0;
 		}
 	}
-	if(!serviceDiscoverySocket)
-	{
-		serviceDiscoverySocket = CreateDiscoverySocket(clientIP, clientDiscoveryPort);
-	}
-	if (!serviceDiscoverySocket)
-		return 0;
-	// Poor show: ENet reverses the order of size and pointer in ENetBuffer, between Win32 and Unix.
-	ENetBuffer buffer = MAKE_ENET_BUFFER(clientID);
-	teleport::core::ServiceDiscoveryResponse response = {};
-	ENetAddress  responseAddress = {0xffffffff, 0};
-	ENetBuffer responseBuffer = MAKE_ENET_BUFFER(response);
-	// Send our client id to the server on the discovery port. Once every 1000 frames.
-	static int frame=1;
-	frame--;
-	if(!frame)
-	{
-		frame = 10;
-		int res = enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
-		if(res==-1)
-		{
-#ifdef MSC_VER
-			int err=WSAGetLastError();
-			TELEPORT_CERR<<"DicoveryService enet_socket_send failed with error "<<err<<std::endl;
-#else
-			TELEPORT_CERR<<"DicoveryService enet_socket_send failed with error "<<std::endl;
-#endif
-			return 0;
-		}
-	}
-
-	static size_t bytesRecv;
-	do
-	{
-		// This will change responseAddress from 0xffffffff into the address of the server
-		bytesRecv = enet_socket_receive(serviceDiscoverySocket, &responseAddress, &responseBuffer, 1);
-		if(bytesRecv == sizeof(response))
-		{
-			clientID = response.clientID;
-			remote.host = responseAddress.host;
-			remote.port = response.remotePort;
-			serverDiscovered = true;
-		}
-	}
-	while(bytesRecv > 0 && !serverDiscovered);
 
 	if(serverDiscovered)
 	{
 		char remoteIP[20];
 		enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-		TELEPORT_CLIENT_LOG("Discovered session server: %s:%d", remoteIP, remote.port);
-
-		enet_socket_destroy(serviceDiscoverySocket);
-		serviceDiscoverySocket = 0;
+		TELEPORT_CLIENT_LOG("Discovered session server: %s:%d\n", remoteIP, remote.port);
 		return clientID;
 	}
 	return 0;

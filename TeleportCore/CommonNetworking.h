@@ -113,7 +113,31 @@ namespace teleport
 			AssignNodePosePath,
 			SetupInputs
 		} AVS_PACKED;
-
+		inline const char *StringOf(CommandPayloadType type)
+		{
+		switch(type)
+		{
+			case CommandPayloadType::Invalid				   :return "Invalid";
+			case CommandPayloadType::Shutdown				   :return "Shutdown";
+			case CommandPayloadType::Setup					   :return "Setup";
+			case CommandPayloadType::AcknowledgeHandshake	   :return "AcknowledgeHandshake";
+			case CommandPayloadType::ReconfigureVideo		   :return "ReconfigureVideo";
+			case CommandPayloadType::SetStageSpaceOriginNode   :return "SetStageSpaceOriginNode";
+			case CommandPayloadType::NodeVisibility			   :return "NodeVisibility";
+			case CommandPayloadType::UpdateNodeMovement		   :return "UpdateNodeMovement";
+			case CommandPayloadType::UpdateNodeEnabledState	   :return "UpdateNodeEnabledState";
+			case CommandPayloadType::SetNodeHighlighted		   :return "SetNodeHighlighted";
+			case CommandPayloadType::UpdateNodeAnimation	   :return "UpdateNodeAnimation";
+			case CommandPayloadType::UpdateNodeAnimationControl:return "UpdateNodeAnimationControl";
+			case CommandPayloadType::SetNodeAnimationSpeed	   :return "SetNodeAnimationSpeed";
+			case CommandPayloadType::SetupLighting			   :return "SetupLighting";
+			case CommandPayloadType::UpdateNodeStructure	   :return "UpdateNodeStructure";
+			case CommandPayloadType::AssignNodePosePath		   :return "AssignNodePosePath";
+			case CommandPayloadType::SetupInputs			   :return "SetupInputs";
+		default:
+		return "Invalid";
+		};
+		}
 		//! The payload type, or how to interpret the client's message.
 		enum class ClientMessagePayloadType : uint8_t
 		{

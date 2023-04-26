@@ -29,6 +29,11 @@ using namespace avs;
 void ClientServerMessageStack::PushBuffer(std::shared_ptr<std::vector<uint8_t>> b)
 {
 	std::lock_guard l(mutex);
+	if(buffers.size()>1000)
+	{
+		std::cerr<<"too many buffers in stack"<<std::endl;
+		return;
+	}
 	buffers.push_back(b);
 }
 
@@ -56,6 +61,7 @@ void ClientServerMessageStack::unmapOutputBuffer()
 	buffers.erase(buffers.begin());
 	mutex.unlock();
 }
+
 GenericEncoder::GenericEncoder()
 	: PipelineNode(new GenericEncoder::Private(this))
 {
@@ -151,7 +157,8 @@ Result GenericEncoder::Private::writeOutput(IOInterface* outputNode)
 	assert(m_backend);
 	void*  mappedBuffer;
 	size_t mappedBufferSize;
-	while( m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize))
+	size_t bufferCount=0;
+	while( m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize)&&bufferCount<1000)
 	{
 		size_t numBytesWrittenToOutput;
 		Result result = outputNode->write(q_ptr(), mappedBuffer, mappedBufferSize, numBytesWrittenToOutput);
@@ -167,6 +174,7 @@ Result GenericEncoder::Private::writeOutput(IOInterface* outputNode)
 			AVSLOG(Warning) << "GenericEncoder: Incomplete data written to output node";
 			return Result::Failed;
 		}
+		bufferCount++;
 
 	}
 	return Result::OK;
