@@ -59,7 +59,7 @@ static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Con
 		{
 			// This is our answer.
 			json message = { {"id", id},
-						{"type", description.typeString()},
+						{"teleport-signal-type", description.typeString()},
 						{"sdp",  std::string(description)} };
 
 			sendMessage(message.dump());
@@ -68,7 +68,7 @@ static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Con
 	pc->onLocalCandidate([sendMessage, id](rtc::Candidate candidate)
 		{
 			json message = { {"id", id},
-						{"type", "candidate"},
+						{"teleport-signal-type", "candidate"},
 						{"candidate", std::string(candidate)},
 						{"mid", candidate.mid()} ,
 						{"mlineindex", 0} };
@@ -269,6 +269,8 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 
 void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const std::string& mid, int mlineindex)
 {
+	if(!m_data->rtcPeerConnection)
+		return;
 	try
 	{
 		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate, mid));
@@ -493,10 +495,14 @@ bool WebRtcNetworkSource::getNextStreamingControlMessage(std::string& msg)
 
 void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 {
+	if(!str.length())
+		return;
 	json message = json::parse(str);
-	auto it = message.find("type");
+	auto it = message.find("teleport-signal-type");
 	if (it == message.end())
 		return;
+	std::string type= message["teleport-signal-type"];
+	json content=message["content"];
 	try
 	{
 		auto type=it->get<std::string>();

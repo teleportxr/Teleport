@@ -788,8 +788,7 @@ void OpenXR::Tick()
 			config.options.passThrough=IsPassthroughActive();
 		}
 	}
-
-				
+	if(config.enable_vr)
 	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
 	{
 		initInstanceThreadState=ThreadState::STARTING;

@@ -1,12 +1,17 @@
 #include "DiscoveryService.h"
 #include "Log.h"
 #include "TeleportCore/ErrorHandling.h"
-
 #include "TeleportCore/CommonNetworking.h"
+#define RTC_ENABLE_WEBSOCKET 1
+#include <rtc/websocket.hpp>
+#define JSON_NOEXCEPTION 1
+#include <nlohmann/json.hpp>
+using nlohmann::json;
 
 using namespace teleport;
 using namespace client;
 static teleport::client::DiscoveryService *discoveryService=nullptr;
+
 teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInstance()
 {
 	if (!discoveryService)
@@ -19,6 +24,7 @@ teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInsta
 	}
 	return *discoveryService;
 }
+
 void teleport::client::DiscoveryService::ShutdownInstance()
 {
 	delete discoveryService;
@@ -91,6 +97,13 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 		return 0;
 	}
 	return socket;
+}
+
+void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
+{
+	TELEPORT_CERR << "ReceiveWebSocketsMessage " << msg << std::endl;
+	std::lock_guard lock(mutex);
+	messagesReceived.push(msg);
 }
 
 uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
@@ -196,4 +209,20 @@ uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscove
 		return clientID;
 	}
 	return 0;
+}
+
+bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)
+{
+	std::lock_guard lock(mutex);
+	if (messagesToPassOn.size())
+	{
+		msg = messagesToPassOn.front();
+		messagesToPassOn.pop();
+		return true;
+	}
+	return false;
+}
+void DiscoveryService::Send(uint64_t server_uid,std::string msg)
+{
+	messagesToSend.push(msg);
 }
