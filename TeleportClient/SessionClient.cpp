@@ -120,7 +120,7 @@ bool SessionClient::HandleConnections()
 		ENetAddress remoteEndpoint; 
 		if (connectionStatus == client::ConnectionStatus::OFFERING)
 		{
-			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover("", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid, server_ip.c_str(), server_discovery_port, remoteEndpoint);
 			if(cl_id!=0&&Connect(remoteEndpoint, config.options.connectionTimeout,cl_id))
 			{
 				return true;
@@ -342,6 +342,11 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		if (clientPipeline.source->getNextStreamingControlMessage(str))
 		{
 			SendStreamingControlMessage(str);
+		}
+		std::string msg;
+		while(teleport::client::DiscoveryService::GetInstance().GetNextMessage(server_uid,msg))
+		{
+			clientPipeline.source->receiveStreamingControlMessage(msg);
 		}
 	}
 }

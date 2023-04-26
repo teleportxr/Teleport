@@ -37,6 +37,7 @@ namespace teleport
 			SignalingState signalingState = SignalingState::START;
 		};
 		//! Signaling service for establishing connections with clients.
+		//! Discover service for establishing connections with clients.
 		class SignalingService
 		{
 		public:
@@ -45,8 +46,11 @@ namespace teleport
 				shutdown();
 			}
 			bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "");
+
 			void shutdown();
+
 			void tick();
+
 			void sendResponseToClient(uint64_t clientID);
 			void sendToClient(avs::uid clientID, std::string str);
 			void discoveryCompleteForClient(uint64_t clientID);
@@ -54,6 +58,12 @@ namespace teleport
 			std::shared_ptr<SignalingClient > getSignalingClient(avs::uid u);
 		protected:
 			void processInitialRequest(avs::uid clientID, std::shared_ptr<SignalingClient> &discoveryClient,nlohmann::json& j);
+			//List of clientIDs we want to attempt to connect to.
+			std::map<uint64_t, ENetAddress> newClients;
+
+			ENetSocket discoverySocket{};
+			ENetAddress address{};
+
 			uint16_t discoveryPort = 0;
 			uint16_t servicePort = 0;
 			std::string desiredIP;
@@ -66,5 +76,6 @@ namespace teleport
 			void ReceiveWebSocketsMessage(avs::uid clientID, std::string msg); 
 			bool GetNextMessage(avs::uid clientID, std::string &msg);
 		};
+		typedef SignalingService SignalingService;
 	}
 }

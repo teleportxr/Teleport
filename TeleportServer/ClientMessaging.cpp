@@ -6,7 +6,7 @@
 #include "libavstream/common_input.h"
 #include "TeleportCore/CommonNetworking.h"
 
-#include "DiscoveryService.h"
+#include "SignalingService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ClientManager.h"
 #include "StringFunctions.h"
@@ -101,11 +101,6 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 
 void ClientMessaging::tick(float deltaTime)
 {
-	std::string msg;
-	if (clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
-	{
-		sendStreamingControlMessage(msg);
-	}
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
@@ -116,6 +111,11 @@ void ClientMessaging::tick(float deltaTime)
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
 		Disconnect();
 		return;
+	}
+	std::string msg;
+	if (peer&&clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
+	{
+		sendStreamingControlMessage(msg);
 	}
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;

@@ -20,8 +20,8 @@ set(src
 	ClientMessaging.h
 	ClientManager.cpp
 	ClientManager.h
-	DiscoveryService.cpp
-	DiscoveryService.h 
+	SignalingService.cpp
+	SignalingService.h 
 	ExtractedTypes.h
 	Font.h
 	Font.cpp

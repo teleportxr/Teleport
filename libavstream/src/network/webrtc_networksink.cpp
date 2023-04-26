@@ -176,7 +176,10 @@ void WebRtcNetworkSink::CreatePeerConnection()
 	}
 	//config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
 	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
-	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1), "1");
+	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config
+		, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1)
+		, std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1)
+		, "1");
 
 	// Now ensure data channels are initialized...
 
@@ -607,7 +610,7 @@ bool WebRtcNetworkSink::getNextStreamingControlMessage(std::string& msg)
 void WebRtcNetworkSink::receiveStreamingControlMessage(const std::string& msg)
 {
 	json message = json::parse(msg);
-	auto it = message.find("type");
+	auto it = message.find("teleport-signal-type");
 	if (it == message.end())
 		return;
 	try

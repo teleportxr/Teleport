@@ -10,7 +10,7 @@
 
 #include "libavstream/common.hpp"
 #include "../src/platform.hpp"
-#include "DiscoveryService.h"
+#include "SignalingService.h"
 
 typedef struct _ENetHost ENetHost;
 
@@ -66,8 +66,9 @@ namespace teleport
 			ENetHost* mHost = nullptr;
 
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
-
+		public:
 			std::map<avs::uid, std::shared_ptr<ClientData>> clients;
+		protected:
 			std::thread mNetworkThread;
 			std::mutex mNetworkMutex;
 			mutable std::mutex mDataMutex;

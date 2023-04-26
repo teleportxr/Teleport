@@ -11,7 +11,7 @@
 #include "TeleportCore/CommonNetworking.h"
 
 
-#include "DiscoveryService.h"
+#include "SignalingService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Threads.h"
 #include "UnityPlugin/PluginClient.h"
@@ -101,9 +101,9 @@ void ClientManager::tick(float deltaTime)
 	{
 		c.second->clientMessaging->handleEvents(deltaTime);
 		std::string msg;
-		if (c.second->clientMessaging->clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
+		//if (c.second->clientMessaging->clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
 		{
-			signalingService.sendToClient(c.first, msg);
+		//	signalingService.sendToClient(c.first, msg);
 		}
 		if (signalingService.GetNextMessage(c.first, msg))
 			c.second->clientMessaging->clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(msg);
