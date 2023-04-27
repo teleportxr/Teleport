@@ -17,6 +17,7 @@ namespace teleport
 		enum ConnectionState
 		{
 			UNCONNECTED,
+			DISCOVERED,
 			CONNECTED
 		};
 		enum class ReflectedStateStatus
@@ -66,7 +67,6 @@ namespace teleport
 				return connectionState;
 			}
 
-			bool isStreaming = false;
 			bool validClientSettings = false;
 			bool videoKeyframeRequired = false;
 

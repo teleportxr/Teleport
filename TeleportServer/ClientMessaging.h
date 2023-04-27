@@ -84,35 +84,10 @@ namespace teleport
 			bool setOrigin(uint64_t valid_counter, avs::uid originNode); 
 			template<typename C> bool sendSignalingCommand(const C& command) 
 			{
-				if (!peer)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
-					return false;
-				}
-
 				size_t commandSize = sizeof(C);
 				std::vector<uint8_t> bin(commandSize);
 				memcpy(bin.data(), &command, commandSize);
 				return SendSignalingCommand(std::move(bin)) ;
-			}
-			template<typename C> bool sendCommand(const C& command) const
-			{
-				if (!peer)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
-					return false;
-				}
-
-				size_t commandSize = sizeof(C);
-				ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
-
-				if (!packet)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<int>(command.commandPayloadType) << "! Failed to create packet!\n";
-					return false;
-				}
-
-				return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
 			}
 			template<typename C> bool sendCommand2(const C& command) const
 			{
@@ -124,31 +99,6 @@ namespace teleport
 
 			uint16_t getStreamingPort() const;
 
-			template<typename C, typename T> bool sendCommand(const C& command, const std::vector<T>& appendedList) const
-			{
-				if (!peer)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
-					return false;
-				}
-
-				size_t commandSize = sizeof(C);
-				size_t listSize = sizeof(T) * appendedList.size();
-
-				ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
-
-				if (!packet)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
-					return false;
-				}
-
-				//Copy list into packet.
-				enet_packet_resize(packet, commandSize + listSize);
-				memcpy(packet->data + commandSize, appendedList.data(), listSize);
-
-				return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
-			}
 
 			template<typename C, typename T> bool sendCommand2(const C& command, const std::vector<T>& appendedList) const
 			{
@@ -163,12 +113,6 @@ namespace teleport
 			}
 			template<typename C, typename T> bool sendSignalingCommand(const C& command, const std::vector<T>& appendedList)
 			{
-				if (!peer)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
-					return false;
-				}
-
 				size_t commandSize = sizeof(C);
 				size_t listSize = sizeof(T) * appendedList.size();
 				std::vector<uint8_t> bin(commandSize+ listSize);
@@ -179,11 +123,6 @@ namespace teleport
 			}
 			template <> bool sendSignalingCommand<teleport::core::SetupInputsCommand, teleport::core::InputDefinition>(const teleport::core::SetupInputsCommand& command, const std::vector<teleport::core::InputDefinition>& appendedInputDefinitions) 
 			{
-				if (!peer)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
-					return false;
-				}
 				if (command.commandPayloadType != teleport::core::CommandPayloadType::SetupInputs)
 				{
 					TELEPORT_CERR << "Invalid command!\n";
@@ -226,60 +165,6 @@ namespace teleport
 				return SendSignalingCommand(std::move(bin)) ;
 			}
 
-			template <> bool sendCommand<teleport::core::SetupInputsCommand, teleport::core::InputDefinition>(const teleport::core::SetupInputsCommand& command, const std::vector<teleport::core::InputDefinition>& appendedInputDefinitions) const
-			{
-				if (!peer)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! ClientMessaging has no peer!\n";
-					return false;
-				}
-				if (command.commandPayloadType != teleport::core::CommandPayloadType::SetupInputs)
-				{
-					TELEPORT_CERR << "Invalid command!\n";
-					return false;
-				}
-				size_t commandSize = sizeof(teleport::core::SetupInputsCommand);
-				size_t listSize = appendedInputDefinitions.size() * (sizeof(avs::InputId) + sizeof(avs::InputType));
-				for (const auto& d : appendedInputDefinitions)
-				{
-					// a uint16 to store the path length.
-					listSize += sizeof(uint16_t);
-					// and however many chars in the path.
-					listSize += sizeof(char) * d.regexPath.length();
-					if (d.regexPath.length() >= (1 << 16))
-					{
-						TELEPORT_CERR << "Input path too long!\n";
-						return false;
-					}
-				}
-				ENetPacket* packet = enet_packet_create(&command, commandSize, ENET_PACKET_FLAG_RELIABLE);
-				if (!packet)
-				{
-					TELEPORT_CERR << "Failed to send command with type: " << static_cast<uint8_t>(command.commandPayloadType) << "! Failed to create packet!\n";
-					return false;
-				}
-				//Copy list into packet.
-				enet_packet_resize(packet, commandSize + listSize);
-				unsigned char* data_ptr = packet->data + commandSize;
-				for (const auto& d : appendedInputDefinitions)
-				{
-					teleport::core::InputDefinitionNetPacket defPacket;
-					defPacket.inputId = d.inputId;
-					defPacket.inputType = d.inputType;
-					defPacket.pathLength = (uint16_t)d.regexPath.length();
-					memcpy(data_ptr, &defPacket, sizeof(defPacket));
-					data_ptr += sizeof(defPacket);
-					memcpy(data_ptr, d.regexPath.c_str(), d.regexPath.length());
-					data_ptr += d.regexPath.length();
-				}
-				if (packet->data + commandSize + listSize != data_ptr)
-				{
-					TELEPORT_CERR << "Failed to send command due to packet size discrepancy\n";
-					return false;
-				}
-
-				return enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Control), packet) == 0;
-			}
 			std::string getClientIP() const
 			{
 				return clientIP;
@@ -323,18 +208,16 @@ namespace teleport
 			friend class ClientManager;
 			void receive(const ENetEvent& event);
 			void receiveSignaling(const std::vector<uint8_t> &bin);
-			void receiveHandshake(const ENetPacket* packet);
-			void receiveInputStates(const ENetPacket* packet);
-			void receiveInputEvents(const ENetPacket* packet); 
-			void receiveDisplayInfo(const ENetPacket* packet);
-			void receiveHeadPose(const ENetPacket* packet);
-			void receiveResourceRequest(const ENetPacket* packet);
-			void receiveKeyframeRequest(const ENetPacket* packet);
-			void receiveClientMessage(const ENetPacket* packet);
-			void receiveStreamingControl(const ENetPacket* packet);
+			void receiveHandshake(const std::vector<uint8_t> &bin);
+			void receiveInputStates(const std::vector<uint8_t> &bin);
+			void receiveInputEvents(const std::vector<uint8_t> &bin); 
+			void receiveDisplayInfo(const std::vector<uint8_t> &bin);
+			void receiveResourceRequest(const std::vector<uint8_t> &bin);
+			void receiveKeyframeRequest(const std::vector<uint8_t> &bin);
+			void receiveClientMessage(const std::vector<uint8_t> &bin);
+			void receiveStreamingControl(const std::vector<uint8_t> &bin);
 
 			void sendStreamingControlMessage(const std::string& msg);
-			avs::ThreadSafeQueue<ENetEvent> eventQueue;
 			teleport::core::Handshake handshake;
 			static bool asyncNetworkDataProcessingFailed;
 			avs::uid clientID=0;
@@ -360,8 +243,6 @@ namespace teleport
 			ClientNetworkContext clientNetworkContext;
 
 			CaptureDelegates captureComponentDelegates;
-
-			ENetPeer* peer = nullptr;
 
 			std::atomic_bool receivedHandshake = false;				//Whether we've received the handshake from the client.
 

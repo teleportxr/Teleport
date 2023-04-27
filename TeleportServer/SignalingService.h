@@ -24,9 +24,8 @@ namespace teleport
 			START,			// Received a WebSocket connection.
 			REQUESTED,		// Got an initial connection request message
 			ACCEPTED,		// Accepted the connection request. Create a ClientData for this client if not already extant.
-			OFFERING,		// Sent a WebRTC offer.
-			STREAMING		// Completed signaling, now streaming. 
-
+			STREAMING,		// Completed initial signaling, now using the signaling socket for streaming setup.
+			INVALID
 		};
 		struct SignalingClient
 		{

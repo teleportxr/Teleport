@@ -20,9 +20,13 @@ TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
 SignalingClient::~SignalingClient()
 {
-	if (webSocket.use_count()>1)
+	if (webSocket)
 	{
-		TELEPORT_COUT << ": info: Websocket " << clientID << " remains after deletion with "<< webSocket.use_count()<<" uses.\n";
+		webSocket->resetCallbacks();
+		if (webSocket.use_count() > 1)
+		{
+			TELEPORT_COUT << ": info: Websocket " << clientID << " remains after deletion with " << webSocket.use_count() << " uses.\n";
+		}
 	}
 }
 
@@ -59,7 +63,7 @@ void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string m
 		c->messagesReceived.push_back(msg);
 	else
 	{
-		TELEPORT_CERR << "Websocket message received but already removed the SignalingClient " << clientID << std::endl;
+		TELEPORT_CERR << ": info: Websocket message received but already removed the SignalingClient " << clientID << std::endl;
 	}
 }
 
@@ -154,7 +158,14 @@ void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingC
 
 void SignalingService::shutdown()
 {
-	TELEPORT_CERR << ": info: SignalingService::shutdown" << std::endl;
+	TELEPORT_COUT<< ": info: SignalingService::shutdown" << std::endl;
+	for (auto c : signalingClients)
+	{
+		if (c.second && c.second->webSocket)
+		{
+			c.second->webSocket->resetCallbacks();
+		}
+	}
 	if (webSocketServer)
 	{
 		webSocketServer->stop();
@@ -316,6 +327,7 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 	try
 	{
 		signalingClients[clientID]->webSocket->send(message.dump());
+		discoveryCompleteForClient(clientID);
 	}
 	catch (...)
 	{
@@ -379,9 +391,7 @@ void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 	auto c = clientManager.GetClient(clientID);
 	if (c)
 	{
-		if (c->GetConnectionState() == CONNECTED)
-			return;
-		c->SetConnectionState(CONNECTED);
+		c->SetConnectionState(DISCOVERED);
 		AddUnlinkedClientID(clientID);
 	}
 }

@@ -111,8 +111,8 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	
  	clientMessaging->sendSignalingCommand(setupInputsCommand, inputDefinitions);
-	
-	isStreaming = true;
+
+	connectionState = CONNECTED;
 
 	for (auto s : nodeSubTypes)
 	{
@@ -125,7 +125,7 @@ void ClientData::setNodePosePath(avs::uid nodeID, const std::string &regexPosePa
 {
 	nodeSubTypes[nodeID].state.regexPath = regexPosePath;
 	nodeSubTypes[nodeID].status=ReflectedStateStatus::UNSENT;
-	if (isStreaming)
+	if (connectionState ==CONNECTED)
 	{
 		clientMessaging->setNodePosePath(nodeID,  regexPosePath);
 		nodeSubTypes[nodeID].status = ReflectedStateStatus::SENT;
@@ -194,13 +194,13 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 			clientMessaging->GetGeometryStreamingService().addGenericTexture(uids[i]);
 		}
 	}
-	if (!isStreaming)
+	if (connectionState != CONNECTED)
 		return;
 	if(changed)
 	{
 		teleport::core::SetupLightingCommand setupLightingCommand;
 		setupLightingCommand.num_gi_textures=(uint8_t)num;
-		clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
+		clientMessaging->sendCommand2(std::move(setupLightingCommand), global_illumination_texture_uids);
 	}
 	
 }

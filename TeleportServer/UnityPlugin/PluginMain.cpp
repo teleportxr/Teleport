@@ -295,7 +295,7 @@ TELEPORT_EXPORT void Teleport_Shutdown()
 		auto &client= clientManager.GetClient(uid);
 		if (!client)
 			continue;
-		if(client->isStreaming)
+		if(client->GetConnectionState()!=UNCONNECTED)
 		{
 			// This will add to lost clients and lost clients will be cleared below.
 			// That's okay because the session is being stopped in Client_StopStreaming 

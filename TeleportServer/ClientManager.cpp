@@ -106,7 +106,10 @@ void ClientManager::startStreaming(avs::uid clientID)
 	}
 	//not ready?
 	if (!client->validClientSettings)
+	{
+		TELEPORT_CERR << "Failed to start streaming to Client " << clientID << ". validClientSettings is false!  " << clientID << "!\n";
 		return;
+	}
 
 	client->StartStreaming(serverSettings,  connectionTimeout, serverID, getUnixTimestamp, httpService->isUsingSSL());
 
@@ -130,12 +133,9 @@ void ClientManager::tick(float deltaTime)
 		{
 			c.second->clientMessaging->receiveSignaling(bin);
 		}
-		if (c.second->clientMessaging->hasPeer())
+		if (c.second->GetConnectionState() == DISCOVERED)
 		{
-			if (c.second->isStreaming == false)
-			{
-				startStreaming(c.first);
-			}
+			startStreaming(c.first);
 		}
 		c.second->clientMessaging->tick(deltaTime);
 	}
@@ -150,7 +150,7 @@ void ClientManager::tick(float deltaTime)
 			continue;
 		if (startSession(clientID, discoveryClient->address, servicePort))
 		{
-			discoveryClient->signalingState = SignalingState::OFFERING;
+			discoveryClient->signalingState = SignalingState::STREAMING;
 		}
 	}
 }
@@ -161,7 +161,7 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP, int se
 		return false;
 	if (clients.size() >= mMaxClients)
 		return false;
-	TELEPORT_COUT << "Started session for clientID" << clientID << " at IP " << clientIP.c_str() << std::endl;
+	TELEPORT_COUT << "Started session for clientID " << clientID << " at IP " << clientIP.c_str() << std::endl;
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 
@@ -256,12 +256,6 @@ void ClientManager::removeClient(avs::uid clientID)
 		return;
 	}
 	client->clientMessaging->stopSession();
-	if (client->clientMessaging->peer)
-	{
-		TELEPORT_COUT << "Stopping session." << std::endl;
-		enet_peer_reset(client->clientMessaging->peer);
-		client->clientMessaging->peer = nullptr;
-	}
 	clientIDs.erase(clientID);
 	clients.erase(clientID);
 	
@@ -374,47 +368,6 @@ void ClientManager::handleStoppedClients()
 }
 void ClientManager::receiveMessages()
 {
-	ENetEvent event;
-	try
-	{
-	// TODO: Can hang in enet_host_service. Why?
-		int res = 0;
-		do
-		{
-			res = enet_host_service(mHost, &event, 0);
-			if(res>0)
-			if (event.type != ENET_EVENT_TYPE_NONE)
-			{
-				std::lock_guard<std::mutex> lock(mNetworkMutex);
-				for (auto c: clients)
-				{
-					auto& client = c.second;
-					if(event.peer==client->clientMessaging->peer||(event.type==ENET_EVENT_TYPE_CONNECT&& client->clientMessaging->peer==nullptr))
-					{
-						char peerIP[20];
-						enet_address_get_host_ip(&event.peer->address, peerIP, sizeof(peerIP));
-						// Was the message from this client?
-						if (client->clientMessaging->clientIP == std::string(peerIP))
-						{
-							// thread-safe queue
-							client->clientMessaging->eventQueue.push(event);
-							break;
-						}
-					}
-				}
-			}
-			if (res < 0)
-			{
-#ifdef _MSC_VER
-					int err = WSAGetLastError();
-					TELEPORT_CERR << "enet_host_service failed with error " << err << "\n";
-#endif
-			}
-		} while (res > 0);
-	}
-	catch (...)
-	{
-	}
 }
 
 void ClientManager::handleStreaming()
