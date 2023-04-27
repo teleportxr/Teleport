@@ -20,8 +20,8 @@ set(src
 	ClientMessaging.h
 	ClientManager.cpp
 	ClientManager.h
-	DiscoveryService.cpp
-	DiscoveryService.h 
+	SignalingService.cpp
+	SignalingService.h 
 	ExtractedTypes.h
 	Font.h
 	Font.cpp
@@ -115,10 +115,13 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
 target_include_directories(TeleportServer PUBLIC ../firstparty)
 # stb truetype
 target_include_directories(TeleportServer PUBLIC ../firstparty/Platform/External/stb)
+#include libdatachannel
+target_include_directories(TeleportServer PUBLIC ../thirdparty/libdatachannel/include)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
 endif()
+target_include_directories(TeleportServer PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 
 #Include CUDA library location.
 if(UNIX)
@@ -126,7 +129,7 @@ if(UNIX)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp fmt  )
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp fmt LibDataChannel::LibDataChannelStatic )
 if(WIN32)
 	target_link_libraries(TeleportServer draco winmm d3d12 Secur32.lib)
 else()

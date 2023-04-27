@@ -100,44 +100,67 @@ void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string 
 	messagesReceived.push(msg);
 }
 
-uint64_t DiscoveryService::Discover(uint64_t server_uid,std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
+void DiscoveryService::ResetConnection(uint64_t server_uid,std::string ip, uint16_t serverDiscoveryPort)
 {
-	std::lock_guard lock(mutex);
-	static int frame=1;
-	if (serverDiscoveryPort == 0)
-	{
-		serverDiscoveryPort = 8080;
-	}
-	bool serverDiscovered = false;
+	while(!messagesReceived.empty())
+		messagesReceived.pop();
+	while(!messagesToPassOn.empty())
+		messagesToPassOn.pop();
+	while(!messagesToSend.empty())
+		messagesToSend.pop();
 	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
-	if(!ws)
+	TELEPORT_CERR << "Websocket open()" << std::endl;
+	if(ip.length()>0)
 	{
-		rtc::WebSocket::Configuration config;
-		ws=websockets[server_uid] = std::make_shared<rtc::WebSocket>(config);
-		auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
-		{
-			if(std::holds_alternative<std::string>(message))
-			{
-				std::string msg = std::get<std::string>(message);
-				ReceiveWebSocketsMessage(server_uid,msg);
-			}
-		};
-		ws->onError([this,server_uid](std::string error)
-		{
-			TELEPORT_CERR << "Websocket error " << error << std::endl;
-			websockets.erase(server_uid);
-		});
-		ws->onMessage(receiveWebSocketMessage);
-		ws->onOpen([this,server_uid]()
-		{
-			TELEPORT_CERR << "Websocket onOpen " << std::endl;
-		});
-		TELEPORT_CERR << "Websocket open()" << std::endl;
 		if(serverDiscoveryPort)
 			ws->open(ip+fmt::format(":{0}",serverDiscoveryPort));
 		else
 			ws->open(ip);
-		frame = 2;
+	}
+}
+void DiscoveryService::InitSocket(uint64_t server_uid)
+{
+	rtc::WebSocket::Configuration config;
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid] = std::make_shared<rtc::WebSocket>(config);
+	auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
+	{
+		if(std::holds_alternative<std::string>(message))
+		{
+			std::string msg = std::get<std::string>(message);
+			ReceiveWebSocketsMessage(server_uid,msg);
+		}
+	};
+	ws->onError([this,server_uid](std::string error)
+	{
+		TELEPORT_CERR << "Websocket error " << error << std::endl;
+		websockets.erase(server_uid);
+	});
+	ws->onMessage(receiveWebSocketMessage);
+	ws->onOpen([this,server_uid]()
+	{
+		TELEPORT_CERR << "Websocket onOpen " << std::endl;
+	});
+	ResetConnection(server_uid,serverIP,serverDiscoveryPort);
+	frame = 2;
+}
+
+uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_t signalPort, ENetAddress& remote)
+{
+	std::lock_guard lock(mutex);
+	serverDiscoveryPort=signalPort;
+	if (serverDiscoveryPort == 0)
+	{
+		serverDiscoveryPort = 8080;
+	}
+	serverIP = ip;
+	if(!serverIP.length())
+		return 0;
+	bool serverDiscovered = false;
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	if(!ws)
+	{
+		InitSocket(server_uid);
+		ws=websockets[server_uid];
 	}
 	if (ip.empty())
 	{
@@ -158,73 +181,13 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid,std::string clientIP, ui
 		}
 		else if(ws->readyState()==rtc::WebSocket::State::Closed)
 		{
-			TELEPORT_CERR << "Websocket open()" << std::endl;
-			if(serverDiscoveryPort)
-				ws->open(ip+fmt::format(":{0}",serverDiscoveryPort));
-			else
-				ws->open(ip);
+			ResetConnection(server_uid,ip,serverDiscoveryPort);
 			frame = 2;
 		}
 		else
 		{
 			frame = 1;
 		}
-	}
-	if(ws->isOpen())
-	{
-		while(messagesToSend.size())
-		{
-			ws->send(messagesToSend.front());
-			TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
-			messagesToSend.pop();
-		}
-	}
-	static size_t bytesRecv;
-	while(messagesReceived.size())
-	{
-		std::string msg = messagesReceived.front();
-		messagesReceived.pop();
-		json message=json::parse(msg);
-		if(message.contains("teleport-signal-type"))
-		{
-			std::string type = message["teleport-signal-type"];
-			if(type=="request-response")
-			{
-				if(message.contains("content"))
-				{
-					json content = message["content"];
-					if(content.contains("clientID"))
-					{
-						uint64_t clid = content["clientID"];
-						if(clientID!=clid)
-							clientID=clid;
-						if(clientID!=0)
-						{
-							if(content.contains("servicePort"))
-							{
-								remotePort = content["servicePort"];
-								
-								serverIP = ip;
-								if (!awaiting)
-								{
-									serverAddress.host = ENET_HOST_ANY;
-									serverAddress.port = remotePort;
-									fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
-									awaiting = true;
-								}
-								
-								break;
-							}
-						}
-					}
-				}
-				messagesReceived.pop();
-			}
-			else
-				messagesToPassOn.push(msg);
-		}
-		else
-			messagesToPassOn.push(msg);
 	}
 	if(awaiting)
 	{
@@ -266,6 +229,72 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid,std::string clientIP, ui
 		return clientID;
 	}
 	return 0;
+}
+
+void DiscoveryService::Tick(uint64_t server_uid)
+{
+	if(!serverIP.length())
+		return;
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	if(!ws)
+	{
+		InitSocket(server_uid);
+		ws=websockets[server_uid];
+	}
+	if(ws->isOpen())
+	{
+		while(messagesToSend.size())
+		{
+			ws->send(messagesToSend.front());
+			TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
+			messagesToSend.pop();
+		}
+	}
+	static size_t bytesRecv;
+	while(messagesReceived.size())
+	{
+		std::string msg = messagesReceived.front();
+		messagesReceived.pop();
+		json message=json::parse(msg);
+		if(message.contains("teleport-signal-type"))
+		{
+			std::string type = message["teleport-signal-type"];
+			if(type=="request-response")
+			{
+				if(message.contains("content"))
+				{
+					json content = message["content"];
+					if(content.contains("clientID"))
+					{
+						uint64_t clid = content["clientID"];
+						if(clientID!=clid)
+							clientID=clid;
+						if(clientID!=0)
+						{
+							if(content.contains("servicePort"))
+							{
+								remotePort = content["servicePort"];
+								if (!awaiting)
+								{
+									serverAddress.host = ENET_HOST_ANY;
+									serverAddress.port = remotePort;
+									fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
+									awaiting = true;
+								}
+								
+								break;
+							}
+						}
+					}
+				}
+				messagesReceived.pop();
+			}
+			else
+				messagesToPassOn.push(msg);
+		}
+		else
+			messagesToPassOn.push(msg);
+	}
 }
 
 bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)

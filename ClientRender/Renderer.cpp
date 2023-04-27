@@ -1251,18 +1251,13 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	auto status = sessionClient->GetConnectionStatus();
+	avs::StreamingConnectionState streamingStatus = sessionClient->GetStreamingConnectionState();
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	gui.LinePrint(fmt::format("Server {0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
-	if(status==client::ConnectionStatus::UNCONNECTED)
-		gui.LinePrint("Unconnected",white);
-	if(status==client::ConnectionStatus::OFFERING)
-		gui.LinePrint("Discovering",white);
-	if (status == client::ConnectionStatus::HANDSHAKING)
-		gui.LinePrint("Handshaking", white);
-	if (status == client::ConnectionStatus::CONNECTED)
-		gui.LinePrint("Connected", white);
+	gui.LinePrint(fmt::format("  Session Status: {0}",teleport::client::StringOf(status)),white);
+	gui.LinePrint(fmt::format("Streaming Status: {0}",avs::stringOf(streamingStatus)),white);
 	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
 	
 	if(gui.Tab("Debug"))

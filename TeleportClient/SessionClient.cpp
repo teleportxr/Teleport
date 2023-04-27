@@ -120,13 +120,14 @@ bool SessionClient::HandleConnections()
 		ENetAddress remoteEndpoint; 
 		if (connectionStatus == client::ConnectionStatus::OFFERING)
 		{
-			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid,"", TELEPORT_CLIENT_DISCOVERY_PORT, server_ip.c_str(), server_discovery_port, remoteEndpoint);
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid, server_ip.c_str(), server_discovery_port, remoteEndpoint);
 			if(cl_id!=0&&Connect(remoteEndpoint, config.options.connectionTimeout,cl_id))
 			{
 				return true;
 			}
 		}
 	}
+	teleport::client::DiscoveryService::GetInstance().Tick(server_uid);
 	return false;
 }
 
@@ -175,7 +176,7 @@ bool SessionClient::Connect(const ENetAddress& remote, uint timeout,avs::uid cl_
 		enet_address_get_host_ip(&mServerEndpoint, remote_ip, sizeof(remote_ip));
 		TELEPORT_CLIENT_LOG("Connected to session server: %s:%d\n", remote_ip, remote.port);
 		remoteIP=remote_ip;
-		connectionStatus = ConnectionStatus::HANDSHAKING;
+		connectionStatus = ConnectionStatus::AWAITING_SETUP;
 		return true;
 	}
 
@@ -265,6 +266,20 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	,double deltaTime)
 {
 	time = t;
+	// Source might not yet be configured...
+	if (clientPipeline.source)
+	{
+		std::string str;
+		if (clientPipeline.source->getNextStreamingControlMessage(str))
+		{
+			SendStreamingControlMessage(str);
+		}
+		std::string msg;
+		while(teleport::client::DiscoveryService::GetInstance().GetNextMessage(server_uid,msg))
+		{
+			clientPipeline.source->receiveStreamingControlMessage(msg);
+		}
+	}
 	bool requestKeyframe = clientPipeline.decoder.idrRequired();
 	if(mClientHost && mServerPeer)
 	{
@@ -300,7 +315,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 				case ENET_EVENT_TYPE_DISCONNECT:
 					TELEPORT_INTERNAL_COUT("ENet disconnected due to internal timeout. Should reconnect here.");
 					mTimeSinceLastServerComm = 0;
-					Disconnect(0);
+					//Disconnect(0);
 					return;
 			}
 		}
@@ -337,15 +352,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		TELEPORT_INTERNAL_CERR("Got avs::Result::Network_Disconnection. We should try to reconnect here.\n");
 		Disconnect(0);
 		return;
-	}
-	// Source might not yet be configured...
-	if (clientPipeline.source)
-	{
-		std::string str;
-		if (clientPipeline.source->getNextStreamingControlMessage(str))
-		{
-			SendStreamingControlMessage(str);
-		}
 	}
 }
 
@@ -390,16 +396,25 @@ ConnectionStatus SessionClient::GetConnectionStatus() const
 	return connectionStatus;
 }
 
+avs::StreamingConnectionState SessionClient::GetStreamingConnectionState() const
+{
+	if(!clientPipeline.source)
+		return avs::StreamingConnectionState::NONE;
+	return clientPipeline.source->GetStreamingConnectionState();
+}
+
 bool SessionClient::IsConnecting() const
 {
-	if(connectionStatus==ConnectionStatus::OFFERING|| connectionStatus== ConnectionStatus::HANDSHAKING)
+	if(connectionStatus==ConnectionStatus::OFFERING|| connectionStatus== ConnectionStatus::HANDSHAKING
+	||connectionStatus== ConnectionStatus::AWAITING_SETUP)
 		return true;
 	return false;
 }
 
 bool SessionClient::IsConnected() const
 {
-	return (connectionStatus == ConnectionStatus::CONNECTED|| connectionStatus == ConnectionStatus::HANDSHAKING);
+	return (connectionStatus == ConnectionStatus::CONNECTED|| connectionStatus == ConnectionStatus::HANDSHAKING
+				||connectionStatus== ConnectionStatus::AWAITING_SETUP);
 }
 
 void SessionClient::DispatchEvent(const ENetEvent& event)
@@ -428,7 +443,7 @@ avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
 	ENetPacket packet;
 	packet.data = ((enet_uint8*)buffer);
 	packet.dataLength = bufferSizeInBytes;
-	TELEPORT_INTERNAL_CERR("ReceiveCommandPacket via WebRTC. " );
+//	TELEPORT_INTERNAL_CERR("ReceiveCommandPacket via WebRTC. " );
 	ReceiveCommandPacket(&packet);
 	return avs::Result::OK;
 }
@@ -436,7 +451,7 @@ avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
 void SessionClient::ReceiveCommandPacket(ENetPacket* packet)
 {
 	teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<teleport::core::CommandPayloadType*>(packet->data));
-	TELEPORT_INTERNAL_CERR("\tCommandPayloadType {0}.\n",teleport::core::StringOf(commandPayloadType));
+//	TELEPORT_INTERNAL_CERR("\tCommandPayloadType {0}.\n",teleport::core::StringOf(commandPayloadType));
 	switch(commandPayloadType)
 	{
 		case teleport::core::CommandPayloadType::Shutdown:
@@ -775,12 +790,18 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const ENetPacket* packet)
 void SessionClient::ReceiveSetupCommand(const ENetPacket* packet)
 {
 	TELEPORT_CERR<<"ReceiveSetupCommand via Enet"<<std::endl;
+	if(connectionStatus != client::ConnectionStatus::AWAITING_SETUP)
+	{
+		TELEPORT_INTERNAL_CERR("But not in AWAITING_SETUP state.\n");
+		return;
+	}
 	size_t commandSize= sizeof(teleport::core::SetupCommand);
 	if(packet->dataLength!=commandSize)
 	{
 		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet->dataLength);
 		return;
 	}
+	connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	//Copy command out of packet.
 	memcpy(static_cast<void*>(&setupCommand), packet->data, commandSize);
 

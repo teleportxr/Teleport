@@ -58,7 +58,7 @@ namespace avs
 		bool recreateConnection = false;
 		rtc::PeerConnection::State currentState = rtc::PeerConnection::State::New;
 		shared_ptr<rtc::PeerConnection> createServerPeerConnection(const rtc::Configuration& config,
-			std::function<void(const std::string&)> sendMessage,
+			std::function<void(const std::string&)> sendConfigMessage,
 			std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannelReceived, std::string id)
 		{
 			auto pc = std::make_shared<rtc::PeerConnection>(config);
@@ -71,33 +71,39 @@ namespace avs
 					{
 						recreateConnection = true;
 					}
-					std::cout << "State: " << state << std::endl;
+					std::cout << "WebRTC onStateChange: " << state << std::endl;
 				});
 
 			pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
 				{
 					std::cout << "Gathering State: " << state << std::endl;
 				});
-
-			pc->onLocalDescription([sendMessage, id](rtc::Description description)
+			 
+			pc->onLocalDescription([sendConfigMessage, id](rtc::Description description)
 				{
 					// This is our offer.
-					json message = { {"id", id},
-								{"type", description.typeString()},
-								{"sdp",  std::string(description)} };
+					json message = {
+										{"teleport-signal-type",description.typeString()},
+												{"sdp",  std::string(description)}
+									};
+					//json message = { {"id", id},
+						//		{"type", description.typeString()},
+							//	{"sdp",  std::string(description)} };
 
-			sendMessage(message.dump());
+					sendConfigMessage(message.dump());
 				});
 
-			pc->onLocalCandidate([sendMessage, id](rtc::Candidate candidate)
+			pc->onLocalCandidate([sendConfigMessage, id](rtc::Candidate candidate)
 				{
-					json message = { {"id", id},
-								{"type", "candidate"},
-								{"candidate", std::string(candidate)},
-								{"mid", candidate.mid()} ,
-								{"mlineindex", 0} };
+					json message = {
+										{"teleport-signal-type","candidate"},
+												{"id", id},
+												{"candidate", std::string(candidate)},
+												{"mid", candidate.mid()} ,
+												{"mlineindex", 0}
+									};
 
-			sendMessage(message.dump());
+					sendConfigMessage(message.dump());
 				});
 
 			pc->onDataChannel([onDataChannelReceived, id](shared_ptr<rtc::DataChannel> dc)
@@ -170,7 +176,10 @@ void WebRtcNetworkSink::CreatePeerConnection()
 	}
 	//config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
 	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
-	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1), "1");
+	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config
+		, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1)
+		, std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1)
+		, "1");
 
 	// Now ensure data channels are initialized...
 
@@ -523,6 +532,13 @@ void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
 		else
 			std::cerr << "std::logic_error." << std::endl;
 	}
+	catch (std::runtime_error err)
+	{
+		if (err.what())
+			std::cerr << err.what() << std::endl;
+		else
+			std::cerr << "std::runtime_error." << std::endl;
+	}
 	catch (...)
 	{
 		std::cerr << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
@@ -594,7 +610,7 @@ bool WebRtcNetworkSink::getNextStreamingControlMessage(std::string& msg)
 void WebRtcNetworkSink::receiveStreamingControlMessage(const std::string& msg)
 {
 	json message = json::parse(msg);
-	auto it = message.find("type");
+	auto it = message.find("teleport-signal-type");
 	if (it == message.end())
 		return;
 	try

@@ -11,7 +11,6 @@
 
 namespace avs
 {
-
 	/*!
 	 * Network source node `[passive, 0/1]`
 	 *
@@ -80,7 +79,16 @@ namespace avs
 		bool getNextStreamingControlMessage(std::string& msg) override;
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
+		
+		void SendConfigMessage(const std::string& str);
+
+		StreamingConnectionState GetStreamingConnectionState() const
+		{
+			return webRtcState;
+		}
+		void SetStreamingConnectionState(StreamingConnectionState s);
 	protected:
+		StreamingConnectionState webRtcState=StreamingConnectionState::NEW;
 		std::vector<std::string> messagesToSend;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
 		NetworkSourceParams m_params;
@@ -90,7 +98,7 @@ namespace avs
 		mutable std::mutex messagesMutex;
 		void receiveOffer(const std::string& offer);
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
-		void SendConfigMessage(const std::string& str);
+		std::string offer;
 	};
 
 } // avs

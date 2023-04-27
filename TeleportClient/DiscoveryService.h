@@ -23,18 +23,23 @@ namespace teleport
 			static DiscoveryService &GetInstance();
 			static void ShutdownInstance();
 			/// Returns Client ID.
-			virtual uint64_t Discover(uint64_t server_uid,std::string clientIP, uint16_t clientDiscoveryPort, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote);
+			uint64_t Discover(uint64_t server_uid, std::string serverIP, uint16_t serverDiscoveryPort, ENetAddress& remote);
+			void Tick(uint64_t server_uid);
 
 			void SetClientID(uint64_t inClientID);
 			bool GetNextMessage(uint64_t server_uid,std::string& msg);
 			void Send(uint64_t server_uid,std::string msg);
 		protected:
+			void InitSocket(uint64_t server_uid);
+		//! When e.g. ip address changes, reset the connection.
+			void ResetConnection(uint64_t server_uid, std::string ip,uint16_t serverDiscoveryPort);
 			uint64_t clientID = uint64_t(0x0);
 			bool awaiting = false;
 			std::future<int> fobj;
 			std::mutex mutex;
 			ENetAddress serverAddress;
 			uint16_t remotePort=0;
+			uint16_t serverDiscoveryPort=0;
 			std::string serverIP;
 			ENetSocket CreateDiscoverySocket(std::string ip, uint16_t discoveryPort);
 			std::unordered_map<uint64_t,std::shared_ptr<rtc::WebSocket>> websockets;
@@ -42,6 +47,7 @@ namespace teleport
 			std::queue<std::string> messagesReceived;
 			std::queue<std::string> messagesToPassOn;
 			std::queue<std::string> messagesToSend;
+			int frame=1;
 		};
 	}
 }

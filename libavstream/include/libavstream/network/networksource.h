@@ -89,6 +89,7 @@ namespace avs
 		virtual bool getNextStreamingControlMessage(std::string& msg) {
 			return false;
 		}
+		virtual StreamingConnectionState GetStreamingConnectionState() const=0;
 		const std::vector<StreamStatus>& GetStreamStatus()
 		{
 			return streamStatus;

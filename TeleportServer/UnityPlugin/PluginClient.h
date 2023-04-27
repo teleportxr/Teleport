@@ -6,9 +6,8 @@
 #include "Export.h"
 #include "ClientData.h"
 #include "DefaultHTTPService.h"
-#include "DiscoveryService.h"
+#include "SignalingService.h"
 
-TELEPORT_EXPORT bool Client_StartSession(avs::uid clientID, std::string clientIP, int discovery_port);
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
 TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID);
@@ -21,10 +20,9 @@ namespace teleport
 	{
 		extern std::mutex audioMutex;
 		extern std::mutex videoMutex;
-		extern std::map<avs::uid, ClientData> clientServices;
+		
 		extern ServerSettings serverSettings;
 
-		extern std::shared_ptr<DiscoveryService> discoveryService;
 		extern std::unique_ptr<DefaultHTTPService> httpService;
 		extern SetHeadPoseFn setHeadPose;
 		extern SetControllerPoseFn setControllerPose;

@@ -525,7 +525,8 @@ bool OpenXR::internalInitInstance()
 	TELEPORT_COUT<<"xrCreateInstance start"<<std::endl;
 	try
 	{
-		XR_CHECK(xrCreateInstance(&createInfo, &xr_instance));
+		XrResult res=xrCreateInstance(&createInfo, &xr_instance);
+		XR_CHECK(res);
 	}
 	catch(...)
 	{

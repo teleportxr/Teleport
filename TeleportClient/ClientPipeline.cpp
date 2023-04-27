@@ -15,6 +15,27 @@ ClientPipeline::ClientPipeline()
 
 ClientPipeline::~ClientPipeline()
 {
+	messageToServerQueue.deconfigure();
+	nodePosesQueue.deconfigure();
+	inputStateQueue.deconfigure();
+	source->deconfigure();
+	videoQueue.deconfigure();
+	decoder.deconfigure();
+	surface.deconfigure();
+
+	tagDataQueue.deconfigure();
+	tagDataDecoder.deconfigure();
+
+	geometryQueue.deconfigure();
+	avsGeometryDecoder.deconfigure();
+	avsGeometryTarget.deconfigure();
+
+	audioQueue.deconfigure();
+	avsAudioDecoder.deconfigure();
+	avsAudioTarget.deconfigure();
+
+	commandQueue.deconfigure();
+	commandDecoder.deconfigure();
 }
 
 bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, const char* server_ip)
@@ -27,8 +48,8 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 				,{40,"video_tags"			,""				,"VideoTagQueue",true	,false}
 				,{60,"audio_server_to_client",""			,"AudioQueue"	,true	,true}		// 2-way
 				,{geoStreamID,"geometry"	,""				,"GeometryQueue",true	,false}
-				,{100,"reliable"				,""				,"Reliable out"	,false	,false}		// 2-way
-				,{120,"unreliable"				,"Unreliable in",""				,false	,true}					// 2-way
+				,{100,"reliable"			,""				,"Reliable out"	,false	,false}		// 2-way
+				,{120,"unreliable"			,"Unreliable in",""				,false	,true}					// 2-way
 			};
 
 	avs::NetworkSourceParams sourceParams;

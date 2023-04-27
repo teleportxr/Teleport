@@ -70,9 +70,23 @@ namespace teleport
 		{
 			UNCONNECTED,
 			OFFERING,
+			AWAITING_SETUP,
 			HANDSHAKING,
 			CONNECTED
 		};
+		inline const char *StringOf(ConnectionStatus s)
+		{
+			switch(s)
+			{
+				case ConnectionStatus::UNCONNECTED		: return "UNCONNECTED";
+				case ConnectionStatus::OFFERING			: return "OFFERING";
+				case ConnectionStatus::AWAITING_SETUP	: return "AWAITING_SETUP";
+				case ConnectionStatus::HANDSHAKING		: return "HANDSHAKING";
+				case ConnectionStatus::CONNECTED		: return "CONNECTED";
+				default:
+				return "INVALID";
+			};
+		}
 		class SessionClient:public avs::GenericTargetInterface
 		{
 			avs::uid server_uid=0;
@@ -109,6 +123,7 @@ namespace teleport
 					double time, double deltaTime);
 					
 			ConnectionStatus GetConnectionStatus() const;
+			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;
 			bool IsConnected() const;
 
