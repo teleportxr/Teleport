@@ -47,7 +47,7 @@ namespace teleport
 		ReportHandshakeFn reportHandshake;
 		uint32_t connectionTimeout = 60000;
 
-		 ClientManager clientManager;
+		ClientManager clientManager;
 	}
 }
 
@@ -151,49 +151,6 @@ TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const av
 	client->clientDynamicLighting = clientDynamicLighting;
 }
 
-TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID)
-{
-	auto client = clientManager.GetClient(clientID);
-	if (!client)
-	{
-		TELEPORT_CERR << "Failed to start streaming to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-	//not ready?
-	if(!client->validClientSettings)
-		return;
-
-	client->clientMessaging->ConfirmSessionStarted();
-
-	CasterEncoderSettings encoderSettings{};
-
-	encoderSettings.frameWidth = client->clientSettings.videoTextureSize[0];
-	encoderSettings.frameHeight = client->clientSettings.videoTextureSize[1];
-
-	if (serverSettings.useAlphaLayerEncoding)
-	{
-		encoderSettings.depthWidth = 0;
-		encoderSettings.depthHeight = 0;
-	}
-	else if (serverSettings.usePerspectiveRendering)
-	{
-		encoderSettings.depthWidth = static_cast<int32_t>(serverSettings.perspectiveWidth * 0.5f);
-		encoderSettings.depthHeight = static_cast<int32_t>(serverSettings.perspectiveHeight * 0.5f);
-	}
-	else
-	{
-		encoderSettings.depthWidth = static_cast<int32_t>(serverSettings.captureCubeSize * 1.5f);
-		encoderSettings.depthHeight = static_cast<int32_t>(serverSettings.captureCubeSize);
-	}
-
-	encoderSettings.wllWriteDepthTexture = false;
-	encoderSettings.enableStackDepth = true;
-	encoderSettings.enableDecomposeCube = true;
-	encoderSettings.maxDepth = 10000;
-
-	client->StartStreaming(serverSettings, encoderSettings,connectionTimeout,serverID,getUnixTimestamp, httpService->isUsingSSL());
-
-}
 
 TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size_t num,const avs::uid * textureIDs)
 {

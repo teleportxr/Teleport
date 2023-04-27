@@ -50,7 +50,6 @@ namespace teleport
 
 			virtual ~ClientMessaging();
 
-
 			avs::ConnectionState getConnectionState() const;
 
 			bool isInitialised() const;

@@ -30,6 +30,7 @@ namespace teleport
 		};
 		struct SignalingClient
 		{
+			avs::uid clientID = 0;
 			std::string address;
 			std::shared_ptr<rtc::WebSocket> webSocket;
 			std::vector<std::string> messagesReceived;
@@ -53,7 +54,7 @@ namespace teleport
 			const std::set<avs::uid> &getClientIds() const;
 			std::shared_ptr<SignalingClient > getSignalingClient(avs::uid u);
 		protected:
-			void SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient, avs::uid clientID);
+			void SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient);
 			void processInitialRequest(avs::uid clientID, std::shared_ptr<SignalingClient> &discoveryClient,nlohmann::json& j);
 			uint16_t discoveryPort = 0;
 			uint16_t servicePort = 0;

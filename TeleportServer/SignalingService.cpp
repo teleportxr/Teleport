@@ -89,21 +89,22 @@ void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 	}
 	signalingClients[clientID] = std::make_shared<SignalingClient>();
 	auto& c = signalingClients[clientID];
+	c->clientID = clientID;
 	c->webSocket = ws;
 	c->address = ip_addr_port;
-	SetCallbacks(c, clientID);
-}
-void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient,avs::uid clientID)
-{
+	SetCallbacks(c);
 	clientUids.insert(clientID);
-	signalingClient->webSocket->onMessage([this, clientID](rtc::message_variant message) {
+}
+void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient)
+{
+	signalingClient->webSocket->onMessage([this, signalingClient](rtc::message_variant message) {
 		if (std::holds_alternative<std::string>(message))
 		{
 			std::string msg = std::get<std::string>(message);
-			ReceiveWebSocketsMessage(clientID, msg);
+			ReceiveWebSocketsMessage(signalingClient->clientID, msg);
 		}
 		});
-	signalingClient->webSocket->onError([this, clientID](std::string error)
+	signalingClient->webSocket->onError([this, signalingClient](std::string error)
 		{
 			TELEPORT_CERR << "Websocket err " << error << std::endl;
 			; });
@@ -137,8 +138,7 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			// identifies as a previous client. Discard the new client ID.
 			//TODO: we're taking the client's word for it that it is clientID. Some kind of token/hash?
 			signalingClients[clientID] = discoveryClient;
-			// The callbacks have to be changed to account for the modified clientID.
-			SetCallbacks(discoveryClient, clientID);
+			discoveryClient->clientID = clientID;
 			clientUids.insert(clientID);
 			if (uid != clientID)
 			{

@@ -72,8 +72,6 @@ namespace teleport
 {
 	namespace server
 	{
-		// TODO: No point having a server id, we can't guarantee its uniqueness!
-		avs::uid serverID = 0;
 		std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
 	}
 }
@@ -249,8 +247,6 @@ TELEPORT_EXPORT void SetConnectionTimeout(int32_t timeout)
 TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 {
 	unlinkedClientIDs.clear();
-
-	serverID = avs::GenerateUid();
 
 	SetClientStoppedRenderingNodeDelegate(initialiseState->clientStoppedRenderingNode);
 	SetClientStartedRenderingNodeDelegate(initialiseState->clientStartedRenderingNode);

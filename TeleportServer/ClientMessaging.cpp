@@ -88,7 +88,7 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 	discoveryService.sendToClient(clientID, msg);
 	// messages to be sent as text e.g. WebRTC config.
 	uint16_t len = (uint16_t)msg.size();
-	if ((size_t)len == msg.size())
+	/*if ((size_t)len == msg.size())
 	{
 		size_t sz = sizeof(len);
 		ENetPacket* packet = enet_packet_create(nullptr, msg.size() + sz, ENET_PACKET_FLAG_RELIABLE);
@@ -96,11 +96,16 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 		memcpy((packet->data + sz), msg.data(), len);
 		if (packet)
 			enet_peer_send(peer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_StreamingControl), packet);
-	}
+	}*/
 }
 
 void ClientMessaging::tick(float deltaTime)
 {
+	std::string msg;
+	if ( clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
+	{
+		sendStreamingControlMessage(msg);
+	}
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
@@ -111,11 +116,6 @@ void ClientMessaging::tick(float deltaTime)
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
 		Disconnect();
 		return;
-	}
-	std::string msg;
-	if (peer&&clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
-	{
-		sendStreamingControlMessage(msg);
 	}
 	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
@@ -179,6 +179,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 			assert(!peer);
 			timeSinceLastClientComm = 0;
 			peer = event.peer;
+			//isStreaming = false;
 			enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
 			discoveryService.discoveryCompleteForClient(clientID);
 			TELEPORT_COUT << clientID<<": Client Enet connected: " << getClientIP() << ":" << getClientPort() << "\n";

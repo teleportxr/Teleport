@@ -10,7 +10,6 @@
 
 TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID);
 TELEPORT_EXPORT void Client_StopSession(avs::uid clientID);
-TELEPORT_EXPORT void Client_StartStreaming(avs::uid clientID);
 
 
 typedef void(TELEPORT_STDCALL* ProcessAudioInputFn) (avs::uid uid, const uint8_t* data, size_t dataSize);
