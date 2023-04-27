@@ -61,6 +61,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	setupCommand.backgroundMode = clientSettings.backgroundMode;
 	setupCommand.backgroundColour = clientSettings.backgroundColour;
 	setupCommand.draw_distance = clientSettings.drawDistance;
+
 	// Often drawDistance will equal serverSettings.detectionSphereRadius + serverSettings.clientDrawDistanceOffset;
 	// but this is for the server operator to decide.
 
@@ -100,16 +101,16 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;
-	clientMessaging->sendCommand(setupCommand);
+	clientMessaging->sendSignalingCommand(setupCommand);
 
 	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
 	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
-	clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
+	clientMessaging->sendSignalingCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 
 	
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	
- 	clientMessaging->sendCommand(setupInputsCommand, inputDefinitions);
+ 	clientMessaging->sendSignalingCommand(setupInputsCommand, inputDefinitions);
 	
 	isStreaming = true;
 

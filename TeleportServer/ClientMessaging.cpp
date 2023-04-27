@@ -15,7 +15,7 @@ using namespace teleport;
 using namespace server;
 
 ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
-								 SignalingService &discoveryService,
+								 SignalingService &signalingService,
 								 SetHeadPoseFn setHeadPose,
 								 SetControllerPoseFn setControllerPose,
 								 ProcessNewInputStateFn processNewInputState,
@@ -25,7 +25,7 @@ ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 ReportHandshakeFn reportHandshakeFn,
 								 ClientManager* clientManager)
 	: settings(settings)
-	, discoveryService(discoveryService)
+	, signalingService(signalingService)
 	, geometryStreamingService(settings)
 	, clientManager(clientManager)
 	, setHeadPose(setHeadPose)
@@ -85,7 +85,7 @@ bool ClientMessaging::isStopped() const
 
 void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 {
-	discoveryService.sendToClient(clientID, msg);
+	signalingService.sendToClient(clientID, msg);
 	// messages to be sent as text e.g. WebRTC config.
 	uint16_t len = (uint16_t)msg.size();
 	/*if ((size_t)len == msg.size())
@@ -181,7 +181,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 			peer = event.peer;
 			//isStreaming = false;
 			enet_peer_timeout(peer, 0, disconnectTimeout, disconnectTimeout * 6);
-			discoveryService.discoveryCompleteForClient(clientID);
+			signalingService.discoveryCompleteForClient(clientID);
 			TELEPORT_COUT << clientID<<": Client Enet connected: " << getClientIP() << ":" << getClientPort() << "\n";
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
@@ -355,6 +355,11 @@ bool ClientMessaging::SendCommand(const void* c, size_t sz) const
 	return true;
 }
 
+bool ClientMessaging::SendSignalingCommand(std::vector<uint8_t>&& bin)
+{
+	return signalingService.sendBinaryToClient(clientID,bin);
+}
+
 bool ClientMessaging::hasReceivedHandshake() const
 {
 	return clientNetworkContext.axesStandard != avs::AxesStandard::NotInitialized;
@@ -408,6 +413,13 @@ void ClientMessaging::receive(const ENetEvent& event)
 		TELEPORT_CERR << "Unhandled channel " << event.channelID << "\n";
 		break;
 	}
+}
+void ClientMessaging::receiveSignaling(const std::vector<uint8_t>& bin)
+{
+	ENetPacket packet;
+	packet.data = (enet_uint8*)bin.data();
+	packet.dataLength = bin.size();
+	receiveHandshake(&packet);
 }
 
 void ClientMessaging::receiveStreamingControl(const ENetPacket* packet)

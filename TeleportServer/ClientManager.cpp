@@ -125,6 +125,11 @@ void ClientManager::tick(float deltaTime)
 		}
 		if (signalingService.GetNextMessage(c.first, msg))
 			c.second->clientMessaging->clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(msg);
+		std::vector<uint8_t> bin;
+		while (signalingService.GetNextBinaryMessage(c.first, bin))
+		{
+			c.second->clientMessaging->receiveSignaling(bin);
+		}
 		if (c.second->clientMessaging->hasPeer())
 		{
 			if (c.second->isStreaming == false)

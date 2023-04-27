@@ -30,11 +30,13 @@ namespace teleport
 		};
 		struct SignalingClient
 		{
+			~SignalingClient();
 			avs::uid clientID = 0;
 			std::string address;
 			std::shared_ptr<rtc::WebSocket> webSocket;
 			std::vector<std::string> messagesReceived;
 			std::queue<std::string> messagesToPassOn;
+			std::queue<std::vector<uint8_t>> binaryMessagesReceived;
 			SignalingState signalingState = SignalingState::START;
 		};
 		//! Signaling service for establishing connections with clients.
@@ -50,6 +52,7 @@ namespace teleport
 			void tick();
 			void sendResponseToClient(uint64_t clientID);
 			void sendToClient(avs::uid clientID, std::string str);
+			bool sendBinaryToClient(avs::uid clientID, std::vector<uint8_t> bin);
 			void discoveryCompleteForClient(uint64_t clientID);
 			const std::set<avs::uid> &getClientIds() const;
 			std::shared_ptr<SignalingClient > getSignalingClient(avs::uid u);
@@ -60,13 +63,16 @@ namespace teleport
 			uint16_t servicePort = 0;
 			std::string desiredIP;
 			std::map<avs::uid, std::shared_ptr<SignalingClient>> signalingClients;
+			std::map<avs::uid, avs::uid> clientRemapping;
 			std::set<avs::uid> clientUids;
 			std::shared_ptr<rtc::WebSocketServer> webSocketServer;
 			std::mutex webSocketsMessagesMutex;
 		public:
 			void OnWebSocket(std::shared_ptr<rtc::WebSocket>);
-			void ReceiveWebSocketsMessage(avs::uid clientID, std::string msg); 
+			void ReceiveWebSocketsMessage(avs::uid clientID, std::string msg);
+			void ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::vector<std::byte>& bin);
 			bool GetNextMessage(avs::uid clientID, std::string &msg);
+			bool GetNextBinaryMessage(avs::uid clientID, std::vector<uint8_t>& bin);
 		};
 	}
 }

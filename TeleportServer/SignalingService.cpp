@@ -18,6 +18,14 @@ using namespace server;
 extern ServerSettings casterSettings;
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
 
+SignalingClient::~SignalingClient()
+{
+	if (webSocket.use_count()>1)
+	{
+		TELEPORT_COUT << ": info: Websocket " << clientID << " remains after deletion with "<< webSocket.use_count()<<" uses.\n";
+	}
+}
+
 bool SignalingService::initialize(uint16_t discovPort, uint16_t servePort, std::string desIP)
 {
 	if (discovPort != 0)
@@ -55,6 +63,23 @@ void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string m
 	}
 }
 
+void SignalingService::ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::vector<std::byte> &bin)
+{
+	TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
+	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
+	auto& c = signalingClients[clientID];
+	if (c)
+	{
+		std::vector<uint8_t> b(bin.size());
+		memcpy(b.data(), bin.data(), b.size());
+		c->binaryMessagesReceived.push(b);
+	}
+	else
+	{
+		TELEPORT_CERR << "Websocket message received but already removed the SignalingClient " << clientID << std::endl;
+	}
+}
+
 bool SignalingService::GetNextMessage(avs::uid clientID, std::string& msg)
 {
 	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
@@ -67,13 +92,25 @@ bool SignalingService::GetNextMessage(avs::uid clientID, std::string& msg)
 	}
 	return false;
 }
+bool SignalingService::GetNextBinaryMessage(avs::uid clientID, std::vector<uint8_t>& bin)
+{
+	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
+	auto& c = signalingClients[clientID];
+	if (c && !c->binaryMessagesReceived.empty())
+	{
+		bin = c->binaryMessagesReceived.front();
+		c->binaryMessagesReceived.pop();
+		return true;
+	}
+	return false;
+}
 
 
 void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 {
+	avs::uid clientID = TeleportUtility::GenerateID();
 	TELEPORT_CERR << "SignalingService::OnWebSocket." << std::endl;
 
-	avs::uid clientID = TeleportUtility::GenerateID();
 	std::string addr = ws->remoteAddress().value();
 	std::regex re("([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)(:[0-9]+)?", std::regex_constants::icase | std::regex::extended);
 	std::smatch match;
@@ -103,6 +140,11 @@ void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingC
 			std::string msg = std::get<std::string>(message);
 			ReceiveWebSocketsMessage(signalingClient->clientID, msg);
 		}
+		else if (std::holds_alternative<rtc::binary>(message))
+		{
+			rtc::binary bin= std::get<rtc::binary>(message);
+			ReceiveBinaryWebSocketsMessage(signalingClient->clientID, bin);
+		}
 		});
 	signalingClient->webSocket->onError([this, signalingClient](std::string error)
 		{
@@ -112,9 +154,15 @@ void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingC
 
 void SignalingService::shutdown()
 {
-	webSocketServer.reset();
+	TELEPORT_CERR << ": info: SignalingService::shutdown" << std::endl;
+	if (webSocketServer)
+	{
+		webSocketServer->stop();
+		webSocketServer.reset();
+	}
 	signalingClients.clear();
 	clientUids.clear();
+	clientRemapping.clear();
 }
 
 void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<SignalingClient>& discoveryClient,json& content)
@@ -142,6 +190,8 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			clientUids.insert(clientID);
 			if (uid != clientID)
 			{
+				TELEPORT_COUT << ": info: Remapped from " << uid << " to " << clientID << std::endl;
+				TELEPORT_COUT << ": info: discoveryClient has " << discoveryClient->clientID << std::endl;
 				signalingClients[uid] = nullptr;
 				clientUids.erase(uid);
 				uid = clientID;
@@ -296,6 +346,33 @@ void SignalingService::sendToClient(avs::uid clientID, std::string str)
 	{
 	}
 }
+
+bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t> bin)
+{
+	if (discoveryPort == 0)
+	{
+		TELEPORT_CERR << "Attempted to call sendResponseToClient on client discovery service without initalising!\n";
+		return false;
+	}
+
+	auto c = signalingClients.find(clientID);
+	if (c == signalingClients.end())
+	{
+		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
+		return false;
+	}
+	try
+	{
+		signalingClients[clientID]->webSocket->send((std::byte*)bin.data(),bin.size());
+		TELEPORT_CERR << "webSocket->send: " << bin.size() << " binary bytes .\n";
+		return true;
+	}
+	catch (...)
+	{
+		return false;
+	}
+}
+
 
 void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 {
