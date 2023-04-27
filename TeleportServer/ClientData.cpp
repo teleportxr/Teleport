@@ -12,12 +12,38 @@ ClientData::ClientData(  std::shared_ptr<ClientMessaging> clientMessaging)
 }
 
 void ClientData::StartStreaming(const ServerSettings& serverSettings
-	,const CasterEncoderSettings& encoderSettings
 	,uint32_t connectionTimeout
 	,avs::uid serverID
 	,GetUnixTimestampFn getUnixTimestamp
 	,bool use_ssl)
 {
+	clientMessaging->ConfirmSessionStarted();
+	CasterEncoderSettings encoderSettings{};
+
+	encoderSettings.frameWidth = clientSettings.videoTextureSize[0];
+	encoderSettings.frameHeight = clientSettings.videoTextureSize[1];
+
+	if (serverSettings.useAlphaLayerEncoding)
+	{
+		encoderSettings.depthWidth = 0;
+		encoderSettings.depthHeight = 0;
+	}
+	else if (serverSettings.usePerspectiveRendering)
+	{
+		encoderSettings.depthWidth = static_cast<int32_t>(serverSettings.perspectiveWidth * 0.5f);
+		encoderSettings.depthHeight = static_cast<int32_t>(serverSettings.perspectiveHeight * 0.5f);
+	}
+	else
+	{
+		encoderSettings.depthWidth = static_cast<int32_t>(serverSettings.captureCubeSize * 1.5f);
+		encoderSettings.depthHeight = static_cast<int32_t>(serverSettings.captureCubeSize);
+	}
+
+	encoderSettings.wllWriteDepthTexture = false;
+	encoderSettings.enableStackDepth = true;
+	encoderSettings.enableDecomposeCube = true;
+	encoderSettings.maxDepth = 10000;
+
 	teleport::core::SetupCommand setupCommand;
 	setupCommand.server_http_port = clientMessaging->getServerPort() + 1;
 	setupCommand.server_streaming_port = clientMessaging->getStreamingPort();
@@ -79,15 +105,12 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
 	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
 	clientMessaging->sendCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
-	if (inputDefinitions.size() >= 256)
-	{
-	}
-	else
-	{
-		teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
+
 	
-		clientMessaging->sendCommand(setupInputsCommand, inputDefinitions);
-	}
+	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
+	
+ 	clientMessaging->sendCommand(setupInputsCommand, inputDefinitions);
+	
 	isStreaming = true;
 
 	for (auto s : nodeSubTypes)

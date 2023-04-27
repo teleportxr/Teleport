@@ -71,16 +71,17 @@ namespace avs
 					{
 						recreateConnection = true;
 					}
-					std::cout << "WebRTC onStateChange: " << state << std::endl;
+					std::cout << "info: WebRTC onStateChange: " << state << std::endl;
 				});
 
 			pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
 				{
-					std::cout << "Gathering State: " << state << std::endl;
+					std::cout << "info: Gathering State: " << state << std::endl;
 				});
 			 
 			pc->onLocalDescription([sendConfigMessage, id](rtc::Description description)
 				{
+					std::cout << "info: onLocalDescription\n";
 					// This is our offer.
 					json message = {
 										{"teleport-signal-type",description.typeString()},
@@ -95,6 +96,7 @@ namespace avs
 
 			pc->onLocalCandidate([sendConfigMessage, id](rtc::Candidate candidate)
 				{
+					std::cout << "info: onLocalCandidate\n";
 					json message = {
 										{"teleport-signal-type","candidate"},
 												{"id", id},

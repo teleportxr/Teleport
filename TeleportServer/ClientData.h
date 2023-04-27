@@ -42,7 +42,6 @@ namespace teleport
 		public:
 			ClientData(  std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
 			void StartStreaming(const ServerSettings &casterSettings
-				, const CasterEncoderSettings &encoderSettings
 				, uint32_t connectionTimeout
 				, avs::uid serverID
 				, GetUnixTimestampFn getUnixTimestamp

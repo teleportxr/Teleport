@@ -23,6 +23,8 @@ using namespace server;
 ClientManager::ClientManager()
 {
 	mLastTickTimestamp = avs::Platform::getTimestamp();
+	// TODO: server id should be a random large hash.
+	serverID = avs::GenerateUid();
 }
 
 ClientManager::~ClientManager()
@@ -93,6 +95,22 @@ bool ClientManager::shutdown()
 	return true;
 }
 
+
+void ClientManager::startStreaming(avs::uid clientID)
+{
+	auto client = clientManager.GetClient(clientID);
+	if (!client)
+	{
+		TELEPORT_CERR << "Failed to start streaming to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return;
+	}
+	//not ready?
+	if (!client->validClientSettings)
+		return;
+
+	client->StartStreaming(serverSettings,  connectionTimeout, serverID, getUnixTimestamp, httpService->isUsingSSL());
+
+}
 void ClientManager::tick(float deltaTime)
 {
 	mLastTickTimestamp = avs::Platform::getTimestamp();
@@ -111,7 +129,7 @@ void ClientManager::tick(float deltaTime)
 		{
 			if (c.second->isStreaming == false)
 			{
-				Client_StartStreaming(c.first);
+				startStreaming(c.first);
 			}
 		}
 		c.second->clientMessaging->tick(deltaTime);

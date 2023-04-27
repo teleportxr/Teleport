@@ -54,6 +54,7 @@ namespace teleport
 
 			SignalingService signalingService;
 		private:
+			void startStreaming(avs::uid clientID);
 			void handleStoppedClients();
 			void receiveMessages();
 			void handleStreaming();
@@ -62,7 +63,7 @@ namespace teleport
 			std::atomic_bool mAsyncNetworkDataProcessingFailed = false;
 			bool mInitialized = false;
 			int32_t mListenPort = 0;
-
+			avs::uid serverID;
 			ENetHost* mHost = nullptr;
 
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
