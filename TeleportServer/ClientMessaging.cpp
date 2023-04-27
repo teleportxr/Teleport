@@ -513,7 +513,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		teleport::core::AcknowledgeHandshakeCommand ack;
 		TELEPORT_LOG("Sending handshake acknowledgement to clientID {0} at IP {1}  .\n", clientID, clientIP);
 
-		sendCommand(ack);
+		sendSignalingCommand(ack);
 	}
 	// Client may have required resources, as they are reconnecting; tell them to show streamed nodes.
 	else
@@ -521,7 +521,7 @@ void ClientMessaging::receiveHandshake(const ENetPacket* packet)
 		TELEPORT_LOG("Sending handshake acknowledgement to clientID {0} at IP {1} with {2} nodes .\n", clientID, clientIP, handshake.resourceCount);
 		const std::set<avs::uid>& streamedNodeIDs = geometryStreamingService.getStreamedNodeIDs();
 		teleport::core::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
-		sendCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
+		sendSignalingCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 	}
 	receivedHandshake = true;
 	reportHandshake(this->clientID, &handshake);
