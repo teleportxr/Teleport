@@ -45,8 +45,8 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	encoderSettings.maxDepth = 10000;
 
 	teleport::core::SetupCommand setupCommand;
-	setupCommand.server_http_port = clientMessaging->getServerPort() + 1;
-	setupCommand.server_streaming_port = clientMessaging->getStreamingPort();
+	setupCommand.server_http_port = 443;
+	setupCommand.server_streaming_port =0;
 	setupCommand.debug_stream = serverSettings.debugStream;
 	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
@@ -107,7 +107,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
 	clientMessaging->sendSignalingCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 
-	
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	
  	clientMessaging->sendSignalingCommand(setupInputsCommand, inputDefinitions);

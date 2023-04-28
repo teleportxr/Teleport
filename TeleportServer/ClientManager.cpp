@@ -32,43 +32,18 @@ ClientManager::~ClientManager()
 	
 }
 
-bool ClientManager::initialize(int32_t signalPort, int32_t servPort,std::string client_ip_match, uint32_t maxClients)
+bool ClientManager::initialize(int32_t signalPort, std::string client_ip_match, uint32_t maxClients)
 {
 	if (mInitialized)
 	{
 		return false;
 	}
-	servicePort = servPort;
-	if(!signalingService.initialize(signalPort, servPort, client_ip_match))
+	if(!signalingService.initialize(signalPort, client_ip_match))
 	{
 		TELEPORT_CERR << "An error occurred while attempting to initalise signalingService!\n";
 		return false;
 	}
-	ENetAddress ListenAddress = {};
-	ListenAddress.host = ENET_HOST_ANY;
-	ListenAddress.port = servPort;
 
-	// ServerHost will live for the lifetime of the session.
-	if(!mHost)
-		mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-	if (!mHost)
-	{
-		ListenAddress.port ++;
-		mHost = enet_host_create(&ListenAddress, maxClients, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_NumChannels), 0, 0);
-		if(mHost)
-		{
-			std::cerr << "Error: port "<< servPort <<" is in use.\n";
-			enet_host_destroy(mHost);
-			mHost = nullptr;
-		}
-		std::cerr << "Session: Failed to create ENET server host!\n";
-		DEBUG_BREAK_ONCE;
-		return false;
-	}
-	
-	mPorts.clear();
-
-	mListenPort = servPort;
 	mMaxClients = maxClients;
 
 	mInitialized = true;
@@ -80,13 +55,6 @@ bool ClientManager::shutdown()
 {
 	if (mInitialized)
 	{
-
-		if (mHost)
-		{
-			enet_host_destroy(mHost);
-			mHost = nullptr;
-		}
-
 		clients.clear();
 
 		mInitialized = false;
@@ -148,14 +116,14 @@ void ClientManager::tick(float deltaTime)
 			continue;
 		if (discoveryClient->signalingState != SignalingState::ACCEPTED)
 			continue;
-		if (startSession(clientID, discoveryClient->address, servicePort))
+		if (startSession(clientID, discoveryClient->address))
 		{
 			discoveryClient->signalingState = SignalingState::STREAMING;
 		}
 	}
 }
 
-bool ClientManager::startSession(avs::uid clientID, std::string clientIP, int servicePort)
+bool ClientManager::startSession(avs::uid clientID, std::string clientIP)
 {
 	if (!clientID || clientIP.size() == 0)
 		return false;
@@ -181,20 +149,6 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP, int se
 		}
 		{
 			std::lock_guard<std::mutex> lock(mNetworkMutex);
-			// find an unused port
-			uint16_t port = mHost->address.port + 2;
-			auto& p = mPorts.begin();
-			while (p != mPorts.end())
-			{
-				if (!p->second)
-				{
-					break;
-				}
-				port++;
-				p++;
-			}
-			client->clientMessaging->streamingPort = port;
-			mPorts[port] = true;
 			clients[clientID] = client;
 			clientIDs.insert(clientID);
 		}
@@ -210,12 +164,6 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP, int se
 	}
 
 	client->SetConnectionState(UNCONNECTED);
-	if (enet_address_set_host_ip(&client->eNetAddress, clientIP.c_str()))
-	{
-		TELEPORT_CERR << "enet_address_set_host_ip failed for " << clientID << "!\n";
-		return false;
-	}
-	client->eNetAddress.port = servicePort;
 	if (client->clientMessaging->isInitialised())
 	{
 		client->clientMessaging->unInitialise();
@@ -258,8 +206,6 @@ void ClientManager::removeClient(avs::uid clientID)
 	client->clientMessaging->stopSession();
 	clientIDs.erase(clientID);
 	clients.erase(clientID);
-	
-	mPorts[client->clientMessaging->streamingPort] = false;
 }
 
 bool ClientManager::hasClient(avs::uid clientID)
@@ -287,14 +233,7 @@ const std::set<avs::uid> &ClientManager::GetClientUids() const
 
 bool ClientManager::hasHost() const
 {
-	return mHost;
-}
-
-uint16_t ClientManager::getServerPort() const
-{
-	assert(mHost);
-
-	return mHost->address.port;
+	return true;
 }
 
 avs::Timestamp ClientManager::getLastTickTimestamp() const

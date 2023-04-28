@@ -30,7 +30,7 @@ SignalingClient::~SignalingClient()
 	}
 }
 
-bool SignalingService::initialize(uint16_t discovPort, uint16_t servePort, std::string desIP)
+bool SignalingService::initialize(uint16_t discovPort,  std::string desIP)
 {
 	if (discovPort != 0)
 		discoveryPort = discovPort;
@@ -47,8 +47,6 @@ bool SignalingService::initialize(uint16_t discovPort, uint16_t servePort, std::
 		auto onWebSocketClient =std::bind(&SignalingService::OnWebSocket,this,std::placeholders::_1);
 		webSocketServer->onClient(onWebSocketClient);
 	}
-	if (servePort != 0)
-		servicePort = servePort;
 	desiredIP = desIP;
 
 	return true;
@@ -314,13 +312,11 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
 		return;
 	}
-//	json message = { {"clientID", clientID},{"servicePort",servicePort} };
 	json message = {
 						{"teleport-signal-type","request-response"},
 						{"content",
 							{
-								{"clientID", clientID},
-								{"servicePort",servicePort}
+								{"clientID", clientID}
 							}
 						}
 	};

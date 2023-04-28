@@ -97,7 +97,6 @@ struct InitialiseState
 	char* certDirectory;
 	char* privateKeyDirectory;
 	uint32_t DISCOVERY_PORT = 10607;
-	uint32_t SERVICE_PORT = 10500;
 
 	ClientStoppedRenderingNodeFn clientStoppedRenderingNode;
 	ClientStartedRenderingNodeFn clientStartedRenderingNode;
@@ -269,7 +268,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	}
 	atexit(enet_deinitialize);
 
-	bool result = clientManager.initialize(initialiseState->DISCOVERY_PORT, initialiseState->SERVICE_PORT, std::string(initialiseState->clientIP));
+	bool result = clientManager.initialize(initialiseState->DISCOVERY_PORT,std::string(initialiseState->clientIP));
 
 	if (!result)
 	{
@@ -279,7 +278,10 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 	clientManager.startAsyncNetworkDataProcessing();
 
-	result = httpService->initialize(initialiseState->httpMountDirectory, initialiseState->certDirectory, initialiseState->privateKeyDirectory, initialiseState->SERVICE_PORT + 1);
+	result = httpService->initialize(initialiseState->httpMountDirectory
+		, initialiseState->certDirectory
+		, initialiseState->privateKeyDirectory
+		,80);
 	return result;
 }
 

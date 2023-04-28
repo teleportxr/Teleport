@@ -477,22 +477,6 @@ TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int 
 	return static_cast<unsigned int>(final_len);
 }
 
-TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)
-{
-	auto client = clientManager.GetClient(clientID);
-	if(!client)
-	{
-		TELEPORT_CERR << "Failed to retrieve client port of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return 0;
-	}
-	return client->clientMessaging->getClientPort();
-}
-
-TELEPORT_EXPORT uint16_t Client_GetServerPort(avs::uid clientID)
-{
-	return clientManager.getServerPort();
-}
-
 TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::NetworkSinkCounters& counters)
 {
 	auto client = clientManager.GetClient(clientID);

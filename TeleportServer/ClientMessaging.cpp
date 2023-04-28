@@ -99,9 +99,9 @@ void ClientMessaging::tick(float deltaTime)
 		return;
 	commandPipeline.process();
 	messagePipeline.process();
-	if (  !clientNetworkContext.NetworkPipeline.isProcessingEnabled())
+	if (!clientNetworkContext.NetworkPipeline.isProcessingEnabled())
 	{
-		TELEPORT_COUT << "Network error occurred with client " << getClientIP() << ":" << getClientPort() << " so disconnecting." << "\n";
+		TELEPORT_COUT << "Network error occurred with client " << getClientIP() <<", disconnecting." << "\n";
 		Disconnect();
 		return;
 	}
@@ -311,13 +311,7 @@ bool ClientMessaging::hasReceivedHandshake() const
 
 std::string ClientMessaging::getPeerIP() const
 {
-
 	return clientIP;
-}
-
-uint16_t ClientMessaging::getClientPort() const
-{
-	return streamingPort;
 }
 
 avs::Result ClientMessaging::decode(const void* buffer, size_t bufferSizeInBytes)
@@ -436,7 +430,7 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	}
 	receivedHandshake = true;
 	reportHandshake(this->clientID, &handshake);
-	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}:{2}.\n", clientID, clientIP,streamingPort);
+	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}.\n", clientID, clientIP);
 }
 
 bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
@@ -739,20 +733,6 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 		break;
 	};
 }
-
-
-uint16_t ClientMessaging::getServerPort() const
-{
-	assert(clientManager);
-
-	return clientManager->getServerPort();
-}
-
-uint16_t ClientMessaging::getStreamingPort() const
-{
-	return streamingPort;
-}
-
 avs::ConnectionState ClientMessaging::getConnectionState() const
 {
 	if (clientNetworkContext.NetworkPipeline.mNetworkSink)

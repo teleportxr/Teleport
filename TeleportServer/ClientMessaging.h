@@ -95,10 +95,6 @@ namespace teleport
 			}
 			bool SendCommand(const void* c, size_t sz) const;
 			bool SendSignalingCommand( std::vector<uint8_t>&& bin);
-			uint16_t getServerPort() const;
-
-			uint16_t getStreamingPort() const;
-
 
 			template<typename C, typename T> bool sendCommand2(const C& command, const std::vector<T>& appendedList) const
 			{
@@ -175,10 +171,9 @@ namespace teleport
 				return clientID;
 			}
 
-			// Same as c;ient ip.
+			// Same as client ip.
 			std::string getPeerIP() const;
 
-			uint16_t getClientPort() const;
 			bool video_encoder_initialized = false;
 			ClientNetworkContext* getClientNetworkContext()
 			{
@@ -238,7 +233,6 @@ namespace teleport
 			ReportHandshakeFn reportHandshake;
 
 			uint32_t disconnectTimeout=0;
-			uint16_t streamingPort=0;
 
 			ClientNetworkContext clientNetworkContext;
 

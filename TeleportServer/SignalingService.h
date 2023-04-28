@@ -46,7 +46,7 @@ namespace teleport
 			{
 				shutdown();
 			}
-			bool initialize(uint16_t discoveryPort = 0, uint16_t servicePort = 0, std::string desiredIP = "");
+			bool initialize(uint16_t discoveryPort = 0, std::string desiredIP = "");
 			void shutdown();
 			void tick();
 			void sendResponseToClient(uint64_t clientID);
@@ -59,7 +59,6 @@ namespace teleport
 			void SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient);
 			void processInitialRequest(avs::uid clientID, std::shared_ptr<SignalingClient> &discoveryClient,nlohmann::json& j);
 			uint16_t discoveryPort = 0;
-			uint16_t servicePort = 0;
 			std::string desiredIP;
 			std::map<avs::uid, std::shared_ptr<SignalingClient>> signalingClients;
 			std::map<avs::uid, avs::uid> clientRemapping;

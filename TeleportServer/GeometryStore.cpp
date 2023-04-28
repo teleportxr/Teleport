@@ -1114,7 +1114,7 @@ void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path
 	path_to_uid[p]=id;
  	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
 }
-
+#include <fmt/core.h>
 void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string cacheFilePath, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
@@ -1135,6 +1135,9 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			TELEPORT_BREAK_ONCE("Bad data.");
 			return;
 		}
+		std::string flnm=fmt::format("{0}{1}.png", cacheFilePath, i);
+		std::ofstream ofs(flnm, std::ios::binary);
+		ofs.write(((char*)newTexture.data + imageOffsets[i]), imageSizes[i]);
 	}
 	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
 	if(newTexture.compression==avs::TextureCompression::BASIS_COMPRESSED&&newTexture.bytesPerPixel != 4)
