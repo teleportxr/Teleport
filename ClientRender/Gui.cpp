@@ -723,10 +723,6 @@ void Gui::LinePrint(const std::string& str, const float* clr)
 
 void Gui::LinePrint(const char* txt,const float *clr)
 {
-	if (in_debug_gui != 1)
-	{
-		return;
-	}
 	if (clr == nullptr)
 		ImGui::Text("%s",txt);
 	else
@@ -761,8 +757,13 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 		m = mip;
 	}
 
-	const int width = texture->width;
-	const int height = texture->length;
+	int width = texture->width;
+	int height = texture->length;
+	width=std::max(width,256);
+	if(width!=texture->width)
+	{
+		height=(width*texture->length)/texture->width;
+	}
 	const char* name = texture->GetName();
 	const float aspect = static_cast<float>(width) / static_cast<float>(height);
 	const ImVec2 regionSize =  ImGui::GetContentRegionAvail();
@@ -829,22 +830,6 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		window_pos_pivot.y = 0.0f;
 		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
 		window_flags |= ImGuiWindowFlags_NoMove;
-	}
-	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-	if (ImGuiBegin("Keyboard", nullptr, window_flags))
-	{
-		ImGui::Text(
-			"O: Toggle OSD\n"
-			"K: Connect/Disconnect\n"
-			"N: Toggle Node Overlays\n"
-			"R: Recompile shaders\n"
-			"NUM 0: PBR\n"
-			"NUM 1: Albedo\n"
-			"NUM 4: Unswizzled Normals\n"
-			"NUM 5: Debug animation\n"
-			"NUM 6: Lightmaps\n"
-			"NUM 2: Vertex Normals\n");
-		ImGuiEnd();
 	}
 	if(geometryCache&&show_inspector)
 	{
@@ -1456,14 +1441,6 @@ void Gui::ShowSettings2D()
 	ImGui::PushFont(defaultFont);
 	ImGui::LabelText("##Settings","Settings");
 	ImGui::PopFont();
-	/*ImGui::Spacing();
-	ImGui::SameLine(ImGui::GetWindowWidth() - 40);
-
-	.if (ImGui::Button(ICON_FK_ARROW_LEFT, ImVec2(36, 24)))
-	{
-		config.SaveOptions();
-		show_options = false;
-	}*/
 	if (ImGui::BeginTable("options", 2))
 	{
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f);
@@ -1632,8 +1609,45 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 		MenuBar2D();
 	}
 	EndMainMenuBar();
+	auto& style = ImGui::GetStyle();
+	auto& config = client::Config::GetInstance();
+	if(config.dev_mode)
 	{
-		auto& style = ImGui::GetStyle();
+		ImVec2 pos = { vp.w - 300.f ,100.f };
+		ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+		ImGui::SetNextWindowPos(pos);
+		ImGuiBegin("dev_overlay",0,window_flags);
+		if(sessionClient)
+		{
+			auto status = sessionClient->GetConnectionStatus();
+			auto streamingStatus = sessionClient->GetStreamingConnectionState();
+		
+			vec4 white(1.f, 1.f, 1.f, 1.f);
+			LinePrint(fmt::format("  Session Status: {0}",teleport::client::StringOf(status)),white);
+			LinePrint(fmt::format("Streaming Status: {0}",avs::stringOf(streamingStatus)),white);
+		}
+
+		ImGuiEnd();
+		
+		/*
+		if (ImGuiBegin("Keyboard", nullptr, window_flags))
+		{
+			ImGui::Text(
+				"O: Toggle OSD\n"
+					"K: Connect/Disconnect\n"
+					"N: Toggle Node Overlays\n"
+					"R: Recompile shaders\n"
+					"NUM 0: PBR\n"
+					"NUM 1: Albedo\n"
+					"NUM 4: Unswizzled Normals\n"
+					"NUM 5: Debug animation\n"
+					"NUM 6: Lightmaps\n"
+					"NUM 2: Vertex Normals\n");
+			ImGuiEnd();
+		}*/
+	}
+	if(config.enable_vr)
+	{
 		ImVec4 transp= ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 		ImGui::PushStyleColor(ImGuiCol_Button,style.Colors[ImGuiCol_WindowBg]);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg,transp);

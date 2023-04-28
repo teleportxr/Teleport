@@ -39,7 +39,6 @@ void teleport::client::DiscoveryService::ShutdownInstance()
 
 DiscoveryService::DiscoveryService()
 {
-	serverAddress = {};
 }
 
 DiscoveryService::~DiscoveryService()
@@ -95,9 +94,16 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 
 void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
 {
-	TELEPORT_CERR << "ReceiveWebSocketsMessage " << msg << std::endl;
+	TELEPORT_COUT << ": info: ReceiveWebSocketsMessage " << msg << std::endl;
 	std::lock_guard lock(mutex);
 	messagesReceived.push(msg);
+}
+
+void DiscoveryService::ReceiveBinaryWebSocketsMessage(uint64_t server_uid,std::vector<std::byte> bin)
+{
+	TELEPORT_COUT << ": info: ReceiveBinaryWebSocketsMessage." << std::endl;
+	std::lock_guard lock(mutex);
+	binaryMessagesReceived.push(bin);
 }
 
 void DiscoveryService::ResetConnection(uint64_t server_uid,std::string ip, uint16_t serverDiscoveryPort)
@@ -108,6 +114,10 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string ip, uint1
 		messagesToPassOn.pop();
 	while(!messagesToSend.empty())
 		messagesToSend.pop();
+	while(!binaryMessagesReceived.empty())
+		binaryMessagesReceived.pop();
+	while(!binaryMessagesToSend.empty())
+		binaryMessagesToSend.pop();
 	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
 	TELEPORT_CERR << "Websocket open()" << std::endl;
 	if(ip.length()>0)
@@ -129,6 +139,11 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 			std::string msg = std::get<std::string>(message);
 			ReceiveWebSocketsMessage(server_uid,msg);
 		}
+		else if(std::holds_alternative<rtc::binary>(message))
+		{
+			rtc::binary bin=std::get<rtc::binary>(message);
+			ReceiveBinaryWebSocketsMessage(server_uid,bin);
+		}
 	};
 	ws->onError([this,server_uid](std::string error)
 	{
@@ -144,7 +159,7 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 	frame = 2;
 }
 
-uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_t signalPort, ENetAddress& remote)
+uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_t signalPort)
 {
 	std::lock_guard lock(mutex);
 	serverDiscoveryPort=signalPort;
@@ -191,41 +206,13 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_
 	}
 	if(awaiting)
 	{
-		auto f = fobj.wait_for(std::chrono::microseconds(0));
-		if (f == std::future_status::timeout)
-		{
-			return 0;
-		}
-		if (f == std::future_status::ready)
-		{
-			awaiting = false;
-			int result= fobj.get();
-			if(result!=0)
-			{
-			#ifdef _MSC_VER
-				int err = WSAGetLastError();
-				TELEPORT_CERR << "enet_address_set_host failed with error " << err << std::endl;
-			#else
-				TELEPORT_CERR << "enet_address_set_host failed with error " << result<< std::endl;
-			#endif
-				return 0;
-			}
-			serverIP = ip;
-			remote = serverAddress;
-			remote.port = remotePort;
-			serverDiscovered = true;
-		}
-		else
-		{
-			return 0;
-		}
+		awaiting = false;
+		serverIP = ip;
+		serverDiscovered = true;
 	}
 
 	if(serverDiscovered)
 	{
-		char remoteIP[20];
-		enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-		TELEPORT_CLIENT_LOG("Discovered session server: %s:%d\n", remoteIP, remote.port);
 		return clientID;
 	}
 	return 0;
@@ -249,12 +236,20 @@ void DiscoveryService::Tick(uint64_t server_uid)
 			TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
 			messagesToSend.pop();
 		}
+		while(binaryMessagesToSend.size())
+		{
+			auto &bin=binaryMessagesToSend.front();
+			ws->send(bin.data(),bin.size());
+			TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
+			binaryMessagesToSend.pop();
+		}
 	}
-	static size_t bytesRecv;
 	while(messagesReceived.size())
 	{
 		std::string msg = messagesReceived.front();
 		messagesReceived.pop();
+		if(!msg.length())
+			continue;
 		json message=json::parse(msg);
 		if(message.contains("teleport-signal-type"))
 		{
@@ -271,23 +266,10 @@ void DiscoveryService::Tick(uint64_t server_uid)
 							clientID=clid;
 						if(clientID!=0)
 						{
-							if(content.contains("servicePort"))
-							{
-								remotePort = content["servicePort"];
-								if (!awaiting)
-								{
-									serverAddress.host = ENET_HOST_ANY;
-									serverAddress.port = remotePort;
-									fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
-									awaiting = true;
-								}
-								
-								break;
-							}
+							awaiting = true;
 						}
 					}
 				}
-				messagesReceived.pop();
 			}
 			else
 				messagesToPassOn.push(msg);
@@ -308,7 +290,30 @@ bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)
 	}
 	return false;
 }
+
+bool DiscoveryService::GetNextBinaryMessage(uint64_t server_uid,std::vector<uint8_t>& msg)
+{
+	std::lock_guard lock(mutex);
+	if (binaryMessagesReceived.size())
+	{
+		auto &bin=binaryMessagesReceived.front();
+		msg.resize(bin.size());
+		memcpy(msg.data(),bin.data(),msg.size());
+		binaryMessagesReceived.pop();
+		return true;
+	}
+	return false;
+}
 void DiscoveryService::Send(uint64_t server_uid,std::string msg)
 {
 	messagesToSend.push(msg);
+}
+
+void DiscoveryService::SendBinary(uint64_t server_uid, std::vector<uint8_t> bin)
+{
+	std::vector<std::byte> b;
+	b.resize(bin.size());
+	memcpy(b.data(),bin.data(),b.size());
+	binaryMessagesToSend.push(b);
+
 }

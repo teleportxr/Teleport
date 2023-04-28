@@ -163,7 +163,7 @@ namespace clientrender
 		
 		// to render the vr view instead of re-rendering.
 		void SetExternalTexture(platform::crossplatform::Texture* t);
-		void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		//void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 
 		void HandleLocalInputs(const teleport::core::Input& local_inputs);
 		void ShowHideGui();

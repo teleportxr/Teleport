@@ -1119,7 +1119,11 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	}
 	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
 	if(!gui.IsVisible()&&!show_osd)
+	{
+		auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+		gui.setSessionClient(sessionClient.get());
 		gui.Render2DGUI(deviceContext);
+	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -1251,7 +1255,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	auto status = sessionClient->GetConnectionStatus();
-	avs::StreamingConnectionState streamingStatus = sessionClient->GetStreamingConnectionState();
+	auto streamingStatus = sessionClient->GetStreamingConnectionState();
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
@@ -1391,7 +1395,7 @@ void Renderer::SetExternalTexture(crossplatform::Texture* t)
 	externalTexture = t;
 	have_vr_device = (externalTexture != nullptr);
 }
-
+/*
 void Renderer::PrintHelpText(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	deviceContext.framePrintY = 8;
@@ -1408,7 +1412,7 @@ void Renderer::PrintHelpText(crossplatform::GraphicsDeviceContext& deviceContext
 	renderPlatform->LinePrint(deviceContext, "NUM 5: Debug animation");
 	renderPlatform->LinePrint(deviceContext, "NUM 6: Lightmaps");
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
-}
+}*/
 
 void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 {

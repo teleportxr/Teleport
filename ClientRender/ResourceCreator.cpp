@@ -1337,7 +1337,7 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 #endif
 	return true;
 }
-
+#include <fstream>
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	SetThisThreadName("BasisThread_TranscodeTextures");
@@ -1384,6 +1384,8 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				for(int i=0;i<num_images;i++)
 				{
 					// Convert from Png to raw data:
+					std::ofstream ofs(fmt::format("{0}_{1}.png",transcoding.name,i).c_str(),std::ios::binary);
+					ofs.write(((char*)basePtr+imageOffsets[i]),(size_t) imageSizes[i]);
 					int num_channels=0;
 					unsigned char *target = teleport::stbi_load_from_memory(basePtr+imageOffsets[i],(int) imageSizes[i], &mipWidth, &mipHeight, &num_channels,(int)0);
 					if( mipWidth > 0 && mipHeight > 0&&target&&transcoding.data.size()>2)

@@ -138,7 +138,7 @@ WebRtcNetworkSource::WebRtcNetworkSource()
 Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams,int numInputs, const NetworkSourceParams& params)
 {
 	size_t numOutputs = in_streams.size();
-	if (numOutputs == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
+	if (numOutputs == 0 ||  params.remoteHTTPPort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -333,6 +333,7 @@ Result WebRtcNetworkSource::deconfigure()
 	{
 		return Result::Node_NotConfigured;
 	}
+	webRtcState=StreamingConnectionState::NEW;
 	setNumOutputSlots(0);
 	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
 	m_data->dataChannels.clear();
