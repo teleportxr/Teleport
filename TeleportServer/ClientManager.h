@@ -28,10 +28,10 @@ namespace teleport
 
 			virtual ~ClientManager();
 
-			bool initialize(int32_t signalPort, int32_t servPort, std::string client_ip_match="", uint32_t maxClients = 100);
+			bool initialize(int32_t signalPort, std::string client_ip_match="", uint32_t maxClients = 100);
 			bool shutdown();
 			void tick(float deltaTime);
-			bool startSession(avs::uid clientID, std::string clientIP, int servicePort);
+			bool startSession(avs::uid clientID, std::string clientIP);
 
 			void startAsyncNetworkDataProcessing();
 			void stopAsyncNetworkDataProcessing(bool killThread = true);
@@ -42,8 +42,6 @@ namespace teleport
 			bool hasClient(avs::uid clientID);
 			std::shared_ptr<ClientData> GetClient(avs::uid clientID);
 			const std::set<avs::uid> &GetClientUids() const;
-
-			uint16_t getServerPort() const;
 
 			avs::Timestamp getLastTickTimestamp() const;
 
@@ -62,9 +60,7 @@ namespace teleport
 			std::set<avs::uid> clientIDs;
 			std::atomic_bool mAsyncNetworkDataProcessingFailed = false;
 			bool mInitialized = false;
-			int32_t mListenPort = 0;
 			avs::uid serverID;
-			ENetHost* mHost = nullptr;
 
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
 		public:
@@ -75,11 +71,9 @@ namespace teleport
 			mutable std::mutex mDataMutex;
 			std::atomic<avs::Timestamp> mLastTickTimestamp;
 			uint32_t mMaxClients = 0;
-			std::map<uint16_t,bool> mPorts;
 
 			// Seconds
 			static constexpr float mStartSessionTimeout = 3;
-			uint16_t servicePort = 0;
 		};
 	}
 }

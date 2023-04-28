@@ -11,7 +11,6 @@
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
 #include "TeleportServer/ClientData.h"
-#include "TeleportServer/SignalingService.h"
 #include "TeleportServer/DefaultHTTPService.h"
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/GeometryStreamingService.h"
@@ -65,7 +64,7 @@ TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 	}
 
 	// Shut-down connections to the client.
-	if(client->isStreaming)
+	if(client->GetConnectionState()!=UNCONNECTED)
 	{
 		// Will add to lost clients and call shutdown command
 		Client_StopStreaming(clientID);
@@ -140,6 +139,7 @@ TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID,const ClientSett
 	client->clientSettings = clientSettings;
 	client->validClientSettings = true;
 }
+
 TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const avs::ClientDynamicLighting &clientDynamicLighting)
 {
 	auto client = clientManager.GetClient(clientID);
@@ -150,7 +150,6 @@ TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const av
 	}
 	client->clientDynamicLighting = clientDynamicLighting;
 }
-
 
 TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size_t num,const avs::uid * textureIDs)
 {
@@ -172,7 +171,7 @@ TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
 		return;
 	}
 	client->clientMessaging->stopSession();
-	client->isStreaming = false;
+	client->SetConnectionState(UNCONNECTED);
 
 	//Delay deletion of clients.
 	lostClients.push_back(clientID);
@@ -478,22 +477,6 @@ TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int 
 	return static_cast<unsigned int>(final_len);
 }
 
-TELEPORT_EXPORT uint16_t Client_GetClientPort(avs::uid clientID)
-{
-	auto client = clientManager.GetClient(clientID);
-	if(!client)
-	{
-		TELEPORT_CERR << "Failed to retrieve client port of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return 0;
-	}
-	return client->clientMessaging->getClientPort();
-}
-
-TELEPORT_EXPORT uint16_t Client_GetServerPort(avs::uid clientID)
-{
-	return clientManager.getServerPort();
-}
-
 TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::NetworkSinkCounters& counters)
 {
 	auto client = clientManager.GetClient(clientID);
@@ -554,7 +537,7 @@ void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dat
 	processAudioInput(clientID, data, dataSize);
 }
 
-TELEPORT_EXPORT avs::ConnectionState Client_GetConnectionState(avs::uid clientID)
+TELEPORT_EXPORT avs::ConnectionState Client_GetStreamingState(avs::uid clientID)
 {
 	auto client = clientManager.GetClient(clientID);
 	if (!client)
@@ -565,4 +548,15 @@ TELEPORT_EXPORT avs::ConnectionState Client_GetConnectionState(avs::uid clientID
 	if(!client->clientMessaging)
 		return avs::ConnectionState::ERROR_STATE;
 	return client->clientMessaging->getConnectionState();
+}
+
+TELEPORT_EXPORT SignalingState Client_GetSignalingState(avs::uid clientID)
+{
+	auto client = clientManager.signalingService.getSignalingClient(clientID);
+	if (!client)
+	{
+		TELEPORT_CERR << "Failed to retrieve connection state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return SignalingState::INVALID;
+	}
+	return client->signalingState;
 }
