@@ -1119,7 +1119,11 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	}
 	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
 	if(!gui.IsVisible()&&!show_osd)
+	{
+		auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+		gui.setSessionClient(sessionClient.get());
 		gui.Render2DGUI(deviceContext);
+	}
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -1251,18 +1255,13 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	vec4 background={0.0f,0.0f,0.0f,0.5f};
 	auto status = sessionClient->GetConnectionStatus();
+	auto streamingStatus = sessionClient->GetStreamingConnectionState();
 
 	deviceContext.framePrintX = 8;
 	deviceContext.framePrintY = 8;
 	gui.LinePrint(fmt::format("Server {0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
-	if(status==client::ConnectionStatus::UNCONNECTED)
-		gui.LinePrint("Unconnected",white);
-	if(status==client::ConnectionStatus::OFFERING)
-		gui.LinePrint("Discovering",white);
-	if (status == client::ConnectionStatus::HANDSHAKING)
-		gui.LinePrint("Handshaking", white);
-	if (status == client::ConnectionStatus::CONNECTED)
-		gui.LinePrint("Connected", white);
+	gui.LinePrint(fmt::format("  Session Status: {0}",teleport::client::StringOf(status)),white);
+	gui.LinePrint(fmt::format("Streaming Status: {0}",avs::stringOf(streamingStatus)),white);
 	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
 	
 	if(gui.Tab("Debug"))
@@ -1396,7 +1395,7 @@ void Renderer::SetExternalTexture(crossplatform::Texture* t)
 	externalTexture = t;
 	have_vr_device = (externalTexture != nullptr);
 }
-
+/*
 void Renderer::PrintHelpText(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	deviceContext.framePrintY = 8;
@@ -1413,7 +1412,7 @@ void Renderer::PrintHelpText(crossplatform::GraphicsDeviceContext& deviceContext
 	renderPlatform->LinePrint(deviceContext, "NUM 5: Debug animation");
 	renderPlatform->LinePrint(deviceContext, "NUM 6: Lightmaps");
 	renderPlatform->LinePrint(deviceContext, "NUM 2: Vertex Normals");
-}
+}*/
 
 void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 {

@@ -1114,7 +1114,7 @@ void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path
 	path_to_uid[p]=id;
  	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
 }
-
+#include <fmt/core.h>
 void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string cacheFilePath, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
@@ -1135,6 +1135,9 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			TELEPORT_BREAK_ONCE("Bad data.");
 			return;
 		}
+		std::string flnm=fmt::format("{0}{1}.png", cacheFilePath, i);
+		std::ofstream ofs(flnm, std::ios::binary);
+		ofs.write(((char*)newTexture.data + imageOffsets[i]), imageSizes[i]);
 	}
 	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
 	if(newTexture.compression==avs::TextureCompression::BASIS_COMPRESSED&&newTexture.bytesPerPixel != 4)
@@ -1600,66 +1603,9 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 	}
 }
 
-avs::uid GeometryStore::PathToUid(std::string p) const
-{
-	p=StandardizePath(p,"");
-	if(p.size()<2)
-		return 0;
-	auto i=path_to_uid.find(p);
-	if(i==path_to_uid.end())
-	{
-		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
-		//TELEPORT_CERR<<"path "<<p.c_str()<<" not found.\n";
-		return 0;
-	}
-	return i->second;
-}
-
-std::string GeometryStore::UidToPath(avs::uid u) const
-{
-	auto i=uid_to_path.find(u);
-	if(i==uid_to_path.end())
-	{
-		TELEPORT_INTERNAL_BREAK_ONCE("No path for this uid.");
-		return "";
-		//throw std::runtime_error("No path for this uid.");
-	}
-	return i->second;
-}
-std::set<avs::uid> GeometryStore::GetClashingUids() const
-{
-	std::set<avs::uid> clash_uids;
-	for(auto m:meshes)
-	{
-		std::set<avs::uid> mesh_uids;
-		std::map<avs::Accessor::ComponentType,std::set<avs::uid>> component_uids;
-		avs::AxesStandard axesStandard=m.first;
-#if 0
-		for(const auto &mesh:m.second)
-		{
-			for(const auto &mesh2:m.second)
-			{
-				for(const auto &a:mesh2.second.mesh.accessors)
-				{
-					if(mesh.first==a.first)
-					{
-						clash_uids.insert(mesh.first);
-						TELEPORT_CERR<<"UID clash, mesh "<<mesh.first<<" "<<mesh.second.getName().c_str()
-							<<" clashes with accessor in mesh "<<mesh2.first<<" "<<mesh2.second.getName().c_str()<<"\n";
-					}
-				}
-			}
-		}
-#endif
-	}
-	return clash_uids;
-}
 
 bool GeometryStore::CheckForErrors() const
 {
-	auto clashes=GetClashingUids();
-	if(clashes.size())
-		return false;
 	return true;
 }
 
@@ -1678,4 +1624,29 @@ avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 	uid_to_path[uid]=p;
 	path_to_uid[p]=uid;
 	return uid;
+}
+
+avs::uid GeometryStore::PathToUid(std::string p) const
+{
+	p = StandardizePath(p, "");
+	if (p.size() < 2)
+		return 0;
+	auto i = path_to_uid.find(p);
+	if (i == path_to_uid.end())
+	{
+		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
+		return 0;
+	}
+	return i->second;
+}
+
+std::string GeometryStore::UidToPath(avs::uid u) const
+{
+	auto i = uid_to_path.find(u);
+	if (i == uid_to_path.end())
+	{
+		TELEPORT_INTERNAL_BREAK_ONCE("No path for this uid.");
+		return "";
+	}
+	return i->second;
 }

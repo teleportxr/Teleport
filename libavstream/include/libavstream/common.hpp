@@ -484,4 +484,30 @@ namespace avs
 		std::mutex m_mutex;
 		std::queue<T> m_data;
 	};
+	
+	enum class StreamingConnectionState
+	{
+		NEW=0,
+		CONNECTING,
+		CONNECTED,
+		DISCONNECTED,
+		FAILED,
+		CLOSED,
+		NONE
+	};
+	inline const char *stringOf(StreamingConnectionState state)
+	{
+	switch(state)
+	{
+		case StreamingConnectionState::NEW				:return "NEW";
+		case StreamingConnectionState::CONNECTING		:return "CONNECTING";
+		case StreamingConnectionState::CONNECTED		:return "CONNECTED";
+		case StreamingConnectionState::DISCONNECTED		:return "DISCONNECTED";
+		case StreamingConnectionState::FAILED			:return "FAILED";
+		case StreamingConnectionState::CLOSED			:return "CLOSED";
+		case StreamingConnectionState::NONE				:return "NONE";
+		default:
+		return "INVALID ";
+	};
+	};
 } // avs

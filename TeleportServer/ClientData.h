@@ -17,6 +17,7 @@ namespace teleport
 		enum ConnectionState
 		{
 			UNCONNECTED,
+			DISCOVERED,
 			CONNECTED
 		};
 		enum class ReflectedStateStatus
@@ -42,7 +43,6 @@ namespace teleport
 		public:
 			ClientData(  std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
 			void StartStreaming(const ServerSettings &casterSettings
-				, const CasterEncoderSettings &encoderSettings
 				, uint32_t connectionTimeout
 				, avs::uid serverID
 				, GetUnixTimestampFn getUnixTimestamp
@@ -67,7 +67,6 @@ namespace teleport
 				return connectionState;
 			}
 
-			bool isStreaming = false;
 			bool validClientSettings = false;
 			bool videoKeyframeRequired = false;
 
@@ -81,7 +80,6 @@ namespace teleport
 			{
 				return global_illumination_texture_uids;
 			}
-			ENetAddress eNetAddress;
 			void tick(float deltaTime);
 		protected:
 			ConnectionState connectionState = UNCONNECTED;

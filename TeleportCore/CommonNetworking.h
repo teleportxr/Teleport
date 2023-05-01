@@ -113,7 +113,31 @@ namespace teleport
 			AssignNodePosePath,
 			SetupInputs
 		} AVS_PACKED;
-
+		inline const char *StringOf(CommandPayloadType type)
+		{
+		switch(type)
+		{
+			case CommandPayloadType::Invalid				   :return "Invalid";
+			case CommandPayloadType::Shutdown				   :return "Shutdown";
+			case CommandPayloadType::Setup					   :return "Setup";
+			case CommandPayloadType::AcknowledgeHandshake	   :return "AcknowledgeHandshake";
+			case CommandPayloadType::ReconfigureVideo		   :return "ReconfigureVideo";
+			case CommandPayloadType::SetStageSpaceOriginNode   :return "SetStageSpaceOriginNode";
+			case CommandPayloadType::NodeVisibility			   :return "NodeVisibility";
+			case CommandPayloadType::UpdateNodeMovement		   :return "UpdateNodeMovement";
+			case CommandPayloadType::UpdateNodeEnabledState	   :return "UpdateNodeEnabledState";
+			case CommandPayloadType::SetNodeHighlighted		   :return "SetNodeHighlighted";
+			case CommandPayloadType::UpdateNodeAnimation	   :return "UpdateNodeAnimation";
+			case CommandPayloadType::UpdateNodeAnimationControl:return "UpdateNodeAnimationControl";
+			case CommandPayloadType::SetNodeAnimationSpeed	   :return "SetNodeAnimationSpeed";
+			case CommandPayloadType::SetupLighting			   :return "SetupLighting";
+			case CommandPayloadType::UpdateNodeStructure	   :return "UpdateNodeStructure";
+			case CommandPayloadType::AssignNodePosePath		   :return "AssignNodePosePath";
+			case CommandPayloadType::SetupInputs			   :return "SetupInputs";
+		default:
+		return "Invalid";
+		};
+		}
 		//! The payload type, or how to interpret the client's message.
 		enum class ClientMessagePayloadType : uint8_t
 		{
@@ -147,13 +171,12 @@ namespace teleport
 			uint32_t maxBandwidthKpS = 0;		// In kilobytes per second
 			avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 			uint8_t framerate = 0;				// In hertz
-			bool usingHands = false; //Whether to send the hand nodes to the client.
+			bool usingHands = false;			//Whether to send the hand nodes to the client.
 			bool isVR = true;
 			uint64_t resourceCount = 0;			//Count of resources the client has, and are appended to the handshake.
 			uint32_t maxLightsSupported = 0;
 			uint32_t clientStreamingPort = 0;	// the local port on the client to receive the stream.
 			int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
-
 			avs::RenderingFeatures renderingFeatures;
 		} AVS_PACKED;
 

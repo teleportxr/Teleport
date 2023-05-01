@@ -525,7 +525,8 @@ bool OpenXR::internalInitInstance()
 	TELEPORT_COUT<<"xrCreateInstance start"<<std::endl;
 	try
 	{
-		XR_CHECK(xrCreateInstance(&createInfo, &xr_instance));
+		XrResult res=xrCreateInstance(&createInfo, &xr_instance);
+		XR_CHECK(res);
 	}
 	catch(...)
 	{
@@ -788,8 +789,7 @@ void OpenXR::Tick()
 			config.options.passThrough=IsPassthroughActive();
 		}
 	}
-
-				
+	if(config.enable_vr)
 	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
 	{
 		initInstanceThreadState=ThreadState::STARTING;

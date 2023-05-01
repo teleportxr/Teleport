@@ -653,36 +653,34 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryDecodeData& geometry
 
 avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeData)
 {
-	{
-		avs::Texture texture;
-		avs::uid texture_uid = geometryDecodeData.uid;
+	avs::Texture texture;
+	avs::uid texture_uid = geometryDecodeData.uid;
 
-		size_t nameLength = Next8B;
-		texture.name.resize(nameLength);
-		copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
-		
-		texture.cubemap= NextB!=0;
+	size_t nameLength = Next8B;
+	texture.name.resize(nameLength);
+	copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	
+	texture.cubemap= NextB!=0;
 
-		texture.width = Next4B;
-		texture.height = Next4B;
-		texture.depth = Next4B;
-		texture.bytesPerPixel = Next4B;
-		texture.arrayCount = Next4B;
-		texture.mipCount = Next4B;
-		texture.format = static_cast<avs::TextureFormat>(Next4B);
-		if(texture.format == avs::TextureFormat::INVALID)
-			texture.format = avs::TextureFormat::G8;
-		texture.compression = static_cast<avs::TextureCompression>(Next4B);
-		texture.valueScale = NextFloat;
+	texture.width = Next4B;
+	texture.height = Next4B;
+	texture.depth = Next4B;
+	texture.bytesPerPixel = Next4B;
+	texture.arrayCount = Next4B;
+	texture.mipCount = Next4B;
+	texture.format = static_cast<avs::TextureFormat>(Next4B);
+	if(texture.format == avs::TextureFormat::INVALID)
+		texture.format = avs::TextureFormat::G8;
+	texture.compression = static_cast<avs::TextureCompression>(Next4B);
+	texture.valueScale = NextFloat;
 
-		texture.dataSize = Next4B;
-		texture.data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
+	texture.dataSize = Next4B;
+	texture.data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
 
-		texture.sampler_uid = Next8B;
+	texture.sampler_uid = Next8B;
 
-		geometryDecodeData.target->CreateTexture(texture_uid, texture);
-	}
-
+	geometryDecodeData.target->CreateTexture(texture_uid, texture);
+	
 	return avs::Result::OK;
 }
 

@@ -5,9 +5,12 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <map>
+#include <set>
 
 #include "libavstream/common.hpp"
 #include "../src/platform.hpp"
+#include "SignalingService.h"
 
 typedef struct _ENetHost ENetHost;
 
@@ -16,6 +19,7 @@ namespace teleport
 	namespace server
 	{
 		class ClientMessaging;
+		class ClientData;
 		//! Container for the client-specific data objects.
 		class ClientManager
 		{
@@ -24,19 +28,20 @@ namespace teleport
 
 			virtual ~ClientManager();
 
-			bool initialize(int32_t listenPort, uint32_t maxClients = 100);
+			bool initialize(int32_t signalPort, std::string client_ip_match="", uint32_t maxClients = 100);
 			bool shutdown();
 			void tick(float deltaTime);
+			bool startSession(avs::uid clientID, std::string clientIP);
 
 			void startAsyncNetworkDataProcessing();
 			void stopAsyncNetworkDataProcessing(bool killThread = true);
 
-			void addClient(ClientMessaging* client);
-			void removeClient(ClientMessaging* client);
+			void removeClient(avs::uid u);
 
 			bool hasHost() const;
 			bool hasClient(avs::uid clientID);
-			uint16_t getServerPort() const;
+			std::shared_ptr<ClientData> GetClient(avs::uid clientID);
+			const std::set<avs::uid> &GetClientUids() const;
 
 			avs::Timestamp getLastTickTimestamp() const;
 
@@ -45,27 +50,27 @@ namespace teleport
 				return mAsyncNetworkDataProcessingFailed;
 			}
 
+			SignalingService signalingService;
 		private:
+			void startStreaming(avs::uid clientID);
 			void handleStoppedClients();
 			void receiveMessages();
 			void handleStreaming();
 			void processNetworkDataAsync();
-
+			std::set<avs::uid> clientIDs;
 			std::atomic_bool mAsyncNetworkDataProcessingFailed = false;
 			bool mInitialized = false;
-			int32_t mListenPort = 0;
-
-			ENetHost* mHost = nullptr;
+			avs::uid serverID;
 
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
-
-			std::vector<ClientMessaging*> mClients;
+		public:
+			std::map<avs::uid, std::shared_ptr<ClientData>> clients;
+		protected:
 			std::thread mNetworkThread;
 			std::mutex mNetworkMutex;
 			mutable std::mutex mDataMutex;
 			std::atomic<avs::Timestamp> mLastTickTimestamp;
 			uint32_t mMaxClients = 0;
-			std::vector<bool> mPorts;
 
 			// Seconds
 			static constexpr float mStartSessionTimeout = 3;

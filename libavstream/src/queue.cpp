@@ -99,7 +99,13 @@ namespace avs
 		if (m_numElements == m_maxBuffers)
 		{
 			auto oldsize=m_maxBuffers;
-			increaseBufferCount();
+			if(m_maxBuffers< m_absoluteMaxBuffers)
+				increaseBufferCount();
+			else
+			{
+				std::cerr << name.c_str() << " Queue::write: Max buffers " << m_maxBuffers << ", can't increase any more.\n";
+				return Result::GeometryDecoder_InvalidBufferSize;
+			}
 #if LIBAVSTREAM_DEBUG_MESSAGES
 			std::cerr << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
 #endif

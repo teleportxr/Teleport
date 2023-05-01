@@ -38,52 +38,6 @@ using nlohmann::json;
 #define EVEN_ID(id) (id-(id%2))
 #define ODD_ID(id) (EVEN_ID(id)+1)
 
-static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Configuration& config,
-	std::function<void(const std::string&)> sendMessage,
-	std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannel,std::string id)
-{
-	auto pc = std::make_shared<rtc::PeerConnection>(config);
-	
-	pc->onStateChange(
-		[](rtc::PeerConnection::State state)
-		{
-			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
-		});
-
-	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
-		{
-			std::cout << "Gathering State: " << state << std::endl;
-		});
-
-	pc->onLocalDescription([sendMessage,id](rtc::Description description)
-		{
-			// This is our answer.
-			json message = { {"id", id},
-						{"type", description.typeString()},
-						{"sdp",  std::string(description)} };
-
-			sendMessage(message.dump());
-		});
-
-	pc->onLocalCandidate([sendMessage, id](rtc::Candidate candidate)
-		{
-			json message = { {"id", id},
-						{"type", "candidate"},
-						{"candidate", std::string(candidate)},
-						{"mid", candidate.mid()} ,
-						{"mlineindex", 0} };
-
-			sendMessage(message.dump());
-		});
-
-	pc->onDataChannel([onDataChannel, id](shared_ptr<rtc::DataChannel> dc)
-	{
-		onDataChannel(dc);
-	});
-
-	//peerConnectionMap.emplace(id, pc);
-	return pc;
-};
 namespace avs
 {
 	struct ClientDataChannel
@@ -120,6 +74,57 @@ namespace avs
 	};
 }
 
+static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Configuration& config,
+avs::WebRtcNetworkSource *src)
+	//std::function<void(const std::string&)> sendMessage,
+	//std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannel,std::string id)
+{
+	auto pc = std::make_shared<rtc::PeerConnection>(config);
+	
+	src->SetStreamingConnectionState(avs::StreamingConnectionState::NEW);
+	pc->onStateChange(
+		[src](rtc::PeerConnection::State state)
+		{
+			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
+			src->SetStreamingConnectionState((avs::StreamingConnectionState) state);
+		});
+
+	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
+		{
+			std::cout << "Gathering State: " << state << std::endl;
+		});
+
+	pc->onLocalDescription([src](rtc::Description description)
+		{
+			// This is our answer.
+		//	std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1"
+			json message = { {"id", "1"},
+						{"teleport-signal-type", description.typeString()},
+						{"sdp",  std::string(description)} };
+
+			src->SendConfigMessage(message.dump());
+		});
+
+	pc->onLocalCandidate([ src](rtc::Candidate candidate)
+		{
+			json message = { {"id", "1"},
+						{"teleport-signal-type", "candidate"},
+						{"candidate", std::string(candidate)},
+						{"mid", candidate.mid()} ,
+						{"mlineindex", 0} };
+
+			src->SendConfigMessage(message.dump());
+		});
+
+	pc->onDataChannel([src](shared_ptr<rtc::DataChannel> dc)
+	{
+		src->m_data->onDataChannel(dc);
+	});
+
+	//peerConnectionMap.emplace(id, pc);
+	return pc;
+};
+
 using namespace avs;
 
 
@@ -133,7 +138,7 @@ WebRtcNetworkSource::WebRtcNetworkSource()
 Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams,int numInputs, const NetworkSourceParams& params)
 {
 	size_t numOutputs = in_streams.size();
-	if (numOutputs == 0 || params.remotePort == 0 || params.remoteHTTPPort == 0)
+	if (numOutputs == 0 ||  params.remoteHTTPPort == 0)
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -141,6 +146,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 	{
 		return Result::Node_InvalidConfiguration;
 	}
+	offer="";
 	m_params = params;
 	m_data->m_EFPReceiver.reset(new ElasticFrameProtocolReceiver(100, 0, nullptr, ElasticFrameProtocolReceiver::EFPReceiverMode::RUN_TO_COMPLETION));
 
@@ -263,12 +269,14 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 	}
 	//"stun:stun.stunprotocol.org:3478");
 	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
-	m_data->rtcPeerConnection = createClientPeerConnection(config, std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1");
+	m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
 
 void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const std::string& mid, int mlineindex)
 {
+	if(!m_data->rtcPeerConnection)
+		return;
 	try
 	{
 		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate, mid));
@@ -325,6 +333,7 @@ Result WebRtcNetworkSource::deconfigure()
 	{
 		return Result::Node_NotConfigured;
 	}
+	webRtcState=StreamingConnectionState::NEW;
 	setNumOutputSlots(0);
 	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
 	m_data->dataChannels.clear();
@@ -481,6 +490,15 @@ void WebRtcNetworkSource::SendConfigMessage(const std::string& str)
 	messagesToSend.push_back(str);
 }
 
+void WebRtcNetworkSource::SetStreamingConnectionState(StreamingConnectionState s)
+{
+	webRtcState=s;
+	if(webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW)
+	{
+		offer="";
+	}
+}
+
 bool WebRtcNetworkSource::getNextStreamingControlMessage(std::string& msg)
 {
 	std::lock_guard<std::mutex> lock(messagesMutex);
@@ -493,21 +511,41 @@ bool WebRtcNetworkSource::getNextStreamingControlMessage(std::string& msg)
 
 void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 {
+	if(!str.length())
+		return;
 	json message = json::parse(str);
-	auto it = message.find("type");
+	auto it = message.find("teleport-signal-type");
 	if (it == message.end())
 		return;
+	std::string type= message["teleport-signal-type"];
+	json content=message["content"];
 	try
 	{
 		auto type=it->get<std::string>();
 		if (type == "offer")
 		{
+			if(offer.length())
+			{
+				if(offer!=str)
+				{
+					AVSLOG(Error) << "WebRtcNetworkSource: Received offer that doesn't match previous offer. Ignoring." << std::endl;
+						return;
+				}
+				else
+				{
+					AVSLOG(Error) << "WebRtcNetworkSource: Received offer that matches previous offer." << std::endl;
+				}
+			}
+			else
+				AVSLOG(Info) << ": info: WebRtcNetworkSource: Received offer." << std::endl;
+			offer=str;
 			auto o = message.find("sdp");
 			string sdp= o->get<std::string>();
 			receiveOffer(sdp);
 		}
 		else if (type == "candidate")
 		{
+			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received candidate." << std::endl;
 			auto c = message.find("candidate");
 			string candidate=c->get<std::string>();
 			auto m= message.find("mid");

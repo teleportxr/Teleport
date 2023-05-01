@@ -1,12 +1,17 @@
 #include "DiscoveryService.h"
 #include "Log.h"
 #include "TeleportCore/ErrorHandling.h"
-
 #include "TeleportCore/CommonNetworking.h"
+#define RTC_ENABLE_WEBSOCKET 1
+#include <rtc/websocket.hpp>
+#define JSON_NOEXCEPTION 1
+#include <nlohmann/json.hpp>
+using nlohmann::json;
 
 using namespace teleport;
 using namespace client;
 static teleport::client::DiscoveryService *discoveryService=nullptr;
+
 teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInstance()
 {
 	if (!discoveryService)
@@ -19,6 +24,7 @@ teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInsta
 	}
 	return *discoveryService;
 }
+
 void teleport::client::DiscoveryService::ShutdownInstance()
 {
 	delete discoveryService;
@@ -33,16 +39,10 @@ void teleport::client::DiscoveryService::ShutdownInstance()
 
 DiscoveryService::DiscoveryService()
 {
-	serverAddress = {};
 }
 
 DiscoveryService::~DiscoveryService()
 {
-	if(serviceDiscoverySocket)
-	{
-		enet_socket_destroy(serviceDiscoverySocket);
-		serviceDiscoverySocket = 0;
-	}
 }
 
 void DiscoveryService::SetClientID(uint64_t inClientID)
@@ -66,7 +66,6 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 	//enet_socket_set_option(sock, ENET_SOCKOPT_SNDBUF, 0);
 	// We don't want to block, just check for packets.
 	enet_socket_set_option(socket, ENET_SOCKOPT_NONBLOCK, 1);
-
 
 	// Here we BIND the socket to the local address that we want to be identified with.
 	// e.g. our OWN local IP.
@@ -93,107 +92,228 @@ ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t disc
 	return socket;
 }
 
-uint64_t DiscoveryService::Discover(std::string clientIP, uint16_t clientDiscoveryPort, std::string ip, uint16_t serverDiscoveryPort, ENetAddress& remote)
+void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
 {
-	bool serverDiscovered = false;
+	TELEPORT_COUT << ": info: ReceiveWebSocketsMessage " << msg << std::endl;
+	std::lock_guard lock(mutex);
+	messagesReceived.push(msg);
+}
 
+void DiscoveryService::ReceiveBinaryWebSocketsMessage(uint64_t server_uid,std::vector<std::byte> bin)
+{
+	TELEPORT_COUT << ": info: ReceiveBinaryWebSocketsMessage." << std::endl;
+	std::lock_guard lock(mutex);
+	binaryMessagesReceived.push(bin);
+}
+
+void DiscoveryService::ResetConnection(uint64_t server_uid,std::string ip, uint16_t serverDiscoveryPort)
+{
+	while(!messagesReceived.empty())
+		messagesReceived.pop();
+	while(!messagesToPassOn.empty())
+		messagesToPassOn.pop();
+	while(!messagesToSend.empty())
+		messagesToSend.pop();
+	while(!binaryMessagesReceived.empty())
+		binaryMessagesReceived.pop();
+	while(!binaryMessagesToSend.empty())
+		binaryMessagesToSend.pop();
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	TELEPORT_CERR << "Websocket open()" << std::endl;
+	if(ip.length()>0)
+	{
+		if(serverDiscoveryPort)
+			ws->open(ip+fmt::format(":{0}",serverDiscoveryPort));
+		else
+			ws->open(ip);
+	}
+}
+void DiscoveryService::InitSocket(uint64_t server_uid)
+{
+	rtc::WebSocket::Configuration config;
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid] = std::make_shared<rtc::WebSocket>(config);
+	auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
+	{
+		if(std::holds_alternative<std::string>(message))
+		{
+			std::string msg = std::get<std::string>(message);
+			ReceiveWebSocketsMessage(server_uid,msg);
+		}
+		else if(std::holds_alternative<rtc::binary>(message))
+		{
+			rtc::binary bin=std::get<rtc::binary>(message);
+			ReceiveBinaryWebSocketsMessage(server_uid,bin);
+		}
+	};
+	ws->onError([this,server_uid](std::string error)
+	{
+		TELEPORT_CERR << "Websocket error " << error << std::endl;
+		websockets.erase(server_uid);
+	});
+	ws->onMessage(receiveWebSocketMessage);
+	ws->onOpen([this,server_uid]()
+	{
+		TELEPORT_CERR << "Websocket onOpen " << std::endl;
+	});
+	ResetConnection(server_uid,serverIP,serverDiscoveryPort);
+	frame = 2;
+}
+
+uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_t signalPort)
+{
+	std::lock_guard lock(mutex);
+	serverDiscoveryPort=signalPort;
+	if (serverDiscoveryPort == 0)
+	{
+		serverDiscoveryPort = 8080;
+	}
+	serverIP = ip;
+	if(!serverIP.length())
+		return 0;
+	bool serverDiscovered = false;
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	if(!ws)
+	{
+		InitSocket(server_uid);
+		ws=websockets[server_uid];
+	}
 	if (ip.empty())
 	{
 		ip = "255.255.255.255";
 	}
-	if (serverAddress.port != serverDiscoveryPort || serverAddress.host == ENET_HOST_ANY || ip != serverIP)
+	// Send our client id to the server on the discovery port. Once every 1000 frames.
+	frame--;
+	if(!frame)
 	{
-		serverIP = ip;
-		if (!awaiting)
+		if(ws->isOpen())
 		{
-			serverAddress.host = ENET_HOST_ANY;
-			serverAddress.port = serverDiscoveryPort;
-			fobj = std::async(&enet_address_set_host, &(serverAddress), serverIP.c_str());
-			awaiting = true;
+			json message = { {"teleport-signal-type","request"},{"content",{ {"teleport","0.9"},{"clientID", clientID}}}};
+			//rtc::message_variant wsdata = fmt::format("{{\"clientID\":{}}}",clientID);
+			ws->send(message.dump());
+			TELEPORT_CERR << "Websocket send()" << std::endl;
+			TELEPORT_CERR << "webSocket->send: " << message.dump() << "  .\n";
+			frame = 1000;
+		}
+		else if(ws->readyState()==rtc::WebSocket::State::Closed)
+		{
+			ResetConnection(server_uid,ip,serverDiscoveryPort);
+			frame = 2;
+		}
+		else
+		{
+			frame = 1;
 		}
 	}
 	if(awaiting)
 	{
-		auto f = fobj.wait_for(std::chrono::microseconds(0));
-		if (f == std::future_status::timeout)
-		{
-			return 0;
-		}
-		if (f == std::future_status::ready)
-		{
-			awaiting = false;
-			int result= fobj.get();
-			if(result!=0)
-			{
-			#ifdef _MSC_VER
-				int err = WSAGetLastError();
-				TELEPORT_CERR << "enet_address_set_host failed with error " << err << std::endl;
-			#else
-				TELEPORT_CERR << "enet_address_set_host failed with error " << result<< std::endl;
-			#endif
-				return 0;
-			}
-			serverIP = ip;
-		}
-		else
-		{
-			return 0;
-		}
+		awaiting = false;
+		serverIP = ip;
+		serverDiscovered = true;
 	}
-	if(!serviceDiscoverySocket)
-	{
-		serviceDiscoverySocket = CreateDiscoverySocket(clientIP, clientDiscoveryPort);
-	}
-	if (!serviceDiscoverySocket)
-		return 0;
-	// Poor show: ENet reverses the order of size and pointer in ENetBuffer, between Win32 and Unix.
-	ENetBuffer buffer = MAKE_ENET_BUFFER(clientID);
-	teleport::core::ServiceDiscoveryResponse response = {};
-	ENetAddress  responseAddress = {0xffffffff, 0};
-	ENetBuffer responseBuffer = MAKE_ENET_BUFFER(response);
-	// Send our client id to the server on the discovery port. Once every 1000 frames.
-	static int frame=1;
-	frame--;
-	if(!frame)
-	{
-		frame = 10;
-		int res = enet_socket_send(serviceDiscoverySocket, &serverAddress, &buffer, 1);
-		if(res==-1)
-		{
-#ifdef MSC_VER
-			int err=WSAGetLastError();
-			TELEPORT_CERR<<"DicoveryService enet_socket_send failed with error "<<err<<std::endl;
-#else
-			TELEPORT_CERR<<"DicoveryService enet_socket_send failed with error "<<std::endl;
-#endif
-			return 0;
-		}
-	}
-
-	static size_t bytesRecv;
-	do
-	{
-		// This will change responseAddress from 0xffffffff into the address of the server
-		bytesRecv = enet_socket_receive(serviceDiscoverySocket, &responseAddress, &responseBuffer, 1);
-		if(bytesRecv == sizeof(response))
-		{
-			clientID = response.clientID;
-			remote.host = responseAddress.host;
-			remote.port = response.remotePort;
-			serverDiscovered = true;
-		}
-	}
-	while(bytesRecv > 0 && !serverDiscovered);
 
 	if(serverDiscovered)
 	{
-		char remoteIP[20];
-		enet_address_get_host_ip(&remote, remoteIP, sizeof(remoteIP));
-		TELEPORT_CLIENT_LOG("Discovered session server: %s:%d", remoteIP, remote.port);
-
-		enet_socket_destroy(serviceDiscoverySocket);
-		serviceDiscoverySocket = 0;
 		return clientID;
 	}
 	return 0;
+}
+
+void DiscoveryService::Tick(uint64_t server_uid)
+{
+	if(!serverIP.length())
+		return;
+	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	if(!ws)
+	{
+		InitSocket(server_uid);
+		ws=websockets[server_uid];
+	}
+	if(ws->isOpen())
+	{
+		while(messagesToSend.size())
+		{
+			ws->send(messagesToSend.front());
+			TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
+			messagesToSend.pop();
+		}
+		while(binaryMessagesToSend.size())
+		{
+			auto &bin=binaryMessagesToSend.front();
+			ws->send(bin.data(),bin.size());
+			TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
+			binaryMessagesToSend.pop();
+		}
+	}
+	while(messagesReceived.size())
+	{
+		std::string msg = messagesReceived.front();
+		messagesReceived.pop();
+		if(!msg.length())
+			continue;
+		json message=json::parse(msg);
+		if(message.contains("teleport-signal-type"))
+		{
+			std::string type = message["teleport-signal-type"];
+			if(type=="request-response")
+			{
+				if(message.contains("content"))
+				{
+					json content = message["content"];
+					if(content.contains("clientID"))
+					{
+						uint64_t clid = content["clientID"];
+						if(clientID!=clid)
+							clientID=clid;
+						if(clientID!=0)
+						{
+							awaiting = true;
+						}
+					}
+				}
+			}
+			else
+				messagesToPassOn.push(msg);
+		}
+		else
+			messagesToPassOn.push(msg);
+	}
+}
+
+bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)
+{
+	std::lock_guard lock(mutex);
+	if (messagesToPassOn.size())
+	{
+		msg = messagesToPassOn.front();
+		messagesToPassOn.pop();
+		return true;
+	}
+	return false;
+}
+
+bool DiscoveryService::GetNextBinaryMessage(uint64_t server_uid,std::vector<uint8_t>& msg)
+{
+	std::lock_guard lock(mutex);
+	if (binaryMessagesReceived.size())
+	{
+		auto &bin=binaryMessagesReceived.front();
+		msg.resize(bin.size());
+		memcpy(msg.data(),bin.data(),msg.size());
+		binaryMessagesReceived.pop();
+		return true;
+	}
+	return false;
+}
+void DiscoveryService::Send(uint64_t server_uid,std::string msg)
+{
+	messagesToSend.push(msg);
+}
+
+void DiscoveryService::SendBinary(uint64_t server_uid, std::vector<uint8_t> bin)
+{
+	std::vector<std::byte> b;
+	b.resize(bin.size());
+	memcpy(b.data(),bin.data(),b.size());
+	binaryMessagesToSend.push(b);
+
 }

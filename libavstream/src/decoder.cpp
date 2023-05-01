@@ -76,7 +76,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 			di = constructBackendFromType(DecoderBackend::NVIDIA);
 			if (!di)
 			{
-				AVSLOG(Error) << "No suitable decoder backend found";
+				AVSLOG(Error) << "No suitable decoder backend found\n";
 				return Result::Decoder_NoSuitableBackendFound;
 			}
 		}
@@ -85,7 +85,7 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 			di = constructBackendFromType(m_selectedBackendType);
 			if (!di)
 			{
-				AVSLOG(Error) << "The selected decoder backend is not supported by this system";
+				AVSLOG(Error) << "The selected decoder backend is not supported by this system\n";
 				return Result::Decoder_NoSuitableBackendFound;
 			}
 		}
@@ -485,7 +485,7 @@ Result Decoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!m_configured)
 	{
-		AVSLOG(Error) << "Decoder: PipelineNode needs to be configured before it can accept output";
+		AVSLOG(Error) << "Decoder: PipelineNode needs to be configured before it can accept output\n";
 		return Result::Node_NotConfigured;
 	}
 	assert(m_backend);
@@ -493,7 +493,7 @@ Result Decoder::onOutputLink(int slot, PipelineNode* node)
 	SurfaceInterface* surface = dynamic_cast<SurfaceInterface*>(node);
 	if (!surface)
 	{
-		AVSLOG(Error) << "Decoder: Output node is not a Surface";
+		AVSLOG(Error) << "Decoder: Output node is not a Surface\n";
 		return Result::Node_Incompatible;
 	}
 	return registerSurface(surface);

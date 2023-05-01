@@ -117,7 +117,7 @@ void SingleQueue::push(const void* data, size_t bytes)
 {
 	if (!buffer.size())
 	{
-		AVSLOG("SingleQueue error: no buffers, unconfigured?\n");
+		//AVSLOG("SingleQueue error: no buffers, unconfigured?\n");
 		return;
 	}
 	if (bytes>buffer.size())

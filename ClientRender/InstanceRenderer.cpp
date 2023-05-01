@@ -874,7 +874,6 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	videoTagDataCubeArray.resize(RenderState::maxTagDataSize);
 
 	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
-	sessionClient->SetPeerTimeout(setupCommand.idle_connection_timeout);
 
 //	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
 	//	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height);

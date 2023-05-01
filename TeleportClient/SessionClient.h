@@ -7,7 +7,6 @@
 #include <map>
 #include <memory>
 
-#include <enet/enet.h>
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
 #include <libavstream/libavstream.hpp>
@@ -70,9 +69,23 @@ namespace teleport
 		{
 			UNCONNECTED,
 			OFFERING,
+			AWAITING_SETUP,
 			HANDSHAKING,
 			CONNECTED
 		};
+		inline const char *StringOf(ConnectionStatus s)
+		{
+			switch(s)
+			{
+				case ConnectionStatus::UNCONNECTED		: return "UNCONNECTED";
+				case ConnectionStatus::OFFERING			: return "OFFERING";
+				case ConnectionStatus::AWAITING_SETUP	: return "AWAITING_SETUP";
+				case ConnectionStatus::HANDSHAKING		: return "HANDSHAKING";
+				case ConnectionStatus::CONNECTED		: return "CONNECTED";
+				default:
+				return "INVALID";
+			};
+		}
 		class SessionClient:public avs::GenericTargetInterface
 		{
 			avs::uid server_uid=0;
@@ -99,16 +112,15 @@ namespace teleport
 			bool HandleConnections();
 			void SetSessionCommandInterface(SessionCommandInterface*);
 			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
-			bool Connect(const char *remoteIP, uint16_t remotePort, uint timeout,avs::uid client_id);
-			bool Connect(const ENetAddress &remote, uint timeout,avs::uid client_id);
+			bool Connect(const char *remoteIP,  uint timeout,avs::uid client_id);
 			void Disconnect(uint timeout, bool resetClientID = true);
-			void SetPeerTimeout(uint timeout);
 			void Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
 					
 			ConnectionStatus GetConnectionStatus() const;
+			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;
 			bool IsConnected() const;
 
@@ -157,8 +169,8 @@ namespace teleport
 				return clientPipeline;
 			}
 		private:
-			void DispatchEvent(const ENetEvent& event);
-			void ReceiveCommandPacket(ENetPacket* packet);
+			void ReceiveCommand(const std::vector<uint8_t> &buffer);
+			void ReceiveCommandPacket(const std::vector<uint8_t> &buffer);
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 			void SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses);
@@ -189,22 +201,22 @@ namespace teleport
 			void SendHandshake(const teleport::core::Handshake &handshake, const std::vector<avs::uid>& clientResourceIDs);
 			void sendAcknowledgeRemovedNodesMessage(const std::vector<avs::uid> &uids);
 	
-			void ReceiveHandshakeAcknowledgement(const ENetPacket* packet);
-			void ReceiveSetupCommand(const ENetPacket* packet);
-			void ReceiveVideoReconfigureCommand(const ENetPacket* packet);
-			void ReceiveStageSpaceOriginNodeId(const ENetPacket* packet);
-			void ReceiveNodeVisibilityUpdate(const ENetPacket* packet);
-			void ReceiveNodeMovementUpdate(const ENetPacket* packet);
-			void ReceiveNodeEnabledStateUpdate(const ENetPacket* packet);
-			void ReceiveNodeHighlightUpdate(const ENetPacket* packet);
-			void ReceiveNodeAnimationUpdate(const ENetPacket* packet);
-			void ReceiveNodeAnimationControlUpdate(const ENetPacket* packet);
-			void ReceiveNodeAnimationSpeedUpdate(const ENetPacket* packet);
-			void ReceiveSetupLightingCommand(const ENetPacket* packet);
-			void ReceiveSetupInputsCommand(const ENetPacket* packet);
-			void ReceiveUpdateNodeStructureCommand(const ENetPacket* packet);
-			void ReceiveAssignNodePosePathCommand(const ENetPacket* packet);
-			void ReceiveTextCommand(const ENetPacket* packet);
+			void ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &packet);
+			void ReceiveSetupCommand(const std::vector<uint8_t> &packet);
+			void ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &packet);
+			void ReceiveStageSpaceOriginNodeId(const std::vector<uint8_t> &packet);
+			void ReceiveNodeVisibilityUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveNodeMovementUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveNodeEnabledStateUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveNodeHighlightUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveNodeAnimationControlUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet);
+			void ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet);
+			void ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet);
+			void ReceiveUpdateNodeStructureCommand(const std::vector<uint8_t> &packet);
+			void ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> &packet);
+			void ReceiveTextCommand(const std::vector<uint8_t> &packet);
 			static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
 			avs::uid lastServerID = 0; //UID of the server we last connected to.
@@ -213,9 +225,6 @@ namespace teleport
 
 			avs::GeometryCacheBackendInterface* geometryCache = nullptr;
 
-			ENetHost* mClientHost = nullptr;
-			ENetPeer* mServerPeer = nullptr;
-			ENetAddress mServerEndpoint{};
 
 			/// Requests the session client has discovered need to be made.
 			std::vector<avs::uid> mQueuedResourceRequests;			
