@@ -33,7 +33,7 @@ Platform gPlatform = Platform::ANDROID;
 #include "TeleportClient/Config.h"
 #include "ClientApp/ClientApp.h"
 #include "AndroidRenderer.h"
-#include "AndroidDiscoveryService.h"
+#include "TeleportClient/DiscoveryService.h"
 
 using namespace platform;
 using namespace crossplatform;

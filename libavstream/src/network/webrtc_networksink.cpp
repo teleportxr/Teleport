@@ -673,26 +673,26 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 	dataChannel.rtcDataChannel = dc;
 	// Wait for the onOpen callback before sending.
 	dataChannel.readyToSend = false;
-	std::cout << "DataChannel from " << id << " created with label \"" << dc->label() << "\"" << std::endl;
+//	std::cout << "DataChannel from " << id << " created with label \"" << dc->label() << "\"" << std::endl;
 
 	dc->onOpen([this, id]()
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			std::cout << "DataChannel "<<id<<" opened" << std::endl;
+			//std::cout << "DataChannel "<<id<<" opened" << std::endl;
 		});
 
 	dc->onClosed([this,id]()
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
-			std::cout << "DataChannel from " << id << " closed" << std::endl;
+			//std::cout << "DataChannel from " << id << " closed" << std::endl;
 		//	dataChannel.closed = true;
 		});
 	dc->onBufferedAmountLow([this, id]()
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			std::cerr << "WebRTC: channel " << id << ", buffered amount is low.\n";
+			//std::cerr << "WebRTC: channel " << id << ", buffered amount is low.\n";
 
 		});
 	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];

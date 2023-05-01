@@ -129,9 +129,6 @@
     <ClCompile Include="..\..\AndroidClient\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\AndroidClient\AndroidDiscoveryService.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\AndroidClient\VideoDecoderBackend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -156,9 +153,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\AndroidClient\redist\android\native_app_glue\android_native_app_glue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\AndroidClient\VideoDecoderBackend.h">

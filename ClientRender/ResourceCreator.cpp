@@ -10,6 +10,7 @@
 #include <Platform/External/magic_enum/include/magic_enum.hpp>
 #include "ThisPlatform/Threads.h"
 #include "draco/compression/decode.h"
+#include <fmt/core.h>
 
 //#define STB_IMAGE_IMPLEMENTATION
 namespace teleport

@@ -85,7 +85,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\AndroidClient\AndroidDiscoveryService.cpp" />
     <ClCompile Include="..\..\AndroidClient\AndroidOpenXR.cpp" />
     <ClCompile Include="..\..\AndroidClient\AndroidRenderer.cpp" />
     <ClCompile Include="..\..\AndroidClient\CmdBuffer.cpp" />
@@ -97,7 +96,6 @@
     <ClCompile Include="..\..\ClientApp\ClientApp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\AndroidClient\AndroidDiscoveryService.h" />
     <ClInclude Include="..\..\AndroidClient\AndroidOpenXR.h" />
     <ClInclude Include="..\..\AndroidClient\AndroidRenderer.h" />
     <ClInclude Include="..\..\AndroidClient\CmdBuffer.h" />

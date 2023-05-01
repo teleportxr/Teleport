@@ -5,6 +5,7 @@
 // for std::future,await:
 #include <future>
 #include <queue>
+#include <unordered_map>
 #include "enet/enet.h"
 
 namespace rtc {

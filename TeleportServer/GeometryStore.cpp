@@ -251,9 +251,6 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 		}
 #endif
 	}
-#if TELEPORT_INTERNAL_CHECKS		
-	GetClashingUids();
-#endif
 }
 
 void GeometryStore::clear(bool freeMeshBuffers)
