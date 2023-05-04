@@ -8,6 +8,8 @@
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
+#include <fmt/core.h>
+
 using namespace teleport;
 using namespace client;
 static teleport::client::DiscoveryService *discoveryService=nullptr;
