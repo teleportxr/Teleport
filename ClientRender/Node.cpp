@@ -116,6 +116,18 @@ void Node::Update(float deltaTime_ms)
 	}
 }
 
+bool Node::HasAnyParent(std::shared_ptr<Node> node) const
+{
+	auto p = parent;
+	while (auto l=p.lock())
+	{
+		if (node == l)
+			return true;
+		p = l->parent;
+	}
+	return false;
+}
+
 void Node::SetParent(std::shared_ptr<Node> newParent)
 {
 	if(parent.use_count())
@@ -139,11 +151,15 @@ void Node::SetParent(std::shared_ptr<Node> newParent)
 
 void Node::AddChild(std::shared_ptr<Node> child)
 {
+	// avoid nasty loops.
+	if (HasAnyParent(child))
+		return;
 	children.push_back(child);
 }
 
 void Node::RemoveChild(std::shared_ptr<Node> node)
 {
+	std::lock_guard lock(childrenMutex);
 	for(auto it = children.begin(); it != children.end(); it++)
 	{
 		std::shared_ptr<Node> child = it->lock();
@@ -158,6 +174,7 @@ void Node::RemoveChild(std::shared_ptr<Node> node)
 
 void Node::RemoveChild(avs::uid childID)
 {
+	std::lock_guard lock(childrenMutex);
 	for(auto it = children.begin(); it != children.end(); it++)
 	{
 		std::shared_ptr<Node> child = it->lock();
@@ -240,19 +257,20 @@ void Node::UpdateGlobalTransform() const
 
 void Node::RequestChildrenUpdateTransforms()
 {
-	for(auto childIt = children.begin(); childIt != children.end();)
+	std::lock_guard lock(childrenMutex);
+	for(size_t i=0;i<children.size();i++)
 	{
-		std::shared_ptr<Node> child = childIt->lock();
+		std::shared_ptr<Node> child = children[i].lock();
 
 		//Erase weak pointer from list, if the child node has been removed.
 		if(child)
 		{
 			child->RequestTransformUpdate();
-			++childIt;
 		}
 		else
 		{
-			childIt = children.erase(childIt);
+			children.erase(children.begin()+i);
+			--i;
 		}
 	}
 }

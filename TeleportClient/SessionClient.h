@@ -126,7 +126,6 @@ namespace teleport
 
 			std::string GetServerIP() const;
 			
-			int GetServerDiscoveryPort() const;
 			void SetServerIP(std::string) ;
 			void SetServerDiscoveryPort(int) ;
 			std::string GetConnectionURL() const;

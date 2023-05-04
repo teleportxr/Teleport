@@ -78,7 +78,6 @@ namespace teleport
 			void updateNodeRenderState(avs::uid nodeID, avs::NodeRenderState update);
 			void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
-			bool hasPeer() const;
 			bool hasReceivedHandshake() const;
 
 			bool setOrigin(uint64_t valid_counter, avs::uid originNode); 

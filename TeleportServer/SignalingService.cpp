@@ -10,6 +10,8 @@
 #include <rtc/websocketserver.hpp>
 #include <functional>
 #include <regex>
+using namespace std::string_literals;
+using std::literals::string_literals::operator""s;
 
 using nlohmann::json;
 
@@ -28,22 +30,23 @@ SignalingClient::~SignalingClient()
 			TELEPORT_COUT << ": info: Websocket " << clientID << " remains after deletion with " << webSocket.use_count() << " uses.\n";
 		}
 	}
+	TELEPORT_COUT << ": info: ~SignalingClient " << clientID << " destroyed.\n";
 }
 
-bool SignalingService::initialize(uint16_t discovPort,  std::string desIP)
+bool SignalingService::initialize(std::set<uint16_t> discoPorts,  std::string desIP)
 {
-	if (discovPort != 0)
-		discoveryPort = discovPort;
-	if (discoveryPort == 0)
+	discoveryPorts = discoPorts;
+	if (discoveryPorts.empty())
 	{
-		discoveryPort = 8080;
+		discoveryPorts.insert(8080);
 	}
-
-	if (!webSocketServer)
+	webSocketServers.clear();
+	for(auto p: discoveryPorts)
 	{
 		rtc::WebSocketServer::Configuration config;
-		config.port = discovPort;
-		webSocketServer = std::make_shared<rtc::WebSocketServer>(config);
+		config.port = p;
+		auto webSocketServer = std::make_shared<rtc::WebSocketServer>(config);
+		webSocketServers[p] = webSocketServer;
 		auto onWebSocketClient =std::bind(&SignalingService::OnWebSocket,this,std::placeholders::_1);
 		webSocketServer->onClient(onWebSocketClient);
 	}
@@ -110,27 +113,42 @@ bool SignalingService::GetNextBinaryMessage(avs::uid clientID, std::vector<uint8
 
 void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 {
-	avs::uid clientID = TeleportUtility::GenerateID();
 	TELEPORT_CERR << "SignalingService::OnWebSocket." << std::endl;
 
-	std::string addr = ws->remoteAddress().value();
+	std::optional<std::string> addr = ws->remoteAddress();
+	if (!addr.has_value())
+	{
+		return;
+	}
+	avs::uid clientID = TeleportUtility::GenerateID();
+	std::string addr_string= addr.value();
+	// Seems to be of the form ::ffff:192.168.3.40:59282
+	// But for example, localhost would give us ::1:59297
 	std::regex re("([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)(:[0-9]+)?", std::regex_constants::icase | std::regex::extended);
 	std::smatch match;
 	std::string ip_addr_port;
-	if (std::regex_search(addr, match, re))
+	if (std::regex_search(addr_string, match, re))
 	{
-		ip_addr_port = match.str(1);
+		ip_addr_port = match.str(0);
 	}
 	else
 	{
-		TELEPORT_CERR << "Websocket connection from " << addr <<" - couldn't decode address." <<std::endl;
-		return;
+		std::regex re_local(":([0-9]+)$", std::regex_constants::icase | std::regex::extended);
+		if (std::regex_search(addr_string, match, re_local))
+		{
+			ip_addr_port = "localhost:"s+match.str(1); //"127.0.0.1:";?
+		}
+		else
+		{
+			TELEPORT_CERR << "Websocket connection from " << addr_string << " - couldn't decode address." << std::endl;
+			return;
+		}
 	}
 	signalingClients[clientID] = std::make_shared<SignalingClient>();
 	auto& c = signalingClients[clientID];
 	c->clientID = clientID;
 	c->webSocket = ws;
-	c->address = ip_addr_port;
+	c->ip_addr_port = ip_addr_port;
 	SetCallbacks(c);
 	clientUids.insert(clientID);
 }
@@ -164,17 +182,18 @@ void SignalingService::shutdown()
 			c.second->webSocket->resetCallbacks();
 		}
 	}
-	if (webSocketServer)
+	for(auto &w:webSocketServers)
 	{
-		webSocketServer->stop();
-		webSocketServer.reset();
+		w.second->stop();
+		w.second.reset();
 	}
+	webSocketServers.clear();
 	signalingClients.clear();
 	clientUids.clear();
 	clientRemapping.clear();
 }
 
-void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<SignalingClient>& discoveryClient,json& content)
+void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<SignalingClient>& signalingClient,json& content)
 {
 	if (content.find("clientID") != content.end())
 	{
@@ -194,25 +213,25 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			}
 			// identifies as a previous client. Discard the new client ID.
 			//TODO: we're taking the client's word for it that it is clientID. Some kind of token/hash?
-			signalingClients[clientID] = discoveryClient;
-			discoveryClient->clientID = clientID;
+			signalingClients[clientID] = signalingClient;
+			signalingClient->clientID = clientID;
 			clientUids.insert(clientID);
 			if (uid != clientID)
 			{
 				TELEPORT_COUT << ": info: Remapped from " << uid << " to " << clientID << std::endl;
-				TELEPORT_COUT << ": info: discoveryClient has " << discoveryClient->clientID << std::endl;
+				TELEPORT_COUT << ": info: signalingClient has " << signalingClient->clientID << std::endl;
 				signalingClients[uid] = nullptr;
 				clientUids.erase(uid);
 				uid = clientID;
 			}
 		}
 		std::string ipAddr;
-		ipAddr = discoveryClient->address;
+		ipAddr = signalingClient->ip_addr_port;
 		TELEPORT_COUT << "Received connection request from " << ipAddr << " identifying as client " << clientID << " .\n";
 
 		//Skip clients we have already added.
-		if (discoveryClient->signalingState == SignalingState::START)
-			discoveryClient->signalingState = SignalingState::REQUESTED;
+		if (signalingClient->signalingState == SignalingState::START)
+			signalingClient->signalingState = SignalingState::REQUESTED;
 		// if signalingState is START, we should not have a client...
 		if (clientManager.hasClient(clientID))
 		{
@@ -220,13 +239,13 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			// Apparently the CLIENT thinks they've disconnected.
 			// The client might, as far as we know, have lost the information it needs to continue the connection.
 			// THerefore we should resend everything required.
-			discoveryClient->signalingState = SignalingState::STREAMING;
+			signalingClient->signalingState = SignalingState::STREAMING;
 			TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them." << std::endl;
 			// It may be just that the connection request was already in flight when we accepted its predecessor.
 			sendResponseToClient(clientID);
 			return;
 		}
-		if (discoveryClient->signalingState != SignalingState::REQUESTED)
+		if (signalingClient->signalingState != SignalingState::REQUESTED)
 			return;
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
@@ -234,19 +253,19 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
 			if (desiredIP.compare(0, ipAddr.size(), { ipAddr.begin(), ipAddr.end() }) == 0)
 			{
-				discoveryClient->signalingState = SignalingState::ACCEPTED;
+				signalingClient->signalingState = SignalingState::ACCEPTED;
 			}
 		}
 		else
 		{
-			discoveryClient->signalingState = SignalingState::ACCEPTED;
+			signalingClient->signalingState = SignalingState::ACCEPTED;
 		}
 	}
 }
 
 void SignalingService::tick()
 {
-	if (discoveryPort == 0 )
+	if (webSocketServers.size() == 0 )
 	{
 		TELEPORT_INTERNAL_CERR("Attempted to call tick on client discovery service without initalizing!",0);
 		return;
@@ -257,23 +276,23 @@ void SignalingService::tick()
 	//Retrieve all packets received since last call, and add any new clients.
 	for (auto &c : signalingClients)
 	{
-		std::shared_ptr<SignalingClient> discoveryClient = c.second;
-		if (!discoveryClient)
+		std::shared_ptr<SignalingClient> signalingClient = c.second;
+		if (!signalingClient)
 			continue;
 		std::lock_guard lock(webSocketsMessagesMutex);
-		while (discoveryClient->messagesReceived.size())
+		while (signalingClient->messagesReceived.size())
 		{
-			std::string msg = discoveryClient->messagesReceived[0];
-			discoveryClient->messagesReceived.erase(discoveryClient->messagesReceived.begin());
+			std::string msg = signalingClient->messagesReceived[0];
+			signalingClient->messagesReceived.erase(signalingClient->messagesReceived.begin());
 			if (!msg.length())
 				continue;
 			json message = json::parse(msg);
 			if (!message.contains("teleport-signal-type"))
 				continue;
 			if (message["teleport-signal-type"] == "request")
-				processInitialRequest(c.first, discoveryClient, message["content"]);
+				processInitialRequest(c.first, signalingClient, message["content"]);
 			else
-				discoveryClient->messagesToPassOn.push(msg);
+				signalingClient->messagesToPassOn.push(msg);
 		}
 	}
 	for (auto c : signalingClients)
@@ -300,12 +319,6 @@ std::shared_ptr<SignalingClient> SignalingService::getSignalingClient(avs::uid u
 
 void SignalingService::sendResponseToClient(uint64_t clientID)
 {
-	if(discoveryPort == 0)
-	{
-		TELEPORT_CERR<<"Attempted to call sendResponseToClient on client discovery service without initalising!\n";
-		return;
-	}
-
 	auto c = signalingClients.find(clientID);
 	if(c == signalingClients.end())
 	{
@@ -333,12 +346,6 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 
 void SignalingService::sendToClient(avs::uid clientID, std::string str)
 {
-	if (discoveryPort == 0)
-	{
-		TELEPORT_CERR << "Attempted to call sendResponseToClient on client discovery service without initalising!\n";
-		return;
-	}
-
 	auto c = signalingClients.find(clientID);
 	if (c == signalingClients.end())
 	{
@@ -357,12 +364,6 @@ void SignalingService::sendToClient(avs::uid clientID, std::string str)
 
 bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t> bin)
 {
-	if (discoveryPort == 0)
-	{
-		TELEPORT_CERR << "Attempted to call sendResponseToClient on client discovery service without initalising!\n";
-		return false;
-	}
-
 	auto c = signalingClients.find(clientID);
 	if (c == signalingClients.end())
 	{

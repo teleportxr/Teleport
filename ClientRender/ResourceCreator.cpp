@@ -594,8 +594,6 @@ void ResourceCreator::CreateNode(avs::uid id, avs::Node& node)
 		break;
 	case avs::NodeDataType::TextCanvas:
 	case avs::NodeDataType::None:
-		CreateMeshNode(id, node);
-		break;
 	case avs::NodeDataType::Mesh:
 		CreateMeshNode(id, node);
 		break;

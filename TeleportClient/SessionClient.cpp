@@ -70,7 +70,7 @@ void SessionClient::ConnectButtonHandler(avs::uid server_uid,const std::string& 
 {
 	IpPort ipP=GetIpPort(url.c_str());
 	auto sc=GetSessionClient(server_uid);
-	sc->RequestConnection(ipP.ip,ipP.port?ipP.port:TELEPORT_SERVER_DISCOVERY_PORT);
+	sc->RequestConnection(ipP.ip,ipP.port);
 	sc->connected_url=url;	
 }
 
@@ -126,7 +126,7 @@ bool SessionClient::HandleConnections()
 			}
 		}
 	}
-	teleport::client::DiscoveryService::GetInstance().Tick(server_uid);
+	teleport::client::DiscoveryService::GetInstance().Tick();
 	return false;
 }
 
@@ -239,17 +239,12 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	}
 }
 
-int SessionClient::GetServerDiscoveryPort() const
-{
-	return server_discovery_port;
-}
 
 void SessionClient::SetServerIP(std::string s) 
 {
 	IpPort ipP=GetIpPort(s.c_str());
 	server_ip=ipP.ip;
-	if(ipP.port)
-		server_discovery_port=ipP.port;
+	server_discovery_port=ipP.port;
 }
 
 void SessionClient::SetServerDiscoveryPort(int p) 
@@ -259,7 +254,6 @@ void SessionClient::SetServerDiscoveryPort(int p)
 
 std::string SessionClient::GetConnectionURL() const
 {
-		//fmt::format("{0}:{1}",sessionClient->GetServerIP(),sessionClient->GetServerDiscoveryPort()).c_str());
 	return connected_url;
 }
 
@@ -538,7 +532,7 @@ void SessionClient::SendReceivedResources()
 			auto sentRequestIt = mSentResourceRequests.find(id);
 			if(sentRequestIt != mSentResourceRequests.end())
 			{
-//				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
+				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
 				mSentResourceRequests.erase(sentRequestIt);
 			}
 		}

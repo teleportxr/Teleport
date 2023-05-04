@@ -28,7 +28,7 @@ namespace teleport
 
 			virtual ~ClientManager();
 
-			bool initialize(int32_t signalPort, std::string client_ip_match="", uint32_t maxClients = 100);
+			bool initialize(std::set<uint16_t> signalPorts, std::string client_ip_match="", uint32_t maxClients = 100);
 			bool shutdown();
 			void tick(float deltaTime);
 			bool startSession(avs::uid clientID, std::string clientIP);

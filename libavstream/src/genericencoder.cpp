@@ -158,7 +158,7 @@ Result GenericEncoder::Private::writeOutput(IOInterface* outputNode)
 	void*  mappedBuffer;
 	size_t mappedBufferSize;
 	size_t bufferCount=0;
-	while( m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize)&&bufferCount<1000)
+	while(bufferCount<1000&&m_backend->mapOutputBuffer(mappedBuffer, mappedBufferSize))
 	{
 		size_t numBytesWrittenToOutput;
 		Result result = outputNode->write(q_ptr(), mappedBuffer, mappedBufferSize, numBytesWrittenToOutput);

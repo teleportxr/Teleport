@@ -32,13 +32,13 @@ ClientManager::~ClientManager()
 	
 }
 
-bool ClientManager::initialize(int32_t signalPort, std::string client_ip_match, uint32_t maxClients)
+bool ClientManager::initialize(std::set<uint16_t> signalPorts, std::string client_ip_match, uint32_t maxClients)
 {
 	if (mInitialized)
 	{
 		return false;
 	}
-	if(!signalingService.initialize(signalPort, client_ip_match))
+	if(!signalingService.initialize(signalPorts, client_ip_match))
 	{
 		TELEPORT_CERR << "An error occurred while attempting to initalise signalingService!\n";
 		return false;
@@ -116,7 +116,7 @@ void ClientManager::tick(float deltaTime)
 			continue;
 		if (discoveryClient->signalingState != SignalingState::ACCEPTED)
 			continue;
-		if (startSession(clientID, discoveryClient->address))
+		if (startSession(clientID, discoveryClient->ip_addr_port))
 		{
 			discoveryClient->signalingState = SignalingState::STREAMING;
 		}

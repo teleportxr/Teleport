@@ -198,7 +198,7 @@ TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 		//TELEPORT_CERR << "Failed to check Client " << clientID << " is connected! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return client->isConnected();
+	return true;
 }
 
 TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID)
@@ -449,7 +449,7 @@ TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 		TELEPORT_CERR << "Failed to check if Client " << clientID << " has peer! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return client->clientMessaging->hasPeer();
+	return true;
 }
 
 
@@ -486,12 +486,6 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	
-	if (!client->clientMessaging->hasPeer())
-	{
-		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! Client has no peer!\n";
-		return false;
-	}
 
 	if(failed)
 	{
@@ -512,13 +506,6 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-
-	if (!client->clientMessaging->hasPeer())
-	{
-		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client " << clientID << "! Client has no peer!\n";
-		return false;
-	}
-
 	if (!client->videoEncodePipeline)
 	{
 		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client " << clientID << "! VideoEncoderPipeline is null!\n";

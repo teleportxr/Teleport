@@ -30,7 +30,7 @@ namespace avs
 		size_t m_originalMaxBuffers = 0;
 		size_t m_maxBufferSize = 0;
 		size_t m_maxBuffers = 0;
-		size_t m_absoluteMaxBuffers = 500000;
+		size_t m_absoluteMaxBuffers = 50000;
 		size_t m_numElements = 0;
 		int64_t m_front = -1;
 		std::mutex m_mutex;

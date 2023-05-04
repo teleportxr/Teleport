@@ -284,11 +284,6 @@ void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationI
 	sendCommand2(command);
 }
 
-bool ClientMessaging::hasPeer() const
-{
-	return true;
-}
-
 bool ClientMessaging::SendCommand(const void* c, size_t sz) const
 {
 	if (sz > 16384)
@@ -380,8 +375,6 @@ void ClientMessaging::ensureStreamingPipeline()
 
 void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 {
-	if (receivedHandshake)
-		return;
 	size_t handShakeSize = sizeof(teleport::core::Handshake);
 
 	memcpy(&handshake, packet.data(), handShakeSize);
@@ -403,13 +396,15 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	{
 		geometryStreamingService.confirmResource(clientResources[i]);
 	}
-	captureComponentDelegates.startStreaming(&clientNetworkContext);
-	geometryStreamingService.startStreaming(&clientNetworkContext, handshake);
+	if (!receivedHandshake)
 	{
-		commandEncoder.configure(&commandStack);
-
-		commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.CommandQueue });
-
+		captureComponentDelegates.startStreaming(&clientNetworkContext);
+		geometryStreamingService.startStreaming(&clientNetworkContext, handshake);
+		{
+			commandEncoder.configure(&commandStack);
+			commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.CommandQueue });
+		}
+		receivedHandshake = true;
 	}
 
 	//Client has nothing, thus can't show nodes.
@@ -428,13 +423,14 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 		teleport::core::AcknowledgeHandshakeCommand ack(streamedNodeIDs.size());
 		sendSignalingCommand<>(ack, std::vector<avs::uid>{streamedNodeIDs.begin(), streamedNodeIDs.end()});
 	}
-	receivedHandshake = true;
 	reportHandshake(this->clientID, &handshake);
 	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}.\n", clientID, clientIP);
 }
 
 bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 {
+	if (!hasReceivedHandshake())
+		return false;
 	geometryStreamingService.setOriginNode(originNode);
 	teleport::core::SetStageSpaceOriginNodeCommand setp;
 	

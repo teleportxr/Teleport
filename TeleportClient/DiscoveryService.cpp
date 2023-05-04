@@ -12,6 +12,14 @@ using namespace teleport;
 using namespace client;
 static teleport::client::DiscoveryService *discoveryService=nullptr;
 
+uint16_t teleport::client::SignalingServer::GetPort() const
+{
+	uint16_t p = remotePort;
+	if (p == 0)
+		p = teleport::client::DiscoveryService::GetInstance().cyclePorts[cyclePortIndex];
+	return p;
+}
+
 teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInstance()
 {
 	if (!discoveryService)
@@ -39,6 +47,7 @@ void teleport::client::DiscoveryService::ShutdownInstance()
 
 DiscoveryService::DiscoveryService()
 {
+	cyclePorts={ 8080,80,443,10600,10700,10800};
 }
 
 DiscoveryService::~DiscoveryService()
@@ -48,48 +57,6 @@ DiscoveryService::~DiscoveryService()
 void DiscoveryService::SetClientID(uint64_t inClientID)
 {
 	clientID = inClientID;
-}
-
-ENetSocket DiscoveryService::CreateDiscoverySocket(std::string ip, uint16_t discoveryPort)
-{
-	ENetSocket socket = enet_socket_create(ENetSocketType::ENET_SOCKET_TYPE_DATAGRAM);// PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (socket <= 0)
-	{
-		TELEPORT_CLIENT_FAIL("Failed to create service discovery UDP socket");
-		return 0;
-	}
-
-	int flagEnable = 1;
-	enet_socket_set_option(socket, ENET_SOCKOPT_REUSEADDR, 1);
-	enet_socket_set_option(socket, ENET_SOCKOPT_BROADCAST, 1);
-	//enet_socket_set_option(sock, ENET_SOCKOPT_RCVBUF, 0);
-	//enet_socket_set_option(sock, ENET_SOCKOPT_SNDBUF, 0);
-	// We don't want to block, just check for packets.
-	enet_socket_set_option(socket, ENET_SOCKOPT_NONBLOCK, 1);
-
-	// Here we BIND the socket to the local address that we want to be identified with.
-	// e.g. our OWN local IP.
-	ENetAddress bindAddress = { ENET_HOST_ANY, discoveryPort };
-
-	if (!ip.empty())
-	{
-	//	ip = "127.0.0.1";
-		enet_address_set_host(&(bindAddress), ip.c_str());
-	}
-	if (enet_socket_bind(socket, &bindAddress) != 0)
-	{
-		TELEPORT_INTERNAL_CERR("Failed to bind to service discovery UDP socket");
-#ifdef _MSC_VER
-		int err = WSAGetLastError();
-		TELEPORT_CERR << "enet_socket_bind failed with error " << err << std::endl;
-#else
-		TELEPORT_CERR << "enet_socket_bind failed with error " <<std::endl;
-#endif
-		enet_socket_destroy(socket);
-		socket = 0;
-		return 0;
-	}
-	return socket;
 }
 
 void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
@@ -106,7 +73,7 @@ void DiscoveryService::ReceiveBinaryWebSocketsMessage(uint64_t server_uid,std::v
 	binaryMessagesReceived.push(bin);
 }
 
-void DiscoveryService::ResetConnection(uint64_t server_uid,std::string ip, uint16_t serverDiscoveryPort)
+void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint16_t serverDiscoveryPort)
 {
 	while(!messagesReceived.empty())
 		messagesReceived.pop();
@@ -118,20 +85,36 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string ip, uint1
 		binaryMessagesReceived.pop();
 	while(!binaryMessagesToSend.empty())
 		binaryMessagesToSend.pop();
-	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
-	TELEPORT_CERR << "Websocket open()" << std::endl;
-	if(ip.length()>0)
+	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
+	std::shared_ptr<rtc::WebSocket> &ws = signalingServer->webSocket;
+	std::string ws_url=fmt::format("ws://{0}:{1}",url, serverDiscoveryPort);
+	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
+	if(url.length()>0)
 	{
-		if(serverDiscoveryPort)
-			ws->open(ip+fmt::format(":{0}",serverDiscoveryPort));
-		else
-			ws->open(ip);
+		try
+		{
+			ws->open(ws_url);
+		}
+		catch(std::exception& e)
+		{
+			TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+		}
+		catch(...)
+		{
+		}
 	}
 }
 void DiscoveryService::InitSocket(uint64_t server_uid)
 {
 	rtc::WebSocket::Configuration config;
-	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid] = std::make_shared<rtc::WebSocket>(config);
+	std::shared_ptr<SignalingServer> &signalingServer=signalingServers[server_uid];
+	auto &ws = signalingServer->webSocket = std::make_shared<rtc::WebSocket>(config);
+	if (signalingServer->remotePort == 0)
+	{
+		signalingServer->cyclePortIndex++;
+		signalingServer->cyclePortIndex %= cyclePorts.size();
+		TELEPORT_COUT << "Cycling ports: connecting to " << signalingServer->url << " on port " << cyclePorts[signalingServer->cyclePortIndex] << std::endl;
+	}
 	auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
 	{
 		if(std::holds_alternative<std::string>(message))
@@ -145,69 +128,92 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 			ReceiveBinaryWebSocketsMessage(server_uid,bin);
 		}
 	};
-	ws->onError([this,server_uid](std::string error)
+	ws->onError([this, server_uid](std::string error)
 	{
-		TELEPORT_CERR << "Websocket error " << error << std::endl;
-		websockets.erase(server_uid);
+		auto& s = signalingServers[server_uid];
+		if (s)
+		{
+			TELEPORT_CERR << "Websocket error " << error << " for url " <<s->url<<" on port "<<s->GetPort()<< std::endl;
+			s->webSocket.reset();
+		}
 	});
 	ws->onMessage(receiveWebSocketMessage);
 	ws->onOpen([this,server_uid]()
 	{
 		TELEPORT_CERR << "Websocket onOpen " << std::endl;
 	});
-	ResetConnection(server_uid,serverIP,serverDiscoveryPort);
+	uint16_t remotePort = signalingServer->GetPort();
+	ResetConnection(server_uid, signalingServer->url, remotePort);
 	frame = 2;
 }
 
-uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_t signalPort)
+uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16_t signalPort)
 {
 	std::lock_guard lock(mutex);
-	serverDiscoveryPort=signalPort;
-	if (serverDiscoveryPort == 0)
+	std::shared_ptr<SignalingServer> &signalingServer= signalingServers[server_uid];
+	if (!signalingServer)
 	{
-		serverDiscoveryPort = 8080;
+		signalingServer = std::make_shared<SignalingServer>();
 	}
-	serverIP = ip;
-	if(!serverIP.length())
+	if(signalingServer->url!=url||signalingServer->remotePort!=signalPort)
+	{
+		signalingServer->webSocket.reset();
+		signalingServer->remotePort = signalPort;
+		signalingServer->url = url;
+		signalingServer->uid = server_uid;
+	}
+	if(!signalingServer->url.length())
 		return 0;
 	bool serverDiscovered = false;
-	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	std::shared_ptr<rtc::WebSocket> &ws = signalingServer->webSocket;
 	if(!ws)
 	{
 		InitSocket(server_uid);
-		ws=websockets[server_uid];
 	}
-	if (ip.empty())
+	if (!ws)
 	{
-		ip = "255.255.255.255";
+		return 0;
+	}
+	if (url.empty())
+	{
+		url = "255.255.255.255";
 	}
 	// Send our client id to the server on the discovery port. Once every 1000 frames.
 	frame--;
 	if(!frame)
 	{
-		if(ws->isOpen())
+		try
 		{
-			json message = { {"teleport-signal-type","request"},{"content",{ {"teleport","0.9"},{"clientID", clientID}}}};
-			//rtc::message_variant wsdata = fmt::format("{{\"clientID\":{}}}",clientID);
-			ws->send(message.dump());
-			TELEPORT_CERR << "Websocket send()" << std::endl;
-			TELEPORT_CERR << "webSocket->send: " << message.dump() << "  .\n";
-			frame = 1000;
+			if (ws->isOpen())
+			{
+				json message = { {"teleport-signal-type","request"},{"content",{ {"teleport","0.9"},{"clientID", clientID}}} };
+				//rtc::message_variant wsdata = fmt::format("{{\"clientID\":{}}}",clientID);
+				ws->send(message.dump());
+				//TELEPORT_CERR << "Websocket send()" << std::endl;
+				//TELEPORT_CERR << "webSocket->send: " << message.dump() << "  .\n";
+				frame = 1000;
+			}
+			else if (ws->readyState() == rtc::WebSocket::State::Closed)
+			{
+				ResetConnection(server_uid, signalingServer->url, signalingServer->remotePort);
+				frame = 2;
+			}
+			else
+			{
+				frame = 1;
+			}
 		}
-		else if(ws->readyState()==rtc::WebSocket::State::Closed)
+		catch (std::exception& e)
 		{
-			ResetConnection(server_uid,ip,serverDiscoveryPort);
-			frame = 2;
+			TELEPORT_CERR<<(e.what()?e.what():"Unknown exception")<< std::endl;
 		}
-		else
+		catch(...)
 		{
-			frame = 1;
 		}
 	}
 	if(awaiting)
 	{
 		awaiting = false;
-		serverIP = ip;
 		serverDiscovered = true;
 	}
 
@@ -218,31 +224,53 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string ip, uint16_
 	return 0;
 }
 
+void DiscoveryService::Tick()
+{
+	for (auto i : signalingServers)
+	{
+		Tick(i.first);
+	}
+}
+
 void DiscoveryService::Tick(uint64_t server_uid)
 {
-	if(!serverIP.length())
+	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
+	if (!signalingServer)
 		return;
-	std::shared_ptr<rtc::WebSocket> ws=websockets[server_uid];
+	std::shared_ptr<rtc::WebSocket>& ws = signalingServer->webSocket;
 	if(!ws)
 	{
 		InitSocket(server_uid);
-		ws=websockets[server_uid];
 	}
-	if(ws->isOpen())
+	if (!ws)
 	{
-		while(messagesToSend.size())
+		return;
+	}
+	try
+	{
+		if (ws->isOpen())
 		{
-			ws->send(messagesToSend.front());
-			TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
-			messagesToSend.pop();
+			while (messagesToSend.size())
+			{
+				ws->send(messagesToSend.front());
+				//TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
+				messagesToSend.pop();
+			}
+			while (binaryMessagesToSend.size())
+			{
+				auto& bin = binaryMessagesToSend.front();
+				ws->send(bin.data(), bin.size());
+				//TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
+				binaryMessagesToSend.pop();
+			}
 		}
-		while(binaryMessagesToSend.size())
-		{
-			auto &bin=binaryMessagesToSend.front();
-			ws->send(bin.data(),bin.size());
-			TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
-			binaryMessagesToSend.pop();
-		}
+	}
+	catch(std::exception& e)
+	{
+		TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+	}
+	catch(...)
+	{
 	}
 	while(messagesReceived.size())
 	{

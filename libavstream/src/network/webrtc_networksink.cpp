@@ -113,6 +113,7 @@ namespace avs
 					onDataChannelReceived(dc);
 				});
 			recreateConnection = false;
+			currentState = rtc::PeerConnection::State::New;
 			//peerConnectionMap.emplace(id, pc);
 			return pc;
 		};

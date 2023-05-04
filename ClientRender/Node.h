@@ -54,6 +54,7 @@ namespace clientrender
 
 		void SetParent(std::shared_ptr<Node> parent);
 		std::weak_ptr<Node> GetParent() const { return parent; }
+		bool HasAnyParent(std::shared_ptr<Node> node) const;
 
 		void AddChild(std::shared_ptr<Node> child);
 		void RemoveChild(std::shared_ptr<Node> child);
@@ -183,6 +184,7 @@ namespace clientrender
 
 		std::weak_ptr<Node> parent;
 		std::vector<std::weak_ptr<Node>> children;
+		std::mutex childrenMutex;
 
 		teleport::core::MovementUpdate lastReceivedMovement;
 

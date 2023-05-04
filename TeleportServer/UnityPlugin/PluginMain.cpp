@@ -35,6 +35,7 @@ VisualStudioDebugOutput debug_buffer(true, "teleport_server.log", 128);
 #include "../UnixDebugOutput.h"
 DebugOutput debug_buffer(true, "teleport_server.log", 128);
 #endif
+#include <regex>
 
 using namespace teleport;
 using namespace server;
@@ -96,7 +97,7 @@ struct InitialiseState
 	char* httpMountDirectory;
 	char* certDirectory;
 	char* privateKeyDirectory;
-	uint32_t DISCOVERY_PORT = 10607;
+	char* signalingPorts;
 
 	ClientStoppedRenderingNodeFn clientStoppedRenderingNode;
 	ClientStartedRenderingNodeFn clientStartedRenderingNode;
@@ -267,8 +268,28 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 	atexit(enet_deinitialize);
-
-	bool result = clientManager.initialize(initialiseState->DISCOVERY_PORT,std::string(initialiseState->clientIP));
+	if (!initialiseState->signalingPorts)
+	{
+		TELEPORT_CERR << "Failed to identify ports as string was null.";
+		return false;
+	}
+	std::string str(initialiseState->signalingPorts);
+	std::string::size_type pos_begin = { 0 }, pos_end = { 0 };
+	std::set<uint16_t> ports;
+	do
+	{
+		pos_end = str.find_first_of(",", pos_begin);
+		std::string str2 = str.substr(pos_begin, pos_end - pos_begin);
+		uint16_t p=std::stoi(str2);
+		ports.insert(p);
+		pos_begin = pos_end + 1;
+	} while (str.find_first_of(",", pos_end) != std::string::npos);
+	if(!ports.size())
+	{
+		TELEPORT_CERR << "Failed to identify ports from string " << initialiseState->signalingPorts  << "!\n";
+		return false;
+	}
+	bool result = clientManager.initialize(ports,std::string(initialiseState->clientIP));
 
 	if (!result)
 	{
@@ -524,11 +545,6 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 		TELEPORT_CERR << "Failed to encode video frame for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	if(!client->clientMessaging->hasPeer())
-	{
-		TELEPORT_COUT << "Failed to encode video frame for Client " << clientID << "! Client has no peer!\n";
-		return;
-	}
 	if (!client->clientMessaging->hasReceivedHandshake())
 	{
 		return;
@@ -621,10 +637,6 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 		auto client = clientManager.GetClient(clientID);
 		if (!client)
 			continue;
-		if (!client->clientMessaging->hasPeer())
-		{
-			continue;
-		}
 		// If handshake hasn't been received, the network pipeline is not set up yet, and can't receive packets from the AudioQueue.
 		if (!client->clientMessaging->hasReceivedHandshake())
 			continue;
@@ -730,6 +742,8 @@ TELEPORT_EXPORT avs::uid StoreTextCanvas( const char *  relative_asset_path, con
 		for(avs::uid u: clientManager.GetClientUids())
 		{
 			auto client = clientManager.GetClient(u);
+			if (!client)
+				continue;
 			if(client->clientMessaging->GetGeometryStreamingService().hasResource(u))
 				client->clientMessaging->GetGeometryStreamingService().requestResource(u);
 		}
@@ -743,6 +757,8 @@ TELEPORT_EXPORT void ResendNode(avs::uid u)
 	for (avs::uid u : clientManager.GetClientUids())
 	{
 		auto client = clientManager.GetClient(u);
+		if (!client)
+			continue;
 		if(client->clientMessaging->GetGeometryStreamingService().hasResource(u))
 			client->clientMessaging->GetGeometryStreamingService().requestResource(u);
 	}

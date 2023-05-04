@@ -6,6 +6,7 @@
 #include <string>
 #include <libavstream/common.hpp>
 #include <memory>
+#include <map>
 #include <nlohmann/json.hpp>
 #include "TeleportServer/UnityPlugin/Export.h"
 
@@ -31,7 +32,7 @@ namespace teleport
 		{
 			~SignalingClient();
 			avs::uid clientID = 0;
-			std::string address;
+			std::string ip_addr_port;
 			std::shared_ptr<rtc::WebSocket> webSocket;
 			std::vector<std::string> messagesReceived;
 			std::queue<std::string> messagesToPassOn;
@@ -46,7 +47,7 @@ namespace teleport
 			{
 				shutdown();
 			}
-			bool initialize(uint16_t discoveryPort = 0, std::string desiredIP = "");
+			bool initialize(std::set<uint16_t> discoveryPorts, std::string desiredIP = "");
 			void shutdown();
 			void tick();
 			void sendResponseToClient(uint64_t clientID);
@@ -58,12 +59,12 @@ namespace teleport
 		protected:
 			void SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient);
 			void processInitialRequest(avs::uid clientID, std::shared_ptr<SignalingClient> &discoveryClient,nlohmann::json& j);
-			uint16_t discoveryPort = 0;
+			std::set<uint16_t> discoveryPorts;
 			std::string desiredIP;
 			std::map<avs::uid, std::shared_ptr<SignalingClient>> signalingClients;
 			std::map<avs::uid, avs::uid> clientRemapping;
 			std::set<avs::uid> clientUids;
-			std::shared_ptr<rtc::WebSocketServer> webSocketServer;
+			std::map<uint16_t,std::shared_ptr<rtc::WebSocketServer>> webSocketServers;
 			std::mutex webSocketsMessagesMutex;
 		public:
 			void OnWebSocket(std::shared_ptr<rtc::WebSocket>);

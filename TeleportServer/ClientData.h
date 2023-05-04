@@ -71,7 +71,6 @@ namespace teleport
 			bool videoKeyframeRequired = false;
 
 			bool setOrigin(uint64_t ctr,avs::uid uid);
-			bool isConnected() const;
 			bool hasOrigin() const;
 			avs::uid getOrigin() const;
 

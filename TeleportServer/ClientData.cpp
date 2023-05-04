@@ -137,36 +137,21 @@ void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefi
 
 bool ClientData::setOrigin(uint64_t ctr,avs::uid uid)
 {
-	if(clientMessaging->hasPeer()&& clientMessaging->hasReceivedHandshake())
+	if(clientMessaging->setOrigin(ctr,uid))
 	{
-		if(clientMessaging->setOrigin(ctr,uid))
-		{
-		// ASSUME the message was received...
-		// TODO: Only set this when client confirms.
-			_hasOrigin=true;
-			originClientHas=uid;
-			return true;
-		}
+	// ASSUME the message was received...
+	// TODO: Only set this when client confirms.
+		_hasOrigin=true;
+		originClientHas=uid;
+		return true;
 	}
 	TELEPORT_INTERNAL_CERR("Can't set origin - no handshake yet.\n");
 	return false;
 }
 
-bool ClientData::isConnected() const
-{
-	if(!clientMessaging->hasPeer())
-		return false;
-	return true;
-}
-
 bool ClientData::hasOrigin() const
 {
-	if(clientMessaging->hasPeer())
-	{
-		return _hasOrigin;
-	}
-	_hasOrigin=false;
-	return false;
+	return _hasOrigin;
 }
 
 avs::uid ClientData::getOrigin() const
