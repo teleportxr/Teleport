@@ -88,7 +88,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	while(!binaryMessagesToSend.empty())
 		binaryMessagesToSend.pop();
 	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
-	std::shared_ptr<rtc::WebSocket> &ws = signalingServer->webSocket;
+	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
 	std::string ws_url=fmt::format("ws://{0}:{1}",url, serverDiscoveryPort);
 	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
 	if(url.length()>0)
@@ -110,7 +110,7 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 {
 	rtc::WebSocket::Configuration config;
 	std::shared_ptr<SignalingServer> &signalingServer=signalingServers[server_uid];
-	auto &ws = signalingServer->webSocket = std::make_shared<rtc::WebSocket>(config);
+	auto ws = signalingServer->webSocket = std::make_shared<rtc::WebSocket>(config);
 	if (signalingServer->remotePort == 0)
 	{
 		signalingServer->cyclePortIndex++;
@@ -167,7 +167,7 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 	if(!signalingServer->url.length())
 		return 0;
 	bool serverDiscovered = false;
-	std::shared_ptr<rtc::WebSocket> &ws = signalingServer->webSocket;
+	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
 	if(!ws)
 	{
 		InitSocket(server_uid);

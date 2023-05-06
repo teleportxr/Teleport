@@ -59,6 +59,7 @@ namespace clientrender
 		void AddChild(std::shared_ptr<Node> child);
 		void RemoveChild(std::shared_ptr<Node> child);
 		void RemoveChild(avs::uid childID);
+		bool HasChild(avs::uid(childID)) const;
 		void ClearChildren();
 
 		const std::vector<std::weak_ptr<Node>>& GetChildren() const { return children; }

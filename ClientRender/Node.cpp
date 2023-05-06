@@ -138,10 +138,12 @@ void Node::SetParent(std::shared_ptr<Node> newParent)
 		parent = newParent;
 		//Remove self from parent list of existing parent, if we have a parent.
 		//Prevent stack overflow by doing this after setting the new parent.
-		if(oldParent)
+		//
+		// This would cause a mutex double-lock for childrenMutex, can't do this.
+		/*if(oldParent)
 		{
 			oldParent->RemoveChild(id);
-		}
+		}*/
 	}
 	else
 		parent=newParent;
