@@ -679,24 +679,26 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 				{
 					dataChannel.readyToSend = false;
 					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it would overflow the webrtc buffer.\n";
-					return Result::OK;
+					return Result::Failed;
 				}
 				// Can't send a buffer greater than 262144. even 64k is dodgy:
 				if (sz >= c->maxMessageSize())
 				{
 					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
-					return Result::OK;
+					return Result::Failed;
 				}
 				if (!c->send((std::byte*)packet, sz))
 				{
 					dataChannel.readyToSend = false;
 					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					return Result::Failed;
 				}
 				dataChannel.bytesSent += sz;
 			}
 			else
 			{
 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+				return Result::Failed;
 			}
 		}
 		catch (std::runtime_error err)
@@ -705,6 +707,7 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 				std::cerr << err.what() << std::endl;
 			else
 				std::cerr << "std::runtime_error." << std::endl;
+			return Result::Failed;
 		}
 		catch (std::logic_error err)
 		{
@@ -712,6 +715,7 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 				std::cerr << err.what() << std::endl;
 			else
 				std::cerr << "std::logic_error." << std::endl;
+			return Result::Failed;
 		}
 
 	}

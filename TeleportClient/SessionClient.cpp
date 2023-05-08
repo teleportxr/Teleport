@@ -532,7 +532,7 @@ void SessionClient::SendReceivedResources()
 			auto sentRequestIt = mSentResourceRequests.find(id);
 			if(sentRequestIt != mSentResourceRequests.end())
 			{
-				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
+//				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
 				mSentResourceRequests.erase(sentRequestIt);
 			}
 		}
@@ -603,14 +603,12 @@ void SessionClient::SendHandshake(const teleport::core::Handshake& handshake, co
 	size_t resourceListSize = sizeof(avs::uid) * clientResourceIDs.size();
 
 	//Create handshake.
-	//ENetPacket* packet = enet_packet_create(&handshake, handshakeSize, ENET_PACKET_FLAG_RELIABLE);
 	//Append list of resource IDs the client has.
 	std::vector<uint8_t> bin(handshakeSize + resourceListSize);
 	
 	memcpy(bin.data(), &handshake, handshakeSize);
 	memcpy(bin.data()+handshakeSize, clientResourceIDs.data(), resourceListSize);
 	DiscoveryService::GetInstance().SendBinary(server_uid,bin);
-	//enet_peer_send(mServerPeer, static_cast<enet_uint8>(teleport::core::RemotePlaySessionChannel::RPCH_Handshake), packet);
 }
 
 void SessionClient::SendStreamingControlMessage(const std::string& msg)

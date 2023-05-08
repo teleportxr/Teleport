@@ -33,13 +33,15 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	if(avsNode.parentID)
 		parentLookup[node_id]=avsNode.parentID;
 	//Link new node to parent.
-	LinkToParentNode(node_id);
+	LinkToParentNode(node);
 
 	//Link node's children to this node.
 	for(avs::uid childID : node->GetChildrenIDs())
 	{
 		parentLookup[childID] = node_id;
-		LinkToParentNode(childID);
+		auto n = nodeLookup.find(childID);
+		if(n!= nodeLookup.end())
+			LinkToParentNode(n->second);
 	}
 
 	//Set last movement, if a movement update was received early.
@@ -114,7 +116,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
 	
 	//nodeLookup[node->id] = node;
-}
+	}
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 {
@@ -440,27 +442,29 @@ void NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, f
 
 bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand)
 {
+	nodeLookup_mutex.lock();
 	auto c = nodeLookup.find(updateNodeStructureCommand.nodeID);
 	auto p = nodeLookup.find(updateNodeStructureCommand.parentID);
-	std::shared_ptr<Node> node = c!= nodeLookup.end()?c->second:nullptr;
-	if(!node)
+	std::shared_ptr<Node> node = c != nodeLookup.end() ? c->second : nullptr;
+	if (!node)
 	{
-		TELEPORT_CERR<<"Failed to reparent node "<<updateNodeStructureCommand.nodeID<<" as it was not found locally.\n";
+		TELEPORT_CERR << "Failed to reparent node " << updateNodeStructureCommand.nodeID << " as it was not found locally.\n";
 		return false;
 	}
-	std::shared_ptr<Node> parent = p!= nodeLookup.end()?p->second : nullptr;
-	if(updateNodeStructureCommand.parentID!=0&&!parent)
+	std::shared_ptr<Node> parent = p != nodeLookup.end() ? p->second : nullptr;
+	nodeLookup_mutex.unlock();
+	if (updateNodeStructureCommand.parentID != 0 && !parent)
 	{
-		TELEPORT_CERR<<"Failed to reparent node "<<updateNodeStructureCommand.nodeID<<" as its new parent "<<updateNodeStructureCommand.parentID<<" was not found locally.\n";
+		TELEPORT_CERR << "Failed to reparent node " << updateNodeStructureCommand.nodeID << " as its new parent " << updateNodeStructureCommand.parentID << " was not found locally.\n";
 		return false;
 	}
 
-	if(updateNodeStructureCommand.parentID !=0)
+	if (updateNodeStructureCommand.parentID != 0)
 		parentLookup[updateNodeStructureCommand.nodeID] = updateNodeStructureCommand.parentID;
 	else
 	{
 		auto p = parentLookup.find(updateNodeStructureCommand.nodeID);
-		if (p!=parentLookup.end())
+		if (p != parentLookup.end())
 			parentLookup.erase(p);
 	}
 	std::weak_ptr<Node> oldParent = node->GetParent();
@@ -471,7 +475,8 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 	node->SetLocalRotation(*((quat*)&updateNodeStructureCommand.relativePose.orientation));
 	// TODO: Force an update. SHOULD NOT be necessary.
 	node->GetGlobalTransform();
-	LinkToParentNode(updateNodeStructureCommand.nodeID);
+	
+	LinkToParentNode(node);
 	return true;
 }
 
@@ -562,16 +567,15 @@ bool NodeManager::IsNodeVisible(avs::uid nodeID) const
 	return node != nullptr && node->IsVisible();
 }
 
-void NodeManager::LinkToParentNode(avs::uid childID)
+void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 {
 	//Do nothing if the child doesn't appear in the parent lookup; i.e. we have not received a parent for the node.
-	auto parentIt = parentLookup.find(childID);
+	auto parentIt = parentLookup.find(child->id);
 	std::shared_ptr<Node> parent;
 	if(parentIt != parentLookup.end())
 	{
 		parent = GetNode(parentIt->second);
 	}
-	std::shared_ptr<Node> child = GetNode(childID);
 
 	//Connect up hierarchy.
 	if (child != nullptr)

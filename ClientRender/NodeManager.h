@@ -117,7 +117,7 @@ namespace clientrender
 		bool IsNodeVisible(avs::uid nodeID) const;
 
 		//Links the node with the passed ID to it's parent. If the node doesn't exist, then it doesn't do anything.
-		void LinkToParentNode(avs::uid nodeID);
+		void LinkToParentNode(std::shared_ptr<Node> child);
 		mutable std::mutex nodeLookup_mutex;
 		mutable std::mutex rootNodes_mutex;
 		mutable std::mutex early_mutex;
