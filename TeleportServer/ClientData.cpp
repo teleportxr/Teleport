@@ -13,7 +13,7 @@ ClientData::ClientData(  std::shared_ptr<ClientMessaging> clientMessaging)
 
 void ClientData::StartStreaming(const ServerSettings& serverSettings
 	,uint32_t connectionTimeout
-	,avs::uid serverID
+	,uint64_t session_id
 	,GetUnixTimestampFn getUnixTimestamp
 	,bool use_ssl)
 {
@@ -52,7 +52,8 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = serverSettings.requiredLatencyMs;
 	setupCommand.idle_connection_timeout = connectionTimeout;
-	setupCommand.server_id = serverID;
+
+	setupCommand.session_id = session_id;
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	setupCommand.control_model = serverSettings.controlModel;

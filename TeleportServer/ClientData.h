@@ -44,7 +44,7 @@ namespace teleport
 			ClientData(  std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
 			void StartStreaming(const ServerSettings &casterSettings
 				, uint32_t connectionTimeout
-				, avs::uid serverID
+				, uint64_t sessionid
 				, GetUnixTimestampFn getUnixTimestamp
 				, bool use_ssl);
 			void setNodePosePath(avs::uid nodeID, const std::string &regexPosePath);

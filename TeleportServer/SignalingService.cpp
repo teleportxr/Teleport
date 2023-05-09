@@ -11,7 +11,7 @@
 #include <functional>
 #include <regex>
 using namespace std::string_literals;
-using std::literals::string_literals::operator""s;
+using namespace std::string_view_literals;
 
 using nlohmann::json;
 

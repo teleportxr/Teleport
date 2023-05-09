@@ -321,7 +321,7 @@ namespace teleport
 			uint32_t			debug_network_packets = 0;			//!< 21
 			int32_t				requiredLatencyMs = 0;				//!< 25
 			uint32_t			idle_connection_timeout = 5000;		//!< 29
-			avs::uid			server_id = 0;						//!< The server's id: not unique on a client.	37 bytes
+			uint64_t			session_id = 0;						//!< The server's session id changes when the server session changes.	37 bytes
 			ControlModel		control_model = ControlModel::NONE;	//!< Not in use 41b to here
 			avs::VideoConfig	video_config;						//!< Video setup structure. 41+89=130 bytes
 			float				draw_distance = 0.0f;				//!< Maximum distance in metres to render locally. 134

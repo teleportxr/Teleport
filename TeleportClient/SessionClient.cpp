@@ -667,7 +667,7 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 
 	messageToServerPipeline.link({ &messageToServerEncoder, &clientPipeline.messageToServerQueue });
 	std::vector<avs::uid> resourceIDs;
-	if(setupCommand.server_id == lastServerID)
+	if(setupCommand.session_id == lastSessionId)
 	{
 		resourceIDs = mCommandInterface->GetGeometryResources();
 		handshake.resourceCount = resourceIDs.size();
@@ -678,7 +678,7 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 	}
 
 	SendHandshake(handshake, resourceIDs);
-	lastServerID = setupCommand.server_id;
+	lastSessionId = setupCommand.session_id;
 }
 
 void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &packet)

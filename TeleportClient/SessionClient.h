@@ -218,7 +218,7 @@ namespace teleport
 			void ReceiveTextCommand(const std::vector<uint8_t> &packet);
 			static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
-			avs::uid lastServerID = 0; //UID of the server we last connected to.
+			uint64_t lastSessionId= 0; //UID of the server session we last connected to.
 
 			SessionCommandInterface* mCommandInterface=nullptr;
 

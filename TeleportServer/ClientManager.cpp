@@ -23,8 +23,6 @@ using namespace server;
 ClientManager::ClientManager()
 {
 	mLastTickTimestamp = avs::Platform::getTimestamp();
-	// TODO: server id should be a random large hash.
-	serverID = avs::GenerateUid();
 }
 
 ClientManager::~ClientManager()
@@ -38,6 +36,12 @@ bool ClientManager::initialize(std::set<uint16_t> signalPorts, std::string clien
 	{
 		return false;
 	}
+	// session id should be a random large hash.
+	// generate a unique session id.
+	// 
+	static std::mt19937 m_mt;
+	std::uniform_int_distribution<uint64_t> distro;
+	sessionID = distro.operator()(m_mt);
 	if(!signalingService.initialize(signalPorts, client_ip_match))
 	{
 		TELEPORT_CERR << "An error occurred while attempting to initalise signalingService!\n";
@@ -79,7 +83,7 @@ void ClientManager::startStreaming(avs::uid clientID)
 		return;
 	}
 
-	client->StartStreaming(serverSettings,  connectionTimeout, serverID, getUnixTimestamp, httpService->isUsingSSL());
+	client->StartStreaming(serverSettings,  connectionTimeout, sessionID, getUnixTimestamp, httpService->isUsingSSL());
 
 }
 void ClientManager::tick(float deltaTime)

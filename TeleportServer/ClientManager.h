@@ -60,7 +60,7 @@ namespace teleport
 			std::set<avs::uid> clientIDs;
 			std::atomic_bool mAsyncNetworkDataProcessingFailed = false;
 			bool mInitialized = false;
-			avs::uid serverID;
+			uint64_t sessionID=0;
 
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
 		public:
