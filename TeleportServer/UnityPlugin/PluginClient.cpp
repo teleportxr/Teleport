@@ -42,7 +42,7 @@ namespace teleport
 		ProcessNewInputEventsFn processNewInputEvents;
 		DisconnectFn onDisconnect;
 		ProcessAudioInputFn processAudioInput;
-		GetUnixTimestampFn getUnixTimestamp;
+		GetUnixTimestampFn getUnixTimestampNs;
 		ReportHandshakeFn reportHandshake;
 		uint32_t connectionTimeout = 60000;
 

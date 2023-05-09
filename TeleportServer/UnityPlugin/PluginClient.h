@@ -29,7 +29,7 @@ namespace teleport
 		extern ProcessNewInputEventsFn processNewInputEvents;
 		extern DisconnectFn onDisconnect;
 		extern ProcessAudioInputFn processAudioInput;
-		extern GetUnixTimestampFn getUnixTimestamp;
+		extern GetUnixTimestampFn getUnixTimestampNs;
 		extern ReportHandshakeFn reportHandshake;
 		extern uint32_t connectionTimeout ;
 

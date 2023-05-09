@@ -331,7 +331,7 @@ namespace teleport
 			std::map<avs::uid,OpenXRServer> openXRServers;
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 			bool haveXRDevice = false;
-			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext, std::vector<XrCompositionLayerProjectionView>& projection_views, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate);
+			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext, XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate);
 			bool RenderLayer(XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views,std::vector<XrCompositionLayerSpaceWarpInfoFB>& spacewarp_views
 						, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate);
 			void DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCompositionLayerSpaceWarpInfoFB &spacewarp_view,int i);

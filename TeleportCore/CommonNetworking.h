@@ -189,7 +189,7 @@ namespace teleport
 		//Contains information to update the transform of a node.
 		struct MovementUpdate
 		{
-			int64_t timestamp = 0;
+			int64_t server_time_ns = 0;		// nanoseconds since the SetupCommand's timestamp.
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
@@ -329,7 +329,7 @@ namespace teleport
 			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's. 147
 			uint8_t				audio_input_enabled = 0;			//!< 148 Server accepts audio stream from client.
 			bool				using_ssl = true;					//!< 147 Not in use, for later.
-			int64_t				startTimestamp_utc_unix_ms = 0;		//!< 157 UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+			int64_t				startTimestamp_utc_unix_ns = 0;		//!< 157 UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode		backgroundMode;							//!< 158 Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;						//!< 174 If the background is of the COLOUR type, which colour to use.

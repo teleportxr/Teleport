@@ -273,10 +273,12 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
 		RenderLocalNodes(deviceContext,server_uid);
 }
-
+#include "TeleportClient/ClientTime.h"
 void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
 	, avs::uid this_server_uid)
 {
+	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_ns,deviceContext.predictedDisplayTimeS);
+	geometryCache.mNodeManager->UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
 	auto& clientServerState = teleport::client::ClientServerState::GetClientServerState(this_server_uid);
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
@@ -873,7 +875,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(RenderState::maxTagDataSize);
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ms);
+	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ns);
 
 //	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
 	//	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height);

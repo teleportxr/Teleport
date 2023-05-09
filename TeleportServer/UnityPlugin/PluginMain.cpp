@@ -109,7 +109,8 @@ struct InitialiseState
 	avs::MessageHandlerFunc messageHandler;
 	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
-	GetUnixTimestampFn getUnixTimestamp;
+	GetUnixTimestampFn getUnixTimestampNs;
+	int64_t start_unix_time_ns = 0;
 };
 
 
@@ -168,7 +169,7 @@ TELEPORT_EXPORT void SetProcessAudioInputDelegate(ProcessAudioInputFn f)
 
 TELEPORT_EXPORT void SetGetUnixTimestampDelegate(GetUnixTimestampFn function)
 {
-	getUnixTimestamp = function;
+	getUnixTimestampNs = function;
 }
 
 static void passOnOutput(const char *msg)
@@ -258,7 +259,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	SetDisconnectDelegate(initialiseState->disconnect);
 	SetMessageHandlerDelegate(initialiseState->messageHandler);
 	SetProcessAudioInputDelegate(initialiseState->processAudioInput);
-	SetGetUnixTimestampDelegate(initialiseState->getUnixTimestamp);
+	SetGetUnixTimestampDelegate(initialiseState->getUnixTimestampNs);
 
 	reportHandshake=initialiseState->reportHandshake;
 
@@ -289,7 +290,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		TELEPORT_CERR << "Failed to identify ports from string " << initialiseState->signalingPorts  << "!\n";
 		return false;
 	}
-	bool result = clientManager.initialize(ports,std::string(initialiseState->clientIP));
+	bool result = clientManager.initialize(ports, initialiseState->start_unix_time_ns,std::string(initialiseState->clientIP));
 
 	if (!result)
 	{

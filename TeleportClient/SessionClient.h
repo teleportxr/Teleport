@@ -118,7 +118,7 @@ namespace teleport
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
-					
+			long long GetServerStartTimeNs() const;
 			ConnectionStatus GetConnectionStatus() const;
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;

@@ -77,29 +77,50 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 
 	//Set transform, then tick based on difference in time since the update was sent and now.
 	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
-	TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - update.timestamp));
+	//TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs()));
 }
 
-void Node::TickExtrapolatedTransform(float deltaTime)
+// Here we will extrapolate the transform based on the last received movement update.
+void Node::TickExtrapolatedTransform(double serverTimeS)
 {
-	deltaTime /= 1000;
+	if (isStatic)
+		return;
+	// timestamp received was in milliseconds Unix time.
+	if (!lastReceivedMovement.server_time_ns)
+		return;
+	// We want to extrapolate the transform from the last timestamp to the "server time" we received as a parameter.
+	// so we want the difference in seconds between these.
+	double server_datum_time_s = double(lastReceivedMovement.server_time_ns) * 0.000000001;
+	double time_offset = serverTimeS - server_datum_time_s;
+	if (time_offset < -5.0)
+		time_offset = -5.0;
+	if (time_offset > 5.0)
+		time_offset = 5.0;
 	const Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
-
-	vec3 newTranslation = transform.m_Translation;// + (lastReceivedMovement.velocity * deltaTime);
-
-	clientrender::quat newRotation = transform.m_Rotation;
-/*	if(lastReceivedMovement.angularVelocityAngle != 0)
+	vec3 p0 = lastReceivedMovement.position;
+	vec3 newTranslation = p0;
+	vec3 v = lastReceivedMovement.velocity;
+	if (length(v) > 0)
 	{
-		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * deltaTime, lastReceivedMovement.angularVelocityAxis);
+		newTranslation +=v * (float)time_offset;
+	}
+	clientrender::quat newRotation = lastReceivedMovement.rotation;
+	if(lastReceivedMovement.angularVelocityAngle != 0)
+	{
+		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, lastReceivedMovement.angularVelocityAxis);
 		newRotation *= deltaRotation;
-	}*/
+	}
 
 	UpdateModelMatrix(newTranslation, newRotation, transform.m_Scale);
 }
 
+void Node::UpdateExtrapolatedPositions(double serverTimeS)
+{
+	TickExtrapolatedTransform(serverTimeS);
+}
+
 void Node::Update(float deltaTime_ms)
 {
-	TickExtrapolatedTransform(deltaTime_ms);
 	visibility.update(deltaTime_ms);
 
 	//Attempt to animate, if we have a skin.

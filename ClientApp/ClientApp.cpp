@@ -1,5 +1,5 @@
 #include "ClientApp.h"
-
+#include "TeleportClient/ClientTime.h"
 using namespace teleport;
 using namespace client;
 
@@ -17,4 +17,5 @@ void ClientApp::Initialize()
 	config.LoadConfigFromIniFile();
 	config.LoadBookmarks();
 	config.LoadOptions();
+	ClientTime::GetInstance();
 }

@@ -30,12 +30,13 @@ ClientManager::~ClientManager()
 	
 }
 
-bool ClientManager::initialize(std::set<uint16_t> signalPorts, std::string client_ip_match, uint32_t maxClients)
+bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_ns, std::string client_ip_match, uint32_t maxClients)
 {
 	if (mInitialized)
 	{
 		return false;
 	}
+	startTimestamp_utc_unix_ns = start_unix_time_ns;
 	// session id should be a random large hash.
 	// generate a unique session id.
 	// 
@@ -83,9 +84,9 @@ void ClientManager::startStreaming(avs::uid clientID)
 		return;
 	}
 
-	client->StartStreaming(serverSettings,  connectionTimeout, sessionID, getUnixTimestamp, httpService->isUsingSSL());
-
+	client->StartStreaming(serverSettings,  connectionTimeout, sessionID, getUnixTimestampNs, startTimestamp_utc_unix_ns,httpService->isUsingSSL());
 }
+
 void ClientManager::tick(float deltaTime)
 {
 	mLastTickTimestamp = avs::Platform::getTimestamp();

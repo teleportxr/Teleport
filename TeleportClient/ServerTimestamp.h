@@ -17,15 +17,16 @@ namespace teleport
 			static void setLastReceivedTimestampUTCUnixMs(uint64_t value);
 
 			//Returns the current timestamp.
-			static double getCurrentTimestampUTCUnixMs();
+			static double getCurrentTimestampUTCUnixNs();
+			static double getCurrentTimestampUTCUnixS();
 
 			//Tick current timestamp along.
 			//	deltaTime : Amount of time that has passed since the last process tick.
 			static void tick(double deltaTime_seconds);
 
 		private:
-			static uint64_t lastReceivedTimestampUTCUnixMs; //Last timestamp received from the server; should be a UTC Unix timestamp in milliseconds.
-			static double currentTimestampUTCUnixMs; //Current time on the client in relation to the server.
+			static uint64_t lastReceivedTimestampUTCUnixNs; //Last timestamp received from the server; should be a UTC Unix timestamp in milliseconds.
+			static double currentTimestampUTCUnixNs; //Current time on the client in relation to the server.
 		};
 	}
 }

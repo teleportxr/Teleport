@@ -25,6 +25,9 @@
     <ClCompile Include="..\..\TeleportClient\SessionClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\TeleportClient\ClientTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportClient\basic_linear_algebra.h">
@@ -52,6 +55,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\TeleportClient\SessionClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportClient\ClientTime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

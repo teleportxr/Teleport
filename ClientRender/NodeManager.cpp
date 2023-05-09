@@ -292,6 +292,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 
 bool NodeManager::ShowNode(avs::uid nodeID)
 {
+	std::lock_guard lock(nodeLookup_mutex);
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())
 	{
@@ -305,6 +306,7 @@ bool NodeManager::ShowNode(avs::uid nodeID)
 
 bool NodeManager::HideNode(avs::uid nodeID)
 {
+	std::lock_guard lock(nodeLookup_mutex);
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())
 	{
@@ -320,10 +322,13 @@ bool NodeManager::HideNode(avs::uid nodeID)
 void NodeManager::SetVisibleNodes(const std::vector<avs::uid> visibleNodes)
 {
 	//Hide all nodes.
-	for(const auto& it : nodeLookup)
 	{
-		it.second->SetVisible(false);
-		hiddenNodes.insert(it.first);
+		std::lock_guard lock(nodeLookup_mutex);
+		for (const auto& it : nodeLookup)
+		{
+			it.second->SetVisible(false);
+			hiddenNodes.insert(it.first);
+		}
 	}
 
 	//Show visible nodes.
@@ -335,6 +340,7 @@ void NodeManager::SetVisibleNodes(const std::vector<avs::uid> visibleNodes)
 
 bool NodeManager::UpdateNodeTransform(avs::uid nodeID, const vec3& translation, const quat& rotation, const vec3& scale)
 {
+	std::lock_guard lock(nodeLookup_mutex);
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())
 	{
@@ -479,8 +485,15 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 	LinkToParentNode(node);
 	return true;
 }
+void NodeManager::UpdateExtrapolatedPositions(double serverTimeS)
+{
+	for (const std::shared_ptr<Node> node : rootNodes)
+	{
+		node->UpdateExtrapolatedPositions(serverTimeS);
+	}
+}
 
-void NodeManager::Update(float deltaTime)
+void NodeManager::Update( float deltaTime)
 {
 	rootNodes_mutex.lock();
 	nodeList_t expiredNodes;

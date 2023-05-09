@@ -48,9 +48,10 @@ namespace clientrender
 
 		void SetLastMovement(const teleport::core::MovementUpdate& update);
 		//Updates the transform by extrapolating data from the last confirmed timestamp.
-		void TickExtrapolatedTransform(float deltaTime);
+		void TickExtrapolatedTransform(double serverTimeS);
 
-		void Update(float deltaTime);
+		void Update( float deltaTime);
+		void UpdateExtrapolatedPositions(double serverTimeS);
 
 		void SetParent(std::shared_ptr<Node> parent);
 		std::weak_ptr<Node> GetParent() const { return parent; }

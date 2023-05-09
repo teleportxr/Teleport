@@ -662,7 +662,6 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		return;
 	if(!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand, handshake))
 		return;
-
 	messageToServerEncoder.configure(&messageToServerStack);
 
 	messageToServerPipeline.link({ &messageToServerEncoder, &clientPipeline.messageToServerQueue });

@@ -6,6 +6,7 @@
 #include <Windows.h>
 #endif
 #include <openxr/openxr.h>
+#define XR_USE_TIMESPEC 1
 #include <openxr/openxr_platform.h>
 #include "OpenXR.h"
 #include "fmt/core.h"
@@ -16,9 +17,12 @@
 #include "Log.h"
 #include "Config.h"
 #include "TeleportCore/Threads.h"
-
 #include <regex>
-
+#include "TeleportClient/ClientTime.h"
+//#define TIME_UTC 1
+#include <ctime>
+bool timeInitialized = false;
+long long offset_xr_to_client_ns = 0;
 
 const char* teleport::client::stringof(ActionId a)
 {
@@ -242,7 +246,10 @@ PFN_xrPassthroughLayerSetStyleFB		ext_xrPassthroughLayerSetStyleFB		= nullptr;
 PFN_xrCreateGeometryInstanceFB			ext_xrCreateGeometryInstanceFB			= nullptr;
 PFN_xrDestroyGeometryInstanceFB			ext_xrDestroyGeometryInstanceFB			= nullptr;
 PFN_xrGeometryInstanceSetTransformFB	ext_xrGeometryInstanceSetTransformFB	= nullptr;
-
+#ifdef _MSC_VER
+PFN_xrConvertWin32PerformanceCounterToTimeKHR ext_xrConvertWin32PerformanceCounterToTimeKHR = nullptr;
+#endif
+PFN_xrConvertTimespecTimeToTimeKHR		ext_xrConvertTimespecTimeToTimeKHR		= nullptr;
 
 
 struct app_transform_buffer_t
@@ -392,8 +399,13 @@ set<std::string> OpenXR::GetRequiredExtensions() const
 	set<std::string> str;
 	str.insert(GetOpenXRGraphicsAPIExtensionName());
 	// Debug utils for extra info
+#ifdef _MSC_VER
+	str.insert("XR_KHR_win32_convert_performance_counter_time");
+#endif
+	str.insert(XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME);
 	return str;
 }
+
 set<std::string> OpenXR::GetOptionalExtensions() const
 {
 	set<std::string> str;
@@ -547,7 +559,7 @@ bool OpenXR::internalInitInstance()
 		#define GET_OPENXR_EXT_FUNCTION(name) {\
 			XrResult result = xrGetInstanceProcAddr(xr_instance, #name, (PFN_xrVoidFunction*)(&ext_##name));\
 			if (XR_FAILED(result)) {\
-			  TELEPORT_INTERNAL_COUT("Failed to obtain the function pointer for {0}.\n",#name);\
+			  TELEPORT_INTERNAL_CERR("Failed to obtain the function pointer for {0}.\n",#name);\
 			}\
 		}
 		GET_OPENXR_EXT_FUNCTION(xrCreateDebugUtilsMessengerEXT);
@@ -564,8 +576,11 @@ bool OpenXR::internalInitInstance()
 		GET_OPENXR_EXT_FUNCTION(xrCreateGeometryInstanceFB);
 		GET_OPENXR_EXT_FUNCTION(xrDestroyGeometryInstanceFB	);
 		GET_OPENXR_EXT_FUNCTION(xrGeometryInstanceSetTransformFB);
+#ifdef _MSC_VER
+		GET_OPENXR_EXT_FUNCTION(xrConvertWin32PerformanceCounterToTimeKHR);
+#endif
+		GET_OPENXR_EXT_FUNCTION(xrConvertTimespecTimeToTimeKHR);
 
-		
 		// Set up a really verbose debug log! Great for dev, but turn this off or
 		// down for final builds. WMR doesn't produce much output here, but it
 		// may be more useful for other runtimes?
@@ -789,21 +804,23 @@ void OpenXR::Tick()
 			config.options.passThrough=IsPassthroughActive();
 		}
 	}
-	if(config.enable_vr)
-	if(initInstanceThreadState==ThreadState::INACTIVE&&!xr_instance)
+	if (config.enable_vr)
 	{
-		initInstanceThreadState=ThreadState::STARTING;
-		initInstanceThread = std::thread(&OpenXR::threadedInitInstance, this);
-	}
-	else if(initInstanceThreadState==ThreadState::FINISHED)
-	{
-		initInstanceThread.join();
-		initInstanceThreadState=ThreadState::INACTIVE;
-	}
-	else if (HaveXRDevice())
-	{
-		PollEvents();
-		PollActions();
+		if (initInstanceThreadState == ThreadState::INACTIVE && !xr_instance)
+		{
+			initInstanceThreadState = ThreadState::STARTING;
+			initInstanceThread = std::thread(&OpenXR::threadedInitInstance, this);
+		}
+		else if (initInstanceThreadState == ThreadState::FINISHED)
+		{
+			initInstanceThread.join();
+			initInstanceThreadState = ThreadState::INACTIVE;
+		}
+		else if (HaveXRDevice())
+		{
+			PollEvents();
+			PollActions();
+		}
 	}
 }
 
@@ -1468,7 +1485,51 @@ void app_update_predicted()
 {
 }
 
-void OpenXR::RenderLayerView(crossplatform::GraphicsDeviceContext &deviceContext, std::vector<XrCompositionLayerProjectionView>& projection_views,
+double ConvertToClientTimeS(XrInstance instance,XrTime xrTime)
+{
+	ClientTime &clientTime=ClientTime::GetInstance();
+	if (!timeInitialized)
+	{
+		long long clientTimeNowNs = clientTime.GetTimeNs();
+#ifdef _MSC_VER
+		LARGE_INTEGER performanceCounter;
+		QueryPerformanceCounter(&performanceCounter);
+		XrTime xrTimeNowNs;
+		// What is the offset between the client time and the xr time?
+		// we don't know the Xr time's epoch, but we can convert from Windows perf counter.
+		XrResult res=ext_xrConvertWin32PerformanceCounterToTimeKHR(
+			instance,
+			&performanceCounter,
+			&xrTimeNowNs);
+		if (!XR_UNQUALIFIED_SUCCESS(res))
+		{
+			TELEPORT_CERR<<"Failed to initialize time.\n";
+		}
+		long long txr=(long long)(xrTimeNowNs);
+		offset_xr_to_client_ns = clientTimeNowNs - txr;
+#else
+		timespec timeSp;
+		clock_gettime(CLOCK_MONOTONIC, &timeSp);
+		XrTime xrTimeNowNs;
+		XrResult res = ext_xrConvertTimespecTimeToTimeKHR(
+			instance,
+			&timeSp,
+			&xrTimeNowNs);
+		if (!XR_UNQUALIFIED_SUCCESS(res))
+		{
+			TELEPORT_CERR << "Failed to initialize time.\n";
+		}
+		long long txr = (long long)(xrTimeNowNs);
+		offset_xr_to_client_ns = clientTimeNowNs - txr;
+#endif
+		timeInitialized = true;
+	}
+	long long clientTimeNs=(long long)(xrTime)+offset_xr_to_client_ns;
+	double clientTimeS=clientTimeNs*1e-9;
+	return clientTimeS;
+}
+
+void OpenXR::RenderLayerView(crossplatform::GraphicsDeviceContext &deviceContext,XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views,
 	swapchain_surfdata_t& surface, crossplatform::RenderDelegate& renderDelegate)
 {
 	if (projection_views.empty())
@@ -1508,6 +1569,8 @@ void OpenXR::RenderLayerView(crossplatform::GraphicsDeviceContext &deviceContext
 	{
 		SIMUL_BREAK("");
 	}
+	deviceContext.predictedDisplayTimeS = ConvertToClientTimeS(xr_instance,predictedTime);
+	
 	// And now that we're set up, pass on the rest of our rendering to the application
 	renderDelegate(deviceContext);
 
@@ -1636,7 +1699,7 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 
 		renderPlatform->BeginEvent(deviceContext, "Main View");
 		// Call the rendering callback with our view and swapchain info
-		RenderLayerView(deviceContext, projection_views, main_view_xr_swapchain.surface_data[img_id], renderDelegate);
+		RenderLayerView(deviceContext, predictedTime,projection_views, main_view_xr_swapchain.surface_data[img_id], renderDelegate);
 		renderPlatform->EndEvent(deviceContext);
 	
 		FinishDeviceContext(MAIN_SWAPCHAIN, img_id);

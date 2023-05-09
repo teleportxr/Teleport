@@ -46,6 +46,7 @@ namespace teleport
 				, uint32_t connectionTimeout
 				, uint64_t sessionid
 				, GetUnixTimestampFn getUnixTimestamp
+				, int64_t startTimestamp_utc_unix_ns
 				, bool use_ssl);
 			void setNodePosePath(avs::uid nodeID, const std::string &regexPosePath);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);

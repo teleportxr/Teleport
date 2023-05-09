@@ -64,8 +64,9 @@ namespace clientrender
 		void NotifyModifiedMaterials(std::shared_ptr<clientrender::Node> node);
 		//Tick the node manager along, and remove any nodes that have been invisible for too long.
 		//	deltaTime : Milliseconds since last update.
-		void Update(float deltaTime);
-
+		void Update( float deltaTime);
+		// For rendering
+		void UpdateExtrapolatedPositions(double serverTimeS);
 		//Clear node manager of all nodes.
 		void Clear();
 		//Clear, and free memory of, all resources; bar from resources on the list.

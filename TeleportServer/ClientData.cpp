@@ -15,6 +15,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	,uint32_t connectionTimeout
 	,uint64_t session_id
 	,GetUnixTimestampFn getUnixTimestamp
+	,int64_t startTimestamp_utc_unix_ns
 	,bool use_ssl)
 {
 	clientMessaging->ConfirmSessionStarted();
@@ -57,7 +58,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	setupCommand.control_model = serverSettings.controlModel;
-	setupCommand.startTimestamp_utc_unix_ms = getUnixTimestamp();
+	setupCommand.startTimestamp_utc_unix_ns = startTimestamp_utc_unix_ns;
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings.backgroundMode;
 	setupCommand.backgroundColour = clientSettings.backgroundColour;

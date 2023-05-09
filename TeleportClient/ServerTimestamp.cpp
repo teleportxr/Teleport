@@ -1,26 +1,29 @@
 #include "ServerTimestamp.h"
 
-namespace teleport
+using namespace teleport;
+
+using namespace client;
+	
+uint64_t ServerTimestamp::lastReceivedTimestampUTCUnixNs;
+double ServerTimestamp::currentTimestampUTCUnixNs;
+
+void ServerTimestamp::setLastReceivedTimestampUTCUnixMs(uint64_t value)
 {
-	namespace client
-	{
-		uint64_t ServerTimestamp::lastReceivedTimestampUTCUnixMs;
-		double ServerTimestamp::currentTimestampUTCUnixMs;
+	lastReceivedTimestampUTCUnixNs = value;
+	currentTimestampUTCUnixNs = static_cast<double>(lastReceivedTimestampUTCUnixNs);
+}
 
-		void ServerTimestamp::setLastReceivedTimestampUTCUnixMs(uint64_t value)
-		{
-			lastReceivedTimestampUTCUnixMs = value;
-			currentTimestampUTCUnixMs = static_cast<double>(lastReceivedTimestampUTCUnixMs);
-		}
+double ServerTimestamp::getCurrentTimestampUTCUnixNs()
+{
+	return currentTimestampUTCUnixNs;
+}
 
-		double ServerTimestamp::getCurrentTimestampUTCUnixMs()
-		{
-			return currentTimestampUTCUnixMs;
-		}
+double ServerTimestamp::getCurrentTimestampUTCUnixS()
+{
+	return double(currentTimestampUTCUnixNs)*0.000000001;
+}
 
-		void ServerTimestamp::tick(double deltaTime_s)
-		{
-			currentTimestampUTCUnixMs += deltaTime_s*1000.0;
-		}
-	}
+void ServerTimestamp::tick(double deltaTime_s)
+{
+	currentTimestampUTCUnixNs += deltaTime_s*1000000000.0;
 }

@@ -82,7 +82,7 @@ namespace clientrender
 		}
 		//Clear any resources that have not been used longer than their expiry time.
 		//	timeElapsed_s : Delta time in seconds.
-		void Update(float timeElapsed_s)
+		void Update( float timeElapsed_s)
 		{
 			mNodeManager->Update(timeElapsed_s);
 			mIndexBufferManager.Update(timeElapsed_s);

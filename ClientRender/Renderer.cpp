@@ -31,6 +31,7 @@
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
+#include "TeleportClient/ClientTime.h"
 
 
 avs::Timestamp clientrender::platformStartTimestamp ;
@@ -682,7 +683,7 @@ void Renderer::Update(double timestamp_ms)
 	teleport::client::ServerTimestamp::tick(timeElapsed_s);
 	for(auto i:instanceRenderers)
 	{
-		i.second->geometryCache.Update(static_cast<float>(timeElapsed_s));
+		i.second->geometryCache.Update( static_cast<float>(timeElapsed_s));
 		i.second->resourceCreator.Update(static_cast<float>(timeElapsed_s));
 
 		if(i.first!=0)
@@ -1078,6 +1079,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
+
+	// For desktop, we will use ClientTime for the predicted display time.
+	deviceContext.predictedDisplayTimeS = client::ClientTime::GetInstance().GetTimeS();
 	//deviceContext.viewStruct.Init();
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);

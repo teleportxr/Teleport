@@ -7,6 +7,7 @@
 #include <sys/system_properties.h>
 #include <vulkan/vulkan.hpp>
 #include <openxr/openxr.h>
+#define XR_USE_TIMESPEC 1
 #include <openxr/openxr_platform.h>
 #include <openxr/openxr_oculus.h>
 #include <openxr/openxr_oculus_helpers.h>
@@ -673,6 +674,7 @@ std::set<std::string> OpenXR::GetRequiredExtensions() const
 	str.insert(XR_KHR_ANDROID_THREAD_SETTINGS_EXTENSION_NAME);
 	str.insert(XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME);
 	str.insert(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
+	str.insert(XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME);
 	//str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
 	return str;
 }
