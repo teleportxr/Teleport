@@ -110,8 +110,18 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, lastReceivedMovement.angularVelocityAxis);
 		newRotation *= deltaRotation;
 	}
-
-	UpdateModelMatrix(newTranslation, newRotation, transform.m_Scale);
+	if (!smoothingInitialized)
+	{
+		smoothedTransform.m_Translation =  newTranslation;
+		smoothingInitialized = true;
+	}
+	else
+	{
+		static float smoothing_rate = 1.0f;;
+		float interp= 1.0f - 1.0f/(1.0f+smoothing_rate* 0.01688f);
+		smoothedTransform.m_Translation = lerp(smoothedTransform.m_Translation, newTranslation, interp);
+	}
+	UpdateModelMatrix(smoothedTransform.m_Translation, newRotation, transform.m_Scale);
 }
 
 void Node::UpdateExtrapolatedPositions(double serverTimeS)

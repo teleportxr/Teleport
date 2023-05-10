@@ -175,6 +175,8 @@ namespace clientrender
 		std::vector<std::shared_ptr<Material>> materials;
 		vec4 lightmapScaleOffset;
 		Transform localTransform;
+		Transform smoothedTransform;
+		bool smoothingInitialized = false;
 
 		std::vector<avs::uid> childIDs;
 
