@@ -190,6 +190,7 @@ namespace teleport
 
 			// Generic target
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
+			const avs::DisplayInfo& getDisplayInfo() const;
 		private:
 
 			// The following MIGHT be moved later to a separate Pipeline class:
@@ -216,6 +217,7 @@ namespace teleport
 			static bool asyncNetworkDataProcessingFailed;
 			avs::uid clientID=0;
 			std::string clientIP;
+			avs::DisplayInfo displayInfo;
 			bool initialized = false;
 			bool startingSession=false;
 			float timeStartingSession=0.0f;

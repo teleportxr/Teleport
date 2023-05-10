@@ -497,6 +497,26 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 
 	return true;
 }
+TELEPORT_EXPORT bool Client_GetClientDisplayInfo(avs::uid clientID, avs::DisplayInfo& displayInfo)
+{
+	auto client = clientManager.GetClient(clientID);
+	static bool failed = false;
+	if (!client)
+	{
+		TELEPORT_CERR << "Failed to retrieve network stats of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return false;
+	}
+
+	if (failed)
+	{
+		TELEPORT_COUT << "Retrieved network stats of Client " << clientID << ".\n";
+		failed = false;
+	}
+	// Thread safe
+	displayInfo=client->clientMessaging->getDisplayInfo();
+
+	return true;
+}
 
 TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::EncoderStats& stats)
 {

@@ -177,6 +177,7 @@ namespace clientrender
 		Transform localTransform;
 		Transform smoothedTransform;
 		bool smoothingInitialized = false;
+		bool smoothingEnabled = false;
 
 		std::vector<avs::uid> childIDs;
 

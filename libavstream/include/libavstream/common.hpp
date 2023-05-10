@@ -290,6 +290,7 @@ namespace avs
 	{
 		uint32_t width;		//!< Width of the display.
 		uint32_t height;	//!< Height of the display.
+		float framerate;	//!< Measured recent framerate.
 	} AVS_PACKED;
 	
 	//! Information on the configuration of a video stream.

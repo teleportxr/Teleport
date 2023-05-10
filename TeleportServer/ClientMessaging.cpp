@@ -581,6 +581,12 @@ void ClientMessaging::receiveDisplayInfo(const std::vector<uint8_t> &packet)
 	CameraInfo& cameraInfo = captureComponentDelegates.getClientCameraInfo();
 	cameraInfo.width = static_cast<float>(displayInfoMessage.displayInfo.width);
 	cameraInfo.height = static_cast<float>(displayInfoMessage.displayInfo.height);
+	displayInfo =displayInfoMessage.displayInfo;
+}
+
+const avs::DisplayInfo& ClientMessaging::getDisplayInfo() const
+{
+	return displayInfo;
 }
 
 void ClientMessaging::receiveResourceRequest(const std::vector<uint8_t> &packet)
