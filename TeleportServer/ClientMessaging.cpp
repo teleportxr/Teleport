@@ -376,7 +376,11 @@ void ClientMessaging::ensureStreamingPipeline()
 void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 {
 	size_t handShakeSize = sizeof(teleport::core::Handshake);
-
+	if (packet.size() < handShakeSize)
+	{
+		TELEPORT_INTERNAL_CERR("Bad handshake size, IP {1}  .\n", clientIP);
+		return;
+	}
 	memcpy(&handshake, packet.data(), handShakeSize);
 
 	clientNetworkContext.axesStandard = handshake.axesStandard;
@@ -387,6 +391,11 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	cameraInfo.fov = handshake.FOV;
 	cameraInfo.isVR = handshake.isVR;
 
+	if (packet.size() !=handShakeSize+sizeof(avs::uid)* handshake.resourceCount)
+	{
+		TELEPORT_INTERNAL_CERR("Bad handshake size, IP {1}  .\n", clientIP);
+		return;
+	}
 	//Extract list of resources the client has.
 	std::vector<avs::uid> clientResources(handshake.resourceCount);
 	memcpy(clientResources.data(), packet.data() + handShakeSize, sizeof(avs::uid)* handshake.resourceCount);
