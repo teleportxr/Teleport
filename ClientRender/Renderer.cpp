@@ -679,7 +679,8 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 void Renderer::Update(double timestamp_ms)
 {
 	double timeElapsed_s = (timestamp_ms - previousTimestamp) / 1000.0f;//ms to seconds
-
+	if(timeElapsed_s>0.0)
+		framerate=1.0f/(float)timeElapsed_s;
 	teleport::client::ServerTimestamp::tick(timeElapsed_s);
 	for(auto i:instanceRenderers)
 	{
@@ -805,7 +806,8 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	if (sessionClient->IsConnected())
 	{
 		auto instanceRenderer=GetInstanceRenderer(server_uid);
-		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())};
+		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())
+										,framerate};
 		const auto &nodePoses=renderState.openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
 		
 		if (renderState.openXR)

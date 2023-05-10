@@ -103,17 +103,20 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 	if (length(v) > 0)
 	{
 		newTranslation +=v * (float)time_offset;
+		smoothingEnabled = true;
 	}
 	clientrender::quat newRotation = lastReceivedMovement.rotation;
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
 		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, lastReceivedMovement.angularVelocityAxis);
 		newRotation *= deltaRotation;
+		smoothingEnabled = true;
 	}
-	if (!smoothingInitialized)
+	if (!smoothingInitialized||!smoothingEnabled)
 	{
 		smoothedTransform.m_Translation =  newTranslation;
-		smoothingInitialized = true;
+		if(smoothingEnabled)
+			smoothingInitialized = true;
 	}
 	else
 	{
