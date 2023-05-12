@@ -486,29 +486,30 @@ namespace avs
 		std::queue<T> m_data;
 	};
 	
-	enum class StreamingConnectionState
+	enum class StreamingConnectionState :uint8_t
 	{
-		NEW=0,
+		UNINITIALIZED = 0,
+		NEW_UNCONNECTED,
 		CONNECTING,
 		CONNECTED,
 		DISCONNECTED,
 		FAILED,
 		CLOSED,
-		NONE
+		ERROR_STATE
 	};
 	inline const char *stringOf(StreamingConnectionState state)
 	{
-	switch(state)
-	{
-		case StreamingConnectionState::NEW				:return "NEW";
-		case StreamingConnectionState::CONNECTING		:return "CONNECTING";
-		case StreamingConnectionState::CONNECTED		:return "CONNECTED";
-		case StreamingConnectionState::DISCONNECTED		:return "DISCONNECTED";
-		case StreamingConnectionState::FAILED			:return "FAILED";
-		case StreamingConnectionState::CLOSED			:return "CLOSED";
-		case StreamingConnectionState::NONE				:return "NONE";
-		default:
-		return "INVALID ";
-	};
+		switch(state)
+		{
+			case StreamingConnectionState::NEW_UNCONNECTED	:return "NEW_UNCONNECTED";
+			case StreamingConnectionState::CONNECTING		:return "CONNECTING";
+			case StreamingConnectionState::CONNECTED		:return "CONNECTED";
+			case StreamingConnectionState::DISCONNECTED		:return "DISCONNECTED";
+			case StreamingConnectionState::FAILED			:return "FAILED";
+			case StreamingConnectionState::CLOSED			:return "CLOSED";
+			case StreamingConnectionState::ERROR_STATE		:return "ERROR_STATE";
+			default:
+			return "INVALID ";
+		};
 	};
 } // avs

@@ -79,7 +79,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
 	//TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs()));
 }
-
+#include "TeleportClient/basic_linear_algebra.h"
 // Here we will extrapolate the transform based on the last received movement update.
 void Node::TickExtrapolatedTransform(double serverTimeS)
 {
@@ -123,6 +123,7 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 		static float smoothing_rate = 1.0f;;
 		float interp= 1.0f - 1.0f/(1.0f+smoothing_rate* 0.01688f);
 		smoothedTransform.m_Translation = lerp(smoothedTransform.m_Translation, newTranslation, interp);
+		smoothedTransform.m_Rotation	= clientrender::quat::Slerp(smoothedTransform.m_Rotation, newRotation, interp);
 	}
 	UpdateModelMatrix(smoothedTransform.m_Translation, newRotation, transform.m_Scale);
 }

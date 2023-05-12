@@ -9,6 +9,7 @@
 #include <map>
 #include <nlohmann/json.hpp>
 #include "TeleportServer/UnityPlugin/Export.h"
+#include "TeleportCore/CommonNetworking.h"
 
 namespace rtc
 {
@@ -20,14 +21,6 @@ namespace teleport
 {
 	namespace server
 	{
-		enum class SignalingState
-		{
-			START,			// Received a WebSocket connection.
-			REQUESTED,		// Got an initial connection request message
-			ACCEPTED,		// Accepted the connection request. Create a ClientData for this client if not already extant.
-			STREAMING,		// Completed initial signaling, now using the signaling socket for streaming setup.
-			INVALID
-		};
 		struct SignalingClient
 		{
 			~SignalingClient();
@@ -37,7 +30,7 @@ namespace teleport
 			std::vector<std::string> messagesReceived;
 			std::queue<std::string> messagesToPassOn;
 			std::queue<std::vector<uint8_t>> binaryMessagesReceived;
-			SignalingState signalingState = SignalingState::START;
+			core::SignalingState signalingState = core::SignalingState::START;
 		};
 		//! Signaling service for establishing connections with clients.
 		class SignalingService

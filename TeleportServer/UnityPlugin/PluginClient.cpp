@@ -544,26 +544,22 @@ void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dat
 	processAudioInput(clientID, data, dataSize);
 }
 
-TELEPORT_EXPORT avs::ConnectionState Client_GetStreamingState(avs::uid clientID)
+
+TELEPORT_EXPORT bool Client_GetNetworkState(avs::uid clientID,core::ClientNetworkState &st)
 {
 	auto client = clientManager.GetClient(clientID);
 	if (!client)
 	{
-		TELEPORT_CERR << "Failed to retrieve connection state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return avs::ConnectionState::ERROR_STATE;
+		auto c= clientManager.signalingService.getSignalingClient(clientID);
+		if (!c)
+		{
+			TELEPORT_CERR << "Failed to retrieve state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+			return false;
+		}
+		st = {};
+		st.signalingState = c->signalingState;
+		return true;
 	}
-	if(!client->clientMessaging)
-		return avs::ConnectionState::ERROR_STATE;
-	return client->clientMessaging->getConnectionState();
-}
-
-TELEPORT_EXPORT SignalingState Client_GetSignalingState(avs::uid clientID)
-{
-	auto client = clientManager.signalingService.getSignalingClient(clientID);
-	if (!client)
-	{
-		TELEPORT_CERR << "Failed to retrieve connection state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return SignalingState::INVALID;
-	}
-	return client->signalingState;
+	st = client->clientMessaging->getClientNetworkState();
+	return true;
 }

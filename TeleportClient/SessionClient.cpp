@@ -275,7 +275,7 @@ ConnectionStatus SessionClient::GetConnectionStatus() const
 avs::StreamingConnectionState SessionClient::GetStreamingConnectionState() const
 {
 	if(!clientPipeline.source)
-		return avs::StreamingConnectionState::NONE;
+		return avs::StreamingConnectionState::ERROR_STATE;
 	return clientPipeline.source->GetStreamingConnectionState();
 }
 
@@ -360,6 +360,9 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 			break;
 		case teleport::core::CommandPayloadType::AssignNodePosePath:
 			ReceiveAssignNodePosePathCommand(packet);
+			break;
+		case teleport::core::CommandPayloadType::PingForLatency:
+			ReceivePingForLatencyCommand(packet);
 			break;
 		default:
 			TELEPORT_CERR << "Invalid CommandPayloadType.\n";
@@ -957,6 +960,32 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> 
 	nodePosePaths[assignNodePosePathCommand.nodeID] = str;
 	TELEPORT_INTERNAL_COUT("Received pose for node {0}: {1}", assignNodePosePathCommand.nodeID, str);
 	mCommandInterface->AssignNodePosePath(assignNodePosePathCommand,str);
+}
+
+void SessionClient::ReceivePingForLatencyCommand(const std::vector<uint8_t>& packet)
+{
+	teleport::core::PingForLatencyCommand cmd;
+	size_t commandSize = sizeof(cmd);
+	if (packet.size() !=commandSize)
+	{
+		TELEPORT_CERR << "Bad packet." << std::endl;
+		return;
+	}
+	memcpy(static_cast<void*>(&cmd), packet.data(), commandSize);
+	cmd.unix_time_ns;
+	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	int64_t diff_ns = unix_time_ns - cmd.unix_time_ns;
+	latency_milliseconds=float(double(diff_ns) * 0.000001);
+
+	core::PongForLatencyMessage pongForLatencyMessage;
+	pongForLatencyMessage.unix_time_ns = unix_time_ns;
+	pongForLatencyMessage.server_to_client_latency_ns = diff_ns;
+	SendMessageToServer(&pongForLatencyMessage, sizeof(pongForLatencyMessage));
+}
+
+float SessionClient::GetLatencyMs() const
+{
+	return latency_milliseconds;
 }
 
 void SessionClient::ReceiveTextCommand(const std::vector<uint8_t> &packet)

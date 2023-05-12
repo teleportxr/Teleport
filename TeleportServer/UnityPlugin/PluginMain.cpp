@@ -307,6 +307,12 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 	return result;
 }
 
+TELEPORT_EXPORT bool Teleport_GetSessionState(teleport::server::SessionState& sessionState)
+{
+	sessionState=clientManager.getSessionState();
+	return  true;
+}
+
 TELEPORT_EXPORT void Teleport_Shutdown()
 {
 	std::lock_guard<std::mutex> videoLock(videoMutex);
@@ -533,7 +539,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParam
 	videoConfig.videoCodec = serverSettings.videoCodec;
 	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
 
-	client->clientMessaging->sendCommand2(cmd);
+	client->clientMessaging->sendReconfigureVideoCommand(cmd);
 }
 
 TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData, size_t tagDataSize)

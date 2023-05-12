@@ -249,6 +249,7 @@ namespace teleport
 		public:
 			OpenXR(const char *app_name);
 			virtual ~OpenXR();
+			void ClearServer(avs::uid server_uid);
 			bool InitInstance();
 			void SetRenderPlatform(platform::crossplatform::RenderPlatform* renderPlatform);
 			void Shutdown();

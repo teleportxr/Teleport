@@ -18,6 +18,13 @@ namespace teleport
 {
 	namespace server
 	{
+#pragma pack(push)
+#pragma pack(1)
+		struct SessionState
+		{
+			uint64_t sessionId = 0;
+		} AVS_PACKED;
+#pragma pack(pop)
 		class ClientMessaging;
 		class ClientData;
 		//! Container for the client-specific data objects.
@@ -51,7 +58,13 @@ namespace teleport
 			}
 
 			SignalingService signalingService;
+
+			const SessionState &getSessionState() const
+			{
+				return sessionState;
+			}
 		private:
+			SessionState sessionState;
 			void startStreaming(avs::uid clientID);
 			void handleStoppedClients();
 			void receiveMessages();
@@ -60,7 +73,6 @@ namespace teleport
 			std::set<avs::uid> clientIDs;
 			std::atomic_bool mAsyncNetworkDataProcessingFailed = false;
 			bool mInitialized = false;
-			uint64_t sessionID=0;
 			int64_t startTimestamp_utc_unix_ns = 0;
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
 		public:

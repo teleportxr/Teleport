@@ -101,7 +101,6 @@ namespace teleport
 			avs::InputId inputId;
 			avs::InputType inputType;
 		} AVS_PACKED;
-#pragma pack(pop)
 
 		struct ServerNetworkSettings
 		{
@@ -127,5 +126,7 @@ namespace teleport
 			int32_t diffuseCubemapSize;
 			int32_t lightCubemapSize;
 		} AVS_PACKED;
+
+#pragma pack(pop)
 	}
 }

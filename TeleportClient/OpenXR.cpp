@@ -930,6 +930,7 @@ void OpenXR::PollActions()
 		}
 	}
 }
+
 void OpenXR::RecordCurrentBindings()
 {
 	activeInteractionProfilePaths.clear();
@@ -1050,6 +1051,11 @@ std::string OpenXR::GetBoundPath(const ActionDefinition &def) const
 	return "";
 }
 
+void OpenXR::ClearServer(avs::uid server_uid)
+{
+	if(openXRServers.find(server_uid)!=openXRServers.end())
+		openXRServers.erase(server_uid);
+}
 // An InputMapping is created for each InputDefinition that the server has sent.
 // It defines which xrActions are linked to which inputs needed by the server.
 // The mappings are initialized on connection and can be changed at any time by the server.

@@ -264,9 +264,10 @@ template<typename u,class T> void ResourceManager<u,T>::Clear()
 	{
 		FreeResource(*data.resource);
 	}
-
+	resourceIDs.clear();
 	cachedItems.clear();
 	cacheChecksum++;
+	idListChecksum++;
 }
 
 template<typename u,class T> void ResourceManager<u,T>::ClearAllButExcluded(std::vector<u>& excludeList)

@@ -852,6 +852,7 @@ void InstanceRenderer::ClearGeometryResources()
 {
 	geometryCache.ClearAll();
 	resourceCreator.Clear();
+	renderState.openXR->ClearServer(server_uid);
 }
 
 void InstanceRenderer::OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions_)

@@ -73,20 +73,38 @@ namespace avs
 #endif
 	};
 }
+avs::StreamingConnectionState ConvertConnectionState(rtc::PeerConnection::State rtcState)
+{
+	switch (rtcState)
+	{
+	case rtc::PeerConnection::State::New:
+		return avs::StreamingConnectionState::NEW_UNCONNECTED;
+	case rtc::PeerConnection::State::Connecting:
+		return avs::StreamingConnectionState::CONNECTING;
+	case rtc::PeerConnection::State::Connected:
+		return avs::StreamingConnectionState::CONNECTED;
+	case rtc::PeerConnection::State::Disconnected:
+		return avs::StreamingConnectionState::DISCONNECTED;
+	case rtc::PeerConnection::State::Failed:
+		return avs::StreamingConnectionState::FAILED;
+	case rtc::PeerConnection::State::Closed:
+		return avs::StreamingConnectionState::CLOSED;
+	default:
+		return avs::StreamingConnectionState::ERROR_STATE;
+	}
+}
 
 static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Configuration& config,
 avs::WebRtcNetworkSource *src)
-	//std::function<void(const std::string&)> sendMessage,
-	//std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannel,std::string id)
 {
 	auto pc = std::make_shared<rtc::PeerConnection>(config);
 	
-	src->SetStreamingConnectionState(avs::StreamingConnectionState::NEW);
+	src->SetStreamingConnectionState(avs::StreamingConnectionState::NEW_UNCONNECTED);
 	pc->onStateChange(
 		[src](rtc::PeerConnection::State state)
 		{
 			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
-			src->SetStreamingConnectionState((avs::StreamingConnectionState) state);
+			src->SetStreamingConnectionState(ConvertConnectionState(state));
 		});
 
 	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
@@ -333,7 +351,7 @@ Result WebRtcNetworkSource::deconfigure()
 	{
 		return Result::Node_NotConfigured;
 	}
-	webRtcState=StreamingConnectionState::NEW;
+	webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 	setNumOutputSlots(0);
 	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
 	m_data->dataChannels.clear();
@@ -493,7 +511,7 @@ void WebRtcNetworkSource::SendConfigMessage(const std::string& str)
 void WebRtcNetworkSource::SetStreamingConnectionState(StreamingConnectionState s)
 {
 	webRtcState=s;
-	if(webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW)
+	if(webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW_UNCONNECTED)
 	{
 		offer="";
 	}

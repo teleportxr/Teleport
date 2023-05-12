@@ -230,8 +230,8 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 		TELEPORT_COUT << "Received connection request from " << ipAddr << " identifying as client " << clientID << " .\n";
 
 		//Skip clients we have already added.
-		if (signalingClient->signalingState == SignalingState::START)
-			signalingClient->signalingState = SignalingState::REQUESTED;
+		if (signalingClient->signalingState == core::SignalingState::START)
+			signalingClient->signalingState = core::SignalingState::REQUESTED;
 		// if signalingState is START, we should not have a client...
 		if (clientManager.hasClient(clientID))
 		{
@@ -239,13 +239,13 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			// Apparently the CLIENT thinks they've disconnected.
 			// The client might, as far as we know, have lost the information it needs to continue the connection.
 			// THerefore we should resend everything required.
-			signalingClient->signalingState = SignalingState::STREAMING;
+			signalingClient->signalingState = core::SignalingState::STREAMING;
 			TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them." << std::endl;
 			// It may be just that the connection request was already in flight when we accepted its predecessor.
 			sendResponseToClient(clientID);
 			return;
 		}
-		if (signalingClient->signalingState != SignalingState::REQUESTED)
+		if (signalingClient->signalingState != core::SignalingState::REQUESTED)
 			return;
 		//Ignore connections from clients with the wrong IP, if a desired IP has been set.
 		if (desiredIP.length() != 0)
@@ -253,12 +253,12 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			//Create new wide-string with clientIP, and add new client if there is no difference between the new client's IP and the desired IP.
 			if (desiredIP.compare(0, ipAddr.size(), { ipAddr.begin(), ipAddr.end() }) == 0)
 			{
-				signalingClient->signalingState = SignalingState::ACCEPTED;
+				signalingClient->signalingState = core::SignalingState::ACCEPTED;
 			}
 		}
 		else
 		{
-			signalingClient->signalingState = SignalingState::ACCEPTED;
+			signalingClient->signalingState = core::SignalingState::ACCEPTED;
 		}
 	}
 }

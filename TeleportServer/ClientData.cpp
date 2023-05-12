@@ -18,7 +18,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	,int64_t startTimestamp_utc_unix_ns
 	,bool use_ssl)
 {
-	clientMessaging->ConfirmSessionStarted();
 	CasterEncoderSettings encoderSettings{};
 
 	encoderSettings.frameWidth = clientSettings.videoTextureSize[0];
@@ -103,15 +102,12 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings.shadowmapSize;
-	clientMessaging->sendSignalingCommand(setupCommand);
 
 	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
 	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
-	clientMessaging->sendSignalingCommand(std::move(setupLightingCommand), global_illumination_texture_uids);
 
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
-	
- 	clientMessaging->sendSignalingCommand(setupInputsCommand, inputDefinitions);
+	clientMessaging->sendSetupCommand(setupCommand, setupLightingCommand, global_illumination_texture_uids, setupInputsCommand, inputDefinitions);
 
 	connectionState = CONNECTED;
 
@@ -186,9 +182,8 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 	{
 		teleport::core::SetupLightingCommand setupLightingCommand;
 		setupLightingCommand.num_gi_textures=(uint8_t)num;
-		clientMessaging->sendCommand2(std::move(setupLightingCommand), global_illumination_texture_uids);
+		clientMessaging->sendSetupLightingCommand(setupLightingCommand, global_illumination_texture_uids);
 	}
-	
 }
 
 

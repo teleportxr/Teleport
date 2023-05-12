@@ -714,6 +714,42 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
+
+
+	static vec4 white(1.f, 1.f, 1.f, 1.f);
+	auto status = sessionClient->GetConnectionStatus();
+	auto streamingStatus = sessionClient->GetStreamingConnectionState();
+
+	const auto& setup = sessionClient->GetSetupCommand();
+	ImGui::BeginTable("serverstats", 2);
+	ImGui::TableSetupColumn("name1", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+	ImGui::TableSetupColumn("val11", ImGuiTableColumnFlags_WidthStretch, 400.0f);
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text("Server");
+	ImGui::TableNextColumn();
+	ImGui::Text(fmt::format("{0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text("Server Session Id");
+	ImGui::TableNextColumn();
+	ImGui::Text("%llu", setup.session_id, white);
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text("Session Status");
+	ImGui::TableNextColumn();
+	ImGui::Text(teleport::client::StringOf(status), white);
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text("Streaming Status");
+	ImGui::TableNextColumn();
+	ImGui::Text( avs::stringOf(streamingStatus), white);
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text("Latency");
+	ImGui::TableNextColumn();
+	ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
+	ImGui::EndTable();
 }
 
 void Gui::LinePrint(const std::string& str, const float* clr)
@@ -1469,23 +1505,25 @@ void Gui::ListBookmarks()
 			else if (!ImGui::IsMouseDown(0) && selected_url == url)
 			{
 				current_url = url;
-				memcpy(url_buffer, current_url.c_str(), std::min((size_t)499, current_url.size()));
+				// copy, including null terminator.
+				memcpy(url_buffer, current_url.c_str(), std::min((size_t)499, current_url.size()+1));
 				connectHandler(url);
 				show_bookmarks = false;
 			}
 			ImGui::TreePop();
 		}
 	};
+	for (int i = 0; i < bookmarks.size(); i++)
+	{
+		const client::Bookmark& b = bookmarks[i];
+		BookmarkEntry(b.url, b.title);
+	}
+	ImGui::Separator();
 	const std::vector<std::string>& recent = config.GetRecent();
 	for (int i = 0; i < recent.size(); i++)
 	{
 		const std::string& r = recent[i];
 		BookmarkEntry(r, r);
-	}
-	for (int i = 0; i < bookmarks.size(); i++)
-	{
-		const client::Bookmark& b = bookmarks[i];
-		BookmarkEntry(b.url, b.title);
 	}
 }
 
@@ -1613,7 +1651,7 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 	auto& config = client::Config::GetInstance();
 	if(config.dev_mode)
 	{
-		ImVec2 pos = { vp.w - 300.f ,100.f };
+		ImVec2 pos = { vp.w - 400.f ,100.f };
 		ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
 		ImGui::SetNextWindowPos(pos);
 		ImGuiBegin("dev_overlay",0,window_flags);
@@ -1623,8 +1661,30 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 			auto streamingStatus = sessionClient->GetStreamingConnectionState();
 		
 			vec4 white(1.f, 1.f, 1.f, 1.f);
-			LinePrint(fmt::format("  Session Status: {0}",teleport::client::StringOf(status)),white);
-			LinePrint(fmt::format("Streaming Status: {0}",avs::stringOf(streamingStatus)),white);
+			ImGui::BeginTable("serverstats", 2);
+			ImGui::TableSetupColumn("name2", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+			ImGui::TableSetupColumn("val21", ImGuiTableColumnFlags_WidthStretch);
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("Session Id");
+			ImGui::TableNextColumn();
+			ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id, white);
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("Session Status");
+			ImGui::TableNextColumn();
+			ImGui::Text(teleport::client::StringOf(status),white);
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("Streaming Status");
+			ImGui::TableNextColumn();
+			ImGui::Text(avs::stringOf(streamingStatus),white);
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("Latency");
+			ImGui::TableNextColumn();
+			ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
+			ImGui::EndTable();
 		}
 
 		ImGuiEnd();

@@ -119,6 +119,7 @@ namespace teleport
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
 			long long GetServerStartTimeNs() const;
+			float GetLatencyMs() const;
 			ConnectionStatus GetConnectionStatus() const;
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;
@@ -215,6 +216,7 @@ namespace teleport
 			void ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet);
 			void ReceiveUpdateNodeStructureCommand(const std::vector<uint8_t> &packet);
 			void ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> &packet);
+			void ReceivePingForLatencyCommand(const std::vector<uint8_t>& packet);
 			void ReceiveTextCommand(const std::vector<uint8_t> &packet);
 			static constexpr double RESOURCE_REQUEST_RESEND_TIME = 10.0; //Seconds we wait before resending a resource request.
 
@@ -233,7 +235,7 @@ namespace teleport
 
 			uint64_t clientID=0;
 			double time=0.0;
-
+			float latency_milliseconds = 0.0;
 			// State received from server.
 			teleport::core::SetupCommand setupCommand;
 			teleport::core::SetupLightingCommand setupLightingCommand;

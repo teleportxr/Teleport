@@ -42,7 +42,7 @@ bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_uni
 	// 
 	static std::mt19937 m_mt;
 	std::uniform_int_distribution<uint64_t> distro;
-	sessionID = distro.operator()(m_mt);
+	sessionState.sessionId = distro.operator()(m_mt);
 	if(!signalingService.initialize(signalPorts, client_ip_match))
 	{
 		TELEPORT_CERR << "An error occurred while attempting to initalise signalingService!\n";
@@ -84,7 +84,7 @@ void ClientManager::startStreaming(avs::uid clientID)
 		return;
 	}
 
-	client->StartStreaming(serverSettings,  connectionTimeout, sessionID, getUnixTimestampNs, startTimestamp_utc_unix_ns,httpService->isUsingSSL());
+	client->StartStreaming(serverSettings,  connectionTimeout, sessionState.sessionId, getUnixTimestampNs, startTimestamp_utc_unix_ns,httpService->isUsingSSL());
 }
 
 void ClientManager::tick(float deltaTime)
@@ -95,10 +95,6 @@ void ClientManager::tick(float deltaTime)
 	{
 		c.second->clientMessaging->handleEvents(deltaTime);
 		std::string msg;
-		//if (c.second->clientMessaging->clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
-		{
-		//	signalingService.sendToClient(c.first, msg);
-		}
 		if (signalingService.GetNextMessage(c.first, msg))
 			c.second->clientMessaging->clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(msg);
 		std::vector<uint8_t> bin;
@@ -119,11 +115,11 @@ void ClientManager::tick(float deltaTime)
 		auto discoveryClient = signalingService.getSignalingClient(clientID);
 		if (!discoveryClient)
 			continue;
-		if (discoveryClient->signalingState != SignalingState::ACCEPTED)
+		if (discoveryClient->signalingState != core::SignalingState::ACCEPTED)
 			continue;
 		if (startSession(clientID, discoveryClient->ip_addr_port))
 		{
-			discoveryClient->signalingState = SignalingState::STREAMING;
+			discoveryClient->signalingState = core::SignalingState::STREAMING;
 		}
 	}
 }

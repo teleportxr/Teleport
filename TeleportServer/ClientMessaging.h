@@ -50,8 +50,7 @@ namespace teleport
 
 			virtual ~ClientMessaging();
 
-			avs::ConnectionState getConnectionState() const;
-
+			const core::ClientNetworkState& getClientNetworkState() const;
 			bool isInitialised() const;
 			void initialize( CaptureDelegates captureDelegates);
 			void unInitialise();
@@ -66,6 +65,13 @@ namespace teleport
 			void handleEvents(float deltaTime);
 			void Disconnect();
 
+			void sendSetupCommand(const teleport::core::SetupCommand& setupCommand
+				, const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids
+				, const teleport::core::SetupInputsCommand& setupInputsCommand, const std::vector<teleport::core::InputDefinition>& inputDefinitions);
+
+			void sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd);
+			void sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids);
+
 			void nodeEnteredBounds(avs::uid nodeID);
 			void nodeLeftBounds(avs::uid nodeID);
 			void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
@@ -78,45 +84,92 @@ namespace teleport
 			void updateNodeRenderState(avs::uid nodeID, avs::NodeRenderState update);
 			void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
+			void pingForLatency();
+
 			bool hasReceivedHandshake() const;
 
 			bool setOrigin(uint64_t valid_counter, avs::uid originNode); 
-			template<typename C> bool sendSignalingCommand(const C& command) 
+
+			std::string getClientIP() const
+			{
+				return clientIP;
+			};
+
+			avs::uid getClientID() const
+			{
+				return clientID;
+			}
+
+			// Same as client ip.
+			std::string getPeerIP() const;
+
+			bool video_encoder_initialized = false;
+			ClientNetworkContext* getClientNetworkContext()
+			{
+				return &clientNetworkContext;
+			}
+
+			bool timedOutStartingSession() const;
+
+			void ConfirmSessionStarted();
+
+			GeometryStreamingService& GetGeometryStreamingService()
+			{
+				return geometryStreamingService;
+			}
+
+			// Generic target
+			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
+			const avs::DisplayInfo& getDisplayInfo() const;
+		private:
+			float timeSinceLastGeometryStream = 0;
+			int framesSinceLastPing = 99;
+			// The following MIGHT be moved later to a separate Pipeline class:
+			avs::Pipeline commandPipeline;
+			avs::GenericEncoder commandEncoder;
+			// A pipeline on the main thread to receive messages.
+			avs::GenericDecoder MessageDecoder;
+			avs::Pipeline messagePipeline;
+
+			friend class ClientManager;
+
+
+			template<typename C> bool sendSignalingCommand(const C& command)
 			{
 				size_t commandSize = sizeof(C);
 				std::vector<uint8_t> bin(commandSize);
 				memcpy(bin.data(), &command, commandSize);
-				return SendSignalingCommand(std::move(bin)) ;
+				return SendSignalingCommand(std::move(bin));
 			}
-			template<typename C> bool sendCommand2(const C& command) const
+			template<typename C> bool sendCommand(const C& command) const
 			{
-				return SendCommand(&command,sizeof(command));
+				return SendCommand(&command, sizeof(command));
 			}
 			bool SendCommand(const void* c, size_t sz) const;
-			bool SendSignalingCommand( std::vector<uint8_t>&& bin);
+			bool SendSignalingCommand(std::vector<uint8_t>&& bin);
 
-			template<typename C, typename T> bool sendCommand2(const C& command, const std::vector<T>& appendedList) const
+			template<typename C, typename T> bool sendCommand(const C& command, const std::vector<T>& appendedList) const
 			{
 				size_t commandSize = sizeof(C);
 				size_t listSize = sizeof(T) * appendedList.size();
 				size_t totalSize = commandSize + listSize;
 				std::vector<uint8_t> buffer(totalSize);
-				memcpy(buffer.data() , &command, commandSize);
-				memcpy(buffer.data()+ commandSize, appendedList.data(), listSize);
+				memcpy(buffer.data(), &command, commandSize);
+				memcpy(buffer.data() + commandSize, appendedList.data(), listSize);
 
-				return SendCommand(buffer.data(), totalSize) ;
+				return SendCommand(buffer.data(), totalSize);
 			}
 			template<typename C, typename T> bool sendSignalingCommand(const C& command, const std::vector<T>& appendedList)
 			{
 				size_t commandSize = sizeof(C);
 				size_t listSize = sizeof(T) * appendedList.size();
-				std::vector<uint8_t> bin(commandSize+ listSize);
-				memcpy(bin.data() , &command, commandSize);
+				std::vector<uint8_t> bin(commandSize + listSize);
+				memcpy(bin.data(), &command, commandSize);
 				memcpy(bin.data() + commandSize, appendedList.data(), listSize);
 
 				return SendSignalingCommand(std::move(bin));
 			}
-			template <> bool sendSignalingCommand<teleport::core::SetupInputsCommand, teleport::core::InputDefinition>(const teleport::core::SetupInputsCommand& command, const std::vector<teleport::core::InputDefinition>& appendedInputDefinitions) 
+			template <> bool sendSignalingCommand<teleport::core::SetupInputsCommand, teleport::core::InputDefinition>(const teleport::core::SetupInputsCommand& command, const std::vector<teleport::core::InputDefinition>& appendedInputDefinitions)
 			{
 				if (command.commandPayloadType != teleport::core::CommandPayloadType::SetupInputs)
 				{
@@ -157,50 +210,9 @@ namespace teleport
 					return false;
 				}
 
-				return SendSignalingCommand(std::move(bin)) ;
+				return SendSignalingCommand(std::move(bin));
 			}
 
-			std::string getClientIP() const
-			{
-				return clientIP;
-			};
-
-			avs::uid getClientID() const
-			{
-				return clientID;
-			}
-
-			// Same as client ip.
-			std::string getPeerIP() const;
-
-			bool video_encoder_initialized = false;
-			ClientNetworkContext* getClientNetworkContext()
-			{
-				return &clientNetworkContext;
-			}
-
-			bool timedOutStartingSession() const;
-
-			void ConfirmSessionStarted();
-
-			GeometryStreamingService& GetGeometryStreamingService()
-			{
-				return geometryStreamingService;
-			}
-
-			// Generic target
-			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
-			const avs::DisplayInfo& getDisplayInfo() const;
-		private:
-
-			// The following MIGHT be moved later to a separate Pipeline class:
-			avs::Pipeline commandPipeline;
-			avs::GenericEncoder commandEncoder;
-			// A pipeline on the main thread to receive messages.
-			avs::GenericDecoder MessageDecoder;
-			avs::Pipeline messagePipeline;
-
-			friend class ClientManager;
 			void receive(const ENetEvent& event);
 			void receiveSignaling(const std::vector<uint8_t> &bin);
 			void receiveHandshake(const std::vector<uint8_t> &bin);
@@ -211,6 +223,7 @@ namespace teleport
 			void receiveKeyframeRequest(const std::vector<uint8_t> &bin);
 			void receiveClientMessage(const std::vector<uint8_t> &bin);
 			void receiveStreamingControl(const std::vector<uint8_t> &bin);
+			void receivePongForLatency(const std::vector<uint8_t>& packet);
 
 			void sendStreamingControlMessage(const std::string& msg);
 			teleport::core::Handshake handshake;
@@ -222,6 +235,8 @@ namespace teleport
 			bool startingSession=false;
 			float timeStartingSession=0.0f;
 			float timeSinceLastClientComm=0.0f;
+			float client_to_server_latency_milliseconds = 0.0f;
+			float server_to_client_latency_milliseconds = 0.0f;
 			const ServerSettings* settings=nullptr;
 			SignalingService &signalingService;
 			PluginGeometryStreamingService geometryStreamingService;
@@ -248,6 +263,7 @@ namespace teleport
 
 			// Seconds
 			static constexpr float startSessionTimeout = 3;
+			mutable core::ClientNetworkState clientNetworkState;
 		};
 	}
 }

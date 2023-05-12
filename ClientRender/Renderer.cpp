@@ -1257,18 +1257,10 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		gui.SetDebugGuiMouse(m,rightTrigger>0.5f);
 	}
 	gui.BeginDebugGui(deviceContext);
-	vec4 white(1.f, 1.f, 1.f, 1.f);
-	vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
-	vec4 background={0.0f,0.0f,0.0f,0.5f};
-	auto status = sessionClient->GetConnectionStatus();
-	auto streamingStatus = sessionClient->GetStreamingConnectionState();
-
-	deviceContext.framePrintX = 8;
-	deviceContext.framePrintY = 8;
-	gui.LinePrint(fmt::format("Server {0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
-	gui.LinePrint(fmt::format("  Session Status: {0}",teleport::client::StringOf(status)),white);
-	gui.LinePrint(fmt::format("Streaming Status: {0}",avs::stringOf(streamingStatus)),white);
-	gui.LinePrint(platform::core::QuickFormat("Framerate: %4.4f", framerate));
+	gui.LinePrint(fmt::format("Framerate {0}", framerate));
+	static vec4 white(1.f, 1.f, 1.f, 1.f);
+	static vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
+	static vec4 background={0.0f,0.0f,0.0f,0.5f};
 	
 	if(gui.Tab("Debug"))
 	{

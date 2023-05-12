@@ -476,19 +476,19 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 				if (c->bufferedAmount() + sz >= 1024 * 1024 * 16)
 				{
 					dataChannel.readyToSend = false;
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size "<< sz <<" as it would overflow the webrtc buffer.\n";
-					return Result::OK;
+					AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size "<< sz <<" as it would overflow the webrtc buffer.\n";
+					return Result::Failed;
 				}
 				// Can't send a buffer greater than 262144. even 64k is dodgy:
 				if (sz >= c->maxMessageSize())
 				{
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
-					return Result::OK;
+					AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
+					return Result::Failed;
 				}
 				if (!c->send((std::byte*)packet, sz))
 				{
 					dataChannel.readyToSend = false;
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
 				}
 				else if (id == 100)
 				{
@@ -497,22 +497,22 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 			}
 			else
 			{
-				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+				AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
 			}
 		}
 		catch (std::runtime_error err)
 		{
 			if (err.what())
-				std::cerr << err.what() << std::endl;
+				AVSLOG(Warning) << err.what() << std::endl;
 			else
-				std::cerr << "std::runtime_error." << std::endl;
+				AVSLOG(Warning) << "std::runtime_error." << std::endl;
 		}
 		catch (std::logic_error err)
 		{
 			if (err.what())
-				std::cerr << err.what() << std::endl;
+				AVSLOG(Warning) << err.what() << std::endl;
 			else
-				std::cerr << "std::logic_error." << std::endl;
+				AVSLOG(Warning) << "std::logic_error." << std::endl;
 		}
 
 	}
@@ -522,7 +522,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 
 void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
 {
-	std::cerr << "WebRtcNetworkSink::receiveAnswer "<<sdp.c_str()<<std::endl;
+	AVSLOG(Warning) << "WebRtcNetworkSink::receiveAnswer "<<sdp.c_str()<<std::endl;
 	try
 	{
 		rtc::Description rtcDescription(sdp, "offer");
@@ -531,26 +531,26 @@ void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
 	catch (std::logic_error err)
 	{
 		if (err.what())
-			std::cerr << err.what() << std::endl;
+			AVSLOG(Warning) << err.what() << std::endl;
 		else
-			std::cerr << "std::logic_error." << std::endl;
+			AVSLOG(Warning) << "std::logic_error." << std::endl;
 	}
 	catch (std::runtime_error err)
 	{
 		if (err.what())
-			std::cerr << err.what() << std::endl;
+			AVSLOG(Warning) << err.what() << std::endl;
 		else
-			std::cerr << "std::runtime_error." << std::endl;
+			AVSLOG(Warning) << "std::runtime_error." << std::endl;
 	}
 	catch (...)
 	{
-		std::cerr << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
+		AVSLOG(Warning) << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
 	}
 }
 
 void WebRtcNetworkSink::receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex)
 {
-	std::cerr << "addRemoteCandidate " << candidate.c_str() << std::endl;
+	AVSLOG(Warning) << "addRemoteCandidate " << candidate.c_str() << std::endl;
 	try
 	{
 		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate));
@@ -558,13 +558,13 @@ void WebRtcNetworkSink::receiveCandidate(const std::string& candidate, const std
 	catch (std::logic_error err)
 	{
 		if (err.what())
-			std::cerr << err.what() << std::endl;
+			AVSLOG(Warning) << err.what() << std::endl;
 		else
-			std::cerr << "std::logic_error." << std::endl;
+			AVSLOG(Warning) << "std::logic_error." << std::endl;
 	}
 	catch (...)
 	{
-		std::cerr << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
+		AVSLOG(Warning) << "rtcPeerConnection->addRemoteCandidate exception." << std::endl;
 	}
 }
 
@@ -643,13 +643,13 @@ void WebRtcNetworkSink::receiveStreamingControlMessage(const std::string& msg)
 	catch (std::invalid_argument inv)
 	{
 		if (inv.what())
-			std::cerr << inv.what() << std::endl;
+			AVSLOG(Warning) << inv.what() << std::endl;
 		else
-			std::cerr << "std::invalid_argument." << std::endl;
+			AVSLOG(Warning) << "std::invalid_argument." << std::endl;
 	}
 	catch (...)
 	{
-		std::cerr << "receiveStreamingControlMessage exception." << std::endl;
+		AVSLOG(Warning) << "receiveStreamingControlMessage exception." << std::endl;
 	}
 }
 
@@ -693,7 +693,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			//std::cerr << "WebRTC: channel " << id << ", buffered amount is low.\n";
+			//AVSLOG(Warning) << "WebRTC: channel " << id << ", buffered amount is low.\n";
 
 		});
 	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
@@ -733,27 +733,27 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 	//dataChannelMap.emplace(id, dc);
 }
 
-ConnectionState WebRtcNetworkSink::getConnectionState() const
+StreamingConnectionState WebRtcNetworkSink::getConnectionState() const
 {
 	if (m_data->rtcPeerConnection)
 	{
 		switch (m_data->currentState)
 		{
 		case rtc::PeerConnection::State::New:
-			return ConnectionState::NEW_UNCONNECTED;
+			return StreamingConnectionState::NEW_UNCONNECTED;
 		case rtc::PeerConnection::State::Connecting:
-			return ConnectionState::CONNECTING;
+			return StreamingConnectionState::CONNECTING;
 		case rtc::PeerConnection::State::Connected:
-			return ConnectionState::CONNECTED;
+			return StreamingConnectionState::CONNECTED;
 		case rtc::PeerConnection::State::Disconnected:
-			return ConnectionState::DISCONNECTED;
+			return StreamingConnectionState::DISCONNECTED;
 		case rtc::PeerConnection::State::Failed:
-			return ConnectionState::FAILED;
+			return StreamingConnectionState::FAILED;
 		case rtc::PeerConnection::State::Closed:
-			return ConnectionState::CLOSED;
+			return StreamingConnectionState::CLOSED;
 		default:
-			return ConnectionState::ERROR_STATE;
+			return StreamingConnectionState::ERROR_STATE;
 		}
 	}
-	return ConnectionState::UNINITIALIZED;
+	return StreamingConnectionState::UNINITIALIZED;
 }

@@ -111,7 +111,8 @@ namespace teleport
 			SetupLighting,
 			UpdateNodeStructure,
 			AssignNodePosePath,
-			SetupInputs
+			SetupInputs,
+			PingForLatency
 		} AVS_PACKED;
 		inline const char *StringOf(CommandPayloadType type)
 		{
@@ -149,7 +150,8 @@ namespace teleport
 			InputStates,
 			InputEvents,
 			DisplayInfo,
-			KeyframeRequest
+			KeyframeRequest,
+			PongForLatency
 		} AVS_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
@@ -587,6 +589,20 @@ namespace teleport
 			}
 		} AVS_PACKED;
 
+		struct PingForLatencyCommand : public Command
+		{
+			int64_t unix_time_ns=0;
+
+			PingForLatencyCommand()
+				:Command(CommandPayloadType::PingForLatency)
+			{}
+
+			static size_t getCommandSize()
+			{
+				return sizeof(PingForLatencyCommand);
+			}
+		} AVS_PACKED; 
+
 		/// A message from a client to a server.
 		struct ClientMessage
 		{
@@ -696,7 +712,31 @@ namespace teleport
 				:ClientMessage(ClientMessagePayloadType::KeyframeRequest)
 			{}
 		} AVS_PACKED;
-		
+
+		struct PongForLatencyMessage :public ClientMessage
+		{
+			int64_t unix_time_ns = 0;
+			int64_t server_to_client_latency_ns = 0;
+			PongForLatencyMessage()
+				:ClientMessage(ClientMessagePayloadType::PongForLatency)
+			{}
+		} AVS_PACKED;
+
+		enum class SignalingState
+		{
+			START,			// Received a WebSocket connection.
+			REQUESTED,		// Got an initial connection request message
+			ACCEPTED,		// Accepted the connection request. Create a ClientData for this client if not already extant.
+			STREAMING,		// Completed initial signaling, now using the signaling socket for streaming setup.
+			INVALID
+		};
+		struct ClientNetworkState
+		{
+			float server_to_client_latency_ms = 0.0f;
+			float client_to_server_latency_ms = 0.0f;
+			core::SignalingState signalingState = core::SignalingState::START;
+			avs::StreamingConnectionState streamingConnectionState = avs::StreamingConnectionState::ERROR_STATE;
+		};
 	} //namespace 
 
 }

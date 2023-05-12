@@ -27,7 +27,7 @@ namespace avs
 	public:
 		WebRtcNetworkSink();
 		virtual ~WebRtcNetworkSink();
-		virtual ConnectionState getConnectionState() const override;
+		virtual StreamingConnectionState getConnectionState() const override;
 
 		/*!
 		 * Configure network sink and bind to local UDP endpoint.

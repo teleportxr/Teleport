@@ -88,7 +88,7 @@ namespace avs
 		}
 		void SetStreamingConnectionState(StreamingConnectionState s);
 	protected:
-		StreamingConnectionState webRtcState=StreamingConnectionState::NEW;
+		StreamingConnectionState webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 		std::vector<std::string> messagesToSend;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
 		NetworkSourceParams m_params;

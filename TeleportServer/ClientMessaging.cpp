@@ -105,7 +105,6 @@ void ClientMessaging::tick(float deltaTime)
 		Disconnect();
 		return;
 	}
-	static float timeSinceLastGeometryStream = 0;
 	timeSinceLastGeometryStream += deltaTime;
 
 	float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f/settings->geometryTicksPerSecond;
@@ -143,6 +142,14 @@ void ClientMessaging::tick(float deltaTime)
 	if (settings->isReceivingAudio )
 	{
 		clientNetworkContext.sourceNetworkPipeline.process();
+	}
+	framesSinceLastPing++;
+	if (framesSinceLastPing > 100)
+	{
+		framesSinceLastPing = 0;
+		teleport::core::PingForLatencyCommand pingForLatencyCommand;
+		pingForLatencyCommand.unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		sendCommand(pingForLatencyCommand);
 	}
 }
 
@@ -212,6 +219,27 @@ void ClientMessaging::Disconnect()
 	stopped = true;
 }
 
+void ClientMessaging::sendSetupCommand(const teleport::core::SetupCommand &setupCommand
+	, const teleport::core::SetupLightingCommand setupLightingCommand,const std::vector<avs::uid> &global_illumination_texture_uids
+, const teleport::core::SetupInputsCommand &setupInputsCommand,const std::vector<teleport::core::InputDefinition>& inputDefinitions)
+{
+	ConfirmSessionStarted();
+	sendSignalingCommand(setupCommand);
+	sendSignalingCommand(setupLightingCommand, global_illumination_texture_uids);
+	sendSignalingCommand(setupInputsCommand, inputDefinitions);
+}
+
+void ClientMessaging::sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd)
+{
+	sendCommand(cmd);
+}
+
+void ClientMessaging::sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids)
+{
+	sendCommand(setupLightingCommand, global_illumination_texture_uids);
+}
+
+
 void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)
 {
 	nodesEnteredBounds.push_back(nodeID);
@@ -227,19 +255,19 @@ void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
 void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
 	teleport::core::UpdateNodeMovementCommand command(updateList.size());
-	sendCommand2<>(command, updateList);
+	sendCommand<>(command, updateList);
 }
 
 void ClientMessaging::updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
 	teleport::core::UpdateNodeEnabledStateCommand command(updateList.size());
-	sendCommand2<>(command, updateList);
+	sendCommand<>(command, updateList);
 }
 
 void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
 	teleport::core::SetNodeHighlightedCommand command(nodeID, isHighlighted);
-	sendCommand2(command);
+	sendCommand(command);
 }
 
 void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose)
@@ -247,7 +275,7 @@ void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Po
 	avs::ConvertRotation(settings->serverAxesStandard, clientNetworkContext.axesStandard, relPose.orientation);
 	avs::ConvertPosition(settings->serverAxesStandard, clientNetworkContext.axesStandard, relPose.position);
 	teleport::core::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
-	sendCommand2(command);
+	sendCommand(command);
 }
 
 void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPosePath)
@@ -257,19 +285,19 @@ void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPo
 	chars.resize(regexPosePath.size());
 	memcpy(chars.data(),regexPosePath.data(),chars.size());
 	TELEPORT_INTERNAL_COUT("Sent pose for node {0}: {1}", nodeID, regexPosePath);
-	sendCommand2(command,chars);
+	sendCommand(command,chars);
 }
 
 void ClientMessaging::updateNodeAnimation(teleport::core::ApplyAnimation update)
 {
 	teleport::core::UpdateNodeAnimationCommand command(update);
-	sendCommand2(command);
+	sendCommand(command);
 }
 
 void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update)
 {
 	teleport::core::SetAnimationControlCommand command(update);
-	sendCommand2(command);
+	sendCommand(command);
 }
 
 
@@ -281,7 +309,13 @@ void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState
 void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
 	teleport::core::SetNodeAnimationSpeedCommand command(nodeID, animationID, speed);
-	sendCommand2(command);
+	sendCommand(command);
+}
+
+void ClientMessaging::pingForLatency()
+{
+	teleport::core::PingForLatencyCommand command;
+	sendCommand(command);
 }
 
 bool ClientMessaging::SendCommand(const void* c, size_t sz) const
@@ -446,7 +480,7 @@ bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
 	setp.origin_node=originNode;
 	setp.valid_counter = valid_counter;
 	TELEPORT_LOG("Send origin node {0} with counter {1} to clientID {2}.\n", originNode, valid_counter, clientID);
-	bool result=sendCommand2(setp);
+	bool result=sendCommand(setp);
 	return result;
 }
 
@@ -612,7 +646,7 @@ void ClientMessaging::receiveResourceRequest(const std::vector<uint8_t> &packet)
 	}
 }
 
-void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t> &packet)
+void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t>& packet)
 {
 	if (packet.size() < sizeof(core::KeyframeRequestMessage))
 	{
@@ -627,6 +661,22 @@ void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t> &packet)
 	{
 		TELEPORT_COUT << "Received keyframe request, but capture component isn't set.\n";
 	}
+}
+
+void ClientMessaging::receivePongForLatency(const std::vector<uint8_t>& packet)
+{
+	if (packet.size() != sizeof(core::PongForLatencyMessage))
+	{
+		TELEPORT_COUT << "Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "\n";
+		return;
+	}
+	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	core::PongForLatencyMessage msg;
+	memcpy(&msg, packet.data() , sizeof(core::PongForLatencyMessage));
+	int64_t diff_ns = unix_time_ns - msg.unix_time_ns;
+
+	clientNetworkState.client_to_server_latency_ms = float(double(diff_ns) * 0.000001);
+	clientNetworkState.server_to_client_latency_ms= float(double(msg.server_to_client_latency_ns) * 0.000001);
 }
 
 void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
@@ -739,14 +789,20 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 		case teleport::core::ClientMessagePayloadType::KeyframeRequest:
 			receiveKeyframeRequest(packet);
 			break;
+		case teleport::core::ClientMessagePayloadType::PongForLatency:
+			receivePongForLatency(packet);
+			break;
 		default:
 			TELEPORT_CERR<<"Unknown client message: "<<(int)clientMessagePayloadType<<"\n";
 		break;
 	};
 }
-avs::ConnectionState ClientMessaging::getConnectionState() const
+
+const core::ClientNetworkState& ClientMessaging::getClientNetworkState() const
 {
 	if (clientNetworkContext.NetworkPipeline.mNetworkSink)
-		return clientNetworkContext.NetworkPipeline.mNetworkSink->getConnectionState();
-	return avs::ConnectionState::UNINITIALIZED;
-};
+		clientNetworkState.streamingConnectionState = clientNetworkContext.NetworkPipeline.mNetworkSink->getConnectionState();
+	else
+		clientNetworkState.streamingConnectionState = avs::StreamingConnectionState::UNINITIALIZED;
+	return clientNetworkState;
+}

@@ -842,8 +842,9 @@ void ResourceCreator::CreateMeshNode(avs::uid id, avs::Node& avsNode)
 	if (avsNode.skinID != 0)
 	{
 		auto skin=geometryCache->mSkinManager.Get(avsNode.skinID);
-		node->SetSkin(skin);
-		if (!skin)
+		if(skin)
+			node->SetSkin(skin);
+		else
 		{
 			//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << avsNode.name << ") missing Skin_" << avsNode.skinID << std::endl;
 
