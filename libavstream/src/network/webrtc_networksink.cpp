@@ -414,7 +414,8 @@ Result WebRtcNetworkSink::packData(const uint8_t* buffer, size_t bufferSize, uin
 	if (dataContent == ElasticFrameContent::unknown)
 	{
 		// This data will NOT be framed
-		sendData(stream.id, buffer, bufferSize);
+		if (!sendData(stream.id, buffer, bufferSize))
+			return Result::Failed;
 	}
 	else
 	{
@@ -482,6 +483,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 				// Can't send a buffer greater than 262144. even 64k is dodgy:
 				if (sz >= c->maxMessageSize())
 				{
+					dataChannel.readyToSend = false;
 					AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
 					return Result::Failed;
 				}
@@ -489,6 +491,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 				{
 					dataChannel.readyToSend = false;
 					AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					return Result::Failed;
 				}
 				else if (id == 100)
 				{
@@ -680,7 +683,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			//std::cout << "DataChannel "<<id<<" opened" << std::endl;
+			std::cout << "DataChannel "<<id<<" opened. Ready to send." << std::endl;
 		});
 
 	dc->onClosed([this,id]()
@@ -693,7 +696,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			//AVSLOG(Warning) << "WebRTC: channel " << id << ", buffered amount is low.\n";
+			AVSLOG(Warning) << "WebRTC: channel " << id << ", buffered amount is low. Ready to send again.\n";
 
 		});
 	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
