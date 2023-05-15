@@ -490,7 +490,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 				if (!c->send((std::byte*)packet, sz))
 				{
 					dataChannel.readyToSend = false;
-					AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					AVSLOG(Warning) << "WebRTC: channel " << m_streams[i->second].inputName.c_str() << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
 					return Result::Failed;
 				}
 				else if (id == 100)
@@ -696,7 +696,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 			dataChannel.readyToSend = true;
-			AVSLOG(Warning) << "WebRTC: channel " << id << ", buffered amount is low. Ready to send again.\n";
+			AVSLOG(Warning) << "WebRTC: channel " << q_ptr()->m_streams[idToStreamIndex[id]].inputName.c_str() << ", buffered amount is low. Ready to send again.\n";
 
 		});
 	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];

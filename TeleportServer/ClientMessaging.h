@@ -141,14 +141,14 @@ namespace teleport
 				memcpy(bin.data(), &command, commandSize);
 				return SendSignalingCommand(std::move(bin));
 			}
-			template<typename C> bool sendCommand(const C& command) const
+			template<typename C> size_t sendCommand(const C& command) const
 			{
 				return SendCommand(&command, sizeof(command));
 			}
-			bool SendCommand(const void* c, size_t sz) const;
+			size_t SendCommand(const void* c, size_t sz) const;
 			bool SendSignalingCommand(std::vector<uint8_t>&& bin);
 
-			template<typename C, typename T> bool sendCommand(const C& command, const std::vector<T>& appendedList) const
+			template<typename C, typename T> size_t sendCommand(const C& command, const std::vector<T>& appendedList) const
 			{
 				size_t commandSize = sizeof(C);
 				size_t listSize = sizeof(T) * appendedList.size();

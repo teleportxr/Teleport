@@ -147,9 +147,7 @@ void ClientMessaging::tick(float deltaTime)
 	if (framesSinceLastPing > 100)
 	{
 		framesSinceLastPing = 0;
-		teleport::core::PingForLatencyCommand pingForLatencyCommand;
-		pingForLatencyCommand.unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-		sendCommand(pingForLatencyCommand);
+		pingForLatency();
 	}
 }
 
@@ -314,18 +312,22 @@ void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationI
 
 void ClientMessaging::pingForLatency()
 {
-	teleport::core::PingForLatencyCommand command;
-	sendCommand(command);
+	teleport::core::PingForLatencyCommand pingForLatencyCommand;
+	pingForLatencyCommand.unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	if (sendCommand(pingForLatencyCommand) > 1)
+	{
+		TELEPORT_CERR << "Pinging on queue.\n";
+	}
 }
 
-bool ClientMessaging::SendCommand(const void* c, size_t sz) const
+size_t ClientMessaging::SendCommand(const void* c, size_t sz) const
 {
 	if (sz > 16384)
-		return false;
+		return 0;
 	auto b=std::make_shared<std::vector<uint8_t>>(sz);
 	memcpy(b->data(), c, sz);
 	commandStack.PushBuffer(b);
-	return true;
+	return commandStack.buffers.size();
 }
 
 bool ClientMessaging::SendSignalingCommand(std::vector<uint8_t>&& bin)

@@ -40,8 +40,9 @@ bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_uni
 	// session id should be a random large hash.
 	// generate a unique session id.
 	// 
-	static std::mt19937 m_mt;
+	static std::mt19937_64 m_mt;
 	std::uniform_int_distribution<uint64_t> distro;
+	m_mt.seed( std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	sessionState.sessionId = distro.operator()(m_mt);
 	if(!signalingService.initialize(signalPorts, client_ip_match))
 	{
