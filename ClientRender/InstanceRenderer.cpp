@@ -546,7 +546,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 
 				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,renderState.diffuseCubemapTexture);
 				// If lighting is via static textures.
-				if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture!=0)
+				if(sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode==avs::LightingMode::TEXTURE)
+				//if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
 					auto t = geometryCache.mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
@@ -555,7 +556,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					}
 				}
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap,renderState.specularCubemapTexture);
-				if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
+				if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
+				//if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
 				{
 					auto t = geometryCache.mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
 					if(t)

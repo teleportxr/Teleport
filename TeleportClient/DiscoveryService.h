@@ -49,7 +49,12 @@ namespace teleport
 			void ResetConnection(uint64_t server_uid, std::string ip,uint16_t serverDiscoveryPort);
 			uint64_t clientID = uint64_t(0x0);
 			bool awaiting = false;
-			std::mutex mutex;
+			std::mutex signalingServersMutex;
+			std::mutex messagesReceivedMutex;
+			std::mutex binaryMessagesReceivedMutex;
+			std::mutex messagesToPassOnMutex;
+			std::mutex messagesToSendMutex;
+			std::mutex binaryMessagesToSendMutex;
 			void ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg);
 			void ReceiveBinaryWebSocketsMessage(uint64_t server_uid,std::vector<std::byte> bin);
 			std::unordered_map<uint64_t, std::shared_ptr<SignalingServer>> signalingServers;

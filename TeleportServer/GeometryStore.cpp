@@ -1116,6 +1116,20 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	auto p=std::string(path);
+	bool black = true;
+	for (size_t i = 0; i < newTexture.dataSize; i++)
+	{
+		if (newTexture.data[i] != 0)
+		{
+			black = false;
+			break;
+		}
+	}
+	if (black)
+	{
+		TELEPORT_INTERNAL_CERR("Black texture {0}", path.c_str());
+		TELEPORT_INTERNAL_BREAK_ONCE("");
+	}
 	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;

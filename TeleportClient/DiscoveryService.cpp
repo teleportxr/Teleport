@@ -64,29 +64,44 @@ void DiscoveryService::SetClientID(uint64_t inClientID)
 void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
 {
 	TELEPORT_COUT << ": info: ReceiveWebSocketsMessage " << msg << std::endl;
-	std::lock_guard lock(mutex);
+	std::lock_guard lock(messagesReceivedMutex);
 	messagesReceived.push(msg);
 }
 
 void DiscoveryService::ReceiveBinaryWebSocketsMessage(uint64_t server_uid,std::vector<std::byte> bin)
 {
 	TELEPORT_COUT << ": info: ReceiveBinaryWebSocketsMessage." << std::endl;
-	std::lock_guard lock(mutex);
+	std::lock_guard lock(binaryMessagesReceivedMutex);
 	binaryMessagesReceived.push(bin);
 }
 
 void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint16_t serverDiscoveryPort)
 {
-	while(!messagesReceived.empty())
-		messagesReceived.pop();
-	while(!messagesToPassOn.empty())
-		messagesToPassOn.pop();
-	while(!messagesToSend.empty())
-		messagesToSend.pop();
-	while(!binaryMessagesReceived.empty())
-		binaryMessagesReceived.pop();
-	while(!binaryMessagesToSend.empty())
-		binaryMessagesToSend.pop();
+	{
+		std::lock_guard lock(messagesReceivedMutex);
+		while (!messagesReceived.empty())
+			messagesReceived.pop();
+	}
+	{
+		std::lock_guard lock(messagesToPassOnMutex);
+		while (!messagesToPassOn.empty())
+			messagesToPassOn.pop();
+	}
+	{
+		std::lock_guard lock(messagesToSendMutex);
+		while (!messagesToSend.empty())
+			messagesToSend.pop();
+	}
+	{
+		std::lock_guard lock(binaryMessagesReceivedMutex);
+		while(!binaryMessagesReceived.empty())
+			binaryMessagesReceived.pop();
+	}
+	{
+		std::lock_guard lock(binaryMessagesToSendMutex);
+		while (!binaryMessagesToSend.empty())
+			binaryMessagesToSend.pop();
+	}
 	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
 	std::string ws_url=fmt::format("ws://{0}:{1}",url, serverDiscoveryPort);
@@ -106,6 +121,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 		}
 	}
 }
+
 void DiscoveryService::InitSocket(uint64_t server_uid)
 {
 	rtc::WebSocket::Configuration config;
@@ -151,7 +167,7 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 
 uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16_t signalPort)
 {
-	std::lock_guard lock(mutex);
+	std::lock_guard lock(signalingServersMutex);
 	std::shared_ptr<SignalingServer> &signalingServer= signalingServers[server_uid];
 	if (!signalingServer)
 	{
@@ -193,7 +209,7 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 				ws->send(message.dump());
 				//TELEPORT_CERR << "Websocket send()" << std::endl;
 				//TELEPORT_CERR << "webSocket->send: " << message.dump() << "  .\n";
-				frame = 1000;
+				frame = 100;
 			}
 			else if (ws->readyState() == rtc::WebSocket::State::Closed)
 			{
@@ -236,6 +252,7 @@ void DiscoveryService::Tick()
 
 void DiscoveryService::Tick(uint64_t server_uid)
 {
+	std::lock_guard lock(signalingServersMutex);
 	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
 	if (!signalingServer)
 		return;
@@ -252,18 +269,25 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	{
 		if (ws->isOpen())
 		{
-			while (messagesToSend.size())
 			{
-				ws->send(messagesToSend.front());
-				//TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
-				messagesToSend.pop();
+				std::lock_guard lock(messagesToSendMutex);
+				while (messagesToSend.size())
+				{
+					ws->send(messagesToSend.front());
+					//TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
+					messagesToSend.pop();
+				}
 			}
-			while (binaryMessagesToSend.size())
 			{
-				auto& bin = binaryMessagesToSend.front();
-				ws->send(bin.data(), bin.size());
-				//TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
-				binaryMessagesToSend.pop();
+
+				std::lock_guard lock(binaryMessagesToSendMutex);
+				while (binaryMessagesToSend.size())
+				{
+					auto& bin = binaryMessagesToSend.front();
+					ws->send(bin.data(), bin.size());
+					//TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
+					binaryMessagesToSend.pop();
+				}
 			}
 		}
 	}
@@ -274,44 +298,53 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	catch(...)
 	{
 	}
-	while(messagesReceived.size())
 	{
-		std::string msg = messagesReceived.front();
-		messagesReceived.pop();
-		if(!msg.length())
-			continue;
-		json message=json::parse(msg);
-		if(message.contains("teleport-signal-type"))
+		std::lock_guard lock(messagesReceivedMutex);
+		while(messagesReceived.size())
 		{
-			std::string type = message["teleport-signal-type"];
-			if(type=="request-response")
+			std::string msg = messagesReceived.front();
+			messagesReceived.pop();
+			if(!msg.length())
+				continue;
+			json message=json::parse(msg);
+			if(message.contains("teleport-signal-type"))
 			{
-				if(message.contains("content"))
+				std::string type = message["teleport-signal-type"];
+				if(type=="request-response")
 				{
-					json content = message["content"];
-					if(content.contains("clientID"))
+					if(message.contains("content"))
 					{
-						uint64_t clid = content["clientID"];
-						if(clientID!=clid)
-							clientID=clid;
-						if(clientID!=0)
+						json content = message["content"];
+						if(content.contains("clientID"))
 						{
-							awaiting = true;
+							uint64_t clid = content["clientID"];
+							if(clientID!=clid)
+								clientID=clid;
+							if(clientID!=0)
+							{
+								awaiting = true;
+							}
 						}
 					}
 				}
+				else
+				{
+					std::lock_guard lock(messagesToPassOnMutex);
+					messagesToPassOn.push(msg);
+				}
 			}
 			else
+			{
+				std::lock_guard lock(messagesToPassOnMutex);
 				messagesToPassOn.push(msg);
+			}
 		}
-		else
-			messagesToPassOn.push(msg);
 	}
 }
 
 bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)
 {
-	std::lock_guard lock(mutex);
+	std::lock_guard lock(messagesToPassOnMutex);
 	if (messagesToPassOn.size())
 	{
 		msg = messagesToPassOn.front();
@@ -323,7 +356,7 @@ bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)
 
 bool DiscoveryService::GetNextBinaryMessage(uint64_t server_uid,std::vector<uint8_t>& msg)
 {
-	std::lock_guard lock(mutex);
+	std::lock_guard lock(binaryMessagesReceivedMutex);
 	if (binaryMessagesReceived.size())
 	{
 		auto &bin=binaryMessagesReceived.front();
@@ -336,11 +369,13 @@ bool DiscoveryService::GetNextBinaryMessage(uint64_t server_uid,std::vector<uint
 }
 void DiscoveryService::Send(uint64_t server_uid,std::string msg)
 {
+	std::lock_guard lock(messagesToSendMutex);
 	messagesToSend.push(msg);
 }
 
 void DiscoveryService::SendBinary(uint64_t server_uid, std::vector<uint8_t> bin)
 {
+	std::lock_guard lock(binaryMessagesToSendMutex);
 	std::vector<std::byte> b;
 	b.resize(bin.size());
 	memcpy(b.data(),bin.data(),b.size());
