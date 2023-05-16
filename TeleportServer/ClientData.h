@@ -48,7 +48,10 @@ namespace teleport
 				, GetUnixTimestampFn getUnixTimestamp
 				, int64_t startTimestamp_utc_unix_ns
 				, bool use_ssl);
+			void tick(float deltaTime);
 			void setNodePosePath(avs::uid nodeID, const std::string &regexPosePath);
+			//! Called after reparenting to inform the client of the new parent.
+			void reparentNode(avs::uid nodeID);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
 			// client settings from engine-side:
 			ClientSettings clientSettings;
@@ -80,8 +83,11 @@ namespace teleport
 			{
 				return global_illumination_texture_uids;
 			}
-			void tick(float deltaTime);
+			void resendUnconfirmedOrthogonalStates();
 		protected:
+			teleport::core::SetupCommand lastSetupCommand;
+			std::map<avs::uid, std::shared_ptr<OrthogonalNodeStateMap>> orthogonalNodeStates;
+			uint64_t nextConfirmationNumber = 1;
 			ConnectionState connectionState = UNCONNECTED;
 			mutable bool _hasOrigin=false;
 			avs::uid originClientHas=0;

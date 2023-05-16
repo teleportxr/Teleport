@@ -205,7 +205,7 @@ namespace clientrender
 		void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) override;
 		void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
 		void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) override;
-		void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) override;
+	//	void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) override;
 		void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
 		bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand &setupCommand, teleport::core::Handshake& handshake) override;
 		void OnVideoStreamClosed() override;

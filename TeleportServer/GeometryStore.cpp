@@ -486,6 +486,29 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 	return shadowMaps.find(id) != shadowMaps.end();
 }
 
+void GeometryStore::setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose)
+{
+	if (nodes.find(id) == nodes.end())
+		return;
+	if(parent_id==nodes[id].parentID)
+		return;
+	nodes[id].localTransform.position = relPose.position;
+	nodes[id].localTransform.rotation = relPose.orientation;
+	//nodes[id].localTransform.scale = relPose.scale;
+	avs::Node* old_parent = getNode(nodes[id].parentID);
+	if (old_parent)
+	{
+		auto it = std::find(old_parent->childrenIDs.begin(), old_parent->childrenIDs.end(), id);
+		if (it != old_parent->childrenIDs.end())
+			old_parent->childrenIDs.erase(it);
+	}
+	nodes[id].parentID = parent_id;
+	avs::Node* new_parent = getNode(parent_id);
+	if (new_parent)
+	{
+		new_parent->childrenIDs.push_back(id);
+	}
+}
 void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 {
 	nodes[id] = newNode;

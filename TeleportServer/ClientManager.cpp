@@ -107,7 +107,7 @@ void ClientManager::tick(float deltaTime)
 		{
 			startStreaming(c.first);
 		}
-		c.second->clientMessaging->tick(deltaTime);
+		c.second->tick(deltaTime);
 	}
 	signalingService.tick();
 	for (auto c : signalingService.getClientIds())

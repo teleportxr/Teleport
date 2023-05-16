@@ -15,7 +15,7 @@ ClientPipeline::ClientPipeline()
 
 ClientPipeline::~ClientPipeline()
 {
-	messageToServerQueue.deconfigure();
+	unreliableToServerQueue.deconfigure();
 	nodePosesQueue.deconfigure();
 	inputStateQueue.deconfigure();
 	source->deconfigure();
@@ -34,7 +34,7 @@ ClientPipeline::~ClientPipeline()
 	avsAudioDecoder.deconfigure();
 	avsAudioTarget.deconfigure();
 
-	commandQueue.deconfigure();
+	reliableOutQueue.deconfigure();
 	commandDecoder.deconfigure();
 }
 

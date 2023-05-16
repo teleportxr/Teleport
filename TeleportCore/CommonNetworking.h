@@ -94,24 +94,24 @@ namespace teleport
 	
 		//! The payload type, or how to interpret the server's message.
 		enum class CommandPayloadType : uint8_t
-		{
-			Invalid,
+		{									// confirm?
+			Invalid,	
 			Shutdown,
 			Setup,
 			AcknowledgeHandshake,
 			ReconfigureVideo,
-			SetStageSpaceOriginNode,
-			NodeVisibility,
-			UpdateNodeMovement,
-			UpdateNodeEnabledState,
-			SetNodeHighlighted,
-			UpdateNodeAnimation,
-			UpdateNodeAnimationControl,
-			SetNodeAnimationSpeed,
-			SetupLighting,
-			UpdateNodeStructure,
-			AssignNodePosePath,
-			SetupInputs,
+			SetStageSpaceOriginNode,		// 0
+			NodeVisibility,					// id
+			UpdateNodeMovement,				//
+			UpdateNodeEnabledState,			// id
+			SetNodeHighlighted,				// id
+			ApplyNodeAnimation,				// id
+			UpdateNodeAnimationControlX,
+			SetNodeAnimationSpeed,			// id
+			SetupLighting,					// 0
+			UpdateNodeStructure,			// id
+			AssignNodePosePath,				// id
+			SetupInputs,					// 0
 			PingForLatency
 		} AVS_PACKED;
 		inline const char *StringOf(CommandPayloadType type)
@@ -128,8 +128,8 @@ namespace teleport
 			case CommandPayloadType::UpdateNodeMovement		   :return "UpdateNodeMovement";
 			case CommandPayloadType::UpdateNodeEnabledState	   :return "UpdateNodeEnabledState";
 			case CommandPayloadType::SetNodeHighlighted		   :return "SetNodeHighlighted";
-			case CommandPayloadType::UpdateNodeAnimation	   :return "UpdateNodeAnimation";
-			case CommandPayloadType::UpdateNodeAnimationControl:return "UpdateNodeAnimationControl";
+			case CommandPayloadType::ApplyNodeAnimation			:return "ApplyNodeAnimation";
+			case CommandPayloadType::UpdateNodeAnimationControlX:return "UpdateNodeAnimationControlX";
 			case CommandPayloadType::SetNodeAnimationSpeed	   :return "SetNodeAnimationSpeed";
 			case CommandPayloadType::SetupLighting			   :return "SetupLighting";
 			case CommandPayloadType::UpdateNodeStructure	   :return "UpdateNodeStructure";
@@ -151,7 +151,8 @@ namespace teleport
 			InputEvents,
 			DisplayInfo,
 			KeyframeRequest,
-			PongForLatency
+			PongForLatency,
+			OrthogonalAcknowledgement
 		} AVS_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
@@ -246,14 +247,14 @@ namespace teleport
 
 		struct ApplyAnimation
 		{
-			int64_t timestamp = 0;	//< When the animation change was detected.
-			avs::uid nodeID = 0;			//< ID of the node the animation is playing on.
+			int64_t timestamp = 0;		//< When the animation change was detected.
+			avs::uid nodeID = 0;		//< ID of the node the animation is playing on.
 			avs::uid animationID = 0;	//< ID of the animation that is now playing.
 		} AVS_PACKED;
 
 		// TODO: These enumerations are placeholder; in the future we want a more flexible system.
 		//! Controls what is used as the current time of the animation.
-		enum class AnimationTimeControl:uint32_t
+		/*enum class AnimationTimeControl:uint32_t
 		{
 			ANIMATION_TIME=0,				//< Default; animation is controlled by time since animation started.
 			CONTROLLER_0_TRIGGER,
@@ -262,11 +263,11 @@ namespace teleport
 
 		struct NodeUpdateAnimationControl
 		{
-			avs::uid nodeID = 0;						//< ID of the node the animation is playing on.
+			avs::uid nodeID = 0;					//< ID of the node the animation is playing on.
 			avs::uid animationID = 0;				//< ID of the animation that we are updating.
 
-			AnimationTimeControl timeControl;	//< What controls the animation's time value.
-		} AVS_PACKED;
+			AnimationTimeControl timeControl;		//< What controls the animation's time value.
+		} AVS_PACKED;*/
 
 		//! A message from a server to a client.
 		//! The commandPayloadType specifies the size and interpretation of the packet.
@@ -487,19 +488,26 @@ namespace teleport
 				return sizeof(SetNodeHighlightedCommand);
 			}
 		} AVS_PACKED;
-
-		//! Instructs the client to reparent the specified node.
-		struct UpdateNodeStructureCommand : public Command
+		//! A confirmable state.
+		struct NodeStateCommand : public Command
 		{
-			avs::uid nodeID = 0;		//!< Which node to reparent.
+			avs::uid nodeID = 0;		//!< Which node to modify.
+			uint64_t confirmationNumber=0;
+			NodeStateCommand(CommandPayloadType type,avs::uid nid)
+				:Command(type),nodeID(nid)
+			{}
+		} AVS_PACKED;
+		//! Instructs the client to reparent the specified node.
+		struct UpdateNodeStructureCommand : public NodeStateCommand
+		{
 			avs::uid parentID = 0;		//!< The new parent uid.
-			Pose_packed relativePose;		//!< The new relative pose of the child node.
+			Pose_packed relativePose;	//!< The new relative pose of the child node.
 			UpdateNodeStructureCommand()
 				:UpdateNodeStructureCommand(0, 0,avs::Pose())
 			{}
 
 			UpdateNodeStructureCommand(avs::uid n, avs::uid p,avs::Pose relPose)
-				:Command(CommandPayloadType::UpdateNodeStructure), nodeID(n), parentID(p)
+				:NodeStateCommand(CommandPayloadType::UpdateNodeStructure,n), parentID(p)
 			{
 				relativePose={*((vec4_packed*)&relPose.orientation),*((vec3_packed*)&relPose.position)};
 			}
@@ -533,24 +541,24 @@ namespace teleport
 		} AVS_PACKED;
 	
 		//! Update the animation state of the specified nodes.
-		struct UpdateNodeAnimationCommand : public Command
+		struct ApplyAnimationCommand : public Command
 		{
 			ApplyAnimation animationUpdate;
 
-			UpdateNodeAnimationCommand()
-				:UpdateNodeAnimationCommand(ApplyAnimation{})
+			ApplyAnimationCommand()
+				:ApplyAnimationCommand(ApplyAnimation{})
 			{}
 
-			UpdateNodeAnimationCommand(const ApplyAnimation& update)
-				:Command(CommandPayloadType::UpdateNodeAnimation), animationUpdate(update)
+			ApplyAnimationCommand(const ApplyAnimation& update)
+				:Command(CommandPayloadType::ApplyNodeAnimation), animationUpdate(update)
 			{}
 
 			static size_t getCommandSize()
 			{
-				return sizeof(UpdateNodeAnimationCommand);
+				return sizeof(ApplyAnimationCommand);
 			}
 		} AVS_PACKED;
-
+		/*
 		struct SetAnimationControlCommand : public Command
 		{
 			NodeUpdateAnimationControl animationControlUpdate;
@@ -567,7 +575,7 @@ namespace teleport
 			{
 				return sizeof(SetAnimationControlCommand);
 			}
-		} AVS_PACKED;
+		} AVS_PACKED;*/
 
 		struct SetNodeAnimationSpeedCommand : public Command
 		{
@@ -612,7 +620,18 @@ namespace teleport
 			ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
 		} AVS_PACKED;
-
+		// TODO: this should be a separate message type, not a client message.
+		struct OrthogonalAcknowledgementMessage: public ClientMessage
+		{
+			uint64_t confirmationNumber=0;
+			OrthogonalAcknowledgementMessage()
+				:OrthogonalAcknowledgementMessage(0)
+			{}
+			OrthogonalAcknowledgementMessage(uint64_t confirmationNumber)
+				:ClientMessage(ClientMessagePayloadType::OrthogonalAcknowledgement),
+				confirmationNumber(confirmationNumber)
+			{}
+		} AVS_PACKED;
 		//! Message info struct containing how many nodes have changed to what state; sent alongside two lists of node UIDs.
 		struct NodeStatusMessage : public ClientMessage
 		{

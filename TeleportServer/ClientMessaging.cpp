@@ -116,26 +116,24 @@ void ClientMessaging::tick(float deltaTime)
 
 		//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
 		if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
-			{
-				size_t commandSize = sizeof(teleport::core::NodeVisibilityCommand);
-				size_t enteredBoundsSize = sizeof(avs::uid) * nodesEnteredBounds.size();
-				size_t leftBoundsSize = sizeof(avs::uid) * nodesLeftBounds.size();
+		{
+			size_t commandSize = sizeof(teleport::core::NodeVisibilityCommand);
+			size_t enteredBoundsSize = sizeof(avs::uid) * nodesEnteredBounds.size();
+			size_t leftBoundsSize = sizeof(avs::uid) * nodesLeftBounds.size();
 
-				teleport::core::NodeVisibilityCommand boundsCommand(nodesEnteredBounds.size(), nodesLeftBounds.size());
-			
+			teleport::core::NodeVisibilityCommand boundsCommand(nodesEnteredBounds.size(), nodesLeftBounds.size());
+		
+			//Resize packet, and insert node lists.
+			size_t totalSize = commandSize + enteredBoundsSize + leftBoundsSize;
+			std::vector<uint8_t> packet(totalSize);
+			memcpy(packet.data() , &boundsCommand, commandSize);
+			memcpy(packet.data() + commandSize, nodesEnteredBounds.data(), enteredBoundsSize);
+			memcpy(packet.data() + commandSize + enteredBoundsSize, nodesLeftBounds.data(), leftBoundsSize);
 
-				//Resize packet, and insert node lists.
-				size_t totalSize = commandSize + enteredBoundsSize + leftBoundsSize;
-				std::vector<uint8_t> packet(totalSize);
-				memcpy(packet.data() , &boundsCommand, commandSize);
-				memcpy(packet.data() + commandSize, nodesEnteredBounds.data(), enteredBoundsSize);
-				memcpy(packet.data() + commandSize + enteredBoundsSize, nodesLeftBounds.data(), leftBoundsSize);
-
-				SendCommand(packet.data(),totalSize);
-				nodesEnteredBounds.clear();
-				nodesLeftBounds.clear();
-			}
-
+			SendCommand(packet.data(),totalSize);
+			nodesEnteredBounds.clear();
+			nodesLeftBounds.clear();
+		}
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
@@ -166,36 +164,37 @@ void ClientMessaging::handleEvents(float deltaTime)
 		// Return because we don't want to process input until the C# side objects have been created.
 		return;
 	}
+	//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
+	const uint8_t* binaryStatesPtr = latestInputStateAndEvents.binaryStates.data();
+	const float* analogueStatesPtr = latestInputStateAndEvents.analogueStates.data();
+	const avs::InputEventBinary* binaryEventsPtr		= latestInputStateAndEvents.binaryEvents.data();
+	const avs::InputEventAnalogue* analogueEventsPtr	= latestInputStateAndEvents.analogueEvents.data();
+	const avs::InputEventMotion* motionEventsPtr		= latestInputStateAndEvents.motionEvents.data();
+	for (auto c : latestInputStateAndEvents.analogueEvents)
 	{
-		//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
-		const uint8_t* binaryStatesPtr = latestInputStateAndEvents.binaryStates.data();
-		const float* analogueStatesPtr = latestInputStateAndEvents.analogueStates.data();
-		const avs::InputEventBinary* binaryEventsPtr		= latestInputStateAndEvents.binaryEvents.data();
-		const avs::InputEventAnalogue* analogueEventsPtr	= latestInputStateAndEvents.analogueEvents.data();
-		const avs::InputEventMotion* motionEventsPtr		= latestInputStateAndEvents.motionEvents.data();
-		for (auto c : latestInputStateAndEvents.analogueEvents)
-		{
-			TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
-		}
-		for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
-		{
-			float &f=latestInputStateAndEvents.analogueStates[i];
-			if(f<-1.f||f>1.f||isnan(f))
-			{
-				TELEPORT_CERR<<"Bad analogue state value "<<f<<std::endl;
-				f=0;
-			}
-		}
-		teleport::core::InputState inputState;
-		inputState.numBinaryStates		=(uint16_t)latestInputStateAndEvents.binaryStates.size();
-		inputState.numAnalogueStates	=(uint16_t)latestInputStateAndEvents.analogueStates.size();
-		uint16_t numBinaryEvents		=(uint16_t)latestInputStateAndEvents.binaryEvents.size();
-		uint16_t numAnalogueEvents	=(uint16_t)latestInputStateAndEvents.analogueEvents.size();
-		uint16_t numMotionEvents		=(uint16_t)latestInputStateAndEvents.motionEvents.size();
-		processNewInputState(clientID, &inputState, &binaryStatesPtr, &analogueStatesPtr);
-		processNewInputEvents(clientID, numBinaryEvents, numAnalogueEvents, numMotionEvents
-								,&binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+		TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
 	}
+	for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
+	{
+		float &f=latestInputStateAndEvents.analogueStates[i];
+		if(f<-1.f||f>1.f||isnan(f))
+		{
+			TELEPORT_CERR<<"Bad analogue state value "<<f<<std::endl;
+			f=0;
+		}
+	}
+	teleport::core::InputState inputState;
+	inputState.numBinaryStates		=(uint16_t)latestInputStateAndEvents.binaryStates.size();
+	inputState.numAnalogueStates	=(uint16_t)latestInputStateAndEvents.analogueStates.size();
+	uint16_t numBinaryEvents		=(uint16_t)latestInputStateAndEvents.binaryEvents.size();
+	uint16_t numAnalogueEvents		=(uint16_t)latestInputStateAndEvents.analogueEvents.size();
+	uint16_t numMotionEvents		=(uint16_t)latestInputStateAndEvents.motionEvents.size();
+	processNewInputState(clientID, &inputState, &binaryStatesPtr, &analogueStatesPtr);
+	processNewInputEvents(clientID, numBinaryEvents, numAnalogueEvents, numMotionEvents
+							,&binaryEventsPtr, &analogueEventsPtr, &motionEventsPtr);
+	
+
+
 	//Input has been passed, so clear the events.
 	latestInputStateAndEvents.clearEvents();
 }
@@ -268,12 +267,9 @@ void ClientMessaging::setNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	sendCommand(command);
 }
 
-void ClientMessaging::reparentNode(avs::uid nodeID, avs::uid newParentID,avs::Pose relPose)
+void ClientMessaging::reparentNode(const teleport::core::UpdateNodeStructureCommand &cmd)
 {
-	avs::ConvertRotation(settings->serverAxesStandard, clientNetworkContext.axesStandard, relPose.orientation);
-	avs::ConvertPosition(settings->serverAxesStandard, clientNetworkContext.axesStandard, relPose.position);
-	teleport::core::UpdateNodeStructureCommand command(nodeID, newParentID, relPose);
-	sendCommand(command);
+	sendCommand(cmd);
 }
 
 void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPosePath)
@@ -288,15 +284,15 @@ void ClientMessaging::setNodePosePath(avs::uid nodeID,const std::string &regexPo
 
 void ClientMessaging::updateNodeAnimation(teleport::core::ApplyAnimation update)
 {
-	teleport::core::UpdateNodeAnimationCommand command(update);
+	teleport::core::ApplyAnimationCommand command(update);
 	sendCommand(command);
 }
-
+/*
 void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update)
 {
 	teleport::core::SetAnimationControlCommand command(update);
 	sendCommand(command);
-}
+}*/
 
 
 void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update)
@@ -447,7 +443,7 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 		geometryStreamingService.startStreaming(&clientNetworkContext, handshake);
 		{
 			commandEncoder.configure(&commandStack);
-			commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.CommandQueue });
+			commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.reliableQueue });
 		}
 		receivedHandshake = true;
 	}
@@ -686,6 +682,11 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 	teleport::core::ClientMessagePayloadType clientMessagePayloadType = *(reinterpret_cast<const teleport::core::ClientMessagePayloadType*>(packet.data()));
 	switch (clientMessagePayloadType)
 	{
+		case teleport::core::ClientMessagePayloadType::OrthogonalAcknowledgement:
+		{
+			const auto *message=reinterpret_cast<const core::OrthogonalAcknowledgementMessage * >(packet.data());
+			confirmationsReceived.insert(message->confirmationNumber);
+		}
 		case teleport::core::ClientMessagePayloadType::ControllerPoses:
 		{
 			teleport::core::ControllerPosesMessage message;

@@ -31,6 +31,20 @@ namespace teleport
 	{
 		class SignalingService;
 		class ClientManager;
+
+		struct OrthogonalNodeState
+		{
+			int64_t serverTimeSentNs = 0;
+			uint64_t confirmationNumber=0;
+		};
+		// A representation of the node state that has been sent to a specific client.
+		// For each relevant command payload type, we store the last "confirmation number" that was sent to the client.
+		// A confirmation number corresponds to a specific state, so if the state changes, the conf number changes,
+		// But if we re-send the command, it will have the same conf number.
+		struct OrthogonalNodeStateMap
+		{
+			std::map<core::CommandPayloadType, OrthogonalNodeState> unconfirmedStates;
+		};
 		//! Per-client messaging handler.
 		class ClientMessaging:public avs::GenericTargetInterface
 		{
@@ -77,10 +91,10 @@ namespace teleport
 			void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
 			void updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);
 			void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
-			void reparentNode(avs::uid nodeID, avs::uid newParentID, avs::Pose relPose);
+			void reparentNode(const teleport::core::UpdateNodeStructureCommand& cmd);
 			void setNodePosePath(avs::uid nodeID, const std::string& regexPosePath);
 			void updateNodeAnimation(teleport::core::ApplyAnimation update);
-			void updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update);
+			//void updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update);
 			void updateNodeRenderState(avs::uid nodeID, avs::NodeRenderState update);
 			void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 
@@ -121,7 +135,12 @@ namespace teleport
 			// Generic target
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 			const avs::DisplayInfo& getDisplayInfo() const;
+			std::set<uint64_t> GetAndResetConfirmationsReceived()
+			{
+				return std::move(confirmationsReceived);
+			}
 		private:
+			std::set<uint64_t> confirmationsReceived;
 			float timeSinceLastGeometryStream = 0;
 			int framesSinceLastPing = 99;
 			// The following MIGHT be moved later to a separate Pipeline class:

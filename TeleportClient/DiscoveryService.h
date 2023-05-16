@@ -41,7 +41,7 @@ namespace teleport
 			bool GetNextBinaryMessage(uint64_t server_uid,std::vector<uint8_t>& msg);
 			void Send(uint64_t server_uid,std::string msg);
 			void SendBinary(uint64_t server_uid, std::vector<uint8_t> bin);
-
+			void Disconnect(uint64_t server_uid);
 		protected:
 			void Tick(uint64_t server_uid);
 			void InitSocket(uint64_t server_uid);

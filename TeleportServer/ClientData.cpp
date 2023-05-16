@@ -18,6 +18,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	,int64_t startTimestamp_utc_unix_ns
 	,bool use_ssl)
 {
+	orthogonalNodeStates.clear();
 	CasterEncoderSettings encoderSettings{};
 
 	encoderSettings.frameWidth = clientSettings.videoTextureSize[0];
@@ -54,6 +55,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	setupCommand.idle_connection_timeout = connectionTimeout;
 
 	setupCommand.session_id = session_id;
+	// TODO: this must change:
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	setupCommand.control_model = serverSettings.controlModel;
@@ -109,6 +111,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	clientMessaging->sendSetupCommand(setupCommand, setupLightingCommand, global_illumination_texture_uids, setupInputsCommand, inputDefinitions);
 
+	lastSetupCommand = setupCommand;
 	connectionState = CONNECTED;
 
 	for (auto s : nodeSubTypes)
@@ -128,6 +131,79 @@ void ClientData::setNodePosePath(avs::uid nodeID, const std::string &regexPosePa
 		nodeSubTypes[nodeID].status = ReflectedStateStatus::SENT;
 	}
 }
+
+void ClientData::reparentNode(avs::uid nodeID)
+{
+	auto node=GeometryStore::GetInstance().getNode(nodeID);
+	if (!node)
+		return;
+	avs::Pose pose;
+	pose.orientation	= node->localTransform.rotation;
+	pose.position		= node->localTransform.position;
+	avs::ConvertRotation(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.orientation);
+	avs::ConvertPosition(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.position);
+	teleport::core::UpdateNodeStructureCommand command(nodeID, node->parentID, pose);
+	command.confirmationNumber = nextConfirmationNumber++;
+	auto& s = orthogonalNodeStates[nodeID];
+	if (!s)
+		s = std::make_shared<OrthogonalNodeStateMap>();
+	auto& st = s->unconfirmedStates[command.commandPayloadType];
+	st.confirmationNumber = command.confirmationNumber;
+	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	st.serverTimeSentNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_ns;
+	clientMessaging->reparentNode(command);
+}
+
+void ClientData::tick(float deltaTime)
+{
+
+	std::set<uint64_t> conf = clientMessaging->GetAndResetConfirmationsReceived();
+	for (auto& nodeState : orthogonalNodeStates)
+	{
+		if (!nodeState.second)
+			continue;
+		for (auto& unconfirmedState : nodeState.second->unconfirmedStates)
+		{
+			if (conf.find(unconfirmedState.second.confirmationNumber) != conf.end())
+			{
+				unconfirmedState.second.confirmationNumber = 0;
+			}
+		}
+	}
+	resendUnconfirmedOrthogonalStates();
+	clientMessaging->tick(deltaTime);
+}
+
+void ClientData::resendUnconfirmedOrthogonalStates()
+{
+	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	int64_t serverTimeNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_ns;
+	// wait one second before resending
+	static int64_t resendOrthogonalStateTimeout = 1000000 * 1000;
+	for (auto& nodeState : orthogonalNodeStates)
+	{
+		if (!nodeState.second)
+			continue;
+		for (auto& unconfirmedState : nodeState.second->unconfirmedStates)
+		{
+			if (unconfirmedState.second.confirmationNumber == 0)
+				continue;
+			if (serverTimeNs - unconfirmedState.second.serverTimeSentNs > resendOrthogonalStateTimeout)
+			{
+				TELEPORT_COUT << "Resending unconfirmed state for node " << nodeState.first << std::endl;
+				unconfirmedState.second.serverTimeSentNs = serverTimeNs;
+				switch (unconfirmedState.first)
+				{
+				case core::CommandPayloadType::UpdateNodeStructure:
+					reparentNode(nodeState.first);
+				default:
+					break;
+				}
+			}
+		}
+	}
+}
+
 void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefinition>& inputDefs)
 {
 	inputDefinitions = inputDefs;

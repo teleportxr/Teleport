@@ -735,7 +735,7 @@ void InstanceRenderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation&
 {
 	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
-
+/*
 void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
 {
 	switch(animationControlUpdate.timeControl)
@@ -747,7 +747,7 @@ void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpda
 		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
 		break;
 	}
-}
+}*/
 
 void InstanceRenderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
@@ -1035,15 +1035,15 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
 	{
-		clientPipeline.commandQueue.configure(3000, 64, "Reliable out");
+		clientPipeline.reliableOutQueue.configure(3000, 64, "Reliable out");
 		clientPipeline.commandDecoder.configure(sessionClient);
-		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.commandQueue);
-		clientPipeline.pipeline.link({ &clientPipeline.commandQueue, &clientPipeline.commandDecoder });
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableOutQueue);
+		clientPipeline.pipeline.link({ &clientPipeline.reliableOutQueue, &clientPipeline.commandDecoder });
 	}
 	// And the generic queue for messages TO the server:
 	{
-		clientPipeline.messageToServerQueue.configure(3000, 64, "Unreliable in");
-		avs::PipelineNode::link(clientPipeline.messageToServerQueue, *(clientPipeline.source.get()));
+		clientPipeline.unreliableToServerQueue.configure(3000, 64, "Unreliable in");
+		avs::PipelineNode::link(clientPipeline.unreliableToServerQueue, *(clientPipeline.source.get()));
 	}
 	// Tow special-purpose queues for time-sensitive messages TO the server:
 	{

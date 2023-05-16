@@ -72,7 +72,6 @@ void Node::RequestTransformUpdate()
 
 void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 {
-	//TODO: Use movement updates to extrapolate a transform and then linearly interpolate towards the extrapolated position, rather than setting transform to the update. This will result in smoother movement.
 	lastReceivedMovement = update;
 
 	//Set transform, then tick based on difference in time since the update was sent and now.

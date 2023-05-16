@@ -25,7 +25,7 @@ NetworkPipeline::NetworkPipeline()
 	TagDataQueue.configure(200, 16, "TagDataQueue");
 	GeometryQueue.configure(200000, 16, "GeometryQueue");
 	AudioQueue.configure(8192, 120, "AudioQueue");
-	CommandQueue.configure(8192, 120, "Reliable in");
+	reliableQueue.configure(8192, 120, "Reliable in");
 	MessageQueue.configure(8192, 120, "Unreliable out");
 }
 
@@ -36,7 +36,7 @@ NetworkPipeline::~NetworkPipeline()
 	TagDataQueue.deconfigure();
 	GeometryQueue.deconfigure();
 	AudioQueue.deconfigure();
-	CommandQueue.deconfigure();
+	reliableQueue.deconfigure();
 	MessageQueue.deconfigure();
 	release();
 }
@@ -222,13 +222,13 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 
 	// Command
 	{
-		if (!avs::PipelineNode::link(CommandQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(reliableQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for commands!" << "\n";
 			initialized = false;
 			return;
 		}
-		mPipeline->add(&CommandQueue);
+		mPipeline->add(&reliableQueue);
 	}
 	// Messages
 	{

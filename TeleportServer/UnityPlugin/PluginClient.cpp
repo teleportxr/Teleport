@@ -360,7 +360,7 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, teleport::cor
 
 	client->clientMessaging->updateNodeAnimation(update);
 }
-
+/*
 TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, teleport::core::NodeUpdateAnimationControl update)
 {
 	auto client = clientManager.GetClient(clientID);
@@ -371,7 +371,7 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, telepo
 	}
 
 	client->clientMessaging->updateNodeAnimationControl(update);
-}
+}*/
 
 TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRenderState update)
 {
@@ -415,8 +415,9 @@ TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs
 		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
 		return;
 	}
-
-	client->clientMessaging->reparentNode(nodeID, newParentNodeID,relPose);
+	// TODO: don't do this in a client function, it's global:
+	GeometryStore::GetInstance().setNodeParent(nodeID,newParentNodeID, relPose);
+	client->reparentNode(nodeID);
 }
 
 TELEPORT_EXPORT void Client_SetNodePosePath(avs::uid clientID, avs::uid nodeID, const char* regexPath)

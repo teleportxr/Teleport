@@ -92,6 +92,7 @@ namespace teleport
 			//Returns whether there is a shadow map stored with the passed id.
 			bool hasShadowMap(avs::uid id) const;
 
+			void setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose);
 			void storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard);
 			void storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard);

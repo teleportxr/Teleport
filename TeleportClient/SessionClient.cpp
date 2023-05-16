@@ -155,6 +155,7 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 	}
 	clientPipeline.pipeline.deconfigure();
 	clientPipeline.source->deconfigure();
+	DiscoveryService::GetInstance().Disconnect(server_uid);
 }
 
 
@@ -340,12 +341,12 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 		case teleport::core::CommandPayloadType::SetNodeHighlighted:
 			ReceiveNodeHighlightUpdate(packet);
 			break;
-		case teleport::core::CommandPayloadType::UpdateNodeAnimation:
+		case teleport::core::CommandPayloadType::ApplyNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
 			break;
-		case teleport::core::CommandPayloadType::UpdateNodeAnimationControl:
+		/*case teleport::core::CommandPayloadType::UpdateNodeAnimationControl:
 			ReceiveNodeAnimationControlUpdate(packet);
-			break;
+			break;*/
 		case teleport::core::CommandPayloadType::SetNodeAnimationSpeed:
 			ReceiveNodeAnimationSpeedUpdate(packet);
 			break;
@@ -665,9 +666,8 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		return;
 	if(!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand, handshake))
 		return;
-	messageToServerEncoder.configure(&messageToServerStack);
-
-	messageToServerPipeline.link({ &messageToServerEncoder, &clientPipeline.messageToServerQueue });
+	unreliableToServerEncoder.configure(&messageToServerStack);
+	messageToServerPipeline.link({ &unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue });
 	std::vector<avs::uid> resourceIDs;
 	if(setupCommand.session_id == lastSessionId)
 	{
@@ -817,7 +817,7 @@ void SessionClient::ReceiveNodeHighlightUpdate(const std::vector<uint8_t> &packe
 void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packet)
 {
 	//Extract command from packet.
-	teleport::core::UpdateNodeAnimationCommand command;
+	teleport::core::ApplyAnimationCommand command;
 	size_t commandSize = command.getCommandSize();
 	if (packet.size() != commandSize)
 	{
@@ -828,7 +828,7 @@ void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packe
 
 	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
 }
-
+/*
 void SessionClient::ReceiveNodeAnimationControlUpdate(const std::vector<uint8_t> &packet)
 {
 	//Extract command from packet.
@@ -842,7 +842,7 @@ void SessionClient::ReceiveNodeAnimationControlUpdate(const std::vector<uint8_t>
 	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
 
 	mCommandInterface->UpdateNodeAnimationControl(command.animationControlUpdate);
-}
+}*/
 
 void SessionClient::ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet)
 {
@@ -936,6 +936,15 @@ void SessionClient::ReceiveUpdateNodeStructureCommand(const std::vector<uint8_t>
 	teleport::core::UpdateNodeStructureCommand updateNodeStructureCommand;
 	memcpy(static_cast<void*>(&updateNodeStructureCommand), packet.data(), commandSize);
 	mCommandInterface->UpdateNodeStructure(updateNodeStructureCommand);
+
+	ConfirmOrthogonalStateToClient(updateNodeStructureCommand.confirmationNumber);
+}
+
+void SessionClient::ConfirmOrthogonalStateToClient(uint64_t confNumber)
+{
+	//TODO: use reliable channel for this.
+	teleport::core::OrthogonalAcknowledgementMessage msg(confNumber);
+	SendMessageToServer(&msg, sizeof(msg));
 }
 
 void SessionClient::ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> &packet)

@@ -46,7 +46,7 @@ namespace teleport
 			avs::Queue TagDataQueue;
 			avs::Queue GeometryQueue;
 			avs::Queue AudioQueue;
-			avs::Queue CommandQueue;
+			avs::Queue reliableQueue;
 			avs::Queue MessageQueue;
 			std::unique_ptr<avs::NetworkSink> mNetworkSink;
 		private:

@@ -683,7 +683,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		}
 		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 		incompleteNode->SetTextCanvas(textCanvas);
-		// MOdified "material" - add to transparent list.
+		// modified "material" - add to transparent list.
 		geometryCache->mNodeManager->NotifyModifiedMaterials(incompleteNode);
 		RESOURCECREATOR_DEBUG_COUT( "Waiting Node {0}({1}) got Canvas {2}({3})" , incompleteNode->id,incompleteNode->name,textCanvas->textCanvasCreateInfo.uid,"");
 
@@ -1149,6 +1149,7 @@ void ResourceCreator::CompleteMaterial(avs::uid id, const clientrender::Material
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
+			geometryCache->mNodeManager->NotifyModifiedMaterials(incompleteNode);
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.

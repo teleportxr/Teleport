@@ -165,6 +165,11 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 	frame = 2;
 }
 
+void DiscoveryService::Disconnect(uint64_t server_uid)
+{
+	awaiting = false;
+}
+
 uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16_t signalPort)
 {
 	std::lock_guard lock(signalingServersMutex);

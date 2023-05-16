@@ -89,8 +89,9 @@ void Config::LoadBookmarks()
 	}
 	else
 	{
-		bookmarks.push_back({"192.168.3.40","192.168.3.40"});
+		bookmarks.push_back({ "home.teleportvr.io","home.teleportvr.io" });
 		bookmarks.push_back({"test.teleportvr.io","test.teleportvr.io"});
+		bookmarks.push_back({ "192.168.3.40","192.168.3.40" });
 		SaveBookmarks();
 	}
 	if(recent_str.length())

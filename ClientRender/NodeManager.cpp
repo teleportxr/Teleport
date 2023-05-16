@@ -553,6 +553,7 @@ void NodeManager::Clear()
 	earlyAnimationControlUpdates.clear();
 	earlyAnimationSpeedUpdates.clear();
 	hiddenNodes.clear();
+	nodesWithModifiedMaterials.clear();
 }
 
 void NodeManager::ClearAllButExcluded(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)

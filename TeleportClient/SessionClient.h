@@ -52,7 +52,7 @@ namespace teleport
 			virtual void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) = 0;
 			virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
 			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
-			virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
+		//	virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
 			virtual void OnStreamingControlMessage(const std::string& str) = 0;
 		};
@@ -96,7 +96,7 @@ namespace teleport
 			mutable avs::ClientServerMessageStack messageToServerStack;
 			// The following MIGHT be moved later to a separate Pipeline class:
 			avs::Pipeline messageToServerPipeline;
-			avs::GenericEncoder messageToServerEncoder;
+			avs::GenericEncoder unreliableToServerEncoder;
 		public:
 			static std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
 			static void DestroySessionClients();
@@ -169,6 +169,7 @@ namespace teleport
 				return clientPipeline;
 			}
 		private:
+			void ConfirmOrthogonalStateToClient(uint64_t confNumber);
 			void ReceiveCommand(const std::vector<uint8_t> &buffer);
 			void ReceiveCommandPacket(const std::vector<uint8_t> &buffer);
 
