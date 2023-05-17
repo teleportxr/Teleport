@@ -57,7 +57,7 @@ bool SignalingService::initialize(std::set<uint16_t> discoPorts,  std::string de
 
 void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string msg)
 {
-	TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
+	//TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
 	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
 	auto &c=signalingClients[clientID];
 	if(c)
@@ -70,7 +70,7 @@ void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string m
 
 void SignalingService::ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::vector<std::byte> &bin)
 {
-	TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
+	//TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
 	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
 	auto& c = signalingClients[clientID];
 	if (c)
@@ -144,6 +144,7 @@ void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 			return;
 		}
 	}
+	std::lock_guard lock(signalingClientsMutex);
 	signalingClients[clientID] = std::make_shared<SignalingClient>();
 	auto& c = signalingClients[clientID];
 	c->clientID = clientID;
@@ -175,12 +176,16 @@ void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingC
 void SignalingService::shutdown()
 {
 	TELEPORT_COUT<< ": info: SignalingService::shutdown" << std::endl;
-	for (auto c : signalingClients)
 	{
-		if (c.second && c.second->webSocket)
+		std::lock_guard lock(signalingClientsMutex);
+		for (auto c : signalingClients)
 		{
-			c.second->webSocket->resetCallbacks();
+			if (c.second && c.second->webSocket)
+			{
+				c.second->webSocket->resetCallbacks();
+			}
 		}
+		signalingClients.clear();
 	}
 	for(auto &w:webSocketServers)
 	{
@@ -188,7 +193,6 @@ void SignalingService::shutdown()
 		w.second.reset();
 	}
 	webSocketServers.clear();
-	signalingClients.clear();
 	clientUids.clear();
 	clientRemapping.clear();
 }
@@ -204,6 +208,7 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			clientID = uid;
 		else
 		{
+			std::lock_guard lock(signalingClientsMutex);
 			if (signalingClients.find(clientID) == signalingClients.end())
 			{
 				// sent us a client ID that isn't valid. Ignore it, don't waste bandwidth..?
@@ -274,12 +279,14 @@ void SignalingService::tick()
 	avs::uid clientID = 0; //Newly received ID.
 
 	//Retrieve all packets received since last call, and add any new clients.
-	for (auto &c : signalingClients)
+	signalingClientsMutex.lock();
+	for (auto c : signalingClients)
 	{
 		std::shared_ptr<SignalingClient> signalingClient = c.second;
 		if (!signalingClient)
 			continue;
 		std::lock_guard lock(webSocketsMessagesMutex);
+		signalingClientsMutex.unlock();
 		while (signalingClient->messagesReceived.size())
 		{
 			std::string msg = signalingClient->messagesReceived[0];
@@ -294,6 +301,7 @@ void SignalingService::tick()
 			else
 				signalingClient->messagesToPassOn.push(msg);
 		}
+		signalingClientsMutex.lock();
 	}
 	for (auto c : signalingClients)
 	{
@@ -305,6 +313,7 @@ void SignalingService::tick()
 			clientUids.erase(clientID);
 		}
 	}
+	signalingClientsMutex.unlock();
 }
 
 const std::set<avs::uid> &SignalingService::getClientIds() const
@@ -314,6 +323,7 @@ const std::set<avs::uid> &SignalingService::getClientIds() const
 
 std::shared_ptr<SignalingClient> SignalingService::getSignalingClient(avs::uid u)
 {
+	std::lock_guard lock(signalingClientsMutex);
 	return signalingClients[u];
 }
 
@@ -335,6 +345,7 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 	};
 	try
 	{
+		std::lock_guard lock(signalingClientsMutex);
 		signalingClients[clientID]->webSocket->send(message.dump());
 		discoveryCompleteForClient(clientID);
 	}
@@ -346,6 +357,7 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 
 void SignalingService::sendToClient(avs::uid clientID, std::string str)
 {
+	std::lock_guard lock(signalingClientsMutex);
 	auto c = signalingClients.find(clientID);
 	if (c == signalingClients.end())
 	{
@@ -364,6 +376,7 @@ void SignalingService::sendToClient(avs::uid clientID, std::string str)
 
 bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t> bin)
 {
+	std::lock_guard lock(signalingClientsMutex);
 	auto c = signalingClients.find(clientID);
 	if (c == signalingClients.end())
 	{

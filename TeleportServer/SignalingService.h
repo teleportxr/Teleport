@@ -59,6 +59,7 @@ namespace teleport
 			std::set<avs::uid> clientUids;
 			std::map<uint16_t,std::shared_ptr<rtc::WebSocketServer>> webSocketServers;
 			std::mutex webSocketsMessagesMutex;
+			std::mutex signalingClientsMutex;
 		public:
 			void OnWebSocket(std::shared_ptr<rtc::WebSocket>);
 			void ReceiveWebSocketsMessage(avs::uid clientID, std::string msg);
