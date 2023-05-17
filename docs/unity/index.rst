@@ -5,8 +5,8 @@ Teleport Unity SDK
 The Teleport Unity SDK provides everything necessary to run a Teleport server as a Unity application. In typical usage, only the server need run Unity - the client
 will be a standard Teleport client app such as the Teleport reference client.
 
-Usage
-=====
+Getting Started
+===============
 You can:
 
 	* Get the example project TeleportUnityExample, or
@@ -66,6 +66,9 @@ Usage
 You can create a GameObject in Unity that has the Monitor component. If not, one will be created when you run the project.
 
 When running, the server awaits connections via the Teleport protocol. When a client connects, the server creates a player instance.
+
+A client, when connected, will maintain a list of Nodes (i.e. GameObjects in Unity) that are relevant to it. The space around the client's
+own position is called its Area of Interest (AOI). The server will send it updates for all Nodes within its AOI. 
 
 Inputs
 ======

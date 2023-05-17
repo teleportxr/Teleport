@@ -1,8 +1,7 @@
-// (C) Copyright 2018-2022 Simul Software Ltd
-
+// (C) Copyright 2018-2023 Simul Software Ltd
 #include "Node.h"
-
 #include "TeleportClient/ServerTimestamp.h"
+#include "TeleportClient/basic_linear_algebra.h"
 
 using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason;
 
@@ -78,7 +77,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
 	//TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs()));
 }
-#include "TeleportClient/basic_linear_algebra.h"
+
 // Here we will extrapolate the transform based on the last received movement update.
 void Node::TickExtrapolatedTransform(double serverTimeS)
 {
