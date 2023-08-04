@@ -8,8 +8,8 @@
 #include "GeometryCache.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/HdrRenderer.h"
-#include "Platform/Shaders/SL/CppSl.sl"
-#include "Platform/Shaders/SL/camera_constants.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/camera_constants.sl"
 #include "client/Shaders/cubemap_constants.sl"
 #include "client/Shaders/pbr_constants.sl"
 #include "client/Shaders/video_types.sl"
@@ -52,14 +52,6 @@ namespace clientrender
 		platform::crossplatform::Texture *texture = nullptr;
 		avs::SurfaceBackendInterface* createSurface() const override;
 	};
-	struct ShaderPassSetup
-	{
-		platform::crossplatform::EffectTechnique	*technique				=nullptr;
-		platform::crossplatform::EffectPass			*lightmapPass			=nullptr;
-		platform::crossplatform::EffectPass			*noLightmapPass			=nullptr;
-		platform::crossplatform::EffectPass			*overridePass			=nullptr;
-		platform::crossplatform::EffectPass			*digitizingPass			=nullptr;
-	};
 	struct RenderState
 	{
 		teleport::client::OpenXR *openXR=nullptr;
@@ -67,27 +59,20 @@ namespace clientrender
 		avs::uid selected_uid=0;
 		bool show_node_overlays			=false;
 		static constexpr int maxTagDataSize = 32;
-		std::string overridePassName;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		/// A framebuffer to store the colour and depth textures for the view.
-		platform::crossplatform::BaseFramebuffer	*hdrFramebuffer	=nullptr;
+		platform::crossplatform::Framebuffer	*hdrFramebuffer	=nullptr;
 		/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
 		platform::crossplatform::HdrRenderer		*hDRRenderer	=nullptr;
-		platform::crossplatform::Texture* diffuseCubemapTexture	= nullptr;
-		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
-		platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
-		platform::crossplatform::Texture* videoTexture				= nullptr;
 		// A simple example mesh to draw as transparent
 		platform::crossplatform::Effect *pbrEffect					= nullptr;
 		
-		ShaderPassSetup pbrEffect_transparent;
-		ShaderPassSetup pbrEffect_transparentMultiview;
-		ShaderPassSetup pbrEffect_solid;
-		ShaderPassSetup pbrEffect_solidMultiview;
-		ShaderPassSetup pbrEffect_solidAnim;
-		ShaderPassSetup pbrEffect_solidAnimMultiview;
-		platform::crossplatform::EffectPass			*pbrEffect_solidTechnique_localPass				=nullptr;
-		platform::crossplatform::EffectPass			*pbrEffect_solidMultiviewTechnique_localPass	=nullptr;
+		platform::crossplatform::EffectTechnique	*solid			=nullptr;
+		platform::crossplatform::EffectTechnique	*transparent	=nullptr;
+
+		std::string overridePixelShader;
+		platform::crossplatform::EffectVariantPass *solidVariantPass=nullptr;
+		platform::crossplatform::EffectVariantPass *transparentVariantPass=nullptr;
 
 		platform::crossplatform::Effect *cubemapClearEffect	= nullptr;
 		platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
@@ -117,6 +102,10 @@ namespace clientrender
 	struct InstanceRenderState
 	{
 		AVSTextureHandle avsTexture;
+		platform::crossplatform::Texture* diffuseCubemapTexture		= nullptr;
+		platform::crossplatform::Texture* specularCubemapTexture	= nullptr;
+		platform::crossplatform::Texture* lightingCubemapTexture	= nullptr;
+		platform::crossplatform::Texture* videoTexture				= nullptr;
 	};
 	//! Renderer that draws for a specific server.
 	//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
@@ -170,9 +159,9 @@ namespace clientrender
 		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			
 			,avs::uid this_server_uid);
-
+			
+		void RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> geometryCache);
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force
@@ -184,7 +173,7 @@ namespace clientrender
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false);
 		
-		clientrender::GeometryCache geometryCache;
+		std::shared_ptr<clientrender::GeometryCache> geometryCache;
 		clientrender::ResourceCreator resourceCreator;
 		
 		virtual avs::DecoderStatus GetVideoDecoderStatus() { return avs::DecoderStatus::DecoderUnavailable; }

@@ -48,7 +48,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	light.uid32=(unsigned)(m_CI.uid&(uint64_t)0xFFFFFFFF);
 	UpdateLightSpaceTransform();
 
-	if (m_CI.shadowMapTexture)
+/*	if (m_CI.shadowMapTexture)
 	{
 	
 		m_ShaderResourceLayout.AddBinding(2,  ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_FRAGMENT);
@@ -66,7 +66,7 @@ Light::Light(LightCreateInfo* pLightCreateInfo)
 	
 		std::string shaderResourceName = std::string("u_ShadowMap") + std::to_string(m_LightID);
 		m_ShaderResource.AddImage( ShaderResourceLayout::ShaderResourceType::COMBINED_IMAGE_SAMPLER, 19 + (uint32_t)m_LightID, shaderResourceName.c_str(), {  m_CI.shadowMapTexture});
-	}
+	}*/
 }
 
 void Light::UpdatePosition(const vec3& position) 

@@ -105,7 +105,7 @@ namespace teleport
 
 			void removeNode(avs::uid id);
 
-			void updateNodeTransform(avs::uid id, avs::Transform& newLTransform, avs::Transform& newGTransform);
+			void updateNodeTransform(avs::uid id, avs::Transform& newLTransform);
 
 			//Returns amount of textures waiting to be compressed.
 			size_t getNumberOfTexturesWaitingForCompression() const;

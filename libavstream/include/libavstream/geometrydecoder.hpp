@@ -86,7 +86,7 @@ namespace avs
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
 		void   onOutputUnlink(int slot, PipelineNode* node) override;
-		Result processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target,avs::uid uid);
+		Result processPayload(avs::uid server_uid,const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target,avs::uid uid);
 	};
 
 } // avs

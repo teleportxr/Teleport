@@ -80,6 +80,7 @@ namespace avs
 	public:
 		NetworkSource(PipelineNode::Private* d_ptr);
 		virtual Result configure(std::vector<NetworkSourceStream>&& streams,int numputs, const NetworkSourceParams& params)=0;
+		virtual void kill() =0;
 		virtual NetworkSourceCounters getCounterValues() const=0;
 		virtual void setDebugStream(uint32_t) = 0;
 		virtual void setDoChecksums(bool) = 0;

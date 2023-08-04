@@ -307,7 +307,7 @@ namespace avs
 		std::string name;
 
 		Transform localTransform;
-		Transform globalTransform;
+		//Transform globalTransform;
 
 		bool stationary=false;
 
@@ -322,7 +322,7 @@ namespace avs
 		NodeDataType data_type=NodeDataType::None;
 		uid data_uid=0;
 
-		//MESH
+		// Mesh: materials for the submeshes.
 		std::vector<uid> materials;
 
 		//SKINNED MESH
@@ -333,11 +333,11 @@ namespace avs
 		NodeRenderState renderState;
 
 		//LIGHT
-		vec4 lightColour={0,0,0,0};
-		float lightRadius=0.f;
-		vec3 lightDirection={0,0,1.0f};	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
-		uint8_t lightType=0;
-		float lightRange=0.f;			//! Maximum distance the light is effective at, in metres.
+		vec4 lightColour	={0,0,0,0};
+		float lightRadius	=0.f;
+		vec3 lightDirection	={0,0,1.0f};	// Unchanging rotation that orients the light's shadowspace so that it shines on the Z axis with X and Y for shadowmap.
+		uint8_t lightType	=0;
+		float lightRange	=0.f;			//! Maximum distance the light is effective at, in metres.
 
 	};
 #ifdef _MSC_VER
@@ -811,13 +811,16 @@ namespace avs
 		size_t m_IndexCount = 0;
 		size_t m_IndexSize = 0;
 		const unsigned char* m_Indices = nullptr;
+		
+		std::shared_ptr<Material> internalMaterial;// not always present.
 	};
 	struct MeshCreate
 	{
 		std::string name;
-
+		uid cache_uid = 0;
 		uid mesh_uid = 0;
 		std::vector<MeshElementCreate> m_MeshElementCreate;
+		bool clockwiseFaces=true;
 	};
 	/*!
  * Common mesh decoder backend interface.
@@ -830,11 +833,11 @@ namespace avs
 		virtual ~GeometryTargetBackendInterface() = default;
 		virtual Result CreateMesh(MeshCreate& meshCreate) = 0;
 
-		virtual void CreateTexture(uid id, const Texture& texture) = 0;
-		virtual void CreateMaterial(uid id, const Material& material) = 0;
-		virtual void CreateNode(uid id, Node& node) = 0;
-		virtual void CreateSkin(avs::uid id, avs::Skin& skin) = 0;
-		virtual void CreateAnimation(avs::uid id, teleport::core::Animation& animation) = 0;
+		virtual void CreateTexture(avs::uid server_uid,uid id, const Texture& texture) = 0;
+		virtual void CreateMaterial(avs::uid server_uid,uid id, const Material& material) = 0;
+		virtual void CreateNode(avs::uid server_uid,uid id,const Node& node) = 0;
+		virtual void CreateSkin(avs::uid server_uid,avs::uid id, avs::Skin& skin) = 0;
+		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
 	};
 
 	class AVSTREAM_API GeometryCacheBackendInterface : public UseInternalAllocator
@@ -853,6 +856,6 @@ namespace avs
 	{
 	public:
 		virtual ~GeometryDecoderBackendInterface() = default;
-		virtual Result decode(const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface *target,avs::uid uid) = 0;
+		virtual Result decode(avs::uid server_uid,const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface *target,avs::uid uid) = 0;
 	};
 } // avs

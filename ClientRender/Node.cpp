@@ -20,6 +20,7 @@ void Node::SetHolderClientId(avs::uid h)
 {
 	holderClientId=h;
 }
+
 avs::uid Node::GetHolderClientId() const
 {
 	return holderClientId;

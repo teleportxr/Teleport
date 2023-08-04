@@ -16,7 +16,7 @@ Platform gPlatform = Platform::ANDROID;
 #include "Platform/CrossPlatform/DisplaySurface.h"
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/HdrRenderer.h"
-#include "Platform/CrossPlatform/BaseFramebuffer.h"
+#include "Platform/CrossPlatform/Framebuffer.h"
 #include "FileLoader.h"
 
 #include "Platform/Vulkan/RenderPlatform.h"

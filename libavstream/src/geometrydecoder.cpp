@@ -183,7 +183,9 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			return Result::Failed;
 		}
-		result = processPayload(ptr, dataSize, payloadType, gti,uid);
+		// TODO: this only supports one server.
+		avs::uid server_uid=1;
+		result = processPayload(server_uid,ptr, dataSize, payloadType, gti,uid);
 	} while (result == Result::OK);
 
 
@@ -202,14 +204,14 @@ Result GeometryDecoder::setBackend(GeometryDecoderBackendInterface* backend)
 	return Result::OK;
 }
 
-Result GeometryDecoder::processPayload(const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target,avs::uid uid)
+Result GeometryDecoder::processPayload(avs::uid server_uid,const uint8_t* buffer, size_t bufferSize, GeometryPayloadType payloadType, GeometryTargetInterface *target,avs::uid uid)
 {
 	assert(m_backend);
 	Result result = Result::UnknownError;
 
 	if (m_backend && bufferSize)
 	{
-		result = m_backend->decode(buffer, bufferSize, payloadType, target->getGeometryTargetBackendInterface(),uid);
+		result = m_backend->decode(server_uid,buffer, bufferSize, payloadType, target->getGeometryTargetBackendInterface(),uid);
 	}
 	return result;
 }

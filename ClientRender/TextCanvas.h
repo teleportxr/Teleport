@@ -6,9 +6,9 @@
 #include "Common.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/Effect.h"
-#include "Platform/Shaders/SL/CppSl.sl"
-#include "Platform/Shaders/SL/text_constants.sl"
-#include "Platform/Shaders/SL/camera_constants.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/text_constants.sl"
+#include "Platform/CrossPlatform/Shaders/camera_constants.sl"
 #include "ClientRender/FontAtlas.h"
 
 namespace platform
@@ -22,6 +22,7 @@ namespace clientrender
 {
 	struct TextCanvasCreateInfo
 	{
+		avs::uid server_uid=0;
 		avs::uid uid=0;
 		avs::uid font=0;
 		int size=0;

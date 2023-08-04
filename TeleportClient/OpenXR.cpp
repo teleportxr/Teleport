@@ -221,7 +221,6 @@ struct XrSwapchainImagePlatform
 	crossplatform::Texture* texture;
 } ;
 
-
 void swapchain_destroy(swapchain_t& swapchain)
 {
 	for (uint32_t i = 0; i < swapchain.surface_data.size(); i++)
@@ -250,7 +249,6 @@ PFN_xrGeometryInstanceSetTransformFB	ext_xrGeometryInstanceSetTransformFB	= null
 PFN_xrConvertWin32PerformanceCounterToTimeKHR ext_xrConvertWin32PerformanceCounterToTimeKHR = nullptr;
 #endif
 PFN_xrConvertTimespecTimeToTimeKHR		ext_xrConvertTimespecTimeToTimeKHR		= nullptr;
-
 
 struct app_transform_buffer_t
 {

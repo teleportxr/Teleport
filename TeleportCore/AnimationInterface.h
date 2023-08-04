@@ -3,7 +3,7 @@
 #include "libavstream/common.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "TeleportCore/ErrorHandling.h"
-#include "Platform/Shaders/SL/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 
 namespace teleport
 {

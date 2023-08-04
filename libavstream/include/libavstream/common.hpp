@@ -282,7 +282,8 @@ namespace avs
 		Mesh,
 		Light,
 		Bone,
-		TextCanvas
+		TextCanvas,
+		SubScene
 	};
 
 	//! Information on the resolution of a client's display.

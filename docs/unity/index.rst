@@ -27,12 +27,11 @@ You can install it as a Git submodule or copy the code directly, it should go in
 
 From your unity project, launch the Package Manager, and install the Core RP Library.
 
-Building from Source
---------------------
+Building the Unity Server from Source
+-------------------------------------
 If you've installed the Teleport Unity SDK as a prebuilt package, you're ready to go. But if you're building the Teleport C++ Server SDK from source, you'll need to follow the instructions in the Server section of this documentation.
 Use CMakeGui to set:
 
-* TELEPORT_SERVER to true
 * TELEPORT_UNITY to true
 * TELEPORT_UNITY_EDITOR_DIR to the folder where Unity.exe resides.
 * TELEPORT_UNITY_PLUGINS_DIR to the folder Plugins/x86_64 in the Teleport Unity assets folder, so that the C++ SDK will build TeleportServer.dll to that directory.
@@ -42,7 +41,7 @@ Then build the Teleport_Server_Unity.sln solution. You can run Unity as normal, 
 
 Configuration
 =============
-First, select the Teleport render pipeline. This adds functionality for video streaming and lighting generation. In the *Edit* menu, under *Project Settings...*, select *Graphics*. Set the Scriptable Render Pipeline Settings
+First, activate the Teleport render pipeline. This adds functionality for video streaming and lighting generation. In the *Edit* menu, under *Project Settings...*, select *Graphics*. Set the Scriptable Render Pipeline Settings
 object to point to the Default Teleport Render Pipeline, found in Teleport/Resources.
 
 .. image:: RenderPipelineAsset.png

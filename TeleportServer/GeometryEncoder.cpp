@@ -413,17 +413,17 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		put((uint8_t*)node->name.data(), nameLength);
 
 		avs::Transform localTransform = node->localTransform;
-		avs::Transform globalTransform = node->globalTransform;
+		//avs::Transform globalTransform = node->globalTransform;
 		avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
-		avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), globalTransform);
+		//avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), globalTransform);
 
-		if (node->parentID)
+		//if (node->parentID)
 			put(localTransform);
-		else
-			put(globalTransform);
-		put(globalTransform);
-		// If the node is stationary, we will normally use the global transform.
-		put((uint8_t)(!node->stationary));
+		//else
+		//	put(globalTransform);
+		// PREVIOUSLY: If the node is stationary, we will normally use the global transform.
+		// NOW: avoid this overcomplexity for now.
+		//put((uint8_t)(!node->stationary));
 		put((uint8_t)(node->stationary));
 
 		put(node->holder_client_id);

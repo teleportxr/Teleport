@@ -304,32 +304,36 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushTexturePath("pc_client/Textures");
 		renderPlatform->PushShaderPath("pc_client/Shaders");
 		renderPlatform->PushShaderPath("../client/Shaders");
+		renderPlatform->PushShaderPath("../../client/Shaders");
+		renderPlatform->PushShaderPath("../../../../client/Shaders");
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushShaderPath("Shaders");	// working directory C:\Teleport
 
 		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SFX").c_str());
-		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/Shaders/SL").c_str());
+		renderPlatform->PushShaderPath((src_dir+"/firstparty/Platform/CrossPlatform/Shaders").c_str());
 		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SFX");
-		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SL");
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/CrossPlatform/Shaders");
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/ImGui/Shaders");
 		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SFX");
-		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SL");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/CrossPlatform/Shaders");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/ImGui/Shaders");
 #if TELEPORT_CLIENT_USE_D3D12
-		renderPlatform->PushShaderPath("../../../../Platform/DirectX12/HLSL");
-		renderPlatform->PushShaderPath("../../Platform/DirectX12/HLSL");
-		renderPlatform->PushShaderPath("Platform/DirectX12/HLSL/");
+		renderPlatform->PushShaderPath("../../../../Platform/DirectX12/Sfx");
+		renderPlatform->PushShaderPath("../../Platform/DirectX12/Sfx");
+		renderPlatform->PushShaderPath("Platform/DirectX12/Sfx/");
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
-		renderPlatform->PushShaderBinaryPath((build_dir+"/firstparty/Platform/DirectX12/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders/directx12");
+		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin/DirectX12").c_str());
+		renderPlatform->PushShaderBinaryPath("assets/shaders");
 #endif
 #if TELEPORT_CLIENT_USE_D3D11
-		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/HLSL").c_str());
-		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/DirectX11/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders/directx11");
+		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/Sfx").c_str());
+		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin").c_str());
+		renderPlatform->PushShaderBinaryPath("assets/shaders");
 #endif
 #if TELEPORT_CLIENT_USE_VULKAN
-		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Vulkan/HLSL").c_str());
-		renderPlatform->PushShaderBinaryPath((build_dir + "/firstparty/Platform/Vulkan/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
+		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Vulkan/Sfx").c_str());
+		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin").c_str());
+		renderPlatform->PushShaderBinaryPath("assets/shaders");
 #endif
 
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);

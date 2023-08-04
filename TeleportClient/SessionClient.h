@@ -108,6 +108,9 @@ namespace teleport
 			SessionClient(avs::uid server_uid);
 			~SessionClient();
 			
+			//! For use only internally or by Renderer for the local session.
+			void ApplySetup(const teleport::core::SetupCommand &s);
+
 			void RequestConnection(const std::string &ip,int port);
 			bool HandleConnections();
 			void SetSessionCommandInterface(SessionCommandInterface*);
@@ -168,6 +171,8 @@ namespace teleport
 			{
 				return clientPipeline;
 			}
+			// Debugging:
+			void KillStreaming();
 		private:
 			void ConfirmOrthogonalStateToClient(uint64_t confNumber);
 			void ReceiveCommand(const std::vector<uint8_t> &buffer);

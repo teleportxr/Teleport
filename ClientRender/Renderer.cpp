@@ -19,7 +19,7 @@
 #include "TeleportClient/DiscoveryService.h"
 #include "Platform/CrossPlatform/Macros.h"
 #include "Platform/CrossPlatform/GpuProfiler.h"
-#include "Platform/CrossPlatform/BaseFramebuffer.h"
+#include "Platform/CrossPlatform/Framebuffer.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/Core/StringFunctions.h"
@@ -100,8 +100,8 @@ avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const
 			return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
 	#endif
 	#if TELEPORT_CLIENT_USE_VULKAN
-			auto &img=((vulkan::Texture*)texture)->AsVulkanImage();
-			return new avs::SurfaceVulkan(&img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
+			vk::Image* img=((vulkan::Texture*)texture)->AsVulkanImage();
+			return new avs::SurfaceVulkan(img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
 	#endif
 }
 
@@ -129,6 +129,7 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 {
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
+	GeometryCache::SetRenderPlatform(r);
 	renderState.openXR = u;
 
 	renderPlatform->SetShaderBuildMode(crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
@@ -169,7 +170,7 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	gui.SetConnectHandler(connectButtonHandler);
 	auto cancelConnectHandler = std::bind(&client::SessionClient::CancelConnectButtonHandler, 1);
 	gui.SetCancelConnectHandler(cancelConnectHandler);
-	
+	gui.SetConsoleCommandHandler(std::bind(&Renderer::ConsoleCommand,this,std::placeholders::_1));
 	auto startSessionHandler = [this](){
 		start_xr_session=true;
 		end_xr_session=false;
@@ -180,13 +181,8 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 		end_xr_session=true;
 	};
 	gui.SetEndXRSessionHandler(endSessionHandler);
-
-	renderState.videoTexture = renderPlatform->CreateTexture();
-	renderState.specularCubemapTexture = renderPlatform->CreateTexture();
-	renderState.diffuseCubemapTexture = renderPlatform->CreateTexture();
-	renderState.lightingCubemapTexture = renderPlatform->CreateTexture();
 	errno = 0;
-	RecompileShaders();
+	LoadShaders();
 
 	renderState.pbrConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.pbrConstants.LinkToEffect(renderState.pbrEffect, "pbrConstants");
@@ -207,11 +203,74 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
 	auto localInstanceRenderer = GetInstanceRenderer(0);
 	auto& localGeometryCache = localInstanceRenderer->geometryCache;
-	localGeometryCache.setCacheFolder("assets/localGeometryCache");
-
-	client::SessionClient::GetSessionClient(server_uid)->SetSessionCommandInterface(GetInstanceRenderer(server_uid).get());
+	localGeometryCache->setCacheFolder("assets/localGeometryCache");
 
 	InitLocalGeometry();
+}
+
+void Renderer::ConsoleCommand(const std::string &str)
+{
+	console.push(str);
+}
+
+void Renderer::ExecConsoleCommands()
+{
+	while(!console.empty())
+	{
+		std::string str = console.front();
+		console.pop();
+		ExecConsoleCommand(str);
+	}
+}
+
+void Renderer::ExecConsoleCommand(const std::string &str)
+{
+	if (str == "killstreaming")
+	{
+		auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+		sessionClient->KillStreaming();
+	}
+	if (str == "reloadshaders")
+	{
+		RecompileShaders();
+	}
+	else if (str == "reloadgeometry")
+	{
+		//geometryDecoder.clearCache();
+		InitLocalGeometry();
+	}
+	else if (str == "reloadtextures")
+	{
+		renderState.pbrConstants.RestoreDeviceObjects(renderPlatform);
+		renderState.pbrConstants.LinkToEffect(renderState.pbrEffect, "pbrConstants");
+		renderState.perNodeConstants.RestoreDeviceObjects(renderPlatform);
+		renderState.perNodeConstants.LinkToEffect(renderState.pbrEffect, "perNodeConstants");
+		renderState.cubemapConstants.RestoreDeviceObjects(renderPlatform);
+		renderState.cubemapConstants.LinkToEffect(renderState.cubemapClearEffect, "CubemapConstants");
+		renderState.cameraConstants.RestoreDeviceObjects(renderPlatform);
+		renderState.stereoCameraConstants.RestoreDeviceObjects(renderPlatform);
+		renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
+		renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
+		renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
+		renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
+		renderState.boneMatrices.LinkToEffect(renderState.pbrEffect, "boneMatrices");
+	}
+	else if (str == "reloadfonts")
+	{
+		text3DRenderer.RestoreDeviceObjects(renderPlatform);
+	}
+	else if (str == "reloadgui")
+	{
+		gui.RestoreDeviceObjects(renderPlatform, nullptr);
+	}
+	else if (str == "reloadall")
+	{
+		RecompileShaders();
+		//geometryDecoder.clearCache();
+		InitLocalGeometry();
+		text3DRenderer.RestoreDeviceObjects(renderPlatform);
+		gui.RestoreDeviceObjects(renderPlatform, nullptr);
+	}
 }
 
 void Renderer::InitLocalGeometry()
@@ -222,12 +281,12 @@ void Renderer::InitLocalGeometry()
 	avs::uid hand_mesh_uid = avs::GenerateUid();
 	lobbyGeometry.hand_skin_uid = avs::GenerateUid();
 	avs::uid point_anim_uid = avs::GenerateUid();
-	geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator,hand_mesh_uid);
-	geometryDecoder.decodeFromFile("assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator, lobbyGeometry.hand_skin_uid);
-	geometryDecoder.decodeFromFile("assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator, point_anim_uid);
+	//geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/2CylinderEngine.gltf",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid);
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator,hand_mesh_uid);
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator, lobbyGeometry.hand_skin_uid);
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator, point_anim_uid);
 	geometryDecoder.WaitFromDecodeThread();
 	
-	localResourceCreator.Update(0.0f);
 	// Generate local uid's for the nodes and resources.
 	lobbyGeometry.left_root_node_uid	= avs::GenerateUid();
 	lobbyGeometry.right_root_node_uid	= avs::GenerateUid();
@@ -240,24 +299,24 @@ void Renderer::InitLocalGeometry()
 		avsMaterial.name="local grey";
 		avsMaterial.pbrMetallicRoughness.metallicFactor=0.0f;
 		avsMaterial.pbrMetallicRoughness.baseColorFactor={.5f,.5f,.5f,.5f};
-		localResourceCreator.CreateMaterial(grey_material_uid,avsMaterial);// not used just now.
+		localResourceCreator.CreateMaterial(0,grey_material_uid,avsMaterial);// not used just now.
 		avsMaterial.name="local blue glow";
 		avsMaterial.emissiveFactor={0.0f,0.2f,0.5f};
-		localResourceCreator.CreateMaterial(blue_material_uid,avsMaterial);
+		localResourceCreator.CreateMaterial(0,blue_material_uid,avsMaterial);
 		avsMaterial.name="local red glow";
 		avsMaterial.emissiveFactor={0.4f,0.1f,0.1f};
-		localResourceCreator.CreateMaterial(red_material_uid,avsMaterial);
+		localResourceCreator.CreateMaterial(0,red_material_uid,avsMaterial);
 
-		localGeometryCache.mMaterialManager.Get(grey_material_uid)->SetShaderOverride("local_hand");
-		localGeometryCache.mMaterialManager.Get(blue_material_uid)->SetShaderOverride("local_hand");
-		localGeometryCache.mMaterialManager.Get(red_material_uid)->SetShaderOverride("local_hand");
+		localGeometryCache->mMaterialManager.Get(grey_material_uid)->SetShaderOverride("ps_local_hand");
+		localGeometryCache->mMaterialManager.Get(blue_material_uid)->SetShaderOverride("ps_local_hand");
+		localGeometryCache->mMaterialManager.Get(red_material_uid)->SetShaderOverride("ps_local_hand");
 	}
 	avs::Node avsNode;
 
 	avsNode.name		="local Left Root";
-	localResourceCreator.CreateNode(lobbyGeometry.left_root_node_uid,avsNode);
+	localResourceCreator.CreateNode(0,lobbyGeometry.left_root_node_uid,avsNode);
 	avsNode.name		="local Right Root";
-	localResourceCreator.CreateNode(lobbyGeometry.right_root_node_uid,avsNode);
+	localResourceCreator.CreateNode(0,lobbyGeometry.right_root_node_uid,avsNode);
 
 	avsNode.data_type	=avs::NodeDataType::Mesh;
 	
@@ -275,7 +334,7 @@ void Renderer::InitLocalGeometry()
 	// 10cm forward, because root of hand is at fingers.
 	avsNode.localTransform.position		={0.f,0.1f,0.f};
 	lobbyGeometry.local_left_hand_uid	=avs::GenerateUid();
-	localResourceCreator.CreateNode(lobbyGeometry.local_left_hand_uid,avsNode);
+	localResourceCreator.CreateNode(0,lobbyGeometry.local_left_hand_uid,avsNode);
 
 	avsNode.name="local Right Hand";
 	avsNode.materials[0]				=red_material_uid;
@@ -284,7 +343,7 @@ void Renderer::InitLocalGeometry()
 	// 10cm forward, because root of hand is at fingers.
 	avsNode.localTransform.position		={0.f,0.1f,0.f};
 	lobbyGeometry.local_right_hand_uid	=avs::GenerateUid();
-	localResourceCreator.CreateNode(lobbyGeometry.local_right_hand_uid,avsNode);
+	localResourceCreator.CreateNode(0,lobbyGeometry.local_right_hand_uid,avsNode);
 
 	if(renderState.openXR)
 	{
@@ -304,37 +363,69 @@ void Renderer::InitLocalGeometry()
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
 	}
+	// test gltf loading.
+	avs::uid gltf_uid = avs::GenerateUid();
+	// gltf_uid will refer to a SubScene asset in cache zero.
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/Buggy.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid);
+	{
+		avs::Node gltfNode;
+		gltfNode.name		="GLTF";
+		gltfNode.data_type	=avs::NodeDataType::SubScene;
+		gltfNode.data_uid	=gltf_uid;
+		gltfNode.materials.resize(3,0);
 	
-	auto rightHand=localGeometryCache.mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
+		gltfNode.localTransform.position=vec3(1.0f,1.0f,2.f);
+		//gltfNode.localTransform.scale=vec3(0.01f,0.01f,0.01f);
+		localResourceCreator.CreateNode(0,avs::GenerateUid(),gltfNode);
+	}
+	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
 	lobbyGeometry.palm_to_hand_r=rightHand->GetLocalTransform();
-	auto leftHand=localGeometryCache.mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
+	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
 	lobbyGeometry.palm_to_hand_l=leftHand->GetLocalTransform();
+
+	// local lighting.
+	avs::uid diffuse_cubemap_uid=avs::GenerateUid();
+	avs::uid specular_cubemap_uid=avs::GenerateUid();
+	{
+		std::vector<unsigned int> diffuse_cubemap_data={0xFF808080,0xFF808080,0xFF808080,0xFF808080,0xFFFFFFFF,0};
+		avs::Texture avsTexture={
+			"diffuse_cubemap"
+			,1,1,1
+			,4,6,1
+			,avs::TextureFormat::RGBA8,avs::TextureCompression::UNCOMPRESSED
+			,false,0,1.0f,true 
+			, (uint32_t)(diffuse_cubemap_data.size()*sizeof(unsigned))
+			, (uint8_t*)diffuse_cubemap_data.data()
+			, false};
+		localResourceCreator.CreateTexture(0,diffuse_cubemap_uid,avsTexture);
+	}
+	{
+		std::vector<unsigned int> specular_cubemap_data={0xFFBBBBBB,0xFFBBBBBB,0xFFBBBBBB,0xFFBBBBBB,0xFF808080,0};
+		avs::Texture avsTexture={
+			"specular_cubemap"
+			,1,1,1
+			,4,6,1
+			,avs::TextureFormat::RGBA8,avs::TextureCompression::UNCOMPRESSED
+			,false,0,1.0f,true 
+			, (uint32_t)(specular_cubemap_data.size()*sizeof(unsigned))
+			, (uint8_t*)specular_cubemap_data.data()
+			, false};
+		localResourceCreator.CreateTexture(0,specular_cubemap_uid,avsTexture);
+	}
+	auto local_session_client=client::SessionClient::GetSessionClient(0);
+
+	auto setupCommand=local_session_client->GetSetupCommand();
+	setupCommand.clientDynamicLighting.diffuseCubemapTexture=diffuse_cubemap_uid;
+	setupCommand.clientDynamicLighting.specularCubemapTexture=specular_cubemap_uid;
+	local_session_client->ApplySetup(setupCommand);
 }
 
 void Renderer::UpdateShaderPasses()
 {
-	auto SetPasses= [this](const char *techname)
-		{
-			ShaderPassSetup shaderPassSetup;
-			shaderPassSetup.technique		=renderState.pbrEffect->GetTechniqueByName(techname);
-			shaderPassSetup.noLightmapPass	=shaderPassSetup.technique->GetPass("pbr_nolightmap");
-			shaderPassSetup.lightmapPass	=shaderPassSetup.technique->GetPass("pbr_lightmap");
-			shaderPassSetup.digitizingPass	=shaderPassSetup.technique->GetPass("digitizing");
-			if (!renderState.overridePassName.empty() 
-				&& shaderPassSetup.technique->HasPass(renderState.overridePassName.c_str()))
-				shaderPassSetup.overridePass	=shaderPassSetup.technique->GetPass(renderState.overridePassName.c_str());
-			return shaderPassSetup;
-		};
-	renderState.pbrEffect_solid					=SetPasses("solid");
-	renderState.pbrEffect_solidAnim				=SetPasses("solid_anim");
-	renderState.pbrEffect_solid					=SetPasses("solid");
-	renderState.pbrEffect_solidMultiview		=SetPasses("solid_multiview");
-	renderState.pbrEffect_solidAnimMultiview	=SetPasses("solid_anim_multiview");
-	
-	renderState.pbrEffect_transparent			=SetPasses("transparent");
-	renderState.pbrEffect_transparentMultiview	=SetPasses("transparent_multiview");
-	
-	renderState.pbrEffect_solidMultiviewTechnique_localPass	=renderState.pbrEffect_solidMultiview.technique->GetPass("local");
+	auto solid=renderState.pbrEffect->GetTechniqueByName("solid");
+	renderState.solidVariantPass					=solid?solid->GetVariantPass("pbr"):nullptr;
+	auto transparent=renderState.pbrEffect->GetTechniqueByName("transparent");
+	renderState.transparentVariantPass				=transparent?solid->GetVariantPass("pbr"):nullptr;
 }
 
 // This allows live-recompile of shaders. 
@@ -345,6 +436,12 @@ void Renderer::RecompileShaders()
 	renderState.hDRRenderer->RecompileShaders();
 	gui.RecompileShaders();
 	TextCanvas::RecompileShaders();
+	renderPlatform->ScheduleRecompileEffects({"pbr","cubemap_clear"},[this](){reload_shaders=true;});
+}
+
+void Renderer::LoadShaders()
+{
+	reload_shaders=false;
 	delete renderState.pbrEffect;
 	delete renderState.cubemapClearEffect;
 	renderState.pbrEffect			= renderPlatform->CreateEffect("pbr");
@@ -411,10 +508,6 @@ void Renderer::InvalidateDeviceObjects()
 		renderPlatform->InvalidateDeviceObjects();
 	if(renderState.hdrFramebuffer)
 		renderState.hdrFramebuffer->InvalidateDeviceObjects();
-	SAFE_DELETE(renderState.diffuseCubemapTexture);
-	SAFE_DELETE(renderState.specularCubemapTexture);
-	SAFE_DELETE(renderState.lightingCubemapTexture);
-	SAFE_DELETE(renderState.videoTexture);
 	SAFE_DELETE(renderState.hDRRenderer);
 	SAFE_DELETE(renderState.hdrFramebuffer);
 	SAFE_DELETE(renderState.pbrEffect);
@@ -505,7 +598,7 @@ avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
 {
 	avs::Pose origin_pose;
 	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
-	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
+	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager->GetNode(clientServerState.origin_node_uid);
 	if(origin_node)
 	{
 		origin_pose.position=origin_node->GetGlobalPosition();
@@ -517,6 +610,8 @@ avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
 
 void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
+	if(reload_shaders)
+		LoadShaders();
 	RenderView(deviceContext);
 	gui.Render3DGUI(deviceContext);
 }
@@ -572,7 +667,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 
 	// Init the viewstruct in global space - i.e. with the server offsets.
 	avs::Pose origin_pose;
-	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache.mNodeManager->GetNode(clientServerState.origin_node_uid);
+	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager->GetNode(clientServerState.origin_node_uid);
 	if(origin_node)
 	{
 		origin_pose.position=origin_node->GetGlobalPosition();
@@ -635,7 +730,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		gui.Render3DGUI(deviceContext);
 
 	renderState.selected_uid=gui.GetSelectedUid();
-	if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
+	//if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
@@ -650,28 +745,28 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	switch(newShaderMode)
 	{
 		case ShaderMode::PBR:
-			renderState.overridePassName = "";
+			renderState.overridePixelShader = "";
 			break;
 		case ShaderMode::ALBEDO:
-			renderState.overridePassName = "albedo_only";
+			renderState.overridePixelShader = "ps_solid_albedo_only";
 			break;
 		case ShaderMode::NORMALS:
-			renderState.overridePassName = "normals";
+			renderState.overridePixelShader = "ps_debug_normals";
 			break;
 		case ShaderMode::DEBUG_ANIM:
-			renderState.overridePassName = "debug_anim";
+			renderState.overridePixelShader = "ps_debug_anim";
 			break;
 		case ShaderMode::LIGHTMAPS:
-			renderState.overridePassName = "debug_lightmaps";
+			renderState.overridePixelShader = "ps_debug_lightmaps";
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
-			renderState.overridePassName = "normal_vertexnormals";
+			renderState.overridePixelShader = "ps_debug_normal_vertexnormals";
 			break;
 		case ShaderMode::REZZING:
-			renderState.overridePassName = "digitizing";
+			renderState.overridePixelShader = "ps_digitizing";
 			break;
 		default:
-			renderState.overridePassName = "";
+			renderState.overridePixelShader = "";
 			break;
 	}
 	UpdateShaderPasses();
@@ -684,12 +779,12 @@ void Renderer::Update(double timestamp_ms)
 	teleport::client::ServerTimestamp::tick(timeElapsed_s);
 	for(auto i:instanceRenderers)
 	{
-		i.second->geometryCache.Update( static_cast<float>(timeElapsed_s));
+		i.second->geometryCache->Update( static_cast<float>(timeElapsed_s));
 		i.second->resourceCreator.Update(static_cast<float>(timeElapsed_s));
 
 		if(i.first!=0)
 		{
-			const auto &removedNodeUids=i.second->geometryCache.mNodeManager->GetRemovedNodeUids();
+			const auto &removedNodeUids=i.second->geometryCache->mNodeManager->GetRemovedNodeUids();
 			// Node has been deleted!
 			for(const auto u:removedNodeUids)
 				renderState.openXR->RemoveNodePoseMapping(i.first,u);
@@ -727,7 +822,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	if(sessionClient->HandleConnections())
 	{
 		auto ir=GetInstanceRenderer(server_uid);
-		sessionClient->SetGeometryCache(&ir->geometryCache);
+		sessionClient->SetGeometryCache(ir->geometryCache.get());
 		config.StoreRecentURL(sessionClient->GetConnectionURL().c_str());
 		gui.Hide();
 	}
@@ -737,7 +832,13 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		{
 			if (!gui.IsVisible())
 			{
-				ShowHideGui();
+				static float invisibleTime=0.0f;
+				invisibleTime+=time_step;
+				if(invisibleTime>30.0f)
+				{
+					ShowHideGui();
+					invisibleTime=0.0f;
+				}
 			}
 		}
 	}
@@ -827,6 +928,7 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		FillInControllerPose(0, -1.f);
 		FillInControllerPose(1, 1.f);
 	}
+	ExecConsoleCommands();
 }
 
 void Renderer::OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta)
@@ -951,9 +1053,9 @@ void Renderer::ShowHideGui()
 	gui.ShowHide();
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
-	auto rightHand=localGeometryCache.mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
-	auto leftHand=localGeometryCache.mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
-	avs::uid point_anim_uid=localGeometryCache.mAnimationManager.GetUidByName("Point");
+	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
+	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
+	avs::uid point_anim_uid=localGeometryCache->mAnimationManager.GetUidByName("Point");
 	rightHand->animationComponent.setAnimation(point_anim_uid);
 	leftHand->animationComponent.setAnimation(point_anim_uid);
 	AnimationState *leftAnimState=leftHand->animationComponent.GetAnimationState(point_anim_uid);
@@ -1011,8 +1113,8 @@ void Renderer::ShowHideGui()
 	}
 	
 	{
-		auto rightHand=localGeometryCache.mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
-		auto rSkin=localGeometryCache.mSkinManager.Get(lobbyGeometry.hand_skin_uid);
+		auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
+		auto rSkin=localGeometryCache->mSkinManager.Get(lobbyGeometry.hand_skin_uid);
 		clientrender::Transform hand_to_finger=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
 		vec3 v=rightHand->GetLocalTransform().LocalToGlobal(hand_to_finger.m_Translation);
 		lobbyGeometry.index_finger_offset=*((vec3*)&v);
@@ -1037,7 +1139,7 @@ void Renderer::WriteHierarchies(avs::uid server)
 {
 	std::cout << "Node Tree\n----------------------------------\n";
 	auto ir=GetInstanceRenderer(server);
-	for(std::shared_ptr<clientrender::Node> node :ir->geometryCache.mNodeManager->GetRootNodes())
+	for(std::shared_ptr<clientrender::Node> node :ir->geometryCache->mNodeManager->GetRootNodes())
 	{
 		WriteHierarchy(0, node);
 	}
@@ -1067,6 +1169,8 @@ void Renderer::ResizeView(int view_id,int W,int H)
 
 void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture, int w, int h, long long frame, void* context_allocator)
 {
+	if(reload_shaders)
+		LoadShaders();
 	static platform::core::Timer timer;
 	static float last_t = 0.0f;
 	timer.UpdateTime();
@@ -1129,7 +1233,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 		gui.setSessionClient(sessionClient.get());
 		gui.Render2DGUI(deviceContext);
-	}
+	}						
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	// We must deactivate the depth buffer here, in order to use it as a texture:
   	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -1156,19 +1260,19 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		if(sel_uid!=0)
 		{
 			std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-			std::shared_ptr<Node> n=geometryCache.mNodeManager->GetNode(sel_uid);
+			std::shared_ptr<Node> n=geometryCache->mNodeManager->GetNode(sel_uid);
 			if(n.get())
 			{
 				avs::uid gi_uid=n->GetGlobalIlluminationTextureUid();
 				if(gi_uid)
 				{
 					int w=tw*2;
-					std::shared_ptr<Texture> t=geometryCache.mTextureManager.Get(gi_uid);
+					std::shared_ptr<Texture> t=geometryCache->mTextureManager.Get(gi_uid);
 					if(t)
 						renderPlatform->DrawTexture(deviceContext, x, y, w, w, t->GetSimulTexture());
 				}
 			}
-			std::shared_ptr<clientrender::Texture> t=geometryCache.mTextureManager.Get(sel_uid);
+			std::shared_ptr<clientrender::Texture> t=geometryCache->mTextureManager.Get(sel_uid);
 			if(t.get())
 			{
 				int w=tw*2;
@@ -1178,7 +1282,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		else if (show_textures)
 		{
 			std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-			auto& textures = geometryCache.mTextureManager.GetCache(cacheLock);
+			auto& textures = geometryCache->mTextureManager.GetCache(cacheLock);
 			for (auto t : textures)
 			{
 				clientrender::Texture* pct = t.second.resource.get();
@@ -1225,8 +1329,6 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	if (!show_osd||gui.IsVisible())
 		return;
 	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto &geometryCache=instanceRenderer->geometryCache;
-	gui.setGeometryCache(&geometryCache);
 	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 	gui.setSessionClient(sessionClient.get());
 	if(renderState.openXR)
@@ -1261,6 +1363,10 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	static vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	static vec4 background={0.0f,0.0f,0.0f,0.5f};
+	if(renderState.overridePixelShader.length())
+	{
+		gui.LinePrint(fmt::format("Override Shader: {0}", renderState.overridePixelShader));
+	}		
 	
 	if(gui.Tab("Debug"))
 	{
@@ -1304,11 +1410,20 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 				gui.DrawTexture(ti->texture);
 			}
 			gui.LinePrint(platform::core::QuickFormat("Specular"), white);
-			gui.DrawTexture(renderState.specularCubemapTexture);
+			gui.DrawTexture(r->GetInstanceRenderState().specularCubemapTexture);
 			gui.LinePrint(platform::core::QuickFormat("DiffuseC"), white);
-			gui.DrawTexture(renderState.diffuseCubemapTexture);
+			gui.DrawTexture(r->GetInstanceRenderState().diffuseCubemapTexture);
 			gui.LinePrint(platform::core::QuickFormat("Lighting"), white);
-			gui.DrawTexture(renderState.lightingCubemapTexture);
+			gui.DrawTexture(r->GetInstanceRenderState().lightingCubemapTexture);
+		}
+		gui.EndTab();
+	}
+	if(gui.Tab("Cubemap"))
+	{
+		std::shared_ptr<clientrender::InstanceRenderer> r=GetInstanceRenderer(server_uid);
+		if(r)
+		{
+		gui.CubemapOSD(r->GetInstanceRenderState().videoTexture);
 		}
 		gui.EndTab();
 	}
@@ -1343,13 +1458,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		gui.LinePrint(platform::core::QuickFormat("Use Alpha Layer Decoding: %s", params.useAlphaLayerDecoding ? "true" : "false"));
 		gui.EndTab();
 	}
-	if(gui.Tab("Cubemap"))
-	{
-		gui.CubemapOSD(renderState.videoTexture);
-		gui.EndTab();
-	}
 	if(gui.Tab("Geometry"))
-	{
+	{			
 		gui.GeometryOSD();
 		gui.EndTab();
 	}

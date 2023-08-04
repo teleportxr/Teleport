@@ -2,7 +2,6 @@
 #pragma once
 
 #include "ClientRender/Texture.h"
-#include "ShaderResource.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
 namespace clientrender
@@ -28,9 +27,11 @@ namespace clientrender
 			MaterialParameter normal;			//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;			//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			MaterialParameter emissive;
-			avs::uid uid=0;						//session uid of the material.
+			avs::uid uid=0;						// session uid of the material.
 			std::string shader;					// not used if empty
 			avs::MaterialMode materialMode=avs::MaterialMode::UNKNOWNMODE;
+			bool doubleSided=false;
+			bool clockwiseFaces=true;
 		};
 
 		struct MaterialData //Layout conformant to GLSL std140
@@ -71,17 +72,10 @@ namespace clientrender
 	protected:
 		MaterialData m_MaterialData;
 		MaterialCreateInfo m_CI;
-
-		//std::shared_ptr<UniformBuffer> m_UB;
-
-		ShaderResourceLayout m_ShaderResourceLayout;
-		ShaderResource m_ShaderResource;
-	
 	public:
-		Material(platform::crossplatform::RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
-		void SetMaterialCreateInfo(platform::crossplatform::RenderPlatform* renderPlatform,const MaterialCreateInfo& pMaterialCreateInfo);
+		Material(const MaterialCreateInfo& pMaterialCreateInfo);
+		void SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo);
 
-		inline const ShaderResource& GetShaderResource() const { return m_ShaderResource; }
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }
 		inline MaterialCreateInfo& GetMaterialCreateInfo() { return m_CI; }
 		inline const MaterialData& GetMaterialData() const { return m_MaterialData; }

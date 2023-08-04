@@ -3,7 +3,9 @@
 #include <fmt/core.h>
 #include "TeleportClient/Log.h"
 #include "TeleportClient/ServerTimestamp.h"
-#include "Platform/CrossPlatform/BaseFramebuffer.h"
+#include "Platform/CrossPlatform/Framebuffer.h"
+#include "ClientRender/NodeComponents/SubSceneComponent.h"
+#include "TeleportClient/ClientTime.h"
 
 using namespace teleport;
 using namespace clientrender;
@@ -50,30 +52,42 @@ InstanceRenderer::InstanceRenderer(avs::uid server,teleport::client::Config &c,G
 	,renderState(rs)
 	,config(c)
 	,geometryDecoder(g)
-	,geometryCache(new clientrender::NodeManager)
 {
 	server_uid=server;
 	audioPlayer.initializeAudioDevice();
-	resourceCreator.SetGeometryCache(&geometryCache);
+	sessionClient->SetSessionCommandInterface(this);
 }
 
 InstanceRenderer::~InstanceRenderer()
 {
+	InvalidateDeviceObjects();
 }
 
 void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
+	GeometryCache::CreateGeometryCache(server_uid);
+	geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	resourceCreator.Initialize(renderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
+
+	instanceRenderState.videoTexture = renderPlatform->CreateTexture();
+	instanceRenderState.specularCubemapTexture = renderPlatform->CreateTexture();
+	instanceRenderState.diffuseCubemapTexture = renderPlatform->CreateTexture();
+	instanceRenderState.lightingCubemapTexture = renderPlatform->CreateTexture();
 }
 
 void InstanceRenderer::InvalidateDeviceObjects()
 {
+	GeometryCache::DestroyGeometryCache(server_uid);
 	AVSTextureImpl *ti = (AVSTextureImpl*)instanceRenderState.avsTexture.get();
 	if (ti)
 	{
 		SAFE_DELETE(ti->texture);
 	}
+	SAFE_DELETE(instanceRenderState.diffuseCubemapTexture);
+	SAFE_DELETE(instanceRenderState.specularCubemapTexture);
+	SAFE_DELETE(instanceRenderState.lightingCubemapTexture);
+	SAFE_DELETE(instanceRenderState.videoTexture);
 }
 
 void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
@@ -136,7 +150,7 @@ void InstanceRenderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContex
 	renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
 	renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, targetTexture);
 	renderState.tagDataIDBuffer.Apply(deviceContext, renderState.cubemapClearEffect, renderState.cubemapClearEffect_TagDataIDBuffer);
-	int zGroups = renderState.videoTexture->IsCubemap() ? 6 : 1;
+	int zGroups = instanceRenderState.videoTexture->IsCubemap() ? 6 : 1;
 	renderState.cubemapClearEffect->Apply(deviceContext, technique, 0);
 	deviceContext.renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, zGroups);
 	renderState.cubemapClearEffect->Unapply(deviceContext);
@@ -154,7 +168,7 @@ void InstanceRenderer::RecomposeCubemap(crossplatform::GraphicsDeviceContext& de
 
 	for (int m = 0; m < mips; m++)
 	{
-		renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, targetTexture, -1, m);
+		renderState.cubemapClearEffect->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, targetTexture, {crossplatform::TextureAspectFlags::COLOUR,m});
 		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 		renderState.cubemapClearEffect->Apply(deviceContext, "recompose", 0);
 		deviceContext.renderPlatform->DispatchCompute(deviceContext, targetTexture->width / 16, targetTexture->width / 16, 6);
@@ -203,20 +217,20 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 		{
 			if (sessionClient->GetSetupCommand().backgroundMode == teleport::core::BackgroundMode::VIDEO)
 			{
-				if (renderState.videoTexture->IsCubemap())
+				if (instanceRenderState.videoTexture->IsCubemap())
 				{
 					const char* technique = sessionClient->GetSetupCommand().video_config.use_alpha_layer_decoding ? "recompose" : "recompose_with_depth_alpha";
-					RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
+					RecomposeVideoTexture(deviceContext, ti->texture, instanceRenderState.videoTexture, technique);
 				}
 				else
 				{
 					const char* technique = sessionClient->GetSetupCommand().video_config.use_alpha_layer_decoding ? "recompose_perspective" : "recompose_perspective_with_depth_alpha";
-					RecomposeVideoTexture(deviceContext, ti->texture, renderState.videoTexture, technique);
+					RecomposeVideoTexture(deviceContext, ti->texture, instanceRenderState.videoTexture, technique);
 				}
 			}
 		}
-		RecomposeCubemap(deviceContext, ti->texture, renderState.diffuseCubemapTexture, renderState.diffuseCubemapTexture->mips, int2(sessionClient->GetSetupCommand().clientDynamicLighting.diffusePos[0], sessionClient->GetSetupCommand().clientDynamicLighting.diffusePos[1]));
-		RecomposeCubemap(deviceContext, ti->texture, renderState.specularCubemapTexture, renderState.specularCubemapTexture->mips, int2(sessionClient->GetSetupCommand().clientDynamicLighting.specularPos[0], sessionClient->GetSetupCommand().clientDynamicLighting.specularPos[1]));
+		RecomposeCubemap(deviceContext, ti->texture, instanceRenderState.diffuseCubemapTexture, instanceRenderState.diffuseCubemapTexture->mips, int2(sessionClient->GetSetupCommand().clientDynamicLighting.diffusePos[0], sessionClient->GetSetupCommand().clientDynamicLighting.diffusePos[1]));
+		RecomposeCubemap(deviceContext, ti->texture, instanceRenderState.specularCubemapTexture, instanceRenderState.specularCubemapTexture->mips, int2(sessionClient->GetSetupCommand().clientDynamicLighting.specularPos[0], sessionClient->GetSetupCommand().clientDynamicLighting.specularPos[1]));
 	}
 
 	// Draw the background. If unconnected, we show a grid and horizon.
@@ -245,26 +259,26 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 			}
 			else if (sessionClient->GetSetupCommand().backgroundMode == teleport::core::BackgroundMode::VIDEO)
 			{
-				if (renderState.videoTexture->IsCubemap())
+				if (instanceRenderState.videoTexture->IsCubemap())
 				{
-					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_cubemap", "cubemapTexture");
+					RenderVideoTexture(deviceContext, server_uid,ti->texture, instanceRenderState.videoTexture, "use_cubemap", "cubemapTexture");
 				}
 				else
 				{
 					math::Matrix4x4 projInv;
 					deviceContext.viewStruct.proj.Inverse(projInv);
-					RenderVideoTexture(deviceContext, server_uid,ti->texture, renderState.videoTexture, "use_perspective", "perspectiveTexture");
+					RenderVideoTexture(deviceContext, server_uid,ti->texture, instanceRenderState.videoTexture, "use_perspective", "perspectiveTexture");
 				}
 			}
 		}
 	}
 	vec4 white={1.f,1.f,1.f,1.f};
 	renderState.pbrConstants.drawDistance = sessionClient->GetSetupCommand().draw_distance;
-	if(renderState.specularCubemapTexture)
-		renderState.pbrConstants.roughestMip=float(renderState.specularCubemapTexture->mips-1);
+	if(instanceRenderState.specularCubemapTexture)
+		renderState.pbrConstants.roughestMip=float(instanceRenderState.specularCubemapTexture->mips-1);
 	if(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
 	{
-		auto t = geometryCache.mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
+		auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
 		if(t&&t->GetSimulTexture())
 		{
 			renderState.pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
@@ -273,12 +287,12 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
 		RenderLocalNodes(deviceContext,server_uid);
 }
-#include "TeleportClient/ClientTime.h"
+
 void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
 	, avs::uid this_server_uid)
 {
 	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_ns,deviceContext.predictedDisplayTimeS);
-	geometryCache.mNodeManager->UpdateExtrapolatedPositions(serverTimeS);
+	geometryCache->mNodeManager->UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
 	auto& clientServerState = teleport::client::ClientServerState::GetClientServerState(this_server_uid);
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
@@ -292,7 +306,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
+		auto& cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
 		if (cachedLights.size() > renderState.lightsBuffer.count)
 		{
 			renderState.lightsBuffer.InvalidateDeviceObjects();
@@ -325,7 +339,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto& cachedLights = geometryCache.mLightManager.GetCache(cacheLock);
+		auto& cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
 		if (cachedLights.size() > renderState.lightsBuffer.count)
 		{
 			renderState.lightsBuffer.InvalidateDeviceObjects();
@@ -341,7 +355,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		for (auto& n : nodePoseStates)
 		{
 			// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
-			std::shared_ptr<clientrender::Node> node = geometryCache.mNodeManager->GetNode(n.first);
+			std::shared_ptr<clientrender::Node> node = geometryCache->mNodeManager->GetNode(n.first);
 			if (node)
 			{
 				// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
@@ -353,8 +367,12 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 			}
 		}
 	}
+	RenderGeometryCache(deviceContext,geometryCache);
+}
 
-	const clientrender::NodeManager::nodeList_t& nodeList = geometryCache.mNodeManager->GetSortedRootNodes();
+void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> geometryCache)
+{
+	const clientrender::NodeManager::nodeList_t& nodeList = geometryCache->mNodeManager->GetSortedRootNodes();
 	for (size_t i = 0; i < nodeList.size(); i++)
 	{
 		std::shared_ptr<clientrender::Node> node = nodeList[i];
@@ -362,7 +380,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 			continue;
 		RenderNode(deviceContext, node, false, true, false);
 	}
-	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache.mNodeManager->GetSortedTransparentNodes();
+	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache->mNodeManager->GetSortedTransparentNodes();
 
 	for (size_t i = 0; i < transparentList.size(); i++)
 	{
@@ -403,7 +421,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	avs::uid gi_texture_id = node->GetGlobalIlluminationTextureUid();
 	if (gi_texture_id)
 	{
-		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 		if ( !globalIlluminationTexture)
 		{
 			material_incomplete = true;
@@ -411,9 +429,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 	if (!node->IsStatic())
 	{
-		if(!renderState.pbrEffect_diffuseCubemap.valid)
+		if(!instanceRenderState.diffuseCubemapTexture||!instanceRenderState.diffuseCubemapTexture->IsValid())
 		{
-			material_incomplete = true;
+		//	material_incomplete = true;
 		}
 	}
 	bool rezzing = material_incomplete;
@@ -463,20 +481,29 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 			renderState.perNodeConstants.rezzing = node->countdown;
 			const auto& meshInfo	= mesh->GetMeshCreateInfo();
 			static int mat_select	= -1;
-			for(size_t element=0; element<node->GetMaterials().size() && element<meshInfo.ib.size(); element++)
+			// iterate through the submeshes.
+			for(size_t element=0; element<meshInfo.indexBuffers.size(); element++)
 			{
 				if(mat_select >= 0 && mat_select != element)
 					continue;
 				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
 				if(!material)
-					continue;
+				{
+					material=mesh->GetInternalMaterials()[element];
+					if(!material)
+						continue;
+				}
 				const clientrender::Material::MaterialCreateInfo& matInfo = material->GetMaterialCreateInfo();
 				bool transparent	=(matInfo.materialMode==avs::MaterialMode::TRANSPARENT_MATERIAL);
 				if(transparent!=transparent_pass)
 					continue;
-				bool double_sided=false;
-				auto* vb = meshInfo.vb[element].get();
-				const auto* ib = meshInfo.ib[element].get();
+				bool double_sided=matInfo.doubleSided;
+				auto* vb = meshInfo.vertexBuffers[element].get();
+				if(!vb)
+					continue;
+				const auto* ib = meshInfo.indexBuffers[element].get();
+				if(!ib)
+					continue;
 
 				const crossplatform::Buffer* const v[] = {vb->GetSimulVertexBuffer()};
 				if(!v[0])
@@ -485,6 +512,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				// TODO: Improve this.
 				auto sc=node->GetGlobalScale();
 				bool negative_scale=(sc.x*sc.y*sc.z)<0.0f;
+				bool clockwise=mesh->GetMeshCreateInfo().clockwiseFaces^negative_scale;
 				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
 				bool anim=skinInstance!=nullptr;
 				if (skinInstance)
@@ -512,63 +540,80 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture	,combined ? combined->GetSimulTexture() : nullptr);
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture	,emissive ? emissive->GetSimulTexture() : nullptr);
 				
-				ShaderPassSetup * shaderPassSetup = mvgdc?(transparent?&renderState.pbrEffect_transparentMultiview:(anim?&renderState.pbrEffect_solidAnimMultiview:&renderState.pbrEffect_solidMultiview))
-																			:(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnim:&renderState.pbrEffect_solid));
-
+//				ShaderPassSetup *shaderPassSetup = mvgdc?(transparent?&renderState.pbrEffect_transparentMultiview:(anim?&renderState.pbrEffect_solidAnimMultiview:&renderState.pbrEffect_solidMultiview))
+	//																		:(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnim:&renderState.pbrEffect_solid));
+				crossplatform::EffectTechnique *tech=transparent?renderState.solid:renderState.transparent;
 				// Pass used for rendering geometry.
-				crossplatform::EffectPass *pass=nullptr;
-				if(shaderPassSetup->overridePass)
-					pass=shaderPassSetup->overridePass;
-				else
-				{
-					if(rezzing)
-						pass=shaderPassSetup->digitizingPass;
-					else if(node->IsStatic())
-						pass=shaderPassSetup->lightmapPass;
-					else
-						pass=shaderPassSetup->noLightmapPass;
-				}
-				if(material->GetMaterialCreateInfo().shader.length())
-				{
-					pass=shaderPassSetup->technique->GetPass(material->GetMaterialCreateInfo().shader.c_str());
-					double_sided=true;
-				}
+				crossplatform::EffectPass *pass=node->GetCachedEffectPass(element);
 				if(!pass)
 				{
-					TELEPORT_CERR<<"Pass not found in "<<shaderPassSetup->technique->name.c_str()<<"\n";
-					pass=renderState.pbrEffect_solid.noLightmapPass;
+					crossplatform::EffectVariantPass *variantPass=transparent?renderState.transparentVariantPass:renderState.solidVariantPass;
+					if(!variantPass)
+						continue;
+					std::string vertex_shader=anim?"vs_anim":"vs_solid";
+					if(mvgdc)
+						vertex_shader+="_mv";
+					bool normal_map=(vb->GetLayout()->GetDesc().size()>=5);
+					std::string pixel_shader=fmt::format("ps_solid_{lightmap}_{ambient}_{normal_map}_{max_lights}"
+							,fmt::arg("lightmap",node->IsStatic())
+							,fmt::arg("ambient",node->IsStatic())
+							,fmt::arg("normal_map",normal_map)
+							,fmt::arg("max_lights",0));
+					if(node->IsStatic())
+						pixel_shader="ps_solid_lightmap";
+					if(rezzing)
+						pixel_shader="ps_digitizing";
+					if(renderState.overridePixelShader.length())
+						pixel_shader=renderState.overridePixelShader.c_str();	
+					else if(material->GetMaterialCreateInfo().shader.length())
+					{
+						pixel_shader=material->GetMaterialCreateInfo().shader.c_str();
+						double_sided=true;
+					}
+					pass=variantPass->GetPass(vertex_shader.c_str(),pixel_shader.c_str());
+
+					// Check if the layout is ok.
+					auto *vertexShader=pass->shaders[crossplatform::ShaderType::SHADERTYPE_VERTEX];
+					if(!vertexShader)
+						continue;
+					if(!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(),vb->GetLayout()->GetDesc()))
+						continue;
+					node->SetCachedEffectPass(element,pass);
+
 				}
+				if(!pass)
+					continue;
 				if (highlight)
 				{
 					renderState.pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
 				}
 				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_globalIlluminationTexture, globalIlluminationTexture ? globalIlluminationTexture->GetSimulTexture() : nullptr);
-
-				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,renderState.diffuseCubemapTexture);
+				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,instanceRenderState.diffuseCubemapTexture);
 				// If lighting is via static textures.
 				if(sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode==avs::LightingMode::TEXTURE)
 				//if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
-					auto t = geometryCache.mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture);
+					auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture);
 					if(t)
 					{
 						renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,t->GetSimulTexture());
 					}
 				}
-				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap,renderState.specularCubemapTexture);
+				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap,instanceRenderState.specularCubemapTexture);
 				if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
 				//if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
 				{
-					auto t = geometryCache.mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
+					auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
 					if(t)
 					{
 						renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_specularCubemap,t->GetSimulTexture());
 					}
 				}
-				
-				renderState.lightsBuffer.Apply(deviceContext, renderState.pbrEffect, renderState._lights );
+				if(renderState._lights.valid)
+					renderState.lightsBuffer.Apply(deviceContext, renderState.pbrEffect, renderState._lights );
 				renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.cubemapClearEffect_TagDataCubeBuffer);
-				renderState.tagDataIDBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.pbrEffect_TagDataIDBuffer);
+				if(renderState.pbrEffect_TagDataIDBuffer.valid)
+					renderState.tagDataIDBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.pbrEffect_TagDataIDBuffer);
 
 				renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.pbrConstants);
 				if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
@@ -576,13 +621,12 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				//else
 					renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
 				renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
-					
 				if(double_sided)
 					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
-				else if(negative_scale)
-					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_COUNTERCLOCKWISE);
-				else
+				else if(clockwise)
 					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_CLOCKWISE);
+				else
+					renderPlatform->SetStandardRenderState(deviceContext,crossplatform::StandardRenderState::STANDARD_FRONTFACE_COUNTERCLOCKWISE);
 				renderPlatform->SetLayout(deviceContext, layout);
 				renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
@@ -609,14 +653,43 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 			RenderNode(deviceContext,child,false,include_children,transparent_pass);
 		}
 	}
+	// what about subscenes?
+	
+	clientrender::SubSceneComponent *s=static_cast<clientrender::SubSceneComponent*>(node->GetComponent<clientrender::SubSceneComponent>());
+	if(s)
+	{
+		if(s->sub_scene_uid)
+		{
+			auto ss=geometryCache->mSubsceneManager.Get(s->sub_scene_uid);
+			if(ss)
+			if(ss->subscene_uid)
+			{
+				auto g=GeometryCache::GetGeometryCache(ss->subscene_uid);
+				if(g)
+				{
+				// transform the view matrix by the local space.
+					mat4 node_model = node->GetGlobalTransform().GetTransformMatrix();
+					mat4 v=*((mat4*)&deviceContext.viewStruct.view);
+					v.transpose();
+					mat4::mul(v, v, node_model);
+					v.transpose();
+					deviceContext.viewStruct.view=(const float*)&v;
+					deviceContext.viewStruct.Init();
+					renderState.cameraConstants.view = deviceContext.viewStruct.view;
+					renderState.cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;
+					RenderGeometryCache(deviceContext,g);
+				}
+			}
+		}
+	}
 }
 
 void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas)
 {
-	auto fontAtlas=geometryCache.mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
+	auto fontAtlas=geometryCache->mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
 	if(!fontAtlas)
 		return;
-	auto fontTexture=geometryCache.mTextureManager.Get(fontAtlas->font_texture_uid);
+	auto fontTexture=geometryCache->mTextureManager.Get(fontAtlas->font_texture_uid);
 	if(!fontTexture)
 		return;
 	textCanvas->Render(deviceContext,renderState.cameraConstants,renderState.stereoCameraConstants,fontTexture->GetSimulTexture());
@@ -634,7 +707,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
-		globalIlluminationTexture = geometryCache.mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	//Only render visible nodes, but still render children that are close enough.
 	if (node->IsVisible()&& (node_select == 0 || node_select == node->id))
@@ -692,18 +765,18 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 
 bool InstanceRenderer::OnNodeEnteredBounds(avs::uid id)
 {
-	return geometryCache.mNodeManager->ShowNode(id);
+	return geometryCache->mNodeManager->ShowNode(id);
 }
 
 bool InstanceRenderer::OnNodeLeftBounds(avs::uid id)
 {
-	return geometryCache.mNodeManager->HideNode(id);
+	return geometryCache->mNodeManager->HideNode(id);
 }
 
 
 void InstanceRenderer::UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand & cmd)
 {
-	geometryCache.mNodeManager->ReparentNode(cmd);
+	geometryCache->mNodeManager->ReparentNode(cmd);
 }
 
 void InstanceRenderer::AssignNodePosePath(const teleport::core::AssignNodePosePathCommand &cmd,const std::string &regexPath)
@@ -713,27 +786,27 @@ void InstanceRenderer::AssignNodePosePath(const teleport::core::AssignNodePosePa
 
 void InstanceRenderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 {
-	geometryCache.mNodeManager->SetVisibleNodes(visibleNodes);
+	geometryCache->mNodeManager->SetVisibleNodes(visibleNodes);
 }
 
 void InstanceRenderer::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
-	geometryCache.mNodeManager->UpdateNodeMovement(updateList);
+	geometryCache->mNodeManager->UpdateNodeMovement(updateList);
 }
 
 void InstanceRenderer::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
-	geometryCache.mNodeManager->UpdateNodeEnabledState(updateList);
+	geometryCache->mNodeManager->UpdateNodeEnabledState(updateList);
 }
 
 void InstanceRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	geometryCache.mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	geometryCache->mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
 }
 
 void InstanceRenderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
 {
-	geometryCache.mNodeManager->UpdateNodeAnimation(animationUpdate);
+	geometryCache->mNodeManager->UpdateNodeAnimation(animationUpdate);
 }
 /*
 void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
@@ -741,7 +814,7 @@ void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpda
 	switch(animationControlUpdate.timeControl)
 	{
 	case teleport::core::AnimationTimeControl::ANIMATION_TIME:
-		geometryCache.mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+		geometryCache->mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 		break;
 	default:
 		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
@@ -751,14 +824,14 @@ void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpda
 
 void InstanceRenderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	geometryCache.mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
+	geometryCache->mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 void InstanceRenderer::UpdateTagDataBuffers(crossplatform::GraphicsDeviceContext& deviceContext)
 {				
 	{
 		std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-		auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
+		auto &cachedLights=geometryCache->mLightManager.GetCache(cacheLock);
 		for (int i = 0; i < videoTagDataCubeArray.size(); ++i)
 		{
 			const auto& td = videoTagDataCubeArray[i];
@@ -824,7 +897,7 @@ void InstanceRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSiz
 	Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
 		to the tag lights. ALL light data will go into the tags, using uid lookup to get any needed data from the unordered cache.
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto &cachedLights=geometryCache.mLightManager.GetCache(cacheLock);
+	auto &cachedLights=geometryCache->mLightManager.GetCache(cacheLock);
 	auto &cachedLight=cachedLights.begin();*/
 	////
 
@@ -846,13 +919,13 @@ void InstanceRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSiz
 
 std::vector<uid> InstanceRenderer::GetGeometryResources()
 {
-	return geometryCache.GetAllResourceIDs();
+	return geometryCache->GetAllResourceIDs();
 }
 
 // This is called when we connect to a new server.
 void InstanceRenderer::ClearGeometryResources()
 {
-	geometryCache.ClearAll();
+	geometryCache->ClearAll();
 	resourceCreator.Clear();
 	renderState.openXR->ClearServer(server_uid);
 }
@@ -902,18 +975,18 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	{
 		if (setupCommand.video_config.colour_cubemap_size)
 		{
-			renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.colour_cubemap_size, setupCommand.video_config.colour_cubemap_size, 1, 1,
+			instanceRenderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.colour_cubemap_size, setupCommand.video_config.colour_cubemap_size, 1, 1,
 				crossplatform::PixelFormat::RGBA_16_FLOAT, empty_data,true, false, false, true);
 		}
 	}
 	else
 	{
-		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.perspective_width, setupCommand.video_config.perspective_height, 1, 1,
+		instanceRenderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.perspective_width, setupCommand.video_config.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_16_FLOAT, empty_data, true, false, false, false);
 	}
 
-	renderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM,empty_data,true, false, false, true);
-	renderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, empty_data,true, false, false, true);
+	instanceRenderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM,empty_data,true, false, false, true);
+	instanceRenderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, empty_data,true, false, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
 	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
@@ -1114,12 +1187,12 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 	std::shared_ptr<std::vector<std::vector<uint8_t>>> empty_data;
 	if (videoConfig.use_cubemap)
 	{
-		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
+		instanceRenderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.colour_cubemap_size, videoConfig.colour_cubemap_size, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, empty_data,true, false, false, true);
 	}
 	else
 	{
-		renderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
+		instanceRenderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, videoConfig.perspective_width, videoConfig.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_32_FLOAT, empty_data,true, false, false, false);
 	}
 

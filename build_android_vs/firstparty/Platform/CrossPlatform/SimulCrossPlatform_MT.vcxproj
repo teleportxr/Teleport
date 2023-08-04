@@ -150,13 +150,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;../../../../firstparty\Platform\External\stb</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;../../../../firstparty\Platform\External\stb;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;../../../../firstparty\Platform\External\stb</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty\Platform\Android;../../../../firstparty\Platform\External\stb;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
@@ -198,7 +198,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\AmortizationStruct.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\AxesStandard.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\BaseAccelerationStructure.cpp" />
-    <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\BaseFramebuffer.cpp" />
+    <ClCompile Include="..\..\..\..\firstparty\Platform\CrossPlatform\Framebuffer.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\BottomLevelAccelerationStructure.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\Buffer.cpp" />
     <ClCompile Include="../../../../firstparty\Platform\CrossPlatform\Camera.cpp" />
@@ -242,7 +242,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\AmortizationStruct.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\AxesStandard.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\BaseAccelerationStructure.h" />
-    <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\BaseFramebuffer.h" />
+    <ClInclude Include="..\..\..\..\firstparty\Platform\CrossPlatform\Framebuffer.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\BaseRenderer.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\BottomLevelAccelerationStructure.h" />
     <ClInclude Include="../../../../firstparty\Platform\CrossPlatform\Buffer.h" />

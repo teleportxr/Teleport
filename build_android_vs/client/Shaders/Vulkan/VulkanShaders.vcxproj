@@ -51,7 +51,7 @@
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/canvas_text.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/canvas_text.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -73,7 +73,7 @@ cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -95,7 +95,7 @@ cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -117,7 +117,7 @@ cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
 
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/Shaders/SL" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I-"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=-"../../../../../firstparty/Platform
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone

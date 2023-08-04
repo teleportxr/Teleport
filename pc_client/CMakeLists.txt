@@ -29,6 +29,8 @@ set(srcs
 	../ClientApp/ClientApp.h
 	CPackOptions.cmake
 )
+file(GLOB shaders "../client/Shaders/*.sfx" )
+file(GLOB shader_includes "../client/Shaders/*.sl" )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -44,9 +46,11 @@ source_group("Shaders" src FILES ${shaders} )
 
 add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
 
+add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
+ 
 
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(TeleportPCClient SimulDirectX12_MT)
@@ -83,6 +87,11 @@ target_link_libraries(TeleportPCClient -ignore:4711)
 
 target_link_options(TeleportPCClient PUBLIC /ignore:4711)
 target_compile_options(TeleportPCClient PRIVATE /wd4711)
+
+cmake_minimum_required(VERSION 2.9)
+
+file(GLOB global_shader_includes "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders/*.sl")
+
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 

@@ -4,7 +4,7 @@
 
 #include "libavstream/common_maths.h"
 
-#include "Platform/Shaders/SL/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "TeleportCore/CommonNetworking.h"
 
 //TODO: Placeholder! Find maths library!

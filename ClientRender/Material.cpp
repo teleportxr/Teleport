@@ -4,12 +4,12 @@
 
 using namespace clientrender;
 
-Material::Material(platform::crossplatform::RenderPlatform* r,const MaterialCreateInfo& pMaterialCreateInfo)
+Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
 {
-	SetMaterialCreateInfo(r,pMaterialCreateInfo);
+	SetMaterialCreateInfo(pMaterialCreateInfo);
 }
 
-void Material::SetMaterialCreateInfo( platform::crossplatform::RenderPlatform* r,const MaterialCreateInfo& pMaterialCreateInfo)
+void Material::SetMaterialCreateInfo( const MaterialCreateInfo& pMaterialCreateInfo)
 {
 	m_CI= pMaterialCreateInfo;
 	m_MaterialData.diffuseOutputScalar			= m_CI.diffuse.textureOutputScalar;

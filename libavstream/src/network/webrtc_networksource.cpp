@@ -345,6 +345,12 @@ void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 	}
 }
 
+void WebRtcNetworkSource::kill()
+{
+	if(m_data->rtcPeerConnection)
+		m_data->rtcPeerConnection->close();
+}
+
 Result WebRtcNetworkSource::deconfigure()
 {
 	if (getNumOutputSlots() <= 0)

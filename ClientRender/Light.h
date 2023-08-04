@@ -62,9 +62,6 @@ namespace clientrender
 		size_t m_LightID;
 		bool m_IsValid = false;
 
-		ShaderResourceLayout m_ShaderResourceLayout;
-		ShaderResource m_ShaderResource;
-
 	public:
 		Light(LightCreateInfo* pLightCreateInfo);
 		~Light() = default;

@@ -392,7 +392,7 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	textureCreate.numOfSamples = 1;
 	textureCreate.make_rt = false;
 	textureCreate.setDepthStencil = false;
-	textureCreate.need_srv = true;
+//	textureCreate.need_srv = true;
 	textureCreate.cubemap = false;
 	textureCreate.external_texture = (void*)reflectedTexture.videoSourceVkImage;
 	textureCreate.forceInit = true;

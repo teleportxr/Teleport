@@ -24,7 +24,7 @@
 #include "draco/compression/encode.h"
 #include "draco/compression/decode.h"
 
-#include "Platform/Shaders/SL/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Font.h"
 #include "UnityPlugin/InteropStructures.h"
 #include "StringFunctions.h"
@@ -1302,14 +1302,14 @@ void GeometryStore::removeNode(avs::uid id)
 	lightNodes.erase(id);
 }
 
-void GeometryStore::updateNodeTransform(avs::uid id, avs::Transform& newLocalTransform, avs::Transform& newGlobalTransform)
+void GeometryStore::updateNodeTransform(avs::uid id, avs::Transform& newLocalTransform)
 {
 	auto nodeIt = nodes.find(id);
 	if(nodeIt == nodes.end())
 		return;
 
 	nodeIt->second.localTransform = newLocalTransform;
-	nodeIt->second.globalTransform= newGlobalTransform;
+	//nodeIt->second.//globalTransform= newGlobalTransform;
 }
 
 size_t GeometryStore::getNumberOfTexturesWaitingForCompression() const

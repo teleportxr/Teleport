@@ -57,17 +57,82 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../thirdparty/draco/include;../../../thirdparty/draco/src;../</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNIX=1;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../thirdparty/draco/include;../../../thirdparty/draco/src;../../../thirdparty/draco/third_party/eigen;../../../thirdparty/draco/third_party/filesystem/include;../../../thirdparty/draco/third_party/tinygltf;../</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DRACO_TRANSCODER_SUPPORTED;UNIX=1;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../thirdparty/draco/include;../../../thirdparty/draco/src;../</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../../thirdparty/draco/include;../../../thirdparty/draco/src;../../../thirdparty/draco/third_party/eigen;../../../thirdparty/draco/third_party/filesystem/include;../../../thirdparty/draco/third_party/tinygltf;../</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DRACO_TRANSCODER_SUPPORTED;;HAS_SOCKLEN_T=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\animation\animation.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\animation\keyframe_animation.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\animation\keyframe_animation_decoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\animation\keyframe_animation_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\animation\node_animation_data.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\animation\skin.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\compression\decode.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\compression\draco_compression_options.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\compression\encode.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\compression\encode_base.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\compression\expert_encode.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\file_reader_factory.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\file_reader_interface.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\file_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\file_writer_factory.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\file_writer_interface.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\file_writer_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\gltf_decoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\gltf_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\gltf_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\image_compression_options.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\mesh_io.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\obj_decoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\obj_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\parser_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\ply_decoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\ply_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\ply_property_reader.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\ply_property_writer.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\ply_reader.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\point_cloud_io.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\scene_io.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\stdio_file_reader.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\stdio_file_writer.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\stl_decoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\stl_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\texture_io.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\io\tiny_gltf_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\material\material.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\material\material_library.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_connected_components.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_features.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_splitter.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\geometry_metadata.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\metadata.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\metadata_decoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\metadata_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\property_table.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\structural_metadata.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\instance_array.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\light.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\mesh_group.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\scene.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\scene_are_equivalent.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\scene_indices.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\scene_node.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\scene_utils.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\trs_matrix.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\texture\source_image.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\texture\texture.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\texture\texture_library.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\texture\texture_map.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\texture\texture_transform.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\texture\texture_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="../../../thirdparty/draco/src/draco/animation/keyframe_animation.cc" />
@@ -166,6 +231,35 @@
     <ClCompile Include="../../../thirdparty/draco/src/draco/metadata/metadata_encoder.cc" />
     <ClCompile Include="../../../thirdparty/draco/src/draco/point_cloud/point_cloud.cc" />
     <ClCompile Include="../../../thirdparty/draco/src/draco/point_cloud/point_cloud_builder.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\animation\animation.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\animation\skin.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\compression\draco_compression_options.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\gltf_decoder.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\gltf_encoder.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\gltf_utils.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\scene_io.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\stl_decoder.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\stl_encoder.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\texture_io.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\io\tiny_gltf_utils.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\material\material.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\material\material_library.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_features.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_splitter.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_utils.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\metadata\property_table.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\metadata\structural_metadata.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\instance_array.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\light.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\scene.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\scene_are_equivalent.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\scene_utils.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\trs_matrix.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\texture\source_image.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\texture\texture_library.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\texture\texture_map.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\texture\texture_transform.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\texture\texture_utils.cc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

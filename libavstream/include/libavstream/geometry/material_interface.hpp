@@ -140,6 +140,7 @@ namespace avs
 		D24F,
 		D32F,
 		RGBA32F,
+		RGB8,
 		MAX
 	};
 	
@@ -185,7 +186,7 @@ namespace avs
 
 		bool cubemap=false;
 		uint32_t dataSize;
-		unsigned char* data = nullptr;
+		const unsigned char* data = nullptr;
 		bool own_data = false;
 
 		bool operator==(const Texture& t) const
@@ -359,7 +360,7 @@ namespace avs
 		TextureAccessor occlusionTexture;
 		TextureAccessor emissiveTexture;
 		vec3 emissiveFactor = {0.0f, 0.0f, 0.0f};
-
+		bool doubleSided=false; // TODO: stream this
 		std::unordered_map<MaterialExtensionIdentifier, std::shared_ptr<MaterialExtension>> extensions; //Mapping of extensions for a material. There should only be one extension per identifier.
 		
 		bool Verify(const Material &t) const

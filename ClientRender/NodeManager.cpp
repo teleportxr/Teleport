@@ -100,15 +100,15 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 			earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 		}
 	}
-	if(avsNode.stationary)
-		node->SetGlobalTransform(static_cast<Transform>(avsNode.globalTransform));
-	else
+	//if(avsNode.stationary)
+	//	node->SetGlobalTransform(static_cast<Transform>(avsNode.globalTransform));
+	//else
 		node->SetLocalTransform(static_cast<Transform>(avsNode.localTransform));
 	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
 	node->SetLightmapScaleOffset(avsNode.renderState.lightmapScaleOffset);
 	node->SetMaterialListSize(avsNode.materials.size());
-	TELEPORT_INTERNAL_COUT("AddNode {0} {1}, with {2} materials.\n", node_id, node->name, node->GetMaterials().size());
+//	TELEPORT_INTERNAL_COUT("AddNode {0} {1}, with {2} materials.\n", node_id, node->name, node->GetMaterials().size());
 	node->SetStatic(avsNode.stationary);
 	
 	node->SetHolderClientId(avsNode.holder_client_id);

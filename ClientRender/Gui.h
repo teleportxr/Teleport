@@ -49,6 +49,7 @@ namespace teleport
 		void SetPlatformWindow(PlatformWindow *w);
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r,PlatformWindow *w);
 		void InvalidateDeviceObjects();
+		void LoadShaders();
 		void RecompileShaders();
 		void Render3DGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void Render2DGUI(platform::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -73,13 +74,14 @@ namespace teleport
 		void OnKeyboard(unsigned wParam, bool bKeyDown);
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		void setGeometryCache(const clientrender::GeometryCache *g)
-		{
-			geometryCache=g;
-		}
+
 		void setSessionClient(const teleport::client::SessionClient *g)
 		{
 			sessionClient=g;
+		}
+		void SetConsoleCommandHandler(std::function<void(const std::string&)> fn)
+		{
+		console = fn;
 		}
 		void SetConnectHandler(std::function<void(const std::string&)> fn);
 		void SetCancelConnectHandler(std::function<void()> fn);
@@ -116,7 +118,9 @@ namespace teleport
 		// Replaces Windows GetCursorPos if necessary.
 		static int GetCursorPos(long p[2]) ;
 	protected:
+		std::function<void(const std::string&)> console;
 		client::OpenXR &openXR;
+		avs::uid cache_uid=0;
 		void LightStyle();
 		void DarkStyle();
 		void ShowSettings2D();
@@ -129,7 +133,7 @@ namespace teleport
 
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone> n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node> node,const char *search_text);
-		const clientrender::GeometryCache *geometryCache=nullptr;
+
 		const teleport::client::SessionClient *sessionClient=nullptr;
 		platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;

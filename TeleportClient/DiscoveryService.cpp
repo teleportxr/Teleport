@@ -4,7 +4,8 @@
 #include "TeleportCore/CommonNetworking.h"
 #define RTC_ENABLE_WEBSOCKET 1
 #include <rtc/websocket.hpp>
-#define JSON_NOEXCEPTION 1
+// This causes abort to be called, don't use it. Have to use exceptions.
+//#define JSON_NOEXCEPTION 1
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
@@ -303,6 +304,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	catch(...)
 	{
 	}
+	try
 	{
 		std::lock_guard lock(messagesReceivedMutex);
 		while(messagesReceived.size())
@@ -344,6 +346,14 @@ void DiscoveryService::Tick(uint64_t server_uid)
 				messagesToPassOn.push(msg);
 			}
 		}
+	}
+	catch(std::exception& e)
+	{
+		TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+	}
+	catch(...)
+	{
+		TELEPORT_CERR <<  "Unknown exception" << std::endl;
 	}
 }
 

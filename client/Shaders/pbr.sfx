@@ -1,10 +1,10 @@
 // Copyright (c) 2015 Simul Software Ltd. All rights reserved.
 #include "shader_platform.sl"
-#include "../SL/common.sl"
-#include "../SL/render_states.sl"
-#include "../SL/camera_constants.sl"
+#include "common.sl"
+#include "render_states.sl"
+#include "camera_constants.sl"
 #include "video_types.sl"
-#include "../SL/depth.sl"
+#include "depth.sl"
 #include "pbr_constants.sl"
 
 uniform Texture2D diffuseTexture;
@@ -14,7 +14,7 @@ uniform Texture2D emissiveTexture;
 uniform Texture2D globalIlluminationTexture;
 uniform TextureCube diffuseCubemap;
 uniform TextureCube specularCubemap;
-uniform TextureCube lightingCubemap;
+uniform TextureCube lightingCubemap; 
 uniform Texture2D videoTexture;
 
 //////////////////////////
@@ -105,7 +105,18 @@ float GetSpecular(vec4 combinedLookup)
 	return combinedLookup.a;
 }
 
-struct vertexInput
+struct vertexInputP
+{
+	vec3 position		: POSITION;
+};
+
+struct vertexInput_normal
+{
+	vec3 position		: POSITION;
+	vec3 normal			: NORMAL;
+};
+
+struct vertexInput_normal_tangent_2tecvoords
 {
 	vec3 position		: POSITION;
 	vec3 normal			: NORMAL;
@@ -123,11 +134,6 @@ struct vertexInputAnim
 	vec2 texCoords1		: TEXCOORD1;
 	vec4 joints			: TEXCOORD2;
 	vec4 weights		: TEXCOORD3;
-};
-
-struct vertexInputP
-{
-	vec3 position		: POSITION;
 };
 
 struct vertexOutput
@@ -153,56 +159,59 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 	OUT.texCoords0	=vec2(0,0);
 	OUT.texCoords1	=vec2(0,0);
 #ifdef SFX_OPENGL_NONE
-	OUT.normal.xyz	=mul(vec3(0,0,1.0), mat3(world));
-	OUT.tangent.xyz = mul(vec3(0, 0, 1.0), mat3(world));
+	OUT.normal.xyz	=normalize(mul(vec3(0,0,1.0), mat3(world)));
+	OUT.tangent.xyz = normalize(mul(vec3(0, 0, 1.0), mat3(world)));
 #else
-	OUT.normal.xyz	=mul(vec4(vec3(0,0,1.0),0.0), world).xyz;
-	OUT.tangent.xyz =mul(vec4(vec3(0, 0, 1.0), 0.0), world).xyz;
+	OUT.normal.xyz	= normalize(mul(vec4(vec3(0,0,1.0),0.0), world).xyz);
+	OUT.tangent.xyz = normalize(mul(vec4(vec3(0, 0, 1.0), 0.0), world).xyz);
 #endif
 	OUT.hPosition	=OUT.clip_pos;
 	OUT.debug_colour = vec4(0, 0, 0, 0);
 	return OUT;
 }
 
-shader vertexOutput VS_Solid(vertexInput IN)
+shader vertexOutput VSSolid(vertexInput_normal_tangent_2tecvoords IN)
 {
 	vertexOutput OUT;
 	vec4 opos			=vec4(IN.position.xyz,1.0);
 	vec4 wpos			=mul(opos, world);
 
-	//wpos.xyz		-= videoCamPosition;
 	OUT.view			=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos	=mul(view,vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
-	//OUT.clip_pos	=mul( opos, worldViewProj);
-	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
-	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
+	
+	OUT.texCoords0		=BottomUpTextureCoordinates(IN.texCoords0);
+	OUT.texCoords1		=BottomUpTextureCoordinates(IN.texCoords1);
 #ifdef SFX_OPENGL_NONE
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
 #else
-	OUT.normal			= mul(vec4(IN.normal.xyz, 0.0), world).xyz;
-	OUT.tangent			= mul(vec4(IN.tangent.xyz,0.0), world).xyz;
+//	must NORMALIZE, because world matix might SCALE the normals!
+	OUT.normal			= normalize(mul(vec4(IN.normal.xyz, 0.0), world).xyz);
+	OUT.tangent			= normalize(mul(vec4(IN.tangent.xyz,0.0), world).xyz);
 #endif
-	OUT.hPosition		=OUT.clip_pos;
+	OUT.hPosition		= OUT.clip_pos;
 	OUT.debug_colour	= vec4(IN.position.xyz, 0);
 	return OUT;
 }
 
-shader vertexOutput VS_Solid_MV(vertexInput IN, uint viewID : SV_ViewID)
+shader vertexOutput VS_Solid(vertexInput_normal_tangent_2tecvoords IN)
+{
+	return VSSolid(IN);
+}
+
+shader vertexOutput VS_Solid_MV(vertexInput_normal_tangent_2tecvoords IN, uint viewID : SV_ViewID)
 {
 	vertexOutput OUT;
 	
 	vec4 opos			=vec4(IN.position.xyz,1.0);
 	vec4 wpos			=mul(opos, viewID == 0 ? leftWorld : rightWorld);
 
-	//wpos.xyz		-= videoCamPosition;
 	OUT.view			=normalize(wpos.xyz-stereoViewPosition);
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
-	//OUT.clip_pos	=mul( opos, worldViewProj);
 	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
 	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
 #ifdef SFX_OPENGL_NONE
@@ -467,14 +476,14 @@ vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	//vec3 env				=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
 	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
-	vec3 env				= specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+	vec3 env				=specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
 
 	//vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS* env;
 
 	 //Metallic materials will have no diffuse output.
 	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo.rgb*diffuse_env;
-	//diffuse					*= surfaceProperties.ao;
+	diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+ specular;
 
 	return colour;
@@ -548,26 +557,25 @@ mat3 CreateMat3FromCols(float3 c0, float3 c1, float3 c2)
 #endif
 }
 
-vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
+vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_lights)
 {
-	vec3 diff			=IN.wpos.xyz - viewPosition;
+	vec3 diff				=IN.wpos.xyz - viewPosition;
 	if(length(diff) > drawDistance)
 		discard;
-	vec3 tangentx			= normalize(IN.tangent);
-	vec3 tangenty			= normalize(cross(IN.normal, tangentx));
-	mat3 TangentMatrix		= CreateMat3FromCols(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
+	vec3 tangentx			=normalize(IN.tangent);
+	vec3 tangenty			=normalize(cross(IN.normal, tangentx));
+	mat3 TangentMatrix		=CreateMat3FromCols(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
-	vec3 normalLookup		= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
-	normalLookup			= normalOutputScalar.xyz*2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
-	vec3 normal				= normalize(mul( TangentMatrix,normalLookup));
+	vec3 normalLookup		=normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
+	normalLookup			=normalOutputScalar.xyz*2.0 * (normalLookup.rgb-vec3(0.5, 0.5, 0.5));
+	vec3 normal				=normalize(mul(TangentMatrix,normalLookup));
 
 	vec2 diffuseTexCoords	=IN.texCoords0.xy * diffuseTexCoordsScalar_R;
-	diffuseTexCoords.y		=1.0-diffuseTexCoords.y;
 	vec4 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgba;
 	diffuseColour			=diffuseColour.rgba * diffuseOutputScalar.rgba;
 
 	vec2 lightmapUVs		=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	lightmapUVs.y			=1.0-lightmapUVs.y;
+	//lightmapUVs.y			=1.0-lightmapUVs.y;
 	vec3 view				=normalize(diff);
 	vec4 combinedLookup		=combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
 	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
@@ -615,8 +623,8 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,int max_lights)
 	emissive			*=	emissiveOutputScalar.rgb;
 	vec4 u				=	vec4(c+emissive,alpha);
 	//if(lightmap)
-	//u.rgb=view.xyz;
-	//u.rgb=viewPosition.xyz;
+	//u.rgb=abs(normal.xyz);
+	//u.rgb=IN.tangent;//surfaceState.F;//vec3(surfaceProperties.metallic,0,0);
 	return u;
 }
 
@@ -628,10 +636,22 @@ vec4 Solid_AlbedoOnly(vertexOutput IN)
 	return vec4(diffuseColour.rgb, 1.0);
 }
 
+shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
+{
+	return Solid(IN,true,false,true,0);
+}
+shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
+{
+	return Solid_AlbedoOnly(IN);
+}
 shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
 {
-	//return vec4(0,1,0,1);
-	return Solid(IN, false, true, 0);
+	return Solid(IN, false, true, true, 0);
+}
+
+shader vec4 PS_Solid(vertexOutput IN,variant bool lightmap,variant bool ambient,variant bool normal_map,variant int max_lights): SV_TARGET
+{
+	return Solid(IN, lightmap, ambient, normal_map, max_lights);
 }
 
 float hash(vec3 p)
@@ -667,30 +687,23 @@ shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
 	vec3 light=vec3(dotp,dotp,dotp);
 	vec3 colour=diffuseOutputScalar.rgb*light;
 	colour		+=emissiveOutputScalar.rgb;
-	//colour=IN.debug_colour.rgb;
 	return vec4(colour,1.0);
-}
-shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
-{
-	return Solid(IN,true,false,0);
 }
 shader vec4 PS_Transparent_Lightmap(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN,true,false,0);
+	return Solid(IN,true,false,true,0);
 }
 shader vec4 PS_Transparent_NoLightmap(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN, false, true, 0);
+	return Solid(IN,false,true,true,0);
 }
-
 shader vec4 PS_Depth(vertexOutput IN) : SV_TARGET
 {
-	return Solid(IN,false,false,0);
-}
-
-shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
-{
-	return Solid_AlbedoOnly(IN);
+	vec3 diff = IN.wpos.xyz - viewPosition;
+	float d=length(diff);
+	if (d > drawDistance)
+		discard;
+	return vec4(d,d,d,1.0);
 }
 
 vec4 DebugNormal(vertexOutput IN, int swizzle_mode)
@@ -744,71 +757,6 @@ shader vec4 PS_Local(vertexOutput IN) : SV_TARGET
 	return clr;
 }
 
-/// A function that applies atmospherics and cloud visibility to a pixel of a transparent object.
-void AtmosphericsAndCloudOcclusion(out vec4 loss,out vec3 add
-				,vec4 clip_pos
-				,vec3 view
-				,TextureCube nearFarTextureCube
-				,Texture2D loss2dTexture
-				,Texture2D shadowTexture
-				,Texture3D inscatterVolumeTexture
-				,vec4 depthToLinFadeDistParams)
-{
-	clip_pos/=clip_pos.w;
-	// we only care about view.z, i.e. the third element of the vector.
-	// so only dot-product the third row of invViewProj, with clip_pos.
-	float sine					=normalize(view).z;
-	vec2 texCoords				=0.5*vec2(clip_pos.x+1.0,1.0-clip_pos.y);
-
-	vec4 nearFarCloud			=texture_wrap_lod(nearFarTextureCube	,view		,0);
-
-	// translate from depth to linear distance.
-	DepthInterpretationStruct depthInterpretationStruct;
-	depthInterpretationStruct.depthToLinFadeDistParams=depthToLinFadeDistParams;
-	depthInterpretationStruct.reverseDepth=(reverseDepth!=0);
-	float dist					=depthToLinearDistance(clip_pos.z	,depthInterpretationStruct);
-	float dist_rt				=pow(dist,0.5);
-	vec3 worldspaceVolumeTexCoords	=vec3(atan2(view.x,view.y)/(2.0*SIMUL_PI_F),0.5*(1.0+2.0*asin(sine)/SIMUL_PI_F),dist_rt);
-	
-	// Inscatter from air:
-	vec4 insc						=texture_3d_wmc_lod(inscatterVolumeTexture,worldspaceVolumeTexCoords,0);
-	
-	vec2 loss_texc				=vec2(dist_rt,0.5*(1.f-sine));
-
-	// Visibility due to clouds:
-	float visibility			=1.0-saturate((dist-nearFarCloud.w) / (0.001));//(nearFarCloud.x-nearFarCloud.y));
-
-	insc.rgb					*=visibility;
-	// loss due to air (alpha is visilibity due to cloud occlusion).
-	loss						=vec4(texture_clamp_lod(loss2dTexture,loss_texc,0).rgb,visibility);
-	add							=insc.rgb;
-}
-
-/// An example shader for rendering transparent objects.
-shader vec4 PS_Transparent(vertexOutput IN) : SV_TARGET
-{
-	vec3 normal	=normalize(IN.normal);
-// Here is whatever colour your shader would normally generate in the absence of atmospherics:
-	vec4 c = vec4(0.5,0.5,0.5,0.5);
-
-// Now we calculate the atmospheric effects:
-	vec4 loss;
-	vec3 add;
-// We need clip_pos and view direction (i.e. the direction in world xyz to the pixel from the camera).
-	AtmosphericsAndCloudOcclusion(loss,add
-				,IN.clip_pos
-				,IN.view
-				,nearFarTextureCube
-				,loss2dTexture
-				,shadowTexture
-				,inscatterVolumeTexture
-				,depthToLinFadeDistParams
-				);
-// Loss is multiplied over the original colour, and inscatter is added:
-	c.rgba*=loss.rgba;
-	c.rgb+=add;
-	return c;
-}
 
 shader vec4 PS_DebugAnim(vertexOutput IN):SV_TARGET
 {
@@ -829,31 +777,29 @@ shader vec4 PS_DebugLightmaps(vertexOutput IN) : SV_TARGET
 	return globalIllumination;
 }
 
-VertexShader vs_solid_mv = CompileShader(vs_6_1, VS_Solid_MV());
-VertexShader vs_anim_mv = CompileShader(vs_6_1, VS_Animation_MV());
+VertexShader vs_solid						= CompileShader(vs_5_0, VS_Solid());
+VertexShader vs_solid_mv					= CompileShader(vs_6_1, VS_Solid_MV());
+VertexShader vs_anim						= CompileShader(vs_5_0, VS_Animation());
+VertexShader vs_anim_mv						= CompileShader(vs_6_1, VS_Animation_MV());
 
-VertexShader vs_solid = CompileShader(vs_5_0, VS_Solid());
-VertexShader vs_anim = CompileShader(vs_5_0, VS_Animation());
-
-PixelShader ps_solid_lightmap = CompileShader(ps_5_0, PS_Solid_Lightmap());
-PixelShader ps_solid_nolightmap = CompileShader(ps_5_0, PS_Solid_NoLightmap());
-PixelShader ps_digitizing = CompileShader(ps_5_0, PS_Digitizing());
+PixelShader ps_solid						= CompileShader(ps_5_0, PS_Solid());
+PixelShader ps_digitizing					= CompileShader(ps_5_0, PS_Digitizing());
 
 
-PixelShader ps_transparent_lightmap		= CompileShader(ps_5_0, PS_Transparent_Lightmap());
-PixelShader ps_transparent_nolightmap	= CompileShader(ps_5_0, PS_Transparent_NoLightmap());
+PixelShader ps_transparent_lightmap			= CompileShader(ps_5_0, PS_Transparent_Lightmap());
+PixelShader ps_transparent_nolightmap		= CompileShader(ps_5_0, PS_Transparent_NoLightmap());
 
-PixelShader ps_local_hand = CompileShader(ps_5_0, PS_Solid_LocalHand());
-PixelShader ps_depth = CompileShader(ps_5_0, PS_Depth());
+PixelShader ps_local_hand					= CompileShader(ps_5_0, PS_Solid_LocalHand());
+PixelShader ps_depth						= CompileShader(ps_5_0, PS_Depth());
 
 //Debug renders.
-PixelShader ps_solid_albedo_only = CompileShader(ps_5_0, PS_Solid_AlbedoOnly()); //Albedo only view
-PixelShader ps_debug_normals = CompileShader(ps_5_0, PS_DebugNormals()); // Normal view
-PixelShader ps_debug_anim = CompileShader(ps_5_0, PS_DebugAnim()); //Unreal-basis normal viewdebug_lightmaps
-PixelShader ps_debug_lightmaps = CompileShader(ps_5_0, PS_DebugLightmaps()); //Unreal-basis normal view
-PixelShader ps_debug_normal_unity = CompileShader(ps_5_0, PS_DebugNormal_Unity()); //Unity-basis normal view
-PixelShader ps_debug_normal_vertexnormals = CompileShader(ps_5_0, PS_DebugNormal_VertexNormals()); //Vertex normals
-
+PixelShader ps_solid_albedo_only			= CompileShader(ps_5_0, PS_Solid_AlbedoOnly());				// Albedo only view
+PixelShader ps_debug_normals				= CompileShader(ps_5_0, PS_DebugNormals());					// Normal view
+PixelShader ps_debug_anim					= CompileShader(ps_5_0, PS_DebugAnim());					// Unreal-basis normal viewdebug_lightmaps
+PixelShader ps_debug_lightmaps				= CompileShader(ps_5_0, PS_DebugLightmaps());				// Unreal-basis normal view
+PixelShader ps_debug_normal_unity			= CompileShader(ps_5_0, PS_DebugNormal_Unity());			// Unity-basis normal view
+PixelShader ps_debug_normal_vertexnormals	= CompileShader(ps_5_0, PS_DebugNormal_VertexNormals());	// Vertex normals
+PixelShader ps_local						= CompileShader(ps_5_0, PS_Local());
 RasterizerState PbrBackfaceCull
 {
 	FillMode				= SOLID;
@@ -868,501 +814,28 @@ RasterizerState PbrDontCull
 	FrontCounterClockwise	= false;
 };
 
-
 technique solid
 {
-	pass local
-	{
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, PS_Local()));
-	}
-	pass depth 
+	pass pbr
 	{
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
+		SetVertexShaderVariants(vs_solid,vs_solid_mv,vs_anim,vs_anim_mv);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_depth);
-	}
-	pass pbr_lightmap 
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_nolightmap);
-	}
-	pass digitizing
-	{
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_digitizing);
-	}
-	pass albedo_only
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_albedo_only);
-	}
-	pass normals
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normals);
-	}
-	pass debug_lightmaps
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_lightmaps);
-	}
-	pass debug_anim
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass normal_unity
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unity);
-	}
-	pass normal_vertexnormals
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_vertexnormals);
-	}
-	pass local_hand
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_local_hand);
-	}
-}
-
-technique solid_anim
-{
-	pass debug_lightmaps
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_lightmaps);
-	}
-	pass debug_anim
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass pbr_lightmap
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_nolightmap);
-	}
-	pass digitizing
-	{
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_digitizing);
-	}
-	pass local_hand
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_local_hand);
-	}
-	pass albedo_only
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_albedo_only);
-	}
-	pass normals
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normals);
-	}
-	pass debug_anim
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass normal_unity
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unity);
-	}
-	pass normal_vertexnormals
-	{
-		
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_anim);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_vertexnormals);
-	}
-}
-
-technique solid_multiview
-{
-	pass local
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, PS_Local()));
-	}
-	pass depth
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_depth);
-	}
-	pass pbr_lightmap
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_nolightmap);
-	}
-	pass digitizing
-	{
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_digitizing);
-	}
-	pass albedo_only
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_albedo_only);
-	}
-	pass normals
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normals);
-	}
-	pass debug_lightmaps
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_lightmaps);
-	}
-	pass debug_anim
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass normal_unity
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unity);
-	}
-	pass normal_vertexnormals
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_vertexnormals);
-	}
-	pass local_hand
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_local_hand);
-	}
-}
-
-technique solid_anim_multiview
-{
-	pass debug_lightmaps
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_lightmaps);
-	}
-	pass debug_anim
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass pbr_lightmap
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_nolightmap);
-	}
-	pass digitizing
-	{
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_digitizing);
-	}
-	pass local_hand
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_local_hand);
-	}
-	pass albedo_only
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_albedo_only);
-	}
-	pass normals
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normals);
-	}
-	pass debug_anim
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_anim);
-	}
-	pass normal_unity
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_unity);
-	}
-	pass normal_vertexnormals
-	{
-		
-		SetDepthStencilState(ReverseDepth, 0);
-		SetBlendState(DontBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_anim_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_debug_normal_vertexnormals);
+		SetPixelShaderVariants(ps_local,ps_solid({false,true},{false,true},{false,true},{0}),ps_digitizing,ps_depth,ps_debug_normals
+				,ps_debug_lightmaps,ps_debug_normal_vertexnormals,ps_local_hand);
 	}
 }
 
 technique transparent
 {
-	pass pbr_lightmap 
+	pass pbr
 	{
 		SetRasterizerState(PbrDontCull);
 		SetDepthStencilState(TestReverseDepth,0);
 		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
+		SetVertexShaderVariants(vs_solid,vs_solid_mv,vs_anim,vs_anim_mv);
 		SetGeometryShader(NULL);
-		SetPixelShader(ps_transparent_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_transparent_nolightmap);
-	}
-	pass digitizing
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth, 0);
-		SetBlendState(AlphaBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_digitizing);
-	}
-}
-
-technique transparent_multiview
-{
-	pass pbr_lightmap 
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_lightmap);
-	}
-	pass pbr_nolightmap
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth,0);
-		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_solid_nolightmap);
-	}
-	pass digitizing
-	{
-		SetRasterizerState(PbrDontCull);
-		SetDepthStencilState(TestReverseDepth, 0);
-		SetBlendState(AlphaBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
-		SetVertexShader(vs_solid_mv);
-		SetGeometryShader(NULL);
-		SetPixelShader(ps_digitizing);
-	}
-}
-
-technique triangle_test
-{
-	pass base 
-	{
-		SetRasterizerState(RenderNoCull);
-		SetDepthStencilState(ReverseDepth,0);
-		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShader(CompileShader(vs_4_0,VS_Triangle()));
-		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0,PS_Triangle()));
+		SetPixelShaderVariants(ps_transparent_lightmap,ps_transparent_nolightmap,ps_digitizing);
 	}
 }

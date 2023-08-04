@@ -8,7 +8,7 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float drawDistance;
 	float roughestMip;
 
-	vec4 depthToLinFadeDistParams;
+	vec4 depthToLinFadeDistParamsY;
 
 	vec4 diffuseOutputScalar;
 	vec2 diffuseTexCoordsScalar_R;

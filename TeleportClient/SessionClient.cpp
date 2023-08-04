@@ -304,6 +304,14 @@ avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
 	return avs::Result::OK;
 }
 
+void SessionClient::KillStreaming()
+{
+	if(clientPipeline.source)
+	{
+		clientPipeline.source->kill();
+	}
+}
+
 void SessionClient::ReceiveCommand(const std::vector<uint8_t> &buffer)
 {
 	ReceiveCommandPacket(buffer);
@@ -658,9 +666,8 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		return;
 	}
 	connectionStatus = client::ConnectionStatus::HANDSHAKING;
-	//Copy command out of packet.
-	memcpy(static_cast<void*>(&setupCommand), packet.data(), commandSize);
-
+	const teleport::core::SetupCommand *s=reinterpret_cast<const teleport::core::SetupCommand*>(packet.data());
+	ApplySetup(*s);
 	teleport::core::Handshake handshake;
 	if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
 		return;
@@ -681,6 +688,12 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 
 	SendHandshake(handshake, resourceIDs);
 	lastSessionId = setupCommand.session_id;
+}
+
+void SessionClient::ApplySetup(const teleport::core::SetupCommand &s)
+{
+	//Copy command out of packet.
+	memcpy(static_cast<void*>(&setupCommand), &s, sizeof(s));
 }
 
 void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &packet)

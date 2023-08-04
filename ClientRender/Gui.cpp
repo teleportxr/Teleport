@@ -332,6 +332,11 @@ void Gui::InvalidateDeviceObjects()
 	}
 }
 
+void Gui::LoadShaders()
+{
+	ImGui_ImplPlatform_LoadShaders();
+}
+
 void Gui::RecompileShaders()
 {
 	ImGui_ImplPlatform_RecompileShaders();
@@ -443,6 +448,7 @@ void Gui::ShowFont()
 
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n,const char *search_text)
 {
+	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	const clientrender::Node *node=n.get();
 	if (!node)
 		return;
@@ -867,6 +873,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
 		window_flags |= ImGuiWindowFlags_NoMove;
 	}
+	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if(geometryCache&&show_inspector)
 	{
 		ImGuiWindowFlags window_flags =ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_MenuBar|ImGuiWindowFlags_AlwaysAutoResize;//  | 
@@ -1272,6 +1279,7 @@ void Gui::CubemapOSD(crossplatform::Texture *videoTexture)
 void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray
 	,VideoTagDataCube videoTagDataCube[])
 {
+	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto& cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
 	const char *name="";
@@ -1315,8 +1323,31 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 
 void Gui::GeometryOSD()
 {
+	const std::vector<avs::uid> &cache_uids=clientrender::GeometryCache::GetCacheUids();
+	static std::vector<std::string> cache_names;
+	static std::vector<const char *> cache_strings;
+	if(cache_uids.size()!=cache_names.size())
+	{
+		cache_names.clear();
+		cache_strings.resize(cache_uids.size());
+		for(size_t i=0;i<cache_uids.size();i++)
+		{
+			cache_names.push_back(fmt::format("{0}",cache_uids[i]));
+		}
+		for(size_t i=0;i<cache_uids.size();i++)
+		{
+			cache_strings[i]=cache_names[i].c_str();
+		}
+	}
+	static int current_choice = 0;
+	ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(),(int)cache_strings.size());
+	if(current_choice>=0&&current_choice<cache_uids.size())
+		cache_uid=cache_uids[current_choice];
 	vec4 white(1.f, 1.f, 1.f, 1.f);
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
+	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
+	if(!geometryCache)
+		return;
 	LinePrint(platform::core::QuickFormat("Nodes: %d",geometryCache->mNodeManager->GetNodeCount()), white);
 
 	static int nodeLimit = 5;
@@ -1381,7 +1412,7 @@ bool Gui::Tab(const char *txt)
 {
 	if(!in_tabs)
 		ImGui::BeginTabBar("tabs");
-		in_tabs=true;
+	in_tabs=true;
 	return ImGui::BeginTabItem(txt);
 }
 
@@ -1392,6 +1423,7 @@ void Gui::EndTab()
 
 void Gui::Scene()
 {
+	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if(!geometryCache)
 		return;
 	ImGui::BeginTabBar("Scene");
@@ -1679,11 +1711,13 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 			ImGui::Text("Streaming Status");
 			ImGui::TableNextColumn();
 			ImGui::Text(avs::stringOf(streamingStatus),white);
+
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			ImGui::Text("Latency");
 			ImGui::TableNextColumn();
 			ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
+
 			ImGui::EndTable();
 		}
 
@@ -1834,6 +1868,15 @@ void Gui::DevModeOptions()
 	ImGui::LabelText("##labelAlwaysShow3dGui", "Force 3D User Interface");
 	ImGui::TableNextColumn();
 	ImGui::Checkbox("##AlwaysShow3dGui", &config.options.alwaysShow3dGui);
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::LabelText("##labelAlwaysShow3dGui", "Test: kill streaming");
+	ImGui::TableNextColumn();
+	if(ImGui::Button("##KillStreaming"))
+	{
+		if(console)
+			console("killstreaming");
+	}
 }
 void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 {

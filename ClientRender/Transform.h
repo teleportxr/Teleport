@@ -1,9 +1,8 @@
 #pragma once
 
-#include "Platform/Shaders/SL/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "TeleportClient/basic_linear_algebra.h"
-
-#include "ShaderResource.h"
+#include "Common.h"
 
 namespace clientrender
 {
@@ -17,8 +16,6 @@ namespace clientrender
 		vec3 m_Velocity={0,0,0};
 	private:
 		mat4 m_ModelMatrix;
-		ShaderResourceLayout m_ShaderResourceLayout;
-		ShaderResource m_ShaderResource;
 	public:
 		Transform();
 		Transform(vec3 translation, quat rotation, vec3 scale);

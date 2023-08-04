@@ -11,10 +11,10 @@ Transform::Transform()
 Transform::Transform(vec3 translation, quat rotation, vec3 scale)
 	: m_Translation(translation), m_Rotation(rotation), m_Scale(scale)
 {
-	m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_VERTEX);
+	//m_ShaderResourceLayout.AddBinding(1, ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, ShaderStage::SHADER_STAGE_VERTEX);
 
-	m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
-	m_ShaderResource.AddBuffer(ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_NodeUBO", { &m_ModelMatrix, 0, sizeof(m_ModelMatrix) });
+	//m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
+	//m_ShaderResource.AddBuffer(ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_NodeUBO", { &m_ModelMatrix, 0, sizeof(m_ModelMatrix) });
 
 	m_ModelMatrix = mat4_deprecated::Translation(translation) * mat4_deprecated::Rotation(rotation) * mat4_deprecated::Scale(scale);
 }

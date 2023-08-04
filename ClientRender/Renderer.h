@@ -48,6 +48,7 @@ namespace clientrender
 		virtual ~Renderer();
 		//! This allows live-recompile of shaders (desktop platforms only).
 		void RecompileShaders();
+		void LoadShaders();
 		void SetMinimumPriority(int32_t p)
 		{
 			minimumPriority=p;
@@ -67,6 +68,7 @@ namespace clientrender
 		}
 
 	protected:
+		bool reload_shaders=false;
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
 		virtual std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid server_uid);
 		void InitLocalGeometry();
@@ -136,6 +138,9 @@ namespace clientrender
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;
 		avs::Pose GetOriginPose(avs::uid server_uid);
+		std::queue<std::string> console;
+		void ExecConsoleCommands();
+		void ExecConsoleCommand(const std::string &str);
 	public:
 		
 		GeometryDecoder geometryDecoder;
@@ -146,6 +151,8 @@ namespace clientrender
 		void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
 		void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 		void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
+
+		void ConsoleCommand(const std::string &str);
 		
 		void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
 		void WriteHierarchies(avs::uid server);

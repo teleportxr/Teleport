@@ -69,7 +69,7 @@ namespace avs
 		/*! Buffer of data to be sent */
 		std::vector<uint8_t> buffer;
 	};
-	//! A message sent by the reliable (Enet/Websockets) channel.
+	//! A message sent by the reliable (e.g. Websockets) channel.
 	struct SetupMessage
 	{
 		std::string text;

@@ -14,9 +14,9 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{820723d2-2241-4784-a775-ec5a36833a2e}</ProjectGuid>
-    <RootNamespace>TeleportVRQuestClientAGDE</RootNamespace>
+    <RootNamespace>TeleportVRClient</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>TeleportVRQuestClient</ProjectName>
+    <ProjectName>TeleportVRClient</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">

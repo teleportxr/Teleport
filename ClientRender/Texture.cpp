@@ -15,23 +15,24 @@ platform::crossplatform::PixelFormat ToSimulPixelFormat(clientrender::Texture::F
 	using namespace platform::crossplatform;
 	switch (f)
 	{
-	case clientrender::Texture::Format::RGBA32F:						return RGBA_32_FLOAT;
+	case clientrender::Texture::Format::RGBA32F:					return RGBA_32_FLOAT;
 	case clientrender::Texture::Format::RGBA32UI:					return RGBA_32_UINT;
-	case clientrender::Texture::Format::RGBA32I:						return RGBA_32_INT;
-	case clientrender::Texture::Format::RGBA16F:						return RGBA_16_FLOAT;
+	case clientrender::Texture::Format::RGBA32I:					return RGBA_32_INT;
+	case clientrender::Texture::Format::RGBA16F:					return RGBA_16_FLOAT;
 	case clientrender::Texture::Format::RGBA16UI:					return RGBA_16_UINT;
-	case clientrender::Texture::Format::RGBA16I:						return RGBA_16_INT;
+	case clientrender::Texture::Format::RGBA16I:					return RGBA_16_INT;
 	case clientrender::Texture::Format::RGBA16_SNORM:				return RGBA_16_SNORM;
 	case clientrender::Texture::Format::RGBA16:						return RGBA_16_UNORM;
-	case clientrender::Texture::Format::RGBA8UI:						return RGBA_8_UINT;
+	case clientrender::Texture::Format::RGBA8UI:					return RGBA_8_UINT;
 	case clientrender::Texture::Format::RGBA8I:						return RGBA_8_INT;
-	case clientrender::Texture::Format::RGBA8_SNORM:					return RGBA_8_SNORM;
+	case clientrender::Texture::Format::RGBA8_SNORM:				return RGBA_8_SNORM;
 	case clientrender::Texture::Format::RGBA8:						return RGBA_8_UNORM;
 	case clientrender::Texture::Format::BGRA8:						return RGBA_8_UNORM;	// Because GL doesn't support  BGRA!!!
 	case clientrender::Texture::Format::RGB10_A2UI:					return RGB_10_A2_UINT;
 	case clientrender::Texture::Format::RGB10_A2:					return RGB_10_A2_INT;
 	case clientrender::Texture::Format::RGB32F:						return RGB_32_FLOAT;
 	case clientrender::Texture::Format::R11F_G11F_B10F:				return RGB_11_11_10_FLOAT;
+	case clientrender::Texture::Format::RGB8:						return RGB_8_UNORM;
 	case clientrender::Texture::Format::RG32F:						return RG_32_FLOAT;
 	case clientrender::Texture::Format::RG32UI:						return RG_32_UINT;
 	case clientrender::Texture::Format::RG32I:							 
@@ -42,7 +43,7 @@ platform::crossplatform::PixelFormat ToSimulPixelFormat(clientrender::Texture::F
 	case clientrender::Texture::Format::RG16:							
 	case clientrender::Texture::Format::RG8UI:							
 	case clientrender::Texture::Format::RG8I:
-	case clientrender::Texture::Format::RG8:							return RG_8_UNORM; 
+	case clientrender::Texture::Format::RG8:						return RG_8_UNORM; 
 	case clientrender::Texture::Format::R32F:						return R_32_FLOAT;
 	case clientrender::Texture::Format::R32UI:						return R_32_UINT;
 	case clientrender::Texture::Format::R32I:						return R_32_INT;

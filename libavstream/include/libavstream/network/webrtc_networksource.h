@@ -36,7 +36,9 @@ namespace avs
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
 		Result configure(std::vector<NetworkSourceStream>&& in_streams,int numOutputs, const NetworkSourceParams& params) override;
-
+		
+		//! Debugging: make it seem as though the connection was lost.
+		void kill() override;
 		/*!
 		 * Deconfigure network source and release all associated resources.
 		 * \return Always returns Result::OK.

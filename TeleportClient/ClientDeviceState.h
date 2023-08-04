@@ -3,7 +3,7 @@
 #include "basic_linear_algebra.h"
 #include <TeleportCore/Input.h>
 
-#include "Platform/Shaders/SL/CppSl.sl"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 
 namespace teleport
 {

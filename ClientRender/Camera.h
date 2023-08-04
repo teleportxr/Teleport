@@ -4,4 +4,3 @@
 #include "Common.h"
 #include "ClientRender/UniformBuffer.h"
 #include "TeleportClient/basic_linear_algebra.h"
-#include "ShaderResource.h"

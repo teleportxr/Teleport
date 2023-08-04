@@ -10,11 +10,11 @@ size_t TextCanvas::count=0;
 bool TextCanvas::recompile=false;
 Effect							*TextCanvas::effect=nullptr;
 EffectTechnique					*TextCanvas::tech=nullptr;
-EffectPass					*TextCanvas::singleViewPass=nullptr;
-EffectPass					*TextCanvas::multiViewPass=nullptr;
+EffectPass						*TextCanvas::singleViewPass=nullptr;
+EffectPass						*TextCanvas::multiViewPass=nullptr;
 ShaderResource					TextCanvas::textureResource;
 ShaderResource					TextCanvas::_fontChars;
-crossplatform::RenderPlatform*					TextCanvas::renderPlatform;
+crossplatform::RenderPlatform*	TextCanvas::renderPlatform;
 ConstantBuffer<TextConstants>	TextCanvas::textConstants;
 
 

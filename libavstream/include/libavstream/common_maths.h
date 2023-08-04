@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cmath>
 #include <iostream>
-#include "../../firstparty/Platform/Shaders/SL/CppSl.sl"
+#include "../../firstparty/Platform/CrossPlatform/Shaders/CppSl.sl"
 namespace avs
 {
 	enum class AxesStandard : uint8_t
@@ -12,10 +12,11 @@ namespace avs
 		RightHanded = 1,
 		LeftHanded = 2,
 		YVertical = 4,
-		EngineeringStyle = 8 | RightHanded,
-		GlStyle = 16 | RightHanded,
-		UnrealStyle = 32 | LeftHanded,
-		UnityStyle = 64 | LeftHanded | YVertical,
+		ZVertical = 8,
+		EngineeringStyle = ZVertical | RightHanded,
+		GlStyle = 16 | YVertical | RightHanded,
+		UnrealStyle = 32 | ZVertical | LeftHanded,
+		UnityStyle = 64 | YVertical | LeftHanded ,
 	};
 
 	inline AxesStandard operator|(const AxesStandard& a, const AxesStandard& b)

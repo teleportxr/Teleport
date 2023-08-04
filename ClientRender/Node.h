@@ -9,6 +9,7 @@
 #include "ClientRender/UniformBuffer.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "NodeComponents/Component.h"
 #include "NodeComponents/AnimationComponent.h"
 #include "NodeComponents/VisibilityComponent.h"
 #include "TextCanvas.h"
@@ -21,6 +22,7 @@ namespace clientrender
 {
 	class Node: public IncompleteNode
 	{
+		std::vector<std::shared_ptr<Component>> components;
 	public:
 		const std::string name;
 
@@ -29,7 +31,24 @@ namespace clientrender
 		mutable float countdown = 2.0f;
 		VisibilityComponent visibility;
 		AnimationComponent animationComponent;
-
+		const std::vector<std::shared_ptr<Component>> &GetComponents();
+		template<typename T>
+		Component *GetComponent()
+		{
+			for(auto &c:components)
+			{
+				T *t=dynamic_cast<T*>(c.get());
+				if(t)
+					return t;
+			}
+			return nullptr;
+		}
+		template<typename T>
+		Component * AddComponent()
+		{
+			components.push_back(std::make_shared<T>());
+			return components.back().get();
+		}
 		Node(avs::uid id, const std::string& name);
 
 		virtual ~Node() = default;
@@ -101,6 +120,20 @@ namespace clientrender
 			}
 
 			return materials[index];
+		}
+		platform::crossplatform::EffectPass *GetCachedEffectPass(size_t submesh_index)
+		{
+			if(submesh_index>=cachedEffectPasses.size())
+				return nullptr;
+			return cachedEffectPasses[submesh_index];
+		}
+		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *e)
+		{
+			if(cachedEffectPasses.size()<materials.size())
+				cachedEffectPasses.resize(materials.size());
+			if(submesh_index>=cachedEffectPasses.size())
+				return;
+			cachedEffectPasses[submesh_index]=e;
 		}
 
 		virtual void SetMaterialListSize(size_t size);
@@ -205,5 +238,6 @@ namespace clientrender
 		
 		avs::uid holderClientId=0;
 		bool isGrabbable=false;
+		std::vector<platform::crossplatform::EffectPass *> cachedEffectPasses;
 	};
 }

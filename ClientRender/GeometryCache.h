@@ -35,6 +35,7 @@ namespace clientrender
 	};
 	struct UntranscodedTexture
 	{
+		avs::uid													cache_or_server_uid			= 0;
 		avs::uid													texture_uid			= 0;
 		std::vector<uint8_t>										data				= {};										//The raw data of the basis file.
 		std::shared_ptr<clientrender::Texture::TextureCreateInfo>	textureCI			= nullptr;									//Creation information on texture being transcoded.
@@ -42,24 +43,41 @@ namespace clientrender
 		avs::TextureCompression										compressionFormat	= avs::TextureCompression::UNCOMPRESSED;
 		float														valueScale			= 0.0f;										// scale on transcode.
 
-		UntranscodedTexture(avs::uid uid, const void* ptr, size_t size, const std::shared_ptr<clientrender::Texture::TextureCreateInfo>& textureCreateInfo,
+		UntranscodedTexture(avs::uid cache_uid, avs::uid uid, const void* ptr, size_t size, const std::shared_ptr<clientrender::Texture::TextureCreateInfo>& textureCreateInfo,
 			const std::string& name, avs::TextureCompression compressionFormat, float valueScale)
-			: texture_uid(uid), data(size), textureCI(textureCreateInfo), name(name), compressionFormat(compressionFormat), valueScale(valueScale)
+			: cache_or_server_uid(cache_uid),texture_uid(uid), data(size), textureCI(textureCreateInfo), name(name), compressionFormat(compressionFormat), valueScale(valueScale)
 		{
 			memcpy(data.data(), ptr, size);
 		}
 	};
-
+	//! A simple mapping to a subscene.
+	struct SubSceneCreate
+	{
+	//! The uid of the asset in the containing cache.
+		avs::uid uid;
+	//! The uid of the subscene's local cache in the cache/server list.
+		avs::uid subscene_uid;
+	};
 	//! A container for geometry sent from servers and cached locally.
 	//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
+	//! There is also one GeometryCache for each externally-provided sub-scene, for example a GLTF or GLB file.
+	//! Each cache must have a unique identifier.
 	class GeometryCache : public avs::GeometryCacheBackendInterface
 	{
 		geometry_cache_uid next_geometry_cache_uid=1;
 		std::map<uint64_t,geometry_cache_uid> uid_mapping;
+		static platform::crossplatform::RenderPlatform *renderPlatform;
 	public:
-		GeometryCache(NodeManager *);
-
+		GeometryCache();
 		~GeometryCache();
+		static void SetRenderPlatform(platform::crossplatform::RenderPlatform *r)
+		{
+			renderPlatform=r;
+		}
+		static const std::vector<avs::uid> &GetCacheUids();
+		static void CreateGeometryCache(avs::uid cache_uid);
+		static void DestroyGeometryCache(avs::uid cache_uid);
+		static std::shared_ptr<GeometryCache> GetGeometryCache(avs::uid cache_uid);
 		/// Generate a new uid unique in this cache (not globally unique).
 		geometry_cache_uid GenerateUid()
 		{
@@ -156,6 +174,8 @@ namespace clientrender
 		
 		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
 		MissingResource* GetMissingResourceIfMissing(avs::uid id, avs::GeometryPayloadType resourceType);
+		
+		const std::vector<avs::uid> &GetResourceRequests() ;
 		//Returns the resources the ResourceCreator needs, and clears the list.
 		std::vector<avs::uid> GetResourceRequests() const override;
 		void ClearResourceRequests() override;
@@ -168,6 +188,7 @@ namespace clientrender
 
 		std::unique_ptr<clientrender::NodeManager>				mNodeManager;
 		ResourceManager<avs::uid,clientrender::Material>		mMaterialManager;
+		ResourceManager<avs::uid,SubSceneCreate>				mSubsceneManager;
 		ResourceManager<avs::uid,clientrender::Texture>			mTextureManager;
 		ResourceManager<avs::uid,clientrender::Mesh>			mMeshManager;
 		ResourceManager<avs::uid,clientrender::Skin>			mSkinManager;
@@ -176,20 +197,37 @@ namespace clientrender
 		ResourceManager<avs::uid,clientrender::Animation>		mAnimationManager;
 		
 		ResourceManager<avs::uid,clientrender::TextCanvas>		mTextCanvasManager;
-		ResourceManager<avs::uid,clientrender::FontAtlas>			mFontAtlasManager;
+		ResourceManager<avs::uid,clientrender::FontAtlas>		mFontAtlasManager;
 		// Buffers used in meshes do not have server-unique id's, their id's are generated clientside.
 		ResourceManager<geometry_cache_uid,clientrender::IndexBuffer>	mIndexBufferManager;
 		ResourceManager<geometry_cache_uid,clientrender::VertexBuffer>	mVertexBufferManager;
 
 		std::vector<avs::uid> m_CompletedNodes; //List of IDs of nodes that have been fully received, and have yet to be confirmed to the server.
 
-		const std::vector<avs::uid> &GetResourceRequests();
 		const std::unordered_map<avs::uid, MissingResource>& GetMissingResources() const
 		{
 			return m_MissingResources;
 		}
 		void ReceivedResource(avs::uid u);
 		void CompleteResource(avs::uid id);
+		avs::Result CreateSubScene(const SubSceneCreate& subSceneCreate);
+		void CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo);
+		void CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin);
+		void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo);
+		void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
+		void CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone);
+		void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
+		void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo& materialInfo);
+		
+		//Add texture to material being created.
+		//	accessor : Data on texture that was received from server.
+		//	colourFactor : Vector factor to multiply texture with to adjust strength.
+		//	dummyTexture : Texture to use if there is no texture ID assigned.
+		//	incompleteMaterial : IncompleteMaterial we are attempting to add the texture to.
+		//	materialParameter : Parameter we are modifying.
+		void AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,
+										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, clientrender::Material::MaterialParameter& materialParameter);
+
 	protected:
 		mutable std::mutex receivedResourcesMutex;
 		mutable std::mutex resourceRequestsMutex;

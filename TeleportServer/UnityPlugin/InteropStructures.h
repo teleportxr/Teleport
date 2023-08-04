@@ -20,7 +20,7 @@ struct InteropNode
 	char* name;
 
 	avs::Transform localTransform;
-	avs::Transform globalTransform;
+	//avs::Transform globalTransform;
 
 	uint8_t stationary;
 	avs::uid holder_client_id;
@@ -56,7 +56,7 @@ struct InteropNode
 			name,
 
 			localTransform,
-			globalTransform,
+		//	globalTransform,
 
 			stationary!=0,
 
@@ -188,7 +188,7 @@ struct InteropMaterial
 	avs::TextureAccessor occlusionTexture;
 	avs::TextureAccessor emissiveTexture;
 	vec3 emissiveFactor;
-
+	bool doubleSided;
 	size_t extensionCount;
 	avs::MaterialExtensionIdentifier* extensionIDs;
 	avs::MaterialExtension** extensions;
@@ -222,6 +222,7 @@ struct InteropMaterial
 			occlusionTexture,
 			emissiveTexture,
 			emissiveFactor,
+			doubleSided,
 			convertedExtensions
 		};
 		return m;

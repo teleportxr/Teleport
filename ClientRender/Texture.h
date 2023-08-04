@@ -59,7 +59,8 @@ namespace clientrender
 			RGB10_A2,
 			
 			RGB32F,
-			R11F_G11F_B10F,										
+			R11F_G11F_B10F,	
+			RGB8,									
 			
 			RG32F,										
 			RG32UI,										
