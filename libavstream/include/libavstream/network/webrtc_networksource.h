@@ -8,6 +8,7 @@
 #include <optional>
 #include "networksource.h"
 #include <unordered_map>
+#include <libavstream/httputil.hpp>
 
 namespace avs
 {

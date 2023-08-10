@@ -42,11 +42,18 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 	memcpy(target, data + dataOffset, count * sizeof(T));
 	dataOffset += count * sizeof(T);
 }
+#include <libavstream/httputil.hpp>
+avs::HTTPUtil hTTPUtil;
 
 GeometryDecoder::GeometryDecoder()
 {
 	decodeThread = std::thread(&GeometryDecoder::decodeAsync, this);
 	decodeThreadActive = true;
+	avs::HTTPUtilConfig httpUtilConfig;
+	httpUtilConfig.remoteHTTPPort = 443;
+	httpUtilConfig.maxConnections = 12;
+	httpUtilConfig.useSSL = true;
+	hTTPUtil.initialize(httpUtilConfig);
 }
 
 GeometryDecoder::~GeometryDecoder()
@@ -63,7 +70,7 @@ void GeometryDecoder::setCacheFolder(const std::string& f)
 avs::Result GeometryDecoder::decode(avs::uid server_uid,const void* buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type,avs::GeometryTargetBackendInterface* target, avs::uid resource_uid)
 {
 	GeometryFileFormat geometryFileFormat=GeometryFileFormat::TELEPORT_NATIVE;
-	decodeData.emplace(server_uid,"",buffer, bufferSizeInBytes, type,geometryFileFormat, (clientrender::ResourceCreator*)target, true, resource_uid);
+	decodeData.emplace(server_uid,"",buffer, bufferSizeInBytes, type,geometryFileFormat, (clientrender::ResourceCreator*)target, true, resource_uid,platform::crossplatform::AxesStandard::Engineering);
 #if !TELEPORT_GEOMETRY_DECODER_ASYNC
 	decodeInternal(decodeData.front());
 	decodeData.pop();
@@ -71,16 +78,47 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,const void* buffer, size
 	return avs::Result::OK;
 }
 #include <filesystem>
-avs::Result GeometryDecoder::decodeFromFile(avs::uid server_uid,const std::string& filename, avs::GeometryPayloadType type, clientrender::ResourceCreator* target,avs::uid resource_uid)
+avs::Result GeometryDecoder::decodeFromFile(avs::uid server_uid,const std::string& filename, avs::GeometryPayloadType type, clientrender::ResourceCreator* target,avs::uid resource_uid,
+	platform::crossplatform::AxesStandard sourceAxesStandard)
 {
 	platform::core::FileLoader* fileLoader=platform::core::FileLoader::GetFileLoader();
 	if (!fileLoader->FileExists(filename.c_str()))
 		return avs::Result::Failed;
+	void *ptr=nullptr;
+	unsigned int sz=0;
+	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
+	auto res= decodeFromBuffer(server_uid,(const uint8_t *)ptr,(size_t)sz,filename,type,target,resource_uid,sourceAxesStandard);
+	fileLoader->ReleaseFileContents(ptr);
+	return res;
+}
+
+avs::Result GeometryDecoder::decodeFromWeb(avs::uid server_uid,const std::string& uri, avs::GeometryPayloadType type, clientrender::ResourceCreator* target,avs::uid resource_uid,
+	platform::crossplatform::AxesStandard sourceAxesStandard)
+{
+	avs::HTTPPayloadRequest req;
+	req.url = uri;
+	//req.type = avs::FilePayloadType::Mesh;
+	std::function<void(const uint8_t* buffer, size_t bufferSize)> f = std::bind(&GeometryDecoder::receiveFromWeb, this, server_uid, uri,std::placeholders::_1, std::placeholders::_2,type,target,resource_uid,sourceAxesStandard);
+	req.callbackFn=std::move(f);
+	hTTPUtil.GetRequestQueue().push(req);
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::receiveFromWeb(avs::uid server_uid,std::string uri,const uint8_t *buffer,size_t bufferSize,avs::GeometryPayloadType type,clientrender::ResourceCreator *target,avs::uid resource_uid,platform::crossplatform::AxesStandard sourceAxesStandard)
+{
+	if(bufferSize)
+	{
+		return decodeFromBuffer(server_uid,buffer,bufferSize,uri,type,target,resource_uid,sourceAxesStandard);
+	}
+	return avs::Result::OK;
+}
+
+avs::Result GeometryDecoder::decodeFromBuffer(avs::uid server_uid,const uint8_t *buffer,size_t bufferSize,const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *target,avs::uid resource_uid,platform::crossplatform::AxesStandard sourceAxesStandard)
+{
 	std::string extens=std::filesystem::path(filename).extension().string();
 	GeometryFileFormat geometryFileFormat=GeometryFileFormat::TELEPORT_NATIVE;
 	if(extens==".mesh_compressed"||extens==".mesh")
 	{
-
 	}
 	else if(extens==".gltf")
 	{
@@ -90,15 +128,7 @@ avs::Result GeometryDecoder::decodeFromFile(avs::uid server_uid,const std::strin
 	{
 		geometryFileFormat=GeometryFileFormat::GLTF_BINARY;
 	}
-	void *ptr=nullptr;
-	unsigned int sz=0;
-	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
-	decodeData.emplace(server_uid,filename, ptr,sz, type,geometryFileFormat, target, false, resource_uid);
-#if !TELEPORT_GEOMETRY_DECODER_ASYNC
-	decodeInternal(decodeData.front());
-	decodeData.pop();
-#endif
-	fileLoader->ReleaseFileContents(ptr);
+	decodeData.emplace(server_uid,filename, buffer,bufferSize, type,geometryFileFormat, target, false, resource_uid,sourceAxesStandard);
 	return avs::Result::OK;
 }
 
@@ -114,6 +144,7 @@ void GeometryDecoder::decodeAsync()
 			decodeData.pop();
 		}
 #endif
+		hTTPUtil.process();
 		std::this_thread::yield();
 	}
 }
@@ -253,11 +284,11 @@ avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData& geometryDecode
 	}
 	avs::Result res=avs::Result::Failed;
 	if(scene.get())
-		return DecodeDracoScene(geometryDecodeData.target,geometryDecodeData.filename_or_url,geometryDecodeData.server_or_cache_uid,geometryDecodeData.uid,*(scene.get()));
+		return DecodeDracoScene(geometryDecodeData.target,geometryDecodeData.filename_or_url,geometryDecodeData.server_or_cache_uid,geometryDecodeData.uid,*(scene.get()),geometryDecodeData.sourceAxesStandard);
 	else if(mesh.get())
 	{
 		DecodedGeometry dg;
-		res=DracoMeshToDecodedGeometry(geometryDecodeData.uid,dg,*(mesh.get()));
+		res=DracoMeshToDecodedGeometry(geometryDecodeData.uid,dg,*(mesh.get()),geometryDecodeData.sourceAxesStandard);
 		if(res!=avs::Result::OK)
 			return res;
 		return CreateFromDecodedGeometry(geometryDecodeData.target, dg, geometryDecodeData.filename_or_url);
@@ -300,9 +331,10 @@ static vec4 convert(const draco::Vector4f &v)
 {
 	return vec4(v[0],v[1],v[2],v[3]);
 }
-avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry &dg,draco::Mesh &dracoMesh)
+avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry &dg,draco::Mesh &dracoMesh,platform::crossplatform::AxesStandard sourceAxesStandard)
 {
 	avs::CompressedSubMesh compressedSubMesh;
+	dg.axesStandard=sourceAxesStandard;
 	compressedSubMesh.indices_accessor	= dg.next_id++;
 	compressedSubMesh.material			= dracoMesh.GetMaterialLibrary().NumMaterials()>0?1: 0;
 	compressedSubMesh.first_index		= 0;
@@ -338,14 +370,30 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayU
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* target,std::string filename_url,avs::uid server_or_cache_uid,avs::uid asset_uid,draco::Scene &dracoScene)
+static avs::uid GenerateUid()
+	{
+		static avs::uid u=0;
+		auto r= u;
+		u++;
+		if(!r)
+			r=10000;
+		return r;
+	};
+avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* target,std::string filename_url,avs::uid server_or_cache_uid,avs::uid asset_uid,draco::Scene &dracoScene,platform::crossplatform::AxesStandard sourceAxesStandard)
 {
 // We will do two things here.
 // 1. We will create a new Geometry Cache containing the whole scene from the draco file.
 // 2. We will create a new asset that refers to that cache.
 	DecodedGeometry subSceneDG;
+	subSceneDG.axesStandard=sourceAxesStandard;
 	// The subscene uid in the server/cache list:
 	subSceneDG.server_or_cache_uid=avs::GenerateUid();
+	std::vector<avs::uid> node_uids(dracoScene.NumNodes());
+	for(int n=0;n<dracoScene.NumNodes();n++)
+	{
+		const auto &dracoNode=dracoScene.GetNode(draco::SceneNodeIndex(n));
+		node_uids[n]=GenerateUid();
+	}
 	// The SubScene's own uid is the asset id.
 	clientrender::SubSceneCreate subSceneCreate;
 	subSceneCreate.uid=asset_uid;
@@ -358,7 +406,6 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 	std::map<const draco::Texture*,avs::uid> texture_uids;
 	//existing subSceneDG.server_or_cache_uid is where the subscene should be added.
 	// a new cache_uid should be created to identify it.
-	std::vector<avs::uid> node_uids(dracoScene.NumNodes());
 	std::vector<avs::uid> mesh_uids(dracoScene.NumMeshGroups());
 	std::vector<avs::uid> material_uids(dracoMaterials.NumMaterials());
 	std::map<avs::uid,std::string> texture_types;
@@ -367,7 +414,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		const draco::Material *dracoMaterial=dracoMaterials.GetMaterial(i);
 		if(dracoMaterial)
 		{
-			avs::uid material_uid=avs::GenerateUid();
+			avs::uid material_uid=GenerateUid();
 			avs::Material &material=subSceneDG.internalMaterials[material_uid];
 			material.name=dracoMaterial->GetName();
 			material.materialMode=avs::MaterialMode::OPAQUE_MATERIAL;
@@ -388,7 +435,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 				auto f=texture_uids.find(t);
 				if(f!=texture_uids.end())
 					return f->second;
-				avs::uid u=avs::GenerateUid();
+				avs::uid u=GenerateUid();
 				texture_uids[t]=u;
 				return u;
 			};
@@ -498,20 +545,9 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 								,false};
 		target->CreateTexture(subSceneCreate.subscene_uid,texture_uid,avsTexture);
 	}
-	for(int n=0;n<dracoScene.NumNodes();n++)
-	{
-		const auto &dracoNode=dracoScene.GetNode(draco::SceneNodeIndex(n));
-		auto meshGroupIndex=dracoNode->GetMeshGroupIndex();
-		if(meshGroupIndex.value()>=dracoScene.NumMeshGroups())
-			continue;
-		const draco::MeshGroup *dracoMeshGroup=dracoScene.GetMeshGroup(meshGroupIndex);
-		if(!dracoMeshGroup)
-			continue;
-		node_uids[n]=avs::GenerateUid();
-	}
 	for(int m=0;m<dracoScene.NumMeshGroups();m++)
 	{
-		mesh_uids[m]=avs::GenerateUid();
+		mesh_uids[m]=GenerateUid();
 		auto *dracoMeshGroup=dracoScene.GetMeshGroup(draco::MeshGroupIndex(m));
 		avs::uid mesh_uid=mesh_uids[m];
 		for(int j=0;j<dracoMeshGroup->NumMeshInstances();j++)
@@ -540,11 +576,10 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		Eigen::Matrix4d m=dracoNode->GetTrsMatrix().ComputeTransformationMatrix();
 		mat4d mat=*((mat4d*)&m);
 		auto meshGroupIndex=dracoNode->GetMeshGroupIndex();
-		if(meshGroupIndex.value()>=dracoScene.NumMeshGroups())
-			continue;
-		const draco::MeshGroup *dracoMeshGroup=dracoScene.GetMeshGroup(meshGroupIndex);
-		if(!dracoMeshGroup)
-			continue;
+		//if(meshGroupIndex.value()>=dracoScene.NumMeshGroups())
+		//	continue;
+		//if(!dracoMeshGroup)
+		//	continue;
 		avs::Node avsNode;
 		avsNode.name=dracoNode->GetName();
 		avsNode.stationary=false;
@@ -553,26 +588,42 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		avsNode.parentID=(dracoNode->NumParents()?node_uids[p.value()]:(avs::uid)(0));
 		auto mt=dracoNode->GetTrsMatrix();
 		
-		auto matrix=mt.Matrix().value();
-
-		Eigen::Affine3d aff;
-		aff = matrix;
-		mt.SetTranslation(aff.translation());
-		Eigen::Quaterniond q(aff.rotation());
-		mt.SetRotation(q);
-		auto tr=mt.Translation().value();
-		auto rt=mt.Rotation().value();
-		auto sc=mt.Scale().value();
-		if(mt.TranslationSet())
-			avsNode.localTransform.position=*((vec3d*)&tr);
-		auto rot=*((tvector4<double>*)&rt);
-		if(mt.RotationSet())
-			avsNode.localTransform.rotation=rot;
-		if(mt.ScaleSet())
-			avsNode.localTransform.scale=*((vec3d*)&sc);
-		//avsNode.localTransform.scale*=30.0f;
-
 		platform::crossplatform::AxesStandard axesStandard=platform::crossplatform::AxesStandard::OpenGL;
+		
+		if(mt.MatrixSet())
+		{
+			auto matrix=mt.Matrix().value();
+			Eigen::Affine3d aff;
+			aff = matrix;//.inverse();
+			//if(!mt.TranslationSet())
+			auto tr=aff.translation();
+			avsNode.localTransform.position=vec3(tr.coeff(0),tr.coeff(1),tr.coeff(2));
+			//if(!mt.RotationSet())
+			{
+				auto rt=aff.rotation();
+				Eigen::Quaterniond q(rt);
+				avsNode.localTransform.rotation={(float)q.x(),(float)q.y(),(float)q.z(),(float)q.w()};
+				//mt.SetRotation(q);
+			}
+		}
+		else
+		{
+			auto tr=mt.Translation().value();
+			auto rt=mt.Rotation().value();
+			auto sc=mt.Scale().value();
+			if(mt.TranslationSet())
+			{
+				avsNode.localTransform.position={(float)tr.coeff(0),(float)tr.coeff(1),(float)tr.coeff(2)};
+			}
+			if(mt.RotationSet())
+			{
+				avsNode.localTransform.rotation={(float)rt.x(),(float)rt.y(),(float)rt.z(),(float)rt.w()};
+			}
+			if(mt.ScaleSet())
+			{
+				avsNode.localTransform.scale={(float)sc.coeff(0),(float)sc.coeff(1),(float)sc.coeff(2)};
+			}
+		}
 		if(axesStandard!=platform::crossplatform::AxesStandard::Engineering)
 		{
 			avsNode.localTransform.position=platform::crossplatform::ConvertPosition(subSceneDG.axesStandard,platform::crossplatform::AxesStandard::Engineering,avsNode.localTransform.position);
@@ -581,14 +632,39 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 			avsNode.localTransform.scale=platform::crossplatform::ConvertScale(subSceneDG.axesStandard,platform::crossplatform::AxesStandard::Engineering,avsNode.localTransform.scale);
 		}
 		avsNode.data_type=avs::NodeDataType::Mesh;
-		for(int i=0;i<dracoMeshGroup->NumMeshInstances();i++)
+		if(meshGroupIndex.value()<dracoScene.NumMeshGroups())
 		{
-			const auto & meshInstance=dracoMeshGroup->GetMeshInstance(i);
-			avs::uid material_uid=material_uids[meshInstance.material_index];
-			avsNode.materials.push_back(material_uid);
+			const draco::MeshGroup *dracoMeshGroup=dracoScene.GetMeshGroup(meshGroupIndex);
+			if(dracoMeshGroup)
+			for(int i=0;i<dracoMeshGroup->NumMeshInstances();i++)
+			{
+				const auto & meshInstance=dracoMeshGroup->GetMeshInstance(i);
+				avs::uid material_uid=material_uids[meshInstance.material_index];
+				avsNode.materials.push_back(material_uid);
+			}
+			avsNode.data_uid=mesh_uids[meshGroupIndex.value()];
 		}
-		avsNode.data_uid=mesh_uids[meshGroupIndex.value()];
 		subSceneDG.nodes.emplace(node_uids[n],avsNode);
+	}
+	for(int n=0;n<dracoScene.NumNodes();n++)
+	{
+		auto &avsNode=subSceneDG.nodes[node_uids[n]];
+		const auto &dracoNode=dracoScene.GetNode(draco::SceneNodeIndex(n));
+		for(int i=0;i<dracoNode->NumChildren();i++)
+		{
+			const auto &childNode=dracoScene.GetNode(draco::SceneNodeIndex(dracoNode->Child(i)));
+			auto &avsChild=subSceneDG.nodes[node_uids[(int)dracoNode->Child(i).value()]];
+			if(childNode->NumParents()!=1)
+			{
+				std::cerr<<""<<std::endl;
+				continue;
+			}
+			if(childNode->Parent(0)!=n)
+			{
+				std::cerr<<""<<std::endl;
+				continue;
+			}
+		}
 	}
 	return CreateFromDecodedGeometry(target, subSceneDG, filename_url);
 }
@@ -708,7 +784,7 @@ avs::Result GeometryDecoder::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUi
 }
 
 // NOTE the inefficiency here, we're coding into "DecodedGeometry", but that is then immediately converted to a MeshCreate.
-avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh)
+avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh,platform::crossplatform::AxesStandard sourceAxesStandard)
 {
 	size_t primitiveArraysSize = compressedMesh.subMeshes.size();
 	dg.primitiveArrays[primitiveArrayUid].reserve(primitiveArraysSize);
@@ -726,7 +802,7 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayU
 				TELEPORT_CERR << "Draco decode failed: " << (uint32_t)dracoStatus.code() << std::endl;
 				return avs::Result::DecoderBackend_DecodeFailed;
 			}
-			DracoMeshToPrimitiveArray(primitiveArrayUid,dg,dracoMesh,subMesh,platform::crossplatform::AxesStandard::OpenGL);
+			DracoMeshToPrimitiveArray(primitiveArrayUid,dg,dracoMesh,subMesh,sourceAxesStandard);
 		}
 	}
 	return avs::Result::OK;
@@ -844,8 +920,19 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 				{
 					vec3 p=platform::crossplatform::ConvertPosition(dg.axesStandard,platform::crossplatform::AxesStandard::Engineering,meshElementCreate.m_Vertices[i]);
 					const_cast<vec3*>(meshElementCreate.m_Vertices)[i]=p;
-					vec3 n=platform::crossplatform::ConvertPosition(dg.axesStandard,platform::crossplatform::AxesStandard::Engineering,meshElementCreate.m_Normals[i]);
-					const_cast<vec3*>(meshElementCreate.m_Normals)[i]=n;
+					if(meshElementCreate.m_Normals)
+					{
+						vec3 n=platform::crossplatform::ConvertPosition(dg.axesStandard,platform::crossplatform::AxesStandard::Engineering,meshElementCreate.m_Normals[i]);
+						const_cast<vec3*>(meshElementCreate.m_Normals)[i]=n;
+					}
+					if(meshElementCreate.m_Tangents)
+					{
+						vec3 t=platform::crossplatform::ConvertPosition(dg.axesStandard,platform::crossplatform::AxesStandard::Engineering,meshElementCreate.m_Tangents[i].xyz);
+						vec4 T;
+						T.xyz=t;
+						T.w=1.0;
+						const_cast<vec4*>(meshElementCreate.m_Tangents)[i]=T;
+					}
 				}
 			}
 			//Indices
@@ -884,6 +971,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 {
 	//Parse buffer and fill struct DecodedGeometry
 	DecodedGeometry dg = {};
+	dg.axesStandard=platform::crossplatform::AxesStandard::Engineering;
 	dg.server_or_cache_uid=geometryDecodeData.server_or_cache_uid;
 	dg.clear();
 	avs::uid uid= geometryDecodeData.uid;
@@ -931,7 +1019,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 				subMesh.buffer.resize(bufferSize);
 				copy<uint8_t>(subMesh.buffer.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, bufferSize);
 			}
-			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh);
+			// Anything sent to us is already in the corect form.
+			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh,platform::crossplatform::AxesStandard::Engineering);
 			if (result != avs::Result::OK)
 				return result;
 		}
@@ -1057,7 +1146,10 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 	material.emissiveFactor.x = NextFloat;
 	material.emissiveFactor.y = NextFloat;
 	material.emissiveFactor.z = NextFloat;
-
+	
+	material.doubleSided = NextB;
+	material.lightmapTexCoordIndex = NextB;
+	
 	size_t extensionCount = Next8B;
 	for(size_t i = 0; i < extensionCount; i++)
 	{
@@ -1090,13 +1182,14 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 {
 	avs::Texture texture;
 	avs::uid texture_uid = geometryDecodeData.uid;
-	if(geometryDecodeData.saveToDisk)
-		saveBuffer(geometryDecodeData, std::string("textures/"+texture.name+".texture"));
 
 	size_t nameLength = Next8B;
 	texture.name.resize(nameLength);
 	copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	
+	if(geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("textures/"+texture.name+".texture"));
+
 	texture.cubemap= NextB!=0;
 	
 	texture.width = Next4B;
@@ -1205,10 +1298,10 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 	};
 
 	uint64_t childCount = Next8B;
-	node.childrenIDs.reserve(childCount);
+	//node.childrenIDs.reserve(childCount);
 	for(uint64_t j = 0; j < childCount; ++j)
 	{
-		node.childrenIDs.push_back(Next8B);
+		Next8B;//node.childrenIDs.push_back(Next8B);
 	}
 
 	geometryDecodeData.target->CreateNode(geometryDecodeData.server_or_cache_uid,uid, node);

@@ -183,14 +183,14 @@ static inline XrPosef XrPosef_Inverse(const XrPosef a) {
 }
 
 
-XrPath MakeXrPath(const XrInstance & xr_instance,const char* str)
+XrPath teleport::client::MakeXrPath(const XrInstance & xr_instance,const char* str)
 {
 	XrPath path;
 	xrStringToPath(xr_instance, str, &path);
 	return path;
 }
 
-std::string FromXrPath(const XrInstance & xr_instance,XrPath path)
+std::string teleport::client::FromXrPath(const XrInstance & xr_instance,XrPath path)
 {
 	uint32_t strl;
 	char text[XR_MAX_PATH_LENGTH];
@@ -396,11 +396,6 @@ set<std::string> OpenXR::GetRequiredExtensions() const
 {
 	set<std::string> str;
 	str.insert(GetOpenXRGraphicsAPIExtensionName());
-	// Debug utils for extra info
-#ifdef _MSC_VER
-	str.insert("XR_KHR_win32_convert_performance_counter_time");
-#endif
-	str.insert(XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME);
 	return str;
 }
 
@@ -410,6 +405,8 @@ set<std::string> OpenXR::GetOptionalExtensions() const
 	str.insert(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	str.insert("XR_FB_passthrough");
 	str.insert("XR_FB_triangle_mesh");
+	str.insert("XR_FB_render_model");
+	str.insert("XR_MSFT_controller_model");
 	// Debug utils for extra info
 	return str;
 }
@@ -485,6 +482,11 @@ bool OpenXR::internalInitInstance()
 		const char * got_ext=xr_instance_extensions[i].extensionName;
 		got_extensions.insert(got_ext);
 	}
+	TELEPORT_COUT<<"All extensions:\n";
+	for(const auto &x:got_extensions)
+	{
+		TELEPORT_COUT<<"    "<<x<<"\n";
+	}
 	for (const auto &e: optional_extensions)
 	{
 		const char *this_ext=e.c_str();
@@ -495,6 +497,10 @@ bool OpenXR::internalInitInstance()
 		if (std::any_of(got_extensions.begin(), got_extensions.end(),match_ext))
 		{
 			use_extensions.push_back(this_ext);
+		}
+		else
+		{
+			TELEPORT_COUT<<"InitInstance: missing optional extension "<<this_ext<<"\n";
 		}
 	}
 	bool missing_required_extension=false;
@@ -512,7 +518,7 @@ bool OpenXR::internalInitInstance()
 		else
 		{
 			missing_required_extension=true;
-			TELEPORT_CERR<<"InitInstance: missing required extension "<<"\n";
+			TELEPORT_CERR<<"InitInstance: missing required extension "<<this_ext<<"\n";
 		}
 	}
 	// If a required extension isn't present, you want to ditch out here!
@@ -612,6 +618,9 @@ bool OpenXR::internalInitInstance()
 		if (ext_xrCreateDebugUtilsMessengerEXT)
 			ext_xrCreateDebugUtilsMessengerEXT(xr_instance, &debug_info, &xr_debug);
 	#endif
+
+		// Extension classes:
+		openXRRenderModel=std::make_shared<OpenXRRenderModel>(xr_instance);
 	}
 	initInstanceThreadState=ThreadState::FINISHED;
 	TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FINISHED\n";
@@ -780,6 +789,8 @@ void OpenXR::MakeActions()
 	attach_info.actionSets = &xr_input_session.actionSet;
 	XR_CHECK(xrAttachSessionActionSets( xr_session, &attach_info));
 	xr_input_session.SessionInit(xr_instance,xr_session);
+	if(openXRRenderModel.get())
+		openXRRenderModel->SessionInit(xr_session);
 	RecordCurrentBindings();
 	for(auto i:openXRServers)
 	{
@@ -2291,7 +2302,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 
-		static bool add_overlay=true;
+		static bool add_overlay=false;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
@@ -2423,6 +2434,7 @@ void OpenXR::Shutdown()
 	EndSession();
 	if (xr_debug != XR_NULL_HANDLE)
 		ext_xrDestroyDebugUtilsMessengerEXT(xr_debug);
+	openXRRenderModel.reset();
 	if (xr_instance != XR_NULL_HANDLE)
 		xrDestroyInstance(xr_instance);
 }
@@ -2452,6 +2464,8 @@ void OpenXR::EndSession()
 	}
 	if (xr_app_space != XR_NULL_HANDLE)
 		xrDestroySpace(xr_app_space);
+	if(openXRRenderModel.get())
+		openXRRenderModel->SessionEnd();
 	if (xr_session != XR_NULL_HANDLE)
 		xrDestroySession(xr_session);
 	xr_session=0;

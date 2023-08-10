@@ -191,6 +191,7 @@ void Node::AddChild(std::shared_ptr<Node> child)
 	if (HasAnyParent(child))
 		return;
 	children.push_back(child);
+	//childIDs.push_back(child->id);
 }
 
 void Node::RemoveChild(std::shared_ptr<Node> node)

@@ -1700,17 +1700,17 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 			ImGui::TableNextColumn();
 			ImGui::Text("Session Id");
 			ImGui::TableNextColumn();
-			ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id, white);
+			ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			ImGui::Text("Session Status");
 			ImGui::TableNextColumn();
-			ImGui::Text(teleport::client::StringOf(status),white);
+			ImGui::Text(teleport::client::StringOf(status));
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			ImGui::Text("Streaming Status");
 			ImGui::TableNextColumn();
-			ImGui::Text(avs::stringOf(streamingStatus),white);
+			ImGui::Text(avs::stringOf(streamingStatus));
 
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();

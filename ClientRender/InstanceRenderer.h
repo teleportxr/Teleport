@@ -71,6 +71,7 @@ namespace clientrender
 		platform::crossplatform::EffectTechnique	*transparent	=nullptr;
 
 		std::string overridePixelShader;
+		uint64_t shaderValidity=1;
 		platform::crossplatform::EffectVariantPass *solidVariantPass=nullptr;
 		platform::crossplatform::EffectVariantPass *transparentVariantPass=nullptr;
 

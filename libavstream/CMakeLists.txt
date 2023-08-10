@@ -379,10 +379,10 @@ target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${webrtc_include_paths}
 														${srt_include_paths}
 														${efp_include_paths}
-														${curl_include_paths}
 														include
 														${PTHREAD_INCLUDE_DIR}
-														PUBLIC include/libavstream)
+														PUBLIC include/libavstream
+														${curl_include_paths})
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
 if(LIBAAV_BUILD_SHARED_LIBS)

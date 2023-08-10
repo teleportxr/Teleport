@@ -6,6 +6,7 @@
 #include "libavstream/common_maths.h"		// for avs::Pose
 #include "TeleportCore/CommonNetworking.h"		// for avs::InputState
 #include "TeleportCore/Input.h"
+#include "TeleportClient/OpenXRRenderModel.h"
 #include <openxr/openxr.h>
 #include <thread>
 
@@ -47,6 +48,9 @@ namespace teleport
 		DECLARE_TO_STRING_FUNC(XrResult);
 		DECLARE_TO_STRING_FUNC(XrFormFactor);
 		extern void ReportError(XrInstance xr_instance, int result);
+		extern XrPath MakeXrPath(const XrInstance & xr_instance,const char* str);
+
+		extern std::string FromXrPath(const XrInstance & xr_instance,XrPath path);
 		struct swapchain_surfdata_t
 		{
 			platform::crossplatform::Texture* depth_view=nullptr;
@@ -319,6 +323,8 @@ namespace teleport
 			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
 			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const avs::Pose& pose);
 
+			// extensions:
+			std::shared_ptr<OpenXRRenderModel> openXRRenderModel;
 		protected:
 			bool threadedInitInstance();
 			bool internalInitInstance();

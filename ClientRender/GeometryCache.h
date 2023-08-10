@@ -102,18 +102,19 @@ namespace clientrender
 		//	timeElapsed_s : Delta time in seconds.
 		void Update( float timeElapsed_s)
 		{
-			mNodeManager->Update(timeElapsed_s);
-			mIndexBufferManager.Update(timeElapsed_s);
-			mMaterialManager.Update(timeElapsed_s);
-			mTextureManager.Update(timeElapsed_s);
-			mVertexBufferManager.Update(timeElapsed_s);
-			mMeshManager.Update(timeElapsed_s);
-			mSkinManager.Update(timeElapsed_s);
-			//mLightManager.Update(timeElapsed_s);
-			mBoneManager.Update(timeElapsed_s);
-			mAnimationManager.Update(timeElapsed_s);
-			mTextCanvasManager.Update(timeElapsed_s);
-			mFontAtlasManager.Update(timeElapsed_s);
+			if(lifetimeFactor>0)
+				mNodeManager->Update(timeElapsed_s);
+			mIndexBufferManager.Update(timeElapsed_s,lifetimeFactor);
+			mMaterialManager.Update(timeElapsed_s,lifetimeFactor);
+			mTextureManager.Update(timeElapsed_s,lifetimeFactor);
+			mVertexBufferManager.Update(timeElapsed_s,lifetimeFactor);
+			mMeshManager.Update(timeElapsed_s,lifetimeFactor);
+			mSkinManager.Update(timeElapsed_s,lifetimeFactor);
+			//mLightManager.Update(timeElapsed_s,lifetimeFactor);
+			mBoneManager.Update(timeElapsed_s,lifetimeFactor);
+			mAnimationManager.Update(timeElapsed_s,lifetimeFactor);
+			mTextCanvasManager.Update(timeElapsed_s,lifetimeFactor);
+			mFontAtlasManager.Update(timeElapsed_s,lifetimeFactor);
 		}
 		void setCacheFolder(const std::string &f);
 		void SaveNodeTree(const std::shared_ptr<clientrender::Node>& n) const;
@@ -228,7 +229,12 @@ namespace clientrender
 		void AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,
 										   std::shared_ptr<IncompleteMaterial> incompleteMaterial, clientrender::Material::MaterialParameter& materialParameter);
 
+		void SetLifetimeFactor(float f)
+		{
+			lifetimeFactor=f;
+		}
 	protected:
+		float lifetimeFactor = 1.0; //The factor lifetimes are adjusted to determine if a resource should be freed. 0.5 = Halve lifetime.
 		mutable std::mutex receivedResourcesMutex;
 		mutable std::mutex resourceRequestsMutex;
 		mutable std::mutex missingResourcesMutex;

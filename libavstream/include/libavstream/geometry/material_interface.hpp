@@ -361,6 +361,7 @@ namespace avs
 		TextureAccessor emissiveTexture;
 		vec3 emissiveFactor = {0.0f, 0.0f, 0.0f};
 		bool doubleSided=false; // TODO: stream this
+		uint8_t lightmapTexCoordIndex=0;
 		std::unordered_map<MaterialExtensionIdentifier, std::shared_ptr<MaterialExtension>> extensions; //Mapping of extensions for a material. There should only be one extension per identifier.
 		
 		bool Verify(const Material &t) const
@@ -371,6 +372,8 @@ namespace avs
 			TELEPORT_VERIFY(occlusionTexture,t.occlusionTexture);
 			TELEPORT_VERIFY(emissiveTexture,t.emissiveTexture);
 			TELEPORT_VERIFY(materialMode,t.materialMode);
+			TELEPORT_VERIFY(doubleSided,t.doubleSided);
+			TELEPORT_VERIFY(lightmapTexCoordIndex,t.lightmapTexCoordIndex);
 			return true;
 		}
 		inline std::vector<avs::uid> GetTextureUids() const
@@ -403,6 +406,8 @@ namespace avs
 			out << material.emissiveTexture;
 			out.writeChunk(material.emissiveFactor);
 			out.writeChunk(material.materialMode);
+			out.writeChunk(material.doubleSided);
+			out.writeChunk(material.lightmapTexCoordIndex);
 			return out;
 		}
 		
@@ -416,6 +421,8 @@ namespace avs
 			in >> material.emissiveTexture;
 			in.readChunk(material.emissiveFactor);
 			in.readChunk(material.materialMode);
+			in.readChunk(material.doubleSided);
+			in.readChunk(material.lightmapTexCoordIndex);
 			return in;
 		}
 	};

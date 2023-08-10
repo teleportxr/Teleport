@@ -189,6 +189,7 @@ struct InteropMaterial
 	avs::TextureAccessor emissiveTexture;
 	vec3 emissiveFactor;
 	bool doubleSided;
+	uint8_t lightmapTexCoord;
 	size_t extensionCount;
 	avs::MaterialExtensionIdentifier* extensionIDs;
 	avs::MaterialExtension** extensions;
@@ -223,6 +224,7 @@ struct InteropMaterial
 			emissiveTexture,
 			emissiveFactor,
 			doubleSided,
+			lightmapTexCoord,
 			convertedExtensions
 		};
 		return m;

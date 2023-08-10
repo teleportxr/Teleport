@@ -45,8 +45,9 @@ private:
 		clientrender::ResourceCreator*			target		= nullptr;
 		bool									saveToDisk	= false;
 		avs::uid								uid = 0;
-		GeometryDecodeData(avs::uid server_cache_uid,std::string filename_url,const void* ptr, size_t size, avs::GeometryPayloadType type_,GeometryFileFormat f,clientrender::ResourceCreator* target_, bool saveToDisk_,avs::uid u)
-			: server_or_cache_uid(server_cache_uid),filename_or_url(filename_url),data(size), type(type_),geometryFileFormat(f), target(target_), saveToDisk(saveToDisk_) , uid (u)
+		platform::crossplatform::AxesStandard sourceAxesStandard=platform::crossplatform::AxesStandard::Engineering;
+		GeometryDecodeData(avs::uid server_cache_uid,std::string filename_url,const void* ptr, size_t size, avs::GeometryPayloadType type_,GeometryFileFormat f,clientrender::ResourceCreator* target_, bool saveToDisk_,avs::uid u,platform::crossplatform::AxesStandard ax)
+			: server_or_cache_uid(server_cache_uid),filename_or_url(filename_url),data(size), type(type_),geometryFileFormat(f), target(target_), saveToDisk(saveToDisk_) , uid (u), sourceAxesStandard(ax)
 		{
 			memcpy(data.data(), ptr, size);
 		}
@@ -61,8 +62,13 @@ public:
 	//! Inherited via GeometryDecoderBackendInterface.
 	virtual avs::Result decode(avs::uid server_uid,const void * buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface* target, avs::uid resource_uid) override;
 	//! Treat the file as buffer input and decode. Note: uid must be supplied, as against in decode, where it is read from the first 8 bytes.
-	avs::Result decodeFromFile(avs::uid server_uid,const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf,avs::uid uid);
-
+	avs::Result decodeFromFile(avs::uid server_uid,const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf,avs::uid uid,platform::crossplatform::AxesStandard sourceAxesStandard=platform::crossplatform::AxesStandard::Engineering);
+	//! Put out an HTTPS request for the specified data.
+	avs::Result decodeFromWeb(avs::uid server_uid,const std::string &uri,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf,avs::uid uid,platform::crossplatform::AxesStandard sourceAxesStandard=platform::crossplatform::AxesStandard::Engineering);
+	//! Callback that receives HTTPS data.
+	avs::Result receiveFromWeb(avs::uid server_uid,std::string uri,const uint8_t *buffer,size_t bufferSize,avs::GeometryPayloadType type,clientrender::ResourceCreator *target,avs::uid resource_uid,platform::crossplatform::AxesStandard sourceAxesStandard);
+	//! Treat the buffer as input and decode as we would a file.
+	avs::Result decodeFromBuffer(avs::uid server_uid,const uint8_t *buffer,size_t bufferSize,const std::string &filename,avs::GeometryPayloadType type,clientrender::ResourceCreator *intf,avs::uid uid,platform::crossplatform::AxesStandard sourceAxesStandard=platform::crossplatform::AxesStandard::Engineering);
 	inline void WaitFromDecodeThread()
 	{
 		//Ugly thread spin lock
@@ -74,9 +80,9 @@ private:
 	avs::Result decodeInternal(GeometryDecodeData& geometryDecodeData);
 	avs::Result DecodeGltf(  const GeometryDecodeData& geometryDecodeData);
 	avs::Result DracoMeshToPrimitiveArray(avs::uid primitiveArrayUid, DecodedGeometry &dg, const draco::Mesh &dracoMesh,const avs::CompressedSubMesh &compressedSubMesh,platform::crossplatform::AxesStandard axesStandard);
-	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry &dg,draco::Mesh &dracoMesh);
-	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry& dg, const avs::CompressedMesh& compressedMesh);
-	avs::Result DecodeDracoScene(clientrender::ResourceCreator* target,std::string filename_url,avs::uid server_or_cache_uid,avs::uid primitiveArrayUid,draco::Scene &dracoScene);
+	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,DecodedGeometry &dg,draco::Mesh &dracoMesh,platform::crossplatform::AxesStandard axesStandard);
+	avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry& dg, const avs::CompressedMesh& compressedMesh,platform::crossplatform::AxesStandard axesStandard);
+	avs::Result DecodeDracoScene(clientrender::ResourceCreator* target,std::string filename_url,avs::uid server_or_cache_uid,avs::uid primitiveArrayUid,draco::Scene &dracoScene,platform::crossplatform::AxesStandard axesStandard);
 	avs::Result CreateFromDecodedGeometry(clientrender::ResourceCreator* target, DecodedGeometry& dg, const std::string& name);
 
 	avs::Result decodeMesh(GeometryDecodeData& geometryDecodeData);

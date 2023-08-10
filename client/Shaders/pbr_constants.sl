@@ -8,39 +8,24 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	float drawDistance;
 	float roughestMip;
 
-	vec4 depthToLinFadeDistParamsY;
-
 	vec4 diffuseOutputScalar;
-	vec2 diffuseTexCoordsScalar_R;
-	vec2 diffuseTexCoordsScalar_G;
-	vec2 diffuseTexCoordsScalar_B;
-	vec2 diffuseTexCoordsScalar_A;
-
 	vec4 normalOutputScalar;
-	vec2 normalTexCoordsScalar_R;
-	vec2 normalTexCoordsScalar_G;
-	vec2 normalTexCoordsScalar_B;
-	vec2 normalTexCoordsScalar_A;
-
 	vec4 combinedOutputScalarRoughMetalOcclusion;
-	vec2 combinedTexCoordsScalar_R;
-	vec2 combinedTexCoordsScalar_G;
-	vec2 combinedTexCoordsScalar_B;
-	vec2 combinedTexCoordsScalar_A;
-
 	vec4 emissiveOutputScalar;
-	vec2 emissiveTexCoordsScalar_R;
-	vec2 emissiveTexCoordsScalar_G;
-	vec2 emissiveTexCoordsScalar_B;
-	vec2 emissiveTexCoordsScalar_A;
+
+	vec2 diffuseTexCoordsScale;
+	vec2 normalTexCoordsScale;
+	vec2 combinedTexCoordsScale;
+	vec2 emissiveTexCoordsScale;
 
 	vec3 u_SpecularColour;
-	float pad135;
+	int diffuseTexCoordIndex;
 
-	float u_DiffuseTexCoordIndex;
-	float u_NormalTexCoordIndex;
-	float u_CombinedTexCoordIndex;
-	float u_EmissiveTexCoordIndex;
+	int normalTexCoordIndex;
+	int combinedTexCoordIndex;
+	int emissiveTexCoordIndex;
+	int lightmapTexCoordIndex;
+
 SIMUL_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(PerNodeConstants, 11)

@@ -30,6 +30,7 @@
     <ClInclude Include="..\..\TeleportClient\DiscoveryService.h" />
     <ClInclude Include="..\..\TeleportClient\Log.h" />
     <ClInclude Include="..\..\TeleportClient\OpenXR.h" />
+    <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h" />
     <ClInclude Include="..\..\TeleportClient\ServerTimestamp.h" />
     <ClInclude Include="..\..\TeleportClient\SessionClient.h" />
   </ItemGroup>
@@ -41,6 +42,7 @@
     <ClCompile Include="..\..\TeleportClient\DiscoveryService.cpp" />
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
+    <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />
     <ClCompile Include="..\..\TeleportClient\ServerTimestamp.cpp" />
     <ClCompile Include="..\..\TeleportClient\SessionClient.cpp" />
   </ItemGroup>

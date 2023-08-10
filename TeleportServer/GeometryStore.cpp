@@ -1214,7 +1214,7 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			{
 				size_t offset=(size_t)imageOffsets[i];
 				size_t imageSize=(size_t)imageSizes[i];
-				uint8_t *src=newTexture.data+offset;
+				const uint8_t *src=newTexture.data+offset;
 				std::vector<uint8_t> img;
 				img.resize(imageSize);
 				//Copy data from source, so it isn't lost.
@@ -1461,16 +1461,13 @@ void GeometryStore::compressNextTexture()
 		if (ok)
 		{
 			basisu::basis_compressor::error_code result = basisCompressor.process();
-
 			if (result == basisu::basis_compressor::error_code::cECSuccess)
 			{
 				basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
-
-			//	delete[] avsTexture.data;
-
 				avsTexture.dataSize = basisCompressor.get_basis_file_size();
-				avsTexture.data = new unsigned char[avsTexture.dataSize];
-				memcpy(avsTexture.data, basisTex.data(), avsTexture.dataSize);
+				unsigned char *target = new unsigned char[avsTexture.dataSize];
+				memcpy(target, basisTex.data(), avsTexture.dataSize);
+				avsTexture.data=target;
 			}
 			else
 			{

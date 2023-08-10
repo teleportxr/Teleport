@@ -14,9 +14,9 @@ namespace clientrender
 		{
 			avs::uid texture_uid=0;
 			std::shared_ptr<Texture> texture;	//Texture Reference.
-			vec2 texCoordsScalar[4] = { {1, 1}, {1, 1}, {1, 1}, {1, 1} };		//Scales the texture co-ordinates for tiling; one per channel.
+			vec2 texCoordsScale = {1, 1};		//Scales the texture co-ordinates for lookup.
 			vec4 textureOutputScalar = { 1, 1, 1, 1 };		//Scales the output of the texture per channel.
-			float texCoordIndex = 0.0f; //Selects which texture co-ordinates to use in sampling.
+			int texCoordIndex = 0; //Selects which texture co-ordinates to use in sampling.
 		};
 
 		struct MaterialCreateInfo
@@ -27,6 +27,7 @@ namespace clientrender
 			MaterialParameter normal;			//R: Tangent, G: Bi-normals and B: Normals
 			MaterialParameter combined;			//R: Ambient Occlusion, G: Roughness, B: Metallic, A: Specular
 			MaterialParameter emissive;
+			int lightmapTexCoordIndex=0;
 			avs::uid uid=0;						// session uid of the material.
 			std::string shader;					// not used if empty
 			avs::MaterialMode materialMode=avs::MaterialMode::UNKNOWNMODE;
@@ -37,36 +38,22 @@ namespace clientrender
 		struct MaterialData //Layout conformant to GLSL std140
 		{
 			vec4 diffuseOutputScalar;
-			vec2 diffuseTexCoordsScalar_R;
-			vec2 diffuseTexCoordsScalar_G;
-			vec2 diffuseTexCoordsScalar_B;
-			vec2 diffuseTexCoordsScalar_A;
-			
 			vec4 normalOutputScalar;
-			vec2 normalTexCoordsScalar_R;
-			vec2 normalTexCoordsScalar_G;
-			vec2 normalTexCoordsScalar_B;
-			vec2 normalTexCoordsScalar_A;
-			
 			vec4 combinedOutputScalarRoughMetalOcclusion;
-			vec2 combinedTexCoordsScalar_R;
-			vec2 combinedTexCoordsScalar_G;
-			vec2 combinedTexCoordsScalar_B;
-			vec2 combinedTexCoordsScalar_A;
-
 			vec4 emissiveOutputScalar;
-			vec2 emissiveTexCoordsScalar_R;
-			vec2 emissiveTexCoordsScalar_G;
-			vec2 emissiveTexCoordsScalar_B;
-			vec2 emissiveTexCoordsScalar_A;
+
+			vec2 diffuseTexCoordsScale;
+			vec2 normalTexCoordsScale;
+			vec2 combinedTexCoordsScale;
+			vec2 emissiveTexCoordsScale;
 			
 			vec3 u_SpecularColour;
-			float _pad;
+			int u_DiffuseTexCoordIndex;
 
-			float u_DiffuseTexCoordIndex;
-			float u_NormalTexCoordIndex;
-			float u_CombinedTexCoordIndex;
-			float u_EmissiveTexCoordIndex;
+			int u_NormalTexCoordIndex;
+			int u_CombinedTexCoordIndex;
+			int u_EmissiveTexCoordIndex;
+			int u_LightmapTexCoordIndex;
 		};
 
 	protected:

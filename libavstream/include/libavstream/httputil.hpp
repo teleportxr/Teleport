@@ -4,17 +4,22 @@
 #pragma once
 
 #include <libavstream/common.hpp>
-#include <platform.hpp>
 #include <string>
 #include <memory>
 #include <functional>
 #include <vector>
-#include <curl/curl.h>
 #include <unordered_map>
+#include <curl/curl.h>
 
 namespace avs
 {
-	using MultiHandle = std::unique_ptr<CURLM, std::function<void(CURLM*)>>;
+	typedef std::function<void(const uint8_t* buffer, size_t bufferSize)> HTTPCallbackFn;
+	struct HTTPPayloadRequest
+	{
+		//FilePayloadType type=FilePayloadType::Invalid;
+		std::string url;
+		HTTPCallbackFn callbackFn;
+	};
 
 	struct HTTPUtilConfig
 	{
@@ -24,14 +29,13 @@ namespace avs
 		uint32_t maxConnections = 10;
 		bool useSSL = true;
 	};
-
 	/*!
 	 * Utility for making HTTP/HTTPS requests.
 	 */
 	class AVSTREAM_API HTTPUtil
 	{
 
-	private:
+	public:
 		class Transfer
 		{
 		public:
@@ -43,23 +47,22 @@ namespace avs
 			void write(const char* data, size_t dataSize);
 			CURL* getHandle() const { return mHandle; };
 			bool isActive() const { return mActive; }
-			const char* getReceivedData() const { return mBuffer.data(); }
+			const uint8_t* getReceivedData() const { return mBuffer.data(); }
 			size_t getReceivedDataSize() const { return mCurrentSize; }
-		private:
 			HTTPPayloadRequest mRequest;
 			CURL* mHandle;
 			CURLM* mMulti;
 			size_t mCurrentSize;
 			bool mActive;
 			std::string mRemoteURL;
-			std::vector<char> mBuffer;
+			std::vector<uint8_t> mBuffer;
 		};
 
 	public:
 		HTTPUtil();
 		~HTTPUtil();
 
-		Result initialize(const HTTPUtilConfig& config, std::function<void(const char* buffer, size_t bufferSize)>&& receiveCallback);
+		Result initialize(const HTTPUtilConfig& config);
 		Result process();
 		Result shutdown();
 
@@ -70,12 +73,10 @@ namespace avs
 		static size_t writeCallback(char* ptr, size_t size, size_t nmemb, void* userData);
 
 		HTTPUtilConfig mConfig;
-		std::string mRemoteURL;
-		MultiHandle mMultiHandle;
+		CURLM *mMultiHandle;
 		std::vector<Transfer> mTransfers;
 		std::queue<HTTPPayloadRequest> mRequestQueue;
 		std::unordered_map<CURL*, int> mHandleTransferMap;
-		std::function<void(const char* buffer, size_t bufferSize)> mReceiveCallback;
 		int mTransferIndex;
 		bool mInitialized;
 

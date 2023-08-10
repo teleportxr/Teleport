@@ -21,6 +21,8 @@ namespace teleport
 		{
 			deviceContext = &d;
 		}
+
+		std::set<std::string> GetRequiredExtensions() const override;
 	protected:
 		const char *GetOpenXRGraphicsAPIExtensionName() const override;
 		platform::crossplatform::MultiviewGraphicsDeviceContext& GetDeviceContext(size_t, size_t) override

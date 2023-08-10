@@ -450,20 +450,14 @@ void GeometryCache::AddTextureToMaterial(const avs::TextureAccessor& accessor, c
 
 		vec2 tiling = { accessor.tiling.x, accessor.tiling.y };
 
-		materialParameter.texCoordsScalar[0] = tiling;
-		materialParameter.texCoordsScalar[1] = tiling;
-		materialParameter.texCoordsScalar[2] = tiling;
-		materialParameter.texCoordsScalar[3] = tiling;
-		materialParameter.texCoordIndex = static_cast<float>(accessor.texCoord);
+		materialParameter.texCoordsScale = tiling;
+		materialParameter.texCoordIndex = (int)accessor.texCoord;
 	}
 	else
 	{
 		materialParameter.texture = dummyTexture;
-		materialParameter.texCoordsScalar[0] = vec2(1.0f, 1.0f);
-		materialParameter.texCoordsScalar[1] = vec2(1.0f, 1.0f);
-		materialParameter.texCoordsScalar[2] = vec2(1.0f, 1.0f);
-		materialParameter.texCoordsScalar[3] = vec2(1.0f, 1.0f);
-		materialParameter.texCoordIndex = 0.0f;
+		materialParameter.texCoordsScale = vec2(1.0f, 1.0f);
+		materialParameter.texCoordIndex = 0;
 	}
 
 	materialParameter.textureOutputScalar = *((vec4*)&colourFactor);

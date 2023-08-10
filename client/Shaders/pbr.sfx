@@ -116,7 +116,22 @@ struct vertexInput_normal
 	vec3 normal			: NORMAL;
 };
 
-struct vertexInput_normal_tangent_2tecvoords
+struct vertexInput_normal_1uv
+{
+	vec3 position		: POSITION;
+	vec3 normal			: NORMAL;
+	vec2 texCoords0		: TEXCOORD0;
+};
+
+struct vertexInput_normal_tangent_1uv
+{
+	vec3 position		: POSITION;
+	vec3 normal			: NORMAL;
+	vec4 tangent		: TANGENT;
+	vec2 texCoords0		: TEXCOORD0;
+};
+
+struct vertexInput_normal_tangent_2uvs
 {
 	vec3 position		: POSITION;
 	vec3 normal			: NORMAL;
@@ -138,26 +153,28 @@ struct vertexInputAnim
 
 struct vertexOutput
 {
-	vec4 hPosition		: SV_POSITION;
-	vec2 texCoords0		: TEXCOORD0;
-	vec2 texCoords1		: TEXCOORD1;
-	vec3 normal			: TEXCOORD2;
-	vec3 tangent		: TEXCOORD3;
-	vec3 wpos			: TEXCOORD4;
-	vec3 view			: TEXCOORD5;
-	vec4 clip_pos		: TEXCOORD6;
-	vec4 debug_colour	: TEXCOORD7;
+	vec4 hPosition				: SV_POSITION;
+	vec4 diffuseNormalUV		: TEXCOORD0;
+	vec4 combinedEmissiveUV		: TEXCOORD1;
+	vec2 lightmapUV				: TEXCOORD2;
+	vec3 normal					: TEXCOORD3;
+	vec3 tangent				: TEXCOORD4;
+	vec3 wpos					: TEXCOORD5;
+	vec3 view					: TEXCOORD6;
+	vec4 clip_pos				: TEXCOORD7;
+	vec4 debug_colour			: TEXCOORD8;
 };
 
 shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 {
 	vertexOutput OUT;
-	vec4 opos		=vec4(IN.position.xyz,1.0);
-	OUT.wpos		=mul(world, opos).xyz;
-	OUT.view		=normalize(OUT.wpos.xyz- viewPosition);
-	OUT.clip_pos	=mul(opos,worldViewProj);
-	OUT.texCoords0	=vec2(0,0);
-	OUT.texCoords1	=vec2(0,0);
+	vec4 opos				=vec4(IN.position.xyz,1.0);
+	OUT.wpos				=mul(world, opos).xyz;
+	OUT.view				=normalize(OUT.wpos.xyz- viewPosition);
+	OUT.clip_pos			=mul(opos,worldViewProj);
+	OUT.diffuseNormalUV		=vec4(0,0,0,0);
+	OUT.combinedEmissiveUV	=vec4(0,0,0,0);
+	OUT.lightmapUV			=vec2(0,0);
 #ifdef SFX_OPENGL_NONE
 	OUT.normal.xyz	=normalize(mul(vec3(0,0,1.0), mat3(world)));
 	OUT.tangent.xyz = normalize(mul(vec3(0, 0, 1.0), mat3(world)));
@@ -170,7 +187,7 @@ shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
 	return OUT;
 }
 
-shader vertexOutput VSSolid(vertexInput_normal_tangent_2tecvoords IN)
+shader vertexOutput VSSolid(vertexInput_normal_tangent_2uvs IN)
 {
 	vertexOutput OUT;
 	vec4 opos			=vec4(IN.position.xyz,1.0);
@@ -181,8 +198,16 @@ shader vertexOutput VSSolid(vertexInput_normal_tangent_2tecvoords IN)
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
 	
-	OUT.texCoords0		=BottomUpTextureCoordinates(IN.texCoords0);
-	OUT.texCoords1		=BottomUpTextureCoordinates(IN.texCoords1);
+	vec2 texCoords[2];
+	texCoords[0]		=IN.texCoords0;
+	texCoords[1]		=IN.texCoords1;
+	
+	OUT.diffuseNormalUV			=BottomUpTextureCoordinates(vec4(texCoords[diffuseTexCoordIndex]* diffuseTexCoordsScale,texCoords[normalTexCoordIndex]* normalTexCoordsScale));
+	OUT.combinedEmissiveUV.xy	=BottomUpTextureCoordinates(texCoords[combinedTexCoordIndex]);
+	OUT.combinedEmissiveUV.zw	=BottomUpTextureCoordinates(texCoords[emissiveTexCoordIndex]);
+	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw);
+	
+
 #ifdef SFX_OPENGL_NONE
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
@@ -196,12 +221,48 @@ shader vertexOutput VSSolid(vertexInput_normal_tangent_2tecvoords IN)
 	return OUT;
 }
 
-shader vertexOutput VS_Solid(vertexInput_normal_tangent_2tecvoords IN)
+shader vertexOutput VS_Solid(vertexInput_normal_tangent_2uvs IN)
 {
 	return VSSolid(IN);
 }
 
-shader vertexOutput VS_Solid_MV(vertexInput_normal_tangent_2tecvoords IN, uint viewID : SV_ViewID)
+shader vertexOutput VS_Solid_Normal(vertexInput_normal IN)
+{
+	vertexInput_normal_tangent_2uvs IN2;
+	
+	IN2.position	=IN.position;
+	IN2.normal		=IN.normal;
+	IN2.tangent		=vec4(0,0,0,0);
+	IN2.texCoords0	=vec2(0,0);
+	IN2.texCoords1	=vec2(0,0);
+	return VSSolid(IN2);
+}
+
+shader vertexOutput VS_Solid_Normal_1UV(vertexInput_normal_1uv IN)
+{
+	vertexInput_normal_tangent_2uvs IN2;
+	
+	IN2.position	=IN.position;
+	IN2.normal		=IN.normal;
+	IN2.tangent		=vec4(0,0,0,0);
+	IN2.texCoords0	=IN.texCoords0;
+	IN2.texCoords1	=IN.texCoords0;
+	return VSSolid(IN2);
+}
+
+shader vertexOutput VS_Solid_Normal_Tangent_1UV(vertexInput_normal_tangent_1uv IN)
+{
+	vertexInput_normal_tangent_2uvs IN2;
+	
+	IN2.position	=IN.position;
+	IN2.normal		=IN.normal;
+	IN2.tangent		=IN.tangent;
+	IN2.texCoords0	=IN.texCoords0;
+	IN2.texCoords1	=IN.texCoords0;
+	return VSSolid(IN2);
+}
+
+vertexOutput VSSolidMV(vertexInput_normal_tangent_2uvs IN, uint viewID)
 {
 	vertexOutput OUT;
 	
@@ -212,8 +273,12 @@ shader vertexOutput VS_Solid_MV(vertexInput_normal_tangent_2tecvoords IN, uint v
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos = wpos.xyz;
-	OUT.texCoords0		=vec2(IN.texCoords0.x,IN.texCoords0.y);
-	OUT.texCoords1		=vec2(IN.texCoords1.x,IN.texCoords1.y);
+	vec2 texCoords[2];
+	texCoords[0]				=IN.texCoords0;
+	texCoords[1]				=IN.texCoords1; 
+	OUT.diffuseNormalUV			=BottomUpTextureCoordinates(vec4(texCoords[diffuseTexCoordIndex]*diffuseTexCoordsScale,texCoords[normalTexCoordIndex]*normalTexCoordsScale));
+	OUT.combinedEmissiveUV		=BottomUpTextureCoordinates(vec4(texCoords[combinedTexCoordIndex],texCoords[emissiveTexCoordIndex]));
+	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw);
 #ifdef SFX_OPENGL_NONE
 	OUT.normal.xyz = mul(IN.normal, mat3(world));
 	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
@@ -226,9 +291,54 @@ shader vertexOutput VS_Solid_MV(vertexInput_normal_tangent_2tecvoords IN, uint v
 	return OUT;
 }
 
-shader vertexOutput VS_Animation(vertexInputAnim IN)
+shader vertexOutput VS_Solid_MV(vertexInput_normal_tangent_2uvs IN, uint viewID : SV_ViewID)
 {
-	vertexOutput OUT;
+	return VSSolidMV(IN,viewID);
+}
+
+shader vertexOutput VS_Solid_Normal_MV(vertexInput_normal IN, uint viewID : SV_ViewID)
+{
+	vertexInput_normal_tangent_2uvs IN2;
+	
+	IN2.position	=IN.position;
+	IN2.normal		=IN.normal;
+	IN2.tangent		=vec4(0,0,0,0);
+	IN2.texCoords0	=vec2(0,0);
+	IN2.texCoords1	=vec2(0,0);
+	return VSSolidMV(IN2,viewID);
+}
+
+shader vertexOutput VS_Solid_Normal_1UV_MV(vertexInput_normal_1uv IN, uint viewID : SV_ViewID)
+{
+	vertexInput_normal_tangent_2uvs IN2;
+	
+	IN2.position	=IN.position;
+	IN2.normal		=IN.normal;
+	IN2.tangent		=vec4(0,0,0,0);
+	IN2.texCoords0	=IN.texCoords0;
+	IN2.texCoords1	=vec2(0,0);
+	return VSSolidMV(IN2,viewID);
+}
+
+shader vertexOutput VS_Solid_Normal_Tangent_1UV_MV(vertexInput_normal_tangent_1uv IN, uint viewID : SV_ViewID)
+{
+	vertexInput_normal_tangent_2uvs IN2;
+	
+	IN2.position	=IN.position;
+	IN2.normal		=IN.normal;
+	IN2.tangent		=IN.tangent;
+	IN2.texCoords0	=IN.texCoords0;
+	IN2.texCoords1	=vec2(0,0);
+	return VSSolidMV(IN2,viewID);
+}
+	vec4 BottomUpTextureCoordinates4(vec4 texc)
+	{
+		return vec4(texc.x,1.0-texc.y,texc.z,1.0-texc.w);
+	}
+
+shader vertexOutput VS_Animation(vertexInputAnim IN)  
+{
+	vertexOutput OUT; 
 	vec4 w	=IN.weights;
 	// normalize: should we REALLY have to do this?
 	float W	=w.x+w.y+w.z+w.w;
@@ -237,21 +347,19 @@ shader vertexOutput VS_Animation(vertexInputAnim IN)
 						+ boneMatrices[int(IN.joints[1])] * w.y
 						+ boneMatrices[int(IN.joints[2])] * w.z
 						+ boneMatrices[int(IN.joints[3])] * w.w;
-	
-	vec4 opos		= vec4(IN.position.xyz,1.0);
+	 
+	vec4 opos			= vec4(IN.position.xyz,1.0);
 	// boneTransform transforms between two positions in object-local space.
-	vec4 wpos		= mul(mul(opos, boneTransform), world);
-	//vec4 wpos		= mul(opos, world);
-	//vec4 wpos = mul(opos, world);
-
+	vec4 wpos			= mul(mul(opos, boneTransform), world);
 	OUT.view			=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos	=mul(view, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
-	OUT.wpos			=wpos.xyz;
-
-	OUT.texCoords0	=IN.texCoords0;
-	OUT.texCoords1	=IN.texCoords1;
-	
+	OUT.wpos			=wpos.xyz; 
+	 
+	vec2 texCoords[2]={IN.texCoords0,IN.texCoords1};  
+	OUT.diffuseNormalUV			=IN.texCoords0.xyxy;//BottomUpTextureCoordinates(vec4(texCoords[diffuseTexCoordIndex]* diffuseTexCoordsScale,texCoords[normalTexCoordIndex]* normalTexCoordsScale));
+	OUT.combinedEmissiveUV		=IN.texCoords0.xyxy;//BottomUpTextureCoordinates(vec4(texCoords[combinedTexCoordIndex],texCoords[emissiveTexCoordIndex]));
+	OUT.lightmapUV.xy			=IN.texCoords0;//BottomUpTextureCoordinates(texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw);
 	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
 	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), world).xyz;
 	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
@@ -285,9 +393,11 @@ shader vertexOutput VS_Animation_MV(vertexInputAnim IN, uint viewID : SV_ViewID)
 	vec4 viewspace_pos = mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos			=wpos.xyz;
-
-	OUT.texCoords0	=IN.texCoords0;
-	OUT.texCoords1	=IN.texCoords1;
+	
+	vec2 texCoords[2]={IN.texCoords0,IN.texCoords1};  
+	OUT.diffuseNormalUV			=BottomUpTextureCoordinates(vec4(texCoords[diffuseTexCoordIndex]* diffuseTexCoordsScale,texCoords[normalTexCoordIndex]* normalTexCoordsScale));
+	OUT.combinedEmissiveUV		=BottomUpTextureCoordinates(vec4(texCoords[combinedTexCoordIndex],texCoords[emissiveTexCoordIndex]));
+	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw);
 	
 	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
 	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
@@ -470,7 +580,7 @@ vec3 ConvertCubemapLookup(vec3 d)
 
 vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
 {
-	float roughness_mip = roughestMip;// MipFromRoughness(surfaceProperties.roughness, roughestMip);
+	float roughness_mip =  MipFromRoughness(surfaceProperties.roughness, roughestMip);
 	// Sample the environment maps:
 	//vec3 diffuse_env		=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceProperties.normal.z));//diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
 	//vec3 env				=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
@@ -485,7 +595,7 @@ vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surface
 	vec3 diffuse			= surfaceState.kD*surfaceProperties.albedo.rgb*diffuse_env;
 	diffuse					*= surfaceProperties.ao;
 	vec3 colour				= diffuse+ specular;
-
+	//colour.r=roughestMip;
 	return colour;
 }
 
@@ -562,27 +672,42 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_li
 	vec3 diff				=IN.wpos.xyz - viewPosition;
 	if(length(diff) > drawDistance)
 		discard;
-	vec3 tangentx			=normalize(IN.tangent);
-	vec3 tangenty			=normalize(cross(IN.normal, tangentx));
-	mat3 TangentMatrix		=CreateMat3FromCols(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
+	vec3 normal;
+	if(normal_map)
+	{
+		vec3 tangentx			=normalize(IN.tangent);
+		vec3 tangenty			=normalize(cross(IN.normal, tangentx));
+		mat3 TangentMatrix		=CreateMat3FromCols(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
+		vec3 normalLookup		=normalTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.zw ).xyz;
+		normalLookup			=normalOutputScalar.xyz*2.0 * (normalLookup.rgb-vec3(0.5, 0.5, 0.5));
+		normal					=normalize(mul(TangentMatrix,normalLookup));
+	}
+	else 
+	{
+		normal=IN.normal;
+	}
 
-	vec3 normalLookup		=normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).xyz;
-	normalLookup			=normalOutputScalar.xyz*2.0 * (normalLookup.rgb-vec3(0.5, 0.5, 0.5));
-	vec3 normal				=normalize(mul(TangentMatrix,normalLookup));
-
-	vec2 diffuseTexCoords	=IN.texCoords0.xy * diffuseTexCoordsScalar_R;
+	vec2 diffuseTexCoords	=IN.diffuseNormalUV.xy ;
 	vec4 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgba;
 	diffuseColour			=diffuseColour.rgba * diffuseOutputScalar.rgba;
-
-	vec2 lightmapUVs		=IN.texCoords1.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	//lightmapUVs.y			=1.0-lightmapUVs.y;
+	
+	//vec2 lightmapUVs		=vec2(IN.lightmapUV.x,1.0-IN.lightmapUV.y);
+	// lightmapUVs		=lightmapUVs.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
+	// lightmapUVs		=vec2(lightmapUVs.x,1.0-lightmapUVs.y);
+//	lightmapUVs.y			=1.0-lightmapUVs.y;
 	vec3 view				=normalize(diff);
-	vec4 combinedLookup		=combinedTexture.Sample(wrapSamplerState, IN.texCoords1.xy);
-	// from combinedLookup we will either use roughness = multiplier * lookup.alpha+offset
+	vec4 combinedLookup		=combinedTexture.Sample(wrapSamplerState, IN.combinedEmissiveUV.xy);
+	// GLTF spec for rough-metal textures:  green channel contains roughness values
+	//										blue channel contains metalness values
+	// 
+	// from combinedLookup we will use roughness =offset+multiplier*lookup.g
+	//      so we can either have lookup.b= roughness (with offset=0 and multiplier>0),
+	//							or lookup.b=smoothness (offset = 1.0 and multiplier <0!
 	// this allows us to have either roughness or smoothness textures.
-	//combinedLookup.b	=1.0;
-	// So combinedLookup is now rough-metal-occl-smooth
-	vec3 roughMetalOcclusion		=combinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.agb;
+	// So roughMetalOcclusion is now rough-metal-occl-smooth
+	// And for GLTF compatibility, we will use combinedTexture g=roughness, b=metalness, a=occlusion
+	vec3 roughMetalOcclusion		=combinedOutputScalarRoughMetalOcclusion.rgb*combinedLookup.gba;
+	// constant factor:
 	roughMetalOcclusion.r			+=combinedOutputScalarRoughMetalOcclusion.a;
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.position		=IN.wpos;
@@ -595,7 +720,7 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_li
 	surfaceProperties.albedo		=diffuseColour;
 	float alpha						=diffuseColour.a;
 	surfaceProperties.roughness2	=surfaceProperties.roughness*surfaceProperties.roughness;
-	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs).rgb;
+	surfaceProperties.globalIllumination=globalIlluminationTexture.Sample(clampSamplerState,IN.lightmapUV).rgb;
 
 	SurfaceState surfaceState		=PreprocessSurface(view,surfaceProperties);
 	//int id						=int(TagDataIDBuffer[0].x);
@@ -619,18 +744,18 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_li
 		//c					+=PBRAddLight(surfaceState,view,surfaceProperties,lightTag);
 	}
 
-	vec3 emissive		=	emissiveTexture.Sample(wrapSamplerState, IN.texCoords0.xy * emissiveTexCoordsScalar_R).rgb;
+	vec3 emissive		=	emissiveTexture.Sample(wrapSamplerState, IN.combinedEmissiveUV.zw * emissiveTexCoordsScale).rgb;
 	emissive			*=	emissiveOutputScalar.rgb;
 	vec4 u				=	vec4(c+emissive,alpha);
 	//if(lightmap)
-	//u.rgb=abs(normal.xyz);
-	//u.rgb=IN.tangent;//surfaceState.F;//vec3(surfaceProperties.metallic,0,0);
+	//u.rg=lightmapUVs;
+//	u.rgb=roughMetalOcclusion.rgb;//vec3(surfaceProperties.roughness,surfaceProperties.metallic,0);
 	return u;
 }
 
 vec4 Solid_AlbedoOnly(vertexOutput IN)
 {
-	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.texCoords0.xy * diffuseTexCoordsScalar_R).rgb;
+	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.xy).rgb;
 	diffuseColour = diffuseColour.rgb ;//* diffuseOutputScalar.rgb;
 
 	return vec4(diffuseColour.rgb, 1.0);
@@ -715,7 +840,7 @@ vec4 DebugNormal(vertexOutput IN, int swizzle_mode)
 	vec3 tangenty = normalize(cross(IN.normal, tangentx));
 	mat3 TangentMatrix = mat3(tangentx, normalize(tangenty), normalize(IN.normal)); //transforms world=>tangent space
 
-	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.texCoords0.xy * normalTexCoordsScalar_R).rgb;
+	vec3 normalLookup	= normalTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.zw).rgb;
 	normalLookup		= 2.0 * (normalLookup.rgb - vec3(0.5, 0.5, 0.5));
 	vec3 normal = normalize(mul(normalLookup, TangentMatrix));
 //	normal = (normal + vec3(1.0f, 1.0f, 1.0f)) / 2.0f;
@@ -749,7 +874,12 @@ shader vec4 PS_DebugNormal_VertexNormals(vertexOutput IN) : SV_TARGET
 	return vec4(0.1,0.1,0.1,0)+vec4(IN.normal.xyz, 1.0f);
 }
 
-
+shader vec4 PS_Debug_UVs(vertexOutput IN) : SV_TARGET
+{
+	vec2 uv=frac(IN.diffuseNormalUV.xy);
+	uv		+=frac(10.0*IN.diffuseNormalUV.xy);
+	return vec4(0.5*uv,0, 1.0f);
+}
 shader vec4 PS_Local(vertexOutput IN) : SV_TARGET
 {
 	vec4 clr=lerp(vec4(0.25,0.25,0.25,1.0),vec4(1.0,1.0,1.0,1.0),0.5*IN.normal.z+0.5);
@@ -771,15 +901,24 @@ shader vec4 PS_DebugLightmaps(vertexOutput IN) : SV_TARGET
 	vec3 diff = IN.wpos.xyz - viewPosition;
 	if (length(diff) > drawDistance)
 		discard;
-	vec2 lightmapUVs = IN.texCoords1.xy * lightmapScaleOffset.xy + lightmapScaleOffset.zw;
-	lightmapUVs.y = 1.0 - lightmapUVs.y;
+	vec2 lightmapUVs = IN.lightmapUV.xy * lightmapScaleOffset.xy + lightmapScaleOffset.zw;
+	//lightmapUVs.y = 1.0 - lightmapUVs.y;
 	vec4 globalIllumination = globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs);
 	return globalIllumination;
 }
 
 VertexShader vs_solid						= CompileShader(vs_5_0, VS_Solid());
+VertexShader vs_solid_normal				= CompileShader(vs_5_0, VS_Solid_Normal());
+VertexShader vs_solid_normal_mv				= CompileShader(vs_6_1, VS_Solid_Normal_MV());
+
+VertexShader vs_solid_normal_1uv			= CompileShader(vs_5_0, VS_Solid_Normal_1UV());
+VertexShader vs_solid_normal_1uv_mv			= CompileShader(vs_6_1, VS_Solid_Normal_1UV_MV());
+
+VertexShader vs_solid_normal_tangent_1uv	= CompileShader(vs_5_0, VS_Solid_Normal_Tangent_1UV());
+VertexShader vs_solid_normal_tangent_1uv_mv	= CompileShader(vs_6_1, VS_Solid_Normal_Tangent_1UV_MV());
+
 VertexShader vs_solid_mv					= CompileShader(vs_6_1, VS_Solid_MV());
-VertexShader vs_anim						= CompileShader(vs_5_0, VS_Animation());
+VertexShader vs_anim						= CompileShader(vs_5_1, VS_Animation());
 VertexShader vs_anim_mv						= CompileShader(vs_6_1, VS_Animation_MV());
 
 PixelShader ps_solid						= CompileShader(ps_5_0, PS_Solid());
@@ -799,6 +938,8 @@ PixelShader ps_debug_anim					= CompileShader(ps_5_0, PS_DebugAnim());					// Un
 PixelShader ps_debug_lightmaps				= CompileShader(ps_5_0, PS_DebugLightmaps());				// Unreal-basis normal view
 PixelShader ps_debug_normal_unity			= CompileShader(ps_5_0, PS_DebugNormal_Unity());			// Unity-basis normal view
 PixelShader ps_debug_normal_vertexnormals	= CompileShader(ps_5_0, PS_DebugNormal_VertexNormals());	// Vertex normals
+
+PixelShader ps_debug_uvs					=CompileShader(ps_5_0,PS_Debug_UVs());
 PixelShader ps_local						= CompileShader(ps_5_0, PS_Local());
 RasterizerState PbrBackfaceCull
 {
@@ -820,10 +961,10 @@ technique solid
 	{
 		SetDepthStencilState(ReverseDepth,0);
 		SetBlendState(DontBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
-		SetVertexShaderVariants(vs_solid,vs_solid_mv,vs_anim,vs_anim_mv);
+		SetVertexShaderVariants(vs_solid,vs_solid_mv,vs_anim,vs_anim_mv,vs_solid_normal,vs_solid_normal_mv,vs_solid_normal_1uv,vs_solid_normal_1uv_mv,vs_solid_normal_tangent_1uv,vs_solid_normal_tangent_1uv_mv);
 		SetGeometryShader(NULL);
-		SetPixelShaderVariants(ps_local,ps_solid({false,true},{false,true},{false,true},{0}),ps_digitizing,ps_depth,ps_debug_normals
-				,ps_debug_lightmaps,ps_debug_normal_vertexnormals,ps_local_hand);
+		SetPixelShaderVariants(ps_local,ps_solid({false,true},{false,true},{false,true},{0}),ps_digitizing,ps_solid_albedo_only,ps_depth,ps_debug_normals
+				,ps_debug_lightmaps,ps_debug_normal_vertexnormals,ps_debug_uvs,ps_local_hand);
 	}
 }
 

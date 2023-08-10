@@ -32,6 +32,7 @@
 #endif
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include "TeleportClient/ClientTime.h"
+#include "TeleportClient/OpenXRRenderModel.h"
 
 
 avs::Timestamp clientrender::platformStartTimestamp ;
@@ -288,14 +289,15 @@ void Renderer::InitLocalGeometry()
 	geometryDecoder.WaitFromDecodeThread();
 	
 	// Generate local uid's for the nodes and resources.
-	lobbyGeometry.left_root_node_uid	= avs::GenerateUid();
-	lobbyGeometry.right_root_node_uid	= avs::GenerateUid();
+	lobbyGeometry.left_hand_node_uid	= avs::GenerateUid();
+	lobbyGeometry.right_hand_node_uid	= avs::GenerateUid();
 	avs::uid grey_material_uid			= avs::GenerateUid();
 	avs::uid blue_material_uid			= avs::GenerateUid();
 	avs::uid red_material_uid			= avs::GenerateUid();
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
 	{
 		avs::Material avsMaterial;
+		avsMaterial.doubleSided=true;
 		avsMaterial.name="local grey";
 		avsMaterial.pbrMetallicRoughness.metallicFactor=0.0f;
 		avsMaterial.pbrMetallicRoughness.baseColorFactor={.5f,.5f,.5f,.5f};
@@ -312,11 +314,13 @@ void Renderer::InitLocalGeometry()
 		localGeometryCache->mMaterialManager.Get(red_material_uid)->SetShaderOverride("ps_local_hand");
 	}
 	avs::Node avsNode;
-
+	lobbyGeometry.self_node_uid=avs::GenerateUid();
+	localResourceCreator.CreateNode(0,lobbyGeometry.self_node_uid,avsNode);
+	avsNode.parentID					=lobbyGeometry.self_node_uid;
 	avsNode.name		="local Left Root";
-	localResourceCreator.CreateNode(0,lobbyGeometry.left_root_node_uid,avsNode);
+	localResourceCreator.CreateNode(0,lobbyGeometry.left_hand_node_uid,avsNode);
 	avsNode.name		="local Right Root";
-	localResourceCreator.CreateNode(0,lobbyGeometry.right_root_node_uid,avsNode);
+	localResourceCreator.CreateNode(0,lobbyGeometry.right_hand_node_uid,avsNode);
 
 	avsNode.data_type	=avs::NodeDataType::Mesh;
 	
@@ -328,7 +332,7 @@ void Renderer::InitLocalGeometry()
 	avsNode.skinID						=lobbyGeometry.hand_skin_uid;
 	avsNode.animations.push_back(point_anim_uid);
 	avsNode.materials[0]				=blue_material_uid;
-	avsNode.parentID					=lobbyGeometry.left_root_node_uid;
+	avsNode.parentID					=lobbyGeometry.left_hand_node_uid;
 	avsNode.localTransform.rotation		={0.707f,0,0,0.707f};
 	avsNode.localTransform.scale		={-1.f,1.f,1.f};
 	// 10cm forward, because root of hand is at fingers.
@@ -338,54 +342,53 @@ void Renderer::InitLocalGeometry()
 
 	avsNode.name="local Right Hand";
 	avsNode.materials[0]				=red_material_uid;
-	avsNode.parentID					=lobbyGeometry.right_root_node_uid;
+	avsNode.parentID					=lobbyGeometry.right_hand_node_uid;
 	avsNode.localTransform.scale		={1.f,1.f,1.f};
 	// 10cm forward, because root of hand is at fingers.
 	avsNode.localTransform.position		={0.f,0.1f,0.f};
+	
 	lobbyGeometry.local_right_hand_uid	=avs::GenerateUid();
 	localResourceCreator.CreateNode(0,lobbyGeometry.local_right_hand_uid,avsNode);
-
+	
 	if(renderState.openXR)
 	{
-		renderState.openXR->SetFallbackBinding(client::LEFT_AIM_POSE	,"left/input/aim/pose");
-		renderState.openXR->SetFallbackBinding(client::RIGHT_AIM_POSE	,"right/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_root_node_uid	,"left/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_root_node_uid	,"right/input/aim/pose");
+		renderState.openXR->SetFallbackBinding(client::LEFT_AIM_POSE		,"left/input/aim/pose");
+		renderState.openXR->SetFallbackBinding(client::RIGHT_AIM_POSE		,"right/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_hand_node_uid	,"left/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_hand_node_uid	,"right/input/aim/pose");
 		
-		renderState.openXR->SetFallbackBinding(client::LEFT_GRIP_POSE	,"left/input/grip/pose");
-		renderState.openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE	,"right/input/grip/pose");
+		renderState.openXR->SetFallbackBinding(client::LEFT_GRIP_POSE		,"left/input/grip/pose");
+		renderState.openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE		,"right/input/grip/pose");
+
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_controller_node_uid	,"left/input/grip/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_controller_node_uid	,"right/input/grip/pose");
 		
 		renderState.openXR->SetFallbackBinding(client::MOUSE_LEFT_BUTTON	,"mouse/left/click");
 		renderState.openXR->SetFallbackBinding(client::MOUSE_RIGHT_BUTTON	,"mouse/right/click");
 
 		// Hard-code the menu button
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
+		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
-	}
-	// test gltf loading.
-	avs::uid gltf_uid = avs::GenerateUid();
-	// gltf_uid will refer to a SubScene asset in cache zero.
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/Buggy.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid);
-	{
-		avs::Node gltfNode;
-		gltfNode.name		="GLTF";
-		gltfNode.data_type	=avs::NodeDataType::SubScene;
-		gltfNode.data_uid	=gltf_uid;
-		gltfNode.materials.resize(3,0);
-	
-		gltfNode.localTransform.position=vec3(1.0f,1.0f,2.f);
-		//gltfNode.localTransform.scale=vec3(0.01f,0.01f,0.01f);
-		localResourceCreator.CreateNode(0,avs::GenerateUid(),gltfNode);
 	}
 	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
 	lobbyGeometry.palm_to_hand_r=rightHand->GetLocalTransform();
 	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
 	lobbyGeometry.palm_to_hand_l=leftHand->GetLocalTransform();
+	leftHand->SetVisible(false);
 
 	// local lighting.
 	avs::uid diffuse_cubemap_uid=avs::GenerateUid();
 	avs::uid specular_cubemap_uid=avs::GenerateUid();
+	if(1)
+	{
+		geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/diffuseRenderTexture.texture"
+			,avs::GeometryPayloadType::Texture,&localResourceCreator, diffuse_cubemap_uid);
+		geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/specularRenderTexture.texture"
+			,avs::GeometryPayloadType::Texture,&localResourceCreator, specular_cubemap_uid);
+
+	}
+	else
 	{
 		std::vector<unsigned int> diffuse_cubemap_data={0xFF808080,0xFF808080,0xFF808080,0xFF808080,0xFFFFFFFF,0};
 		avs::Texture avsTexture={
@@ -398,10 +401,9 @@ void Renderer::InitLocalGeometry()
 			, (uint8_t*)diffuse_cubemap_data.data()
 			, false};
 		localResourceCreator.CreateTexture(0,diffuse_cubemap_uid,avsTexture);
-	}
-	{
+
 		std::vector<unsigned int> specular_cubemap_data={0xFFBBBBBB,0xFFBBBBBB,0xFFBBBBBB,0xFFBBBBBB,0xFF808080,0};
-		avs::Texture avsTexture={
+		avs::Texture avsCTexture={
 			"specular_cubemap"
 			,1,1,1
 			,4,6,1
@@ -410,14 +412,68 @@ void Renderer::InitLocalGeometry()
 			, (uint32_t)(specular_cubemap_data.size()*sizeof(unsigned))
 			, (uint8_t*)specular_cubemap_data.data()
 			, false};
-		localResourceCreator.CreateTexture(0,specular_cubemap_uid,avsTexture);
+		localResourceCreator.CreateTexture(0,specular_cubemap_uid,avsCTexture);
+	}
+	// test gltf loading.
+	avs::uid gltf_uid = avs::GenerateUid();
+	// gltf_uid will refer to a SubScene asset in cache zero.
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/SheenChair.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
+	{
+		avs::Node gltfNode;
+		gltfNode.name		="GLTF";
+		gltfNode.data_type	=avs::NodeDataType::SubScene;
+		gltfNode.data_uid	=gltf_uid;
+	//	gltfNode.materials.resize(3,0);
+		static float sc=1.01f;
+		gltfNode.localTransform.position=vec3(1.0f,1.0f,1.0f);
+		gltfNode.localTransform.scale=vec3(sc,sc,sc);
+		localResourceCreator.CreateNode(0,avs::GenerateUid(),gltfNode);
+	}
+	if(renderState.openXR->openXRRenderModel)
+	{
+		std::vector<uint8_t> model=renderState.openXR->openXRRenderModel->LoadRenderModel("/user/hand/left");
+		if(model.size())
+		{
+			geometryDecoder.decodeFromBuffer(0,model.data(),model.size(),"user_hand_left.gltf",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
+		}
 	}
 	auto local_session_client=client::SessionClient::GetSessionClient(0);
-
 	auto setupCommand=local_session_client->GetSetupCommand();
 	setupCommand.clientDynamicLighting.diffuseCubemapTexture=diffuse_cubemap_uid;
 	setupCommand.clientDynamicLighting.specularCubemapTexture=specular_cubemap_uid;
+	setupCommand.draw_distance=10.0f;
+	localGeometryCache->SetLifetimeFactor(0.f);
 	local_session_client->ApplySetup(setupCommand);
+}
+
+void Renderer::XrSessionChanged()
+{
+	auto localInstanceRenderer = GetInstanceRenderer(0);
+	auto &localResourceCreator=localInstanceRenderer->resourceCreator;
+	{
+		avs::Node avsNode;
+		avsNode.parentID						=lobbyGeometry.self_node_uid;
+		avs::uid left_model_uid					= avs::GenerateUid();
+		geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/left.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,left_model_uid,platform::crossplatform::AxesStandard::OpenGL);
+		avsNode.name							="Left Controller";
+		lobbyGeometry.left_controller_node_uid	=avs::GenerateUid();
+		avsNode.data_type						=avs::NodeDataType::SubScene;
+		avsNode.data_uid						=left_model_uid;
+		localResourceCreator.CreateNode(0,lobbyGeometry.left_controller_node_uid,avsNode);
+	}
+	
+	{
+		avs::Node avsNode;
+		avsNode.parentID						=lobbyGeometry.self_node_uid;
+		avs::uid right_model_uid				= avs::GenerateUid();
+		geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/right.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,right_model_uid,platform::crossplatform::AxesStandard::OpenGL);
+		avsNode.name							="Right Controller";
+		lobbyGeometry.right_controller_node_uid	=avs::GenerateUid();
+		avsNode.data_type						=avs::NodeDataType::SubScene;
+		avsNode.data_uid						=right_model_uid;
+		localResourceCreator.CreateNode(0,lobbyGeometry.right_controller_node_uid,avsNode);
+	}
+
 }
 
 void Renderer::UpdateShaderPasses()
@@ -442,6 +498,7 @@ void Renderer::RecompileShaders()
 void Renderer::LoadShaders()
 {
 	reload_shaders=false;
+	renderState.shaderValidity++;
 	delete renderState.pbrEffect;
 	delete renderState.cubemapClearEffect;
 	renderState.pbrEffect			= renderPlatform->CreateEffect("pbr");
@@ -553,8 +610,8 @@ void Renderer::FillInControllerPose(int index, float offset)
 	static float elev_mult=1.2f;
 	float elevation	= elev_mult*(y-0.5f);
 	q.Reset();
-	q.Rotate(elevation,vec3(-1.0f, 0, 0));
-	q.Rotate(azimuth,vec3(0,0,1.0f));
+	q.Rotate(elevation	,vec3(-1.0f, 0, 0));
+	q.Rotate(azimuth	,vec3(0,0,1.0f));
 	vec3 point_dir=q*vec3(0, 1.0f, 0);
 	static float roll=-1.3f;
 	q.Rotate(roll*offset, point_dir);
@@ -564,7 +621,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	pose.orientation=*((const vec4*)&q);
 
 	renderState.openXR->SetFallbackPoseState(index?client::RIGHT_GRIP_POSE:client::LEFT_GRIP_POSE,pose);
-	pose.position.z-=0.1f;
+	//pose.position.z-=0.1f;
 	renderState.openXR->SetFallbackPoseState(index?client::RIGHT_AIM_POSE:client::LEFT_AIM_POSE,pose);
 }
 
@@ -696,25 +753,20 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 
 	const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 		=renderState.openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
-	auto l=nodePoseStates.find(lobbyGeometry.left_root_node_uid);
+	auto l=nodePoseStates.find(lobbyGeometry.left_hand_node_uid);
 	vec4 white={1.f,1.f,1.f,1.f};
 	std::vector<vec4> hand_pos_press;
 	if(l!=nodePoseStates.end())
 	{
 		avs::Pose handPose	= l->second.pose_footSpace.pose;
 		vec3 pos		= LocalToGlobal(handPose,*((vec3*)&lobbyGeometry.index_finger_offset));
-		//Clang can't handle overloaded functions, where a parameter could be upcast to another overload. Hence split the function calls.
-	/*	if (multiview) 
-			renderPlatform->PrintAt3dPos(*mvgdc, (const float*)&pos, "L", (const float*)&white);
-		else
-			renderPlatform->PrintAt3dPos(deviceContext, (const float*)&pos, "L", (const float*)&white);*/
 		vec4 pos4;
 		pos4.xyz			= (const float*)&pos;
 		pos4.w				= 0.0f;
 		hand_pos_press.push_back(pos4);
 	}
 
-	auto r=nodePoseStates.find(lobbyGeometry.right_root_node_uid);
+	auto r=nodePoseStates.find(lobbyGeometry.right_hand_node_uid);
 	if(r!=nodePoseStates.end())
 	{
 		avs::Pose rightHand = r->second.pose_footSpace.pose;
@@ -762,6 +814,9 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 		case ShaderMode::NORMAL_VERTEXNORMALS:
 			renderState.overridePixelShader = "ps_debug_normal_vertexnormals";
 			break;
+		case ShaderMode::UVS:
+			renderState.overridePixelShader = "ps_debug_uvs";
+			break;
 		case ShaderMode::REZZING:
 			renderState.overridePixelShader = "ps_digitizing";
 			break;
@@ -769,6 +824,7 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 			renderState.overridePixelShader = "";
 			break;
 	}
+	renderState.shaderValidity++;
 	UpdateShaderPasses();
 }
 void Renderer::Update(double timestamp_ms)
@@ -892,9 +948,15 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		vec3 cam_pos = camera.GetPosition();
 		float r = sqrt(cam_pos.x * cam_pos.x + cam_pos.y * cam_pos.y);
 		if (cam_pos.z > 2.0f)
+		{
 			cam_pos.z = 2.0f;
+			camera.SetPosition(cam_pos);
+		}
 		if (cam_pos.z < 1.0f)
+		{
 			cam_pos.z = 1.0f;
+			camera.SetPosition(cam_pos);
+		}
 		math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
@@ -1041,6 +1103,9 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case VK_NUMPAD7: //.
 			ChangePass(clientrender::ShaderMode::REZZING);
 			break;
+		case VK_NUMPAD8: //.
+			ChangePass(clientrender::ShaderMode::UVS);
+			break;
 			#endif
 		default:
 			break;
@@ -1053,6 +1118,7 @@ void Renderer::ShowHideGui()
 	gui.ShowHide();
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
+		auto selfRoot=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.self_node_uid);
 	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
 	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
 	avs::uid point_anim_uid=localGeometryCache->mAnimationManager.GetUidByName("Point");
@@ -1062,6 +1128,7 @@ void Renderer::ShowHideGui()
 	AnimationState *rightAnimState=rightHand->animationComponent.GetAnimationState(point_anim_uid);
 	if(gui.IsVisible())
 	{
+		selfRoot->SetVisible(true);
 		show_osd = false; //TODO: Find a better fix for OSD and Keyboard resource collision in Vulkan/ImGui - AJR.
 
 		// If we've just started to show the gui, let's make the hands point, so the index finger alone is extended for typing.
@@ -1077,8 +1144,8 @@ void Renderer::ShowHideGui()
 		}
 		rightHand->GetLocalTransform();
 		// The AIM pose should be mapped to the index finger.
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_root_node_uid,"left/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_root_node_uid,"right/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_hand_node_uid,"left/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_hand_node_uid,"right/input/aim/pose");
 		// Now adjust the local transform of the hand object based on the root being at the finger.
 		clientrender::Transform finger_to_hand;
 		// "global" transform is in hand's root cooords.
@@ -1100,14 +1167,15 @@ void Renderer::ShowHideGui()
 	}
 	else
 	{
+//		selfRoot->SetVisible(false);
 	// reverse the animation.
 		if(leftAnimState)
 			leftAnimState->speed=-1.0f;
 		if(rightAnimState)
 			rightAnimState->speed=-1.0f;
 		// The GRIP pose should be mapped to the palm.
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_root_node_uid,"left/input/grip/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_root_node_uid,"right/input/grip/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_hand_node_uid,"left/input/grip/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_hand_node_uid,"right/input/grip/pose");
 		rightHand->SetLocalTransform(lobbyGeometry.palm_to_hand_r);
 		leftHand->SetLocalTransform(lobbyGeometry.palm_to_hand_l);
 	}

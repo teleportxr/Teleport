@@ -7,6 +7,7 @@
 #include <libavstream/node.hpp>
 #include <optional>
 #include "networksource.h"
+#include <libavstream/httputil.hpp>
 
 namespace avs
 {

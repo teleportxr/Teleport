@@ -334,11 +334,6 @@ option(TINYGLTF_NO_STB_IMAGE  "" ON)
 option(TINYGLTF_NO_STB_IMAGE_WRITE  "" ON)
 add_subdirectory(thirdparty/draco)
 
-# Prevent Draco from using stb_image and stb_image_write:
-#target_compile_definitions(draco_io PUBLIC TINYGLTF_NO_STB_IMAGE=1 TINYGLTF_NO_STB_IMAGE_WRITE=1)
-#target_compile_definitions(draco_encoder PUBLIC TINYGLTF_NO_STB_IMAGE=1 TINYGLTF_NO_STB_IMAGE_WRITE=1)
-#target_compile_definitions(draco_decoder PUBLIC TINYGLTF_NO_STB_IMAGE=1 TINYGLTF_NO_STB_IMAGE_WRITE=1)
-#target_compile_definitions(draco_transcoder PUBLIC TINYGLTF_NO_STB_IMAGE=1 TINYGLTF_NO_STB_IMAGE_WRITE=1)
 # Here we will put all the draco targets into the thirdparty/draco solution folder:
 macro(get_all_targets_recursive targets dir)
     get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)

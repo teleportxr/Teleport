@@ -372,13 +372,6 @@ namespace avs
 		Mesh,
 		Material
 	};
-
-	struct HTTPPayloadRequest
-	{
-		FilePayloadType type=FilePayloadType::Invalid;
-		std::string fileName;
-	};
-
 	enum class PayloadInfoType : uint8_t
 	{
 		Stream = 0,

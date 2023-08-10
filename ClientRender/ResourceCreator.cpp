@@ -690,6 +690,8 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 	incompleteMaterial->materialInfo.name = material.name;
 	incompleteMaterial->materialInfo.materialMode=material.materialMode;
 	incompleteMaterial->materialInfo.doubleSided=material.doubleSided;
+	
+	incompleteMaterial->materialInfo.lightmapTexCoordIndex=material.lightmapTexCoordIndex;
 	//Colour/Albedo/Diffuse
 	geometryCache->AddTextureToMaterial(material.pbrMetallicRoughness.baseColorTexture,
 		*((vec4*)&material.pbrMetallicRoughness.baseColorFactor),
@@ -956,10 +958,10 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 		TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
 		//leaves nodes with no children. why?
 		auto n=geometryCache->mNodeManager->GetNode(id);
-		if (n->GetChildrenIDs().size() != avsNode.childrenIDs.size())
+	/*	if (n->GetChildrenIDs().size() != avsNode.childrenIDs.size())
 		{
 			TELEPORT_CERR << "recreating avsNode " << n->id << " with " << avsNode.childrenIDs.size() << " children." << std::endl;
-		}
+		}*/
 		node=geometryCache->mNodeManager->GetNode(id);
 	}
 	else
@@ -1139,7 +1141,8 @@ void ResourceCreator::CreateBone(avs::uid server_uid,avs::uid id,const avs::Node
 		bone->SetParent(parent);
 		parent->AddChild(bone);
 	}
-
+	// THEREFORE, the below should not be necessary.
+	/*
 	for(avs::uid childID : node.childrenIDs)
 	{
 		std::shared_ptr<clientrender::Bone> child = geometryCache->mBoneManager.Get(childID);
@@ -1148,7 +1151,7 @@ void ResourceCreator::CreateBone(avs::uid server_uid,avs::uid id,const avs::Node
 			child->SetParent(bone);
 			bone->AddChild(child);
 		}
-	}
+	}*/
 
 	geometryCache->CompleteBone(id, bone);
 }

@@ -73,10 +73,6 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	source->setDebugNetworkPackets(setupCommand.debug_network_packets);
 
 	//test
-	//avs::HTTPPayloadRequest req;
-	//req.fileName = "meshes/engineering/Cube_Cube.mesh";
-	//req.type = avs::FilePayloadType::Mesh;
-	//source->GetHTTPRequestQueue().emplace(std::move(req));
 
 	decoderParams.deferDisplay = false;
 	decoderParams.decodeFrequency = avs::DecodeFrequency::NALUnit;

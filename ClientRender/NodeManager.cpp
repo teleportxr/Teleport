@@ -18,7 +18,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	//TELEPORT_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
 	//Remove any node already using the ID.
 //	RemoveNode(node->id);
-	node->SetChildrenIDs(avsNode.childrenIDs);
+	//node->SetChildrenIDs(avsNode.childrenIDs);
 	// if !always_render...?
 	{
 		rootNodes_mutex.lock();
@@ -31,18 +31,34 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	avs::uid node_id = node->id;
 	nodeLookup_mutex.unlock();
 	if(avsNode.parentID)
+	{
 		parentLookup[node_id]=avsNode.parentID;
+		childLookup[avsNode.parentID].insert(node_id);
+	}
 	//Link new node to parent.
 	LinkToParentNode(node);
 
+	// is this a missing parent of a child?
+	auto previous_children=childLookup.find(node_id);
+	if(previous_children!=childLookup.end())
+	{
+		for(auto childID : previous_children->second)
+		{
+			parentLookup[childID] = node_id;
+			auto n = nodeLookup.find(childID);
+			if(n!= nodeLookup.end())
+				LinkToParentNode(n->second);
+		}
+	}
+	childLookup.erase(node_id);
 	//Link node's children to this node.
-	for(avs::uid childID : node->GetChildrenIDs())
+/*	for(avs::uid childID : node->GetChildrenIDs())
 	{
 		parentLookup[childID] = node_id;
 		auto n = nodeLookup.find(childID);
 		if(n!= nodeLookup.end())
 			LinkToParentNode(n->second);
-	}
+	}*/
 
 	//Set last movement, if a movement update was received early.
 	{
@@ -100,9 +116,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 			earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 		}
 	}
-	//if(avsNode.stationary)
-	//	node->SetGlobalTransform(static_cast<Transform>(avsNode.globalTransform));
-	//else
+
+
+
 		node->SetLocalTransform(static_cast<Transform>(avsNode.localTransform));
 	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
@@ -115,8 +131,8 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
 	
-	//nodeLookup[node->id] = node;
-	}
+
+}
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 {

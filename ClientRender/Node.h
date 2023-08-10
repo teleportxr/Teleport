@@ -83,8 +83,8 @@ namespace clientrender
 		void ClearChildren();
 
 		const std::vector<std::weak_ptr<Node>>& GetChildren() const { return children; }
-		void SetChildrenIDs(const std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
-		const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
+		//void SetChildrenIDs(const std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
+		//const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
 
 		bool IsVisible() const { return visibility.getVisibility(); }
 		void SetVisible(bool visible);
@@ -121,21 +121,25 @@ namespace clientrender
 
 			return materials[index];
 		}
+		uint64_t GetCachedEffectPassValidity(size_t submesh_index)
+		{
+		return cachedEffectPassValidity;
+		}
 		platform::crossplatform::EffectPass *GetCachedEffectPass(size_t submesh_index)
 		{
 			if(submesh_index>=cachedEffectPasses.size())
 				return nullptr;
 			return cachedEffectPasses[submesh_index];
 		}
-		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *e)
+		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *e,uint64_t validity)
 		{
 			if(cachedEffectPasses.size()<materials.size())
 				cachedEffectPasses.resize(materials.size());
 			if(submesh_index>=cachedEffectPasses.size())
 				return;
 			cachedEffectPasses[submesh_index]=e;
+			cachedEffectPassValidity=validity;
 		}
-
 		virtual void SetMaterialListSize(size_t size);
 		virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials);
 		const std::vector<std::shared_ptr<Material>>& GetMaterials() const { return materials; }
@@ -201,6 +205,7 @@ namespace clientrender
 			globalIlluminationTextureUid=uid;
 		}
 	protected:
+		uint64_t cachedEffectPassValidity=0;
 		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<TextCanvas> textCanvas;
@@ -212,7 +217,7 @@ namespace clientrender
 		bool smoothingInitialized = false;
 		bool smoothingEnabled = false;
 
-		std::vector<avs::uid> childIDs;
+		//std::vector<avs::uid> childIDs;
 
 		bool isStatic;
 		int priority=0;

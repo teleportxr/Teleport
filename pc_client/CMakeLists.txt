@@ -16,7 +16,7 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 	endif()
 endif()
 
-file(GLOB inifiles "*.ini")
+file(GLOB inifiles "*.ini" "assets/*.ini")
 set(srcs
 	Main.cpp
 	MemoryUtil.cpp
@@ -54,9 +54,9 @@ target_include_directories(TeleportPCClient PRIVATE
 
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(TeleportPCClient SimulDirectX12_MT)
+	target_link_libraries(TeleportPCClient d3d12)
 else()
 	target_link_libraries(TeleportPCClient SimulDirectX11_MT)
-	target_link_libraries(TeleportPCClient d3d12)
 endif()
 #target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
 target_link_libraries(TeleportPCClient )

@@ -243,8 +243,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
 	httpUtilConfig.maxConnections = params.maxHTTPConnections;
 	httpUtilConfig.useSSL = params.useSSL;
-	auto f = std::bind(&WebRtcNetworkSource::receiveHTTPFile, this, std::placeholders::_1, std::placeholders::_2);
-	return m_data->m_httpUtil.initialize(httpUtilConfig, std::move(f));
+	return m_data->m_httpUtil.initialize(httpUtilConfig);
 #else
 	return Result::OK;
 #endif

@@ -269,3 +269,11 @@ bool UseOpenXR::StartSession()
 	return true;
 }
 
+set<std::string> UseOpenXR::GetRequiredExtensions() const
+{
+	set<std::string> str=client::OpenXR::GetRequiredExtensions();
+#ifdef _MSC_VER
+	str.insert("XR_KHR_win32_convert_performance_counter_time");
+#endif
+	return str;
+}

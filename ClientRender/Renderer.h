@@ -34,7 +34,7 @@ namespace clientrender
 
 	enum class ShaderMode
 	{
-		DEFAULT,PBR, ALBEDO, NORMALS, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS, REZZING,NUM
+		DEFAULT,PBR, ALBEDO, NORMALS, DEBUG_ANIM, LIGHTMAPS, NORMAL_VERTEXNORMALS, UVS, REZZING,NUM
 	};
 	//! Timestamp of when the system started.
 	extern avs::Timestamp platformStartTimestamp;	
@@ -111,8 +111,11 @@ namespace clientrender
 
 		struct LobbyGeometry
 		{
-			avs::uid left_root_node_uid = 0;
-			avs::uid right_root_node_uid = 0;
+			avs::uid self_node_uid=0;
+			avs::uid left_hand_node_uid = 0;
+			avs::uid right_hand_node_uid = 0;
+			avs::uid left_controller_node_uid = 0;
+			avs::uid right_controller_node_uid = 0;
 			avs::uid local_left_hand_uid = 0;
 			clientrender::Transform palm_to_hand_l;
 			avs::uid local_right_hand_uid = 0;
@@ -165,6 +168,8 @@ namespace clientrender
 		}
 		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
+		
+		void XrSessionChanged();
 		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		

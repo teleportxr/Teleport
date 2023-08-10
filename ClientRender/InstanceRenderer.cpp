@@ -274,6 +274,13 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 	vec4 white={1.f,1.f,1.f,1.f};
 	renderState.pbrConstants.drawDistance = sessionClient->GetSetupCommand().draw_distance;
+	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
+		RenderLocalNodes(deviceContext,server_uid);
+}
+
+void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
+	, avs::uid this_server_uid)
+{
 	if(instanceRenderState.specularCubemapTexture)
 		renderState.pbrConstants.roughestMip=float(instanceRenderState.specularCubemapTexture->mips-1);
 	if(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
@@ -284,13 +291,6 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 			renderState.pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
 		}
 	}
-	if (sessionClient->IsConnected()||config.options.showGeometryOffline)
-		RenderLocalNodes(deviceContext,server_uid);
-}
-
-void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
-	, avs::uid this_server_uid)
-{
 	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_ns,deviceContext.predictedDisplayTimeS);
 	geometryCache->mNodeManager->UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
@@ -407,6 +407,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	,bool include_children
 	,bool transparent_pass)
 {
+	if(!force&&!node->IsVisible())
+		return;
 	auto renderPlatform=deviceContext.renderPlatform;
 	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 	clientrender::AVSTexture& tx = *th;
@@ -434,14 +436,20 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		//	material_incomplete = true;
 		}
 	}
+	bool reset_pass=false;
 	bool rezzing = material_incomplete;
 	if (material_incomplete)
 		node->countdown = 1.0f;
 	else if (node->countdown > 0.0f)
 	{
 		node->countdown -= 0.01f;
-		rezzing = true;
+		if(node->countdown<0)
+			reset_pass=true;
+		else
+			rezzing = true;
 	}
+//	else
+//		reset_pass=true;
 	bool force_highlight = force||(renderState.selected_uid== node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
@@ -454,7 +462,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		if(mesh||textCanvas)
 		{
 			const mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
-			model = reinterpret_cast<const float*>(&globalTransformMatrix);
+			mat4 m=mul(*((const mat4*)(&deviceContext.viewStruct.model)),globalTransformMatrix);
+			model = reinterpret_cast<const float*>(&m);
 			static bool override_model=false;
 			if(override_model)
 			{
@@ -545,22 +554,40 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				crossplatform::EffectTechnique *tech=transparent?renderState.solid:renderState.transparent;
 				// Pass used for rendering geometry.
 				crossplatform::EffectPass *pass=node->GetCachedEffectPass(element);
-				if(!pass)
+				if(node->GetCachedEffectPassValidity(element)!=renderState.shaderValidity)
+					reset_pass=true;
+				if(!pass||reset_pass)
 				{
+					const auto &meshLayout=vb->GetLayout()->GetDesc();
 					crossplatform::EffectVariantPass *variantPass=transparent?renderState.transparentVariantPass:renderState.solidVariantPass;
 					if(!variantPass)
 						continue;
+					auto layoutHash=vb->GetLayout()->GetHash();
 					std::string vertex_shader=anim?"vs_anim":"vs_solid";
+					using namespace platform::crossplatform;
+					static uint64_t positionNormal				=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0}});
+					static uint64_t positionNormal_1uv			=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0},{RG_32_FLOAT,LayoutSemantic::TEXCOORD,0}});
+					static uint64_t positionNormalTangent_1uv	=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0},{RGBA_32_FLOAT,LayoutSemantic::TANGENT,0},{RG_32_FLOAT,LayoutSemantic::TEXCOORD,0}});
+					if(layoutHash==positionNormal)
+					{
+						vertex_shader="vs_solid_normal";
+					}
+					if(layoutHash==positionNormal_1uv)
+					{
+						vertex_shader="vs_solid_normal_1uv";
+					}
+					if(layoutHash==positionNormalTangent_1uv)
+					{
+						vertex_shader="vs_solid_normal_tangent_1uv";
+					}
 					if(mvgdc)
 						vertex_shader+="_mv";
 					bool normal_map=(vb->GetLayout()->GetDesc().size()>=5);
 					std::string pixel_shader=fmt::format("ps_solid_{lightmap}_{ambient}_{normal_map}_{max_lights}"
 							,fmt::arg("lightmap",node->IsStatic())
-							,fmt::arg("ambient",node->IsStatic())
+							,fmt::arg("ambient",!node->IsStatic())
 							,fmt::arg("normal_map",normal_map)
 							,fmt::arg("max_lights",0));
-					if(node->IsStatic())
-						pixel_shader="ps_solid_lightmap";
 					if(rezzing)
 						pixel_shader="ps_digitizing";
 					if(renderState.overridePixelShader.length())
@@ -571,14 +598,19 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 						double_sided=true;
 					}
 					pass=variantPass->GetPass(vertex_shader.c_str(),pixel_shader.c_str());
-
+					if(!pass)
+					{
+						pass=variantPass->GetPass(vertex_shader.c_str());
+					}
+					if(!pass)
+						continue;
 					// Check if the layout is ok.
 					auto *vertexShader=pass->shaders[crossplatform::ShaderType::SHADERTYPE_VERTEX];
 					if(!vertexShader)
 						continue;
-					if(!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(),vb->GetLayout()->GetDesc()))
+					if(!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(),meshLayout))
 						continue;
-					node->SetCachedEffectPass(element,pass);
+					node->SetCachedEffectPass(element,pass,renderState.shaderValidity);
 
 				}
 				if(!pass)
@@ -667,17 +699,24 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				auto g=GeometryCache::GetGeometryCache(ss->subscene_uid);
 				if(g)
 				{
+					auto oldview=deviceContext.viewStruct.view;
 				// transform the view matrix by the local space.
 					mat4 node_model = node->GetGlobalTransform().GetTransformMatrix();
-					mat4 v=*((mat4*)&deviceContext.viewStruct.view);
-					v.transpose();
-					mat4::mul(v, v, node_model);
-					v.transpose();
-					deviceContext.viewStruct.view=(const float*)&v;
-					deviceContext.viewStruct.Init();
+					deviceContext.viewStruct.PushModelMatrix(*((platform::math::Matrix4x4*)&node_model));
+					//mat4 v=*((mat4*)&deviceContext.viewStruct.view);
+					//v.transpose();
+					//mat4::mul(v, v, node_model);
+					//v.transpose();
+					//deviceContext.viewStruct.view=(const float*)&v;
+					//deviceContext.viewStruct.Init();
 					renderState.cameraConstants.view = deviceContext.viewStruct.view;
 					renderState.cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;
 					RenderGeometryCache(deviceContext,g);
+				//	deviceContext.viewStruct.view=oldview;
+					deviceContext.viewStruct.PopModelMatrix();
+					//deviceContext.viewStruct.Init();
+					renderState.cameraConstants.view = deviceContext.viewStruct.view;
+					renderState.cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;
 				}
 			}
 		}

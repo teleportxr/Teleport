@@ -103,6 +103,7 @@ namespace clientrender
 		};
 
 		std::map<avs::uid, avs::uid> parentLookup; //Lookup for the parent of an node, so they can be linked when received. <ChildID, ParentID>
+		std::map<avs::uid,std::set<avs::uid>> childLookup;
 
 		std::set<avs::uid> removed_node_uids;
 		//Node updates that were received before the node was received.

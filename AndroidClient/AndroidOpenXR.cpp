@@ -667,7 +667,7 @@ const char* OpenXR::GetOpenXRGraphicsAPIExtensionName() const
 
 std::set<std::string> OpenXR::GetRequiredExtensions() const
 {
-	std::set<std::string> str;
+	std::set<std::string> str=client::OpenXR::GetRequiredExtensions();
 	str.insert(GetOpenXRGraphicsAPIExtensionName());
 	str.insert(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
 	str.insert(XR_EXT_PERFORMANCE_SETTINGS_EXTENSION_NAME);

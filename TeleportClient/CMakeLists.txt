@@ -20,6 +20,8 @@ set(src_files
 	Log.h
 	OpenXR.cpp
 	OpenXR.h
+	OpenXRRenderModel.cpp
+	OpenXRRenderModel.h
 	ServerTimestamp.cpp
 	ServerTimestamp.h
 	SessionClient.cpp
@@ -27,7 +29,7 @@ set(src_files
 )
 
 #For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore)
+add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream)
 SetTeleportDefaults(TeleportClient)
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 

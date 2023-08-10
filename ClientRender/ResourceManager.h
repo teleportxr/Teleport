@@ -109,9 +109,6 @@ public:
 	
 	const std::unordered_map<u, ResourceData>& GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock) const;
 
-	//Set the factor to adjust the lifetime of resources before freeing them; i.e. 0.5 would halve the lifetime of a resource in the manager.
-	void SetLifetimeFactor(float lifetimeFactor);
-
 	//! Returns a shared pointer to the resource; returns nullptr if the resource was not found.
 	// !Resets time since last use of the resource.
 	std::shared_ptr<T> Get(u id);
@@ -134,7 +131,7 @@ public:
 
 	//Process the ResourceManager for this tick; allowing it to free any resources that have not been used for a while.
 	//	deltaTimestamp : Milliseconds that have passed since the last update.
-	void Update(float deltaTimestamp);
+	void Update(float deltaTimestamp,float lifetimeFactor);
 private:
 
 	mutable std::vector<u> resourceIDs;
@@ -143,7 +140,6 @@ private:
 	//Increases readability by obfuscating the full iterator definition.
 	typedef typename std::unordered_map<u, ResourceManager<u,T>::ResourceData>::iterator mapIterator_t;
 
-	float lifetimeFactor = 1.0; //The factor lifetimes are adjusted to determine if a resource should be freed. 0.5 = Halve lifetime.
 	std::function<void(T&)> freeResourceFunction; //A functional reference to the function that frees this resource.
 	std::unordered_map<u, ResourceData> cachedItems = std::unordered_map<u, ResourceData>(); //Hashmap of the stored resources.
 
@@ -195,11 +191,6 @@ template<typename u,class T> inline const std::unordered_map<u, typename Resourc
 {
 	cacheLock = std::make_unique<std::lock_guard<std::mutex>>(mutex_cachedItems);
 	return cachedItems;
-}
-
-template<typename u,class T> void ResourceManager<u,T>::SetLifetimeFactor(float lifetimeFactor)
-{
-	this->lifetimeFactor = lifetimeFactor;
 }
 
 template<typename u,class T> u ResourceManager<u,T>::GetUidByName(const char *n) const
@@ -304,15 +295,17 @@ template<typename u,class T> void ResourceManager<u,T>::ClearAllButExcluded(std:
 }
 
 template<typename u,class T>
-void ResourceManager<u,T>::Update(float deltaTimestamp_s)
+void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 {
+	if(!lifetimeFactor)
+		return;
 	const bool sufficientMemory = false;//clientrender::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
 
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
 	{
-		//Increment time spent unused, if the resource manager is the only object pointing to the resource.
+		//Increment time spent unused, if the resourlifetimeFactorce manager is the only object pointing to the resource.
 		if(it->second.resource.use_count() == 1)
 		{
 			it->second.timeSinceLastUse_s += deltaTimestamp_s;
