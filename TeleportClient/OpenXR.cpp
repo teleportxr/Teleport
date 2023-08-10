@@ -1687,21 +1687,21 @@ bool OpenXR::RenderLayer( XrTime predictedTime
 
 		// Set up our rendering information for the viewpoint we're using right now!
 		{
-			projection_views[0] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-			projection_views[0].pose = xr_views[0].pose;
-			projection_views[0].fov = xr_views[0].fov;
-			projection_views[0].subImage.swapchain = main_view_xr_swapchain.handle;
-			projection_views[0].subImage.imageRect.offset = { 0, 0 };
-			projection_views[0].subImage.imageRect.extent = { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
-			projection_views[0].subImage.imageArrayIndex = 0;
+			projection_views[0]								= { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+			projection_views[0].pose						= xr_views[0].pose;
+			projection_views[0].fov							= xr_views[0].fov;
+			projection_views[0].subImage.swapchain			= main_view_xr_swapchain.handle;
+			projection_views[0].subImage.imageRect.offset	= { 0, 0 };
+			projection_views[0].subImage.imageRect.extent	= { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
+			projection_views[0].subImage.imageArrayIndex	= 0;
 
-			projection_views[1] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-			projection_views[1].pose = xr_views[1].pose;
-			projection_views[1].fov = xr_views[1].fov;
-			projection_views[1].subImage.swapchain = main_view_xr_swapchain.handle;
-			projection_views[1].subImage.imageRect.offset = { 0, 0 };
-			projection_views[1].subImage.imageRect.extent = { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
-			projection_views[1].subImage.imageArrayIndex = 1;
+			projection_views[1]								= { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
+			projection_views[1].pose						= xr_views[1].pose;
+			projection_views[1].fov							= xr_views[1].fov;
+			projection_views[1].subImage.swapchain			= main_view_xr_swapchain.handle;
+			projection_views[1].subImage.imageRect.offset	= { 0, 0 };
+			projection_views[1].subImage.imageRect.extent	= { main_view_xr_swapchain.width, main_view_xr_swapchain.height };
+			projection_views[1].subImage.imageArrayIndex	= 1;
 		}
 		
 		crossplatform::GraphicsDeviceContext& deviceContext=GetDeviceContext(MAIN_SWAPCHAIN, img_id);

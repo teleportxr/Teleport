@@ -1716,7 +1716,7 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 			ImGui::TableNextColumn();
 			ImGui::Text("Latency");
 			ImGui::TableNextColumn();
-			ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
+			ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
 
 			ImGui::EndTable();
 		}

@@ -9,8 +9,9 @@
 #include <functional>
 #include <vector>
 #include <unordered_map>
-#include <curl/curl.h>
 
+typedef void CURL;
+typedef void CURLM;
 namespace avs
 {
 	typedef std::function<void(const uint8_t* buffer, size_t bufferSize)> HTTPCallbackFn;

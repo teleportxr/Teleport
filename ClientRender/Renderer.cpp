@@ -448,32 +448,34 @@ void Renderer::InitLocalGeometry()
 
 void Renderer::XrSessionChanged()
 {
-	auto localInstanceRenderer = GetInstanceRenderer(0);
-	auto &localResourceCreator=localInstanceRenderer->resourceCreator;
+	if(renderState.openXR->IsSessionActive())
 	{
-		avs::Node avsNode;
-		avsNode.parentID						=lobbyGeometry.self_node_uid;
-		avs::uid left_model_uid					= avs::GenerateUid();
-		geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/left.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,left_model_uid,platform::crossplatform::AxesStandard::OpenGL);
-		avsNode.name							="Left Controller";
-		lobbyGeometry.left_controller_node_uid	=avs::GenerateUid();
-		avsNode.data_type						=avs::NodeDataType::SubScene;
-		avsNode.data_uid						=left_model_uid;
-		localResourceCreator.CreateNode(0,lobbyGeometry.left_controller_node_uid,avsNode);
-	}
+		auto localInstanceRenderer = GetInstanceRenderer(0);
+		auto &localResourceCreator=localInstanceRenderer->resourceCreator;
+		{
+			avs::Node avsNode;
+			avsNode.parentID						=lobbyGeometry.self_node_uid;
+			avs::uid left_model_uid					= avs::GenerateUid();
+			geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/left.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,left_model_uid,platform::crossplatform::AxesStandard::OpenGL);
+			avsNode.name							="Left Controller";
+			lobbyGeometry.left_controller_node_uid	=avs::GenerateUid();
+			avsNode.data_type						=avs::NodeDataType::SubScene;
+			avsNode.data_uid						=left_model_uid;
+			localResourceCreator.CreateNode(0,lobbyGeometry.left_controller_node_uid,avsNode);
+		}
 	
-	{
-		avs::Node avsNode;
-		avsNode.parentID						=lobbyGeometry.self_node_uid;
-		avs::uid right_model_uid				= avs::GenerateUid();
-		geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/right.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,right_model_uid,platform::crossplatform::AxesStandard::OpenGL);
-		avsNode.name							="Right Controller";
-		lobbyGeometry.right_controller_node_uid	=avs::GenerateUid();
-		avsNode.data_type						=avs::NodeDataType::SubScene;
-		avsNode.data_uid						=right_model_uid;
-		localResourceCreator.CreateNode(0,lobbyGeometry.right_controller_node_uid,avsNode);
+		{
+			avs::Node avsNode;
+			avsNode.parentID						=lobbyGeometry.self_node_uid;
+			avs::uid right_model_uid				= avs::GenerateUid();
+			geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/right.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,right_model_uid,platform::crossplatform::AxesStandard::OpenGL);
+			avsNode.name							="Right Controller";
+			lobbyGeometry.right_controller_node_uid	=avs::GenerateUid();
+			avsNode.data_type						=avs::NodeDataType::SubScene;
+			avsNode.data_uid						=right_model_uid;
+			localResourceCreator.CreateNode(0,lobbyGeometry.right_controller_node_uid,avsNode);
+		}
 	}
-
 }
 
 void Renderer::UpdateShaderPasses()
@@ -850,17 +852,17 @@ void Renderer::Update(double timestamp_ms)
 	if(start_xr_session)
 	{
 		renderState.openXR->StartSession();
-		{
-			renderState.openXR->MakeActions();
-		}
+		renderState.openXR->MakeActions();
 		start_xr_session=false;
 		end_xr_session=false;
+		XrSessionChanged();
 	}
 	else if(end_xr_session)
 	{
 		renderState.openXR->EndSession();
 		start_xr_session=false;
 		end_xr_session=false;
+		XrSessionChanged();
 	}
 }
 
