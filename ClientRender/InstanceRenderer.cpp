@@ -781,6 +781,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 		mat4 globalTransformMatrix=node->GetGlobalTransform().GetTransformMatrix();
 		renderPlatform->DrawAxes(deviceContext,globalTransformMatrix,0.1f);
 	
+			static std::string str;
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		auto skeletonInstance=node->GetSkeletonInstance();
 		if (skeletonInstance.get()&&skeletonInstance->GetBones().size())
@@ -806,7 +807,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 				renderPlatform->Draw(deviceContext, (int)boneMatrices.size()*2, 0);
 				renderState.pbrEffect->Unapply(deviceContext);*/
 			}
-			std::string str;
+			str="";
 			auto animC=node->GetOrCreateComponent<AnimationComponent>();
 			const clientrender::AnimationState* animationState = animC->GetCurrentAnimationState();
 			if (animationState)
@@ -827,13 +828,13 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 		}
 		else if (mesh)
 		{
-			std::string str=fmt::format("{0} {1}: {2}", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
+			str=fmt::format("{0} {1}: {2}", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white), nullptr, 0, 0, false);
 		}
 		else
 		{
 			vec4 yellow(1.0f, 1.0f, 0.0f, 1.0f); 
-			std::string str=fmt::format("{0} {1}", node->id, node->name.c_str());
+			str=fmt::format("{0} {1}", node->id, node->name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&yellow), nullptr, 0, 0, false);
 		}
 	}
