@@ -18,7 +18,6 @@ public:
 	void SetParent(std::shared_ptr<Bone> parent);
 	const std::shared_ptr<Bone> GetParent() const;
 
-
 	const std::vector<std::weak_ptr<Bone>> &GetChildren() const
 	{
 		return children;

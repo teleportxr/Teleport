@@ -360,18 +360,7 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, teleport::cor
 
 	client->clientMessaging->updateNodeAnimation(update);
 }
-/*
-TELEPORT_EXPORT void Client_UpdateNodeAnimationControl(avs::uid clientID, teleport::core::NodeUpdateAnimationControl update)
-{
-	auto client = clientManager.GetClient(clientID);
-	if(!client)
-	{
-		TELEPORT_CERR << "Failed to update node animation control for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
 
-	client->clientMessaging->updateNodeAnimationControl(update);
-}*/
 
 TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRenderState update)
 {

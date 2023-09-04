@@ -8,6 +8,8 @@
 #include <vector>
 #include <curl/curl.h>
 
+	#define CURL_CHECK(cc) {if (cc != CURLE_OK){std::cerr<<"CURL code failed.\n";}}
+
 namespace avs 
 {
 	HTTPUtil::HTTPUtil()
@@ -39,7 +41,7 @@ namespace avs
 		} 
 		// Multiplexing allows for multiple transfers to be executed on a single TCP connection.
 		// A server that supports the HTTP/2 protocol is required for multiplexing. 
-		curl_multi_setopt(mMultiHandle, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX); 
+		curl_multi_setopt(mMultiHandle, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX);
 
 		std::string protocol = config.useSSL ? "https" : "http";
 		
@@ -106,6 +108,10 @@ namespace avs
 						size_t dataSize = transfer.getReceivedDataSize();
 						transfer.mRequest.callbackFn(transfer.getReceivedData(), dataSize);
 					}
+					else
+					{
+						AVSLOG(Error)<<"CURL transfer failed. \n";
+					}
 					transfer.stop();
 				}
 			}
@@ -154,7 +160,6 @@ namespace avs
 
 		return Result::OK;
 	}
-
 	size_t HTTPUtil::writeCallback(char* ptr, size_t size, size_t nmemb, void* userData)
 	{
 		size_t realSize = size * nmemb;
@@ -164,7 +169,8 @@ namespace avs
 
 		return realSize;
 	}
-
+	
+		 std::string HTTPUtil::cert_path;
 	HTTPUtil::Transfer::Transfer(CURLM* multi, std::string remoteURL, size_t bufferSize)
 		: mMulti(multi)
 		, mCurrentSize(0)
@@ -174,8 +180,26 @@ namespace avs
 		mHandle = curl_easy_init();
 		mBuffer.resize(bufferSize);
 		// Set to 1 to verify SSL certificates.
-		curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYPEER, 1L);
-		curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYHOST, 1L);
+	#ifdef __ANDROID__
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYPEER, 0L));
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYHOST, 0L));
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_WRITEFUNCTION, &HTTPUtil::writeCallback));
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_WRITEDATA, this));
+		// HTTP/2 please 
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0));
+		// Wait for pipe connection to confirm 
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_PIPEWAIT, 1L)); 
+		// Use CURLOPT_SSLCERT later.
+		// see https://github.com/gcesarmza/curl-android-ios/issues/5
+		// The solution is to download cacert.pem from the cURL site and distribute it with your app,
+		//inside the APK. Then on runtime, copy it to a reachable directory, for instance the dataDir returned by the getApplicationInfo() function. The path to that file is what you pass to curl_setopt(CURLOPT_CAPATH)
+		// https://curl.haxx.se/ca/cacert.pem
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_CAPATH, HTTPUtil::GetCertificatePath())); 
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_CAINFO, HTTPUtil::GetCertificatePath()));
+	#else
+		// Set to 1 to verify SSL certificates.
+		curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYPEER, 0L);
+		curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYHOST, 0L);
 		curl_easy_setopt(mHandle, CURLOPT_WRITEFUNCTION, &HTTPUtil::writeCallback);
 		curl_easy_setopt(mHandle, CURLOPT_WRITEDATA, this);
 		// HTTP/2 please 
@@ -183,6 +207,7 @@ namespace avs
 		// Wait for pipe connection to confirm 
 		curl_easy_setopt(mHandle, CURLOPT_PIPEWAIT, 1L); 
 		// Use CURLOPT_SSLCERT later.
+	#endif
 	}
 
 	HTTPUtil::Transfer::~Transfer()

@@ -819,6 +819,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 
 static void DoRow(const char* title, const char* text, ...)
 {
+	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
 	ImGui::Text("%s", title);
 	ImGui::TableNextColumn();
@@ -833,6 +834,36 @@ static void DoRow(const char* title, const char* text, ...)
 	va_end(args);
 	ImGui::Text("%s", bufferData);
 	delete[] bufferData;
+};
+
+static void DoRow(const char* title, vec3 pos)
+{
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text("%s", title);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", pos.x);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", pos.y);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", pos.z);
+	ImGui::TableNextColumn();
+};
+
+static void DoRow(const char* title, vec4 q)
+{
+	ImGui::TableNextRow();
+	ImGui::TableNextColumn();
+	ImGui::Text( title);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", q.x);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", q.y);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", q.z);
+	ImGui::TableNextColumn();
+	ImGui::Text("%2.2f", q.w);
+	ImGui::TableNextColumn();
 };
 
 static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
@@ -920,6 +951,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		//auto j=nodePoses.find(node->id);
 				vec3 gs = selected_node->GetGlobalScale();
 				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
+				ImGui::Text("owners %d", selected_node.use_count());
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
@@ -933,50 +965,70 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::TableNextColumn();
 					bool stationary=selected_node->IsStatic();
 					ImGui::Checkbox("##isStatic", &stationary);
+					ImGui::EndTable();
+				}
+				if (ImGui::BeginTable("selected1", 5))
+				{
 					DoRow("GI"			,"%d", gi_uid);
-					DoRow("Local Pos"	,"%3.3f %3.3f %3.3f", pos.x, pos.y, pos.z);
-					DoRow("Local Rot"	,"%3.3f %3.3f %3.3f %3.3f", q.x, q.y, q.z, q.w);
-					DoRow("Local Scale"	,"%3.3f %3.3f %3.3f", sc.x, sc.y, sc.z);
+					DoRow("Local Pos"	, pos);
+					DoRow("Local Rot"	,q);
+					DoRow("Local Scale"	,sc);
 					ImGui::Separator();
-					DoRow("Global Pos"	,"%3.3f %3.3f %3.3f", gpos.x, gpos.y, gpos.z);
-					DoRow("Global Rot"	,"%3.3f %3.3f %3.3f %3.3f", gq.x, gq.y, gq.z, gq.w);
-					DoRow("Global Scale","%3.3f %3.3f %3.3f", gs.x, gs.y, gs.z);
+					DoRow("Global Pos"	,gpos);
+					DoRow("Global Rot"	,gq);
+					DoRow("Global Scale", gs);
+					ImGui::EndTable();
+				}
+				if (ImGui::BeginTable("selected2", 2))
+				{
 					if(selected_node->GetMesh())
 					{
 						auto m=selected_node->GetMesh();
 						DoRow("Mesh"		,"%d : %s", m->GetMeshCreateInfo().id, m->GetMeshCreateInfo().name.c_str());
+						if (ImGui::IsItemClicked())
+						{
+							Select(m->GetMeshCreateInfo().id);
+						}
+					}
+					const auto &sn=selected_node->GetSkeletonNode();
+					if(auto n=sn.lock())
+					{
+						DoRow("Skeleton Node"	,"%s",n->name);
+						if (ImGui::IsItemClicked())
+						{
+							Select(n->id);
+						}
+					}
+					if(selected_node->GetSkeletonInstance())
+					{
+						auto s=selected_node->GetSkeletonInstance();
+						DoRow("Skeleton"	,"%d : %s",s->GetBones().size(),s->GetSkeleton()->name);
+						if (ImGui::IsItemClicked())
+						{
+							//Select(s->GetSkeleton()->id);
+						}
 					}
 					ImGui::EndTable();
 				}
-				std::shared_ptr<clientrender::SkinInstance> skinInstance = selected_node->GetSkinInstance();
-				if (skinInstance)
+				std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = selected_node->GetSkeletonInstance();
+				if (skeletonInstance)
 				{
-					float anim_time_s=selected_node->animationComponent.GetCurrentAnimationTimeSeconds();
+					auto animC=selected_node->GetComponent<clientrender::AnimationComponent>();
+					if(animC)
+					{
+						float anim_time_s=animC->GetCurrentAnimationTimeSeconds();
 
-					ImGui::Text("Animation Time: %3.3f", anim_time_s);
+						ImGui::Text("Animation Time: %3.3f", anim_time_s);
+					}
 					ImGui::BeginGroup();
-					const auto &skin	=skinInstance->GetSkin();
-					const auto &bones	=skinInstance->GetBones();
+					const auto &skeleton	=skeletonInstance->GetSkeleton();
+					const auto &bones	=skeletonInstance->GetBones();
 					{
 						for (auto b : bones)
 						{
 							if(b->GetParent()==nullptr)
 								BoneTreeNode(b, nullptr);
 						}
-						/*
-					if (ImGui::BeginTable("Bones", 4))
-					const auto& l = b->GetLocalTransform().m_Rotation;
-							const auto& g = b->GetGlobalTransform().m_Rotation;
-							ImGui::TableNextColumn(); 
-							ImGui::Text("%d", b->id);
-							ImGui::TableNextColumn();
-							ImGui::Text("%s", b->name.c_str());
-							ImGui::TableNextColumn();
-							ImGui::Text(STR_VECTOR4,l.i, l.j, l.k, l.s);
-							ImGui::TableNextColumn();
-							ImGui::Text(STR_VECTOR4, g.i, g.j, g.k, g.s);
-					
-						ImGui::EndTable();	*/
 					}
 					ImGui::EndGroup();
 				}
@@ -1445,7 +1497,7 @@ void Gui::Scene()
 	ImGui::EndTabBar();
 }
 
-void Gui::NodeTree(const clientrender::NodeManager::nodeList_t& root_nodes)
+void Gui::NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>& root_nodes)
 {
 	static const size_t bufferSize = 40;
 	static char buffer[bufferSize];
@@ -1455,7 +1507,7 @@ void Gui::NodeTree(const clientrender::NodeManager::nodeList_t& root_nodes)
 		search_text = buffer;
 	for(auto &r:root_nodes)
 	{
-		TreeNode(r, search_text);
+		TreeNode(r.lock(), search_text);
 	}
 }
 

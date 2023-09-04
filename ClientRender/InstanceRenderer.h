@@ -170,6 +170,7 @@ namespace clientrender
 			,bool transparent_pass);
 
 		void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas);
+		void RenderBone(platform::crossplatform::GraphicsDeviceContext& deviceContext,const mat4 &model_matrix,const std::shared_ptr<clientrender::Bone> bone);
 		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force=false);

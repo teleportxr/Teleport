@@ -6,7 +6,6 @@
 #include <map>
 #include <memory>
 #include <set>
-
 #include <libavstream/common.hpp>
 #include <libavstream/memory.hpp>
 //#include <TeleportCore/CommonNetworking.h>
@@ -57,7 +56,7 @@ namespace avs
 							//			5121 (UNSIGNED_BYTE) normalized
 							//			5123 (UNSIGNED_SHORT) normalized	RGB or RGBA vertex color
 		JOINTS_0,			//"VEC4"	5121 (UNSIGNED_BYTE)
-							//			5123 (UNSIGNED_SHORT)				See Skinned Mesh Attributes
+							//			5123 (UNSIGNED_SHORT)				See Skeletonned Mesh Attributes
 		WEIGHTS_0,			//"VEC4"	5126 (FLOAT)
 							//			5121 (UNSIGNED_BYTE) normalized
 							//			5123 (UNSIGNED_SHORT) normalized
@@ -231,7 +230,8 @@ namespace avs
 			SCALAR = 1,
 			VEC2,
 			VEC3,
-			VEC4
+			VEC4,
+			MAT4
 		};
 		enum class ComponentType : uint32_t
 		{
@@ -307,7 +307,6 @@ namespace avs
 		std::string name;
 
 		Transform localTransform;
-		//Transform globalTransform;
 
 		bool stationary=false;
 
@@ -326,7 +325,8 @@ namespace avs
 		std::vector<uid> materials;
 
 		//SKINNED MESH
-		uid skinID=0;
+		uid skeletonNodeID=0;
+		std::vector<int16_t> joint_indices;
 		std::vector<uid> animations;
 
 		// e.g. lightmap offset and multiplier.
@@ -376,42 +376,35 @@ namespace avs
 			return 2;
 		case Accessor::DataType::VEC3:
 			return 3;
+		case Accessor::DataType::MAT4:
+			return 16;
 		case Accessor::DataType::VEC4:
 		default:
 			return 4;
 		};
 	}
 
-	struct Skin
+	struct Skeleton
 	{
 		std::string name;
-		std::vector<Mat4x4> inverseBindMatrices;
+		//std::vector<Mat4x4> inverseBindMatrices;
 		std::vector<uid> boneIDs;
-		// of which a subset is:
-		std::vector<uid> jointIDs;
-		Transform skinTransform;
-		// New method, bones are built into the skin:
+		Transform skeletonTransform;
+		// New method, bones are built into the skeleton:
 		std::vector<Transform> boneTransforms;
-		std::vector<uint16_t> parentIndices;
-		std::vector<uint16_t> jointIndices;
+		std::vector<int16_t> parentIndices;
 		std::vector<std::string> boneNames;
 
-		static Skin convertToStandard(const Skin& skin, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
+		static Skeleton convertToStandard(const Skeleton& skeleton, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
-			avs::Skin convertedSkin;
-			convertedSkin.name = skin.name;
-			convertedSkin.boneIDs = skin.boneIDs;
-			convertedSkin.jointIDs = skin.jointIDs;
+			avs::Skeleton convertedSkeleton;
+			convertedSkeleton.name = skeleton.name;
+			convertedSkeleton.boneIDs = skeleton.boneIDs;
 
-			for(const Mat4x4& matrix : skin.inverseBindMatrices)
-			{
-				convertedSkin.inverseBindMatrices.push_back(Mat4x4::convertToStandard(matrix, sourceStandard, targetStandard));
-			}
+			convertedSkeleton.skeletonTransform = skeleton.skeletonTransform;
+			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkeleton.skeletonTransform);
 
-			convertedSkin.skinTransform = skin.skinTransform;
-			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkin.skinTransform);
-
-			return convertedSkin;
+			return convertedSkeleton;
 		}
 	};
 	template<typename U,typename T>
@@ -449,6 +442,27 @@ namespace avs
 		std::unordered_map<uint64_t, Accessor> accessors;
 		std::map<uint64_t, BufferView> bufferViews;
 		std::map<uint64_t, GeometryBuffer> buffers;
+		uint64_t inverseBindMatricesAccessorID;
+
+		inline std::tuple<const uint8_t*,size_t> GetDataFromAccessor(uint64_t id) const
+		{
+			auto a=accessors.find(id);
+			if(a==accessors.end())
+				return {0,0};
+			auto bv=bufferViews.find(a->second.bufferView);
+			if(bv==bufferViews.end())
+				return {0,0};
+			size_t offs=a->second.byteOffset;
+			size_t sz=avs::GetDataTypeSize(a->second.type);
+			sz*=avs::GetComponentSize(a->second.componentType);
+			sz*=a->second.count;
+
+			auto b=buffers.find(bv->second.buffer);
+			if(b==buffers.end())
+				return {0,0};
+			uint8_t *data=b->second.data+bv->second.byteOffset+a->second.byteOffset;
+			return {data, sz};
+		}
 		bool operator==(const Mesh& m) const
 		{
 			if (primitiveArrays != m.primitiveArrays)
@@ -465,10 +479,15 @@ namespace avs
 				return false;
 			if (buffers != m.buffers)
 				return false;
+			if (inverseBindMatricesAccessorID != m.inverseBindMatricesAccessorID)
+				return false;
 			return true;
 		}
 		void ResetAccessors(uint64_t subtract)
 		{
+			if(subtract<=1)
+				return;
+			subtract--;
 			for(auto &a:primitiveArrays)
 			{
 				a.indices_accessor-=subtract;
@@ -493,6 +512,7 @@ namespace avs
 				buffers_new[b.first-subtract]=b.second;
 			}
 			buffers=buffers_new;
+			inverseBindMatricesAccessorID-=subtract;
 		}
 		void GetAccessorRange(uint64_t &lowest,uint64_t &highest) const
 		{
@@ -520,6 +540,8 @@ namespace avs
 				lowest=std::min(lowest,(uint64_t)b.first);
 				highest=std::max(highest,(uint64_t)b.first);
 			}
+			lowest=std::min(lowest,(uint64_t)inverseBindMatricesAccessorID);
+			highest=std::max(highest,(uint64_t)inverseBindMatricesAccessorID);
 		}
 		template<typename OutStream>
 		friend OutStream& operator<< (OutStream& out, const Mesh& mesh)
@@ -551,6 +573,7 @@ namespace avs
 				out.writeChunk(bufferPair.first);
 				out << bufferPair.second;
 			}
+			out.writeChunk(mesh.inverseBindMatricesAccessorID);
 			return out;
 		}
 
@@ -598,13 +621,15 @@ namespace avs
 				in >>  buffer;
 				mesh.buffers[id] = buffer;
 			}
+			in.readChunk(mesh.inverseBindMatricesAccessorID);
 			return in;
 		}
 	};
 	enum class MeshCompressionType:uint8_t
 	{
 		NONE=0,
-		DRACO=1
+		DRACO=1,
+		DRACO_VERSIONED=3
 	};
 	struct CompressedSubMesh
 	{
@@ -665,6 +690,10 @@ namespace avs
 		}
 		void ResetAccessors(uint64_t subtract)
 		{
+			if(subtract>1)
+				subtract--;
+			else
+				return;
 			for( auto &subMesh:subMeshes)
 			{
 				subMesh.ResetAccessors(subtract);
@@ -742,7 +771,7 @@ namespace avs
 	{
 		uid node_uid=0;
 		uid mesh_uid=0;
-		uid skinID=0;
+		uid skeletonAssetID=0;
 		std::vector<uid> boneIDs;
 		std::vector<uid> animationIDs;
 		std::vector<MaterialResources> materials;
@@ -820,9 +849,10 @@ namespace avs
 		uid cache_uid = 0;
 		uid mesh_uid = 0;
 		std::vector<MeshElementCreate> m_MeshElementCreate;
+		std::vector<mat4> inverseBindMatrices;
 		bool clockwiseFaces=true;
 	};
-	/*!
+/*!
  * Common mesh decoder backend interface.
  *
  * Mesh backend receives data payloads and will convert them to geometry.
@@ -836,7 +866,7 @@ namespace avs
 		virtual void CreateTexture(avs::uid server_uid,uid id, const Texture& texture) = 0;
 		virtual void CreateMaterial(avs::uid server_uid,uid id, const Material& material) = 0;
 		virtual void CreateNode(avs::uid server_uid,uid id,const Node& node) = 0;
-		virtual void CreateSkin(avs::uid server_uid,avs::uid id, avs::Skin& skin) = 0;
+		virtual void CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skeleton& skeleton) = 0;
 		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
 	};
 

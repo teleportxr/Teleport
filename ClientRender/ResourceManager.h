@@ -14,7 +14,7 @@ namespace clientrender
 {
 	typedef unsigned long long geometry_cache_uid;
 	class Node;
-	class Skin;
+	class Skeleton;
 	class Material;
 	struct IncompleteResource
 	{
@@ -54,21 +54,22 @@ namespace clientrender
 
 	struct IncompleteNode : IncompleteResource
 	{
-		IncompleteNode(avs::uid id, avs::GeometryPayloadType type)
-			:IncompleteResource(id, type)
+		IncompleteNode(avs::uid id )
+			:IncompleteResource(id, avs::GeometryPayloadType::Node)
 		{}
 
-		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
-		std::unordered_map<avs::uid, size_t> missingAnimations; //<ID of missing animation, index in animation vector>
+		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots;	//<ID of the material, list of indexes the material should be placed into node material list>.
+		//std::unordered_map<avs::uid, size_t> missingAnimations;				//<ID of missing animation, index in animation vector>
+		//std::set<avs::uid> missingNodes;									//<e.g. missing skeleton nodes.
 	};
 
-	struct IncompleteSkin : IncompleteResource
+	struct IncompleteSkeleton : IncompleteResource
 	{
-		IncompleteSkin(avs::uid id, avs::GeometryPayloadType type)
+		IncompleteSkeleton(avs::uid id, avs::GeometryPayloadType type)
 			:IncompleteResource(id, type)
 		{}
 
-		std::shared_ptr<clientrender::Skin> skin;
+		std::shared_ptr<clientrender::Skeleton> skeleton;
 
 		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
 	};

@@ -248,6 +248,7 @@ namespace teleport
 			Running,
 			Stopped
 		};
+		typedef std::function<void(bool)> SessionChangedCallback;
 		class OpenXR
 		{
 		public:
@@ -259,6 +260,10 @@ namespace teleport
 			void Shutdown();
 			virtual bool StartSession()=0;
 			void EndSession();
+			void SetSessionChangedCallback(SessionChangedCallback s)
+			{
+				sessionChangedCallback=s;
+			}
 			void CreateMouseAndKeyboardProfile();
 			void MakeActions();
 			void Tick();
@@ -314,6 +319,10 @@ namespace teleport
 			{
 				return xr_session_running;
 			}
+			bool IsSessionCreated() const
+			{
+				return xr_session!=nullptr;
+			}
 
 			Overlay overlay;
 			static avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stagePose_worldSpace,const XrPosef &pose) ;
@@ -330,6 +339,7 @@ namespace teleport
 			bool internalInitInstance();
 			bool quit=false;
 			std::string applicationName;
+			SessionChangedCallback sessionChangedCallback;
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
 			std::map<avs::uid,FallbackBinding> fallbackBindings;

@@ -87,7 +87,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 		//Encode mesh nodes first, as they should be sent before lighting data.
 		for (avs::MeshNodeResources meshResourceInfo : meshNodeResources)
 		{
-			if (!geometryStreamingService->hasResource(meshResourceInfo.mesh_uid))
+			if(meshResourceInfo.mesh_uid!=0&&!geometryStreamingService->hasResource(meshResourceInfo.mesh_uid))
 			{
 				encodeMeshes(geometryStreamingService, { meshResourceInfo.mesh_uid });
 
@@ -97,23 +97,20 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 					break;
 				}
 			}
-			if (meshResourceInfo.skinID != 0)
+			if (meshResourceInfo.skeletonAssetID != 0&&!geometryStreamingService->hasResource(meshResourceInfo.skeletonAssetID))
 			{
-				if (!geometryStreamingService->hasResource(meshResourceInfo.skinID))
-				{
-					encodeSkin(geometryStreamingService, meshResourceInfo.skinID);
+				encodeSkeleton(geometryStreamingService, meshResourceInfo.skeletonAssetID);
 
-					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-					{
-						break;
-					}
+				keepQueueing = attemptQueueData();
+				if (!keepQueueing)
+				{
+					break;
 				}
 			}
 
 			for (avs::uid animationID : meshResourceInfo.animationIDs)
 			{
-				if (!geometryStreamingService->hasResource(animationID))
+				if (animationID!=0&&!geometryStreamingService->hasResource(animationID))
 				{
 					encodeAnimation(geometryStreamingService, animationID);
 
@@ -131,7 +128,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 
 			for (avs::MaterialResources material : meshResourceInfo.materials)
 			{
-				if (!geometryStreamingService->hasResource(material.material_uid))
+				if (material.material_uid!=0&&!geometryStreamingService->hasResource(material.material_uid))
 				{
 					encodeMaterials(geometryStreamingService, { material.material_uid });
 					keepQueueing = attemptQueueData();
@@ -144,6 +141,8 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 				{
 					for (avs::uid textureID : material.texture_uids)
 					{
+						if(textureID==0)
+							continue;
 						encodeTextures(geometryStreamingService, { textureID });
 						keepQueueing = attemptQueueData();
 						if (!keepQueueing)
@@ -265,7 +264,9 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
 	for (avs::uid uid : missingUIDs)
 	{
-	//	size_t oldBufferSize = buffer.size();
+		if(uid==0)
+			continue;
+		const avs::Mesh* mesh = geometryStore->getMesh(uid, geometryStreamingService->getClientAxesStandard());
 		const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
 		putPayloadType(avs::GeometryPayloadType::Mesh,uid);
 		if (compressedMesh && compressedMesh->meshCompressionType != avs::MeshCompressionType::NONE)
@@ -273,14 +274,28 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 			uint64_t lowest_accessor = 0xFFFFFFFFFFFFFFFF, highest_accessor = 0;
 			compressedMesh->GetAccessorRange(lowest_accessor, highest_accessor);
 			uint64_t accessor_subtract = lowest_accessor;
-			//uint64_t accessor_add = 0;
-			put(compressedMesh->meshCompressionType);
+			if(compressedMesh->meshCompressionType==avs::MeshCompressionType::DRACO)
+				put(avs::MeshCompressionType::DRACO_VERSIONED);
+			else
+				put(compressedMesh->meshCompressionType);
+			uint16_t version=1;
+			put(version);
 			static const int32_t DRACO_COMPRESSED_MESH_VERSION_NUMBER = 1;
 			put(DRACO_COMPRESSED_MESH_VERSION_NUMBER);
-			//Push name.
 			size_t nameLength = compressedMesh->name.length();
 			put(nameLength);
 			put((uint8_t*)compressedMesh->name.data(), nameLength);
+
+			// skin binding. Not included in draco Meshes, just Scenes. So we add it here:
+			std::tuple<const uint8_t*,size_t> data=mesh->GetDataFromAccessor(mesh->inverseBindMatricesAccessorID);
+			size_t inv_bind_datasize=std::get<size_t>(data);
+			put(inv_bind_datasize);
+			if(inv_bind_datasize>0)
+			{
+				const uint8_t* inv_bind_data=std::get<const uint8_t*>(data);
+				put(inv_bind_data, inv_bind_datasize);
+			}
+
 			size_t num_elements = compressedMesh->subMeshes.size();
 			put((uint32_t)num_elements);
 			for (size_t i = 0; i < num_elements; i++)
@@ -307,78 +322,11 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 				put((uint8_t*)subMesh.buffer.data(), bufferSize);
 			}
 		}
-		if (compressedMesh && compressedMesh->meshCompressionType == avs::MeshCompressionType::NONE)
+		if (!compressedMesh || compressedMesh->meshCompressionType == avs::MeshCompressionType::NONE)
 		{
-			avs::Mesh* mesh = geometryStore->getMesh(uid, geometryStreamingService->getClientAxesStandard());
-			if (!mesh)
-			{
-				TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " does not exist!\n";
-				continue;
-			}
-			put(avs::MeshCompressionType::NONE);
-			static const int32_t UNCOMPRESSED_MESH_VERSION_NUMBER = 1;
-			put(UNCOMPRESSED_MESH_VERSION_NUMBER);
-			//Push name length.
-			size_t nameLength = mesh->name.length();
-			put(nameLength);
-			//Push name.
-			put((uint8_t*)mesh->name.data(), nameLength);
-
-			put(mesh->primitiveArrays.size());
-
-			std::set<avs::uid> accessors;
-			for (const avs::PrimitiveArray& primitiveArray : mesh->primitiveArrays)
-			{
-				put(primitiveArray.attributeCount);
-				put(primitiveArray.indices_accessor);
-				put(primitiveArray.material);
-				put(primitiveArray.primitiveMode);
-				accessors.insert(primitiveArray.indices_accessor);
-				for (size_t k = 0; k < primitiveArray.attributeCount; k++)
-				{
-					put(primitiveArray.attributes[k]);
-					accessors.insert(primitiveArray.attributes[k].accessor);
-				}
-			}
-
-			put(accessors.size());
-			std::set<avs::uid> bufferViews;
-			for (avs::uid accessorID : accessors)
-			{
-				avs::Accessor accessor = mesh->accessors[accessorID];
-				put(accessorID);
-				put(accessor.type);
-				put(accessor.componentType);
-				put(accessor.count);
-				put(accessor.bufferView);
-				bufferViews.insert(accessor.bufferView);
-				put(accessor.byteOffset);
-			}
-
-			put(bufferViews.size());
-			std::set<avs::uid> buffers;
-			for (avs::uid bufferViewID : bufferViews)
-			{
-				avs::BufferView bufferView = mesh->bufferViews[bufferViewID];
-				put(bufferViewID);
-				put(bufferView.buffer);
-				put(bufferView.byteOffset);
-				put(bufferView.byteLength);
-				put(bufferView.byteStride);
-				buffers.insert(bufferView.buffer);
-			}
-
-			put(buffers.size());
-			for (avs::uid bufferID : buffers)
-			{
-				avs::GeometryBuffer buffer = mesh->buffers[bufferID];
-				put(bufferID);
-				put(buffer.byteLength);
-				put(buffer.data, buffer.byteLength);
-			}
+			TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " MeshCompressionType::NONE is not supported!\n";
+			continue;
 		}
-
-		//TELEPORT_COUT<<"Encoded mesh "<<mesh->name.c_str()<<" with size "<<MemSize(buffer.size()-oldBufferSize)<<"\n";
 		// Actual size is now known so update payload size
 		putPayloadSize();
 
@@ -424,7 +372,15 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		put(node->data_uid);
 		put(node->data_type);
 
-		put(node->skinID);
+		put(node->skeletonNodeID);
+		put(node->joint_indices.size());
+		if(node->joint_indices.size())
+		{
+			for (int16_t index : node->joint_indices)
+			{
+				put(index);
+			}
+		}
 		put(node->parentID);
 
 		put(node->animations.size());
@@ -463,12 +419,9 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		{
 			// nothing node-specific to add at present.
 		}
-		put(node->childrenIDs.size());
-		for (avs::uid id : node->childrenIDs)
+		if (node->data_type == avs::NodeDataType::Skeleton)
 		{
-			put(id);
 		}
-
 		geometryStreamingService->encodedResource(uid);
 	}
 
@@ -478,54 +431,34 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*, avs::uid skinID)
+avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterface*, avs::uid skeletonID)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
-
-	const avs::Skin* skin = geometryStore->getSkin(skinID, geometryStreamingService->getClientAxesStandard());
-	if (skin)
+	const avs::Skeleton* skeleton = geometryStore->getSkeleton(skeletonID, geometryStreamingService->getClientAxesStandard());
+	if(skeleton)
 	{
-		putPayloadType(avs::GeometryPayloadType::Skin,skinID);
-
+		putPayloadType(avs::GeometryPayloadType::Skeleton,skeletonID);
 		//Push name length.
-		size_t nameLength = skin->name.length();
+		size_t nameLength = skeleton->name.length();
 		put(nameLength);
 		//Push name.
-		put((uint8_t*)skin->name.data(), nameLength);
-
-		put(skin->inverseBindMatrices.size());
-		for (int i = 0; i < (int)skin->inverseBindMatrices.size(); i++)
-		{
-			put(skin->inverseBindMatrices[i]);
-		}
-#if 0
-		// TODO: This is inefficient, most boneID's will be jointID's :
-		put(skin->boneIDs.size());
-		for (int i = 0; i < skin->boneIDs.size(); i++)
-		{
-			put(skin->boneIDs[i]);
-		}
-
-		put(skin->jointIDs.size());
-		for (int i = 0; i < skin->jointIDs.size(); i++)
-		{
-			put(skin->jointIDs[i]);
-		}
-#else
+		put((uint8_t*)skeleton->name.data(), nameLength);
 		auto findIndex = [](std::vector<avs::uid> v, avs::uid u)
 		{
 			auto j = std::find(v.begin(), v.end(), u);
-			uint16_t index = (uint16_t)std::distance(v.begin(), j);
+			int16_t index = (int16_t)std::distance(v.begin(), j);
+			if(index==v.size())
+				index=-1;
 			return index;
 		};
-		put(skin->boneIDs.size());
-		for (int i = 0; i <(int) skin->boneIDs.size(); i++)
+		put(skeleton->boneIDs.size());
+		for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
 		{
-			avs::Node* node = geometryStore->getNode(skin->boneIDs[i]);
+			avs::Node* node = geometryStore->getNode(skeleton->boneIDs[i]);
 			avs::Transform localTransform = node->localTransform;
 			avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
-			//put(skin->boneIDs[i]);
-			uint16_t parentIndex = findIndex(skin->boneIDs, node->parentID);
+			//put(skeleton->boneIDs[i]);
+			int16_t parentIndex = findIndex(skeleton->boneIDs, node->parentID);
 			put(parentIndex);
 			put(localTransform);
 			size_t nameLength = node->name.length();
@@ -533,18 +466,10 @@ avs::Result GeometryEncoder::encodeSkin(avs::GeometryRequesterBackendInterface*,
 			//Push name.
 			put((uint8_t*)node->name.data(), nameLength);
 		}
-		put(skin->jointIDs.size());
-		// which bones are joints?
-		for (int i = 0; i < (int)skin->jointIDs.size(); i++)
-		{
-			uint16_t jointIndex = findIndex(skin->boneIDs, skin->jointIDs[i]);
-			put(jointIndex);
-		}
-#endif
-		put(skin->skinTransform);
+		put(skeleton->skeletonTransform);
 
 		putPayloadSize();
-		geometryStreamingService->encodedResource(skinID);
+		geometryStreamingService->encodedResource(skeletonID);
 	}
 
 	return avs::Result::OK;
@@ -604,6 +529,10 @@ void GeometryEncoder::putPayloadSize()
 
 	// prevBufferSize will be the index where the payload size placeholder was added
 	replace(prevBufferSize, payloadSize);
+
+	avs::GeometryPayloadType type;
+	memcpy(&type,(buffer.data()+prevBufferSize+sizeof(size_t)),sizeof(type));
+	std::cout<<" payloadSize "<<payloadSize<<" for "<<stringOf(type)<<"\n";
 
 	prevBufferSize = 0;
 }
@@ -674,7 +603,7 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 avs::Result GeometryEncoder::encodeTextures(avs::GeometryRequesterBackendInterface*
 	, std::vector<avs::uid> missingUIDs)
 {
-	//GeometryStore* geometryStore = &(GeometryStore::GetInstance());
+
 	encodeTexturesBackend(geometryStreamingService, missingUIDs);
 	return avs::Result::OK;
 }
@@ -919,8 +848,11 @@ avs::Result GeometryEncoder::encodeVector4Keyframes(const std::vector<teleport::
 size_t GeometryEncoder::put(const uint8_t* data, size_t count)
 {
 	size_t pos = buffer.size();
-	buffer.resize(buffer.size() + count);
-	memcpy(buffer.data() + pos, data, count);
+	if(count>0)
+	{
+		buffer.resize(buffer.size() + count);
+		memcpy(buffer.data() + pos, data, count);
+	}
 #if TELEPORT_DEBUG_GEOMETRY_MESSAGES
 	if (count >= settings->geometryBufferCutoffSize)
 	{

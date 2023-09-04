@@ -81,6 +81,9 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 		case avs::NodeDataType::None:
 		case avs::NodeDataType::Light:
 			break;
+		case avs::NodeDataType::Skeleton:
+			GetSkeletonNodeResources(nodeID, *node, outMeshResources);
+		break;
 		case avs::NodeDataType::Mesh:
 			if(node->priority>=minimumPriority)
 			{
@@ -88,6 +91,19 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 				if(node->renderState.globalIlluminationUid>0)
 				{
 					genericTextureUids.insert(node->renderState.globalIlluminationUid);
+				}
+				if(node->skeletonNodeID!=0)
+				{
+					avs::Node* skeletonnode = geometryStore->getNode(node->skeletonNodeID);
+					if(!skeletonnode)
+					{
+						TELEPORT_CERR<<"Missing skeleton node "<<node->skeletonNodeID<<std::endl;
+					}
+					else
+					{
+						outNodeIDs.insert(node->skeletonNodeID);
+						GetSkeletonNodeResources(node->skeletonNodeID, *skeletonnode, outMeshResources);
+					}
 				}
 			}
 			break;
@@ -293,13 +309,13 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 	avs::MeshNodeResources meshNode;
 	meshNode.node_uid = nodeID;
 	meshNode.mesh_uid = node.data_uid;
-	meshNode.skinID = node.skinID;
+	//meshNode.skeletonID = node.skeletonNodeID;
 
-	//Get joint/bone IDs, if the skinID is not zero.
-	if (meshNode.skinID != 0)
+	//Get joint/bone IDs, if the skeletonID is not zero.
+	if (node.data_uid != 0&&node.data_type==avs::NodeDataType::Skeleton)
 	{
-		avs::Skin* skin = geometryStore->getSkin(node.skinID, getClientAxesStandard());
-		meshNode.boneIDs = skin->boneIDs;
+		avs::Skeleton* skeleton = geometryStore->getSkeleton(node.data_uid, getClientAxesStandard());
+		meshNode.boneIDs = skeleton->boneIDs;
 	}
 
 	meshNode.animationIDs = node.animations;
@@ -333,4 +349,26 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 	}
 
 	outMeshResources.push_back(meshNode);
+}
+
+void GeometryStreamingService::GetSkeletonNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources> &outMeshNodeResources) const
+{
+	if (node.data_type != avs::NodeDataType::Skeleton)
+	{
+		return;
+	}
+	avs::MeshNodeResources sk;
+	
+	sk.node_uid = nodeID;
+	sk.skeletonAssetID = node.data_uid;
+
+	// Get joint/bone IDs, if the skeletonID is not zero.
+	if (node.data_uid != 0)
+	{
+		avs::Skeleton* skeleton = geometryStore->getSkeleton(node.data_uid, getClientAxesStandard());
+		sk.boneIDs = skeleton->boneIDs;
+	}
+
+	sk.animationIDs = node.animations;
+	outMeshNodeResources.push_back(sk);
 }

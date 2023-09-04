@@ -183,6 +183,28 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate& subSceneCreate)
 {
 	std::shared_ptr<SubSceneCreate> s = std::make_shared<SubSceneCreate>(subSceneCreate);
 	mSubsceneManager.Add(subSceneCreate.uid, s);
+	//Add mesh to nodes waiting for mesh.
+	MissingResource* missingSubScene = GetMissingResourceIfMissing(subSceneCreate.uid, avs::GeometryPayloadType::Mesh);
+	if (missingSubScene)
+	{
+		for (auto it = missingSubScene->waitingResources.begin(); it != missingSubScene->waitingResources.end(); it++)
+		{
+			if (it->get()->type != avs::GeometryPayloadType::Node)
+			{
+				TELEPORT_CERR << "Waiting resource is not a node, it's " << int(it->get()->type) << std::endl;
+				continue;
+			}
+			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got SubScene {2}=cache {3}", incompleteNode->id, incompleteNode->name, id, subSceneCreate.subscene_uid);
+			//If only this mesh and this function are pointing to the node, then it is complete.
+			if (it->use_count() == 2)
+			{
+				CompleteNode(incompleteNode->id, incompleteNode);
+			}
+		}
+	}
+	//Resource has arrived, so we are no longer waiting for it.
+	CompleteResource(subSceneCreate.uid);
 	return avs::Result::OK;
 }
 
@@ -219,23 +241,23 @@ void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCrea
 	CompleteResource(id);
 }
 
-void GeometryCache::CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin)
+void GeometryCache::CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton)
 {
-	RESOURCECREATOR_DEBUG_COUT( "CompleteSkin {0}({1})",id,completeSkin->skin->name);
+	RESOURCECREATOR_DEBUG_COUT( "CompleteSkeleton {0}({1})",id,completeSkeleton->skeleton->name);
 
-	mSkinManager.Add(id, completeSkin->skin);
+	mSkeletonManager.Add(id, completeSkeleton->skeleton);
 
-	//Add skin to nodes waiting for skin.
-	MissingResource *missingSkin = GetMissingResourceIfMissing(id,avs::GeometryPayloadType::Skin);
-	if(missingSkin)
+	//Add skeleton to nodes waiting for skeleton.
+	MissingResource *missingSkeleton = GetMissingResourceIfMissing(id,avs::GeometryPayloadType::Skeleton);
+	if(missingSkeleton)
 	{
-		for(auto it = missingSkin->waitingResources.begin(); it != missingSkin->waitingResources.end(); it++)
+		for(auto it = missingSkeleton->waitingResources.begin(); it != missingSkeleton->waitingResources.end(); it++)
 		{
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
-			incompleteNode->SetSkin(completeSkin->skin);
-			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Skin {0}({1})",incompleteNode->id,incompleteNode->name,id,completeSkin->skin->name);
+			incompleteNode->SetSkeleton(completeSkeleton->skeleton);
+			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Skeleton {0}({1})",incompleteNode->id,incompleteNode->name,id,completeSkeleton->skeleton->name);
 
-			//If only this resource and this skin are pointing to the node, then it is complete.
+			//If only this skeleton and this function are pointing to the node, then it is complete.
 			if(it->use_count() == 2)
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
@@ -323,22 +345,22 @@ void GeometryCache::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone
 
 	mBoneManager.Add(id, bone);
 
-	//Add bone to skin waiting for bone.
+	//Add bone to skeleton waiting for bone.
 	MissingResource *missingBone = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Bone);
 	if(missingBone)
 	{
 		for(auto it = missingBone->waitingResources.begin(); it != missingBone->waitingResources.end(); it++)
 		{
-			if((*it)->type == avs::GeometryPayloadType::Skin)
+			if((*it)->type == avs::GeometryPayloadType::Skeleton)
 			{
-				std::shared_ptr<IncompleteSkin> incompleteSkin = std::static_pointer_cast<IncompleteSkin>(*it);
-				incompleteSkin->skin->SetBone(incompleteSkin->missingBones[id], bone);
-				RESOURCECREATOR_DEBUG_COUT( "Waiting Skin {0}({1}) got Bone {2}({3})",incompleteSkin->id,incompleteSkin->skin->name,id,bone->name);
+				std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::static_pointer_cast<IncompleteSkeleton>(*it);
+				incompleteSkeleton->skeleton->SetBone(incompleteSkeleton->missingBones[id], bone);
+				RESOURCECREATOR_DEBUG_COUT( "Waiting Skeleton {0}({1}) got Bone {2}({3})",incompleteSkeleton->id,incompleteSkeleton->skeleton->name,id,bone->name);
 
-				//If only this bone, and the loop, are pointing at the skin, then it is complete.
+				//If only this bone, and the loop, are pointing at the skeleton, then it is complete.
 				if(it->use_count() == 2)
 				{
-					CompleteSkin(incompleteSkin->id, incompleteSkin);
+					CompleteSkeleton(incompleteSkeleton->id, incompleteSkeleton);
 				}
 			}
 		}
@@ -363,10 +385,10 @@ void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender:
 		for(auto it = missingAnimation->waitingResources.begin(); it != missingAnimation->waitingResources.end(); it++)
 		{
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
-			incompleteNode->animationComponent.addAnimation(id, animation);
+			incompleteNode->GetOrCreateComponent<AnimationComponent>()->addAnimation(id, animation);
 			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Animation {2}({3})",incompleteNode->id,incompleteNode->name,id,animation->name);
 
-			//If only this bone, and the loop, are pointing at the skin, then it is complete.
+			//If only this bone, and the loop, are pointing at the skeleton, then it is complete.
 			if(incompleteNode.use_count() == 2)
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
@@ -423,9 +445,9 @@ void GeometryCache::CompleteMaterial(avs::uid id, const clientrender::Material::
 void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
 {
 //	RESOURCECREATOR_DEBUG_COUT( "CompleteMeshNode(ID: ",id,", node: ",node->name,")\n";
-
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
 	m_CompletedNodes.push_back(id);
+	CompleteResource(id);
 }
 
 void GeometryCache::AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,

@@ -17,6 +17,8 @@ namespace clientrender
 			std::vector<std::shared_ptr<VertexBuffer>> vertexBuffers;
 			std::vector<std::shared_ptr<IndexBuffer>> indexBuffers;
 			std::vector<std::shared_ptr<Material::MaterialCreateInfo>> internalMaterials;
+			std::vector<mat4> inverseBindMatrices;
+
 			bool clockwiseFaces=true;
 		};
 

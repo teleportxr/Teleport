@@ -109,7 +109,7 @@ namespace clientrender
 			mTextureManager.Update(timeElapsed_s,lifetimeFactor);
 			mVertexBufferManager.Update(timeElapsed_s,lifetimeFactor);
 			mMeshManager.Update(timeElapsed_s,lifetimeFactor);
-			mSkinManager.Update(timeElapsed_s,lifetimeFactor);
+			mSkeletonManager.Update(timeElapsed_s,lifetimeFactor);
 			//mLightManager.Update(timeElapsed_s,lifetimeFactor);
 			mBoneManager.Update(timeElapsed_s,lifetimeFactor);
 			mAnimationManager.Update(timeElapsed_s,lifetimeFactor);
@@ -129,7 +129,7 @@ namespace clientrender
 			resourceIDs.insert(resourceIDs.end(), t.begin(), t.end());
 			const auto& h = mMeshManager.GetAllIDs();
 			resourceIDs.insert(resourceIDs.end(), h.begin(), h.end());
-			const auto& s = mSkinManager.GetAllIDs();
+			const auto& s = mSkeletonManager.GetAllIDs();
 			resourceIDs.insert(resourceIDs.end(), s.begin(), s.end());
 			const auto& l = mLightManager.GetAllIDs();
 			resourceIDs.insert(resourceIDs.end(), l.begin(), l.end());
@@ -165,7 +165,7 @@ namespace clientrender
 			mTextureManager.Clear();
 			mVertexBufferManager.Clear();
 			mMeshManager.Clear();
-			mSkinManager.Clear();
+			mSkeletonManager.Clear();
 			mLightManager.Clear();
 			mBoneManager.Clear();
 			mAnimationManager.Clear();
@@ -192,7 +192,7 @@ namespace clientrender
 		ResourceManager<avs::uid,SubSceneCreate>				mSubsceneManager;
 		ResourceManager<avs::uid,clientrender::Texture>			mTextureManager;
 		ResourceManager<avs::uid,clientrender::Mesh>			mMeshManager;
-		ResourceManager<avs::uid,clientrender::Skin>			mSkinManager;
+		ResourceManager<avs::uid,clientrender::Skeleton>			mSkeletonManager;
 		ResourceManager<avs::uid,clientrender::Light>			mLightManager;
 		ResourceManager<uint64_t,clientrender::Bone>			mBoneManager;
 		ResourceManager<avs::uid,clientrender::Animation>		mAnimationManager;
@@ -213,7 +213,7 @@ namespace clientrender
 		void CompleteResource(avs::uid id);
 		avs::Result CreateSubScene(const SubSceneCreate& subSceneCreate);
 		void CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo);
-		void CompleteSkin(avs::uid id, std::shared_ptr<IncompleteSkin> completeSkin);
+		void CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton);
 		void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo& textureInfo);
 		void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
 		void CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone);

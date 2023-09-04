@@ -13,7 +13,7 @@ namespace clientrender
 		TIMESTAMP,	// Animation automatically based on timestamp and speed.
 		SCRUBBING	// Animate based on explicit setting of time value.
 	};
-	//! Manages the state of a specific animation applied to a specific skin/skeleton.
+	//! Manages the state of a specific animation applied to a specific skeleton/skeleton.
 	class AnimationState
 	{
 	public:

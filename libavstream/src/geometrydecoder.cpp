@@ -140,8 +140,29 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			dataOffset = sizeof(StreamPayloadInfo);
 			// The offset is incremented in the classify function to be after the payload type.
 			payloadType = m_parser->classify(m_buffer.data(), bufferSize, dataOffset);
+			switch(payloadType)
+			{
+			case avs::GeometryPayloadType::Mesh:
+			case avs::GeometryPayloadType::Material:
+			case avs::GeometryPayloadType::MaterialInstance:
+			case avs::GeometryPayloadType::Texture:
+			case avs::GeometryPayloadType::Animation:
+			case avs::GeometryPayloadType::Node:
+			case avs::GeometryPayloadType::Skeleton:
+			case avs::GeometryPayloadType::FontAtlas:
+			case avs::GeometryPayloadType::TextCanvas:
+			break;
+			default:
+				std::cerr<<"Invalid Geometry payload\n";
+				continue;
+			};
 
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
+			if (dataSize>m_buffer.size())
+			{
+				AVSLOG(Error) << "Bad dataSize.\n";
+				return Result::Failed;
+			}
 		}
 		else if (payloadInfoType == PayloadInfoType::File)
 		{
@@ -150,6 +171,11 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 			dataOffset = sizeof(FilePayloadInfo);
 			dataSize = info.dataSize;
+			if (dataSize>m_buffer.size())
+			{
+				AVSLOG(Error) << "Bad dataSize.\n";
+				return Result::Failed;
+			}
 
 			switch (info.httpPayloadType)
 			{
@@ -181,6 +207,11 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		ptr += sizeof(uid);
 		if (dataSize==0)
 		{
+			return Result::Failed;
+		}
+		if (dataSize+dataOffset+sizeof(uid)>m_buffer.size())
+		{
+			AVSLOG(Error) << "Bad dataSize.\n";
 			return Result::Failed;
 		}
 		// TODO: this only supports one server.

@@ -52,10 +52,10 @@ set( src_root
 	Renderer.cpp
 	ShaderResource.cpp
 	ShaderResource.h
-	Skin.cpp
-	Skin.h
-	SkinInstance.cpp
-	SkinInstance.h
+	Skeleton.cpp
+	Skeleton.h
+	SkeletonInstance.cpp
+	SkeletonInstance.h
 	Transform.cpp
 	Transform.h
 	TextCanvas.cpp

@@ -2,6 +2,7 @@
 
 #include "stream/parser_geo.hpp"
 #include <string.h>
+#include <iostream>
 
 
 namespace avs
@@ -33,6 +34,15 @@ namespace avs
 		{
 			size_t dataSize;
 			memcpy(&dataSize, buffer + parseOffset, HEADER_SIZE);
+			GeometryPayloadType type;
+			if(parseOffset+sizeof(size_t)<bufferSize)
+				memcpy(&type,buffer+parseOffset+sizeof(size_t),sizeof(GeometryPayloadType));
+			if(dataSize+parseOffset>bufferSize)
+			{
+				std::cerr<<"Bad dataSize for "<<stringOf(type)<<".\n";
+				break;
+			}
+			std::cout<<" dataSize "<<dataSize<<" for "<<stringOf(type)<<"\n";
 			result = m_callback(m_node, m_inputNodeIndex, buffer, dataSize, parseOffset + HEADER_SIZE, true);
 			if (!result)
 			{

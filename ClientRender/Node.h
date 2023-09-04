@@ -13,8 +13,8 @@
 #include "NodeComponents/AnimationComponent.h"
 #include "NodeComponents/VisibilityComponent.h"
 #include "TextCanvas.h"
-#include "Skin.h"
-#include "SkinInstance.h"
+#include "Skeleton.h"
+#include "SkeletonInstance.h"
 #include "Transform.h"
 #include "ResourceManager.h"
 
@@ -30,29 +30,56 @@ namespace clientrender
 		float distance=1.0f;
 		mutable float countdown = 2.0f;
 		VisibilityComponent visibility;
-		AnimationComponent animationComponent;
-		const std::vector<std::shared_ptr<Component>> &GetComponents();
-		template<typename T>
-		Component *GetComponent()
+		const std::vector<std::shared_ptr<Component>> &GetComponents()
 		{
-			for(auto &c:components)
-			{
-				T *t=dynamic_cast<T*>(c.get());
-				if(t)
-					return t;
-			}
-			return nullptr;
+			return components;
 		}
 		template<typename T>
-		Component * AddComponent()
+		std::shared_ptr<T> GetComponent()
 		{
-			components.push_back(std::make_shared<T>());
-			return components.back().get();
+			for(auto c:components)
+			{
+				T* t=dynamic_cast<T*>(c.get());
+				if(t)
+					return std::shared_ptr<T>(t);
+			}
+			std::shared_ptr<T> u;
+			return u;
+		}
+		template<typename T>
+		std::shared_ptr<T> AddComponent()
+		{
+			auto u=std::make_shared<T>();
+			components.push_back(u);
+			return u;
 		}
 		Node(avs::uid id, const std::string& name);
 
 		virtual ~Node() = default;
 
+		template<typename T> std::shared_ptr<T> GetOrCreateComponent()
+		{
+			for(auto c:components)
+			{
+				auto t=std::dynamic_pointer_cast<T>(c);
+				if(t)
+					return t;
+			}
+			std::shared_ptr<T> u=std::make_shared<T>();
+			components.push_back(std::static_pointer_cast<Component>(u));
+			return u;
+		}
+		template<typename T> std::shared_ptr<const T> GetComponent() const
+		{
+			for(auto c:components)
+			{
+				auto t=std::dynamic_pointer_cast<T>(c);
+				if(t)
+					return t;
+			}
+			std::shared_ptr<const T> u;
+			return u;
+		}
 		void SetStatic(bool s);
 		bool IsStatic() const;
 		void SetHolderClientId(avs::uid h);
@@ -83,9 +110,19 @@ namespace clientrender
 		void ClearChildren();
 
 		const std::vector<std::weak_ptr<Node>>& GetChildren() const { return children; }
-		//void SetChildrenIDs(const std::vector<avs::uid>& childrenIDs) { childIDs = childrenIDs; }
-		//const std::vector<avs::uid>& GetChildrenIDs() const { return childIDs; }
-
+		
+		const std::weak_ptr<const Node> GetSkeletonNode() const
+		{
+			return skeletonNode;
+		}
+		std::weak_ptr<Node> GetSkeletonNode()
+		{
+			return skeletonNode;
+		}
+		void SetSkeletonNode(std::weak_ptr<Node> n)
+		{
+			skeletonNode=n;
+		}
 		bool IsVisible() const { return visibility.getVisibility(); }
 		void SetVisible(bool visible);
 		float GetTimeSinceLastVisible() const { return visibility.getTimeSinceLastVisible(); }
@@ -96,9 +133,19 @@ namespace clientrender
 		void SetTextCanvas(std::shared_ptr<TextCanvas> t) { this->textCanvas = t; }
 		std::shared_ptr<TextCanvas> GetTextCanvas() const { return textCanvas; }
 		
-		virtual void SetSkin(std::shared_ptr<Skin> skin) { skinInstance.reset(new SkinInstance(skin)); }
-		const std::shared_ptr<SkinInstance> GetSkinInstance() const { return skinInstance; }
-		std::shared_ptr<SkinInstance> GetSkinInstance() { return skinInstance; }
+		
+		virtual void SetSkeleton(std::shared_ptr<Skeleton> skeleton) { skeletonInstance.reset(new SkeletonInstance(skeleton)); }
+		const std::shared_ptr<SkeletonInstance> GetSkeletonInstance() const { return skeletonInstance; }
+		std::shared_ptr<SkeletonInstance> GetSkeletonInstance() { return skeletonInstance; }
+
+		void SetJointIndices(const std::vector<int16_t> j)
+		{
+			jointIndices=j;
+		}
+		const std::vector<int16_t> &GetJointIndices() const
+		{
+			return jointIndices;
+		}
 
 		virtual void SetMaterial(size_t index, std::shared_ptr<Material> material)
 		{
@@ -209,7 +256,7 @@ namespace clientrender
 		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<TextCanvas> textCanvas;
-		std::shared_ptr<SkinInstance> skinInstance;
+		std::shared_ptr<SkeletonInstance> skeletonInstance;
 		std::vector<std::shared_ptr<Material>> materials;
 		vec4 lightmapScaleOffset;
 		Transform localTransform;
@@ -244,5 +291,7 @@ namespace clientrender
 		avs::uid holderClientId=0;
 		bool isGrabbable=false;
 		std::vector<platform::crossplatform::EffectPass *> cachedEffectPasses;
+		std::weak_ptr<Node> skeletonNode;
+		std::vector<int16_t> jointIndices;
 	};
 }

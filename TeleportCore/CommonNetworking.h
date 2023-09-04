@@ -317,26 +317,25 @@ namespace teleport
 			{
 				return sizeof(SetupCommand);
 			}
-			int32_t				server_streaming_port = 0;			//!< 5
-			int32_t				server_http_port = 0;				//!< 9
-			uint32_t			debug_stream = 0;					//!< 13
-			uint32_t			do_checksums = 0;					//!< 17
-			uint32_t			debug_network_packets = 0;			//!< 21
-			int32_t				requiredLatencyMs = 0;				//!< 25
-			uint32_t			idle_connection_timeout = 5000;		//!< 29
-			uint64_t			session_id = 0;						//!< The server's session id changes when the server session changes.	37 bytes
-			ControlModel		control_model = ControlModel::NONE;	//!< Not in use 41b to here
-			avs::VideoConfig	video_config;						//!< Video setup structure. 41+89=130 bytes
-			float				draw_distance = 0.0f;				//!< Maximum distance in metres to render locally. 134
-			vec3_packed			bodyOffsetFromHead_DEPRECATED;		//!< Not in use. 146
+			int32_t				server_streaming_port = 0;							//!< 5
+			int32_t				server_http_port = 0;								//!< 9
+			uint32_t			debug_stream = 0;									//!< 13
+			uint32_t			do_checksums = 0;									//!< 17
+			uint32_t			debug_network_packets = 0;							//!< 21
+			int32_t				requiredLatencyMs = 0;								//!< 25
+			uint32_t			idle_connection_timeout = 5000;						//!< 29
+			uint64_t			session_id = 0;										//!< The server's session id changes when the server session changes.	37 bytes
+			ControlModel		control_model = ControlModel::NONE;					//!< Not in use 41b to here
+			avs::VideoConfig	video_config;										//!< Video setup structure. 41+89=130 bytes
+			float				draw_distance = 0.0f;								//!< Maximum distance in metres to render locally. 134
 			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's. 147
-			uint8_t				audio_input_enabled = 0;			//!< 148 Server accepts audio stream from client.
-			bool				using_ssl = true;					//!< 147 Not in use, for later.
-			int64_t				startTimestamp_utc_unix_ns = 0;		//!< 157 UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+			uint8_t				audio_input_enabled = 0;							//!< 148 Server accepts audio stream from client.
+			bool				using_ssl = true;									//!< 147 Not in use, for later.
+			int64_t				startTimestamp_utc_unix_ns = 0;						//!< 157 UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
-			BackgroundMode		backgroundMode;							//!< 158 Whether the server supplies a background, and of which type.
-			vec4_packed			backgroundColour;						//!< 174 If the background is of the COLOUR type, which colour to use.
-			avs::ClientDynamicLighting clientDynamicLighting;		//!< Setup for dynamic object lighting. 174+57=231 bytes
+			BackgroundMode		backgroundMode;										//!< 158 Whether the server supplies a background, and of which type.
+			vec4_packed			backgroundColour;									//!< 174 If the background is of the COLOUR type, which colour to use.
+			avs::ClientDynamicLighting clientDynamicLighting;						//!< Setup for dynamic object lighting. 174+57=231 bytes
 		} AVS_PACKED;
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.

@@ -91,6 +91,7 @@ namespace teleport
 
 			//Recursively obtains the resources from the mesh node, and its child nodes.
 			void GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
+			void GetSkeletonNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources> &outSkeletonNodeResources) const;
 		};
 
 		typedef bool(TELEPORT_STDCALL* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);

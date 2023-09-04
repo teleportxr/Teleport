@@ -86,7 +86,7 @@ static const char *stringof(avs::GeometryPayloadType t)
 		"Texture",
 		"Animation",
 		"Node",
-		"Skin",
+		"Skeleton",
 		"Bone"
 	};
 	return txt[(size_t)t];
@@ -125,9 +125,10 @@ Renderer::~Renderer()
 {
 	InvalidateDeviceObjects(); 
 }
-
+#include <functional>
 void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
 {
+	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged,this,std::placeholders::_1));
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
 	GeometryCache::SetRenderPlatform(r);
@@ -280,11 +281,11 @@ void Renderer::InitLocalGeometry()
 	auto &localResourceCreator=localInstanceRenderer->resourceCreator;
 	// initialize the default local geometry:
 	avs::uid hand_mesh_uid = avs::GenerateUid();
-	lobbyGeometry.hand_skin_uid = avs::GenerateUid();
+	lobbyGeometry.hand_skeleton_uid = avs::GenerateUid();
 	avs::uid point_anim_uid = avs::GenerateUid();
 	//geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/2CylinderEngine.gltf",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid);
 	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator,hand_mesh_uid);
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/skins/Hand.skin",avs::GeometryPayloadType::Skin,&localResourceCreator, lobbyGeometry.hand_skin_uid);
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/skeletons/Hand.skeleton",avs::GeometryPayloadType::Skeleton,&localResourceCreator, lobbyGeometry.hand_skeleton_uid);
 	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator, point_anim_uid);
 	geometryDecoder.WaitFromDecodeThread();
 	
@@ -321,7 +322,23 @@ void Renderer::InitLocalGeometry()
 	localResourceCreator.CreateNode(0,lobbyGeometry.left_hand_node_uid,avsNode);
 	avsNode.name		="local Right Root";
 	localResourceCreator.CreateNode(0,lobbyGeometry.right_hand_node_uid,avsNode);
-
+	
+	{
+		avs::Node leftSkeletonNode;
+		lobbyGeometry.left_hand_skeleton_node_uid=avs::GenerateUid();
+		leftSkeletonNode.data_type	=avs::NodeDataType::Skeleton;
+		leftSkeletonNode.data_uid	=lobbyGeometry.hand_skeleton_uid;
+		leftSkeletonNode.parentID					=lobbyGeometry.left_hand_node_uid;
+		localResourceCreator.CreateNode(0,lobbyGeometry.left_hand_skeleton_node_uid,leftSkeletonNode);
+	}
+	{
+		avs::Node rightSkeletonNode;
+		lobbyGeometry.right_hand_skeleton_node_uid=avs::GenerateUid();
+		rightSkeletonNode.data_type	=avs::NodeDataType::Skeleton;
+		rightSkeletonNode.data_uid	=lobbyGeometry.hand_skeleton_uid;
+		rightSkeletonNode.parentID					=lobbyGeometry.right_hand_node_uid;
+		localResourceCreator.CreateNode(0,lobbyGeometry.right_hand_skeleton_node_uid,rightSkeletonNode);
+	}
 	avsNode.data_type	=avs::NodeDataType::Mesh;
 	
 	avsNode.data_uid	=hand_mesh_uid;
@@ -329,10 +346,11 @@ void Renderer::InitLocalGeometry()
 	avsNode.materials.push_back(grey_material_uid);
 	
 	avsNode.name						="local Left Hand";
-	avsNode.skinID						=lobbyGeometry.hand_skin_uid;
+	avsNode.skeletonNodeID				=lobbyGeometry.left_hand_skeleton_node_uid;
 	avsNode.animations.push_back(point_anim_uid);
 	avsNode.materials[0]				=blue_material_uid;
 	avsNode.parentID					=lobbyGeometry.left_hand_node_uid;
+	avsNode.skeletonNodeID				=lobbyGeometry.left_hand_skeleton_node_uid;
 	avsNode.localTransform.rotation		={0.707f,0,0,0.707f};
 	avsNode.localTransform.scale		={-1.f,1.f,1.f};
 	// 10cm forward, because root of hand is at fingers.
@@ -343,6 +361,7 @@ void Renderer::InitLocalGeometry()
 	avsNode.name="local Right Hand";
 	avsNode.materials[0]				=red_material_uid;
 	avsNode.parentID					=lobbyGeometry.right_hand_node_uid;
+	avsNode.skeletonNodeID				=lobbyGeometry.right_hand_skeleton_node_uid;
 	avsNode.localTransform.scale		={1.f,1.f,1.f};
 	// 10cm forward, because root of hand is at fingers.
 	avsNode.localTransform.position		={0.f,0.1f,0.f};
@@ -350,6 +369,8 @@ void Renderer::InitLocalGeometry()
 	lobbyGeometry.local_right_hand_uid	=avs::GenerateUid();
 	localResourceCreator.CreateNode(0,lobbyGeometry.local_right_hand_uid,avsNode);
 	
+	lobbyGeometry.left_controller_node_uid	=avs::GenerateUid();
+	lobbyGeometry.right_controller_node_uid	=avs::GenerateUid();
 	if(renderState.openXR)
 	{
 		renderState.openXR->SetFallbackBinding(client::LEFT_AIM_POSE		,"left/input/aim/pose");
@@ -417,7 +438,7 @@ void Renderer::InitLocalGeometry()
 	// test gltf loading.
 	avs::uid gltf_uid = avs::GenerateUid();
 	// gltf_uid will refer to a SubScene asset in cache zero.
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/SheenChair.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
+/*	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/SheenChair.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
 	{
 		avs::Node gltfNode;
 		gltfNode.name		="GLTF";
@@ -428,15 +449,7 @@ void Renderer::InitLocalGeometry()
 		gltfNode.localTransform.position=vec3(1.0f,1.0f,1.0f);
 		gltfNode.localTransform.scale=vec3(sc,sc,sc);
 		localResourceCreator.CreateNode(0,avs::GenerateUid(),gltfNode);
-	}
-	if(renderState.openXR->openXRRenderModel)
-	{
-		std::vector<uint8_t> model=renderState.openXR->openXRRenderModel->LoadRenderModel("/user/hand/left");
-		if(model.size())
-		{
-			geometryDecoder.decodeFromBuffer(0,model.data(),model.size(),"user_hand_left.gltf",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
-		}
-	}
+	}*/
 	auto local_session_client=client::SessionClient::GetSessionClient(0);
 	auto setupCommand=local_session_client->GetSetupCommand();
 	setupCommand.clientDynamicLighting.diffuseCubemapTexture=diffuse_cubemap_uid;
@@ -446,19 +459,27 @@ void Renderer::InitLocalGeometry()
 	local_session_client->ApplySetup(setupCommand);
 }
 
-void Renderer::XrSessionChanged()
+void Renderer::XrSessionChanged(bool active)
 {
-	if(renderState.openXR->IsSessionActive())
+	if(active)
 	{
 		auto localInstanceRenderer = GetInstanceRenderer(0);
 		auto &localResourceCreator=localInstanceRenderer->resourceCreator;
+		if(renderState.openXR->openXRRenderModel)
+		{
+			std::vector<uint8_t> model=renderState.openXR->openXRRenderModel->LoadRenderModel("/user/hand/left");
+			if(model.size())
+			{
+				geometryDecoder.decodeFromBuffer(0,model.data(),model.size(),"user_hand_left.gltf",avs::GeometryPayloadType::Mesh,&localResourceCreator,avs::GenerateUid(),platform::crossplatform::AxesStandard::OpenGL);
+			}
+		}
 		{
 			avs::Node avsNode;
 			avsNode.parentID						=lobbyGeometry.self_node_uid;
 			avs::uid left_model_uid					= avs::GenerateUid();
+			//geometryDecoder.decodeFromWeb(0,"https://stackoverflow.com/questions/3876563/curl-request-is-failing-on-the-ssl?rq=4",avs::GeometryPayloadType::Mesh,&localResourceCreator,left_model_uid,platform::crossplatform::AxesStandard::OpenGL);
 			geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/left.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,left_model_uid,platform::crossplatform::AxesStandard::OpenGL);
 			avsNode.name							="Left Controller";
-			lobbyGeometry.left_controller_node_uid	=avs::GenerateUid();
 			avsNode.data_type						=avs::NodeDataType::SubScene;
 			avsNode.data_uid						=left_model_uid;
 			localResourceCreator.CreateNode(0,lobbyGeometry.left_controller_node_uid,avsNode);
@@ -470,7 +491,6 @@ void Renderer::XrSessionChanged()
 			avs::uid right_model_uid				= avs::GenerateUid();
 			geometryDecoder.decodeFromWeb(0,"https://simul.co:443/wp-content/uploads/teleport/content/oculus-touch-v3/right.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,right_model_uid,platform::crossplatform::AxesStandard::OpenGL);
 			avsNode.name							="Right Controller";
-			lobbyGeometry.right_controller_node_uid	=avs::GenerateUid();
 			avsNode.data_type						=avs::NodeDataType::SubScene;
 			avsNode.data_uid						=right_model_uid;
 			localResourceCreator.CreateNode(0,lobbyGeometry.right_controller_node_uid,avsNode);
@@ -855,14 +875,12 @@ void Renderer::Update(double timestamp_ms)
 		renderState.openXR->MakeActions();
 		start_xr_session=false;
 		end_xr_session=false;
-		XrSessionChanged();
 	}
 	else if(end_xr_session)
 	{
 		renderState.openXR->EndSession();
 		start_xr_session=false;
 		end_xr_session=false;
-		XrSessionChanged();
 	}
 }
 
@@ -1054,6 +1072,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 	{
 		switch (wParam)
 		{
+#if TELEPORT_INTERNAL_CHECKS
 		case 'O':
 			show_osd =!show_osd;
 			break;
@@ -1063,15 +1082,19 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case 'N':
 			renderState.show_node_overlays = !renderState.show_node_overlays;
 			break;
+		case 'B':
+			XrSessionChanged(true);
+			break;
+		case 'R':
+			RecompileShaders();
+			break;
+#endif
 		case 'K':
 			{
 				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 				if(sessionClient->IsConnected())
 					sessionClient->Disconnect(0);
 			}
-			break;
-		case 'R':
-			RecompileShaders();
 			break;
 		case 'Y':
 			{
@@ -1124,10 +1147,10 @@ void Renderer::ShowHideGui()
 	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
 	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
 	avs::uid point_anim_uid=localGeometryCache->mAnimationManager.GetUidByName("Point");
-	rightHand->animationComponent.setAnimation(point_anim_uid);
-	leftHand->animationComponent.setAnimation(point_anim_uid);
-	AnimationState *leftAnimState=leftHand->animationComponent.GetAnimationState(point_anim_uid);
-	AnimationState *rightAnimState=rightHand->animationComponent.GetAnimationState(point_anim_uid);
+	rightHand->GetOrCreateComponent<AnimationComponent>()->setAnimation(point_anim_uid);
+	leftHand->GetOrCreateComponent<AnimationComponent>()->setAnimation(point_anim_uid);
+	AnimationState *leftAnimState=leftHand->GetOrCreateComponent<AnimationComponent>()->GetAnimationState(point_anim_uid);
+	AnimationState *rightAnimState=rightHand->GetOrCreateComponent<AnimationComponent>()->GetAnimationState(point_anim_uid);
 	if(gui.IsVisible())
 	{
 		selfRoot->SetVisible(true);
@@ -1151,20 +1174,23 @@ void Renderer::ShowHideGui()
 		// Now adjust the local transform of the hand object based on the root being at the finger.
 		clientrender::Transform finger_to_hand;
 		// "global" transform is in hand's root cooords.
-		auto rSkin=rightHand->GetSkinInstance()->GetSkin();
-		clientrender::Transform hand_to_finger=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
-		clientrender::Transform root_to_hand=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
-		// We want the transform in the finger's coords!
-		finger_to_hand=hand_to_finger.GetInverse();
+		if(rightHand->GetSkeletonInstance())
 		{
-			Transform tr=rightHand->GetLocalTransform();
-			tr.m_Translation=tr.m_Rotation.RotateVector(finger_to_hand.m_Translation);
-			rightHand->SetLocalTransform(tr);
-		}
-		{
-			Transform tr=leftHand->GetLocalTransform();
-			tr.m_Translation=tr.m_Rotation.RotateVector(finger_to_hand.m_Translation);
-			leftHand->SetLocalTransform(tr);
+			auto rSkeleton=rightHand->GetSkeletonInstance()->GetSkeleton();
+			clientrender::Transform hand_to_finger=rSkeleton->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
+			clientrender::Transform root_to_hand=rSkeleton->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
+			// We want the transform in the finger's coords!
+			finger_to_hand=hand_to_finger.GetInverse();
+			{
+				Transform tr=rightHand->GetLocalTransform();
+				tr.m_Translation=tr.m_Rotation.RotateVector(finger_to_hand.m_Translation);
+				rightHand->SetLocalTransform(tr);
+			}
+			{
+				Transform tr=leftHand->GetLocalTransform();
+				tr.m_Translation=tr.m_Rotation.RotateVector(finger_to_hand.m_Translation);
+				leftHand->SetLocalTransform(tr);
+			}
 		}
 	}
 	else
@@ -1184,10 +1210,13 @@ void Renderer::ShowHideGui()
 	
 	{
 		auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
-		auto rSkin=localGeometryCache->mSkinManager.Get(lobbyGeometry.hand_skin_uid);
-		clientrender::Transform hand_to_finger=rSkin->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
-		vec3 v=rightHand->GetLocalTransform().LocalToGlobal(hand_to_finger.m_Translation);
-		lobbyGeometry.index_finger_offset=*((vec3*)&v);
+		auto rSkeleton=localGeometryCache->mSkeletonManager.Get(lobbyGeometry.hand_skeleton_uid);
+		if(rSkeleton&&rSkeleton->GetBoneByName("IndexFinger4_R"))
+		{
+			clientrender::Transform hand_to_finger=rSkeleton->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
+			vec3 v=rightHand->GetLocalTransform().LocalToGlobal(hand_to_finger.m_Translation);
+			lobbyGeometry.index_finger_offset=*((vec3*)&v);
+		}
 	}
 }
 
@@ -1209,9 +1238,9 @@ void Renderer::WriteHierarchies(avs::uid server)
 {
 	std::cout << "Node Tree\n----------------------------------\n";
 	auto ir=GetInstanceRenderer(server);
-	for(std::shared_ptr<clientrender::Node> node :ir->geometryCache->mNodeManager->GetRootNodes())
+	for(std::weak_ptr<clientrender::Node> node :ir->geometryCache->mNodeManager->GetRootNodes())
 	{
-		WriteHierarchy(0, node);
+		WriteHierarchy(0, node.lock());
 	}
 
 	std::cout << std::endl;

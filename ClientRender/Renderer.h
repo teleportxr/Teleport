@@ -114,13 +114,15 @@ namespace clientrender
 			avs::uid self_node_uid=0;
 			avs::uid left_hand_node_uid = 0;
 			avs::uid right_hand_node_uid = 0;
+			avs::uid left_hand_skeleton_node_uid = 0;
+			avs::uid right_hand_skeleton_node_uid = 0;
 			avs::uid left_controller_node_uid = 0;
 			avs::uid right_controller_node_uid = 0;
 			avs::uid local_left_hand_uid = 0;
 			clientrender::Transform palm_to_hand_l;
 			avs::uid local_right_hand_uid = 0;
 			clientrender::Transform palm_to_hand_r;
-			avs::uid hand_skin_uid = 0;
+			avs::uid hand_skeleton_uid = 0;
 			vec3 index_finger_offset;
 		};
 		LobbyGeometry lobbyGeometry;
@@ -169,7 +171,7 @@ namespace clientrender
 		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
 		
-		void XrSessionChanged();
+		void XrSessionChanged(bool active);
 		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		

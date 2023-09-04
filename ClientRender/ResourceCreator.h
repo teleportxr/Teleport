@@ -17,7 +17,7 @@
 #include "MemoryUtil.h"
 #include "NodeManager.h"
 #include "ResourceManager.h"
-#include "Skin.h"
+#include "Skeleton.h"
 #include "GeometryCache.h"
 #include "FontAtlas.h"
 #include "TextCanvas.h"
@@ -58,7 +58,7 @@ namespace clientrender
 		void CreateFontAtlas(avs::uid server_uid,avs::uid id,teleport::core::FontAtlas &fontAtlas);
 		void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
-		void CreateSkin(avs::uid server_uid,avs::uid id, avs::Skin& skin) override;
+		void CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skeleton& skeleton) override;
 		void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) override;
 
 		std::shared_ptr<clientrender::Texture> m_DummyWhite;

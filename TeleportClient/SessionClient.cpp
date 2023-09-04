@@ -838,24 +838,9 @@ void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packe
 		return;
 	}
 	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
-
+	TELEPORT_COUT<<"Animation: node "<<command.animationUpdate.nodeID<<", animation "<<command.animationUpdate.animationID<<", timestamp "<<command.animationUpdate.timestamp<<"\n";
 	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
 }
-/*
-void SessionClient::ReceiveNodeAnimationControlUpdate(const std::vector<uint8_t> &packet)
-{
-	//Extract command from packet.
-	teleport::core::SetAnimationControlCommand command;
-	size_t commandSize = command.getCommandSize();
-	if (packet.size() != commandSize)
-	{
-		TELEPORT_INTERNAL_CERR("Bad packet size");
-		return;
-	}
-	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
-
-	mCommandInterface->UpdateNodeAnimationControl(command.animationControlUpdate);
-}*/
 
 void SessionClient::ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet)
 {

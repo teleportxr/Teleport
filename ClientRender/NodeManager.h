@@ -14,6 +14,16 @@
 
 namespace clientrender
 {
+	template<typename T>
+	struct weak_ptr_compare {
+		bool operator() (const std::weak_ptr<T> &lhs, const std::weak_ptr<T> &rhs) const
+		{
+			auto lptr = lhs.lock(), rptr = rhs.lock();
+			if (!rptr) return false; // nothing after expired pointer 
+			if (!lptr) return true;  // every not expired after expired pointer
+			return lptr < rptr;
+		}
+	};
 	//! Manages nodes for a specific server context.
 	class NodeManager
 	{
@@ -26,7 +36,6 @@ namespace clientrender
 
 		virtual std::shared_ptr<Node> CreateNode(avs::uid id, const avs::Node &avsNode) ;
 
-		void AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData);
 
 		void RemoveNode(std::shared_ptr<Node> node);
 		void RemoveNode(avs::uid nodeID);
@@ -37,9 +46,9 @@ namespace clientrender
 		size_t GetNodeCount() const;
 
 		//Get list of nodes parented to the world root.
-		const nodeList_t& GetRootNodes() const;
-		const std::vector<std::shared_ptr<Node>> & GetSortedRootNodes();
-		const std::vector<std::shared_ptr<Node>>& GetSortedTransparentNodes();
+		const std::vector<std::weak_ptr<Node>>& GetRootNodes() const;
+		const std::vector<std::weak_ptr<Node>> & GetSortedRootNodes();
+		const std::vector<std::weak_ptr<Node>>& GetSortedTransparentNodes();
 
 		//Causes the node to become visible.
 		bool ShowNode(avs::uid nodeID);
@@ -77,18 +86,19 @@ namespace clientrender
 		//! Get the nodes that have been removed since the last update.
 		const std::set<avs::uid> &GetRemovedNodeUids() const;
 	protected:
-		nodeList_t rootNodes; //Nodes that are parented to the world root.
-		std::vector<std::shared_ptr<clientrender::Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
+		std::vector<std::weak_ptr<Node>> rootNodes; //Nodes that are parented to the world root.
+		std::vector<std::weak_ptr<Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
 	
-		nodeList_t transparentNodes; //Nodes that are parented to the world root.
-		std::vector<std::shared_ptr<clientrender::Node>> distanceSortedTransparentNodes; //The rootNodes list above, but sorted from near to far.
+		std::vector<std::weak_ptr<Node>> transparentNodes; //Nodes that are parented to the world root.
+		std::vector<std::weak_ptr<Node>> distanceSortedTransparentNodes; //The rootNodes list above, but sorted from near to far.
 
 		// Nodes that have been added, or modified, to be sorted into transparent or not.
-		std::set<std::shared_ptr<clientrender::Node>> nodesWithModifiedMaterials;
+		std::set<std::weak_ptr<Node>,weak_ptr_compare<Node>> nodesWithModifiedMaterials;
 
         std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
 	private:
+		void AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData);
 		struct EarlyAnimationControl
 		{
 			avs::uid animationID;

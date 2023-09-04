@@ -706,10 +706,23 @@ TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 	GeometryStore::GetInstance().storeNode(id, avsNode);
 }
 
-TELEPORT_EXPORT void StoreSkin(avs::uid id, InteropSkin skin)
+TELEPORT_EXPORT bool GetNode(avs::uid id, InteropNode *node)
 {
-	avs::Skin avsSkin(skin);
-	GeometryStore::GetInstance().storeSkin(id, avsSkin, avs::AxesStandard::UnityStyle);
+	auto *avsNode=GeometryStore::GetInstance().getNode(id);
+	if(avsNode)
+	{
+		node->name=avsNode->name.c_str();
+		node->dataID=avsNode->data_uid;
+		node->dataType=avsNode->data_type;
+		return true;
+	}
+	return false;
+}
+
+TELEPORT_EXPORT void StoreSkeleton(avs::uid id, InteropSkeleton skeleton)
+{
+	avs::Skeleton avsSkeleton(skeleton);
+	GeometryStore::GetInstance().storeSkeleton(id, avsSkeleton, avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
@@ -788,11 +801,11 @@ TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
 	return node != nullptr;
 }
 
-TELEPORT_EXPORT bool IsSkinStored(avs::uid id)
+TELEPORT_EXPORT bool IsSkeletonStored(avs::uid id)
 {
 	//NOTE: Assumes we always are storing animations in the engineering axes standard.
-	const avs::Skin* skin = GeometryStore::GetInstance().getSkin(id, avs::AxesStandard::EngineeringStyle);
-	return skin != nullptr;
+	const avs::Skeleton* skeleton = GeometryStore::GetInstance().getSkeleton(id, avs::AxesStandard::EngineeringStyle);
+	return skeleton != nullptr;
 }
 
 TELEPORT_EXPORT bool IsMeshStored(avs::uid id)

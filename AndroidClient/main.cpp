@@ -2,6 +2,7 @@
 #include <vector>
 #include <filesystem>
 #include <sys/prctl.h> // for prctl( PR_SET_NAME )
+#include <libavstream/httputil.hpp>
 
 enum class Platform { NONE, WIN64, ANDROID };
 
@@ -155,6 +156,15 @@ void android_main(struct android_app* app)
 	platform::core::FileLoader::SetFileLoader(&androidFileLoader);
 	auto &config=client::Config::GetInstance();
 	config.SetStorageFolder(app->activity->internalDataPath);
+	{
+		void *pem_ptr=nullptr;
+		unsigned int pem_bytes=0;
+		androidFileLoader.AcquireFileContents(pem_ptr,pem_bytes,"assets/cert/cacert.pem",false);
+		std::string cert_path=config.GetStorageFolder()+"/cacert.pem";
+		androidFileLoader.Save(pem_ptr,pem_bytes,cert_path.c_str(),false);
+
+		avs::HTTPUtil::SetCertificatePath(cert_path.c_str());
+	}
 	clientApp.Initialize();
 	gui.SetPlatformWindow(app->window);
 	

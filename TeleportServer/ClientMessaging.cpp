@@ -73,9 +73,11 @@ void ClientMessaging::stopSession()
 {
 	receivedHandshake = false;
 	geometryStreamingService.reset();
+	clientNetworkContext.NetworkPipeline.release();
 
 	stopped = true;
 }
+
 bool ClientMessaging::isStopped() const
 {
 	return stopped;
@@ -293,7 +295,6 @@ void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnima
 	teleport::core::SetAnimationControlCommand command(update);
 	sendCommand(command);
 }*/
-
 
 void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update)
 {

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <fmt/core.h>
 
 #if defined ( _WIN32 )
 #include <sys/stat.h>
@@ -153,8 +154,8 @@ GeometryStore::GeometryStore()
 	meshes[avs::AxesStandard::GlStyle];
 	animations[avs::AxesStandard::EngineeringStyle];
 	animations[avs::AxesStandard::GlStyle];
-	skins[avs::AxesStandard::EngineeringStyle];
-	skins[avs::AxesStandard::GlStyle];
+	skeletons[avs::AxesStandard::EngineeringStyle];
+	skeletons[avs::AxesStandard::GlStyle];
 	
 	uid_to_path[0]=".";
 	path_to_uid["."]=0;
@@ -290,8 +291,8 @@ void GeometryStore::clear(bool freeMeshBuffers)
 
 	//Clear lookup tables; we want to clear the resources inside them, not their structure.
 	nodes.clear();
-	skins[avs::AxesStandard::EngineeringStyle].clear();
-	skins[avs::AxesStandard::GlStyle].clear();
+	skeletons[avs::AxesStandard::EngineeringStyle].clear();
+	skeletons[avs::AxesStandard::GlStyle].clear();
 	animations[avs::AxesStandard::EngineeringStyle].clear();
 	animations[avs::AxesStandard::GlStyle].clear();
 	meshes[avs::AxesStandard::EngineeringStyle].clear();
@@ -340,14 +341,14 @@ const std::map<avs::uid, avs::Node>& GeometryStore::getNodes() const
 	return nodes;
 }
 
-avs::Skin* GeometryStore::getSkin(avs::uid skinID, avs::AxesStandard standard)
+avs::Skeleton* GeometryStore::getSkeleton(avs::uid skeletonID, avs::AxesStandard standard)
 {
-	return getResource(skins.at(standard), skinID);
+	return getResource(skeletons.at(standard), skeletonID);
 }
 
-const avs::Skin* GeometryStore::getSkin(avs::uid skinID, avs::AxesStandard standard) const
+const avs::Skeleton* GeometryStore::getSkeleton(avs::uid skeletonID, avs::AxesStandard standard) const
 {
-	return getResource(skins.at(standard), skinID);
+	return getResource(skeletons.at(standard), skeletonID);
 }
 
 teleport::core::Animation* GeometryStore::getAnimation(avs::uid id, avs::AxesStandard standard)
@@ -494,20 +495,7 @@ void GeometryStore::setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose rel
 		return;
 	nodes[id].localTransform.position = relPose.position;
 	nodes[id].localTransform.rotation = relPose.orientation;
-	//nodes[id].localTransform.scale = relPose.scale;
-	avs::Node* old_parent = getNode(nodes[id].parentID);
-	if (old_parent)
-	{
-		auto it = std::find(old_parent->childrenIDs.begin(), old_parent->childrenIDs.end(), id);
-		if (it != old_parent->childrenIDs.end())
-			old_parent->childrenIDs.erase(it);
-	}
 	nodes[id].parentID = parent_id;
-	avs::Node* new_parent = getNode(parent_id);
-	if (new_parent)
-	{
-		new_parent->childrenIDs.push_back(id);
-	}
 }
 void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 {
@@ -515,23 +503,6 @@ void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 	if (newNode.parentID != 0)
 	{
 		avs::Node* parent = getNode(newNode.parentID);
-		if (parent)
-		{
-			if (std::find(parent->childrenIDs.begin(), parent->childrenIDs.end(),id) == parent->childrenIDs.end())
-				parent->childrenIDs.push_back(id);
-		}
-	}
-	for(auto c:newNode.childrenIDs)
-	{
-		avs::Node* child = getNode(c);
-		if (child)
-		{
-			if (child->parentID != 0 && child->parentID != id)
-			{
-				TELEPORT_CERR << "Changing parent of " << child->name.c_str() << " to " << newNode.name.c_str() << "\n";
-			}
-			child->parentID = id;
-		}
 	}
 	if(newNode.data_type == avs::NodeDataType::Light)
 	{
@@ -539,10 +510,10 @@ void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 	}
 }
 
-void GeometryStore::storeSkin(avs::uid id, avs::Skin& newSkin, avs::AxesStandard sourceStandard)
+void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard)
 {
-	skins[avs::AxesStandard::EngineeringStyle][id] = avs::Skin::convertToStandard(newSkin, sourceStandard, avs::AxesStandard::EngineeringStyle);
-	skins[avs::AxesStandard::GlStyle][id] = avs::Skin::convertToStandard(newSkin, sourceStandard, avs::AxesStandard::GlStyle);
+	skeletons[avs::AxesStandard::EngineeringStyle][id] = avs::Skeleton::convertToStandard(newSkeleton, sourceStandard, avs::AxesStandard::EngineeringStyle);
+	skeletons[avs::AxesStandard::GlStyle][id] = avs::Skeleton::convertToStandard(newSkeleton, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
 void GeometryStore::storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
@@ -732,6 +703,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		}
 		//dracoMesh.DeduplicateAttributeValues();
 		//dracoMesh.DeduplicatePointIds();
+		
 		draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
 		if(!status.ok())
 		{
@@ -748,7 +720,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		}
 	}
 	TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
-	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO;
+	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO_VERSIONED;
 /*
 	draco::Decoder dracoDecoder;
 	draco::DecoderBuffer dracoDecoderBuffer;
@@ -798,6 +770,24 @@ static bool VecCompare(vec4 a, vec4 b)
 	float m = std::max(B, 1.0f);
 	vec4 diff = a - b;
 	float dif_rel = abs(diff.x + diff.y + diff.z + diff.w) / m;
+	if (dif_rel > 0.1f)
+		return false;
+	return true;
+}
+
+static bool MatCompare(mat4 a, mat4 b)
+{
+	float A = sqrt(a.a * a.a + a.f * a.f + a.k * a.k + a.p * a.p);
+	float B = sqrt(b.a * b.a + b.f * b.f + b.k * b.k + b.p * b.p);
+	float m = std::max(B, 1.0f);
+	m = std::max(m, A);
+	mat4 diff = a - b;
+	float total=0;
+	for(int i=0;i<16;i++)
+	{
+		total+=diff.m[i];
+	}
+	float dif_rel = abs(total) / m;
 	if (dif_rel > 0.1f)
 		return false;
 	return true;
@@ -948,6 +938,17 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 							auto c = attr->GetValue<float, 4>(draco::AttributeValueIndex(i));
 							vec4 compare = *((const vec4*)&c);
 							if (!VecCompare(compare, *((const vec4*)src_data)))
+							{
+								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
+								break;
+							}
+						}
+						break;
+						case avs::Accessor::DataType::MAT4:
+						{
+							auto c = attr->GetValue<float, 16>(draco::AttributeValueIndex(i));
+							mat4 compare = *((const mat4*)&c);
+							if (!MatCompare(compare, *((const mat4*)src_data)))
 							{
 								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
 								break;
@@ -1134,7 +1135,7 @@ void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path
 	path_to_uid[p]=id;
  	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
 }
-#include <fmt/core.h>
+
 void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string cacheFilePath, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
@@ -1533,13 +1534,13 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
 			teleport::DebugBreak();
+			resource_ofstream saveFile(file_name.c_str(), UidToPath);
+			saveFile << resource;
 			resource_ifstream verifyFile(file_name.c_str(), PathToUid);
 			ExtractedResource  verifyResource2;
 			verifyFile>>verifyResource2;
 			verifyFile.close();
-			
-			resource_ofstream saveFile(file_name.c_str(), UidToPath);
-			saveFile << resource;
+			resource.Verify(verifyResource2);
 			return false;
 		}
 	}

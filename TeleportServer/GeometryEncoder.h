@@ -60,7 +60,7 @@ namespace teleport
 			avs::Result encodeMeshes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
 			avs::Result encodeNodes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
 			avs::Result encodeShadowMaps(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-			avs::Result encodeSkin(avs::GeometryRequesterBackendInterface* req, avs::uid skinID);
+			avs::Result encodeSkeleton(avs::GeometryRequesterBackendInterface* req, avs::uid skeletonID);
 			avs::Result encodeTextures(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
 
 			//The actual implementation of encode textures that can be used by encodeMaterials to package textures with it.

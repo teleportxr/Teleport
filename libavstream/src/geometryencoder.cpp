@@ -400,7 +400,11 @@ Result GeometryEncoder::Private::writeOutput(IOInterface* outputNode)
 		return result;
 	size_t numBytesWrittenToOutput;
 	result = outputNode->write(q_ptr(), mappedBuffer, mappedBufferSize, numBytesWrittenToOutput);
-
+	size_t dataSize=0;
+	avs::GeometryPayloadType type;
+	memcpy(&dataSize,mappedBuffer,sizeof(size_t));
+	memcpy(&type,((uint8_t*)mappedBuffer)+sizeof(size_t),sizeof(type));
+	std::cout<<"geometry encoder wrote "<<numBytesWrittenToOutput<<" bytes starting with "<<dataSize<<" "<<stringOf(type)<<"\n";
 	m_backend->unmapOutputBuffer();
 
 	if (!result)

@@ -66,10 +66,18 @@ namespace avs
 		Result initialize(const HTTPUtilConfig& config);
 		Result process();
 		Result shutdown();
-
+		static void SetCertificatePath(const char *p)
+		{
+			cert_path=p;
+		}
+		static const char*GetCertificatePath()
+		{
+		return cert_path.c_str();
+		}
 		std::queue<HTTPPayloadRequest>& GetRequestQueue() { return mRequestQueue; } 
 
 	private:
+		static std::string cert_path;
 		bool AddRequest(const HTTPPayloadRequest& request);
 		static size_t writeCallback(char* ptr, size_t size, size_t nmemb, void* userData);
 

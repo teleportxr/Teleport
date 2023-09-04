@@ -308,10 +308,14 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 				result = nodeIO->read(this, stream.buffer.data(), bufferSize, numBytesRead);
 			}
 			numBytesRead = std::min(bufferSize, numBytesRead);
+			if(numBytesRead>0&&streamIndex==3)
+			{
+				avs::GeometryPayloadType type;
+				memcpy(&type,stream.buffer.data()+sizeof(size_t), sizeof(type));
+				std::cout << "stream.buffer type "<<stringOf(type)<<" numBytesRead "<<numBytesRead<<"\n";
+			}
 			if (result == Result::OK)
 			{
-				//std::cout << ".";
-				//memcpy(stream.buffer.data(), &streamPayloadInfo, infoSize);
 			}
 			if (numBytesRead >stream.buffer.size())
 			{
@@ -717,7 +721,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 			auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
 			if (!stream.framed)
 			{
-				size_t numBytesWrittenToOutput;
+				size_t numBytesWrittenToOutput=0;
 				auto outputNode = dynamic_cast<IOInterface*>(q_ptr()->getOutput(outputIndex));
 				if (!outputNode)
 				{

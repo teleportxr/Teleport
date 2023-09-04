@@ -85,7 +85,8 @@ using namespace teleport::audio;
 	void NetworkPipeline::release()
 	{
 		pipeline.reset();
-		if (networkSink) networkSink->deconfigure();
+		if (networkSink)
+			networkSink->deconfigure();
 		networkSink.reset();
 		audioPipes.clear();
 	}

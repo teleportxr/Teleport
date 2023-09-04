@@ -8,7 +8,7 @@ using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason
 using namespace clientrender;
 
 Node::Node(avs::uid id, const std::string& name)
-	:IncompleteNode(id,avs::GeometryPayloadType::Node), name(name), isStatic(false)
+	:IncompleteNode(id), name(name), isStatic(false)
 {}
 
 void Node::SetStatic(bool s)
@@ -136,10 +136,11 @@ void Node::Update(float deltaTime_ms)
 {
 	visibility.update(deltaTime_ms);
 
-	//Attempt to animate, if we have a skin.
-	if(skinInstance&&skinInstance->GetSkin())
+	//Attempt to animate, if we have a skeleton.
+	if(skeletonInstance&&skeletonInstance->GetSkeleton())
 	{
-		animationComponent.update(skinInstance->GetJoints(), deltaTime_ms);
+		auto animC=GetOrCreateComponent<AnimationComponent>();
+		animC->update(skeletonInstance->GetBones(), deltaTime_ms);
 	}
 
 	for(std::weak_ptr<Node> child : children)

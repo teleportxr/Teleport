@@ -1615,6 +1615,8 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 				{
 					TELEPORT_COUT<<"Beginning OpenXR Session."<<std::endl;
 					xr_session_running = true;
+					if(sessionChangedCallback)
+						sessionChangedCallback(true);
 				}
 			}
 		break;
@@ -1636,6 +1638,8 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 		case XR_SESSION_STATE_STOPPING:
 			{
 				xr_session_running = false;
+				if(sessionChangedCallback)
+					sessionChangedCallback(false);
 				EndSession();
 			}
 			break;
@@ -2057,9 +2061,9 @@ bool OpenXR::CanStartSession()
 		// If the device is not on, not connected, or its app is not running, this may fail here:
 		XrSystemGetInfo systemInfo = { XR_TYPE_SYSTEM_GET_INFO };
 		systemInfo.formFactor = app_config_form;
-		if (!CheckXrResult(xr_instance,xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
+		if (xrGetSystem(xr_instance, &systemInfo, &xr_system_id)!=XrResult::XR_SUCCESS)
 		{
-			TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
+			//TELEPORT_CERR << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
 			return false;
 		}
 		xrGetSystemProperties(xr_instance,xr_system_id,&xr_system_properties);

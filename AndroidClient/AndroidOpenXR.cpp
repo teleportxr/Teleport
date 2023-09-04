@@ -297,6 +297,8 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 			std::cerr<<"Begin OpenXR Session failed."<<std::endl;
 		}
 		xr_session_running=(result==XR_SUCCESS);
+		if(sessionChangedCallback)
+			sessionChangedCallback(xr_session_running);
 
         // Set session state once we have entered VR mode and have a valid session object.
         if (result == XR_SUCCESS)
@@ -368,6 +370,8 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 	else if (state == XR_SESSION_STATE_STOPPING)
 	{
         XR_CHECK(xrEndSession(xr_session));
+		if(sessionChangedCallback)
+			sessionChangedCallback(false);
 		xr_session_running = false;
     }
 	xr_session_state=state;

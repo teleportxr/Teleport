@@ -63,7 +63,7 @@ namespace clientrender
 		static auto tBegin = avs::Platform::getTimestamp();
 		auto ts = avs::Platform::getTimestamp();
 		double ms=avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts);
-		setAnimation(animationID,(uint64_t)ms);
+ 		setAnimation(animationID,(uint64_t)ms);
 	}
 	
 		
@@ -102,7 +102,7 @@ namespace clientrender
 		animation->seekTime(boneList, currentAnimationState->second.currentAnimationTimeS);
 
 #if CYCLE_ANIMATIONS
-		if(currentAnimationTime >= animation->getAnimationLength())
+		if(currentAnimationState->second.currentAnimationTimeS >= animation->getAnimationLengthSeconds())
 		{
 			//Increment animations, and loop back to the start of the list if we reach the end.
 			++currentAnimationState;
@@ -111,8 +111,8 @@ namespace clientrender
 				currentAnimationState = animationStates.begin();
 			}
 
-			currentAnimationTime = 0.0f;
-			animation->seekTime(boneList, currentAnimationTime);
+			currentAnimationState->second.currentAnimationTimeS = 0.0f;
+			animation->seekTime(boneList, currentAnimationState->second.currentAnimationTimeS);
 		}
 #endif
 	}
@@ -124,7 +124,7 @@ namespace clientrender
 	
 	AnimationState* AnimationComponent:: GetAnimationState(avs::uid u) 
 	{
-		auto i=animationStates.find(u);
+ 		auto i=animationStates.find(u);
 		if(i==animationStates.end())
 			return nullptr;
 		return &i->second;
@@ -144,9 +144,9 @@ namespace clientrender
 
 	void AnimationComponent::startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestampUtcMs)
 	{
-		if(currentAnimationState != animationIterator)
+ 		if(currentAnimationState != animationIterator)
 		{
-			currentAnimationState = animationIterator;
+ 			currentAnimationState = animationIterator;
 			currentAnimationState->second.currentAnimationTimeS = 0.f;//float(0.001 * (teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - startTimestampUtcMs));
 		}
 	}

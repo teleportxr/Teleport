@@ -19,15 +19,35 @@
 
 #define TELEPORT_GEOMETRY_DECODER_ASYNC 1
 
-#define Next8B get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
-#define Next4B get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
-#define Next2B get<uint16_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
-#define NextB get<uint8_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextUint64 get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextUint32 get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextInt32 get<int32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextUint16 get<uint16_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextInt16 get<int16_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define NextByte get<uint8_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextFloat get<float>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextVec4 get<vec4>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextVec3 get<vec3>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextChunk(T) get<T>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
+#define CopyChunk(target,size) copy_chunk(target,geometryDecodeData.data.data(), &geometryDecodeData.offset,size)
 
+template<typename T,typename U> bool getList(std::vector<U> &list,std::vector<uint8_t> &data,size_t &offset)
+{
+	if(offset>=data.size())
+		return false;
+	T size=get<T>(data.data(), &offset);
+	if(size==0)
+		return true;
+	size_t byteSize=size*sizeof(U);
+	if(offset+byteSize>data.size())
+		return false;
+	if(offset+byteSize<offset)
+		return false;
+	list.resize(size);
+	copy<U>(list.data(), data.data(), offset, size);
+	return true;
+}
+#define NextList(T,U,list) {if(!getList<T,U>(list,geometryDecodeData.data, geometryDecodeData.offset)) {return avs::Result::Failed;}}
 using std::string;
 using namespace std::string_literals;
 
@@ -37,6 +57,15 @@ template<typename T> T get(const uint8_t* data, size_t* offset)
 	*offset += sizeof(T);
 	return *t;
 }
+
+static void copy_chunk(uint8_t* target,const uint8_t* data, size_t* offset,size_t num_bytes)
+{
+	const void *src=((const void*)(data+(*offset)));
+	void *dst=(void*)target;
+	memcpy(dst,src,num_bytes);
+	(*offset)+=num_bytes;
+}
+
 template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffset, size_t count)
 {
 	memcpy(target, data + dataOffset, count * sizeof(T));
@@ -71,6 +100,23 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,const void* buffer, size
 {
 	GeometryFileFormat geometryFileFormat=GeometryFileFormat::TELEPORT_NATIVE;
 	decodeData.emplace(server_uid,"",buffer, bufferSizeInBytes, type,geometryFileFormat, (clientrender::ResourceCreator*)target, true, resource_uid,platform::crossplatform::AxesStandard::Engineering);
+	
+	switch(type)
+	{
+	case avs::GeometryPayloadType::Mesh:
+	case avs::GeometryPayloadType::Material:
+	case avs::GeometryPayloadType::MaterialInstance:
+	case avs::GeometryPayloadType::Texture:
+	case avs::GeometryPayloadType::Animation:
+	case avs::GeometryPayloadType::Node:
+	case avs::GeometryPayloadType::Skeleton:
+	case avs::GeometryPayloadType::FontAtlas:
+	case avs::GeometryPayloadType::TextCanvas:
+	break;
+	default:
+		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
+	};
+
 #if !TELEPORT_GEOMETRY_DECODER_ASYNC
 	decodeInternal(decodeData.front());
 	decodeData.pop();
@@ -165,8 +211,8 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData& geometryDecodeDa
 		return decodeAnimation(geometryDecodeData);
 	case avs::GeometryPayloadType::Node:
 		return decodeNode(geometryDecodeData);
-	case avs::GeometryPayloadType::Skin:
-		return decodeSkin(geometryDecodeData);
+	case avs::GeometryPayloadType::Skeleton:
+		return decodeSkeleton(geometryDecodeData);
 	case avs::GeometryPayloadType::FontAtlas:
 		return decodeFontAtlas(geometryDecodeData);
 	case avs::GeometryPayloadType::TextCanvas:
@@ -503,7 +549,6 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		auto &img=dracoTexture->source_image();
 		std::string mime=img.mime_type();
 		std::vector<uint8_t> data;
-				// avs::Texture.		
 		// start with a uint16 N with the number of images
 		// then a list of N uint32 offsets. Each is a subresource image. Then image 0 starts.
 		data.resize(img.encoded_data().size()+2+4);
@@ -720,7 +765,7 @@ avs::Result GeometryDecoder::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUi
 	avs::uid indices_buffer_uid = dg.next_id++;
 	buffers.push_back(indices_buffer_uid);
 	auto& indicesBuffer = dg.buffers[indices_buffer_uid];
-	size_t subMeshFaces= dracoMesh.num_faces(); //subMesh.num_indices / 3;
+	size_t subMeshFaces= dracoMesh.num_faces();
 	if(sizeof(draco::PointIndex)==sizeof(uint32_t))
 	{
 		indicesBuffer.byteLength=3*sizeof(uint32_t)* subMeshFaces;
@@ -754,7 +799,7 @@ avs::Result GeometryDecoder::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUi
 	indices_accessor.type=avs::Accessor::DataType::SCALAR;
 	buffer_views.push_back(indices_accessor.bufferView);
 	auto& indicesBufferView = dg.bufferViews[indices_accessor.bufferView];
-	indicesBufferView.byteOffset= 0;// indexStride *subMesh.first_index;
+	indicesBufferView.byteOffset= 0;
 	indicesBufferView.byteLength= indexStride *subMesh.num_indices;
 	indicesBufferView.byteStride= indexStride;
 	indicesBufferView.buffer	= indices_buffer_uid ;
@@ -949,7 +994,7 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 		}
 		meshCreate.name = name;
 		meshCreate.clockwiseFaces=dg.clockwiseFaces;
-
+		meshCreate.inverseBindMatrices=dg.inverseBindMatrices;
 		avs::Result result = target->CreateMesh(meshCreate);
 		if (result != avs::Result::OK)
 		{
@@ -982,40 +1027,65 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 		m_DecompressedBuffers.resize(MAX_ATTR_COUNT);
 	m_DecompressedBufferIndex=0;
 	avs::CompressedMesh compressedMesh;
+	uint16_t version=0;
 	if(geometryDecodeData.geometryFileFormat==GeometryFileFormat::GLTF_TEXT||geometryDecodeData.geometryFileFormat==GeometryFileFormat::GLTF_BINARY)
 	{
 		return DecodeGltf(geometryDecodeData);
 	}
 	else
 	{
-		compressedMesh.meshCompressionType =(avs::MeshCompressionType)NextB;
+		compressedMesh.meshCompressionType =(avs::MeshCompressionType)NextByte;
+		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO_VERSIONED)
+		{
+			version=NextUint16;
+			compressedMesh.meshCompressionType =avs::MeshCompressionType::DRACO;
+		}
 		if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::DRACO)
 		{
-			int32_t version_number= Next4B;
-			size_t nameLength = Next8B;
+			int32_t version_number= NextUint32;
+			size_t nameLength = NextUint64;
 			if (nameLength > geometryDecodeData.data.size() - geometryDecodeData.offset)
 				return avs::Result::Failed;
 			name.resize(nameLength);
 			copy<char>(name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 			compressedMesh.name= name;
+
+			//inverse bind matrices, if required:
+			if(version>=1)
+			{
+				size_t inv_bind_datasize=NextUint64;
+				if(inv_bind_datasize>0)
+				{
+					std::vector<uint8_t> inv_bind_data(inv_bind_datasize);
+					dg.inverseBindMatrices.resize(inv_bind_datasize/sizeof(mat4));
+					CopyChunk((uint8_t*)inv_bind_data.data(),inv_bind_datasize);
+					for(int i=0;i<dg.inverseBindMatrices.size();i++)
+					{
+						dg.inverseBindMatrices[i]=mat4::identity();
+					}
+					memcpy(dg.inverseBindMatrices.data(),inv_bind_data.data(),sizeof(mat4)*dg.inverseBindMatrices.size());
+				}
+			}
 			if(geometryDecodeData.saveToDisk)
 				saveBuffer(geometryDecodeData, std::string("meshes/"+name+".mesh_compressed"));
-			size_t num_elements=(size_t)Next4B;
+			size_t num_elements=(size_t)NextUint32;
+			if(num_elements>1000)
+				return avs::Result::Failed;
 			compressedMesh.subMeshes.resize(num_elements);
 			for(size_t i=0;i< num_elements;i++)
 			{
 				auto &subMesh= compressedMesh.subMeshes[i];
-				subMesh.indices_accessor= Next8B;
-				subMesh.material		= Next8B;
-				subMesh.first_index		= Next4B;
-				subMesh.num_indices		= Next4B;
-				size_t numAttributeSemantics = Next8B;
+				subMesh.indices_accessor		= NextUint64;
+				subMesh.material				= NextUint64;
+				subMesh.first_index				= NextUint32;
+				subMesh.num_indices				= NextUint32;
+				size_t numAttributeSemantics	= NextUint64;
 				for (size_t i = 0; i < numAttributeSemantics; i++)
 				{
-					int32_t attr= Next4B;
-					subMesh.attributeSemantics[attr] = (avs::AttributeSemantic)NextB;
+					int32_t attr				= NextUint32;
+					subMesh.attributeSemantics[attr] = (avs::AttributeSemantic)NextByte;
 				}
-				size_t bufferSize = Next8B;
+				size_t bufferSize				= NextUint64;
 				subMesh.buffer.resize(bufferSize);
 				copy<uint8_t>(subMesh.buffer.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, bufferSize);
 			}
@@ -1026,62 +1096,62 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 		}
 		else if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::NONE)
 		{
-			int32_t version_number= Next4B;
-			size_t nameLength = Next8B;
+			int32_t version_number= NextUint32;
+			size_t nameLength = NextUint64;
 			name.resize(nameLength);
 			copy<char>(name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 			compressedMesh.name= name;
-			size_t primitiveArraysSize = Next8B;
+			size_t primitiveArraysSize = NextUint64;
 			dg.primitiveArrays[uid].reserve(primitiveArraysSize);
 
 			for (size_t j = 0; j < primitiveArraysSize; j++)
 			{
-				size_t attributeCount = Next8B;
-				avs::uid indices_accessor = Next8B;
-				avs::uid material = Next8B;
-				avs::PrimitiveMode primitiveMode = (avs::PrimitiveMode)Next4B;
+				size_t attributeCount = NextUint64;
+				avs::uid indices_accessor = NextUint64;
+				avs::uid material = NextUint64;
+				avs::PrimitiveMode primitiveMode = (avs::PrimitiveMode)NextUint32;
 
 				std::vector<avs::Attribute> attributes;
 				attributes.reserve(attributeCount);
 				for (size_t k = 0; k < attributeCount; k++)
 				{
-					avs::AttributeSemantic semantic = (avs::AttributeSemantic)Next8B;
-					avs::uid accessor = Next8B;
+					avs::AttributeSemantic semantic = (avs::AttributeSemantic)NextUint64;
+					avs::uid accessor = NextUint64;
 					attributes.push_back({ semantic, accessor });
 				}
 
 				dg.primitiveArrays[uid].push_back({ attributeCount, attributes, indices_accessor, material, primitiveMode });
 			}
-			size_t accessorsSize = Next8B;
+			size_t accessorsSize = NextUint64;
 			for (size_t j = 0; j < accessorsSize; j++)
 			{
-				avs::uid acc_uid= Next8B;
-				avs::Accessor::DataType type = (avs::Accessor::DataType)Next4B;
-				avs::Accessor::ComponentType componentType = (avs::Accessor::ComponentType)Next4B;
-				size_t count = Next8B;
-				avs::uid bufferView = Next8B;
-				size_t byteOffset = Next8B;
+				avs::uid acc_uid= NextUint64;
+				avs::Accessor::DataType type = (avs::Accessor::DataType)NextUint32;
+				avs::Accessor::ComponentType componentType = (avs::Accessor::ComponentType)NextUint32;
+				size_t count = NextUint64;
+				avs::uid bufferView = NextUint64;
+				size_t byteOffset = NextUint64;
 
 				dg.accessors[acc_uid] = { type, componentType, count, bufferView, byteOffset };
 			}
-			size_t bufferViewsSize = Next8B;
+			size_t bufferViewsSize = NextUint64;
 			for (size_t j = 0; j < bufferViewsSize; j++)
 			{
-				avs::uid bv_uid = Next8B;
-				avs::uid buffer = Next8B;
-				size_t byteOffset = Next8B;
-				size_t byteLength = Next8B;
-				size_t byteStride = Next8B;
+				avs::uid bv_uid = NextUint64;
+				avs::uid buffer = NextUint64;
+				size_t byteOffset = NextUint64;
+				size_t byteLength = NextUint64;
+				size_t byteStride = NextUint64;
 	
 				dg.bufferViews[bv_uid] = { buffer, byteOffset, byteLength, byteStride };
 			}
 
-			size_t buffersSize = Next8B;
+			size_t buffersSize = NextUint64;
 			for (size_t j = 0; j < buffersSize; j++)
 			{
-				avs::uid key = Next8B;
+				avs::uid key = NextUint64;
 				dg.buffers[key]= { 0, nullptr };
-				dg.buffers[key].byteLength = Next8B;
+				dg.buffers[key].byteLength = NextUint64;
 				if(geometryDecodeData.data.size() < geometryDecodeData.offset + dg.buffers[key].byteLength)
 				{
 					return avs::Result::GeometryDecoder_InvalidBufferSize;
@@ -1104,14 +1174,14 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 {
 	avs::Material material;
 	avs::uid mat_uid = geometryDecodeData.uid;
-	size_t nameLength = Next8B;
+	size_t nameLength = NextUint64;
 	
 	material.name.resize(nameLength);
 	copy<char>(material.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
-	material.materialMode = (avs::MaterialMode)NextB;
-	material.pbrMetallicRoughness.baseColorTexture.index = Next8B;
+	material.materialMode = (avs::MaterialMode)NextByte;
+	material.pbrMetallicRoughness.baseColorTexture.index = NextUint64;
 //	TELEPORT_INTERNAL_COUT("GeometryDecoder::decodeMaterial - {0}({1}) diffuse {2}",mat_uid,material.name.c_str(),material.pbrMetallicRoughness.baseColorTexture.index);
-	material.pbrMetallicRoughness.baseColorTexture.texCoord = NextB;
+	material.pbrMetallicRoughness.baseColorTexture.texCoord = NextByte;
 	material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 	material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;
 	material.pbrMetallicRoughness.baseColorFactor.x = NextFloat;
@@ -1119,42 +1189,42 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 	material.pbrMetallicRoughness.baseColorFactor.z = NextFloat;
 	material.pbrMetallicRoughness.baseColorFactor.w = NextFloat;
 
-	material.pbrMetallicRoughness.metallicRoughnessTexture.index = Next8B;
-	material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = NextB;
+	material.pbrMetallicRoughness.metallicRoughnessTexture.index = NextUint64;
+	material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = NextByte;
 	material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.x = NextFloat;
 	material.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y = NextFloat;
 	material.pbrMetallicRoughness.metallicFactor = NextFloat;
 	material.pbrMetallicRoughness.roughnessMultiplier = NextFloat;
 	material.pbrMetallicRoughness.roughnessOffset = NextFloat;
 
-	material.normalTexture.index = Next8B;
-	material.normalTexture.texCoord = NextB;
+	material.normalTexture.index = NextUint64;
+	material.normalTexture.texCoord = NextByte;
 	material.normalTexture.tiling.x = NextFloat;
 	material.normalTexture.tiling.y = NextFloat;
 	material.normalTexture.scale = NextFloat;
 
-	material.occlusionTexture.index = Next8B;
-	material.occlusionTexture.texCoord = NextB;
+	material.occlusionTexture.index = NextUint64;
+	material.occlusionTexture.texCoord = NextByte;
 	material.occlusionTexture.tiling.x = NextFloat;
 	material.occlusionTexture.tiling.y = NextFloat;
 	material.occlusionTexture.strength = NextFloat;
 
-	material.emissiveTexture.index = Next8B;
-	material.emissiveTexture.texCoord = NextB;
+	material.emissiveTexture.index = NextUint64;
+	material.emissiveTexture.texCoord = NextByte;
 	material.emissiveTexture.tiling.x = NextFloat;
 	material.emissiveTexture.tiling.y = NextFloat;
 	material.emissiveFactor.x = NextFloat;
 	material.emissiveFactor.y = NextFloat;
 	material.emissiveFactor.z = NextFloat;
 	
-	material.doubleSided = NextB;
-	material.lightmapTexCoordIndex = NextB;
+	material.doubleSided = NextByte;
+	material.lightmapTexCoordIndex = NextByte;
 	
-	size_t extensionCount = Next8B;
+	size_t extensionCount = NextUint64;
 	for(size_t i = 0; i < extensionCount; i++)
 	{
 		std::unique_ptr<avs::MaterialExtension> newExtension;
-		avs::MaterialExtensionIdentifier id = static_cast<avs::MaterialExtensionIdentifier>(Next4B);
+		avs::MaterialExtensionIdentifier id = static_cast<avs::MaterialExtensionIdentifier>(NextUint32);
 
 		switch(id)
 		{
@@ -1183,31 +1253,31 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	avs::Texture texture;
 	avs::uid texture_uid = geometryDecodeData.uid;
 
-	size_t nameLength = Next8B;
+	size_t nameLength = NextUint64;
 	texture.name.resize(nameLength);
 	copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("textures/"+texture.name+".texture"));
 
-	texture.cubemap= NextB!=0;
+	texture.cubemap= NextByte!=0;
 	
-	texture.width = Next4B;
-	texture.height = Next4B;
-	texture.depth = Next4B;
-	texture.bytesPerPixel = Next4B;
-	texture.arrayCount = Next4B;
-	texture.mipCount = Next4B;
-	texture.format = static_cast<avs::TextureFormat>(Next4B);
+	texture.width = NextUint32;
+	texture.height = NextUint32;
+	texture.depth = NextUint32;
+	texture.bytesPerPixel = NextUint32;
+	texture.arrayCount = NextUint32;
+	texture.mipCount = NextUint32;
+	texture.format = static_cast<avs::TextureFormat>(NextUint32);
 	if(texture.format == avs::TextureFormat::INVALID)
 		texture.format = avs::TextureFormat::G8;
-	texture.compression = static_cast<avs::TextureCompression>(Next4B);
+	texture.compression = static_cast<avs::TextureCompression>(NextUint32);
 	texture.valueScale = NextFloat;
 
-	texture.dataSize = Next4B;
+	texture.dataSize = NextUint32;
 	texture.data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
 
-	texture.sampler_uid = Next8B;
+	texture.sampler_uid = NextUint64;
 
 	geometryDecodeData.target->CreateTexture(geometryDecodeData.server_or_cache_uid,texture_uid, texture);
 	
@@ -1223,17 +1293,17 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 	}
 	teleport::core::Animation animation;
 	avs::uid animationID = geometryDecodeData.uid;
-	size_t nameLength = Next8B;
+	size_t nameLength = NextUint64;
 	animation.name.resize(nameLength);
 	copy<char>(animation.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("animations/"+animation.name+".anim"));
 
-	animation.boneKeyframes.resize(Next8B);
+	animation.boneKeyframes.resize(NextUint64);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		teleport::core::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
-		transformKeyframe.boneIndex = Next8B;
+		transformKeyframe.boneIndex = NextUint64;
 
 		decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes);
 		decodeVector4Keyframes(geometryDecodeData, transformKeyframe.rotationKeyframes);
@@ -1250,107 +1320,91 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 
 	avs::Node node;
 
-	size_t nameLength = Next8B;
+	size_t nameLength = NextUint64;
 	node.name.resize(nameLength);
 	copy<char>(node.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 
 	node.localTransform = NextChunk(avs::Transform);
-	//bool useLocalTransform =(NextB)!=0;
+	//bool useLocalTransform =(NextByte)!=0;
 
-	node.stationary =(NextB)!=0;
-	node.holder_client_id = Next8B;
-	node.priority = Next4B;
-	node.data_uid = Next8B;
-	node.data_type = static_cast<avs::NodeDataType>(NextB);
+	node.stationary =(NextByte)!=0;
+	node.holder_client_id = NextUint64;
+	node.priority = NextUint32;
+	node.data_uid = NextUint64;
+	node.data_type = static_cast<avs::NodeDataType>(NextByte);
 
-	node.skinID = Next8B;
-	node.parentID = Next8B;
-
-	node.animations.resize(Next8B);
-	for(size_t j = 0; j < node.animations.size(); j++)
-	{
-		node.animations[j] = Next8B;
-	}
+	node.skeletonNodeID = NextUint64;
+	NextList(uint64_t,int16_t,node.joint_indices)
+	node.parentID = NextUint64;
+	NextList(uint64_t,uint64_t,node.animations)
 
 	switch(node.data_type)
 	{
 		case avs::NodeDataType::Mesh:
 		{
-			uint64_t materialCount = Next8B;
+			uint64_t materialCount = NextUint64;
 			node.materials.reserve(materialCount);
 			for(uint64_t j = 0; j < materialCount; ++j)
 			{
-				node.materials.push_back(Next8B);
+				node.materials.push_back(NextUint64);
 			}
-			node.renderState.lightmapScaleOffset=NextVec4;
-			node.renderState.globalIlluminationUid = Next8B;
+			node.renderState.lightmapScaleOffset	=NextVec4;
+			node.renderState.globalIlluminationUid	=NextUint64;
 		}
 		break;
 		case avs::NodeDataType::Light:
-			node.lightColour = NextVec4;
-			node.lightRadius = NextFloat;
-			node.lightRange = NextFloat;
+			node.lightColour	= NextVec4;
+			node.lightRadius	= NextFloat;
+			node.lightRange		= NextFloat;
 			node.lightDirection = NextVec3;
-			node.lightType = NextB;
+			node.lightType		= NextByte;
 			break;
 		default:
 			break;
 	};
-
-	uint64_t childCount = Next8B;
-	//node.childrenIDs.reserve(childCount);
-	for(uint64_t j = 0; j < childCount; ++j)
-	{
-		Next8B;//node.childrenIDs.push_back(Next8B);
-	}
 
 	geometryDecodeData.target->CreateNode(geometryDecodeData.server_or_cache_uid,uid, node);
 	
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeSkin(GeometryDecodeData& geometryDecodeData)
+avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeData)
 {
 	static size_t skip = 0;
 	if (skip)
 	{
 		geometryDecodeData.data.erase(geometryDecodeData.data.begin(), geometryDecodeData.data.begin() + skip);
 	}
-	avs::uid skinID = geometryDecodeData.uid;
+	avs::uid skeletonID = geometryDecodeData.uid;
 
-	avs::Skin skin;
+	avs::Skeleton skeleton;
 
-	size_t nameLength = Next8B;
-	skin.name.resize(nameLength);
-	copy<char>(skin.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	size_t nameLength = NextUint64;
+	skeleton.name.resize(nameLength);
+	copy<char>(skeleton.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
-		saveBuffer(geometryDecodeData, std::string("skins/"+skin.name+".skin"));
-
-	skin.inverseBindMatrices.resize(Next8B);
-	for(size_t i = 0; i < skin.inverseBindMatrices.size(); i++)
+		saveBuffer(geometryDecodeData, std::string("skeletons/"+skeleton.name+".skeleton"));
+/*
+	skeleton.inverseBindMatrices.resize(NextUint64);
+	for(size_t i = 0; i < skeleton.inverseBindMatrices.size(); i++)
 	{
-		skin.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
-	}
+		skeleton.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
+	}*/
 
-	skin.boneTransforms.resize(Next8B);
-	skin.parentIndices.resize(skin.boneTransforms.size());
-	skin.boneNames.resize(skin.boneTransforms.size());
-	for (size_t i = 0; i < skin.boneTransforms.size(); i++)
+	skeleton.boneTransforms.resize(NextUint64);
+	skeleton.parentIndices.resize(skeleton.boneTransforms.size());
+	skeleton.boneNames.resize(skeleton.boneTransforms.size());
+	for (size_t i = 0; i < skeleton.boneTransforms.size(); i++)
 	{
-		skin.parentIndices[i]=Next2B;
-		skin.boneTransforms[i] = NextChunk(avs::Transform);
-		size_t nameLength = Next8B;
-		skin.boneNames[i].resize(nameLength);
-		copy<char>(skin.boneNames[i].data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+		skeleton.parentIndices[i]=NextUint16;
+		skeleton.boneTransforms[i] = NextChunk(avs::Transform);
+		size_t nameLength = NextUint64;
+		skeleton.boneNames[i].resize(nameLength);
+		copy<char>(skeleton.boneNames[i].data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	}
-	skin.jointIndices.resize(Next8B);
-	for (size_t i = 0; i < skin.jointIndices.size(); i++)
-	{
-		skin.jointIndices[i]=Next2B;
-	}
-	skin.skinTransform = NextChunk(avs::Transform);
+	skeleton.skeletonTransform = NextChunk(avs::Transform);
 
-	geometryDecodeData.target->CreateSkin(geometryDecodeData.server_or_cache_uid,skinID, skin);
+	geometryDecodeData.target->CreateSkeleton(geometryDecodeData.server_or_cache_uid,skeletonID, skeleton);
 	return avs::Result::OK;
 }
 
@@ -1358,14 +1412,14 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeD
 {
 	avs::uid fontAtlasUid = geometryDecodeData.uid;
 	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
-	fontAtlas.font_texture_uid= Next8B;
-	int numMaps=NextB;
+	fontAtlas.font_texture_uid= NextUint64;
+	int numMaps=NextByte;
 	for(int i=0;i<numMaps;i++)
 	{
-		int sz=Next4B;
+		int sz=NextUint32;
 		auto &fontMap=fontAtlas.fontMaps[sz];
 		fontMap.lineHeight=NextFloat;
-		uint16_t numGlyphs=Next2B;
+		uint16_t numGlyphs=NextUint16;
 		fontMap.glyphs.resize(numGlyphs);
 		for(uint16_t j=0;j<numGlyphs;j++)
 		{
@@ -1382,14 +1436,14 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecode
 	clientrender::TextCanvasCreateInfo textCanvasCreateInfo;
 	textCanvasCreateInfo.server_uid=geometryDecodeData.server_or_cache_uid;
 	textCanvasCreateInfo.uid = geometryDecodeData.uid;
-	textCanvasCreateInfo.font=Next8B;
-	textCanvasCreateInfo.size=Next4B;
+	textCanvasCreateInfo.font=NextUint64;
+	textCanvasCreateInfo.size=NextUint32;
 	textCanvasCreateInfo.lineHeight=NextFloat;
 	textCanvasCreateInfo.width=NextFloat;
 	textCanvasCreateInfo.height=NextFloat;
 	copy<char>((char*)&textCanvasCreateInfo.colour, geometryDecodeData.data.data(), geometryDecodeData.offset, sizeof(textCanvasCreateInfo.colour));
 
-	size_t len=Next8B;
+	size_t len=NextUint64;
 	// Maximum 1 million chars.
 	if(len>1024*1024)
 		return avs::Result::Failed;
@@ -1401,7 +1455,7 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecode
 
 avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
-	keyframes.resize(Next8B);
+	keyframes.resize(NextUint64);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
@@ -1413,7 +1467,7 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDe
 
 avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
-	keyframes.resize(Next8B);
+	keyframes.resize(NextUint64);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
@@ -1425,7 +1479,7 @@ avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometry
 
 avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
-	keyframes.resize(Next8B);
+	keyframes.resize(NextUint64);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;

@@ -38,6 +38,7 @@ private:
 	{
 		avs::uid server_or_cache_uid=0;
 		std::string filename_or_url;
+		uint16_t version=0;
 		std::vector<uint8_t>					data		= {};
 		size_t									offset		= 0;
 		avs::GeometryPayloadType				type		= avs::GeometryPayloadType::Invalid;
@@ -91,7 +92,7 @@ private:
 	avs::Result decodeTexture(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeAnimation(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeNode(GeometryDecodeData& geometryDecodeData);
-	avs::Result decodeSkin(GeometryDecodeData& geometryDecodeData);
+	avs::Result decodeSkeleton(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeFontAtlas(GeometryDecodeData& geometryDecodeData);
 	avs::Result decodeTextCanvas(GeometryDecodeData& geometryDecodeData);
 
@@ -132,6 +133,7 @@ private:
 		std::unordered_map<uint64_t, avs::BufferView> bufferViews;
 		std::unordered_map<uint64_t, avs::GeometryBuffer> buffers;
 		std::unordered_map<avs::uid,avs::Material> internalMaterials;
+		std::vector<mat4> inverseBindMatrices;
 		bool clockwiseFaces=true;
 		// For internal numbering of accessors etc.
 		uint64_t next_id=0;

@@ -142,7 +142,8 @@ namespace clientrender
 	{
 		for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 		{
-			boneKeyframeList.seekTime(boneList[boneKeyframeList.boneIndex], time);
+			if(boneKeyframeList.boneIndex<boneList.size())
+					boneKeyframeList.seekTime(boneList[boneKeyframeList.boneIndex], time);
 		}
 	}
 }

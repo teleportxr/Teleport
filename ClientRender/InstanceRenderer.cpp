@@ -185,8 +185,8 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	auto renderPlatform=deviceContext.renderPlatform;
 
 	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
-		clientrender::AVSTexture& tx = *th;
-		AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+	clientrender::AVSTexture& tx = *th;
+	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 
 	if (ti)
 	{
@@ -204,12 +204,10 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 		const uint4* videoIDBuffer = renderState.tagDataIDBuffer.OpenReadBuffer(deviceContext);
 		if (videoIDBuffer && videoIDBuffer[0].x < 32 && videoIDBuffer[0].w == 110) // sanity check
 		{
-			int tagDataID = videoIDBuffer[0].x;
-
-			const auto& ct = videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
-			videoPos = vec3(ct.position.x, ct.position.y, ct.position.z);
-
-			videoPosDecoded = true;
+			int tagDataID	=videoIDBuffer[0].x;
+			const auto& ct	=videoTagDataCubeArray[tagDataID].coreData.cameraTransform;
+			videoPos		=vec3(ct.position.x, ct.position.y, ct.position.z);
+			videoPosDecoded =true;
 		}
 		renderState.tagDataIDBuffer.CloseReadBuffer(deviceContext);
 		UpdateTagDataBuffers(deviceContext);
@@ -372,19 +370,23 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 
 void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> geometryCache)
 {
-	const clientrender::NodeManager::nodeList_t& nodeList = geometryCache->mNodeManager->GetSortedRootNodes();
+	const std::vector<std::weak_ptr<Node>>& nodeList = geometryCache->mNodeManager->GetSortedRootNodes();
 	for (size_t i = 0; i < nodeList.size(); i++)
 	{
-		std::shared_ptr<clientrender::Node> node = nodeList[i];
+		std::shared_ptr<clientrender::Node> node = nodeList[i].lock();
+		if(!node)
+			continue;
 		if (renderState.show_only != 0 && renderState.show_only != node->id)
 			continue;
 		RenderNode(deviceContext, node, false, true, false);
 	}
-	const clientrender::NodeManager::nodeList_t& transparentList = geometryCache->mNodeManager->GetSortedTransparentNodes();
+	const std::vector<std::weak_ptr<clientrender::Node>>& transparentList = geometryCache->mNodeManager->GetSortedTransparentNodes();
 
 	for (size_t i = 0; i < transparentList.size(); i++)
 	{
-		const std::shared_ptr<clientrender::Node> node = transparentList[i];
+		const std::shared_ptr<clientrender::Node> node = transparentList[i].lock();
+		if(!node)
+			continue;
 		if (renderState.show_only != 0 && renderState.show_only != node->id)
 			continue;
 		RenderNode(deviceContext, node, false, false, true);
@@ -393,7 +395,7 @@ void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDevi
 	{
 		for (size_t i = 0; i < nodeList.size(); i++)
 		{
-			std::shared_ptr<clientrender::Node> node = nodeList[i];
+			std::shared_ptr<clientrender::Node> node = nodeList[i].lock();
 			RenderNodeOverlay(deviceContext, node);
 		}
 	}
@@ -448,8 +450,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		else
 			rezzing = true;
 	}
-//	else
-//		reset_pass=true;
 	bool force_highlight = force||(renderState.selected_uid== node->id);
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
@@ -522,18 +522,25 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				auto sc=node->GetGlobalScale();
 				bool negative_scale=(sc.x*sc.y*sc.z)<0.0f;
 				bool clockwise=mesh->GetMeshCreateInfo().clockwiseFaces^negative_scale;
-				std::shared_ptr<clientrender::SkinInstance> skinInstance = node->GetSkinInstance();
-				bool anim=skinInstance!=nullptr;
-				if (skinInstance)
+				bool anim=false;
+				auto skeletonNode=node->GetSkeletonNode().lock();
+				if(skeletonNode.get())
 				{
-					mat4* scr_matrices = skinInstance->GetBoneMatrices(model);
-					BoneMatrices *b=static_cast<BoneMatrices*>(&renderState.boneMatrices);
-					memcpy(b, scr_matrices, sizeof(mat4) * clientrender::Skin::MAX_BONES);
-
-					renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
-					//usedPassName = "anim_" + usedPassName;
+					std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
+					anim=skeletonInstance!=nullptr;
+					if (skeletonInstance)
+					{
+					// The bone matrices transform from the original local position of a vertex
+					//								to its current animated local position.
+					// For each bone matrix,
+					//				pos_local= (bone_matrix_j) * pos_original_local
+						std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
+						skeletonInstance->GetBoneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices,node->GetJointIndices(),boneMatrices);
+						BoneMatrices *b=static_cast<BoneMatrices*>(&renderState.boneMatrices);
+						memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
+						renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
+					}
 				}
-
 				bool highlight=node->IsHighlighted()||force_highlight;
 				
 				highlight|= (renderState.selected_uid == material->id);
@@ -687,7 +694,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 	// what about subscenes?
 	
-	clientrender::SubSceneComponent *s=static_cast<clientrender::SubSceneComponent*>(node->GetComponent<clientrender::SubSceneComponent>());
+	clientrender::SubSceneComponent *s=node->GetComponent<clientrender::SubSceneComponent>().get();
 	if(s)
 	{
 		if(s->sub_scene_uid)
@@ -734,6 +741,23 @@ void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& de
 	textCanvas->Render(deviceContext,renderState.cameraConstants,renderState.stereoCameraConstants,fontTexture->GetSimulTexture());
 }
 
+void InstanceRenderer::RenderBone(crossplatform::GraphicsDeviceContext& deviceContext,const mat4 &model_matrix,const std::shared_ptr<clientrender::Bone> bone)
+{
+	const auto &tr=bone->GetGlobalTransform();
+	static vec4 blue={0.f,0.25f,1.f,1.f};
+	for(int i=0;i<bone->GetChildren().size();i++)
+	{
+		const auto child_bone=bone->GetChildren()[i].lock();
+		const auto &child_tr=child_bone->GetGlobalTransform();
+		// Draw a pyramid from parent to child.
+		mat4 m1=model_matrix*tr.GetTransformMatrix();
+		mat4 m2=model_matrix*child_tr.GetTransformMatrix();
+		//m2.l+=0.1f;
+		renderPlatform->DrawLine(deviceContext,{m1.d,m1.h,m1.l},{m2.d,m2.h,m2.l},blue,2.0f);
+		RenderBone(deviceContext,model_matrix,child_bone);
+	}
+}
+
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext
 	,const std::shared_ptr<clientrender::Node> node
 	,bool force)
@@ -752,16 +776,39 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 	if (node->IsVisible()&& (node_select == 0 || node_select == node->id))
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
-		const clientrender::AnimationComponent& anim = node->animationComponent;
+		const auto anim = node->GetComponent<clientrender::AnimationComponent>();
 		vec3 pos = node->GetGlobalPosition();
-		mat4 m=node->GetGlobalTransform().GetTransformMatrix();
-		renderPlatform->DrawAxes(deviceContext,m,0.1f);
+		mat4 globalTransformMatrix=node->GetGlobalTransform().GetTransformMatrix();
+		renderPlatform->DrawAxes(deviceContext,globalTransformMatrix,0.1f);
 	
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
-		if (node->GetSkinInstance().get())
+		auto skeletonInstance=node->GetSkeletonInstance();
+		if (skeletonInstance.get()&&skeletonInstance->GetBones().size())
 		{
+			RenderBone(deviceContext,globalTransformMatrix,*skeletonInstance->GetBones().begin());
+			{
+				// The bone matrices transform from the original local position of a vertex
+				//								to its current animated local position.
+				// For each bone matrix,
+				//				pos_local= (bone_matrix_j) * pos_original_local
+			/*	std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
+				skeletonInstance->GetBoneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices,boneMatrices);
+				BoneMatrices *b=static_cast<BoneMatrices*>(&renderState.boneMatrices);
+				memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
+				renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
+					
+				const mat4& globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
+				mat4 m=mul(*((const mat4*)(&deviceContext.viewStruct.model)),globalTransformMatrix);
+				renderState.cameraConstants.world = m;
+			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+				renderState.pbrEffect->Apply(deviceContext,"skeleton","bones");
+				renderPlatform->SetTopology(deviceContext,crossplatform::Topology::LINESTRIP);
+				renderPlatform->Draw(deviceContext, (int)boneMatrices.size()*2, 0);
+				renderState.pbrEffect->Unapply(deviceContext);*/
+			}
 			std::string str;
-			const clientrender::AnimationState* animationState = node->animationComponent.GetCurrentAnimationState();
+			auto animC=node->GetOrCreateComponent<AnimationComponent>();
+			const clientrender::AnimationState* animationState = animC->GetCurrentAnimationState();
 			if (animationState)
 			{
 				//const clientrender::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
@@ -771,7 +818,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 					const auto& a = animationState->getAnimation();
 					if (a.get())
 					{
-						str +=fmt::format( "{0} {1} {2}\n", node->id, a->name.c_str(), node->animationComponent.GetCurrentAnimationTimeSeconds());
+						str +=fmt::format( "{0} {1} {2}\n", node->id, a->name.c_str(), animC->GetCurrentAnimationTimeSeconds());
 						
 					}
 				}

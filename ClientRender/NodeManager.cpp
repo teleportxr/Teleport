@@ -4,6 +4,28 @@ using namespace clientrender;
 
 using InvisibilityReason = VisibilityComponent::InvisibilityReason;
 
+template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::weak_ptr<T> &p)
+{
+	auto f=std::find_if(v.begin(), v.end(),  [&p](const std::weak_ptr<Node>& ptr1) {
+				return ptr1.lock() == p;
+			});
+	return f;
+}
+template<typename T> auto find(const std::vector<std::weak_ptr<T>> &v,const std::weak_ptr<T> &p)
+{
+	auto f=std::find_if(v.begin(), v.end(),  [&p](const std::weak_ptr<Node>& ptr1) {
+				return ptr1.lock() == p;
+			});
+	return f;
+}
+template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_ptr<T> &p)
+{
+	auto f=std::find_if(v.begin(), v.end(),  [&p](const std::weak_ptr<Node>& ptr1) {
+				return ptr1.lock() == p;
+			});
+	return f;
+}
+
 std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
 {
 	std::shared_ptr<Node> node= std::make_shared<Node>(id, avsNode.name);
@@ -15,11 +37,6 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
-	//TELEPORT_COUT<<"AddNode "<<avsNode.name.c_str()<<" "<<(avsNode.stationary?"static":"mobile")<<"\n";
-	//Remove any node already using the ID.
-//	RemoveNode(node->id);
-	//node->SetChildrenIDs(avsNode.childrenIDs);
-	// if !always_render...?
 	{
 		rootNodes_mutex.lock();
 		rootNodes.push_back(node);
@@ -51,14 +68,6 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		}
 	}
 	childLookup.erase(node_id);
-	//Link node's children to this node.
-/*	for(avs::uid childID : node->GetChildrenIDs())
-	{
-		parentLookup[childID] = node_id;
-		auto n = nodeLookup.find(childID);
-		if(n!= nodeLookup.end())
-			LinkToParentNode(n->second);
-	}*/
 
 	//Set last movement, if a movement update was received early.
 	{
@@ -85,12 +94,13 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 			node->SetHighlighted(highlightIt->second);
 			earlyNodeHighlights.erase(highlightIt);
 		}
-
+		
+		auto animC=node->GetOrCreateComponent<AnimationComponent>();
 		//Set playing animation, if an animation update was received early.
 		auto animationIt = earlyAnimationUpdates.find(node_id);
 		if (animationIt != earlyAnimationUpdates.end())
 		{
-			node->animationComponent.setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
+			animC->setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
 			earlyAnimationUpdates.erase(animationIt);
 		}
 
@@ -100,7 +110,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		{
 			for (const EarlyAnimationControl& earlyControlUpdate : animationControlIt->second)
 			{
-				node->animationComponent.setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
+				animC->setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
 			}
 			earlyAnimationControlUpdates.erase(animationControlIt);
 		}
@@ -111,32 +121,30 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		{
 			for (const EarlyAnimationSpeed& earlySpeedUpdate : animationSpeedIt->second)
 			{
-				node->animationComponent.setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
+				animC->setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
 			}
 			earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 		}
 	}
 
+	node->SetJointIndices(avsNode.joint_indices);
 
-
-		node->SetLocalTransform(static_cast<Transform>(avsNode.localTransform));
+	node->SetLocalTransform(static_cast<Transform>(avsNode.localTransform));
 	
 	// Must do BEFORE SetMaterialListSize because that instantiates the damn mesh for some reason.
 	node->SetLightmapScaleOffset(avsNode.renderState.lightmapScaleOffset);
 	node->SetMaterialListSize(avsNode.materials.size());
-//	TELEPORT_INTERNAL_COUT("AddNode {0} {1}, with {2} materials.\n", node_id, node->name, node->GetMaterials().size());
 	node->SetStatic(avsNode.stationary);
 	
 	node->SetHolderClientId(avsNode.holder_client_id);
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
-	
-
 }
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 {
-	nodesWithModifiedMaterials.insert(node);
+	std::weak_ptr<Node> n=node;
+	nodesWithModifiedMaterials.insert(n);
 }
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
@@ -153,14 +161,17 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 	else
 	{
 		rootNodes_mutex.lock();
-		rootNodes.erase(std::find(rootNodes.begin(), rootNodes.end(), node));
+		auto f = find(distanceSortedRootNodes, node);
+		rootNodes.erase(f);
 		rootNodes_mutex.unlock();
-		distanceSortedRootNodes.erase(std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), node));
+		std::weak_ptr<clientrender::Node> wn=node;
+		//auto d=std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), wn);
+		//distanceSortedRootNodes.erase(d);
 	}
 	// If it's in the transparent list, erase it from there.
 	{
 		std::scoped_lock l(distanceSortedTransparentNodes_mutex);
-		auto f = std::find(distanceSortedTransparentNodes.begin(), distanceSortedTransparentNodes.end(), node);
+		auto f = find(distanceSortedTransparentNodes,  node);
 		if (f != distanceSortedTransparentNodes.end())
 			distanceSortedTransparentNodes.erase(f);
 	}
@@ -220,33 +231,39 @@ size_t NodeManager::GetNodeCount() const
 	return nodeLookup.size();
 }
 
-const NodeManager::nodeList_t& NodeManager::GetRootNodes() const
+const std::vector<std::weak_ptr<Node>>& NodeManager::GetRootNodes() const
 {
 	return rootNodes;
 }
 
-const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedRootNodes()
+const std::vector<std::weak_ptr<Node>>& NodeManager::GetSortedRootNodes()
 {
 	std::scoped_lock lock(distanceSortedRootNodes_mutex);
+	for(size_t i=0;i<distanceSortedRootNodes.size();i++)
+	{
+		if(distanceSortedRootNodes[i].expired())
+			distanceSortedRootNodes.erase(distanceSortedRootNodes.begin()+i);
+	}
 	std::sort
 	(
 		distanceSortedRootNodes.begin(),
 		distanceSortedRootNodes.end(),
-		[](std::shared_ptr<Node> a, std::shared_ptr<Node> b)
+		[](std::weak_ptr<Node> a, std::weak_ptr<Node> b)
 		{
-			return a->distance < b->distance;
+			return a.lock()->distance < b.lock()->distance;
 		}
 	);
 
 	return distanceSortedRootNodes;
 }
 
-const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes()
+const std::vector<std::weak_ptr<Node>>& NodeManager::GetSortedTransparentNodes()
 {
-	std::set<std::shared_ptr<Node>>::iterator n=nodesWithModifiedMaterials.begin();
+	std::set<std::weak_ptr<Node>>::iterator n=nodesWithModifiedMaterials.begin();
 	while(n!=nodesWithModifiedMaterials.end())
 	{
-		const auto &m=n->get()->GetMaterials();
+		auto N=n->lock();
+		const auto &m=N->GetMaterials();
 		bool transparent=false;
 		bool unknown=false;
 		for(const auto &M:m)
@@ -256,7 +273,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 			if(M->GetMaterialCreateInfo().materialMode==avs::MaterialMode::TRANSPARENT_MATERIAL)
 				transparent=true;
 		}
-		if(n->get()->GetTextCanvas())
+		if(N->GetTextCanvas())
 			transparent=true;
 		if(!unknown)
 		{
@@ -266,7 +283,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 				std::scoped_lock l(distanceSortedTransparentNodes_mutex);
 				for(auto i=distanceSortedTransparentNodes.begin();i!=distanceSortedTransparentNodes.end();i++)
 				{
-					if(*i==*n)
+					if(i->lock()==N)
 					{
 						alreadyPresent=true;
 						break;
@@ -280,7 +297,7 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 				std::scoped_lock l(distanceSortedTransparentNodes_mutex);
 				for(auto i=distanceSortedTransparentNodes.begin();i!=distanceSortedTransparentNodes.end();i++)
 				{
-					if(*i==*n)
+					if(i->lock()==N)
 					{
 						distanceSortedTransparentNodes.erase(i);
 						break;
@@ -297,9 +314,15 @@ const std::vector<std::shared_ptr<Node>>& NodeManager::GetSortedTransparentNodes
 		(
 			distanceSortedTransparentNodes.begin(),
 			distanceSortedTransparentNodes.end(),
-			[](std::shared_ptr<Node> a, std::shared_ptr<Node> b)
+			[](std::weak_ptr<Node> a, std::weak_ptr<Node> b)
 			{
-				return a->distance < b->distance;
+				auto A=a.lock();
+				if(!A)
+				return false;
+				auto B=a.lock();
+				if(!B)
+					return false;
+				return A->distance < B->distance;
 			}
 		);
 	}
@@ -423,7 +446,8 @@ void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& anim
 	std::shared_ptr<Node> node = GetNode(animationUpdate.nodeID);
 	if(node)
 	{
-		node->animationComponent.setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
+		auto animC=node->GetOrCreateComponent<AnimationComponent>();
+		animC->setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
 	}
 	else
 	{
@@ -437,7 +461,8 @@ void NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animation
 	std::shared_ptr<Node> node = GetNode(nodeID);
 	if(node)
 	{
-		node->animationComponent.setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
+		auto animC=node->GetOrCreateComponent<AnimationComponent>();
+		animC->setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
 	}
 	else
 	{
@@ -452,7 +477,8 @@ void NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, f
 	std::shared_ptr<Node> node = GetNode(nodeID);
 	if(node)
 	{
-		node->animationComponent.setAnimationSpeed(animationID, speed);
+		auto animC=node->GetOrCreateComponent<AnimationComponent>();
+		animC->setAnimationSpeed(animationID, speed);
 	}
 	else
 	{
@@ -503,9 +529,11 @@ bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand&
 }
 void NodeManager::UpdateExtrapolatedPositions(double serverTimeS)
 {
-	for (const std::shared_ptr<Node> node : rootNodes)
+	for (const std::weak_ptr<Node> node : rootNodes)
 	{
-		node->UpdateExtrapolatedPositions(serverTimeS);
+		auto n=node.lock();
+		if(n)
+			n->UpdateExtrapolatedPositions(serverTimeS);
 	}
 }
 
@@ -513,9 +541,11 @@ void NodeManager::Update( float deltaTime)
 {
 	rootNodes_mutex.lock();
 	nodeList_t expiredNodes;
-	for(const std::shared_ptr<Node> node : rootNodes)
+	for(const std::weak_ptr<Node> node : rootNodes)
 	{
-		node->Update(deltaTime);
+		auto n=node.lock();
+		if(n)
+			n->Update(deltaTime);
 	}
 	rootNodes_mutex.unlock();
 	for(const avs::uid u : hiddenNodes)
@@ -614,13 +644,19 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 		child->SetParent(parent);
 		if (parent == nullptr)
 		{
-	rootNodes_mutex.lock();
+			rootNodes_mutex.lock();
 			// put in root nodes list.
-			auto r = std::find(rootNodes.begin(), rootNodes.end(), child);
+			auto r = std::find_if(rootNodes.begin(), rootNodes.end(),  [&child](const std::weak_ptr<Node>& ptr1) {
+				return ptr1.lock() == child;
+			});
 			if (r == rootNodes.end())
 				rootNodes.push_back(child);
 			distanceSortedRootNodes_mutex.lock();
-			auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
+			
+			auto f = std::find_if(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), [&child](const std::weak_ptr<Node>& ptr1) {
+				return ptr1.lock() == child;
+			});
+			//auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
 			if (f == distanceSortedRootNodes.end())
 				distanceSortedRootNodes.push_back(child);
 			distanceSortedRootNodes_mutex.unlock();
@@ -636,7 +672,9 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 	parent->AddChild(child);
 	{
 		std::scoped_lock l(distanceSortedRootNodes_mutex);
-		auto f = std::find(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), child);
+		auto f = std::find_if(distanceSortedRootNodes.begin(), distanceSortedRootNodes.end(), [&child](const std::weak_ptr<Node>& ptr1) {
+				return ptr1.lock() == child;
+			});
 		if (f != distanceSortedRootNodes.end())
 			distanceSortedRootNodes.erase(f);
 	}
@@ -644,7 +682,7 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 	// TODO: ONLY do this if it was unparented before.....
 	
 	rootNodes_mutex.lock();
-	auto r=std::find(rootNodes.begin(), rootNodes.end(), child);
+	auto r=find(rootNodes, child);
 	if(r!=rootNodes.end())
 		rootNodes.erase(r);
 	rootNodes_mutex.unlock();

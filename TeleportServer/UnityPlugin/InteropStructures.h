@@ -17,10 +17,9 @@
 //! Interop struct to receive nodes from external code.
 struct InteropNode
 {
-	char* name;
+	const char* name;
 
 	avs::Transform localTransform;
-	//avs::Transform globalTransform;
 
 	uint8_t stationary;
 	avs::uid holder_client_id;
@@ -28,13 +27,16 @@ struct InteropNode
 	avs::NodeDataType dataType;
 	avs::uid parentID;
 	avs::uid dataID;
-	avs::uid skinID;
+	avs::uid skeletonID;
 
 	vec4 lightColour;
 	vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
 	float lightRadius;				// i.e. light is a sphere, where lightColour is the irradiance on its surface.
 	float lightRange;
 	uint8_t lightType;
+
+	size_t jointCount;
+	int32_t* jointIndices;
 
 	size_t animationCount;
 	avs::uid* animationIDs;
@@ -43,9 +45,6 @@ struct InteropNode
 	avs::uid* materialIDs;
 	
 	avs::NodeRenderState renderState;
-
-	size_t childCount;
-	avs::uid* childIDs;
 
 	int32_t priority;
 
@@ -56,7 +55,6 @@ struct InteropNode
 			name,
 
 			localTransform,
-		//	globalTransform,
 
 			stationary!=0,
 
@@ -65,13 +63,13 @@ struct InteropNode
 			priority,
 
 			parentID,
-			{childIDs, childIDs + childCount},
 
 			dataType,
 			dataID,
 
 			{materialIDs, materialIDs + materialCount},
-			skinID,
+			skeletonID,
+			{jointIndices, jointIndices + jointCount},
 			{animationIDs, animationIDs + animationCount},
 
 			renderState,
@@ -85,32 +83,27 @@ struct InteropNode
 	}
 };
 
-struct InteropSkin
+struct InteropSkeleton
 {
 	char* name;
 	char* path;
 
-	size_t numInverseBindMatrices;
-	avs::Mat4x4* inverseBindMatrices;
+	//size_t numInverseBindMatrices;
+	//avs::Mat4x4* inverseBindMatrices;
 
 	size_t numBones;
 	avs::uid* boneIDs;
-	
-	size_t numJoints;
-	avs::uid* jointIDs;
 
 	avs::Transform rootTransform;
 
-	operator avs::Skin() const
+	operator avs::Skeleton() const
 	{
 		return
 		{
 			name,
-			{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
+		//	{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
 			{boneIDs, boneIDs + numBones},
-			{jointIDs, jointIDs + numJoints},
 			rootTransform,
-			{},
 			{},
 			{},
 			{},
@@ -137,6 +130,9 @@ struct InteropMesh
 	int64_t bufferCount;
 	avs::uid* bufferIDs;
 	avs::GeometryBuffer* buffers;
+	//The number of inverseBindMatrices MUST be greater than or equal to the number of joints referenced in the vertices.
+	
+	avs::uid inverseBindMatricesAccessorID;
 
 	operator avs::Mesh() const
 	{
@@ -173,7 +169,7 @@ struct InteropMesh
 			newMesh.buffers[bufferIDs[i]].data = new uint8_t[buffers[i].byteLength];
 			memcpy_s(const_cast<uint8_t*>(newMesh.buffers[bufferIDs[i]].data), buffers[i].byteLength, buffers[i].data, buffers[i].byteLength);
 		}
-
+		newMesh.inverseBindMatricesAccessorID=inverseBindMatricesAccessorID;
 		return newMesh;
 	}
 };

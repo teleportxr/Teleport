@@ -58,7 +58,7 @@ namespace teleport
 		void LinePrint(const char* txt,const float *clr=nullptr);
 		void Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager);
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
-		void NodeTree(const clientrender::NodeManager::nodeList_t&);
+		void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>&);
 		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
 		void TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
 
