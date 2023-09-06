@@ -7,6 +7,7 @@
 #include "libavstream/common.hpp"
 
 #include "AnimationState.h"
+#include "Component.h"
 
 namespace clientrender
 {
@@ -14,10 +15,11 @@ namespace clientrender
 	class Bone;
 	typedef std::map<avs::uid, AnimationState> AnimationStateMap;
 
-	class AnimationComponent
+	class AnimationComponent:public Component
 	{
 	public:
 		AnimationComponent();
+		virtual ~AnimationComponent(){}
 		AnimationComponent(const std::map<avs::uid, std::shared_ptr<clientrender::Animation>>& animations);
 
 		void addAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
