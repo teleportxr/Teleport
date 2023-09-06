@@ -719,7 +719,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			TELEPORT_INTERNAL_BREAK_ONCE("");
 		}
 	}
-	TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
+	//TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
 	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO_VERSIONED;
 /*
 	draco::Decoder dracoDecoder;
@@ -1000,7 +1000,6 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 	}
 	return true;
 }
-
 
 void standardize_path(std::string& p)
 {
