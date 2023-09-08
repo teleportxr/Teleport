@@ -210,7 +210,7 @@ namespace clientrender
 			return m_MissingResources;
 		}
 		void ReceivedResource(avs::uid u);
-		void CompleteResource(avs::uid id);
+		void RemoveFromMissingResources(avs::uid id);
 		avs::Result CreateSubScene(const SubSceneCreate& subSceneCreate);
 		void CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo);
 		void CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton);

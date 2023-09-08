@@ -68,7 +68,7 @@ namespace teleport
 #define TELEPORT_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
 
 #if TELEPORT_INTERNAL_CHECKS
-	#define TELEPORT_INTERNAL_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
+	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...) {teleport::InternalWarn((fmt::format("{0} ({1}): error: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__);DEBUG_BREAK_ONCE}
 	void TeleportLogUnsafe(const char* fmt, ...);
 	#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
 		{ TeleportLogUnsafe(__VA_ARGS__); }

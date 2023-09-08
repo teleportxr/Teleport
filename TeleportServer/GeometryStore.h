@@ -155,7 +155,7 @@ namespace teleport
 			std::map<avs::uid, ExtractedTexture> shadowMaps;
 			std::map<avs::uid, ExtractedFontAtlas> fontAtlases;
 
-			std::map<avs::uid, PrecompressedTexture> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
+			std::map<avs::uid, std::shared_ptr<PrecompressedTexture>> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
 			std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
 

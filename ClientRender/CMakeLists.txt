@@ -45,6 +45,8 @@ set( src_root
 	Node.h
 	NodeManager.cpp
 	NodeManager.h
+	Resource.h
+	Resource.cpp 
 	ResourceCreator.cpp
 	ResourceCreator.h
 	ResourceManager.h

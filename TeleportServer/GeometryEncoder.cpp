@@ -749,6 +749,11 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		texture = geometryStore->getTexture(uid);
 		if (texture)
 		{
+			if(texture->dataSize==0)
+			{
+				TELEPORT_CERR << "Trying to send a zero-size texture. Never do this!\n";
+				continue;
+			}
 			if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
 			{
 				TELEPORT_CERR << "Trying to send uncompressed texture. Never do this!\n";

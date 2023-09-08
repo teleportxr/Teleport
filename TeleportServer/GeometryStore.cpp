@@ -1087,7 +1087,11 @@ void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,st
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 	auto &mesh=meshes[standard][id] = ExtractedMesh{guid, path, lastModified, newMesh};
-	if(compress)
+	if(!compress)
+	{
+		std::cerr<<"Mesh must be compressed.\n";
+		return;
+	}
 	{
 		CompressMesh(mesh.compressedMesh,mesh.mesh);
 		if(verify)
@@ -1169,9 +1173,9 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			TELEPORT_BREAK_ONCE("Bad data.");
 			return;
 		}
-		std::string flnm=fmt::format("{0}{1}.png", cacheFilePath, i);
-		std::ofstream ofs(flnm, std::ios::binary);
-		ofs.write(((char*)newTexture.data + imageOffsets[i]), imageSizes[i]);
+		//std::string flnm=fmt::format("{0}{1}.png", cacheFilePath, i);
+		//std::ofstream ofs(flnm, std::ios::binary);
+		//ofs.write(((char*)newTexture.data + imageOffsets[i]), imageSizes[i]);
 	}
 	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
 	if(newTexture.compression==avs::TextureCompression::BASIS_COMPRESSED&&newTexture.bytesPerPixel != 4)
@@ -1203,13 +1207,13 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 		//Otherwise, queue the texture for compression.
 		else 	// UASTC doesn't work from inside the dll. Unclear why.
 		{
-			PrecompressedTexture pct;
-			pct.basisFilePath=cacheFilePath;
-			pct.numMips=newTexture.mipCount;
-			pct.genMips=genMips;
-			pct.highQualityUASTC=highQualityUASTC;
-			pct.textureCompression=newTexture.compression;
-			pct.format = newTexture.format;
+			std::shared_ptr<PrecompressedTexture> pct = std::make_shared<PrecompressedTexture>();
+			pct->basisFilePath=cacheFilePath;
+			pct->numMips=newTexture.mipCount;
+			pct->genMips=genMips;
+			pct->highQualityUASTC=highQualityUASTC;
+			pct->textureCompression=newTexture.compression;
+			pct->format = newTexture.format;
 			for(size_t i=0;i<imageSizes.size();i++)
 			{
 				size_t offset=(size_t)imageOffsets[i];
@@ -1219,7 +1223,7 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 				img.resize(imageSize);
 				//Copy data from source, so it isn't lost.
 				memcpy(img.data(), src, img.size());
-				pct.images.push_back(std::move(img));
+				pct->images.push_back(std::move(img));
 			}
  			newTexture.data = nullptr;
 			newTexture.dataSize=0;
@@ -1339,32 +1343,35 @@ void GeometryStore::compressNextTexture()
 	assert(foundTexture != textures.end());
 	ExtractedTexture& extractedTexture = foundTexture->second;
 	avs::Texture& avsTexture = extractedTexture.texture;
-	PrecompressedTexture& compressionData = compressionPair->second;
-	if (compressionData.textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
+	std::shared_ptr<PrecompressedTexture> compressionData = compressionPair->second;
+	if (compressionData->textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
 		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
 		basisCompressorParams.m_source_images.clear();
 		// Basis stores mip 0 in m_source_images, and subsequent mips in m_source_mipmap_images.
 		// They MUST have equal sizes.
-		if(compressionData.numMips<1)
+		if(compressionData->numMips<1)
 		{
-			TELEPORT_CERR<<"Bad mipcount "<<compressionData.numMips<<"\n";
+			TELEPORT_CERR<<"Bad mipcount "<<compressionData->numMips<<"\n";
 			texturesToCompress.erase(texturesToCompress.begin());
 			return;
 		}
-		size_t imagesPerMip=compressionData.images.size()/compressionData.numMips;
-		if(imagesPerMip*compressionData.numMips!=compressionData.images.size())
+		size_t imagesPerMip=compressionData->images.size()/compressionData->numMips;
+		if(imagesPerMip*compressionData->numMips!=compressionData->images.size())
 		{
-			TELEPORT_CERR<<"Bad image count "<<compressionData.images.size()<<" for "<<compressionData.numMips<<" mips.\n";
+			TELEPORT_CERR<<"Bad image count "<<compressionData->images.size()<<" for "<<compressionData->numMips<<" mips.\n";
 			texturesToCompress.erase(texturesToCompress.begin());
 			return;
 		}
 		size_t n=0;
 		int w=avsTexture.width;
 		int h=avsTexture.height;
-		//compressionData.numMips=std::min((size_t)2,compressionData.numMips);
-		for(size_t m=0;m<compressionData.numMips;m++)
+		bool breakout=false;
+		//compressionData->numMips=std::min((size_t)2,compressionData->numMips);
+		for(size_t m=0;m<compressionData->numMips;m++)
 		{
+			if(breakout)
+				break;
 			for(size_t i=0;i<imagesPerMip;i++)
 			{
 				if(m>0&&basisCompressorParams.m_source_mipmap_images.size()<imagesPerMip)
@@ -1372,15 +1379,28 @@ void GeometryStore::compressNextTexture()
 				basisu::image image(w, h);
 				// TODO: This ONLY works for 8-bit rgba.
 				basisu::color_rgba_vec& imageData = image.get_pixels();
-				std::vector<uint8_t> &img=compressionData.images[n];
+				std::vector<uint8_t> &img=compressionData->images[n];
+				if(img.size()>4)
+				{
+					std::string pngString="XXX";
+					memcpy(pngString.data(),img.data()+1,3);
+					if(pngString=="PNG")
+					{
+						TELEPORT_CERR << "Texture " << extractedTexture.getName()<<" was already a PNG, can't Basis-compress this.\n ";
+						breakout=true;
+						break;
+					}
+				}
 				if(img.size()>4*imageData.size())
 				{
-					TELEPORT_CERR<<"Image data size mismatch.\n";
-					return;
+					// Actually possible with small mips - the PNG can be bigger than the raw mip data.
+					TELEPORT_CERR << "Image data size mismatch.\n";
+					continue;
 				}
 				if(img.size()<4*imageData.size())
 				{
-					TELEPORT_CERR<<"Image data size mismatch.\n";
+					TELEPORT_CERR << "Image data size mismatch.\n";
+					continue;
 				}
 				memcpy(imageData.data(),img.data(),img.size());
 				if(m==0)
@@ -1392,97 +1412,100 @@ void GeometryStore::compressNextTexture()
 			w=(w+1)/2;
 			h=(h+1)/2;
 		}
-		// TODO: This doesn't work for mips>0. So can't flip textures from Unity for example.
-		//basisCompressorParams.m_y_flip=true;
-		basisCompressorParams.m_quality_level = compressionQuality;
-		basisCompressorParams.m_compression_level = compressionStrength;
-
-		basisCompressorParams.m_write_output_basis_files = true;
-		basisCompressorParams.m_out_filename = compressionData.basisFilePath;
-		basisCompressorParams.m_uastc = compressionData.highQualityUASTC;
-
-		uint32_t num_threads = 32;
-		if (compressionData.highQualityUASTC)
+		if(!breakout)
 		{
-			num_threads = 1;
-			// Write this to a different filename, it's just for testing.
-			auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
-			basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
-			return;
+			// TODO: This doesn't work for mips>0. So can't flip textures from Unity for example.
+			//basisCompressorParams.m_y_flip=true;
+			basisCompressorParams.m_quality_level = compressionQuality;
+			basisCompressorParams.m_compression_level = compressionStrength;
 
-			// we want the equivalent of:
-			// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
-			basisCompressorParams.m_rdo_uastc_multithreading = false;
-			basisCompressorParams.m_multithreading = false;
-			//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
+			basisCompressorParams.m_write_output_basis_files = true;
+			basisCompressorParams.m_out_filename = compressionData->basisFilePath;
+			basisCompressorParams.m_uastc = compressionData->highQualityUASTC;
 
-			int uastc_level = std::clamp<int>(4, 0, 4);
-
-			//static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
-
-			//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
-			//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
-
-			//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
-			//basisCompressorParams.m_check_for_alpha=true;
-			basisCompressorParams.m_debug = true;
-			basisCompressorParams.m_status_output = true;
-			basisCompressorParams.m_compute_stats = true;
-			//basisCompressorParams.m_perceptual=true;
-			//basisCompressorParams.m_validate=false;
-			basisCompressorParams.m_mip_srgb = true;
-			basisCompressorParams.m_quality_level = 128;
-		}
-		else
-		{
-			basisCompressorParams.m_mip_gen = compressionData.genMips;
-			basisCompressorParams.m_mip_smallest_dimension = 4; // ???
-		}
-		basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
-		if(avsTexture.cubemap)
-		{
-			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexTypeCubemapArray;
-		}
-		if (!basisCompressorParams.m_pJob_pool)
-		{
-			basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
-		}
-
-		if(!basisu::g_library_initialized)
-			basisu::basisu_encoder_init(false,false);
-		if(!basisu::g_library_initialized)
-		{
-			TELEPORT_CERR << "basisu_encoder_init failed.\n";
-			return ;
-		}
-		basisu::basis_compressor basisCompressor;
-		basisu::enable_debug_printf(true);
-		bool ok = basisCompressor.init(basisCompressorParams);
-		if (ok)
-		{
-			basisu::basis_compressor::error_code result = basisCompressor.process();
-			if (result == basisu::basis_compressor::error_code::cECSuccess)
+			uint32_t num_threads = 32;
+			if (compressionData->highQualityUASTC)
 			{
-				basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
-				avsTexture.dataSize = basisCompressor.get_basis_file_size();
-				unsigned char *target = new unsigned char[avsTexture.dataSize];
-				memcpy(target, basisTex.data(), avsTexture.dataSize);
-				avsTexture.data=target;
+				num_threads = 1;
+				// Write this to a different filename, it's just for testing.
+				auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
+				basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
+				return;
+
+				// we want the equivalent of:
+				// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
+				basisCompressorParams.m_rdo_uastc_multithreading = false;
+				basisCompressorParams.m_multithreading = false;
+				//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
+
+				int uastc_level = std::clamp<int>(4, 0, 4);
+
+				//static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
+
+				//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
+				//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
+
+				//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
+				//basisCompressorParams.m_check_for_alpha=true;
+				basisCompressorParams.m_debug = true;
+				basisCompressorParams.m_status_output = true;
+				basisCompressorParams.m_compute_stats = true;
+				//basisCompressorParams.m_perceptual=true;
+				//basisCompressorParams.m_validate=false;
+				basisCompressorParams.m_mip_srgb = true;
+				basisCompressorParams.m_quality_level = 128;
 			}
 			else
 			{
-				TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"!\n";
+				basisCompressorParams.m_mip_gen = compressionData->genMips;
+				basisCompressorParams.m_mip_smallest_dimension = 4; // ???
 			}
-		}
-		else
-		{
-			TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
-		}
-		delete basisCompressorParams.m_pJob_pool;
-		basisCompressorParams.m_pJob_pool = nullptr;
-		{
-			std::string file_name = (cachePath + "/") + MakeResourceFilename(extractedTexture);
-			saveResourceBinary(file_name, extractedTexture);
+			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
+			if(avsTexture.cubemap)
+			{
+				basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexTypeCubemapArray;
+			}
+			if (!basisCompressorParams.m_pJob_pool)
+			{
+				basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
+			}
+
+			if(!basisu::g_library_initialized)
+				basisu::basisu_encoder_init(false,false);
+			if(!basisu::g_library_initialized)
+			{
+				TELEPORT_CERR << "basisu_encoder_init failed.\n";
+				return ;
+			}
+			basisu::basis_compressor basisCompressor;
+			basisu::enable_debug_printf(true);
+			bool ok = basisCompressor.init(basisCompressorParams);
+			if (ok)
+			{
+				basisu::basis_compressor::error_code result = basisCompressor.process();
+				if (result == basisu::basis_compressor::error_code::cECSuccess)
+				{
+					basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
+					avsTexture.dataSize = basisCompressor.get_basis_file_size();
+					unsigned char *target = new unsigned char[avsTexture.dataSize];
+					memcpy(target, basisTex.data(), avsTexture.dataSize);
+					avsTexture.data=target;
+				}
+				else
+				{
+					TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"!\n";
+				}
+			}
+			else
+			{
+				TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
+			}
+			delete basisCompressorParams.m_pJob_pool;
+			basisCompressorParams.m_pJob_pool = nullptr;
+			{
+				std::string file_name = (cachePath + "/") + MakeResourceFilename(extractedTexture);
+				saveResourceBinary(file_name, extractedTexture);
+			}
 		}
 	}
 	else

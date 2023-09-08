@@ -835,27 +835,27 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 	// Was this resource being awaited?
 	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(textCanvas->textCanvasCreateInfo.uid, avs::GeometryPayloadType::TextCanvas);
 	if(missingResource)
-	for(auto it = missingResource->waitingResources.begin(); it != missingResource->waitingResources.end(); it++)
+		for (auto waiting = missingResource->waitingResources.begin(); waiting != missingResource->waitingResources.end(); waiting++)
 	{
-		if(it->get()->type!=avs::GeometryPayloadType::Node)
+		if (waiting->get()->type != avs::GeometryPayloadType::Node)
 		{
-			TELEPORT_CERR<<"Waiting resource is not a node, it's "<<int(it->get()->type)<<std::endl;
+			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
 			continue;
 		}
-		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
 		incompleteNode->SetTextCanvas(textCanvas);
 		// modified "material" - add to transparent list.
 		geometryCache->mNodeManager->NotifyModifiedMaterials(incompleteNode);
 		RESOURCECREATOR_DEBUG_COUT( "Waiting Node {0}({1}) got Canvas {2}({3})" , incompleteNode->id,incompleteNode->name,textCanvas->textCanvasCreateInfo.uid,"");
 
-		//If only this mesh and this function are pointing to the node, then it is complete.
-		if(it->use_count() == 2)
+		//If the waiting resource has no incomplete resources, it is now itself complete.
+		if (waiting->use_count() == 2)
 		{
 			geometryCache->CompleteNode(incompleteNode->id, incompleteNode);
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
-	geometryCache->CompleteResource(textCanvas->textCanvasCreateInfo.uid);
+	geometryCache->RemoveFromMissingResources(textCanvas->textCanvasCreateInfo.uid);
 }
 
 void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skeleton& skeleton)
@@ -865,14 +865,6 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skele
 	geometryCache->ReceivedResource(id);
 
 	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id, avs::GeometryPayloadType::Skeleton);
-
-	//Convert avs::Mat4x4 to clientrender::Transform.
-/*	std::vector<mat4> inverseBindMatrices;
-	inverseBindMatrices.reserve(skeleton.inverseBindMatrices.size());
-	for (const avs::Mat4x4& matrix : skeleton.inverseBindMatrices)
-	{
-		inverseBindMatrices.push_back(*((mat4*)&matrix));
-	}*/
 
 	//Create skeleton.
 	incompleteSkeleton->skeleton = std::make_shared<clientrender::Skeleton>(skeleton.name, skeleton.boneIDs.size(), skeleton.skeletonTransform);
@@ -906,6 +898,25 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skele
 	{
 		geometryCache->CompleteSkeleton(id, incompleteSkeleton);
 	}
+	MissingResource *missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Skeleton);
+	if (missingResource)
+		for (auto waiting = missingResource->waitingResources.begin(); waiting != missingResource->waitingResources.end(); waiting++)
+		{
+			if (waiting->get()->type != avs::GeometryPayloadType::Node)
+			{
+			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
+			continue;
+			}
+			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
+			incompleteNode->SetSkeleton(incompleteSkeleton->skeleton);
+			RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Skeleton {2}({3})", incompleteNode->id, incompleteNode->name, id, "");
+
+			// If the waiting resource has no incomplete resources, it is now itself complete.
+			if (waiting->use_count() == 2)
+			{
+				geometryCache->CompleteNode(incompleteNode->id, incompleteNode);
+			}
+		}
 }
 
 void ResourceCreator::CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation)
@@ -938,12 +949,18 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	std::shared_ptr<Node> node;
+	TELEPORT_CERR << "Creating Node " << id <<  "\n";
 	if (geometryCache->mNodeManager->HasNode(id))
 	{
 		TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
 		//leaves nodes with no children. why?
 		auto n=geometryCache->mNodeManager->GetNode(id);
-		node=geometryCache->mNodeManager->GetNode(id);
+		node = geometryCache->mNodeManager->GetNode(id);
+		MissingResource *missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
+		if(missingResource)
+		{
+			TELEPORT_CERR << "But it's listed as missing.\n";
+		}
 	}
 	else
 	{
@@ -953,29 +970,26 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
 	if(missingResource)
 	{
-		for(auto it = missingResource->waitingResources.begin(); it != missingResource->waitingResources.end(); it++)
+		for(auto waiting = missingResource->waitingResources.begin(); waiting != missingResource->waitingResources.end(); waiting++)
 		{
-			if(it->get()->type!=avs::GeometryPayloadType::Node)
+			if(waiting->get()->type!=avs::GeometryPayloadType::Node)
 			{
-				TELEPORT_CERR<<"Waiting resource is not a Node, it's "<<int(it->get()->type)<<std::endl;
+				TELEPORT_CERR<<"Waiting resource is not a Node, it's "<<int(waiting->get()->type)<<std::endl;
 				continue;
 			}
-			std::shared_ptr<IncompleteNode> incompleteNode = std::static_pointer_cast<IncompleteNode>(*it);
-			
-			auto meshNode=geometryCache->mNodeManager->GetNode(incompleteNode->id);
-			if(meshNode)
+			std::shared_ptr<Node> waitingNode = std::static_pointer_cast<Node>(*waiting);
+			TELEPORT_INTERNAL_CERR("Waiting Mesh Node {0} got Skeleton Node {1}", waitingNode->id, id);
+			if (waitingNode)
 			{
-				meshNode->SetSkeletonNode(node);
+				waitingNode->SetSkeletonNode(node);
+				waitingNode->DecrementMissingResources();
+			// If the waiting resource has no incomplete resources, it is now itself complete.
+				if (waitingNode->GetMissingResourceCount() == 0)
+				{
+					geometryCache->CompleteNode(waitingNode->id, waitingNode);
+				}
 			}
-		/*	auto n=incompleteNode->missingNodes.find(id);
-			if(n==incompleteNode->missingNodes.end())
-			{
-				TELEPORT_CERR<<"Waiting Node was not awaiting this Node."<<std::endl;
-				continue;
-			}
-			incompleteNode->missingNodes.erase(n);*/
-			RESOURCECREATOR_DEBUG_COUT( "Waiting Mesh Node {0} got Skeleton Node {1}" , incompleteNode->id,id);
-			// The TextCanvas is complete
+
 		}
 	}
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
@@ -1000,7 +1014,9 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 				{
 					TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
 					isMissingResources = true;
-					geometryCache->GetMissingResource(avsNode.skeletonNodeID, avs::GeometryPayloadType::Node).waitingResources.insert(node);
+					auto &missing=geometryCache->GetMissingResource(avsNode.skeletonNodeID, avs::GeometryPayloadType::Node);
+					missing.waitingResources.insert(node);
+					node->IncrementMissingResources();
 				}
 				else
 				{
@@ -1041,8 +1057,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 				node->SetSkeleton(skeleton);
 			else
 			{
-				//RESOURCECREATOR_DEBUG_COUT( "MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton_" << avsNode.skeletonID << std::endl;
-
+				node->IncrementMissingResources();
 				isMissingResources = true;
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Skeleton).waitingResources.insert(node);
 			}
@@ -1342,7 +1357,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				basist::basisu_file_info fileinfo;
 				if (!basis_transcoder.get_file_info(transcoding.data.data(), (uint32_t)transcoding.data.size(), fileinfo))
 				{
-					TELEPORT_CERR << "Failed to transcode texture \"" << transcoding.name << "\"." << std::endl;
+					TELEPORT_CERR << "Failed to transcode texture " << transcoding.textureCI->uid<<" \""<<transcoding.name << "\"." << std::endl;
 					continue;
 				}
 				BasisValidate(basis_transcoder, fileinfo,transcoding.data);
