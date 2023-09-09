@@ -369,6 +369,7 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 
 TELEPORT_EXPORT void EditorTick()
 {
+	GeometryStore::GetInstance().compressNextTexture();
 	PipeOutMessages();
 }
 
@@ -843,22 +844,25 @@ TELEPORT_EXPORT uint64_t GetNumberOfTexturesWaitingForCompression()
 }
 
 ///TODO: Free memory of allocated string, or use passed in string to return message.
-TELEPORT_EXPORT bool GetMessageForNextCompressedTexture(uint64_t textureIndex, uint64_t totalTextures,char *str,size_t len)
+TELEPORT_EXPORT bool GetMessageForNextCompressedTexture(char *str,size_t len)
 {
 	const avs::Texture* texture = GeometryStore::GetInstance().getNextTextureToCompress();
-
+	if(!texture)
+	{
+		return false;
+	}
 	std::stringstream messageStream;
 	//Write compression message to  string stream.
-	messageStream << "Compressing texture " << textureIndex << "/" << totalTextures << " (" << texture->name.data() << " [" << texture->width << " x " << texture->height << "])";
+	messageStream << "Compressing texture " <<" (" << texture->name.data() << " [" << texture->width << " x " << texture->height << "])";
 
 	memcpy(str,messageStream.str().data(),std::min(len,messageStream.str().length()));
 	return true;
 }
-
 TELEPORT_EXPORT void CompressNextTexture()
 {
 	GeometryStore::GetInstance().compressNextTexture();
 }
+
 ///GeometryStore END
 
 TELEPORT_EXPORT size_t SizeOf(const char* str)

@@ -503,7 +503,7 @@ void Renderer::UpdateShaderPasses()
 	auto solid=renderState.pbrEffect->GetTechniqueByName("solid");
 	renderState.solidVariantPass					=solid?solid->GetVariantPass("pbr"):nullptr;
 	auto transparent=renderState.pbrEffect->GetTechniqueByName("transparent");
-	renderState.transparentVariantPass				=transparent?solid->GetVariantPass("pbr"):nullptr;
+	renderState.transparentVariantPass				=transparent?transparent->GetVariantPass("pbr"):nullptr;
 }
 
 // This allows live-recompile of shaders. 

@@ -1087,6 +1087,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	if (placeholderMaterial == nullptr)
 	{
 		clientrender::Material::MaterialCreateInfo materialCreateInfo;
+		materialCreateInfo.name="Placeholder";
 		materialCreateInfo.diffuse.texture = m_DummyWhite;
 		materialCreateInfo.combined.texture = m_DummyCombined;
 		materialCreateInfo.normal.texture = m_DummyNormal;

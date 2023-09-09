@@ -1430,7 +1430,11 @@ void GeometryStore::compressNextTexture()
 				// Write this to a different filename, it's just for testing.
 				auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
 				basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
-				return;
+				{
+					texturesToCompress.erase(texturesToCompress.begin());
+					TELEPORT_CERR << "highQualityUASTC is not functional for texture compression.\n";
+					return;
+				}
 
 				// we want the equivalent of:
 				// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
@@ -1475,6 +1479,7 @@ void GeometryStore::compressNextTexture()
 			if(!basisu::g_library_initialized)
 			{
 				TELEPORT_CERR << "basisu_encoder_init failed.\n";
+				texturesToCompress.erase(texturesToCompress.begin());
 				return ;
 			}
 			basisu::basis_compressor basisCompressor;

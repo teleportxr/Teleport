@@ -170,22 +170,38 @@ namespace clientrender
 		}
 		uint64_t GetCachedEffectPassValidity(size_t submesh_index)
 		{
-		return cachedEffectPassValidity;
+			if(cachedEffectPasses.size()<materials.size())
+				cachedEffectPasses.resize(materials.size());
+			if(submesh_index>=cachedEffectPasses.size())
+				return 0;
+			return cachedEffectPasses[submesh_index].cachedEffectPassValidity;
+		}
+		void ResetCachedPass(size_t submesh_index)
+		{
+			SetCachedEffectPass(submesh_index,nullptr,0);
+		}
+		void ResetCachedPasses()
+		{
+			for(size_t i=0;i<cachedEffectPasses.size();i++)
+			{
+				cachedEffectPasses[i].pass=0;
+				cachedEffectPasses[i].cachedEffectPassValidity=0;
+			}
 		}
 		platform::crossplatform::EffectPass *GetCachedEffectPass(size_t submesh_index)
 		{
 			if(submesh_index>=cachedEffectPasses.size())
 				return nullptr;
-			return cachedEffectPasses[submesh_index];
+			return cachedEffectPasses[submesh_index].pass;
 		}
-		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *e,uint64_t validity)
+		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *p,uint64_t validity)
 		{
 			if(cachedEffectPasses.size()<materials.size())
 				cachedEffectPasses.resize(materials.size());
 			if(submesh_index>=cachedEffectPasses.size())
 				return;
-			cachedEffectPasses[submesh_index]=e;
-			cachedEffectPassValidity=validity;
+			cachedEffectPasses[submesh_index].pass=p;
+			cachedEffectPasses[submesh_index].cachedEffectPassValidity=validity;
 		}
 		virtual void SetMaterialListSize(size_t size);
 		virtual void SetMaterialList(std::vector<std::shared_ptr<Material>>& materials);
@@ -252,7 +268,6 @@ namespace clientrender
 			globalIlluminationTextureUid=uid;
 		}
 	protected:
-		uint64_t cachedEffectPassValidity=0;
 		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<TextCanvas> textCanvas;
@@ -290,7 +305,12 @@ namespace clientrender
 		
 		avs::uid holderClientId=0;
 		bool isGrabbable=false;
-		std::vector<platform::crossplatform::EffectPass *> cachedEffectPasses;
+		struct PassCache
+		{
+			uint64_t cachedEffectPassValidity=0;
+			platform::crossplatform::EffectPass *pass=nullptr;
+		};
+		std::vector<PassCache> cachedEffectPasses;
 		std::weak_ptr<Node> skeletonNode;
 		std::vector<int16_t> jointIndices;
 	};

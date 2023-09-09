@@ -425,17 +425,10 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	avs::uid gi_texture_id = node->GetGlobalIlluminationTextureUid();
 	if (gi_texture_id)
 	{
-		globalIlluminationTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
+		globalIlluminationTexture = geometryCache->mTextureManager.Get(gi_texture_id);
 		if ( !globalIlluminationTexture)
 		{
 			material_incomplete = true;
-		}
-	}
-	if (!node->IsStatic())
-	{
-		if(!instanceRenderState.diffuseCubemapTexture||!instanceRenderState.diffuseCubemapTexture->IsValid())
-		{
-		//	material_incomplete = true;
 		}
 	}
 	bool reset_pass=false;
@@ -446,7 +439,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	{
 		node->countdown -= 0.01f;
 		if(node->countdown<0)
-			reset_pass=true;
+			node->ResetCachedPasses();
 		else
 			rezzing = true;
 	}
@@ -556,14 +549,11 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture	,combined ? combined->GetSimulTexture() : nullptr);
 				renderState.pbrEffect->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture	,emissive ? emissive->GetSimulTexture() : nullptr);
 				
-//				ShaderPassSetup *shaderPassSetup = mvgdc?(transparent?&renderState.pbrEffect_transparentMultiview:(anim?&renderState.pbrEffect_solidAnimMultiview:&renderState.pbrEffect_solidMultiview))
-	//																		:(transparent?&renderState.pbrEffect_transparent:(anim?&renderState.pbrEffect_solidAnim:&renderState.pbrEffect_solid));
-				crossplatform::EffectTechnique *tech=transparent?renderState.solid:renderState.transparent;
 				// Pass used for rendering geometry.
 				crossplatform::EffectPass *pass=node->GetCachedEffectPass(element);
-				if(node->GetCachedEffectPassValidity(element)!=renderState.shaderValidity)
-					reset_pass=true;
-				if(!pass||reset_pass)
+				if(pass&&node->GetCachedEffectPassValidity(element)!=renderState.shaderValidity)
+					pass=nullptr;
+				if(!pass)
 				{
 					const auto &meshLayout=vb->GetLayout()->GetDesc();
 					crossplatform::EffectVariantPass *variantPass=transparent?renderState.transparentVariantPass:renderState.solidVariantPass;
@@ -590,7 +580,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					if(mvgdc)
 						vertex_shader+="_mv";
 					bool normal_map=(vb->GetLayout()->GetDesc().size()>=5);
-					std::string pixel_shader=fmt::format("ps_solid_{lightmap}_{ambient}_{normal_map}_{max_lights}"
+					std::string base_pixel_shader=transparent?"ps_transparent":"ps_solid";
+					std::string pixel_shader=fmt::format("{base}_{lightmap}_{ambient}_{normal_map}_{max_lights}"
+							,fmt::arg("base",base_pixel_shader)
 							,fmt::arg("lightmap",node->IsStatic())
 							,fmt::arg("ambient",!node->IsStatic())
 							,fmt::arg("normal_map",normal_map)
@@ -608,6 +600,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					if(!pass)
 					{
 						pass=variantPass->GetPass(vertex_shader.c_str());
+						TELEPORT_INTERNAL_CERR("Failed to find pass with vertex shader {0} and pixel shader {1}",vertex_shader,pixel_shader);
 					}
 					if(!pass)
 						continue;
@@ -618,7 +611,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					if(!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(),meshLayout))
 						continue;
 					node->SetCachedEffectPass(element,pass,renderState.shaderValidity);
-
 				}
 				if(!pass)
 					continue;
@@ -710,18 +702,11 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				// transform the view matrix by the local space.
 					mat4 node_model = node->GetGlobalTransform().GetTransformMatrix();
 					deviceContext.viewStruct.PushModelMatrix(*((platform::math::Matrix4x4*)&node_model));
-					//mat4 v=*((mat4*)&deviceContext.viewStruct.view);
-					//v.transpose();
-					//mat4::mul(v, v, node_model);
-					//v.transpose();
-					//deviceContext.viewStruct.view=(const float*)&v;
-					//deviceContext.viewStruct.Init();
+		
 					renderState.cameraConstants.view = deviceContext.viewStruct.view;
 					renderState.cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;
 					RenderGeometryCache(deviceContext,g);
-				//	deviceContext.viewStruct.view=oldview;
 					deviceContext.viewStruct.PopModelMatrix();
-					//deviceContext.viewStruct.Init();
 					renderState.cameraConstants.view = deviceContext.viewStruct.view;
 					renderState.cameraConstants.viewPosition=deviceContext.viewStruct.cam_pos;
 				}

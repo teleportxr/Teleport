@@ -4,6 +4,9 @@ project( ClientRender )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 
+configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.c @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.h ${CMAKE_CURRENT_BINARY_DIR}/flecs.h @ONLY)
+
 # Source
 set( src_root
 	Common.h
@@ -96,7 +99,8 @@ set(av_parser
 	AVParser/Parser.cpp
 	AVParser/Parser.h
 )
-	
+set(flecs_files ${CMAKE_CURRENT_BINARY_DIR}/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.h
+	)
 source_group("Source Files\\Node Components" src FILES ${src_node_components})
 source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 source_group("AVParser" src FILES ${av_parser} )
@@ -111,7 +115,7 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_static_library(ClientRender SOURCES ${src_public} ${av_parser} )  
+add_static_library(ClientRender SOURCES ${src_public} ${av_parser} ${flecs_files})  
 SetTeleportDefaults(ClientRender)
 #Include its root directory
 target_include_directories(ClientRender PRIVATE src)

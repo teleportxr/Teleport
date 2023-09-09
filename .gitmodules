@@ -37,3 +37,6 @@
 [submodule "thirdparty/oboe"]
 	path = thirdparty/oboe
 	url = git@github.com:google/oboe.git
+[submodule "thirdparty/flecs"]
+	path = thirdparty/flecs
+	url = git@github.com:SanderMertens/flecs.git

@@ -92,7 +92,7 @@ namespace clientrender
 		const uint32_t normalRGBA = 0xFFFF7F7F;
 		const uint32_t combinedBGRA = 0xFFFFFFFF;
 		const uint32_t blackBGRA = 0x0;
-		const uint32_t greenBGRA = 0xFF337733;
+		const uint32_t greenBGRA = 0xFF337744;
 	};
 
 

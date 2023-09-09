@@ -843,14 +843,12 @@ shader vec4 PS_Solid_LocalHand(vertexOutput IN) : SV_TARGET
 	colour		+=emissiveOutputScalar.rgb;
 	return vec4(colour,1.0);
 }
-shader vec4 PS_Transparent_Lightmap(vertexOutput IN) : SV_TARGET
+
+shader vec4 PS_Transparent(vertexOutput IN,variant bool lightmap,variant bool ambient,variant bool normal_map,variant int max_lights) : SV_TARGET
 {
-	return Solid(IN,true,false,true,0);
+	return Solid(IN,lightmap, ambient, normal_map, max_lights);
 }
-shader vec4 PS_Transparent_NoLightmap(vertexOutput IN) : SV_TARGET
-{
-	return Solid(IN,false,true,true,0);
-}
+
 shader vec4 PS_Depth(vertexOutput IN) : SV_TARGET
 {
 	vec3 diff = IN.wpos.xyz - viewPosition;
@@ -953,8 +951,7 @@ PixelShader ps_solid						= CompileShader(ps_5_0, PS_Solid());
 PixelShader ps_digitizing					= CompileShader(ps_5_0, PS_Digitizing());
 
 
-PixelShader ps_transparent_lightmap			= CompileShader(ps_5_0, PS_Transparent_Lightmap());
-PixelShader ps_transparent_nolightmap		= CompileShader(ps_5_0, PS_Transparent_NoLightmap());
+PixelShader ps_transparent					= CompileShader(ps_5_0, PS_Transparent());
 
 PixelShader ps_local_hand					= CompileShader(ps_5_0, PS_Solid_LocalHand());
 PixelShader ps_depth						= CompileShader(ps_5_0, PS_Depth());
@@ -1005,7 +1002,7 @@ technique transparent
 		SetBlendState(AlphaBlend,float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF );
 		SetVertexShaderVariants(vs_solid,vs_solid_mv,vs_anim,vs_anim_mv);
 		SetGeometryShader(NULL);
-		SetPixelShaderVariants(ps_transparent_lightmap,ps_transparent_nolightmap,ps_digitizing);
+		SetPixelShaderVariants(ps_transparent({false,true},{false,true},{false,true},{0}),ps_digitizing);
 	}
 }
 

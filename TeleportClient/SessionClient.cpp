@@ -238,6 +238,12 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		Disconnect(0);
 		return;
 	}
+	if (result==avs::Result::GeometryDecoder_InvalidBufferSize)
+	{
+		TELEPORT_INTERNAL_CERR("Got avs::Result::GeometryDecoder_InvalidBufferSize. Disconnecting as no-one is listening.\n");
+		Disconnect(0);
+		return;
+	}
 }
 
 
