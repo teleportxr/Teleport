@@ -1173,9 +1173,6 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			TELEPORT_BREAK_ONCE("Bad data.");
 			return;
 		}
-		//std::string flnm=fmt::format("{0}{1}.png", cacheFilePath, i);
-		//std::ofstream ofs(flnm, std::ios::binary);
-		//ofs.write(((char*)newTexture.data + imageOffsets[i]), imageSizes[i]);
 	}
 	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
 	if(newTexture.compression==avs::TextureCompression::BASIS_COMPRESSED&&newTexture.bytesPerPixel != 4)
@@ -1663,8 +1660,18 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 }
 
 
-bool GeometryStore::CheckForErrors() const
+bool GeometryStore::CheckForErrors() 
 {
+	for(auto &t:textures)
+	{
+		ExtractedTexture& textureData = t.second;
+		
+		if(textureData.texture.dataSize==0)
+		{
+			storeTexture(t.first, textureData.guid,textureData.path, textureData.lastModified, textureData.texture, textureData.cacheFilePath, false, false,true);
+		}
+
+	}
 	return true;
 }
 

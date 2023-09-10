@@ -488,7 +488,10 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 			{
 				if(mat_select >= 0 && mat_select != element)
 					continue;
-				std::shared_ptr<clientrender::Material> material = node->GetMaterials()[element];
+				auto &materials=node->GetMaterials();
+				if(element>=materials.size())
+					continue;
+				std::shared_ptr<clientrender::Material> material = materials[element];
 				if(!material)
 				{
 					material=mesh->GetInternalMaterials()[element];

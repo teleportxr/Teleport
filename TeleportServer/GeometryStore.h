@@ -115,7 +115,7 @@ namespace teleport
 			void compressNextTexture();
 
 			/// Check for errors - these should be resolved before using this store in a server.
-			bool CheckForErrors() const;
+			bool CheckForErrors() ;
 			//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.
 			avs::uid GetOrGenerateUid(const std::string& path);
 			//! Get the current session uid corresponding to the given resource/asset path.
