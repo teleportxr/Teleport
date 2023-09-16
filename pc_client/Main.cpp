@@ -276,7 +276,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-	static bool use_debug=true;
+	static bool use_debug = false;
 #else
 	static bool use_debug=false;
 #endif
@@ -299,6 +299,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
 		renderPlatform->PushTexturePath("../../pc_client/Textures");
+		renderPlatform->PushTexturePath("assets/Textures");
 		// Or from the Simul directory -e.g. by automatic builds:
 
 		renderPlatform->PushTexturePath("pc_client/Textures");
@@ -343,7 +344,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, clientRenderer, std::placeholders::_1);
-	overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, clientRenderer, std::placeholders::_1);
+	overlayDelegate = std::bind(&clientrender::Renderer::RenderOverlayMenu, clientRenderer, std::placeholders::_1);
 	auto &config=client::Config::GetInstance();
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());
 	if(config.recent_server_urls.size())
@@ -392,6 +393,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		RECT rect;
 		GetClientRect(hWnd, &rect);
+		if(!useOpenXR.IsSessionActive())
 		ImGui_ImplPlatform_SetMousePos(pos.x, pos.y,rect.right-rect.left,rect.bottom-rect.top);
 	}
 	{

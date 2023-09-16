@@ -27,7 +27,6 @@ set(src_files
 	SessionClient.cpp
 	SessionClient.h
 )
-
 #For MT runtime
 add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream)
 SetTeleportDefaults(TeleportClient)
@@ -41,6 +40,7 @@ target_include_directories(TeleportClient PUBLIC ../libavstream/include)
 target_include_directories(TeleportClient PUBLIC ../thirdparty/basis_universal)
 #Include enet
 target_include_directories(TeleportClient PUBLIC ../thirdparty/enet/include)
+target_include_directories(TeleportClient PUBLIC ../thirdparty/json)
 
 target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include )
 

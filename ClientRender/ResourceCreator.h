@@ -83,7 +83,7 @@ namespace clientrender
 		basist::transcoder_texture_format basis_transcoder_textureFormat =basist::transcoder_texture_format::cTFETC2;
 	#endif
 
-		std::vector<UntranscodedTexture> texturesToTranscode;
+		std::vector<std::shared_ptr<UntranscodedTexture>> texturesToTranscode;
 		std::mutex mutex_texturesToTranscode;
 		std::atomic_bool shouldBeTranscoding = true;	//Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
 		std::thread basisThread;						//Thread where we transcode basis files to mip data.

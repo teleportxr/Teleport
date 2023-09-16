@@ -1606,6 +1606,12 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 		TELEPORT_CERR << "Failed to load " << file_name.c_str() << "\n";
 		return 0;
 	}
+	if(!newResource.IsValid())
+	{
+		resourceMap.erase(newID);
+		TELEPORT_CERR << "Resource: " << file_name.c_str() << " is invalid, not loading.\n";
+		return 0;
+	}
 	standardize_path(p);
 	uid_to_path[newID] = p;
 	path_to_uid[p] = newID;
@@ -1668,7 +1674,9 @@ bool GeometryStore::CheckForErrors()
 		
 		if(textureData.texture.dataSize==0)
 		{
-			storeTexture(t.first, textureData.guid,textureData.path, textureData.lastModified, textureData.texture, textureData.cacheFilePath, false, false,true);
+			//storeTexture(t.first, textureData.guid, textureData.path, textureData.lastModified, textureData.texture, "", false, false, true);
+			TELEPORT_CERR<<"Texture "<<t.second.getName()<<" is empty.\n";
+			return false;
 		}
 
 	}

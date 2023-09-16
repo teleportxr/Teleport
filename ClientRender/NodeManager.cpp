@@ -250,7 +250,11 @@ const std::vector<std::weak_ptr<Node>>& NodeManager::GetSortedRootNodes()
 		distanceSortedRootNodes.end(),
 		[](std::weak_ptr<Node> a, std::weak_ptr<Node> b)
 		{
-			return a.lock()->distance < b.lock()->distance;
+			auto A = a.lock();
+			auto B = b.lock();
+			if(!A||!B)
+				return false;
+			return A->distance < B->distance;
 		}
 	);
 

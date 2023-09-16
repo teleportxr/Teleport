@@ -60,7 +60,7 @@ Transform Transform::operator*(const Transform& other) const
 {
 	vec3 scale(m_Scale.x * other.m_Scale.x, m_Scale.y * other.m_Scale.y, m_Scale.z * other.m_Scale.z);
 	quat rotation = other.m_Rotation * m_Rotation;
-	vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * abs(other.m_Scale));
+	vec3 translation = other.m_Translation + other.m_Rotation.RotateVector(m_Translation * other.m_Scale);
 
 	return Transform(translation, rotation, scale);
 }

@@ -124,6 +124,8 @@ namespace clientrender
 			clientrender::Transform palm_to_hand_r;
 			avs::uid hand_skeleton_uid = 0;
 			vec3 index_finger_offset;
+			avs::uid left_model_uid=0;
+			avs::uid right_model_uid=0;
 		};
 		LobbyGeometry lobbyGeometry;
 
@@ -170,11 +172,14 @@ namespace clientrender
 		}
 		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
-		
+
+		void XrBindingsChanged(std::string user_path, std::string profile);
 		void XrSessionChanged(bool active);
 		void RemoveView(int) override;
+		void RenderOverlayMenu(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		
+		void UpdateVRGuiMouse();
+
 		// to render the vr view instead of re-rendering.
 		void SetExternalTexture(platform::crossplatform::Texture* t);
 		//void PrintHelpText(platform::crossplatform::GraphicsDeviceContext& deviceContext);
@@ -183,5 +188,6 @@ namespace clientrender
 		void ShowHideGui();
 
 		vec3 hit={0,0,0};
+		std::map<std::string,std::string> xr_profile_to_controller_model_name;
 	};
 }

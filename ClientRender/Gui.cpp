@@ -40,9 +40,7 @@ using namespace platform;
 using namespace platform;
 using namespace crossplatform;
 ImFont *defaultFont = nullptr;
-ImFont *smallFont=nullptr;
-ImFont *symbolFont=nullptr;
-ImFont *smallSymbolFont=nullptr;
+std::map<int,ImFont *> fontInter;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 PlatformWindow* platformWindow = nullptr;
@@ -65,6 +63,7 @@ bool Gui::url_input = false;
 	}
 	
 ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
+ImGui_ImplPlatform_TextureView imgui_ViveControllerTexture;
 void Gui::SetPlatformWindow(PlatformWindow *w)
 {
 #ifndef _MSC_VER
@@ -131,6 +130,25 @@ void Gui::LightStyle()
 	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
 	style.FramePadding = ImVec2(8.f, 4.f);
 	style.FrameBorderSize = 1.f;
+	style.WindowPadding = ImVec2(20.f, 14.f);
+}
+
+void Gui::RebindStyle()
+{
+	if (style == ColourStyle::REBIND_STYLE)
+		return;
+	style = ColourStyle::REBIND_STYLE;
+	ImGui::StyleColorsDark();
+
+	auto &style = ImGui::GetStyle();
+	style.GrabRounding = 12.f;
+	style.WindowRounding = 12.f;
+	style.ScrollbarRounding = 12.f;
+	style.FrameRounding = 2.f;
+	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+	style.FramePadding = ImVec2(4.f, 2.f);
+	style.FramePadding.x = 4.f;
+	style.FrameBorderSize = 2.f;
 	style.WindowPadding = ImVec2(20.f, 14.f);
 }
 
@@ -221,6 +239,17 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	imgui_vrHeadsetIconTexture.mip=0;
 	imgui_vrHeadsetIconTexture.slice=0;
 	imgui_vrHeadsetIconTexture.texture=vrHeadsetIconTexture;
+
+	{
+		SAFE_DELETE(viveControllerTexture);
+		viveControllerTexture = renderPlatform->CreateTexture("viveController.png");
+		imgui_ViveControllerTexture.height = 347;
+		imgui_ViveControllerTexture.width = 265;
+		imgui_ViveControllerTexture.mip = 0;
+		imgui_ViveControllerTexture.slice = 0;
+		imgui_ViveControllerTexture.texture = viveControllerTexture;
+		
+	}
 	for(uint16_t i=0;i<VK_MAX;i++)
 	{
 		KeysDown[i]=false;
@@ -282,16 +311,26 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
-		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);									
+		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);
+		builder.AddText(ICON_FK_PLUS_SQUARE_O);
+		builder.AddText(ICON_FK_MINUS_SQUARE_O);
+		builder.AddText(ICON_FK_PLUS);
+		builder.AddText(ICON_FK_MINUS);
+		builder.AddText(ICON_FK_CHEVRON_RIGHT);
+		builder.AddText(ICON_FK_CHEVRON_DOWN);
+		
+										
 		builder.BuildRanges(&glyph_ranges1);							// Build the final result (ordered ranges with all the unique characters submitted)
-		symbolFont=AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges1.Data);
+		AddFont("forkawesome-webfont.ttf",32.f,&config,glyph_ranges1.Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
+	std::vector<int> fontSizes = {12, 18};
+	static std::vector<ImVector<ImWchar>> glyph_ranges2;
+	glyph_ranges2.resize(fontSizes.size());
+	for(int i=0;i<fontSizes.size();i++)
 	{
-		smallFont=AddFont("Inter-Medium.ttf",18.f);
-	}
-	static ImVector<ImWchar> glyph_ranges2;
-	{
+		int sz=fontSizes[i];
+		fontInter[sz] = AddFont("Inter-Medium.ttf", float(sz));
 		ImFontConfig config;
 		config.MergeMode = true;
 		config.GlyphMinAdvanceX = 20.0f;
@@ -308,8 +347,14 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
 		builder.AddText(ICON_FK_LONG_ARROW_RIGHT);
-		builder.BuildRanges(&glyph_ranges2);							// Build the final result (ordered ranges with all the unique characters submitted)
-		smallSymbolFont = AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2.Data);
+		builder.AddText(ICON_FK_PLUS_SQUARE_O);
+		builder.AddText(ICON_FK_MINUS_SQUARE_O);
+		builder.AddText(ICON_FK_PLUS);
+		builder.AddText(ICON_FK_MINUS);
+		builder.AddText(ICON_FK_CHEVRON_RIGHT);
+		builder.AddText(ICON_FK_CHEVRON_DOWN);
+		builder.BuildRanges(&glyph_ranges2[i]);							// Build the final result (ordered ranges with all the unique characters submitted)
+		AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2[i].Data);
 		io.Fonts->Build();										// Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	io.ConfigFlags|=ImGuiConfigFlags_IsTouchScreen;// VR more like a touch screen.
@@ -327,6 +372,8 @@ void Gui::InvalidateDeviceObjects()
 		ImGui::DestroyContext();
 		imgui_vrHeadsetIconTexture.texture=0;
 		SAFE_DELETE(vrHeadsetIconTexture);
+		imgui_ViveControllerTexture.texture = 0;
+		SAFE_DELETE(viveControllerTexture);
 		renderPlatform=nullptr;
 
 	}
@@ -516,7 +563,10 @@ bool mouseButtons[5]={false,false,false,false};
 void Gui::SetDebugGuiMouse(vec2 m,bool leftButton)
 {
 	mouse=m;
-	mouseButtons[0]=leftButton;
+	if(mouseButtons[0]!=leftButton)
+	{
+		mouseButtons[0] = leftButton;
+	}
 }
 #define VK_KEYPAD_ENTER      (VK_RETURN + 256)
 
@@ -692,6 +742,188 @@ void Gui::OnKeyboard(unsigned wParam, bool is_key_down)
 	}
 #endif
 }
+#include <json.hpp>
+#include <NodeComponents/SubSceneComponent.h>
+using json = nlohmann::json;
+json j;
+void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
+{
+	static bool loaded=false;
+	static std::string binding_filename = "example_binding.json";
+	if(!loaded)
+	{
+		auto *fileLoader = platform::core::FileLoader::GetFileLoader();
+		if (fileLoader)
+		{
+			void *ptr = nullptr;
+			unsigned bytelen = 0;
+			auto &config = client::Config::GetInstance();
+			std::string filename = config.GetStoragePath() + "config/"s + binding_filename;
+			fileLoader->AcquireFileContents(ptr, bytelen, filename.c_str(), true);
+			if (ptr)
+			{
+				try
+				{
+					j = json::parse((const char *)ptr);
+					fileLoader->ReleaseFileContents(ptr);
+					loaded = true;
+				}
+				catch(...)
+				{
+				}
+			}
+		}
+	}
+	RebindStyle();
+	// POSSIBLY can't use ImGui's own Win32 NewFrame as we may want to override the mousepos.
+#ifdef _MSC_VER
+	ImGui_ImplWin32_NewFrame();
+#endif
+#ifdef __ANDROID__
+	ImGui_ImplAndroid_NewFrame();
+#endif
+	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	ImGuiIO &io = ImGui::GetIO();
+	// MUST do this, or ImGui won't know the "screen" size.
+	io.DisplaySize = ImVec2((float)(vp.w), (float)(vp.h));
+	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
+	ImGui::NewFrame();
+	
+	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
+	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
+
+	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
+	ImGui_ImplPlatform_SetMouseDown(1, mouseButtons[1]);
+	ImGui_ImplPlatform_SetMouseDown(2, mouseButtons[2]);
+
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize |
+					  ImGuiWindowFlags_NoMove |
+					  ImGuiWindowFlags_NoCollapse |
+					  ImGuiWindowFlags_NoScrollbar;
+
+	ImVec2 size((float)vp.w,(float)vp.h);
+	ImGui::SetNextWindowPos(ImVec2(0, 0)); // always at the window origin
+	ImGui::SetNextWindowSizeConstraints(size, size);
+	ImGui::SetNextWindowSize(size);
+
+	ImGui::PushFont(fontInter[18]);
+	static vec4 white(1.f, 1.f, 1.f, 1.f);
+	try
+	{
+		if (ImGuiBegin("Rebind Inputs", nullptr, window_flags))
+		{
+			ImGui::Text(binding_filename.c_str());
+			json &actionSets = j["actionSets"];
+			static int chosenSet = -1;
+			static ImGuiTableFlags flags =  0 ;
+			ImGui::BeginTable("actionSets", 3, flags,ImVec2(float(vp.w),float(vp.h)),float(vp.w));
+			ImGui::TableSetupColumn("Action Set", ImGuiTableColumnFlags_WidthFixed,float(vp.w)*0.12f);
+			ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, float(vp.w) * 0.28f);
+			ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch, float(vp.w) * 0.4f);
+			ImGui::TableHeadersRow();
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			for (int i=0;i<actionSets.size();i++)
+			{
+				json &actionSet = actionSets[i];
+				std::string actionSetName = actionSet["name"];
+				std::string actionSetLocalizedName = actionSet["localizedName"];
+				if (ImGui::Button(actionSetLocalizedName.c_str()))
+				{
+					if(chosenSet!=i)
+						chosenSet=i;
+					else
+						chosenSet=-1;
+				}
+		
+			}
+			ImGui::TableNextColumn();
+			if (chosenSet>=0&&chosenSet<actionSets.size())
+			{
+				json &actionSet=actionSets[chosenSet];
+				int priority = actionSet["priority"];
+				ImGui::Text("Priority: ");
+				ImGui::SameLine();
+				if(ImGui::SliderInt("##priority",&priority,0,10))
+					actionSet["priority"] = priority;
+				json &actions = actionSet["actions"];
+				static int choseAction=-1;
+				int i=0;
+				for (json::iterator actionPair = actions.begin(); actionPair != actions.end(); ++actionPair,i++)
+				{
+					json &action = actionPair.value();
+					std::string actionName = action["name"];
+					std::string localizedName = action["localizedName"];
+					if (ImGui::Button(i == choseAction ? ICON_FK_CHEVRON_DOWN : ICON_FK_CHEVRON_RIGHT))
+					{
+						if (choseAction != i)
+							choseAction = i;
+						else
+							choseAction = -1;
+					}
+					ImGui::SameLine();
+					ImGui::Text(localizedName.c_str());
+					if(i==choseAction)
+					{
+						json &bindingsList = action["bindings"];
+						ImVec4 brd = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
+						ImGui::PushStyleColor(ImGuiCol_Border, brd);
+						ImGui::BeginGroup();
+						for(json &binding:bindingsList)
+						{
+							std::string bindingName = binding.get<std::string>();
+							ImGui::Spacing();
+							ImGui::SameLine();
+							if (ImGui::SmallButton( ICON_FK_MINUS ))
+							{
+							}
+							ImGui::SameLine();
+							ImGui::Text("Binding: ");
+							ImGui::SameLine();
+							ImGui::Button(bindingName.c_str(),ImVec2(150.f,20.f));
+						}
+						ImGui::Spacing();
+						ImGui::SameLine();
+						if (ImGui::SmallButton(ICON_FK_PLUS))
+						{
+						}
+						ImGui::EndGroup();
+						ImGui::PopStyleColor();
+					}
+				}
+			}
+			ImGui::TableNextColumn();
+			float imgWidth = ImGui::GetColumnWidth(2);
+			ImVec2 imgSize(347.f, 265.f);
+			imgSize.y *= imgWidth / imgSize.x;
+			imgSize.x = imgWidth;
+			ImVec2 availableSize=ImGui::GetContentRegionAvail();
+			if(imgSize.y>availableSize.y)
+			{
+				imgSize.x *= availableSize.y / imgSize.y;
+				imgSize.y = availableSize.y;
+			}
+			ImGui::Image(&imgui_ViveControllerTexture, imgSize);
+			ImGui::EndTable();
+			ImGuiEnd();
+		}
+	}
+	catch(...)
+	{
+	}
+	ImGui::PopFont();
+	ImVec2 window_pos = ImGui::GetWindowPos();
+	ImVec2 window_size = ImGui::GetWindowSize();
+	ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+
+	ImVec2 mouse_pos = io.MousePos;
+	if (mouseButtons[0])
+		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 3.f, IM_COL32(255, 90, 90, 200), 16);
+	else
+		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+	ImGui::Render();
+	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+}
 
 void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 {
@@ -708,24 +940,40 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplAndroid_NewFrame();
 #endif
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	ImGuiIO &io = ImGui::GetIO();
+	// MUST do this, or ImGui won't know the "screen" size.
+	io.DisplaySize = ImVec2((float)(vp.w), (float)(vp.h));
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
-#ifdef __ANDROID__
-	ImGuiIO& io = ImGui::GetIO();
-	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
-	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
-	ImGui_ImplPlatform_SetMouseDown(0,mouseButtons[0]);
-#endif
-	ImGui::PushFont(smallFont);
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	bool in3D = openXR.IsSessionActive();
+	if(in3D)
+	{
+		// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
+		ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
+
+		ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
+		ImGui_ImplPlatform_SetMouseDown(1, mouseButtons[1]);
+		ImGui_ImplPlatform_SetMouseDown(2, mouseButtons[2]);
+	}
+	ImGui::PushFont(fontInter[18]);
+
+	ImGuiWindowFlags window_flags = 0;
+
+	ImVec2 size((float)vp.w, (float)vp.h);
+	if(in3D)
+	{
+		size.x*=0.6f;
+		ImGui::SetNextWindowPos(ImVec2(0, 0)); // always at the window origin
+		ImGui::SetNextWindowSizeConstraints(size, size);
+
+		window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse ;
+	}
 	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
-
 
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	auto status = sessionClient->GetConnectionStatus();
 	auto streamingStatus = sessionClient->GetStreamingConnectionState();
-
 	const auto& setup = sessionClient->GetSetupCommand();
 	ImGui::BeginTable("serverstats", 2);
 	ImGui::TableSetupColumn("name1", ImGuiTableColumnFlags_WidthFixed, 200.0f);
@@ -890,7 +1138,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		return;
 	}
 	ImGuiEnd();
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	//ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	{
 		const float PAD = 10.0f;
 		const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -902,12 +1150,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		window_pos_pivot.x = 1.0f;
 		window_pos_pivot.y = 0.0f;
 		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-		window_flags |= ImGuiWindowFlags_NoMove;
+		//window_flags |= ImGuiWindowFlags_NoMove;
 	}
 	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if(geometryCache&&show_inspector)
 	{
-		ImGuiWindowFlags window_flags =ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_MenuBar|ImGuiWindowFlags_AlwaysAutoResize;//  | 
+		ImGuiWindowFlags window_flags =ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_MenuBar;
 			//| ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;|ImGuiWindowFlags_NoDecoration
 		if (ImGuiBegin("Properties", &show_inspector, window_flags))
 		{
@@ -938,6 +1186,9 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			std::shared_ptr<const clientrender::Material> selected_material		=geometryCache->mMaterialManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Texture> selected_texture		=geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation	=geometryCache->mAnimationManager.Get(selected_uid);
+
+			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene= geometryCache->mSubsceneManager.Get(selected_uid);
+		
 			if (selected_node.get())
 			{
 				vec3 pos = selected_node->GetLocalPosition();
@@ -947,8 +1198,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				vec4 gq = selected_node->GetGlobalRotation();
 				
 				vec3 v=selected_node->GetGlobalVelocity();
-		//const auto &nodePoses=openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
-		//auto j=nodePoses.find(node->id);
+		
 				vec3 gs = selected_node->GetGlobalScale();
 				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
 				ImGui::Text("owners %d", selected_node.use_count());
@@ -1044,6 +1294,16 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 						}
 					}
 				}
+
+				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
+				if (s)
+				{
+					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %d", s->sub_scene_uid);
+					if (ImGui::IsItemClicked())
+					{
+						Select(s->sub_scene_uid);
+					}
+				}
 			}
 			else if (selected_material.get())
 			{
@@ -1112,6 +1372,29 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::EndTable();
 				}
 			}
+			else if(selected_subscene.get())
+			{
+				ImGui::Text("Subscene resource %d",selected_subscene->uid);
+
+				if (selected_subscene->subscene_uid)
+				{
+					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
+					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %d", selected_subscene->subscene_uid);
+
+					if (g)
+					{
+						auto rn=g->mNodeManager->GetRootNodes();
+						if(rn.size())
+						{
+							auto b=rn.begin();
+							if(b!=rn.end())
+							{
+								ImGui::Text("Root %s", b->lock()->name.c_str());
+							}
+						}
+					}
+				}
+			}
 			ImGuiEnd();
 		}
 	}
@@ -1123,7 +1406,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 	
 	ImGuiIO& io = ImGui::GetIO();
 	ImVec2 mouse_pos=io.MousePos;
-	ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+	if(io.MouseClicked[0])
+		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 3.f, IM_COL32(255, 90, 90, 200), 16);
+	else
+		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
@@ -1719,7 +2005,7 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
 #endif
-	ImGui::PushFont(smallFont);
+	ImGui::PushFont(fontInter[18]);
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	
 	//ImGuiBegin("Teleport VR", nullptr, window_flags);
@@ -2153,14 +2439,14 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 					};
 					KeyboardLine("1234567890-");
 					ImGui::SameLine();
-					ImGui::PushFont(symbolFont);
+					//ImGui::PushFont(symbolFont);
 					//ImGui::Button(ICON_FK_SEARCH " Search");
 					if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
 					{
 						 refocus=0;
 						 keys_pressed.push_back(VK_BACK);
 					}
-					ImGui::PopFont();
+					//ImGui::PopFont();
 					ImGui::Text("  ");
 					ImGui::SameLine();
 					KeyboardLine("qwertyuiop");

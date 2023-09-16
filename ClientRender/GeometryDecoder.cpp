@@ -129,7 +129,10 @@ avs::Result GeometryDecoder::decodeFromFile(avs::uid server_uid,const std::strin
 {
 	platform::core::FileLoader* fileLoader=platform::core::FileLoader::GetFileLoader();
 	if (!fileLoader->FileExists(filename.c_str()))
+	{
+		TELEPORT_CERR<<"Failed to load file: "<<filename<<std::endl;
 		return avs::Result::Failed;
+	}
 	void *ptr=nullptr;
 	unsigned int sz=0;
 	fileLoader->AcquireFileContents(ptr,sz,filename.c_str(),false);
@@ -306,7 +309,7 @@ avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData& geometryDecode
 		draco::StatusOr<std::unique_ptr<draco::Scene>> s=gltfDecoder.DecodeFromBufferToScene(&dracoDecoderBuffer);
 		if(s.status().code()!=draco::Status::OK)
 		{
-			TELEPORT_CERR<<s.status().error_msg_string()<<"\n";
+			TELEPORT_CERR<<"Failed to decode "<<geometryDecodeData.filename_or_url<<": "<<s.status().error_msg_string()<<"\n";
 			return avs::Result::Failed;
 		}
 		scene = std::move(s).value();
@@ -639,8 +642,8 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		{
 			auto matrix=mt.Matrix().value();
 			Eigen::Affine3d aff;
-			aff = matrix;//.inverse();
-			//if(!mt.TranslationSet())
+			aff = matrix;
+			
 			auto tr=aff.translation();
 			avsNode.localTransform.position=vec3(tr.coeff(0),tr.coeff(1),tr.coeff(2));
 			//if(!mt.RotationSet())

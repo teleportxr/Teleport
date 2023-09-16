@@ -30,6 +30,10 @@ namespace teleport
 			{
 				return mesh.name;
 			}
+			bool IsValid() const
+			{
+				return true;
+			}
 			std::string guid;
 			//! The path to the asset, which is both the relative path from the cache directory, and the URI
 			//! relative to the server.
@@ -103,6 +107,10 @@ namespace teleport
 			{
 				return material.name;
 			}
+			bool IsValid() const
+			{
+				return true;
+			}
 			std::string guid;
 			//! The path to the asset, which is both the relative path from the cache directory, and the URI
 			//! relative to the server.
@@ -154,6 +162,10 @@ namespace teleport
 			std::string path;
 			std::time_t lastModified;
 			avs::Texture texture;
+			bool IsValid() const
+			{
+				return texture.dataSize!=0;
+			}
 			bool Verify(const ExtractedTexture& t) const
 			{
 				return texture==t.texture;
@@ -188,6 +200,10 @@ namespace teleport
 		struct ExtractedFontAtlas
 		{
 			core::FontAtlas fontAtlas;
+			bool IsValid() const
+			{
+				return true;
+			}
 
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedFontAtlas& extractedFontAtlas)
@@ -211,6 +227,10 @@ namespace teleport
 		struct ExtractedText
 		{
 			std::string text;
+			bool IsValid() const
+			{
+				return true;
+			}
 		};
 		//Resource that has been loaded from disk.
 		struct LoadedResource

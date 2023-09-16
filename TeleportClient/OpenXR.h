@@ -236,10 +236,20 @@ namespace teleport
 			bool rightButtonDown=false;
 			bool middleButtonDown=false; 
 		};
+		enum OverlayType
+		{
+			NONE=0,
+			QUAD=1,
+			CYLINDER=2
+		};
 		struct Overlay
 		{
-			XrPosef pose={{0,0,0,1.0f},{2.0f, 1.8f,0.0f}};
+			XrPosef pose={{0,0,0,1.0f},{0.0f, 1.8f,2.0f}};
 			XrExtent2Df size = {4.0f, 2.0f};
+			float radius=2.5f;
+			float angularSpanRadians = 3.14159f /3.f;
+			float centreHeight=0.8f;
+			OverlayType overlayType;
 		};
 		enum class OpenXRState
 		{
@@ -249,6 +259,8 @@ namespace teleport
 			Stopped
 		};
 		typedef std::function<void(bool)> SessionChangedCallback;
+		typedef std::function<void(std::string,std::string)> BindingsChangedCallback;
+		
 		class OpenXR
 		{
 		public:
@@ -264,8 +276,13 @@ namespace teleport
 			{
 				sessionChangedCallback=s;
 			}
+			void SetBindingsChangedCallback(BindingsChangedCallback s)
+			{
+				bindingsChangedCallback = s;
+			}
 			void CreateMouseAndKeyboardProfile();
 			void MakeActions();
+			void AttachSessionActions();
 			void Tick();
 			void PollActions();
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
@@ -286,6 +303,18 @@ namespace teleport
 			void SetFallbackPoseState(ActionId actionId,const avs::Pose &pose);
 			void SetFallbackButtonState(ActionId actionId,bool btn_down);
 
+			void SetOverlayEnabled(bool o)
+			{
+				if(o!=add_overlay)
+				{
+					add_overlay=o;
+					overlayAzimuth=100.0f;
+				}
+			}
+			bool IsOverlayEnabled() const
+			{
+				return add_overlay;
+			}
 			//! Process mouse and keyboard
 			void OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 			void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
@@ -340,6 +369,8 @@ namespace teleport
 			bool quit=false;
 			std::string applicationName;
 			SessionChangedCallback sessionChangedCallback;
+			BindingsChangedCallback bindingsChangedCallback;
+			
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
 			std::map<avs::uid,FallbackBinding> fallbackBindings;
@@ -353,7 +384,8 @@ namespace teleport
 						, XrCompositionLayerProjection& layer, platform::crossplatform::RenderDelegate& renderDelegate);
 			void DoSpaceWarp(XrCompositionLayerProjectionView &projection_view,XrCompositionLayerSpaceWarpInfoFB &spacewarp_view,int i);
 			bool RenderOverlayLayer(XrTime predictedTime,platform::crossplatform::RenderDelegate &overlayDelegate);
-			bool AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
+			bool AddQuadOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
+			bool AddCylinderOverlayLayer(XrTime predictedTime, XrCompositionLayerCylinderKHR &layer, int i);
 
 			avs::Pose headPose_stageSpace={};
 			struct XrState
@@ -372,6 +404,7 @@ namespace teleport
 			virtual const char *GetOpenXRGraphicsAPIExtensionName() const=0;
 			virtual std::set<std::string> GetRequiredExtensions() const;
 			virtual std::set<std::string> GetOptionalExtensions() const;
+			bool IsExtensionEnabled(const std::string&) const;
 			virtual void HandleSessionStateChanges( XrSessionState state);
 			virtual platform::crossplatform::GraphicsDeviceContext& GetDeviceContext(size_t swapchainIndex, size_t imageIndex)=0;
 			virtual void FinishDeviceContext(size_t swapchainIndex, size_t imageIndex) {}
@@ -412,8 +445,16 @@ namespace teleport
 			std::atomic<ThreadState> initInstanceThreadState=ThreadState::INACTIVE;
 			std::mutex instanceMutex;
 			std::set<std::string> got_extensions;
+			std::vector<std::string> using_extensions;
 			XrPassthroughFB passthroughFeature = XR_NULL_HANDLE;
 			XrPassthroughLayerFB passthroughLayer = XR_NULL_HANDLE;
+			bool add_overlay = false;
+			// enabled extensions:
+			bool cylinderOverlayExt=false;
+			float viewAzimuth=0.0f;
+			float overlayAzimuth = 0.0f;
+			float targetOverlayAzimuth = 0.0f;
+			void UpdateOverlayPosition();
 		};
 	}
 }

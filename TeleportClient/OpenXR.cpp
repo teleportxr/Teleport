@@ -407,6 +407,7 @@ set<std::string> OpenXR::GetOptionalExtensions() const
 	str.insert("XR_FB_triangle_mesh");
 	str.insert("XR_FB_render_model");
 	str.insert("XR_MSFT_controller_model");
+	//str.insert(XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME);
 	// Debug utils for extra info
 	return str;
 }
@@ -438,6 +439,12 @@ bool OpenXR::threadedInitInstance()
 #endif
 }
 
+bool OpenXR::IsExtensionEnabled(const std::string &e) const
+{
+	auto r = std::find(using_extensions.begin(), using_extensions.end(), e);
+	return (r != using_extensions.end());
+}
+
 bool OpenXR::internalInitInstance()
 {
 	initInstanceThreadState = ThreadState::RUNNING;
@@ -449,7 +456,6 @@ bool OpenXR::internalInitInstance()
 		// example: the hand tracking extension may be present, but the hand
 		// sensor might not be plugged in or turned on. There are often 
 		// additional checks that should be made before using certain features!
-	vector<const char*> use_extensions;
 	set<string> required_extensions;
 	set<string> optional_extensions;
 	required_extensions = GetRequiredExtensions();
@@ -496,7 +502,7 @@ bool OpenXR::internalInitInstance()
 		};
 		if (std::any_of(got_extensions.begin(), got_extensions.end(),match_ext))
 		{
-			use_extensions.push_back(this_ext);
+			using_extensions.push_back(this_ext);
 		}
 		else
 		{
@@ -513,7 +519,7 @@ bool OpenXR::internalInitInstance()
 		};
 		if (std::any_of(got_extensions.begin(), got_extensions.end(),match_ext))
 		{
-			use_extensions.push_back(this_ext);
+			using_extensions.push_back(this_ext);
 		}
 		else
 		{
@@ -532,9 +538,15 @@ bool OpenXR::internalInitInstance()
 	}
 
 	// Initialize OpenXR with the extensions we've found!
-	XrInstanceCreateInfo createInfo = { XR_TYPE_INSTANCE_CREATE_INFO };
-	createInfo.enabledExtensionCount =(uint32_t) use_extensions.size();
-	createInfo.enabledExtensionNames = use_extensions.data();
+	// Convert string to const char*
+	std::vector<const char*> using_charptrs(using_extensions.size());
+	for(size_t i=0;i<using_extensions.size();i++)
+	{
+		using_charptrs[i] = using_extensions[i].c_str();
+	}
+	XrInstanceCreateInfo createInfo = {XR_TYPE_INSTANCE_CREATE_INFO};
+	createInfo.enabledExtensionCount = (uint32_t)using_charptrs.size();
+	createInfo.enabledExtensionNames = using_charptrs.data();
 	createInfo.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
 	strcpy_s(createInfo.applicationInfo.applicationName, XR_MAX_APPLICATION_NAME_SIZE,applicationName.c_str());
 	
@@ -624,6 +636,9 @@ bool OpenXR::internalInitInstance()
 	}
 	initInstanceThreadState=ThreadState::FINISHED;
 	TELEPORT_COUT<<"initInstanceThreadState = ThreadState::FINISHED\n";
+
+	cylinderOverlayExt = IsExtensionEnabled(XR_KHR_COMPOSITION_LAYER_CYLINDER_EXTENSION_NAME);
+	overlay.overlayType = cylinderOverlayExt?OverlayType::CYLINDER:OverlayType::QUAD;
 	return (xr_instance!=nullptr);
 }
 
@@ -782,7 +797,10 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction		,RIGHT "/input/thumbstick/y"}
 		});
 	SuggestBind(oculusGo);
-	
+}
+
+void OpenXR::AttachSessionActions()
+{
 	// Attach the action set we just made to the session
 	XrSessionActionSetsAttachInfo attach_info = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
 	attach_info.countActionSets = 1;
@@ -791,7 +809,6 @@ void OpenXR::MakeActions()
 	xr_input_session.SessionInit(xr_instance,xr_session);
 	if(openXRRenderModel.get())
 		openXRRenderModel->SessionInit(xr_session);
-	RecordCurrentBindings();
 	for(auto i:openXRServers)
 	{
 		BindUnboundPoses(i.first);
@@ -837,9 +854,12 @@ void OpenXR::PollActions()
 {
 	if (xr_session_state != XR_SESSION_STATE_FOCUSED)
 		return;
+#ifdef _MSC_VER
+	if (activeInteractionProfilePaths.size() <=1)
+#else
 	if(activeInteractionProfilePaths.size()==0)
+	#endif
 	{
-		RecordCurrentBindings();
 		for(auto i:openXRServers)
 		{
 			BindUnboundPoses(i.first);
@@ -949,26 +969,38 @@ void OpenXR::RecordCurrentBindings()
 		XrInteractionProfileState interactionProfile={XR_TYPE_INTERACTION_PROFILE_STATE,0,0};
 		// for each action, what is the binding?
 		XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance, "/user/hand/left"),&interactionProfile));
-		if(interactionProfile.interactionProfile)
-			TELEPORT_COUT<<" userHandLeftActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
-		userHandLeftActiveProfile=interactionProfile.interactionProfile;
+		if (userHandLeftActiveProfile != interactionProfile.interactionProfile)
+		{
+			std::string pathstr = FromXrPath(xr_instance, interactionProfile.interactionProfile);
+			if (interactionProfile.interactionProfile)
+				TELEPORT_COUT << " userHandLeftActiveProfile " << pathstr.c_str() << std::endl;
+			if (userHandLeftActiveProfile)
+				activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
+			userHandLeftActiveProfile = interactionProfile.interactionProfile;
+			if(bindingsChangedCallback)
+				bindingsChangedCallback("/user/hand/left"s,pathstr);
+		}
 		XR_CHECK(xrGetCurrentInteractionProfile(xr_session,MakeXrPath(xr_instance,"/user/hand/right"),&interactionProfile));
-		if(interactionProfile.interactionProfile)
-			TELEPORT_COUT<<"userHandRightActiveProfile "<<FromXrPath(xr_instance,interactionProfile.interactionProfile).c_str()<<std::endl;
-		userHandRightActiveProfile=interactionProfile.interactionProfile;
-		if(userHandLeftActiveProfile)
-			activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);
-		if(userHandRightActiveProfile)
-			activeInteractionProfilePaths.push_back(userHandRightActiveProfile);
+		if (userHandRightActiveProfile != interactionProfile.interactionProfile)
+		{
+			std::string pathstr = FromXrPath(xr_instance, interactionProfile.interactionProfile);
+			if (interactionProfile.interactionProfile)
+				TELEPORT_COUT << "userHandRightActiveProfile " << FromXrPath(xr_instance, interactionProfile.interactionProfile).c_str() << std::endl;
+			userHandRightActiveProfile = interactionProfile.interactionProfile;
+			if(userHandRightActiveProfile)
+				activeInteractionProfilePaths.push_back(userHandRightActiveProfile);
+			if (bindingsChangedCallback)
+				bindingsChangedCallback("/user/hand/right"s, pathstr);
+		}
 	}
-	// On a desktop machine? add mouse/keyboard profile.
+	// On a desktop machine? Add mouse/keyboard profile.
 	#ifdef _MSC_VER
 	if (MOUSE_KEYBOARD_PROFILE_INDEX >= interactionProfiles.size())
 	{
 		CreateMouseAndKeyboardProfile();
+		InteractionProfile &mouseAndKeyboard = interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
+		activeInteractionProfilePaths.push_back(mouseAndKeyboard.profilePath);
 	}
-	InteractionProfile &mouseAndKeyboard	=interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
-	activeInteractionProfilePaths.push_back(mouseAndKeyboard.profilePath);
 	#endif
 }
 
@@ -1617,6 +1649,7 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 					xr_session_running = true;
 					if(sessionChangedCallback)
 						sessionChangedCallback(true);
+					AttachSessionActions();
 				}
 			}
 		break;
@@ -1852,8 +1885,11 @@ void OpenXR::PollEvents()
 					(instance_loss_pending_event->lossTime)<<std::endl;
 			} break;
 			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-				TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
-				break;
+				{TELEPORT_COUT<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
+				const XrEventDataInteractionProfileChanged *data =
+					(XrEventDataInteractionProfileChanged *)(baseEventHeader);
+				RecordCurrentBindings();
+				break;}
 			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT: {
 				const XrEventDataPerfSettingsEXT* perf_settings_event =
 					(XrEventDataPerfSettingsEXT*)(baseEventHeader);
@@ -2098,7 +2134,8 @@ float OpenXR::GetActionFloatState(ActionId actionId) const
 
 typedef union {
     XrCompositionLayerProjection Projection;
-    XrCompositionLayerQuad Quad;
+	XrCompositionLayerQuad Quad;
+	XrCompositionLayerCylinderKHR Cylinder;
 } XrCompositionLayer_Union;
 XrCompositionLayer_Union layers[3];
 
@@ -2286,14 +2323,17 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 		openxr_poll_predicted(frame_state.predictedDisplayTime);
 		app_update_predicted();
 
-		XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-		XrResult		res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &space_location);
+		XrSpaceLocation headspace_location = { XR_TYPE_SPACE_LOCATION };
+		XrResult res = xrLocateSpace(xr_head_space, xr_app_space, frame_state.predictedDisplayTime, &headspace_location);
 		if (XR_UNQUALIFIED_SUCCESS(res) &&
-			(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-			(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+			(headspace_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+			(headspace_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 		{
-			state.XrSpacePoseInWorld=space_location.pose;
-			headPose_stageSpace=ConvertGLStageSpacePoseToLocalSpacePose(space_location.pose);
+			state.XrSpacePoseInWorld = headspace_location.pose;
+			headPose_stageSpace = ConvertGLStageSpacePoseToLocalSpacePose(headspace_location.pose);
+			crossplatform::Quaternionf q=headPose_stageSpace.orientation;
+			vec3 dir=q.RotateVector({0,1.f,0});
+			viewAzimuth=atan2f(-dir.x,dir.y);
 		}
 		// If the session is active, lets render our layer in the compositor!
 	
@@ -2306,17 +2346,19 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layer_proj;
 		}
 
-		static bool add_overlay=false;
 		if(add_overlay)
 		{
 			RenderOverlayLayer(frame_state.predictedDisplayTime,overlayDelegate);
-			if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[1].Quad,0))
+
+			bool add=false;
+			if(overlay.overlayType==OverlayType::CYLINDER)
+				add=AddCylinderOverlayLayer(frame_state.predictedDisplayTime, layers[1].Cylinder, 0);
+			else
+				add=AddQuadOverlayLayer(frame_state.predictedDisplayTime, layers[1].Quad, 0);
+
+			if(add)
 			{
 				layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layers[1];
-			}
-			if(AddOverlayLayer(frame_state.predictedDisplayTime,layers[2].Quad,1))
-			{
-				layer_ptrs[num_layers++] = (XrCompositionLayerBaseHeader*)&layers[2];
 			}
 		}
 		EndFrame();
@@ -2404,16 +2446,74 @@ static  XrQuaternionf XrQuaternionf_CreateFromVectorAngle(
     r.z = unitAxis.z * sinHalfAngle;
     return r;
 }
-bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_layer,int i)
+#include "Platform/Math/Pi.h"
+static float AngleRange(float a)
 {
+	if (a < -SIMUL_PI_F)
+		a += SIMUL_PI_F;
+	if (a > SIMUL_PI_F)
+		a -= SIMUL_PI_F;
+	return a;
+}
 
-// Build the quad layer
+void OpenXR::UpdateOverlayPosition()
+{
+	// Build the layer
+	float quarter_circle = (SIMUL_PI_F / 2.0f);
+	// nearest 90 degrees:
+	int A = int(std::nearbyint(viewAzimuth / quarter_circle));
+	if (overlayAzimuth > 10.f)
+	{
+		overlayAzimuth = targetOverlayAzimuth = float(A) * quarter_circle;
+	}
+	else
+	{
+		float diffAngle = AngleRange(targetOverlayAzimuth - overlayAzimuth);
+		overlayAzimuth += 0.05f * diffAngle;
+		overlayAzimuth = AngleRange(overlayAzimuth);
+		if (diffAngle < 0.01f && fabs(AngleRange(viewAzimuth - targetOverlayAzimuth)) > (SIMUL_PI_F * .5f))
+		{
+			targetOverlayAzimuth = float(A) * quarter_circle;
+		}
+	}
+}
 
+bool OpenXR::AddCylinderOverlayLayer(XrTime predictedTime, XrCompositionLayerCylinderKHR &cylinder_layer, int i)
+{
+	UpdateOverlayPosition();
+	cylinder_layer.type = XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR;
+	cylinder_layer.next = NULL;
+	cylinder_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+	cylinder_layer.space = xr_app_space;
+	cylinder_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH; 
+	memset(&cylinder_layer.subImage, 0, sizeof(XrSwapchainSubImage));
+	cylinder_layer.subImage.swapchain = xr_swapchains[OVERLAY_SWAPCHAIN].handle;
+	cylinder_layer.subImage.imageRect.offset.x = 0;
+	cylinder_layer.subImage.imageRect.offset.y = 0;
+	cylinder_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
+	cylinder_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
+	cylinder_layer.subImage.imageArrayIndex = 0; // AJR: Only composite the top layer image array, as the overlay quad will be rendered in 3D space.
+
+	overlay.pose.orientation = XrQuaternionf_CreateFromVectorAngle({0, 1.0f, 0}, overlayAzimuth);
+	overlay.pose.position = {0, overlay.centreHeight, 0};
+	cylinder_layer.pose = overlay.pose;
+	cylinder_layer.radius=overlay.radius;
+	// width in radians
+	cylinder_layer.centralAngle = overlay.angularSpanRadians;
+	cylinder_layer.aspectRatio = float(cylinder_layer.subImage.imageRect.extent.height) / float(cylinder_layer.subImage.imageRect.extent.width);
+	
+	return true;
+}
+
+bool OpenXR::AddQuadOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_layer,int i)
+{
+	UpdateOverlayPosition();
+	// Build the quad layer
     quad_layer.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
     quad_layer.next = NULL;
     quad_layer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
     quad_layer.space = xr_app_space;
-    quad_layer.eyeVisibility = i?XR_EYE_VISIBILITY_RIGHT:XR_EYE_VISIBILITY_LEFT;
+	quad_layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
     memset(&quad_layer.subImage, 0, sizeof(XrSwapchainSubImage));
     quad_layer.subImage.swapchain = xr_swapchains[OVERLAY_SWAPCHAIN].handle;
     quad_layer.subImage.imageRect.offset.x = 0;
@@ -2421,9 +2521,14 @@ bool OpenXR::AddOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &quad_l
 	quad_layer.subImage.imageRect.extent.width = xr_swapchains[OVERLAY_SWAPCHAIN].width;
 	quad_layer.subImage.imageRect.extent.height = xr_swapchains[OVERLAY_SWAPCHAIN].height;
 	quad_layer.subImage.imageArrayIndex = 0; //AJR: Only composite the top layer image array, as the overlay quad will be rendered in 3D space.
-    overlay.pose.orientation =        XrQuaternionf_CreateFromVectorAngle({0,1.0f,0},-90.0f * 3.14159f / 180.0f);
+
+    overlay.pose.orientation = XrQuaternionf_CreateFromVectorAngle({0, 1.0f, 0}, overlayAzimuth);
+	overlay.pose.position = {-sin(overlayAzimuth) * overlay.radius, overlay.centreHeight, -cos(overlayAzimuth) * overlay.radius};
     quad_layer.pose = overlay.pose;
-    quad_layer.size = overlay.size;
+	float w = overlay.radius * tan(overlay.angularSpanRadians);
+	float h = w * float(quad_layer.subImage.imageRect.extent.height) / float(quad_layer.subImage.imageRect.extent.width);
+	overlay.size = {w,h};
+	quad_layer.size = overlay.size;
 	return true;
 }
 

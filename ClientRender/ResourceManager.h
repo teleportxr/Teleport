@@ -108,7 +108,14 @@ template<typename u,class T>
 void ResourceManager<u,T>::Add(u id, std::shared_ptr<T> & newItem, float postUseLifetime_s)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
-	cachedItems.emplace(id, ResourceData{newItem, postUseLifetime_s, 0});
+	ResourceData resd = {newItem, postUseLifetime_s, 0};
+	auto res= cachedItems.emplace(id, resd);
+	if(res.second==false)
+//	if(newkey==cachedItems.end())
+	{
+		cachedItems[id]=resd;
+	}
+
 	cacheChecksum++;
 }
 

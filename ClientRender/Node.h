@@ -37,13 +37,13 @@ namespace clientrender
 		template<typename T>
 		std::shared_ptr<T> GetComponent()
 		{
+			std::shared_ptr<T> u;
 			for(auto c:components)
 			{
-				T* t=dynamic_cast<T*>(c.get());
-				if(t)
-					return std::shared_ptr<T>(t);
+				std::shared_ptr<T> t = std::dynamic_pointer_cast<T>(c);
+				if(t.get()!=nullptr)
+					return t;
 			}
-			std::shared_ptr<T> u;
 			return u;
 		}
 		template<typename T>
@@ -61,8 +61,8 @@ namespace clientrender
 		{
 			for(auto c:components)
 			{
-				auto t=std::dynamic_pointer_cast<T>(c);
-				if(t)
+				std::shared_ptr<T> t = std::dynamic_pointer_cast<T>(c);
+				if (t.get() != nullptr)
 					return t;
 			}
 			std::shared_ptr<T> u=std::make_shared<T>();

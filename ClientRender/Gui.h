@@ -21,7 +21,8 @@ namespace teleport
 	{
 		NONE,
 		LIGHT_STYLE,
-		DARK_STYLE
+		DARK_STYLE,
+		REBIND_STYLE
 	};
 	namespace client
 	{
@@ -72,6 +73,7 @@ namespace teleport
 		// Unitless,relative to debug gui size, [-1,+1]
 		void SetDebugGuiMouse(vec2 m,bool leftButton);
 		void OnKeyboard(unsigned wParam, bool bKeyDown);
+		void OverlayMenu(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 
@@ -123,6 +125,7 @@ namespace teleport
 		avs::uid cache_uid=0;
 		void LightStyle();
 		void DarkStyle();
+		void RebindStyle();
 		void ShowSettings2D();
 		void MenuBar2D();
 		void MainOptions();
@@ -166,6 +169,8 @@ namespace teleport
 		std::string selected_url;
 		bool show_bookmarks = false;
 		bool show_options = false;
-		platform::crossplatform::Texture *vrHeadsetIconTexture=nullptr;
+		platform::crossplatform::Texture *vrHeadsetIconTexture = nullptr;
+		platform::crossplatform::Texture *viveControllerTexture = nullptr;
+		
 	};
 }

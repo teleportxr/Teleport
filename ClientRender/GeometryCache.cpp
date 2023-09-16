@@ -448,7 +448,7 @@ void GeometryCache::CompleteMaterial(avs::uid id, const clientrender::Material::
 
 void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node)
 {
-	TELEPORT_INTERNAL_CERR( "CompleteNode {0} {1}",id,node->name);
+//	TELEPORT_INTERNAL_CERR( "CompleteNode {0} {1}",id,node->name);
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
 	m_CompletedNodes.push_back(id);
 	RemoveFromMissingResources(id);

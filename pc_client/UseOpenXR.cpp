@@ -253,7 +253,7 @@ bool UseOpenXR::StartSession()
 	swapchain_info.mipCount		= 1;
 	AddXrSwapchain(swapchain_info);
 
-	OVERLAY_SWAPCHAIN = (int)xr_swapchains.size();
+	OVERLAY_SWAPCHAIN			= (int)xr_swapchains.size();
 	swapchain_info.createFlags	= 0;
 	swapchain_info.usageFlags	= XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 	swapchain_info.format		= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;

@@ -562,7 +562,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					crossplatform::EffectVariantPass *variantPass=transparent?renderState.transparentVariantPass:renderState.solidVariantPass;
 					if(!variantPass)
 						continue;
-					auto layoutHash=vb->GetLayout()->GetHash();
+					auto layoutHash = vb->GetLayout()->GetHash();
+					if (meshLayout.size() == 7)
+						anim=true;
 					std::string vertex_shader=anim?"vs_anim":"vs_solid";
 					using namespace platform::crossplatform;
 					static uint64_t positionNormal				=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0}});
@@ -679,7 +681,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 	if(!include_children)
 		return;
-	for(std::weak_ptr<clientrender::Node> childPtr : node->GetChildren())
+	const auto &children = node->GetChildren();
+	for(std::weak_ptr<clientrender::Node> childPtr : children)
 	{
 		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
@@ -689,7 +692,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 	// what about subscenes?
 	
-	clientrender::SubSceneComponent *s=node->GetComponent<clientrender::SubSceneComponent>().get();
+	auto s=node->GetComponent<clientrender::SubSceneComponent>();
 	if(s)
 	{
 		if(s->sub_scene_uid)
@@ -766,8 +769,9 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		const auto anim = node->GetComponent<clientrender::AnimationComponent>();
 		vec3 pos = node->GetGlobalPosition();
-		mat4 globalTransformMatrix=node->GetGlobalTransform().GetTransformMatrix();
-		renderPlatform->DrawAxes(deviceContext,globalTransformMatrix,0.1f);
+		mat4 globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
+		mat4 m = mul(*((const mat4 *)(&deviceContext.viewStruct.model)), globalTransformMatrix);
+		renderPlatform->DrawAxes(deviceContext,m,0.1f);
 	
 			static std::string str;
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
