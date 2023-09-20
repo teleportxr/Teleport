@@ -558,35 +558,20 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					pass=nullptr;
 				if(!pass)
 				{
-					const auto &meshLayout=vb->GetLayout()->GetDesc();
+					auto *meshLayout = vb->GetLayout();
+					const auto &meshLayoutDesc=meshLayout->GetDesc();
 					crossplatform::EffectVariantPass *variantPass=transparent?renderState.transparentVariantPass:renderState.solidVariantPass;
 					if(!variantPass)
 						continue;
-					auto layoutHash = vb->GetLayout()->GetHash();
-					if (meshLayout.size() == 7)
+					auto layoutHash = meshLayout->GetHash();
+					if (meshLayoutDesc.size() == 7)
 						anim=true;
-					std::string vertex_shader=anim?"vs_anim":"vs_solid";
-					using namespace platform::crossplatform;
-					static uint64_t positionNormal				=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0}});
-					static uint64_t positionNormal_1uv			=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0},{RG_32_FLOAT,LayoutSemantic::TEXCOORD,0}});
-					static uint64_t positionNormalTangent_1uv	=platform::crossplatform::GetLayoutHash({{RGB_32_FLOAT,LayoutSemantic::POSITION,0},{RGB_32_FLOAT,LayoutSemantic::NORMAL,0},{RGBA_32_FLOAT,LayoutSemantic::TANGENT,0},{RG_32_FLOAT,LayoutSemantic::TEXCOORD,0}});
-					if(layoutHash==positionNormal)
-					{
-						vertex_shader="vs_solid_normal";
-					}
-					if(layoutHash==positionNormal_1uv)
-					{
-						vertex_shader="vs_solid_normal_1uv";
-					}
-					if(layoutHash==positionNormalTangent_1uv)
-					{
-						vertex_shader="vs_solid_normal_tangent_1uv";
-					}
+					bool normal_map = (meshLayoutDesc.size() >= 5);
+					std::string base_pixel_shader=transparent?"ps_transparent":"ps_solid";
+					std::string vertex_shader="vs_variants";
 					if(mvgdc)
 						vertex_shader+="_mv";
-					bool normal_map=(vb->GetLayout()->GetDesc().size()>=5);
-					std::string base_pixel_shader=transparent?"ps_transparent":"ps_solid";
-					std::string pixel_shader=fmt::format("{base}_{lightmap}_{ambient}_{normal_map}_{max_lights}"
+					std::string pixel_shader=fmt::format("{base}({lightmap}_{ambient}_{normal_map}_{max_lights})"
 							,fmt::arg("base",base_pixel_shader)
 							,fmt::arg("lightmap",node->IsStatic())
 							,fmt::arg("ambient",!node->IsStatic())
@@ -601,11 +586,12 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 						pixel_shader=material->GetMaterialCreateInfo().shader.c_str();
 						double_sided=true;
 					}
-					pass=variantPass->GetPass(vertex_shader.c_str(),pixel_shader.c_str());
+					pass = variantPass->GetPass(vertex_shader.c_str(),layoutHash, pixel_shader.c_str());
 					if(!pass)
 					{
-						pass=variantPass->GetPass(vertex_shader.c_str());
-						TELEPORT_INTERNAL_CERR("Failed to find pass with vertex shader {0} and pixel shader {1}",vertex_shader,pixel_shader);
+						meshLayout->GetHash();
+						pass = variantPass->GetPass(vertex_shader.c_str(), layoutHash, nullptr);
+						TELEPORT_INTERNAL_CERR("Failed to find pass with pixel shader {0}",pixel_shader);
 					}
 					if(!pass)
 						continue;
@@ -613,7 +599,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					auto *vertexShader=pass->shaders[crossplatform::ShaderType::SHADERTYPE_VERTEX];
 					if(!vertexShader)
 						continue;
-					if(!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(),meshLayout))
+					if(!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(),meshLayoutDesc))
 						continue;
 					node->SetCachedEffectPass(element,pass,renderState.shaderValidity);
 				}

@@ -276,7 +276,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-	static bool use_debug = false;
+	static bool use_debug = true;
 #else
 	static bool use_debug=false;
 #endif
