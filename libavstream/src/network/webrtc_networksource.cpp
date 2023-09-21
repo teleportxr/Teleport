@@ -239,7 +239,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 
 #if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
-	httpUtilConfig.remoteIP = params.remoteIP;
+	//httpUtilConfig.//remoteIP = params.remoteIP;
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
 	httpUtilConfig.maxConnections = params.maxHTTPConnections;
 	httpUtilConfig.useSSL = params.useSSL;

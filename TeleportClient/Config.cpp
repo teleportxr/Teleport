@@ -11,6 +11,7 @@ using namespace teleport;
 using namespace client;
 using std::string;
 using namespace std::string_literals;
+using std::filesystem::path;
 
 Config &Config::GetInstance()
 {
@@ -68,13 +69,13 @@ void Config::LoadBookmarks()
 	{
 		void *ptr=nullptr;
 		unsigned bytelen=0;
-		std::string filename=GetStoragePath()+"config/bookmarks.txt"s;
+		std::string filename = (path(GetStorageFolder())/"config/bookmarks.txt"s).string();
 		fileLoader->AcquireFileContents(ptr,bytelen,filename.c_str(),true);
 		if(ptr)
 			bookmarks_str=(char*)ptr;
 		fileLoader->ReleaseFileContents(ptr);
 
-		recent_str=fileLoader->LoadAsString((GetStoragePath()+"config/recent_servers.txt"s).c_str());
+		recent_str = fileLoader->LoadAsString((path(GetStorageFolder())/"config/recent_servers.txt"s).string().c_str());
 	}
 	if(bookmarks_str.length())
 	{
@@ -89,9 +90,9 @@ void Config::LoadBookmarks()
 	}
 	else
 	{
-		bookmarks.push_back({"home.teleportvr.io","home.teleportvr.io" });
+		bookmarks.push_back({"home.teleportvr.io","home.teleportvr.io"});
 		bookmarks.push_back({"test.teleportvr.io","test.teleportvr.io"});
-		bookmarks.push_back({ "192.168.3.40","192.168.3.40" });
+		bookmarks.push_back({"192.168.3.40","192.168.3.40"});
 		SaveBookmarks();
 	}
 	if(recent_str.length())
@@ -142,7 +143,7 @@ void Config::SaveBookmarks()
 		{
 			str+=fmt::format("{0} {1}\n",b.url,b.title);
 		}
-		std::string filename=GetStoragePath()+"config/bookmarks.txt"s;
+		std::string filename = (path(GetStorageFolder()) / "config/bookmarks.txt"s).string();
 		fileLoader->Save(str.data(),(uint32_t)str.length(),filename.c_str(),true);
 	}
 }
@@ -153,7 +154,7 @@ void Config::LoadOptions()
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	if(!fileLoader)
 		return;
-	std::string filename=GetStoragePath()+"config/options.txt"s;
+	std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 	string str=fileLoader->LoadAsString(filename.c_str());
 	if(!str.length())
 		return;	
@@ -180,7 +181,7 @@ void Config::SaveOptions()
 		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
 		str+=fmt::format("\nStartupConnectOption={0}",magic_enum::enum_name(options.startupConnectOption));
 		str += fmt::format("\nAlwaysShow3DGUI={0}", options.alwaysShow3dGui);
-		std::string filename=GetStoragePath()+"config/options.txt"s;
+		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 		LoadOptions();
 	}
@@ -210,7 +211,7 @@ void Config::StoreRecentURL(const char *r)
 		{
 			str+=fmt::format("{0}\n",i);
 		}
-		std::string filename=GetStoragePath()+"config/recent_servers.txt";
+		std::string filename=(path(GetStorageFolder())/"config/recent_servers.txt").string();
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 	}
 }
@@ -219,15 +220,6 @@ void Config::SetStorageFolder(const char *f)
 {
 	std::filesystem::path p(f);
 	storageFolder = p.generic_string();
-}
-
-const std::string &Config::GetStoragePath() const
-{
-	if(!storageFolder.length())
-		return storageFolder;
-	static std::string str;
-	str=storageFolder+"/"s;
-	return str;
 }
 
 const std::string &Config::GetStorageFolder() const

@@ -45,10 +45,9 @@ namespace teleport
 		class Config
 		{
 			std::vector<Bookmark> bookmarks;
-			std::string storageFolder="";
+			std::string storageFolder="storage";
 
 		public:
-			const std::string &GetStoragePath() const;
 			static Config &GetInstance();
 			void LoadConfigFromIniFile();
 			std::vector<std::string> recent_server_urls;

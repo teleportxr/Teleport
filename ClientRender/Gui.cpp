@@ -758,7 +758,7 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 			void *ptr = nullptr;
 			unsigned bytelen = 0;
 			auto &config = client::Config::GetInstance();
-			std::string filename = config.GetStoragePath() + "config/"s + binding_filename;
+			std::string filename = config.GetStorageFolder() + "/config/"s + binding_filename;
 			fileLoader->AcquireFileContents(ptr, bytelen, filename.c_str(), true);
 			if (ptr)
 			{

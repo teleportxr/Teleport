@@ -343,7 +343,7 @@ void Renderer::InitLocalGeometry()
 	}
 	avsNode.data_type	=avs::NodeDataType::Mesh;
 	
-	avsNode.data_uid	=hand_mesh_uid;
+	avsNode.data_uid	=0;//hand_mesh_uid;
 	avsNode.materials.push_back(blue_material_uid);
 	avsNode.materials.push_back(grey_material_uid);
 	
@@ -460,17 +460,17 @@ void Renderer::InitLocalGeometry()
 	localGeometryCache->SetLifetimeFactor(0.f);
 	local_session_client->ApplySetup(setupCommand);
 	XrSessionChanged(true);
-	xr_profile_to_controller_model_name["/interaction_profiles/khr/simple_controller"]			= "generic-trigger-squeeze-touchpad-thumbstick";
-	xr_profile_to_controller_model_name["/interaction_profiles/google/daydream_controller"]		= "google-daydream";
-	xr_profile_to_controller_model_name["/interaction_profiles/htc/vive_controller"]			= "htc-vive-cosmos";
-	xr_profile_to_controller_model_name["/interaction_profiles/htc/vive_pro"]					= "htc-vive-cosmos";
-	xr_profile_to_controller_model_name["/interaction_profiles/microsoft/motion_controller"]	= "microsoft-mixed-reality";
+	xr_profile_to_controller_model_name["/interaction_profiles/khr/simple_controller"]			= "generic-trigger-squeeze-touchpad-thumbstick/{SIDE}";
+	xr_profile_to_controller_model_name["/interaction_profiles/google/daydream_controller"]		= "google-daydream/{SIDE}";
+	xr_profile_to_controller_model_name["/interaction_profiles/htc/vive_controller"]			= "htc-vive-focus/none";
+	xr_profile_to_controller_model_name["/interaction_profiles/htc/vive_pro"]					= "htc-vive-focus-pro/none";
+	xr_profile_to_controller_model_name["/interaction_profiles/microsoft/motion_controller"]	= "microsoft-mixed-reality/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/microsoft/xbox_controller"]		= "";
-	xr_profile_to_controller_model_name["/interaction_profiles/oculus/go_controller"]			= "oculus-go";
-	xr_profile_to_controller_model_name["/interaction_profiles/oculus/touch_controller"]		= "oculus-touch-v3";
-	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"]			= "valve-index";
-	//XrBindingsChanged("/user/hand/left", "/interaction_profiles/oculus/touch_controller");
-	XrBindingsChanged("/user/hand/right", "/interaction_profiles/valve/index_controller");
+	xr_profile_to_controller_model_name["/interaction_profiles/oculus/go_controller"]			= "oculus-go/{SIDE}";
+	xr_profile_to_controller_model_name["/interaction_profiles/oculus/touch_controller"]		= "oculus-touch-v3/{SIDE}";
+	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"]			= "valve-index/{SIDE}";
+	XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
+	XrBindingsChanged("/user/hand/right", "/interaction_profiles/khr/simple_controller");
 	
 }
 
@@ -483,13 +483,16 @@ void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 	if(u!=xr_profile_to_controller_model_name.end())
 	{
 		std::string model_name = u->second;
+
 		if(user_path=="/user/hand/left")
 		{
+			std::string left_model_name = u->second;
+			platform::core::find_and_replace(left_model_name, "{SIDE}", "left");
 			avs::Node avsNode;
 			avsNode.parentID = lobbyGeometry.self_node_uid;
 			if (!lobbyGeometry.left_model_uid)
 				lobbyGeometry.left_model_uid = avs::GenerateUid();
-			geometryDecoder.decodeFromWeb(0, source_root+"/"s+model_name+"/left.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.left_model_uid, platform::crossplatform::AxesStandard::OpenGL);
+			geometryDecoder.decodeFromWeb(0, source_root + "/"s + left_model_name + ".glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.left_model_uid, platform::crossplatform::AxesStandard::OpenGL);
 			avsNode.name = "Left Controller";
 			avsNode.data_type = avs::NodeDataType::SubScene;
 			avsNode.data_uid = lobbyGeometry.left_model_uid;
@@ -497,11 +500,13 @@ void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 		}
 		if (user_path == "/user/hand/right")
 		{
+			std::string right_model_name = u->second;
+			platform::core::find_and_replace(right_model_name, "{SIDE}", "right");
 			avs::Node avsNode;
 			avsNode.parentID = lobbyGeometry.self_node_uid;
 			if (!lobbyGeometry.right_model_uid)
 				lobbyGeometry.right_model_uid = avs::GenerateUid();
-			geometryDecoder.decodeFromWeb(0, source_root + "/"s + model_name + "/right.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.right_model_uid, platform::crossplatform::AxesStandard::OpenGL);
+			geometryDecoder.decodeFromWeb(0, source_root + "/"s + right_model_name + ".glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.right_model_uid, platform::crossplatform::AxesStandard::OpenGL);
 			avsNode.name = "Right Controller";
 			avsNode.data_type = avs::NodeDataType::SubScene;
 			avsNode.data_uid = lobbyGeometry.right_model_uid;
@@ -1116,7 +1121,8 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			{
 				p++;
 			}
-			
+
+			XrBindingsChanged("/user/hand/left", p->first);
 			XrBindingsChanged("/user/hand/right", p->first);
 			break;
 		}

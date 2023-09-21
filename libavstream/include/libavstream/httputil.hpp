@@ -9,6 +9,7 @@
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <chrono>
 
 typedef void CURL;
 typedef void CURLM;
@@ -17,14 +18,16 @@ namespace avs
 	typedef std::function<void(const uint8_t* buffer, size_t bufferSize)> HTTPCallbackFn;
 	struct HTTPPayloadRequest
 	{
-		//FilePayloadType type=FilePayloadType::Invalid;
+		bool shouldCache = false;
+		bool cached=false;
+		std::chrono::time_point<std::chrono::system_clock> cacheUpdated;
 		std::string url;
 		HTTPCallbackFn callbackFn;
 	};
 
 	struct HTTPUtilConfig
 	{
-		const char* remoteIP = "";
+		const char *cacheDirectory="";
 		int32_t remoteHTTPPort = 0;
 		uint32_t connectionTimeout = 5000;
 		uint32_t maxConnections = 10;
@@ -77,6 +80,7 @@ namespace avs
 		std::queue<HTTPPayloadRequest>& GetRequestQueue() { return mRequestQueue; } 
 
 	private:
+		std::string cacheDirectory;
 		static std::string cert_path;
 		bool AddRequest(const HTTPPayloadRequest& request);
 		static size_t writeCallback(char* ptr, size_t size, size_t nmemb, void* userData);
@@ -90,5 +94,6 @@ namespace avs
 		bool mInitialized;
 
 		static constexpr size_t mMinTransferBufferSize = 300000; //bytes
+		void CacheReceivedFile(const Transfer &transfer);
 	};
 } 

@@ -225,15 +225,14 @@ shader vertexOutput VSSolid(vertexInput_normal_tangent_2uvs IN)
 struct vertexInputVariant
 {
 	vec3 position : POSITION;
-	variant(have_normal) vec3 normal : NORMAL;
-	variant(have_tangent) vec4 tangent : TANGENT;
-	variant(uv_count> 0) vec2 texCoords0 : TEXCOORD0;
-	variant(uv_count > 1) vec2 texCoords1 : TEXCOORD1;
-	variant(have_colour) vec4 colour : TEXCOORD2;
-	variant(have_anim) vec4 joints : TEXCOORD3;
-	variant(have_anim) vec4 weights : TEXCOORD4;
+	[variant(have_normal)] vec3 normal : NORMAL;
+	[variant(have_tangent)] vec4 tangent : TANGENT;
+	[variant(uv_count> 0)] vec2 texCoords0 : TEXCOORD_AUTO;
+	[variant(uv_count > 1)] vec2 texCoords1 : TEXCOORD_AUTO;
+	[variant(have_colour)] vec4 colour : COLOR;
+	[variant(have_anim)] vec4 joints : TEXCOORD_AUTO;
+	[variant(have_anim)] vec4 weights : TEXCOORD_AUTO;
 };
-
 
 shader vertexOutput VS_Solid_Normal_Tangent_2UVs(vertexInput_normal_tangent_2uvs IN)
 {

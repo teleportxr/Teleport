@@ -25,7 +25,7 @@ const char * GetAttributeSemantic(avs::AttributeSemantic sem)
 		return "TEXCOORD";
 		break;
 	case avs::AttributeSemantic::COLOR_0:
-		return "COLOR_0";
+		return "COLOR";
 		break;
 	case avs::AttributeSemantic::JOINTS_0:
 		return "TEXCOORD";

@@ -7,6 +7,7 @@
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/AnimationInterface.h"
+#include "TeleportClient/Config.h"
 #include "ThisPlatform/Threads.h"
 #include "ResourceCreator.h"
 
@@ -16,6 +17,10 @@
 #include "draco/compression/decode.h"
 #include "draco/io/gltf_decoder.h"
 #include <TeleportCore/FontAtlas.h>
+#include <libavstream/httputil.hpp>
+avs::HTTPUtil hTTPUtil;
+#include <filesystem>
+using std::filesystem::path;
 
 #define TELEPORT_GEOMETRY_DECODER_ASYNC 1
 
@@ -71,8 +76,6 @@ template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffse
 	memcpy(target, data + dataOffset, count * sizeof(T));
 	dataOffset += count * sizeof(T);
 }
-#include <libavstream/httputil.hpp>
-avs::HTTPUtil hTTPUtil;
 
 GeometryDecoder::GeometryDecoder()
 {
@@ -82,6 +85,8 @@ GeometryDecoder::GeometryDecoder()
 	httpUtilConfig.remoteHTTPPort = 443;
 	httpUtilConfig.maxConnections = 12;
 	httpUtilConfig.useSSL = true;
+	auto &config = teleport::client::Config::GetInstance();
+	httpUtilConfig.cacheDirectory=(path(config.GetStorageFolder())/"http_cache"s).string().c_str();
 	hTTPUtil.initialize(httpUtilConfig);
 }
 
@@ -149,6 +154,7 @@ avs::Result GeometryDecoder::decodeFromWeb(avs::uid server_uid,const std::string
 	//req.type = avs::FilePayloadType::Mesh;
 	std::function<void(const uint8_t* buffer, size_t bufferSize)> f = std::bind(&GeometryDecoder::receiveFromWeb, this, server_uid, uri,std::placeholders::_1, std::placeholders::_2,type,target,resource_uid,sourceAxesStandard);
 	req.callbackFn=std::move(f);
+	req.shouldCache=true;
 	hTTPUtil.GetRequestQueue().push(req);
 	return avs::Result::OK;
 }

@@ -5,8 +5,13 @@
 #include <logger.hpp>
 #include <iostream>
 #include <functional>
+#include <filesystem>
 #include <vector>
 #include <curl/curl.h>
+#include <string>
+#include <fstream>
+using std::filesystem::path;
+using namespace std::string_literals;
 
 	#define CURL_CHECK(cc) {if (cc != CURLE_OK){std::cerr<<"CURL code failed.\n";}}
 
@@ -30,7 +35,7 @@ namespace avs
 		{
 			return Result::OK;
 		}
-
+		cacheDirectory=config.cacheDirectory;
 		curl_global_init(CURL_GLOBAL_DEFAULT);
 
 		mMultiHandle=curl_multi_init();
@@ -107,6 +112,8 @@ namespace avs
 					{
 						size_t dataSize = transfer.getReceivedDataSize();
 						transfer.mRequest.callbackFn(transfer.getReceivedData(), dataSize);
+						if(transfer.mRequest.shouldCache)
+							CacheReceivedFile(transfer);
 					}
 					else
 					{
@@ -118,6 +125,30 @@ namespace avs
 		}
 
 		return Result::OK;
+	}
+	std::string URLToFilePath(std::string url)
+	{
+		size_t protocol_end=url.find("://");
+		std::string filepath=url.substr(protocol_end+3,url.length()-protocol_end-3);
+		size_t first_slash=filepath.find("/");
+		if(first_slash>=filepath.length())
+			first_slash=filepath.length();
+		std::string base_url=filepath.substr(0,first_slash);
+		filepath=filepath.substr(first_slash,filepath.length()-first_slash);
+		size_t colon_pos=base_url.find(":");
+		if(colon_pos<base_url.length())
+			base_url=base_url.substr(0,colon_pos);
+		filepath=base_url+filepath;
+		// TODO: check path length is not too long.
+		return filepath;
+	}
+	void HTTPUtil::CacheReceivedFile(const Transfer &transfer)
+	{
+		std::string cacheFilePath=URLToFilePath(transfer.mRequest.url);
+		path fullPath = path(cacheDirectory) / cacheFilePath;
+		std::filesystem::create_directories(fullPath.parent_path());
+		std::ofstream ofs(fullPath.c_str(),std::ios::binary);
+		ofs.write((const char*)transfer.getReceivedData(),transfer.getReceivedDataSize());
 	}
 
 	bool HTTPUtil::AddRequest(const HTTPPayloadRequest& request)
@@ -170,7 +201,7 @@ namespace avs
 		return realSize;
 	}
 	
-		 std::string HTTPUtil::cert_path;
+	std::string HTTPUtil::cert_path;
 	HTTPUtil::Transfer::Transfer(CURLM* multi, std::string remoteURL, size_t bufferSize)
 		: mMulti(multi)
 		, mCurrentSize(0)

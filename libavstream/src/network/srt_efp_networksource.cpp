@@ -166,7 +166,7 @@ Result SrtEfpNetworkSource::configure(std::vector<NetworkSourceStream>&& streams
 
 #if TELEPORT_CLIENT
 	HTTPUtilConfig httpUtilConfig;
-	httpUtilConfig.remoteIP = params.remoteIP;
+	//httpUtilConfig.remoteIP = params.remoteIP;
 	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
 	httpUtilConfig.maxConnections = params.maxHTTPConnections;
 	httpUtilConfig.useSSL = params.useSSL;
