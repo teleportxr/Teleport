@@ -299,7 +299,8 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 		xr_session_running=(result==XR_SUCCESS);
 		if(sessionChangedCallback)
 			sessionChangedCallback(xr_session_running);
-
+		if (xr_session_running)
+			AttachSessionActions();
         // Set session state once we have entered VR mode and have a valid session object.
         if (result == XR_SUCCESS)
 		{

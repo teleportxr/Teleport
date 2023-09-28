@@ -31,6 +31,14 @@
 
 namespace clientrender
 {
+	struct LocalGlobalPose
+	{
+		avs::Pose localPose;
+		avs::Pose globalPose;
+	};
+	//! The generic state of the client hardware device e.g. headset, controllers etc.
+	//! There exists one of these for each server, plus one for the null server (local state).
+	
 	struct DebugOptions
 	{
 		bool showAxes=false;
@@ -155,7 +163,7 @@ namespace clientrender
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 		void InvalidateDeviceObjects();
 		
-		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, avs::uid server_uid,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
+		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
 		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
 		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
 		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);

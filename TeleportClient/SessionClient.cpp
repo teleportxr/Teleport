@@ -20,28 +20,30 @@ using namespace clientrender;
 avs::Timestamp tBegin;
 
 static std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient>> sessionClients;
+static std::set<avs::uid> sessionClientIds;
 
-struct IpPort
+
+IpPort teleport::client::GetIpPort(const char *ip_port)
 {
-	std::string ip;
-	int port=0;
-};
-IpPort GetIpPort(const char *ip_port)
-{
-	std::string ip= ip_port;
-	size_t pos=ip.find(":");
+	std::string ip = ip_port;
+	size_t pos = ip.find(":");
 	IpPort ipPort;
-	if(pos>=ip.length())
+	if (pos >= ip.length())
 	{
-		ipPort.port=0;
-		ipPort.ip=ip;
+		ipPort.port = 0;
+		ipPort.ip = ip;
 	}
 	else
 	{
-		ipPort.port=(atoi(ip.substr(pos+1,ip.length()-pos-1).c_str()));
-		ipPort.ip=ip.substr(0,pos);
+		ipPort.port = (atoi(ip.substr(pos + 1, ip.length() - pos - 1).c_str()));
+		ipPort.ip = ip.substr(0, pos);
 	}
 	return ipPort;
+}
+
+const std::set<avs::uid> &SessionClient::GetSessionClientIds()
+{
+	return sessionClientIds;
 }
 
 std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient(avs::uid server_uid)
@@ -49,11 +51,32 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	auto i=sessionClients.find(server_uid);
 	if(i==sessionClients.end())
 	{
-		auto r=std::make_shared<client::SessionClient>(server_uid);
-		sessionClients[server_uid]=r;
-		return r;
+	// We can create client zero, but any other must use CreateSessionClient() via TabContext.
+		if(server_uid==0)
+		{
+			auto r = std::make_shared<client::SessionClient>(0);
+			sessionClients[0] = r;
+			sessionClientIds.insert(0);
+			return r;
+		}
+		return nullptr;
 	}
 	return i->second;
+}
+
+avs::uid SessionClient::CreateSessionClient()
+{
+	avs::uid server_uid=avs::GenerateUid();
+	auto i = sessionClients.find(server_uid);
+	while (i != sessionClients.end())
+	{
+		server_uid = avs::GenerateUid();
+		i = sessionClients.find(server_uid);
+	}
+	auto r = std::make_shared<client::SessionClient>(server_uid);
+	sessionClients[server_uid] = r;
+	sessionClientIds.insert(server_uid);
+	return server_uid;
 }
 
 void SessionClient::DestroySessionClients()
@@ -62,22 +85,8 @@ void SessionClient::DestroySessionClients()
 	{
 		c.second=nullptr;
 	}
+	sessionClientIds.clear();
 	sessionClients.clear();
-}
-
-
-void SessionClient::ConnectButtonHandler(avs::uid server_uid,const std::string& url)
-{
-	IpPort ipP=GetIpPort(url.c_str());
-	auto sc=GetSessionClient(server_uid);
-	sc->RequestConnection(ipP.ip,ipP.port);
-	sc->connected_url=url;	
-}
-
-void SessionClient::CancelConnectButtonHandler(avs::uid server_uid)
-{
-	auto sc=GetSessionClient(server_uid);
-	sc->Disconnect(0);
 }
 
 SessionClient::SessionClient(avs::uid s)

@@ -169,7 +169,7 @@ void Config::LoadOptions()
 		auto C=magic_enum::enum_cast<StartupConnectOption>(c);
 		if(C.has_value())
 			options.startupConnectOption = C.value();
-		options.alwaysShow3dGui = ini.GetBoolValue("", "AlwaysShow3DGUI", options.alwaysShow3dGui);
+		options.simulateVR = ini.GetBoolValue("", "SimulateVR", options.simulateVR);
 	}
 }
 
@@ -180,7 +180,7 @@ void Config::SaveOptions()
 		string str;
 		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
 		str+=fmt::format("\nStartupConnectOption={0}",magic_enum::enum_name(options.startupConnectOption));
-		str += fmt::format("\nAlwaysShow3DGUI={0}", options.alwaysShow3dGui);
+		str += fmt::format("\nSimulateVR={0}", options.simulateVR);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 		LoadOptions();

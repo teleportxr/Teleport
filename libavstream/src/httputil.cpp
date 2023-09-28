@@ -10,10 +10,21 @@
 #include <curl/curl.h>
 #include <string>
 #include <fstream>
-using std::filesystem::path;
+#include <fmt/chrono.h>
+#include "Platform/Core/FileLoader.h"
+
+using namespace std::chrono;
+using namespace std::filesystem;
+#ifdef __ANDROID__
+#include <experimental/filesystem>
+using namespace std::experimental::filesystem;
+#define FILE_TIME_TYPE _FilesystemClock
+#else
+#define FILE_TIME_TYPE _File_time_clock
+#endif
 using namespace std::string_literals;
 
-	#define CURL_CHECK(cc) {if (cc != CURLE_OK){std::cerr<<"CURL code failed.\n";}}
+#define CURL_CHECK(cc) {if (cc != CURLE_OK){std::cerr<<"CURL code failed.\n";}}
 
 namespace avs 
 {
@@ -110,10 +121,30 @@ namespace avs
 					Transfer& transfer = mTransfers[index];
 					if (msgs[0].data.result == CURLE_OK)
 					{
-						size_t dataSize = transfer.getReceivedDataSize();
-						transfer.mRequest.callbackFn(transfer.getReceivedData(), dataSize);
-						if(transfer.mRequest.shouldCache)
-							CacheReceivedFile(transfer);
+						long response_code;
+						curl_easy_getinfo(msgs[0].easy_handle, CURLINFO_RESPONSE_CODE, &response_code);
+						if(response_code==200)
+						{
+							size_t dataSize = transfer.getReceivedDataSize();
+							transfer.mRequest.callbackFn(transfer.getReceivedData(), dataSize);
+							if(transfer.mRequest.shouldCache)
+								CacheReceivedFile(transfer);
+						}
+						else if(response_code==304)
+						{
+						// This means the file has not been updated since the cached version was saved. So we will send the cached version to the callback.
+							auto *fileLoader = platform::core::FileLoader::GetFileLoader();
+							if (fileLoader)
+							{
+								uint8_t *ptr=nullptr;
+								uint32_t bytes=0;
+								fileLoader->AcquireFileContents(((void*&)ptr),bytes,transfer.mRequest.cachedFilePath.c_str(),false);
+								if(ptr&&bytes>0)
+								{
+									transfer.mRequest.callbackFn(ptr, bytes);
+								}
+							}
+						}
 					}
 					else
 					{
@@ -126,7 +157,7 @@ namespace avs
 
 		return Result::OK;
 	}
-	std::string URLToFilePath(std::string url)
+	std::string HTTPUtil::URLToFilePath(std::string url)
 	{
 		size_t protocol_end=url.find("://");
 		std::string filepath=url.substr(protocol_end+3,url.length()-protocol_end-3);
@@ -139,16 +170,43 @@ namespace avs
 		if(colon_pos<base_url.length())
 			base_url=base_url.substr(0,colon_pos);
 		filepath=base_url+filepath;
+		path fullpath = path(cacheDirectory) / filepath;
 		// TODO: check path length is not too long.
-		return filepath;
+		return fullpath.generic_string();
 	}
 	void HTTPUtil::CacheReceivedFile(const Transfer &transfer)
 	{
-		std::string cacheFilePath=URLToFilePath(transfer.mRequest.url);
-		path fullPath = path(cacheDirectory) / cacheFilePath;
+		if(fileCacheSize +transfer.getReceivedDataSize()>maximumFileCacheSize)
+		{
+			return;
+		}
+		path fullPath = path(transfer.mRequest.cachedFilePath);
 		std::filesystem::create_directories(fullPath.parent_path());
-		std::ofstream ofs(fullPath.c_str(),std::ios::binary);
-		ofs.write((const char*)transfer.getReceivedData(),transfer.getReceivedDataSize());
+		if(transfer.getReceivedDataSize()>10000000000)
+			return;
+		auto *fileLoader = platform::core::FileLoader::GetFileLoader();
+		if (!fileLoader)
+			return;
+		fileLoader->Save(transfer.getReceivedData(), (uint32_t)transfer.getReceivedDataSize(), transfer.mRequest.cachedFilePath.c_str(), false);
+		fileCacheSize += transfer.getReceivedDataSize();
+	}
+
+	void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
+	{
+		if (!request.shouldCache)
+			return;
+		
+		request.cachedFilePath = URLToFilePath(request.url);
+		if (std::filesystem::exists(request.cachedFilePath))
+		{
+			request.cached = true;
+			file_time_type write_time = std::filesystem::last_write_time(path(request.cachedFilePath));
+			auto sctp = time_point_cast<system_clock::duration>(write_time - FILE_TIME_TYPE::now() + system_clock::now());
+			//auto sctp = FILE_TIME_TYPE::time_since_epoch(write_time);
+			request.cacheUpdated = std::chrono::floor<seconds>(sctp);
+		}
+		else
+			request.cached = false;
 	}
 
 	bool HTTPUtil::AddRequest(const HTTPPayloadRequest& request)
@@ -160,7 +218,9 @@ namespace avs
 			Transfer& transfer = mTransfers[index];
 			if (!transfer.isActive())
 			{
-				transfer.start(request);
+				HTTPPayloadRequest rq=request;
+				CheckForCachedFile(rq);
+				transfer.start(rq);
 				mTransferIndex = (index + 1) % mConfig.maxConnections;
 				return true;
 			}
@@ -263,6 +323,15 @@ namespace avs
 			{
 				return;
 			}
+			mCurrentSize = 0;
+			mRequest = request;
+			struct curl_slist *headerlist =nullptr;
+			if (request.cached)
+			{
+				headerlist = curl_slist_append(NULL, getModifiedSinceHeader().c_str());
+			}
+			if(headerlist)
+				curl_easy_setopt(mHandle, CURLOPT_HTTPHEADER, headerlist);
 			//curl_easy_setopt(mHandle, CURLOPT_READDATA, this);
 			//curl_easy_setopt(mHandle, CURLOPT_READFUNCTION, read_callback);
 			CURLMcode rm = curl_multi_add_handle(mMulti, mHandle);
@@ -270,8 +339,6 @@ namespace avs
 			{
 				return;
 			}
-			mCurrentSize = 0;
-			mRequest = request;
 		//	addBufferHeader();
 			mActive = true;
 		}
@@ -289,6 +356,17 @@ namespace avs
 			// data size includes size of the file name and the file name.
 			info->dataSize = mCurrentSize - sizeof(FilePayloadInfo);
 		}
+	}
+
+	std::string HTTPUtil::Transfer::getModifiedSinceHeader()
+	{
+		//	If-Modified-Since: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+		// e.g. If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT
+		// TODO: because fmt::format with a time_point adds a silly number of decimal places to the "seconds", we can't use it for the whole time.
+		// instead, we must extract the seconds separately.
+		std::string header=fmt::format("If-Modified-Since: {:%a, %d %b %Y %H:%M}:00 GMT", mRequest.cacheUpdated,0);
+		write(header.c_str(),header.length());
+		return header;
 	}
 
 	void HTTPUtil::Transfer::addBufferHeader()

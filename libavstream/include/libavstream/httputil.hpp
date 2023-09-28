@@ -19,10 +19,11 @@ namespace avs
 	struct HTTPPayloadRequest
 	{
 		bool shouldCache = false;
-		bool cached=false;
 		std::chrono::time_point<std::chrono::system_clock> cacheUpdated;
 		std::string url;
 		HTTPCallbackFn callbackFn;
+		bool cached = false;		// filled by HTTPUtil when the file is present.
+		std::string cachedFilePath; // filled by HTTPUtil .
 	};
 
 	struct HTTPUtilConfig
@@ -47,6 +48,7 @@ namespace avs
 			~Transfer();
 			void start(const HTTPPayloadRequest& request);
 			void stop();
+			std::string getModifiedSinceHeader();
 			void addBufferHeader();
 			void write(const char* data, size_t dataSize);
 			CURL* getHandle() const { return mHandle; };
@@ -94,6 +96,10 @@ namespace avs
 		bool mInitialized;
 
 		static constexpr size_t mMinTransferBufferSize = 300000; //bytes
+		void CheckForCachedFile(HTTPPayloadRequest &request);
 		void CacheReceivedFile(const Transfer &transfer);
+		size_t fileCacheSize=0;
+		size_t maximumFileCacheSize=128*1024*1024;	// 128Mb cache?
+		std::string URLToFilePath(std::string url);
 	};
 } 

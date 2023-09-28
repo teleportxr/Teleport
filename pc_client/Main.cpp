@@ -344,11 +344,11 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, clientRenderer, std::placeholders::_1);
-	overlayDelegate = std::bind(&clientrender::Renderer::RenderOverlayMenu, clientRenderer, std::placeholders::_1);
+	overlayDelegate = std::bind(&clientrender::Renderer::RenderVROverlay, clientRenderer, std::placeholders::_1);
 	auto &config=client::Config::GetInstance();
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());
-	if(config.recent_server_urls.size())
-		client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
+	//if(config.recent_server_urls.size())
+	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
 	dsmi->AddWindow(hWnd);
 	dsmi->SetRenderer(clientRenderer);
@@ -519,7 +519,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// because vertex and index buffers can be created in OnFrameMove. 
 				// StartFrame does nothing for D3D11.
 				w->StartFrame();
-				clientRenderer->OnFrameMove(fTime,time_step,useOpenXR.HaveXRDevice());
+				clientRenderer->OnFrameMove(fTime,time_step);
 				fTime+=time_step;
 				errno=0;
 				platform::crossplatform::MultiviewGraphicsDeviceContext	deviceContext;

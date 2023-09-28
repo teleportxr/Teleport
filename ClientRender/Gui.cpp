@@ -28,17 +28,21 @@ using namespace std::string_literals;
 #include "Platform/Core/StringFunctions.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/OpenXR.h"
+#include "TeleportClient/TabContext.h"
 
 #ifdef __ANDROID__
 #define VK_BACK           0x01
 #define VK_ESCAPE         0x02
 #endif
+
 #define VK_MAX         0x10
+
 bool KeysDown[VK_MAX];
+
 using namespace teleport;
 using namespace platform;
-using namespace platform;
 using namespace crossplatform;
+
 ImFont *defaultFont = nullptr;
 std::map<int,ImFont *> fontInter;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
@@ -925,13 +929,8 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
 
-void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
+void Gui::BeginFrame(GraphicsDeviceContext &deviceContext)
 {
-	if (in_debug_gui != 0)
-	{
-		return;
-	}
-	DarkStyle();
 	// POSSIBLY can't use ImGui's own Win32 NewFrame as we may want to override the mousepos.
 #ifdef _MSC_VER
 	ImGui_ImplWin32_NewFrame();
@@ -946,7 +945,7 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 	ImGui::NewFrame();
 	bool in3D = openXR.IsSessionActive();
-	if(in3D)
+	if (in3D)
 	{
 		// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
 		ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
@@ -955,11 +954,15 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 		ImGui_ImplPlatform_SetMouseDown(1, mouseButtons[1]);
 		ImGui_ImplPlatform_SetMouseDown(2, mouseButtons[2]);
 	}
-	ImGui::PushFont(fontInter[18]);
+}
 
+void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
+{
+	DarkStyle();
 	ImGuiWindowFlags window_flags = 0;
-
+	auto vp = renderPlatform->GetViewport(deviceContext, 0);
 	ImVec2 size((float)vp.w, (float)vp.h);
+	bool in3D = openXR.IsSessionActive();
 	if(in3D)
 	{
 		size.x*=0.6f;
@@ -968,42 +971,50 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 
 		window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse ;
 	}
+	if (in_debug_gui != 0)
+	{
+		return;
+	}
+	ImGui::PushFont(fontInter[18]);
 	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
-
+/*
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
-	auto status = sessionClient->GetConnectionStatus();
-	auto streamingStatus = sessionClient->GetStreamingConnectionState();
-	const auto& setup = sessionClient->GetSetupCommand();
-	ImGui::BeginTable("serverstats", 2);
-	ImGui::TableSetupColumn("name1", ImGuiTableColumnFlags_WidthFixed, 200.0f);
-	ImGui::TableSetupColumn("val11", ImGuiTableColumnFlags_WidthStretch, 400.0f);
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::Text("Server");
-	ImGui::TableNextColumn();
-	ImGui::Text(fmt::format("{0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::Text("Server Session Id");
-	ImGui::TableNextColumn();
-	ImGui::Text("%llu", setup.session_id, white);
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::Text("Session Status");
-	ImGui::TableNextColumn();
-	ImGui::Text(teleport::client::StringOf(status), white);
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::Text("Streaming Status");
-	ImGui::TableNextColumn();
-	ImGui::Text( avs::stringOf(streamingStatus), white);
-	ImGui::TableNextRow();
-	ImGui::TableNextColumn();
-	ImGui::Text("Latency");
-	ImGui::TableNextColumn();
-	ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
-	ImGui::EndTable();
+	if(sessionClient)
+	{
+		auto status = sessionClient->GetConnectionStatus();
+		auto streamingStatus = sessionClient->GetStreamingConnectionState();
+		const auto& setup = sessionClient->GetSetupCommand();
+		ImGui::BeginTable("serverstats", 2);
+		ImGui::TableSetupColumn("name1", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+		ImGui::TableSetupColumn("val11", ImGuiTableColumnFlags_WidthStretch, 400.0f);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Server");
+		ImGui::TableNextColumn();
+		ImGui::Text(fmt::format("{0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Server Session Id");
+		ImGui::TableNextColumn();
+		ImGui::Text("%llu", setup.session_id, white);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Session Status");
+		ImGui::TableNextColumn();
+		ImGui::Text(teleport::client::StringOf(status), white);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Streaming Status");
+		ImGui::TableNextColumn();
+		ImGui::Text( avs::stringOf(streamingStatus), white);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::Text("Latency");
+		ImGui::TableNextColumn();
+		ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
+		ImGui::EndTable();
+	}*/
 }
 
 void Gui::LinePrint(const std::string& str, const float* clr)
@@ -1243,7 +1254,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					const auto &sn=selected_node->GetSkeletonNode();
 					if(auto n=sn.lock())
 					{
-						DoRow("Skeleton Node"	,"%s",n->name);
+						DoRow("Skeleton Node"	,"%s",n->name.c_str());
 						if (ImGui::IsItemClicked())
 						{
 							Select(n->id);
@@ -1252,7 +1263,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					if(selected_node->GetSkeletonInstance())
 					{
 						auto s=selected_node->GetSkeletonInstance();
-						DoRow("Skeleton"	,"%d : %s",s->GetBones().size(),s->GetSkeleton()->name);
+						DoRow("Skeleton"	,"%d : %s",s->GetBones().size(),s->GetSkeleton()->name.c_str());
 						if (ImGui::IsItemClicked())
 						{
 							//Select(s->GetSkeleton()->id);
@@ -1410,6 +1421,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 3.f, IM_COL32(255, 90, 90, 200), 16);
 	else
 		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+}
+
+void Gui::EndFrame(GraphicsDeviceContext &deviceContext)
+{
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
@@ -1733,17 +1748,20 @@ void Gui::GeometryOSD()
 		}
 		LinePrint(lst.c_str());
 	}
-	const auto &sent_req=sessionClient->GetSentResourceRequests();
-	LinePrint(fmt::format("{0} Requests Sent",sent_req.size()).c_str());
-	if(sent_req.size())
+/*	if(sessionClient)
 	{
-		std::string lst;
-		for(const auto &r:sent_req)
+		const auto &sent_req=sessionClient->GetSentResourceRequests();
+		LinePrint(fmt::format("{0}: {1} Requests Sent",sessionClient->GetServerIP(),sent_req.size()).c_str());
+		if(sent_req.size())
 		{
-			lst+=fmt::format("{0} ",r.first);
+			std::string lst;
+			for(const auto &r:sent_req)
+			{
+				lst+=fmt::format("{0} ",r.first);
+			}
+			LinePrint(lst.c_str());
 		}
-		LinePrint(lst.c_str());
-	}
+	}*/
 }
 
 bool Gui::Tab(const char *txt)
@@ -1877,7 +1895,7 @@ void Gui::ListBookmarks()
 				current_url = url;
 				// copy, including null terminator.
 				memcpy(url_buffer, current_url.c_str(), std::min((size_t)499, current_url.size()+1));
-				connectHandler(url);
+				connectHandler(current_tab_context,url);
 				show_bookmarks = false;
 			}
 			ImGui::TreePop();
@@ -1902,17 +1920,21 @@ void Gui::MenuBar2D()
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.00f, 0.00f, 0.0f));
 	if (ImGui::Button(ICON_FK_RENREN, ImVec2(36, 24)))
 	{
-		cancelConnectHandler();
+		cancelConnectHandler(current_tab_context);
 	}
 	if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 		TIMED_TOOLTIP("Return to lobby");
 	auto& config = client::Config::GetInstance();
 	{
-		// TODO: Temporary
-		avs::uid server_uid = 1;
+		if(!current_tab_context)
+		{
+			current_tab_context = client::TabContext::AddTabContext();
+		}
+		auto tabContext = client::TabContext::GetTabContext(current_tab_context);
+		avs::uid server_uid = tabContext->GetServerUid();
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-		bool connecting = sessionClient->IsConnecting();
-		bool connected = sessionClient->IsConnected();
+		bool connecting = sessionClient?sessionClient->IsConnecting():false;
+		bool connected = sessionClient?sessionClient->IsConnected() : false;
 		bool connect_please=false;
 		bool cancel_please=false;
 		ImGui::SameLine();
@@ -1947,14 +1969,14 @@ void Gui::MenuBar2D()
 		}
 		if(cancel_please)
 		{
-			cancelConnectHandler();
+			cancelConnectHandler(current_tab_context);
 		}
 		if(connect_please)
 		{
 			show_bookmarks = false;
 			show_options = false;
 			current_url = url_buffer;
-			connectHandler(current_url);
+			connectHandler(current_tab_context,current_url);
 		}
 
 		ImGui::SameLine();
@@ -2021,41 +2043,60 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 	auto& config = client::Config::GetInstance();
 	if(config.dev_mode)
 	{
-		ImVec2 pos = { vp.w - 400.f ,100.f };
+		static float dev_overlay_width=0.f;
+		ImGui::PushFont(fontInter[12]);
+		ImVec2 pos = {vp.w - dev_overlay_width-12.f, 100.f};
 		ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
 		ImGui::SetNextWindowPos(pos);
 		ImGuiBegin("dev_overlay",0,window_flags);
-		if(sessionClient)
 		{
-			auto status = sessionClient->GetConnectionStatus();
-			auto streamingStatus = sessionClient->GetStreamingConnectionState();
-		
+			dev_overlay_width = ImGui::GetWindowWidth();
+			client::ConnectionStatus status=client::ConnectionStatus::UNCONNECTED;
+			avs::StreamingConnectionState streamingStatus = avs::StreamingConnectionState::UNINITIALIZED;
+			const auto &ids=client::SessionClient::GetSessionClientIds();
 			vec4 white(1.f, 1.f, 1.f, 1.f);
 			ImGui::BeginTable("serverstats", 2);
 			ImGui::TableSetupColumn("name2", ImGuiTableColumnFlags_WidthFixed, 120.0f);
 			ImGui::TableSetupColumn("val21", ImGuiTableColumnFlags_WidthStretch);
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn();
-			ImGui::Text("Session Id");
-			ImGui::TableNextColumn();
-			ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn();
-			ImGui::Text("Session Status");
-			ImGui::TableNextColumn();
-			ImGui::Text(teleport::client::StringOf(status));
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn();
-			ImGui::Text("Streaming Status");
-			ImGui::TableNextColumn();
-			ImGui::Text(avs::stringOf(streamingStatus));
 
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn();
-			ImGui::Text("Latency");
-			ImGui::TableNextColumn();
-			ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+			for(auto id:ids)
+			{
+				auto sessionClient = client::SessionClient::GetSessionClient(id);
+				status = sessionClient->GetConnectionStatus();
+				streamingStatus = sessionClient->GetStreamingConnectionState();
 
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::Text("Server Id");
+				ImGui::TableNextColumn();
+				ImGui::Text("%llu", id);
+
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::Text("Session Id");
+				ImGui::TableNextColumn();
+				ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
+
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::Text("Session Status");
+				ImGui::TableNextColumn();
+				ImGui::Text(teleport::client::StringOf(status));
+
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::Text("Streaming Status");
+				ImGui::TableNextColumn();
+				ImGui::Text(avs::stringOf(streamingStatus));
+
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::Text("Latency");
+				ImGui::TableNextColumn();
+				ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+
+				ImGui::TableNextRow();
+			}
 			ImGui::EndTable();
 		}
 
@@ -2077,6 +2118,7 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 					"NUM 2: Vertex Normals\n");
 			ImGuiEnd();
 		}*/
+		ImGui::PopFont();
 	}
 	if(config.enable_vr)
 	{
@@ -2203,12 +2245,12 @@ void Gui::DevModeOptions()
 	ImGui::Checkbox("##showGeometryOffline", &config.options.showGeometryOffline);
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::LabelText("##labelAlwaysShow3dGui", "Force 3D User Interface");
+	ImGui::LabelText("##labelSimulateVR", "Simulate VR device");
 	ImGui::TableNextColumn();
-	ImGui::Checkbox("##AlwaysShow3dGui", &config.options.alwaysShow3dGui);
+	ImGui::Checkbox("##cbSimulateVR", &config.options.simulateVR);
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::LabelText("##labelAlwaysShow3dGui", "Test: kill streaming");
+	ImGui::LabelText("##labelkillstr", "Test: kill streaming");
 	ImGui::TableNextColumn();
 	if(ImGui::Button("##KillStreaming"))
 	{
@@ -2352,7 +2394,7 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 		{
 			if (ImGui::Button(ICON_FK_RENREN, ImVec2(64, 32)))
 			{
-				cancelConnectHandler();
+				cancelConnectHandler(current_tab_context);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(64, 32)))
@@ -2396,14 +2438,14 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 					if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(64, 32)))
 					{
 						current_url = url_buffer;
-						connectHandler(current_url);
+						connectHandler(current_tab_context,current_url);
 					}
 				}
 				else
 				{
 					if (ImGui::Button(ICON_FK_TIMES, ImVec2(64, 32)))
 					{
-						cancelConnectHandler();
+						cancelConnectHandler(current_tab_context);
 					}
 				}
 
@@ -2429,7 +2471,7 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 								keys_pressed.push_back(*key);
 								if(connecting)
 								{
-									cancelConnectHandler();
+									cancelConnectHandler(current_tab_context);
 								}
 							}
 							key++;
@@ -2439,14 +2481,12 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 					};
 					KeyboardLine("1234567890-");
 					ImGui::SameLine();
-					//ImGui::PushFont(symbolFont);
 					//ImGui::Button(ICON_FK_SEARCH " Search");
 					if (ImGui::Button(ICON_FK_LONG_ARROW_LEFT,ImVec2(92,32)))
 					{
 						 refocus=0;
 						 keys_pressed.push_back(VK_BACK);
 					}
-					//ImGui::PopFont();
 					ImGui::Text("  ");
 					ImGui::SameLine();
 					KeyboardLine("qwertyuiop");
@@ -2489,12 +2529,12 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 		Hide();
 }
 
-void Gui::SetConnectHandler(std::function<void(const std::string&)> fn)
+void Gui::SetConnectHandler(std::function<void(int32_t,const std::string&)> fn)
 {
 	connectHandler = fn;
 }
 
-void Gui::SetCancelConnectHandler(std::function<void()> fn)
+void Gui::SetCancelConnectHandler(std::function<void(int32_t)> fn)
 {
 	cancelConnectHandler = fn;
 }

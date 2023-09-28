@@ -74,19 +74,17 @@ namespace teleport
 		void SetDebugGuiMouse(vec2 m,bool leftButton);
 		void OnKeyboard(unsigned wParam, bool bKeyDown);
 		void OverlayMenu(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void BeginFrame(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void EndDebugGui(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void EndFrame(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 
-		void setSessionClient(const teleport::client::SessionClient *g)
-		{
-			sessionClient=g;
-		}
 		void SetConsoleCommandHandler(std::function<void(const std::string&)> fn)
 		{
-		console = fn;
+			console = fn;
 		}
-		void SetConnectHandler(std::function<void(const std::string&)> fn);
-		void SetCancelConnectHandler(std::function<void()> fn);
+		void SetConnectHandler(std::function<void(int32_t,const std::string&)> fn);
+		void SetCancelConnectHandler(std::function<void(int32_t)> fn);
 		void SetStartXRSessionHandler(std::function<void()> fn)
 		{
 			startXRSessionHandler = fn;
@@ -137,18 +135,18 @@ namespace teleport
 		void BoneTreeNode(const std::shared_ptr<clientrender::Bone> n, const char* search_text); 
 		void TreeNode(const std::shared_ptr<clientrender::Node> node,const char *search_text);
 
-		const teleport::client::SessionClient *sessionClient=nullptr;
 		platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
 		vec3 view_pos;
 		vec3 view_dir;
 		vec3 menu_pos;
 		vec2 bookmarks_pos;
+		int32_t current_tab_context = 0;
 		bool in_tabs=false;
 		float azimuth=0.0f, tilt = 0.0f;
 		std::string current_url;
 		std::vector<std::string> server_ips;
-		std::function<void(const std::string&)> connectHandler;
-		std::function<void()> cancelConnectHandler;
+		std::function<void(int32_t,const std::string &)> connectHandler;
+		std::function<void(int32_t)> cancelConnectHandler;
 		std::function<void()> startXRSessionHandler;
 		std::function<void()> endXRSessionHandler;
 		bool visible = false;

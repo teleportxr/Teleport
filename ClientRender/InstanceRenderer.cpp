@@ -90,11 +90,11 @@ void InstanceRenderer::InvalidateDeviceObjects()
 	SAFE_DELETE(instanceRenderState.videoTexture);
 }
 
-void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext,avs::uid server_uid, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
+void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture)
 {
 	bool multiview = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
 	
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+	auto &clientServerState=sessionClient->GetClientServerState();
 	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect,renderState.cubemapClearEffect_TagDataCubeBuffer);
 	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.localPose.position) - videoPos;
@@ -108,6 +108,7 @@ void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& 
 	renderState.cubemapClearEffect->Unapply(deviceContext);
 	renderState.cubemapClearEffect->UnbindTextures(deviceContext);
 }
+
 void InstanceRenderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContext& deviceContext, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, const char* technique)
 {
 	int W = targetTexture->width;
@@ -259,13 +260,13 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 			{
 				if (instanceRenderState.videoTexture->IsCubemap())
 				{
-					RenderVideoTexture(deviceContext, server_uid,ti->texture, instanceRenderState.videoTexture, "use_cubemap", "cubemapTexture");
+					RenderVideoTexture(deviceContext, ti->texture, instanceRenderState.videoTexture, "use_cubemap", "cubemapTexture");
 				}
 				else
 				{
 					math::Matrix4x4 projInv;
 					deviceContext.viewStruct.proj.Inverse(projInv);
-					RenderVideoTexture(deviceContext, server_uid,ti->texture, instanceRenderState.videoTexture, "use_perspective", "perspectiveTexture");
+					RenderVideoTexture(deviceContext, ti->texture, instanceRenderState.videoTexture, "use_perspective", "perspectiveTexture");
 				}
 			}
 		}
@@ -292,7 +293,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_ns,deviceContext.predictedDisplayTimeS);
 	geometryCache->mNodeManager->UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
-	auto& clientServerState = teleport::client::ClientServerState::GetClientServerState(this_server_uid);
+	auto &clientServerState = sessionClient->GetClientServerState();
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
 	if (renderState.openXR)
 	{
@@ -1004,7 +1005,7 @@ void InstanceRenderer::OnInputsSetupChanged(const std::vector<teleport::core::In
 
 void InstanceRenderer::SetOrigin(unsigned long long ctr,avs::uid origin_uid) 
 {
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+	auto &clientServerState = sessionClient->GetClientServerState();
 	clientServerState.origin_node_uid=origin_uid;
 	receivedInitialPos=ctr;
 }

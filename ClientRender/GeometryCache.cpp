@@ -44,6 +44,10 @@ std::shared_ptr<GeometryCache> GeometryCache::GetGeometryCache(avs::uid cache_ui
 		return nullptr;
 	return caches[cache_uid];
 }
+void GeometryCache::DestroyAllCaches()
+{
+	caches.clear();
+}
 
 const std::vector<avs::uid> &GeometryCache::GetCacheUids()
 {
@@ -250,7 +254,6 @@ void GeometryCache::CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkel
 	RESOURCECREATOR_DEBUG_COUT( "CompleteSkeleton {0}({1})",id,completeSkeleton->skeleton->name);
 
 	mSkeletonManager.Add(id, completeSkeleton->skeleton);
-
 	//Add skeleton to nodes waiting for skeleton.
 	MissingResource *missingSkeleton = GetMissingResourceIfMissing(id,avs::GeometryPayloadType::Skeleton);
 	if(missingSkeleton)

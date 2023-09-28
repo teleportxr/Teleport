@@ -28,9 +28,12 @@ set(srcs
 	../ClientApp/ClientApp.cpp
 	../ClientApp/ClientApp.h
 	CPackOptions.cmake
-)
-file(GLOB shaders "../client/Shaders/*.sfx" )
-file(GLOB shader_includes "../client/Shaders/*.sl" )
+) 
+set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/canvas_text.sfx"
+			"${CMAKE_SOURCE_DIR}/client/Shaders/cubemap_clear.sfx"
+			"${CMAKE_SOURCE_DIR}/client/Shaders/pbr.sfx"
+			"${CMAKE_SOURCE_DIR}/client/Shaders/texture_conversion.sfx")
+file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -43,6 +46,7 @@ endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
+source_group("Shaders Includes" src FILES ${shader_includes} )
 
 add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
 

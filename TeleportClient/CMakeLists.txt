@@ -3,6 +3,7 @@ project( TeleportClient )
 
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
+
 # Source
 set(src_files
 	basic_linear_algebra.h
@@ -26,6 +27,8 @@ set(src_files
 	ServerTimestamp.h
 	SessionClient.cpp
 	SessionClient.h
+	TabContext.cpp
+	TabContext.h
 )
 #For MT runtime
 add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream)

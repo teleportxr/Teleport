@@ -16,6 +16,7 @@
 #include "TeleportCore/Input.h"
 #include "TeleportClient/basic_linear_algebra.h"
 #include "ClientPipeline.h"
+#include "ClientDeviceState.h"
 
 typedef unsigned int uint;
 
@@ -29,6 +30,13 @@ namespace teleport
 {
 	namespace client
 	{
+		struct IpPort
+		{
+			std::string ip;
+			int port = 0;
+		};
+		extern IpPort GetIpPort(const char *ip_port);
+		class TabContext;
 		class SessionCommandInterface
 		{
 		public:
@@ -52,7 +60,6 @@ namespace teleport
 			virtual void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) = 0;
 			virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
 			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
-		//	virtual void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) = 0;
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
 			virtual void OnStreamingControlMessage(const std::string& str) = 0;
 		};
@@ -97,21 +104,29 @@ namespace teleport
 			// The following MIGHT be moved later to a separate Pipeline class:
 			avs::Pipeline messageToServerPipeline;
 			avs::GenericEncoder unreliableToServerEncoder;
+			ClientServerState clientServerState;
+		protected:
+			static avs::uid CreateSessionClient();
+			void RequestConnection(const std::string &ip, int port);
+			void SetServerIP(std::string);
+			void SetServerDiscoveryPort(int);
+			friend class TabContext;
 		public:
+			static const std::set<avs::uid> &GetSessionClientIds();
 			static std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
 			static void DestroySessionClients();
-			static void ConnectButtonHandler(avs::uid server_uid,const std::string& url);
-			static void CancelConnectButtonHandler(avs::uid server_uid);
 			// Implementing avs::GenericTargetInterface:
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		public:
 			SessionClient(avs::uid server_uid);
 			~SessionClient();
 			
+			ClientServerState &GetClientServerState()
+			{
+				return clientServerState;
+			}
 			//! For use only internally or by Renderer for the local session.
 			void ApplySetup(const teleport::core::SetupCommand &s);
-
-			void RequestConnection(const std::string &ip,int port);
 			bool HandleConnections();
 			void SetSessionCommandInterface(SessionCommandInterface*);
 			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
@@ -130,8 +145,6 @@ namespace teleport
 
 			std::string GetServerIP() const;
 			
-			void SetServerIP(std::string) ;
-			void SetServerDiscoveryPort(int) ;
 			std::string GetConnectionURL() const;
 			int GetPort() const;
 

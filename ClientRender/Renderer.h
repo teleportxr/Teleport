@@ -107,7 +107,6 @@ namespace clientrender
 		bool show_osd = false;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
-		bool using_vr = true;
 
 		struct LobbyGeometry
 		{
@@ -136,7 +135,6 @@ namespace clientrender
 		platform::crossplatform::Texture* externalTexture = nullptr;
 		
 		// TODO: temporary.
-		avs::uid server_uid=1;
 		const avs::uid local_server_uid=0;
 		const avs::InputId local_menu_input_id=0;
 		const avs::InputId local_cycle_osd_id=1;
@@ -153,7 +151,7 @@ namespace clientrender
 		GeometryDecoder geometryDecoder;
 	
 		bool OnDeviceRemoved();
-		void OnFrameMove(double fTime, float time_step, bool have_headset);
+		void OnFrameMove(double fTime, float time_step);
 		void OnMouseButtonPressed(bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
 		void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
 		void OnMouseMove(int xPos, int yPos,bool bLeftButtonDown, bool bRightButtonDown, bool bMiddleButtonDown, int nMouseWheelDelta);
@@ -176,8 +174,10 @@ namespace clientrender
 		void XrBindingsChanged(std::string user_path, std::string profile);
 		void XrSessionChanged(bool active);
 		void RemoveView(int) override;
-		void RenderOverlayMenu(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		void DrawOSD(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void DrawOSD(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext, bool mode_3d);
+		//! Callback fn for OpenXR Overlay.
+		void RenderVROverlay(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void UpdateVRGuiMouse();
 
 		// to render the vr view instead of re-rendering.

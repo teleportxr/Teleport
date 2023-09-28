@@ -187,14 +187,14 @@ void FileLoader::AcquireFileContents(void*& pointer, unsigned int& bytes, const 
 			bytes=0;
 			return;
 		}
-		size_t sz=fs::file_size(p);
-		pointer = malloc(sz+1);
+		bytes = fs::file_size(p);
+		pointer = malloc(bytes + 1);
 		std::string str;
 		char *s=(char *)pointer;
 		std::ifstream ifs(filename_utf8,open_as_text?0:std::ios_base::binary);
 		if(!open_as_text)
 		{
-			ifs.read(s,sz*sizeof(uint8_t));
+			ifs.read(s, bytes * sizeof(uint8_t));
 		}
 		else
 		{
@@ -205,8 +205,8 @@ void FileLoader::AcquireFileContents(void*& pointer, unsigned int& bytes, const 
 				{
 					str.push_back(c);
 				}
-				memcpy(s,str.data(),sz);
-				s[sz]=0;
+				memcpy(s, str.data(), bytes);
+				s[bytes] = 0;
 			}
 		}
 		/*

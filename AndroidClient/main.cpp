@@ -253,7 +253,7 @@ void android_main(struct android_app* app)
 		double timestamp_ms = avs::Platform::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::Platform::getTimestamp());
 
 		androidRenderer->Update(timestamp_ms);
-		androidRenderer->OnFrameMove(float(time_seconds),float(time_step_seconds),openXR.HaveXRDevice());
+		androidRenderer->OnFrameMove(float(time_seconds),float(time_step_seconds));
 		renderPlatform->BeginFrame(frame);
 		if (openXR.HaveXRDevice())
 		{

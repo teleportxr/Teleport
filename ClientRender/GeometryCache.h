@@ -77,6 +77,7 @@ namespace clientrender
 		static const std::vector<avs::uid> &GetCacheUids();
 		static void CreateGeometryCache(avs::uid cache_uid);
 		static void DestroyGeometryCache(avs::uid cache_uid);
+		static void DestroyAllCaches();
 		static std::shared_ptr<GeometryCache> GetGeometryCache(avs::uid cache_uid);
 		/// Generate a new uid unique in this cache (not globally unique).
 		geometry_cache_uid GenerateUid()

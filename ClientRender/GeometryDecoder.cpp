@@ -36,6 +36,23 @@ using std::filesystem::path;
 #define NextChunk(T) get<T>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define CopyChunk(target,size) copy_chunk(target,geometryDecodeData.data.data(), &geometryDecodeData.offset,size)
 
+template <typename T>
+void copy(T *target, const uint8_t *data, size_t &dataOffset, size_t count)
+{
+	memcpy(target, data + dataOffset, count * sizeof(T));
+	dataOffset += count * sizeof(T);
+}
+
+using std::string;
+using namespace std::string_literals;
+
+template<typename T> T get(const uint8_t* data, size_t* offset)
+{
+	T* t = (T*)(data + (*offset));
+	*offset += sizeof(T);
+	return *t;
+}
+
 template<typename T,typename U> bool getList(std::vector<U> &list,std::vector<uint8_t> &data,size_t &offset)
 {
 	if(offset>=data.size())
@@ -53,15 +70,6 @@ template<typename T,typename U> bool getList(std::vector<U> &list,std::vector<ui
 	return true;
 }
 #define NextList(T,U,list) {if(!getList<T,U>(list,geometryDecodeData.data, geometryDecodeData.offset)) {return avs::Result::Failed;}}
-using std::string;
-using namespace std::string_literals;
-
-template<typename T> T get(const uint8_t* data, size_t* offset)
-{
-	T* t = (T*)(data + (*offset));
-	*offset += sizeof(T);
-	return *t;
-}
 
 static void copy_chunk(uint8_t* target,const uint8_t* data, size_t* offset,size_t num_bytes)
 {
@@ -69,12 +77,6 @@ static void copy_chunk(uint8_t* target,const uint8_t* data, size_t* offset,size_
 	void *dst=(void*)target;
 	memcpy(dst,src,num_bytes);
 	(*offset)+=num_bytes;
-}
-
-template<typename T> void copy(T* target, const uint8_t *data, size_t &dataOffset, size_t count)
-{
-	memcpy(target, data + dataOffset, count * sizeof(T));
-	dataOffset += count * sizeof(T);
 }
 
 GeometryDecoder::GeometryDecoder()
@@ -151,7 +153,6 @@ avs::Result GeometryDecoder::decodeFromWeb(avs::uid server_uid,const std::string
 {
 	avs::HTTPPayloadRequest req;
 	req.url = uri;
-	//req.type = avs::FilePayloadType::Mesh;
 	std::function<void(const uint8_t* buffer, size_t bufferSize)> f = std::bind(&GeometryDecoder::receiveFromWeb, this, server_uid, uri,std::placeholders::_1, std::placeholders::_2,type,target,resource_uid,sourceAxesStandard);
 	req.callbackFn=std::move(f);
 	req.shouldCache=true;
@@ -1343,9 +1344,9 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 	node.data_type = static_cast<avs::NodeDataType>(NextByte);
 
 	node.skeletonNodeID = NextUint64;
-	NextList(uint64_t,int16_t,node.joint_indices)
+	NextList(size_t, int16_t, node.joint_indices)
 	node.parentID = NextUint64;
-	NextList(uint64_t,uint64_t,node.animations)
+	NextList(size_t,avs::uid,node.animations)
 
 	switch(node.data_type)
 	{

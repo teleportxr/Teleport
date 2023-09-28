@@ -416,6 +416,11 @@ endif()
 target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
 target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib64")
 
+#fmt
+target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/Platform/External/fmt/include )
+#Platform etc
+target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/ )
+
 target_link_libraries(libavstream cuda cudart asio nv efp ${curl_libraries})
 
 if(LIBAV_USE_SRT)

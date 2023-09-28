@@ -39,7 +39,7 @@ namespace teleport
 			bool showGeometryOffline = false;
 			StartupConnectOption startupConnectOption = StartupConnectOption::LAST;
 			unsigned int connectionTimeout=TELEPORT_TIMEOUT;
-			bool alwaysShow3dGui = false;
+			bool simulateVR = false;
 			bool passThrough=false;
 		};
 		class Config

@@ -33,6 +33,8 @@
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
 #include "TeleportClient/ClientTime.h"
 #include "TeleportClient/OpenXRRenderModel.h"
+#include <functional>
+#include "TeleportClient/TabContext.h"
 
 using namespace std::string_literals;
 
@@ -126,7 +128,6 @@ Renderer::~Renderer()
 {
 	InvalidateDeviceObjects(); 
 }
-#include <functional>
 void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
@@ -170,9 +171,9 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	renderState.hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
 
 	gui.RestoreDeviceObjects(renderPlatform, active_window);
-	auto connectButtonHandler = std::bind(&client::SessionClient::ConnectButtonHandler, 1, std::placeholders::_1);
+	auto connectButtonHandler = std::bind(&client::TabContext::ConnectButtonHandler, std::placeholders::_1, std::placeholders::_2);
 	gui.SetConnectHandler(connectButtonHandler);
-	auto cancelConnectHandler = std::bind(&client::SessionClient::CancelConnectButtonHandler, 1);
+	auto cancelConnectHandler = std::bind(&client::TabContext::CancelConnectButtonHandler, std::placeholders::_1);
 	gui.SetCancelConnectHandler(cancelConnectHandler);
 	gui.SetConsoleCommandHandler(std::bind(&Renderer::ConsoleCommand,this,std::placeholders::_1));
 	auto startSessionHandler = [this](){
@@ -231,8 +232,12 @@ void Renderer::ExecConsoleCommand(const std::string &str)
 {
 	if (str == "killstreaming")
 	{
-		auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-		sessionClient->KillStreaming();
+		std::set<avs::uid> ids=client::SessionClient::GetSessionClientIds();
+		for(auto i:ids)
+		{
+			auto sessionClient=client::SessionClient::GetSessionClient(i);
+			sessionClient->KillStreaming();
+		}
 	}
 	if (str == "reloadshaders")
 	{
@@ -596,6 +601,8 @@ void Renderer::InvalidateDeviceObjects()
 {
 	for(auto i:instanceRenderers)
 		i.second->InvalidateDeviceObjects();
+
+	GeometryCache::DestroyAllCaches();
 	text3DRenderer.InvalidateDeviceObjects();
 	gui.InvalidateDeviceObjects();
 	if(renderState.pbrEffect)
@@ -700,7 +707,8 @@ void SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const av
 avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
 {
 	avs::Pose origin_pose;
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+	auto &clientServerState=sessionClient->GetClientServerState();
 	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager->GetNode(clientServerState.origin_node_uid);
 	if(origin_node)
 	{
@@ -716,7 +724,7 @@ void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 	if(reload_shaders)
 		LoadShaders();
 	RenderView(deviceContext);
-	gui.Render3DGUI(deviceContext);
+	DrawGUI(deviceContext, true);
 }
 
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
@@ -740,46 +748,50 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
 
-	auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
-	// TODO: This should render only if no background clients are connected.
-	if (!sessionClient->IsConnected())
+	const std::set<avs::uid> &server_uids=client::SessionClient::GetSessionClientIds();
+	for (const auto &server_uid : server_uids)
 	{
-		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+		// TODO: This should render only if no background clients are connected.
+		if (!sessionClient->IsConnected())
 		{
-			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-			renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
-			renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
-			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-			renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-		}
-		renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+			{
+				crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+				renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+				renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+				renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
+				renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
+			}
+			renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+			renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
 		
-		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
-		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
-			passName += "_multiview";
-		if(!renderState.openXR->IsPassthroughActive())
-		{
-			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-			renderPlatform->DrawQuad(deviceContext);
-			renderState.cubemapClearEffect->Unapply(deviceContext);
+			std::string passName = (int)config.options.lobbyView ? "neon" : "white";
+			if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
+				passName += "_multiview";
+			if(!renderState.openXR->IsPassthroughActive())
+			{
+				renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+				renderPlatform->DrawQuad(deviceContext);
+				renderState.cubemapClearEffect->Unapply(deviceContext);
+			}
 		}
-	}
 
-	// Init the viewstruct in global space - i.e. with the server offsets.
-	avs::Pose origin_pose;
-	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager->GetNode(clientServerState.origin_node_uid);
-	if(origin_node)
-	{
-		origin_pose.position=origin_node->GetGlobalPosition();
-		origin_pose.orientation=*((vec4*)&origin_node->GetGlobalRotation());
-		SetRenderPose(deviceContext,GetOriginPose(server_uid));
-		GetInstanceRenderer(server_uid)->RenderView(deviceContext);
-		if(debugOptions.showAxes)
+		// Init the viewstruct in global space - i.e. with the server offsets.
+		avs::Pose origin_pose;
+		auto &clientServerState = sessionClient->GetClientServerState();
+		std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager->GetNode(clientServerState.origin_node_uid);
+		if(origin_node)
 		{
-			renderPlatform->DrawAxes(deviceContext,mat4::identity(),2.0f);
+			origin_pose.position=origin_node->GetGlobalPosition();
+			origin_pose.orientation=*((vec4*)&origin_node->GetGlobalRotation());
+			SetRenderPose(deviceContext,GetOriginPose(server_uid));
+			GetInstanceRenderer(server_uid)->RenderView(deviceContext);
+			if(debugOptions.showAxes)
+			{
+				renderPlatform->DrawAxes(deviceContext,mat4::identity(),2.0f);
+			}
 		}
 	}
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
@@ -822,13 +834,13 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		pos4.w = 0.0f;
 		hand_pos_press.push_back(pos4);
 	}
-	static bool override_have_vr_device=false;
-	gui.Update(hand_pos_press, have_vr_device||override_have_vr_device);
-	if(have_vr_device || override_have_vr_device)
+	static bool override_show_local_geometry = false;
+	gui.Update(hand_pos_press, have_vr_device || config.options.simulateVR);
+	if (have_vr_device || config.options.simulateVR)
 		gui.Render3DGUI(deviceContext);
-
+	bool show_local_geometry = (gui.IsVisible()&&(have_vr_device || config.options.simulateVR))|| override_show_local_geometry;
 	renderState.selected_uid=gui.GetSelectedUid();
-	//if((have_vr_device || override_have_vr_device)&&(!sessionClient->IsConnected()||gui.IsVisible()||config.options.showGeometryOffline))
+	if (show_local_geometry)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
@@ -914,36 +926,41 @@ bool Renderer::OnDeviceRemoved()
 	InvalidateDeviceObjects();
 	return true;
 }
-#define WAIT_TIME_TO_SHOW_ADDRESS_BAR (300000.0f)
+#define WAIT_TIME_TO_SHOW_ADDRESS_BAR (3.0f)
 
-void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
+void Renderer::OnFrameMove(double fTime,float time_step)
 {
-	std::shared_ptr<teleport::client::SessionClient> sessionClient=client::SessionClient::GetSessionClient(server_uid);
-	// returns true if a connection occurred:
-	if(sessionClient->HandleConnections())
+	int num_connected_servers = 0;
+	bool gained_connection=false;
+	const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+	for(avs::uid server_uid:server_uids)
 	{
-		auto ir=GetInstanceRenderer(server_uid);
-		sessionClient->SetGeometryCache(ir->geometryCache.get());
-		config.StoreRecentURL(sessionClient->GetConnectionURL().c_str());
-		gui.Hide();
-	}
-	if(renderState.openXR->IsSessionActive())
-	{
-		if (!sessionClient->IsConnected())
+		std::shared_ptr<teleport::client::SessionClient> sessionClient=client::SessionClient::GetSessionClient(server_uid);
+		num_connected_servers+=sessionClient->IsConnected()?1:0;
+		// returns true if a connection occurred:
+		if(sessionClient->HandleConnections())
 		{
-			if (!gui.IsVisible())
+			auto ir=GetInstanceRenderer(server_uid);
+			sessionClient->SetGeometryCache(ir->geometryCache.get());
+			config.StoreRecentURL(sessionClient->GetConnectionURL().c_str());
+			gained_connection=true;
+		}
+	}
+	if(gained_connection)
+		gui.Hide();
+	if (!num_connected_servers)
+	{
+		if (!gui.IsVisible())
+		{
+			static float invisibleTime=0.0f;
+			invisibleTime+=time_step;
+			if(invisibleTime>WAIT_TIME_TO_SHOW_ADDRESS_BAR)
 			{
-				static float invisibleTime=0.0f;
-				invisibleTime+=time_step;
-				if(invisibleTime>WAIT_TIME_TO_SHOW_ADDRESS_BAR)
-				{
-					ShowHideGui();
-					invisibleTime=0.0f;
-				}
+				ShowHideGui();
+				invisibleTime=0.0f;
 			}
 		}
 	}
-	using_vr = have_headset;
 	vec2 clientspace_input;
 	static vec2 stored_clientspace_input(0,0);
 #ifdef _MSC_VER
@@ -966,19 +983,25 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 	mouseCameraInput.up_down_input		=((float)keydown['q']-(float)keydown['z'])*(float)(!keydown[VK_SHIFT]);
 	
 #endif
-	auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
 	if (renderState.openXR)
 	{
 		const teleport::core::Input& local_inputs=renderState.openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
 		HandleLocalInputs(local_inputs);
 		have_vr_device=renderState.openXR->HaveXRDevice();
-		if (have_headset)
+		if (have_vr_device)
 		{
-			const avs::Pose &headPose_stageSpace=renderState.openXR->GetHeadPose_StageSpace();
-			clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, *((quat*)&headPose_stageSpace.orientation));
+			const avs::Pose &headPose_stageSpace = renderState.openXR->GetHeadPose_StageSpace();
+			for(auto server_uid:client::SessionClient::GetSessionClientIds())
+			{
+				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+				auto &clientServerState = sessionClient->GetClientServerState();
+				clientServerState.SetHeadPose_StageSpace(headPose_stageSpace.position, *((quat*)&headPose_stageSpace.orientation));
+			}
 		}
 	}
-	if (!have_headset)
+	if (!renderState.openXR)
+		have_vr_device = false;
+	if (!have_vr_device)
 	{
 		static float spd = 0.5f;
 		crossplatform::UpdateMouseCamera(&camera
@@ -1005,32 +1028,41 @@ void Renderer::OnFrameMove(double fTime,float time_step,bool have_headset)
 		math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(1.f, 0.0f, 0.0f));
 		auto q = camera.Orientation.GetQuaternion();
 		auto q_rel = q / q0;
-		clientServerState.SetHeadPose_StageSpace(*((vec3*)&cam_pos), *((clientrender::quat*)&q_rel));
-		const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(local_server_uid,renderPlatform->GetFrameNumber());
-		clientServerState.SetInputs( inputs);
-	}
-	// Handle networked session.
-	auto ir=GetInstanceRenderer(server_uid);
-	if (sessionClient->IsConnected())
-	{
-		auto instanceRenderer=GetInstanceRenderer(server_uid);
-		avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())
-										,framerate};
-		const auto &nodePoses=renderState.openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
-		
-		if (renderState.openXR)
+		for (auto server_uid : client::SessionClient::GetSessionClientIds())
 		{
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+			auto &clientServerState = sessionClient->GetClientServerState();
+			clientServerState.SetHeadPose_StageSpace(*((vec3 *)&cam_pos), *((clientrender::quat *)&q_rel));
 			const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 			clientServerState.SetInputs(inputs);
 		}
-		sessionClient->Frame(displayInfo, clientServerState.headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
-			clientServerState.input,fTime, time_step);
+	}
+	// Handle networked session.
+	for (auto server_uid : client::SessionClient::GetSessionClientIds())
+	{
+		auto ir = GetInstanceRenderer(server_uid);
+		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+		if (sessionClient->IsConnected())
+		{
+			auto instanceRenderer=GetInstanceRenderer(server_uid);
+			avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())
+											,framerate};
+			const auto &nodePoses=renderState.openXR->GetNodePoses(server_uid,renderPlatform->GetFrameNumber());
+		
+			if (renderState.openXR)
+			{
+				const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
+				sessionClient->GetClientServerState().SetInputs(inputs);
+			}
+			sessionClient->Frame(displayInfo, sessionClient->GetClientServerState().headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
+								 sessionClient->GetClientServerState().input, fTime, time_step);
 
+		}
+
+		gui.SetVideoDecoderStatus(ir->GetVideoDecoderStatus());
 	}
 
-	gui.SetVideoDecoderStatus(ir->GetVideoDecoderStatus());
-
-	if (!have_headset)
+	if (config.options.simulateVR && !have_vr_device)
 	{
 		FillInControllerPose(0, -1.f);
 		FillInControllerPose(1, 1.f);
@@ -1103,9 +1135,9 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			if(renderState.openXR)
 				renderState.openXR->SetOverlayEnabled(show_osd);
 			break;
-		case 'H':
-			WriteHierarchies(server_uid);
-			break;
+		//case 'H':
+			//WriteHierarchies(server_uid);
+			//break;
 		case 'N':
 			renderState.show_node_overlays = !renderState.show_node_overlays;
 			break;
@@ -1131,20 +1163,28 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 			break;
 #endif
 		case 'K':
-			{
-				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-				if(sessionClient->IsConnected())
-					sessionClient->Disconnect(0);
-			}
-			break;
+		{
+				const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+				for (const auto &server_uid : server_uids)
+				{
+					auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+					if(sessionClient->IsConnected())
+						sessionClient->Disconnect(0);
+				}
+		}
+		break;
 		case 'Y':
-			{
-				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-				if (sessionClient->IsConnected())
-					sessionClient->GetClientPipeline().decoder.toggleShowAlphaAsColor();
+		{
+				const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+				for (const auto &server_uid : server_uids)
+				{
+					auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+					if (sessionClient->IsConnected())
+						sessionClient->GetClientPipeline().decoder.toggleShowAlphaAsColor();
+				}
 			}
 			break;
-			#ifdef _MSC_VER
+		#ifdef _MSC_VER
 		case VK_SPACE:
 			ShowHideGui();
 			break;
@@ -1353,18 +1393,25 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		else
 			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
 		
-		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
+		//auto &clientServerState=sessionClient->GetClientServerState();
 		// Init the viewstruct in local space - i.e. with no server offsets.
 		{
 			math::SimulOrientation globalOrientation;
+			const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+			for (const auto &server_uid : server_uids)
+			{
+				auto instanceRenderer = GetInstanceRenderer(server_uid);
+				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 			// global pos/orientation:
-			globalOrientation.SetPosition((const float*)&clientServerState.headPose.localPose.position);
-			math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(-1.f, 0.0f, 0.0f));
-			math::Quaternion q1 = (const float*)&clientServerState.headPose.localPose.orientation;
-			auto q_rel = q1/q0;
-			globalOrientation.SetOrientation(q_rel);
-			deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
-			// MUST call init each frame.
+				auto &clientServerState = sessionClient->GetClientServerState();
+				globalOrientation.SetPosition((const float*)&clientServerState.headPose.localPose.position);
+				math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(-1.f, 0.0f, 0.0f));
+				math::Quaternion q1 = (const float*)&clientServerState.headPose.localPose.orientation;
+				auto q_rel = q1/q0;
+				globalOrientation.SetOrientation(q_rel);
+				deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
+				// MUST call init each frame.
+			}
 			deviceContext.viewStruct.Init();
 		}
 
@@ -1375,14 +1422,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		else
 		{
 			RenderView(deviceContext);
-		}
-		// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
-		if(!gui.IsVisible()&&!show_osd&&(!renderState.openXR||!renderState.openXR->IsSessionActive()))
-		{
-			auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-			gui.setSessionClient(sessionClient.get());
-			gui.Render2DGUI(deviceContext);
-		}						
+		}	
 		vec4 white(1.f, 1.f, 1.f, 1.f);
 		// We must deactivate the depth buffer here, in order to use it as a texture:
   		renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
@@ -1394,18 +1434,15 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 			lod++;
 		}
 		lod = lod % 8;
-		auto instanceRenderer=GetInstanceRenderer(server_uid);
-		auto &geometryCache=instanceRenderer->geometryCache;
+		//auto instanceRenderer=GetInstanceRenderer(server_uid);
+		//auto &geometryCache=instanceRenderer->geometryCache;
 		if (!tt)
 		{
 			tt=1000;
 		}
 		renderState.hdrFramebuffer->Deactivate(deviceContext);
 		renderState.hDRRenderer->Render(deviceContext, renderState.hdrFramebuffer->GetTexture(), 1.0f, gamma);
-		if(!renderState.openXR||!renderState.openXR->IsSessionActive())
-		{
-			DrawOSD(deviceContext);
-		}
+		DrawGUI(deviceContext,false);
 	#ifdef ONSCREEN_PROF
 		static std::string profiling_text;
 		renderPlatform->LinePrint(deviceContext, profiling_text.c_str());
@@ -1420,15 +1457,31 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 #endif
 }
 
-void Renderer::RemoveView(int)
+void Renderer::DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext,bool mode_3d)
 {
+	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
+	if(mode_3d)
+	{
+		gui.Render3DGUI(deviceContext);
+	}
+	else
+	{
+		if (gui.IsVisible() && !config.options.simulateVR)
+		{
+			// auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
+			// gui.setSessionClient(sessionClient.get());
+			gui.Render2DGUI(deviceContext);
+		}
+		if (!renderState.openXR || !renderState.openXR->IsSessionActive())
+		{
+			DrawOSD(deviceContext);
+		}
+		// in vr mode, the OSD is drawn from a callback in an OpenXR layer.
+	}
 }
 
-void Renderer::RenderOverlayMenu(crossplatform::GraphicsDeviceContext &deviceContext)
+void Renderer::RemoveView(int)
 {
-	DrawOSD(deviceContext);
-	//UpdateVRGuiMouse();
-	//gui.OverlayMenu(deviceContext);
 }
 
 void Renderer::UpdateVRGuiMouse()
@@ -1477,17 +1530,20 @@ void Renderer::UpdateVRGuiMouse()
 	gui.SetDebugGuiMouse(m, rightTrigger > 0.5f);
 }
 
+void Renderer::RenderVROverlay(crossplatform::GraphicsDeviceContext &deviceContext)
+{
+	DrawOSD(deviceContext);
+}
+
 void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if (!show_osd||gui.IsVisible())
 		return;
-	auto instanceRenderer=GetInstanceRenderer(server_uid);
-	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-	gui.setSessionClient(sessionClient.get());
 	if(renderState.openXR)
 	{
 		UpdateVRGuiMouse();
 	}
+	gui.BeginFrame(deviceContext);
 	gui.BeginDebugGui(deviceContext);
 	gui.LinePrint(fmt::format("Framerate {0}", framerate));
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
@@ -1505,55 +1561,76 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Network"))
 	{
-		gui.NetworkPanel(sessionClient->GetClientPipeline());
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
+		{
+			auto instanceRenderer = GetInstanceRenderer(server_uid);
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+			gui.NetworkPanel(sessionClient->GetClientPipeline());
+		}
 		gui.EndTab();
 	}
 	if(gui.Tab("Camera"))
 	{
-		auto &clientServerState=teleport::client::ClientServerState::GetClientServerState(server_uid);
-		vec3 offset=camera.GetPosition();
-		auto originPose=GetOriginPose(server_uid);
-		gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z)):"Origin:", white);
-		gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
-		gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
-		if (instanceRenderer->videoPosDecoded)
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
 		{
-			gui.LinePrint(platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", instanceRenderer->videoPos.x, instanceRenderer->videoPos.y, instanceRenderer->videoPos.z), white);
-		}	
-		else
-		{
-			gui.LinePrint(platform::core::QuickFormat(" Video: -"), white);
+			auto instanceRenderer = GetInstanceRenderer(server_uid);
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+		
+			auto &clientServerState=sessionClient->GetClientServerState();
+			vec3 offset=camera.GetPosition();
+			auto originPose=GetOriginPose(server_uid);
+			gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z)):"Origin:", white);
+			gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
+			gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
+			if (instanceRenderer->videoPosDecoded)
+			{
+				gui.LinePrint(platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", instanceRenderer->videoPos.x, instanceRenderer->videoPos.y, instanceRenderer->videoPos.z), white);
+			}	
+			else
+			{
+				gui.LinePrint(platform::core::QuickFormat(" Video: -"), white);
+			}
 		}
 		gui.EndTab();
 	}
 	if(gui.Tab("Video"))
 	{
-		std::shared_ptr<clientrender::InstanceRenderer> r=GetInstanceRenderer(server_uid);
-		if(r)
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
 		{
-			clientrender::AVSTextureHandle th = r->GetInstanceRenderState().avsTexture;
-			clientrender::AVSTexture& tx = *th;
-			AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-			if(ti)
+			std::shared_ptr<clientrender::InstanceRenderer> r=GetInstanceRenderer(server_uid);
+			if(r)
 			{
-				gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
-				gui.DrawTexture(ti->texture);
+				clientrender::AVSTextureHandle th = r->GetInstanceRenderState().avsTexture;
+				clientrender::AVSTexture& tx = *th;
+				AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+				if(ti)
+				{
+					gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+					gui.DrawTexture(ti->texture);
+				}
+				gui.LinePrint(platform::core::QuickFormat("Specular"), white);
+				gui.DrawTexture(r->GetInstanceRenderState().specularCubemapTexture);
+				gui.LinePrint(platform::core::QuickFormat("DiffuseC"), white);
+				gui.DrawTexture(r->GetInstanceRenderState().diffuseCubemapTexture);
+				gui.LinePrint(platform::core::QuickFormat("Lighting"), white);
+				gui.DrawTexture(r->GetInstanceRenderState().lightingCubemapTexture);
 			}
-			gui.LinePrint(platform::core::QuickFormat("Specular"), white);
-			gui.DrawTexture(r->GetInstanceRenderState().specularCubemapTexture);
-			gui.LinePrint(platform::core::QuickFormat("DiffuseC"), white);
-			gui.DrawTexture(r->GetInstanceRenderState().diffuseCubemapTexture);
-			gui.LinePrint(platform::core::QuickFormat("Lighting"), white);
-			gui.DrawTexture(r->GetInstanceRenderState().lightingCubemapTexture);
 		}
 		gui.EndTab();
 	}
 	if(gui.Tab("Cubemap"))
 	{
-		std::shared_ptr<clientrender::InstanceRenderer> r=GetInstanceRenderer(server_uid);
-		if(r)
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
 		{
-		gui.CubemapOSD(r->GetInstanceRenderState().videoTexture);
+			std::shared_ptr<clientrender::InstanceRenderer> r=GetInstanceRenderer(server_uid);
+			if(r)
+			{
+				gui.CubemapOSD(r->GetInstanceRenderState().videoTexture);
+			}
 		}
 		gui.EndTab();
 	}
@@ -1578,14 +1655,19 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		gui.LinePrint(" ", white);
 
 		gui.LinePrint("Decoder Parameters:", white);
-		const avs::DecoderParams& params = sessionClient->GetClientPipeline().decoderParams;
-		const auto& videoCodecNames = magic_enum::enum_names<avs::VideoCodec>();
-		const auto& decoderFrequencyNames = magic_enum::enum_names<avs::DecodeFrequency>();
-		gui.LinePrint(platform::core::QuickFormat("Video Codec: %s", videoCodecNames[size_t(params.codec)]));
-		gui.LinePrint(platform::core::QuickFormat("Decode Frequency: %s", decoderFrequencyNames[size_t(params.decodeFrequency)]));
-		gui.LinePrint(platform::core::QuickFormat("Use 10-Bit Decoding: %s", params.use10BitDecoding ? "true" : "false"));
-		gui.LinePrint(platform::core::QuickFormat("Chroma Format: %s", params.useYUV444ChromaFormat ? "YUV444" : "YUV420"));
-		gui.LinePrint(platform::core::QuickFormat("Use Alpha Layer Decoding: %s", params.useAlphaLayerDecoding ? "true" : "false"));
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
+		{
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+			const avs::DecoderParams& params = sessionClient->GetClientPipeline().decoderParams;
+			const auto& videoCodecNames = magic_enum::enum_names<avs::VideoCodec>();
+			const auto& decoderFrequencyNames = magic_enum::enum_names<avs::DecodeFrequency>();
+			gui.LinePrint(platform::core::QuickFormat("Video Codec: %s", videoCodecNames[size_t(params.codec)]));
+			gui.LinePrint(platform::core::QuickFormat("Decode Frequency: %s", decoderFrequencyNames[size_t(params.decodeFrequency)]));
+			gui.LinePrint(platform::core::QuickFormat("Use 10-Bit Decoding: %s", params.use10BitDecoding ? "true" : "false"));
+			gui.LinePrint(platform::core::QuickFormat("Chroma Format: %s", params.useYUV444ChromaFormat ? "YUV444" : "YUV420"));
+			gui.LinePrint(platform::core::QuickFormat("Use Alpha Layer Decoding: %s", params.useAlphaLayerDecoding ? "true" : "false"));
+		}
 		gui.EndTab();
 	}
 	if(gui.Tab("Geometry"))
@@ -1595,15 +1677,28 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	if(gui.Tab("Tags"))
 	{
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
+		{
+			auto instanceRenderer = GetInstanceRenderer(server_uid);
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 		gui.TagOSD(instanceRenderer->videoTagDataCubeArray,instanceRenderer->videoTagDataCube);
+		}
 		gui.EndTab();
 	}
 	if(gui.Tab("Controllers"))
 	{
-		gui.InputsPanel(server_uid,sessionClient.get(), renderState.openXR);
+		const std::set<avs::uid> &server_uids = client::SessionClient::GetSessionClientIds();
+		for (const auto &server_uid : server_uids)
+		{
+			auto instanceRenderer = GetInstanceRenderer(server_uid);
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+			gui.InputsPanel(server_uid,sessionClient.get(), renderState.openXR);
+		}
 		gui.EndTab();
 	}
 	gui.EndDebugGui(deviceContext);
+	gui.EndFrame(deviceContext);
 
 	//ImGui::PlotLines("Jitter buffer length", statJitterBuffer.data(), statJitterBuffer.count(), 0, nullptr, 0.0f, 100.0f);
 	//ImGui::PlotLines("Jitter buffer push calls", statJitterPush.data(), statJitterPush.count(), 0, nullptr, 0.0f, 5.0f);
