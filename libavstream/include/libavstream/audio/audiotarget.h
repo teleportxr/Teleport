@@ -19,7 +19,7 @@ namespace avs
 
 	   /*!
 		* Configure audio target node.
-		* \param backend backend associated with this node.
+		* \param audioBackend Backend associated with this node.
 		* \return
 		*  - Result::OK on success.
 		*  - Result::Node_AlreadyConfigured if has already been configured with a backend.

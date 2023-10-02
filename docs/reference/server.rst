@@ -41,7 +41,7 @@ Classes
 .. doxygenclass:: teleport::server::ClientMessaging
 	:members:
 
-.. doxygenclass:: teleport::server::DiscoveryService
+.. doxygenclass:: teleport::server::SignalingService
 	:members:
 
 .. doxygenclass:: teleport::server::GeometryEncoder
@@ -62,7 +62,7 @@ Classes
 .. doxygenclass:: teleport::server::NetworkPipeline
 	:members:
 
-.. doxygenclass:: teleport::server::ServerSettings
+.. doxygenstruct:: teleport::server::ServerSettings
 	:members:
 
 .. doxygenclass:: teleport::server::SourceNetworkPipeline

@@ -32,6 +32,7 @@ namespace avs
 		/*!
 		 * Configure network sink and bind to local UDP endpoint.
 		 * \param streams Collection of configurations for each stream.
+		 * \param local_bind_addr Address this endpoint is bound to.
 		 * \param localPort Local UDP endpoint port number.
 		 * \param remote Remote UDP endpoint name or IP address.
 		 * \param remotePort Remote UDP endpoint port number.

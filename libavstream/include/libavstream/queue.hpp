@@ -54,6 +54,7 @@ namespace avs
 		 * Configure queue.
 		 * \param maxBufferSize Maximum size of a buffer in the queue.
 		 * \param maxBuffers Maximum number of buffers in the queue.
+		 * \param name Name of the node.
 		 * \warning Reconfiguring an already configured Queue performs an implicit flush.
 		 * \return 
 		 *  - Result::OK on success.

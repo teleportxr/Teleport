@@ -29,6 +29,7 @@ namespace avs
 		}
 		/*!
 		 * Configure network source and bind to local UDP endpoint.
+		 * \param in_streams Definitions of the input streams. 
 		 * \param numOutputs Number of output slots. This determines maximum number of multiplexed streams the node will support.
 		 * \param params Additional network source parameters.
 		 * \return

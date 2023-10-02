@@ -9,7 +9,7 @@ TeleportClient is a library that provides client functionality, in particular cl
 Classes
 -------
 
-.. doxygenclass:: teleport::client::ClientServerState
+.. doxygenstruct:: teleport::client::ClientServerState
 	:members:
 
 .. doxygenclass:: teleport::client::ClientPipeline
@@ -26,8 +26,11 @@ Classes
 
 .. doxygenclass:: teleport::client::ServerTimestamp
 	:members:
-
+	
 .. doxygenclass:: teleport::client::SessionClient
+	:members:
+
+.. doxygenstruct:: teleport::client::SignalingServer
 	:members:
 
 

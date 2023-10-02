@@ -20,24 +20,22 @@ namespace avs
 		AVSTREAM_PUBLICINTERFACE(GeometrySource)
 	public:
 		GeometrySource();
-		/*!
-		 * Configure GeometrySource node.
-		 * \param backend backend associated with this node.
-		 * \return
-		 *  - Result::OK on success.
-		 *  - Result::Node_AlreadyConfigured if has already been configured with a backend.
-		 *  - Result::Mesh_InvalidBackend if backend is nullptr.
-		 */
+		/// Configure GeometrySource node.
+		/// \param req What requests the geometry.
+		/// \return
+		///  - Result::OK on success.
+		///  - Result::Node_AlreadyConfigured if has already been configured with a backend.
+		///  - Result::Mesh_InvalidBackend if backend is nullptr.
 		Result configure( GeometryRequesterBackendInterface *req);
 
 		GeometryRequesterBackendInterface* getGeometryRequesterBackendInterface() const override;
 
-		/*!
-		 * Deconfigure surface node and release its backend.
-		 * \return
-		 *  - Result::OK on success.
-		 *  - Result::Node_NotConfigured if surface has not been configured.
-		 */
+		/// 
+		/// Deconfigure surface node and release its backend.
+		/// \return
+		///  - Result::OK on success.
+		///  - Result::Node_NotConfigured if surface has not been configured.
+		/// 
 		Result deconfigure() override;
 
 		/*!
@@ -59,13 +57,13 @@ namespace avs
 		GeometryTarget();
 		/*!
 		 * Configure GeometrySource node.
-		 * \param backend backend associated with this node.
+		 * \param target backend associated with this target node.
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_AlreadyConfigured if has already been configured with a backend.
 		 *  - Result::Mesh_InvalidBackend if backend is nullptr.
 		 */
-		Result configure(GeometryTargetBackendInterface *);
+		Result configure(GeometryTargetBackendInterface *target);
 
 		GeometryTargetBackendInterface* getGeometryTargetBackendInterface() const override;
 

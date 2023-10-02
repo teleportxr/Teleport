@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(libavstream )
 set(LIBAV_CUDA_SAMPLES_DIR "C:/ProgramData/NVIDIA Corporation/CUDA Samples/v11.5" CACHE STRING "")
 set(LIBAV_CUDA_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5" CACHE STRING "")
-set(CMAKE_CUDA_COMPILER "${LIBAV_CUDA_DIR}/bin/nvcc.exe" CACHE STRING "")
+set(CMAKE_CUDA_COMPILER "${LIBAV_CUDA_DIR}/bin/nvcc.exe" )
 # Build options
 option(LIBAV_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 option(LIBAV_BUILD_SHARED_LIBS "Build shared library" OFF)

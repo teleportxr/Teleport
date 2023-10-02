@@ -15,6 +15,7 @@ namespace teleport
 {
 	namespace client
 	{
+		//! Identifies a remote server as seen by the DiscoveryService.
 		struct SignalingServer
 		{
 			std::string url;
@@ -24,7 +25,7 @@ namespace teleport
 			std::shared_ptr<rtc::WebSocket> webSocket;
 			uint16_t GetPort() const;
 		};
-		//Abstract discovery service for clients to connect to the server.
+		//! Abstract discovery service for clients to connect to the server.
 		class DiscoveryService
 		{
 		public:

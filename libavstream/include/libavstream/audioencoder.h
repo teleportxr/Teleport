@@ -44,10 +44,7 @@ public:
 
 	/*!
 	 * Configure audio encoder.
-	 * \param device Graphics API device handle (DirectX or OpenGL).
-	 * \param frameWidth Expected video frame width in pixels.
-	 * \param frameHeight Expected video frame height in pixels.
-	 * \param params Additional encoder parameters.
+	 * \param params Encoder parameters.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_AlreadyConfigured if encoder was already in configured state.
@@ -79,8 +76,8 @@ public:
 	/*!
 	 * Write data to the output stream
 	 * \sa PipelineNode::process()
-	 * \param extra data buffer
-	 * \param extra data buffer size
+	 * \param extraDataBuffer
+	 * \param bufferSize
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.

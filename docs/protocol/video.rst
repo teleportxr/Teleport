@@ -95,7 +95,6 @@ The cubemap sub-layout should be in the following form:
 |                       |                       |                       |
 +-----------------------+-----------------------+-----------------------+
 
-
 where
 
 .. list-table:: Video Texture Layout

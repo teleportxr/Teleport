@@ -31,6 +31,10 @@ At any time, each connected client has partial information on the simulation sta
      - A read-only, unchanging data object that is used for rendering: a mesh, texture, material, etc.
    * - Mutable Asset
      - A data object that may be expected to change during the simulation runtime: a Node is a Mutable Asset, for example.
+   * - Component
+     - An instance that provides functionality to a specific node. Each node can have zero or more components, and components are of different types depending on their purpose.
+
+Table :numref:Definitions defines some key terms.
 
 The server tells the client which nodes it needs to keep track of, and which assets and resources it needs.
 The server will send the client the asset states and resource data.

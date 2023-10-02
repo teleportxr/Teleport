@@ -24,6 +24,7 @@ public:
 	/*!
 	 * Configure surface node.
 	 * \param surfaceBackend Surface backend associated with this node.
+	 * \param alphaSurfaceBackend Surface backend for the alpha surface.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_AlreadyConfigured if surface has already been configured with a backend.

@@ -85,7 +85,7 @@ namespace avs
 		 * \param frameWidth Expected video frame width in pixels.
 		 * \param frameHeight Expected video frame height in pixels.
 		 * \param params Additional decoder parameters.
-		 * \param params callback for extracting extra video data
+		 * \param streamId The stream identifier.
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_AlreadyConfigured if decoder was already in configured state.
@@ -176,7 +176,7 @@ namespace avs
 		void onOutputUnlink(int slot, PipelineNode* node) override;
 		/*!
 		* Register the decoder's surface texture
-		* \param Pointer to surface interface
+		* \param surface The graphics surface this decodes to.
 		* \return
 		*  - Result::OK on success.
 		*  - Result::Decoder_SurfaceAlreadyRegistered if an input surface is already registered.

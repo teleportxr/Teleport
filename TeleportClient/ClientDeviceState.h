@@ -12,7 +12,6 @@ namespace teleport
 		struct LocalGlobalPose
 		{
 			avs::Pose localPose;
-			avs::Pose globalPose;
 		};
 		//! The generic state of the client hardware device e.g. headset, controllers etc.
 		//! There exists one of these for each server, plus one for the null server (local state).

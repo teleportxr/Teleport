@@ -45,6 +45,7 @@ namespace avs
 		 * Configure stream parser.
 		 * \param node PipelineNode instance to pass to the callback invocation.
 		 * \param callback Callback function invoked every time new codec packet has been fully parsed.
+		 * \param inputNodeIndex Which input node this is the parser for.
 		 * \return
 		 *  - Result::OK on success.
 		 */

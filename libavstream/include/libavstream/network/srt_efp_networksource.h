@@ -24,17 +24,15 @@ namespace avs
 
 		/*!
 		 * Configure network source and bind to local UDP endpoint.
+		 * \param streams Definitions of the source streams.
 		 * \param numOutputs Number of output slots. This determines maximum number of multiplexed streams the node will support.
-		 * \param localPort Local UDP endpoint port number.
-		 * \param remote Remote UDP endpoint name or IP address.
-		 * \param remotePort Remote UDP endpoint port number.
 		 * \param params Additional network source parameters.
 		 * \return
 		 *  - Result::OK on success.
-		 *  - Result::Node_InvalidConfiguration if numOutputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
+		 *  - Result::Node_InvalidConfiguration if numOutputs is zero, or if params is invalid.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSourceStream>&& streams,int numputs, const NetworkSourceParams& params) override;
+		Result configure(std::vector<NetworkSourceStream>&& streams,int numOutputs, const NetworkSourceParams& params) override;
 
 		/*!
 		 * Deconfigure network source and release all associated resources.
@@ -44,6 +42,8 @@ namespace avs
 
 		/*!
 		 * Receive and process incoming network packets.
+		 * \param timestamp When this is happening.
+		 * \param deltaTime Time since the last call.
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_NotConfigured if network source has not been configured.

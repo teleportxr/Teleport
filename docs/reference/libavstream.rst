@@ -70,6 +70,10 @@ avs Nodes
    :members:
 .. doxygenclass:: avs::File
 .. doxygenclass:: avs::Forwarder
+.. doxygenclass:: avs::GenericDecoder
+   :members:
+.. doxygenclass:: avs::GenericEncoder
+   :members:
 .. doxygenclass:: avs::GeometryDecoder
    :members:
 .. doxygenclass:: avs::GeometryEncoder
@@ -108,17 +112,3 @@ avs Structs
 .. doxygenstruct:: avs::Result
    :members:
    
-Client Messages
----------------
-.. doxygenstruct:: avs::ClientMessage
-   :members:
-.. doxygenstruct:: avs::DisplayInfo
-   :members:
-.. doxygenstruct:: avs::NodeStatusMessage
-   :members:
-.. doxygenstruct:: avs::ReceivedResourcesMessage
-   :members:
-.. doxygenstruct:: avs::ControllerPosesMessage
-   :members: 
-.. doxygenstruct:: avs::OriginPoseMessage
-   :members: 

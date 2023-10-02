@@ -64,30 +64,29 @@ class AVSTREAM_API PacketInterface
 public:
 	virtual ~PacketInterface() = default;
 
-	/*!
-	 * Read packet.
-	 * \param reader PipelineNode which performs the read operation.
-	 * \param buffer Pointer to destination buffer (may be nullptr to query for buffer size).
-	 * \param bufferSize Size of destination buffer in bytes.
-	 * \return
-	 *  - Result::OK on success.
-	 *  - Result::IO_Retry if either buffer is nullptr or bufferSize is too small.
-	 *                     Correct buffer size is written back to bufferSize and the read should be retried.
-	 *  - PipelineNode specific error result.
-	 */
-	virtual Result readPacket(PipelineNode* reader, void* buffer, size_t& bufferSize, int index) = 0;
+	// Read packet.
+	// \param reader PipelineNode which performs the read operation.
+	// \param buffer Pointer to destination buffer (may be nullptr to query for buffer size).
+	// \param bufferSize Size of destination buffer in bytes
+	// \param streamIndex Stream Index.
+	// \return
+	//  - Result::OK on success.
+	//  - Result::IO_Retry if either buffer is nullptr or bufferSize is too small.
+	//                     Correct buffer size is written back to bufferSize and the read should be retried.
+	//  - PipelineNode specific error result.
+	// 
+	virtual Result readPacket(PipelineNode *reader, void *buffer, size_t &bufferSize, int streamIndex) = 0;
 
-	/*!
-	 * Write packet.
-	 * \param writer PipelineNode which performs the write operation.
-	 * \param buffer Pointer to source buffer.
-	 * \param bufferSize Size of source buffer in bytes.
-	 * \return
-	 *  - Result::OK on success.
-	 *  - Result::IO_InvalidArgument if either buffer is nullptr or bufferSize is zero.
-	 *  - PipelineNode specific error result.
-	 */
-	virtual Result writePacket(PipelineNode* writer, const void* buffer, size_t bufferSize, const int index) = 0;
+	// Write packet.
+	// \param writer PipelineNode which performs the write operation.
+	// \param buffer Pointer to source buffer.
+	// \param bufferSize Size of source buffer in bytes.
+	// \param streamIndex Stream Index.
+	// \return
+	//  - Result::OK on success.
+	//  - Result::IO_InvalidArgument if either buffer is nullptr or bufferSize is zero.
+	//  - PipelineNode specific error result.
+	virtual Result writePacket(PipelineNode *writer, const void *buffer, size_t bufferSize, const int streamIndex) = 0;
 };
 
 /*!

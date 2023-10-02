@@ -36,7 +36,8 @@ namespace avs
 
 		/*!
 		 * Configure decoder.
-		 * \param params callback for extracting extra video data
+		 * \param streamId Which stream.
+		 * \param onReceiveDataCallback callback for extracting extra video data
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_AlreadyConfigured if decoder was already in configured state.
@@ -58,6 +59,8 @@ namespace avs
 		/*!
 		 * Process received video tag data
 		 * \sa PipelineNode::process()
+		 * \param timestamp When this is happening.
+		 * \param deltaTime Time since the last call.
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_NotConfigured if decoder was not in configured state.
