@@ -1,6 +1,7 @@
 #pragma once
 #ifdef DOXYGEN
 #define TELEPORT_EXPORT
+#else
 #if PLATFORM_WINDOWS
 #define TELEPORT_EXPORT extern "C" __declspec(dllexport)
 #else

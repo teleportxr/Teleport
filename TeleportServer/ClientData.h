@@ -25,7 +25,7 @@ namespace teleport
 			UNSENT=0,SENT,CONFIRMED
 		};
 		/// <summary>
-		/// A helper struct for a state that should be refleced client-side. Including a boolean flag for whether that state has been confirmed by the client.
+		/// A helper struct for a state that should be reflected client-side. Including a boolean flag for whether that state has been confirmed by the client.
 		/// </summary>
 		/// <typeparam name="State">The state's type</typeparam>
 		template<typename State> struct ReflectedState
@@ -62,10 +62,7 @@ namespace teleport
 			std::shared_ptr<AudioEncodePipeline> audioEncodePipeline;
 			std::shared_ptr<teleport::server::ClientMessaging> clientMessaging;
 
-			void SetConnectionState(ConnectionState c)
-			{
-				connectionState = c;
-			}
+			void SetConnectionState(ConnectionState c);
 			ConnectionState GetConnectionState() const
 			{
 				return connectionState;

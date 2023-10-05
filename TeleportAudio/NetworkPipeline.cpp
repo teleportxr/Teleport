@@ -60,7 +60,7 @@ using namespace teleport::audio;
 			streams.emplace_back(std::move(stream));
 		}
 
-		if (!networkSink->configure(std::move(streams), nullptr, inNetworkSettings.localPort, inNetworkSettings.remoteIP, inNetworkSettings.remotePort, SinkParams))
+		if (!networkSink->configure(std::move(streams),SinkParams))
 		{
 			TELEPORT_INTERNAL_CERR( "Failed to configure network sink!\n");
 			return;

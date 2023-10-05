@@ -120,11 +120,6 @@ void ResourceCreator::Clear()
 	mutex_texturesToTranscode.lock();
 	texturesToTranscode.clear();
 	mutex_texturesToTranscode.unlock();
-	
-	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(1);
-	geometryCache->ClearResourceRequests();
-	geometryCache->ClearReceivedResources();
-	geometryCache->m_CompletedNodes.clear();
 }
 
 void ResourceCreator::Update(float deltaTime)

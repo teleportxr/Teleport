@@ -8,10 +8,9 @@
 #include <libavstream/platforms/platform_common.hpp>
 #include <cstring>
 
-inline void memcpy_s(void *targ, size_t size1,void* src,size_t size2)
+inline void memcpy_s(void *targ, [[maybe_unused]] size_t size1, void *src, size_t size2)
 {
 	assert(size1<=size2);
-	size1;
 	memcpy(targ,src,size2);
 }
 

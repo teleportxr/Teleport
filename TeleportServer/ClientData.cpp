@@ -3,6 +3,18 @@
 using namespace teleport;
 using namespace server;
 
+void ClientData::SetConnectionState(ConnectionState c)
+{
+	if (connectionState == c)
+		return;
+	connectionState = c;
+	if(connectionState!=CONNECTED)
+	{
+		// Have to assume that client has lost any information it might have had: 
+		_hasOrigin = false;
+		originClientHas = 0;
+	}
+}
 ClientData::ClientData(  std::shared_ptr<ClientMessaging> clientMessaging)
 	:   clientMessaging(clientMessaging)
 {
@@ -46,8 +58,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	encoderSettings.maxDepth = 10000;
 
 	teleport::core::SetupCommand setupCommand;
-	setupCommand.server_http_port = 443;
-	setupCommand.server_streaming_port =0;
 	setupCommand.debug_stream = serverSettings.debugStream;
 	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;

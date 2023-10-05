@@ -129,8 +129,13 @@ WebRtcNetworkSink::WebRtcNetworkSink()
 	m_data = static_cast<WebRtcNetworkSink::Private*>(m_d);
 }
 
+WebRtcNetworkSink::~WebRtcNetworkSink()
+{
+	deconfigure();
+}
+
 // configure() is called when we have agreed to connect with a specific client.
-Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* , uint16_t , const char* , uint16_t , const NetworkSinkParams& params)
+Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const NetworkSinkParams& params)
 {
 	size_t numInputs = streams.size();
 	if (numInputs == 0 )
@@ -225,11 +230,6 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		// We DO NOT get a callback from creating a dc locally.
 		m_data->onDataChannel(dataChannel.rtcDataChannel);
 	}
-}
-
-WebRtcNetworkSink::~WebRtcNetworkSink()
-{
-	deconfigure();
 }
 
 NetworkSinkCounters WebRtcNetworkSink::getCounters() const

@@ -174,11 +174,9 @@ namespace teleport
 			uint32_t maxBandwidthKpS = 0;		// In kilobytes per second
 			avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
 			uint8_t framerate = 0;				// In hertz
-			bool usingHands = false;			//Whether to send the hand nodes to the client.
 			bool isVR = true;
 			uint64_t resourceCount = 0;			//Count of resources the client has, and are appended to the handshake.
 			uint32_t maxLightsSupported = 0;
-			uint32_t clientStreamingPort = 0;	// the local port on the client to receive the stream.
 			int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
 			avs::RenderingFeatures renderingFeatures;
 		} AVS_PACKED;
@@ -317,8 +315,6 @@ namespace teleport
 			{
 				return sizeof(SetupCommand);
 			}
-			int32_t				server_streaming_port = 0;							//!< 5
-			int32_t				server_http_port = 0;								//!< 9
 			uint32_t			debug_stream = 0;									//!< 13
 			uint32_t			do_checksums = 0;									//!< 17
 			uint32_t			debug_network_packets = 0;							//!< 21

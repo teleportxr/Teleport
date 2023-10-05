@@ -45,7 +45,7 @@ html_theme_options = {
     'logo_only': False,
     'display_version': False,
 }
-
+numfig = True
 html_favicon = 'favicon.ico'
 
 # -- Options for HTML output -------------------------------------------------

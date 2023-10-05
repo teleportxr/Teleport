@@ -44,7 +44,7 @@ The Service Connection controls the others and is the main line of information b
 	:maxdepth: 4
 	:caption: Contents:
 	
-	protocol/discovery
+	protocol/signaling
 	protocol/service
 	protocol/data_transfer
 	protocol/video

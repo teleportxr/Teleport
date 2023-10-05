@@ -151,6 +151,8 @@ bool SessionClient::Connect(const char* remote_ip,  uint timeout,avs::uid cl_id)
 	return true;
 }
 
+#include <nlohmann/json.hpp>
+using nlohmann::json;
 void SessionClient::Disconnect(uint timeout, bool resetClientID)
 {
 	remoteIP="";
@@ -994,7 +996,7 @@ void SessionClient::ReceivePingForLatencyCommand(const std::vector<uint8_t>& pac
 		return;
 	}
 	memcpy(static_cast<void*>(&cmd), packet.data(), commandSize);
-	cmd.unix_time_ns;
+	//cmd.unix_time_ns;
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	int64_t diff_ns = unix_time_ns - cmd.unix_time_ns;
 	latency_milliseconds=float(double(diff_ns) * 0.000001);

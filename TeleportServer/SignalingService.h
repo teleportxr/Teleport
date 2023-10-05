@@ -51,6 +51,7 @@ namespace teleport
 			std::shared_ptr<SignalingClient > getSignalingClient(avs::uid u);
 		protected:
 			void SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient);
+			void processDisconnection(avs::uid uid, std::shared_ptr<SignalingClient> &signalingClient);
 			void processInitialRequest(avs::uid clientID, std::shared_ptr<SignalingClient> &discoveryClient,nlohmann::json& j);
 			std::set<uint16_t> discoveryPorts;
 			std::string desiredIP;

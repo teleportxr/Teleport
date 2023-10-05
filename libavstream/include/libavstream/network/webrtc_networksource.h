@@ -20,16 +20,13 @@ namespace avs
 	class AVSTREAM_API WebRtcNetworkSource final : public NetworkSource
 	{
 		AVSTREAM_PUBLICINTERFACE(WebRtcNetworkSource)
-		WebRtcNetworkSource::Private * m_data = nullptr;
+		Private * m_data = nullptr;
 	public:
 		WebRtcNetworkSource();
-		virtual ~WebRtcNetworkSource()
-		{
-			deconfigure();
-		}
+		virtual ~WebRtcNetworkSource();
 		/*!
-		 * Configure network source and bind to local UDP endpoint.
-		 * \param in_streams Definitions of the input streams. 
+		 * Configure network node and bind to local UDP endpoint.
+		 * \param in_streams Collection of configurations for each stream. 
 		 * \param numOutputs Number of output slots. This determines maximum number of multiplexed streams the node will support.
 		 * \param params Additional network source parameters.
 		 * \return
@@ -48,10 +45,10 @@ namespace avs
 		Result deconfigure() override;
 
 		/*!
-		 * Receive and process incoming network packets.
+		 * Send and receive data for all streams to and from remote UDP endpoint.
 		 * \return
 		 *  - Result::OK on success.
-		 *  - Result::Node_NotConfigured if network source has not been configured.
+		 *  - Result::Node_NotConfigured if this network node has not been configured.
 		 *  - Result::Network_ResolveFailed if failed to resolve the name of remote UDP endpoint.
 		 *  - Result::Network_RecvFailed on general network receive failure.
 		 */
@@ -66,11 +63,6 @@ namespace avs
 		 * Get current counter values.
 		 */
 		NetworkSourceCounters getCounterValues() const override;
-
-#if TELEPORT_CLIENT
-		std::queue<HTTPPayloadRequest>& GetHTTPRequestQueue();
-#endif
-
 		void setDebugStream(uint32_t)override {}
 		void setDoChecksums(bool)override {}
 		void setDebugNetworkPackets(bool s)override {}
@@ -84,9 +76,9 @@ namespace avs
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
 		
-		void SendConfigMessage(const std::string& str);
+		void sendConfigMessage(const std::string& str);
 
-		StreamingConnectionState GetStreamingConnectionState() const
+		StreamingConnectionState GetStreamingConnectionState() const override
 		{
 			return webRtcState;
 		}

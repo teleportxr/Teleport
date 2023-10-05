@@ -55,8 +55,6 @@ if(LIBAV_USE_SRT)
 
 set(src_private_network
 	${src_private_network}
-	src/network/srt_efp_networksink.cpp
-	src/network/srt_efp_networksource.cpp
 	)
 endif()
 
@@ -185,11 +183,9 @@ set(hdr_public_root
 	)
 set(hdr_public_network
 	include/libavstream/network/networksink.h
-	include/libavstream/network/srt_efp_networksink.h
 	include/libavstream/network/webrtc_networksink.h
 	include/libavstream/network/webrtc_observers.h
 	include/libavstream/network/networksource.h
-	include/libavstream/network/srt_efp_networksource.h
 	include/libavstream/network/webrtc_networksource.h)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)

@@ -28,7 +28,12 @@
     <ClCompile Include="..\..\TeleportClient\ClientTime.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />
+    <ClCompile Include="..\..\TeleportClient\TabContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportClient\basic_linear_algebra.h">
@@ -61,7 +66,12 @@
     <ClInclude Include="..\..\TeleportClient\ClientTime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h" />
+    <ClInclude Include="..\..\TeleportClient\TabContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">

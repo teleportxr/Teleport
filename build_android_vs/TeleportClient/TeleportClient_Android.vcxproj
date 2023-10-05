@@ -33,6 +33,7 @@
     <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h" />
     <ClInclude Include="..\..\TeleportClient\ServerTimestamp.h" />
     <ClInclude Include="..\..\TeleportClient\SessionClient.h" />
+    <ClInclude Include="..\..\TeleportClient\TabContext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\TeleportClient\ClientDeviceState.cpp" />
@@ -45,6 +46,7 @@
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />
     <ClCompile Include="..\..\TeleportClient\ServerTimestamp.cpp" />
     <ClCompile Include="..\..\TeleportClient\SessionClient.cpp" />
+    <ClCompile Include="..\..\TeleportClient\TabContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\firstparty\Platform\CrossPlatform\SimulCrossPlatform_MT.vcxproj">

@@ -172,6 +172,10 @@ namespace clientrender
 			mAnimationManager.Clear();
 			mTextCanvasManager.Clear();
 			mFontAtlasManager.Clear();
+
+			ClearResourceRequests();
+			ClearReceivedResources();
+			m_CompletedNodes.clear();
 		}
 		
 		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);

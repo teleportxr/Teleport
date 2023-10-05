@@ -36,7 +36,7 @@ namespace avs
 		 *  - Result::Decoder_NoSuitableBackendFound if there's no usable decoder backend on the system.
 		 *  - Any error result returned by DecoderBackendInterface::initialize().
 		 */
-		Result configure(uint8_t streamId, GeometryDecoderBackendInterface* backend);
+		Result configure(uint8_t streamId, avs::uid server_uid,GeometryDecoderBackendInterface* backend);
 
 		/*!
 		 * Deconfigure decoder and release all associated resources.
@@ -82,6 +82,7 @@ namespace avs
 		// non-owned backend
 		std::unique_ptr<GeometryParserInterface> m_parser;
 		std::vector<uint8_t> m_buffer;
+		avs::uid server_uid = 0;
 		bool m_configured = false;
 		int m_streamId = 0;
 		Result onInputLink(int slot, PipelineNode* node) override;

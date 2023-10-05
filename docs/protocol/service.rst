@@ -1,14 +1,46 @@
 #######
-Service
+Data Service
 #######
 
 Initialization
 ^^^^^^^^^^^^^^
-After a **Connecting Client** is discovered and accepted, the Server creates the Service Connection, a nonblocking connection bound to the **Server Service Port**. The **Service Connection** uses `enet <http://enet.bespin.org/>`_, a thin UDP manager, to ensure packet reliability and in-order delivery. The connection has eight channels: *Handshake, Control, DisplayInfo, HeadPose, ResourceRequest, KeyframeRequest, ClientMessage* and *Origin*.
+After a **Connecting Client** completes signaling, the Data Service has been created. This connection has six channels:
 
-The **Connecting Client** on receiving its **Service Discovery Response** opens the enet connection on its **Client Service Socket** as nonblocking, bound to the **Client Service Port**. This connects to the **Server** on the **Server Service Port**.
+.. list-table:: Data Service Channels
+   :widths: 15 7 7 30
+   :header-rows: 1
 
-When the Server receives the **Enet Connection Request**, it considers **Discovery** to be complete for this **Client**. The **Server** sends the **Setup Command** to the **Client** on the **Service Connection**'s **Control** channel.
+   * - Name
+     - Reliable
+     - Two-way
+     - Description
+   * - Video
+     - No
+     - No
+     - Video stream from server to client.
+   * - Video Tags
+     - No
+     - No
+     - Video per-frame metadata.
+   * - Audio
+     - No
+     - Yes
+     - Two-way audio channel.
+   * - Geometry
+     - No
+     - No
+     - Geometry streaming to client.
+   * - Message
+     - No
+     - Yes
+     - Unreliable, time-sensitive messages.
+   * - Command
+     - Yes
+     - Yes
+     - Reliable commands and responses.
+
+
+When initial signaling is complete for this **Client**, the **Server** sends the **Setup Command** to the **Client** on the **Command** channel.
 
 *Definitions*
 
@@ -35,9 +67,9 @@ The **Setup Command** is
 +=======================+===================+===========================+
 |      1                | CommandPayloadType|    Setup=2                |
 +-----------------------+-------------------+---------------------------+
-|      4                |    int32          |    server streaming port  |
+|      4                |    int32          |    deprecated             |
 +-----------------------+-------------------+---------------------------+
-|      4                |    int32          |    server http port       |
+|      4                |    int32          |   deprecated              |
 +-----------------------+-------------------+---------------------------+
 |     4                 |    uint32         |    debug_stream           |
 +-----------------------+-------------------+---------------------------+
@@ -178,7 +210,7 @@ where
      - float  
      - draw_distance
 
-The  **Client** then initiates its streaming connection with the given **Server Streaming Port** from the ****Setup Command****. The Client sends a **Handshake** on the Handshake channel of the Service Connection.
+The Client sends a **Handshake** on the Handshake channel of the Data Service.
 
 The **Handshake** is
 
@@ -217,11 +249,9 @@ The **Handshake** is
 |     8 * N             | uid               |resources already present|
 +-----------------------+-------------------+-------------------------+
 
+When the **Server** receives the **Handshake**, it starts streaming data. The handshake is of variable size, as it contains a list of the resource uid's that it already has cached.
 
-When the **Server** receives the **Handshake**, it starts streaming proper. The **Streaming Connection** is created on the **Server Streaming Port**, which is by default (**Server Service Port** + 1). The Handshake is of variable size, as it contains a list of the resource uid's that it already has cached.
-
-The server then sends the AcknowledgeHandshake command on the *Control* channel:
-
+The server then sends the ``AcknowledgeHandshake`` command on the **Command** channel:
 
 .. list-table:: AcknowledgeHandshake
    :widths: 5 10 30
@@ -242,8 +272,7 @@ The server then sends the AcknowledgeHandshake command on the *Control* channel:
 
 See :cpp:struct:`AcknowledgeHandshakeCommand`.
 
-Once the **Client** has received the AcknowledgeHandshake, Initialization is complete and the client enters the main continuous Update mode.
-
+Once the **Client** has received the ``AcknowledgeHandshake``, initialization is complete and the client enters the main continuous Update mode.
 
 Update
 ^^^^^^

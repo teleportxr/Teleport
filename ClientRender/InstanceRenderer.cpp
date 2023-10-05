@@ -1137,8 +1137,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		{
 			audio::NetworkSettings networkSettings =
 			{
-					setupCommand.server_streaming_port + 1, server_ip, setupCommand.server_streaming_port
-					, static_cast<int32_t>(handshake.maxBandwidthKpS)
+					static_cast<int32_t>(handshake.maxBandwidthKpS)
 					, static_cast<int32_t>(handshake.udpBufferSize)
 					, setupCommand.requiredLatencyMs
 					, (int32_t)setupCommand.idle_connection_timeout
@@ -1164,7 +1163,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 	// We will add a GEOMETRY PIPE
 	{
-		clientPipeline.avsGeometryDecoder.configure(80, &geometryDecoder);
+		clientPipeline.avsGeometryDecoder.configure(80, server_uid, & geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
 		clientPipeline.geometryQueue.configure(600000, 200, "GeometryQueue");
@@ -1203,7 +1202,6 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source->getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
-	handshake.clientStreamingPort = setupCommand.server_streaming_port + 1;
 
 	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 	return true;

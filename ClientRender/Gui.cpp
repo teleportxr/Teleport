@@ -2414,11 +2414,22 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 			}
 			else
 			{
-				// TODO: Temporary
-				avs::uid server_uid=1;
-				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-				bool connecting=sessionClient->IsConnecting();
-				bool connected=sessionClient->IsConnected();
+				const std::set<int32_t> &tabIndices=client::TabContext::GetTabIndices();
+				int32_t tab_index=0;
+				if(tabIndices.size())
+					tab_index=tabIndices.begin().operator*();
+				else
+					tab_index = client::TabContext::AddTabContext();
+				std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(tab_index);
+				avs::uid server_uid=tabContext->GetServerUid();
+				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+				bool connecting = false;
+				bool connected = false;
+				if(sessionClient)
+				{
+				 connecting=sessionClient->IsConnecting();
+					 connected=sessionClient->IsConnected();
+				}
 				ImGui::SameLine();
 				if (refocus == 0)
 				{

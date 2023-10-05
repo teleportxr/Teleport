@@ -168,6 +168,9 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 
 void DiscoveryService::Disconnect(uint64_t server_uid)
 {
+	json message = {
+		{"teleport-signal-type", "disconnect"}};
+	Send(server_uid,message.dump());
 	awaiting = false;
 }
 
