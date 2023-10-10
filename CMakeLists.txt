@@ -277,9 +277,9 @@ add_subdirectory(TeleportCore)
 if(TELEPORT_SERVER)
 	# Server doesn't include Platform, so load fmt separately.
 	add_subdirectory(firstparty/Platform/External/fmt)
-	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "")
-	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "")
-	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "")
+	set(LIBAV_USE_DYNAMIC_RUNTIME ON CACHE BOOL "" FORCE)
+	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "" FORCE)
 	add_subdirectory(thirdparty/cpp-httplib)
 endif()
 
@@ -329,9 +329,9 @@ if(TELEPORT_UNIX)
 	target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 endif()
 
-option(DRACO_TRANSCODER_SUPPORTED  "" ON)
-option(TINYGLTF_NO_STB_IMAGE  "" ON)
-option(TINYGLTF_NO_STB_IMAGE_WRITE  "" ON)
+set(DRACO_TRANSCODER_SUPPORTED ON CACHE BOOL "" FORCE)
+set(TINYGLTF_NO_STB_IMAGE ON CACHE BOOL "" FORCE)
+set(TINYGLTF_NO_STB_IMAGE_WRITE ON CACHE BOOL "" FORCE)
 add_subdirectory(thirdparty/draco)
 
 # Here we will put all the draco targets into the thirdparty/draco solution folder:
