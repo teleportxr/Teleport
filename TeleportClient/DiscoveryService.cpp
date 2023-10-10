@@ -15,22 +15,11 @@ using namespace teleport;
 using namespace client;
 static teleport::client::DiscoveryService *discoveryService=nullptr;
 
-uint16_t teleport::client::SignalingServer::GetPort() const
-{
-	uint16_t p = remotePort;
-	if (p == 0)
-		p = teleport::client::DiscoveryService::GetInstance().cyclePorts[cyclePortIndex];
-	return p;
-}
 
 teleport::client::DiscoveryService &teleport::client::DiscoveryService::GetInstance()
 {
 	if (!discoveryService)
 	{
-		if (enet_initialize() != 0)
-		{
-			TELEPORT_CERR << "An error occurred while attempting to initalise ENet!\n";
-		}
 		discoveryService = new teleport::client::DiscoveryService;
 	}
 	return *discoveryService;
@@ -56,54 +45,35 @@ DiscoveryService::DiscoveryService()
 DiscoveryService::~DiscoveryService()
 {
 }
-
+/*
 void DiscoveryService::SetClientID(uint64_t inClientID)
 {
 	clientID = inClientID;
-}
-
+}*/
 void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
 {
-	TELEPORT_COUT << ": info: ReceiveWebSocketsMessage " << msg << std::endl;
-	std::lock_guard lock(messagesReceivedMutex);
-	messagesReceived.push(msg);
+	std::lock_guard lock(signalingServersMutex);
+	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
+	if(signalingServer)
+		signalingServer->ReceiveMessage(msg);
 }
 
-void DiscoveryService::ReceiveBinaryWebSocketsMessage(uint64_t server_uid,std::vector<std::byte> bin)
+void DiscoveryService::ReceiveBinaryWebSocketsMessage(uint64_t server_uid, std::vector<std::byte> bin)
 {
-	TELEPORT_COUT << ": info: ReceiveBinaryWebSocketsMessage." << std::endl;
-	std::lock_guard lock(binaryMessagesReceivedMutex);
-	binaryMessagesReceived.push(bin);
+	std::lock_guard lock(signalingServersMutex);
+	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
+	if (signalingServer)
+		signalingServer->ReceiveBinaryMessage(bin);
 }
 
 void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint16_t serverDiscoveryPort)
 {
+	std::shared_ptr<SignalingServer> signalingServer;
 	{
-		std::lock_guard lock(messagesReceivedMutex);
-		while (!messagesReceived.empty())
-			messagesReceived.pop();
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
 	}
-	{
-		std::lock_guard lock(messagesToPassOnMutex);
-		while (!messagesToPassOn.empty())
-			messagesToPassOn.pop();
-	}
-	{
-		std::lock_guard lock(messagesToSendMutex);
-		while (!messagesToSend.empty())
-			messagesToSend.pop();
-	}
-	{
-		std::lock_guard lock(binaryMessagesReceivedMutex);
-		while(!binaryMessagesReceived.empty())
-			binaryMessagesReceived.pop();
-	}
-	{
-		std::lock_guard lock(binaryMessagesToSendMutex);
-		while (!binaryMessagesToSend.empty())
-			binaryMessagesToSend.pop();
-	}
-	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
+	signalingServer->Reset();
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
 	std::string ws_url=fmt::format("ws://{0}:{1}",url, serverDiscoveryPort);
 	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
@@ -126,7 +96,13 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 void DiscoveryService::InitSocket(uint64_t server_uid)
 {
 	rtc::WebSocket::Configuration config;
-	std::shared_ptr<SignalingServer> &signalingServer=signalingServers[server_uid];
+	std::shared_ptr<SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
+	}
+	if(!signalingServer)
+		return;
 	auto ws = signalingServer->webSocket = std::make_shared<rtc::WebSocket>(config);
 	if (signalingServer->remotePort == 0)
 	{
@@ -168,19 +144,26 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 
 void DiscoveryService::Disconnect(uint64_t server_uid)
 {
-	json message = {
-		{"teleport-signal-type", "disconnect"}};
-	Send(server_uid,message.dump());
-	awaiting = false;
+	std::shared_ptr<SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
+	}
+	if(signalingServer)
+		signalingServer->QueueDisconnectionMessage();
 }
 
 uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16_t signalPort)
 {
-	std::lock_guard lock(signalingServersMutex);
-	std::shared_ptr<SignalingServer> &signalingServer= signalingServers[server_uid];
+	std::shared_ptr<SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer= signalingServers[server_uid];
+	}
 	if (!signalingServer)
 	{
 		signalingServer = std::make_shared<SignalingServer>();
+		signalingServers[server_uid]=signalingServer;
 	}
 	if(signalingServer->url!=url||signalingServer->remotePort!=signalPort)
 	{
@@ -213,11 +196,8 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		{
 			if (ws->isOpen())
 			{
-				json message = { {"teleport-signal-type","request"},{"content",{ {"teleport","0.9"},{"clientID", clientID}}} };
-				//rtc::message_variant wsdata = fmt::format("{{\"clientID\":{}}}",clientID);
+				json message = {{"teleport-signal-type", "request"}, {"content", {{"teleport", "0.9"}, {"clientID", signalingServer->clientID}}}};
 				ws->send(message.dump());
-				//TELEPORT_CERR << "Websocket send()" << std::endl;
-				//TELEPORT_CERR << "webSocket->send: " << message.dump() << "  .\n";
 				frame = 100;
 			}
 			else if (ws->readyState() == rtc::WebSocket::State::Closed)
@@ -238,15 +218,15 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		{
 		}
 	}
-	if(awaiting)
+	if (signalingServer->awaiting)
 	{
-		awaiting = false;
+		signalingServer->awaiting = false;
 		serverDiscovered = true;
 	}
 
 	if(serverDiscovered)
 	{
-		return clientID;
+		return signalingServer->clientID;
 	}
 	return 0;
 }
@@ -261,8 +241,11 @@ void DiscoveryService::Tick()
 
 void DiscoveryService::Tick(uint64_t server_uid)
 {
-	std::lock_guard lock(signalingServersMutex);
-	std::shared_ptr<SignalingServer> &signalingServer = signalingServers[server_uid];
+	std::shared_ptr<SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
+	}
 	if (!signalingServer)
 		return;
 	std::shared_ptr<rtc::WebSocket>& ws = signalingServer->webSocket;
@@ -278,26 +261,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	{
 		if (ws->isOpen())
 		{
-			{
-				std::lock_guard lock(messagesToSendMutex);
-				while (messagesToSend.size())
-				{
-					ws->send(messagesToSend.front());
-					//TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
-					messagesToSend.pop();
-				}
-			}
-			{
-
-				std::lock_guard lock(binaryMessagesToSendMutex);
-				while (binaryMessagesToSend.size())
-				{
-					auto& bin = binaryMessagesToSend.front();
-					ws->send(bin.data(), bin.size());
-					//TELEPORT_CERR << "webSocket->send binary: " << bin.size() << " bytes.\n";
-					binaryMessagesToSend.pop();
-				}
-			}
+			signalingServer->SendMessages();
 		}
 	}
 	catch(std::exception& e)
@@ -309,46 +273,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	}
 	try
 	{
-		std::lock_guard lock(messagesReceivedMutex);
-		while(messagesReceived.size())
-		{
-			std::string msg = messagesReceived.front();
-			messagesReceived.pop();
-			if(!msg.length())
-				continue;
-			json message=json::parse(msg);
-			if(message.contains("teleport-signal-type"))
-			{
-				std::string type = message["teleport-signal-type"];
-				if(type=="request-response")
-				{
-					if(message.contains("content"))
-					{
-						json content = message["content"];
-						if(content.contains("clientID"))
-						{
-							uint64_t clid = content["clientID"];
-							if(clientID!=clid)
-								clientID=clid;
-							if(clientID!=0)
-							{
-								awaiting = true;
-							}
-						}
-					}
-				}
-				else
-				{
-					std::lock_guard lock(messagesToPassOnMutex);
-					messagesToPassOn.push(msg);
-				}
-			}
-			else
-			{
-				std::lock_guard lock(messagesToPassOnMutex);
-				messagesToPassOn.push(msg);
-			}
-		}
+		signalingServer->ProcessReceivedMessages();
 	}
 	catch(std::exception& e)
 	{
@@ -362,41 +287,48 @@ void DiscoveryService::Tick(uint64_t server_uid)
 
 bool DiscoveryService::GetNextMessage(uint64_t server_uid,std::string& msg)
 {
-	std::lock_guard lock(messagesToPassOnMutex);
-	if (messagesToPassOn.size())
+	std::shared_ptr<SignalingServer> signalingServer;
 	{
-		msg = messagesToPassOn.front();
-		messagesToPassOn.pop();
-		return true;
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
 	}
-	return false;
+	if (!signalingServer)
+		return false;
+	return signalingServer->GetNextPassedOnMessage(msg);
 }
 
-bool DiscoveryService::GetNextBinaryMessage(uint64_t server_uid,std::vector<uint8_t>& msg)
+bool DiscoveryService::GetNextBinaryMessage(uint64_t server_uid, std::vector<uint8_t> &bin)
 {
-	std::lock_guard lock(binaryMessagesReceivedMutex);
-	if (binaryMessagesReceived.size())
+	std::shared_ptr<SignalingServer> signalingServer;
 	{
-		auto &bin=binaryMessagesReceived.front();
-		msg.resize(bin.size());
-		memcpy(msg.data(),bin.data(),msg.size());
-		binaryMessagesReceived.pop();
-		return true;
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
 	}
-	return false;
+	if (!signalingServer)
+		return false;
+	return signalingServer->GetNextBinaryMessageReceived(bin);
 }
+
 void DiscoveryService::Send(uint64_t server_uid,std::string msg)
 {
-	std::lock_guard lock(messagesToSendMutex);
-	messagesToSend.push(msg);
+	std::shared_ptr<SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
+	}
+	if(signalingServer)
+		signalingServer->QueueMessage(msg);
 }
 
 void DiscoveryService::SendBinary(uint64_t server_uid, std::vector<uint8_t> bin)
 {
-	std::lock_guard lock(binaryMessagesToSendMutex);
-	std::vector<std::byte> b;
-	b.resize(bin.size());
-	memcpy(b.data(),bin.data(),b.size());
-	binaryMessagesToSend.push(b);
-
+	std::shared_ptr<SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		signalingServer = signalingServers[server_uid];
+	}
+	if (signalingServer)
+	{
+		signalingServer->QueueBinaryMessage(bin);
+	}
 }

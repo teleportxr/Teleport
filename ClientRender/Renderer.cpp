@@ -748,36 +748,51 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
 
-	const std::set<avs::uid> &server_uids=client::SessionClient::GetSessionClientIds();
+	const std::set<int32_t> &tab_ids=client::TabContext::GetTabIndices();
+	// Each tab context has one active server at most.
+	static std::set<avs::uid> server_uids;
+	server_uids.clear();
+	for(const auto t:tab_ids)
+	{
+		auto tabContext=client::TabContext::GetTabContext(t);
+		if(!tabContext)
+			continue;
+		auto server_uid = tabContext->GetServerUid();
+		if(server_uid!=0)
+		{
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+			if(sessionClient->IsConnected())
+				server_uids.insert(server_uid);
+		}
+	}
+	if(!server_uids.size())
+	{
+		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+		{
+			crossplatform::MultiviewGraphicsDeviceContext &mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+			renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+			renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
+			renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
+		}
+		renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+
+		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
+		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
+			passName += "_multiview";
+		if (!renderState.openXR->IsPassthroughActive())
+		{
+			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+			renderPlatform->DrawQuad(deviceContext);
+			renderState.cubemapClearEffect->Unapply(deviceContext);
+		}
+		server_uids.insert(0);
+	}
 	for (const auto &server_uid : server_uids)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-		// TODO: This should render only if no background clients are connected.
-		if (!sessionClient->IsConnected())
-		{
-			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-			{
-				crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-				renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
-				renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
-				renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-				renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-			}
-			renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-			renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-		
-			std::string passName = (int)config.options.lobbyView ? "neon" : "white";
-			if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
-				passName += "_multiview";
-			if(!renderState.openXR->IsPassthroughActive())
-			{
-				renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-				renderPlatform->DrawQuad(deviceContext);
-				renderState.cubemapClearEffect->Unapply(deviceContext);
-			}
-		}
-
 		// Init the viewstruct in global space - i.e. with the server offsets.
 		avs::Pose origin_pose;
 		auto &clientServerState = sessionClient->GetClientServerState();

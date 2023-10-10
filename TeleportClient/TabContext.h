@@ -13,7 +13,7 @@ namespace teleport
 		class TabContext
 		{
 			avs::uid server_uid=0;
-			avs::uid previous_server_uid=0;
+			avs::uid next_server_uid=0;
 		public:
 			static const std::set<int32_t> &GetTabIndices();
 			static std::shared_ptr<TabContext> GetTabContext(int32_t index);
@@ -28,10 +28,13 @@ namespace teleport
 			{
 				return server_uid;
 			}
-			avs::uid GetPreviousServerUid() const
+			avs::uid GetNextServerUid() const
 			{
-				return previous_server_uid;
+				return next_server_uid;
 			}
+
+			//! Communication from SessionClient
+			void ConnectionComplete(avs::uid uid);
 		};
 	}
 }

@@ -27,6 +27,8 @@ set(src_files
 	ServerTimestamp.h
 	SessionClient.cpp
 	SessionClient.h
+	SignalingServer.cpp
+	SignalingServer.h
 	TabContext.cpp
 	TabContext.h
 )
@@ -41,8 +43,7 @@ target_include_directories(TeleportClient PUBLIC src)
 target_include_directories(TeleportClient PUBLIC ../libavstream/include)
 #Include Basis Universal
 target_include_directories(TeleportClient PUBLIC ../thirdparty/basis_universal)
-#Include enet
-target_include_directories(TeleportClient PUBLIC ../thirdparty/enet/include)
+#Include json
 target_include_directories(TeleportClient PUBLIC ../thirdparty/json)
 
 target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include )

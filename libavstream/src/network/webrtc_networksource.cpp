@@ -697,7 +697,7 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 			}
 			else
 			{
-				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+ 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
 				return Result::Failed;
 			}
 		}

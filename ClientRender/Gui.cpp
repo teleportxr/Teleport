@@ -2051,53 +2051,75 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 		ImGuiBegin("dev_overlay",0,window_flags);
 		{
 			dev_overlay_width = ImGui::GetWindowWidth();
-			client::ConnectionStatus status=client::ConnectionStatus::UNCONNECTED;
-			avs::StreamingConnectionState streamingStatus = avs::StreamingConnectionState::UNINITIALIZED;
-			const auto &ids=client::SessionClient::GetSessionClientIds();
-			vec4 white(1.f, 1.f, 1.f, 1.f);
-			ImGui::BeginTable("serverstats", 2);
-			ImGui::TableSetupColumn("name2", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-			ImGui::TableSetupColumn("val21", ImGuiTableColumnFlags_WidthStretch);
 
-			for(auto id:ids)
+			ImGui::BeginTabBar("tabcontexts");
+			const auto &tabs = client::TabContext::GetTabIndices();
+			for(const auto t:tabs)
 			{
-				auto sessionClient = client::SessionClient::GetSessionClient(id);
-				status = sessionClient->GetConnectionStatus();
-				streamingStatus = sessionClient->GetStreamingConnectionState();
+				const auto tabContext = client::TabContext::GetTabContext(t);
+				if(!tabContext)
+					continue;
+				std::string str=fmt::format("{0}",t);
+				if(ImGui::BeginTabItem(str.c_str()))
+				{
+					client::ConnectionStatus status=client::ConnectionStatus::UNCONNECTED;
+					avs::StreamingConnectionState streamingStatus = avs::StreamingConnectionState::UNINITIALIZED;
+					static std::vector<avs::uid > ids;
+					ids.resize(0);
+					ids.push_back(tabContext->GetServerUid());
+					ids.push_back(tabContext->GetNextServerUid());
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Server Id");
-				ImGui::TableNextColumn();
-				ImGui::Text("%llu", id);
+					vec4 white(1.f, 1.f, 1.f, 1.f);
+					ImGui::BeginTable("serverstats", 2);
+					ImGui::TableSetupColumn("name2", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+					ImGui::TableSetupColumn("val21", ImGuiTableColumnFlags_WidthStretch);
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Session Id");
-				ImGui::TableNextColumn();
-				ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
+					for(auto id:ids)
+					{
+						if(!id)
+							continue;
+						auto sessionClient = client::SessionClient::GetSessionClient(id);
+						status = sessionClient->GetConnectionStatus();
+						streamingStatus = sessionClient->GetStreamingConnectionState();
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Session Status");
-				ImGui::TableNextColumn();
-				ImGui::Text(teleport::client::StringOf(status));
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Server Id");
+						ImGui::TableNextColumn();
+						ImGui::Text("%llu", id);
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Streaming Status");
-				ImGui::TableNextColumn();
-				ImGui::Text(avs::stringOf(streamingStatus));
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Session Id");
+						ImGui::TableNextColumn();
+						ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Latency");
-				ImGui::TableNextColumn();
-				ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Session Status");
+						ImGui::TableNextColumn();
+						ImGui::Text(teleport::client::StringOf(status));
 
-				ImGui::TableNextRow();
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Streaming Status");
+						ImGui::TableNextColumn();
+						ImGui::Text(avs::stringOf(streamingStatus));
+
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Latency");
+						ImGui::TableNextColumn();
+						ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+
+						ImGui::TableNextRow();
+					}
+					ImGui::EndTable();
+
+					ImGui::EndTabItem();
+				}
 			}
-			ImGui::EndTable();
+			ImGui::EndTabBar();
 		}
 
 		ImGuiEnd();

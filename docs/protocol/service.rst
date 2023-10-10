@@ -39,6 +39,7 @@ After a **Connecting Client** completes signaling, the Data Service has been cre
      - Yes
      - Reliable commands and responses.
 
+The video stream can be configured as h264 or HEVC. The data streams 
 
 When initial signaling is complete for this **Client**, the **Server** sends the **Setup Command** to the **Client** on the **Command** channel.
 

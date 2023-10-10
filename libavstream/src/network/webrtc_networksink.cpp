@@ -87,10 +87,6 @@ namespace avs
 										{"teleport-signal-type",description.typeString()},
 												{"sdp",  std::string(description)}
 									};
-					//json message = { {"id", id},
-						//		{"type", description.typeString()},
-							//	{"sdp",  std::string(description)} };
-
 					sendConfigMessage(message.dump());
 				});
 

@@ -13,6 +13,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "DiscoveryService.h"
 #include "Config.h"
+#include "TabContext.h"
 
 using namespace teleport;
 using namespace client;
@@ -54,7 +55,7 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	// We can create client zero, but any other must use CreateSessionClient() via TabContext.
 		if(server_uid==0)
 		{
-			auto r = std::make_shared<client::SessionClient>(0);
+			auto r = std::make_shared<client::SessionClient>(0,nullptr);
 			sessionClients[0] = r;
 			sessionClientIds.insert(0);
 			return r;
@@ -64,7 +65,7 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	return i->second;
 }
 
-avs::uid SessionClient::CreateSessionClient()
+avs::uid SessionClient::CreateSessionClient(TabContext *tabContext)
 {
 	avs::uid server_uid=avs::GenerateUid();
 	auto i = sessionClients.find(server_uid);
@@ -73,7 +74,7 @@ avs::uid SessionClient::CreateSessionClient()
 		server_uid = avs::GenerateUid();
 		i = sessionClients.find(server_uid);
 	}
-	auto r = std::make_shared<client::SessionClient>(server_uid);
+	auto r = std::make_shared<client::SessionClient>(server_uid,tabContext);
 	sessionClients[server_uid] = r;
 	sessionClientIds.insert(server_uid);
 	return server_uid;
@@ -89,8 +90,8 @@ void SessionClient::DestroySessionClients()
 	sessionClients.clear();
 }
 
-SessionClient::SessionClient(avs::uid s)
-	:server_uid(s)
+SessionClient::SessionClient(avs::uid s, TabContext *tc)
+	: server_uid(s), tabContext(tc)
 {
 }
 
@@ -219,15 +220,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 
 	mTimeSinceLastServerComm += deltaTime;
 
-#if 0
-	// Handle cases where we set a breakpoint and enet doesn't receive disconnect message
-	// This only works with geometry streaming on. Otherwise there are not regular http messages received. 
-	if (mTimeSinceLastServerComm > (setupCommand.idle_connection_timeout * 0.001) + 2)
-	{
-		Disconnect(0);
-		return;
-	}
-#endif
 
 	//Append resource requests to the request list again, if it has been too long since we sent the request.
 	for(auto sentResource : mSentResourceRequests)
@@ -241,7 +233,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	}
 	// TODO: These pipelines could be on different threads,
 	messageToServerPipeline.process();
-
 	avs::Result result = clientPipeline.pipeline.process();
 	if (result == avs::Result::Network_Disconnection)
 	{
@@ -465,7 +456,6 @@ void SessionClient::SendInput(const core::Input& input)
 	auto ts = avs::Platform::getTimestamp();
 	inputStatesMessage.timestamp_unix_ms = (uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
 	inputEventsMessage.timestamp_unix_ms = inputStatesMessage.timestamp_unix_ms;
-	enet_uint32 packetFlags = ENET_PACKET_FLAG_RELIABLE;
 	//Set event amount.
 	if(input.analogueEvents.size()>50)
 	{
@@ -682,6 +672,7 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet.size());
 		return;
 	}
+
 	connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	const teleport::core::SetupCommand *s=reinterpret_cast<const teleport::core::SetupCommand*>(packet.data());
 	ApplySetup(*s);
@@ -705,6 +696,8 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 
 	SendHandshake(handshake, resourceIDs);
 	lastSessionId = setupCommand.session_id;
+	if(tabContext)
+		tabContext->ConnectionComplete(server_uid);
 }
 
 void SessionClient::ApplySetup(const teleport::core::SetupCommand &s)

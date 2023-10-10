@@ -106,11 +106,12 @@ namespace teleport
 			avs::GenericEncoder unreliableToServerEncoder;
 			ClientServerState clientServerState;
 		protected:
-			static avs::uid CreateSessionClient();
+			static avs::uid CreateSessionClient(TabContext *tabContext);
 			void RequestConnection(const std::string &ip, int port);
 			void SetServerIP(std::string);
 			void SetServerDiscoveryPort(int);
 			friend class TabContext;
+			TabContext *tabContext = nullptr;
 		public:
 			static const std::set<avs::uid> &GetSessionClientIds();
 			static std::shared_ptr<teleport::client::SessionClient> GetSessionClient(avs::uid server_uid);
@@ -118,7 +119,7 @@ namespace teleport
 			// Implementing avs::GenericTargetInterface:
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		public:
-			SessionClient(avs::uid server_uid);
+			SessionClient(avs::uid server_uid, TabContext *tabContext);
 			~SessionClient();
 			
 			ClientServerState &GetClientServerState()

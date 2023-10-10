@@ -53,7 +53,7 @@ add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifi
 add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
+	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
  
 
 if(TELEPORT_CLIENT_USE_D3D12)
@@ -71,7 +71,7 @@ set_target_properties( TeleportPCClient PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTE
 set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties( TeleportPCClient PROPERTIES FOLDER Client)
 set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=$ENV{$WindowsSdkVerBinPath};$(PATH)"	 )		
-target_include_directories(TeleportPCClient PUBLIC ../thirdparty/enet/Include ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
+target_include_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
 target_compile_features(TeleportPCClient PRIVATE cxx_std_17)
 target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
 
@@ -80,7 +80,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader) 
-target_link_libraries(TeleportPCClient libavstream enet TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
+target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
 target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
 
 target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)

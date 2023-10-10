@@ -125,8 +125,7 @@ target_include_directories(ClientRender PRIVATE ../libavstream/include)
 target_include_directories(ClientRender PRIVATE ../thirdparty/basis_universal)
 #Include stb
 target_include_directories(ClientRender PRIVATE ../firstparty/Platform/External/stb)
-#Include enet
-target_include_directories(ClientRender PRIVATE ../thirdparty/enet/include)
+#Include imgui
 target_include_directories(ClientRender PRIVATE ${SIMUL_PLATFORM_DIR}/External/imgui)
 #Include draco
 target_include_directories(ClientRender PUBLIC ${CMAKE_BINARY_DIR})

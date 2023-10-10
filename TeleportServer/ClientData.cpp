@@ -229,7 +229,7 @@ bool ClientData::setOrigin(uint64_t ctr,avs::uid uid)
 		originClientHas=uid;
 		return true;
 	}
-	TELEPORT_INTERNAL_CERR("Can't set origin - no handshake yet.\n");
+	TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",uid);
 	return false;
 }
 

@@ -322,13 +322,10 @@ else()
 	target_compile_definitions(libavstream PRIVATE LIBAV_USE_D3D12=0)
 endif()
 
-add_subdirectory(thirdparty/enet)
-set_target_properties( enet PROPERTIES FOLDER thirdparty/enet)
 add_subdirectory(thirdparty/basis_universal)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
 
 if(TELEPORT_UNIX)
-	target_compile_options(enet PRIVATE -fPIC)
 	target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 endif()
 
