@@ -51,11 +51,11 @@ PlatformWindow* platformWindow = nullptr;
 
 bool Gui::url_input = false;
 
-#define TIMED_TOOLTIP(txt)\
+#define TIMED_TOOLTIP(...)\
 		{if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
-			ImGui::SetTooltip(txt);}\
+			ImGui::SetTooltip(__VA_ARGS__);}\
 
-#define TIMED_TOOLTIP2(txt)\
+#define TIMED_TOOLTIP2(...)\
 	{\
 		static int timer=1200;\
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
@@ -63,7 +63,7 @@ bool Gui::url_input = false;
 		else\
 			timer = 1200;\
 		if(timer<=0)\
-			ImGui::SetTooltip(txt);\
+			ImGui::SetTooltip(__VA_ARGS__);\
 	}
 	
 ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
@@ -295,7 +295,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		fileLoader->AcquireFileContents(ttf_data,ttf_size,full_path.c_str(),false);
 		return io.Fonts->AddFontFromMemoryTTF(ttf_data,ttf_size,size_pixels,config,ranges);
 	};
-	defaultFont=AddFont("Exo-SemiBold.ttf");
+	defaultFont=AddFont("Exo2-SemiBold.ttf");
 	// NOTE: imgui expects the ranges pointer to be VERY persistent. Not clear how persistent exactly, but it is used out of the scope of
 	// this function. So we have to have a persistent variable for it!
 	static ImVector<ImWchar> glyph_ranges1;
@@ -816,7 +816,7 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 	{
 		if (ImGuiBegin("Rebind Inputs", nullptr, window_flags))
 		{
-			ImGui::Text(binding_filename.c_str());
+			ImGui::Text("%s",binding_filename.c_str());
 			json &actionSets = j["actionSets"];
 			static int chosenSet = -1;
 			static ImGuiTableFlags flags =  0 ;
@@ -866,7 +866,7 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 							choseAction = -1;
 					}
 					ImGui::SameLine();
-					ImGui::Text(localizedName.c_str());
+					ImGui::Text("%s",localizedName.c_str());
 					if(i==choseAction)
 					{
 						json &bindingsList = action["bindings"];
@@ -1113,7 +1113,7 @@ static void DoRow(const char* title, vec4 q)
 {
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::Text( title);
+	ImGui::Text("%s",title);
 	ImGui::TableNextColumn();
 	ImGui::Text("%2.2f", q.x);
 	ImGui::TableNextColumn();
@@ -1212,7 +1212,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		
 				vec3 gs = selected_node->GetGlobalScale();
 				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
-				ImGui::Text("owners %d", selected_node.use_count());
+				ImGui::Text("owners %lu", selected_node.use_count());
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
@@ -1309,7 +1309,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %d", s->sub_scene_uid);
+					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %ull", s->sub_scene_uid);
 					if (ImGui::IsItemClicked())
 					{
 						Select(s->sub_scene_uid);
@@ -1385,12 +1385,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			}
 			else if(selected_subscene.get())
 			{
-				ImGui::Text("Subscene resource %d",selected_subscene->uid);
+				ImGui::Text("Subscene resource %llu",selected_subscene->uid);
 
 				if (selected_subscene->subscene_uid)
 				{
 					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
-					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %d", selected_subscene->subscene_uid);
+					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %ull", selected_subscene->subscene_uid);
 
 					if (g)
 					{
@@ -1517,11 +1517,11 @@ void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,t
 		{
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##clientActionId", teleport::client::stringof(m.clientActionId));
+			ImGui::LabelText("##clientActionId","%s", teleport::client::stringof(m.clientActionId));
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##inputType", avs::stringof(m.serverInputDefinition.inputType));
+			ImGui::LabelText("##inputType", "%s", avs::stringof(m.serverInputDefinition.inputType));
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##inputType", m.serverInputDefinition.regexPath.c_str());
+			ImGui::LabelText("##inputType", "%s", m.serverInputDefinition.regexPath.c_str());
 			ImGui::TableNextColumn();
 			switch (m.serverInputDefinition.inputType)
 			{
@@ -1537,8 +1537,10 @@ void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,t
 			case avs::InputType::IntegerEvent:
 				val = fmt::format("{0}", I.getLastBinaryEvent(m.serverInputDefinition.inputId).activated);
 				break;
+			default:
+				break;
 			};
-			ImGui::LabelText("##inputVal", val.c_str());
+			ImGui::LabelText("##inputVal", "%s", val.c_str());
 		}
 		ImGui::EndTable();
 	}
@@ -1551,9 +1553,9 @@ void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,t
 		{
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##frst", fmt::format("{0}", p.first).c_str());
+			ImGui::LabelText("##frst", "%s", fmt::format("{0}", p.first).c_str());
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##second", fmt::format("{0}", p.second).c_str());
+			ImGui::LabelText("##second", "%s", fmt::format("{0}", p.second).c_str());
 		}
 		ImGui::EndTable();
 	}
@@ -1580,9 +1582,9 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 			const auto& s = streams[i];
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##chnl", "%d",i);
+			ImGui::LabelText("##chnl", "%zu",i);
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##slabel", s.label.c_str());
+			ImGui::LabelText("##slabel", "%s",s.label.c_str());
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##kps_in", "%3.1f",kps_in);
 			ImGui::TableNextColumn();
@@ -2092,19 +2094,19 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 						ImGui::TableNextColumn();
 						ImGui::Text("Session Id");
 						ImGui::TableNextColumn();
-						ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
+						ImGui::Text("%lu", sessionClient->GetSetupCommand().session_id);
 
 						ImGui::TableNextRow();
 						ImGui::TableNextColumn();
 						ImGui::Text("Session Status");
 						ImGui::TableNextColumn();
-						ImGui::Text(teleport::client::StringOf(status));
+						ImGui::Text("%s", teleport::client::StringOf(status));
 
 						ImGui::TableNextRow();
 						ImGui::TableNextColumn();
 						ImGui::Text("Streaming Status");
 						ImGui::TableNextColumn();
-						ImGui::Text(avs::stringOf(streamingStatus));
+						ImGui::Text("%s", avs::stringOf(streamingStatus));
 
 						ImGui::TableNextRow();
 						ImGui::TableNextColumn();
@@ -2164,7 +2166,7 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 		{
 			if(systname)
 			{
-				TIMED_TOOLTIP(("Activate VR: "s+systname).c_str());
+				TIMED_TOOLTIP("%s", ("Activate VR: "s + systname).c_str());
 			}
 			else
 				TIMED_TOOLTIP("Activate VR");

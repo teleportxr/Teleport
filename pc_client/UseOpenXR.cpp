@@ -2,15 +2,23 @@
 #include <d3d12.h>
 #define XR_USE_GRAPHICS_API_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
-#else
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
 #include <d3d11.h>
 #define XR_USE_GRAPHICS_API_D3D11
 #include "Platform/DirectX11/RenderPlatform.h"
+#endif
+#if TELEPORT_CLIENT_USE_VULKAN
+#include <vulkan/vulkan.hpp>
+#define XR_USE_GRAPHICS_API_VULKAN
+#include "Platform/Vulkan/RenderPlatform.h"
 #endif
 #define XR_USE_PLATFORM_WIN32
 #include "UseOpenXR.h"
 
 #include <openxr/openxr.h>
+#include <WTypesbase.h>	// for LARGE_INTEGER  etc
+#include <Unknwn.h>	// for  IUnknown etc
 #include <openxr/openxr_platform.h>
 
 #include "fmt/core.h"
@@ -29,9 +37,13 @@ const XrPosef xr_pose_identity = { {0,0,0,1}, {0,0,0} };
 
 const char *UseOpenXR::GetOpenXRGraphicsAPIExtensionName() const
 {
+#if TELEPORT_CLIENT_USE_VULKAN
+	return XR_KHR_VULKAN_ENABLE_EXTENSION_NAME; // Use Direct3D11 for rendering
+#endif
 #if TELEPORT_CLIENT_USE_D3D12
 	return XR_KHR_D3D12_ENABLE_EXTENSION_NAME; // Use Direct3D12 for rendering
-#else
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
 	return XR_KHR_D3D11_ENABLE_EXTENSION_NAME; // Use Direct3D11 for rendering
 #endif
 }
@@ -39,18 +51,25 @@ const char *UseOpenXR::GetOpenXRGraphicsAPIExtensionName() const
 swapchain_surfdata_t CreateSurfaceData(crossplatform::RenderPlatform *renderPlatform,XrBaseInStructure& swapchain_img, XrSwapchainCreateInfo swapchain_info)
 {
 	swapchain_surfdata_t result = {};
+	platform::crossplatform::TextureCreate textureCreate = {};
 
 	// Get information about the swapchain image that OpenXR made for us!
+#if TELEPORT_CLIENT_USE_VULKAN
+	XrSwapchainImageVulkanKHR &api_swapchain_img = (XrSwapchainImageVulkanKHR &)swapchain_img;
+	textureCreate.external_texture = api_swapchain_img.image;
+	platform::crossplatform::PixelFormat pixelFormat = platform::vulkan::RenderPlatform::FromVulkanFormat((vk::Format)swapchain_info.format);
+#endif
 #if TELEPORT_CLIENT_USE_D3D12
-	XrSwapchainImageD3D12KHR& d3d_swapchain_img = (XrSwapchainImageD3D12KHR&)swapchain_img;
+	XrSwapchainImageD3D12KHR &api_swapchain_img = (XrSwapchainImageD3D12KHR &)swapchain_img;
+	textureCreate.external_texture = api_swapchain_img.texture;
 	platform::crossplatform::PixelFormat pixelFormat = platform::dx12::RenderPlatform::FromDxgiFormat((DXGI_FORMAT)swapchain_info.format);
-#else
-	XrSwapchainImageD3D11KHR& d3d_swapchain_img = (XrSwapchainImageD3D11KHR&)swapchain_img;
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
+	XrSwapchainImageD3D11KHR &api_swapchain_img = (XrSwapchainImageD3D11KHR &)swapchain_img;
+	textureCreate.external_texture = api_swapchain_img.texture;
 	platform::crossplatform::PixelFormat pixelFormat = platform::dx11::RenderPlatform::FromDxgiFormat((DXGI_FORMAT)swapchain_info.format);
 #endif
 
-	platform::crossplatform::TextureCreate textureCreate = {};
-	textureCreate.external_texture	= d3d_swapchain_img.texture;
 	textureCreate.w					= swapchain_info.width;
 	textureCreate.l					= swapchain_info.height;
 	textureCreate.arraysize			= swapchain_info.arraySize;
@@ -102,7 +121,29 @@ bool UseOpenXR::StartSession()
 	binding.device = renderPlatform->AsD3D12Device();
 	auto *rp12=(platform::dx12::RenderPlatform*)renderPlatform;
 	binding.queue = rp12->GetCommandQueue();
-#else
+#endif
+#if TELEPORT_CLIENT_USE_VULKAN
+	PFN_xrGetVulkanGraphicsRequirementsKHR ext_xrGetVulkanGraphicsRequirementsKHR = nullptr;
+	xrGetInstanceProcAddr(xr_instance, "xrGetVulkanGraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetVulkanGraphicsRequirementsKHR));
+	XrGraphicsRequirementsVulkanKHR requirement = {XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN_KHR};
+	ext_xrGetVulkanGraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
+	// A session represents this application's desire to display things! This is where we hook up our graphics API.
+	// This does not start the session, for that, you'll need a call to xrBeginSession, which we do in openxr_poll_events
+	XrGraphicsBindingVulkanKHR binding = {XR_TYPE_GRAPHICS_BINDING_D3D12_KHR};
+	binding.device = renderPlatform->AsVulkanDevice()->operator VkDevice();
+	binding.instance = renderPlatform->AsVulkanInstance()->operator VkInstance();
+	PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR;
+	xrGetInstanceProcAddr(xr_instance, "xrGetVulkanGraphicsDeviceKHR", (PFN_xrVoidFunction *)&xrGetVulkanGraphicsDeviceKHR);
+	VkPhysicalDevice vkPhysicalDevice;
+	if (xrGetVulkanGraphicsDeviceKHR != NULL)
+	{
+		xrGetVulkanGraphicsDeviceKHR(xr_instance, xr_system_id, renderPlatform->AsVulkanInstance()->operator VkInstance(), &vkPhysicalDevice);
+	}
+	binding.physicalDevice = vkPhysicalDevice; // vulkanPhysicalDevice->operator VkPhysicalDevice();
+	auto *vk = (platform::vulkan::RenderPlatform *)renderPlatform;
+	//binding.queueFamilyIndex = vk->GetCommandQueue();
+#endif
+#if TELEPORT_CLIENT_USE_D3D11
 	PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR = nullptr;
 	xrGetInstanceProcAddr(xr_instance, "xrGetD3D11GraphicsRequirementsKHR", (PFN_xrVoidFunction*)(&ext_xrGetD3D11GraphicsRequirementsKHR));
 	XrGraphicsRequirementsD3D11KHR requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
@@ -169,8 +210,13 @@ bool UseOpenXR::StartSession()
 	}
 
 	// Find out what format to use:
+#if TELEPORT_CLIENT_USE_VULKAN
+	int64_t swapchain_format = VK_FORMAT_R8G8B8A8_UNORM;
+	constexpr int64_t SupportedColorSwapchainFormats[] = {VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM};
+#else
 	int64_t swapchain_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	constexpr int64_t SupportedColorSwapchainFormats[] = { DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM };
+#endif
 	uint32_t formatCount = 0;
 	res = xrEnumerateSwapchainFormats(xr_session, 0, &formatCount, nullptr);
 	if (!formatCount)
@@ -217,8 +263,14 @@ bool UseOpenXR::StartSession()
 		swapchain.handle = handle;
 #if TELEPORT_CLIENT_USE_D3D12
 		vector<XrSwapchainImageD3D12KHR> surface_images;
-		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR });
-#else
+		surface_images.resize(surface_count, {XR_TYPE_SWAPCHAIN_IMAGE_D3D12_KHR});
+#endif
+#if TELEPORT_CLIENT_USE_VULKAN
+		vector<XrSwapchainImageVulkanKHR> surface_images;
+		surface_images.resize(surface_count, {XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR});
+#endif
+
+#if TELEPORT_CLIENT_USE_D3D11
 		vector<XrSwapchainImageD3D11KHR> surface_images;
 		surface_images.resize(surface_count, { XR_TYPE_SWAPCHAIN_IMAGE_D3D11_KHR });
 #endif
@@ -256,7 +308,7 @@ bool UseOpenXR::StartSession()
 	OVERLAY_SWAPCHAIN			= (int)xr_swapchains.size();
 	swapchain_info.createFlags	= 0;
 	swapchain_info.usageFlags	= XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
-	swapchain_info.format		= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	swapchain_info.format = swapchain_format;//DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	swapchain_info.sampleCount	= 1;
 	swapchain_info.width		= 1024;
 	swapchain_info.height		= 512;

@@ -108,6 +108,8 @@ avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const
 			return new avs::SurfaceVulkan(img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
 	#endif
 }
+platform::crossplatform::RenderDelegate renderDelegate;
+platform::crossplatform::RenderDelegate overlayDelegate;
 
 Renderer::Renderer(teleport::Gui& g)
 	:gui(g)
@@ -122,6 +124,8 @@ Renderer::Renderer(teleport::Gui& g)
 	timestamp_initialized=true;
 
 	clientrender::Tests::RunAllTests();
+	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, this, std::placeholders::_1);
+	overlayDelegate = std::bind(&clientrender::Renderer::RenderVROverlay, this, std::placeholders::_1);
 }
 
 Renderer::~Renderer()
@@ -474,8 +478,8 @@ void Renderer::InitLocalGeometry()
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/go_controller"]			= "oculus-go/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/touch_controller"]		= "oculus-touch-v3/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"]			= "valve-index/{SIDE}";
-	XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
-	XrBindingsChanged("/user/hand/right", "/interaction_profiles/khr/simple_controller");
+	//XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
+	XrBindingsChanged("/user/hand/right", "/interaction_profiles/oculus/touch_controller");
 	
 }
 
@@ -1389,6 +1393,8 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
+	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
@@ -1470,6 +1476,24 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	if(!c)
 		profiling_text=renderPlatform->GetGpuProfiler()->GetDebugText();
 #endif
+
+	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	if (renderState.openXR->HaveXRDevice())
+	{
+		// Note we do this even when the device is inactive.
+		//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
+		renderState.openXR->SetCurrentFrameDeviceContext(&deviceContext);
+		renderState.openXR->RenderFrame(renderDelegate, overlayDelegate);
+		if (renderState.openXR->IsXRDeviceRendering())
+			SetExternalTexture(renderState.openXR->GetRenderTexture());
+	}
+	else
+	{
+		SetExternalTexture(nullptr);
+	}
+	errno = 0;
+	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+	SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 }
 
 void Renderer::DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext,bool mode_3d)

@@ -17,7 +17,7 @@ uniform TextureCube specularCubemap;
 uniform TextureCube lightingCubemap; 
 uniform Texture2D videoTexture;
 
-//////////////////////////
+//////////////////
 uniform TextureCube nearFarTextureCube;
 uniform Texture2D loss2dTexture;
 uniform Texture2D shadowTexture;
@@ -412,7 +412,8 @@ vertexOutput VSAnimMV(vertexInputAnim IN, uint viewID)
 	OUT.diffuseNormalUV = BottomUpTextureCoordinates4(diffnorm);
 	vec4 ce = vec4(texCoords[combinedTexCoordIndex], texCoords[emissiveTexCoordIndex]);
 	OUT.combinedEmissiveUV = BottomUpTextureCoordinates4(ce);
-	OUT.lightmapUV.xy = BottomUpTextureCoordinates(texCoords[lightmapTexCoordIndex] * lightmapScaleOffset.xy + lightmapScaleOffset.zw);
+	vec2 lm = texCoords[lightmapTexCoordIndex] * lightmapScaleOffset.xy + lightmapScaleOffset.zw;
+	OUT.lightmapUV.xy = BottomUpTextureCoordinates(lm);
 
 	// OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
 	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
@@ -813,14 +814,10 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_li
 		normal=IN.normal;
 	}
 
-	vec2 diffuseTexCoords	=IN.diffuseNormalUV.xy ;
+	vec2 diffuseTexCoords = IN.diffuseNormalUV.xy;
 	vec4 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgba;
 	diffuseColour			=diffuseColour.rgba * diffuseOutputScalar.rgba;
 	
-	//vec2 lightmapUVs		=vec2(IN.lightmapUV.x,1.0-IN.lightmapUV.y);
-	// lightmapUVs		=lightmapUVs.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	// lightmapUVs		=vec2(lightmapUVs.x,1.0-lightmapUVs.y);
-//	lightmapUVs.y			=1.0-lightmapUVs.y;
 	vec3 view				=normalize(diff);
 	vec4 combinedLookup		=combinedTexture.Sample(wrapSamplerState, IN.combinedEmissiveUV.xy);
 	// GLTF spec for rough-metal textures:  green channel contains roughness values

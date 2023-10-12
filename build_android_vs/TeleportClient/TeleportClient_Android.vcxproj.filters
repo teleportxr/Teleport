@@ -34,6 +34,9 @@
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\TeleportClient\SignalingServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportClient\basic_linear_algebra.h">
@@ -70,6 +73,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportClient\SignalingServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

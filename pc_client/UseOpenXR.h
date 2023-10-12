@@ -17,9 +17,9 @@ namespace teleport
 		{}
 
 		bool StartSession() override;
-		void SetCurrentFrameDeviceContext(platform::crossplatform::MultiviewGraphicsDeviceContext& d)
+		void SetCurrentFrameDeviceContext(platform::crossplatform::GraphicsDeviceContext* d)
 		{
-			deviceContext = &d;
+			deviceContext = d;
 		}
 
 		std::set<std::string> GetRequiredExtensions() const override;
@@ -27,8 +27,8 @@ namespace teleport
 		const char *GetOpenXRGraphicsAPIExtensionName() const override;
 		platform::crossplatform::MultiviewGraphicsDeviceContext& GetDeviceContext(size_t, size_t) override
 		{
-			return *deviceContext;
+			return *((platform::crossplatform::MultiviewGraphicsDeviceContext*)deviceContext);
 		}
-		platform::crossplatform::MultiviewGraphicsDeviceContext* deviceContext = nullptr;
+		platform::crossplatform::GraphicsDeviceContext* deviceContext = nullptr;
 	};
 }

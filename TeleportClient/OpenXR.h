@@ -270,7 +270,11 @@ namespace teleport
 			bool InitInstance();
 			void SetRenderPlatform(platform::crossplatform::RenderPlatform* renderPlatform);
 			void Shutdown();
-			virtual bool StartSession()=0;
+			virtual bool StartSession() = 0;
+			virtual void SetCurrentFrameDeviceContext(platform::crossplatform::GraphicsDeviceContext *d)
+			{
+			}
+
 			void EndSession();
 			void SetSessionChangedCallback(SessionChangedCallback s)
 			{

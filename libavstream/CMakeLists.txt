@@ -197,6 +197,7 @@ set(src_public_surfaces
 	include/libavstream/surfaces/surface_interface.hpp
 	include/libavstream/surfaces/surface_dx11.hpp
 	include/libavstream/surfaces/surface_dx12.hpp
+	include/libavstream/surfaces/surface_vulkan.hpp
 )
 set(src_public_platforms
 	include/libavstream/platforms/platform_common.hpp
@@ -257,6 +258,8 @@ if(WIN32)
 		include/libavstream/surfaces/surface_dx11.hpp
 		src/surfaces/surface_dx12.cpp
 		include/libavstream/surfaces/surface_dx12.hpp
+		src/surfaces/surface_vulkan.cpp
+		include/libavstream/surfaces/surface_vulkan.hpp
 	)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601 INIT_CUDA_D3D11=1)
 	find_program(xxd NAMES xxd.exe HINTS tools/win32)
@@ -427,6 +430,10 @@ if(NOT ANDROID)
 	add_dependencies(libavstream cuda_kernels)
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
+    if (Vulkan_FOUND)
+        target_include_directories(libavstream PUBLIC ${Vulkan_INCLUDE_DIRS})
+		target_compile_definitions(libavstream PRIVATE LIBAVSTREAM_SUPPORT_VULKAN=${TELEPORT_CLIENT_USE_VULKAN}>)
+    endif()
 endif()
 
 # linking with libdatachannel for alternative webrtc support

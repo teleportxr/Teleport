@@ -655,7 +655,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
 				renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
 				renderPlatform->ApplyPass(deviceContext, pass);
-				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+				renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);	
 				renderState.pbrEffect->UnbindTextures(deviceContext);
 				renderPlatform->UnapplyPass(deviceContext);
 				layout->Unapply(deviceContext);

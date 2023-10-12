@@ -5,7 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
-
+#if LIBAVSTREAM_SUPPORT_VULKAN
 #include <vulkan/vulkan.hpp>
 
 namespace avs
@@ -50,3 +50,5 @@ namespace avs
 	};
 
 } // avs
+
+#endif

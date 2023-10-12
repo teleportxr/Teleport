@@ -520,7 +520,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		vb_ci.vertexCount = meshElementCreate.m_VertexCount;
 		vb_ci.data = constructedVB;
 		vb->Create(&vb_ci);
-		//vb->GetLayout()->topology=platform::crossplatform::Topology::TRIANGLELIST;
+	
 		std::shared_ptr<IndexBuffer> ib = std::make_shared<clientrender::IndexBuffer>(renderPlatform);
 		IndexBuffer::IndexBufferCreateInfo ib_ci;
 		ib_ci.usage = BufferUsageBit::STATIC_BIT | BufferUsageBit::DRAW_BIT;

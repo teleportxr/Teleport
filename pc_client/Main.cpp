@@ -35,6 +35,10 @@ VisualStudioDebugOutput debug_buffer(true,nullptr, 128);
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
 platform::dx12::DeviceManager deviceManager;
+#elif TELEPORT_CLIENT_USE_VULKAN
+#include "Platform/Vulkan/DeviceManager.h"
+#include "Platform/Vulkan/RenderPlatform.h"
+platform::vulkan::DeviceManager deviceManager;
 #else
 #include "Platform/DirectX11/RenderPlatform.h"
 #include "Platform/DirectX11/DeviceManager.h"
@@ -47,8 +51,6 @@ using namespace teleport;
 
 clientrender::Renderer *clientRenderer=nullptr;
 teleport::client::SessionClient *sessionClient=nullptr;
-platform::crossplatform::RenderDelegate renderDelegate;
-platform::crossplatform::RenderDelegate overlayDelegate;
 UseOpenXR useOpenXR("Teleport PC Client");
 Gui gui(useOpenXR);
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
@@ -269,6 +271,8 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	dsmi = &displaySurfaceManager;
 #if TELEPORT_CLIENT_USE_D3D12
 	renderPlatform = new dx12::RenderPlatform();
+#elif TELEPORT_CLIENT_USE_VULKAN
+	renderPlatform = new vulkan::RenderPlatform();
 #else
 	renderPlatform = new dx11::RenderPlatform();
 #endif
@@ -332,8 +336,11 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderBinaryPath("assets/shaders");
 #endif
 #if TELEPORT_CLIENT_USE_VULKAN
-		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Vulkan/Sfx").c_str());
-		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin").c_str());
+		renderPlatform->PushShaderPath("../../../../Platform/Vulkan/Sfx");
+		renderPlatform->PushShaderPath("../../Platform/Vulkan/Sfx");
+		renderPlatform->PushShaderPath("Platform/Vulkan/Sfx/");
+		// Must do this before RestoreDeviceObjects so the rootsig can be found
+		renderPlatform->PushShaderBinaryPath((build_dir + "/shaderbin/Vulkan").c_str());
 		renderPlatform->PushShaderBinaryPath("assets/shaders");
 #endif
 
@@ -343,8 +350,6 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	// Now renderPlatform is initialized, can init OpenXR:
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
-	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, clientRenderer, std::placeholders::_1);
-	overlayDelegate = std::bind(&clientrender::Renderer::RenderVROverlay, clientRenderer, std::placeholders::_1);
 	auto &config=client::Config::GetInstance();
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());
 	//if(config.recent_server_urls.size())
@@ -518,49 +523,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// Call StartFrame here so the command list will be in a recording state for D3D12 
 				// because vertex and index buffers can be created in OnFrameMove. 
 				// StartFrame does nothing for D3D11.
-				w->StartFrame();
 				clientRenderer->OnFrameMove(fTime,time_step);
 				fTime+=time_step;
 				errno=0;
-				platform::crossplatform::MultiviewGraphicsDeviceContext	deviceContext;
-				deviceContext.renderPlatform = renderPlatform;
-				// This context is active. So we will use it.
-				deviceContext.platform_context = w->GetPlatformDeviceContext();
-				if (deviceContext.platform_context)
 				{
-					platform::crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 					platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
 					renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 					cpuProfiler.SetMaxLevel(5);
 					cpuProfiler.StartFrame();
-					renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
-					SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
-					SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 
 					dsmi->Render(hWnd);
-				
-					SIMUL_COMBINED_PROFILE_END(deviceContext);	
-					if (useOpenXR.HaveXRDevice())
-					{
-						// Note we do this even when the device is inactive.
-						//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
-						useOpenXR.SetCurrentFrameDeviceContext(deviceContext);
-						useOpenXR.RenderFrame(renderDelegate, overlayDelegate);
-						if(useOpenXR.IsXRDeviceRendering())
-							clientRenderer->SetExternalTexture(useOpenXR.GetRenderTexture());
-					}
-					else
-					{
-						clientRenderer->SetExternalTexture(nullptr);
-					}
-					errno = 0;
-					renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-					cpuProfiler.EndFrame();
-					SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 				}
 #endif
 				displaySurfaceManager.EndFrame();
 				renderPlatform->EndFrame();
+				cpuProfiler.EndFrame();
 			}
         }
         break;
