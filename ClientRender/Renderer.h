@@ -62,10 +62,6 @@ namespace clientrender
 		void RenderVRView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
-		bool OSDVisible() const
-		{
-			return show_osd;
-		}
 
 	protected:
 		bool reload_shaders=false;
@@ -104,7 +100,6 @@ namespace clientrender
 		RenderState renderState;
 		DebugOptions debugOptions;
 		platform::crossplatform::Text3DRenderer text3DRenderer;
-		bool show_osd = false;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
 
@@ -171,8 +166,12 @@ namespace clientrender
 		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
 
+		// callbacks
+		void HandTrackingChanged(bool on_off);
 		void XrBindingsChanged(std::string user_path, std::string profile);
 		void XrSessionChanged(bool active);
+
+
 		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext, bool mode_3d);

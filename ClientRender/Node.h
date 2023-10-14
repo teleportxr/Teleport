@@ -28,7 +28,11 @@ namespace clientrender
 
 		// distance from the viewer - so we can sort nodes from front to back.
 		float distance=1.0f;
-		mutable float countdown = 2.0f;
+		mutable float countdown = 0.0f;
+		void InitDigitizing()
+		{
+			countdown=1.2f;
+		}
 		VisibilityComponent visibility;
 		const std::vector<std::shared_ptr<Component>> &GetComponents()
 		{

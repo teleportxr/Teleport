@@ -92,6 +92,9 @@ namespace teleport
 			RIGHT_HAPTIC,
 			MOUSE_LEFT_BUTTON,
 			MOUSE_RIGHT_BUTTON,
+			HANDTRACKING_PALM_POSE,
+			GRASP,
+			PINCH,
 			MAX_ACTIONS
 		};
 		const char* stringof(ActionId a);
@@ -154,6 +157,7 @@ namespace teleport
 			const char* name;
 			const char* localizedName;
 			XrActionType xrActionType;
+			bool subActionPaths=false;
 		};
 
 		// struct to store the state of an XR action:
@@ -187,6 +191,7 @@ namespace teleport
 			XrSpace			space;
 			std::string name;
 			std::string localizedName;
+			bool subActionPaths;
 		};
 
 		struct InputSession
@@ -199,7 +204,6 @@ namespace teleport
 			// Here we  can set all the actions to be supported.
 			void SetActions( std::initializer_list<ActionInitializer> actions);
 			ActionId AddAction( const char* name,const char* localizedName,XrActionType xrActionType);
-			void InstanceInit(XrInstance& xr_instance);
 			void SessionInit(XrInstance xr_instance,XrSession &xr_session);
 		};
 
@@ -216,6 +220,7 @@ namespace teleport
 			std::string name;
 			std::vector<XrActionSuggestedBinding> xrActionSuggestedBindings;
 			std::vector<std::string> bindingPaths;
+			void Add(XrInstance &xr_instance, std::initializer_list<InteractionProfileBinding> bindings);
 			void Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings);
 			//! virtual_binding  means that the binding is not a real OpenXR path, but e.g. mouse/keyboard.
 			void Add(XrInstance &xr_instance,XrAction action,const char *complete_path,bool virtual_binding);
@@ -258,8 +263,10 @@ namespace teleport
 			Running,
 			Stopped
 		};
-		typedef std::function<void(bool)> SessionChangedCallback;
-		typedef std::function<void(std::string,std::string)> BindingsChangedCallback;
+		typedef std::function<void(bool)> CallbackTakesBool;
+		typedef std::function<void(std::string, std::string)> CallbackTakesStringString;
+		typedef std::function<void(std::string)> CallbackTakesString;
+		
 		
 		class OpenXR
 		{
@@ -276,19 +283,24 @@ namespace teleport
 			}
 
 			void EndSession();
-			void SetSessionChangedCallback(SessionChangedCallback s)
+			void SetSessionChangedCallback(CallbackTakesBool s)
 			{
 				sessionChangedCallback=s;
 			}
-			void SetBindingsChangedCallback(BindingsChangedCallback s)
+			void SetBindingsChangedCallback(CallbackTakesStringString s)
 			{
 				bindingsChangedCallback = s;
 			}
+			void SetHandTrackingChangedCallback(CallbackTakesBool s)
+			{
+				handTrackingChangedCallback=s;
+			}
+
 			void CreateMouseAndKeyboardProfile();
 			void MakeActions();
 			void AttachSessionActions();
 			void Tick();
-			void PollActions();
+			void PollActions(XrTime predictedTime);
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
 			void PollEvents();
 			bool HaveXRDevice() const;
@@ -372,8 +384,9 @@ namespace teleport
 			bool internalInitInstance();
 			bool quit=false;
 			std::string applicationName;
-			SessionChangedCallback sessionChangedCallback;
-			BindingsChangedCallback bindingsChangedCallback;
+			CallbackTakesBool sessionChangedCallback;
+			CallbackTakesStringString bindingsChangedCallback;
+			CallbackTakesBool handTrackingChangedCallback;
 			
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
@@ -459,6 +472,22 @@ namespace teleport
 			float overlayAzimuth = 0.0f;
 			float targetOverlayAzimuth = 0.0f;
 			void UpdateOverlayPosition();
+			// The action for getting the hand or controller position and orientation.
+			XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties = {XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT};
+			struct TrackedHand
+			{
+				XrHandJointLocationEXT jointLocations[XR_HAND_JOINT_COUNT_EXT];
+				XrHandTrackerEXT handTracker = 0;
+				XrPath path=0;
+				XrSpace poseSpace;
+				XrActionStatePose poseState = {XR_TYPE_ACTION_STATE_POSE};
+				XrPosef pose;
+			};
+			TrackedHand trackedHands[2];
+			void CreateHandTrackers();
+			std::vector<XrPath> subActionPaths;
+			void InstanceInit(InputSession &input_session, XrInstance &xr_instance);
+			bool hand_tracking_active=false;
 		};
 	}
 }

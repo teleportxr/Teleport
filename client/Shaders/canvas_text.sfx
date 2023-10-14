@@ -25,7 +25,7 @@ shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
 	#ifdef  SFX_OPENGL
 	f.text_rect.y *= -1;
 	f.text_rect.y -= f.text_rect.w;
-	#endif
+	#endif 
 	
 	posTexVertexOutput OUT;
 	vec2 poss[4];

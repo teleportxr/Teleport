@@ -1132,6 +1132,8 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	{
 		geometryCache->CompleteNode(id, node);
 	}
+	else
+		node->InitDigitizing();
 }
 
 void ResourceCreator::CreateLight(avs::uid server_uid,avs::uid id,const avs::Node& node)

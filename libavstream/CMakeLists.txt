@@ -197,8 +197,10 @@ set(src_public_surfaces
 	include/libavstream/surfaces/surface_interface.hpp
 	include/libavstream/surfaces/surface_dx11.hpp
 	include/libavstream/surfaces/surface_dx12.hpp
-	include/libavstream/surfaces/surface_vulkan.hpp
 )
+if(TELEPORT_CLIENT_USE_VULKAN)
+	set(src_public_surfaces ${src_public_surfaces} include/libavstream/surfaces/surface_vulkan.hpp)
+endif()
 set(src_public_platforms
 	include/libavstream/platforms/platform_common.hpp
 	include/libavstream/platforms/platform_windows.hpp
@@ -258,9 +260,10 @@ if(WIN32)
 		include/libavstream/surfaces/surface_dx11.hpp
 		src/surfaces/surface_dx12.cpp
 		include/libavstream/surfaces/surface_dx12.hpp
-		src/surfaces/surface_vulkan.cpp
-		include/libavstream/surfaces/surface_vulkan.hpp
 	)
+if(TELEPORT_CLIENT_USE_VULKAN)
+	set(src_platform ${src_platform} src/surfaces/surface_vulkan.cpp include/libavstream/surfaces/surface_vulkan.hpp)
+endif()
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601 INIT_CUDA_D3D11=1)
 	find_program(xxd NAMES xxd.exe HINTS tools/win32)
 	
@@ -432,7 +435,6 @@ if(NOT ANDROID)
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
     if (Vulkan_FOUND)
         target_include_directories(libavstream PUBLIC ${Vulkan_INCLUDE_DIRS})
-		target_compile_definitions(libavstream PRIVATE LIBAVSTREAM_SUPPORT_VULKAN=${TELEPORT_CLIENT_USE_VULKAN}>)
     endif()
 endif()
 

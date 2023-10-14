@@ -132,10 +132,14 @@ Renderer::~Renderer()
 {
 	InvalidateDeviceObjects(); 
 }
+
 void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
 	u->SetBindingsChangedCallback(std::bind(&Renderer::XrBindingsChanged, this, std::placeholders::_1, std::placeholders::_2));
+
+	u->SetHandTrackingChangedCallback(std::bind(&Renderer::HandTrackingChanged, this, std::placeholders::_1));
+
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
 	GeometryCache::SetRenderPlatform(r);
@@ -479,12 +483,25 @@ void Renderer::InitLocalGeometry()
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/touch_controller"]		= "oculus-touch-v3/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"]			= "valve-index/{SIDE}";
 	//XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
-	XrBindingsChanged("/user/hand/right", "/interaction_profiles/oculus/touch_controller");
+	//XrBindingsChanged("/user/hand/right", "/interaction_profiles/oculus/touch_controller");
 	
+}
+
+void Renderer::HandTrackingChanged(bool on_off)
+{
+	if(on_off)
+	{
+		TELEPORT_CERR<<"Hand Tracking enabled.\n";
+	}
+	else
+	{
+		TELEPORT_CERR << "Hand Tracking disabled.\n";
+	}
 }
 
 void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 {
+	std::string systemName=renderState.openXR->GetSystemName();
 	auto localInstanceRenderer = GetInstanceRenderer(0);
 	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
 	std::string source_root="https://simul.co:443/wp-content/uploads/teleport/content";
@@ -854,10 +871,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		hand_pos_press.push_back(pos4);
 	}
 	static bool override_show_local_geometry = false;
-	gui.Update(hand_pos_press, have_vr_device || config.options.simulateVR);
 	if (have_vr_device || config.options.simulateVR)
-		gui.Render3DGUI(deviceContext);
-	bool show_local_geometry = (gui.IsVisible()&&(have_vr_device || config.options.simulateVR))|| override_show_local_geometry;
+	{
+		gui.Update(hand_pos_press, have_vr_device || config.options.simulateVR);
+		gui.Render3DConnectionGUI(deviceContext);
+	}
+	bool show_local_geometry = (gui.GetGuiType()!=GuiType::None&&(have_vr_device || config.options.simulateVR))|| override_show_local_geometry;
 	renderState.selected_uid=gui.GetSelectedUid();
 	if (show_local_geometry)
 	{	
@@ -966,10 +985,10 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 		}
 	}
 	if(gained_connection)
-		gui.Hide();
+		gui.SetGuiType(GuiType::None);
 	if (!num_connected_servers)
 	{
-		if (!gui.IsVisible())
+		if (gui.GetGuiType()==GuiType::None)
 		{
 			static float invisibleTime=0.0f;
 			invisibleTime+=time_step;
@@ -1150,13 +1169,17 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		{
 #if TELEPORT_INTERNAL_CHECKS
 		case 'O':
-			show_osd =!show_osd;
+			if(gui.GetGuiType()!=teleport::GuiType::Debug)
+			{
+				gui.SetGuiType(teleport::GuiType::Debug);
+			}
+			else
+			{
+				gui.SetGuiType(teleport::GuiType::None);
+			}
 			if(renderState.openXR)
-				renderState.openXR->SetOverlayEnabled(show_osd);
+				renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == teleport::GuiType::Debug);
 			break;
-		//case 'H':
-			//WriteHierarchies(server_uid);
-			//break;
 		case 'N':
 			renderState.show_node_overlays = !renderState.show_node_overlays;
 			break;
@@ -1240,7 +1263,11 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 
 void Renderer::ShowHideGui()
 {
-	gui.ShowHide();
+	if(gui.GetGuiType()==GuiType::None)
+		gui.SetGuiType(GuiType::Connection);
+	else
+		gui.SetGuiType(GuiType::None);
+		
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
 		auto selfRoot=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.self_node_uid);
@@ -1251,13 +1278,11 @@ void Renderer::ShowHideGui()
 	leftHand->GetOrCreateComponent<AnimationComponent>()->setAnimation(point_anim_uid);
 	AnimationState *leftAnimState=leftHand->GetOrCreateComponent<AnimationComponent>()->GetAnimationState(point_anim_uid);
 	AnimationState *rightAnimState=rightHand->GetOrCreateComponent<AnimationComponent>()->GetAnimationState(point_anim_uid);
-	if(gui.IsVisible())
+	if (gui.GetGuiType()!=GuiType::None)
 	{
 		selfRoot->SetVisible(true);
-		show_osd = false; //TODO: Find a better fix for OSD and Keyboard resource collision in Vulkan/ImGui - AJR.
-
 		if (renderState.openXR)
-			renderState.openXR->SetOverlayEnabled(show_osd);
+			renderState.openXR->SetOverlayEnabled(gui.GetGuiType()==GuiType::Debug);
 		// If we've just started to show the gui, let's make the hands point, so the index finger alone is extended for typing.
 		if(leftAnimState)
 		{
@@ -1501,15 +1526,13 @@ void Renderer::DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceCon
 	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
 	if(mode_3d)
 	{
-		gui.Render3DGUI(deviceContext);
+		gui.Render3DConnectionGUI(deviceContext);
 	}
 	else
 	{
-		if (gui.IsVisible() && !config.options.simulateVR)
+		if (gui.GetGuiType()==GuiType::Connection && !config.options.simulateVR)
 		{
-			// auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-			// gui.setSessionClient(sessionClient.get());
-			gui.Render2DGUI(deviceContext);
+			gui.Render2DConnectionGUI(deviceContext);
 		}
 		if (!renderState.openXR || !renderState.openXR->IsSessionActive())
 		{
@@ -1576,7 +1599,7 @@ void Renderer::RenderVROverlay(crossplatform::GraphicsDeviceContext &deviceConte
 
 void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 {
-	if (!show_osd||gui.IsVisible())
+	if (gui.GetGuiType()!=GuiType::Debug)
 		return;
 	if(renderState.openXR)
 	{
@@ -1783,9 +1806,20 @@ void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 			// do this on *releasing* the button:
 			if(i.activated==false)
 			{
-				show_osd = !show_osd;
+				switch(gui.GetGuiType())
+				{
+					case GuiType::None:
+						gui.SetGuiType(GuiType::Connection);
+					break;
+					case GuiType::Connection:
+						gui.SetGuiType(GuiType::None);
+					break;
+					default:
+						gui.SetGuiType(GuiType::None);
+					break;
+				};
 				if (renderState.openXR)
-					renderState.openXR->SetOverlayEnabled(show_osd);
+					renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == GuiType::Debug);
 			}
 		}
 		else if(i.inputID==local_cycle_shader_id)

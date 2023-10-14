@@ -1,7 +1,6 @@
 // libavstream
 // (c) Copyright 2018-2022 Simul Software Ltd
 
-#if LIBAVSTREAM_SUPPORT_VULKAN
 #include <libavstream/surfaces/surface_vulkan.hpp>
 
 namespace avs {
@@ -56,5 +55,3 @@ namespace avs {
 	}
 
 } // avs
-
-#endif

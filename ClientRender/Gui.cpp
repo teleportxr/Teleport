@@ -311,7 +311,8 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_BOOKMARK);		
 		builder.AddText(ICON_FK_FOLDER_O);			
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);		
-		builder.AddText(ICON_FK_COG);				
+		builder.AddText(ICON_FK_COG);
+		builder.AddText(ICON_FK_WRENCH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
@@ -334,7 +335,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	for(int i=0;i<fontSizes.size();i++)
 	{
 		int sz=fontSizes[i];
-		fontInter[sz] = AddFont("Inter-Medium.ttf", float(sz));
+		fontInter[sz] = AddFont("Inter-Regular.ttf", float(sz));
 		ImFontConfig config;
 		config.MergeMode = true;
 		config.GlyphMinAdvanceX = 20.0f;
@@ -347,6 +348,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_FOLDER_O);
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);
 		builder.AddText(ICON_FK_COG);
+		builder.AddText(ICON_FK_WRENCH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
@@ -393,36 +395,27 @@ void Gui::RecompileShaders()
 	ImGui_ImplPlatform_RecompileShaders();
 }
 
-void Gui::ShowHide()
+void Gui::SetGuiType(GuiType t)
 {
-	if(visible)
+	if(guiType==t)
+		return;
+	guiType = t;
+	if (guiType==GuiType::None)
 	{
-		Hide();
+#ifdef _MSC_VER
+		ImGui_ImplWin32_SetFunction_GetCursorPos(nullptr);
+#endif
+		auto &config = client::Config::GetInstance();
+		config.SaveOptions();
 	}
 	else
 	{
-		Show();
+#ifdef _MSC_VER
+		ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
+#endif
+		reset_menu_pos = true;
+		keys_pressed.clear();
 	}
-}
-
-void Gui::Show()
-{
-#ifdef _MSC_VER
-	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
-#endif
-	visible			= true;
-	reset_menu_pos	=true;
-	keys_pressed.clear();
-}
-
-void Gui::Hide()
-{
-#ifdef _MSC_VER
-	ImGui_ImplWin32_SetFunction_GetCursorPos(nullptr);
-#endif
-	auto &config=client::Config::GetInstance();
-	config.SaveOptions();
-	visible = false;
 }
 
 void Gui::SetScaleMetres()
@@ -1940,7 +1933,15 @@ void Gui::MenuBar2D()
 		bool connect_please=false;
 		bool cancel_please=false;
 		ImGui::SameLine();
-		ImGui::PushItemWidth(ImGui::GetWindowWidth() - 5*40-8);
+		int num_buttons=5;
+
+#if TELEPORT_INTERNAL_CHECKS
+		if (config.dev_mode)
+		{
+			num_buttons++;
+		}
+#endif
+		ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons*40-8);
 		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer),ImGuiInputTextFlags_EnterReturnsTrue))
 		{
 			current_url = url_buffer;
@@ -1993,7 +1994,7 @@ void Gui::MenuBar2D()
 				bookmarks_pos = { ImGui::GetWindowWidth(),pos.y };
 			}
 		}
-		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		if (!show_bookmarks&&(ImGui::IsItemActive() || ImGui::IsItemHovered()))
 			TIMED_TOOLTIP("Bookmarks");
 		ImGui::SameLine();
 		if (ImGui::Button(ICON_FK_COG, ImVec2(36, 24)))
@@ -2005,13 +2006,23 @@ void Gui::MenuBar2D()
 				config.SaveOptions();
 			}
 		}
+#if TELEPORT_INTERNAL_CHECKS
+		if (config.dev_mode)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button(ICON_FK_WRENCH, ImVec2(36, 24)))
+			{
+				guiType=GuiType::Debug;
+			}
+		}
+#endif
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 			TIMED_TOOLTIP("Settings");
 	}
 	ImGui::PopStyleColor();
 }
 
-void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
+void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 {
 	LightStyle();
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
@@ -2282,12 +2293,12 @@ void Gui::DevModeOptions()
 			console("killstreaming");
 	}
 }
-void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
+void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;
 	auto& config = client::Config::GetInstance();
-	if(!visible)
+	if(guiType!=GuiType::Connection)
 		return;
 	vec3 pos_diff=view_pos-menu_pos;
 	if(length(pos_diff)>1.4f)
@@ -2560,8 +2571,6 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 	ImGui::GetForegroundDrawList()->AddRectFilled(handle2_min,handle2_max,handle2Colour,0.5f);
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
-	if(!show_hide)
-		Hide();
 }
 
 void Gui::SetConnectHandler(std::function<void(int32_t,const std::string&)> fn)

@@ -1,6 +1,18 @@
 cmake_minimum_required( VERSION 3.8 )
+
+cmake_policy(SET CMP0135 NEW)
 project( TeleportClient )
 
+# For FetchContent_Declare() and FetchContent_MakeAvailable()
+include(FetchContent)
+# We would LIKE to use FetchContent to obtain an appropriate release of the openxr sdk, but it uses the MD runtime, and we don't.
+#FetchContent_Declare(
+#	OpenXR
+#	URL_HASH SHA256=256e9b0af9e492e9836cda8ab5c21be35c372dd4cff4780ecde16d84d2350a13
+#	URL https://github.com/KhronosGroup/OpenXR-SDK-Source/archive/refs/tags/release-1.0.30.zip
+#	SOURCE_DIR openxr
+#)
+#FetchContent_MakeAvailable(OpenXR)
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 
@@ -33,7 +45,7 @@ set(src_files
 	TabContext.h
 )
 #For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream)
+add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream ) 
 SetTeleportDefaults(TeleportClient)
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
@@ -53,6 +65,8 @@ target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/
 #include libdatachannel
 target_include_directories(TeleportClient PRIVATE ../thirdparty/libdatachannel/include)
 target_include_directories(TeleportClient PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
+        # From OpenXR repo
+target_include_directories(TeleportClient PUBLIC "${openxr_SOURCE_DIR}/src/common" "${openxr_SOURCE_DIR}/external/include")
 
 if(WIN32)
 elseif(ANDROID)

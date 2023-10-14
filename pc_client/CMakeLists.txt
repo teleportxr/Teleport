@@ -11,7 +11,8 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 	endif()
 endif()
 
-file(GLOB inifiles "*.ini" "assets/*.ini")
+configure_file(client_default.ini assets/client.ini)
+file(GLOB inifiles "client_default.ini" assets/client.ini)
 set(srcs
 	Main.cpp
 	MemoryUtil.cpp
@@ -97,10 +98,15 @@ target_link_libraries(TeleportPCClient -ignore:4711)
 target_link_options(TeleportPCClient PUBLIC /ignore:4711)
 target_compile_options(TeleportPCClient PRIVATE /wd4711)
 
-cmake_minimum_required(VERSION 2.9)
-
 file(GLOB global_shader_includes "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders/*.sl")
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+add_custom_command(
+    TARGET TeleportPCClient
+    PRE_BUILD
+    COMMAND (robocopy ${CMAKE_SOURCE_DIR}/client/assets ${CMAKE_CURRENT_SOURCE_DIR}/assets /s /e /NFL /NDL /NJH /NJS /nc /ns /np) ^& IF %ERRORLEVEL% LSS 8 SET ERRORLEVEL = 0
+)
+endif()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 

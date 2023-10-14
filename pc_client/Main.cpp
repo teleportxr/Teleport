@@ -30,7 +30,7 @@
 #include "ClientApp/ClientApp.h"
 VisualStudioDebugOutput debug_buffer(true,nullptr, 128);
 #endif
-
+ 
 #if TELEPORT_CLIENT_USE_D3D12
 #include "Platform/DirectX12/RenderPlatform.h"
 #include "Platform/DirectX12/DeviceManager.h"
@@ -406,12 +406,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
-			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
+			if(gui.GetGuiType()==teleport::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(false, true, false, 0);
 			break;
 		case WM_RBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
-			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(false, true, false, 0);
 			break;
 		case WM_MOUSEMOVE:
@@ -435,13 +435,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (message)
 		{
 		case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.IsVisible());
-			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
+			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() != teleport::GuiType::None);
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.IsVisible());
-			if(!gui.IsVisible()&&!clientRenderer->OSDVisible())
+			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() != teleport::GuiType::None);
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
 		default:
@@ -449,28 +449,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	if (!ui_handled && !gui.IsVisible())
+	if (!ui_handled && gui.GetGuiType()== teleport::GuiType::None)
 	{
 		switch (message)
 		{
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-			if (!gui.IsVisible() && !clientRenderer->OSDVisible())
+			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:
