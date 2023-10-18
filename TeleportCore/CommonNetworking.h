@@ -70,7 +70,7 @@ namespace teleport
 			vec3_packed angularVelocity;
 		} AVS_PACKED;
 #endif
-		enum class RemotePlaySessionChannel : unsigned char //enet_uint8
+		enum class RemotePlaySessionChannel : unsigned char 
 		{
 			RPCH_Handshake = 0,
 			RPCH_Control = 1,

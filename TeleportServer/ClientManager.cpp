@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <iostream>
 
-#include "enet/enet.h"
 #include "libavstream/common_input.h"
 #include "TeleportCore/CommonNetworking.h"
 

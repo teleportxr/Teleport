@@ -164,7 +164,7 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 
 	// Having completed the above, we are not yet ready to actually send data.
 	// We await the "offer" from webrtc locally and the "candidates" from the STUN server.
-	// Then we must send these using the messaging channel (Websockets or Enet) to the client.
+	// Then we must send these using the messaging channel (eg Websockets) to the client.
 	return Result::OK;
 }
 

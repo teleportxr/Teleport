@@ -257,8 +257,9 @@ PFN_xrLocateHandJointsEXT				ext_xrLocateHandJointsEXT				= nullptr;
 
 #ifdef _MSC_VER
 PFN_xrConvertWin32PerformanceCounterToTimeKHR ext_xrConvertWin32PerformanceCounterToTimeKHR = nullptr;
+#else
+PFN_xrConvertTimespecTimeToTimeKHR ext_xrConvertTimespecTimeToTimeKHR = nullptr;
 #endif
-PFN_xrConvertTimespecTimeToTimeKHR		ext_xrConvertTimespecTimeToTimeKHR		= nullptr;
 
 struct app_transform_buffer_t
 {
@@ -629,8 +630,9 @@ bool OpenXR::internalInitInstance()
 		GET_OPENXR_EXT_FUNCTION(xrGeometryInstanceSetTransformFB);
 #ifdef _MSC_VER
 		GET_OPENXR_EXT_FUNCTION(xrConvertWin32PerformanceCounterToTimeKHR);
-#endif
+#else
 		GET_OPENXR_EXT_FUNCTION(xrConvertTimespecTimeToTimeKHR);
+#endif
 
 		GET_OPENXR_EXT_FUNCTION(xrCreateHandTrackerEXT);
 		GET_OPENXR_EXT_FUNCTION(xrDestroyHandTrackerEXT);
@@ -1019,7 +1021,6 @@ void OpenXR::PollActions(XrTime predictedTime)
         // For each hand, get the pose state if possible.
 	if(handTrackingSystemProperties.supportsHandTracking)
 	{
-		bool any_hand_tracked=false;
 		for (int i = 0; i < 2; i++)
 		{
 			// Specify the subAction Path.
@@ -1030,26 +1031,45 @@ void OpenXR::PollActions(XrTime predictedTime)
 			XR_CHECK(xrGetActionStatePose(xr_session, &actionStateGetInfo, &trackedHands[i].poseState));
 			if (trackedHands[i].poseState.isActive)
 			{
-					any_hand_tracked = true;
-					handTrackingChangedCallback(any_hand_tracked);
+				if (!trackedHands[i].hand_tracking_active)
+				{
+					trackedHands[i].hand_tracking_active = true;
+					handTrackingChangedCallback(i, true);
+				}
 				XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-					XrResult res = xrLocateSpace(trackedHands[i].poseSpace, xr_app_space, predictedTime, &spaceLocation);
+				XrResult res = xrLocateSpace(trackedHands[i].poseSpace, xr_app_space, predictedTime, &spaceLocation);
 				if (XR_UNQUALIFIED_SUCCESS(res) &&
 					(spaceLocation.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 					(spaceLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
 					trackedHands[i].pose = spaceLocation.pose;
 				}
+				bool Unobstructed = true;
+				XrHandJointsMotionRangeInfoEXT motionRangeInfo{XR_TYPE_HAND_JOINTS_MOTION_RANGE_INFO_EXT};
+				motionRangeInfo.handJointsMotionRange = Unobstructed
+															? XR_HAND_JOINTS_MOTION_RANGE_UNOBSTRUCTED_EXT
+															: XR_HAND_JOINTS_MOTION_RANGE_CONFORMING_TO_CONTROLLER_EXT;
+				XrHandJointsLocateInfoEXT locateInfo{XR_TYPE_HAND_JOINTS_LOCATE_INFO_EXT, &motionRangeInfo};
+				locateInfo.baseSpace = xr_app_space;
+				locateInfo.time = predictedTime;
+
+				XrHandJointLocationsEXT locations{XR_TYPE_HAND_JOINT_LOCATIONS_EXT};
+				locations.jointCount = (uint32_t)XR_HAND_JOINT_COUNT_EXT;
+				locations.jointLocations = trackedHands[i].jointLocations;
+				XR_CHECK(ext_xrLocateHandJointsEXT(trackedHands[i].handTracker, &locateInfo, &locations));
+			}
+			else
+			{
+				if(trackedHands[i].hand_tracking_active)
+				{
+					trackedHands[i].hand_tracking_active = false;
+					handTrackingChangedCallback(i,false);
+				}
 			}
 		}
-		if(hand_tracking_active!=any_hand_tracked)
-		{
-			hand_tracking_active=any_hand_tracked;
-			handTrackingChangedCallback(hand_tracking_active);
-		}
 	}
-	// record the updated pose states for bound nodes:
 
+	// record the updated pose states for bound nodes:
 	for (uint32_t hand = 0; hand < xr_input_session.inputDeviceStates.size(); hand++)
 	{
 		XrActionStateGetInfo get_info = { XR_TYPE_ACTION_STATE_GET_INFO };
@@ -1109,7 +1129,7 @@ void OpenXR::RecordCurrentBindings()
 		{
 			std::string pathstr = FromXrPath(xr_instance, interactionProfile.interactionProfile);
 			if (interactionProfile.interactionProfile)
-				TELEPORT_COUT << "userHandRightActiveProfile " << FromXrPath(xr_instance, interactionProfile.interactionProfile).c_str() << std::endl;
+				TELEPORT_COUT << "userHandRightActiveProfile " << pathstr.c_str() << std::endl;
 			userHandRightActiveProfile = interactionProfile.interactionProfile;
 			if(userHandRightActiveProfile)
 				activeInteractionProfilePaths.push_back(userHandRightActiveProfile);
@@ -2585,7 +2605,7 @@ bool OpenXR::AddCylinderOverlayLayer(XrTime predictedTime, XrCompositionLayerCyl
 	cylinder_layer.radius=overlay.radius;
 	// width in radians
 	cylinder_layer.centralAngle = overlay.angularSpanRadians;
-	cylinder_layer.aspectRatio = float(cylinder_layer.subImage.imageRect.extent.height) / float(cylinder_layer.subImage.imageRect.extent.width);
+	cylinder_layer.aspectRatio = float(cylinder_layer.subImage.imageRect.extent.width) / float(cylinder_layer.subImage.imageRect.extent.height);
 	
 	return true;
 }

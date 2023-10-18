@@ -12,7 +12,6 @@
 #include "../src/platform.hpp"
 #include "SignalingService.h"
 
-typedef struct _ENetHost ENetHost;
 
 namespace teleport
 {

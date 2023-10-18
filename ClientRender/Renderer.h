@@ -117,7 +117,7 @@ namespace clientrender
 			avs::uid local_right_hand_uid = 0;
 			clientrender::Transform palm_to_hand_r;
 			avs::uid hand_skeleton_uid = 0;
-			vec3 index_finger_offset;
+			vec3 index_finger_offset={0,0,0};
 			avs::uid left_model_uid=0;
 			avs::uid right_model_uid=0;
 		};
@@ -167,7 +167,7 @@ namespace clientrender
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
 
 		// callbacks
-		void HandTrackingChanged(bool on_off);
+		void HandTrackingChanged(int left_right, bool on_off);
 		void XrBindingsChanged(std::string user_path, std::string profile);
 		void XrSessionChanged(bool active);
 

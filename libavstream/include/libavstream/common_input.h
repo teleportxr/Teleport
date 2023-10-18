@@ -21,7 +21,7 @@ namespace avs
 	//! An input identifier, used between client and server to denote a specific input.
 	typedef uint16_t InputId;
 	//! What type of input to send, and when. 
-	enum class InputType : uint8_t //enet_uint8
+	enum class InputType : uint8_t
 	{
 		Invalid=0,
 		IsEvent=1,

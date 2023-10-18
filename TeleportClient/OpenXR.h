@@ -264,6 +264,7 @@ namespace teleport
 			Stopped
 		};
 		typedef std::function<void(bool)> CallbackTakesBool;
+		typedef std::function<void(int,bool)> CallbackTakesIntBool;
 		typedef std::function<void(std::string, std::string)> CallbackTakesStringString;
 		typedef std::function<void(std::string)> CallbackTakesString;
 		
@@ -291,7 +292,7 @@ namespace teleport
 			{
 				bindingsChangedCallback = s;
 			}
-			void SetHandTrackingChangedCallback(CallbackTakesBool s)
+			void SetHandTrackingChangedCallback(CallbackTakesIntBool s)
 			{
 				handTrackingChangedCallback=s;
 			}
@@ -386,7 +387,7 @@ namespace teleport
 			std::string applicationName;
 			CallbackTakesBool sessionChangedCallback;
 			CallbackTakesStringString bindingsChangedCallback;
-			CallbackTakesBool handTrackingChangedCallback;
+			CallbackTakesIntBool handTrackingChangedCallback;
 			
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
@@ -482,12 +483,12 @@ namespace teleport
 				XrSpace poseSpace;
 				XrActionStatePose poseState = {XR_TYPE_ACTION_STATE_POSE};
 				XrPosef pose;
+				bool hand_tracking_active = false;
 			};
 			TrackedHand trackedHands[2];
 			void CreateHandTrackers();
 			std::vector<XrPath> subActionPaths;
 			void InstanceInit(InputSession &input_session, XrInstance &xr_instance);
-			bool hand_tracking_active=false;
 		};
 	}
 }

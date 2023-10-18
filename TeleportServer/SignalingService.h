@@ -2,7 +2,6 @@
 
 #include <map>
 #include <set>
-#include <enet/enet.h>
 #include <string>
 #include <libavstream/common.hpp>
 #include <memory>

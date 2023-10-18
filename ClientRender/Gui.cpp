@@ -2012,7 +2012,7 @@ void Gui::MenuBar2D()
 			ImGui::SameLine();
 			if (ImGui::Button(ICON_FK_WRENCH, ImVec2(36, 24)))
 			{
-				guiType=GuiType::Debug;
+				guiType = GuiType::Debug;
 			}
 		}
 #endif
@@ -2327,7 +2327,11 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 	ImGuiIO& io = ImGui::GetIO();
 	static bool in3d=true;
 	static float window_width=720.0f;
-	static float window_height=260.0f;
+	static float window_height = 260.0f;
+#if TELEPORT_INTERNAL_CHECKS
+	if (config.dev_mode)
+		window_height=400.0f;
+#endif
 	ImVec2 size_min(window_width,window_height);
 	ImVec2 size_max(window_width,window_height);
 	ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
@@ -2470,7 +2474,15 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 				{
 					ImGui::SetKeyboardFocusHere();
 				}
-				ImGui::PushItemWidth(ImGui::GetWindowWidth() - 4 * 80);
+				int num_buttons = 4;
+
+#if TELEPORT_INTERNAL_CHECKS
+				if (config.dev_mode)
+				{
+					 num_buttons++;
+				}
+#endif
+				ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * 80);
 				if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
 				{
 					current_url = url_buffer;
@@ -2500,6 +2512,17 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 				{
 					show_options=!show_options;
 				}
+#if TELEPORT_INTERNAL_CHECKS
+				if (config.dev_mode)
+				{
+					ImGui::SameLine();
+					if (ImGui::Button(ICON_FK_WRENCH, ImVec2(64, 32)))
+					{
+						guiType = GuiType::Debug;
+						openXR.SetOverlayEnabled(true);
+					}
+				}
+#endif
 
 				if (show_keyboard)
 				{

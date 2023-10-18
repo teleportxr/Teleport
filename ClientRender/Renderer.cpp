@@ -138,7 +138,7 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
 	u->SetBindingsChangedCallback(std::bind(&Renderer::XrBindingsChanged, this, std::placeholders::_1, std::placeholders::_2));
 
-	u->SetHandTrackingChangedCallback(std::bind(&Renderer::HandTrackingChanged, this, std::placeholders::_1));
+	u->SetHandTrackingChangedCallback(std::bind(&Renderer::HandTrackingChanged, this, std::placeholders::_1, std::placeholders::_2));
 
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
@@ -481,21 +481,27 @@ void Renderer::InitLocalGeometry()
 	xr_profile_to_controller_model_name["/interaction_profiles/microsoft/xbox_controller"]		= "";
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/go_controller"]			= "oculus-go/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/touch_controller"]		= "oculus-touch-v3/{SIDE}";
-	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"]			= "valve-index/{SIDE}";
+	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"] = "valve-index/{SIDE}";
+	xr_profile_to_controller_model_name["/interaction_profiles/microsoft/hand_controller"] = "valve-index/{SIDE}";
 	//XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
 	//XrBindingsChanged("/user/hand/right", "/interaction_profiles/oculus/touch_controller");
 	
 }
 
-void Renderer::HandTrackingChanged(bool on_off)
+void Renderer::HandTrackingChanged(int left_right,bool on_off)
 {
+	std::shared_ptr<Node> controller_node = GetInstanceRenderer(0)->geometryCache->mNodeManager->GetNode(left_right == 0 ? lobbyGeometry.left_controller_node_uid : lobbyGeometry.right_controller_node_uid);
 	if(on_off)
 	{
-		TELEPORT_CERR<<"Hand Tracking enabled.\n";
+		TELEPORT_CERR << (left_right == 0 ? "Left" : "Right") << " Hand Tracking enabled.\n";
+		if (controller_node)
+			controller_node->SetVisible(false);
 	}
 	else
 	{
-		TELEPORT_CERR << "Hand Tracking disabled.\n";
+		TELEPORT_CERR << (left_right == 0 ? "Left" : "Right") << " Hand Tracking disabled.\n";
+		if (controller_node)
+			controller_node->SetVisible(true);
 	}
 }
 
