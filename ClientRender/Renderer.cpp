@@ -99,16 +99,16 @@ static const char *stringof(avs::GeometryPayloadType t)
 
 avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const 
 {
-	#if TELEPORT_CLIENT_USE_D3D12
-			return new avs::SurfaceDX12(texture->AsD3D12Resource());
-	#endif
-	#if TELEPORT_CLIENT_USE_D3D11
-			return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
-	#endif
-	#if TELEPORT_CLIENT_USE_VULKAN
-			vk::Image* img=((vulkan::Texture*)texture)->AsVulkanImage();
-			return new avs::SurfaceVulkan(img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
-	#endif
+#if TELEPORT_CLIENT_USE_D3D12
+	return new avs::SurfaceDX12(texture->AsD3D12Resource());
+#elif TELEPORT_CLIENT_USE_D3D11
+	return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
+#elif TELEPORT_CLIENT_USE_VULKAN
+	vk::Image* img=((vulkan::Texture*)texture)->AsVulkanImage();
+	return new avs::SurfaceVulkan(img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
+#else
+	return nullptr;
+#endif
 }
 platform::crossplatform::RenderDelegate renderDelegate;
 platform::crossplatform::RenderDelegate overlayDelegate;
