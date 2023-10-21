@@ -23,7 +23,6 @@ avs::Timestamp tBegin;
 static std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient>> sessionClients;
 static std::set<avs::uid> sessionClientIds;
 
-
 IpPort teleport::client::GetIpPort(const char *ip_port)
 {
 	std::string ip = ip_port;

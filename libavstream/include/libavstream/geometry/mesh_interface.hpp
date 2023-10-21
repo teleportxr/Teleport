@@ -387,7 +387,7 @@ namespace avs
 	struct Skeleton
 	{
 		std::string name;
-		//std::vector<Mat4x4> inverseBindMatrices;
+		
 		std::vector<uid> boneIDs;
 		Transform skeletonTransform;
 		// New method, bones are built into the skeleton:
@@ -866,7 +866,7 @@ namespace avs
 		virtual void CreateTexture(avs::uid server_uid,uid id, const Texture& texture) = 0;
 		virtual void CreateMaterial(avs::uid server_uid,uid id, const Material& material) = 0;
 		virtual void CreateNode(avs::uid server_uid,uid id,const Node& node) = 0;
-		virtual void CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skeleton& skeleton) = 0;
+		virtual void CreateSkeleton(avs::uid server_uid,avs::uid id, const avs::Skeleton& skeleton) = 0;
 		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
 	};
 

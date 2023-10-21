@@ -63,7 +63,8 @@ namespace teleport
 		void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
 		void LinePrint(const std::string& str, const float* clr = nullptr);
 		void LinePrint(const char* txt,const float *clr=nullptr);
-		void Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager);
+		void Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager);
+		void Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &animManager);
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
 		void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>&);
 		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
@@ -71,7 +72,8 @@ namespace teleport
 
 		void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
 		void NetworkPanel(const teleport::client::ClientPipeline& clientPipeline);
-		void DebugPanel(clientrender::DebugOptions &debugOptions);
+		/// @returns true if changed.
+		bool DebugPanel(clientrender::DebugOptions &debugOptions);
 		void GeometryOSD();
 		void Scene();
 		bool Tab(const char *txt);

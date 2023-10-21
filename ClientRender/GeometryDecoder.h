@@ -127,7 +127,8 @@ private:
 		avs::uid server_or_cache_uid=0;
 		platform::crossplatform::AxesStandard axesStandard=platform::crossplatform::AxesStandard::Engineering;
 		// Optional, for creating local subgraphs.
-		std::unordered_map<avs::uid,avs::Node> nodes;
+		std::unordered_map<avs::uid, avs::Node> nodes;
+		std::unordered_map<avs::uid, avs::Skeleton> skeletons;
 		std::unordered_map<avs::uid, std::vector<PrimitiveArray>> primitiveArrays;
 		std::unordered_map<uint64_t, avs::Accessor> accessors;
 		std::unordered_map<uint64_t, avs::BufferView> bufferViews;

@@ -58,7 +58,7 @@ namespace clientrender
 		void CreateFontAtlas(avs::uid server_uid,avs::uid id,teleport::core::FontAtlas &fontAtlas);
 		void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
-		void CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skeleton& skeleton) override;
+		void CreateSkeleton(avs::uid server_uid, avs::uid id, const avs::Skeleton &skeleton) override;
 		void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) override;
 
 		std::shared_ptr<clientrender::Texture> m_DummyWhite;

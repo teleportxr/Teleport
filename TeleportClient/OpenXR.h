@@ -10,7 +10,7 @@
 #include <openxr/openxr.h>
 #include <thread>
 
-#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){teleport::client::ReportError(xr_instance,(int)res);}
+#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){teleport::client::ReportError(xr_instance,(int)res,__FILE__,__LINE__,#res);}
 #include <openxr/openxr_reflection.h>
 
 // Macro to generate stringify functions for OpenXR enumerations based data provided in openxr_reflection.h
@@ -47,7 +47,7 @@ namespace teleport
 		DECLARE_TO_STRING_FUNC(XrSessionState);
 		DECLARE_TO_STRING_FUNC(XrResult);
 		DECLARE_TO_STRING_FUNC(XrFormFactor);
-		extern void ReportError(XrInstance xr_instance, int result);
+		extern void ReportError(XrInstance xr_instance, int result,const char *file, int line,const char *failed_cmd);
 		extern XrPath MakeXrPath(const XrInstance & xr_instance,const char* str);
 
 		extern std::string FromXrPath(const XrInstance & xr_instance,XrPath path);
@@ -104,6 +104,7 @@ namespace teleport
 		{
 			teleport::core::InputDefinition serverInputDefinition;
 			ActionId clientActionId;
+			int8_t subActionIndex=0;
 		};
 		//! State of an input. Note that we store *both* float and integer values,
 		//! allowing for hysteresis in the integer interpretation of float input.
@@ -117,6 +118,7 @@ namespace teleport
 			std::string regexPath;
 			ActionId actionId;		// Which local action is bound to the node.
 			avs::Pose poseOffset;	// In the XR pose's local space, the offset to the node's pose.
+			int subActionIndex = 0; // Basically left or right, where applicable
 		};
 		struct NodePoseState
 		{
@@ -161,7 +163,7 @@ namespace teleport
 		};
 
 		// struct to store the state of an XR action:
-		struct ActionState
+		struct SubActionState
 		{
 			union
 			{
@@ -175,11 +177,15 @@ namespace teleport
 			XrVector3f  angularVelocity_stageSpace;
 		};
 
+		struct ActionState
+		{
+			SubActionState subActionStates[2];
+		};
 		//
 		struct XRInputDeviceState
 		{
 			XrBool32	renderThisDevice;
-			XrBool32	handSelect;
+			//XrBool32	handSelect;
 			XrBool32	handMenu;
 		};
 
@@ -188,7 +194,7 @@ namespace teleport
 			XrAction		xrAction;
 			ActionId		actionId;
 			XrActionType	xrActionType;
-			XrSpace			space;
+			XrSpace			spaces[2];
 			std::string name;
 			std::string localizedName;
 			bool subActionPaths;
@@ -353,12 +359,14 @@ namespace teleport
 
 			//! Get the head pose in the device's stage space (axes adapted to the Engineering standard, Z=up).
 			const avs::Pose& GetHeadPose_StageSpace() const;
-			avs::Pose GetActionPose(ActionId id) const;
-			float GetActionFloatState(ActionId actionId) const;
+			avs::Pose GetActionPose(ActionId id,uint8_t subActionIndex=0) const;
+			float GetActionFloatState(ActionId actionId, uint8_t subActionIndex=0) const;
 			 avs::uid GetRootNode(avs::uid server_uid);
 			const std::map<avs::uid,avs::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			
+			const std::vector<avs::Pose> &GetTrackedHandJointPoses(int i);
+
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
 			bool IsSessionActive() const
@@ -371,9 +379,8 @@ namespace teleport
 			}
 
 			Overlay overlay;
-			static avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stagePose_worldSpace,const XrPosef &pose) ;
-			static avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) ;
-			vec3 ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const;
+			static avs::Pose ConvertGLSpaceToEngineeringSpace(const XrPosef &pose);
+			vec3 ConvertGLSpaceToEngineeringSpace(const XrVector3f &d) const;
 			platform::crossplatform::ViewStruct CreateViewStructFromXrCompositionLayerProjectionView(XrCompositionLayerProjectionView view, int id, platform::crossplatform::DepthTextureStyle depthTextureStyle);
 			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
 			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const avs::Pose& pose);
@@ -475,19 +482,23 @@ namespace teleport
 			void UpdateOverlayPosition();
 			// The action for getting the hand or controller position and orientation.
 			XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties = {XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT};
-			struct TrackedHand
+			struct XrTrackedHand
 			{
 				XrHandJointLocationEXT jointLocations[XR_HAND_JOINT_COUNT_EXT];
 				XrHandTrackerEXT handTracker = 0;
 				XrPath path=0;
-				XrSpace poseSpace;
 				XrActionStatePose poseState = {XR_TYPE_ACTION_STATE_POSE};
 				XrPosef pose;
 				bool hand_tracking_active = false;
 			};
+			XrTrackedHand xrTrackedHands[2];
+			struct TrackedHand
+			{
+				bool active=false;
+				std::vector<avs::Pose> jointPoses;
+			};
 			TrackedHand trackedHands[2];
 			void CreateHandTrackers();
-			std::vector<XrPath> subActionPaths;
 			void InstanceInit(InputSession &input_session, XrInstance &xr_instance);
 		};
 	}

@@ -67,6 +67,7 @@ namespace clientrender
 		bool reload_shaders=false;
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
 		virtual std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid server_uid);
+		void InitLocalHandGeometry();
 		void InitLocalGeometry();
 		void RemoveInstanceRenderer(avs::uid);
 		void InvalidateDeviceObjects();
@@ -98,28 +99,35 @@ namespace clientrender
 		platform::crossplatform::RenderPlatform		*renderPlatform	=nullptr;
 
 		RenderState renderState;
-		DebugOptions debugOptions;
 		platform::crossplatform::Text3DRenderer text3DRenderer;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
+		struct ControllerModel
+		{
+			avs::uid controller_node_uid = 0;
+			vec3 index_finger_offset = {0, 0, 0};
+			avs::uid model_uid = 0;
+		};
+		struct HandModel
+		{
+			bool visible=false;
+			
+			avs::uid hand_node_uid = 0;					// The parent node in the local scene:
+				avs::uid hand_skeleton_node_uid = 0;		// The skeleton root node, child of hand_node_uid.
+				avs::uid hand_mesh_node_uid = 0;			// The mesh root node, child of hand_node_uid.
+
+			avs::uid hand_skeleton_uid = 0;				// The skeleton asset
+			avs::uid model_uid = 0;						// The mesh asset
+			clientrender::Transform palm_to_hand;
+			vec3 index_finger_offset = {0, 0, 0};
+		};
 
 		struct LobbyGeometry
 		{
-			avs::uid self_node_uid=0;
-			avs::uid left_hand_node_uid = 0;
-			avs::uid right_hand_node_uid = 0;
-			avs::uid left_hand_skeleton_node_uid = 0;
-			avs::uid right_hand_skeleton_node_uid = 0;
-			avs::uid left_controller_node_uid = 0;
-			avs::uid right_controller_node_uid = 0;
-			avs::uid local_left_hand_uid = 0;
-			clientrender::Transform palm_to_hand_l;
-			avs::uid local_right_hand_uid = 0;
-			clientrender::Transform palm_to_hand_r;
-			avs::uid hand_skeleton_uid = 0;
-			vec3 index_finger_offset={0,0,0};
-			avs::uid left_model_uid=0;
-			avs::uid right_model_uid=0;
+			avs::uid self_node_uid;
+			ControllerModel leftController;
+			ControllerModel rightController;
+			HandModel hands[2];
 		};
 		LobbyGeometry lobbyGeometry;
 

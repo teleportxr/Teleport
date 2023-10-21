@@ -1286,23 +1286,29 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					}
 					ImGui::EndGroup();
 				}
+				ImGui::Separator();
+				ImGui::LabelText("Materials","Materials");
+				int element=0;
 				for (const auto& m : selected_node->GetMaterials())
 				{
 					if(m)
 					{
+						std::string passName;
+						auto *pass = selected_node->GetCachedEffectPass(element);
 						const char *name=m->GetMaterialCreateInfo().name.c_str();
-						ImGui::TreeNodeEx(name, flags, "%llu: %s", m->id, name);
+						ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, pass?pass->name.c_str():"");
 						if (ImGui::IsItemClicked())
 						{
 							Select(m->id);
 						}
 					}
+					element++;
 				}
 
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %ull", s->sub_scene_uid);
+					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %llu", (unsigned long long)s->sub_scene_uid);
 					if (ImGui::IsItemClicked())
 					{
 						Select(s->sub_scene_uid);
@@ -1383,7 +1389,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				if (selected_subscene->subscene_uid)
 				{
 					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
-					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %ull", selected_subscene->subscene_uid);
+					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %llu", selected_subscene->subscene_uid);
 
 					if (g)
 					{
@@ -1468,6 +1474,26 @@ void Gui::Textures(const ResourceManager<avs::uid,clientrender::Texture>& textur
 		{
 			if(!show_inspector)
 				show_inspector=true;
+			Select(id);
+		}
+		ImGui::TreePop();
+	}
+	ImGui::EndGroup();
+}
+
+
+void Gui::Skeletons(const ResourceManager<avs::uid,clientrender::Skeleton>& skeletonManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids = skeletonManager.GetAllIDs();
+	for (auto id : ids)
+	{
+		const auto &skeleton = skeletonManager.Get(id);
+		ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str());
+		if (ImGui::IsItemClicked())
+		{
+			if (!show_inspector)
+				show_inspector = true;
 			Select(id);
 		}
 		ImGui::TreePop();
@@ -1601,10 +1627,52 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 	LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));*/
 }
 
-void Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
+bool Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
 {
 	ImGui::Checkbox("Global Origin Axes",&debugOptions.showAxes);
-	ImGui::Checkbox("Show Stage Space",&debugOptions.showStageSpace);
+	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
+	const char *debugShaders[]={""
+								,"ps_solid_albedo_only"
+								,"ps_debug_normals"
+								,"ps_debug_normal_vertexnormals"
+								,"ps_debug_lightmaps"
+								,"ps_debug_ambient"
+								,"ps_debug_anim"
+								,"ps_debug_uvs"
+								,"ps_digitizing"
+								};
+	ImGui::LabelText("DebugShaders","Debug Shader");
+	static int chooseDebugShader= 0;
+	int oldChooseDebugShader = chooseDebugShader;
+	ImGui::RadioButton("Default", &chooseDebugShader, 0);
+	ImGui::SameLine();
+	ImGui::RadioButton("Albedo", &chooseDebugShader, 1);
+	ImGui::SameLine();
+	ImGui::RadioButton("Normals", &chooseDebugShader, 2);
+	ImGui::SameLine();
+	ImGui::RadioButton("Vertex Normals", &chooseDebugShader, 3);
+	ImGui::RadioButton("Anim", &chooseDebugShader, 4);
+	ImGui::SameLine();
+	ImGui::RadioButton("Lightmaps", &chooseDebugShader, 5);
+	ImGui::SameLine();
+	ImGui::RadioButton("Ambient", &chooseDebugShader, 6);
+	ImGui::SameLine();
+	ImGui::RadioButton("UVs", &chooseDebugShader, 7);
+	ImGui::RadioButton("Digitizing", &chooseDebugShader, 8);
+	if (oldChooseDebugShader != chooseDebugShader)
+	{
+		if(chooseDebugShader!=0)
+		{
+			debugOptions.debugShader = debugShaders[chooseDebugShader];
+			debugOptions.useDebugShader = true;
+		}
+		else
+		{
+			debugOptions.useDebugShader=false;
+		}
+		return true;
+	}
+	return false;
 }
 
 void Gui::CubemapOSD(crossplatform::Texture *videoTexture)
@@ -1783,6 +1851,11 @@ void Gui::Scene()
 		NodeTree( geometryCache->mNodeManager->GetRootNodes());
 		ImGui::EndTabItem();
 	}
+	if (ImGui::BeginTabItem("Skeletons"))
+	{
+		Skeletons(geometryCache->mSkeletonManager);
+		ImGui::EndTabItem();
+	}
 	if(ImGui::BeginTabItem("Animations"))
 	{
 		Anims(geometryCache->mAnimationManager);
@@ -1793,6 +1866,7 @@ void Gui::Scene()
 		Textures(geometryCache->mTextureManager);
 		ImGui::EndTabItem();
 	}
+	
 	ImGui::EndTabBar();
 }
 

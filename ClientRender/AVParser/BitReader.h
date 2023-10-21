@@ -10,8 +10,8 @@ public:
   BitReader(const uint8_t* data = nullptr, size_t size = 0);
   void start(const uint8_t* data, size_t size);
   bool getBit();
-  uint32_t getBits(size_t amount);
-  void skipBits(size_t amount);
+  uint32_t getBits(size_t count);
+  void skipBits(size_t count);
   uint32_t getGolombU();
   int32_t getGolombS();
 

@@ -439,7 +439,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 {
 // We will do two things here.
 // 1. We will create a new Geometry Cache containing the whole scene from the draco file.
-// 2. We will create a new asset that refers to that cache.
+// 2. We will create a new asset in the containing cache that refers to that cache.
 	DecodedGeometry subSceneDG;
 	subSceneDG.axesStandard=sourceAxesStandard;
 	// The subscene uid in the server/cache list:
@@ -458,7 +458,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 	// this is a new cache, so create it:
 	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid);
 	auto &dracoMaterials=dracoScene.GetMaterialLibrary();
-	auto &dracoTextures=dracoMaterials.GetTextureLibrary();
+	auto &dracoTextures = dracoMaterials.GetTextureLibrary();
 	std::map<const draco::Texture*,avs::uid> texture_uids;
 	//existing subSceneDG.server_or_cache_uid is where the subscene should be added.
 	// a new cache_uid should be created to identify it.
@@ -631,10 +631,6 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		Eigen::Matrix4d m=dracoNode->GetTrsMatrix().ComputeTransformationMatrix();
 		mat4d mat=*((mat4d*)&m);
 		auto meshGroupIndex=dracoNode->GetMeshGroupIndex();
-		//if(meshGroupIndex.value()>=dracoScene.NumMeshGroups())
-		//	continue;
-		//if(!dracoMeshGroup)
-		//	continue;
 		avs::Node avsNode;
 		avsNode.name=dracoNode->GetName();
 		avsNode.stationary=false;
@@ -701,6 +697,62 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		}
 		subSceneDG.nodes.emplace(node_uids[n],avsNode);
 	}
+	std::vector<avs::uid> skeleton_uids;
+	for (int i = 0; i < dracoScene.NumSkins(); i++)
+	{
+		draco::SkinIndex skinIndex(i);
+		const auto &dracoSkin = dracoScene.GetSkin(skinIndex);
+		avs::uid skeleton_uid = GenerateUid();
+		skeleton_uids.push_back(skeleton_uid);
+		avs::Skeleton &avsSkeleton = subSceneDG.skeletons[skeleton_uid];
+
+		avsSkeleton.name = fmt::format("{0} skeleton {1}", filename_url, i);
+		int numBones = dracoSkin->NumJoints();
+		avsSkeleton.boneIDs.resize(numBones);
+		// avsSkeleton.boneTransforms.resize(numBones);
+		//  We'll only use boneIDs in this case because the joints are actual nodes.
+		// avsSkeleton.parentIndices.resize(numBones);
+		// avsSkeleton.boneNames.reserve(numBones);
+		for (int j = 0; j < numBones; j++)
+		{
+			int draco_joint_index = dracoSkin->GetJoint(j).value();
+			avsSkeleton.boneIDs[j] = node_uids[draco_joint_index];
+		}
+		draco::NodeAnimationData dracoNodeAnimData = dracoSkin->GetInverseBindMatrices();
+		if (dracoNodeAnimData.type() != draco::NodeAnimationData::Type::MAT4)
+		{
+			// problem...
+			TELEPORT_CERR << "Wrong data type for inverse bind matrices\n";
+		}
+		int numInverseBinds = dracoNodeAnimData.count();
+		// TODO: Not where this should go.
+		subSceneDG.inverseBindMatrices.resize(numInverseBinds);
+		const float *invBindPtr = dracoNodeAnimData.GetData()->data();
+		for (int j = 0; j < numInverseBinds; j++)
+		{
+			const mat4 &b= *((const mat4*)invBindPtr);
+			subSceneDG.inverseBindMatrices[j] = platform::crossplatform::ConvertMatrix(subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, b);
+			subSceneDG.inverseBindMatrices[j].transpose();
+			invBindPtr += 16;
+		}
+	}
+	// find skeleton nodes and skinned mesh nodes.
+	for (int n = 0; n < dracoScene.NumNodes(); n++)
+	{
+		auto &avsNode = subSceneDG.nodes[node_uids[n]];
+		const auto &dracoNode = dracoScene.GetNode(draco::SceneNodeIndex(n));
+		auto skinIndex = dracoNode->GetSkinIndex();
+		if (skinIndex < dracoScene.NumSkins())
+		{
+			int i= skinIndex.value();
+			avs::uid skeleton_uid=skeleton_uids[i];
+			avs::Skeleton &avsSkeleton=subSceneDG.skeletons[skeleton_uid];
+			avsNode.skeletonNodeID = avsSkeleton.boneIDs[0];
+			auto &avsSkeletonRootNode = subSceneDG.nodes[avsNode.skeletonNodeID];
+			avsSkeletonRootNode.data_type = avs::NodeDataType::Skeleton;
+			avsSkeletonRootNode.data_uid=skeleton_uid;
+		}
+	}
 	for(int n=0;n<dracoScene.NumNodes();n++)
 	{
 		auto &avsNode=subSceneDG.nodes[node_uids[n]];
@@ -747,7 +799,8 @@ avs::Result GeometryDecoder::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUi
 		uint64_t buffer_view_uid = dg.next_id++;
 		buffer_views.push_back(buffer_view_uid);
 		auto& bufferView = dg.bufferViews[buffer_view_uid];
-		bufferView.byteStride = dracoAttribute->byte_stride();
+		// we're converting all attributes to float...
+		bufferView.byteStride = dracoAttribute->num_components()*sizeof(float);//dracoAttribute->byte_stride();
 		// This could be bigger than draco's buffer, because we want a 1-2-1 correspondence of attribute values on each vertex.
 		bufferView.byteLength = num_vertices*bufferView.byteStride;
 		bufferView.byteOffset = 0;
@@ -759,6 +812,7 @@ avs::Result GeometryDecoder::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUi
 		buffer.data = buf.data();
 	
 		uint8_t * buf_ptr=buffer.data;
+		dracoAttribute->data_type();
 		std::array<float, 4> value;
 		for (draco::PointIndex i(0); i < static_cast<uint32_t>(num_vertices); ++i)
 		{
@@ -873,6 +927,12 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 		auto mat_uid=m.first;
 		const auto &avsMaterial=m.second;
 		target->CreateMaterial(dg.server_or_cache_uid,mat_uid,avsMaterial);
+	}
+	for (auto s : dg.skeletons)
+	{
+		auto s_uid = s.first;
+		const auto &avsSkeleton= s.second;
+		target->CreateSkeleton(dg.server_or_cache_uid, s_uid, avsSkeleton);
 	}
 	// Create the meshes:
 	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to

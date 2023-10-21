@@ -332,8 +332,8 @@ namespace avs
 		int32_t diffuseCubemapSize=0;
 		int32_t lightPos[2]={0,0};
 		int32_t lightCubemapSize=0;
-		uid specularCubemapTexture=0;
-		uid diffuseCubemapTexture=0;
+		uid specular_cubemap_texture_uid=0;
+		uid diffuse_cubemap_texture_uid=0;
 		LightingMode lightingMode = LightingMode::TEXTURE;
 	} AVS_PACKED;	// 57 bytes
 

@@ -192,7 +192,7 @@ namespace clientrender
 				cachedEffectPasses[i].cachedEffectPassValidity=0;
 			}
 		}
-		platform::crossplatform::EffectPass *GetCachedEffectPass(size_t submesh_index)
+		platform::crossplatform::EffectPass *GetCachedEffectPass(size_t submesh_index) const
 		{
 			if(submesh_index>=cachedEffectPasses.size())
 				return nullptr;

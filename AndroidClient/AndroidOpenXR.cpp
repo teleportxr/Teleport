@@ -302,7 +302,11 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 		if(sessionChangedCallback)
 			sessionChangedCallback(xr_session_running);
 		if (xr_session_running)
+		{
 			AttachSessionActions();
+			if (handTrackingSystemProperties.supportsHandTracking)
+				CreateHandTrackers();
+		}
         // Set session state once we have entered VR mode and have a valid session object.
         if (result == XR_SUCCESS)
 		{

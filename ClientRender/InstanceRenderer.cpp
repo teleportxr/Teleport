@@ -282,9 +282,9 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 {
 	if(instanceRenderState.specularCubemapTexture)
 		renderState.pbrConstants.roughestMip=float(instanceRenderState.specularCubemapTexture->mips-1);
-	if(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
+	if(sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid!=0)
 	{
-		auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
+		auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid);
 		if(t&&t->GetSimulTexture())
 		{
 			renderState.pbrConstants.roughestMip=float(t->GetSimulTexture()->mips-1);
@@ -349,7 +349,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
 	if (renderState.openXR)
 	{
-			// The node pose states are in the space whose origin is the VR device's playspace origin.
+		// The node pose states are in the space whose origin is the VR device's playspace origin.
 		const auto& nodePoseStates = renderState.openXR->GetNodePoseStates(this_server_uid, renderPlatform->GetFrameNumber());
 		for (auto& n : nodePoseStates)
 		{
@@ -369,9 +369,9 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	RenderGeometryCache(deviceContext,geometryCache);
 }
 
-void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> geometryCache)
+void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> g)
 {
-	const std::vector<std::weak_ptr<Node>>& nodeList = geometryCache->mNodeManager->GetSortedRootNodes();
+	const std::vector<std::weak_ptr<Node>>& nodeList = g->mNodeManager->GetSortedRootNodes();
 	for (size_t i = 0; i < nodeList.size(); i++)
 	{
 		std::shared_ptr<clientrender::Node> node = nodeList[i].lock();
@@ -379,9 +379,9 @@ void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDevi
 			continue;
 		if (renderState.show_only != 0 && renderState.show_only != node->id)
 			continue;
-		RenderNode(deviceContext, node, false, true, false);
+		RenderNode(deviceContext,g,node, false, true, false);
 	}
-	const std::vector<std::weak_ptr<clientrender::Node>>& transparentList = geometryCache->mNodeManager->GetSortedTransparentNodes();
+	const std::vector<std::weak_ptr<clientrender::Node>>& transparentList = g->mNodeManager->GetSortedTransparentNodes();
 
 	for (size_t i = 0; i < transparentList.size(); i++)
 	{
@@ -390,21 +390,21 @@ void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDevi
 			continue;
 		if (renderState.show_only != 0 && renderState.show_only != node->id)
 			continue;
-		RenderNode(deviceContext, node, false, false, true);
+		RenderNode(deviceContext, g, node, false, false, true);
 	}
 	if (renderState.show_node_overlays)
 	{
 		for (size_t i = 0; i < nodeList.size(); i++)
-		{
+		{ 
 			std::shared_ptr<clientrender::Node> node = nodeList[i].lock();
 			RenderNodeOverlay(deviceContext, node);
 		}
 	}
 }
 
-
 //[thread=RenderThread]
 void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceContext
+	,const std::shared_ptr<clientrender::GeometryCache> &geometrySubCache
 	,const std::shared_ptr<clientrender::Node> node
 	,bool force
 	,bool include_children
@@ -426,7 +426,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	avs::uid gi_texture_id = node->GetGlobalIlluminationTextureUid();
 	if (gi_texture_id)
 	{
-		globalIlluminationTexture = geometryCache->mTextureManager.Get(gi_texture_id);
+		globalIlluminationTexture = geometrySubCache->mTextureManager.Get(gi_texture_id);
 		if ( !globalIlluminationTexture)
 		{
 			material_incomplete = true;
@@ -532,7 +532,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					// For each bone matrix,
 					//				pos_local= (bone_matrix_j) * pos_original_local
 						std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
-						skeletonInstance->GetBoneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices,node->GetJointIndices(),boneMatrices);
+						skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
 						BoneMatrices *b=static_cast<BoneMatrices*>(&renderState.boneMatrices);
 						memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
 						renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
@@ -567,7 +567,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					auto layoutHash = meshLayout->GetHash();
 					if (meshLayoutDesc.size() == 7)
 						anim=true;
-					bool normal_map = (meshLayoutDesc.size() >= 5);
+					// To render with normal maps, we must have normal and tangent vertex attributes, and we must have a normal map!
+					bool normal_map = meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::NORMAL)
+									&& meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && (matInfo.normal.texture_uid!=0);
 					std::string base_pixel_shader=transparent?"ps_transparent":"ps_solid";
 					std::string vertex_shader="vs_variants";
 					if(mvgdc)
@@ -580,8 +582,8 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 							,fmt::arg("max_lights",0));
 					if(rezzing)
 						pixel_shader="ps_digitizing";
-					if(renderState.overridePixelShader.length())
-						pixel_shader=renderState.overridePixelShader.c_str();	
+					if (renderState.debugOptions.useDebugShader)
+						pixel_shader = renderState.debugOptions.debugShader.c_str();	
 					else if(material->GetMaterialCreateInfo().shader.length())
 					{
 						pixel_shader=material->GetMaterialCreateInfo().shader.c_str();
@@ -616,7 +618,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				if(sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode==avs::LightingMode::TEXTURE)
 				//if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture!=0)
 				{
-					auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture);
+					auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuse_cubemap_texture_uid);
 					if(t)
 					{
 						renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,t->GetSimulTexture());
@@ -626,7 +628,7 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
 				//if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
 				{
-					auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture);
+					auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid);
 					if(t)
 					{
 						renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_specularCubemap,t->GetSimulTexture());
@@ -674,17 +676,16 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		std::shared_ptr<clientrender::Node> child = childPtr.lock();
 		if(child)
 		{
-			RenderNode(deviceContext,child,false,include_children,transparent_pass);
+			RenderNode(deviceContext,geometrySubCache,child,false,include_children,transparent_pass);
 		}
 	}
 	// what about subscenes?
-	
 	auto s=node->GetComponent<clientrender::SubSceneComponent>();
 	if(s)
 	{
 		if(s->sub_scene_uid)
 		{
-			auto ss=geometryCache->mSubsceneManager.Get(s->sub_scene_uid);
+			auto ss = geometrySubCache->mSubsceneManager.Get(s->sub_scene_uid);
 			if(ss)
 			if(ss->subscene_uid)
 			{
@@ -758,9 +759,9 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 		vec3 pos = node->GetGlobalPosition();
 		mat4 globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 		mat4 m = mul(*((const mat4 *)(&deviceContext.viewStruct.model)), globalTransformMatrix);
-		renderPlatform->DrawAxes(deviceContext,m,0.1f);
+		renderPlatform->DrawAxes(deviceContext,m,0.02f);
 	
-			static std::string str;
+		static std::string str;
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		auto skeletonInstance=node->GetSkeletonInstance();
 		if (skeletonInstance.get()&&skeletonInstance->GetBones().size())

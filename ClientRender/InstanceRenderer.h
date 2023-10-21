@@ -42,7 +42,9 @@ namespace clientrender
 	struct DebugOptions
 	{
 		bool showAxes=false;
-		bool showStageSpace=false;
+		bool showStageSpace = false;
+		bool useDebugShader = false;
+		std::string debugShader;
 	};
 	struct AVSTexture
 	{
@@ -62,10 +64,11 @@ namespace clientrender
 	};
 	struct RenderState
 	{
-		teleport::client::OpenXR *openXR=nullptr;
+		teleport::client::OpenXR *openXR = nullptr;
+		DebugOptions debugOptions;
 		avs::uid show_only=0;
 		avs::uid selected_uid=0;
-		bool show_node_overlays			=false;
+		bool show_node_overlays			=true;
 		static constexpr int maxTagDataSize = 32;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		/// A framebuffer to store the colour and depth textures for the view.
@@ -78,7 +81,6 @@ namespace clientrender
 		platform::crossplatform::EffectTechnique	*solid			=nullptr;
 		platform::crossplatform::EffectTechnique	*transparent	=nullptr;
 
-		std::string overridePixelShader;
 		uint64_t shaderValidity=1;
 		platform::crossplatform::EffectVariantPass *solidVariantPass=nullptr;
 		platform::crossplatform::EffectVariantPass *transparentVariantPass=nullptr;
@@ -172,6 +174,7 @@ namespace clientrender
 			
 		void RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> geometryCache);
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
+			,const std::shared_ptr<clientrender::GeometryCache> &g
 			,const std::shared_ptr<clientrender::Node> node
 			,bool force
 			,bool include_children
