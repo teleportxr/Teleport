@@ -68,7 +68,7 @@ namespace clientrender
 		DebugOptions debugOptions;
 		avs::uid show_only=0;
 		avs::uid selected_uid=0;
-		bool show_node_overlays			=true;
+		bool show_node_overlays			=false;
 		static constexpr int maxTagDataSize = 32;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		/// A framebuffer to store the colour and depth textures for the view.

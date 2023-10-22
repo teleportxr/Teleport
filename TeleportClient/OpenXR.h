@@ -119,6 +119,7 @@ namespace teleport
 			ActionId actionId;		// Which local action is bound to the node.
 			avs::Pose poseOffset;	// In the XR pose's local space, the offset to the node's pose.
 			int subActionIndex = 0; // Basically left or right, where applicable
+			int handJointIndex=-1;	// If ActionId is invalid, it's a hand tracking joint, and should be 0-25.
 		};
 		struct NodePoseState
 		{
@@ -365,7 +366,12 @@ namespace teleport
 			const std::map<avs::uid,avs::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			
+			/// Get the poses relative to the hand root.
 			const std::vector<avs::Pose> &GetTrackedHandJointPoses(int i);
+			/// @brief Get the hand root pose in local space.
+			/// @param pose 
+			/// @return 
+			avs::Pose GetTrackedHandRootPose(int i) const;
 
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
@@ -495,7 +501,8 @@ namespace teleport
 			struct TrackedHand
 			{
 				bool active=false;
-				std::vector<avs::Pose> jointPoses;
+				avs::Pose rootPose;						// In local space.
+				std::vector<avs::Pose> jointPoses;		// In space relative to root.
 			};
 			TrackedHand trackedHands[2];
 			void CreateHandTrackers();

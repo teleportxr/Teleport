@@ -905,8 +905,8 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 		{
 			if (waiting->get()->type != avs::GeometryPayloadType::Node)
 			{
-			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
-			continue;
+				TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
+				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
 			incompleteNode->SetSkeleton(incompleteSkeleton->skeleton);

@@ -139,9 +139,9 @@ namespace clientrender
 		
 		// TODO: temporary.
 		const avs::uid local_server_uid=0;
-		const avs::InputId local_menu_input_id=0;
-		const avs::InputId local_cycle_osd_id=1;
-		const avs::InputId local_cycle_shader_id=2;
+		const avs::InputId local_menu_input_id=1;
+		const avs::InputId local_cycle_osd_id=2;
+		const avs::InputId local_cycle_shader_id=3;
 		teleport::Gui &gui;
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;

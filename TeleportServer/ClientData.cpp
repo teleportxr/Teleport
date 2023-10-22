@@ -103,13 +103,13 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	memcpy(&setupCommand.clientDynamicLighting,&clientDynamicLighting,sizeof(clientDynamicLighting));
 
 	// Set any static lighting textures to be required-streamable.
-	if(setupCommand.clientDynamicLighting.diffuseCubemapTexture)
+	if(setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid)
 	{
-		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuseCubemapTexture);
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid);
 	}
-	if(setupCommand.clientDynamicLighting.specularCubemapTexture)
+	if(setupCommand.clientDynamicLighting.specular_cubemap_texture_uid)
 	{
-		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specularCubemapTexture);
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specular_cubemap_texture_uid);
 	}
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];

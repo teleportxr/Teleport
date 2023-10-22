@@ -12,6 +12,8 @@ SkeletonInstance::SkeletonInstance(std::shared_ptr<Skeleton> s)
 	const auto &orig_bones=s->GetBones();
 	for(const auto &b:orig_bones)
 	{
+		if(!b)
+			continue;
 		std::shared_ptr<clientrender::Bone> bone = std::make_shared<clientrender::Bone>(b->id,b->name+"_instance");
 		boneMap[b->id]=bone;
 		std::shared_ptr<clientrender::Bone> parent;

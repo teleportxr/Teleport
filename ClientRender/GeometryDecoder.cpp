@@ -1460,12 +1460,14 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeDa
 	{
 		skeleton.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
 	}*/
-
+	skeleton.useExternalBones=NextByte;
 	skeleton.boneTransforms.resize(NextUint64);
 	skeleton.parentIndices.resize(skeleton.boneTransforms.size());
 	skeleton.boneNames.resize(skeleton.boneTransforms.size());
+	skeleton.boneIDs.resize(skeleton.boneTransforms.size());
 	for (size_t i = 0; i < skeleton.boneTransforms.size(); i++)
 	{
+		skeleton.boneIDs[i]=NextUint64;
 		skeleton.parentIndices[i]=NextUint16;
 		skeleton.boneTransforms[i] = NextChunk(avs::Transform);
 		size_t nameLength = NextUint64;

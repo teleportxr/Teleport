@@ -12,6 +12,7 @@
 #include "fmt/core.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/AxesStandard.h"
+#include "Platform/Core/StringFunctions.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ThisPlatform/StringFunctions.h"
 #include "Log.h"
@@ -62,6 +63,52 @@ const char* teleport::client::stringof(ActionId a)
 	default:
 		return "INVALID";
 	};
+}
+
+const char *GetHandTrackingJointName(XrHandJointEXT j)
+{
+	switch(j)
+	{
+	case XR_HAND_JOINT_PALM_EXT							:return "palm";
+	case XR_HAND_JOINT_WRIST_EXT						:return "wrist";
+	case XR_HAND_JOINT_THUMB_METACARPAL_EXT				:return "thumb_metacarpal";
+	case XR_HAND_JOINT_THUMB_PROXIMAL_EXT				:return "thumb_proximal";
+	case XR_HAND_JOINT_THUMB_DISTAL_EXT					:return "thumb_distal";
+	case XR_HAND_JOINT_THUMB_TIP_EXT					:return "thumb_tip";
+	case XR_HAND_JOINT_INDEX_METACARPAL_EXT				:return "index_metacarpal";
+	case XR_HAND_JOINT_INDEX_PROXIMAL_EXT				:return "index_proximal";
+	case XR_HAND_JOINT_INDEX_INTERMEDIATE_EXT			:return "index_intermediate";
+	case XR_HAND_JOINT_INDEX_DISTAL_EXT					:return "index_distal";
+	case XR_HAND_JOINT_INDEX_TIP_EXT					:return "index_tip";
+	case XR_HAND_JOINT_MIDDLE_METACARPAL_EXT			:return "middle_metacarpal";
+	case XR_HAND_JOINT_MIDDLE_PROXIMAL_EXT				:return "middle_proximal";
+	case XR_HAND_JOINT_MIDDLE_INTERMEDIATE_EXT			:return "middle_intermediate";
+	case XR_HAND_JOINT_MIDDLE_DISTAL_EXT				:return "middle_distal";
+	case XR_HAND_JOINT_MIDDLE_TIP_EXT					:return "middle_tip";
+	case XR_HAND_JOINT_RING_METACARPAL_EXT				:return "ring_metacarpal";
+	case XR_HAND_JOINT_RING_PROXIMAL_EXT				:return "ring_proximal";
+	case XR_HAND_JOINT_RING_INTERMEDIATE_EXT			:return "ring_intermediate";
+	case XR_HAND_JOINT_RING_DISTAL_EXT					:return "ring_distal";
+	case XR_HAND_JOINT_RING_TIP_EXT						:return "ring_tip";
+	case XR_HAND_JOINT_LITTLE_METACARPAL_EXT			:return "little_metacarpal";
+	case XR_HAND_JOINT_LITTLE_PROXIMAL_EXT				:return "little_proximal";
+	case XR_HAND_JOINT_LITTLE_INTERMEDIATE_EXT			:return "little_intermediate";
+	case XR_HAND_JOINT_LITTLE_DISTAL_EXT				:return "little_distal";
+	case XR_HAND_JOINT_LITTLE_TIP_EXT					:return "little_tip";
+	default:
+	break;
+	};
+	return "UNKNOWN/INVALID";
+};
+
+int GetJointFromName(std::string name)
+{
+	for (int i=0;i<XR_HAND_JOINT_COUNT_EXT;i++)
+	{
+		if(name==GetHandTrackingJointName((XrHandJointEXT)i))
+		return (int)i;
+	}
+	return -1;
 }
 
 static std::string letters_numbers="abcdefghijklmnopqrstuvwxyz0123456789 ";
@@ -883,9 +930,10 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction	, LEFT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction	,RIGHT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::GRASP].xrAction			, LEFT "/input/squeeze/value"}
-			,{xr_input_session.actionDefinitions[ActionId::GRASP].xrAction			,RIGHT "/input/squeeze/value"}
-			,{xr_input_session.actionDefinitions[ActionId::PINCH].xrAction			, LEFT "/input/select/value"}
-			,{xr_input_session.actionDefinitions[ActionId::PINCH].xrAction			,RIGHT "/input/select/value"}
+			,{xr_input_session.actionDefinitions[ActionId::GRASP].xrAction		 	,RIGHT "/input/squeeze/value"}
+			, {xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction, LEFT "/input/squeeze/value"}
+			, {xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction, RIGHT "/input/squeeze/value"}
+			//,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction		, LEFT "/input/select/value"}
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	,right_palm_str.c_str()}
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
 		});
@@ -1094,6 +1142,7 @@ void OpenXR::PollActions(XrTime predictedTime)
 					(spaceLocation.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
 					xrTrackedHands[i].pose = spaceLocation.pose;
+					trackedHands[i].rootPose = ConvertJointPose(spaceLocation.pose);
 				}
 				bool Unobstructed = true;
 				XrHandJointsMotionRangeInfoEXT motionRangeInfo{XR_TYPE_HAND_JOINTS_MOTION_RANGE_INFO_EXT};
@@ -1168,6 +1217,11 @@ const std::vector<avs::Pose> &OpenXR::GetTrackedHandJointPoses(int i)
 	if(!trackedHands[i].active)
 		return emptyPoses;
 	return trackedHands[i].jointPoses;
+}
+
+avs::Pose OpenXR::GetTrackedHandRootPose(int i) const
+{
+	return trackedHands[i].rootPose;
 }
 
 void OpenXR::RecordCurrentBindings()
@@ -1307,6 +1361,7 @@ void OpenXR::ClearServer(avs::uid server_uid)
 	if(openXRServers.find(server_uid)!=openXRServers.end())
 		openXRServers.erase(server_uid);
 }
+
 // An InputMapping is created for each InputDefinition that the server has sent.
 // It defines which xrActions are linked to which inputs needed by the server.
 // The mappings are initialized on connection and can be changed at any time by the server.
@@ -1329,69 +1384,75 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 	re_left_right[1].assign("/right/", std::regex_constants::icase | std::regex::extended);
 	for (const auto& serverInputDef : inputDefinitions_)
 	{
-		std::regex re(serverInputDef.regexPath, std::regex_constants::icase | std::regex::extended);
-		std::cerr<<"Trying to bind "<<serverInputDef.regexPath.c_str()<<"\n";
-		// which, if any, action should be used to map to this?
-		// we match by the bindings.
-		// For each action, get the currently bound path.
-		int found=0;
-		for(size_t a=0;a<xr_input_session.actionDefinitions.size();a++)
+		// Split the regex path by semicolons, allowing multiple definitions.
+		std::vector<std::string> strs = platform::core::split(serverInputDef.regexPath, ';');
+		for(const auto &str_regex:strs)
 		{
-			auto &actionDef=xr_input_session.actionDefinitions[a];
-			bool matches = false;
-			std::string path_str = GetBoundPath(actionDef);
-			std::smatch match;
-			if(serverInputDef.regexPath.length())
+			if(str_regex.length()==0)
+				break;
+			std::regex re(str_regex, std::regex_constants::icase | std::regex::extended);
+			std::cerr << "Trying to bind " << str_regex.c_str() << "\n";
+			// which, if any, action should be used to map to this?
+			// we match by the bindings.
+			// For each action, get the currently bound path.
+			int found=0;
+			for(size_t a=0;a<xr_input_session.actionDefinitions.size();a++)
 			{
-				if(!path_str.length())
-					continue;
-				//TELEPORT_CERR<<"\tChecking against: "<<path_str.c_str()<<std::endl;
-				// Now we try to match this path to the input serverInputDef.
-				if (std::regex_search(path_str, match, re))
+				auto &actionDef=xr_input_session.actionDefinitions[a];
+				bool matches = false;
+				std::string path_str = GetBoundPath(actionDef);
+				std::smatch match;
 				{
-					TELEPORT_CERR<<"\t\t\tMatches.\n";
-					matches=true;
-				}
-				//else
-				//	TELEPORT_CERR<<"\t\t\tX\n";
-			}
-			if(matches)
-			{
-				string matching=match.str(0);
-				TELEPORT_CERR<<"Binding matches: "<<serverInputDef.regexPath.c_str()<<" with "<<matching.c_str()<<std::endl;
-				for(int subActionI=0;subActionI<(actionDef.subActionPaths?2:1);subActionI++)
-				{
-					if(actionDef.subActionPaths)
-					if (!std::regex_search(path_str, match, re_left_right[subActionI]))
-					{
+					if(!path_str.length())
 						continue;
-					}
-					inputMappings.push_back(InputMapping());
-					inputStates.push_back(InputState());
-					InputMapping& mapping = inputMappings.back();
-					// store the definition.
-					mapping.serverInputDefinition=serverInputDef;
-					mapping.clientActionId=(ActionId)a;
-					mapping.subActionIndex = subActionI;
-					found++;
-				
-					// If it's in the keyboard range, make sure it's in the boundKeys map.
-					if(a>=MAX_ACTIONS&&a-MAX_ACTIONS<letters_numbers.size())
+					//TELEPORT_CERR<<"\tChecking against: "<<path_str.c_str()<<std::endl;
+					// Now we try to match this path to the input serverInputDef.
+					if (std::regex_search(path_str, match, re))
 					{
-						char character=letters_numbers[a-MAX_ACTIONS];
-					// keyboard.
-						xr_input_session.boundKeys[character]=actionDef.actionId;
+						TELEPORT_CERR<<"\t\t\tMatches.\n";
+						matches=true;
+					}
+					//else
+					//	TELEPORT_CERR<<"\t\t\tX\n";
+				}
+				if(matches)
+				{
+					string matching=match.str(0);
+					TELEPORT_CERR << "Binding matches: " << str_regex.c_str() << " with " << matching.c_str() << std::endl;
+					for(int subActionI=0;subActionI<(actionDef.subActionPaths?2:1);subActionI++)
+					{
+						if(actionDef.subActionPaths)
+						if (!std::regex_search(path_str, match, re_left_right[subActionI]))
+						{
+							continue;
+						}
+						inputMappings.push_back(InputMapping());
+						inputStates.push_back(InputState());
+						InputMapping& mapping = inputMappings.back();
+						// store the definition.
+						mapping.serverInputDefinition=serverInputDef;
+						mapping.clientActionId=(ActionId)a;
+						mapping.subActionIndex = subActionI;
+						found++;
+				
+						// If it's in the keyboard range, make sure it's in the boundKeys map.
+						if(a>=MAX_ACTIONS&&a-MAX_ACTIONS<letters_numbers.size())
+						{
+							char character=letters_numbers[a-MAX_ACTIONS];
+						// keyboard.
+							xr_input_session.boundKeys[character]=actionDef.actionId;
+						}
 					}
 				}
 			}
-		}
-		if(found==0)
-		{
-			TELEPORT_CERR<<"No match found for "<<serverInputDef.regexPath.c_str()<<"\n";
-		}
-		else
-		{
-			TELEPORT_CERR<<"Found "<<found<<" matches for "<<serverInputDef.regexPath.c_str()<<"\n";
+			if(found==0)
+			{
+				TELEPORT_CERR << "No match found for " << str_regex.c_str() << "\n";
+			}
+			else
+			{
+				TELEPORT_CERR << "Found " << found << " matches for " << str_regex.c_str() << "\n";
+			}
 		}
 	}
 }
@@ -1426,7 +1487,38 @@ void OpenXR::BindUnboundPoses(avs::uid server_uid)
 		// we match by the bindings.
 		// For each action, get the currently bound path.
 		bool found_match=false;
-		for(size_t a=0;a<ActionId::MAX_ACTIONS;a++)
+		// match for hand tracking must be exact.
+		if(regexPath.find("hand_tracking/")==0)
+		{
+ 			vector<string> parts=platform::core::split(regexPath,'/');
+			if(parts.size()!=3)
+			{
+				u++;
+				continue;
+			}
+			int hand=-1;
+			if(parts[1]=="left")
+				hand=0;
+			if(parts[1]=="right")
+				hand=1;
+			if(hand<0)
+			{
+				u++;
+				continue;
+			}
+			std::string jointname = parts[2];
+			int j=GetJointFromName(jointname);
+			if(j>=0&&j<XR_HAND_JOINT_COUNT_EXT)
+			{
+				nodePoseMappings[uid].actionId = ActionId::INVALID;
+				nodePoseMappings[uid].poseOffset = u->second.poseOffset;
+				nodePoseMappings[uid].regexPath = u->second.regexPath;
+				nodePoseMappings[uid].subActionIndex = hand;
+				nodePoseMappings[uid].handJointIndex = j;
+				found_match = true;
+			}
+		}
+		else for(size_t a=0;a<ActionId::MAX_ACTIONS;a++)
 		{
 			auto &actionDef=xr_input_session.actionDefinitions[a];
 			if(actionDef.xrActionType!=XR_ACTION_TYPE_POSE_INPUT)
@@ -1513,12 +1605,13 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 	{
 		for(auto m:server.nodePoseMappings)
 		{
-			auto &def=m.second;
+			auto &mapping = m.second;
+			auto &definition = xr_input_session.actionDefinitions[mapping.actionId];
 			auto &state=server.nodePoseStates[m.first];
 			XrSpaceVelocity space_velocity {XR_TYPE_SPACE_VELOCITY};
 			XrSpaceLocation space_location {XR_TYPE_SPACE_LOCATION, &space_velocity};
 			space_velocity.velocityFlags=XR_SPACE_VELOCITY_LINEAR_VALID_BIT |XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
-			auto space=xr_input_session.actionDefinitions[def.actionId].spaces[def.subActionIndex];
+			auto space = xr_input_session.actionDefinitions[mapping.actionId].spaces[mapping.subActionIndex];
 			if (xr_session&& space)
 			{
 				XrResult		res = xrLocateSpace(space, xr_app_space, lastTime, &space_location);
@@ -1526,7 +1619,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
 					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
 				{
-					auto &subActionState = xr_input_session.actionStates[def.actionId].subActionStates[def.subActionIndex];
+					auto &subActionState = xr_input_session.actionStates[mapping.actionId].subActionStates[mapping.subActionIndex];
 					subActionState.pose_stageSpace				=space_location.pose;
 					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_LINEAR_VALID_BIT)
 						subActionState.velocity_stageSpace = space_velocity.linearVelocity;
@@ -1541,13 +1634,13 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			}
 			else
 			{
-				if(fallbackBindings.find(def.actionId)!=fallbackBindings.end())
+				if (fallbackBindings.find(mapping.actionId) != fallbackBindings.end())
 				{
 					vec3 p0=*((vec3*)&state.pose_footSpace.pose.position);
-					vec3 p1=*((vec3*)&fallbackStates[def.actionId].pose_worldSpace.position);
+					vec3 p1 = *((vec3 *)&fallbackStates[mapping.actionId].pose_worldSpace.position);
 					float dt=float(framenumber-server.framenumber)*0.01f;
 					vec3 v=(p1-p0)/dt;
-					state.pose_footSpace.pose=fallbackStates[def.actionId].pose_worldSpace;
+					state.pose_footSpace.pose = fallbackStates[mapping.actionId].pose_worldSpace;
 					static float r=0.1f;
 					vec3 v0=*((vec3*)&state.pose_footSpace.velocity);
 					v=v0*(1.f-r)+r*v;

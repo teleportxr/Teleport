@@ -708,7 +708,6 @@ void SessionClient::ApplySetup(const teleport::core::SetupCommand &s)
 void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &packet)
 {
 	size_t commandSize = sizeof(teleport::core::ReconfigureVideoCommand);
-
 	//Copy command out of packet.
 	teleport::core::ReconfigureVideoCommand reconfigureCommand;
 	memcpy(static_cast<void*>(&reconfigureCommand), packet.data(), commandSize);

@@ -353,8 +353,8 @@ void Renderer::InitLocalGeometry()
 
 		// Hard-code the menu button
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
+		//renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
+		//renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
 	}
 	// local lighting.
 	avs::uid diffuse_cubemap_uid=avs::GenerateUid();
@@ -770,6 +770,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 		=renderState.openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
 	std::vector<vec4> hand_pos_press;
+	auto localInstanceRenderer = GetInstanceRenderer(0);
+	auto &localGeometryCache = localInstanceRenderer->geometryCache;
 	for(int h=0;h<2;h++)
 	{
 		auto &hand=lobbyGeometry.hands[h];
@@ -778,8 +780,6 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		// can type or press with the tips of each finger.
 			const auto &poses = renderState.openXR->GetTrackedHandJointPoses(h);
 			// The poses are in the hand's local space.
-			auto localInstanceRenderer = GetInstanceRenderer(0);
-			auto &localGeometryCache = localInstanceRenderer->geometryCache;
 			auto handNode=localGeometryCache->mNodeManager->GetNode(hand.hand_node_uid);
 			uint8_t fingertips[]={XR_HAND_JOINT_INDEX_TIP_EXT,XR_HAND_JOINT_MIDDLE_TIP_EXT,XR_HAND_JOINT_RING_TIP_EXT,XR_HAND_JOINT_LITTLE_TIP_EXT,XR_HAND_JOINT_THUMB_TIP_EXT};
 			if(handNode)
@@ -822,16 +822,19 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
 		// hand tracking?
+		auto localInstanceRenderer = GetInstanceRenderer(0);
+		auto &localGeometryCache = localInstanceRenderer->geometryCache;
 		if(enable_hand_deformation)
 		for (int i = 0; i < 2; i++)
 		{
 			auto &hand = lobbyGeometry.hands[i];
+			auto handNode = localGeometryCache->mNodeManager->GetNode(hand.hand_node_uid);
 			const auto &poses = renderState.openXR->GetTrackedHandJointPoses(i);
-			if (poses.size())
+			if (hand.visible && poses.size())
 			{
+				if (handNode)
+					handNode->SetVisible(true);
 				// a list of 26 poses. apply them to the 24 joints.
-				auto localInstanceRenderer = GetInstanceRenderer(0);
-				auto &localGeometryCache = localInstanceRenderer->geometryCache;
 				auto subScene=localGeometryCache->mSubsceneManager.Get(hand.model_uid);
 				if(subScene)
 				{
@@ -862,6 +865,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 						}
 					}
 				}
+			}
+			else
+			{
+				if (handNode)
+					handNode->SetVisible(false);
 			}
 		}
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);

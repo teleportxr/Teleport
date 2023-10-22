@@ -2527,14 +2527,13 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 			}
 			else
 			{
-				const std::set<int32_t> &tabIndices=client::TabContext::GetTabIndices();
-				int32_t tab_index=0;
-				if(tabIndices.size())
-					tab_index=tabIndices.begin().operator*();
-				else
-					tab_index = client::TabContext::AddTabContext();
-				std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(tab_index);
-				avs::uid server_uid=tabContext->GetServerUid();
+				const std::set<int32_t> &tabIndices = client::TabContext::GetTabIndices();
+				if (!current_tab_context)
+				{
+					current_tab_context = client::TabContext::AddTabContext();
+				}
+				std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
+				avs::uid server_uid = tabContext->GetServerUid();
 				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 				bool connecting = false;
 				bool connected = false;
