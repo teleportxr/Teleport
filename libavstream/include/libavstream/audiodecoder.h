@@ -29,7 +29,6 @@ namespace avs
 		/*!
 		 * Configure decoder.
 		 * \param streamId - id for network stream
-		 * \param params backend for decoding audio
 		 * \return
 		 *  - Result::OK on success.
 		 *  - Result::Node_AlreadyConfigured if decoder was already in configured state.

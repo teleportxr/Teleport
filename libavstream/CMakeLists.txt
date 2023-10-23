@@ -360,7 +360,7 @@ if(LIBAV_USE_EFP)
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
 
-if(NOT TELEPORT_SERVER)
+if(NOT TELEPORT_SERVER AND NOT TELEPORT_BUILD_DOCS)
     set(BUILD_CURL_EXE OFF CACHE BOOL "")
     set(CURL_STATIC_CRT ON CACHE BOOL "")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
@@ -403,14 +403,14 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 # Third party dependencies
-add_subdirectory(thirdparty/asio)
-add_subdirectory(thirdparty/nv)
+	add_subdirectory(thirdparty/asio)
+	add_subdirectory(thirdparty/nv)
 
-# Tests
-if(LIBAV_BUILD_TESTS)
-	add_subdirectory(thirdparty/cxxopts)
-	add_subdirectory(tests)
-endif()
+	# Tests
+	if(LIBAV_BUILD_TESTS)
+		add_subdirectory(thirdparty/cxxopts)
+		add_subdirectory(tests)
+	endif()
 
 #Include CUDA library location.
 target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
