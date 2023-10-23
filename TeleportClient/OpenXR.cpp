@@ -1162,7 +1162,13 @@ void OpenXR::PollActions(XrTime predictedTime)
 				{
 					trackedHands[i].jointPoses[j]=ConvertJointPose(locations.jointLocations[j].pose);
 				}
-				trackedHands[i].active=true;
+				trackedHands[i].active = locations.isActive;
+
+				// 
+				if(trackedHands[i].active)
+				{
+					xr_input_session.actionStates[i==0?LEFT_SQUEEZE:RIGHT_SQUEEZE].subActionStates[0].f32=std::min(1.f,std::max(0.f,-2.0f*trackedHands[1].jointPoses[15].orientation.w));
+				}
 			}
 			else
 			{
@@ -1227,6 +1233,8 @@ avs::Pose OpenXR::GetTrackedHandRootPose(int i) const
 void OpenXR::RecordCurrentBindings()
 {
 	activeInteractionProfilePaths.clear();
+	userHandLeftActiveProfile=0;
+	userHandRightActiveProfile = 0;
 	if(xr_session)
 	{
 	// now we are ready to:
@@ -1265,7 +1273,106 @@ void OpenXR::RecordCurrentBindings()
 		InteractionProfile &mouseAndKeyboard = interactionProfiles[MOUSE_KEYBOARD_PROFILE_INDEX];
 		activeInteractionProfilePaths.push_back(mouseAndKeyboard.profilePath);
 	}
-	#endif
+#endif
+	if(!activeInteractionProfilePaths.size())
+		return;
+	for(auto &srv:openXRServers)
+	{
+		auto &server = openXRServers[srv.first];
+		// TODO: is this the right place to reset the mappings?
+		// Put all th mappings back into unbound, to be recalculated later.
+		auto &unboundPoses = server.unboundPoses;
+		//unboundPoses.clear();
+		for (const auto &m : server.nodePoseMappings)
+		{
+			unboundPoses[m.first].regexPath = m.second.regexPath;
+			unboundPoses[m.first].poseOffset = m.second.poseOffset;
+		}
+		server.nodePoseMappings.clear();
+		auto &inputMappings = server.inputMappings;
+		if(srv.first!=0)
+			inputMappings.clear();
+		auto &inputStates = server.inputStates;
+		inputStates.clear();
+		std::regex re_left_right[2];
+		re_left_right[0].assign("/left/", std::regex_constants::icase | std::regex::extended);
+		re_left_right[1].assign("/right/", std::regex_constants::icase | std::regex::extended);
+		for (const auto &serverInputDef : server.inputDefinitions)
+		{
+			// Split the regex path by semicolons, allowing multiple definitions.
+			std::vector<std::string> strs = platform::core::split(serverInputDef.regexPath, ';');
+			for (const auto &str_regex : strs)
+			{
+				if (str_regex.length() == 0)
+					break;
+				std::regex re(str_regex, std::regex_constants::icase | std::regex::extended);
+				std::cerr << "Trying to bind " << str_regex.c_str() << "\n";
+				// which, if any, action should be used to map to this?
+				// we match by the bindings.
+				// For each action, get the currently bound path.
+				int found = 0;
+				for (size_t a = 0; a < xr_input_session.actionDefinitions.size(); a++)
+				{
+					auto &actionDef = xr_input_session.actionDefinitions[a];
+					bool matches = false;
+					std::string path_str = GetBoundPath(actionDef);
+					std::smatch match;
+					{
+						if (!path_str.length())
+							continue;
+						// TELEPORT_CERR<<"\tChecking against: "<<path_str.c_str()<<std::endl;
+						//  Now we try to match this path to the input serverInputDef.
+						if (std::regex_search(path_str, match, re))
+						{
+							TELEPORT_CERR << "\t\t\tMatches.\n";
+							matches = true;
+						}
+						// else
+						//	TELEPORT_CERR<<"\t\t\tX\n";
+					}
+					if (matches)
+					{
+						string matching = match.str(0);
+						TELEPORT_CERR << "Binding matches: " << str_regex.c_str() << " with " << matching.c_str() << std::endl;
+						for (int subActionI = 0; subActionI < (actionDef.subActionPaths ? 2 : 1); subActionI++)
+						{
+							if (actionDef.subActionPaths)
+								if (!std::regex_search(path_str, match, re_left_right[subActionI]))
+								{
+									continue;
+								}
+							inputMappings.push_back(InputMapping());
+							inputStates.push_back(InputState());
+							InputMapping &mapping = inputMappings.back();
+							// store the definition.
+							mapping.serverInputDefinition = serverInputDef;
+							mapping.clientActionId = (ActionId)a;
+							mapping.subActionIndex = subActionI;
+							found++;
+
+							// If it's in the keyboard range, make sure it's in the boundKeys map.
+							if (a >= MAX_ACTIONS && a - MAX_ACTIONS < letters_numbers.size())
+							{
+								char character = letters_numbers[a - MAX_ACTIONS];
+								// keyboard.
+								xr_input_session.boundKeys[character] = actionDef.actionId;
+							}
+						}
+					}
+				}
+				if (found == 0)
+				{
+					std::string left_path = FromXrPath(xr_instance, userHandLeftActiveProfile);
+					std::string right_path = FromXrPath(xr_instance, userHandRightActiveProfile);
+					TELEPORT_CERR << "No match found for " << str_regex.c_str() <<" with "<<left_path<< " or "<<right_path<< "\n";
+				}
+				else
+				{
+					TELEPORT_CERR << "Found " << found << " matches for " << str_regex.c_str() << "\n";
+				}
+			}
+		}
+	}
 }
 
 const InteractionProfile *OpenXR::GetActiveBinding(XrPath p) const
@@ -1368,93 +1475,9 @@ void OpenXR::ClearServer(avs::uid server_uid)
 // So we have a set of mappings for each currently connected server.
 void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition>& inputDefinitions_)
 {
+	auto &server = openXRServers[server_uid];
+	server.inputDefinitions = inputDefinitions_;
 	RecordCurrentBindings();
-	auto &server		=openXRServers[server_uid];
-// TODO: is this the right place to reset the mappings?
-	server.nodePoseMappings.clear();
-	server.unboundPoses.clear();
-
-	server.inputDefinitions=inputDefinitions_;
-	auto &inputMappings	=server.inputMappings;
-	inputMappings.clear();
-	auto &inputStates	=server.inputStates;
-	inputStates.clear();
-	std::regex re_left_right[2];
-	re_left_right[0].assign("/left/", std::regex_constants::icase | std::regex::extended);
-	re_left_right[1].assign("/right/", std::regex_constants::icase | std::regex::extended);
-	for (const auto& serverInputDef : inputDefinitions_)
-	{
-		// Split the regex path by semicolons, allowing multiple definitions.
-		std::vector<std::string> strs = platform::core::split(serverInputDef.regexPath, ';');
-		for(const auto &str_regex:strs)
-		{
-			if(str_regex.length()==0)
-				break;
-			std::regex re(str_regex, std::regex_constants::icase | std::regex::extended);
-			std::cerr << "Trying to bind " << str_regex.c_str() << "\n";
-			// which, if any, action should be used to map to this?
-			// we match by the bindings.
-			// For each action, get the currently bound path.
-			int found=0;
-			for(size_t a=0;a<xr_input_session.actionDefinitions.size();a++)
-			{
-				auto &actionDef=xr_input_session.actionDefinitions[a];
-				bool matches = false;
-				std::string path_str = GetBoundPath(actionDef);
-				std::smatch match;
-				{
-					if(!path_str.length())
-						continue;
-					//TELEPORT_CERR<<"\tChecking against: "<<path_str.c_str()<<std::endl;
-					// Now we try to match this path to the input serverInputDef.
-					if (std::regex_search(path_str, match, re))
-					{
-						TELEPORT_CERR<<"\t\t\tMatches.\n";
-						matches=true;
-					}
-					//else
-					//	TELEPORT_CERR<<"\t\t\tX\n";
-				}
-				if(matches)
-				{
-					string matching=match.str(0);
-					TELEPORT_CERR << "Binding matches: " << str_regex.c_str() << " with " << matching.c_str() << std::endl;
-					for(int subActionI=0;subActionI<(actionDef.subActionPaths?2:1);subActionI++)
-					{
-						if(actionDef.subActionPaths)
-						if (!std::regex_search(path_str, match, re_left_right[subActionI]))
-						{
-							continue;
-						}
-						inputMappings.push_back(InputMapping());
-						inputStates.push_back(InputState());
-						InputMapping& mapping = inputMappings.back();
-						// store the definition.
-						mapping.serverInputDefinition=serverInputDef;
-						mapping.clientActionId=(ActionId)a;
-						mapping.subActionIndex = subActionI;
-						found++;
-				
-						// If it's in the keyboard range, make sure it's in the boundKeys map.
-						if(a>=MAX_ACTIONS&&a-MAX_ACTIONS<letters_numbers.size())
-						{
-							char character=letters_numbers[a-MAX_ACTIONS];
-						// keyboard.
-							xr_input_session.boundKeys[character]=actionDef.actionId;
-						}
-					}
-				}
-			}
-			if(found==0)
-			{
-				TELEPORT_CERR << "No match found for " << str_regex.c_str() << "\n";
-			}
-			else
-			{
-				TELEPORT_CERR << "Found " << found << " matches for " << str_regex.c_str() << "\n";
-			}
-		}
-	}
 }
 
 void OpenXR::SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId)

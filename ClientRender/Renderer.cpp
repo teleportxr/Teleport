@@ -782,7 +782,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			// The poses are in the hand's local space.
 			auto handNode=localGeometryCache->mNodeManager->GetNode(hand.hand_node_uid);
 			uint8_t fingertips[]={XR_HAND_JOINT_INDEX_TIP_EXT,XR_HAND_JOINT_MIDDLE_TIP_EXT,XR_HAND_JOINT_RING_TIP_EXT,XR_HAND_JOINT_LITTLE_TIP_EXT,XR_HAND_JOINT_THUMB_TIP_EXT};
-			if(handNode)
+			if (handNode && poses.size()>=XR_HAND_JOINT_COUNT_EXT)
 			{
 				for(int i=0;i<5;i++)
 				{
