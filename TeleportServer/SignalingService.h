@@ -25,6 +25,7 @@ namespace teleport
 			~SignalingClient();
 			avs::uid clientID = 0;
 			std::string ip_addr_port;
+			std::string path;
 			std::shared_ptr<rtc::WebSocket> webSocket;
 			std::vector<std::string> messagesReceived;
 			std::queue<std::string> messagesToPassOn;

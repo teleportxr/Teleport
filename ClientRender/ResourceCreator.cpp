@@ -114,16 +114,11 @@ void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform* r, cli
 	m_DummyGreen->Create(tci);
 }
 
-
 void ResourceCreator::Clear()
 {
 	mutex_texturesToTranscode.lock();
 	texturesToTranscode.clear();
 	mutex_texturesToTranscode.unlock();
-}
-
-void ResourceCreator::Update(float deltaTime)
-{
 }
 
 template<typename indexType>
@@ -529,8 +524,12 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		ib_ci.data = _indices;
 		ib->Create(&ib_ci);
 
-		geometryCache->mVertexBufferManager.Add(geometryCache->GenerateUid(meshElementCreate.vb_id), vb);
-		geometryCache->mIndexBufferManager.Add(geometryCache->GenerateUid(meshElementCreate.ib_id), ib);
+		avs::uid vb_uid = geometryCache->GenerateUid(meshElementCreate.vb_id);
+		geometryCache->mVertexBufferManager.Add(vb_uid, vb);
+		TELEPORT_CERR << "Cache " << meshCreate.cache_uid << " Mesh " << mesh_ci.name << " has vertex buffer " << vb_uid << std::endl;
+		avs::uid ib_uid = geometryCache->GenerateUid(meshElementCreate.ib_id);
+		geometryCache->mIndexBufferManager.Add(ib_uid, ib);
+		TELEPORT_CERR << "Cache " << meshCreate.cache_uid << " Mesh " << mesh_ci.name << " has index buffer " << ib_uid << std::endl;
 
 		mesh_ci.vertexBuffers[i] = vb;
 		mesh_ci.indexBuffers[i] = ib;

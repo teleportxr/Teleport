@@ -105,7 +105,7 @@ add_custom_target(Sphinx ALL
 					${CMAKE_CURRENT_SOURCE_DIR}/index.rst 
 					${DOXYGEN_INDEX_FILE}
 					MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-					COMMENT "Generating documentation with Sphinx"
+					COMMENT "Generating documentation at ${CMAKE_CURRENT_BINARY_DIR}/sphinx/index.html"
 					SOURCES ${ALL_RST_FILES})
 set_target_properties( Sphinx PROPERTIES FOLDER Docs)
 

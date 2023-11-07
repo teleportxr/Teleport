@@ -112,6 +112,7 @@ namespace teleport
 		{
 			float float32;
 			uint32_t uint32;
+			bool isValid=false;
 		};
 		struct NodePoseMapping
 		{
@@ -173,6 +174,7 @@ namespace teleport
 				float vec2f[2];
 				bool poseActive;
 			};
+			bool isValid=false;
 			XrPosef		pose_stageSpace;
 			XrVector3f  velocity_stageSpace;
 			XrVector3f  angularVelocity_stageSpace;

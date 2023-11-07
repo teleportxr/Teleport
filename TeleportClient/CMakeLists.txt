@@ -43,6 +43,8 @@ set(src_files
 	SignalingServer.h
 	TabContext.cpp
 	TabContext.h
+	URLHandlers.h
+	URLHandlers.cpp
 )
 #For MT runtime
 add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream ) 

@@ -15,6 +15,7 @@ namespace clientrender
 {
 	struct DebugOptions;
 }
+#define MAX_URL_SIZE (2500)
 namespace teleport
 {
 	enum class ColourStyle
@@ -109,6 +110,7 @@ namespace teleport
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void SetScaleMetres();
 		bool URLInputActive() const { return url_input; }
+		void Navigate(const std::string &url);
 		void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
 		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
 		void SetServerIPs(const std::vector<std::string> &server_ips);
@@ -162,7 +164,7 @@ namespace teleport
 		float width_m=0.6f;
 		std::vector<unsigned int> keys_pressed;
 		void ShowFont();
-        char url_buffer[500];
+        char url_buffer[MAX_URL_SIZE];
 		bool have_vr_device = false;
 		std::vector<avs::uid> selection_history;
 		size_t selection_cursor;
@@ -175,6 +177,8 @@ namespace teleport
 		bool show_options = false;
 		platform::crossplatform::Texture *vrHeadsetIconTexture = nullptr;
 		platform::crossplatform::Texture *viveControllerTexture = nullptr;
+		bool connect_please = false;
+		bool cancel_please = false;
 		
 	};
 }

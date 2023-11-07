@@ -17,6 +17,7 @@
 #include "TeleportClient/basic_linear_algebra.h"
 #include "ClientPipeline.h"
 #include "ClientDeviceState.h"
+#include "TeleportCore/URLParser.h"
 
 typedef unsigned int uint;
 
@@ -30,12 +31,6 @@ namespace teleport
 {
 	namespace client
 	{
-		struct IpPort
-		{
-			std::string ip;
-			int port = 0;
-		};
-		extern IpPort GetIpPort(const char *ip_port);
 		class TabContext;
 		class SessionCommandInterface
 		{
@@ -63,15 +58,6 @@ namespace teleport
 			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
 			virtual void OnStreamingControlMessage(const std::string& str) = 0;
 		};
-		
-		enum class WebspaceLocation : uint8_t
-		{
-			UNKNOWN,
-			LOBBY,
-			SERVER,
-
-			HOME = LOBBY,
-		};
 		enum class ConnectionStatus : uint8_t
 		{
 			UNCONNECTED,
@@ -96,7 +82,12 @@ namespace teleport
 		class SessionClient:public avs::GenericTargetInterface
 		{
 			avs::uid server_uid=0;
-			std::string server_ip;
+			const std::string domain;
+			std::string server_path;
+			const std::string &GetServerURL() const;
+			mutable std::string server_domain;
+			mutable bool server_domain_valid=false;
+
 			int server_discovery_port=0;
 
 			teleport::client::ClientPipeline clientPipeline;
@@ -106,9 +97,9 @@ namespace teleport
 			avs::GenericEncoder unreliableToServerEncoder;
 			ClientServerState clientServerState;
 		protected:
-			static avs::uid CreateSessionClient(TabContext *tabContext);
-			void RequestConnection(const std::string &ip, int port);
-			void SetServerIP(std::string);
+			static avs::uid CreateSessionClient(TabContext *tabContext, const std::string &domain);
+			void RequestConnection(const std::string &path, int port);
+			void SetServerPath(std::string);
 			void SetServerDiscoveryPort(int);
 			friend class TabContext;
 			TabContext *tabContext = nullptr;
@@ -119,7 +110,7 @@ namespace teleport
 			// Implementing avs::GenericTargetInterface:
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		public:
-			SessionClient(avs::uid server_uid, TabContext *tabContext);
+			SessionClient(avs::uid server_uid, TabContext *tabContext, const std::string &domain);
 			~SessionClient();
 			
 			ClientServerState &GetClientServerState()
@@ -143,6 +134,9 @@ namespace teleport
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;
 			bool IsConnected() const;
+			//! Is this client ready to render, i.e. does it have the final setup from the server required to initialize rendering?
+			//! return true if ready, false if not.
+			bool IsReadyToRender() const;
 
 			std::string GetServerIP() const;
 			

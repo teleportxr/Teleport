@@ -99,8 +99,26 @@ void ClientMessaging::tick(float deltaTime)
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
-	commandPipeline.process();
-	messagePipeline.process();
+	avs::Result commandResult=commandPipeline.process();
+	if(commandResult==avs::Result::IO_Full)
+	{
+		commandPipeline.SetPipelineBlocked(true);
+		TELEPORT_CERR << "Client "<<clientID<<": Command pipeline is full. No further commands accepted until it clears.\n";
+	}
+	else
+	{
+		commandPipeline.SetPipelineBlocked(false);
+	}
+	avs::Result messageResult = messagePipeline.process();
+	if (commandResult == avs::Result::IO_Full)
+	{
+		messagePipeline.SetPipelineBlocked(true);
+		TELEPORT_CERR << "Client " << clientID << ": Message pipeline is full. No further messages accepted until it clears.\n";
+	}
+	else
+	{
+		messagePipeline.SetPipelineBlocked(false);
+	}
 	if (!clientNetworkContext.NetworkPipeline.isProcessingEnabled())
 	{
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() <<", disconnecting." << "\n";
@@ -320,6 +338,8 @@ void ClientMessaging::pingForLatency()
 size_t ClientMessaging::SendCommand(const void* c, size_t sz) const
 {
 	if (sz > 16384)
+		return 0;
+	if(commandPipeline.IsPipelineBlocked())
 		return 0;
 	auto b=std::make_shared<std::vector<uint8_t>>(sz);
 	memcpy(b->data(), c, sz);

@@ -927,8 +927,11 @@ void Renderer::Update(double timestamp_ms)
 	teleport::client::ServerTimestamp::tick(timeElapsed_s);
 	for(auto i:instanceRenderers)
 	{
-		i.second->geometryCache->Update( static_cast<float>(timeElapsed_s));
-		i.second->resourceCreator.Update(static_cast<float>(timeElapsed_s));
+		// A long wait since last rendered frame? Device might have been asleep. Don't do a timeout check for these.
+		if (timeElapsed_s <1.0)
+		{
+			i.second->geometryCache->Update(static_cast<float>(timeElapsed_s));
+		}
 
 		if(i.first!=0)
 		{
@@ -1076,7 +1079,7 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 	{
 		auto ir = GetInstanceRenderer(server_uid);
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-		if (sessionClient->IsConnected())
+		if (sessionClient->IsReadyToRender())
 		{
 			auto instanceRenderer=GetInstanceRenderer(server_uid);
 			avs::DisplayInfo displayInfo = {static_cast<uint32_t>(renderState.hdrFramebuffer->GetWidth()), static_cast<uint32_t>(renderState.hdrFramebuffer->GetHeight())
@@ -1559,7 +1562,7 @@ void Renderer::UpdateVRGuiMouse()
 		float azimuth	= atan2f(-hit.x, hit.y);
 		float aspectRatio=2.0f;
 		float height	=renderState.openXR->overlay.angularSpanRadians/aspectRatio*renderState.openXR->overlay.radius;
-		m = {-azimuth / (renderState.openXR->overlay.angularSpanRadians / 2.f), hit.z * 2.f / height};
+		m = {-azimuth / (renderState.openXR->overlay.angularSpanRadians / 2.f), (hit.z / height)};
 	}
 	gui.SetDebugGuiMouse(m, rightTrigger > 0.5f);
 }

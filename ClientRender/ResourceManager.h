@@ -10,6 +10,7 @@
 #include <algorithm>		//std::remove
 #include "MemoryUtil.h"
 #include "Resource.h"
+#include "TeleportCore/ErrorHandling.h"
 
 typedef unsigned long long uid; //Unique identifier for a resource.
 
@@ -18,6 +19,7 @@ typedef unsigned long long uid; //Unique identifier for a resource.
 template<typename u,class T>
 class ResourceManager
 {
+	avs::uid cache_uid=0;
 public:
 	//Struct to keep the resource and its metadata together.
 	struct ResourceData
@@ -28,7 +30,7 @@ public:
 	};
 
 	//Create a resource manager with the class specific function to free it from memory before destroying the resource.
-	ResourceManager(std::function<void(T&)> freeResourceFunction = nullptr);
+	ResourceManager(avs::uid cache_uid,std::function<void(T &)> freeResourceFunction = nullptr);
 	~ResourceManager();
 
 	//Add a resource to the resource manager.
@@ -94,8 +96,8 @@ private:
 };
 
 template<typename u,class T>
-ResourceManager<u,T>::ResourceManager(std::function<void(T&)> freeResourceFunction)
-	: freeResourceFunction(freeResourceFunction)
+ResourceManager<u,T>::ResourceManager(avs::uid c_uid,std::function<void(T&)> freeResourceFunction)
+	: cache_uid(c_uid), freeResourceFunction(freeResourceFunction)
 {}
 
 template<typename u,class T>
@@ -257,11 +259,12 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 			//Delete the resource, if memory is low and it has been too long since the object was last used.
 			if(!sufficientMemory && it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
 			{
+				TELEPORT_CERR<<"Cache "<<cache_uid<<", Timeout Freeing resource "<<it->first<<"\n";
 				it = RemoveResource(it);
 			}
 			else
 			{
-				++it;
+				++it; 
 			}
 		}
 		else

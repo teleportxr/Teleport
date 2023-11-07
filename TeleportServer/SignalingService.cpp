@@ -45,7 +45,16 @@ bool SignalingService::initialize(std::set<uint16_t> discoPorts,  std::string de
 	{
 		rtc::WebSocketServer::Configuration config;
 		config.port = p;
-		auto webSocketServer = std::make_shared<rtc::WebSocketServer>(config);
+		std::shared_ptr<rtc::WebSocketServer> webSocketServer;
+		try
+		{
+			webSocketServer = std::make_shared<rtc::WebSocketServer>(config);
+		}
+		catch(...)
+		{
+			TELEPORT_CERR<<"Failed to create WebSockets server on port "<<p<<"\n";
+			continue;
+		}
 		webSocketServers[p] = webSocketServer;
 		auto onWebSocketClient =std::bind(&SignalingService::OnWebSocket,this,std::placeholders::_1);
 		webSocketServer->onClient(onWebSocketClient);
@@ -150,6 +159,7 @@ void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 	c->clientID = clientID;
 	c->webSocket = ws;
 	c->ip_addr_port = ip_addr_port;
+	c->path=ws->path().has_value()?ws->path().value():"";
 	SetCallbacks(c);
 	clientUids.insert(clientID);
 }

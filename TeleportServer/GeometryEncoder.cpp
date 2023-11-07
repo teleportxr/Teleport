@@ -533,7 +533,7 @@ void GeometryEncoder::putPayloadSize()
 
 	avs::GeometryPayloadType type;
 	memcpy(&type,(buffer.data()+prevBufferSize+sizeof(size_t)),sizeof(type));
-	std::cout<<" payloadSize "<<payloadSize<<" for "<<stringOf(type)<<"\n";
+	//std::cout<<" payloadSize "<<payloadSize<<" for "<<stringOf(type)<<"\n";
 
 	prevBufferSize = 0;
 }

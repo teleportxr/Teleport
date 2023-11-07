@@ -26,7 +26,8 @@ namespace clientrender
 		MeshCreateInfo m_CI;
 		std::vector<std::shared_ptr<Material>> internalMaterials;
 	public:
-		Mesh(const MeshCreateInfo& pMeshCreateInfo);
+		Mesh(const MeshCreateInfo &pMeshCreateInfo);
+		~Mesh();
 		inline const MeshCreateInfo& GetMeshCreateInfo() const { return m_CI; }
 		const std::vector<std::shared_ptr<Material>> GetInternalMaterials() const
 		{

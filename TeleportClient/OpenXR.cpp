@@ -812,7 +812,8 @@ void OpenXR::MakeActions()
 	InteractionProfile &oculusGo			=interactionProfiles[4];
 	InteractionProfile &handInteractionExt	=interactionProfiles[5];
 	bool palm_pose_enabled = IsExtensionEnabled(XR_EXT_PALM_POSE_EXTENSION_NAME);
-	bool hand_interaction_enabled = IsExtensionEnabled(XR_EXT_HAND_INTERACTION_EXTENSION_NAME);
+	bool generic_hand_interaction_enabled = IsExtensionEnabled(XR_EXT_HAND_INTERACTION_EXTENSION_NAME);
+	bool msft_hand_interaction_enabled = IsExtensionEnabled(XR_MSFT_HAND_INTERACTION_EXTENSION_NAME);
 	std::string left_palm_str = LEFT "/input/"s + (palm_pose_enabled ? "palm_ext"s : "grip"s) + "/pose";
 	std::string right_palm_str = RIGHT "/input/"s + (palm_pose_enabled ? "palm_ext"s : "grip"s) + "/pose";
 	auto AddHandInteractions=[this](InteractionProfile &p)
@@ -886,28 +887,28 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
 		});
 	oculusGo.Init(xr_instance, "/interaction_profiles/oculus/go_controller", {
-			{xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction, LEFT "/input/grip/pose"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction, RIGHT "/input/grip/pose"}
-			, {xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction, LEFT "/input/aim/pose"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction, RIGHT "/input/aim/pose"}
-			, {xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction, LEFT "/input/menu/click"}
-			, {xr_input_session.actionDefinitions[ActionId::SYSTEM].xrAction, LEFT "/input/system/click"}
-			, {xr_input_session.actionDefinitions[ActionId::A].xrAction, RIGHT "/input/a/click"}
-			, {xr_input_session.actionDefinitions[ActionId::B].xrAction, RIGHT "/input/b/click"}
-			,{xr_input_session.actionDefinitions[ActionId::X].xrAction, LEFT "/input/x/click"}
-			, {xr_input_session.actionDefinitions[ActionId::Y].xrAction, LEFT "/input/y/click"}
-			, {xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction, LEFT "/input/trigger/value"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction, RIGHT "/input/trigger/value"}
-			, {xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction, LEFT "/input/squeeze/value"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction, RIGHT "/input/squeeze/value"}
-			, {xr_input_session.actionDefinitions[ActionId::LEFT_STICK_X].xrAction, LEFT "/input/thumbstick/x"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_X].xrAction, RIGHT "/input/thumbstick/x"}
-			, {xr_input_session.actionDefinitions[ActionId::LEFT_STICK_Y].xrAction, LEFT "/input/thumbstick/y"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction, RIGHT "/input/thumbstick/y"}
-			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	,right_palm_str.c_str()}
-			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
+				{xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction, LEFT "/input/grip/pose"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction, RIGHT "/input/grip/pose"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction, LEFT "/input/aim/pose"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction, RIGHT "/input/aim/pose"}
+				,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction, LEFT "/input/menu/click"}
+				,{xr_input_session.actionDefinitions[ActionId::SYSTEM].xrAction, LEFT "/input/system/click"}
+				,{xr_input_session.actionDefinitions[ActionId::A].xrAction, RIGHT "/input/a/click"}
+				,{xr_input_session.actionDefinitions[ActionId::B].xrAction, RIGHT "/input/b/click"}
+				,{xr_input_session.actionDefinitions[ActionId::X].xrAction, LEFT "/input/x/click"}
+				,{xr_input_session.actionDefinitions[ActionId::Y].xrAction, LEFT "/input/y/click"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction, LEFT "/input/trigger/value"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction, RIGHT "/input/trigger/value"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction, LEFT "/input/squeeze/value"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction, RIGHT "/input/squeeze/value"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_X].xrAction, LEFT "/input/thumbstick/x"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_X].xrAction, RIGHT "/input/thumbstick/x"}
+				,{xr_input_session.actionDefinitions[ActionId::LEFT_STICK_Y].xrAction, LEFT "/input/thumbstick/y"}
+				,{xr_input_session.actionDefinitions[ActionId::RIGHT_STICK_Y].xrAction, RIGHT "/input/thumbstick/y"}
+				,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	,right_palm_str.c_str()}
+				,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
 			});
-	if(hand_interaction_enabled)
+	if(generic_hand_interaction_enabled)
 	{
 		handInteractionExt.Init(xr_instance
 		, "/interaction_profiles/ext/hand_interaction_ext"
@@ -920,25 +921,28 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
 		});
 	}
-	else if(IsExtensionEnabled(XR_MSFT_HAND_INTERACTION_EXTENSION_NAME))
+	else if (msft_hand_interaction_enabled)
 	{
 		handInteractionExt.Init(xr_instance
 		, "/interaction_profiles/microsoft/hand_interaction"
 		, {
-			{xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction	, LEFT "/input/grip/pose"}
+			 {xr_input_session.actionDefinitions[ActionId::LEFT_GRIP_POSE].xrAction	, LEFT "/input/grip/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_GRIP_POSE].xrAction,RIGHT "/input/grip/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::LEFT_AIM_POSE].xrAction	, LEFT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_AIM_POSE].xrAction	,RIGHT "/input/aim/pose"}
 			,{xr_input_session.actionDefinitions[ActionId::GRASP].xrAction			, LEFT "/input/squeeze/value"}
 			,{xr_input_session.actionDefinitions[ActionId::GRASP].xrAction		 	,RIGHT "/input/squeeze/value"}
-			, {xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction, LEFT "/input/squeeze/value"}
-			, {xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction, RIGHT "/input/squeeze/value"}
-			//,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction		, LEFT "/input/select/value"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction	, LEFT "/input/squeeze/value"}
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction	,RIGHT "/input/squeeze/value"}
+			,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction		, LEFT "/input/select/value"}
+			,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction	, LEFT "/input/select/value" }
+			,{xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction	,RIGHT "/input/select/value" }
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	,right_palm_str.c_str()}
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
 		});
 	}
-	if(hand_interaction_enabled)
+	// The following  is supposedly enabled, but not in practice supported:
+	if (generic_hand_interaction_enabled)
 	{
 		AddHandInteractions(khrSimpleIP);
 		AddHandInteractions(valveIndexIP);
@@ -1056,13 +1060,40 @@ void OpenXR::PollActions(XrTime predictedTime)
 			{
 				XrActionStatePose pose_state	= { XR_TYPE_ACTION_STATE_POSE };
 				get_info.action					= def.xrAction;
-				xrGetActionStatePose(xr_session, &get_info, &pose_state);
-				state.subActionStates[0].poseActive = pose_state.isActive;
-				if (def.subActionPaths)
+				int count=1;
+				if(def.subActionPaths)
+					count=2;
+				for(int j=0;j<count;j++)
 				{
-					get_info.subactionPath = subActionPaths[1];
+					if(def.subActionPaths)
+						get_info.subactionPath = subActionPaths[j];
 					xrGetActionStatePose(xr_session, &get_info, &pose_state);
-					state.subActionStates[1].poseActive = pose_state.isActive;
+					state.subActionStates[j].poseActive = pose_state.isActive;
+					if(pose_state.isActive)
+					{
+						XrSpaceVelocity space_velocity{XR_TYPE_SPACE_VELOCITY};
+						XrSpaceLocation space_location{XR_TYPE_SPACE_LOCATION, &space_velocity};
+						space_velocity.velocityFlags = XR_SPACE_VELOCITY_LINEAR_VALID_BIT | XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
+						auto space = def.spaces[j];
+						auto &subActionState = state.subActionStates[j];
+						XrResult res = xrLocateSpace(space, xr_app_space, predictedTime, &space_location);
+						if (XR_UNQUALIFIED_SUCCESS(res) &&
+							(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
+							(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
+						{
+							subActionState.pose_stageSpace = space_location.pose;
+							if (space_velocity.velocityFlags & XR_SPACE_VELOCITY_LINEAR_VALID_BIT)
+								subActionState.velocity_stageSpace = space_velocity.linearVelocity;
+							else
+								subActionState.velocity_stageSpace = {0, 0, 0};
+							if (space_velocity.velocityFlags & XR_SPACE_VELOCITY_ANGULAR_VALID_BIT)
+								subActionState.angularVelocity_stageSpace = {0, 0, 0};
+						}
+						else
+						{
+							state.subActionStates[j].poseActive = false;
+						}
+					}
 				}
 			}
 			break;
@@ -1071,12 +1102,20 @@ void OpenXR::PollActions(XrTime predictedTime)
 				XrActionStateBoolean bool_state	= { XR_TYPE_ACTION_STATE_BOOLEAN };
 				get_info.action = def.xrAction;
 				xrGetActionStateBoolean(xr_session, &get_info, &bool_state);
-				state.subActionStates[0].u32 = bool_state.currentState;
+				state.subActionStates[0].isValid = bool_state.isActive;
+				if(bool_state.isActive)
+				{
+					state.subActionStates[0].u32 = bool_state.currentState;
+				}
 				if (def.subActionPaths)
 				{
 					get_info.subactionPath = subActionPaths[1];
 					xrGetActionStateBoolean(xr_session, &get_info, &bool_state);
-					state.subActionStates[1].u32 = bool_state.currentState;
+					state.subActionStates[1].isValid = bool_state.isActive;
+					if (bool_state.isActive)
+					{
+						state.subActionStates[1].u32 = bool_state.currentState;
+					}
 				}
 			}
 			break;
@@ -1085,12 +1124,20 @@ void OpenXR::PollActions(XrTime predictedTime)
 				XrActionStateFloat float_state	= { XR_TYPE_ACTION_STATE_FLOAT };
 				get_info.action = def.xrAction;
 				xrGetActionStateFloat(xr_session, &get_info, &float_state);
-				state.subActionStates[0].f32 = float_state.currentState;
+				state.subActionStates[0].isValid = float_state.isActive;
+				if (float_state.isActive)
+				{
+					state.subActionStates[0].f32 = float_state.currentState;
+				}
 				if (def.subActionPaths)
 				{
 					get_info.subactionPath = subActionPaths[1];
 					xrGetActionStateFloat(xr_session, &get_info, &float_state);
-					state.subActionStates[1].f32 = float_state.currentState;
+					state.subActionStates[1].isValid = float_state.isActive;
+					if (float_state.isActive)
+					{
+						state.subActionStates[1].f32 = float_state.currentState;
+					}
 				}
 			}
 			break;
@@ -1099,14 +1146,22 @@ void OpenXR::PollActions(XrTime predictedTime)
 				XrActionStateVector2f vec2_state	= { XR_TYPE_ACTION_STATE_VECTOR2F };
 				get_info.action = def.xrAction;
 				xrGetActionStateVector2f(xr_session, &get_info, &vec2_state);
-				state.subActionStates[0].vec2f[0]=vec2_state.currentState.x;
-				state.subActionStates[0].vec2f[1] = vec2_state.currentState.y;
+				state.subActionStates[0].isValid = vec2_state.isActive;
+				if (vec2_state.isActive)
+				{
+					state.subActionStates[0].vec2f[0]=vec2_state.currentState.x;
+					state.subActionStates[0].vec2f[1] = vec2_state.currentState.y;
+				}
 				if (def.subActionPaths)
 				{
 					get_info.subactionPath = subActionPaths[1];
 					xrGetActionStateVector2f(xr_session, &get_info, &vec2_state);
-					state.subActionStates[1].vec2f[0] = vec2_state.currentState.x;
-					state.subActionStates[1].vec2f[1] = vec2_state.currentState.y;
+					state.subActionStates[1].isValid = vec2_state.isActive;
+					if (vec2_state.isActive)
+					{
+						state.subActionStates[1].vec2f[0] = vec2_state.currentState.x;
+						state.subActionStates[1].vec2f[1] = vec2_state.currentState.y;
+					}
 				}
 			}
 			break;
@@ -1266,7 +1321,7 @@ void OpenXR::RecordCurrentBindings()
 		}
 	}
 	// On a desktop machine? Add mouse/keyboard profile.
-	#ifdef _MSC_VER
+#ifdef _MSC_VER
 	if (MOUSE_KEYBOARD_PROFILE_INDEX >= interactionProfiles.size())
 	{
 		CreateMouseAndKeyboardProfile();
@@ -1631,29 +1686,13 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			auto &mapping = m.second;
 			auto &definition = xr_input_session.actionDefinitions[mapping.actionId];
 			auto &state=server.nodePoseStates[m.first];
-			XrSpaceVelocity space_velocity {XR_TYPE_SPACE_VELOCITY};
-			XrSpaceLocation space_location {XR_TYPE_SPACE_LOCATION, &space_velocity};
-			space_velocity.velocityFlags=XR_SPACE_VELOCITY_LINEAR_VALID_BIT |XR_SPACE_VELOCITY_ANGULAR_VALID_BIT;
 			auto space = xr_input_session.actionDefinitions[mapping.actionId].spaces[mapping.subActionIndex];
-			if (xr_session&& space)
+			auto &subActionState = xr_input_session.actionStates[mapping.actionId].subActionStates[mapping.subActionIndex];
+			if (subActionState.poseActive)
 			{
-				XrResult		res = xrLocateSpace(space, xr_app_space, lastTime, &space_location);
-				if (XR_UNQUALIFIED_SUCCESS(res) &&
-					(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-					(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
-				{
-					auto &subActionState = xr_input_session.actionStates[mapping.actionId].subActionStates[mapping.subActionIndex];
-					subActionState.pose_stageSpace				=space_location.pose;
-					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_LINEAR_VALID_BIT)
-						subActionState.velocity_stageSpace = space_velocity.linearVelocity;
-					else
-						subActionState.velocity_stageSpace = {0, 0, 0};
-					if(space_velocity.velocityFlags&XR_SPACE_VELOCITY_ANGULAR_VALID_BIT)
-						subActionState.angularVelocity_stageSpace = {0, 0, 0};
-					state.pose_footSpace.pose = ConvertGLSpaceToEngineeringSpace(subActionState.pose_stageSpace);
-					state.pose_footSpace.velocity = ConvertGLSpaceToEngineeringSpace(subActionState.velocity_stageSpace);
-					state.pose_footSpace.angularVelocity = ConvertGLSpaceToEngineeringSpace(subActionState.angularVelocity_stageSpace);
-				}
+				state.pose_footSpace.pose = ConvertGLSpaceToEngineeringSpace(subActionState.pose_stageSpace);
+				state.pose_footSpace.velocity = ConvertGLSpaceToEngineeringSpace(subActionState.velocity_stageSpace);
+				state.pose_footSpace.angularVelocity = ConvertGLSpaceToEngineeringSpace(subActionState.angularVelocity_stageSpace);
 			}
 			else
 			{
@@ -1684,6 +1723,9 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			const auto &actionState		=xr_input_session.actionStates[mapping.clientActionId].subActionStates[mapping.subActionIndex];
 			const auto &actionDefinition=xr_input_session.actionDefinitions[mapping.clientActionId];
 			InputState previousState=state;
+			state.isValid = actionState.isValid;
+			if (!state.isValid)
+				continue;
 			switch(actionDefinition.xrActionType)
 			{
 				case XR_ACTION_TYPE_BOOLEAN_INPUT:
@@ -1698,6 +1740,9 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			// process as state or as event?
 			if((mapping.serverInputDefinition.inputType&avs::InputType::IsEvent)==avs::InputType::IsEvent)
 			{
+				// don't treat as a change of state if it wasn't valid last-frame.
+				if (!previousState.isValid)
+					continue;
 				// possibilities:
 				// float action interpreted as float event:
 				if(actionDefinition.xrActionType==XR_ACTION_TYPE_FLOAT_INPUT)
@@ -1854,8 +1899,8 @@ OpenXR::OpenXR(const char *app_name)
 		,{ActionId::MOUSE_LEFT_BUTTON	,"mouse_left"			,"Left Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::MOUSE_RIGHT_BUTTON	,"mouse_right"			,"Right Mouse Button"	,XR_ACTION_TYPE_BOOLEAN_INPUT}
 		,{ActionId::HANDTRACKING_PALM_POSE	,"handtracking_palm","Handtracking Palm"	,XR_ACTION_TYPE_POSE_INPUT,true}
-		,{ActionId::PINCH					,"handtracking_pinch","Handtracking Pinch"	,XR_ACTION_TYPE_BOOLEAN_INPUT,true}
-		,{ActionId::GRASP					,"handtracking_grasp","Handtracking Grasp"	,XR_ACTION_TYPE_BOOLEAN_INPUT,true}
+		,{ActionId::PINCH				,"handtracking_pinch","Handtracking Pinch"	,XR_ACTION_TYPE_BOOLEAN_INPUT,true}
+		,{ActionId::GRASP				,"handtracking_grasp","Handtracking Grasp"	,XR_ACTION_TYPE_BOOLEAN_INPUT,true}
 		});
 	#ifdef _MSC_VER
 	// Add keyboard keys:

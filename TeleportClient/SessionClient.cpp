@@ -19,26 +19,21 @@ using namespace teleport;
 using namespace client;
 using namespace clientrender;
 avs::Timestamp tBegin;
+using std::string;
 
+using namespace std::string_literals;
 static std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient>> sessionClients;
 static std::set<avs::uid> sessionClientIds;
 
-IpPort teleport::client::GetIpPort(const char *ip_port)
+
+const std::string &SessionClient::GetServerURL() const
 {
-	std::string ip = ip_port;
-	size_t pos = ip.find(":");
-	IpPort ipPort;
-	if (pos >= ip.length())
+	if (!server_domain_valid)
 	{
-		ipPort.port = 0;
-		ipPort.ip = ip;
+		server_domain = domain + "/"s + server_path;
+		server_domain_valid=true;
 	}
-	else
-	{
-		ipPort.port = (atoi(ip.substr(pos + 1, ip.length() - pos - 1).c_str()));
-		ipPort.ip = ip.substr(0, pos);
-	}
-	return ipPort;
+	return server_domain;
 }
 
 const std::set<avs::uid> &SessionClient::GetSessionClientIds()
@@ -54,7 +49,7 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	// We can create client zero, but any other must use CreateSessionClient() via TabContext.
 		if(server_uid==0)
 		{
-			auto r = std::make_shared<client::SessionClient>(0,nullptr);
+			auto r = std::make_shared<client::SessionClient>(0,nullptr,"");
 			sessionClients[0] = r;
 			sessionClientIds.insert(0);
 			return r;
@@ -64,7 +59,7 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	return i->second;
 }
 
-avs::uid SessionClient::CreateSessionClient(TabContext *tabContext)
+avs::uid SessionClient::CreateSessionClient(TabContext *tabContext,const std::string &domain)
 {
 	avs::uid server_uid=avs::GenerateUid();
 	auto i = sessionClients.find(server_uid);
@@ -73,7 +68,7 @@ avs::uid SessionClient::CreateSessionClient(TabContext *tabContext)
 		server_uid = avs::GenerateUid();
 		i = sessionClients.find(server_uid);
 	}
-	auto r = std::make_shared<client::SessionClient>(server_uid,tabContext);
+	auto r = std::make_shared<client::SessionClient>(server_uid, tabContext, domain);
 	sessionClients[server_uid] = r;
 	sessionClientIds.insert(server_uid);
 	return server_uid;
@@ -89,8 +84,8 @@ void SessionClient::DestroySessionClients()
 	sessionClients.clear();
 }
 
-SessionClient::SessionClient(avs::uid s, TabContext *tc)
-	: server_uid(s), tabContext(tc)
+SessionClient::SessionClient(avs::uid s, TabContext *tc,const std::string &dom)
+	: server_uid(s), domain(dom), tabContext(tc)
 {
 }
 
@@ -99,13 +94,14 @@ SessionClient::~SessionClient()
 	//Disconnect(0); causes crash. trying to access deleted objects.
 }
 
-void SessionClient::RequestConnection(const std::string &ip,int port)
+void SessionClient::RequestConnection(const std::string &path,int port)
 {
 	if (connectionStatus != client::ConnectionStatus::UNCONNECTED)
 		return;
-	if (server_ip != ip || server_discovery_port != port )
+	std::string ip=domain+"/"s+path;
+	if (server_path != path || server_discovery_port != port)
 	{
-		SetServerIP(ip);
+		SetServerPath(path);
 		SetServerDiscoveryPort(port);
 	}
 	connectionStatus = client::ConnectionStatus::OFFERING;
@@ -128,8 +124,8 @@ bool SessionClient::HandleConnections()
 		auto &config=Config::GetInstance();
 		if (connectionStatus == client::ConnectionStatus::OFFERING)
 		{
-			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid, server_ip.c_str(), server_discovery_port);
-			if(cl_id!=0&&Connect( server_ip.c_str(),config.options.connectionTimeout,cl_id))
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid, GetServerURL().c_str(), server_discovery_port);
+			if (cl_id != 0 && Connect(GetServerURL().c_str(), config.options.connectionTimeout, cl_id))
 			{
 				return true;
 			}
@@ -248,11 +244,9 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 }
 
 
-void SessionClient::SetServerIP(std::string s) 
+void SessionClient::SetServerPath(std::string path)
 {
-	IpPort ipP=GetIpPort(s.c_str());
-	server_ip=ipP.ip;
-	server_discovery_port=ipP.port;
+	server_path=path;
 }
 
 void SessionClient::SetServerDiscoveryPort(int p) 
@@ -299,6 +293,13 @@ bool SessionClient::IsConnected() const
 {
 	return (connectionStatus == ConnectionStatus::CONNECTED|| connectionStatus == ConnectionStatus::HANDSHAKING
 				||connectionStatus== ConnectionStatus::AWAITING_SETUP);
+}
+
+bool SessionClient::IsReadyToRender() const
+{
+	if(IsConnected())
+		return true;
+	return false;
 }
 
 avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
@@ -671,8 +672,6 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet.size());
 		return;
 	}
-
-	connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	const teleport::core::SetupCommand *s=reinterpret_cast<const teleport::core::SetupCommand*>(packet.data());
 	ApplySetup(*s);
 	teleport::core::Handshake handshake;
@@ -693,6 +692,7 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		mCommandInterface->ClearGeometryResources();
 	}
 
+	connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	SendHandshake(handshake, resourceIDs);
 	lastSessionId = setupCommand.session_id;
 	if(tabContext)

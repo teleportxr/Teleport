@@ -1,12 +1,25 @@
 #include "TabContext.h"
 #include "SessionClient.h"
+#include "TeleportCore/ErrorHandling.h"
 #include <map>
+#include <string>
+#include <fmt/format.h>
+#include "Platform/Core/StringToWString.h"
+#ifdef _MSC_VER
+// For ShellExecute
+#include <shellapi.h>
+#include <windows.h>
+#include <Shlwapi.h>
+#endif
+#include "URLHandlers.h"
+using namespace std::string_literals;
 
 using namespace teleport;
 using namespace client;
 
 static std::set<int32_t> tabIndices;
-static std::map<int32_t,std::shared_ptr<TabContext>> tabContexts;
+static std::map<int32_t, std::shared_ptr<TabContext>> tabContexts;
+static int32_t next_tab = 1;
 
 const std::set<int32_t> &TabContext::GetTabIndices()
 {
@@ -21,9 +34,24 @@ std::shared_ptr<TabContext> TabContext::GetTabContext(int32_t index)
 	return i->second;
 }
 
+int32_t TabContext::GetEmptyTabContext()
+{
+	for(auto i:tabIndices)
+	{
+		auto &j=tabContexts.find(i);
+		if(j!=tabContexts.end())
+		{
+			if(j->second->IsInUse())
+			{
+				return i;
+			}
+		}
+	}
+	return 0;
+}
+
 int32_t TabContext::AddTabContext()
 {
-	static int32_t next_tab = 1;
 	while (tabIndices.find(next_tab) != tabIndices.end())
 	{
 		next_tab++;
@@ -63,13 +91,43 @@ void TabContext::CancelConnectButtonHandler(int32_t tab_context_id)
 		tabContext->CancelConnection();
 }
 
+bool TabContext::IsInUse() const
+{
+	return server_uid!=0;
+}
+static std::queue<std::string> externalURLs;
+static bool shouldFollowExternalURL=false;
+
+bool TabContext::ShouldFollowExternalURL()
+{
+	return shouldFollowExternalURL;
+}
+
+std::string TabContext::PopExternalURL()
+{
+	std::string url=externalURLs.front();
+	externalURLs.pop();
+	shouldFollowExternalURL=(externalURLs.size()>0);
+	return url;
+}
 
 void TabContext::ConnectTo(std::string url)
 {
-	IpPort ipP = GetIpPort(url.c_str());
+	core::DomainPortPath domainPortPath = core::GetDomainPortPath(url);
+	// Not Teleport protocol? launch some other app or ignore.
+	if (domainPortPath.protocol != "teleport")
+	{
+		if(domainPortPath.protocol.length()>0)
+		{
+			externalURLs.push(url);
+			shouldFollowExternalURL=true;
+		}
+		return;
+	}
+	// Question: Is this the current server domain? Or are we reconnecting to a server that already has a cache?
 	if (next_server_uid == 0)
 	{
-		next_server_uid = SessionClient::CreateSessionClient(this);
+		next_server_uid = SessionClient::CreateSessionClient(this, domainPortPath.domain);
 	}
 	if (!next_server_uid)
 		return;
@@ -94,7 +152,7 @@ void TabContext::ConnectTo(std::string url)
 			return;
 		nextSessionClient->Disconnect(0);
 	}
-	nextSessionClient->RequestConnection(ipP.ip, ipP.port);
+	nextSessionClient->RequestConnection(domainPortPath.path, domainPortPath.port);
 	nextSessionClient->connected_url = url;
 }
 

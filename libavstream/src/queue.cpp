@@ -104,7 +104,7 @@ namespace avs
 			else
 			{
 				std::cerr << name.c_str() << " Queue::write: Max buffers " << m_maxBuffers << ", can't increase any more.\n";
-				return Result::GeometryDecoder_InvalidBufferSize;
+				return Result::IO_Full;
 			}
 #if LIBAVSTREAM_DEBUG_MESSAGES
 			std::cerr << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";

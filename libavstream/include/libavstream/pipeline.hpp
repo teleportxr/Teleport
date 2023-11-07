@@ -35,9 +35,19 @@ class AVSTREAM_API Pipeline final
 	void writeTimingsHeader();
 	void writeTimings(uint32_t timestamp, const std::vector<double>& timings);
 
+	bool m_blocked=false;
 public:
 	Pipeline();
 	~Pipeline();
+
+	void SetPipelineBlocked(bool b)
+	{
+		m_blocked = b;
+	}
+	bool IsPipelineBlocked() const
+	{
+		return m_blocked;
+	}
 
 	uint64_t GetStartTimestamp() const;
 	uint64_t GetTimestamp() const;

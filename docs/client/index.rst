@@ -32,3 +32,22 @@ server's particular setup. Their functions will change, depending on the app you
 
 This is distinct from many other online XR systems. Two different Teleport servers are not two distinct
 "levels", "worlds" or "locations" for a single application. They are two different apps.
+
+Teleport URL's
+--------------
+A teleport URL is of the form:
+
+``[PROTOCOL]://[DOMAIN:PORT]/[PATH]/[PARAMETERS]``
+
+This is similar to an HTTP request, except that a Teleport URL doesn't refer to a "document" or "resource". Instead, it's a request for a real-time connection.
+The [PROTOCOL] would be 'teleport'. [DOMAIN:PORT] would be a domain name of either two or three parts, or an IP address, optionally followed by a colon and a port number. The interpretation of the path and parameters are up to the server, but in general, the path should describe a location within the server's application, while the parameters should represent any other information the URL encodes.
+
+Specifically, a Teleport URL would look like this:
+
+``teleport://subdomain.domain.tld:port/path/?parameter=value``
+
+For example:
+
+`teleport://home.teleportvr.io <teleport://home.teleportvr.io>`_
+
+

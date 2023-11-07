@@ -44,10 +44,6 @@ namespace clientrender
 		/// Full reset, when the server has changed.
 		void Clear();
 
-		//Updates any processes that need to happen on a regular basis; should be called at least once per second.
-		//	deltaTime : Milliseconds that has passed since the last call to Update();
-		void Update(float deltaTime);
-
 		// Inherited via GeometryTargetBackendInterface
 		avs::Result CreateMesh(avs::MeshCreate& meshCreate) override;
 		avs::Result CreateSubScene(avs::uid server_uid,const SubSceneCreate& meshCreate);

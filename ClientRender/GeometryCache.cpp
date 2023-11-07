@@ -5,11 +5,20 @@ using namespace clientrender;
 
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform=nullptr;
 
-GeometryCache::GeometryCache()
-		:mNodeManager(new clientrender::NodeManager),
-		  mTextureManager(&clientrender::Texture::Destroy),
-		  mIndexBufferManager(&clientrender::IndexBuffer::Destroy),
-		  mVertexBufferManager(&clientrender::VertexBuffer::Destroy)
+GeometryCache::GeometryCache(avs::uid c_uid)
+		:cache_uid(c_uid), mNodeManager(new clientrender::NodeManager),
+	  mMaterialManager(c_uid),
+	  mSubsceneManager(c_uid),
+	  mTextureManager(c_uid, &clientrender::Texture::Destroy),
+	  mMeshManager(c_uid),
+	  mSkeletonManager(c_uid),
+	  mLightManager(c_uid),
+	  mBoneManager(c_uid),
+	  mAnimationManager(c_uid),
+	  mTextCanvasManager(c_uid),
+	  mFontAtlasManager(c_uid),
+	  mIndexBufferManager(c_uid, &clientrender::IndexBuffer::Destroy),
+	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
 }
 
@@ -28,7 +37,7 @@ static std::vector<avs::uid> cache_uids;
 
 void GeometryCache::CreateGeometryCache(avs::uid cache_uid)
 {
-	caches[cache_uid]=std::make_shared<GeometryCache>();
+	caches[cache_uid] = std::make_shared<GeometryCache>(cache_uid);
 	cache_uids.push_back(cache_uid);
 }
 

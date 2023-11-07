@@ -11,12 +11,14 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 	endif()
 endif()
 
-configure_file(client_default.ini assets/client.ini)
+#configure_file(client_default.ini assets/client.ini) 
 file(GLOB inifiles "client_default.ini" assets/client.ini)
 set(srcs
 	Main.cpp
 	MemoryUtil.cpp
 	MemoryUtil.h
+	ProcessHandler.h
+	ProcessHandler.cpp
 	UseOpenXR.cpp
 	UseOpenXR.h
 	Resource.h
@@ -94,6 +96,10 @@ target_link_libraries(TeleportPCClient LibDataChannel::LibDataChannelStatic usrs
 
 
 target_link_libraries(TeleportPCClient -ignore:4711)
+
+if(WIN32)
+	target_link_libraries(TeleportPCClient Shlwapi.lib)
+endif()
 
 target_link_options(TeleportPCClient PUBLIC /ignore:4711)
 target_compile_options(TeleportPCClient PRIVATE /wd4711)

@@ -17,10 +17,13 @@ namespace teleport
 		public:
 			static const std::set<int32_t> &GetTabIndices();
 			static std::shared_ptr<TabContext> GetTabContext(int32_t index);
+			static int32_t GetEmptyTabContext();
 			static int32_t AddTabContext();
 			static void DeleteTabContext(int32_t index);
 			static void ConnectButtonHandler(int32_t tab_context_id, const std::string &url);
 			static void CancelConnectButtonHandler(int32_t tab_context_id);
+			static bool ShouldFollowExternalURL();
+			static std::string PopExternalURL();
 
 			void ConnectTo(std::string url);
 			void CancelConnection();
@@ -35,6 +38,10 @@ namespace teleport
 
 			//! Communication from SessionClient
 			void ConnectionComplete(avs::uid uid);
+
+			//! Is the tabContext connected or connecting?
+			//! If not, it's available for a connection.
+			bool IsInUse() const;
 		};
 	}
 }

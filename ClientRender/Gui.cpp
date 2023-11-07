@@ -1212,13 +1212,17 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::TableNextColumn();
 					ImGui::Text("Hidden");
 					ImGui::TableNextColumn();
-					bool hidden=!selected_node->IsVisible();
+					bool hidden = !selected_node->IsVisible();
+					ImGui::BeginDisabled(true);
 					ImGui::Checkbox("##isHidden", &hidden);
+					ImGui::EndDisabled();
 					ImGui::TableNextColumn();
 					ImGui::Text("Stationary");
 					ImGui::TableNextColumn();
-					bool stationary=selected_node->IsStatic();
+					bool stationary = selected_node->IsStatic();
+					ImGui::BeginDisabled(true);
 					ImGui::Checkbox("##isStatic", &stationary);
+					ImGui::EndDisabled();
 					ImGui::EndTable();
 				}
 				if (ImGui::BeginTable("selected1", 5))
@@ -1637,27 +1641,26 @@ bool Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
 								,"ps_debug_normal_vertexnormals"
 								,"ps_debug_lightmaps"
 								,"ps_debug_ambient"
-								,"ps_debug_anim"
 								,"ps_debug_uvs"
+								,"ps_debug_anim"
 								,"ps_digitizing"
 								};
 	ImGui::LabelText("DebugShaders","Debug Shader");
 	static int chooseDebugShader= 0;
 	int oldChooseDebugShader = chooseDebugShader;
 	ImGui::RadioButton("Default", &chooseDebugShader, 0);
-	ImGui::SameLine();
 	ImGui::RadioButton("Albedo", &chooseDebugShader, 1);
 	ImGui::SameLine();
 	ImGui::RadioButton("Normals", &chooseDebugShader, 2);
 	ImGui::SameLine();
 	ImGui::RadioButton("Vertex Normals", &chooseDebugShader, 3);
-	ImGui::RadioButton("Anim", &chooseDebugShader, 4);
+	ImGui::RadioButton("Lightmaps", &chooseDebugShader, 4);
 	ImGui::SameLine();
-	ImGui::RadioButton("Lightmaps", &chooseDebugShader, 5);
+	ImGui::RadioButton("Ambient", &chooseDebugShader, 5);
 	ImGui::SameLine();
-	ImGui::RadioButton("Ambient", &chooseDebugShader, 6);
+	ImGui::RadioButton("UVs", &chooseDebugShader, 6);
+	ImGui::RadioButton("Anim", &chooseDebugShader, 7);
 	ImGui::SameLine();
-	ImGui::RadioButton("UVs", &chooseDebugShader, 7);
 	ImGui::RadioButton("Digitizing", &chooseDebugShader, 8);
 	if (oldChooseDebugShader != chooseDebugShader)
 	{
@@ -1983,6 +1986,14 @@ void Gui::ListBookmarks()
 		BookmarkEntry(r, r);
 	}
 }
+static bool overwrite_url_edit=false;
+void Gui::Navigate(const std::string &url)
+{
+	connect_please =true;
+	strncpy(url_buffer,url.c_str(),std::min((size_t)MAX_URL_SIZE,url.size()+1));
+	url_buffer[MAX_URL_SIZE - 1] = 0;
+	overwrite_url_edit=true;
+}
 
 void Gui::MenuBar2D()
 {
@@ -1993,19 +2004,24 @@ void Gui::MenuBar2D()
 	}
 	if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 		TIMED_TOOLTIP("Return to lobby");
+	if(overwrite_url_edit)
+	{
+		ImGui::SetKeyboardFocusHere();
+		overwrite_url_edit=false;
+	}
 	auto& config = client::Config::GetInstance();
 	{
 		if(!current_tab_context)
 		{
-			current_tab_context = client::TabContext::AddTabContext();
+			current_tab_context = client::TabContext::GetEmptyTabContext();
+			if (!current_tab_context)
+				current_tab_context = client::TabContext::AddTabContext();
 		}
 		auto tabContext = client::TabContext::GetTabContext(current_tab_context);
 		avs::uid server_uid = tabContext->GetServerUid();
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 		bool connecting = sessionClient?sessionClient->IsConnecting():false;
 		bool connected = sessionClient?sessionClient->IsConnected() : false;
-		bool connect_please=false;
-		bool cancel_please=false;
 		ImGui::SameLine();
 		int num_buttons=5;
 
@@ -2047,13 +2063,15 @@ void Gui::MenuBar2D()
 		if(cancel_please)
 		{
 			cancelConnectHandler(current_tab_context);
+			cancel_please = false;
 		}
 		if(connect_please)
 		{
 			show_bookmarks = false;
 			show_options = false;
 			current_url = url_buffer;
-			connectHandler(current_tab_context,current_url);
+			connectHandler(current_tab_context, current_url);
+			connect_please = false;
 		}
 
 		ImGui::SameLine();
@@ -2530,7 +2548,9 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 				const std::set<int32_t> &tabIndices = client::TabContext::GetTabIndices();
 				if (!current_tab_context)
 				{
-					current_tab_context = client::TabContext::AddTabContext();
+					current_tab_context = client::TabContext::GetEmptyTabContext();
+					if (!current_tab_context)
+						current_tab_context = client::TabContext::AddTabContext();
 				}
 				std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
 				avs::uid server_uid = tabContext->GetServerUid();
@@ -2566,17 +2586,21 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 				ImGui::SameLine();
 				if (!connecting)
 				{
-					if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(64, 32)))
+					if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(64, 32))||connect_please)
 					{
 						current_url = url_buffer;
 						connectHandler(current_tab_context,current_url);
+						connect_please = false;
+						cancel_please = false;
 					}
 				}
 				else
 				{
-					if (ImGui::Button(ICON_FK_TIMES, ImVec2(64, 32)))
+					connect_please = false;
+					if (ImGui::Button(ICON_FK_TIMES, ImVec2(64, 32)) || cancel_please)
 					{
 						cancelConnectHandler(current_tab_context);
+						cancel_please = false;
 					}
 				}
 

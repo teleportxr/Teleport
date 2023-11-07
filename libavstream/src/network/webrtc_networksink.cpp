@@ -505,7 +505,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 		}
 		catch (std::runtime_error err)
 		{
-			if (err.what())
+			if (err.what()) 
 				AVSLOG(Warning) << err.what() << std::endl;
 			else
 				AVSLOG(Warning) << "std::runtime_error." << std::endl;

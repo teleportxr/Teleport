@@ -10,7 +10,7 @@
 // C RunTime Header Files
 #include <stdlib.h>
 #include <filesystem>
-//#include <Shlobj.h>
+#include <regex>
 #include <Shlobj_core.h>
 #include "Resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
@@ -19,10 +19,13 @@
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/DisplaySurface.h"
 #include "Platform/Core/Timer.h"
-
+#include "Platform/Core/StringFunctions.h"
+#include "TeleportClient/URLHandlers.h"
+#include "TeleportClient/TabContext.h"
 #include "ClientRender/Renderer.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "Config.h"
+#include "ProcessHandler.h"
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 #include "TeleportClient/ClientDeviceState.h"
@@ -63,12 +66,14 @@ std::string teleport_path;
 std::string storage_folder;
 // Need ONE global instance of this:
 avs::Context context;
+bool receive_link = false;
+std::string cmdLine ;
 
 #define MAX_LOADSTRING 100
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
-WCHAR szWindowClass[]=L"MainWindow";            // the main window class name
+WCHAR szWindowClass[] = L"TeleportPCClientWindowClass"; // the main window class name
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -78,13 +83,39 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND,bool,bool);
 void ShutdownRenderer(HWND);
 #include "Platform/Core/FileLoader.h"
+#include <shellapi.h>
+
+void ReceiveCmdLine()
+{
+	using std::string, std::regex;
+	try
+	{
+		string re_str = R"(\"([^\"]*)\")";
+		regex re(re_str, std::regex_constants::icase);
+		std::smatch match;
+		if (std::regex_search(cmdLine, match, re))
+		{
+			cmdLine = (match.size() > 1 && match[1].matched) ? match[1].str() : "";
+		}
+	}
+	catch (...)
+	{
+	}
+
+	if (cmdLine.length() > 0)
+		receive_link = true;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	std::wstring wcmdline = lpCmdLine;
+	cmdLine = platform::core::WStringToUtf8(wcmdline);
+	if(EnsureSingleProcess(cmdLine))
+		return 0;
 	
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	fileLoader->SetRecordFilesLoaded(true);
@@ -96,9 +127,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return 0;
 	}
 	// run from pc_client directory.
-	if(!std::filesystem::exists("assets/client.ini"))
+	std::filesystem::path current_path = std::filesystem::current_path();
+	if(!std::filesystem::exists("client_default.ini"))
 	{
-		std::filesystem::path current_path=std::filesystem::current_path();
 		wchar_t filename[700];
 		DWORD res=GetModuleFileNameW(nullptr,filename,700);
 		if(res)
@@ -106,17 +137,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			current_path=filename;
 			current_path=current_path.remove_filename();
 		}
-		while(!current_path.empty()&&!std::filesystem::exists("assets/client.ini"))
+		// Get into the pc_client directory.
+		while (!current_path.empty() && !std::filesystem::exists("pc_client/client_default.ini"))
 		{
-			auto prev_path=current_path;
-			std::string rel_pc_client="../../pc_client";
-			current_path=current_path.append(rel_pc_client).lexically_normal();
+			std::filesystem::path prev_path = current_path;
+			//std::string rel_pc_client="../../pc_client";
+			current_path=current_path.append("../").lexically_normal();
 			if(prev_path==current_path)
 				break;
 			if(std::filesystem::exists(current_path))
 				std::filesystem::current_path(current_path);
+			else
+				break;
 		}
 	}
+	current_path = current_path.append("pc_client").lexically_normal();
+	if (!std::filesystem::exists(current_path))
+		return -1;
+	std::filesystem::current_path(current_path);
 	auto &config=client::Config::GetInstance();
 	// Get a folder we can write to:
 	
@@ -149,21 +187,30 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
+	if (!hWnd)
+	{
+		return FALSE;
+	}
 	InitRenderer(hWnd, config.enable_vr, config.dev_mode);
-	if(!hWnd)
-    {
-        return FALSE;
-    }
+	receive_link=false;
+	// remove quotes etc.
+	ReceiveCmdLine();
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
 	MSG msg;
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
-       // if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		{
+			// Have we entered a URL or followed a link that is not a teleport protocol link?
+			if(client::TabContext::ShouldFollowExternalURL())
+			{
+				std::string url=client::TabContext::PopExternalURL();
+				teleport::client::LaunchProtocolHandler( url);
+			}
             TranslateMessage(&msg);
             DispatchMessage(&msg);
-        }
+		}
     }
 	
 	if(fileLoader->GetRecordFilesLoaded())
@@ -190,19 +237,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     WNDCLASSEXW wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
-	while(fs::current_path().has_parent_path()&&fs::current_path().filename()!="pc_client")
-	{
-		fs::current_path(fs::current_path().parent_path());
-		for (auto const& dir_entry : std::filesystem::directory_iterator{fs::current_path()}) 
-		{
-			auto str=dir_entry.path().filename();
-			if(str=="pc_client")
-			{
-				fs::current_path(dir_entry.path());
-				break;
-			}
-		}
-	}
 	teleport_path = fs::current_path().parent_path().string();
 
 	// replacing Windows' broken resource system, just load our icon from a png:
@@ -223,7 +257,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = 0;
-    wcex.lpszClassName  = L"MainWindow";
+	wcex.lpszClassName = szWindowClass;
 
 	wcex.hIconSm = CreateIconFromResourceEx(buffer.data(), (DWORD)bufferSize, 1, 0x30000, 32, 32, LR_DEFAULTCOLOR);
  
@@ -370,7 +404,6 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y,int w,int h);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	//return 0;
 	bool ui_handled=false;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{
@@ -404,6 +437,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		switch (message)
 		{
+		case WM_COPYDATA:
+		// An external application has sent us a message.
+			{
+				cmdLine=GetExternalCommandLine(lParam);
+				ReceiveCmdLine();
+			}
+			break;
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
 			if(gui.GetGuiType()==teleport::GuiType::None)
@@ -509,7 +549,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if(gdi)
 			{
 				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-
 				clientRenderer->Update(timestamp_ms);
 				useOpenXR.Tick();
 #ifndef FIX_BROKEN
@@ -535,6 +574,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					dsmi->Render(hWnd);
 				}
 #endif
+				if(receive_link)
+				{
+					gui.SetGuiType(teleport::GuiType::Connection);
+					gui.Navigate(cmdLine);
+					receive_link = false;
+				}
 				displaySurfaceManager.EndFrame();
 				renderPlatform->EndFrame();
 				cpuProfiler.EndFrame();

@@ -67,8 +67,9 @@ namespace clientrender
 		geometry_cache_uid next_geometry_cache_uid=1;
 		std::map<uint64_t,geometry_cache_uid> uid_mapping;
 		static platform::crossplatform::RenderPlatform *renderPlatform;
+		avs::uid cache_uid=0;
 	public:
-		GeometryCache();
+		GeometryCache(avs::uid c_uid);
 		~GeometryCache();
 		static void SetRenderPlatform(platform::crossplatform::RenderPlatform *r)
 		{

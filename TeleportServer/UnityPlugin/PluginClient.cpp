@@ -441,6 +441,23 @@ TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 	return true;
 }
 
+TELEPORT_EXPORT unsigned int Client_GetSignalingPath(avs::uid clientID, unsigned int bufferLength, char *lpBuffer)
+{
+	auto c = clientManager.signalingService.getSignalingClient(clientID);
+	if(c)
+	{
+		size_t final_len = std::min(static_cast<size_t>(bufferLength), c->path.length());
+		if (final_len == c->path.length())
+		{
+			memcpy(reinterpret_cast<void *>(lpBuffer), c->path.c_str(), final_len);
+			lpBuffer[final_len] = 0;
+		}
+		return static_cast<unsigned int>(c->path.length());
+	}
+	if(lpBuffer)
+		lpBuffer[0] = 0;
+	return 0;
+}
 
 TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int bufferLength,  char* lpBuffer)
 {
