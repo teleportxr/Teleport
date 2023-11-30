@@ -12,6 +12,7 @@
 #include "NodeManager.h"
 #include "ResourceManager.h"
 #include "TeleportCore/FontAtlas.h"
+#include "flecs.h"
 
 namespace clientrender
 {
@@ -43,11 +44,10 @@ namespace clientrender
 		avs::TextureCompression										compressionFormat	= avs::TextureCompression::UNCOMPRESSED;
 		float														valueScale			= 0.0f;										// scale on transcode.
 
-		UntranscodedTexture(avs::uid cache_uid, avs::uid uid, const void* ptr, size_t size, const std::shared_ptr<clientrender::Texture::TextureCreateInfo>& textureCreateInfo,
+		UntranscodedTexture(avs::uid cache_uid, avs::uid uid, const std::vector<uint8_t> &d, const std::shared_ptr<clientrender::Texture::TextureCreateInfo> &textureCreateInfo,
 			const std::string& name, avs::TextureCompression compressionFormat, float valueScale)
-			: cache_or_server_uid(cache_uid),texture_uid(uid), data(size), textureCI(textureCreateInfo), name(name), compressionFormat(compressionFormat), valueScale(valueScale)
+			: cache_or_server_uid(cache_uid),texture_uid(uid), data(d), textureCI(textureCreateInfo), name(name), compressionFormat(compressionFormat), valueScale(valueScale)
 		{
-			memcpy(data.data(), ptr, size);
 		}
 	};
 	//! A simple mapping to a subscene.
@@ -67,7 +67,8 @@ namespace clientrender
 		geometry_cache_uid next_geometry_cache_uid=1;
 		std::map<uint64_t,geometry_cache_uid> uid_mapping;
 		static platform::crossplatform::RenderPlatform *renderPlatform;
-		avs::uid cache_uid=0;
+		avs::uid cache_uid = 0;
+		flecs::world flecs_world;
 	public:
 		GeometryCache(avs::uid c_uid);
 		~GeometryCache();
@@ -105,7 +106,7 @@ namespace clientrender
 		void Update( float timeElapsed_s)
 		{
 			if(lifetimeFactor>0)
-				mNodeManager->Update(timeElapsed_s);
+				mNodeManager.Update(timeElapsed_s);
 			mIndexBufferManager.Update(timeElapsed_s,lifetimeFactor);
 			mMaterialManager.Update(timeElapsed_s,lifetimeFactor);
 			mTextureManager.Update(timeElapsed_s,lifetimeFactor);
@@ -160,7 +161,7 @@ namespace clientrender
 		//Clear all resources.
 		void ClearAll()
 		{
-			mNodeManager->Clear();
+			mNodeManager.Clear();
 
 			mIndexBufferManager.Clear();
 			mMaterialManager.Clear();
@@ -177,6 +178,7 @@ namespace clientrender
 			ClearResourceRequests();
 			ClearReceivedResources();
 			m_CompletedNodes.clear();
+			flecs_world.reset();
 		}
 		
 		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
@@ -193,7 +195,7 @@ namespace clientrender
 		std::vector<avs::uid> GetCompletedNodes() const override;
 		void ClearCompletedNodes() override;
 
-		std::unique_ptr<clientrender::NodeManager>				mNodeManager;
+		clientrender::NodeManager								mNodeManager;
 		ResourceManager<avs::uid,clientrender::Material>		mMaterialManager;
 		ResourceManager<avs::uid,SubSceneCreate>				mSubsceneManager;
 		ResourceManager<avs::uid,clientrender::Texture>			mTextureManager;

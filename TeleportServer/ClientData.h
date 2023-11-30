@@ -40,7 +40,7 @@ namespace teleport
 		class ClientData
 		{
 		public:
-			ClientData(  std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
+			ClientData(avs::uid clientID, std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
 			void StartStreaming(const ServerSettings &casterSettings
 				, uint32_t connectionTimeout
 				, uint64_t sessionid
@@ -52,8 +52,6 @@ namespace teleport
 			//! Called after reparenting to inform the client of the new parent.
 			void reparentNode(avs::uid nodeID);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
-			// client settings from engine-side:
-			ClientSettings clientSettings;
 			avs::ClientDynamicLighting clientDynamicLighting;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
@@ -67,7 +65,6 @@ namespace teleport
 				return connectionState;
 			}
 
-			bool validClientSettings = false;
 			bool videoKeyframeRequired = false;
 
 			bool setOrigin(uint64_t ctr,avs::uid uid);
@@ -81,6 +78,7 @@ namespace teleport
 			}
 			void resendUnconfirmedOrthogonalStates();
 		protected:
+			avs::uid clientID=0;
 			teleport::core::SetupCommand lastSetupCommand;
 			std::map<avs::uid, std::shared_ptr<OrthogonalNodeStateMap>> orthogonalNodeStates;
 			uint64_t nextConfirmationNumber = 1;

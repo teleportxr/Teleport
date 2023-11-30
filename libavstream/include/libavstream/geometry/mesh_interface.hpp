@@ -813,7 +813,6 @@ namespace avs
 		virtual Result encode(uint64_t timestamp, GeometryRequesterBackendInterface* requester) = 0;
 		virtual Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual Result unmapOutputBuffer() = 0;
-		virtual void setMinimumPriority(int32_t) =0;
 	};
 
 	/*! Structure to pass to GeometryTargetBackendInterface 

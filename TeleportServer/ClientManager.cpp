@@ -17,7 +17,13 @@
 
 using namespace teleport;
 using namespace server;
+ClientManager clientManagerInstance ;
 
+
+ClientManager &ClientManager::instance()
+{
+	return clientManagerInstance;
+}
 
 ClientManager::ClientManager()
 {
@@ -71,14 +77,14 @@ bool ClientManager::shutdown()
 
 void ClientManager::startStreaming(avs::uid clientID)
 {
-	auto client = clientManager.GetClient(clientID);
+	auto client = GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to start streaming to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	//not ready?
-	if (!client->validClientSettings)
+	//not yet received client settings from the engine?
+	if (clientSettings.find(clientID)==clientSettings.end())
 	{
 		TELEPORT_CERR << "Failed to start streaming to Client " << clientID << ". validClientSettings is false!  " << clientID << "!\n";
 		return;
@@ -139,9 +145,9 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP)
 	if (!client)
 	{
 		std::shared_ptr<ClientMessaging> clientMessaging
-			= std::make_shared<ClientMessaging>(&serverSettings, signalingService, setHeadPose, setControllerPose, processNewInputState, processNewInputEvents, onDisconnect, connectionTimeout, reportHandshake, &clientManager);
+			= std::make_shared<ClientMessaging>(&serverSettings, signalingService, setHeadPose, setControllerPose, processNewInputState, processNewInputEvents, onDisconnect, connectionTimeout, reportHandshake,clientID);
 
-		client = std::make_shared<ClientData>(clientMessaging);
+		client = std::make_shared<ClientData>(clientID,clientMessaging);
 
 		if (!clientMessaging->startSession(clientID, clientIP))
 		{
@@ -207,6 +213,12 @@ void ClientManager::removeClient(avs::uid clientID)
 	client->clientMessaging->stopSession();
 	clientIDs.erase(clientID);
 	clients.erase(clientID);
+	clientSettings.erase(clientID);
+}
+void ClientManager::SetClientSettings(avs::uid clientID,const struct ClientSettings &c)
+{
+	clientSettings[clientID] = std::make_shared<ClientSettings>();
+	*(clientSettings[clientID])=c;
 }
 
 bool ClientManager::hasClient(avs::uid clientID)

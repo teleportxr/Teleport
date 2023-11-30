@@ -46,18 +46,21 @@ namespace filesystem = std::filesystem;
 #include <regex>
 std::string StandardizePath(const std::string &file_name,const std::string &path_root)
 {
-	std::string p=file_name;
+	filesystem::path path(file_name);
+	path = path.lexically_relative(path_root);
+	path = path.replace_extension("");
+	std::string p=path.generic_u8string();
 	std::replace(p.begin(),p.end(),' ','%');
 	std::replace(p.begin(),p.end(),'\\','/');
 	std::string r=path_root;
 	if(r.size()&&r[r.size()-1]!='/')
 		r+="/";
 	p=std::regex_replace( p, std::regex(r), "" );
-	//size_t last_dot_pos=p.find_last_of('.');
-	//size_t last_slash_pos=p.find_last_of('/');
+	size_t last_dot_pos = p.rfind('.');
+	size_t last_slash_pos = p.rfind('/');
 	// Knock off the extension if it's the extension of the filename, not just a dot in a pathname...
-	//if(last_dot_pos<p.length()&&(last_slash_pos>=p.length()||last_slash_pos<last_dot_pos))
-	//	p=p.substr(0,last_dot_pos);
+	if(last_dot_pos<p.length()&&(last_slash_pos>=p.length()||last_slash_pos<last_dot_pos))
+		p=p.substr(0,last_dot_pos);
 	return p;
 }
 #ifdef _MSC_VER
@@ -280,13 +283,13 @@ void GeometryStore::clear(bool freeMeshBuffers)
 	//Free memory for texture pixel data.
 	for(auto& idTexturePair : textures)
 	{
-		delete[] idTexturePair.second.texture.data;
+		idTexturePair.second.texture.data.clear();
 	}
 
 	//Free memory for shadow map pixel data.
 	for(auto& idShadowPair : shadowMaps)
 	{
-		delete[] idShadowPair.second.texture.data;
+		idShadowPair.second.texture.data.clear();
 	}
 
 	//Clear lookup tables; we want to clear the resources inside them, not their structure.
@@ -1001,18 +1004,15 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 	return true;
 }
 
-void standardize_path(std::string& p)
-{
-	std::replace(p.begin(), p.end(), ' ', '%');
-}
-
 class resource_ofstream :public std::ofstream
 {
 protected:
 	std::function<std::string(avs::uid)> uid_to_path;
 public:
-	resource_ofstream(const char* filename, std::function<std::string(avs::uid)> f)
-		:std::ofstream(filename, std::ofstream::out | std::ofstream::binary)
+	std::string filename;
+	resource_ofstream(const char *fn, std::function<std::string(avs::uid)> f)
+		: filename(fn) 
+		,std::ofstream(fn, std::ofstream::out | std::ofstream::binary)
 		, uid_to_path(f)
 	{
 		unsetf(std::ios_base::skipws);
@@ -1051,8 +1051,10 @@ class resource_ifstream :public std::ifstream
 protected:
 	std::function<avs::uid(std::string)> path_to_uid;
 public:
-	resource_ifstream(const char* filename, std::function<avs::uid(std::string)> f)
-		:std::ifstream(filename, resource_ifstream::in | resource_ifstream::binary)
+	std::string filename;
+	resource_ifstream(const char* fn, std::function<avs::uid(std::string)> f)
+		: filename(fn) 
+		, std::ifstream(fn, resource_ifstream::in | resource_ifstream::binary)
 		, path_to_uid(f)
 	{
 		unsetf(std::ios_base::skipws);
@@ -1062,11 +1064,17 @@ public:
 	{
 		read((char*)&t, sizeof(t));
 	}
+
+	std::vector<char> readData()
+	{
+		std::vector<char> fileContents((std::istreambuf_iterator<char>(*this)),
+									   std::istreambuf_iterator<char>());
+		return fileContents;
+	}
 	friend resource_ifstream& operator>>(resource_ifstream& stream, avs::uid& u)
 	{
 		std::string p;
 		stream >> p;
-		standardize_path(p);
 		u = stream.path_to_uid(p);
 		return stream;
 	}
@@ -1083,7 +1091,6 @@ public:
 void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
 {
 	std::string p=std::string(path);
-	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 	auto &mesh=meshes[standard][id] = ExtractedMesh{guid, path, lastModified, newMesh};
@@ -1123,28 +1130,44 @@ void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,st
 	}
 }
 
-template<typename ExtractedResource> std::string MakeResourceFilename(ExtractedResource& resource)
+bool validate_path(const std::string &p)
 {
-	std::string file_name;
-	file_name+=resource.path+resource.fileExtension();
-	return file_name;
+	if(p.find(' ')<p.length())
+	{
+		TELEPORT_CERR<<"Validation failed for path "<<p<<": paths should not contain spaces.\n";
+		return false;
+	}
+	if (p.find('.') < p.length())
+	{
+		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain periods.\n";
+		return false;
+	}
+	if (p.find(',') < p.length())
+	{
+		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain commas.\n";
+		return false;
+	}
+	return true;
 }
 
 void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
 {
+	if(!validate_path(path))
+		return ;
 	std::string p=std::string(path);
-	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
  	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
 }
 
-void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string cacheFilePath, bool genMips
+void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
+	if (!validate_path(path))
+		return;
 	auto p=std::string(path);
 	bool black = true;
-	for (size_t i = 0; i < newTexture.dataSize; i++)
+	for (size_t i = 0; i < newTexture.data.size(); i++)
 	{
 		if (newTexture.data[i] != 0)
 		{
@@ -1157,18 +1180,17 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 		TELEPORT_INTERNAL_CERR("Black texture {0}", path.c_str());
 		TELEPORT_INTERNAL_BREAK_ONCE("");
 	}
-	standardize_path(p);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
-	uint16_t numImages=*((uint16_t*)newTexture.data);
+	uint16_t numImages=*((uint16_t*)newTexture.data.data());
 	std::vector<uint32_t> imageOffsets(numImages);
-	memcpy(imageOffsets.data(),newTexture.data+2,sizeof(int32_t)*numImages);
-	imageOffsets.push_back(newTexture.dataSize);
+	memcpy(imageOffsets.data(),newTexture.data.data()+2,sizeof(int32_t)*numImages);
+	imageOffsets.push_back((uint32_t)newTexture.data.size());
 	std::vector<size_t> imageSizes(numImages);
 	for(size_t i=0;i<numImages;i++)
 	{
 		imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
-		if(imageSizes[i]>newTexture.dataSize)
+		if(imageSizes[i]>newTexture.data.size())
 		{
 			TELEPORT_BREAK_ONCE("Bad data.");
 			return;
@@ -1179,9 +1201,8 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 	{
 		newTexture.compression=avs::TextureCompression::UNCOMPRESSED;
 	}
-	if(!cacheFilePath.empty() )
 	{
-		bool validFileExists = false;
+	/*	bool validFileExists = false;
 		filesystem::path fsFilePath = cacheFilePath;
 		if(filesystem::exists(fsFilePath))
 		{
@@ -1193,19 +1214,12 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 
 			//The file is valid if the basis file is younger than the texture file.
 			validFileExists = basisModified >= lastModified;
-		}
-		// if it isn't to be compressed or it's already been, just take the data we've been given. But copy it, because the original pointer is not ours.
-		if(newTexture.compressed==true||newTexture.compression==avs::TextureCompression::UNCOMPRESSED)
-		{
-			uint8_t *newDataCopy = new unsigned char[newTexture.dataSize];
-			memcpy(newDataCopy,newTexture.data,newTexture.dataSize);
-			newTexture.data = newDataCopy;
-		}
+		}*/
 		//Otherwise, queue the texture for compression.
-		else 	// UASTC doesn't work from inside the dll. Unclear why.
+		 	// UASTC doesn't work from inside the dll. Unclear why.
 		{
 			std::shared_ptr<PrecompressedTexture> pct = std::make_shared<PrecompressedTexture>();
-			pct->basisFilePath=cacheFilePath;
+		
 			pct->numMips=newTexture.mipCount;
 			pct->genMips=genMips;
 			pct->highQualityUASTC=highQualityUASTC;
@@ -1215,37 +1229,19 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 			{
 				size_t offset=(size_t)imageOffsets[i];
 				size_t imageSize=(size_t)imageSizes[i];
-				const uint8_t *src=newTexture.data+offset;
+				const uint8_t *src=newTexture.data.data()+offset;
 				std::vector<uint8_t> img;
 				img.resize(imageSize);
 				//Copy data from source, so it isn't lost.
 				memcpy(img.data(), src, img.size());
 				pct->images.push_back(std::move(img));
 			}
- 			newTexture.data = nullptr;
-			newTexture.dataSize=0;
+ 			newTexture.data.clear();
 			
 			texturesToCompress.emplace(id, pct);
 		}
 	}
-	else
-	{
-		newTexture.compression = avs::TextureCompression::UNCOMPRESSED;
-		
-		unsigned char* dataCopy = new unsigned char[newTexture.dataSize];
-		memcpy(dataCopy, newTexture.data, newTexture.dataSize);
-		newTexture.data = dataCopy;
-		if(newTexture.dataSize > 1048576)
-		{
-			TELEPORT_WARN << "Texture \"" << newTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << newTexture.dataSize << "B(" << newTexture.dataSize / 1048576.0f << "MB).\n";
-		}
-	}
-	textures[id] = ExtractedTexture{ guid, path, lastModified, newTexture };
-	if (newTexture.compressed)
-	{
-		std::string file_name = (cachePath + "/") + MakeResourceFilename(textures[id]);
-		saveResourceBinary(file_name, textures[id]);
-	}
+	textures[id] = ExtractedTexture{guid, path, lastModified, newTexture};
 }
 
 avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
@@ -1262,9 +1258,8 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 	std::filesystem::path p=std::string(ttf_path_utf8);
 	saveResourceBinary(cacheFontFilePath,fa);
 	loadResourceBinary(cacheFontFilePath, "",fa);
-	storeTexture(font_texture_uid,"",relative_asset_path_utf8,lastModified, avsTexture,cachePath+"/"s+cacheTextureFilePath, true,	 true,true);
+	storeTexture(font_texture_uid,"",relative_asset_path_utf8,lastModified, avsTexture, true,	 true,true);
 	fa.fontAtlas.font_texture_uid=font_texture_uid;
-	//Font::Free(avsTexture);
 	return font_atlas_uid;
 }
 
@@ -1329,7 +1324,12 @@ const avs::Texture* GeometryStore::getNextTextureToCompress() const
 
 	return &foundTexture->second.texture;
 }
-
+//#define STB_IMAGE_WRITE_IMPLEMENTATION 1
+#pragma warning(disable:4996)
+namespace teleport
+{
+#include "stb_image_write.h"
+}
 void GeometryStore::compressNextTexture()
 {
 	//No textures to compress.
@@ -1341,180 +1341,106 @@ void GeometryStore::compressNextTexture()
 	ExtractedTexture& extractedTexture = foundTexture->second;
 	avs::Texture& avsTexture = extractedTexture.texture;
 	std::shared_ptr<PrecompressedTexture> compressionData = compressionPair->second;
+	std::string file_name = (cachePath + "/") + extractedTexture.MakeFilename();
 	if (compressionData->textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
-		basisu::basis_compressor_params basisCompressorParams; //Parameters for basis compressor.
-		basisCompressorParams.m_source_images.clear();
-		// Basis stores mip 0 in m_source_images, and subsequent mips in m_source_mipmap_images.
-		// They MUST have equal sizes.
-		if(compressionData->numMips<1)
+		if (!ApplyBasisCompression(extractedTexture, compressionData, compressionStrength,  compressionQuality))
 		{
-			TELEPORT_CERR<<"Bad mipcount "<<compressionData->numMips<<"\n";
 			texturesToCompress.erase(texturesToCompress.begin());
-			return;
+			return ;
 		}
-		size_t imagesPerMip=compressionData->images.size()/compressionData->numMips;
-		if(imagesPerMip*compressionData->numMips!=compressionData->images.size())
+	}
+	else 
+	{
+		size_t n = 0;
+		bool breakout = false;
+		size_t imagesPerMip = compressionData->images.size() / compressionData->numMips;
+		std::vector<std::vector<uint8_t>> subImages;
+		subImages.resize(compressionData->images.size());
+		if (compressionData->textureCompression == avs::TextureCompression::PNG)
 		{
-			TELEPORT_CERR<<"Bad image count "<<compressionData->images.size()<<" for "<<compressionData->numMips<<" mips.\n";
-			texturesToCompress.erase(texturesToCompress.begin());
-			return;
-		}
-		size_t n=0;
-		int w=avsTexture.width;
-		int h=avsTexture.height;
-		bool breakout=false;
-		//compressionData->numMips=std::min((size_t)2,compressionData->numMips);
-		for(size_t m=0;m<compressionData->numMips;m++)
-		{
-			if(breakout)
-				break;
-			for(size_t i=0;i<imagesPerMip;i++)
+			// encode each sub-image as a separate png.
+			for (size_t i = 0; i < imagesPerMip; i++)
 			{
-				if(m>0&&basisCompressorParams.m_source_mipmap_images.size()<imagesPerMip)
-					basisCompressorParams.m_source_mipmap_images.push_back(basisu::vector<basisu::image>());
-				basisu::image image(w, h);
-				// TODO: This ONLY works for 8-bit rgba.
-				basisu::color_rgba_vec& imageData = image.get_pixels();
-				std::vector<uint8_t> &img=compressionData->images[n];
-				if(img.size()>4)
+				if (breakout)
+					break;
+				int w = avsTexture.width;
+				int h = avsTexture.height;
+				for (size_t m = 0; m < compressionData->numMips; m++)
 				{
-					std::string pngString="XXX";
-					memcpy(pngString.data(),img.data()+1,3);
-					if(pngString=="PNG")
+					std::vector<uint8_t> &img = compressionData->images[n];
+					if (img.size() > 4)
 					{
-						TELEPORT_CERR << "Texture " << extractedTexture.getName()<<" was already a PNG, can't Basis-compress this.\n ";
-						breakout=true;
+						std::string pngString = "XXX";
+						memcpy(pngString.data(), img.data() + 1, 3);
+						if (pngString == "PNG")
+						{
+							TELEPORT_CERR << "Texture " << extractedTexture.getName() << " was already a PNG, can't further compress this.\n ";
+							breakout = true;
+							break;
+						}
+					}
+
+					auto write_func=[](void *context, void *data, int size)
+					{
+						std::vector<uint8_t> &subImage = *((std::vector<uint8_t>*)context);
+						subImage.resize(size);
+						unsigned char *target = subImage.data();
+						memcpy(target, data, size);
+					};
+
+					//STBIWDEF int stbi_write_png_to_func(stbi_write_func * func, void *context, int w, int h, int comp, const void *data, int stride_in_bytes);
+
+					int res = stbi_write_png_to_func(write_func, &subImages[n], w, h, 4, (const unsigned char *)(img.data()), w * 4);
+					if (!res)
+					{
+						TELEPORT_CERR << "Texture " << extractedTexture.getName() << " was already a PNG, can't further compress this.\n ";
+						breakout = true;
 						break;
 					}
+					n++;
+					w = (w + 1) / 2;
+					h = (h + 1) / 2;
 				}
-				if(img.size()>4*imageData.size())
-				{
-					// Actually possible with small mips - the PNG can be bigger than the raw mip data.
-					TELEPORT_CERR << "Image data size mismatch.\n";
-					continue;
-				}
-				if(img.size()<4*imageData.size())
-				{
-					TELEPORT_CERR << "Image data size mismatch.\n";
-					continue;
-				}
-				memcpy(imageData.data(),img.data(),img.size());
-				if(m==0)
-					basisCompressorParams.m_source_images.push_back(std::move(image));
-				else
-					basisCompressorParams.m_source_mipmap_images[i].push_back(std::move(image));
-				n++;
 			}
-			w=(w+1)/2;
-			h=(h+1)/2;
 		}
-		if(!breakout)
+		else  //uncompressed
 		{
-			// TODO: This doesn't work for mips>0. So can't flip textures from Unity for example.
-			//basisCompressorParams.m_y_flip=true;
-			basisCompressorParams.m_quality_level = compressionQuality;
-			basisCompressorParams.m_compression_level = compressionStrength;
-
-			basisCompressorParams.m_write_output_basis_files = true;
-			basisCompressorParams.m_out_filename = compressionData->basisFilePath;
-			basisCompressorParams.m_uastc = compressionData->highQualityUASTC;
-
-			uint32_t num_threads = 32;
-			if (compressionData->highQualityUASTC)
-			{
-				num_threads = 1;
-				// Write this to a different filename, it's just for testing.
-				auto ext_pos = basisCompressorParams.m_out_filename.find(".basis");
-				basisCompressorParams.m_out_filename = basisCompressorParams.m_out_filename.substr(0, ext_pos) + "-dll.basis";
-				{
-					texturesToCompress.erase(texturesToCompress.begin());
-					TELEPORT_CERR << "highQualityUASTC is not functional for texture compression.\n";
-					return;
-				}
-
-				// we want the equivalent of:
-				// -uastc -uastc_rdo_m -no_multithreading -debug -stats -output_path "outputPath" "srcPng"
-				basisCompressorParams.m_rdo_uastc_multithreading = false;
-				basisCompressorParams.m_multithreading = false;
-				//basisCompressorParams.m_ktx2_uastc_supercompression = basist::KTX2_SS_NONE;//= basist::KTX2_SS_ZSTANDARD;
-
-				int uastc_level = std::clamp<int>(4, 0, 4);
-
-				//static const uint32_t s_level_flags[5] = { basisu::cPackUASTCLevelFastest, basisu::cPackUASTCLevelFaster, basisu::cPackUASTCLevelDefault, basisu::cPackUASTCLevelSlower, basisu::cPackUASTCLevelVerySlow };
-
-				//basisCompressorParams.m_pack_uastc_flags &= ~basisu::cPackUASTCLevelMask;
-				//basisCompressorParams.m_pack_uastc_flags |= s_level_flags[uastc_level];
-
-				//basisCompressorParams.m_rdo_uastc_dict_size = 32768;
-				//basisCompressorParams.m_check_for_alpha=true;
-				basisCompressorParams.m_debug = true;
-				basisCompressorParams.m_status_output = true;
-				basisCompressorParams.m_compute_stats = true;
-				//basisCompressorParams.m_perceptual=true;
-				//basisCompressorParams.m_validate=false;
-				basisCompressorParams.m_mip_srgb = true;
-				basisCompressorParams.m_quality_level = 128;
-			}
-			else
-			{
-				basisCompressorParams.m_mip_gen = compressionData->genMips;
-				basisCompressorParams.m_mip_smallest_dimension = 4; // ???
-			}
-			basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexType2D;
-			if(avsTexture.cubemap)
-			{
-				basisCompressorParams.m_tex_type = basist::basis_texture_type::cBASISTexTypeCubemapArray;
-			}
-			if (!basisCompressorParams.m_pJob_pool)
-			{
-				basisCompressorParams.m_pJob_pool = new basisu::job_pool(num_threads);
-			}
-
-			if(!basisu::g_library_initialized)
-				basisu::basisu_encoder_init(false,false);
-			if(!basisu::g_library_initialized)
-			{
-				TELEPORT_CERR << "basisu_encoder_init failed.\n";
-				texturesToCompress.erase(texturesToCompress.begin());
-				return ;
-			}
-			basisu::basis_compressor basisCompressor;
-			basisu::enable_debug_printf(true);
-			bool ok = basisCompressor.init(basisCompressorParams);
-			if (ok)
-			{
-				basisu::basis_compressor::error_code result = basisCompressor.process();
-				if (result == basisu::basis_compressor::error_code::cECSuccess)
-				{
-					basisu::uint8_vec basisTex = basisCompressor.get_output_basis_file();
-					avsTexture.dataSize = basisCompressor.get_basis_file_size();
-					unsigned char *target = new unsigned char[avsTexture.dataSize];
-					memcpy(target, basisTex.data(), avsTexture.dataSize);
-					avsTexture.data=target;
-				}
-				else
-				{
-					TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"!\n";
-				}
-			}
-			else
-			{
-				TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"! Basis Universal compressor failed to initialise.\n";
-			}
-			delete basisCompressorParams.m_pJob_pool;
-			basisCompressorParams.m_pJob_pool = nullptr;
-			{
-				std::string file_name = (cachePath + "/") + MakeResourceFilename(extractedTexture);
-				saveResourceBinary(file_name, extractedTexture);
-			}
+			subImages=compressionData->images;
+		}
+		uint16_t imageCount = subImages.size();
+		uint32_t dataSize=(sizeof(uint16_t) + imageCount * sizeof(size_t));
+		for(const auto &img:subImages)
+		{
+			dataSize+=img.size();
+		}
+		avsTexture.data.resize(dataSize);
+		uint8_t *target = avsTexture.data.data();
+		memcpy(target, &imageCount, sizeof(imageCount));
+		target+=sizeof(imageCount);
+		uint32_t offset=sizeof(imageCount)+imageCount*sizeof(uint32_t);
+		std::vector<uint32_t> offsets(imageCount);
+		for (size_t i=0;i<imageCount;i++)
+		{
+			const auto &img = subImages[i];
+			uint32_t sz = (uint32_t)img.size();
+			offsets[i] = offset;
+			offset+=sz;
+		}
+		memcpy(target, offsets.data(), imageCount * sizeof(uint32_t));
+		target += imageCount * sizeof(uint32_t);
+		for (const auto &img : subImages)
+		{
+			memcpy(target, img.data(), img.size());
+			target += img.size();
 		}
 	}
-	else
+	if (compressionData->textureCompression == avs::TextureCompression::UNCOMPRESSED && avsTexture.data.size() > 1048576)
 	{
-		// TODO: just store?
-		TELEPORT_CERR << "Failed to compress texture \"" << avsTexture.name << "\"!\n";
+		TELEPORT_WARN << "Texture \"" << avsTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << avsTexture.data.size() << "B(" << avsTexture.data.size() / 1048576.0f << "MB).\n";
 	}
+	saveResourceBinary(file_name, extractedTexture);
+	
 	texturesToCompress.erase(texturesToCompress.begin());
 }
 
@@ -1534,20 +1460,22 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 	//Save data to new file.
 	auto UidToPath = std::bind(&GeometryStore::UidToPath, this, std::placeholders::_1);
 	auto PathToUid = std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1);
-	resource_ofstream resourceFile(file_name.c_str(), UidToPath);
-	try
 	{
-		resourceFile << resource;
-	}
-	catch(...)
-	{
+		resource_ofstream resourceFile(file_name.c_str(), UidToPath);
+		try
+		{
+			resourceFile << resource;
+		}
+		catch(...)
+		{
+			resourceFile.close();
+			filesystem::remove(file_name);
+			TELEPORT_CERR << "Failed to save \"" << file_name << "\"!\n";
+			filesystem::rename(file_name+ ".bak", file_name );
+			return false;
+		}
 		resourceFile.close();
-		filesystem::remove(file_name);
-		TELEPORT_CERR << "Failed to save \"" << file_name << "\"!\n";
-		filesystem::rename(file_name+ ".bak", file_name );
-		return false;
 	}
-	resourceFile.close();
 	// verify:
 	{
 		resource_ifstream verifyFile(file_name.c_str(), PathToUid);
@@ -1558,8 +1486,10 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
 			teleport::DebugBreak();
-			resource_ofstream saveFile(file_name.c_str(), UidToPath);
-			saveFile << resource;
+			{
+				resource_ofstream saveFile(file_name.c_str(), UidToPath);
+				saveFile << resource;
+			}
 			resource_ifstream verifyFile(file_name.c_str(), PathToUid);
 			ExtractedResource  verifyResource2;
 			verifyFile>>verifyResource2;
@@ -1579,6 +1509,11 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 {
 	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 	std::string p = StandardizePath(file_name, path_root);
+	if(!validate_path(p))
+	{
+		TELEPORT_CERR << "Failed to load " << file_name.c_str() << " as resource path is not valid.\n";
+		return 0;
+	}
 	size_t ext_pos = p.find(ExtractedResource::fileExtension());
 	if (ext_pos < p.length())
 		p = p.substr(0, ext_pos);
@@ -1604,6 +1539,14 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 	catch (...)
 	{
 		TELEPORT_CERR << "Failed to load " << file_name.c_str() << "\n";
+		try
+		{
+			resourceFile >> newResource;
+		}
+		catch (...)
+		{
+			return 0;
+		}
 		return 0;
 	}
 	if(!newResource.IsValid())
@@ -1612,7 +1555,6 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 		TELEPORT_CERR << "Resource: " << file_name.c_str() << " is invalid, not loading.\n";
 		return 0;
 	}
-	standardize_path(p);
 	uid_to_path[newID] = p;
 	path_to_uid[p] = newID;
 	return newID;
@@ -1641,7 +1583,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(con
 	{
 		if (resourceData.second.path.length() == 0)
 			continue;
-		std::string file_name = (path + "/") + MakeResourceFilename(resourceData.second);
+		std::string file_name = (path + "/") + resourceData.second.MakeFilename();
 		saveResourceBinary(file_name, resourceData.second);
 	}
 	return true;
@@ -1656,12 +1598,15 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 	std::map<avs::uid, std::filesystem::file_time_type> timestamps;
 	for (auto const& dir_entry : std::filesystem::recursive_directory_iterator{ fspath })
 	{
-		std::string file_name = dir_entry.path().string();
-		if (file_name.find(search_str) < file_name.length())
+		std::string extn= dir_entry.path().extension().u8string();
+		if (extn.length()>1&&search_str.find(extn) < search_str.length())
+		{
+			std::string file_name = dir_entry.path().string();
 			if (filesystem::exists(file_name))
 			{
 				loadResourceBinary(file_name, path, resourceMap);
 			}
+		}
 	}
 }
 
@@ -1672,9 +1617,8 @@ bool GeometryStore::CheckForErrors()
 	{
 		ExtractedTexture& textureData = t.second;
 		
-		if(textureData.texture.dataSize==0)
+		if(textureData.texture.data.size()==0)
 		{
-			//storeTexture(t.first, textureData.guid, textureData.path, textureData.lastModified, textureData.texture, "", false, false, true);
 			TELEPORT_CERR<<"Texture "<<t.second.getName()<<" is empty.\n";
 			return false;
 		}
@@ -1685,10 +1629,25 @@ bool GeometryStore::CheckForErrors()
 
 avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 {
-	std::string p=path;
-	if(p.size()<2)
+	std::string p = path;
+	if (p.size() < 2)
 		return 0;
-	standardize_path(p);
+	if (!validate_path(path))
+	{
+		TELEPORT_BREAK_ONCE("Failed to generate Uid for invalid path.\n");
+		return 0;
+	}
+	if(p.find(".")<p.length())
+	{
+		TELEPORT_CERR<<"Nonstandard path "<<p<<", paths should not contain periods.\n";
+		return 0;
+	}
+	if (p.find(",") < p.length())
+	{
+		TELEPORT_CERR << "Nonstandard path " << p << ", paths should not contain commas.\n";
+		return 0;
+	}
+	p = StandardizePath(p, "");
 	auto i=path_to_uid.find(p);
 	if(i!=path_to_uid.end())
 	{

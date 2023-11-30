@@ -268,8 +268,7 @@ struct InteropTexture
 			sampler_uid,
 			valueScale,
 			cubemap,
-			dataSize,
-			data
+			std::vector<uint8_t>(data, data+dataSize)
 		};
 	}
 };

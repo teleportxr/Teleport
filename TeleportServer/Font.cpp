@@ -138,10 +138,8 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	uint32_t imageSize=len;//height*pc.stride_in_bytes;
 	uint16_t numImages=1;
 	uint32_t offset0=uint32_t(sizeof(numImages)+sizeof(imageSize));
-	avsTexture.dataSize=imageSize+offset0;
-	
-	unsigned char *target=new unsigned char[avsTexture.dataSize];
-	avsTexture.data=target;
+	avsTexture.data.resize(imageSize + offset0);
+	uint8_t *target = avsTexture.data.data();
 	memcpy(target,&numImages,sizeof(numImages));
 	target+=sizeof(numImages);
 	memcpy(target,&offset0,sizeof(offset0));
@@ -183,8 +181,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	
 void server::Font::Free(avs::Texture &avsTexture)
 {
-	delete [] avsTexture.data;
-	avsTexture.data=0;
+	avsTexture.data.clear();
 }
 
 server::Font &server::Font::GetInstance()

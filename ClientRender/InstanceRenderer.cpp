@@ -291,7 +291,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		}
 	}
 	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_ns,deviceContext.predictedDisplayTimeS);
-	geometryCache->mNodeManager->UpdateExtrapolatedPositions(serverTimeS);
+	geometryCache->mNodeManager.UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
 	auto &clientServerState = sessionClient->GetClientServerState();
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
@@ -354,7 +354,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		for (auto& n : nodePoseStates)
 		{
 			// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
-			std::shared_ptr<clientrender::Node> node = geometryCache->mNodeManager->GetNode(n.first);
+			std::shared_ptr<clientrender::Node> node = geometryCache->mNodeManager.GetNode(n.first);
 			if (node)
 			{
 				// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
@@ -371,7 +371,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 
 void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> g)
 {
-	const std::vector<std::weak_ptr<Node>>& nodeList = g->mNodeManager->GetSortedRootNodes();
+	const std::vector<std::weak_ptr<Node>>& nodeList = g->mNodeManager.GetSortedRootNodes();
 	for (size_t i = 0; i < nodeList.size(); i++)
 	{
 		std::shared_ptr<clientrender::Node> node = nodeList[i].lock();
@@ -381,7 +381,7 @@ void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDevi
 			continue;
 		RenderNode(deviceContext,g,node, false, true, false);
 	}
-	const std::vector<std::weak_ptr<clientrender::Node>>& transparentList = g->mNodeManager->GetSortedTransparentNodes();
+	const std::vector<std::weak_ptr<clientrender::Node>>& transparentList = g->mNodeManager.GetSortedTransparentNodes();
 
 	for (size_t i = 0; i < transparentList.size(); i++)
 	{
@@ -392,7 +392,7 @@ void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDevi
 			continue;
 		RenderNode(deviceContext, g, node, false, false, true);
 	}
-	if (renderState.show_node_overlays)
+	if (renderState.debugOptions.showOverlays)
 	{
 		for (size_t i = 0; i < nodeList.size(); i++)
 		{ 
@@ -520,24 +520,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				bool negative_scale=(sc.x*sc.y*sc.z)<0.0f;
 				bool clockwise=mesh->GetMeshCreateInfo().clockwiseFaces^negative_scale;
 				bool anim=false;
-				auto skeletonNode=node->GetSkeletonNode().lock();
-				if(skeletonNode.get())
-				{
-					std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
-					anim=skeletonInstance!=nullptr;
-					if (skeletonInstance)
-					{
-					// The bone matrices transform from the original local position of a vertex
-					//								to its current animated local position.
-					// For each bone matrix,
-					//				pos_local= (bone_matrix_j) * pos_original_local
-						std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
-						skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
-						BoneMatrices *b=static_cast<BoneMatrices*>(&renderState.boneMatrices);
-						memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
-						renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
-					}
-				}
 				bool highlight=node->IsHighlighted()||force_highlight;
 				
 				highlight|= (renderState.selected_uid == material->id);
@@ -565,8 +547,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					if(!variantPass)
 						continue;
 					auto layoutHash = meshLayout->GetHash();
-					if (meshLayoutDesc.size() == 7)
-						anim=true;
+					//if (meshLayoutDesc.size() == 7)
+					//	anim = true;
+					//LayoutContains(meshLayoutDesc, "WEIGHTS");
 					// To render with normal maps, we must have normal and tangent vertex attributes, and we must have a normal map!
 					bool normal_map = meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::NORMAL)
 									&& meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && (matInfo.normal.texture_uid!=0);
@@ -610,8 +593,28 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 					continue;
 				if (highlight)
 				{
-					renderState.pbrConstants.emissiveOutputScalar += vec4(0.2f, 0.2f, 0.2f, 0.f);
+					renderState.pbrConstants.emissiveOutputScalar += vec4(1.2f, 1.2f,1.2f, 0.f);
 				}
+				bool setBoneConstantBuffer=(pass->usesConstantBufferSlot(12));
+				auto skeletonNode = node->GetSkeletonNode().lock();
+				if (skeletonNode.get())
+				{
+					std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
+					anim = skeletonInstance != nullptr;
+					if (skeletonInstance)
+					{
+						// The bone matrices transform from the original local position of a vertex
+						//								to its current animated local position.
+						// For each bone matrix,
+						//				pos_local= (bone_matrix_j) * pos_original_local
+						std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
+						skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
+						BoneMatrices *b = static_cast<BoneMatrices *>(&renderState.boneMatrices);
+						memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
+					}
+				}
+				if(setBoneConstantBuffer)
+					renderState.pbrEffect->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
 				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_globalIlluminationTexture, globalIlluminationTexture ? globalIlluminationTexture->GetSimulTexture() : nullptr);
 				renderState.pbrEffect->SetTexture(deviceContext,renderState.pbrEffect_diffuseCubemap,instanceRenderState.diffuseCubemapTexture);
 				// If lighting is via static textures.
@@ -832,18 +835,18 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 
 bool InstanceRenderer::OnNodeEnteredBounds(avs::uid id)
 {
-	return geometryCache->mNodeManager->ShowNode(id);
+	return geometryCache->mNodeManager.ShowNode(id);
 }
 
 bool InstanceRenderer::OnNodeLeftBounds(avs::uid id)
 {
-	return geometryCache->mNodeManager->HideNode(id);
+	return geometryCache->mNodeManager.HideNode(id);
 }
 
 
 void InstanceRenderer::UpdateNodeStructure(const teleport::core::UpdateNodeStructureCommand & cmd)
 {
-	geometryCache->mNodeManager->ReparentNode(cmd);
+	geometryCache->mNodeManager.ReparentNode(cmd);
 }
 
 void InstanceRenderer::AssignNodePosePath(const teleport::core::AssignNodePosePathCommand &cmd,const std::string &regexPath)
@@ -853,27 +856,37 @@ void InstanceRenderer::AssignNodePosePath(const teleport::core::AssignNodePosePa
 
 void InstanceRenderer::SetVisibleNodes(const std::vector<avs::uid>& visibleNodes)
 {
-	geometryCache->mNodeManager->SetVisibleNodes(visibleNodes);
+	geometryCache->mNodeManager.SetVisibleNodes(visibleNodes);
 }
 
 void InstanceRenderer::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
-	geometryCache->mNodeManager->UpdateNodeMovement(updateList);
+	geometryCache->mNodeManager.UpdateNodeMovement(updateList);
 }
 
 void InstanceRenderer::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList)
 {
-	geometryCache->mNodeManager->UpdateNodeEnabledState(updateList);
+	geometryCache->mNodeManager.UpdateNodeEnabledState(updateList);
 }
 
 void InstanceRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 {
-	geometryCache->mNodeManager->SetNodeHighlighted(nodeID, isHighlighted);
+	geometryCache->mNodeManager.SetNodeHighlighted(nodeID, isHighlighted);
 }
 
 void InstanceRenderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
 {
-	geometryCache->mNodeManager->UpdateNodeAnimation(animationUpdate);
+	static uint8_t ctr=1;
+	ctr--;
+	if(!ctr)
+	{
+		std::shared_ptr<Node> node=geometryCache->mNodeManager.GetNode(animationUpdate.nodeID);
+		if(node)
+		{
+			TELEPORT_COUT << "Animation: node " << animationUpdate.nodeID << " " << node->name<<", animation " << animationUpdate.animationID << ", timestamp " << animationUpdate.timestamp << "\n";
+		}
+	}
+	geometryCache->mNodeManager.UpdateNodeAnimation(animationUpdate);
 }
 /*
 void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
@@ -881,7 +894,7 @@ void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpda
 	switch(animationControlUpdate.timeControl)
 	{
 	case teleport::core::AnimationTimeControl::ANIMATION_TIME:
-		geometryCache->mNodeManager->UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
+		geometryCache->mNodeManager.UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
 		break;
 	default:
 		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
@@ -891,7 +904,7 @@ void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpda
 
 void InstanceRenderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
 {
-	geometryCache->mNodeManager->SetNodeAnimationSpeed(nodeID, animationID, speed);
+	geometryCache->mNodeManager.SetNodeAnimationSpeed(nodeID, animationID, speed);
 }
 
 void InstanceRenderer::UpdateTagDataBuffers(crossplatform::GraphicsDeviceContext& deviceContext)

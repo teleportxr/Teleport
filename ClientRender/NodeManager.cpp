@@ -1,6 +1,7 @@
 #include "NodeManager.h"
 
 using namespace clientrender;
+using avs::Pose;
 
 using InvisibilityReason = VisibilityComponent::InvisibilityReason;
 
@@ -26,6 +27,12 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 	return f;
 }
 
+NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
+{
+	using avs::Pose;
+	ECS_COMPONENT_DEFINE(flecs_world, Pose);
+}
+
 std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
 {
 	std::shared_ptr<Node> node= std::make_shared<Node>(id, avsNode.name);
@@ -37,13 +44,18 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
+	using avs::Pose;
+	flecs_world.add(42, ecs_id(Pose));
 	{
 		rootNodes_mutex.lock();
 		rootNodes.push_back(node);
 		rootNodes_mutex.unlock();
 		distanceSortedRootNodes.push_back(node);
 	}
-	nodeLookup_mutex.lock();
+	// Should not do this on the main thread, or any perf-critical thread.
+	while(!nodeLookup_mutex.try_lock())
+	{}
+
 	nodeLookup[node->id] = node;
 	avs::uid node_id = node->id;
 	nodeLookup_mutex.unlock();
@@ -267,6 +279,8 @@ const std::vector<std::weak_ptr<Node>>& NodeManager::GetSortedTransparentNodes()
 	while(n!=nodesWithModifiedMaterials.end())
 	{
 		auto N=n->lock();
+		if(!N)
+			break;
 		const auto &m=N->GetMaterials();
 		bool transparent=false;
 		bool unknown=false;

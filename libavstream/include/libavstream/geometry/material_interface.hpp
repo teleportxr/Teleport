@@ -164,8 +164,6 @@ namespace avs
 	{
 		~Texture()
 		{
-			if(own_data)
-				delete[] data;
 		}
 		std::string name;
 
@@ -185,22 +183,50 @@ namespace avs
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
 
 		bool cubemap=false;
-		uint32_t dataSize;
-		const unsigned char* data = nullptr;
-		bool own_data = false;
+		
+		std::vector<uint8_t> data ;
+		
 
 		bool operator==(const Texture& t) const
 		{
 			if (t.name != name)
 				return false;
 			const unsigned char* start1 = (const unsigned char*)&width;
-			const unsigned char* end1 = (const unsigned char*)&data;
+			const unsigned char* end1 = (const unsigned char*)&cubemap+sizeof(cubemap);
 			const unsigned char* start2 = (const unsigned char*)&t.width;
-			const unsigned char* end2 = (const unsigned char*)&t.data;
+			const unsigned char *end2 = (const unsigned char *)&t.cubemap + sizeof(t.cubemap);
 			auto c = memcmp(start1, start2, size_t(end1 - start1));
 			if (c != 0)
+			{
+			// memory check fails but could be junk data in between aligned members, so check individually:
+				if (width != t.width)
+					return false;
+				if (height != t.height)
+					return false;
+				if (depth != t.depth)
+					return false;
+				if (bytesPerPixel != t.bytesPerPixel)
+					return false;
+				if (arrayCount != t.arrayCount)
+					return false;
+				if (mipCount != t.mipCount)
+					return false;
+				if (format != t.format)
+					return false;
+				if (compression != t.compression)
+					return false;
+				if (compressed != t.compressed)
+					return false;
+				if (sampler_uid != t.sampler_uid)
+					return false;
+				if (valueScale != t.valueScale)
+					return false;
+				if (cubemap != t.cubemap)
+					return false;
+			}
+			if(data.size()!=t.data.size())
 				return false;
-			auto d = memcmp(data, t.data, dataSize);
+			auto d = memcmp(data.data(), t.data.data(), data.size());
 			if (d != 0)
 				return false;
 			return true;
@@ -212,8 +238,10 @@ namespace avs
 			out<< texture.name;
 			const unsigned char*start=(const unsigned char*)&texture.width;
 			const unsigned char* end = (const unsigned char*)&texture.data;
-			out.write((const char*)start,(size_t)(end -start));
-			out.write((const char*)texture.data, texture.dataSize);
+			out.write((const char *)start, (size_t)(end - start));
+			uint32_t sz=texture.data.size();
+			out.write((char*)&sz,sizeof(sz));
+			out.write((const char*)texture.data.data(), sz);
 			return out;
 		}
 		
@@ -224,11 +252,10 @@ namespace avs
 			unsigned char* start = ( unsigned char*)&texture.width;
 			const unsigned char* end = (const unsigned char*)&texture.data;
 			in.read((char*)start, (size_t)(end - start));
-			if(texture.own_data)
-				delete[] texture.data;
-			texture.data = new unsigned char[texture.dataSize];
-			texture.own_data = true;
-			in.read((char*)texture.data, texture.dataSize);
+			uint32_t sz=0;
+			in.read((char*)&sz,sizeof(sz));
+			texture.data.resize(sz);
+			in.read((char*)texture.data.data(), sz);
 			return in;
 		}
 	};

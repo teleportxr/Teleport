@@ -627,17 +627,17 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			auto & stream=q_ptr()->m_streams[streamIndex];
 			if (!stream.framed)
 			{
-				size_t numBytesWrittenToOutput;
+				size_t numBytesWrittenToOutput=0;
 				auto outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(outputNodeIndex));
 				if (!outputNode)
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.\n";
 					return;
 				}
 				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 				if (numBytesWrittenToOutput!=b.size())
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: failed to write all to output Node.";
+					AVSLOG_NOSPAM(Warning) << "WebRtcNetworkSource EFP onMessage: " << stream.label << ": failed to write all to output Node.\n";
 					return;
 				}
 			}
@@ -698,7 +698,7 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 			else
 			{
  				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
-				return Result::Failed;
+				return Result::Network_Disconnection;
 			}
 		}
 		catch (std::runtime_error err)

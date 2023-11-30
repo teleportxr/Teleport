@@ -42,6 +42,7 @@ namespace clientrender
 	struct DebugOptions
 	{
 		bool showAxes=false;
+		bool showOverlays=false;
 		bool showStageSpace = false;
 		bool useDebugShader = false;
 		std::string debugShader;
@@ -68,7 +69,7 @@ namespace clientrender
 		DebugOptions debugOptions;
 		avs::uid show_only=0;
 		avs::uid selected_uid=0;
-		bool show_node_overlays			=false;
+		avs::uid selected_cache=0;
 		static constexpr int maxTagDataSize = 32;
 		platform::crossplatform::StructuredBuffer<uint4> tagDataIDBuffer;
 		/// A framebuffer to store the colour and depth textures for the view.

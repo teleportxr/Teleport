@@ -934,12 +934,14 @@ void OpenXR::MakeActions()
 			,{xr_input_session.actionDefinitions[ActionId::GRASP].xrAction		 	,RIGHT "/input/squeeze/value"}
 			,{xr_input_session.actionDefinitions[ActionId::LEFT_SQUEEZE].xrAction	, LEFT "/input/squeeze/value"}
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_SQUEEZE].xrAction	,RIGHT "/input/squeeze/value"}
-			,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction		, LEFT "/input/select/value"}
+			//,{xr_input_session.actionDefinitions[ActionId::SHOW_MENU].xrAction	, LEFT "/input/select/value"}
 			,{xr_input_session.actionDefinitions[ActionId::LEFT_TRIGGER].xrAction	, LEFT "/input/select/value" }
 			,{xr_input_session.actionDefinitions[ActionId::RIGHT_TRIGGER].xrAction	,RIGHT "/input/select/value" }
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	,right_palm_str.c_str()}
 			,{xr_input_session.actionDefinitions[ActionId::HANDTRACKING_PALM_POSE].xrAction	, left_palm_str.c_str()}
 		});
+		// For hand interaction, SHOW_MENU should only be activated when input/select/value switches AND
+		// the hand is facing palm-towards the head position.
 	}
 	// The following  is supposedly enabled, but not in practice supported:
 	if (generic_hand_interaction_enabled)
@@ -1211,14 +1213,16 @@ void OpenXR::PollActions(XrTime predictedTime)
 				XrHandJointLocationsEXT locations{XR_TYPE_HAND_JOINT_LOCATIONS_EXT};
 				locations.jointCount = (uint32_t)XR_HAND_JOINT_COUNT_EXT;
 				locations.jointLocations = xrTrackedHands[i].jointLocations;
-				XR_CHECK(ext_xrLocateHandJointsEXT(xrTrackedHands[i].handTracker, &locateInfo, &locations));
-
-				for(uint32_t j=0;j<locations.jointCount;j++)
+				if (!XR_UNQUALIFIED_SUCCESS(ext_xrLocateHandJointsEXT(xrTrackedHands[i].handTracker, &locateInfo, &locations)))
+					trackedHands[i].active=false;
+				else
 				{
-					trackedHands[i].jointPoses[j]=ConvertJointPose(locations.jointLocations[j].pose);
+					for(uint32_t j=0;j<locations.jointCount;j++)
+					{
+						trackedHands[i].jointPoses[j]=ConvertJointPose(locations.jointLocations[j].pose);
+					}
+					trackedHands[i].active = locations.isActive;
 				}
-				trackedHands[i].active = locations.isActive;
-
 				// 
 				if(trackedHands[i].active)
 				{
@@ -1245,30 +1249,6 @@ void OpenXR::PollActions(XrTime predictedTime)
 	
 		XrActionStatePose pose_state = { XR_TYPE_ACTION_STATE_POSE };
 		get_info.action				= xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].xrAction;
-		//xrGetActionStatePose(xr_session, &get_info, &pose_state);
-		//inputDeviceState.renderThisDevice	= pose_state.isActive;
-
-		// Events come with a timestamp
-		//XrActionStateBoolean select_state = { XR_TYPE_ACTION_STATE_BOOLEAN };
-		//get_info.action = xr_input_session.actionDefinitions[SELECT].xrAction;
-		//xrGetActionStateBoolean(xr_session, &get_info, &select_state);
-		//xr_input_session.inputDeviceStates[hand].handSelect = select_state.currentState && select_state.changedSinceLastSync;
-
-		//get_info.action = xr_input_session.actionDefinitions[SHOW_MENU].xrAction;
-		//xrGetActionStateBoolean(xr_session, &get_info, &select_state);
-		//xr_input_session.inputDeviceStates[hand].handMenu = select_state.currentState && select_state.changedSinceLastSync;
-		// If we have a select event, update the hand pose to match the event's timestamp
-		//if (xr_input_session.inputDeviceStates[hand].handSelect)
-		/*{
-			XrSpaceLocation space_location = { XR_TYPE_SPACE_LOCATION };
-			XrResult		res = xrLocateSpace(xr_input_session.actionDefinitions[LEFT_GRIP_POSE+hand].space, xr_app_space, select_state.lastChangeTime, &space_location);
-			if (XR_UNQUALIFIED_SUCCESS(res) &&
-				(space_location.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0 &&
-				(space_location.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) != 0)
-			{
-				xr_input_session.actionStates[LEFT_GRIP_POSE+hand].pose_stageSpace=( space_location.pose);
-			}
-		}*/
 	}
 }
 
@@ -1301,6 +1281,7 @@ void OpenXR::RecordCurrentBindings()
 			std::string pathstr = FromXrPath(xr_instance, interactionProfile.interactionProfile);
 			if (interactionProfile.interactionProfile)
 				TELEPORT_CERR << " userHandLeftActiveProfile " << pathstr.c_str() << std::endl;
+			//if(pathstr=="/interaction_profiles/microsoft/hand_interaction
 			userHandLeftActiveProfile = interactionProfile.interactionProfile;
 			if (userHandLeftActiveProfile)
 				activeInteractionProfilePaths.push_back(userHandLeftActiveProfile);

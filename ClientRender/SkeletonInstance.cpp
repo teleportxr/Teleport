@@ -58,7 +58,7 @@ void SkeletonInstance::GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCa
 		for (size_t i = 0; i < upperBound; i++)
 		{
 			avs::uid bone_node_uid=bone_ids[i];
-			auto node=geometryCache->mNodeManager->GetNode(bone_node_uid);
+			auto node=geometryCache->mNodeManager.GetNode(bone_node_uid);
 			if(!node)
 				return;
 			mat4 joint_matrix = node->GetGlobalTransform().GetTransformMatrix();

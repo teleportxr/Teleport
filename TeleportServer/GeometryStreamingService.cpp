@@ -19,8 +19,8 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-GeometryStreamingService::GeometryStreamingService(const ServerSettings* settings)
-	:geometryStore(nullptr), settings(settings), clientNetworkContext(nullptr), geometryEncoder(settings,this)
+GeometryStreamingService::GeometryStreamingService(const ServerSettings *settings, avs::uid clid)
+	: geometryStore(nullptr), settings(settings), clientNetworkContext(nullptr), geometryEncoder(settings, this, clid)
 {
 }
 
@@ -48,7 +48,26 @@ void GeometryStreamingService::requestResource(avs::uid resource_uid)
 
 void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 {
+	if(unconfirmedResourceTimes.find(resource_uid)==unconfirmedResourceTimes.end())
+		return;
 	unconfirmedResourceTimes.erase(resource_uid);
+	// Is this resource a node?
+	if(auto node=geometryStore->getNode(resource_uid))
+	{
+		if (unconfirmed_priority_counts.find(node->priority) == unconfirmed_priority_counts.end())
+		{
+			TELEPORT_INTERNAL_BREAK_ONCE("Trying to decrement priority {0} but it's not in the list.", node->priority);
+		}
+		else
+		{
+			unconfirmed_priority_counts[node->priority]--;
+			if(unconfirmed_priority_counts[node->priority]==0)
+			{
+				unconfirmed_priority_counts.erase(node->priority);
+				TELEPORT_COUT<<"Got all nodes of priority "<<node->priority<<"\n";
+			}
+		}
+	}
 	//Confirm again; in case something just elapsed the timer, but has yet to be sent.
 	sentResources[resource_uid] = true;
 }
@@ -67,6 +86,14 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 	}
 	if(originNodeId)
 		outNodeIDs.insert(originNodeId);
+
+	int32_t lowest_confirmed_node_priority = -100000;
+	// What is the lowest priority that has no unconfirmed nodes?
+	// This unconfirmed_priority_counts is an ordered list of how many unconfirmed nodes each priority level has.
+	// So the last value in that list gives the lowest priority we should stream.
+	// When any value reaches zero, it's removed from the list.
+	if(unconfirmed_priority_counts.size())
+		lowest_confirmed_node_priority = unconfirmed_priority_counts.rbegin()->first;
 	for (avs::uid nodeID : streamedNodeIDs)
 	{
 		avs::Node* node = geometryStore->getNode(nodeID);
@@ -74,6 +101,10 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 		{
 			continue;
 		}
+		if(node->priority<lowest_confirmed_node_priority)
+			continue;
+		if (node->priority < minimumPriority)
+			continue;
 		outNodeIDs.insert(nodeID);
 
 		switch (node->data_type)
@@ -265,6 +296,8 @@ void GeometryStreamingService::reset()
 	unconfirmedResourceTimes.clear();
 	streamedNodeIDs.clear();
 	clientRenderingNodes.clear();
+
+	unconfirmed_priority_counts.clear();
 }
 
 void GeometryStreamingService::setOriginNode(avs::uid nodeID)
@@ -276,13 +309,38 @@ void GeometryStreamingService::addNode(avs::uid nodeID)
 {
 	if (nodeID != 0)
 	{
-		streamedNodeIDs.insert(nodeID);
+		if(streamedNodeIDs.find(nodeID)==streamedNodeIDs.end())
+		{
+			streamedNodeIDs.insert(nodeID);
+			auto node = geometryStore->getNode(nodeID);
+			unconfirmed_priority_counts[node->priority]++;
+		}
 	}
 }
 
 void GeometryStreamingService::removeNode(avs::uid nodeID)
 {
-	streamedNodeIDs.erase(nodeID);
+	if (streamedNodeIDs.find(nodeID) != streamedNodeIDs.end())
+	{
+		streamedNodeIDs.erase(nodeID);
+		if(unconfirmedResourceTimes.find(nodeID)!=unconfirmedResourceTimes.end())
+		{
+			auto node = geometryStore->getNode(nodeID);
+			if(unconfirmed_priority_counts.find(node->priority)==unconfirmed_priority_counts.end())
+			{
+				TELEPORT_INTERNAL_BREAK_ONCE( "Trying to decrement priority {0} but it's not in the list.",node->priority);
+			}
+			else
+			{
+				unconfirmed_priority_counts[node->priority]--;
+				if (unconfirmed_priority_counts[node->priority] == 0)
+				{
+					unconfirmed_priority_counts.erase(node->priority);
+					TELEPORT_COUT << "Got all nodes of priority " << node->priority << "\n";
+				}
+			}
+		}
+	}
 }
 
 bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)

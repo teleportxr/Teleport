@@ -22,12 +22,10 @@ ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								ProcessNewInputEventsFn processNewInputEvents,
 								 DisconnectFn onDisconnect,
 								 uint32_t disconnectTimeout,
-								 ReportHandshakeFn reportHandshakeFn,
-								 ClientManager* clientManager)
+								 ReportHandshakeFn reportHandshakeFn, avs::uid clid)
 	: settings(settings)
 	, signalingService(signalingService)
-	, geometryStreamingService(settings)
-	, clientManager(clientManager)
+	, geometryStreamingService(settings,clid)
 	, setHeadPose(setHeadPose)
 	, setControllerPose(setControllerPose)
 	, processNewInputState(processNewInputState)
@@ -256,14 +254,13 @@ void ClientMessaging::sendSetupLightingCommand(const teleport::core::SetupLighti
 	sendCommand(setupLightingCommand, global_illumination_texture_uids);
 }
 
-
-void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)
+void ClientMessaging::streamNode(avs::uid nodeID)
 {
 	nodesEnteredBounds.push_back(nodeID);
 	nodesLeftBounds.erase(std::remove(nodesLeftBounds.begin(), nodesLeftBounds.end(), nodeID), nodesLeftBounds.end());
 }
 
-void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
+void ClientMessaging::unstreamNode(avs::uid nodeID)
 {
 	nodesLeftBounds.push_back(nodeID);
 	nodesEnteredBounds.erase(std::remove(nodesEnteredBounds.begin(), nodesEnteredBounds.end(), nodeID), nodesEnteredBounds.end());
@@ -338,7 +335,10 @@ void ClientMessaging::pingForLatency()
 size_t ClientMessaging::SendCommand(const void* c, size_t sz) const
 {
 	if (sz > 16384)
+	{
+		TELEPORT_CERR << "Command too large, size is "<<sz<<".\n";
 		return 0;
+	}
 	if(commandPipeline.IsPipelineBlocked())
 		return 0;
 	auto b=std::make_shared<std::vector<uint8_t>>(sz);

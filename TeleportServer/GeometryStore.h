@@ -32,6 +32,10 @@ namespace teleport
 
 			//Checks and sets the global cache path for the project. Returns true if path is valid.
 			bool SetCachePath(const char* path);
+			std::string GetCachePath() const
+			{
+				return cachePath;
+			}
 			void verify();
 			bool saveToDisk() const;
 			//Load from disk.
@@ -98,7 +102,7 @@ namespace teleport
 			void storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard);
 			void storeMesh(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress = false, bool verify = false);
 			void storeMaterial(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Material& newMaterial);
-			void storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& newTexture, std::string basisFileLocation, bool genMips, bool highQualityUASTC, bool forceOverwrite);
+			void storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& newTexture,  bool genMips, bool highQualityUASTC, bool forceOverwrite);
 			avs::uid storeFont(std::string ttf_path_utf8, std::string relative_asset_path_utf8, std::time_t lastModified, int size = 32);
 			avs::uid storeTextCanvas(std::string relative_asset_path, const InteropTextCanvas* interopTextCanvas);
 			void storeShadowMap(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& shadowMap);
@@ -123,21 +127,21 @@ namespace teleport
 			//! Get the resource/asset path corresponding to the current session uid.
 			std::string UidToPath(avs::uid u) const;
 
+			template <typename ExtractedResource>
+			bool saveResourceBinary(const std::string file_name, const ExtractedResource &resource) const;
+			template <typename ExtractedResource>
+			bool loadResourceBinary(const std::string file_name, const std::string &path_root, ExtractedResource &esource);
+			template <typename ExtractedResource>
+			avs::uid loadResourceBinary(const std::string file_name, const std::string &path_root, std::map<avs::uid, ExtractedResource> &resourceMap);
+
+			template <typename ExtractedResource>
+			bool saveResourcesBinary(const std::string file_name, const std::map<avs::uid, ExtractedResource> &resourceMap) const;
+
+			template <typename ExtractedResource>
+			void loadResourcesBinary(std::string file_name, std::map<avs::uid, ExtractedResource> &resourceMap);
+
 		private:
 			std::string cachePath;
-			//Stores data on a texture that is to be compressed.
-			struct PrecompressedTexture
-			{
-				std::string basisFilePath;
-
-				std::vector<std::vector<uint8_t>> images;
-
-				size_t numMips;
-				bool genMips;	// if false, numMips tells how many are in the data already.
-				bool highQualityUASTC;
-				avs::TextureCompression textureCompression = avs::TextureCompression::UNCOMPRESSED;
-				avs::TextureFormat format = avs::TextureFormat::INVALID;
-			};
 
 			uint8_t compressionStrength = 1;
 			uint8_t compressionQuality = 1;
@@ -158,21 +162,7 @@ namespace teleport
 			std::map<avs::uid, std::shared_ptr<PrecompressedTexture>> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
 			std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
-
-			template<typename ExtractedResource>
-			bool saveResourceBinary(const std::string file_name, const ExtractedResource& resource) const;
-			template<typename ExtractedResource>
-			bool loadResourceBinary(const std::string file_name, const std::string& path_root, ExtractedResource& esource);
-			template<typename ExtractedResource>
-			avs::uid loadResourceBinary(const std::string file_name, const std::string& path_root, std::map<avs::uid, ExtractedResource>& resourceMap);
-
-			template<typename ExtractedResource>
-			bool saveResourcesBinary(const std::string file_name, const std::map<avs::uid, ExtractedResource>& resourceMap) const;
-
-			template<typename ExtractedResource>
-			void loadResourcesBinary(std::string file_name, std::map<avs::uid, ExtractedResource>& resourceMap);
-			
-
+		
 			std::map<avs::uid, std::string> uid_to_path;
 			std::map<std::string, avs::uid> path_to_uid;
 		};

@@ -119,6 +119,8 @@ add_static_library(ClientRender SOURCES ${src_public} ${av_parser} ${flecs_files
 SetTeleportDefaults(ClientRender)
 #Include its root directory
 target_include_directories(ClientRender PRIVATE src)
+#include flecs
+target_include_directories(ClientRender PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 #Include libavstream
 target_include_directories(ClientRender PRIVATE ../libavstream/include)
 #Include Basis Universal

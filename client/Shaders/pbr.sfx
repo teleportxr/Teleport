@@ -881,10 +881,8 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_li
 
 vec4 Solid_AlbedoOnly(vertexOutput IN)
 {
-	vec3 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.xy).rgb;
-	diffuseColour = diffuseColour.rgb ;//* diffuseOutputScalar.rgb;
-
-	return vec4(diffuseColour.rgb, 1.0);
+	vec4 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.xy);
+	return diffuseColour;
 }
 
 shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
@@ -1098,13 +1096,14 @@ technique transparent
 {
 	pass pbr
 	{
-		SetRasterizerState(PbrDontCull);
 		SetDepthStencilState(TestReverseDepth,0);
 		SetBlendState(AlphaBlend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xFFFFFFFF);
 		SetVertexShaderVariants(vs_variants({false,true},{false,true},{0,1,2},{false,true},{false,true})
 								,vs_variants_mv({false,true},{false,true},{0,1,2},{false,true},{false,true}));
 		SetGeometryShader(NULL);
-		SetPixelShaderVariants(ps_transparent({false,true},{false,true},{false,true},{0}),ps_digitizing);
+		SetPixelShaderVariants(ps_transparent({false, true}, {false, true}, {false, true}, {0}), ps_digitizing
+				, ps_solid_albedo_only, ps_depth, ps_debug_normals, ps_debug_lightmaps, ps_debug_ambient
+				, ps_debug_normal_vertexnormals, ps_debug_uvs, ps_local_hand);
 	}
 }
 

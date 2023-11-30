@@ -45,6 +45,8 @@ set(src
 	HTTPService.h 
 	DefaultHTTPService.cpp
 	DefaultHTTPService.h 
+	Texture.h 
+	Texture.cpp
 	UnixDebugOutput.h 
 )
 
@@ -81,9 +83,9 @@ if(TELEPORT_UNITY)
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_UNITY_EDITOR_DIR}/Data/PluginAPI)
 
 	set_target_properties(TeleportServer PROPERTIES
-		ARCHIVE_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
-		LIBRARY_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
-		RUNTIME_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
+		ARCHIVE_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}/"
+		LIBRARY_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}/"
+		RUNTIME_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}/"
 		)
 else()
 	add_library(TeleportServer STATIC ${src})

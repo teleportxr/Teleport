@@ -32,7 +32,5 @@ namespace teleport
 		extern GetUnixTimestampFn getUnixTimestampNs;
 		extern ReportHandshakeFn reportHandshake;
 		extern uint32_t connectionTimeout ;
-
-		extern ClientManager clientManager;
 	}
 }

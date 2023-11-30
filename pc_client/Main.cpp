@@ -314,7 +314,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-	static bool use_debug = true;
+	static bool use_debug = false;
 #else
 	static bool use_debug=false;
 #endif
@@ -475,12 +475,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (message)
 		{
 		case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() != teleport::GuiType::None);
+			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() == teleport::GuiType::Connection);
 			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() != teleport::GuiType::None);
+			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() == teleport::GuiType::Connection);
 			if (gui.GetGuiType() == teleport::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;

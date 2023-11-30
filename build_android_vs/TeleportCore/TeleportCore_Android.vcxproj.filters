@@ -13,6 +13,9 @@
     <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\TeleportCore\URLParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h">
@@ -31,6 +34,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\TeleportCore\TextCanvas.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\TeleportCore\URLParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

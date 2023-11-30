@@ -283,7 +283,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		TELEPORT_CERR << "Failed to identify ports from string " << initialiseState->signalingPorts  << "!\n";
 		return false;
 	}
-	bool result = clientManager.initialize(ports, initialiseState->start_unix_time_ns,std::string(initialiseState->clientIP));
+	bool result = ClientManager::instance().initialize(ports, initialiseState->start_unix_time_ns,std::string(initialiseState->clientIP));
 
 	if (!result)
 	{
@@ -291,7 +291,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		return false;
 	}
 
-	clientManager.startAsyncNetworkDataProcessing();
+	ClientManager::instance().startAsyncNetworkDataProcessing();
 
 	result = httpService->initialize(initialiseState->httpMountDirectory
 		, initialiseState->certDirectory
@@ -302,7 +302,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 TELEPORT_EXPORT bool Teleport_GetSessionState(teleport::server::SessionState& sessionState)
 {
-	sessionState=clientManager.getSessionState();
+	sessionState=ClientManager::instance().getSessionState();
 	return  true;
 }
 
@@ -311,11 +311,11 @@ TELEPORT_EXPORT void Teleport_Shutdown()
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 
-	clientManager.stopAsyncNetworkDataProcessing(true);
+	ClientManager::instance().stopAsyncNetworkDataProcessing(true);
 
-	for(auto& uid : clientManager.GetClientUids())
+	for(auto& uid : ClientManager::instance().GetClientUids())
 	{
-		auto &client= clientManager.GetClient(uid);
+		auto &client= ClientManager::instance().GetClient(uid);
 		if (!client)
 			continue;
 		if(client->GetConnectionState()!=UNCONNECTED)
@@ -331,7 +331,7 @@ TELEPORT_EXPORT void Teleport_Shutdown()
 		}
 	}
 
-	clientManager.shutdown();
+	ClientManager::instance().shutdown();
 	httpService->shutdown();
 
 	lostClients.clear();
@@ -351,11 +351,11 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	//Delete client data for clients who have been lost.
 	for(avs::uid clientID : lostClients)
 	{
-		clientManager.removeClient(clientID);
+		ClientManager::instance().removeClient(clientID);
 	}
 	lostClients.clear();
 
-	clientManager.tick(deltaTime);
+	ClientManager::instance().tick(deltaTime);
 
 	PipeOutMessages();
 }
@@ -463,7 +463,7 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to initialise video encoder for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -486,7 +486,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParam
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to reconfigure video encoder for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -540,7 +540,7 @@ TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData,
 {
 	std::lock_guard<std::mutex> lock(videoMutex);
 
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to encode video frame for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -625,7 +625,7 @@ TELEPORT_EXPORT void SetAudioSettings(const AudioSettings& newAudioSettings)
 TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 {
 	// Only continue processing if the main thread hasn't hung.
-	double elapsedTime = avs::Platform::getTimeElapsedInSeconds(clientManager.getLastTickTimestamp(), avs::Platform::getTimestamp());
+	double elapsedTime = avs::Platform::getTimeElapsedInSeconds(ClientManager::instance().getLastTickTimestamp(), avs::Platform::getTimestamp());
 	if (elapsedTime > 0.15f)
 	{
 		return;
@@ -633,9 +633,9 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 
 	std::lock_guard<std::mutex> lock(audioMutex);
 
-	for (avs::uid clientID : clientManager.GetClientUids())
+	for (avs::uid clientID : ClientManager::instance().GetClientUids())
 	{
-		auto client = clientManager.GetClient(clientID);
+		auto client = ClientManager::instance().GetClient(clientID);
 		if (!client)
 			continue;
 		// If handshake hasn't been received, the network pipeline is not set up yet, and can't receive packets from the AudioQueue.
@@ -737,10 +737,10 @@ TELEPORT_EXPORT void StoreMaterial(avs::uid id, const char *  guid, const char *
 	GeometryStore::GetInstance().storeMaterial(id, (guid), (path), lastModified, avsMaterial);
 }
 
-TELEPORT_EXPORT void StoreTexture(avs::uid id, const char * guid, const char *  relative_asset_path, std::time_t lastModified, InteropTexture texture, char* basisFileLocation,  bool genMips, bool highQualityUASTC, bool forceOverwrite)
+TELEPORT_EXPORT void StoreTexture(avs::uid id, const char * guid, const char *relative_asset_path, std::time_t lastModified, InteropTexture texture,   bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
 	avs::Texture avsTexture(texture);
-	GeometryStore::GetInstance().storeTexture(id, (guid), (relative_asset_path), lastModified, avsTexture, basisFileLocation,  genMips,  highQualityUASTC, forceOverwrite);
+	GeometryStore::GetInstance().storeTexture(id, (guid), (relative_asset_path), lastModified, avsTexture, genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT avs::uid StoreFont( const char *  ttf_path,const char *  relative_asset_path,std::time_t lastModified, int size)
@@ -753,9 +753,9 @@ TELEPORT_EXPORT avs::uid StoreTextCanvas( const char *  relative_asset_path, con
 	avs::uid u=GeometryStore::GetInstance().storeTextCanvas((relative_asset_path),interopTextCanvas);
 	if(u)
 	{
-		for(avs::uid u: clientManager.GetClientUids())
+		for(avs::uid u: ClientManager::instance().GetClientUids())
 		{
-			auto client = clientManager.GetClient(u);
+			auto client = ClientManager::instance().GetClient(u);
 			if (!client)
 				continue;
 			if(client->clientMessaging->GetGeometryStreamingService().hasResource(u))
@@ -768,9 +768,9 @@ TELEPORT_EXPORT avs::uid StoreTextCanvas( const char *  relative_asset_path, con
 // TODO: This is a really basic resend/update function. Must make better.
 TELEPORT_EXPORT void ResendNode(avs::uid u)
 {
-	for (avs::uid u : clientManager.GetClientUids())
+	for (avs::uid u : ClientManager::instance().GetClientUids())
 	{
-		auto client = clientManager.GetClient(u);
+		auto client = ClientManager::instance().GetClient(u);
 		if (!client)
 			continue;
 		if(client->clientMessaging->GetGeometryStreamingService().hasResource(u))
@@ -851,6 +851,7 @@ TELEPORT_EXPORT bool GetMessageForNextCompressedTexture(char *str,size_t len)
 	memcpy(str,messageStream.str().data(),std::min(len,messageStream.str().length()));
 	return true;
 }
+
 TELEPORT_EXPORT void CompressNextTexture()
 {
 	GeometryStore::GetInstance().compressNextTexture();

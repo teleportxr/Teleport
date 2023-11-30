@@ -395,6 +395,11 @@ namespace teleport
 
 			// extensions:
 			std::shared_ptr<OpenXRRenderModel> openXRRenderModel;
+
+			bool IsHandTrackingActive(int i) const
+			{
+				return xrTrackedHands[i].hand_tracking_active;
+			}
 		protected:
 			bool threadedInitInstance();
 			bool internalInitInstance();

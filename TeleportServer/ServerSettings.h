@@ -94,6 +94,7 @@ namespace teleport
 			teleport::core::BackgroundMode backgroundMode;
 			vec4 backgroundColour;
 			float drawDistance;
+			int32_t minimumNodePriority;
 		} AVS_PACKED;
 		struct InputDefinitionInterop
 		{

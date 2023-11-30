@@ -268,7 +268,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	}
 	try
 	{
-		if (ws->isOpen())
+		if (ws&&ws->isOpen())
 		{
 			signalingServer->SendMessages();
 		}

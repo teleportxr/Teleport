@@ -11,6 +11,7 @@
 
 #include "Node.h"
 #include "ResourceManager.h"
+#include "flecs.h"
 
 namespace clientrender
 {
@@ -27,7 +28,11 @@ namespace clientrender
 	//! Manages nodes for a specific server context.
 	class NodeManager
 	{
+		flecs::world &flecs_world;
+
+		ECS_COMPONENT_DECLARE(Pose);
 	public:
+		NodeManager(flecs::world &flecs_w);
 		typedef std::vector<std::shared_ptr<Node>> nodeList_t;
 
 		uint32_t nodeLifetime = 30000; //Milliseconds the manager waits before removing invisible nodes.
@@ -35,7 +40,6 @@ namespace clientrender
 		virtual ~NodeManager() = default;
 
 		virtual std::shared_ptr<Node> CreateNode(avs::uid id, const avs::Node &avsNode) ;
-
 
 		void RemoveNode(std::shared_ptr<Node> node);
 		void RemoveNode(avs::uid nodeID);

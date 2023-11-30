@@ -38,7 +38,7 @@ int32_t TabContext::GetEmptyTabContext()
 {
 	for(auto i:tabIndices)
 	{
-		auto &j=tabContexts.find(i);
+		auto j=tabContexts.find(i);
 		if(j!=tabContexts.end())
 		{
 			if(j->second->IsInUse())
@@ -125,13 +125,30 @@ void TabContext::ConnectTo(std::string url)
 		return;
 	}
 	// Question: Is this the current server domain? Or are we reconnecting to a server that already has a cache?
+	auto currentSessionClient = SessionClient::GetSessionClient(server_uid);
+	if(currentSessionClient)
+	{
+		// same domain? 
+		if (currentSessionClient->domain == domainPortPath.domain)
+		{
+			next_server_uid=server_uid;
+			server_uid=0;
+		}
+	}
 	if (next_server_uid == 0)
 	{
 		next_server_uid = SessionClient::CreateSessionClient(this, domainPortPath.domain);
 	}
+	else
+	{
+		auto sc=SessionClient::GetSessionClient(next_server_uid);
+		if(sc->domain!=domainPortPath.domain)
+		{
+			next_server_uid = SessionClient::CreateSessionClient(this, domainPortPath.domain);
+		}
+	}
 	if (!next_server_uid)
 		return;
-	auto currentSessionClient = SessionClient::GetSessionClient(server_uid);
 	if (currentSessionClient && currentSessionClient->IsConnected())
 	{
 		if (currentSessionClient->GetConnectionURL() == url)

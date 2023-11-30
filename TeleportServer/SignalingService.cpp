@@ -60,7 +60,6 @@ bool SignalingService::initialize(std::set<uint16_t> discoPorts,  std::string de
 		webSocketServer->onClient(onWebSocketClient);
 	}
 	desiredIP = desIP;
-
 	return true;
 }
 
@@ -209,7 +208,7 @@ void SignalingService::shutdown()
 
 void SignalingService::processDisconnection(avs::uid clientID, std::shared_ptr<SignalingClient> &signalingClient)
 {
-	auto c = clientManager.GetClient(clientID);
+	auto c = ClientManager::instance().GetClient(clientID);
 	if (c)
 	{
 		c->SetConnectionState(UNCONNECTED);
@@ -262,7 +261,7 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 		if (signalingClient->signalingState == core::SignalingState::START)
 			signalingClient->signalingState = core::SignalingState::REQUESTED;
 		// if signalingState is START, we should not have a client...
-		if (clientManager.hasClient(clientID))
+		if (ClientManager::instance().hasClient(clientID))
 		{
 			// ok, we've received a connection request from a client that WE think we already have.
 			// Apparently the CLIENT thinks they've disconnected.
@@ -425,7 +424,7 @@ bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t
 
 void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 {
-	auto c = clientManager.GetClient(clientID);
+	auto c = ClientManager::instance().GetClient(clientID);
 	if (c)
 	{
 		c->SetConnectionState(DISCOVERED);

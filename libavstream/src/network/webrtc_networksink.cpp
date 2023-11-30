@@ -721,13 +721,13 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 				auto outputNode = dynamic_cast<IOInterface*>(q_ptr()->getOutput(outputIndex));
 				if (!outputNode)
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.\n";
 					return;
 				}
 				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 				if (numBytesWrittenToOutput != b.size())
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: failed to write all to output Node.";
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: failed to write received message to output Queue node.\n";
 					return;
 				}
 			}

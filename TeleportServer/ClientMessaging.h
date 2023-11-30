@@ -58,8 +58,8 @@ namespace teleport
 				ProcessNewInputEventsFn processNewInputEvents,
 				DisconnectFn onDisconnect,
 				uint32_t disconnectTimeout,
-				ReportHandshakeFn reportHandshakeFn,
-				ClientManager* clientManager);
+							ReportHandshakeFn reportHandshakeFn, avs::uid clid
+				);
 
 			virtual ~ClientMessaging();
 
@@ -85,8 +85,10 @@ namespace teleport
 			void sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd);
 			void sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids);
 
-			void nodeEnteredBounds(avs::uid nodeID);
-			void nodeLeftBounds(avs::uid nodeID);
+			/// Mark this node as being needed by the client.
+			void streamNode(avs::uid nodeID);
+			/// Mark this node as being NOT needed by the client.
+			void unstreamNode(avs::uid nodeID);
 			void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
 			void updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);
 			void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
@@ -257,7 +259,6 @@ namespace teleport
 			const ServerSettings* settings=nullptr;
 			SignalingService &signalingService;
 			PluginGeometryStreamingService geometryStreamingService;
-			ClientManager* clientManager;
 			SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.
 			SetControllerPoseFn setControllerPose; //Delegate called when a head pose is received.
 			ProcessNewInputStateFn processNewInputState; //Delegate called when new input is received.

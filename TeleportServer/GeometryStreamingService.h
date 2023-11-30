@@ -21,7 +21,7 @@ namespace teleport
 		class GeometryStreamingService : public avs::GeometryRequesterBackendInterface
 		{
 		public:
-			GeometryStreamingService(const struct ServerSettings* settings);
+			GeometryStreamingService(const struct ServerSettings *settings, avs::uid clid);
 			virtual ~GeometryStreamingService();
 
 			virtual bool hasResource(avs::uid resourceID) const override;
@@ -67,13 +67,19 @@ namespace teleport
 			void addGenericTexture(avs::uid id);
 		protected:
 			avs::uid originNodeId = 0;
+			int32_t priority = 0;
+			// The lowest priority for which the client has confirmed all the nodes we sent.
+			// We only send lower-priority nodes when all higher priorities have been confirmed.
+			int32_t lowest_confirmed_node_priority=-100000;
+			// How many nodes we have unconfirmed 
+			std::map<int32_t,uint32_t> unconfirmed_priority_counts;
 			GeometryStore* geometryStore = nullptr;
 
 			virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 			virtual bool clientStartedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 			teleport::core::Handshake handshake;
 		private:
-			const struct ServerSettings* settings;
+			const struct ServerSettings *settings = nullptr;
 
 			ClientNetworkContext* clientNetworkContext = nullptr;
 			GeometryEncoder geometryEncoder;
@@ -99,8 +105,8 @@ namespace teleport
 		class PluginGeometryStreamingService : public GeometryStreamingService
 		{
 		public:
-			PluginGeometryStreamingService(const struct ServerSettings* serverSettings)
-				:GeometryStreamingService(serverSettings)
+			PluginGeometryStreamingService(const struct ServerSettings *serverSettings, avs::uid clid)
+				: GeometryStreamingService(serverSettings,  clid)
 			{
 				this->geometryStore = &GeometryStore::GetInstance();
 			}

@@ -107,6 +107,10 @@ namespace teleport
 		{
 			endXRSessionHandler = fn;
 		}
+		void SetSelectionHandler(std::function<void()> fn)
+		{
+			selectionHandler = fn;
+		}
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
 		void SetScaleMetres();
 		bool URLInputActive() const { return url_input; }
@@ -115,12 +119,13 @@ namespace teleport
 		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
 		void SetServerIPs(const std::vector<std::string> &server_ips);
 		avs::uid GetSelectedServer() const;
+		avs::uid GetSelectedCache() const;
 		avs::uid GetSelectedUid() const;
 		vec3 Get3DPos()
 		{
 			return menu_pos;
 		}
-		void Select(avs::uid u);
+		void Select(avs::uid c, avs::uid u);
 		void SelectPrevious();
 		void SelectNext();
 		// Replaces Windows GetCursorPos if necessary.
@@ -158,6 +163,8 @@ namespace teleport
 		std::function<void(int32_t)> cancelConnectHandler;
 		std::function<void()> startXRSessionHandler;
 		std::function<void()> endXRSessionHandler;
+		std::function<void()> selectionHandler;
+		
 		static bool url_input;
 		bool reset_menu_pos=false;
 		avs::DecoderStatus videoStatus;
@@ -166,7 +173,16 @@ namespace teleport
 		void ShowFont();
         char url_buffer[MAX_URL_SIZE];
 		bool have_vr_device = false;
-		std::vector<avs::uid> selection_history;
+		struct Selection
+		{
+			avs::uid cache_uid=0;
+			avs::uid selected_uid=0;
+			bool operator==(const Selection&s)
+			{
+				return (cache_uid==s.cache_uid&&selected_uid==s.selected_uid);
+			}
+		};
+		std::vector<Selection> selection_history;
 		size_t selection_cursor;
 		avs::uid selected_server=0;
 

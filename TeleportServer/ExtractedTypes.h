@@ -1,11 +1,8 @@
-/*
- * We save and load the IDs from disk, but then we need to re-assign them.
- * Otherwise we will end up with a lot of unused ID slots, and need to manually change the next unused ID to a safe value.
- */
 #pragma once
 
 #include <ctime>
 #include <algorithm>
+#include <vector>
 
 #ifdef _MSC_VER
 #include "comdef.h"
@@ -15,6 +12,7 @@
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "Font.h"
 #include "StringFunctions.h"
+#include "Texture.h"
 
 namespace teleport
 {
@@ -25,6 +23,12 @@ namespace teleport
 			static const char* fileExtension()
 			{
 				return ".mesh";
+			}
+			std::string MakeFilename() const
+			{
+				std::string file_name;
+				file_name = path + fileExtension();
+				return file_name;
 			}
 			std::string getName() const
 			{
@@ -107,6 +111,12 @@ namespace teleport
 			{
 				return material.name;
 			}
+			std::string MakeFilename() const
+			{
+				std::string file_name;
+				file_name = path + fileExtension();
+				return file_name;
+			}
 			bool IsValid() const
 			{
 				return true;
@@ -145,16 +155,37 @@ namespace teleport
 				return in;
 			}
 		};
-
+		// Stores data on a texture that is to be compressed.
+		struct PrecompressedTexture
+		{
+			std::vector<std::vector<uint8_t>> images;
+			size_t numMips;
+			bool genMips; // if false, numMips tells how many are in the data already.
+			bool highQualityUASTC;
+			avs::TextureCompression textureCompression = avs::TextureCompression::UNCOMPRESSED;
+			avs::TextureFormat format = avs::TextureFormat::INVALID;
+		};
 		struct ExtractedTexture
 		{
 			static const char* fileExtension()
 			{
-				return ".texture";
+				return ".basis;.ktx;.ktx2;.png;.texture";
 			}
 			std::string getName() const
 			{
 				return texture.name;
+			}
+			std::string MakeFilename() const
+			{
+				std::string file_name;
+				file_name += path;
+				if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
+					file_name += ".basis";
+				else if (texture.compression == avs::TextureCompression::PNG)
+					file_name += ".texture";
+				// if (resource.texture.compression == avs::TextureCompression::KTX)
+				//		file_name += ".ktx";
+				return file_name;
 			}
 			std::string guid;
 			//! The path to the asset, which is both the relative path from the cache directory, and the URI
@@ -164,7 +195,7 @@ namespace teleport
 			avs::Texture texture;
 			bool IsValid() const
 			{
-				return texture.dataSize!=0;
+				return texture.data.size()!=0;
 			}
 			bool Verify(const ExtractedTexture& t) const
 			{
@@ -173,6 +204,11 @@ namespace teleport
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedTexture& textureData)
 			{
+				if (out.filename.find(".basis") == out.filename.length() - 6)
+				{
+					out.write((const char*)textureData.texture.data.data(),textureData.texture.data.size());
+					return out;
+				}
 				out << textureData.guid;
 				std::string pathAsString = textureData.path;
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
@@ -181,10 +217,19 @@ namespace teleport
 				out << textureData.texture;
 				return out;
 			}
-
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedTexture& textureData)
 			{
+				if (in.filename.rfind(".basis") == in.filename.length() - 6)
+				{
+					LoadAsBasisFile(textureData, in.readData(), in.filename);
+					return in;
+				}
+				if (in.filename.rfind(".texture") != in.filename.length() - 8)
+				{
+					TELEPORT_CERR<<"Unknown texture file format for "<<in.filename<<"\n";
+					return in;
+				}
 				in >> textureData.guid;
 				std::string pathAsString;
 				in >> pathAsString;

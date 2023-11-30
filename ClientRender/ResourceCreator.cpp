@@ -526,10 +526,10 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 
 		avs::uid vb_uid = geometryCache->GenerateUid(meshElementCreate.vb_id);
 		geometryCache->mVertexBufferManager.Add(vb_uid, vb);
-		TELEPORT_CERR << "Cache " << meshCreate.cache_uid << " Mesh " << mesh_ci.name << " has vertex buffer " << vb_uid << std::endl;
+		//TELEPORT_CERR << "Cache " << meshCreate.cache_uid << " Mesh " << mesh_ci.name << " has vertex buffer " << vb_uid << std::endl;
 		avs::uid ib_uid = geometryCache->GenerateUid(meshElementCreate.ib_id);
 		geometryCache->mIndexBufferManager.Add(ib_uid, ib);
-		TELEPORT_CERR << "Cache " << meshCreate.cache_uid << " Mesh " << mesh_ci.name << " has index buffer " << ib_uid << std::endl;
+		//TELEPORT_CERR << "Cache " << meshCreate.cache_uid << " Mesh " << mesh_ci.name << " has index buffer " << ib_uid << std::endl;
 
 		mesh_ci.vertexBuffers[i] = vb;
 		mesh_ci.indexBuffers[i] = ib;
@@ -637,7 +637,7 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(std::make_shared<UntranscodedTexture>(server_uid, id, texture.data, texture.dataSize, texInfo, texture.name, texture.compression, texture.valueScale));
+		texturesToTranscode.emplace_back(std::make_shared<UntranscodedTexture>(server_uid, id, texture.data, texInfo, texture.name, texture.compression, texture.valueScale));
 	}
 	else
 	{
@@ -646,7 +646,7 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 		int m=0;
 		int mip_width=texInfo->width;
 		int mip_length = texInfo->height;
-		const unsigned char *src=texture.data;
+		const unsigned char *src=texture.data.data();
 		for (size_t i=0;i<numImages;i++)
 		{
 			if(m==texInfo->mipCount)
@@ -657,7 +657,7 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 			}
 			size_t dataSize=mip_width*mip_length*texInfo->bytesPerPixel;
 			(*texInfo->images)[i].resize(dataSize);
-			if(src>=texture.data+texture.dataSize)
+			if(src>=texture.data.data()+texture.data.size())
 			{
 				std::cerr<<"Bad data size for texture.\n";
 				return ;
@@ -839,7 +839,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
 		incompleteNode->SetTextCanvas(textCanvas);
 		// modified "material" - add to transparent list.
-		geometryCache->mNodeManager->NotifyModifiedMaterials(incompleteNode);
+		geometryCache->mNodeManager.NotifyModifiedMaterials(incompleteNode);
 		RESOURCECREATOR_DEBUG_COUT( "Waiting Node {0}({1}) got Canvas {2}({3})" , incompleteNode->id,incompleteNode->name,textCanvas->textCanvasCreateInfo.uid,"");
 
 		//If the waiting resource has no incomplete resources, it is now itself complete.
@@ -950,12 +950,12 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	std::shared_ptr<Node> node;
 //	TELEPORT_CERR << "Creating Node " << id <<  "\n";
-	if (geometryCache->mNodeManager->HasNode(id))
+	if (geometryCache->mNodeManager.HasNode(id))
 	{
 		//TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
 		//leaves nodes with no children. why?
-		auto n=geometryCache->mNodeManager->GetNode(id);
-		node = geometryCache->mNodeManager->GetNode(id);
+		auto n=geometryCache->mNodeManager.GetNode(id);
+		node = geometryCache->mNodeManager.GetNode(id);
 		MissingResource *missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
 		if(missingResource)
 		{
@@ -964,7 +964,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	}
 	else
 	{
-		node = geometryCache->mNodeManager->CreateNode(id, avsNode);
+		node = geometryCache->mNodeManager.CreateNode(id, avsNode);
 	}
 	// Was this resource being awaited?
 	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
@@ -1009,7 +1009,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 			}
 			if(avsNode.skeletonNodeID!=0)
 			{
-				auto skeletonNode=geometryCache->mNodeManager->GetNode(avsNode.skeletonNodeID);
+				auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
 				if(!skeletonNode)
 				{
 					TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
@@ -1048,7 +1048,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::TextCanvas).waitingResources.insert(node);
 			}
 			else
-				geometryCache->mNodeManager->NotifyModifiedMaterials(node);
+				geometryCache->mNodeManager.NotifyModifiedMaterials(node);
 		}
 		if (avsNode.data_type==avs::NodeDataType::Skeleton)
 		{
@@ -1111,7 +1111,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 		if (material)
 		{
 			node->SetMaterial(i, material);
-			geometryCache->mNodeManager->NotifyModifiedMaterials(node);
+			geometryCache->mNodeManager.NotifyModifiedMaterials(node);
 		}
 		else 
 		{

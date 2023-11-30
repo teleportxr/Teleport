@@ -161,6 +161,7 @@ namespace clientrender
 		void OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown);
 
 		void ConsoleCommand(const std::string &str);
+		void SelectionChanged();
 		
 		void WriteHierarchy(int tab,std::shared_ptr<clientrender::Node> node);
 		void WriteHierarchies(avs::uid server);

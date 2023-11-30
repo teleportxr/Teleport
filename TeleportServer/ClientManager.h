@@ -26,6 +26,7 @@ namespace teleport
 #pragma pack(pop)
 		class ClientMessaging;
 		class ClientData;
+		struct ClientSettings;
 		//! Container for the client-specific data objects.
 		class ClientManager
 		{
@@ -34,15 +35,24 @@ namespace teleport
 
 			virtual ~ClientManager();
 
+			static ClientManager &instance();
 			bool initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_ns, std::string client_ip_match="", uint32_t maxClients = 100);
 			bool shutdown();
 			void tick(float deltaTime);
 			bool startSession(avs::uid clientID, std::string clientIP);
+			const ClientSettings *GetClientSettings(avs::uid clientID) 
+			{
+				auto f = clientSettings.find(clientID);
+				if (f == clientSettings.end())
+					return nullptr;
+				return f->second.get();
+			}
 
 			void startAsyncNetworkDataProcessing();
 			void stopAsyncNetworkDataProcessing(bool killThread = true);
 
 			void removeClient(avs::uid u);
+			void SetClientSettings(avs::uid clientID, const struct ClientSettings &clientSettings);
 
 			bool hasHost() const;
 			bool hasClient(avs::uid clientID);
@@ -76,6 +86,7 @@ namespace teleport
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
 		public:
 			std::map<avs::uid, std::shared_ptr<ClientData>> clients;
+			std::map<avs::uid, std::shared_ptr<struct ClientSettings>> clientSettings;
 		protected:
 			std::thread mNetworkThread;
 			std::mutex mNetworkMutex;

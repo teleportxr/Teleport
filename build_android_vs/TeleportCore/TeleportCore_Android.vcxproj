@@ -18,6 +18,7 @@
     <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp" />
     <ClCompile Include="..\..\TeleportCore\Input.cpp" />
     <ClCompile Include="..\..\TeleportCore\TeleportCore.cpp" />
+    <ClCompile Include="..\..\TeleportCore\URLParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\CommonNetworking.h" />
@@ -26,6 +27,7 @@
     <ClInclude Include="..\..\TeleportCore\Input.h" />
     <ClInclude Include="..\..\TeleportCore\TeleportUtility.h" />
     <ClInclude Include="..\..\TeleportCore\TextCanvas.h" />
+    <ClInclude Include="..\..\TeleportCore\URLParser.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\firstparty\Platform\External\fmt\fmt.vcxproj">

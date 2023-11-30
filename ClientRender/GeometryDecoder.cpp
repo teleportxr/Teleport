@@ -571,13 +571,13 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		if(!name.length())
 		{
 			name=filename_url;
-			size_t slash=filename_url.find_last_of("/");
+			size_t slash=filename_url.rfind("/");
 			if(slash<filename_url.size())
 				name=filename_url.substr(slash+1,filename_url.size()-slash-1);
 			name+="_"s+texture_types[texture_uid];
 		}
 	/*	{
-			size_t slash=mime.find_last_of("/");
+			size_t slash=mime.rfind("/");
 			std::string ext=mime.substr(slash+1,mime.size()-slash-1);
 			std::ofstream ofs("temp/"s+name+"."s+ext,std::ios_base::binary);
 			ofs.write((const char*)img.encoded_data().data(),img.encoded_data().size());
@@ -595,9 +595,8 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 								, 0
 								,1.0f
 								,false
-								,(uint32_t)data.size()
-								,(const unsigned char*)data.data()
-								,false};
+								,std::move(data)
+								};
 		target->CreateTexture(subSceneCreate.subscene_uid,texture_uid,avsTexture);
 	}
 	for(int m=0;m<dracoScene.NumMeshGroups();m++)
@@ -649,12 +648,12 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 			
 			auto tr=aff.translation();
 			avsNode.localTransform.position=vec3(tr.coeff(0),tr.coeff(1),tr.coeff(2));
-			//if(!mt.RotationSet())
+		
 			{
 				auto rt=aff.rotation();
 				Eigen::Quaterniond q(rt);
 				avsNode.localTransform.rotation={(float)q.x(),(float)q.y(),(float)q.z(),(float)q.w()};
-				//mt.SetRotation(q);
+		
 			}
 		}
 		else
@@ -1344,8 +1343,9 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	texture.compression = static_cast<avs::TextureCompression>(NextUint32);
 	texture.valueScale = NextFloat;
 
-	texture.dataSize = NextUint32;
-	texture.data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
+	uint32_t dataSize = NextUint32;
+	texture.data.resize(dataSize);
+	memcpy(texture.data.data(),geometryDecodeData.data.data() + geometryDecodeData.offset,dataSize);
 
 	texture.sampler_uid = NextUint64;
 

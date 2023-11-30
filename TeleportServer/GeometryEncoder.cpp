@@ -12,6 +12,7 @@
 #include "TeleportCore/TextCanvas.h"
 #include "GeometryStreamingService.h"
 #include "GeometryStore.h"
+#include "ClientManager.h"
 
 
 using namespace teleport;
@@ -39,8 +40,8 @@ size_t GetNewUIDs(std::vector<avs::uid>& outUIDs, avs::GeometryRequesterBackendI
 	return outUIDs.size();
 }
 
-GeometryEncoder::GeometryEncoder(const ServerSettings* settings, GeometryStreamingService* srv)
-	: geometryStreamingService(srv),settings(settings)
+GeometryEncoder::GeometryEncoder(const ServerSettings *settings, GeometryStreamingService *srv, avs::uid clid)
+	: geometryStreamingService(srv), settings(settings), clientID(clid)
 {}
 
 avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBackendInterface*)
@@ -54,7 +55,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 
 	//Encode data onto buffer, and then move it onto queuedBuffer.
 	//Unless queueing the data would causes queuedBuffer to exceed the recommended buffer size, which will cause the data to stay in buffer until the next encode call.
-	//Data may still be queued, and exceed the recommeneded size, if not queueing the data may leave it empty.
+	//Data may still be queued, and exceed the recommended size, if not queueing the data may leave it empty.
 
 	//Queue what may have been left since last time, and keep queueing if there is still some space.
 	bool keepQueueing = attemptQueueData();
@@ -67,6 +68,9 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 		std::vector<avs::uid> font_uids;
 		std::set<avs::uid> genericTexturesToStream;
 
+		int32_t minimumPriority = 0;
+		auto *clientSettings = ClientManager::instance().GetClientSettings(clientID);
+		minimumPriority=clientSettings->minimumNodePriority;
 		geometryStreamingService->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream
 			, textCanvas_uids, font_uids, minimumPriority);
 
@@ -254,10 +258,6 @@ avs::Result GeometryEncoder::unmapOutputBuffer()
 	return avs::Result::OK;
 }
 
-void GeometryEncoder::setMinimumPriority(int32_t p)
-{
-	minimumPriority = p;
-}
 
 avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 {
@@ -750,18 +750,21 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		texture = geometryStore->getTexture(uid);
 		if (texture)
 		{
-			if(texture->dataSize==0)
+			if(texture->data.size()==0)
 			{
-				TELEPORT_CERR << "Trying to send a zero-size texture. Never do this!\n";
+				TELEPORT_CERR << "Trying to send a zero-size texture " << texture->name << ". Never do this!\n";
 				continue;
 			}
 			if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
 			{
-				TELEPORT_CERR << "Trying to send uncompressed texture. Never do this!\n";
+				TELEPORT_CERR << "Trying to send uncompressed texture " << texture->name << ". Never do this!\n";
 				continue;
 			}
-			//size_t oldBufferSize = buffer.size();
-
+			if (texture->width == 0 || texture->height == 0)
+			{
+				TELEPORT_CERR << "Trying to send texture "<<texture->name<<" of zero size. Never do this!\n";
+				continue;
+			}
 			//Place payload type onto the buffer.
 			putPayloadType(avs::GeometryPayloadType::Texture,uid);
 
@@ -793,8 +796,8 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 			put(texture->valueScale);
 
 			//Push size, and data.
-			put(texture->dataSize);
-			put(texture->data, texture->dataSize);
+			put((uint32_t)texture->data.size());
+			put(texture->data.data(), texture->data.size());
 
 			//Push sampler identifier.
 			put(texture->sampler_uid);

@@ -502,7 +502,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n,const char *searc
 	bool show			= true;
 	if (search_text)
 	{
-		if (str.find(search_text) >= str.length())
+		if (platform::core::find_case_insensitive(str,search_text)>=str.length())
 		{
 			show = false;
 		}
@@ -534,7 +534,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n,const char *searc
 	{
 		if(!show_inspector)
 			show_inspector=true;
-		Select(n->id);
+		Select(cache_uid,n->id);
 	}
 	if(open)
 	{
@@ -1186,7 +1186,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			}
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			avs::uid selected_uid=GetSelectedUid();
-			std::shared_ptr<const clientrender::Node> selected_node				=geometryCache->mNodeManager->GetNode(selected_uid);
+			std::shared_ptr<const clientrender::Node> selected_node				=geometryCache->mNodeManager.GetNode(selected_uid);
 			std::shared_ptr<const clientrender::Material> selected_material		=geometryCache->mMaterialManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Texture> selected_texture		=geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation	=geometryCache->mAnimationManager.Get(selected_uid);
@@ -1245,7 +1245,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 						DoRow("Mesh"		,"%d : %s", m->GetMeshCreateInfo().id, m->GetMeshCreateInfo().name.c_str());
 						if (ImGui::IsItemClicked())
 						{
-							Select(m->GetMeshCreateInfo().id);
+							Select(cache_uid, m->GetMeshCreateInfo().id);
 						}
 					}
 					const auto &sn=selected_node->GetSkeletonNode();
@@ -1254,7 +1254,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 						DoRow("Skeleton Node"	,"%s",n->name.c_str());
 						if (ImGui::IsItemClicked())
 						{
-							Select(n->id);
+							Select(cache_uid, n->id);
 						}
 					}
 					if(selected_node->GetSkeletonInstance())
@@ -1263,7 +1263,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 						DoRow("Skeleton"	,"%d : %s",s->GetBones().size(),s->GetSkeleton()->name.c_str());
 						if (ImGui::IsItemClicked())
 						{
-							//Select(s->GetSkeleton()->id);
+							//Select(cache_uid,s->GetSkeleton()->id);
 						}
 					}
 					ImGui::EndTable();
@@ -1303,7 +1303,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 						ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, pass?pass->name.c_str():"");
 						if (ImGui::IsItemClicked())
 						{
-							Select(m->id);
+							Select(cache_uid, m->id);
 						}
 					}
 					element++;
@@ -1315,7 +1315,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %llu", (unsigned long long)s->sub_scene_uid);
 					if (ImGui::IsItemClicked())
 					{
-						Select(s->sub_scene_uid);
+						Select(cache_uid, s->sub_scene_uid);
 					}
 				}
 			}
@@ -1331,7 +1331,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					
 					if (ImGui::IsItemClicked())
 					{
-						Select(mci.diffuse.texture->GetTextureCreateInfo().uid);
+						Select(cache_uid, mci.diffuse.texture->GetTextureCreateInfo().uid);
 					}
 				}
 
@@ -1344,7 +1344,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					
 					if (ImGui::IsItemClicked())
 					{
-						Select( mci.combined.texture->GetTextureCreateInfo().uid);
+						Select(cache_uid, mci.combined.texture->GetTextureCreateInfo().uid);
 					}
 				}
 				if (mci.emissive.texture.get())
@@ -1353,7 +1353,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					
 					if (ImGui::IsItemClicked())
 					{
-						Select( mci.emissive.texture->GetTextureCreateInfo().uid);
+						Select(cache_uid, mci.emissive.texture->GetTextureCreateInfo().uid);
 					}
 				}
 			}
@@ -1397,7 +1397,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 
 					if (g)
 					{
-						auto rn=g->mNodeManager->GetRootNodes();
+						auto rn=g->mNodeManager.GetRootNodes();
 						if(rn.size())
 						{
 							auto b=rn.begin();
@@ -1478,7 +1478,7 @@ void Gui::Textures(const ResourceManager<avs::uid,clientrender::Texture>& textur
 		{
 			if(!show_inspector)
 				show_inspector=true;
-			Select(id);
+			Select(cache_uid, id);
 		}
 		ImGui::TreePop();
 	}
@@ -1498,7 +1498,7 @@ void Gui::Skeletons(const ResourceManager<avs::uid,clientrender::Skeleton>& skel
 		{
 			if (!show_inspector)
 				show_inspector = true;
-			Select(id);
+			Select(cache_uid, id);
 		}
 		ImGui::TreePop();
 	}
@@ -1517,7 +1517,7 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 		{
 			if(!show_inspector)
 				show_inspector=true;
-			Select(id);
+			Select(cache_uid, id);
 		}
 		ImGui::TreePop();
 	}
@@ -1633,7 +1633,8 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 
 bool Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
 {
-	ImGui::Checkbox("Global Origin Axes",&debugOptions.showAxes);
+	ImGui::Checkbox("Show Overlays", &debugOptions.showOverlays);
+	ImGui::Checkbox("Show Axes",&debugOptions.showAxes);
 	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
 	const char *debugShaders[]={""
 								,"ps_solid_albedo_only"
@@ -1767,15 +1768,15 @@ void Gui::GeometryOSD()
 	auto geometryCache=clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if(!geometryCache)
 		return;
-	LinePrint(platform::core::QuickFormat("Nodes: %d",geometryCache->mNodeManager->GetNodeCount()), white);
+	LinePrint(platform::core::QuickFormat("Nodes: %d",geometryCache->mNodeManager.GetNodeCount()), white);
 
 	static int nodeLimit = 5;
-	auto& rootNodes = geometryCache->mNodeManager->GetRootNodes();
+	auto& rootNodes = geometryCache->mNodeManager.GetRootNodes();
 	static int lineLimit = 50;
 
 	LinePrint(platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache->mMeshManager.GetCache(cacheLock).size(),
 					geometryCache->mLightManager.GetCache(cacheLock).size()), white);
-	LinePrint(platform::core::QuickFormat("Transparent Nodes: %d", geometryCache->mNodeManager->GetSortedTransparentNodes().size()), white);
+	LinePrint(platform::core::QuickFormat("Transparent Nodes: %d", geometryCache->mNodeManager.GetSortedTransparentNodes().size()), white);
 					
 	Scene();
 
@@ -1794,7 +1795,7 @@ void Gui::GeometryOSD()
 				std::string name;
 				if(type==avs::GeometryPayloadType::Node)
 				{
-					auto n = geometryCache->mNodeManager->GetNode(id);
+					auto n = geometryCache->mNodeManager.GetNode(id);
 					if(n)
 						name = fmt::format(" ({0})",n->name);
 				}
@@ -1851,7 +1852,7 @@ void Gui::Scene()
 	ImGui::BeginTabBar("Scene");
 	if(ImGui::BeginTabItem("Nodes"))
 	{
-		NodeTree( geometryCache->mNodeManager->GetRootNodes());
+		NodeTree( geometryCache->mNodeManager.GetRootNodes());
 		ImGui::EndTabItem();
 	}
 	if (ImGui::BeginTabItem("Skeletons"))
@@ -1877,7 +1878,32 @@ void Gui::NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>& root_no
 {
 	static const size_t bufferSize = 40;
 	static char buffer[bufferSize];
-	ImGui::InputText("Search: ", buffer, bufferSize);
+	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
+
+	if (ImGui::BeginTable("NodeOpts", 2))
+	{
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##rootnode", "Origin node");
+		ImGui::TableNextColumn();
+		if (sessionClient)
+		{
+			auto &clientServerState = sessionClient->GetClientServerState();
+			if(ImGui::Button(fmt::format("{0}",clientServerState.origin_node_uid).c_str()))
+			{
+				if(clientServerState.origin_node_uid)
+					Select(cache_uid, clientServerState.origin_node_uid);
+			}
+		}
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##srch", "Search:");
+		ImGui::TableNextColumn();
+		ImGui::InputText("##searchtxt", buffer, bufferSize);
+		ImGui::EndTable();
+	}
 	const char* search_text = nullptr;
 	if (strlen(buffer) > 0)
 		search_text = buffer;
@@ -2715,16 +2741,23 @@ void Gui::SetServerIPs(const std::vector<std::string> &s)
 }
 
 
-void Gui::Select(avs::uid u)
+void Gui::Select(avs::uid c,avs::uid u)
 {
+	cache_uid=c;
 	if(selection_cursor+1<selection_history.size())
 	{
 		selection_history.erase(selection_history.begin()+selection_cursor+1,selection_history.end());
 	}
-	else if(selection_cursor==selection_history.size()-1&&u==selection_history.back())
-		return;
-	selection_history.push_back(u);
+	else
+	{
+		Selection s={c, u};
+		if (selection_cursor == selection_history.size() - 1 && s == selection_history.back())
+			return;
+	}
+	selection_history.push_back({c,u});
 	selection_cursor=selection_history.size()-1;
+	if(selectionHandler)
+		selectionHandler();
 }
 
 void Gui::SelectPrevious()
@@ -2742,9 +2775,14 @@ void Gui::SelectNext()
 avs::uid Gui::GetSelectedUid() const
 {
 	if(selection_cursor<selection_history.size())
-		return selection_history[selection_cursor];
+		return selection_history[selection_cursor].selected_uid;
 	else
 		return 0;
+}
+
+avs::uid Gui::GetSelectedCache() const
+{
+	return cache_uid;
 }
 
 avs::uid Gui::GetSelectedServer() const

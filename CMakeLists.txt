@@ -34,6 +34,18 @@ set(PLATFORM_IMGUI ON)
 option(TELEPORT_UNITY "Build for Unity?" ${TELEPORT_UNITY})
 option(TELEPORT_BUILD_DOCS "Build documentation?" OFF)
 option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
+option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
+
+if(TELEPORT_TRACY_PROFILING)
+	FetchContent_Declare (
+		tracy
+		GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+		GIT_TAG master
+		GIT_SHALLOW TRUE
+		GIT_PROGRESS TRUE
+	)
+	FetchContent_MakeAvailable(tracy)
+endif()
 if(TELEPORT_UNITY)
 	set(TELEPORT_SERVER true)
 	set(TELEPORT_CLIENT false)

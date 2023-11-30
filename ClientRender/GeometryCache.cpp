@@ -6,7 +6,7 @@ using namespace clientrender;
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform=nullptr;
 
 GeometryCache::GeometryCache(avs::uid c_uid)
-		:cache_uid(c_uid), mNodeManager(new clientrender::NodeManager),
+		:cache_uid(c_uid), mNodeManager(flecs_world),
 	  mMaterialManager(c_uid),
 	  mSubsceneManager(c_uid),
 	  mTextureManager(c_uid, &clientrender::Texture::Destroy),
@@ -20,6 +20,8 @@ GeometryCache::GeometryCache(avs::uid c_uid)
 	  mIndexBufferManager(c_uid, &clientrender::IndexBuffer::Destroy),
 	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
+	using avs::Pose;
+	ECS_COMPONENT(flecs_world, Pose);
 }
 
 GeometryCache::~GeometryCache()
@@ -451,7 +453,7 @@ void GeometryCache::CompleteMaterial(avs::uid id, const clientrender::Material::
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
-			mNodeManager->NotifyModifiedMaterials(incompleteNode);
+			mNodeManager.NotifyModifiedMaterials(incompleteNode);
 		}
 	}
 	//Resource has arrived, so we are no longer waiting for it.
