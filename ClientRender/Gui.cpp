@@ -240,7 +240,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	vrHeadsetIconTexture=renderPlatform->CreateTexture("headsetIconLine.png");
 	imgui_vrHeadsetIconTexture.height=20;
 	imgui_vrHeadsetIconTexture.width=20;
-	imgui_vrHeadsetIconTexture.mip=0;
+	imgui_vrHeadsetIconTexture.mip=-1;
 	imgui_vrHeadsetIconTexture.slice=0;
 	imgui_vrHeadsetIconTexture.texture=vrHeadsetIconTexture;
 
@@ -249,7 +249,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		viveControllerTexture = renderPlatform->CreateTexture("viveController.png");
 		imgui_ViveControllerTexture.height = 347;
 		imgui_ViveControllerTexture.width = 265;
-		imgui_ViveControllerTexture.mip = 0;
+		imgui_ViveControllerTexture.mip = -1;
 		imgui_ViveControllerTexture.slice = 0;
 		imgui_ViveControllerTexture.texture = viveControllerTexture;
 		
@@ -958,7 +958,7 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	bool in3D = openXR.IsSessionActive();
 	if(in3D)
 	{
-		size.x*=0.6f;
+		//size.x*=0.6f;
 		ImGui::SetNextWindowPos(ImVec2(0, 0)); // always at the window origin
 		ImGui::SetNextWindowSizeConstraints(size, size);
 
@@ -971,43 +971,6 @@ void Gui::BeginDebugGui(GraphicsDeviceContext& deviceContext)
 	ImGui::PushFont(fontInter[18]);
 	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
 		in_debug_gui++;
-/*
-	static vec4 white(1.f, 1.f, 1.f, 1.f);
-	if(sessionClient)
-	{
-		auto status = sessionClient->GetConnectionStatus();
-		auto streamingStatus = sessionClient->GetStreamingConnectionState();
-		const auto& setup = sessionClient->GetSetupCommand();
-		ImGui::BeginTable("serverstats", 2);
-		ImGui::TableSetupColumn("name1", ImGuiTableColumnFlags_WidthFixed, 200.0f);
-		ImGui::TableSetupColumn("val11", ImGuiTableColumnFlags_WidthStretch, 400.0f);
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::Text("Server");
-		ImGui::TableNextColumn();
-		ImGui::Text(fmt::format("{0}:{1}", sessionClient->GetServerIP().c_str(), sessionClient->GetPort()).c_str());
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::Text("Server Session Id");
-		ImGui::TableNextColumn();
-		ImGui::Text("%llu", setup.session_id, white);
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::Text("Session Status");
-		ImGui::TableNextColumn();
-		ImGui::Text(teleport::client::StringOf(status), white);
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::Text("Streaming Status");
-		ImGui::TableNextColumn();
-		ImGui::Text( avs::stringOf(streamingStatus), white);
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::Text("Latency");
-		ImGui::TableNextColumn();
-		ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs(), white);
-		ImGui::EndTable();
-	}*/
 }
 
 void Gui::LinePrint(const std::string& str, const float* clr)
@@ -1631,11 +1594,13 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 	LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));*/
 }
 
-bool Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
+bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 {
 	ImGui::Checkbox("Show Overlays", &debugOptions.showOverlays);
 	ImGui::Checkbox("Show Axes",&debugOptions.showAxes);
 	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
+	ImGui::Checkbox("Texture Transcoding Thread", &debugOptions.enableTextureTranscodingThread);
+	ImGui::Checkbox("Geometry Transcoding Thread", &debugOptions.enableGeometryTranscodingThread);
 	const char *debugShaders[]={""
 								,"ps_solid_albedo_only"
 								,"ps_debug_normals"

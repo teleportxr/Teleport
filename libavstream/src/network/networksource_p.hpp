@@ -92,7 +92,7 @@ namespace avs
 		std::unique_ptr<udp::endpoint> m_endpoint;
 #endif
 		std::vector<NetworkSourceStream> m_streams;
-		std::unordered_map<uint32_t, int> m_streamNodeMap;
+		phmap::flat_hash_map<uint32_t, int> m_streamNodeMap;
 		NetworkSourceParams m_params;
 		NetworkSourceCounters m_counters;
 

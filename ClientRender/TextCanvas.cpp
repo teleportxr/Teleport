@@ -81,7 +81,6 @@ void TextCanvas::Recompile()
 	recompile = false;
 	SAFE_DELETE(effect);
 	effect			=renderPlatform->CreateEffect("canvas_text");
-	textConstants.LinkToEffect(effect,"TextConstants");
 	tech			=effect->GetTechniqueByName("text");
 	
 	singleViewPass			=tech->GetPass("singleview");
@@ -91,8 +90,7 @@ void TextCanvas::Recompile()
 	_fontChars		=effect->GetShaderResource("fontChars");
 }
 
-void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplatform::ConstantBuffer<CameraConstants> &cameraConstants
-	,platform::crossplatform::ConstantBuffer<StereoCameraConstants> &stereoCameraConstants
+void TextCanvas::Render(GraphicsDeviceContext &deviceContext, platform::crossplatform::ConstantBuffer<CameraConstants, crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> &cameraConstants, platform::crossplatform::ConstantBuffer<StereoCameraConstants, crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> &stereoCameraConstants
 	,platform::crossplatform::Texture *fontTexture)
 {
 	if(!renderPlatform)
@@ -215,12 +213,12 @@ void TextCanvas::Render(GraphicsDeviceContext &deviceContext,platform::crossplat
 	textConstants.numChars = n;
 	if (n > 0)
 	{
-		effect->SetTexture(deviceContext, textureResource, fontTexture);
+		renderPlatform->SetTexture(deviceContext, textureResource, fontTexture);
 		renderPlatform->ApplyPass(deviceContext,pass);
-		effect->SetConstantBuffer(deviceContext, &textConstants);
-		effect->SetConstantBuffer(deviceContext, &cameraConstants);
+		renderPlatform->SetConstantBuffer(deviceContext, &textConstants);
+		renderPlatform->SetConstantBuffer(deviceContext, &cameraConstants);
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-			effect->SetConstantBuffer(deviceContext, &stereoCameraConstants);
+			renderPlatform->SetConstantBuffer(deviceContext, &stereoCameraConstants);
 		renderPlatform->SetVertexBuffers(deviceContext, 0, 0, nullptr, nullptr);
 		fontChars.Apply(deviceContext, effect, _fontChars);
 		renderPlatform->SetTopology(deviceContext, Topology::TRIANGLELIST);

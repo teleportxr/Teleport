@@ -43,8 +43,8 @@ namespace clientrender
 		TextCanvasCreateInfo textCanvasCreateInfo;
 		
 		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext
-				,platform::crossplatform::ConstantBuffer<CameraConstants> &cameraConstants
-				,platform::crossplatform::ConstantBuffer<StereoCameraConstants> &stereoCameraConstants
+				, platform::crossplatform::ConstantBuffer<CameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> &cameraConstants
+				, platform::crossplatform::ConstantBuffer<StereoCameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> &stereoCameraConstants
 				,platform::crossplatform::Texture *fontTexture);
 		void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 		void InvalidateDeviceObjects();

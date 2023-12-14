@@ -128,7 +128,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	// run from pc_client directory.
 	std::filesystem::path current_path = std::filesystem::current_path();
-	if(!std::filesystem::exists("client_default.ini"))
+	if(!std::filesystem::exists("pc_client/client_default.ini"))
 	{
 		wchar_t filename[700];
 		DWORD res=GetModuleFileNameW(nullptr,filename,700);

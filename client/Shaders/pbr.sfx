@@ -164,33 +164,11 @@ struct vertexOutput
 	vec4 debug_colour			: TEXCOORD8;
 };
 
-shader vertexOutput VS_Solid_PosOnly(vertexInputP IN)
-{
-	vertexOutput OUT;
-	vec4 opos				=vec4(IN.position.xyz,1.0);
-	OUT.wpos				=mul(world, opos).xyz;
-	OUT.view				=normalize(OUT.wpos.xyz- viewPosition);
-	OUT.clip_pos			=mul(opos,worldViewProj);
-	OUT.diffuseNormalUV		=vec4(0,0,0,0);
-	OUT.combinedEmissiveUV	=vec4(0,0,0,0);
-	OUT.lightmapUV			=vec2(0,0);
-#ifdef SFX_OPENGL_NONE
-	OUT.normal.xyz	=normalize(mul(vec3(0,0,1.0), mat3(world)));
-	OUT.tangent.xyz = normalize(mul(vec3(0, 0, 1.0), mat3(world)));
-#else
-	OUT.normal.xyz	= normalize(mul(vec4(vec3(0,0,1.0),0.0), world).xyz);
-	OUT.tangent.xyz = normalize(mul(vec4(vec3(0, 0, 1.0), 0.0), world).xyz);
-#endif
-	OUT.hPosition	=OUT.clip_pos;
-	OUT.debug_colour = vec4(0, 0, 0, 0);
-	return OUT;
-}
-
 shader vertexOutput VSSolid(vertexInput_normal_tangent_2uvs IN)
 {
 	vertexOutput OUT;
 	vec4 opos			=vec4(IN.position.xyz,1.0);
-	vec4 wpos			=mul(opos, world);
+	vec4 wpos			=mul(opos, model);
 
 	OUT.view			=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos	=mul(view,vec4(wpos.xyz, 1.0));
@@ -199,7 +177,7 @@ shader vertexOutput VSSolid(vertexInput_normal_tangent_2uvs IN)
 	
 	vec2 texCoords[2];
 	texCoords[0]		=IN.texCoords0;
-	texCoords[1]		=IN.texCoords1;
+	texCoords[1]		=IN.texCoords1; 
 	
 	vec4 diffnorm=vec4(texCoords[diffuseTexCoordIndex]* diffuseTexCoordsScale,texCoords[normalTexCoordIndex]* normalTexCoordsScale);
 	OUT.diffuseNormalUV			=BottomUpTextureCoordinates4(diffnorm);
@@ -209,12 +187,12 @@ shader vertexOutput VSSolid(vertexInput_normal_tangent_2uvs IN)
 	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(lm);
 	
 #ifdef SFX_OPENGL_NONE
-	OUT.normal.xyz = mul(IN.normal, mat3(world));
-	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
+	OUT.normal.xyz = mul(IN.normal, mat3(model));
+	OUT.tangent.xyz = mul(IN.tangent, model).xyz;
 #else
-//	must NORMALIZE, because world matix might SCALE the normals!
-	OUT.normal			= normalize(mul(vec4(IN.normal.xyz, 0.0), world).xyz);
-	OUT.tangent			= normalize(mul(vec4(IN.tangent.xyz,0.0), world).xyz);
+//	must NORMALIZE, because world matrix might SCALE the normals!
+	OUT.normal			= normalize(mul(vec4(IN.normal.xyz, 0.0), model).xyz);
+	OUT.tangent			= normalize(mul(vec4(IN.tangent.xyz,0.0), model).xyz);
 #endif
 	OUT.hPosition		= OUT.clip_pos;
 	OUT.debug_colour	= vec4(IN.position.xyz, 0);
@@ -279,7 +257,7 @@ vertexOutput VSSolidMV(vertexInput_normal_tangent_2uvs IN, uint viewID)
 	vertexOutput OUT;
 	
 	vec4 opos			=vec4(IN.position.xyz,1.0);
-	vec4 wpos			=mul(opos, viewID == 0 ? leftWorld : rightWorld);
+	vec4 wpos			=mul(opos, model);
 
 	OUT.view			=normalize(wpos.xyz-stereoViewPosition);
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
@@ -295,11 +273,11 @@ vertexOutput VSSolidMV(vertexInput_normal_tangent_2uvs IN, uint viewID)
 	vec2 lm						=texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(lm);
 #ifdef SFX_OPENGL_NONE
-	OUT.normal.xyz = mul(IN.normal, mat3(world));
-	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
+	OUT.normal.xyz = mul(IN.normal, mat3(model));
+	OUT.tangent.xyz = mul(IN.tangent, model).xyz;
 #else
-	OUT.normal			=mul(vec4(IN.normal.xyz, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
-	OUT.tangent			=mul(vec4(IN.tangent.xyz,0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
+	OUT.normal			=mul(vec4(IN.normal.xyz, 0.0), model).xyz;
+	OUT.tangent			=mul(vec4(IN.tangent.xyz,0.0), model).xyz;
 #endif
 	OUT.hPosition		=OUT.clip_pos;
 	OUT.debug_colour	=vec4(IN.position.xyz, 0);
@@ -364,7 +342,7 @@ vertexOutput VSAnim(vertexInputAnim IN)
 	vec4 bpos			= mul(opos, boneTransform);
 	//mmbpos=opos;
 	// boneTransform transforms between two positions in object-local space.
-	vec4 wpos			= mul(bpos, world);
+	vec4 wpos			= mul(bpos, model);
 	OUT.view			=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos	=mul(view, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
@@ -378,9 +356,9 @@ vertexOutput VSAnim(vertexInputAnim IN)
 	vec2 lm=texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(lm);
 	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
-	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), world).xyz;
+	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), model).xyz;
 	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
-	OUT.tangent.xyz = mul(IN.tangent, world).xyz;
+	OUT.tangent.xyz = mul(IN.tangent, model).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
 	OUT.debug_colour = IN.weights;
@@ -396,7 +374,7 @@ vertexOutput VSAnimMV(vertexInputAnim IN, uint viewID)
 	float W = w.x + w.y + w.z + w.w;
 	w /= W;
 	mat4 boneTransform = boneMatrices[int(IN.joints[0])] * w.x + boneMatrices[int(IN.joints[1])] * w.y + boneMatrices[int(IN.joints[2])] * w.z + boneMatrices[int(IN.joints[3])] * w.w;
-	mat4 world = viewID == 0 ? leftWorld : rightWorld;
+	mat4 world = model;
 	vec4 opos = vec4(IN.position.xyz, 1.0);
 	// boneTransform transforms between two positions in object-local space.
 	vec4 bpos = mul(opos, boneTransform);
@@ -447,7 +425,7 @@ shader vertexOutput VS_DebugAnimation(idOnly IN)
 	 
 	vec4 opos			=vec4(0,0,float(IN.vertex_id),1.0);
 	// boneTransform transforms between two positions in object-local space.
-	vec4 wpos			=mul(mul(opos, boneTransform), world);
+	vec4 wpos			=mul(mul(opos, boneTransform), model);
 	OUT.view			=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos	=mul(view, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));

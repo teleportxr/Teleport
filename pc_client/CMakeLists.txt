@@ -72,7 +72,7 @@ if(TELEPORT_CLIENT_USE_VULKAN)
 endif()
 #target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
 target_link_libraries(TeleportPCClient )
-target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_VULKAN=$<BOOL:${TELEPORT_CLIENT_USE_VULKAN}> TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
+target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_VULKAN=$<BOOL:${TELEPORT_CLIENT_USE_VULKAN}> TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>  )	
 
 SetTeleportDefaults(TeleportPCClient)
 set_target_properties( TeleportPCClient PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
@@ -89,11 +89,11 @@ endif()
 
 target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader) 
 target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
-target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
+target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt::fmt-header-only)
 
 target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)
 target_link_libraries(TeleportPCClient LibDataChannel::LibDataChannelStatic usrsctp ws2_32.lib  libssl.lib juice-static iphlpapi.lib  bcrypt.lib)
-
+target_compile_definitions( TeleportPCClient PUBLIC FMT_HEADER_ONLY )
 
 target_link_libraries(TeleportPCClient -ignore:4711)
 

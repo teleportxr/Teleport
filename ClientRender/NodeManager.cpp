@@ -30,7 +30,7 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
 {
 	using avs::Pose;
-	ECS_COMPONENT_DEFINE(flecs_world, Pose);
+	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
 }
 
 std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
@@ -41,11 +41,29 @@ std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsN
 	AddNode(node, avsNode);
 	return node;
 }
+ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
+{
+	ecs_ensure(flecs_world, node_id);
+	return (ecs_entity_t)node_id;
+#if 0
+	auto f = flecs_entity_map.find(node_id);
+	ecs_entity_t e;
+	if (f == flecs_entity_map.end())
+	{
+		e = flecs_world.entity();
+	}
+	else
+	{
+		e = f->second;
+	}
+	flecs_entity_map[node_id] = e;
+	return e;
+#endif
+}
 
 void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 {
 	using avs::Pose;
-	flecs_world.add(42, ecs_id(Pose));
 	{
 		rootNodes_mutex.lock();
 		rootNodes.push_back(node);
@@ -54,15 +72,25 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	}
 	// Should not do this on the main thread, or any perf-critical thread.
 	while(!nodeLookup_mutex.try_lock())
-	{}
-
+	{
+	}
 	nodeLookup[node->id] = node;
 	avs::uid node_id = node->id;
+
+	ecs_entity_t e=FlecsEntity(node_id);
+	ecs_ensure(flecs_world, node_id);
+	flecs_world.entity(e).set_doc_name(avsNode.name.c_str());
+
+//	flecs_world.entity(e)
+	//				.set<flecs_local_pos>({{0, 0, 0}})
+		//			.set<flecs_local_orientation>({{0, 0, 0,1.0f}});
+
 	nodeLookup_mutex.unlock();
 	if(avsNode.parentID)
 	{
 		parentLookup[node_id]=avsNode.parentID;
 		childLookup[avsNode.parentID].insert(node_id);
+		flecs_world.entity(e).child_of(FlecsEntity(avsNode.parentID));
 	}
 	//Link new node to parent.
 	LinkToParentNode(node);
@@ -212,6 +240,7 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(avs::uid nodeID)
 {
+	flecs_world.delete_with(flecs_world.entity(FlecsEntity(nodeID)));
 	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())

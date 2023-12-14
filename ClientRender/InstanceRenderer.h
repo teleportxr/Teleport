@@ -11,7 +11,6 @@
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Platform/CrossPlatform/Shaders/camera_constants.sl"
 #include "client/Shaders/cubemap_constants.sl"
-#include "client/Shaders/pbr_constants.sl"
 #include "client/Shaders/video_types.sl"
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
@@ -36,17 +35,6 @@ namespace clientrender
 		avs::Pose localPose;
 		avs::Pose globalPose;
 	};
-	//! The generic state of the client hardware device e.g. headset, controllers etc.
-	//! There exists one of these for each server, plus one for the null server (local state).
-	
-	struct DebugOptions
-	{
-		bool showAxes=false;
-		bool showOverlays=false;
-		bool showStageSpace = false;
-		bool useDebugShader = false;
-		std::string debugShader;
-	};
 	struct AVSTexture
 	{
 		virtual ~AVSTexture() = default;
@@ -63,10 +51,10 @@ namespace clientrender
 		platform::crossplatform::Texture *texture = nullptr;
 		avs::SurfaceBackendInterface* createSurface() const override;
 	};
+	//! The generic state of the renderer.
 	struct RenderState
 	{
 		teleport::client::OpenXR *openXR = nullptr;
-		DebugOptions debugOptions;
 		avs::uid show_only=0;
 		avs::uid selected_uid=0;
 		avs::uid selected_cache=0;
@@ -101,16 +89,17 @@ namespace clientrender
 		platform::crossplatform::ShaderResource pbrEffect_globalIlluminationTexture;
 		platform::crossplatform::ShaderResource cubemapClearEffect_TagDataCubeBuffer; 
 		
-		platform::crossplatform::ConstantBuffer<CameraConstants> cameraConstants;
-		platform::crossplatform::ConstantBuffer<StereoCameraConstants> stereoCameraConstants;
+		platform::crossplatform::ConstantBuffer<CameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> cameraConstants;
+		platform::crossplatform::ConstantBuffer<StereoCameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> stereoCameraConstants;
 		platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
-		platform::crossplatform::ConstantBuffer<PbrConstants> pbrConstants;
+		platform::crossplatform::ConstantBuffer<TeleportSceneConstants, platform::crossplatform::ResourceUsageFrequency::ONCE_PER_FRAME> teleportSceneConstants;
 		platform::crossplatform::ConstantBuffer<PerNodeConstants> perNodeConstants;
 		platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
 		platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 		platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
 	};
 	//! API objects that are per-server.
+	//! There exists one of these for each server, plus one for the null server (local state).
 	struct InstanceRenderState
 	{
 		AVSTextureHandle avsTexture;
@@ -148,8 +137,9 @@ namespace clientrender
 		
 		virtual avs::DecoderBackendInterface* CreateVideoDecoder()
 		{
-		return nullptr;
+			return nullptr;
 		}
+		void ApplyModelMatrix(platform::crossplatform::GraphicsDeviceContext &deviceContext,const mat4 &model);
 	public:
 		std::vector<clientrender::SceneCaptureCubeTagData> videoTagDataCubeArray;
 		VideoTagDataCube videoTagDataCube[RenderState::maxTagDataSize];
@@ -160,6 +150,15 @@ namespace clientrender
 		{
 			return instanceRenderState;
 		}
+		struct MeshRender
+		{
+			avs::uid cache_uid;
+			avs::uid node_uid;
+			mat4 model;
+			bool transparent_pass;
+		};
+		std::vector<MeshRender> meshRenders;
+		std::vector<MeshRender> meshTransparentRenders;
 	public:
 		InstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,RenderState &renderState,teleport::client::SessionClient *sessionClient);
 		virtual ~InstanceRenderer();
@@ -177,14 +176,13 @@ namespace clientrender
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
 			,const std::shared_ptr<clientrender::GeometryCache> &g
 			,const std::shared_ptr<clientrender::Node> node
-			,bool force
 			,bool include_children
 			,bool transparent_pass);
 
+		void RenderMeshNode(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
 		void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas);
 		void RenderBone(platform::crossplatform::GraphicsDeviceContext& deviceContext,const mat4 &model_matrix,const std::shared_ptr<clientrender::Bone> bone);
-		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,const std::shared_ptr<clientrender::Node> node
+		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const MeshRender &meshRender
 			,bool force=false);
 		
 		std::shared_ptr<clientrender::GeometryCache> geometryCache;

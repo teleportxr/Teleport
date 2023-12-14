@@ -63,6 +63,7 @@ target_include_directories(TeleportClient PUBLIC ../thirdparty/json)
 target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include )
 
 target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
+target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External )
 
 #include libdatachannel
 target_include_directories(TeleportClient PRIVATE ../thirdparty/libdatachannel/include)

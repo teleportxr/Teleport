@@ -489,9 +489,12 @@ namespace teleport
 			bool add_overlay = false;
 			// enabled extensions:
 			bool cylinderOverlayExt=false;
+			public:
 			float viewAzimuth=0.0f;
-			float overlayAzimuth = 0.0f;
+			float overlayAzimuth = 20.0f;
 			float targetOverlayAzimuth = 0.0f;
+			float azimuthDiffAngle=0.0f;
+			protected:
 			void UpdateOverlayPosition();
 			// The action for getting the hand or controller position and orientation.
 			XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties = {XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT};

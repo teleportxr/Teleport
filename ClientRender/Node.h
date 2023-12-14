@@ -283,8 +283,6 @@ namespace clientrender
 		bool smoothingInitialized = false;
 		bool smoothingEnabled = false;
 
-		//std::vector<avs::uid> childIDs;
-
 		bool isStatic;
 		int priority=0;
 		//Cached global transform, and dirty flag; updated when necessary on a request.

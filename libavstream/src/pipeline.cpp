@@ -98,6 +98,21 @@ size_t Pipeline::getLength() const
 	return m_nodes.size();
 }
 
+void Pipeline::processAsync()
+{
+	if(!pipelineThread.joinable())
+		pipelineThread = std::thread(&Pipeline::processAsyncFn, this);
+	pipelineThreadActive = true;
+}
+
+void Pipeline::processAsyncFn()
+{
+	while (pipelineThreadActive)
+	{
+		Result result= process();
+	}
+}
+
 Result Pipeline::process()
 {
 	// Returns in milliseconds.
@@ -148,6 +163,9 @@ Result Pipeline::process()
 
 void Pipeline::deconfigure()
 {
+	pipelineThreadActive=false;
+	if(pipelineThread.joinable())
+		pipelineThread.join();
 	for (PipelineNode* node : m_nodes)
 	{
 		assert(node);

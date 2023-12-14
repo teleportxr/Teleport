@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cmath>
 #include <functional>
+#include <parallel_hashmap/phmap.h>
 
 #include <rtc/rtc.hpp>
 #include <nlohmann/json.hpp>
@@ -46,14 +47,14 @@ namespace avs
 	struct WebRtcNetworkSink::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSink, PipelineNode)
-		std::unordered_map<uint64_t, ServerDataChannel> dataChannels;
+		phmap::flat_hash_map<uint64_t, ServerDataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
 			void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
-		std::unordered_map<int, uint8_t> idToStreamIndex;
-		std::unordered_map<uint8_t, uint8_t> streamIndexToInputIndex;
-		std::unordered_map<uint8_t, uint8_t> streamIndexToOutputIndex;
-		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
+		phmap::flat_hash_map<int, uint8_t> idToStreamIndex;
+		phmap::flat_hash_map<uint8_t, uint8_t> streamIndexToInputIndex;
+		phmap::flat_hash_map<uint8_t, uint8_t> streamIndexToOutputIndex;
+		phmap::flat_hash_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		bool recreateConnection = false;
 		rtc::PeerConnection::State currentState = rtc::PeerConnection::State::New;

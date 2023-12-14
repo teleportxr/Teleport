@@ -128,6 +128,7 @@ Renderer::Renderer(teleport::Gui& g)
 	clientrender::Tests::RunAllTests();
 	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, this, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::RenderVROverlay, this, std::placeholders::_1);
+	SetThisThreadPriority(2);
 }
 
 Renderer::~Renderer()
@@ -201,20 +202,16 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	errno = 0;
 	LoadShaders();
 
-	renderState.pbrConstants.RestoreDeviceObjects(renderPlatform);
-	renderState.pbrConstants.LinkToEffect(renderState.pbrEffect, "pbrConstants");
+	renderState.teleportSceneConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.perNodeConstants.RestoreDeviceObjects(renderPlatform);
-	renderState.perNodeConstants.LinkToEffect(renderState.pbrEffect, "perNodeConstants");
 	renderState.cubemapConstants.RestoreDeviceObjects(renderPlatform);
-	renderState.cubemapConstants.LinkToEffect(renderState.cubemapClearEffect, "CubemapConstants");
 	renderState.cameraConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.stereoCameraConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
 	renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
 	renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
-	renderState.boneMatrices.LinkToEffect(renderState.pbrEffect, "boneMatrices");
-
+	
 	avs::Context::instance()->setMessageHandler(msgHandler, nullptr);
 
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
@@ -286,19 +283,15 @@ void Renderer::ExecConsoleCommand(const std::string &str)
 	}
 	else if (str == "reloadtextures")
 	{
-		renderState.pbrConstants.RestoreDeviceObjects(renderPlatform);
-		renderState.pbrConstants.LinkToEffect(renderState.pbrEffect, "pbrConstants");
+		renderState.teleportSceneConstants.RestoreDeviceObjects(renderPlatform);
 		renderState.perNodeConstants.RestoreDeviceObjects(renderPlatform);
-		renderState.perNodeConstants.LinkToEffect(renderState.pbrEffect, "perNodeConstants");
 		renderState.cubemapConstants.RestoreDeviceObjects(renderPlatform);
-		renderState.cubemapConstants.LinkToEffect(renderState.cubemapClearEffect, "CubemapConstants");
 		renderState.cameraConstants.RestoreDeviceObjects(renderPlatform);
 		renderState.stereoCameraConstants.RestoreDeviceObjects(renderPlatform);
 		renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 		renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
 		renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
 		renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
-		renderState.boneMatrices.LinkToEffect(renderState.pbrEffect, "boneMatrices");
 	}
 	else if (str == "reloadfonts")
 	{
@@ -392,20 +385,23 @@ void Renderer::InitLocalGeometry()
 		,avs::GeometryPayloadType::Texture,&localResourceCreator, specular_cubemap_uid);
 
 	// test gltf loading.
-/*	avs::uid gltf_uid = avs::GenerateUid();
+	avs::uid gltf_uid = avs::GenerateUid();
 	// gltf_uid will refer to a SubScene asset in cache zero.
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/generic_controller.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
+	std::string source_root="https://simul.co:443/wp-content/uploads/teleport-content/controller-models";
+	geometryDecoder.decodeFromFile(0,config.GetStorageFolder()+"/meshes/Buggy.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid, platform::crossplatform::AxesStandard::OpenGL);
+
+	//geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/generic_controller.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
 	{
 		avs::Node gltfNode;
 		gltfNode.name		="generic_controller.glb";
 		gltfNode.data_type	=avs::NodeDataType::SubScene;
 		gltfNode.data_uid	=gltf_uid;
 	//	gltfNode.materials.resize(3,0);
-		static float sc=1.01f;
+		static float sc=0.01f;
 		gltfNode.localTransform.position=vec3(1.0f,1.0f,1.0f);
 		gltfNode.localTransform.scale=vec3(sc,sc,sc);
 		localResourceCreator.CreateNode(0,avs::GenerateUid(),gltfNode);
-	}*/
+	}
 	auto local_session_client=client::SessionClient::GetSessionClient(0);
 	teleport::core::SetupCommand setupCommand = local_session_client->GetSetupCommand();
 	setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid=diffuse_cubemap_uid;
@@ -452,7 +448,7 @@ void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 	std::string systemName=renderState.openXR->GetSystemName();
 	auto localInstanceRenderer = GetInstanceRenderer(0);
 	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
-	std::string source_root="https://simul.co:443/wp-content/uploads/teleport/content";
+	std::string source_root="https://simul.co:443/wp-content/uploads/teleport-content/controller-models";
 	auto u = xr_profile_to_controller_model_name.find(profile);
 	if(u!=xr_profile_to_controller_model_name.end())
 	{
@@ -739,14 +735,16 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		{
 			crossplatform::MultiviewGraphicsDeviceContext &mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-			renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
-			renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+			renderState.stereoCameraConstants.leftInvViewProj = (const float *)mgdc.viewStructs[0].invViewProj;
+			renderState.stereoCameraConstants.rightInvViewProj = (const float *)mgdc.viewStructs[1].invViewProj;
 			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-			renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
+			renderState.stereoCameraConstants.SetHasChanged();
+			renderPlatform->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
 		}
-		renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+		renderState.cameraConstants.invViewProj = (const float *)deviceContext.viewStruct.invViewProj;
 		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+		renderState.cameraConstants.SetHasChanged();
+		renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
 
 		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
 		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
@@ -772,7 +770,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			origin_pose.orientation=*((vec4*)&origin_node->GetGlobalRotation());
 			SetRenderPose(deviceContext,GetOriginPose(server_uid));
 			GetInstanceRenderer(server_uid)->RenderView(deviceContext);
-			if(renderState.debugOptions.showAxes)
+			if(config.debugOptions.showAxes)
 			{
 				renderPlatform->DrawAxes(deviceContext,mat4::identity(),2.0f);
 			}
@@ -846,7 +844,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	static bool enable_hand_deformation = true;
 	if (show_local_geometry)
 	{	
-		renderState.pbrConstants.drawDistance = 1000.0f;
+		renderState.teleportSceneConstants.drawDistance = 1000.0f;
 		// hand tracking?
 		auto localInstanceRenderer = GetInstanceRenderer(0);
 		auto &localGeometryCache = localInstanceRenderer->geometryCache;
@@ -898,7 +896,13 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 					handNode->SetVisible(false);
 			}
 		}
-		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
+		{
+			renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
+			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+				renderPlatform->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
+			renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+			GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
+		}
 	}
 	
 	renderState.pbrEffect->UnbindTextures(deviceContext);
@@ -910,36 +914,36 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	switch(newShaderMode)
 	{
 		case ShaderMode::ALBEDO:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_solid_albedo_only";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_solid_albedo_only";
 			break;
 		case ShaderMode::NORMALS:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_debug_normals";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_normals";
 			break;
 		case ShaderMode::DEBUG_ANIM:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_debug_anim";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_anim";
 			break;
 		case ShaderMode::LIGHTMAPS:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_debug_lightmaps";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_lightmaps";
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_debug_normal_vertexnormals";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_normal_vertexnormals";
 			break;
 		case ShaderMode::UVS:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_debug_uvs";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_uvs";
 			break;
 		case ShaderMode::REZZING:
-			renderState.debugOptions.useDebugShader = true;
-			renderState.debugOptions.debugShader = "ps_digitizing";
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_digitizing";
 			break;
 		default:
-			renderState.debugOptions.useDebugShader = false;
-			renderState.debugOptions.debugShader = "";
+			config.debugOptions.useDebugShader = false;
+			config.debugOptions.debugShader = "";
 			break;
 	}
 	renderState.shaderValidity++;
@@ -1206,7 +1210,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 				renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == teleport::GuiType::Debug);
 			break;
 		case 'N':
-			renderState.debugOptions.showOverlays = !renderState.debugOptions.showOverlays;
+			config.debugOptions.showOverlays = !config.debugOptions.showOverlays;
 			break;
 		case 'B':
 		{
@@ -1531,17 +1535,22 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	gui.BeginFrame(deviceContext);
 	gui.BeginDebugGui(deviceContext);
 	gui.LinePrint(fmt::format("Framerate {0}", framerate));
+	//gui.LinePrint(fmt::format("view Azimuth {0}", 180.f/3.14159f*renderState.openXR->viewAzimuth));
+	//gui.LinePrint(fmt::format("overlay Azimuth {0}", 180.f / 3.14159f * renderState.openXR->overlayAzimuth));
+	//gui.LinePrint(fmt::format("target Azimuth {0}", 180.f / 3.14159f * renderState.openXR->targetOverlayAzimuth));
+	//gui.LinePrint(fmt::format("Diff Angle {0}", 180.f / 3.14159f * renderState.openXR->azimuthDiffAngle));
+	
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	static vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	static vec4 background={0.0f,0.0f,0.0f,0.5f};
-	if(renderState.debugOptions.useDebugShader)
+	if (config.debugOptions.useDebugShader)
 	{
-		gui.LinePrint(fmt::format("Override Shader: {0}", renderState.debugOptions.debugShader));
+		gui.LinePrint(fmt::format("Override Shader: {0}", config.debugOptions.debugShader));
 	}		
 	
 	if(gui.Tab("Debug"))
 	{
-		if(gui.DebugPanel(renderState.debugOptions))		
+		if (gui.DebugPanel(config.debugOptions))		
 			renderState.shaderValidity++;
 		gui.EndTab();
 	}

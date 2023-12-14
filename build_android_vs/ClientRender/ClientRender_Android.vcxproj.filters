@@ -126,6 +126,9 @@
     <ClCompile Include="..\..\ClientRender\Resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="flecs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h">
@@ -259,6 +262,9 @@
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\Resource.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flecs.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

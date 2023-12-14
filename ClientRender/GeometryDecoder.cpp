@@ -21,6 +21,7 @@
 avs::HTTPUtil hTTPUtil;
 #include <filesystem>
 using std::filesystem::path;
+using namespace std::chrono_literals;
 
 #define TELEPORT_GEOMETRY_DECODER_ASYNC 1
 
@@ -191,8 +192,14 @@ avs::Result GeometryDecoder::decodeFromBuffer(avs::uid server_uid,const uint8_t 
 void GeometryDecoder::decodeAsync()
 {
 	SetThisThreadName("GeometryDecoder::decodeAsync");
+	auto &config = teleport::client::Config::GetInstance();
 	while (decodeThreadActive)
 	{
+		if (!config.debugOptions.enableGeometryTranscodingThread)
+		{
+			std::this_thread::sleep_for(2000ms);
+			continue;
+		}
 #if TELEPORT_GEOMETRY_DECODER_ASYNC
 		if (!decodeData.empty())
 		{
@@ -937,7 +944,7 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to
 	// 	   create the mesh? Why not go direct to MeshCreate??
 	// dg is complete, now send to avs::GeometryTargetBackendInterface
-	for (std::unordered_map<avs::uid, std::vector<PrimitiveArray>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
+	for (phmap::flat_hash_map<avs::uid, std::vector<PrimitiveArray>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
 	{
 		size_t index = 0;
 		avs::MeshCreate meshCreate;

@@ -1,13 +1,15 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 #pragma once
 
+#include "ClientRender/Resource.h"
 #include "ClientRender/Texture.h"
 #include "TeleportClient/basic_linear_algebra.h"
-
+// For PbrMaterialConstants:
+#include "client/Shaders/pbr_constants.sl"
 namespace clientrender
 {
 	class RenderPlatform;
-	class Material
+	class Material:public Resource
 	{
 	public:
 		struct MaterialParameter
@@ -60,7 +62,8 @@ namespace clientrender
 		MaterialData m_MaterialData;
 		MaterialCreateInfo m_CI;
 	public:
-		Material(const MaterialCreateInfo& pMaterialCreateInfo);
+		Material( const MaterialCreateInfo &pMaterialCreateInfo);
+		~Material();
 		void SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo);
 
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }
@@ -68,6 +71,6 @@ namespace clientrender
 		inline const MaterialData& GetMaterialData() const { return m_MaterialData; }
 
 		void SetShaderOverride(const char *);
-		avs::uid id = 0;
+		platform::crossplatform::ConstantBuffer<PbrMaterialConstants, platform::crossplatform::ResourceUsageFrequency::ONCE> pbrMaterialConstants;
 	};
 }

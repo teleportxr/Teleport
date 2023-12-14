@@ -228,8 +228,9 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	}
 	// TODO: These pipelines could be on different threads,
 	messageToServerPipeline.process();
-	avs::Result result = clientPipeline.pipeline.process();
-	if (result == avs::Result::Network_Disconnection)
+
+	//avs::Result result = clientPipeline.pipeline.asyncResult();
+/*	if (result == avs::Result::Network_Disconnection)
 	{
 		TELEPORT_INTERNAL_CERR("Got avs::Result::Network_Disconnection. We should try to reconnect here.\n");
 		Disconnect(0);
@@ -240,7 +241,7 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		TELEPORT_INTERNAL_CERR("Got avs::Result::GeometryDecoder_InvalidBufferSize. Disconnecting as no-one is listening.\n");
 		Disconnect(0);
 		return;
-	}
+	}*/
 }
 
 
@@ -697,6 +698,9 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 	lastSessionId = setupCommand.session_id;
 	if(tabContext)
 		tabContext->ConnectionComplete(server_uid);
+
+	// Set it running.
+	clientPipeline.pipeline.processAsync();
 }
 
 void SessionClient::ApplySetup(const teleport::core::SetupCommand &s)

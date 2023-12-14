@@ -11,12 +11,15 @@
 #include "ThisPlatform/Threads.h"
 #include "draco/compression/decode.h"
 #include <fmt/core.h>
+#include <fstream>
 #include "NodeComponents/SubSceneComponent.h"
+#include "TeleportClient/Config.h"
 #ifdef _MSC_VER
 #define isinf !_finite
 #else
 #include <cmath>		// for isinf()
 #endif
+using namespace std::chrono_literals;
 
 //#define STB_IMAGE_IMPLEMENTATION
 namespace teleport
@@ -879,15 +882,18 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 			bone_ids[i]=next_bone_id;
 			std::shared_ptr<clientrender::Bone> bone = std::make_shared<clientrender::Bone>(next_bone_id,skeleton.boneNames[i]);
 			geometryCache->mBoneManager.Add(next_bone_id, bone);
-			std::shared_ptr<clientrender::Bone> parent=geometryCache->mBoneManager.Get(bone_ids[skeleton.parentIndices[i]]);
-			if(parent)
+			if(skeleton.parentIndices[i]>=0&&skeleton.parentIndices[i]<bone_ids.size())
 			{
-				bone->SetParent(parent);
-				parent->AddChild(bone);
-			}
-			else if(skeleton.parentIndices[i]!=-1&&skeleton.parentIndices[i]!=bone_ids.size())
-			{
-				TELEPORT_CERR<<"Error creating skeleton "<<std::endl;
+				std::shared_ptr<clientrender::Bone> parent=geometryCache->mBoneManager.Get(bone_ids[skeleton.parentIndices[i]]);
+				if(parent)
+				{
+					bone->SetParent(parent);
+					parent->AddChild(bone);
+				}
+				else if(skeleton.parentIndices[i]!=-1&&skeleton.parentIndices[i]!=bone_ids.size())
+				{
+					TELEPORT_CERR<<"Error creating skeleton "<<std::endl;
+				}
 			}
 			bone->SetLocalTransform(skeleton.boneTransforms[i]);
 
@@ -1261,24 +1267,32 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 #endif
 	return true;
 }
-#include <fstream>
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	SetThisThreadName("BasisThread_TranscodeTextures");
+	auto &config=teleport::client::Config::GetInstance();
 	while (shouldBeTranscoding)
 	{
+		if(!config.debugOptions.enableTextureTranscodingThread)
+		{
+			std::this_thread::sleep_for(1700ms);
+			continue;
+		}
 		//std::this_thread::yield(); //Yield at the start, as we don't want to yield before we unlock (when lock goes out of scope).
-
+		
 		//Copy the data out of the shared data structure and minimise thread stalls due to mutexes
-		std::vector<std::shared_ptr<UntranscodedTexture>> texturesToTranscode_Internal;
-		texturesToTranscode_Internal.reserve(texturesToTranscode.size());
+		std::shared_ptr<UntranscodedTexture> transcoding;
 		{
 			std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-			texturesToTranscode_Internal.insert(texturesToTranscode_Internal.end(), texturesToTranscode.begin(), texturesToTranscode.end());
-			texturesToTranscode.clear();
+			if(!texturesToTranscode.size())
+			{
+				std::this_thread::yield();
+				continue;
+			}
+			transcoding = texturesToTranscode[0];
+			texturesToTranscode.erase(texturesToTranscode.begin());
 		}
 
-		for (auto transcoding : texturesToTranscode_Internal)
 		{
 			auto geometryCache=GeometryCache::GetGeometryCache(transcoding->cache_or_server_uid);
 			if (transcoding->compressionFormat == avs::TextureCompression::PNG)

@@ -410,7 +410,7 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	auto srcResource = effect->GetShaderResource("ycbcrTexture");
 	auto dstResource = effect->GetShaderResource("rgbTexture");
 	renderPlatform->SetTexture(deviceContext, srcResource, reflectedTexture.sourceTexture);
-	effect->SetUnorderedAccessView(deviceContext, dstResource, targetTexture);
+	renderPlatform->SetUnorderedAccessView(deviceContext, dstResource, targetTexture);
 	renderPlatform->ApplyPass(deviceContext, effectPass);
 	int w = (targetTexture->width + 7) / 8;
 	int l = (targetTexture->length + 7) / 8;

@@ -27,6 +27,15 @@ long long offset_xr_to_client_ns = 0;
 #ifndef _MSC_VER
 #pragma clang optimize off
 #endif
+#include "Platform/Math/Pi.h"
+static float AngleRange(float a)
+{
+	if (a < -SIMUL_PI_F)
+		a += 2.0f * SIMUL_PI_F;
+	if (a > SIMUL_PI_F)
+		a -= 2.0f*SIMUL_PI_F;
+	return a;
+}
 const char* teleport::client::stringof(ActionId a)
 {
 	switch(a)
@@ -2653,7 +2662,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 			headPose_stageSpace = ConvertGLSpaceToEngineeringSpace(headspace_location.pose);
 			crossplatform::Quaternionf q=headPose_stageSpace.orientation;
 			vec3 dir=q.RotateVector({0,1.f,0});
-			viewAzimuth=atan2f(-dir.x,dir.y);
+			viewAzimuth = AngleRange(atan2f(-dir.x, dir.y));
 		}
 		// If the session is active, lets render our layer in the compositor!
 	
@@ -2766,34 +2775,26 @@ static  XrQuaternionf XrQuaternionf_CreateFromVectorAngle(
     r.z = unitAxis.z * sinHalfAngle;
     return r;
 }
-#include "Platform/Math/Pi.h"
-static float AngleRange(float a)
-{
-	if (a < -SIMUL_PI_F)
-		a += SIMUL_PI_F;
-	if (a > SIMUL_PI_F)
-		a -= SIMUL_PI_F;
-	return a;
-}
 
 void OpenXR::UpdateOverlayPosition()
 {
 	// Build the layer
-	float quarter_circle = (SIMUL_PI_F / 2.0f);
+	const float arc= (SIMUL_PI_F / 4.0f);
 	// nearest 90 degrees:
-	int A = int(std::nearbyint(viewAzimuth / quarter_circle));
+	int A = int(std::nearbyint(viewAzimuth / arc));
 	if (overlayAzimuth > 10.f)
 	{
-		overlayAzimuth = targetOverlayAzimuth = float(A) * quarter_circle;
+		overlayAzimuth = targetOverlayAzimuth = float(A) * arc;
 	}
 	else
 	{
-		float diffAngle = AngleRange(targetOverlayAzimuth - overlayAzimuth);
-		overlayAzimuth += 0.05f * diffAngle;
+		azimuthDiffAngle = AngleRange(targetOverlayAzimuth - overlayAzimuth);
+		overlayAzimuth += 0.005f * azimuthDiffAngle;
 		overlayAzimuth = AngleRange(overlayAzimuth);
-		if (diffAngle < 0.01f && fabs(AngleRange(viewAzimuth - targetOverlayAzimuth)) > (SIMUL_PI_F * .5f))
+		static float hysteresis=0.95f;
+		if (fabs(AngleRange(viewAzimuth - targetOverlayAzimuth))> (arc * hysteresis))
 		{
-			targetOverlayAzimuth = float(A) * quarter_circle;
+			targetOverlayAzimuth = float(A) * arc;
 		}
 	}
 }
@@ -2815,7 +2816,8 @@ bool OpenXR::AddCylinderOverlayLayer(XrTime predictedTime, XrCompositionLayerCyl
 	cylinder_layer.subImage.imageArrayIndex = 0; // AJR: Only composite the top layer image array, as the overlay quad will be rendered in 3D space.
 
 	overlay.pose.orientation = XrQuaternionf_CreateFromVectorAngle({0, 1.0f, 0}, overlayAzimuth);
-	overlay.pose.position = {0, overlay.centreHeight, 0};
+	overlay.pose.position = state.XrSpacePoseInWorld.position;
+	overlay.pose.position.y=overlay.centreHeight;
 	cylinder_layer.pose = overlay.pose;
 	cylinder_layer.radius=overlay.radius;
 	// width in radians

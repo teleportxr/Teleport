@@ -378,7 +378,6 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		//if (inputNodeIndex >= m_streams.size())
 		//	return Result::Failed;
 		auto& stream = m_streams[streamIndex];
-		const ClientDataChannel& dataChannel = m_data->dataChannels[stream.id];
 
 		assert(node);
 		//assert(buffer.size() >= stream.chunkSize);

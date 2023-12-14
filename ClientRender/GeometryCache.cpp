@@ -21,11 +21,13 @@ GeometryCache::GeometryCache(avs::uid c_uid)
 	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
 	using avs::Pose;
-	ECS_COMPONENT(flecs_world, Pose);
+	flecs_world.set_entity_range(1, 50000000);
+	//ECS_COMPONENT(flecs_world, Pose);
 }
 
 GeometryCache::~GeometryCache()
 {
+	flecs_world.quit();
 	auto uids=mSubsceneManager.GetAllIDs();
 	for(auto u:uids)
 	{

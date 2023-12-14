@@ -2,12 +2,12 @@
 #pragma once
 
 #include <string>			//std::string
-#include <unordered_map>	//std::unordered_map
 #include <functional>		//std::function
 #include <vector>			//std::vector
 #include <memory>			//Smart pointers
 #include <mutex>			//Thread safety.
 #include <algorithm>		//std::remove
+#include <parallel_hashmap/phmap.h>
 #include "MemoryUtil.h"
 #include "Resource.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -44,9 +44,9 @@ public:
 	
 	//Returns the internal cache.
 	//	cacheLock : A lock which must live for the same duration of the map, or will break thread-safety. 
-	std::unordered_map<u, ResourceData>& GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock);
+	phmap::flat_hash_map<u, ResourceData>& GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock);
 	
-	const std::unordered_map<u, ResourceData>& GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock) const;
+	const phmap::flat_hash_map<u, ResourceData>& GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock) const;
 
 	//! Returns a shared pointer to the resource; returns nullptr if the resource was not found.
 	// !Resets time since last use of the resource.
@@ -77,10 +77,10 @@ private:
 	mutable uint64_t cacheChecksum=0;
 	mutable uint64_t idListChecksum=0;
 	//Increases readability by obfuscating the full iterator definition.
-	typedef typename std::unordered_map<u, ResourceManager<u,T>::ResourceData>::iterator mapIterator_t;
+	typedef typename phmap::flat_hash_map<u, ResourceManager<u,T>::ResourceData>::iterator mapIterator_t;
 
 	std::function<void(T&)> freeResourceFunction; //A functional reference to the function that frees this resource.
-	std::unordered_map<u, ResourceData> cachedItems = std::unordered_map<u, ResourceData>(); //Hashmap of the stored resources.
+	phmap::flat_hash_map<u, ResourceData> cachedItems = phmap::flat_hash_map<u, ResourceData>(); //Hashmap of the stored resources.
 
 	mutable std::mutex mutex_cachedItems; //Mutex for thread-safety of cachedItems.
 
@@ -127,13 +127,13 @@ template<typename u,class T> bool ResourceManager<u,T>::Has(u id) const
 	return cachedItems.find(id) != cachedItems.end();
 }
 
-template<typename u,class T> inline std::unordered_map<u, typename ResourceManager<u,T>::ResourceData>& ResourceManager<u,T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock)
+template<typename u,class T> inline phmap::flat_hash_map<u, typename ResourceManager<u,T>::ResourceData>& ResourceManager<u,T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock)
 {
 	cacheLock = std::make_unique<std::lock_guard<std::mutex>>(mutex_cachedItems);
 	return cachedItems;
 }
 
-template<typename u,class T> inline const std::unordered_map<u, typename ResourceManager<u,T>::ResourceData>& ResourceManager<u,T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock) const
+template<typename u,class T> inline const phmap::flat_hash_map<u, typename ResourceManager<u,T>::ResourceData>& ResourceManager<u,T>::GetCache(std::unique_ptr<std::lock_guard<std::mutex>>& cacheLock) const
 {
 	cacheLock = std::make_unique<std::lock_guard<std::mutex>>(mutex_cachedItems);
 	return cachedItems;

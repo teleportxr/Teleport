@@ -25,7 +25,7 @@ namespace clientrender
 		// TODO: this is a very crude repro of the mBoneManager locally,
 		// containing only copies of the bones/joints that the original Skeleton has.
 		// This must be made MUCH more efficient.
-		std::unordered_map<avs::uid,std::shared_ptr<Bone>> boneMap;
+		phmap::flat_hash_map<avs::uid, std::shared_ptr<Bone>> boneMap;
 		std::vector<std::shared_ptr<Bone>> bones;
 		mat4 boneMatrices[Skeleton::MAX_BONES];
 	};

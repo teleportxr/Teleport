@@ -3,8 +3,14 @@
 #include "MemoryUtil.h"
 #include "libavstream/common.hpp"
 #include <set>
-#include <unordered_map>
-
+#include <parallel_hashmap/phmap.h>
+namespace platform
+{
+	namespace crossplatform
+	{
+		class RenderPlatform;
+	}
+}
 namespace clientrender
 {
 	typedef unsigned long long geometry_cache_uid;
@@ -73,7 +79,7 @@ namespace clientrender
 		{
 		}
 
-		std::unordered_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
+		phmap::flat_hash_map<avs::uid, std::vector<size_t>> materialSlots; //<ID of the material, list of indexes the material should be placed into node material list>.
 																		 // std::unordered_map<avs::uid, size_t> missingAnimations;				//<ID of missing animation, index in animation vector>
 		// std::set<avs::uid> missingNodes;									//<e.g. missing skeleton nodes.
 	};
@@ -87,7 +93,11 @@ namespace clientrender
 
 		std::shared_ptr<clientrender::Skeleton> skeleton;
 
-		std::unordered_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
+		phmap::flat_hash_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
 	};
-
+	class Resource
+	{
+	public:
+		avs::uid id = 0;
+	};
 }

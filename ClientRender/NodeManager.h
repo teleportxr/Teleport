@@ -5,13 +5,24 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <unordered_map>
+#include <parallel_hashmap/phmap.h>
 
 #include "libavstream/geometry/mesh_interface.hpp"
 
 #include "Node.h"
 #include "ResourceManager.h"
 #include "flecs.h"
+#include "Platform/CrossPlatform/Quaterniond.h"
+
+struct flecs_local_pos
+{
+	vec3 value;
+};
+struct flecs_local_orientation
+{
+	platform::crossplatform::Quaternionf value;
+};
+
 
 namespace clientrender
 {
@@ -29,8 +40,14 @@ namespace clientrender
 	class NodeManager
 	{
 		flecs::world &flecs_world;
+		ecs_entity_t FlecsEntity(avs::uid node_id);
 
-		ECS_COMPONENT_DECLARE(Pose);
+		//ECS_COMPONENT_DECLARE(flecs_pos);
+	/*	phmap::flat_hash_map<avs::uid, ecs_entity_t> flecs_entity_map;
+		inline phmap::flat_hash_map<avs::uid, ecs_entity_t> &GetFlecsEntityMap()
+		{
+			return flecs_entity_map;
+		}*/
 	public:
 		NodeManager(flecs::world &flecs_w);
 		typedef std::vector<std::shared_ptr<Node>> nodeList_t;
@@ -99,7 +116,7 @@ namespace clientrender
 		// Nodes that have been added, or modified, to be sorted into transparent or not.
 		std::set<std::weak_ptr<Node>,weak_ptr_compare<Node>> nodesWithModifiedMaterials;
 
-        std::unordered_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
+        phmap::flat_hash_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
 	private:
 		void AddNode(std::shared_ptr<Node> node, const avs::Node& nodeData);

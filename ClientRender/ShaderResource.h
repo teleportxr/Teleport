@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2022 Simul Software Ltd
+// (C) Copyright 2018-2024 Simul Software Ltd
 #pragma once
 
 #include "ClientRender/Texture.h"
@@ -14,7 +14,7 @@ namespace clientrender
 	class ShaderResourceLayout
 	{
 	public:
-		enum class ShaderResourceType : uint32_t
+		enum class ShaderResourceType : uint8_t
 		{
 			SAMPLER,
 			COMBINED_IMAGE_SAMPLER,

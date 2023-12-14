@@ -1,12 +1,19 @@
-// (C) Copyright 2018-2022 Simul Software Ltd
+// (C) Copyright 2018-2024 Simul Software Ltd
 
 #include "Material.h"
+#include "GeometryCache.h"
 
 using namespace clientrender;
 
-Material::Material(const MaterialCreateInfo& pMaterialCreateInfo)
+Material::Material(const MaterialCreateInfo &pMaterialCreateInfo)
 {
 	SetMaterialCreateInfo(pMaterialCreateInfo);
+	pbrMaterialConstants.RestoreDeviceObjects(GeometryCache::GetRenderPlatform());
+}
+
+Material::~Material()
+{
+	pbrMaterialConstants.InvalidateDeviceObjects();
 }
 
 void Material::SetMaterialCreateInfo( const MaterialCreateInfo& pMaterialCreateInfo)
@@ -30,7 +37,11 @@ void Material::SetMaterialCreateInfo( const MaterialCreateInfo& pMaterialCreateI
 	m_MaterialData.u_NormalTexCoordIndex		= m_CI.normal.texCoordIndex;
 	m_MaterialData.u_CombinedTexCoordIndex		= m_CI.combined.texCoordIndex;
 	m_MaterialData.u_EmissiveTexCoordIndex		= m_CI.emissive.texCoordIndex;
-	m_MaterialData.u_LightmapTexCoordIndex		= m_CI.lightmapTexCoordIndex;
+	m_MaterialData.u_LightmapTexCoordIndex = m_CI.lightmapTexCoordIndex;
+	const clientrender::Material::MaterialData &md = GetMaterialData();
+	memcpy(&pbrMaterialConstants.diffuseOutputScalar, &md, sizeof(md));
+	// Ensure that this is uploaded to GPU.
+	pbrMaterialConstants.SetHasChanged();
 }
 
 

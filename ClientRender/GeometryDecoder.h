@@ -3,6 +3,7 @@
 #include <libavstream/mesh.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
 
+#include <parallel_hashmap/phmap.h>
 #include <map>
 #include <thread>
 #include "Platform/CrossPlatform/AxesStandard.h"
@@ -127,13 +128,13 @@ private:
 		avs::uid server_or_cache_uid=0;
 		platform::crossplatform::AxesStandard axesStandard=platform::crossplatform::AxesStandard::Engineering;
 		// Optional, for creating local subgraphs.
-		std::unordered_map<avs::uid, avs::Node> nodes;
-		std::unordered_map<avs::uid, avs::Skeleton> skeletons;
-		std::unordered_map<avs::uid, std::vector<PrimitiveArray>> primitiveArrays;
-		std::unordered_map<uint64_t, avs::Accessor> accessors;
-		std::unordered_map<uint64_t, avs::BufferView> bufferViews;
-		std::unordered_map<uint64_t, avs::GeometryBuffer> buffers;
-		std::unordered_map<avs::uid,avs::Material> internalMaterials;
+		phmap::flat_hash_map<avs::uid, avs::Node> nodes;
+		phmap::flat_hash_map<avs::uid, avs::Skeleton> skeletons;
+		phmap::flat_hash_map<avs::uid, std::vector<PrimitiveArray>> primitiveArrays;
+		phmap::flat_hash_map<uint64_t, avs::Accessor> accessors;
+		phmap::flat_hash_map<uint64_t, avs::BufferView> bufferViews;
+		phmap::flat_hash_map<uint64_t, avs::GeometryBuffer> buffers;
+		phmap::flat_hash_map<avs::uid,avs::Material> internalMaterials;
 		std::vector<mat4> inverseBindMatrices;
 		bool clockwiseFaces=true;
 		// For internal numbering of accessors etc.

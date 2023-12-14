@@ -6,7 +6,7 @@
 #include <libavstream/decoders/dec_interface.hpp>
 #include <memory>
 #include <vector>
-#include <unordered_map>
+#include <parallel_hashmap/phmap.h>
 #include "Platform/CrossPlatform/BaseRenderer.h"
 #include "Platform/CrossPlatform/VideoDecoder.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
@@ -103,7 +103,7 @@ namespace clientrender
 		platform::crossplatform::Effect* mTextureConversionEffect;
 
 		std::vector<FrameCache> mDPB;
-		std::unordered_map<uint32_t, uint32_t> mPocFrameIndexMap;
+		phmap::flat_hash_map<uint32_t, uint32_t> mPocFrameIndexMap;
 
 		uint32_t mCurrentFrame;
 		uint32_t mStatusID;

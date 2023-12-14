@@ -11,13 +11,13 @@
 struct ANativeWindow;
 #endif
 #include <client/Shaders/video_types.sl>
-namespace clientrender
-{
-	struct DebugOptions;
-}
 #define MAX_URL_SIZE (2500)
 namespace teleport
 {
+	namespace client
+	{
+		struct DebugOptions;
+	}
 	enum class ColourStyle
 	{
 		NONE,
@@ -74,7 +74,7 @@ namespace teleport
 		void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
 		void NetworkPanel(const teleport::client::ClientPipeline& clientPipeline);
 		/// @returns true if changed.
-		bool DebugPanel(clientrender::DebugOptions &debugOptions);
+		bool DebugPanel(client::DebugOptions &debugOptions);
 		void GeometryOSD();
 		void Scene();
 		bool Tab(const char *txt);

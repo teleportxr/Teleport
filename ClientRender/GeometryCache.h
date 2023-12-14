@@ -72,9 +72,14 @@ namespace clientrender
 	public:
 		GeometryCache(avs::uid c_uid);
 		~GeometryCache();
+		avs::uid GetCacheUid() const {return cache_uid;}
 		static void SetRenderPlatform(platform::crossplatform::RenderPlatform *r)
 		{
 			renderPlatform=r;
+		}
+		static platform::crossplatform::RenderPlatform *GetRenderPlatform()
+		{
+			return renderPlatform;
 		}
 		static const std::vector<avs::uid> &GetCacheUids();
 		static void CreateGeometryCache(avs::uid cache_uid);
@@ -213,7 +218,7 @@ namespace clientrender
 
 		std::vector<avs::uid> m_CompletedNodes; //List of IDs of nodes that have been fully received, and have yet to be confirmed to the server.
 
-		const std::unordered_map<avs::uid, MissingResource>& GetMissingResources() const
+		const phmap::flat_hash_map<avs::uid, MissingResource> &GetMissingResources() const
 		{
 			return m_MissingResources;
 		}
@@ -249,6 +254,6 @@ namespace clientrender
 		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
 		std::vector<avs::uid> m_ReceivedResources; //Resources received.
 		std::string cacheFolder;
-		std::unordered_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
+		phmap::flat_hash_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 	};
 }

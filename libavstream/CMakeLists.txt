@@ -238,7 +238,7 @@ set(src_private ${src_private_root} ${src_private_api} ${src_private_network} ${
 # Windows platform
 if(WIN32)
 	set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi /Ob0 /Od /D_DEBUG /DDEBUG /RTC1")
-	set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Od /Ob0 /DNDEBUG /Zi")
+	set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /Ob2 /DNDEBUG /Zi")
 	if(${LIBAV_USE_DYNAMIC_RUNTIME})
 		set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
 		set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD")
@@ -438,7 +438,9 @@ if(NOT ANDROID)
     endif()
 endif()
 
-# linking with libdatachannel for alternative webrtc support
+target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/firstparty/Platform/External")
+
+# linking with libdatachannel for webrtc support
 target_compile_definitions(libavstream PRIVATE TELEPORT_DATACHANNEL_WEBRTC=$<BOOL:${TELEPORT_DATACHANNEL_WEBRTC}>)
 if(TELEPORT_DATACHANNEL_WEBRTC)
 	target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/include")
@@ -449,3 +451,4 @@ if(TELEPORT_DATACHANNEL_WEBRTC)
 	endif()
 endif()
 target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
+target_compile_definitions( libavstream PUBLIC FMT_HEADER_ONLY )

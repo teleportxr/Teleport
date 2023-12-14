@@ -79,13 +79,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
