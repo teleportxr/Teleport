@@ -159,8 +159,6 @@ SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
   WriteRegStr HKCR 'Teleport' '@' 'URL:Teleport Protocol'
   WriteRegStr HKCR 'Teleport' 'URL Protocol' 'teleport'
   WriteRegStr HKCR 'Teleport\\\\DefaultIcon' '@' '\"${TELEPORT_INSTALLED_CLIENT_EXE}\"'
-  WriteRegStr HKCR 'Teleport\\\\shell'
-  WriteRegStr HKCR 'Teleport\\\\shell\\\\open'
   WriteRegStr HKCR 'Teleport\\\\shell\\\\open\\\\command' '@' '\"${TELEPORT_INSTALLED_CLIENT_EXE}\" \"%1\"'
  ")
 SET(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
