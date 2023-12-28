@@ -116,8 +116,9 @@ endif()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
+set(TELEPORT_INSTALLED_CLIENT_EXE $INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe)
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
-    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe' '-log'"
+    "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '${TELEPORT_INSTALLED_CLIENT_EXE}' '-log'"
 )
 LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
     "Delete '$INSTDIR\\\\TeleportClient.lnk'"
@@ -129,7 +130,10 @@ install(TARGETS TeleportPCClient
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
 install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.pdb" DESTINATION build_pc_client/bin/Release COMPONENT client )
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
+if(LIBAV_USE_CUDA)
+	install(FILES "${LIBAV_CUDA_DIR}\\\\bin\\\\cudart64_110.dll" DESTINATION build_pc_client/bin/Release COMPONENT client )
+endif()
 install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
 install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
@@ -140,8 +144,18 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\sh
 
 install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
 
+SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
+  WriteRegStr HKCR 'Teleport' '@' 'URL:Teleport Protocol'
+  WriteRegStr HKCR 'Teleport' 'URL Protocol' 'teleport'
+  WriteRegStr HKCR 'Teleport\\\\DefaultIcon' '@' '\"${TELEPORT_INSTALLED_CLIENT_EXE}\"'
+  WriteRegStr HKCR 'Teleport\\\\shell'
+  WriteRegStr HKCR 'Teleport\\\\shell\\\\open'
+  WriteRegStr HKCR 'Teleport\\\\shell\\\\open\\\\command' '@' '\"${TELEPORT_INSTALLED_CLIENT_EXE}\" \"%1\"'
+ ")
+SET(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
+  DeleteRegKey HKCR 'Teleport'
+ ")
 message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
-
 
 install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
 

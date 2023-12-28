@@ -1139,12 +1139,12 @@ bool validate_path(const std::string &p)
 	}
 	if (p.find('.') < p.length())
 	{
-		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain periods.\n";
+		TELEPORT_CERR<<"Validation failed for path " << p << ": paths should not contain periods.\n";
 		return false;
 	}
 	if (p.find(',') < p.length())
 	{
-		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain commas.\n";
+		TELEPORT_CERR<<"Validation failed for path " << p << ": paths should not contain commas.\n";
 		return false;
 	}
 	return true;
