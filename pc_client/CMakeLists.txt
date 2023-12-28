@@ -48,6 +48,14 @@ source_group("Shaders Includes" src FILES ${shader_includes} )
 
 add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
 
+if(LIBAV_USE_CUDA)
+	add_custom_command(
+        TARGET TeleportPCClient POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${LIBAV_CUDA_DIR}/bin/cudart64_110.dll
+               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/cudart64_110.dll)
+endif()
+
 add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE 
@@ -73,6 +81,9 @@ endif()
 #target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
 target_link_libraries(TeleportPCClient )
 target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_VULKAN=$<BOOL:${TELEPORT_CLIENT_USE_VULKAN}> TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>  )	
+
+file(GET_RUNTIME_DEPENDENCIES RESOLVED_DEPENDENCIES_VAR dependencies)
+message("dependencies: ${dependencies}")
 
 SetTeleportDefaults(TeleportPCClient)
 set_target_properties( TeleportPCClient PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
