@@ -4,7 +4,9 @@
 #include "TeleportClient/Log.h"
 #include "TeleportClient/ServerTimestamp.h"
 #include "Platform/CrossPlatform/Framebuffer.h"
+#if TELEPORT_CLIENT_USE_VULKAN
 #include "Platform/Vulkan/RenderPlatform.h"
+#endif
 #include "ClientRender/NodeComponents/SubSceneComponent.h"
 #include "TeleportClient/ClientTime.h"
 
