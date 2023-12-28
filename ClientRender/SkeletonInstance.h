@@ -2,6 +2,8 @@
 
 #include "Skeleton.h"
 
+#include "client/Shaders/pbr_constants.sl"
+
 namespace clientrender
 {
 	class GeometryCache;
@@ -10,7 +12,7 @@ namespace clientrender
 	{
 	public:
 		SkeletonInstance( std::shared_ptr<Skeleton> s);
-		virtual ~SkeletonInstance() = default;
+		virtual ~SkeletonInstance();
 		void GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCache, const std::vector<mat4> &inverseBindMatrices, const std::vector<int16_t> &jointIndices, std::vector<mat4> &boneMatrices);
 		std::shared_ptr<Skeleton> GetSkeleton()
 		{
@@ -20,6 +22,7 @@ namespace clientrender
 		{
 			return bones;
 		}
+		platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
 	protected:
 		std::shared_ptr<Skeleton> skeleton;
 		// TODO: this is a very crude repro of the mBoneManager locally,
@@ -27,6 +30,5 @@ namespace clientrender
 		// This must be made MUCH more efficient.
 		phmap::flat_hash_map<avs::uid, std::shared_ptr<Bone>> boneMap;
 		std::vector<std::shared_ptr<Bone>> bones;
-		mat4 boneMatrices[Skeleton::MAX_BONES];
 	};
 }

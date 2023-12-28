@@ -94,7 +94,6 @@ namespace clientrender
 		platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
 		platform::crossplatform::ConstantBuffer<TeleportSceneConstants, platform::crossplatform::ResourceUsageFrequency::ONCE_PER_FRAME> teleportSceneConstants;
 		platform::crossplatform::ConstantBuffer<PerNodeConstants> perNodeConstants;
-		platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
 		platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 		platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
 	};
@@ -150,15 +149,37 @@ namespace clientrender
 		{
 			return instanceRenderState;
 		}
-		struct MeshRender
+		struct NodeRender
 		{
+			mat4 model;
 			avs::uid cache_uid;
 			avs::uid node_uid;
-			mat4 model;
 			bool transparent_pass;
 		};
-		std::vector<MeshRender> meshRenders;
-		std::vector<MeshRender> meshTransparentRenders;
+		std::vector<NodeRender> nodeRenders;
+		std::vector<NodeRender> nodeTransparentRenders;
+		struct MeshRender
+		{
+			platform::crossplatform::EffectPass *pass;
+			mat4 model;
+			avs::uid cache_uid;
+			std::shared_ptr<clientrender::Material> material;
+			avs::uid mesh_uid;
+			avs::uid gi_texture_id;
+			bool transparent_pass;
+			bool setBoneConstantBuffer;
+			bool clockwise;
+			uint16_t element;
+			platform::crossplatform::ConstantBufferBase *boneMatrices;
+		};
+		// Group everything that uses a given pass together.
+		struct PassRender
+		{
+			platform::crossplatform::EffectPass *pass;
+			// node to MeshRender.
+			phmap::flat_hash_map<uint64_t, MeshRender> meshRenders;
+		};
+		phmap::flat_hash_map<platform::crossplatform::EffectPass *, PassRender> passRenders;
 	public:
 		InstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,RenderState &renderState,teleport::client::SessionClient *sessionClient);
 		virtual ~InstanceRenderer();
@@ -168,9 +189,9 @@ namespace clientrender
 		void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext,platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique, const char* shaderTexture);
 		void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, const char* technique);
 		void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext& deviceContext, platform::crossplatform::Texture* srcTexture, platform::crossplatform::Texture* targetTexture, int mips, int2 sourceOffset);
-		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext
-			,avs::uid this_server_uid);
+		virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void ApplyCameraMatrices(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 			
 		void RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> geometryCache);
 		void RenderNode(platform::crossplatform::GraphicsDeviceContext& deviceContext
@@ -178,11 +199,13 @@ namespace clientrender
 			,const std::shared_ptr<clientrender::Node> node
 			,bool include_children
 			,bool transparent_pass);
-
-		void RenderMeshNode(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
+		// Render everything that uses a given pass:
+		void RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p);
+		void RenderMeshNode(platform::crossplatform::GraphicsDeviceContext &deviceContext, const NodeRender &meshRender);
+		void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
 		void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas);
 		void RenderBone(platform::crossplatform::GraphicsDeviceContext& deviceContext,const mat4 &model_matrix,const std::shared_ptr<clientrender::Bone> bone);
-		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const MeshRender &meshRender
+		void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext& deviceContext, const NodeRender &meshRender
 			,bool force=false);
 		
 		std::shared_ptr<clientrender::GeometryCache> geometryCache;
@@ -212,7 +235,11 @@ namespace clientrender
 		void OnVideoStreamClosed() override;
 		void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) override;
 		void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition>& inputDefinitions) override;
-		void SetOrigin(unsigned long long ctr,avs::uid oorigin_uid) override;
+		void SetOrigin(unsigned long long ctr,avs::uid origin_uid) override;
 		void OnStreamingControlMessage(const std::string& str) override;
+
+		// Called by nodemanager:
+		static void AddNodeToRender(avs::uid cache_uid, avs::uid node_uid);
+		static void RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid);
 	};
 }

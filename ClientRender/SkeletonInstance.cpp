@@ -9,6 +9,7 @@ using namespace clientrender;
 SkeletonInstance::SkeletonInstance(std::shared_ptr<Skeleton> s)
 	:  skeleton(s)
 {
+	boneMatrices.RestoreDeviceObjects(GeometryCache::GetRenderPlatform());
 	const auto &orig_bones=s->GetBones();
 	for(const auto &b:orig_bones)
 	{
@@ -35,6 +36,11 @@ SkeletonInstance::SkeletonInstance(std::shared_ptr<Skeleton> s)
 		bone->SetLocalTransform(b->GetLocalTransform());
 		bones.push_back(bone);
 	}
+}
+
+SkeletonInstance::~SkeletonInstance()
+{
+	boneMatrices.InvalidateDeviceObjects();
 }
 
 void SkeletonInstance::GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCache,const std::vector<mat4> &inverseBindMatrices, const std::vector<int16_t> &jointIndices, std::vector<mat4> &boneMatrices)

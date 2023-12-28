@@ -189,6 +189,7 @@ void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 {
+	removeNodeFromRender(node->id);
 	nodeLookup_mutex.lock();
 	//Remove node from parent's child list.
 	if(!node->GetParent().expired())
@@ -733,4 +734,9 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 	if(r!=rootNodes.end())
 		rootNodes.erase(r);
 	rootNodes_mutex.unlock();
+}
+
+void NodeManager::CompleteNode(avs::uid id)
+{
+	addNodeForRender(id);
 }

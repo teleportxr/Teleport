@@ -599,7 +599,6 @@ void NdkVideoDecoder::FreeTexture(int index)
 	}
 }
 
-#pragma clang optimize off
 int32_t NdkVideoDecoder::QueueInputBuffer(std::vector<uint8_t>& bytes, int flags, bool send)
 {
 	buffers_mutex.lock();

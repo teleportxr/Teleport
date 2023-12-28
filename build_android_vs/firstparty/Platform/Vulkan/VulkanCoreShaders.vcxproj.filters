@@ -2,34 +2,9 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <CustomBuild Include="../../../../firstparty/Platform/build\CMakeFiles\c6f6e28e772831ddedf1a06887a151da\VulkanCoreShaders.rule" />
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\copy.sfx">
+    <CustomBuild Include="../../../../firstparty\Platform\ImGui\Shaders\imgui.sfx">
       <Filter>Shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\debug.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\font.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\hdr.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\light_probes.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\mip.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\solid.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\sphere.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\spherical_harmonics.sfx">
-      <Filter>Shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="../../../../firstparty\Platform\ImGui\Shaders\imgui.sfx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../../../firstparty\Platform\Vulkan\Sfx\VulkanAndroid.json" />
@@ -59,6 +34,36 @@
     <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\spherical_harmonics.sl" />
     <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\spherical_harmonics_constants.sl" />
     <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\text_constants.sl" />
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\copy.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\debug.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\font.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\hdr.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\light_probes.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\mip.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\solid.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\sphere.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\spherical_harmonics.sfx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\texture_compression.sfx">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Shader Includes">

@@ -16,7 +16,7 @@ uniform StructuredBuffer<uint4> TagDataIDBuffer;
 uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
 uniform RWTexture2D<float4> RWTextureTarget;
 uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
-
+ 
 vec2 OffsetScale(vec2 uv, vec4 offsc)
 {
 	return uv * offsc.zw + offsc.xy;

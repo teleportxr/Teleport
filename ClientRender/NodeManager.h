@@ -106,6 +106,16 @@ namespace clientrender
 
 		//! Get the nodes that have been removed since the last update.
 		const std::set<avs::uid> &GetRemovedNodeUids() const;
+
+		void SetFunctionAddNodeForRender(std::function<void(avs::uid)> fn)
+		{
+			addNodeForRender = fn;
+		}
+		void SetFunctionRemoveNodeFromRender(std::function<void(avs::uid)> fn)
+		{
+			removeNodeFromRender = fn;
+		}
+		void CompleteNode(avs::uid id);
 	protected:
 		std::vector<std::weak_ptr<Node>> rootNodes; //Nodes that are parented to the world root.
 		std::vector<std::weak_ptr<Node>> distanceSortedRootNodes; //The rootNodes list above, but sorted from near to far.
@@ -156,5 +166,7 @@ namespace clientrender
 		mutable std::mutex early_mutex;
 		mutable std::mutex distanceSortedRootNodes_mutex;
 		mutable std::mutex distanceSortedTransparentNodes_mutex;
+		std::function<void(avs::uid)> addNodeForRender;
+		std::function<void(avs::uid)> removeNodeFromRender;
 	};
 }

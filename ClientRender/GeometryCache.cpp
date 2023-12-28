@@ -1,12 +1,12 @@
 #include "GeometryCache.h"
-
+#include "InstanceRenderer.h"
 using namespace clientrender;
 #define RESOURCECREATOR_DEBUG_COUT(txt, ...)
 
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform=nullptr;
 
-GeometryCache::GeometryCache(avs::uid c_uid)
-		:cache_uid(c_uid), mNodeManager(flecs_world),
+GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid)
+	: cache_uid(c_uid), parent_cache_uid(parent_c_uid),mNodeManager(flecs_world),
 	  mMaterialManager(c_uid),
 	  mSubsceneManager(c_uid),
 	  mTextureManager(c_uid, &clientrender::Texture::Destroy),
@@ -23,6 +23,10 @@ GeometryCache::GeometryCache(avs::uid c_uid)
 	using avs::Pose;
 	flecs_world.set_entity_range(1, 50000000);
 	//ECS_COMPONENT(flecs_world, Pose);
+	auto addFn=std::bind(&InstanceRenderer::AddNodeToRender,c_uid,std::placeholders::_1);
+	mNodeManager.SetFunctionAddNodeForRender(addFn);
+	auto removeFn = std::bind(&InstanceRenderer::RemoveNodeFromRender, c_uid, std::placeholders::_1);
+	mNodeManager.SetFunctionRemoveNodeFromRender(removeFn);
 }
 
 GeometryCache::~GeometryCache()
@@ -39,9 +43,9 @@ GeometryCache::~GeometryCache()
 static std::map<avs::uid,std::shared_ptr<GeometryCache>> caches;
 static std::vector<avs::uid> cache_uids;
 
-void GeometryCache::CreateGeometryCache(avs::uid cache_uid)
+void GeometryCache::CreateGeometryCache(avs::uid cache_uid,avs::uid parent_cache_uid)
 {
-	caches[cache_uid] = std::make_shared<GeometryCache>(cache_uid);
+	caches[cache_uid] = std::make_shared<GeometryCache>(cache_uid, parent_cache_uid);
 	cache_uids.push_back(cache_uid);
 }
 
@@ -468,6 +472,7 @@ void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
 	m_CompletedNodes.push_back(id);
 	RemoveFromMissingResources(id);
+	mNodeManager.CompleteNode(id);
 }
 
 void GeometryCache::AddTextureToMaterial(const avs::TextureAccessor& accessor, const vec4& colourFactor, const std::shared_ptr<clientrender::Texture>& dummyTexture,

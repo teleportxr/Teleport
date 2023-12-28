@@ -65,7 +65,7 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\copy.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\copy.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating copy.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -99,7 +99,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\debug.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\debug.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating debug.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -133,7 +133,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\font.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\font.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating font.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -167,7 +167,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\hdr.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\hdr.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating hdr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -235,7 +235,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\light_probes.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\light_probes.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating light_probes.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -269,7 +269,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\mip.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\mip.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating mip.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -303,7 +303,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\solid.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\solid.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating solid.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -337,7 +337,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\sphere.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\sphere.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating sphere.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin
@@ -371,7 +371,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../firstparty\Platform\Shaders\SFX\spherical_harmonics.sfx">
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\spherical_harmonics.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating spherical_harmonics.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 mkdir shaderbin

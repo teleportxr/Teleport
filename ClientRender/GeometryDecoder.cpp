@@ -463,7 +463,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 	subSceneCreate.subscene_uid=subSceneDG.server_or_cache_uid;
 	avs::Result result = target->CreateSubScene(server_or_cache_uid, subSceneCreate);
 	// this is a new cache, so create it:
-	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid);
+	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid,server_or_cache_uid);
 	auto &dracoMaterials=dracoScene.GetMaterialLibrary();
 	auto &dracoTextures = dracoMaterials.GetTextureLibrary();
 	std::map<const draco::Texture*,avs::uid> texture_uids;

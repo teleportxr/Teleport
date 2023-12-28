@@ -210,7 +210,6 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
 	renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
-	renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
 	
 	avs::Context::instance()->setMessageHandler(msgHandler, nullptr);
 
@@ -291,7 +290,6 @@ void Renderer::ExecConsoleCommand(const std::string &str)
 		renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 		renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
 		renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
-		renderState.boneMatrices.RestoreDeviceObjects(renderPlatform);
 	}
 	else if (str == "reloadfonts")
 	{
@@ -730,27 +728,16 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 				server_uids.insert(server_uid);
 		}
 	}
-	if(!server_uids.size())
+	static bool override_show_local_geometry = false;
+	bool show_local_geometry = (gui.GetGuiType() != GuiType::None && (have_vr_device || config.options.simulateVR)) || override_show_local_geometry;
+	if (!server_uids.size())
 	{
-		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-		{
-			crossplatform::MultiviewGraphicsDeviceContext &mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-			renderState.stereoCameraConstants.leftInvViewProj = (const float *)mgdc.viewStructs[0].invViewProj;
-			renderState.stereoCameraConstants.rightInvViewProj = (const float *)mgdc.viewStructs[1].invViewProj;
-			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-			renderState.stereoCameraConstants.SetHasChanged();
-			renderPlatform->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-		}
-		renderState.cameraConstants.invViewProj = (const float *)deviceContext.viewStruct.invViewProj;
-		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-		renderState.cameraConstants.SetHasChanged();
-		renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-
 		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
 		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
 			passName += "_multiview";
 		if (!renderState.openXR->IsPassthroughActive())
 		{
+			GetInstanceRenderer(0)->ApplyCameraMatrices(deviceContext);
 			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
 			renderPlatform->DrawQuad(deviceContext);
 			renderState.cubemapClearEffect->Unapply(deviceContext);
@@ -833,13 +820,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			}
 		}
 	}
-	static bool override_show_local_geometry = false;
 	if (have_vr_device || config.options.simulateVR)
 	{
-		gui.Update(hand_pos_press, have_vr_device || config.options.simulateVR);
+		gui.Update(hand_pos_press, have_vr_device );//|| config.options.simulateVR);
 		gui.Render3DConnectionGUI(deviceContext);
 	}
-	bool show_local_geometry = (gui.GetGuiType()!=GuiType::None&&(have_vr_device || config.options.simulateVR))|| override_show_local_geometry;
 	renderState.selected_uid = gui.GetSelectedUid();
 	static bool enable_hand_deformation = true;
 	if (show_local_geometry)
@@ -898,10 +883,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 		{
 			renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
-			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-				renderPlatform->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
-			renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-			GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
+			GetInstanceRenderer(0)->RenderLocalNodes(deviceContext);
 		}
 	}
 	
@@ -1341,10 +1323,11 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 
 	// For desktop, we will use ClientTime for the predicted display time.
 	deviceContext.predictedDisplayTimeS = client::ClientTime::GetInstance().GetTimeS();
-	//deviceContext.viewStruct.Init();
+#if PLATFORM_INTERNAL_PROFILING
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+#endif
 	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
@@ -1444,7 +1427,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		SetExternalTexture(nullptr);
 	}
 	errno = 0;
+#if PLATFORM_INTERNAL_PROFILING
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+#endif
 	SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 }
 

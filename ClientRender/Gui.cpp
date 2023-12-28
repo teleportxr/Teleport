@@ -1261,9 +1261,9 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					if(m)
 					{
 						std::string passName;
-						auto *pass = selected_node->GetCachedEffectPass(element);
+						auto *passCache = selected_node->GetCachedEffectPass(element);
 						const char *name=m->GetMaterialCreateInfo().name.c_str();
-						ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, pass?pass->name.c_str():"");
+						ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, passCache ? (passCache->pass?passCache->pass->name.c_str():"") : "");
 						if (ImGui::IsItemClicked())
 						{
 							Select(cache_uid, m->id);

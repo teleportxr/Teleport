@@ -67,7 +67,7 @@ InstanceRenderer::~InstanceRenderer()
 void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
-	GeometryCache::CreateGeometryCache(server_uid);
+	GeometryCache::CreateGeometryCache(server_uid,-1);
 	geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	resourceCreator.Initialize(renderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 
@@ -238,20 +238,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	// Draw the background. If unconnected, we show a grid and horizon.
 	// If connected, we show the server's chosen background: video, texture or colour.
 	{
-		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-		{
-			crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-			renderState.stereoCameraConstants.leftInvViewProj = mgdc.viewStructs[0].invViewProj;
-			renderState.stereoCameraConstants.rightInvViewProj = mgdc.viewStructs[1].invViewProj;
-			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-			renderState.stereoCameraConstants.SetHasChanged();
-			renderPlatform->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-		}
-		renderState.cameraConstants.frameNumber = (int)renderPlatform->GetFrameNumber();
-		renderState.cameraConstants.invViewProj = deviceContext.viewStruct.invViewProj;
-		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-		renderState.cameraConstants.SetHasChanged();
-		renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+		ApplyCameraMatrices(deviceContext);
 
 		if (sessionClient->IsConnected())
 		{
@@ -281,14 +268,43 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 		renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
 		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 			renderPlatform->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
-		renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-		RenderLocalNodes(deviceContext,server_uid);
+		RenderLocalNodes(deviceContext);
 	}
 }
-
-void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext
-	, avs::uid this_server_uid)
+void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext &deviceContext)
 {
+	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+	{
+		crossplatform::MultiviewGraphicsDeviceContext &mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+		mgdc.viewStructs[0].Init();
+		mgdc.viewStructs[1].Init();
+		renderState.stereoCameraConstants.leftInvViewProj = mgdc.viewStructs[0].invViewProj;
+		renderState.stereoCameraConstants.leftView = mgdc.viewStructs[0].view;
+		renderState.stereoCameraConstants.leftProj = mgdc.viewStructs[0].proj;
+		renderState.stereoCameraConstants.leftViewProj = mgdc.viewStructs[0].viewProj;
+		renderState.stereoCameraConstants.rightInvViewProj = mgdc.viewStructs[1].invViewProj;
+		renderState.stereoCameraConstants.rightView = mgdc.viewStructs[1].view;
+		renderState.stereoCameraConstants.rightProj = mgdc.viewStructs[1].proj;
+		renderState.stereoCameraConstants.rightViewProj = mgdc.viewStructs[1].viewProj;
+		renderState.stereoCameraConstants.SetHasChanged();
+	}
+	renderPlatform->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
+	// else
+	{
+		deviceContext.viewStruct.Init();
+		renderState.cameraConstants.invViewProj = deviceContext.viewStruct.invViewProj;
+		renderState.cameraConstants.view = deviceContext.viewStruct.view;
+		renderState.cameraConstants.proj = deviceContext.viewStruct.proj;
+		renderState.cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
+		renderState.cameraConstants.SetHasChanged();
+	}
+	renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+	renderPlatform->ApplyResourceGroup(deviceContext,0);
+}
+
+void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& deviceContext)
+{
+	ApplyCameraMatrices(deviceContext);
 	if(instanceRenderState.specularCubemapTexture)
 		renderState.teleportSceneConstants.roughestMip = float(instanceRenderState.specularCubemapTexture->mips - 1);
 	if(sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid!=0)
@@ -307,7 +323,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
 	if (renderState.openXR)
 	{
-		avs::uid root_node_uid = renderState.openXR->GetRootNode(this_server_uid);
+		avs::uid root_node_uid = renderState.openXR->GetRootNode(server_uid);
 	}
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 		renderState.stereoCameraConstants.stereoViewPosition = renderState.cameraConstants.viewPosition;// ((const float*)&clientServerState.headPose.globalPose.position);
@@ -321,30 +337,6 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 			renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, static_cast<int>(cachedLights.size()));
 		}
 		renderState.teleportSceneConstants.lightCount = static_cast<int>(cachedLights.size());
-	}
-	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-	{
-		crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-		mgdc.viewStructs[0].Init();
-		mgdc.viewStructs[1].Init();
-		renderState.stereoCameraConstants.leftInvViewProj = mgdc.viewStructs[0].invViewProj;
-		renderState.stereoCameraConstants.leftView = mgdc.viewStructs[0].view;
-		renderState.stereoCameraConstants.leftProj = mgdc.viewStructs[0].proj;
-		renderState.stereoCameraConstants.leftViewProj = mgdc.viewStructs[0].viewProj;
-		renderState.stereoCameraConstants.rightInvViewProj = mgdc.viewStructs[1].invViewProj;
-		renderState.stereoCameraConstants.rightView = mgdc.viewStructs[1].view;
-		renderState.stereoCameraConstants.rightProj = mgdc.viewStructs[1].proj;
-		renderState.stereoCameraConstants.rightViewProj = mgdc.viewStructs[1].viewProj;
-		renderState.stereoCameraConstants.SetHasChanged();
-	}
-	//else
-	{
-		deviceContext.viewStruct.Init();
-		renderState.cameraConstants.invViewProj = deviceContext.viewStruct.invViewProj;
-		renderState.cameraConstants.view = deviceContext.viewStruct.view;
-		renderState.cameraConstants.proj = deviceContext.viewStruct.proj;
-		renderState.cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
-		renderState.cameraConstants.SetHasChanged();
 	}
 
 	{
@@ -361,7 +353,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 	if (renderState.openXR)
 	{
 		// The node pose states are in the space whose origin is the VR device's playspace origin.
-		const auto& nodePoseStates = renderState.openXR->GetNodePoseStates(this_server_uid, renderPlatform->GetFrameNumber());
+		const auto& nodePoseStates = renderState.openXR->GetNodePoseStates(server_uid, renderPlatform->GetFrameNumber());
 		for (auto& n : nodePoseStates)
 		{
 			// TODO, we set LOCAL node pose from GLOBAL worldspace because we ASSUME no parent for these nodes.
@@ -377,26 +369,42 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 			}
 		}
 	}
-	meshRenders.resize(0);
-	meshTransparentRenders.resize(0);
+	nodeRenders.resize(0);
+	nodeTransparentRenders.resize(0);
 	// Accumulate the meshes to render:
 	RenderGeometryCache(deviceContext, geometryCache);
+
+	passRenders.clear();
 	// Now actually render them:
-	for (const auto &m : meshRenders)
+	for (const auto &m : nodeRenders)
 	{
 		RenderMeshNode(deviceContext, m);
 	}
-	for (const auto &m : meshTransparentRenders)
+	for (auto &p : passRenders)
+	{
+		RenderPass(deviceContext, p.second);
+	}
+	for (const auto &m : nodeTransparentRenders)
 	{
 		RenderMeshNode(deviceContext, m);
 	}
 	if (config.debugOptions.showOverlays)
 	{
-		for (const auto &m : meshRenders)
+		for (const auto &m : nodeRenders)
 		{
 			RenderNodeOverlay(deviceContext, m);
 		}
 	}
+}
+
+void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext& deviceContext,PassRender &p)
+{
+	renderPlatform->ApplyPass(deviceContext, p.pass);
+	for(auto &m:p.meshRenders)
+	{
+		 RenderMesh(deviceContext,m.second);
+	}
+	renderPlatform->UnapplyPass(deviceContext);
 }
 
 void InstanceRenderer::RenderGeometryCache(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> g)
@@ -435,7 +443,6 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 	clientrender::AVSTexture& tx = *th;
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-
 	if (!node)
 		return;
 	bool force_highlight = renderState.selected_uid==node->id;
@@ -461,9 +468,9 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 		if(mesh)
 		{
 			if (transparent_pass)
-				meshTransparentRenders.push_back({geometrySubCache->GetCacheUid(), node->id, model, transparent_pass});
+				nodeTransparentRenders.push_back({model, geometrySubCache->GetCacheUid(), node->id, transparent_pass});
 			else
-				meshRenders.push_back({geometrySubCache->GetCacheUid(), node->id, model, transparent_pass});
+				nodeRenders.push_back({model, geometrySubCache->GetCacheUid(), node->id,  transparent_pass});
 		}
 		if(textCanvas)
 		{
@@ -514,28 +521,17 @@ void InstanceRenderer::ApplyModelMatrix(crossplatform::GraphicsDeviceContext &de
 }
 
 void InstanceRenderer::RenderMeshNode(crossplatform::GraphicsDeviceContext &deviceContext
-										,const MeshRender &meshRender)
+										,const NodeRender &nodeRender)
 {
-	const auto geometrySubCache = GeometryCache::GetGeometryCache(meshRender.cache_uid);
+	const auto geometrySubCache = GeometryCache::GetGeometryCache(nodeRender.cache_uid);
 	if(!geometrySubCache)
 		return;
-	ApplyModelMatrix(deviceContext, meshRender.model);
-	const auto node = geometrySubCache->mNodeManager.GetNode(meshRender.node_uid);
+	const auto node = geometrySubCache->mNodeManager.GetNode(nodeRender.node_uid);
 	const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 	renderState.perNodeConstants.lightmapScaleOffset = *(const vec4 *)(&(node->GetLightmapScaleOffset()));
 	bool reset_pass = false;
 	// Is the material/lighting incomplete?
 	bool material_incomplete = false;
-	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
-	avs::uid gi_texture_id = node->GetGlobalIlluminationTextureUid();
-	if (gi_texture_id)
-	{
-		globalIlluminationTexture = geometrySubCache->mTextureManager.Get(gi_texture_id);
-		if (!globalIlluminationTexture)
-		{
-			material_incomplete = true;
-		}
-	}
 	bool rezzing = material_incomplete;
 	if (material_incomplete)
 		node->countdown = 1.0f;
@@ -549,62 +545,42 @@ void InstanceRenderer::RenderMeshNode(crossplatform::GraphicsDeviceContext &devi
 	}
 	renderState.perNodeConstants.rezzing = node->countdown;
 	const auto &meshInfo = mesh->GetMeshCreateInfo();
-	static int mat_select = -1;
 	// iterate through the submeshes.
-	for (size_t element = 0; element < meshInfo.indexBuffers.size(); element++)
+	auto &materials = node->GetMaterials();
+	for (uint32_t element = 0; element < meshInfo.indexBuffers.size(); element++)
 	{
-		if (mat_select >= 0 && mat_select != element)
-			continue;
-		auto &materials = node->GetMaterials();
 		if (element >= materials.size())
 			continue;
 		std::shared_ptr<clientrender::Material> material = materials[element];
 		if (!material)
 		{
-		material = mesh->GetInternalMaterials()[element];
-		if (!material)
-			continue;
+			material = mesh->GetInternalMaterials()[element];
+			if (!material)
+				continue;
 		}
 		const clientrender::Material::MaterialCreateInfo &matInfo = material->GetMaterialCreateInfo();
 		bool transparent = (matInfo.materialMode == avs::MaterialMode::TRANSPARENT_MATERIAL);
 		//if (transparent != transparent_pass)
 		//	continue;
-		bool double_sided = matInfo.doubleSided;
-		auto *vb = meshInfo.vertexBuffers[element].get();
-		if (!vb)
-			continue;
-		const auto *ib = meshInfo.indexBuffers[element].get();
-		if (!ib)
-			continue;
-
-		const crossplatform::Buffer *const v[] = {vb->GetSimulVertexBuffer()};
-		if (!v[0])
-			continue;
-		crossplatform::Layout *layout = vb->GetLayout();
 		// TODO: Improve this.
-		auto sc = node->GetGlobalScale();
+		const vec3 &sc = node->GetGlobalScale();
 		bool negative_scale = (sc.x * sc.y * sc.z) < 0.0f;
 		bool clockwise = mesh->GetMeshCreateInfo().clockwiseFaces ^ negative_scale;
 		bool anim = false;
-		bool highlight = node->IsHighlighted() ;
+		bool highlight = node->IsHighlighted();
 
 		highlight |= (renderState.selected_uid == material->id);
-		std::shared_ptr<clientrender::Texture> diffuse = matInfo.diffuse.texture;
-		std::shared_ptr<clientrender::Texture> normal = matInfo.normal.texture;
-		std::shared_ptr<clientrender::Texture> combined = matInfo.combined.texture;
-		std::shared_ptr<clientrender::Texture> emissive = matInfo.emissive.texture;
-
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseTexture, diffuse ? diffuse->GetSimulTexture() : nullptr);
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_normalTexture, normal ? normal->GetSimulTexture() : nullptr);
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture, combined ? combined->GetSimulTexture() : nullptr);
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture, emissive ? emissive->GetSimulTexture() : nullptr);
 
 		// Pass used for rendering geometry.
-		crossplatform::EffectPass *pass = node->GetCachedEffectPass(element);
+		const clientrender::PassCache *passCache = node->GetCachedEffectPass(element);
+		crossplatform::EffectPass *pass = passCache ? passCache->pass:nullptr;
 		if (pass && node->GetCachedEffectPassValidity(element) != renderState.shaderValidity)
-		pass = nullptr;
+			pass = nullptr;
 		if (!pass)
 		{
+			auto *vb = meshInfo.vertexBuffers[element].get();
+			if (!vb)
+				continue;
 			auto *meshLayout = vb->GetLayout();
 			const auto &meshLayoutDesc = meshLayout->GetDesc();
 			crossplatform::EffectVariantPass *variantPass = transparent ? renderState.transparentVariantPass : renderState.solidVariantPass;
@@ -626,7 +602,6 @@ void InstanceRenderer::RenderMeshNode(crossplatform::GraphicsDeviceContext &devi
 			else if (material->GetMaterialCreateInfo().shader.length())
 			{
 				pixel_shader = material->GetMaterialCreateInfo().shader.c_str();
-				double_sided = true;
 			}
 			pass = variantPass->GetPass(vertex_shader.c_str(), layoutHash, pixel_shader.c_str());
 			if (!pass)
@@ -643,17 +618,32 @@ void InstanceRenderer::RenderMeshNode(crossplatform::GraphicsDeviceContext &devi
 				continue;
 			if (!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(), meshLayoutDesc))
 				continue;
-			node->SetCachedEffectPass(element, pass, renderState.shaderValidity);
+			auto have_anim=vertexShader->variantValues.find("have_anim");
+			bool anim=false;
+			if(have_anim!=vertexShader->variantValues.end())
+			{
+				if(have_anim->second=="true")
+				{
+					anim=true;
+				}
+			}
+			node->SetCachedEffectPass(element, pass, anim, renderState.shaderValidity);
+			passCache = node->GetCachedEffectPass(element);
 		}
-		if (!pass)
+		if (!passCache||!pass)
 			continue;
 	/*	if (highlight)
 		{
 			renderState.pbrMaterialConstants.emissiveOutputScalar += vec4(1.2f, 1.2f, 1.2f, 0.f);
 		}*/
-		bool setBoneConstantBuffer = (pass->usesConstantBufferSlot(12));
+		bool setBoneConstantBuffer = (passCache->anim);
 		auto skeletonNode = node->GetSkeletonNode().lock();
-		if (skeletonNode.get())
+		PassRender &passRender = passRenders[pass];
+		passRender.pass = pass;
+		uint64_t node_element_hash = (nodeRender.node_uid << uint64_t(12)) + (nodeRender.cache_uid << uint16_t(6)) + element;
+		MeshRender &meshRender = passRender.meshRenders[node_element_hash];
+		meshRender.boneMatrices=nullptr;
+		if (passCache->anim&&skeletonNode.get())
 		{
 			std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
 			anim = skeletonInstance != nullptr;
@@ -665,58 +655,101 @@ void InstanceRenderer::RenderMeshNode(crossplatform::GraphicsDeviceContext &devi
 				//				pos_local= (bone_matrix_j) * pos_original_local
 				std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
 				skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
-				BoneMatrices *b = static_cast<BoneMatrices *>(&renderState.boneMatrices);
+				BoneMatrices *b = &skeletonInstance->boneMatrices;
 				memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
+				meshRender.boneMatrices = &skeletonInstance->boneMatrices;
 			}
 		}
-		if (setBoneConstantBuffer)
-			renderPlatform->SetConstantBuffer(deviceContext, &renderState.boneMatrices);
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_globalIlluminationTexture, globalIlluminationTexture ? globalIlluminationTexture->GetSimulTexture() : nullptr);
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseCubemap, instanceRenderState.diffuseCubemapTexture);
-		// If lighting is via static textures.
-		if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
-		// if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.diffuseCubemapTexture!=0)
-		{
-			auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuse_cubemap_texture_uid);
-			if (t)
-			{
-				renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseCubemap, t->GetSimulTexture());
-			}
-		}
-		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap, instanceRenderState.specularCubemapTexture);
-		if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
-		// if(sessionClient->GetSetupCommand().backgroundMode!=teleport::core::BackgroundMode::VIDEO&& sessionClient->GetSetupCommand().clientDynamicLighting.specularCubemapTexture!=0)
-		{
-			auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid);
-			if (t)
-			{
-				renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap, t->GetSimulTexture());
-			}
-		}
-		if (renderState._lights.valid)
-			renderState.lightsBuffer.Apply(deviceContext, renderState.pbrEffect, renderState._lights);
-		renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.cubemapClearEffect_TagDataCubeBuffer);
-		if (renderState.pbrEffect_TagDataIDBuffer.valid)
-			renderState.tagDataIDBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.pbrEffect_TagDataIDBuffer);
-
-		renderPlatform->SetConstantBuffer(deviceContext, &material->pbrMaterialConstants);
-		renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
-		if (double_sided)
-			renderPlatform->SetStandardRenderState(deviceContext, crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
-		else if (clockwise)
-			renderPlatform->SetStandardRenderState(deviceContext, crossplatform::StandardRenderState::STANDARD_FRONTFACE_CLOCKWISE);
-		else
-			renderPlatform->SetStandardRenderState(deviceContext, crossplatform::StandardRenderState::STANDARD_FRONTFACE_COUNTERCLOCKWISE);
-		renderPlatform->SetLayout(deviceContext, layout);
-		renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
-		renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
-		renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
-		renderPlatform->ApplyPass(deviceContext, pass);
-		renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-		//renderState.pbrEffect->UnbindTextures(deviceContext);
-		renderPlatform->UnapplyPass(deviceContext);
-		layout->Unapply(deviceContext);
+		meshRender.material = material;
+		meshRender.model=nodeRender.model;
+		meshRender.cache_uid=nodeRender.cache_uid;
+		meshRender.gi_texture_id=node->GetGlobalIlluminationTextureUid();
+		meshRender.mesh_uid = node->GetMesh()->GetMeshCreateInfo().id;
+		meshRender.setBoneConstantBuffer = setBoneConstantBuffer;
+		meshRender.clockwise = clockwise;
+		meshRender.pass = pass;
+		meshRender.element = element;
+		//RenderMesh(deviceContext,meshRender);
 	}
+}
+
+void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender)
+{
+	const auto geometrySubCache = GeometryCache::GetGeometryCache(meshRender.cache_uid);
+	if (!geometrySubCache)
+		return;
+	ApplyModelMatrix(deviceContext, meshRender.model);
+	const auto &mesh = geometrySubCache->mMeshManager.Get(meshRender.mesh_uid);
+	const auto &meshInfo = mesh->GetMeshCreateInfo();
+	if (meshRender.setBoneConstantBuffer)
+	{
+		if(!meshRender.boneMatrices)
+			return;
+		renderPlatform->SetConstantBuffer(deviceContext, meshRender.boneMatrices);
+	}
+
+	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
+	if (meshRender.gi_texture_id)
+	{
+		globalIlluminationTexture = geometrySubCache->mTextureManager.Get(meshRender.gi_texture_id);
+	}
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_globalIlluminationTexture, globalIlluminationTexture ? globalIlluminationTexture->GetSimulTexture() : nullptr);
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseCubemap	, instanceRenderState.diffuseCubemapTexture);
+	// If lighting is via static textures.
+	if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
+	{
+		auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuse_cubemap_texture_uid);
+		if (t)
+		{
+			renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseCubemap, t->GetSimulTexture());
+		}
+	}
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap, instanceRenderState.specularCubemapTexture);
+	if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
+	{
+		auto t = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid);
+		if (t)
+		{
+			renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap, t->GetSimulTexture());
+		}
+	}
+	if (renderState._lights.valid)
+		renderState.lightsBuffer.Apply(deviceContext, renderState.pbrEffect, renderState._lights);
+	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.cubemapClearEffect_TagDataCubeBuffer);
+	if (renderState.pbrEffect_TagDataIDBuffer.valid)
+		renderState.tagDataIDBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.pbrEffect_TagDataIDBuffer);
+
+	const clientrender::Material::MaterialCreateInfo &matInfo = meshRender.material->GetMaterialCreateInfo();
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseTexture, matInfo.diffuse.texture ? matInfo.diffuse.texture->GetSimulTexture() : nullptr);
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_normalTexture, matInfo.normal.texture ? matInfo.normal.texture->GetSimulTexture() : nullptr);
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture, matInfo.combined.texture ? matInfo.combined.texture->GetSimulTexture() : nullptr);
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture, matInfo.emissive.texture ? matInfo.emissive.texture->GetSimulTexture() : nullptr);
+
+	renderPlatform->SetConstantBuffer(deviceContext, &meshRender.material->pbrMaterialConstants);
+	renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
+	if (matInfo.doubleSided)
+		renderPlatform->SetStandardRenderState(deviceContext, crossplatform::StandardRenderState::STANDARD_DOUBLE_SIDED);
+	else if (meshRender.clockwise)
+		renderPlatform->SetStandardRenderState(deviceContext, crossplatform::StandardRenderState::STANDARD_FRONTFACE_CLOCKWISE);
+	else
+		renderPlatform->SetStandardRenderState(deviceContext, crossplatform::StandardRenderState::STANDARD_FRONTFACE_COUNTERCLOCKWISE);
+	auto *vb = meshInfo.vertexBuffers[meshRender.element].get();
+	if (!vb)
+		return;
+	const auto *ib = meshInfo.indexBuffers[meshRender.element].get();
+	if (!ib)
+		return;
+
+	const crossplatform::Buffer *const v[] = {vb->GetSimulVertexBuffer()};
+	if (!v[0])
+		return;
+	crossplatform::Layout *layout = vb->GetLayout();
+	renderPlatform->SetLayout(deviceContext, layout);
+	renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
+	renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, layout);
+	renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
+	renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
+	layout->Unapply(deviceContext);
 }
 
 void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas)
@@ -748,14 +781,14 @@ void InstanceRenderer::RenderBone(crossplatform::GraphicsDeviceContext& deviceCo
 }
 
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext
-	,const MeshRender &meshRender
+	,const NodeRender &nodeRender
 	,bool force)
 {
-	const auto geometrySubCache = GeometryCache::GetGeometryCache(meshRender.cache_uid);
+	const auto geometrySubCache = GeometryCache::GetGeometryCache(nodeRender.cache_uid);
 	if (!geometrySubCache)
 		return;
-	ApplyModelMatrix(deviceContext, meshRender.model);
-	const auto node = geometrySubCache->mNodeManager.GetNode(meshRender.node_uid);
+	ApplyModelMatrix(deviceContext, nodeRender.model);
+	const auto node = geometrySubCache->mNodeManager.GetNode(nodeRender.node_uid);
 	auto renderPlatform=deviceContext.renderPlatform;
 	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
 	clientrender::AVSTexture& tx = *th;
@@ -1284,5 +1317,22 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 }
 
 void InstanceRenderer::OnStreamingControlMessage(const std::string& str)
+{
+}
+
+void InstanceRenderer::AddNodeToRender(avs::uid cache_uid, avs::uid node_uid)
+{
+	// add this node's meshes etc to a renderpass.
+	auto &geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
+	avs::uid renderpass_cache_uid = cache_uid;
+	if (int64_t(parent_cache_uid) != int64_t(-1))
+	{
+		renderpass_cache_uid=parent_cache_uid;
+	}
+	// Add the node's objects to this renderpass.
+}
+
+void InstanceRenderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
 {
 }

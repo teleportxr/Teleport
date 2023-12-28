@@ -314,7 +314,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	// Pass "true" for first argument to deviceManager to use API debugging:
 #if TELEPORT_INTERNAL_CHECKS
-	static bool use_debug = false;
+	static bool use_debug = true;
 #else
 	static bool use_debug=false;
 #endif
@@ -380,6 +380,10 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
+	platform::crossplatform::ResourceGroupLayout perFrameLayout;
+	perFrameLayout.UseConstantBufferSlot(0);
+	perFrameLayout.UseConstantBufferSlot(1);
+	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	// Now renderPlatform is initialized, can init OpenXR:
 

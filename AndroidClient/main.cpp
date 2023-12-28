@@ -204,6 +204,12 @@ void android_main(struct android_app* app)
 	renderPlatform->PushShaderBinaryPath("shaders");
 	renderPlatform->PushShaderBinaryPath("assets/shaders");
 
+	// Mark CB's 0 and 1 as being in resource group 0 (per-frame)
+	platform::crossplatform::ResourceGroupLayout perFrameLayout;
+	perFrameLayout.UseConstantBufferSlot(0);
+	perFrameLayout.UseConstantBufferSlot(1);
+	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
+
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());
 	renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::NEVER_BUILD);
 	androidRenderer->Init(renderPlatform,&openXR,app->window);

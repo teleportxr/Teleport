@@ -68,11 +68,13 @@ namespace clientrender
 		std::map<uint64_t,geometry_cache_uid> uid_mapping;
 		static platform::crossplatform::RenderPlatform *renderPlatform;
 		avs::uid cache_uid = 0;
+		avs::uid parent_cache_uid=0;
 		flecs::world flecs_world;
 	public:
-		GeometryCache(avs::uid c_uid);
+		GeometryCache(avs::uid c_uid,avs::uid parent_cache_uid);
 		~GeometryCache();
-		avs::uid GetCacheUid() const {return cache_uid;}
+		avs::uid GetCacheUid() const { return cache_uid; }
+		avs::uid GetParentCacheUid() const { return parent_cache_uid; }
 		static void SetRenderPlatform(platform::crossplatform::RenderPlatform *r)
 		{
 			renderPlatform=r;
@@ -82,7 +84,7 @@ namespace clientrender
 			return renderPlatform;
 		}
 		static const std::vector<avs::uid> &GetCacheUids();
-		static void CreateGeometryCache(avs::uid cache_uid);
+		static void CreateGeometryCache(avs::uid cache_uid, avs::uid parent_cache_uid);
 		static void DestroyGeometryCache(avs::uid cache_uid);
 		static void DestroyAllCaches();
 		static std::shared_ptr<GeometryCache> GetGeometryCache(avs::uid cache_uid);
@@ -251,9 +253,11 @@ namespace clientrender
 		mutable std::mutex receivedResourcesMutex;
 		mutable std::mutex resourceRequestsMutex;
 		mutable std::mutex missingResourcesMutex;
-		std::vector<avs::uid> m_ResourceRequests; //Resources the client will request from the server.
-		std::vector<avs::uid> m_ReceivedResources; //Resources received.
+		std::vector<avs::uid> m_ResourceRequests;	//Resources the client will request from the server.
+		std::vector<avs::uid> m_ReceivedResources;	//Resources received.
 		std::string cacheFolder;
 		phmap::flat_hash_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
+
+		
 	};
 }

@@ -20,6 +20,12 @@
 
 namespace clientrender
 {
+	struct PassCache
+	{
+		uint64_t cachedEffectPassValidity = 0;
+		platform::crossplatform::EffectPass *pass = nullptr;
+		bool anim = false;
+	};
 	class Node: public IncompleteNode
 	{
 		std::vector<std::shared_ptr<Component>> components;
@@ -182,29 +188,31 @@ namespace clientrender
 		}
 		void ResetCachedPass(size_t submesh_index)
 		{
-			SetCachedEffectPass(submesh_index,nullptr,0);
+			SetCachedEffectPass(submesh_index,nullptr,false,0);
 		}
 		void ResetCachedPasses()
 		{
 			for(size_t i=0;i<cachedEffectPasses.size();i++)
 			{
 				cachedEffectPasses[i].pass=0;
-				cachedEffectPasses[i].cachedEffectPassValidity=0;
+				cachedEffectPasses[i].anim = false;
+				cachedEffectPasses[i].cachedEffectPassValidity = 0;
 			}
 		}
-		platform::crossplatform::EffectPass *GetCachedEffectPass(size_t submesh_index) const
+		const PassCache *GetCachedEffectPass(size_t submesh_index) const
 		{
 			if(submesh_index>=cachedEffectPasses.size())
 				return nullptr;
-			return cachedEffectPasses[submesh_index].pass;
+			return &(cachedEffectPasses[submesh_index]);
 		}
-		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *p,uint64_t validity)
+		void SetCachedEffectPass(size_t submesh_index,platform::crossplatform::EffectPass *p,bool anim,uint64_t validity)
 		{
 			if(cachedEffectPasses.size()<materials.size())
 				cachedEffectPasses.resize(materials.size());
 			if(submesh_index>=cachedEffectPasses.size())
 				return;
 			cachedEffectPasses[submesh_index].pass=p;
+			cachedEffectPasses[submesh_index].anim = anim;
 			cachedEffectPasses[submesh_index].cachedEffectPassValidity=validity;
 		}
 		virtual void SetMaterialListSize(size_t size);
@@ -307,11 +315,6 @@ namespace clientrender
 		
 		avs::uid holderClientId=0;
 		bool isGrabbable=false;
-		struct PassCache
-		{
-			uint64_t cachedEffectPassValidity=0;
-			platform::crossplatform::EffectPass *pass=nullptr;
-		};
 		std::vector<PassCache> cachedEffectPasses;
 		std::weak_ptr<Node> skeletonNode;
 		std::vector<int16_t> jointIndices;
