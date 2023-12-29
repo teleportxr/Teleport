@@ -127,7 +127,7 @@ endif()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
-set(TELEPORT_INSTALLED_CLIENT_EXE $INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe)
+set(TELEPORT_INSTALLED_CLIENT_EXE "$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe")
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
     "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '${TELEPORT_INSTALLED_CLIENT_EXE}' '-log'"
 )
@@ -156,11 +156,10 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\sh
 install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
 
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
-  WriteRegStr HKCR 'Teleport' '@' 'URL:Teleport Protocol'
+  WriteRegStr HKCR 'Teleport' '' 'URL:Teleport Protocol'
   WriteRegStr HKCR 'Teleport' 'URL Protocol' 'teleport'
-  WriteRegStr HKCR 'Teleport\\\\DefaultIcon' '@' '\"${TELEPORT_INSTALLED_CLIENT_EXE}\"'
-  WriteRegStr HKCR 'Teleport\\\\shell\\\\open\\\\command' '@' '\"${TELEPORT_INSTALLED_CLIENT_EXE}\" \"%1\"'
- ")
+  WriteRegStr HKCR 'Teleport\\\\DefaultIcon' '' '${TELEPORT_INSTALLED_CLIENT_EXE}'
+  WriteRegStr HKCR 'Teleport\\\\shell\\\\open\\\\command' '' '\\\"${TELEPORT_INSTALLED_CLIENT_EXE}\\\" \\\"%1\\\" \\\"%2\\\" \\\"%3\\\"'")
 SET(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
   DeleteRegKey HKCR 'Teleport'
  ")
