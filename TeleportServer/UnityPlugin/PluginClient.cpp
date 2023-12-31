@@ -318,6 +318,8 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core
 
 	std::vector<teleport::core::MovementUpdate> updateList(numUpdates);
 	auto axesStandard = client->clientMessaging->getClientNetworkContext()->axesStandard;
+	if(axesStandard==avs::AxesStandard::NotInitialized)
+		return;
 	for(int i = 0; i < numUpdates; i++)
 	{
 		updateList[i] = updates[i];

@@ -161,6 +161,10 @@ if(TELEPORT_WINDOWS)
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
 	add_subdirectory(thirdparty/srt/submodules/pthread-win32)
+
+	option(TELEPORT_CLIENT_SUPPORT_IPSME "Should IPSME be included?" OFF)
+	set(TELEPORT_CLIENT_MOSQUITTO_LIB_DIR "E:/Code/Teleport/IPSME/mosquitto-2.0.18/build/lib" CACHE PATH "Mosquitto install path for IPSME support")
+	set(TELEPORT_CLIENT_MOSQUITTO_INCLUDE_DIR "E:/Code/Teleport/IPSME/mosquitto-2.0.18/include" CACHE PATH "Mosquitto install path for IPSME support")
 endif()
 
 # This must go before the openssl settings, or it won't generate:

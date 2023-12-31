@@ -46,6 +46,8 @@ namespace clientrender
 	public:
 		Renderer(teleport::Gui &g);
 		virtual ~Renderer();
+		static Renderer *GetRenderer();
+
 		//! This allows live-recompile of shaders (desktop platforms only).
 		void RecompileShaders();
 		void LoadShaders();
@@ -63,6 +65,9 @@ namespace clientrender
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
 
+		// Called by nodemanager:
+		void AddNodeToRender(avs::uid cache_uid, avs::uid node_uid);
+		void RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid);
 	protected:
 		bool reload_shaders=false;
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;

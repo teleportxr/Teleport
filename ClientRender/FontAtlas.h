@@ -21,5 +21,9 @@ namespace clientrender
 	public:
 		FontAtlas(avs::uid u=0):teleport::core::FontAtlas(u),IncompleteFontAtlas(u){}
 		std::shared_ptr<clientrender::Texture> fontTexture;
+		std::string getName() const
+		{
+			return "FontAtlas";
+		}
 	};
 }

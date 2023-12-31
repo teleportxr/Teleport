@@ -64,6 +64,11 @@ namespace clientrender
 	public:
 		Material( const MaterialCreateInfo &pMaterialCreateInfo);
 		~Material();
+
+		std::string getName() const
+		{
+			return m_CI.name;
+		}
 		void SetMaterialCreateInfo(const MaterialCreateInfo& pMaterialCreateInfo);
 
 		inline const MaterialCreateInfo& GetMaterialCreateInfo() const { return m_CI; }

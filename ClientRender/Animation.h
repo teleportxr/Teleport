@@ -40,7 +40,11 @@ public:
 
 	Animation(const std::string& name);
 	Animation(const std::string& name, std::vector<BoneKeyframeList> boneKeyframes);
-	
+
+	std::string getName() const
+	{
+		return name;
+	}
 	//Updates how long the animations runs for by scanning boneKeyframeLists.
 	void updateAnimationLength();
 

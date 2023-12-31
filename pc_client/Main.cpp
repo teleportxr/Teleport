@@ -49,7 +49,9 @@ platform::dx11::DeviceManager deviceManager;
 #endif
 #include "UseOpenXR.h"
 #include "Platform/CrossPlatform/GpuProfiler.cpp"
-
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+#include "TeleportClient/IPSME_MsgEnv.h"
+#endif
 using namespace teleport;
 
 clientrender::Renderer *clientRenderer=nullptr;
@@ -195,6 +197,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	receive_link=false;
 	// remove quotes etc.
 	ReceiveCmdLine();
+
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+    mosquitto_lib_init();
+#endif
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
 	MSG msg;
     // Main message loop:
@@ -211,8 +217,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
 		}
-    }
-	
+	}
+
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+	mosquitto_lib_cleanup();
+#endif
 	if(fileLoader->GetRecordFilesLoaded())
 	{
 		auto l=fileLoader->GetFilesLoaded();

@@ -268,6 +268,8 @@ void ClientMessaging::unstreamNode(avs::uid nodeID)
 
 void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
+	if(!updateList.size())
+		return;
 	teleport::core::UpdateNodeMovementCommand command(updateList.size());
 	sendCommand<>(command, updateList);
 }

@@ -371,7 +371,7 @@ shader vec4 PS_UnconnectedWhite(posTexVertexOutput IN) : SV_TARGET
 }
 shader vec4 PS_UnconnectedNeon_MV(posTexVertexOutput IN, uint viewID : SV_ViewID) : SV_TARGET
 {
-	vec3 _viewPosition = stereoViewPosition;
+	vec3 _viewPosition = stereoViewPosition[viewID].xyz;
 	vec3 view = normalize(TexCoordsToView(IN.texCoords, viewID).xyz);
 	vec4 res = vec4(0, 0, 0, 1.0);
 	// flat surface at 0:
@@ -400,7 +400,7 @@ shader vec4 PS_UnconnectedNeon_MV(posTexVertexOutput IN, uint viewID : SV_ViewID
 }
 shader vec4 PS_UnconnectedWhite_MV(posTexVertexOutput IN, uint viewID : SV_ViewID) : SV_TARGET
 {
-	vec3 _viewPosition = stereoViewPosition;
+	vec3 _viewPosition = stereoViewPosition[viewID].xyz;
 	vec3 view = normalize(TexCoordsToView(IN.texCoords, viewID).xyz);
 	vec4 res = vec4(0.9, 0.9, 0.9, 1.0);
 	// flat surface at 0:

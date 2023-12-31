@@ -55,6 +55,13 @@ if(LIBAV_USE_CUDA)
                 ${LIBAV_CUDA_DIR}/bin/cudart64_110.dll
                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/cudart64_110.dll)
 endif()
+if(TELEPORT_CLIENT_SUPPORT_IPSME)
+	add_custom_command(
+        TARGET TeleportPCClient POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${TELEPORT_CLIENT_MOSQUITTO_LIB_DIR}/${CMAKE_CFG_INTDIR}/mosquitto.dll
+               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/mosquitto.dll)
+endif()
 
 add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
@@ -112,6 +119,10 @@ if(WIN32)
 	target_link_libraries(TeleportPCClient Shlwapi.lib)
 endif()
 
+if(TELEPORT_CLIENT_SUPPORT_IPSME)
+	target_link_directories(TeleportPCClient PUBLIC "${TELEPORT_CLIENT_MOSQUITTO_LIB_DIR}")
+	target_link_libraries(TeleportPCClient mosquitto.lib)
+endif()
 target_link_options(TeleportPCClient PUBLIC /ignore:4711)
 target_compile_options(TeleportPCClient PRIVATE /wd4711)
 

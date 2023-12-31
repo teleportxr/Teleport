@@ -1247,8 +1247,9 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
 {
 	avs::Texture avsTexture;
-	std::string cacheFontFilePath=relative_asset_path_utf8+".font";
-	std::string cacheTextureFilePath=relative_asset_path_utf8+".png";
+	std::replace(relative_asset_path_utf8.begin(),relative_asset_path_utf8.end(),'.','_');
+	std::string cacheFontFilePath=relative_asset_path_utf8+"_font";
+	std::string cacheTextureFilePath=relative_asset_path_utf8+"_texture";
 	avs::uid font_atlas_uid=GetOrGenerateUid(cacheFontFilePath);
 	avs::uid font_texture_uid=GetOrGenerateUid(cacheTextureFilePath);
 	ExtractedFontAtlas &fa=fontAtlases[font_atlas_uid];
@@ -1485,7 +1486,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 		if(!resource.Verify(verifyResource))
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
-			teleport::DebugBreak();
+			//teleport::DebugBreak();
 			{
 				resource_ofstream saveFile(file_name.c_str(), UidToPath);
 				saveFile << resource;

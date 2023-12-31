@@ -90,7 +90,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	{
 		parentLookup[node_id]=avsNode.parentID;
 		childLookup[avsNode.parentID].insert(node_id);
-		flecs_world.entity(e).child_of(FlecsEntity(avsNode.parentID));
+//		flecs_world.entity(e).child_of(FlecsEntity(avsNode.parentID));
 	}
 	//Link new node to parent.
 	LinkToParentNode(node);
@@ -179,6 +179,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetHolderClientId(avsNode.holder_client_id);
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
+
+	if(avsNode.url.length())
+		node->AddLink(avsNode.url);
 }
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
@@ -738,5 +741,6 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 
 void NodeManager::CompleteNode(avs::uid id)
 {
+	TELEPORT_COUT<<"CompleteNode "<<id<<"\n";
 	addNodeForRender(id);
 }

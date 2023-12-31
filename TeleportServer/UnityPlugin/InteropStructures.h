@@ -48,6 +48,8 @@ struct InteropNode
 
 	int32_t priority;
 
+	const char *url;
+
 	operator avs::Node() const
 	{
 		return
@@ -78,7 +80,8 @@ struct InteropNode
 			lightRadius,
 			lightDirection,
 			lightType,
-			lightRange
+			lightRange,
+			url?url:""
 		};
 	}
 };

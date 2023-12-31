@@ -17,7 +17,11 @@ namespace clientrender
 		const std::string name;
 
 		Skeleton(const std::string& name);
-		Skeleton(const std::string& name, size_t numBones, const Transform& skeletonTransform);
+		Skeleton(const std::string &name, size_t numBones, const Transform &skeletonTransform);
+		std::string getName() const
+		{
+			return name;
+		}
 
 		virtual ~Skeleton() = default;
 

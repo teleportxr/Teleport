@@ -278,7 +278,8 @@ namespace avs
 		Bone,
 		TextCanvas,
 		SubScene,
-		Skeleton
+		Skeleton,
+		Link
 	};
 
 	//! Information on the resolution of a client's display.

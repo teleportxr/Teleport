@@ -11,6 +11,10 @@ class Bone
 public:
 	Bone(avs::uid id, const std::string& name);
 	~Bone();
+	std::string getName() const
+	{
+		return name;
+	}
 
 	const avs::uid id;
 	const std::string name;

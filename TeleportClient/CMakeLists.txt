@@ -2,7 +2,6 @@ cmake_minimum_required( VERSION 3.8 )
 
 cmake_policy(SET CMP0135 NEW)
 project( TeleportClient )
-
 # For FetchContent_Declare() and FetchContent_MakeAvailable()
 include(FetchContent)
 # We would LIKE to use FetchContent to obtain an appropriate release of the openxr sdk, but it uses the MD runtime, and we don't.
@@ -46,8 +45,13 @@ set(src_files
 	URLHandlers.h
 	URLHandlers.cpp
 )
+if(TELEPORT_CLIENT_SUPPORT_IPSME)
+	set(ipsme_files
+		IPSME_MsgEnv.cpp
+		IPSME_MsgEnv.h)
+endif()
 #For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files} DEPENDENCIES TeleportCore libavstream ) 
+add_static_library( TeleportClient SOURCES ${src_files} ${ipsme_files} DEPENDENCIES TeleportCore libavstream ) 
 SetTeleportDefaults(TeleportClient)
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 
@@ -79,7 +83,8 @@ elseif(ANDROID)
 	target_include_directories(TeleportClient PUBLIC ../client/LibOVRKernel/Src)
 endif()
 
-#For MD runtime
-#add_library( ClientRender STATIC ${src_public} ) 
+if(TELEPORT_CLIENT_SUPPORT_IPSME)
+	target_include_directories(TeleportClient PUBLIC "${TELEPORT_CLIENT_MOSQUITTO_INCLUDE_DIR}")
+endif()
 
-#target_compile_features(libavstream PRIVATE cxx_std_17)
+target_compile_definitions(TeleportClient PUBLIC TELEPORT_CLIENT_SUPPORT_IPSME=$<BOOL:${TELEPORT_CLIENT_SUPPORT_IPSME}>)

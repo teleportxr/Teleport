@@ -245,7 +245,8 @@ namespace clientrender
 
 			return globalTransform;
 		}
-
+		//! the model matrix in-use, including all transforms (e.g. subCache transforms, etc).
+		mutable mat4 renderModelMatrix;
 		void SetLocalPosition(const vec3& pos);
 		const vec3& GetLocalPosition() const { return GetLocalTransform().m_Translation; }
 		const vec3& GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }
@@ -279,7 +280,16 @@ namespace clientrender
 		{
 			globalIlluminationTextureUid=uid;
 		}
+		void AddLink(const std::string &u)
+		{
+			url=u;
+		}
+		const std::string &GetURL() const
+		{
+			return url;
+		}
 	protected:
+		std::string url;
 		avs::uid globalIlluminationTextureUid=0;
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<TextCanvas> textCanvas;

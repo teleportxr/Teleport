@@ -7,6 +7,9 @@
 #include "Platform/Core/StringToWString.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/URLParser.h"
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+#include "IPSME_MsgEnv.h"
+#endif
 using namespace teleport;
 using namespace client;
 static std::string GetAssocString(IQueryAssociations *pqa, ASSOCSTR stringType)
@@ -54,6 +57,14 @@ void teleport::client::LaunchProtocolHandler( std::string url)
 
 void teleport::client::LaunchProtocolHandler(std::string protocol, std::string url)
 {
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+	if(protocol=="ipsme")
+	{
+		IPSME_MsgEnv::RET_TYPE ret = IPSME_MsgEnv::publish("...");
+		assert(ret == 0);
+		return;
+	}
+#endif
 	std::string cmd = teleport::client::GetLauncherForProtocol(protocol);
 	if(!cmd.length())
 		return;

@@ -1436,6 +1436,13 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 			node.lightDirection = NextVec3;
 			node.lightType		= NextByte;
 			break;
+		case avs::NodeDataType::Link:
+			{
+				size_t url_length=NextUint64;
+				node.url.resize(url_length);
+				copy<char>(node.url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, url_length);
+			}
+		break;
 		default:
 			break;
 	};

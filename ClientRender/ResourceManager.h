@@ -251,7 +251,7 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
 	for(auto it = cachedItems.begin(); it != cachedItems.end();)
 	{
-		//Increment time spent unused, if the resourlifetimeFactorce manager is the only object pointing to the resource.
+		//Increment time spent unused, if the resource manager is the only object pointing to the resource.
 		if(it->second.resource.use_count() == 1)
 		{
 			it->second.timeSinceLastUse_s += deltaTimestamp_s;
@@ -259,7 +259,7 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 			//Delete the resource, if memory is low and it has been too long since the object was last used.
 			if(!sufficientMemory && it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
 			{
-				TELEPORT_CERR<<"Cache "<<cache_uid<<", Timeout Freeing resource "<<it->first<<"\n";
+				TELEPORT_INTERNAL_CERR("Cache {0}, Timeout Freeing resource {1} ({2})\n",cache_uid,it->first,it->second.resource->getName());
 				it = RemoveResource(it);
 			}
 			else

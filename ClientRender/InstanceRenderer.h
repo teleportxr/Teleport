@@ -156,15 +156,14 @@ namespace clientrender
 			avs::uid node_uid;
 			bool transparent_pass;
 		};
-		std::vector<NodeRender> nodeRenders;
-		std::vector<NodeRender> nodeTransparentRenders;
 		struct MeshRender
 		{
 			platform::crossplatform::EffectPass *pass;
-			mat4 model;
+			const mat4 *model;
 			avs::uid cache_uid;
 			std::shared_ptr<clientrender::Material> material;
 			avs::uid mesh_uid;
+			avs::uid node_uid;
 			avs::uid gi_texture_id;
 			bool transparent_pass;
 			bool setBoneConstantBuffer;
@@ -179,7 +178,15 @@ namespace clientrender
 			// node to MeshRender.
 			phmap::flat_hash_map<uint64_t, MeshRender> meshRenders;
 		};
+		struct LinkRender
+		{
+			vec3 position;
+			std::string url;
+		};
+		//std::vector<NodeRender> nodeRenders;
+		std::vector<LinkRender> linkRenders;
 		phmap::flat_hash_map<platform::crossplatform::EffectPass *, PassRender> passRenders;
+		bool multiview=false;
 	public:
 		InstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,RenderState &renderState,teleport::client::SessionClient *sessionClient);
 		virtual ~InstanceRenderer();
@@ -201,6 +208,7 @@ namespace clientrender
 			,bool transparent_pass);
 		// Render everything that uses a given pass:
 		void RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p);
+		void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &l);
 		void RenderMeshNode(platform::crossplatform::GraphicsDeviceContext &deviceContext, const NodeRender &meshRender);
 		void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
 		void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas);
@@ -238,8 +246,8 @@ namespace clientrender
 		void SetOrigin(unsigned long long ctr,avs::uid origin_uid) override;
 		void OnStreamingControlMessage(const std::string& str) override;
 
-		// Called by nodemanager:
-		static void AddNodeToRender(avs::uid cache_uid, avs::uid node_uid);
-		static void RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid);
+		void AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node_uid);
+		void RemoveNodeFromInstanceRender(avs::uid cache_uid, avs::uid node_uid);
+		void AddNodeMeshToInstanceRender(avs::uid cache_uid, std::shared_ptr<Node> node, const std::shared_ptr<clientrender::Mesh> mesh);
 	};
 }

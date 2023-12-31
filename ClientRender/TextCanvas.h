@@ -40,6 +40,10 @@ namespace clientrender
 	public:
 		TextCanvas(const TextCanvasCreateInfo &t);
 		~TextCanvas();
+		std::string getName() const
+		{
+			return "TextCanvas";
+		}
 		TextCanvasCreateInfo textCanvasCreateInfo;
 		
 		void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext

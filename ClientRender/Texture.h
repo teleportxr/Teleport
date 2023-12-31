@@ -187,6 +187,11 @@ namespace clientrender
 
 		virtual ~Texture();
 
+		std::string getName() const
+		{
+			return m_CI.name;
+		}
+
 		//Returns whether the texture is valid.
 		bool IsValid() const
 		{

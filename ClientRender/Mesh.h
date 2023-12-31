@@ -28,6 +28,10 @@ namespace clientrender
 	public:
 		Mesh(const MeshCreateInfo &pMeshCreateInfo);
 		~Mesh();
+		std::string getName() const
+		{
+			return m_CI.name;
+		}
 		inline const MeshCreateInfo& GetMeshCreateInfo() const { return m_CI; }
 		const std::vector<std::shared_ptr<Material>> GetInternalMaterials() const
 		{

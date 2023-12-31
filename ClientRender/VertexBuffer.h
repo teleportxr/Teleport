@@ -26,6 +26,10 @@ namespace clientrender
 			size_t size = 0;
 			std::shared_ptr<std::vector<uint8_t>> data;
 		};
+		std::string getName() const
+		{
+			return "VertexBuffer";
+		}
 
     protected:
 		VertexBufferCreateInfo m_CI;

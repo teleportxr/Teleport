@@ -25,6 +25,10 @@ namespace clientrender
 			std::shared_ptr<std::vector<uint8_t>> data;
 		};
 
+		std::string getName() const
+		{
+			return "IndexBuffer";
+		}
 	protected:
 		IndexBufferCreateInfo m_CI;
 	

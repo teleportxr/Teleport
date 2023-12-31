@@ -66,7 +66,8 @@ namespace clientrender
 	private:
 		void CreateMeshNode(avs::uid server_id,avs::uid id,const avs::Node& node);
 		void CreateLight(avs::uid server_id,avs::uid id, const avs::Node& node);
-		void CreateBone(avs::uid server_id,avs::uid id, const avs::Node& node);
+		void CreateBone(avs::uid server_id, avs::uid id, const avs::Node &node);
+		void CreateLinkNode(avs::uid server_uid, avs::uid id, const avs::Node &node);
 
 		void BasisThread_TranscodeTextures();
 

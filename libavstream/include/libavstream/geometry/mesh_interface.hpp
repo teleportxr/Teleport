@@ -339,6 +339,7 @@ namespace avs
 		uint8_t lightType	=0;
 		float lightRange	=0.f;			//! Maximum distance the light is effective at, in metres.
 
+		std::string url;		// if node is a link/portal
 	};
 #ifdef _MSC_VER
 #pragma pack(pop)

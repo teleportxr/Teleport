@@ -422,6 +422,13 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		if (node->data_type == avs::NodeDataType::Skeleton)
 		{
 		}
+		if (node->data_type == avs::NodeDataType::Link)
+		{
+			size_t urlLength = node->url.length();
+			put(urlLength);
+			put((uint8_t *)node->url.data(), urlLength);
+
+		}
 		geometryStreamingService->encodedResource(uid);
 	}
 

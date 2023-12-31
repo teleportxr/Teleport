@@ -43,6 +43,7 @@ static bool timestamp_initialized=false;
 using namespace clientrender;
 using namespace teleport;
 using namespace platform;
+static Renderer *rendererInstance = nullptr;
 
 void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 {
@@ -129,13 +130,19 @@ Renderer::Renderer(teleport::Gui& g)
 	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, this, std::placeholders::_1);
 	overlayDelegate = std::bind(&clientrender::Renderer::RenderVROverlay, this, std::placeholders::_1);
 	SetThisThreadPriority(2);
+	rendererInstance = this;
 }
 
 Renderer::~Renderer()
 {
-	InvalidateDeviceObjects(); 
+	InvalidateDeviceObjects();
+	rendererInstance = nullptr;
 }
 
+Renderer *Renderer::GetRenderer()
+{
+	return rendererInstance;
+}
 void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
@@ -386,12 +393,12 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = avs::GenerateUid();
 	// gltf_uid will refer to a SubScene asset in cache zero.
 	std::string source_root="https://simul.co:443/wp-content/uploads/teleport-content/controller-models";
-	geometryDecoder.decodeFromFile(0,config.GetStorageFolder()+"/meshes/Buggy.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid, platform::crossplatform::AxesStandard::OpenGL);
+	//geometryDecoder.decodeFromFile(0,config.GetStorageFolder()+"/meshes/Buggy.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid, platform::crossplatform::AxesStandard::OpenGL);
 
 	//geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/generic_controller.glb",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid,platform::crossplatform::AxesStandard::OpenGL);
 	{
 		avs::Node gltfNode;
-		gltfNode.name		="generic_controller.glb";
+		gltfNode.name		="GLTF Test";
 		gltfNode.data_type	=avs::NodeDataType::SubScene;
 		gltfNode.data_uid	=gltf_uid;
 	//	gltfNode.materials.resize(3,0);
@@ -500,12 +507,13 @@ void Renderer::UpdateShaderPasses()
 // This allows live-recompile of shaders. 
 void Renderer::RecompileShaders()
 {
+	renderPlatform->ScheduleRecompileEffects({"pbr", "cubemap_clear"}, [this]()
+											 { reload_shaders = true; });
 	renderPlatform->RecompileShaders();
 	text3DRenderer.RecompileShaders();
 	renderState.hDRRenderer->RecompileShaders();
 	gui.RecompileShaders();
 	TextCanvas::RecompileShaders();
-	renderPlatform->ScheduleRecompileEffects({"pbr","cubemap_clear"},[this](){reload_shaders=true;});
 }
 
 void Renderer::LoadShaders()
@@ -1748,5 +1756,40 @@ void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 				ChangePass(shaderMode);
 			}
 		}
+	}
+}
+void Renderer::AddNodeToRender(avs::uid cache_uid, avs::uid node_uid)
+{
+	TELEPORT_COUT<<"AddNodeToRender: cache "<<cache_uid<<", node "<<node_uid<<"\n";
+	// add this node's meshes etc to a renderpass.
+	auto &geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
+	avs::uid renderpass_cache_uid = cache_uid;
+	if (int64_t(parent_cache_uid) != int64_t(-1))
+	{
+		renderpass_cache_uid = parent_cache_uid;
+	}
+	// Add the node's objects to this renderpass.
+	auto r=GetInstanceRenderer(renderpass_cache_uid);
+	if(r)
+	{
+		r->AddNodeToInstanceRender(cache_uid,node_uid);
+	}
+}
+
+void Renderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
+{
+	auto &geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
+	avs::uid renderpass_cache_uid = cache_uid;
+	if (int64_t(parent_cache_uid) != int64_t(-1))
+	{
+		renderpass_cache_uid = parent_cache_uid;
+	}
+	// Add the node's objects to this renderpass.
+	auto r = GetInstanceRenderer(renderpass_cache_uid);
+	if (r)
+	{
+		r->RemoveNodeFromInstanceRender(cache_uid, node_uid);
 	}
 }
