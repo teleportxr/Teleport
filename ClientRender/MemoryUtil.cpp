@@ -3,30 +3,33 @@
 #include "MemoryUtil.h"
 #include <cassert>
 
-namespace clientrender
+namespace teleport
 {
-	const MemoryUtil* MemoryUtil::mMemoryUtil = nullptr;
-
-	MemoryUtil::MemoryUtil()
+	namespace clientrender
 	{
-		assert(!mMemoryUtil);
-		mMemoryUtil = this;
+		const MemoryUtil *MemoryUtil::mMemoryUtil = nullptr;
+
+		MemoryUtil::MemoryUtil()
+		{
+			assert(!mMemoryUtil);
+			mMemoryUtil = this;
+		}
+
+		MemoryUtil::~MemoryUtil()
+		{
+			mMemoryUtil = nullptr;
+		}
+
+		const MemoryUtil *MemoryUtil::Get()
+		{
+			return mMemoryUtil;
+		}
+
+		bool MemoryUtil::isSufficientMemory(long minimum) const
+		{
+			long mem = getAvailableMemory();
+			return mem >= minimum;
+		}
 	}
 
-	MemoryUtil::~MemoryUtil()
-	{
-		mMemoryUtil = nullptr;
-	}
-
-	const MemoryUtil* MemoryUtil::Get()
-	{
-		return mMemoryUtil;
-	}
-
-	bool MemoryUtil::isSufficientMemory(long minimum) const
-	{
-		long mem = getAvailableMemory();
-		return mem >= minimum;
-	}
 }
-

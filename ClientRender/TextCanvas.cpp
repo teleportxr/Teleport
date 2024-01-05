@@ -2,6 +2,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/Macros.h"
 
+using namespace teleport;
 using namespace clientrender;
 using namespace platform;
 using namespace crossplatform;

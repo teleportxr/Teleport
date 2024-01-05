@@ -3,6 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "GeometryCache.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 
@@ -57,13 +58,15 @@ void SkeletonInstance::GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCa
 	} 
 // external skeleton?
 	const auto &bone_ids = skeleton->GetExternalBoneIds();
-	if(bone_ids.size()>0&&skeleton->GetBones().size()==0)
+	if(bone_ids.size()>0)//&&skeleton->GetBones().size()==0)
 	{
-		size_t upperBound = std::min<size_t>(bone_ids.size(), Skeleton::MAX_BONES);
+		size_t upperBound = std::min<size_t>(jointIndices.size(), Skeleton::MAX_BONES);
 		boneMatrices.resize(upperBound);
 		for (size_t i = 0; i < upperBound; i++)
 		{
-			avs::uid bone_node_uid=bone_ids[i];
+			TELEPORT_ASSERT(i<jointIndices.size());
+			TELEPORT_ASSERT(jointIndices[i] < bone_ids.size());
+			avs::uid bone_node_uid = bone_ids[jointIndices[i]];
 			auto node=geometryCache->mNodeManager.GetNode(bone_node_uid);
 			if(!node)
 				return;

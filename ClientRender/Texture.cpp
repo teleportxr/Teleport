@@ -5,6 +5,7 @@
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/External/magic_enum/include/magic_enum.hpp"
+using namespace teleport;
 using namespace clientrender;
 
 const vec3 Texture::DUMMY_DIMENSIONS = {1, 1, 1};

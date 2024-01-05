@@ -3,9 +3,10 @@
 #include "TeleportClient/ServerTimestamp.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
-using InvisibilityReason = clientrender::VisibilityComponent::InvisibilityReason;
-
+using namespace teleport;
 using namespace clientrender;
+
+using InvisibilityReason = VisibilityComponent::InvisibilityReason;
 
 Node::Node(avs::uid id, const std::string& name)
 	:IncompleteNode(id), name(name), isStatic(false)

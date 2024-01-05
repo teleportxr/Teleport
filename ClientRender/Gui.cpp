@@ -40,6 +40,7 @@ using namespace std::string_literals;
 bool KeysDown[VK_MAX];
 
 using namespace teleport;
+using namespace clientrender;
 using namespace platform;
 using namespace crossplatform;
 
@@ -108,6 +109,18 @@ void ImGuiEnd()
 	ImGui::End();
 }
 
+void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags=0, const char *txt=0, ...)
+{
+	if(!txt)
+		txt=str_id;
+	va_list args;
+	va_start(args, txt);
+	std::string str=fmt::format(txt,args);
+	va_end(args);
+	bool is_open = ImGui::TreeNodeEx(str_id, flags, str.c_str());
+	if(is_open&&((flags&ImGuiTreeNodeFlags_NoTreePushOnOpen)==0))
+		ImGui::TreePop();
+}
 static inline ImVec4 ImLerp(const ImVec4& a, const ImVec4& b, float t)
 {
 	return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
@@ -231,7 +244,7 @@ void Gui::DarkStyle()
 	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
 
-void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
+void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform* r,PlatformWindow *w)
 {
 	renderPlatform=r;
 	if(!r)
@@ -1001,7 +1014,7 @@ void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &d
 	}
 }
 
-void Gui::DrawTexture(const Texture* texture,float m,int slice)
+void Gui::DrawTexture(const crossplatform::Texture* texture,float m,int slice)
 {
 	if (!texture)
 		return;
@@ -1028,7 +1041,7 @@ void Gui::DrawTexture(const Texture* texture,float m,int slice)
 	float showWidth=std::min(regionSize.x, textureSize.x);
 	const ImVec2 size = ImVec2(showWidth, float(showWidth)/aspect);
 		
-	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<Texture*>(texture),m,slice);
+	platform::crossplatform::RenderDelegate drawTexture=std::bind(&Gui::DelegatedDrawTexture,this,std::placeholders::_1,const_cast<crossplatform::Texture*>(texture),m,slice);
 	ImGui_ImplPlatform_DrawTexture(drawTexture, texture->GetName(), m, slice, (int)showWidth,(int)size.y);
 }
 
@@ -1097,9 +1110,6 @@ static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
 
 void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 {
-	if(in_tabs)
-		ImGui::EndTabBar();
-		in_tabs=false;
 	if (in_debug_gui != 1)
 	{
 		return;
@@ -1149,12 +1159,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			}
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			avs::uid selected_uid=GetSelectedUid();
-			std::shared_ptr<const clientrender::Node> selected_node				=geometryCache->mNodeManager.GetNode(selected_uid);
-			std::shared_ptr<const clientrender::Material> selected_material		=geometryCache->mMaterialManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Texture> selected_texture		=geometryCache->mTextureManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Animation> selected_animation	=geometryCache->mAnimationManager.Get(selected_uid);
-
-			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene= geometryCache->mSubsceneManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Node> selected_node					=geometryCache->mNodeManager.GetNode(selected_uid);
+			std::shared_ptr<const clientrender::Material> selected_material			;//=geometryCache->mMaterialManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Texture> selected_texture			;//=geometryCache->mTextureManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Animation> selected_animation		;//=geometryCache->mAnimationManager.Get(selected_uid);
+																					;//
+			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene	;//= geometryCache->mSubsceneManager.Get(selected_uid);
 		
 			if (selected_node.get())
 			{
@@ -1263,10 +1273,13 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 						std::string passName;
 						auto *passCache = selected_node->GetCachedEffectPass(element);
 						const char *name=m->GetMaterialCreateInfo().name.c_str();
-						ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, passCache ? (passCache->pass?passCache->pass->name.c_str():"") : "");
-						if (ImGui::IsItemClicked())
+						if(ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, passCache ? (passCache->pass?passCache->pass->name.c_str():"") : ""))
 						{
-							Select(cache_uid, m->id);
+							if (ImGui::IsItemClicked())
+							{
+								Select(cache_uid, m->id);
+							}
+							//ImGui::TreePop(); ImGuiTreeNodeFlags_NoTreePushOnOpen
 						}
 					}
 					element++;
@@ -1275,14 +1288,15 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %llu", (unsigned long long)s->sub_scene_uid);
+					ImGuiTreeNodeEx("##subsc", flags, " SubScene resource: {0}", s->sub_scene_uid);
+				
 					if (ImGui::IsItemClicked())
 					{
 						Select(cache_uid, s->sub_scene_uid);
 					}
 				}
 			}
-			else if (selected_material.get())
+			if (selected_material.get())
 			{
 				const auto& mci = selected_material->GetMaterialCreateInfo();
 				const clientrender::Material::MaterialData& md = selected_material->GetMaterialData();
@@ -1290,20 +1304,23 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				if(mci.diffuse.texture.get())
 				{
 					const char *name=mci.diffuse.texture->GetTextureCreateInfo().name.c_str();
-					ImGui::TreeNodeEx(name, flags," Diffuse: %s",  name);
-					
-					if (ImGui::IsItemClicked())
+					if(ImGui::TreeNodeEx(name, flags," Diffuse: %s",  name))
 					{
-						Select(cache_uid, mci.diffuse.texture->GetTextureCreateInfo().uid);
+						if (ImGui::IsItemClicked())
+						{
+							Select(cache_uid, mci.diffuse.texture->GetTextureCreateInfo().uid);
+						}
+						//ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
 				}
 
 				if (mci.combined.texture.get())
 				{
 					const char *name=mci.combined.texture->GetTextureCreateInfo().name.c_str();
-					ImGui::TreeNodeEx(name, flags,"Combined: %s", name);
-					ImGui::TreeNodeEx(name, flags,"Metal: %3.3f", md.combinedOutputScalarRoughMetalOcclusion.y);
-					ImGui::TreeNodeEx(name, flags,"Roughness: R = %3.3f a + %3.3f",  md.combinedOutputScalarRoughMetalOcclusion.x,md.combinedOutputScalarRoughMetalOcclusion.w);
+
+					ImGuiTreeNodeEx(name, flags, "Combined: {0}", name);
+					ImGuiTreeNodeEx(name, flags,"Metal: {0}", md.combinedOutputScalarRoughMetalOcclusion.y);
+					ImGuiTreeNodeEx(name, flags,"Roughness: R = {0} a + {0}",  md.combinedOutputScalarRoughMetalOcclusion.x,md.combinedOutputScalarRoughMetalOcclusion.w);
 					
 					if (ImGui::IsItemClicked())
 					{
@@ -1312,7 +1329,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				}
 				if (mci.emissive.texture.get())
 				{
-					ImGui::TreeNodeEx("", flags,"Emissive: %s", mci.emissive.texture->GetTextureCreateInfo().name.c_str());
+					ImGuiTreeNodeEx("", flags, "Emissive: {0}", mci.emissive.texture->GetTextureCreateInfo().name.c_str());
 					
 					if (ImGui::IsItemClicked())
 					{
@@ -1320,7 +1337,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					}
 				}
 			}
-			else if (selected_texture.get())
+			if (selected_texture.get())
 			{
 				const auto& tci = selected_texture->GetTextureCreateInfo();
 				ImGui::Text("%llu: %s", tci.uid, tci.name.c_str());
@@ -1331,7 +1348,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				const clientrender::Texture* pct = static_cast<const clientrender::Texture*>(selected_texture.get());
 				DrawTexture(selected_texture->GetSimulTexture(),(float)mip_current,0);
 			}
-			else if(selected_animation.get())
+			if(selected_animation.get())
 			{
 				ImGui::Text("%llu: %s", selected_uid,selected_animation->name.c_str());
 				if (ImGui::BeginTable("selected", 2))
@@ -1356,7 +1373,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 				if (selected_subscene->subscene_uid)
 				{
 					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
-					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %llu", selected_subscene->subscene_uid);
+					ImGuiTreeNodeEx("##name111", flags, " Subscene Geometry Cache: {0}", selected_subscene->subscene_uid);
 
 					if (g)
 					{
@@ -1436,14 +1453,16 @@ void Gui::Textures(const ResourceManager<avs::uid,clientrender::Texture>& textur
 	for (auto id : ids)
 	{
 		const auto &texture=textureManager.Get(id);
-		ImGui::TreeNodeEx(fmt::format("{0}: {1} ",id, texture->GetTextureCreateInfo().name.c_str()).c_str(),ImGuiTreeNodeFlags_Leaf);
-		if (ImGui::IsItemClicked())
+		if(ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, texture->GetTextureCreateInfo().name.c_str()).c_str(), ImGuiTreeNodeFlags_Leaf))
 		{
-			if(!show_inspector)
-				show_inspector=true;
-			Select(cache_uid, id);
+			if (ImGui::IsItemClicked())
+			{
+				if(!show_inspector)
+					show_inspector=true;
+				Select(cache_uid, id);
+			}
+			ImGui::TreePop();
 		}
-		ImGui::TreePop();
 	}
 	ImGui::EndGroup();
 }
@@ -1456,14 +1475,13 @@ void Gui::Skeletons(const ResourceManager<avs::uid,clientrender::Skeleton>& skel
 	for (auto id : ids)
 	{
 		const auto &skeleton = skeletonManager.Get(id);
-		ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str());
+		ImGuiTreeNodeEx(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str());
 		if (ImGui::IsItemClicked())
 		{
 			if (!show_inspector)
 				show_inspector = true;
 			Select(cache_uid, id);
 		}
-		ImGui::TreePop();
 	}
 	ImGui::EndGroup();
 }
@@ -1475,14 +1493,16 @@ void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animMan
 	for (auto id : ids)
 	{
 		const auto &anim=animManager.Get(id);
-		ImGui::TreeNodeEx(fmt::format("{0}: {1} ",id, anim->name.c_str()).c_str());
-		if (ImGui::IsItemClicked())
+		if(ImGui::TreeNodeEx(fmt::format("{0}: {1} ",id, anim->name.c_str()).c_str()))
 		{
-			if(!show_inspector)
-				show_inspector=true;
-			Select(cache_uid, id);
+			if (ImGui::IsItemClicked())
+			{
+				if(!show_inspector)
+					show_inspector=true;
+				Select(cache_uid, id);
+			}
+			ImGui::TreePop();
 		}
-		ImGui::TreePop();
 	}
 	
 	ImGui::EndGroup();
@@ -1614,31 +1634,23 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::LabelText("DebugShaders","Debug Shader");
 	static int chooseDebugShader= 0;
 	int oldChooseDebugShader = chooseDebugShader;
-	ImGui::RadioButton("Default", &chooseDebugShader, 0);
-	ImGui::RadioButton("Albedo", &chooseDebugShader, 1);
+	ImGui::RadioButton("Default", &chooseDebugShader,(int)ShaderMode::DEFAULT);
+	ImGui::RadioButton("Albedo", &chooseDebugShader, (int)ShaderMode::ALBEDO);
 	ImGui::SameLine();
-	ImGui::RadioButton("Normals", &chooseDebugShader, 2);
+	ImGui::RadioButton("Normals", &chooseDebugShader, (int)ShaderMode::NORMALS);
 	ImGui::SameLine();
-	ImGui::RadioButton("Vertex Normals", &chooseDebugShader, 3);
-	ImGui::RadioButton("Lightmaps", &chooseDebugShader, 4);
+	ImGui::RadioButton("Vertex Normals", &chooseDebugShader, (int)ShaderMode::NORMAL_VERTEXNORMALS);
+	ImGui::RadioButton("Lightmaps", &chooseDebugShader, (int)ShaderMode::LIGHTMAPS);
 	ImGui::SameLine();
-	ImGui::RadioButton("Ambient", &chooseDebugShader, 5);
+	ImGui::RadioButton("Ambient", &chooseDebugShader, (int)ShaderMode::AMBIENT);
 	ImGui::SameLine();
-	ImGui::RadioButton("UVs", &chooseDebugShader, 6);
-	ImGui::RadioButton("Anim", &chooseDebugShader, 7);
+	ImGui::RadioButton("UVs", &chooseDebugShader, (int)ShaderMode::UVS);
+	ImGui::RadioButton("Anim", &chooseDebugShader, (int)ShaderMode::DEBUG_ANIM);
 	ImGui::SameLine();
-	ImGui::RadioButton("Digitizing", &chooseDebugShader, 8);
+	ImGui::RadioButton("Digitizing", &chooseDebugShader, (int)ShaderMode::REZZING);
 	if (oldChooseDebugShader != chooseDebugShader)
 	{
-		if(chooseDebugShader!=0)
-		{
-			debugOptions.debugShader = debugShaders[chooseDebugShader];
-			debugOptions.useDebugShader = true;
-		}
-		else
-		{
-			debugOptions.useDebugShader=false;
-		}
+		changeRender((ShaderMode)chooseDebugShader);
 		return true;
 	}
 	return false;
@@ -1717,7 +1729,8 @@ void Gui::GeometryOSD()
 		cache_strings.resize(cache_uids.size());
 		for(size_t i=0;i<cache_uids.size();i++)
 		{
-			cache_names.push_back(fmt::format("{0}",cache_uids[i]));
+			auto g = clientrender::GeometryCache::GetGeometryCache(cache_uids[i]);
+			cache_names.push_back(fmt::format("{0}, {1}",cache_uids[i],g->GetName()));
 		}
 		for(size_t i=0;i<cache_uids.size();i++)
 		{
@@ -1796,11 +1809,19 @@ void Gui::GeometryOSD()
 	}*/
 }
 
+void Gui::BeginTabBar(const char *txt)
+{
+	ImGui::BeginTabBar("tabs");
+	in_tabs=true;
+}
+
+void Gui::EndTabBar()
+{
+	ImGui::EndTabBar ();
+}
+
 bool Gui::Tab(const char *txt)
 {
-	if(!in_tabs)
-		ImGui::BeginTabBar("tabs");
-	in_tabs=true;
 	return ImGui::BeginTabItem(txt);
 }
 
@@ -1903,7 +1924,7 @@ bool Gui::BeginMainMenuBar()
 	ImGui::SetNextWindowViewport(viewport->ID);
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-	bool res=ImGui::Begin("menu",0,window_flags);
+	bool res=ImGuiBegin("menu",0,window_flags);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.f);
 	return res;
 }
@@ -1911,7 +1932,7 @@ bool Gui::BeginMainMenuBar()
 void Gui::EndMainMenuBar()
 {
 	ImGui::PopStyleVar(1);
-	ImGui::End();
+	ImGuiEnd();
 	ImGui::PopStyleVar(1);
 }
 
@@ -1924,7 +1945,7 @@ void Gui::ShowSettings2D()
 	ImGui::SetNextItemWidth(w);
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	ImGui::SameLine(ImGui::GetWindowWidth() - 80);
-	ImGui::Begin("Settings", 0, window_flags);
+	ImGuiBegin("Settings", 0, window_flags);
 	ImGui::PushFont(defaultFont);
 	ImGui::LabelText("##Settings","Settings");
 	ImGui::PopFont();
@@ -1939,6 +1960,7 @@ void Gui::ShowSettings2D()
 #endif
 		ImGui::EndTable();
 	}
+	ImGuiEnd();
 }
 
 void Gui::ListBookmarks()
@@ -2220,22 +2242,6 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 
 		ImGuiEnd();
 		
-		/*
-		if (ImGuiBegin("Keyboard", nullptr, window_flags))
-		{
-			ImGui::Text(
-				"O: Toggle OSD\n"
-					"K: Connect/Disconnect\n"
-					"N: Toggle Node Overlays\n"
-					"R: Recompile shaders\n"
-					"NUM 0: PBR\n"
-					"NUM 1: Albedo\n"
-					"NUM 4: Unswizzled Normals\n"
-					"NUM 5: Debug animation\n"
-					"NUM 6: Lightmaps\n"
-					"NUM 2: Vertex Normals\n");
-			ImGuiEnd();
-		}*/
 		ImGui::PopFont();
 	}
 	if(config.enable_vr)
@@ -2248,7 +2254,7 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		ImVec2 pos = { vp.w - 100.f ,vp.h-100.f };
 		ImGui::SetNextWindowPos(pos);
 
-		ImGui::Begin("btn",0,window_flags);
+		ImGuiBegin("btn",0,window_flags);
 			//ImGui::SameLine();
 		ImGui::BeginDisabled(!openXR.CanStartSession());
 		const char *systname=openXR.GetSystemName();
@@ -2273,9 +2279,9 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		ImGui::PopStyleColor();
 		ImGui::PopStyleColor();
 		ImGui::EndDisabled();
-		ImGui::End();
+		ImGuiEnd();
 	}
-	//ImGui::End();
+
 	if (show_options)
 	{
 		ShowSettings2D();
@@ -2293,10 +2299,10 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		ImVec2 pos = { bookmarks_pos.x - bookmarks_width ,bookmarks_pos.y };
 		ImGui::SetNextWindowPos(pos);
 
-		ImGui::Begin("Bookmarks", 0, window_flags);
+		ImGuiBegin("Bookmarks", 0, window_flags);
 		bookmarks_width = ImGui::GetWindowWidth();
 		ListBookmarks();
-		ImGui::End();
+		ImGuiEnd();
 	}
 	//ImGuiEnd();
 	ImGui::PopFont();

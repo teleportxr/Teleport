@@ -4,12 +4,15 @@
 #include <memory>
 #include <vector>
 
-namespace clientrender
+namespace teleport
 {
-	class Component
+	namespace clientrender
 	{
-	public:
-	Component(){}
-	virtual ~Component(){}
-	};
+		class Component
+		{
+		public:
+			Component() {}
+			virtual ~Component() {}
+		};
+	}
 }

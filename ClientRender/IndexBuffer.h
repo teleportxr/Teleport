@@ -11,7 +11,9 @@ namespace platform
 	}
 }
 
-namespace clientrender
+namespace teleport
+{
+	namespace clientrender
 {
 	/// Wrapper for an IndexBuffer
 	class IndexBuffer :public APIObject
@@ -66,4 +68,5 @@ namespace clientrender
 	protected:
 		platform::crossplatform::Buffer *m_SimulBuffer=nullptr;
 	};
+}
 }

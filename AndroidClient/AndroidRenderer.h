@@ -10,7 +10,7 @@ namespace teleport
 		class AndroidInstanceRenderer : public clientrender::InstanceRenderer,public DecodeEventInterface
 		{
 		public:
-			AndroidInstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,clientrender::RenderState &renderState,teleport::client::SessionClient *sessionClient);
+			AndroidInstanceRenderer(avs::uid server,teleport::client::Config &config,clientrender::GeometryDecoder &geometryDecoder,clientrender::RenderState &renderState,teleport::client::SessionClient *sessionClient);
 			~AndroidInstanceRenderer();
 			void OnFrameAvailable() override;
 			void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext ) override;
@@ -22,7 +22,7 @@ namespace teleport
 		class AndroidRenderer : public clientrender::Renderer
 		{
 		public:
-			AndroidRenderer(teleport::Gui &g);
+			AndroidRenderer(teleport::clientrender::Gui &g);
 			virtual ~AndroidRenderer();
 		protected:
 			std::shared_ptr<clientrender::InstanceRenderer> GetInstanceRenderer(avs::uid server_uid) override;

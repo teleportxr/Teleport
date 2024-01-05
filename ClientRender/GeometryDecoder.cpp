@@ -22,6 +22,8 @@ avs::HTTPUtil hTTPUtil;
 #include <filesystem>
 using std::filesystem::path;
 using namespace std::chrono_literals;
+using namespace teleport;
+using namespace clientrender;
 
 #define TELEPORT_GEOMETRY_DECODER_ASYNC 1
 
@@ -463,7 +465,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 	subSceneCreate.subscene_uid=subSceneDG.server_or_cache_uid;
 	avs::Result result = target->CreateSubScene(server_or_cache_uid, subSceneCreate);
 	// this is a new cache, so create it:
-	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid,server_or_cache_uid);
+	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid,server_or_cache_uid,filename_url);
 	auto &dracoMaterials=dracoScene.GetMaterialLibrary();
 	auto &dracoTextures = dracoMaterials.GetTextureLibrary();
 	std::map<const draco::Texture*,avs::uid> texture_uids;
@@ -1468,13 +1470,7 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeDa
 	copy<char>(skeleton.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("skeletons/"+skeleton.name+".skeleton"));
-/*
-	skeleton.inverseBindMatrices.resize(NextUint64);
-	for(size_t i = 0; i < skeleton.inverseBindMatrices.size(); i++)
-	{
-		skeleton.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
-	}*/
-	skeleton.useExternalBones=NextByte;
+
 	skeleton.boneTransforms.resize(NextUint64);
 	skeleton.parentIndices.resize(skeleton.boneTransforms.size());
 	skeleton.boneNames.resize(skeleton.boneTransforms.size());
@@ -1482,11 +1478,7 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeDa
 	for (size_t i = 0; i < skeleton.boneTransforms.size(); i++)
 	{
 		skeleton.boneIDs[i]=NextUint64;
-		skeleton.parentIndices[i]=NextUint16;
-		skeleton.boneTransforms[i] = NextChunk(avs::Transform);
-		size_t nameLength = NextUint64;
-		skeleton.boneNames[i].resize(nameLength);
-		copy<char>(skeleton.boneNames[i].data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+		//skeleton.parentIndices[i]=NextUint16;
 	}
 	skeleton.skeletonTransform = NextChunk(avs::Transform);
 

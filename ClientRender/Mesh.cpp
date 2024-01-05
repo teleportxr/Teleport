@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2022 Simul Software Ltd
 #include "Mesh.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 Mesh::Mesh(const MeshCreateInfo& pMeshCreateInfo)

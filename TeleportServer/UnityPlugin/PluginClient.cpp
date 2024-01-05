@@ -24,6 +24,7 @@
 #include "PluginMain.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "CustomAudioStreamTarget.h"
+#pragma optimize("", off)
 
 namespace teleport
 {

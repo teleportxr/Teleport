@@ -57,7 +57,7 @@ using namespace teleport;
 clientrender::Renderer *clientRenderer=nullptr;
 teleport::client::SessionClient *sessionClient=nullptr;
 UseOpenXR useOpenXR("Teleport PC Client");
-Gui gui(useOpenXR);
+clientrender::Gui gui(useOpenXR);
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
@@ -171,7 +171,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		storage_folder = std::string(szPath)+"/TeleportVR";
 	}
-	
 	config.SetStorageFolder(storage_folder.c_str());
 	clientApp.Initialize();
 	gui.SetServerIPs(config.recent_server_urls);
@@ -184,9 +183,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		debug_buffer.setLogFile(config.log_filename.c_str());
 	}
-	errno=0;
+	errno = 0;
     // Initialize global strings
-    MyRegisterClass(hInstance);
+	MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
 	if (!hWnd)
@@ -273,6 +272,25 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
+int TeleportClientReportHook(int reportType, char *message, int *returnValue)
+{
+	//_CRT_WARN, _CRT_ERROR, or _CRT_ASSERT
+	TELEPORT_CERR<<message<<"\n";
+	if(reportType==_CRT_ASSERT)
+		SIMUL_BREAK("Assertion Failed!");
+	return 0;
+}
+
+int TeleportClientReportHookW(int reportType, wchar_t *message, int *returnValue)
+{
+	//_CRT_WARN, _CRT_ERROR, or _CRT_ASSERT
+	TELEPORT_CERR << message << "\n";
+	if (reportType == _CRT_ASSERT)
+		SIMUL_BREAK("Assertion Failed!");
+	return 0;
+}
+
+
 HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
@@ -284,10 +302,16 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
       return FALSE;
    }
-   SetWindowPos(hWnd
-   , HWND_TOP// or HWND_TOPMOST
-   , 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);	
+	   SetWindowPos(hWnd, HWND_TOP// or HWND_TOPMOST
+				,0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
    ShowWindow(hWnd, nCmdShow);
+	 _CrtSetReportHook(&TeleportClientReportHook);
+   _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL ,&TeleportClientReportHook);
+	 _CrtSetReportHookW2(_CRT_RPTHOOK_INSTALL ,&TeleportClientReportHookW);
+   _set_error_mode(_OUT_TO_STDERR);
+	// std::cout<<"asserting\n";
+	// assert(false);
+	// std::cout << "asserting done\n";
    UpdateWindow(hWnd);
    return hWnd;
 }
@@ -398,7 +422,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	auto &config=client::Config::GetInstance();
-	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());
+	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)GetActiveWindow());
 	//if(config.recent_server_urls.size())
 	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
@@ -418,6 +442,8 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y,int w,int h);
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	bool ui_handled=false;
+	//if(message!=15)
+	//	std::cout<<"\tWndProc "<<std::hex<<message<<std::endl;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{
 		ui_handled=true;
@@ -434,6 +460,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			default:
 				break;
 			}
+			break;
+		case WM_IME_NOTIFY:
+		case WM_ENABLE:
+		//case WM_NCACTIVATE:
+	//	case WM_ACTIVATE:
+			//SIMUL_BREAK("WMW");
 			break;
 		default:
 			break;
@@ -459,12 +491,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
-			if(gui.GetGuiType()==teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(false, true, false, 0);
 			break;
 		case WM_RBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(false, true, false, 0);
 			break;
 		case WM_MOUSEMOVE:
@@ -488,13 +520,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (message)
 		{
 		case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() == teleport::GuiType::Connection);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() == teleport::GuiType::Connection);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
 		default:
@@ -502,28 +534,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	if (!ui_handled && gui.GetGuiType()== teleport::GuiType::None)
+	if (!ui_handled && gui.GetGuiType() == teleport::clientrender::GuiType::None)
 	{
 		switch (message)
 		{
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:
@@ -589,7 +621,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #endif
 				if(receive_link)
 				{
-					gui.SetGuiType(teleport::GuiType::Connection);
+					gui.SetGuiType(teleport::clientrender::GuiType::Connection);
 					gui.Navigate(cmdLine);
 					receive_link = false;
 				}

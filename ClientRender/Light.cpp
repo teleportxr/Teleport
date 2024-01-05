@@ -2,6 +2,7 @@
 
 #include "Light.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 const uint32_t Light::s_MaxLights = 8; 

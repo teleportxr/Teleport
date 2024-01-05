@@ -1,5 +1,6 @@
 #include "NodeManager.h"
 
+using namespace teleport;
 using namespace clientrender;
 using avs::Pose;
 
@@ -627,6 +628,8 @@ const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
 
 void NodeManager::Clear()
 {
+	for(auto n:nodeLookup)
+		removeNodeFromRender(n.first);
 	rootNodes_mutex.lock();
 	rootNodes.clear();
 	rootNodes_mutex.unlock();

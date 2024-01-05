@@ -2,35 +2,40 @@
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
-namespace clientrender
+namespace teleport
 {
-	Skeleton::Skeleton(const std::string& name)
-		:name(name)
-	{}
-
-	Skeleton::Skeleton(const std::string& name,  size_t numBones, const Transform& skeletonTransform)
-		: name(name),  bones(numBones), skeletonTransform(skeletonTransform)
-	{}
-
-	std::shared_ptr<Bone> Skeleton::GetBoneByName(const char *txt)
+	namespace clientrender
 	{
-		for(auto b:bones)
+		Skeleton::Skeleton(const std::string &name)
+			: name(name)
 		{
-			if(b->name==txt)
-				return b;
 		}
-		return nullptr;
-	}
 
-	void Skeleton::SetBone(size_t index, std::shared_ptr<Bone> bone)
-	{
-		if (index < bones.size())
+		Skeleton::Skeleton(const std::string &name, size_t numBones, const Transform &skeletonTransform)
+			: name(name), bones(numBones), skeletonTransform(skeletonTransform)
 		{
-			bones[index] = bone;
 		}
-		else
+
+		std::shared_ptr<Bone> Skeleton::GetBoneByName(const char *txt)
 		{
-			TELEPORT_CERR << "ERROR: Attempted to add bone to skeleton (" << name << ") at index " << index << " greater than size " << bones.size() << "!\n";
+			for (auto b : bones)
+			{
+				if (b->name == txt)
+					return b;
+			}
+			return nullptr;
+		}
+
+		void Skeleton::SetBone(size_t index, std::shared_ptr<Bone> bone)
+		{
+			if (index < bones.size())
+			{
+				bones[index] = bone;
+			}
+			else
+			{
+				TELEPORT_CERR << "ERROR: Attempted to add bone to skeleton (" << name << ") at index " << index << " greater than size " << bones.size() << "!\n";
+			}
 		}
 	}
 }

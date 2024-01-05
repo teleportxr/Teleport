@@ -14,7 +14,7 @@
 #include "GeometryStore.h"
 #include "ClientManager.h"
 
-
+#pragma optimize("", off)
 using namespace teleport;
 using namespace server;
 
@@ -458,9 +458,9 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 				index=-1;
 			return index;
 		};
-		put(true);
 		put(skeleton->boneIDs.size());
-		for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
+		put((const uint8_t *)skeleton->boneIDs.data(), sizeof(avs::uid) * skeleton->boneIDs.size());
+	/*	for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
 		{
 			avs::Node* node = geometryStore->getNode(skeleton->boneIDs[i]);
 			avs::Transform localTransform = node->localTransform;
@@ -473,7 +473,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 			put(nameLength);
 			//Push name.
 			put((uint8_t*)node->name.data(), nameLength);
-		}
+		}*/
 		put(skeleton->skeletonTransform);
 
 		putPayloadSize();

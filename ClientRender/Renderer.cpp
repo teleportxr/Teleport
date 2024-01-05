@@ -37,11 +37,11 @@
 #include "TeleportClient/TabContext.h"
 
 using namespace std::string_literals;
+using namespace teleport;
 
 avs::Timestamp clientrender::platformStartTimestamp ;
 static bool timestamp_initialized=false;
 using namespace clientrender;
-using namespace teleport;
 using namespace platform;
 static Renderer *rendererInstance = nullptr;
 
@@ -114,7 +114,7 @@ avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const
 platform::crossplatform::RenderDelegate renderDelegate;
 platform::crossplatform::RenderDelegate overlayDelegate;
 
-Renderer::Renderer(teleport::Gui& g)
+Renderer::Renderer(Gui& g)
 	:gui(g)
 	,config(teleport::client::Config::GetInstance())
 {
@@ -143,7 +143,8 @@ Renderer *Renderer::GetRenderer()
 {
 	return rendererInstance;
 }
-void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
+
+void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, PlatformWindow* active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
 	u->SetBindingsChangedCallback(std::bind(&Renderer::XrBindingsChanged, this, std::placeholders::_1, std::placeholders::_2));
@@ -191,6 +192,8 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	gui.RestoreDeviceObjects(renderPlatform, active_window);
 	auto connectButtonHandler = std::bind(&client::TabContext::ConnectButtonHandler, std::placeholders::_1, std::placeholders::_2);
 	gui.SetConnectHandler(connectButtonHandler);
+	auto changeRender = std::bind(&Renderer::ChangePass, this, std::placeholders::_1);
+	gui.SetChangeRender(changeRender);
 	auto selectionHandler = std::bind(&Renderer::SelectionChanged,this);
 	gui.SetSelectionHandler(selectionHandler);
 	auto cancelConnectHandler = std::bind(&client::TabContext::CancelConnectButtonHandler, std::placeholders::_1);
@@ -885,8 +888,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			}
 			else
 			{
-				if (handNode)
-					handNode->SetVisible(false);
+			//	if (handNode)
+			//		handNode->SetVisible(false);
 			}
 		}
 		{
@@ -923,6 +926,10 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 			config.debugOptions.useDebugShader = true;
 			config.debugOptions.debugShader = "ps_debug_normal_vertexnormals";
 			break;
+		case ShaderMode::AMBIENT:
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_ambient";
+			break;
 		case ShaderMode::UVS:
 			config.debugOptions.useDebugShader = true;
 			config.debugOptions.debugShader = "ps_debug_uvs";
@@ -938,6 +945,7 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	}
 	renderState.shaderValidity++;
 	UpdateShaderPasses();
+	UpdateAllNodeRenders();
 }
 void Renderer::Update(double timestamp_ms)
 {
@@ -1188,16 +1196,16 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		{
 #if TELEPORT_INTERNAL_CHECKS
 		case 'O':
-			if(gui.GetGuiType()!=teleport::GuiType::Debug)
+			if(gui.GetGuiType()!=GuiType::Debug)
 			{
-				gui.SetGuiType(teleport::GuiType::Debug);
+				gui.SetGuiType(GuiType::Debug);
 			}
 			else
 			{
-				gui.SetGuiType(teleport::GuiType::None);
+				gui.SetGuiType(GuiType::None);
 			}
 			if(renderState.openXR)
-				renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == teleport::GuiType::Debug);
+				renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == GuiType::Debug);
 			break;
 		case 'N':
 			config.debugOptions.showOverlays = !config.debugOptions.showOverlays;
@@ -1540,7 +1548,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		gui.LinePrint(fmt::format("Override Shader: {0}", config.debugOptions.debugShader));
 	}		
-	
+	gui.BeginTabBar("tabs");
 	if(gui.Tab("Debug"))
 	{
 		if (gui.DebugPanel(config.debugOptions))		
@@ -1685,6 +1693,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 		gui.EndTab();
 	}
+	gui.EndTabBar();
 	gui.EndDebugGui(deviceContext);
 	gui.EndFrame(deviceContext);
 
@@ -1758,11 +1767,20 @@ void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 		}
 	}
 }
+
+void Renderer::UpdateAllNodeRenders()
+{
+	for(auto i:instanceRenderers)
+	{
+		i.second->UpdateNodeRenders();
+	}
+}
+
 void Renderer::AddNodeToRender(avs::uid cache_uid, avs::uid node_uid)
 {
 	TELEPORT_COUT<<"AddNodeToRender: cache "<<cache_uid<<", node "<<node_uid<<"\n";
 	// add this node's meshes etc to a renderpass.
-	auto &geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	auto geometryCache = GeometryCache::GetGeometryCache(cache_uid);
 	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
 	avs::uid renderpass_cache_uid = cache_uid;
 	if (int64_t(parent_cache_uid) != int64_t(-1))
@@ -1779,7 +1797,7 @@ void Renderer::AddNodeToRender(avs::uid cache_uid, avs::uid node_uid)
 
 void Renderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
 {
-	auto &geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	auto geometryCache = GeometryCache::GetGeometryCache(cache_uid);
 	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
 	avs::uid renderpass_cache_uid = cache_uid;
 	if (int64_t(parent_cache_uid) != int64_t(-1))

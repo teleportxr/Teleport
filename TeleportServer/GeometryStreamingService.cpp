@@ -6,6 +6,7 @@
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#pragma optimize("", off)
 
 using namespace teleport;
 using namespace server;
@@ -54,13 +55,21 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 	// Is this resource a node?
 	if(auto node=geometryStore->getNode(resource_uid))
 	{
-		if (unconfirmed_priority_counts.find(node->priority) == unconfirmed_priority_counts.end())
+		if (streamedNodeIDs.find(resource_uid) == streamedNodeIDs.end())
 		{
-			TELEPORT_INTERNAL_BREAK_ONCE("Trying to decrement priority {0} but it's not in the list.", node->priority);
+			// this node wasn't meant to be sent. Ignore this, it CAN happen e.g. if 
+			// the client is out-of-date with the current state.
+		}
+		else if (unconfirmed_priority_counts.find(node->priority) == unconfirmed_priority_counts.end())
+		{
+			TELEPORT_INTERNAL_BREAK_ONCE("GeometryStreamingService::confirmResource Trying to decrement Node {0} priority {1} but it's not in the list.", resource_uid,node->priority);
 		}
 		else
 		{
 			unconfirmed_priority_counts[node->priority]--;
+#if TELEPORT_DEBUG_NODE_STREAMING
+			TELEPORT_COUT << "GeometryStreamingService::confirmResource Node " << resource_uid << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority] << "\n";
+#endif
 			if(unconfirmed_priority_counts[node->priority]==0)
 			{
 				unconfirmed_priority_counts.erase(node->priority);
@@ -134,6 +143,13 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 					{
 						outNodeIDs.insert(node->skeletonNodeID);
 						GetSkeletonNodeResources(node->skeletonNodeID, *skeletonnode, outMeshResources);
+						for(auto r:outMeshResources)
+						{
+							for(auto b:r.boneIDs)
+							{
+								outNodeIDs.insert(b);
+							}
+						}
 					}
 				}
 			}
@@ -314,6 +330,9 @@ void GeometryStreamingService::addNode(avs::uid nodeID)
 			streamedNodeIDs.insert(nodeID);
 			auto node = geometryStore->getNode(nodeID);
 			unconfirmed_priority_counts[node->priority]++;
+			#if TELEPORT_DEBUG_NODE_STREAMING
+			TELEPORT_COUT << "AddNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority]<<"\n";
+			#endif
 		}
 	}
 }
@@ -325,14 +344,19 @@ void GeometryStreamingService::removeNode(avs::uid nodeID)
 		streamedNodeIDs.erase(nodeID);
 		if(unconfirmedResourceTimes.find(nodeID)!=unconfirmedResourceTimes.end())
 		{
+			unconfirmedResourceTimes.erase(nodeID);
+		
 			auto node = geometryStore->getNode(nodeID);
 			if(unconfirmed_priority_counts.find(node->priority)==unconfirmed_priority_counts.end())
 			{
-				TELEPORT_INTERNAL_BREAK_ONCE( "Trying to decrement priority {0} but it's not in the list.",node->priority);
+				TELEPORT_INTERNAL_BREAK_ONCE( "Trying to decrement Node {0} priority {1} but it's not in the list.",nodeID,node->priority);
 			}
 			else
 			{
 				unconfirmed_priority_counts[node->priority]--;
+	#if TELEPORT_DEBUG_NODE_STREAMING
+					TELEPORT_COUT << "removeNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority] << "\n";
+	#endif
 				if (unconfirmed_priority_counts[node->priority] == 0)
 				{
 					unconfirmed_priority_counts.erase(node->priority);

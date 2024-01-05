@@ -83,7 +83,7 @@ namespace teleport
 
 #endif
 #define TELEPORT_ASSERT(c)\
-	if(!c){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
+	if(!(c)){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
 
 #ifdef _MSC_VER
     #pragma warning(pop)

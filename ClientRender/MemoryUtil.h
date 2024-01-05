@@ -2,22 +2,25 @@
 
 #pragma once
 
-namespace clientrender
+namespace teleport
 {
-	class MemoryUtil
+	namespace clientrender
 	{
-	public:
-		virtual bool isSufficientMemory(long minimum) const;
-		virtual long getAvailableMemory() const = 0;
-		virtual long getTotalMemory() const = 0;
-		virtual void printMemoryStats() const = 0;
+		class MemoryUtil
+		{
+		public:
+			virtual bool isSufficientMemory(long minimum) const;
+			virtual long getAvailableMemory() const = 0;
+			virtual long getTotalMemory() const = 0;
+			virtual void printMemoryStats() const = 0;
 
-		static const MemoryUtil* Get();
+			static const MemoryUtil *Get();
 
-	protected:
-		MemoryUtil();
-		virtual ~MemoryUtil();
+		protected:
+			MemoryUtil();
+			virtual ~MemoryUtil();
 
-		static const MemoryUtil* mMemoryUtil;
-	};
+			static const MemoryUtil *mMemoryUtil;
+		};
+	}
 }

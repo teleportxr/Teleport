@@ -1,3 +1,6 @@
+#ifndef _MSC_VER
+#pragma clang optimize off
+#endif 
 #include "InstanceRenderer.h"
 #include "Renderer.h"
 #include <fmt/core.h>
@@ -69,7 +72,7 @@ InstanceRenderer::~InstanceRenderer()
 void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
-	GeometryCache::CreateGeometryCache(server_uid,-1);
+	GeometryCache::CreateGeometryCache(server_uid, -1, server_uid?sessionClient->GetConnectionURL():"Local");
 	geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	resourceCreator.Initialize(renderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 
@@ -373,40 +376,30 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		}
 	}
 	multiview = deviceContext.AsMultiviewGraphicsDeviceContext()!=nullptr;
-	#if 0
-	nodeRenders.resize(0);
-	nodeTransparentRenders.resize(0);
-	linkRenders.resize(0);
-	#endif
+
 	// Accumulate the meshes to render:
 	RenderGeometryCache(deviceContext, geometryCache);
-	#if 0
-	passRenders.clear();
-	// Now actually render them:
-	for (const auto &m : nodeRenders)
+	// TODO: Find a way to protect this without locks.
+	std::lock_guard<std::mutex> passRenders_lock(passRenders_mutex);
+	for (auto p : passRenders)
 	{
-		RenderMeshNode(deviceContext, m);
+		RenderPass(deviceContext, *p.second.get(),p.first);
 	}
-	#endif
-	for (auto &p : passRenders)
-	{
-		RenderPass(deviceContext, p.second);
-	}
-	#if 0
-	for (const auto &m : nodeTransparentRenders)
-	{
-		RenderMeshNode(deviceContext, m);
-	}
-	#endif
 	for(const auto &l:linkRenders)
 	{
 		RenderLink(deviceContext,l);
 	}
 	if (config.debugOptions.showOverlays)
 	{
-		//for (const auto &m : nodeRenders)
+		auto &rootNodes = geometryCache->mNodeManager.GetRootNodes();
+		for (const auto &m : rootNodes)
 		{
-			//RenderNodeOverlay(deviceContext, m.second);
+			RenderNodeOverlay(deviceContext, geometryCache, m.lock(),false);
+		}
+		if(renderState.selected_cache==geometryCache->GetCacheUid())
+		{
+			auto node = geometryCache->mNodeManager.GetNode(renderState.selected_uid);
+			RenderNodeOverlay(deviceContext, geometryCache, node,true);
 		}
 	}
 }
@@ -418,18 +411,19 @@ void InstanceRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext
 	renderPlatform->PrintAt3dPos(deviceContext,l.position,l.url.c_str(),colour,background);
 }
 
-void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext& deviceContext,PassRender &p)
+void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p,platform::crossplatform::EffectPass *pass)
 {
-	renderPlatform->ApplyPass(deviceContext, p.pass);
-	for(auto &m:p.meshRenders)
+	renderPlatform->ApplyPass(deviceContext, pass);
+	for(auto m:p.meshRenders)
 	{
-		 RenderMesh(deviceContext,m.second);
+		 RenderMesh(deviceContext,*m.second.get());
 	}
 	renderPlatform->UnapplyPass(deviceContext);
 }
 
 void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node_uid)
 {
+	std::lock_guard<std::mutex> passRenders_lock(passRenders_mutex);
 	TELEPORT_COUT<< "AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << "\n";
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 	if(!g)
@@ -480,6 +474,37 @@ static uint64_t MakeNodeHash(avs::uid cache_uid, avs::uid node_id)
 {
 	uint64_t node_hash = (node_id << uint64_t(12)) + (cache_uid << uint16_t(6));
 	return node_hash;
+}
+void InstanceRenderer::UpdateNodeRenders()
+{
+	struct CacheNode
+	{
+		std::set<avs::uid> nodes;
+	};
+	std::map<avs::uid, CacheNode> cacheNodes;
+	for(auto p:passRenders)
+	{
+		for(auto r:p.second->meshRenders)
+		{
+			cacheNodes[r.second->cache_uid];
+		}
+	}
+	for (auto p : passRenders)
+	{
+		for (auto r : p.second->meshRenders)
+		{
+			auto &cacheNode = cacheNodes[r.second->cache_uid];
+			cacheNode.nodes.insert(r.second->node_uid);
+		}
+	}
+	passRenders.clear();
+	for(auto c:cacheNodes)
+	{
+		for(auto n:c.second.nodes)
+		{
+			AddNodeToInstanceRender(c.first,n);
+		}
+	}
 }
 
 void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid cache_uid, std::shared_ptr<Node> node, const std::shared_ptr<clientrender::Mesh> mesh)
@@ -602,11 +627,16 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid cache_uid, std::shar
 		}
 		bool setBoneConstantBuffer = (passCache->anim);
 		auto skeletonNode = node->GetSkeletonNode().lock();
-		PassRender &passRender = passRenders[pass];
-		passRender.pass = pass;
+		std::shared_ptr<PassRender> passRender;
+		passRender= passRenders[pass];
+		if(!passRender)
+			passRenders[pass] = passRender = std::make_shared<PassRender>();
+	
 		uint64_t node_element_hash = (node->id << uint64_t(12)) + (cache_uid << uint16_t(6)) + element;
-		MeshRender &meshRender = passRender.meshRenders[node_element_hash];
-		meshRender.boneMatrices = nullptr;
+		std::shared_ptr<MeshRender> meshRender = passRender->meshRenders[node_element_hash];
+		if (!meshRender)
+			passRender->meshRenders[node_element_hash] = meshRender = std::make_shared<MeshRender>();
+		meshRender->skeletonInstance.reset();
 		if (passCache->anim && skeletonNode.get())
 		{
 			std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
@@ -617,30 +647,30 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid cache_uid, std::shar
 				//								to its current animated local position.
 				// For each bone matrix,
 				//				pos_local= (bone_matrix_j) * pos_original_local
-				std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
-				skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
-				BoneMatrices *b = &skeletonInstance->boneMatrices;
-				memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
-				meshRender.boneMatrices = &skeletonInstance->boneMatrices;
+				meshRender->skeletonInstance = skeletonInstance;
 			}
 		}
 		std::cout << "AddNodeMeshToInstanceRender: cache " << cache_uid << ", node " << node->id<<", element "<<element<< "\n";
-		meshRender.material = material;
-		meshRender.model = &(node->renderModelMatrix);
-		meshRender.cache_uid = cache_uid;
-		meshRender.gi_texture_id = node->GetGlobalIlluminationTextureUid();
-		meshRender.mesh_uid = node->GetMesh()->GetMeshCreateInfo().id;
-		meshRender.node_uid = node->id;
-		meshRender.setBoneConstantBuffer = setBoneConstantBuffer;
-		meshRender.clockwise = clockwise;
-		meshRender.pass = pass;
-		meshRender.element = element;
-		// RenderMesh(deviceContext,meshRender);
+		meshRender->material = material;
+		meshRender->model = &(node->renderModelMatrix);
+		meshRender->cache_uid = cache_uid;
+		meshRender->gi_texture_id = node->GetGlobalIlluminationTextureUid();
+		meshRender->mesh_uid = node->GetMesh()->GetMeshCreateInfo().id;
+		meshRender->node_uid = node->id;
+		meshRender->setBoneConstantBuffer = setBoneConstantBuffer;
+		meshRender->clockwise = clockwise;
+		meshRender->pass = pass;
+		meshRender->element = element;
+		if(!meshRender->material)
+		{
+			TELEPORT_BREAK_ONCE("No material found.");
+		}
 	}
 }
 
 void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, avs::uid node_uid)
 {
+	TELEPORT_COUT<<"RemoveNodeFromInstanceRender: "<<cache_uid<<", "<<node_uid<<"\n";
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 	if (!g)
 		return;
@@ -663,7 +693,7 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, avs::uid
 			auto p=passRenders.find(pass);
 			if (p == passRenders.end())
 				continue;
-			PassRender &passRender = p->second;
+			PassRender &passRender = *p->second.get();
 			passRender.meshRenders.erase(node_element_hash);
 		}
 	}
@@ -707,16 +737,34 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
 	if (!node)
 		return;
+	static bool show=false;
+	if(show)
+		std::cout<<"Node "<<node->id<<"\n";
 	bool force_highlight = renderState.selected_uid==node->id;
 	//Only render visible nodes, but still render children that are close enough.
 	if(node->GetPriority()>=0)
-	if(node->IsVisible()&&(renderState.show_only == 0 || renderState.show_only == node->id))
+	if(node->IsVisible())
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		const std::shared_ptr<TextCanvas> textCanvas=transparent_pass?node->GetTextCanvas():nullptr;
-		crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
-		//mat4 model;
-		if(mesh||textCanvas)
+		if (node->GetSkeletonNode().use_count())
+		{
+			std::shared_ptr<Node> skeletonNode = node->GetSkeletonNode().lock();
+			std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
+			if (mesh&&skeletonInstance)
+			{
+				// The bone matrices transform from the original local position of a vertex
+				//								to its current animated local position.
+				// For each bone matrix,
+				//				pos_local= (bone_matrix_j) * pos_original_local
+				std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
+				skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
+				BoneMatrices *b = &skeletonInstance->boneMatrices;
+				memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
+			}
+			node->renderModelMatrix = *((const mat4 *)(&deviceContext.viewStruct.model));
+		}
+		else if(mesh||textCanvas)
 		{
 			const mat4 &globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 			node->renderModelMatrix= mul(*((const mat4 *)(&deviceContext.viewStruct.model)), globalTransformMatrix);
@@ -785,161 +833,6 @@ void InstanceRenderer::ApplyModelMatrix(crossplatform::GraphicsDeviceContext &de
 	renderState.perNodeConstants.SetHasChanged();
 }
 
-void InstanceRenderer::RenderMeshNode(crossplatform::GraphicsDeviceContext &deviceContext
-										,const NodeRender &nodeRender)
-{
-	const auto geometrySubCache = GeometryCache::GetGeometryCache(nodeRender.cache_uid);
-	if(!geometrySubCache)
-		return;
-	const auto node = geometrySubCache->mNodeManager.GetNode(nodeRender.node_uid);
-	const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
-	bool reset_pass = false;
-	// Is the material/lighting incomplete?
-	bool material_incomplete = false;
-	bool rezzing = material_incomplete;
-	if (material_incomplete)
-		node->countdown = 1.0f;
-	else if (node->countdown > 0.0f)
-	{
-		node->countdown -= 0.01f;
-		if (node->countdown < 0)
-			node->ResetCachedPasses();
-		else
-			rezzing = true;
-	}
-	const auto &meshInfo = mesh->GetMeshCreateInfo();
-	// iterate through the submeshes.
-	auto &materials = node->GetMaterials();
-	for (uint32_t element = 0; element < meshInfo.indexBuffers.size(); element++)
-	{
-		if (element >= materials.size())
-			continue;
-		std::shared_ptr<clientrender::Material> material = materials[element];
-		if (!material)
-		{
-			material = mesh->GetInternalMaterials()[element];
-			if (!material)
-				continue;
-		}
-		const clientrender::Material::MaterialCreateInfo &matInfo = material->GetMaterialCreateInfo();
-		bool transparent = (matInfo.materialMode == avs::MaterialMode::TRANSPARENT_MATERIAL);
-		//if (transparent != transparent_pass)
-		//	continue;
-		// TODO: Improve this.
-		const vec3 &sc = node->GetGlobalScale();
-		bool negative_scale = (sc.x * sc.y * sc.z) < 0.0f;
-		bool clockwise = mesh->GetMeshCreateInfo().clockwiseFaces ^ negative_scale;
-		bool anim = false;
-		bool highlight = node->IsHighlighted();
-
-		highlight |= (renderState.selected_uid == material->id);
-
-		// Pass used for rendering geometry.
-		const clientrender::PassCache *passCache = node->GetCachedEffectPass(element);
-		crossplatform::EffectPass *pass = passCache ? passCache->pass:nullptr;
-		if (pass && node->GetCachedEffectPassValidity(element) != renderState.shaderValidity)
-			pass = nullptr;
-		if (!pass)
-		{
-			auto *vb = meshInfo.vertexBuffers[element].get();
-			if (!vb)
-				continue;
-			auto *meshLayout = vb->GetLayout();
-			const auto &meshLayoutDesc = meshLayout->GetDesc();
-			crossplatform::EffectVariantPass *variantPass = transparent ? renderState.transparentVariantPass : renderState.solidVariantPass;
-			if (!variantPass)
-				continue;
-			auto layoutHash = meshLayout->GetHash();
-			//  To render with normal maps, we must have normal and tangent vertex attributes, and we must have a normal map!
-			bool normal_map = meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::NORMAL) && meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && (matInfo.normal.texture_uid != 0);
-			bool emissive=false;
-			std::string base_pixel_shader = transparent ? "ps_transparent" : "ps_solid";
-			std::string vertex_shader = "vs_variants";
-			crossplatform::MultiviewGraphicsDeviceContext *mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
-			if (mvgdc)
-				vertex_shader += "_mv";
-			std::string pixel_shader = fmt::format("{base}({lightmap}_{ambient}_{normal_map}_{emissive}_{max_lights})"
-				, fmt::arg("base", base_pixel_shader)
-				, fmt::arg("lightmap", node->IsStatic())
-				, fmt::arg("ambient", !node->IsStatic())
-				, fmt::arg("normal_map", normal_map)
-				, fmt::arg("emissive", emissive)
-				, fmt::arg("max_lights", 0));
-			if (rezzing)
-				pixel_shader = "ps_digitizing";
-			if (config.debugOptions.useDebugShader)
-				pixel_shader = config.debugOptions.debugShader.c_str();
-			else if (material->GetMaterialCreateInfo().shader.length())
-			{
-				pixel_shader = material->GetMaterialCreateInfo().shader.c_str();
-			}
-			pass = variantPass->GetPass(vertex_shader.c_str(), layoutHash, pixel_shader.c_str());
-			if (!pass)
-			{
-				meshLayout->GetHash();
-				pass = variantPass->GetPass(vertex_shader.c_str(), layoutHash, nullptr);
-				TELEPORT_INTERNAL_CERR("Failed to find pass with pixel shader {0}", pixel_shader);
-			}
-			if (!pass)
-				continue;
-			// Check if the layout is ok.
-			auto *vertexShader = pass->shaders[crossplatform::ShaderType::SHADERTYPE_VERTEX];
-			if (!vertexShader)
-				continue;
-			if (!crossplatform::LayoutMatches(vertexShader->layout.GetDesc(), meshLayoutDesc))
-				continue;
-			auto have_anim=vertexShader->variantValues.find("have_anim");
-			bool anim=false;
-			if(have_anim!=vertexShader->variantValues.end())
-			{
-				if(have_anim->second=="true")
-				{
-					anim=true;
-				}
-			}
-			node->SetCachedEffectPass(element, pass, anim, renderState.shaderValidity);
-			passCache = node->GetCachedEffectPass(element);
-		}
-		if (!passCache||!pass)
-			continue;
-		bool setBoneConstantBuffer = (passCache->anim);
-		auto skeletonNode = node->GetSkeletonNode().lock();
-		PassRender &passRender = passRenders[pass];
-		passRender.pass = pass;
-		uint64_t node_element_hash = (nodeRender.node_uid << uint64_t(12)) + (nodeRender.cache_uid << uint16_t(6)) + element;
-		MeshRender &meshRender = passRender.meshRenders[node_element_hash];
-		meshRender.boneMatrices=nullptr;
-		if (passCache->anim&&skeletonNode.get())
-		{
-			std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
-			anim = skeletonInstance != nullptr;
-			if (skeletonInstance)
-			{
-				// The bone matrices transform from the original local position of a vertex
-				//								to its current animated local position.
-				// For each bone matrix,
-				//				pos_local= (bone_matrix_j) * pos_original_local
-				std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
-				skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
-				BoneMatrices *b = &skeletonInstance->boneMatrices;
-				memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
-				meshRender.boneMatrices = &skeletonInstance->boneMatrices;
-			}
-		}
-		meshRender.material = material;
-		meshRender.model=&nodeRender.model;
-		meshRender.cache_uid=nodeRender.cache_uid;
-		meshRender.gi_texture_id = node->GetGlobalIlluminationTextureUid();
-		meshRender.mesh_uid = node->GetMesh()->GetMeshCreateInfo().id;
-		meshRender.node_uid = nodeRender.node_uid;
-		meshRender.setBoneConstantBuffer = setBoneConstantBuffer;
-		meshRender.clockwise = clockwise;
-		meshRender.pass = pass;
-		meshRender.element = element;
-		//RenderMesh(deviceContext,meshRender);
-	}
-}
-
 void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender)
 {
 	const auto geometrySubCache = GeometryCache::GetGeometryCache(meshRender.cache_uid);
@@ -949,13 +842,16 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 		return;
 	ApplyModelMatrix(deviceContext, *meshRender.model);
 	const auto &mesh = geometrySubCache->mMeshManager.Get(meshRender.mesh_uid);
-	const auto &node = geometrySubCache->mNodeManager.GetNode(meshRender.node_uid);
+	auto node = geometrySubCache->mNodeManager.GetNode(meshRender.node_uid);
+	if(!node)
+		return;
 	const auto &meshInfo = mesh->GetMeshCreateInfo();
 	if (meshRender.setBoneConstantBuffer)
 	{
-		if(!meshRender.boneMatrices)
+		auto sk=meshRender.skeletonInstance.lock();
+		if(!sk)	
 			return;
-		renderPlatform->SetConstantBuffer(deviceContext, meshRender.boneMatrices);
+		renderPlatform->SetConstantBuffer(deviceContext,&(sk->boneMatrices));
 	}
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
@@ -1052,37 +948,31 @@ void InstanceRenderer::RenderBone(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 }
 
-void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& deviceContext
-	,const NodeRender &nodeRender
-	,bool force)
+void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &geometrySubCache, const std::shared_ptr<clientrender::Node> node, bool include_children)
 {
-	const auto geometrySubCache = GeometryCache::GetGeometryCache(nodeRender.cache_uid);
 	if (!geometrySubCache)
 		return;
-	ApplyModelMatrix(deviceContext, nodeRender.model);
-	const auto node = geometrySubCache->mNodeManager.GetNode(nodeRender.node_uid);
+	ApplyModelMatrix(deviceContext, node->renderModelMatrix);
 	auto renderPlatform=deviceContext.renderPlatform;
-	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
-	clientrender::AVSTexture& tx = *th;
-	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
+
 	avs::uid node_select=renderState.selected_uid;
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
 	if (node->GetGlobalIlluminationTextureUid())
 		globalIlluminationTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
-	//Only render visible nodes, but still render children that are close enough.
-	if (node->IsVisible()&& (node_select == 0 || node_select == node->id))
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 		const auto anim = node->GetComponent<clientrender::AnimationComponent>();
 		vec3 pos = node->GetGlobalPosition();
 		mat4 globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 		mat4 m = mul(*((const mat4 *)(&deviceContext.viewStruct.model)), globalTransformMatrix);
-		renderPlatform->DrawAxes(deviceContext,m,0.02f);
+		static float sz=0.1f;
+		renderPlatform->DrawAxes(deviceContext,m,sz);
 	
 		static std::string str;
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+		vec4 bkg={0,0,0,0.5f};
 		auto skeletonInstance=node->GetSkeletonInstance();
 		if (skeletonInstance.get()&&skeletonInstance->GetBones().size())
 		{
@@ -1103,19 +993,30 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext& d
 						
 					}
 				}
-				renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white));
+				renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white),bkg);
 			}
 		}
 		else if (mesh)
 		{
 			str=fmt::format("{0} {1}: {2}", node->id,node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
-			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white), nullptr, 0, 0, false);
+			renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&pos), str.c_str(), (const float *)(&white), bkg, 0, 0, false);
 		}
 		else
 		{
 			vec4 yellow(1.0f, 1.0f, 0.0f, 1.0f); 
 			str=fmt::format("{0} {1}", node->id, node->name.c_str());
-			renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&yellow), nullptr, 0, 0, false);
+			renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&pos), str.c_str(), (const float *)(&yellow), bkg, 0, 0, false);
+		}
+	}
+	if (!include_children)
+		return;
+	const auto &children = node->GetChildren();
+	for (std::weak_ptr<clientrender::Node> childPtr : children)
+	{
+		std::shared_ptr<clientrender::Node> child = childPtr.lock();
+		if (child)
+		{
+			RenderNodeOverlay(deviceContext, geometrySubCache, child, include_children);
 		}
 	}
 }

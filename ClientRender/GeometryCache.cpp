@@ -1,13 +1,14 @@
 #include "GeometryCache.h"
 #include "InstanceRenderer.h"
 #include "Renderer.h"
+using namespace teleport;
 using namespace clientrender;
 #define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt, ##__VA_ARGS__)
 
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform=nullptr;
 
-GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid)
-	: cache_uid(c_uid), parent_cache_uid(parent_c_uid),mNodeManager(flecs_world),
+GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::string &n)
+	: cache_uid(c_uid), parent_cache_uid(parent_c_uid),name(n),mNodeManager(flecs_world),
 	  mMaterialManager(c_uid),
 	  mSubsceneManager(c_uid),
 	  mTextureManager(c_uid, &clientrender::Texture::Destroy),
@@ -44,9 +45,9 @@ GeometryCache::~GeometryCache()
 static std::map<avs::uid,std::shared_ptr<GeometryCache>> caches;
 static std::vector<avs::uid> cache_uids;
 
-void GeometryCache::CreateGeometryCache(avs::uid cache_uid,avs::uid parent_cache_uid)
+void GeometryCache::CreateGeometryCache(avs::uid cache_uid,avs::uid parent_cache_uid,const std::string &name)
 {
-	caches[cache_uid] = std::make_shared<GeometryCache>(cache_uid, parent_cache_uid);
+	caches[cache_uid] = std::make_shared<GeometryCache>(cache_uid, parent_cache_uid,name);
 	cache_uids.push_back(cache_uid);
 }
 
@@ -221,11 +222,11 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate& subSceneCreate)
 				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
-			incompleteNode->DecrementMissingResources();
-			size_t num_remaining = it->use_count() - 2;
+			RESOURCE_RECEIVES(incompleteNode,subSceneCreate.uid);
+			size_t num_remaining = RESOURCES_AWAITED(*it);
 			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got SubScene {2}=cache {3}, missing {4} or {5}", incompleteNode->id, incompleteNode->name, subSceneCreate.uid, subSceneCreate.subscene_uid,num_remaining,incompleteNode->GetMissingResourceCount());
 			//If only this mesh and this function are pointing to the node, then it is complete.
-			if (it->use_count() == 2)
+			if (RESOURCE_IS_COMPLETE(*it))
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
@@ -256,12 +257,12 @@ void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCrea
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 			incompleteNode->SetMesh(mesh);
-			incompleteNode->DecrementMissingResources();
-			size_t num_remaining = it->use_count()-2;
+			RESOURCE_RECEIVES(incompleteNode, id);
+			size_t num_remaining = RESOURCES_AWAITED(*it);
 			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got Mesh {2}({3}), missing {4} or {5}", incompleteNode->id, incompleteNode->name, id, meshInfo.name, num_remaining,incompleteNode->GetMissingResourceCount());
 
 			//If only this mesh and this function are pointing to the node, then it is complete.
-			if (it->use_count() == 2)
+			if (RESOURCE_IS_COMPLETE(*it))
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
@@ -284,7 +285,7 @@ void GeometryCache::CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkel
 		{
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 			incompleteNode->SetSkeleton(completeSkeleton->skeleton);
-			incompleteNode->DecrementMissingResources();
+			RESOURCE_RECEIVES(incompleteNode, id);
 			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Skeleton {0}({1})",incompleteNode->id,incompleteNode->name,id,completeSkeleton->skeleton->name);
 			//If only this skeleton and this function are pointing to the node, then it is complete.
 			if (incompleteNode->GetMissingResourceCount()==0)
@@ -311,6 +312,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 	{
 		for(auto it = missingTexture->waitingResources.begin(); it != missingTexture->waitingResources.end(); it++)
 		{
+			RESOURCE_RECEIVES(*it,id);
 			switch((*it)->type)
 			{
 				case avs::GeometryPayloadType::FontAtlas:
@@ -338,24 +340,24 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 						RESOURCECREATOR_DEBUG_COUT( "Waiting Material ",") got Texture ",incompleteMaterial->id,incompleteMaterial->materialInfo.name,id,textureInfo.name);
 
 						//If only this texture and this function are pointing to the material, then it is complete.
-						if (it->use_count() == 2)
+						if (RESOURCE_IS_COMPLETE(*it))
 						{
 							CompleteMaterial(incompleteMaterial->id, incompleteMaterial->materialInfo);
 						}
 						else
 						{
-							RESOURCECREATOR_DEBUG_COUT(" Still awaiting {0} resources.",(it->use_count()-2));
+							RESOURCECREATOR_DEBUG_COUT(" Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
 						}
 					}
 					break;
 				case avs::GeometryPayloadType::Node:
 					{
 						std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
-						size_t num_remaining = incompleteNode.use_count() - 2;
+						size_t num_remaining = RESOURCES_AWAITED(incompleteNode);
 						RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Texture {2}({3}), missing {4} or {5}", incompleteNode->id, incompleteNode->name.c_str(), id, textureInfo.name, num_remaining,incompleteNode->GetMissingResourceCount());
 
 						//If only this material and function are pointing to the MeshNode, then it is complete.
-						if(incompleteNode.use_count() == 2)
+						if (RESOURCE_IS_COMPLETE(incompleteNode))
 						{
 							CompleteNode(incompleteNode->id, incompleteNode);
 						}
@@ -388,7 +390,7 @@ void GeometryCache::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone
 				RESOURCECREATOR_DEBUG_COUT( "Waiting Skeleton {0}({1}) got Bone {2}({3})",incompleteSkeleton->id,incompleteSkeleton->skeleton->name,id,bone->name);
 
 				//If only this bone, and the loop, are pointing at the skeleton, then it is complete.
-				if(it->use_count() == 2)
+				if (RESOURCE_IS_COMPLETE(*it))
 				{
 					CompleteSkeleton(incompleteSkeleton->id, incompleteSkeleton);
 				}
@@ -416,11 +418,11 @@ void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender:
 		{
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 			incompleteNode->GetOrCreateComponent<AnimationComponent>()->addAnimation(id, animation);
-			incompleteNode->DecrementMissingResources();
+			RESOURCE_RECEIVES(incompleteNode, id);
 			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Animation {2}({3})",incompleteNode->id,incompleteNode->name,id,animation->name);
 
 			//If only this bone, and the loop, are pointing at the skeleton, then it is complete.
-			if(incompleteNode.use_count() == 2)
+			if (RESOURCE_IS_COMPLETE(incompleteNode))
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
@@ -460,12 +462,12 @@ void GeometryCache::CompleteMaterial(avs::uid id, const clientrender::Material::
 			{
 				incompleteNode->SetMaterial(materialIndex, material);
 			}
-			size_t num_remaining = incompleteNode.use_count() - 2;
-			incompleteNode->DecrementMissingResources();
+			size_t num_remaining = RESOURCES_AWAITED(incompleteNode);
+			RESOURCE_RECEIVES(incompleteNode,id);
 			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got Material {2}({3}) - missing {4} or {5}", incompleteNode->id, incompleteNode->name, id, materialInfo.name, num_remaining,incompleteNode->GetMissingResourceCount());
 
 			//If only this material and function are pointing to the MeshNode, then it is complete.
-			if(incompleteNode.use_count() == 2)
+			if (RESOURCE_IS_COMPLETE(incompleteNode))
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
 			}
@@ -502,6 +504,7 @@ void GeometryCache::AddTextureToMaterial(const avs::TextureAccessor& accessor, c
 			//TELEPORT_DEBUG_COUT( "Material {0}({1}) missing Texture ",incompleteMaterial->id,"(",incompleteMaterial->id,accessor.index);
 			clientrender::MissingResource& missing=GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture);
 			missing.waitingResources.insert(incompleteMaterial);
+			RESOURCE_AWAITS(incompleteMaterial,accessor.index);
 			incompleteMaterial->missingTextureUids.insert(accessor.index);
 		}
 

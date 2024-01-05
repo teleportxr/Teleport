@@ -26,6 +26,7 @@ namespace teleport
 {
 #include "stb_image.h"
 }
+using namespace teleport;
 using namespace clientrender;
 
 #define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt,##__VA_ARGS__)
@@ -622,6 +623,8 @@ clientrender::Texture::CompressionFormat toSCRCompressionFormat(basist::transcod
 void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::Texture& texture)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
+	if(geometryCache->mTextureManager.Get(id))
+		return;
 	geometryCache->ReceivedResource(id);
 	clientrender::Texture::CompressionFormat scrTextureCompressionFormat= clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
@@ -694,11 +697,13 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	if(id)
 		geometryCache->ReceivedResource(id);
-
+	if(geometryCache->mMaterialManager.Get(id))
+		return;
 	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
 	//A list of unique resources that the material is missing, and needs to be completed.
  	std::set<avs::uid> missingResources;
-	
+
+	incompleteMaterial->ResetMissingResourceCount();
 	incompleteMaterial->materialInfo.name = material.name;
 	incompleteMaterial->materialInfo.materialMode=material.materialMode;
 	incompleteMaterial->materialInfo.doubleSided=material.doubleSided;
@@ -824,13 +829,15 @@ void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,teleport::
 
 void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo)
 {
-	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(textCanvasCreateInfo.server_uid);
+	std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(textCanvasCreateInfo.server_uid);
 	std::shared_ptr<clientrender::TextCanvas> textCanvas=geometryCache->mTextCanvasManager.Get(textCanvasCreateInfo.uid);
 	if(!textCanvas)
 	{
 		textCanvas = std::make_shared<clientrender::TextCanvas>(textCanvasCreateInfo);
 		geometryCache->mTextCanvasManager.Add(textCanvas->textCanvasCreateInfo.uid, textCanvas);
 	}
+	else
+		return;
 	textCanvas->textCanvasCreateInfo=textCanvasCreateInfo;
 
 	geometryCache->ReceivedResource(textCanvas->textCanvasCreateInfo.uid);
@@ -865,7 +872,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		RESOURCECREATOR_DEBUG_COUT( "Waiting Node {0}({1}) got Canvas {2}({3})" , incompleteNode->id,incompleteNode->name,textCanvas->textCanvasCreateInfo.uid,"");
 
 		//If the waiting resource has no incomplete resources, it is now itself complete.
-		if (waiting->use_count() == 2)
+		if (RESOURCE_IS_COMPLETE((*waiting)))
 		{
 			geometryCache->CompleteNode(incompleteNode->id, incompleteNode);
 		}
@@ -882,17 +889,18 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 
 	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id, avs::GeometryPayloadType::Skeleton);
 
+	incompleteSkeleton->ResetMissingResourceCount();
 	//Create skeleton.
 	incompleteSkeleton->skeleton = std::make_shared<clientrender::Skeleton>(skeleton.name, skeleton.boneIDs.size(), skeleton.skeletonTransform);
 
 	std::vector<avs::uid> bone_ids;
 	bone_ids.resize(skeleton.boneIDs.size());
-	incompleteSkeleton->skeleton->SetNumBones(skeleton.boneTransforms.size());
+	//incompleteSkeleton->skeleton->SetNumBones(skeleton.boneTransforms.size());
 	// External bones.
 	incompleteSkeleton->skeleton->SetExternalBoneIds(skeleton.boneIDs);
 	//Add bones. This is the full list of transforms for this skeleton.
 	// We do this if the skeleton has internal bones. If not, the boneID's refer to node uid's in the scene or subscene.
-	if(skeleton.boneTransforms.size()==skeleton.boneIDs.size())
+	/*if(skeleton.boneTransforms.size()==skeleton.boneIDs.size())
 	{
 		for (size_t i = 0; i < bone_ids.size(); i++)
 		{
@@ -918,8 +926,8 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 
 			incompleteSkeleton->skeleton->SetBone(i, bone);
 		}
-	}
-	if (incompleteSkeleton->missingBones.size() == 0)
+	}*/
+	if(incompleteSkeleton->missingBones.size() == 0)
 	{
 		geometryCache->CompleteSkeleton(id, incompleteSkeleton);
 	}
@@ -937,7 +945,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 			RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Skeleton {2}({3})", incompleteNode->id, incompleteNode->name, id, "");
 
 			// If the waiting resource has no incomplete resources, it is now itself complete.
-			if (waiting->use_count() == 2)
+			if (RESOURCE_IS_COMPLETE(*waiting))
 			{
 				geometryCache->CompleteNode(incompleteNode->id, incompleteNode);
 			}
@@ -975,9 +983,12 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	std::shared_ptr<Node> node;
 //	TELEPORT_CERR << "Creating Node " << id <<  "\n";
+
+// If the node exists already we have a problem.
+//   If we recreate the node here, we must either reset the missing resource count or add to it.
 	if (geometryCache->mNodeManager.HasNode(id))
 	{
-		//TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
+	TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
 		//leaves nodes with no children. why?
 		auto n=geometryCache->mNodeManager.GetNode(id);
 		node = geometryCache->mNodeManager.GetNode(id);
@@ -986,11 +997,13 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 		{
 			TELEPORT_CERR << "But it's listed as missing.\n";
 		}
+		return;
 	}
 	else
 	{
 		node = geometryCache->mNodeManager.CreateNode(id, avsNode);
 	}
+	node->ResetMissingResourceCount();
 	// Was this resource being awaited?
 	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
 	if(missingResource)
@@ -1006,15 +1019,14 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 			TELEPORT_INTERNAL_CERR("Waiting Mesh Node {0} got Skeleton Node {1}", waitingNode->id, id);
 			if (waitingNode)
 			{
+				RESOURCE_RECEIVES(waitingNode, id);
 				waitingNode->SetSkeletonNode(node);
-				waitingNode->DecrementMissingResources();
 			// If the waiting resource has no incomplete resources, it is now itself complete.
 				if (waitingNode->GetMissingResourceCount() == 0)
 				{
 					geometryCache->CompleteNode(waitingNode->id, waitingNode);
 				}
 			}
-
 		}
 	}
 	//Whether the node is missing any resource before, and must wait for them before it can be completed.
@@ -1153,7 +1165,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 				// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
 				node->SetMaterial(i, placeholderMaterial);
 
-				TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material " << avsNode.materials[i] << std::endl;
+			//	TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material " << avsNode.materials[i] << std::endl;
 
 				isMissingResources = true;
 				node->IncrementMissingResources();
@@ -1163,8 +1175,8 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 		}
 	}
 
-	size_t num_remaining = node.use_count() - 2;
-
+	size_t num_remaining = RESOURCES_AWAITED(node);
+	TELEPORT_ASSERT(RESOURCE_IS_COMPLETE(node) == (!isMissingResources));
 	//Complete node now, if we aren't missing any resources.
 	if (!isMissingResources)
 	{

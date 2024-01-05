@@ -388,7 +388,6 @@ namespace avs
 	struct Skeleton
 	{
 		std::string name;
-		bool useExternalBones=false;
 		std::vector<uid> boneIDs;
 		Transform skeletonTransform;
 		// New method, bones are built into the skeleton:
@@ -400,7 +399,6 @@ namespace avs
 		{
 			avs::Skeleton convertedSkeleton;
 			convertedSkeleton.name = skeleton.name;
-			convertedSkeleton.useExternalBones = skeleton.useExternalBones;
 			convertedSkeleton.boneIDs = skeleton.boneIDs;
 
 			convertedSkeleton.skeletonTransform = skeleton.skeletonTransform;

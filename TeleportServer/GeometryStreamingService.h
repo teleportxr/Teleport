@@ -11,6 +11,11 @@
 #include "GeometryEncoder.h"
 #include "GeometryStore.h"
 
+#if TELEPORT_INTERNAL_CHECKS
+#define TELEPORT_DEBUG_NODE_STREAMING 1
+#else
+#define TELEPORT_DEBUG_NODE_STREAMING 0
+#endif
  
 namespace teleport
 {
@@ -91,7 +96,9 @@ namespace teleport
 
 			std::unordered_map<avs::uid, bool> sentResources; //Tracks the resources sent to the user; <resource identifier, doesClientHave>.
 			std::unordered_map<avs::uid, float> unconfirmedResourceTimes; //Tracks time since an unconfirmed resource was sent; <resource identifier, time since sent>.
-			std::set<avs::uid> streamedNodeIDs; //Nodes that the client needs to draw, and should be sent to them.
+			 /// Nodes that the client needs to draw, which should be sent to the client if it doesn't have them. Not all of these will always be sent: they're sent in order of priority,
+			 ///  and only when the client confirms higher priority nodes are the lower-priority ones sent.
+			std::set<avs::uid> streamedNodeIDs;
 			std::set<avs::uid> clientRenderingNodes; //Nodes that are currently rendered on this client.
 			std::set<avs::uid> streamedGenericTextureUids; // Textures that are not specifically specified in a material, e.g. lightmaps.
 

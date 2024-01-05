@@ -57,7 +57,7 @@ struct AppState
 {
 	bool resumed=false;
 	ANativeWindow* nativeWindow = nullptr;
-	Gui *gui = nullptr;
+	clientrender::Gui *gui = nullptr;
 };
 AppState appState;
 
@@ -137,7 +137,7 @@ void android_main(struct android_app* app)
 	prctl(PR_SET_NAME, (long)"Teleport Main", 0, 0, 0);
 	
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
-	teleport::Gui gui(openXR);
+	teleport::clientrender::Gui gui(openXR);
 	appState.gui=&gui;
 	app->onAppCmd = handle_cmd;
 	int events;

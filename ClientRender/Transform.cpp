@@ -2,6 +2,7 @@
 #include "TeleportClient/Log.h" 
 #include "TeleportCore/ErrorHandling.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 Transform::Transform()

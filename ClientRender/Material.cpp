@@ -3,6 +3,7 @@
 #include "Material.h"
 #include "GeometryCache.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 Material::Material(const MaterialCreateInfo &pMaterialCreateInfo)
