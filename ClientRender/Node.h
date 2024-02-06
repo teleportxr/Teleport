@@ -69,7 +69,10 @@ namespace teleport
 			Node(avs::uid id, const std::string &name);
 
 			virtual ~Node() = default;
-
+			static const char *getTypeName()
+			{
+				return "Node";
+			}
 			template <typename T>
 			std::shared_ptr<T> GetOrCreateComponent()
 			{
@@ -111,7 +114,7 @@ namespace teleport
 			// Updates the transform by extrapolating data from the last confirmed timestamp.
 			void TickExtrapolatedTransform(double serverTimeS);
 
-			void Update(float deltaTime);
+			void Update(std::chrono::microseconds timestamp_us);
 			void UpdateExtrapolatedPositions(double serverTimeS);
 
 			void SetParent(std::shared_ptr<Node> parent);
@@ -140,7 +143,7 @@ namespace teleport
 			}
 			bool IsVisible() const { return visibility.getVisibility(); }
 			void SetVisible(bool visible);
-			float GetTimeSinceLastVisible() const { return visibility.getTimeSinceLastVisible(); }
+			float GetTimeSinceLastVisibleS(std::chrono::microseconds timestamp) const { return visibility.getTimeSinceLastVisibleS(timestamp.count()); }
 
 			virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
 			std::shared_ptr<Mesh> GetMesh() const { return mesh; }

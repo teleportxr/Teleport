@@ -156,7 +156,7 @@ namespace teleport
 			ColourStyle style= ColourStyle::NONE;
 			void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice);
 
-			void BoneTreeNode(const std::shared_ptr<Bone> n, const char* search_text); 
+
 			void TreeNode(const std::shared_ptr<Node> node,const char *search_text);
 
 			platform::crossplatform::RenderPlatform* renderPlatform=nullptr;

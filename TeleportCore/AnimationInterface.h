@@ -72,13 +72,14 @@ namespace teleport
 		struct Animation
 		{
 			std::string name;
+			float duration;
 			std::vector<TransformKeyframeList> boneKeyframes;
 
 			static Animation convertToStandard(const Animation& animation, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 			{
 				Animation convertedAnimation;
 				convertedAnimation.name = animation.name;
-
+				convertedAnimation.duration = animation.duration;
 				for (const TransformKeyframeList& keyframe : animation.boneKeyframes)
 				{
 

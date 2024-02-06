@@ -2,22 +2,23 @@ cmake_minimum_required(VERSION 3.11)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(TELEPORT_VERSION 1.0.0)
 if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
-	if(TELEPORT_BUILD_DOCS)
+	if(TELEPORT_UNITY)
+		project(Teleport_Server_Unity VERSION ${TELEPORT_VERSION})
+	elseif(TELEPORT_SERVER)
+		project(Teleport_Server VERSION ${TELEPORT_VERSION})
+	elseif(TELEPORT_CLIENT)
+		project(Teleport_Client VERSION ${TELEPORT_VERSION})
+	elseif(TELEPORT_BUILD_DOCS)
 		project(Teleport_Docs VERSION ${TELEPORT_VERSION})
 		set(VS_STARTUP_PROJECT Sphinx)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sphinx)
-	elseif(TELEPORT_UNITY)
-		project(Teleport_Server_Unity VERSION ${TELEPORT_VERSION})
-	else()
-		if(TELEPORT_SERVER)
-			project(Teleport_Server VERSION ${TELEPORT_VERSION})
-		else()
-			project(Teleport_Client VERSION ${TELEPORT_VERSION})
-		endif()
 	endif()
 else()
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
+# FetchContent download timestamp policy:
+cmake_policy(SET CMP0135 NEW)
+cmake_policy(SET CMP0077 NEW)
 
 set(PLATFORM_USE_FMT ON)
 set(PLATFORM_SUPPORT_D3D12 ON)
@@ -35,6 +36,15 @@ option(TELEPORT_UNITY "Build for Unity?" ${TELEPORT_UNITY})
 option(TELEPORT_BUILD_DOCS "Build documentation?" OFF)
 option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
 option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
+Include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.4.0 # or a later release
+)
+
+FetchContent_MakeAvailable(Catch2)
 
 if(TELEPORT_TRACY_PROFILING)
 	FetchContent_Declare (
@@ -52,10 +62,16 @@ if(TELEPORT_UNITY)
 else()
 	option(TELEPORT_SERVER "Build for server? If true, client will not be built." ${TELEPORT_SERVER})
 endif()
-if(TELEPORT_SERVER OR TELEPORT_BUILD_DOCS)
+if(TELEPORT_SERVER)
 	set(TELEPORT_CLIENT OFF)
 else()
-	set(TELEPORT_CLIENT ON)
+	if(TELEPORT_BUILD_DOCS)
+		option(TELEPORT_CLIENT "Build for client?" OFF)
+	else()
+		option(TELEPORT_CLIENT "Build for client?" ON)
+	endif()
+endif()
+if(TELEPORT_CLIENT)
 	option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
 	option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	if( ${TELEPORT_CLIENT_USE_D3D12})
@@ -105,24 +121,10 @@ if(TELEPORT_UNITY)
 	get_filename_component(PROJECT_DIR ${CMAKE_BINARY_DIR} DIRECTORY)
 	set(TELEPORT_UNITY_PLUGINS_DIR "${PROJECT_DIR}/Assets/Teleport/Plugins/x86_64" CACHE PATH "Location to build TeleportServer.dll for use by Unity")
 	set(TELEPORT_UNITY_PROJECT_DIR "${PROJECT_DIR}" CACHE PATH "")
-	set(TELEPORT_UNITY_EDITOR_DIR "C:/Program Files/Unity/Editor" CACHE PATH "")
-	set(TELEPORT_UNITY_EDITOR_EXE "Unity.exe")
-	find_program(TELEPORT_UNITY_EDITOR_EXE Unity.exe PATHS ${TELEPORT_UNITY_EDITOR_DIR})
-endif()
-set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
-
-#Override srt encryption to be off.
-set(ENABLE_ENCRYPTION OFF CACHE BOOL "Enable encryption in SRT")
-
-#Hide Basis Universal STATIC option, and set to opposite of USE_DYNAMIC_RUNTIME.
-if(LIBAV_USE_DYNAMIC_RUNTIME)
-	set(STATIC OFF CACHE INTERNAL "Static linking for Basis Universal" FORCE)
-else()
-	set(STATIC ON CACHE INTERNAL "Static linking for Basis Universal" FORCE)
 endif()
 
 set(CONFIG_NAME $<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
-#message(STATUS "CONFIG_NAME ${CONFIG_NAME}")
+
 
 #defaults for srt:
 if(TELEPORT_WINDOWS)
@@ -236,31 +238,15 @@ function(SetTeleportDefaults targname)
 	set_target_properties( ${targname} PROPERTIES PREFIX "" )
 	set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR ON)
 	add_definitions(-DUNICODE -D_UNICODE)
+	if(TELEPORT_TRACY_PROFILING)
+		target_include_directories(${targname} PUBLIC ${CMAKE_BINARY_DIR}/_deps/tracy-src/public)
+		target_compile_definitions(${targname} PRIVATE TRACY_ENABLE=1 )
+		target_link_libraries(${targname} TracyClient )
+	endif()
 	if(MSVC)
 	# Treat angle-brackets as representing external headers. Minimal warnings for external headers.
 		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /external:anglebrackets /external:W0)
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=__stdcall)
-	# attempting to get WebRTC not to crash:
-	#target_compile_definitions(${targname} PRIVATE   
-	#					  _WEBSOCKETPP_CPP11_INTERNAL_
-    #                        #USE_AURA=1
-	#						_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
-	#						_CRT_SECURE_NO_DEPRECATE
-    #                        _SCL_SECURE_NO_DEPRECATE
-	#						_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-	#						#_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
-    #                        #PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
-    #                        #WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
-    #                        #NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
-    #                        #NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
-	#						WEBRTC_ENABLE_PROTOBUF=0
-    #                        WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
-    #                        WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
-    #                        WEBRTC_WIN
-	#						ABSL_ALLOCATOR_NOTHROW=1
-	#						ABSL_USES_STD_OPTIONAL=0
-	#						HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
-	#)
 	else()
 	#TODO: -Wno-deprecated-copy should be removed when possible.
 		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
@@ -387,6 +373,7 @@ set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 if(TELEPORT_BUILD_DOCS)
 	add_subdirectory ("docs")
 endif()
+add_subdirectory(test)
 
 set(KTX_FEATURE_GL_UPLOAD Off)
 set(KTX_FEATURE_STATIC_LIBRARY On)

@@ -57,10 +57,9 @@ namespace teleport
 
 #define TELEPORT_CERR\
 	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
-	
-#define TELEPORT_WARN\
-	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
 
+#define TELEPORT_WARN(txt, ...)\
+	teleport::InternalWarn((fmt::format("{0} ({1}): warning: ", __FILE__, __LINE__) + #txt).c_str(), ##__VA_ARGS__)
 
 #define TELEPORT_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 #define TELEPORT_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
@@ -69,7 +68,7 @@ namespace teleport
 
 #if TELEPORT_INTERNAL_CHECKS
 	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...) {teleport::InternalWarn((fmt::format("{0} ({1}): error: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__);DEBUG_BREAK_ONCE}
-	void TeleportLogUnsafe(const char* fmt, ...);
+		void TeleportLogUnsafe(const char* fmt, ...);
 	#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
 		{ TeleportLogUnsafe(__VA_ARGS__); }
 	#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn((fmt::format("{0} ({1}): warning: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)

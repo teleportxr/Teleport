@@ -5,7 +5,18 @@ project( TeleportCore )
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
 set(src_files TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp URLParser.cpp)
-file(GLOB header_files *.h)
+file(GLOB header_files	AnimationInterface.h
+						CommonNetworking.h
+						ErrorHandling.h
+						FontAtlas.h
+						Input.h
+						Protocol.h
+						StringFunctions.h
+						TeleportUtility.h
+						TextCanvas.h
+						Threads.h
+						Time.h
+						URLParser.h )
 
 if(ANDROID)
 	include_directories(../client/VrApi/Include) 

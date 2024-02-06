@@ -355,8 +355,8 @@ vertexOutput VSAnim(vertexInputAnim IN)
 	OUT.combinedEmissiveUV		=BottomUpTextureCoordinates4(combem);
 	vec2 lm=texCoords[lightmapTexCoordIndex]*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
 	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(lm);
-	//OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
-	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), model).xyz;
+	OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), model).xyz;
+	// OUT.normal.xyz = mul(vec4(IN.normal, 0.0), model).xyz;
 	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
 	OUT.tangent.xyz = mul(IN.tangent, model).xyz;
 

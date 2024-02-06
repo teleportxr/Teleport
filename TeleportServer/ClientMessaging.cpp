@@ -9,7 +9,7 @@
 #include "SignalingService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ClientManager.h"
-#include "StringFunctions.h"
+#include "TeleportCore/StringFunctions.h"
 
 using namespace teleport;
 using namespace server;
@@ -306,12 +306,6 @@ void ClientMessaging::updateNodeAnimation(teleport::core::ApplyAnimation update)
 	teleport::core::ApplyAnimationCommand command(update);
 	sendCommand(command);
 }
-/*
-void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update)
-{
-	teleport::core::SetAnimationControlCommand command(update);
-	sendCommand(command);
-}*/
 
 void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update)
 {

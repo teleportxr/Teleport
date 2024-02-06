@@ -4,11 +4,11 @@ namespace teleport
 {
 	namespace clientrender
 	{
-		void VisibilityComponent::update(float deltaTime)
+		void VisibilityComponent::update(int64_t timestamp_us)
 		{
-			if (isVisible == false)
+			if (isVisible )
 			{
-				timeSinceLastVisible += deltaTime;
+				timestamp_last_visible_us = timestamp_us;
 			}
 		}
 
@@ -17,10 +17,6 @@ namespace teleport
 			isVisible = visible;
 			invisibilityReason = !visible ? reason : VisibilityComponent::InvisibilityReason::VISIBLE;
 
-			if (isVisible)
-			{
-				timeSinceLastVisible = 0;
-			}
 		}
 
 		bool VisibilityComponent::getVisibility() const
@@ -33,9 +29,9 @@ namespace teleport
 			return invisibilityReason;
 		}
 
-		float VisibilityComponent::getTimeSinceLastVisible() const
+		float VisibilityComponent::getTimeSinceLastVisibleS(int64_t timestamp_us) const
 		{
-			return timeSinceLastVisible;
+			return float(double(timestamp_us - timestamp_last_visible_us) / 1000000.0);
 		}
 	}
 }

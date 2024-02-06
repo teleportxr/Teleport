@@ -31,6 +31,10 @@ namespace teleport
 		{
 			return "IndexBuffer";
 		}
+		static const char *getTypeName()
+		{
+			return "IndexBuffer";
+		}
 	protected:
 		IndexBufferCreateInfo m_CI;
 	

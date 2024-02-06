@@ -92,7 +92,6 @@ void teleport::client::LaunchProtocolHandler(std::string protocol, std::string u
 
 	try
 	{
-		//ellExecuteA(0, nullptr, url.c_str(), 0, 0, SW_SHOW);
 		ShellExecuteExA(&exInfo);
 	}
 	catch(...)

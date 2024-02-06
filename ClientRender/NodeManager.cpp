@@ -34,12 +34,12 @@ NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
 	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
 }
 
-std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
+std::shared_ptr<Node> NodeManager::CreateNode(std::chrono::microseconds session_time_us,avs::uid id, const avs::Node &avsNode)
 {
 	std::shared_ptr<Node> node= std::make_shared<Node>(id, avsNode.name);
 
 	//Create MeshNode even if it is missing resources
-	AddNode(node, avsNode);
+	AddNode(session_time_us,node, avsNode);
 	return node;
 }
 ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
@@ -62,7 +62,7 @@ ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
 #endif
 }
 
-void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
+void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_ptr<Node> node, const avs::Node &avsNode)
 {
 	using avs::Pose;
 	{
@@ -141,7 +141,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		auto animationIt = earlyAnimationUpdates.find(node_id);
 		if (animationIt != earlyAnimationUpdates.end())
 		{
-			animC->setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
+			animC->setAnimationState(session_time_us, animationIt->second);
 			earlyAnimationUpdates.erase(animationIt);
 		}
 
@@ -151,7 +151,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		{
 			for (const EarlyAnimationControl& earlyControlUpdate : animationControlIt->second)
 			{
-				animC->setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
+				//animC->setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
 			}
 			earlyAnimationControlUpdates.erase(animationControlIt);
 		}
@@ -162,7 +162,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		{
 			for (const EarlyAnimationSpeed& earlySpeedUpdate : animationSpeedIt->second)
 			{
-				animC->setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
+				//animC->setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
 			}
 			earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 		}
@@ -493,50 +493,18 @@ void NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	}
 }
 
-void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
+void NodeManager::UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate)
 {
 	std::shared_ptr<Node> node = GetNode(animationUpdate.nodeID);
 	if(node)
 	{
 		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
+		animC->setAnimationState(timestampUs,animationUpdate);
 	}
 	else
 	{
 		std::lock_guard<std::mutex> lock(early_mutex);
 		earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
-	}
-}
-
-void NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, float animationTimeOverride, float overrideMaximum)
-{
-	std::shared_ptr<Node> node = GetNode(nodeID);
-	if(node)
-	{
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
-	}
-	else
-	{
-		std::lock_guard<std::mutex> lock(early_mutex);
-		std::vector<EarlyAnimationControl>& earlyControlUpdates = earlyAnimationControlUpdates[nodeID];
-		earlyControlUpdates.emplace_back(EarlyAnimationControl{animationID, animationTimeOverride, overrideMaximum});
-	}
-}
-
-void NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
-{
-	std::shared_ptr<Node> node = GetNode(nodeID);
-	if(node)
-	{
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationSpeed(animationID, speed);
-	}
-	else
-	{
-		std::lock_guard<std::mutex> lock(early_mutex);
-		std::vector<EarlyAnimationSpeed>& earlySpeedUpdates = earlyAnimationSpeedUpdates[nodeID];
-		earlySpeedUpdates.emplace_back(EarlyAnimationSpeed{animationID, speed});
 	}
 }
 
@@ -589,7 +557,7 @@ void NodeManager::UpdateExtrapolatedPositions(double serverTimeS)
 	}
 }
 
-void NodeManager::Update( float deltaTime)
+void NodeManager::Update( std::chrono::microseconds timestamp_us)
 {
 	rootNodes_mutex.lock();
 	nodeList_t expiredNodes;
@@ -597,7 +565,7 @@ void NodeManager::Update( float deltaTime)
 	{
 		auto n=node.lock();
 		if(n)
-			n->Update(deltaTime);
+			n->Update(timestamp_us);
 	}
 	rootNodes_mutex.unlock();
 	for(const avs::uid u : hiddenNodes)
@@ -606,7 +574,7 @@ void NodeManager::Update( float deltaTime)
 		if(n!=nodeLookup.end())
 		{
 			std::shared_ptr<Node> node =n->second;
-			if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
+			if (node->GetTimeSinceLastVisibleS(timestamp_us) >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
 			{
 				expiredNodes.push_back(node);
 			}

@@ -17,22 +17,22 @@ Transform::Transform(vec3 translation, quat rotation, vec3 scale)
 	//m_ShaderResource = ShaderResource({ m_ShaderResourceLayout });
 	//m_ShaderResource.AddBuffer(ShaderResourceLayout::ShaderResourceType::UNIFORM_BUFFER, 1, "u_NodeUBO", { &m_ModelMatrix, 0, sizeof(m_ModelMatrix) });
 
-	m_ModelMatrix = mat4_deprecated::Translation(translation) * mat4_deprecated::Rotation(rotation) * mat4_deprecated::Scale(scale);
+	m_ModelMatrix = mat4::translation(translation) * mat4::rotation(*((vec4*)&rotation)) * mat4::scale(scale);
 }
 
 Transform::Transform(mat4 matrix)
 {
 	m_ModelMatrix = matrix;
 
-	m_Translation = mat4_deprecated::GetTranslation(matrix);
-	m_Rotation = mat4_deprecated::GetRotation(matrix);
-	m_Scale = mat4_deprecated::GetScale(matrix);
+	m_Translation = matrix.GetTranslation();
+	//m_Rotation = matrix.GetRotation();
+	m_Scale = matrix.GetScale();
 }
 
 Transform::Transform(const avs::Transform& transform)
 	:m_Translation(transform.position), m_Rotation(transform.rotation), m_Scale(transform.scale)
 {
-	m_ModelMatrix = mat4_deprecated::Translation(m_Translation) * mat4_deprecated::Rotation(m_Rotation) * mat4_deprecated::Scale(m_Scale);
+	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4 *)&m_Rotation)) * mat4::scale(m_Scale);
 }
 
 Transform& Transform::operator= (const avs::Transform& transform)
@@ -41,7 +41,7 @@ Transform& Transform::operator= (const avs::Transform& transform)
 	m_Rotation = transform.rotation;
 	m_Scale = transform.scale;
 
-	m_ModelMatrix = mat4_deprecated::Translation(m_Translation) * mat4_deprecated::Rotation(m_Rotation) * mat4_deprecated::Scale(m_Scale);
+	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4 *)&m_Rotation)) * mat4::scale(m_Scale);
 
 	return *this;
 }
@@ -52,7 +52,7 @@ Transform& Transform::operator= (const Transform& transform)
 	m_Rotation = transform.m_Rotation;
 	m_Scale = transform.m_Scale;
 
-	m_ModelMatrix = mat4_deprecated::Translation(m_Translation) * mat4_deprecated::Rotation(m_Rotation) * mat4_deprecated::Scale(m_Scale);
+	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4 *)&m_Rotation)) * mat4::scale(m_Scale);
 
 	return *this;
 }
@@ -75,7 +75,7 @@ vec3 Transform::LocalToGlobal(const vec3& local)
 
 void Transform::UpdateModelMatrix()
 {
-	m_ModelMatrix = mat4_deprecated::Translation(m_Translation) * mat4_deprecated::Rotation(m_Rotation) * mat4_deprecated::Scale(m_Scale);
+	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4*)&m_Rotation)) * mat4::scale(m_Scale);
 }
 
 bool Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)

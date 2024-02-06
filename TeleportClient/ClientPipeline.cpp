@@ -65,7 +65,6 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	}
 
 	source->setDebugStream(setupCommand.debug_stream);
-	source->setDoChecksums(setupCommand.do_checksums);
 	source->setDebugNetworkPackets(setupCommand.debug_network_packets);
 
 	//test

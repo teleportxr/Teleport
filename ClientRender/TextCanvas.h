@@ -47,6 +47,11 @@ namespace teleport
 			{
 				return "TextCanvas";
 			}
+
+			static const char *getTypeName()
+			{
+				return "TextCanvas";
+			}
 			TextCanvasCreateInfo textCanvasCreateInfo;
 
 			void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::ConstantBuffer<CameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> &cameraConstants, platform::crossplatform::ConstantBuffer<StereoCameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> &stereoCameraConstants, platform::crossplatform::Texture *fontTexture);

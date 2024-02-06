@@ -241,7 +241,6 @@ namespace avs
 		Animation,
 		Node,
 		Skeleton,
-		Bone,
 		FontAtlas,
 		TextCanvas,
 	};
@@ -256,8 +255,7 @@ namespace avs
 			case GeometryPayloadType::Texture:			return "Texture";
 			case GeometryPayloadType::Animation:		return "Animation";
 			case GeometryPayloadType::Node:				return "Node";
-			case GeometryPayloadType::Skeleton:				return "Skeleton";
-			case GeometryPayloadType::Bone:				return "Bone";
+			case GeometryPayloadType::Skeleton:			return "Skeleton";
 			case GeometryPayloadType::FontAtlas:		return "FontAtlas";
 			case GeometryPayloadType::TextCanvas:		return "TextCanvas";
 			default:
@@ -275,7 +273,6 @@ namespace avs
 		None,
 		Mesh,
 		Light,
-		Bone,
 		TextCanvas,
 		SubScene,
 		Skeleton,

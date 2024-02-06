@@ -98,10 +98,6 @@ target_include_directories(TeleportServer PUBLIC .)
 target_include_directories(TeleportServer PUBLIC .. )
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
-#Include TeleportCore
-target_include_directories(TeleportServer PUBLIC ../TeleportCore)
-#Include TeleportAudio
-target_include_directories(TeleportServer PUBLIC ../TeleportAudio)
 #Include Basis Universal
 target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include draco

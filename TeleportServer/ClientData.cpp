@@ -26,8 +26,7 @@ ClientData::ClientData(avs::uid clid, std::shared_ptr<ClientMessaging> clientMes
 void ClientData::StartStreaming(const ServerSettings& serverSettings
 	,uint32_t connectionTimeout
 	,uint64_t session_id
-	,GetUnixTimestampFn getUnixTimestamp
-	,int64_t startTimestamp_utc_unix_ns
+	,GetUnixTimestampFn getUnixTimestamp, int64_t startTimestamp_utc_unix_us
 	,bool use_ssl)
 {
 	orthogonalNodeStates.clear();
@@ -61,7 +60,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 
 	teleport::core::SetupCommand setupCommand;
 	setupCommand.debug_stream = serverSettings.debugStream;
-	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = serverSettings.requiredLatencyMs;
 	setupCommand.idle_connection_timeout = connectionTimeout;
@@ -70,8 +68,7 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	// TODO: this must change:
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
-	setupCommand.control_model = serverSettings.controlModel;
-	setupCommand.startTimestamp_utc_unix_ns = startTimestamp_utc_unix_ns;
+	setupCommand.startTimestamp_utc_unix_us = startTimestamp_utc_unix_us;
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings->backgroundMode;
 	setupCommand.backgroundColour = clientSettings->backgroundColour;
@@ -162,7 +159,7 @@ void ClientData::reparentNode(avs::uid nodeID)
 	auto& st = s->unconfirmedStates[command.commandPayloadType];
 	st.confirmationNumber = command.confirmationNumber;
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	st.serverTimeSentNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_ns;
+	st.serverTimeSentNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_us;
 	clientMessaging->reparentNode(command);
 }
 
@@ -189,7 +186,7 @@ void ClientData::tick(float deltaTime)
 void ClientData::resendUnconfirmedOrthogonalStates()
 {
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	int64_t serverTimeNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_ns;
+	int64_t serverTimeNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_us;
 	// wait one second before resending
 	static int64_t resendOrthogonalStateTimeout = 1000000 * 1000;
 	for (auto& nodeState : orthogonalNodeStates)

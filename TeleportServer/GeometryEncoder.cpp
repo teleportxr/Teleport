@@ -10,6 +10,7 @@
 
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/Profiling.h"
 #include "GeometryStreamingService.h"
 #include "GeometryStore.h"
 #include "ClientManager.h"
@@ -46,6 +47,7 @@ GeometryEncoder::GeometryEncoder(const ServerSettings *settings, GeometryStreami
 
 avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBackendInterface*)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (!geometryStreamingService || geometryStreamingService->getClientAxesStandard() == avs::AxesStandard::NotInitialized)
 		return avs::Result::Failed;
 	queuedBuffer.clear();
@@ -496,7 +498,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterf
 		put(nameLength);
 		//Push name.
 		put((uint8_t*)animation->name.data(), nameLength);
-
+		put(animation->duration);
 		put(animation->boneKeyframes.size());
 		for (const teleport::core::TransformKeyframeList& transformKeyframe : animation->boneKeyframes)
 		{

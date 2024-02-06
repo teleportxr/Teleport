@@ -5,7 +5,6 @@
 #include "Renderer.h"
 #include <fmt/core.h>
 #include "TeleportClient/Log.h"
-#include "TeleportClient/ServerTimestamp.h"
 #include "Platform/CrossPlatform/Framebuffer.h"
 #if TELEPORT_CLIENT_USE_VULKAN
 #include "Platform/Vulkan/RenderPlatform.h"
@@ -325,7 +324,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext& de
 		}
 	}
 	renderState.teleportSceneConstants.SetHasChanged();
-	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_ns,deviceContext.predictedDisplayTimeS);
+	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us,deviceContext.predictedDisplayTimeS);
 	geometryCache->mNodeManager.UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
 	auto &clientServerState = sessionClient->GetClientServerState();
@@ -759,7 +758,14 @@ void InstanceRenderer::RenderNode(crossplatform::GraphicsDeviceContext& deviceCo
 				//				pos_local= (bone_matrix_j) * pos_original_local
 				std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
 				skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
-				BoneMatrices *b = &skeletonInstance->boneMatrices;
+			
+				avs::uid sk_id = skeletonInstance->GetSkeleton()->id;
+				if (skeletonRenders.find(sk_id) == skeletonRenders.end())
+				{
+					skeletonRenders[sk_id] = std::make_shared<SkeletonRender>();
+					skeletonRenders[sk_id]->boneMatrices.RestoreDeviceObjects(renderPlatform);
+				}
+				BoneMatrices *b = &skeletonRenders[sk_id]->boneMatrices;
 				memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
 			}
 			node->renderModelMatrix = *((const mat4 *)(&deviceContext.viewStruct.model));
@@ -851,7 +857,10 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 		auto sk=meshRender.skeletonInstance.lock();
 		if(!sk)	
 			return;
-		renderPlatform->SetConstantBuffer(deviceContext,&(sk->boneMatrices));
+		avs::uid sk_id=sk->GetSkeleton()->id;
+		if(skeletonRenders.find(sk_id)==skeletonRenders.end())
+			return;
+		renderPlatform->SetConstantBuffer(deviceContext, &(skeletonRenders[sk_id]->boneMatrices));
 	}
 
 	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
@@ -931,26 +940,11 @@ void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& de
 	textCanvas->Render(deviceContext,renderState.cameraConstants,renderState.stereoCameraConstants,fontTexture->GetSimulTexture());
 }
 
-void InstanceRenderer::RenderBone(crossplatform::GraphicsDeviceContext& deviceContext,const mat4 &model_matrix,const std::shared_ptr<clientrender::Bone> bone)
-{
-	const auto &tr=bone->GetGlobalTransform();
-	static vec4 blue={0.f,0.25f,1.f,1.f};
-	for(int i=0;i<bone->GetChildren().size();i++)
-	{
-		const auto child_bone=bone->GetChildren()[i].lock();
-		const auto &child_tr=child_bone->GetGlobalTransform();
-		// Draw a pyramid from parent to child.
-		mat4 m1=model_matrix*tr.GetTransformMatrix();
-		mat4 m2=model_matrix*child_tr.GetTransformMatrix();
-		//m2.l+=0.1f;
-		renderPlatform->DrawLine(deviceContext,{m1.d,m1.h,m1.l},{m2.d,m2.h,m2.l},blue,2.0f);
-		RenderBone(deviceContext,model_matrix,child_bone);
-	}
-}
-
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &geometrySubCache, const std::shared_ptr<clientrender::Node> node, bool include_children)
 {
 	if (!geometrySubCache)
+		return;
+	if (!node)
 		return;
 	ApplyModelMatrix(deviceContext, node->renderModelMatrix);
 	auto renderPlatform=deviceContext.renderPlatform;
@@ -974,24 +968,19 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext &d
 		vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 		vec4 bkg={0,0,0,0.5f};
 		auto skeletonInstance=node->GetSkeletonInstance();
-		if (skeletonInstance.get()&&skeletonInstance->GetBones().size())
+		if (skeletonInstance.get())
 		{
-			RenderBone(deviceContext,globalTransformMatrix,*skeletonInstance->GetBones().begin());
 			str="";
 			auto animC=node->GetOrCreateComponent<AnimationComponent>();
-			const clientrender::AnimationState* animationState = animC->GetCurrentAnimationState();
-			if (animationState)
+			const auto &animationLayerStates = animC->GetAnimationLayerStates();
+			if (animationLayerStates.size())
 			{
 				//const clientrender::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
 				static char txt[250];
-				//for(const auto &s:animationStates)
+				for (const auto &s : animationLayerStates)
 				{
-					const auto& a = animationState->getAnimation();
-					if (a.get())
-					{
-						str +=fmt::format( "{0} {1} {2}\n", node->id, a->name.c_str(), animC->GetCurrentAnimationTimeSeconds());
-						
-					}
+					const auto &a = s.getState();
+					str += fmt::format("{0} anim {1}\n", node->id, a.animationState.animationId);
 				}
 				renderPlatform->PrintAt3dPos(deviceContext, (const float*)(&pos), str.c_str(), (const float*)(&white),bkg);
 			}
@@ -1063,7 +1052,7 @@ void InstanceRenderer::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	geometryCache->mNodeManager.SetNodeHighlighted(nodeID, isHighlighted);
 }
 
-void InstanceRenderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
+void InstanceRenderer::UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate)
 {
 	static uint8_t ctr=1;
 	ctr--;
@@ -1072,28 +1061,10 @@ void InstanceRenderer::UpdateNodeAnimation(const teleport::core::ApplyAnimation&
 		std::shared_ptr<Node> node=geometryCache->mNodeManager.GetNode(animationUpdate.nodeID);
 		if(node)
 		{
-			TELEPORT_COUT << "Animation: node " << animationUpdate.nodeID << " " << node->name<<", animation " << animationUpdate.animationID << ", timestamp " << animationUpdate.timestamp << "\n";
+			TELEPORT_COUT << "Animation: node " << animationUpdate.nodeID << " " << node->name<<", animation " << animationUpdate.animationID << ", timestamp " << animationUpdate.timestampUs << "\n";
 		}
 	}
-	geometryCache->mNodeManager.UpdateNodeAnimation(animationUpdate);
-}
-/*
-void InstanceRenderer::UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate)
-{
-	switch(animationControlUpdate.timeControl)
-	{
-	case teleport::core::AnimationTimeControl::ANIMATION_TIME:
-		geometryCache->mNodeManager.UpdateNodeAnimationControl(animationControlUpdate.nodeID, animationControlUpdate.animationID);
-		break;
-	default:
-		TELEPORT_CERR_BREAK("Failed to update node animation control! Time control was set to the invalid value" + std::to_string(static_cast<int>(animationControlUpdate.timeControl)) + "!", -1);
-		break;
-	}
-}*/
-
-void InstanceRenderer::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
-{
-	geometryCache->mNodeManager.SetNodeAnimationSpeed(nodeID, animationID, speed);
+	geometryCache->mNodeManager.UpdateNodeAnimation(timestampUs,animationUpdate);
 }
 
 void InstanceRenderer::UpdateTagDataBuffers(crossplatform::GraphicsDeviceContext& deviceContext)
@@ -1159,7 +1130,7 @@ void InstanceRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSiz
 
 	tagData.lights.resize(tagData.coreData.lightCount);
 
-	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
+	//teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
 
 	// We will check the received light tags agains the current list of lights - rough and temporary.
 	/*
@@ -1219,11 +1190,6 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 	videoTagDataCubeArray.clear();
 	videoTagDataCubeArray.resize(RenderState::maxTagDataSize);
-
-	teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(setupCommand.startTimestamp_utc_unix_ns);
-
-//	TELEPORT_CLIENT_WARN("SETUP COMMAND RECEIVED: server_streaming_port %d clr %d x %d dpth %d x %d\n", setupCommand.server_streaming_port, clientPipeline.videoConfig.video_width, clientPipeline.videoConfig.video_height
-	//	, clientPipeline.videoConfig.depth_width, clientPipeline.videoConfig.depth_height);
 
 	AVSTextureImpl* ti = (AVSTextureImpl*)(instanceRenderState.avsTexture.get());
 	if (ti)

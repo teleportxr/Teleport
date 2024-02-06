@@ -58,7 +58,7 @@ namespace teleport
 
 			virtual ~NodeManager() = default;
 
-			virtual std::shared_ptr<Node> CreateNode(avs::uid id, const avs::Node &avsNode);
+			std::shared_ptr<Node> CreateNode(std::chrono::microseconds session_time_us,avs::uid id, const avs::Node &avsNode);
 
 			void RemoveNode(std::shared_ptr<Node> node);
 			void RemoveNode(avs::uid nodeID);
@@ -86,17 +86,15 @@ namespace teleport
 			void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate> &updateList);
 			void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState> &updateList);
 			void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
-			void UpdateNodeAnimation(const teleport::core::ApplyAnimation &animationUpdate);
-			void UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, float animationTimeOverride = 0.0f, float overrideMaximum = 0.0f);
-			void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
+			void UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate);
 
 			//! Returns true if successful, or false if not e.g. if either the node or the parent is not present.
 			bool ReparentNode(const teleport::core::UpdateNodeStructureCommand &updateNodeStructureCommand);
 
 			void NotifyModifiedMaterials(std::shared_ptr<clientrender::Node> node);
 			// Tick the node manager along, and remove any nodes that have been invisible for too long.
-			//	deltaTime : Milliseconds since last update.
-			void Update(float deltaTime);
+			//	timestamp_us : current "server time" - microseconds since server's time datum.
+			void Update(std::chrono::microseconds timestamp_us);
 			// For rendering
 			void UpdateExtrapolatedPositions(double serverTimeS);
 			// Clear node manager of all nodes.
@@ -132,7 +130,7 @@ namespace teleport
 			phmap::flat_hash_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
 		private:
-			void AddNode(std::shared_ptr<Node> node, const avs::Node &nodeData);
+			void AddNode(std::chrono::microseconds session_time_us,std::shared_ptr<Node> node, const avs::Node &nodeData);
 			struct EarlyAnimationControl
 			{
 				avs::uid animationID;

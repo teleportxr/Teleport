@@ -1,30 +1,29 @@
 #include "Animation.h"
 
-#include "Bone.h"
-
+#include "Node.h"
+#include "Transform.h"
+using qt=platform::crossplatform::Quaternionf;
 namespace teleport
 {
 	namespace clientrender
 	{
-		BoneKeyframeList::BoneKeyframeList()
+		BoneKeyframeList::BoneKeyframeList(float dur) : duration(dur)
 		{}
 
-		void BoneKeyframeList::seekTime(std::shared_ptr<Bone> bone, float time) const
+		void BoneKeyframeList::seekTime(std::shared_ptr<Node> bone, float time, float strength,bool loop) const
 		{
 			if(!bone)
 			{
 				return;
 			}
-
 			Transform transform = bone->GetLocalTransform();
-			setPositionToTime(time, transform.m_Translation, positionKeyframes);
-			setRotationToTime(time, transform.m_Rotation, rotationKeyframes);
-
+			blendPositionToTime(time, transform.m_Translation, positionKeyframes, strength, loop);
+			blendRotationToTime(time, *((qt*)&transform.m_Rotation), rotationKeyframes, strength, loop);
 			transform.UpdateModelMatrix();
 			bone->SetLocalTransform(transform);
 		}
 
-		void BoneKeyframeList::setPositionToTime(float time, vec3& bonePosition, const std::vector<teleport::core::Vector3Keyframe>& keyframes) const
+		void BoneKeyframeList::blendPositionToTime(float time, vec3 &bonePosition, const std::vector<teleport::core::Vector3Keyframe> &keyframes, float strength,bool loop) const
 		{
 			if(keyframes.size() == 0)
 			{
@@ -36,17 +35,23 @@ namespace teleport
 				bonePosition = keyframes[0].value;
 				return;
 			}
-
-			size_t nextKeyframeIndex = getNextKeyframeIndex(time, keyframes);
-			const teleport::core::Vector3Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
-			const teleport::core::Vector3Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
+			KeyframePair kf = getNextKeyframeIndex(time, keyframes, loop);
+			const teleport::core::Vector3Keyframe &previousKeyframe = keyframes[kf.prev];
+			const teleport::core::Vector3Keyframe &nextKeyframe = keyframes[kf.next];
 
 			//Linear interpolation between previous keyframe and next keyframe.
-			float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
-			bonePosition = (1.0f - timeBlend) * previousKeyframe.value + timeBlend * nextKeyframe.value;
+			vec3 newpos = (1.0f - kf.interp) * previousKeyframe.value + kf.interp * nextKeyframe.value;
+			if(strength>=1.f)
+			{
+				bonePosition = newpos;
+			}
+			else if(strength>0.f)
+			{
+				bonePosition =lerp(bonePosition,newpos,strength);
+			}
 		}
 
-		void BoneKeyframeList::setRotationToTime(float time, quat& boneRotation, const std::vector<teleport::core::Vector4Keyframe>& keyframes) const
+		void BoneKeyframeList::blendRotationToTime(float time, platform::crossplatform::Quaternionf &boneRotation, const std::vector<teleport::core::Vector4Keyframe> &keyframes, float strength, bool loop) const
 		{
 			if(keyframes.size() == 0)
 			{
@@ -59,57 +64,83 @@ namespace teleport
 				return;
 			}
 
-			size_t nextKeyframeIndex = getNextKeyframeIndex(time, keyframes);
-			const teleport::core::Vector4Keyframe& previousKeyframe = (nextKeyframeIndex == 0 ? keyframes[nextKeyframeIndex] : keyframes[nextKeyframeIndex - 1]);
-			const teleport::core::Vector4Keyframe& nextKeyframe = keyframes[nextKeyframeIndex];
+			KeyframePair kf= getNextKeyframeIndex(time, keyframes,loop);
+			const teleport::core::Vector4Keyframe& previousKeyframe = keyframes[kf.prev];
+			const teleport::core::Vector4Keyframe& nextKeyframe = keyframes[kf.next];
 
 			//Linear interpolation between previous keyframe and next keyframe.
-			float timeBlend = getTimeBlend(time, previousKeyframe.time, nextKeyframe.time);
-			vec4 &previousValue=*((vec4*)&previousKeyframe.value);
-			vec4 &nextValue=*((vec4*)&nextKeyframe.value);
-			boneRotation = (1.0f - timeBlend) * previousValue + timeBlend * nextValue;
+			platform::crossplatform::Quaternionf &previousValue = *((platform::crossplatform::Quaternionf *)&previousKeyframe.value);
+			platform::crossplatform::Quaternionf &nextValue = *((platform::crossplatform::Quaternionf *)&nextKeyframe.value);
 			//boneRotation = quat::Slerp(previousKeyframe.value, nextKeyframe.value, timeBlend);
+			platform::crossplatform::Quaternionf newrot = previousKeyframe.value * (1.f - kf.interp) + nextKeyframe.value * kf.interp; // quat::Slerp(previousValue, nextValue, kf.interp);
+			newrot = platform::crossplatform::slerp(previousValue, nextValue, kf.interp);
+			newrot.MakeUnit();
+			if (strength >= 1.f)
+			{
+				boneRotation = newrot;
+			}
+			else if (strength > 0.f)
+			{
+				boneRotation = platform::crossplatform::slerp(boneRotation, newrot, strength);
+			}
 		}
-
-		size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<teleport::core::Vector3Keyframe>& keyframes) const
+		template<typename U>
+		BoneKeyframeList::KeyframePair BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<U> &keyframes, bool loop) const
 		{
-			for(size_t i = 1; i < keyframes.size(); i++)
+			KeyframePair p;
+			uint32_t N = (uint32_t)keyframes.size();
+			// If the last keyframe is right on the loop-time, discard it and interpolate to keyframe 0 instead.
+			if (loop && keyframes[N - 1].time >= duration)
+			{
+				N--;
+			}
+			if(loop)
+			{
+				time = fmodf(time, duration);
+			}
+			p.next = N-1;
+			for (uint32_t i = 1; i < keyframes.size(); i++)
 			{
 				if(keyframes[i].time >= time)
 				{
-					return i;
+					p.next = i;
+					break;
 				}
 			}
-
-			return keyframes.size() - 1;
-		}
-
-		size_t BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<teleport::core::Vector4Keyframe>& keyframes) const
-		{
-			for(size_t i = 1; i < keyframes.size(); i++)
+			if (loop)
 			{
-				if(keyframes[i].time >= time)
-				{
-					return i;
-				}
+				p.prev = (p.next + N - 1) % N;
 			}
-
-			return keyframes.size() - 1;
+			else
+			{
+				if(p.next>0)
+					p.prev = p.next-1;
+				else
+					p.prev=0;
+			}
+			float previousTime=keyframes[p.prev].time;
+			float nextTime=keyframes[p.next].time;
+			if(nextTime<previousTime)
+				nextTime+=duration;
+			if(nextTime==previousTime)
+				p.interp=0.0f;
+			else
+				p.interp=std::max(std::min(1.0f, (time - previousTime) / (nextTime - previousTime)), 0.0f);
+			return p;
 		}
 
-		float BoneKeyframeList::getTimeBlend(float currentTime, float previousTime, float nextTime) const
-		{
-			return (currentTime - previousTime) / (nextTime - previousTime);
-		}
 
 		Animation::Animation(const std::string& name)
 			:name(name)
 		{}
 
-		Animation::Animation(const std::string& name, std::vector<BoneKeyframeList> bk)
-			: name(name), boneKeyframeLists(bk)
+		Animation::Animation(const std::string& name, float dur,std::vector<BoneKeyframeList> bk)
+			: name(name), duration(dur), boneKeyframeLists(bk)
 		{
 			updateAnimationLength();
+		}
+		Animation::~Animation()
+		{
 		}
 
 		//Retrieve end time from latest time in any bone animations.
@@ -140,12 +171,12 @@ namespace teleport
 			return endTime_s;
 		}
 
-		void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float time) const
+		void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Node>>& boneList, float time,float strength,bool loop) const
 		{
 			for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
 			{
 				if(boneKeyframeList.boneIndex<boneList.size())
-						boneKeyframeList.seekTime(boneList[boneKeyframeList.boneIndex], time);
+					boneKeyframeList.seekTime(boneList[boneKeyframeList.boneIndex], time,  strength,loop);
 			}
 		}
 	}

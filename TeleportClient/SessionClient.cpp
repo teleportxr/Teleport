@@ -52,6 +52,7 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 			auto r = std::make_shared<client::SessionClient>(0,nullptr,"");
 			sessionClients[0] = r;
 			sessionClientIds.insert(0);
+			
 			return r;
 		}
 		return nullptr;
@@ -87,6 +88,8 @@ void SessionClient::DestroySessionClients()
 SessionClient::SessionClient(avs::uid s, TabContext *tc,const std::string &dom)
 	: server_uid(s), domain(dom), tabContext(tc)
 {
+	if(server_uid==0)
+		setupCommand.startTimestamp_utc_unix_us =std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 SessionClient::~SessionClient()
@@ -321,6 +324,11 @@ void SessionClient::KillStreaming()
 	}
 }
 
+void SessionClient::SetTimestamp(std::chrono::microseconds t)
+{
+	session_time_us=t;
+}
+
 void SessionClient::ReceiveCommand(const std::vector<uint8_t> &buffer)
 {
 	ReceiveCommandPacket(buffer);
@@ -360,12 +368,6 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 			break;
 		case teleport::core::CommandPayloadType::ApplyNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
-			break;
-		/*case teleport::core::CommandPayloadType::UpdateNodeAnimationControl:
-			ReceiveNodeAnimationControlUpdate(packet);
-			break;*/
-		case teleport::core::CommandPayloadType::SetNodeAnimationSpeed:
-			ReceiveNodeAnimationSpeedUpdate(packet);
 			break;
 		case teleport::core::CommandPayloadType::SetupLighting:
 			ReceiveSetupLightingCommand(packet);
@@ -850,21 +852,7 @@ void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packe
 		return;
 	}
 	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
-	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
-}
-
-void SessionClient::ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet)
-{
-	teleport::core::SetNodeAnimationSpeedCommand command;
-	size_t commandSize = command.getCommandSize();
-	if (packet.size() != commandSize)
-	{
-		TELEPORT_INTERNAL_CERR("Bad packet size");
-		return;
-	}
-
-	memcpy(static_cast<void*>(&command), packet.data(), command.getCommandSize());
-	mCommandInterface->SetNodeAnimationSpeed(command.nodeID, command.animationID, command.speed);
+	mCommandInterface->UpdateNodeAnimation(GetTimestamp(),command.animationUpdate);
 }
 
 void SessionClient::ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet)

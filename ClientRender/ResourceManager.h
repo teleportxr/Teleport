@@ -259,7 +259,7 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 			//Delete the resource, if memory is low and it has been too long since the object was last used.
 			if(!sufficientMemory && it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
 			{
-				TELEPORT_INTERNAL_CERR("Cache {0}, Timeout Freeing resource {1} ({2})\n",cache_uid,it->first,it->second.resource->getName());
+				TELEPORT_INTERNAL_CERR("Cache {0}, Timeout Freeing {1} resource {2} ({3})\n",cache_uid,T::getTypeName(),it->first,it->second.resource->getName());
 				it = RemoveResource(it);
 			}
 			else

@@ -192,6 +192,11 @@ namespace teleport
 			{
 				return m_CI.name;
 			}
+			static const char *getTypeName() 
+			{
+				return "Texture";
+			}
+			
 
 			//Returns whether the texture is valid.
 			bool IsValid() const

@@ -11,7 +11,7 @@
 #include "libavstream/geometry/material_interface.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "Font.h"
-#include "StringFunctions.h"
+#include "TeleportCore/StringFunctions.h"
 #include "Texture.h"
 
 namespace teleport

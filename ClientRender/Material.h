@@ -67,7 +67,10 @@ namespace teleport
 		public:
 			Material(const MaterialCreateInfo &pMaterialCreateInfo);
 			~Material();
-
+			static const char *getTypeName()
+			{
+				return "Material";
+			}
 			std::string getName() const
 			{
 				return m_CI.name;

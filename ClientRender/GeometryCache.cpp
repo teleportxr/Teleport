@@ -15,7 +15,6 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	  mMeshManager(c_uid),
 	  mSkeletonManager(c_uid),
 	  mLightManager(c_uid),
-	  mBoneManager(c_uid),
 	  mAnimationManager(c_uid),
 	  mTextCanvasManager(c_uid),
 	  mFontAtlasManager(c_uid),
@@ -275,9 +274,8 @@ void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCrea
 void GeometryCache::CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton)
 {
 	RESOURCECREATOR_DEBUG_COUT( "CompleteSkeleton {0}({1})",id,completeSkeleton->skeleton->name);
-
-	mSkeletonManager.Add(id, completeSkeleton->skeleton);
 	//Add skeleton to nodes waiting for skeleton.
+	mSkeletonManager.Get(id)->InitBones(*this);
 	MissingResource *missingSkeleton = GetMissingResourceIfMissing(id,avs::GeometryPayloadType::Skeleton);
 	if(missingSkeleton)
 	{
@@ -371,36 +369,6 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 	//Resource has arrived, so we are no longer waiting for it.
 	RemoveFromMissingResources(id);
 }
-void GeometryCache::CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone)
-{
-	//RESOURCECREATOR_DEBUG_COUT( "CompleteBone(",id,", ",bone->name,")\n";
-
-	mBoneManager.Add(id, bone);
-
-	//Add bone to skeleton waiting for bone.
-	MissingResource *missingBone = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Bone);
-	if(missingBone)
-	{
-		for(auto it = missingBone->waitingResources.begin(); it != missingBone->waitingResources.end(); it++)
-		{
-			if((*it)->type == avs::GeometryPayloadType::Skeleton)
-			{
-				std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::static_pointer_cast<IncompleteSkeleton>(*it);
-				incompleteSkeleton->skeleton->SetBone(incompleteSkeleton->missingBones[id], bone);
-				RESOURCECREATOR_DEBUG_COUT( "Waiting Skeleton {0}({1}) got Bone {2}({3})",incompleteSkeleton->id,incompleteSkeleton->skeleton->name,id,bone->name);
-
-				//If only this bone, and the loop, are pointing at the skeleton, then it is complete.
-				if (RESOURCE_IS_COMPLETE(*it))
-				{
-					CompleteSkeleton(incompleteSkeleton->id, incompleteSkeleton);
-				}
-			}
-		}
-	}
-
-	//Resource has arrived, so we are no longer waiting for it.
-	RemoveFromMissingResources(id);
-}
 
 void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)
 {
@@ -417,10 +385,11 @@ void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender:
 		for(auto it = missingAnimation->waitingResources.begin(); it != missingAnimation->waitingResources.end(); it++)
 		{
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
-			incompleteNode->GetOrCreateComponent<AnimationComponent>()->addAnimation(id, animation);
 			RESOURCE_RECEIVES(incompleteNode, id);
 			RESOURCECREATOR_DEBUG_COUT( "Waiting MeshNode {0}({1}) got Animation {2}({3})",incompleteNode->id,incompleteNode->name,id,animation->name);
 
+			auto animC = incompleteNode->GetOrCreateComponent<AnimationComponent>();
+			animC->addAnimation(id, animation);
 			//If only this bone, and the loop, are pointing at the skeleton, then it is complete.
 			if (RESOURCE_IS_COMPLETE(incompleteNode))
 			{

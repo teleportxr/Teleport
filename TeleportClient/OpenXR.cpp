@@ -414,13 +414,13 @@ void InteractionProfile::Add(XrInstance &xr_instance, std::initializer_list<Inte
 	size_t i = 0;
 	for (auto elem : bindings)
 	{
-		XrPath p;
+		XrPath p=0;
 		if (xr_instance)
 			p = MakeXrPath(xr_instance, elem.complete_path);
 		if (elem.action)
 		{
 			if (p)
-			xrActionSuggestedBindings.push_back({elem.action, p});
+				xrActionSuggestedBindings.push_back({elem.action, p});
 			bindingPaths.push_back(elem.complete_path);
 			i++;
 		}

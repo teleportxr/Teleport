@@ -36,7 +36,7 @@ namespace teleport
 			virtual ~ClientManager();
 
 			static ClientManager &instance();
-			bool initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_ns, std::string client_ip_match="", uint32_t maxClients = 100);
+			bool initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_us, std::string client_ip_match = "", uint32_t maxClients = 100);
 			bool shutdown();
 			void tick(float deltaTime);
 			bool startSession(avs::uid clientID, std::string clientIP);
@@ -82,7 +82,7 @@ namespace teleport
 			std::set<avs::uid> clientIDs;
 			std::atomic_bool mAsyncNetworkDataProcessingFailed = false;
 			bool mInitialized = false;
-			int64_t startTimestamp_utc_unix_ns = 0;
+			int64_t startTimestamp_utc_unix_us = 0;
 			std::atomic_bool mAsyncNetworkDataProcessingActive = false;
 		public:
 			std::map<avs::uid, std::shared_ptr<ClientData>> clients;

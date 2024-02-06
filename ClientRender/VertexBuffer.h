@@ -32,6 +32,10 @@ namespace teleport
 			{
 				return "VertexBuffer";
 			}
+			static const char *getTypeName()
+			{
+				return "VertexBuffer";
+			}
 
 		protected:
 			VertexBufferCreateInfo m_CI;

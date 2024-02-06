@@ -61,7 +61,7 @@ namespace teleport
 			virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void RenderVRView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			float framerate = 0.0f;
-			void Update(double timestamp_ms);
+			void Update(std::chrono::microseconds timestamp_us);
 
 			//! e.g. for debug shaders or shader recompilation.
 			void UpdateAllNodeRenders();
@@ -105,7 +105,7 @@ namespace teleport
 
 			RenderState renderState;
 			platform::crossplatform::Text3DRenderer text3DRenderer;
-			double previousTimestamp = 0.0;
+			std::chrono::microseconds previousTimestampUs;
 			int32_t minimumPriority = 0;
 			struct ControllerModel
 			{

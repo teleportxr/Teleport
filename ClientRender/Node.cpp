@@ -1,6 +1,5 @@
 // (C) Copyright 2018-2023 Simul Software Ltd
 #include "Node.h"
-#include "TeleportClient/ServerTimestamp.h"
 #include "TeleportClient/basic_linear_algebra.h"
 
 using namespace teleport;
@@ -109,7 +108,7 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
 		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, lastReceivedMovement.angularVelocityAxis);
-		newRotation *= deltaRotation;
+		newRotation = newRotation* deltaRotation;
 		smoothingEnabled = true;
 	}
 	if (!smoothingInitialized||!smoothingEnabled)
@@ -123,7 +122,7 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 		static float smoothing_rate = 1.0f;;
 		float interp= 1.0f - 1.0f/(1.0f+smoothing_rate* 0.01688f);
 		smoothedTransform.m_Translation = lerp(smoothedTransform.m_Translation, newTranslation, interp);
-		smoothedTransform.m_Rotation	= clientrender::quat::Slerp(smoothedTransform.m_Rotation, newRotation, interp);
+		smoothedTransform.m_Rotation	= platform::crossplatform::slerp(smoothedTransform.m_Rotation, newRotation, interp);
 	}
 	UpdateModelMatrix(smoothedTransform.m_Translation, newRotation, transform.m_Scale);
 }
@@ -133,22 +132,22 @@ void Node::UpdateExtrapolatedPositions(double serverTimeS)
 	TickExtrapolatedTransform(serverTimeS);
 }
 
-void Node::Update(float deltaTime_ms)
+void Node::Update( std::chrono::microseconds timestamp_us)
 {
-	visibility.update(deltaTime_ms);
+	visibility.update(timestamp_us.count());
 
-	//Attempt to animate, if we have a skeleton.
+	// Attempt to animate, if we have a skeleton.
 	if(skeletonInstance&&skeletonInstance->GetSkeleton())
 	{
 		auto animC=GetOrCreateComponent<AnimationComponent>();
-		animC->update(skeletonInstance->GetBones(), deltaTime_ms);
+		animC->update(skeletonInstance->GetSkeleton()->GetBones(), timestamp_us.count());
 	}
 
 	for(std::weak_ptr<Node> child : children)
 	{
 		std::shared_ptr n = child.lock();
 		if(n)
-			n->Update(deltaTime_ms);
+			n->Update(timestamp_us);
 	}
 }
 
@@ -245,6 +244,8 @@ void Node::SetLocalTransform(const Transform& transform)
 	}
 	localTransform = transform;
 	isTransformDirty = true;
+	// The node's children need to update their transforms, as their parent's transform has been updated.
+	RequestChildrenUpdateTransforms();
 }
 
 void Node::SetGlobalTransform(const Transform& transform)

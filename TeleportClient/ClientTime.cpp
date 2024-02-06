@@ -35,12 +35,12 @@ long long ClientTime::GetTimeNs() const
 	return nanoseconds_since_start;
 }
 
-double ClientTime::ClientToServerTimeS(long long server_start_unix_time_ns, double clientTimeS) const
+double ClientTime::ClientToServerTimeS(long long server_start_unix_time_us, double clientTimeS) const
 {
 	// What is the server time for this client time?
 	long long client_time_ns = static_cast<long long>(clientTimeS * 1000000000.0);
 	long long unix_time_ns= start_nanoseconds_since_epoch+ client_time_ns;
-	long long server_time_ns = unix_time_ns-server_start_unix_time_ns;
+	long long server_time_ns = unix_time_ns - (long long)(1000 * server_start_unix_time_us);
 	double server_time_s = double(server_time_ns) / 1000000000.0;
 	return server_time_s;
 }

@@ -64,7 +64,6 @@ namespace avs
 		 */
 		NetworkSourceCounters getCounterValues() const override;
 		void setDebugStream(uint32_t)override {}
-		void setDoChecksums(bool)override {}
 		void setDebugNetworkPackets(bool s)override {}
 		size_t getSystemBufferSize() const override {
 			return 0;

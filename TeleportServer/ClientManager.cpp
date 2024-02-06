@@ -35,19 +35,19 @@ ClientManager::~ClientManager()
 	
 }
 
-bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_ns, std::string client_ip_match, uint32_t maxClients)
+bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_us, std::string client_ip_match, uint32_t maxClients)
 {
 	if (mInitialized)
 	{
 		return false;
 	}
-	startTimestamp_utc_unix_ns = start_unix_time_ns;
+	startTimestamp_utc_unix_us = start_unix_time_us;
 	// session id should be a random large hash.
 	// generate a unique session id.
 	// 
 	static std::mt19937_64 m_mt;
 	std::uniform_int_distribution<uint64_t> distro;
-	m_mt.seed( std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
+	m_mt.seed( std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	sessionState.sessionId = distro.operator()(m_mt);
 	if(!signalingService.initialize(signalPorts, client_ip_match))
 	{
@@ -90,7 +90,8 @@ void ClientManager::startStreaming(avs::uid clientID)
 		return;
 	}
 
-	client->StartStreaming(serverSettings,  connectionTimeout, sessionState.sessionId, getUnixTimestampNs, startTimestamp_utc_unix_ns,httpService->isUsingSSL());
+	client->StartStreaming(serverSettings,  connectionTimeout, sessionState.sessionId
+		, getUnixTimestampNs, startTimestamp_utc_unix_us,httpService->isUsingSSL());
 }
 
 void ClientManager::tick(float deltaTime)

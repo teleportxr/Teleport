@@ -6,7 +6,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
 
-#include "AudioStreamTarget.h"
+#include "TeleportAudio/AudioStreamTarget.h"
 #include "libavstream/network/webrtc_networksource.h"
 
 using namespace teleport;

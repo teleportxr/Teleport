@@ -9,7 +9,7 @@
 #include "SourceNetworkPipeline.h"
 #include <libavstream/audiodecoder.h>
 #include <libavstream/audio/audiotarget.h>
-#include <CustomAudioStreamTarget.h>
+#include "TeleportAudio/CustomAudioStreamTarget.h"
 
 namespace teleport
 {

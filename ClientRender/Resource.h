@@ -111,7 +111,7 @@ namespace teleport
 
 			std::shared_ptr<clientrender::Skeleton> skeleton;
 
-			phmap::flat_hash_map<avs::uid, size_t> missingBones; //<ID of missing bone, index in vector>
+			std::set<avs::uid> missingBones; //<ID of missing bone, index in vector>
 		};
 		class Resource
 		{

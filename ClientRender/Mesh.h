@@ -35,6 +35,10 @@ namespace teleport
 			{
 				return m_CI.name;
 			}
+			static const char *getTypeName()
+			{
+				return "Mesh";
+			}
 			inline const MeshCreateInfo &GetMeshCreateInfo() const { return m_CI; }
 			const std::vector<std::shared_ptr<Material>> GetInternalMaterials() const
 			{

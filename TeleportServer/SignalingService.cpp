@@ -3,7 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/ServerSettings.h"    
-#include "TeleportUtility.h" 
+#include "TeleportCore/TeleportUtility.h" 
 #include "UnityPlugin/PluginMain.h"
 #include "UnityPlugin/PluginClient.h"
 #include <rtc/websocket.hpp>

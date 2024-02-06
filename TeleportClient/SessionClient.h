@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <chrono>
 
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
@@ -54,8 +55,7 @@ namespace teleport
 			virtual void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList) = 0;
 			virtual void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) = 0;
 			virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
-			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
-			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
+			virtual void UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate) = 0;
 			virtual void OnStreamingControlMessage(const std::string& str) = 0;
 		};
 		enum class ConnectionStatus : uint8_t
@@ -128,7 +128,6 @@ namespace teleport
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
-			long long GetServerStartTimeNs() const;
 			float GetLatencyMs() const;
 			ConnectionStatus GetConnectionStatus() const;
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
@@ -181,6 +180,11 @@ namespace teleport
 			}
 			// Debugging:
 			void KillStreaming();
+			void SetTimestamp(std::chrono::microseconds t);
+			std::chrono::microseconds GetTimestamp() const
+			{
+				return session_time_us;
+			}
 		private:
 			void ConfirmOrthogonalStateToClient(uint64_t confNumber);
 			void ReceiveCommand(const std::vector<uint8_t> &buffer);
@@ -225,7 +229,6 @@ namespace teleport
 			void ReceiveNodeHighlightUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveNodeAnimationControlUpdate(const std::vector<uint8_t> &packet);
-			void ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet);
 			void ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet);
 			void ReceiveUpdateNodeStructureCommand(const std::vector<uint8_t> &packet);
@@ -263,6 +266,7 @@ namespace teleport
 			double mTimeSinceLastServerComm = 0;
 
 			ConnectionStatus connectionStatus = ConnectionStatus::UNCONNECTED;
+			std::chrono::microseconds session_time_us = std::chrono::microseconds(0);
 		};
 	}
 }

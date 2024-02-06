@@ -95,7 +95,6 @@ namespace teleport
 			void reparentNode(const teleport::core::UpdateNodeStructureCommand& cmd);
 			void setNodePosePath(avs::uid nodeID, const std::string& regexPosePath);
 			void updateNodeAnimation(teleport::core::ApplyAnimation update);
-			//void updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update);
 			void updateNodeRenderState(avs::uid nodeID, avs::NodeRenderState update);
 			void setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed);
 

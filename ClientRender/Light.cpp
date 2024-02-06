@@ -90,8 +90,8 @@ void Light::UpdateLightSpaceTransform()
 		// We consider lights to shine in the Z direction.
 		//vec3 defaultDirection(0,0,1.0f);
 		light.position = m_CI.position;
-		light.direction = ((m_CI.orientation * m_CI.direction) * m_CI.orientation.Conjugate()).GetIJK(); //p = Im(q * p0 * q^-1)
+		light.direction = m_CI.orientation.RotateVector(m_CI.direction);
 		vec3 scale(m_CI.lightRadius,m_CI.lightRadius,m_CI.lightRadius);
-		light.lightSpaceTransform = mat4_deprecated::Translation(m_CI.position) * mat4_deprecated::Rotation(m_CI.orientation)*mat4_deprecated::Scale(scale);
+		light.lightSpaceTransform = mat4::translation(m_CI.position) * mat4::rotation(*((vec4*)&m_CI.orientation)) * mat4::scale(scale);
 	}
 }

@@ -28,7 +28,7 @@
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Font.h"
 #include "UnityPlugin/InteropStructures.h"
-#include "StringFunctions.h"
+#include "TeleportCore/StringFunctions.h"
 using namespace std::string_literals;
 using namespace teleport;
 using namespace server;
@@ -144,11 +144,9 @@ const char* stringOf(avs::NodeDataType type)
 	case avs::NodeDataType::None:		return "None";
 	case avs::NodeDataType::Mesh:		return "Mesh";
 	case avs::NodeDataType::Light:		return "Light";
-	case avs::NodeDataType::Bone:		return "Bone";
 	default:							return "Unimplemented";
 	};
 }
-
 
 GeometryStore::GeometryStore()
 {
@@ -1438,7 +1436,7 @@ void GeometryStore::compressNextTexture()
 	}
 	if (compressionData->textureCompression == avs::TextureCompression::UNCOMPRESSED && avsTexture.data.size() > 1048576)
 	{
-		TELEPORT_WARN << "Texture \"" << avsTexture.name << "\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: " << avsTexture.data.size() << "B(" << avsTexture.data.size() / 1048576.0f << "MB).\n";
+		TELEPORT_WARN("Texture \"{0}\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: {1}B ({2}MB).\n",avsTexture.name, avsTexture.data.size(),avsTexture.data.size() / 1048576.0f);
 	}
 	saveResourceBinary(file_name, extractedTexture);
 	

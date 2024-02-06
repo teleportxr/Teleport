@@ -1371,13 +1371,14 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 		geometryDecodeData.data.erase(geometryDecodeData.data.begin(), geometryDecodeData.data.begin() + skip);
 	}
 	teleport::core::Animation animation;
-	avs::uid animationID = geometryDecodeData.uid;
-	size_t nameLength = NextUint64;
+	avs::uid animationID	= geometryDecodeData.uid;
+	size_t nameLength		= NextUint64;
 	animation.name.resize(nameLength);
 	copy<char>(animation.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("animations/"+animation.name+".anim"));
 
+	animation.duration=NextFloat;
 	animation.boneKeyframes.resize(NextUint64);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{

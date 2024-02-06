@@ -168,7 +168,7 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\
 
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
   WriteRegStr HKCR 'Teleport' '' 'URL:Teleport Protocol'
-  WriteRegStr HKCR 'Teleport' 'URL Protocol' 'teleport'
+  WriteRegStr HKCR 'Teleport' 'URL Protocol' ''
   WriteRegStr HKCR 'Teleport\\\\DefaultIcon' '' '${TELEPORT_INSTALLED_CLIENT_EXE}'
   WriteRegStr HKCR 'Teleport\\\\shell\\\\open\\\\command' '' '\\\"${TELEPORT_INSTALLED_CLIENT_EXE}\\\" \\\"%1\\\" \\\"%2\\\" \\\"%3\\\"'")
 SET(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "

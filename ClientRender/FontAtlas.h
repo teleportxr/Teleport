@@ -27,6 +27,10 @@ namespace teleport
 			{
 				return "FontAtlas";
 			}
+			static const char *getTypeName()
+			{
+				return "FontAtlas";
+			}
 		};
 	}
 }

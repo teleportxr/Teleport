@@ -34,8 +34,6 @@ set(src_files
 	OpenXR.h
 	OpenXRRenderModel.cpp
 	OpenXRRenderModel.h
-	ServerTimestamp.cpp
-	ServerTimestamp.h
 	SessionClient.cpp
 	SessionClient.h
 	SignalingServer.cpp

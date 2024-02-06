@@ -27,6 +27,7 @@
 #include "TeleportAudio/AndroidAudioPlayer.h"
 #endif
 #include "TeleportAudio/NetworkPipeline.h"
+#include <chrono>
 
 namespace teleport
 {
@@ -152,6 +153,15 @@ namespace teleport
 			{
 				return instanceRenderState;
 			}
+			struct SkeletonRender
+			{
+				platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
+				~SkeletonRender()
+				{
+					boneMatrices.InvalidateDeviceObjects();
+				}
+			};
+			phmap::flat_hash_map<avs::uid, std::shared_ptr<SkeletonRender>> skeletonRenders;
 			struct NodeRender
 			{
 				mat4 model;
@@ -210,7 +220,6 @@ namespace teleport
 			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &l);
 			void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
 			void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<TextCanvas> textCanvas);
-			void RenderBone(platform::crossplatform::GraphicsDeviceContext &deviceContext, const mat4 &model_matrix, const std::shared_ptr<clientrender::Bone> bone);
 			void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &g, const std::shared_ptr<clientrender::Node> node, bool include_children);
 
 			std::shared_ptr<clientrender::GeometryCache> geometryCache;
@@ -233,9 +242,7 @@ namespace teleport
 			void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate> &updateList) override;
 			void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState> &updateList) override;
 			void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
-			void UpdateNodeAnimation(const teleport::core::ApplyAnimation &animationUpdate) override;
-			//	void UpdateNodeAnimationControl(const teleport::core::NodeUpdateAnimationControl& animationControlUpdate) override;
-			void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) override;
+			void UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate) override;
 			bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand, teleport::core::Handshake &handshake) override;
 			void OnVideoStreamClosed() override;
 			void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand) override;

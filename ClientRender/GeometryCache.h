@@ -5,6 +5,7 @@
 #include <mutex>
 #include <set>
 #include <thread>
+#include <chrono>
 
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/mesh.hpp>
@@ -21,10 +22,8 @@ namespace teleport
 		class Animation;
 		class Material;
 		class Light;
-	}
-
-	namespace clientrender
-	{
+		class TextCanvas;
+		class FontAtlas;
 		enum class ShaderMode
 		{
 			DEFAULT,
@@ -73,6 +72,10 @@ namespace teleport
 			avs::uid uid;
 			//! The uid of the subscene's local cache in the cache/server list.
 			avs::uid subscene_uid;
+			static const char *getTypeName()
+			{
+				return "SubScene";
+			}
 		};
 		//! A container for geometry sent from servers and cached locally.
 		//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
@@ -129,12 +132,17 @@ namespace teleport
 			{
 				return uid_mapping[from];
 			}
+			std::chrono::microseconds GetSessionTimeUs() const
+			{
+				return last_session_time_us;
+			}
 			// Clear any resources that have not been used longer than their expiry time.
 			//	timeElapsed_s : Delta time in seconds.
-			void Update(float timeElapsed_s)
+			void Update(std::chrono::microseconds timestamp_us,float timeElapsed_s)
 			{
+				last_session_time_us = timestamp_us;
 				if (lifetimeFactor > 0)
-					mNodeManager.Update(timeElapsed_s);
+					mNodeManager.Update(timestamp_us);
 				mIndexBufferManager.Update(timeElapsed_s, lifetimeFactor);
 				mMaterialManager.Update(timeElapsed_s, lifetimeFactor);
 				mTextureManager.Update(timeElapsed_s, lifetimeFactor);
@@ -142,7 +150,6 @@ namespace teleport
 				mMeshManager.Update(timeElapsed_s, lifetimeFactor);
 				mSkeletonManager.Update(timeElapsed_s, lifetimeFactor);
 				// mLightManager.Update(timeElapsed_s,lifetimeFactor);
-				mBoneManager.Update(timeElapsed_s, lifetimeFactor);
 				mAnimationManager.Update(timeElapsed_s, lifetimeFactor);
 				mTextCanvasManager.Update(timeElapsed_s, lifetimeFactor);
 				mFontAtlasManager.Update(timeElapsed_s, lifetimeFactor);
@@ -164,8 +171,7 @@ namespace teleport
 				resourceIDs.insert(resourceIDs.end(), s.begin(), s.end());
 				const auto &l = mLightManager.GetAllIDs();
 				resourceIDs.insert(resourceIDs.end(), l.begin(), l.end());
-				const auto &b = mBoneManager.GetAllIDs();
-				resourceIDs.insert(resourceIDs.end(), b.begin(), b.end());
+				
 				const auto &a = mAnimationManager.GetAllIDs();
 				resourceIDs.insert(resourceIDs.end(), a.begin(), a.end());
 
@@ -198,7 +204,6 @@ namespace teleport
 				mMeshManager.Clear();
 				mSkeletonManager.Clear();
 				mLightManager.Clear();
-				mBoneManager.Clear();
 				mAnimationManager.Clear();
 				mTextCanvasManager.Clear();
 				mFontAtlasManager.Clear();
@@ -230,7 +235,6 @@ namespace teleport
 			ResourceManager<avs::uid, clientrender::Mesh> mMeshManager;
 			ResourceManager<avs::uid, clientrender::Skeleton> mSkeletonManager;
 			ResourceManager<avs::uid, clientrender::Light> mLightManager;
-			ResourceManager<uint64_t, clientrender::Bone> mBoneManager;
 			ResourceManager<avs::uid, clientrender::Animation> mAnimationManager;
 
 			ResourceManager<avs::uid, clientrender::TextCanvas> mTextCanvasManager;
@@ -252,7 +256,6 @@ namespace teleport
 			void CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton);
 			void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo &textureInfo);
 			void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
-			void CompleteBone(avs::uid id, std::shared_ptr<clientrender::Bone> bone);
 			void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 			void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo &materialInfo);
 
@@ -271,6 +274,7 @@ namespace teleport
 			}
 
 		protected:
+			std::chrono::microseconds last_session_time_us = std::chrono::microseconds(0);
 			float lifetimeFactor = 1.0; // The factor lifetimes are adjusted to determine if a resource should be freed. 0.5 = Halve lifetime.
 			mutable std::mutex receivedResourcesMutex;
 			mutable std::mutex resourceRequestsMutex;

@@ -9,45 +9,47 @@ namespace teleport
 	namespace clientrender
 	{
 		class Animation;
-		enum class AnimationTimeMode
+		//! Snapshot state of an animation at a particular timestamp.
+		//! When we want to apply the animations of a given layer at a specific time,
+		//! we find the two AnimationStates that that time is between.
+		//! Then, we calculate an interpolation *interp* based on the two AnimationState timestamps and
+		//!   the current timestamp.
+		//! We apply the earlier state with a weight of *(1.0-interp)* and the later state with a weight of
+		//!  *interp*
+		struct AnimationState
 		{
-			INVALID = 0,
-			TIMESTAMP, // Animation automatically based on timestamp and speed.
-			SCRUBBING  // Animate based on explicit setting of time value.
+			avs::uid animationId = 0;
+			int64_t timestampUs = 0;
+			float animationTimeS = 0.0f;
+			float speedUnitsPerS = 1.0f;
+			bool loop=false;
 		};
-		//! Manages the state of a specific animation applied to a specific skeleton/skeleton.
-		class AnimationState
+		struct InstantaneousAnimationState
+		{
+			AnimationState previousAnimationState;
+			AnimationState animationState;
+			float interpolation = 0.0f;
+		};
+		//! Manages the state of a specific animation layer applied to a specific skeleton.
+		//! AnimationLayerStateSequence contains zero or more AnimationStates.
+		//! An AnimationState specifies the state at a given timestamp.
+		class AnimationLayerStateSequence
 		{
 		public:
-			float speed = 1.0f; // Speed the animation plays at.
-			float currentAnimationTimeS = 0.0f;
+			AnimationLayerStateSequence();
 
-			AnimationState();
-			AnimationState(const std::shared_ptr<Animation> &animation);
+			//! Add a state to the sequence.
+			void AddState(std::chrono::microseconds timestampUs, const AnimationState &st);
+			InstantaneousAnimationState getState(int64_t timestampUs) const;
+			InstantaneousAnimationState getState() const;
 
-			// Set animation this state is wrapping.
-			void setAnimation(const std::shared_ptr<Animation> &reference);
-			// Returns state's animation.
-			std::shared_ptr<Animation> getAnimation() const;
-
-			AnimationTimeMode GetAnimationTimeMode() const;
-			void setAnimationTimeMode(AnimationTimeMode m);
-			void setTimeOverride(float override, float maximum);
-
-			// Returns the time override normalised between zero and one; returns zero when there is no time override.
-			float getNormalisedTimeOverride() const;
-
-			operator const std::shared_ptr<Animation> &()
-			{
-				return animation;
-			}
-
+			uint32_t sequenceNumber=0;
+			mutable int interpState = 0;
 		private:
-			std::shared_ptr<Animation> animation;
-
-			float timeOverride = 0.0f;
-			float timeOverrideMaximum = 0.0f;
-			AnimationTimeMode animationTimeMode = AnimationTimeMode::TIMESTAMP;
+			int64_t lastUpdateTimestamp = 0;
+			mutable std::map<int64_t, AnimationState> animationStates;
+			// Interpolated data:
+			mutable InstantaneousAnimationState instantaneousAnimationState;
 		};
 	}
 }

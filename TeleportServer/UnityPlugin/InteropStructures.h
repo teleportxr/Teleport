@@ -294,22 +294,30 @@ struct InteropTransformKeyframe
 	}
 };
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 struct InteropTransformAnimation
 {
-	const char *name;
-	const char * path;
-	int64_t boneCount;
-	InteropTransformKeyframe* boneKeyframes=nullptr;
+	const char *name;	// 8
+	const char *path;	// 8
+	int64_t boneCount;	// 8
+	InteropTransformKeyframe *boneKeyframes = nullptr; // 8
+	float duration;									   // 4
 
 	operator teleport::core::Animation() const
 	{
 		return
 		{
 			name,
+			duration,
 			{boneKeyframes, boneKeyframes + boneCount}
 		};
 	}
 };
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 struct InteropTextCanvas
 {

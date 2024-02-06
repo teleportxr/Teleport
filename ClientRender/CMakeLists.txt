@@ -24,8 +24,6 @@ set( src_root
 	Animation.h
 	API.cpp
 	API.h
-	Bone.cpp
-	Bone.h
 	Camera.cpp
 	Camera.h
 	FontAtlas.cpp

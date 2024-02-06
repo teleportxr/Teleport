@@ -6,6 +6,7 @@
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/Profiling.h"
 #pragma optimize("", off)
 
 using namespace teleport;
@@ -49,6 +50,7 @@ void GeometryStreamingService::requestResource(avs::uid resource_uid)
 
 void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if(unconfirmedResourceTimes.find(resource_uid)==unconfirmedResourceTimes.end())
 		return;
 	unconfirmedResourceTimes.erase(resource_uid);
@@ -89,6 +91,7 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 		,std::vector<avs::uid> &fontAtlases
 		,int32_t minimumPriority) const
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	for(const auto &r:streamedGenericTextureUids)
 	{
 		genericTextureUids.insert(r);
@@ -269,11 +272,13 @@ void GeometryStreamingService::setNodeVisible(avs::uid clientID, avs::uid nodeID
 
 bool GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return clientRenderingNodes.find(nodeID) != clientRenderingNodes.end();
 }
 
 void GeometryStreamingService::tick(float deltaTime)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	// Might not be initialized... YET
 	if (!avsPipeline || !settings->enableGeometryStreaming)
 		return;
@@ -379,6 +384,7 @@ void GeometryStreamingService::addGenericTexture(avs::uid id)
 
 void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources,int32_t minimumPriority) const
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (node.data_type != avs::NodeDataType::Mesh)
 	{
 		return;
@@ -435,6 +441,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 
 void GeometryStreamingService::GetSkeletonNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources> &outMeshNodeResources) const
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (node.data_type != avs::NodeDataType::Skeleton)
 	{
 		return;

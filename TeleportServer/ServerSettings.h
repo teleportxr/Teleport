@@ -61,7 +61,6 @@ namespace teleport
 			int32_t debugStream = 0;
 			bool enableDebugNetworkPackets = false;
 			bool enableDebugControlPackets = false;
-			bool enableChecksums = false;
 			bool willCacheReset = false;
 			bool pipeDllOutputToUnity = false;
 			uint8_t estimatedDecodingFrequency = 0; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
@@ -80,8 +79,6 @@ namespace teleport
 			int32_t defaultDiffuseCubemapSize = 0;
 			int32_t defaultLightCubemapSize = 0;
 			int32_t defaultShadowmapSize = 0;
-
-			teleport::core::ControlModel controlModel = teleport::core::ControlModel::SERVER_ORIGIN_CLIENT_LOCAL;
 		} AVS_PACKED;
 		struct ClientSettings
 		{

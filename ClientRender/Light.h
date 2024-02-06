@@ -68,6 +68,11 @@ namespace teleport
 			Light(LightCreateInfo *pLightCreateInfo);
 			~Light() = default;
 
+			static const char *getTypeName()
+			{
+				return "Light";
+			}
+
 			void UpdatePosition(const vec3 &position);
 			void UpdateOrientation(const quat &orientation);
 

@@ -7,6 +7,8 @@
 
 #include "libavstream/common.hpp"
 
+#include "TeleportCore/Profiling.h"
+
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
 #include "TeleportServer/ClientData.h"
@@ -21,7 +23,7 @@
 #include "InteropStructures.h"
 #include "PluginGraphics.h"
 #include "TeleportCore/ErrorHandling.h"
-#include "CustomAudioStreamTarget.h"
+#include "TeleportAudio/CustomAudioStreamTarget.h"
 #include "PluginClient.h"
 #include "PluginMain.h"
 
@@ -109,7 +111,7 @@ struct InitialiseState
 	ReportHandshakeFn reportHandshake;
 	ProcessAudioInputFn processAudioInput;
 	GetUnixTimestampFn getUnixTimestampNs;
-	int64_t start_unix_time_ns = 0;
+	int64_t start_unix_time_us;
 };
 
 
@@ -173,18 +175,21 @@ TELEPORT_EXPORT void SetGetUnixTimestampDelegate(GetUnixTimestampFn function)
 
 static void passOnOutput(const char *msg)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if(msg)
 		avsContext.log(avs::LogSeverity::Info,msg);
 }
 
 static void passOnError(const char *msg)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if(msg)
 		avsContext.log(avs::LogSeverity::Error,msg);
 }
 
 void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, void* userData)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::lock_guard<std::mutex> lock(messagesMutex);
 	if(severity==avs::LogSeverity::Error|| severity==avs::LogSeverity::Critical)
 	{
@@ -207,6 +212,7 @@ void AccumulateMessagesFromThreads(avs::LogSeverity severity, const char* msg, v
 
 void PipeOutMessages()
 {
+	TELEPORT_PROFILE_ZONE(PipeOut);
 	std::lock_guard<std::mutex> lock(messagesMutex);
 	if(messageHandler)
 	{
@@ -220,6 +226,7 @@ void PipeOutMessages()
 
 TELEPORT_EXPORT void SetMessageHandlerDelegate(avs::MessageHandlerFunc msgh)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::lock_guard<std::mutex> lock(messagesMutex);
 	if(msgh)
 	{
@@ -283,7 +290,7 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 		TELEPORT_CERR << "Failed to identify ports from string " << initialiseState->signalingPorts  << "!\n";
 		return false;
 	}
-	bool result = ClientManager::instance().initialize(ports, initialiseState->start_unix_time_ns,std::string(initialiseState->clientIP));
+	bool result = ClientManager::instance().initialize(ports, initialiseState->start_unix_time_us,std::string(initialiseState->clientIP));
 
 	if (!result)
 	{
@@ -348,6 +355,7 @@ TELEPORT_EXPORT void Teleport_Shutdown()
 
 TELEPORT_EXPORT void Tick(float deltaTime)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	//Delete client data for clients who have been lost.
 	for(avs::uid clientID : lostClients)
 	{
@@ -358,16 +366,20 @@ TELEPORT_EXPORT void Tick(float deltaTime)
 	ClientManager::instance().tick(deltaTime);
 
 	PipeOutMessages();
+
+	TELEPORT_FRAME_END;
 }
 
 TELEPORT_EXPORT void EditorTick()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().compressNextTexture();
 	PipeOutMessages();
 }
 
 TELEPORT_EXPORT avs::uid GetUnlinkedClientID()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if(unlinkedClientIDs.size() != 0)
 	{
 		avs::uid clientID = *unlinkedClientIDs.begin();
@@ -383,6 +395,7 @@ TELEPORT_EXPORT avs::uid GetUnlinkedClientID()
 
 TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	unlinkedClientIDs.insert(clientID);
 }
 ///PLUGIN-SPECIFC END
@@ -390,12 +403,14 @@ TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID)
 ///libavstream START
 TELEPORT_EXPORT avs::uid GenerateUid()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return avs::GenerateUid();
 }
 ///libavstream END
 
 TELEPORT_EXPORT avs::uid GetOrGenerateUid(const char *path)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if(!path)
 		return 0;
 	std::string str=(path);
@@ -404,6 +419,7 @@ TELEPORT_EXPORT avs::uid GetOrGenerateUid(const char *path)
 
 TELEPORT_EXPORT avs::uid PathToUid(const char* path)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (!path)
 		return 0;
 	std::string str = (path);
@@ -412,6 +428,7 @@ TELEPORT_EXPORT avs::uid PathToUid(const char* path)
 
 TELEPORT_EXPORT size_t UidToPath(avs::uid u, char* const path, size_t len)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::string str = GeometryStore::GetInstance().UidToPath(u);
 	if (str.length() < len)
 	{
@@ -427,6 +444,7 @@ TELEPORT_EXPORT size_t UidToPath(avs::uid u, char* const path, size_t len)
 ///VideoEncodePipeline START
 TELEPORT_EXPORT bool GetVideoEncodeCapabilities(avs::EncodeCapabilities& capabilities)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	VideoEncodeParams params;
 	params.deviceHandle = GraphicsManager::mGraphicsDevice;
 
@@ -461,6 +479,7 @@ TELEPORT_EXPORT bool GetVideoEncodeCapabilities(avs::EncodeCapabilities& capabil
 
 TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams& videoEncodeParams)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::lock_guard<std::mutex> lock(videoMutex);
 
 	auto client = ClientManager::instance().GetClient(clientID);
@@ -484,6 +503,7 @@ TELEPORT_EXPORT void InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams
 
 TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParams& videoEncodeParams)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::lock_guard<std::mutex> lock(videoMutex);
 
 	auto client = ClientManager::instance().GetClient(clientID);
@@ -538,6 +558,7 @@ TELEPORT_EXPORT void ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParam
 
 TELEPORT_EXPORT void EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData, size_t tagDataSize)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::lock_guard<std::mutex> lock(videoMutex);
 
 	auto client = ClientManager::instance().GetClient(clientID);
@@ -580,6 +601,7 @@ struct EncodeVideoParamsWrapper
 
 static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (eventID == 0)
 	{
 		auto wrapper = (EncodeVideoParamsWrapper*)data;
@@ -612,6 +634,7 @@ static void UNITY_INTERFACE_API OnRenderEventWithData(int eventID, void* data)
 
 TELEPORT_EXPORT UnityRenderingEventAndData GetRenderEventWithDataCallback()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return OnRenderEventWithData;
 }
 ///VideoEncodePipeline END
@@ -624,6 +647,7 @@ TELEPORT_EXPORT void SetAudioSettings(const AudioSettings& newAudioSettings)
 
 TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	// Only continue processing if the main thread hasn't hung.
 	double elapsedTime = avs::Platform::getTimeElapsedInSeconds(ClientManager::instance().getLastTickTimestamp(), avs::Platform::getTimestamp());
 	if (elapsedTime > 0.15f)
@@ -665,43 +689,51 @@ TELEPORT_EXPORT void SendAudio(const uint8_t* data, size_t dataSize)
 ///GeometryStore START
 TELEPORT_EXPORT void SaveGeometryStore()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().saveToDisk();
 	GeometryStore::GetInstance().verify();
 }
 
 TELEPORT_EXPORT bool CheckGeometryStoreForErrors()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return GeometryStore::GetInstance().CheckForErrors();
 }
 
 TELEPORT_EXPORT void LoadGeometryStore(size_t* meshAmount, LoadedResource** meshes, size_t* textureAmount, LoadedResource** textures, size_t* materialAmount, LoadedResource** materials)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().loadFromDisk(*meshAmount, *meshes, *textureAmount, *textures, *materialAmount, *materials);
 }
 
 TELEPORT_EXPORT void ClearGeometryStore()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().clear(true);
 }
 
 TELEPORT_EXPORT void SetDelayTextureCompression(bool willDelay)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().willDelayTextureCompression = willDelay;
 }
 
 TELEPORT_EXPORT void SetCompressionLevels(uint8_t compressionStrength, uint8_t compressionQuality)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().setCompressionLevels(compressionStrength, compressionQuality);
 }
 
 TELEPORT_EXPORT void StoreNode(avs::uid id, InteropNode node)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::Node avsNode(node);
 	GeometryStore::GetInstance().storeNode(id, avsNode);
 }
 
 TELEPORT_EXPORT bool GetNode(avs::uid id, InteropNode *node)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	auto *avsNode=GeometryStore::GetInstance().getNode(id);
 	if(avsNode)
 	{
@@ -715,41 +747,48 @@ TELEPORT_EXPORT bool GetNode(avs::uid id, InteropNode *node)
 
 TELEPORT_EXPORT void StoreSkeleton(avs::uid id, InteropSkeleton skeleton)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::Skeleton avsSkeleton(skeleton);
 	GeometryStore::GetInstance().storeSkeleton(id, avsSkeleton, avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreTransformAnimation(avs::uid animationID, InteropTransformAnimation* animation)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	teleport::core::Animation a(*animation);
 	GeometryStore::GetInstance().storeAnimation(animationID, a, avs::AxesStandard::UnityStyle);
 }
 
 TELEPORT_EXPORT void StoreMesh(avs::uid id, const char *  guid, const char *  path, std::time_t lastModified, const InteropMesh* mesh, avs::AxesStandard extractToStandard, bool compress,bool verify)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::Mesh avsMesh(*mesh);
 	GeometryStore::GetInstance().storeMesh(id, (guid), (path), lastModified, avsMesh, extractToStandard,compress,verify);
 }
 
 TELEPORT_EXPORT void StoreMaterial(avs::uid id, const char *  guid, const char *  path, std::time_t lastModified, InteropMaterial material)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::Material avsMaterial(material);
 	GeometryStore::GetInstance().storeMaterial(id, (guid), (path), lastModified, avsMaterial);
 }
 
 TELEPORT_EXPORT void StoreTexture(avs::uid id, const char * guid, const char *relative_asset_path, std::time_t lastModified, InteropTexture texture,   bool genMips, bool highQualityUASTC, bool forceOverwrite)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::Texture avsTexture(texture);
 	GeometryStore::GetInstance().storeTexture(id, (guid), (relative_asset_path), lastModified, avsTexture, genMips,  highQualityUASTC, forceOverwrite);
 }
 
 TELEPORT_EXPORT avs::uid StoreFont( const char *  ttf_path,const char *  relative_asset_path,std::time_t lastModified, int size)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return GeometryStore::GetInstance().storeFont((ttf_path), (relative_asset_path),lastModified,size);
 }
 
 TELEPORT_EXPORT avs::uid StoreTextCanvas( const char *  relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::uid u=GeometryStore::GetInstance().storeTextCanvas((relative_asset_path),interopTextCanvas);
 	if(u)
 	{
@@ -768,6 +807,7 @@ TELEPORT_EXPORT avs::uid StoreTextCanvas( const char *  relative_asset_path, con
 // TODO: This is a really basic resend/update function. Must make better.
 TELEPORT_EXPORT void ResendNode(avs::uid u)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	for (avs::uid u : ClientManager::instance().GetClientUids())
 	{
 		auto client = ClientManager::instance().GetClient(u);
@@ -780,23 +820,27 @@ TELEPORT_EXPORT void ResendNode(avs::uid u)
 
 TELEPORT_EXPORT bool GetFontAtlas( const char *  ttf_path,  InteropFontAtlas *interopFontAtlas)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return teleport::server::Font::GetInstance().GetInteropFontAtlas((ttf_path),interopFontAtlas);
 }
 
 TELEPORT_EXPORT void StoreShadowMap(avs::uid id, const char *  guid, const char *  path, std::time_t lastModified, InteropTexture shadowMap)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::Texture avsTexture(shadowMap);
 	GeometryStore::GetInstance().storeShadowMap(id, guid, path, lastModified, avsTexture);
 }
 
 TELEPORT_EXPORT bool IsNodeStored(avs::uid id)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	const avs::Node* node = GeometryStore::GetInstance().getNode(id);
 	return node != nullptr;
 }
 
 TELEPORT_EXPORT bool IsSkeletonStored(avs::uid id)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	//NOTE: Assumes we always are storing animations in the engineering axes standard.
 	const avs::Skeleton* skeleton = GeometryStore::GetInstance().getSkeleton(id, avs::AxesStandard::EngineeringStyle);
 	return skeleton != nullptr;
@@ -804,6 +848,7 @@ TELEPORT_EXPORT bool IsSkeletonStored(avs::uid id)
 
 TELEPORT_EXPORT bool IsMeshStored(avs::uid id)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	//NOTE: Assumes we always are storing meshes in the engineering axes standard.
 	const avs::Mesh* mesh = GeometryStore::GetInstance().getMesh(id, avs::AxesStandard::EngineeringStyle);
 	return mesh != nullptr;
@@ -811,34 +856,40 @@ TELEPORT_EXPORT bool IsMeshStored(avs::uid id)
 
 TELEPORT_EXPORT bool IsMaterialStored(avs::uid id)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	const avs::Material* material = GeometryStore::GetInstance().getMaterial(id);
 	return material != nullptr;
 }
 
 TELEPORT_EXPORT bool IsTextureStored(avs::uid id)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	const avs::Texture* texture = GeometryStore::GetInstance().getTexture(id);
 	return texture != nullptr;
 }
 
 TELEPORT_EXPORT void RemoveNode(avs::uid nodeID)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().removeNode(nodeID);
 }
 
 TELEPORT_EXPORT avs::Node* getNode(avs::uid nodeID)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return GeometryStore::GetInstance().getNode(nodeID);
 }
 
 TELEPORT_EXPORT uint64_t GetNumberOfTexturesWaitingForCompression()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return static_cast<int64_t>(GeometryStore::GetInstance().getNumberOfTexturesWaitingForCompression());
 }
 
 ///TODO: Free memory of allocated string, or use passed in string to return message.
 TELEPORT_EXPORT bool GetMessageForNextCompressedTexture(char *str,size_t len)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	const avs::Texture* texture = GeometryStore::GetInstance().getNextTextureToCompress();
 	if(!texture)
 	{
@@ -854,6 +905,7 @@ TELEPORT_EXPORT bool GetMessageForNextCompressedTexture(char *str,size_t len)
 
 TELEPORT_EXPORT void CompressNextTexture()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	GeometryStore::GetInstance().compressNextTexture();
 }
 
@@ -861,6 +913,7 @@ TELEPORT_EXPORT void CompressNextTexture()
 
 TELEPORT_EXPORT size_t SizeOf(const char* str)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::string n=str;
 	if(n=="ServerSettings")
 	{

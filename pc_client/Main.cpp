@@ -278,6 +278,8 @@ int TeleportClientReportHook(int reportType, char *message, int *returnValue)
 	TELEPORT_CERR<<message<<"\n";
 	if(reportType==_CRT_ASSERT)
 		SIMUL_BREAK("Assertion Failed!");
+	if (reportType == _CRT_ERROR)
+		SIMUL_BREAK("Error!");
 	return 0;
 }
 
@@ -287,6 +289,8 @@ int TeleportClientReportHookW(int reportType, wchar_t *message, int *returnValue
 	TELEPORT_CERR << message << "\n";
 	if (reportType == _CRT_ASSERT)
 		SIMUL_BREAK("Assertion Failed!");
+	if (reportType == _CRT_ERROR)
+		SIMUL_BREAK("Error!");
 	return 0;
 }
 
@@ -593,8 +597,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-				clientRenderer->Update(timestamp_ms);
+				auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
+			
+				clientRenderer->Update(microsecondsUTC);
 				useOpenXR.Tick();
 #ifndef FIX_BROKEN
 				static double fTime=0.0;

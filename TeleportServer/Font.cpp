@@ -1,3 +1,4 @@
+
 #include "Font.h"
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb_rect_pack.h> // optional, used for better bitmap packing
@@ -6,7 +7,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
-#include <ErrorHandling.h>
+#include <TeleportCore/ErrorHandling.h>
 #include <fstream>
 #include "libavstream/geometry/mesh_interface.hpp"
 #include <GeometryStore.h>

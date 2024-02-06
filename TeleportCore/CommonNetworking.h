@@ -243,29 +243,24 @@ namespace teleport
 			bool enabled = false;	//< Whether the node is enabled, and thus should be rendered.
 		} AVS_PACKED;
 
+		//! Animation is applied to skeletons (hierarchies of nodes).
+		//! Each skeleton can have one or more animation layers, and each layer is applied in turn.
+		//! Each layer has either zero, one, or two animations active.
+		//! This is because it can be in three states: not playing an animation, playing one animation,
+		//!  or transitioning from the previous animation to the next.
+		//! In ApplyAnimation, we specify a time at which the named animation is fully applied.
+		//! If the client is playing a different animation on this skeleton node and layer, and the timestamp
+		//! has not yet been reached, it will interpolate to the new state.
 		struct ApplyAnimation
 		{
-			int64_t timestamp = 0;		//< When the animation change was detected.
-			avs::uid nodeID = 0;		//< ID of the node the animation is playing on.
-			avs::uid animationID = 0;	//< ID of the animation that is now playing.
+			int32_t animLayer=0;			
+			int64_t timestampUs = 0;					//< When the animation state should apply, in server-session time, microseconds.
+			avs::uid nodeID = 0;						//< ID of the node the animation is playing on.
+			avs::uid animationID = 0;					//< ID of the animation that is now playing.
+			float animTimeAtTimestamp=0.0f;				//< At the given timestamp, where in the animation should we be?
+			float speedUnitsPerSecond=1.0f;				//< At the timestamp, how fast is the animation playing? For extrapolation.
+			bool loop=false;
 		} AVS_PACKED;
-
-		// TODO: These enumerations are placeholder; in the future we want a more flexible system.
-		//! Controls what is used as the current time of the animation.
-		/*enum class AnimationTimeControl:uint32_t
-		{
-			ANIMATION_TIME=0,				//< Default; animation is controlled by time since animation started.
-			CONTROLLER_0_TRIGGER,
-			CONTROLLER_1_TRIGGER
-		} AVS_PACKED;
-
-		struct NodeUpdateAnimationControl
-		{
-			avs::uid nodeID = 0;					//< ID of the node the animation is playing on.
-			avs::uid animationID = 0;				//< ID of the animation that we are updating.
-
-			AnimationTimeControl timeControl;		//< What controls the animation's time value.
-		} AVS_PACKED;*/
 
 		//! A message from a server to a client.
 		//! The commandPayloadType specifies the size and interpretation of the packet.
@@ -316,18 +311,16 @@ namespace teleport
 				return sizeof(SetupCommand);
 			}
 			uint32_t			debug_stream = 0;									//!< 13
-			uint32_t			do_checksums = 0;									//!< 17
 			uint32_t			debug_network_packets = 0;							//!< 21
 			int32_t				requiredLatencyMs = 0;								//!< 25
 			uint32_t			idle_connection_timeout = 5000;						//!< 29
 			uint64_t			session_id = 0;										//!< The server's session id changes when the server session changes.	37 bytes
-			ControlModel		control_model = ControlModel::NONE;					//!< Not in use 41b to here
 			avs::VideoConfig	video_config;										//!< Video setup structure. 41+89=130 bytes
 			float				draw_distance = 0.0f;								//!< Maximum distance in metres to render locally. 134
 			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's. 147
 			uint8_t				audio_input_enabled = 0;							//!< 148 Server accepts audio stream from client.
 			bool				using_ssl = true;									//!< 147 Not in use, for later.
-			int64_t				startTimestamp_utc_unix_ns = 0;						//!< 157 UTC Unix Timestamp in milliseconds of when the server started streaming to the client.
+			int64_t				startTimestamp_utc_unix_us = 0;						//!< 157 UTC Unix Timestamp in microseconds when the server session began.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode		backgroundMode;										//!< 158 Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;									//!< 174 If the background is of the COLOUR type, which colour to use.
@@ -540,7 +533,7 @@ namespace teleport
 		{
 			ApplyAnimation animationUpdate;
 
-			ApplyAnimationCommand()
+			ApplyAnimationCommand() 
 				:ApplyAnimationCommand(ApplyAnimation{})
 			{}
 
@@ -553,24 +546,6 @@ namespace teleport
 				return sizeof(ApplyAnimationCommand);
 			}
 		} AVS_PACKED;
-		/*
-		struct SetAnimationControlCommand : public Command
-		{
-			NodeUpdateAnimationControl animationControlUpdate;
-
-			SetAnimationControlCommand()
-				:SetAnimationControlCommand(NodeUpdateAnimationControl{})
-			{}
-
-			SetAnimationControlCommand(const NodeUpdateAnimationControl& update)
-				:Command(CommandPayloadType::UpdateNodeAnimationControl), animationControlUpdate(update)
-			{}
-
-			static size_t getCommandSize()
-			{
-				return sizeof(SetAnimationControlCommand);
-			}
-		} AVS_PACKED;*/
 
 		struct SetNodeAnimationSpeedCommand : public Command
 		{

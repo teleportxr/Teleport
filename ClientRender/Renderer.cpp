@@ -11,7 +11,6 @@
 #ifdef _MSC_VER
 #include "libavstream/platforms/platform_windows.hpp"
 #endif
-#include "TeleportClient/ServerTimestamp.h"
 #include "TeleportClient/Log.h"
 #include <regex>
 #include "Tests.h"
@@ -30,7 +29,7 @@
 #include "Platform/Vulkan/Texture.h"
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
-#include "Platform/External/magic_enum/include/magic_enum.hpp"
+#include <magic_enum/magic_enum.hpp>
 #include "TeleportClient/ClientTime.h"
 #include "TeleportClient/OpenXRRenderModel.h"
 #include <functional>
@@ -115,8 +114,8 @@ platform::crossplatform::RenderDelegate renderDelegate;
 platform::crossplatform::RenderDelegate overlayDelegate;
 
 Renderer::Renderer(Gui& g)
-	:gui(g)
-	,config(teleport::client::Config::GetInstance())
+	: previousTimestampUs(0), gui(g)
+	  , config(teleport::client::Config::GetInstance())
 {
 	if (!timestamp_initialized)
 #ifdef _MSC_VER
@@ -947,18 +946,21 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	UpdateShaderPasses();
 	UpdateAllNodeRenders();
 }
-void Renderer::Update(double timestamp_ms)
+void Renderer::Update(std::chrono::microseconds unix_time_us)
 {
-	double timeElapsed_s = (timestamp_ms - previousTimestamp) / 1000.0f;//ms to seconds
+	double timeElapsed_s = double(unix_time_us.count() - previousTimestampUs.count()) / 1000000.0; // ms to seconds
 	if(timeElapsed_s>0.0)
 		framerate=1.0f/(float)timeElapsed_s;
-	teleport::client::ServerTimestamp::tick(timeElapsed_s);
 	for(auto i:instanceRenderers)
 	{
+		std::shared_ptr<teleport::client::SessionClient> sessionClient = client::SessionClient::GetSessionClient(i.first);
+		const auto &setupCommand=sessionClient->GetSetupCommand();
+		std::chrono::microseconds session_time_us(unix_time_us.count() - setupCommand.startTimestamp_utc_unix_us);
+		sessionClient->SetTimestamp(session_time_us);
 		// A long wait since last rendered frame? Device might have been asleep. Don't do a timeout check for these.
 		if (timeElapsed_s <1.0)
 		{
-			i.second->geometryCache->Update(static_cast<float>(timeElapsed_s));
+			i.second->geometryCache->Update(session_time_us,static_cast<float>(timeElapsed_s));
 		}
 
 		if(i.first!=0)
@@ -969,7 +971,7 @@ void Renderer::Update(double timestamp_ms)
 				renderState.openXR->RemoveNodePoseMapping(i.first,u);
 		}
 	}
-	previousTimestamp = timestamp_ms;
+	previousTimestampUs = unix_time_us;
 	if(start_xr_session)
 	{
 		renderState.openXR->StartSession();
@@ -1536,11 +1538,6 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	gui.BeginFrame(deviceContext);
 	gui.BeginDebugGui(deviceContext);
 	gui.LinePrint(fmt::format("Framerate {0}", framerate));
-	//gui.LinePrint(fmt::format("view Azimuth {0}", 180.f/3.14159f*renderState.openXR->viewAzimuth));
-	//gui.LinePrint(fmt::format("overlay Azimuth {0}", 180.f / 3.14159f * renderState.openXR->overlayAzimuth));
-	//gui.LinePrint(fmt::format("target Azimuth {0}", 180.f / 3.14159f * renderState.openXR->targetOverlayAzimuth));
-	//gui.LinePrint(fmt::format("Diff Angle {0}", 180.f / 3.14159f * renderState.openXR->azimuthDiffAngle));
-	
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	static vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	static vec4 background={0.0f,0.0f,0.0f,0.5f};
