@@ -519,8 +519,11 @@ void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::
 
 void GeometryStore::storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
 {
-	animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
-	animations[avs::AxesStandard::GlStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
+	auto &anim1=animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
+	std::string genericFilePath = UidToPath(id) + ".teleport_anim"s;
+	saveResourceBinary(cachePath + "/engineering/"s + genericFilePath, anim1);
+	auto &anim2 = animations[avs::AxesStandard::GlStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
+	saveResourceBinary(cachePath + "/gl/"s + genericFilePath, anim2);
 }
 
 draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
@@ -1048,6 +1051,7 @@ class resource_ifstream :public std::ifstream
 {
 protected:
 	std::function<avs::uid(std::string)> path_to_uid;
+	size_t fileSize=0;
 public:
 	std::string filename;
 	resource_ifstream(const char* fn, std::function<avs::uid(std::string)> f)
@@ -1055,6 +1059,7 @@ public:
 		, std::ifstream(fn, resource_ifstream::in | resource_ifstream::binary)
 		, path_to_uid(f)
 	{
+		fileSize=std::filesystem::file_size(fn);
 		unsetf(std::ios_base::skipws);
 	}
 	template<typename T>
@@ -1062,7 +1067,15 @@ public:
 	{
 		read((char*)&t, sizeof(t));
 	}
-
+	size_t getFileSize() const
+	{
+		return fileSize;
+	}
+	/// Get the number of bytes until the end of the file.
+	size_t getBytesRemaining() 
+	{
+		return fileSize - (size_t)tellg();
+	}
 	std::vector<char> readData()
 	{
 		std::vector<char> fileContents((std::istreambuf_iterator<char>(*this)),
@@ -1681,4 +1694,33 @@ std::string GeometryStore::UidToPath(avs::uid u) const
 		return "";
 	}
 	return i->second;
+}
+
+bool GeometryStore::EnsureResourceIsLoaded(avs::uid u)
+{
+	if (textures.find(u) != textures.end())
+		return true;
+	if (materials.find(u) != materials.end())
+		return true;
+	auto &e=meshes.at(avs::AxesStandard::EngineeringStyle);
+	if (e.find(u) != e.end())
+		return true;
+	auto &a = animations.at(avs::AxesStandard::EngineeringStyle);
+	if(a.find(u)!=a.end())
+		return true;
+	std::string path=UidToPath(u);
+	if(!path.length())
+		return false;
+	if(LoadResourceAtPath(path,u))
+		return true;
+	return false;
+}
+
+bool GeometryStore::LoadResourceAtPath(std::string p,avs::uid u)
+{
+// The resource type depends on the file extension.
+	std::string filename = cachePath + "/"s+p;
+	if(std::filesystem::exists(filename))
+		return true;
+	return false;
 }

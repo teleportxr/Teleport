@@ -126,7 +126,8 @@ namespace teleport
 			avs::uid PathToUid(std::string p) const;
 			//! Get the resource/asset path corresponding to the current session uid.
 			std::string UidToPath(avs::uid u) const;
-
+			//! Load the resource if possible from the file cache into memory.
+			bool EnsureResourceIsLoaded(avs::uid u);
 			template <typename ExtractedResource>
 			bool saveResourceBinary(const std::string file_name, const ExtractedResource &resource) const;
 			template <typename ExtractedResource>
@@ -165,6 +166,7 @@ namespace teleport
 		
 			std::map<avs::uid, std::string> uid_to_path;
 			std::map<std::string, avs::uid> path_to_uid;
+			bool LoadResourceAtPath(std::string p,avs::uid u);
 		};
 	}
 }

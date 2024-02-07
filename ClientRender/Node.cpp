@@ -192,7 +192,6 @@ void Node::AddChild(std::shared_ptr<Node> child)
 	if (HasAnyParent(child))
 		return;
 	children.push_back(child);
-	//childIDs.push_back(child->id);
 }
 
 void Node::RemoveChild(std::shared_ptr<Node> node)
@@ -288,7 +287,14 @@ void Node::UpdateGlobalTransform() const
 {
 	std::shared_ptr<Node> parentPtr = parent.lock();
 	if(parentPtr)
+	{
+		if(parentPtr->parent.lock().get()==this)
+		{
+			TELEPORT_BREAK_ONCE("Nodes in loop.");
+			return;
+		}
 		globalTransform =  localTransform * parentPtr->GetGlobalTransform() ;
+	}
 	else
 		globalTransform =  localTransform;
 

@@ -18,7 +18,7 @@ using nlohmann::json;
 using namespace teleport;
 using namespace server;
 extern ServerSettings casterSettings;
-TELEPORT_EXPORT void AddUnlinkedClientID(avs::uid clientID);
+TELEPORT_EXPORT void Server_AddUnlinkedClientID(avs::uid clientID);
 
 SignalingClient::~SignalingClient()
 {
@@ -337,6 +337,7 @@ void SignalingService::tick()
 		{
 			signalingClients.erase(clientID);
 			clientUids.erase(clientID);
+			break;
 		}
 	}
 	signalingClientsMutex.unlock();
@@ -428,6 +429,6 @@ void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 	if (c)
 	{
 		c->SetConnectionState(DISCOVERED);
-		AddUnlinkedClientID(clientID);
+		Server_AddUnlinkedClientID(clientID);
 	}
 }
