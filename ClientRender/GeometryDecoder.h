@@ -45,6 +45,13 @@ namespace teleport
 				std::string filename_or_url;
 				uint16_t version = 0;
 				std::vector<uint8_t> data = {};
+				size_t bytesRemaining() const
+				{
+					if(offset<data.size())
+						return data.size()-offset;
+					else
+						return 0;
+				}
 				size_t offset = 0;
 				avs::GeometryPayloadType type = avs::GeometryPayloadType::Invalid;
 				GeometryFileFormat geometryFileFormat = GeometryFileFormat::TELEPORT_NATIVE;

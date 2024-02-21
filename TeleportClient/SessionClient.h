@@ -25,13 +25,13 @@ typedef unsigned int uint;
 namespace avs
 {
 	class GeometryTargetBackendInterface;
-	class GeometryCacheBackendInterface;
 }
 
 namespace teleport
 {
 	namespace client
 	{
+		class GeometryCacheBackendInterface;
 		class TabContext;
 		class SessionCommandInterface
 		{
@@ -121,7 +121,7 @@ namespace teleport
 			void ApplySetup(const teleport::core::SetupCommand &s);
 			bool HandleConnections();
 			void SetSessionCommandInterface(SessionCommandInterface*);
-			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
+			void SetGeometryCache(GeometryCacheBackendInterface *r);
 			bool Connect(const char *remoteIP,  uint timeout,avs::uid client_id);
 			void Disconnect(uint timeout, bool resetClientID = true);
 			void Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
@@ -241,7 +241,7 @@ namespace teleport
 
 			SessionCommandInterface* mCommandInterface=nullptr;
 
-			avs::GeometryCacheBackendInterface* geometryCache = nullptr;
+			GeometryCacheBackendInterface* geometryCache = nullptr;
 
 
 			/// Requests the session client has discovered need to be made.

@@ -50,13 +50,12 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 	* Build to a subfolder of your Unity project, e.g. Project/teleport_build. *Don't* build inside the Assets folder.
 	* Check TELEPORT_UNITY.
 	* Check TELEPORT_SERVER.
-	* Uncheck LIBAV_USE_DYNAMIC_RUNTIME.
-	* Uncheck USE_DYNAMIC_RUNTIME.
+    * Uncheck TELEPORT_CLIENT.
 	* Click 'Configure' solution button.
-	* Set TELEPORT_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2019.4.15f1/Editor".
+	* Set TELEPORT_UNITY_EDITOR_DIR to "Editor" sub-directory where Unity is installed; e.g. "C:/Program Files/Unity/2022.4.15f1/Editor".
 	* Click 'Generate' solution button.
 2. Open Project, and set to "Release" build mode.
-3. Set TeleportServer as startup project.
+3. Set TeleportServer as startup project:
 	* Right-click TeleportServer project in 'Solution Explorer' pane.
 	* Click "Set as Startup Project".
 
@@ -72,7 +71,7 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 
 ## Building UE4 plugin
 
-The UE4 plugin is not currently functional, it will be updated in mid-2022.
+The UE4 plugin is not currently functional, it will be updated in 2024.
 
 1. Build pthread.2015.sln in "\thirdparty\srt\submodules\pthread-win32" in Release x64.
     * You will need to target pthread_lib to the same toolset as your Unreal.

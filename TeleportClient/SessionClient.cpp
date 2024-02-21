@@ -10,6 +10,7 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 
 #include "TeleportClient/Log.h"
+#include "TeleportClient/GeometryCacheBackendInterface.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "DiscoveryService.h"
 #include "Config.h"
@@ -115,7 +116,7 @@ void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
 	mCommandInterface=s;
 }
 
-void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
+void SessionClient::SetGeometryCache(GeometryCacheBackendInterface* r)
 {
 	geometryCache = r;
 }
@@ -571,14 +572,19 @@ void SessionClient::SendReceivedResources()
 		SendMessageToServer(packet.data(), messageSize + receivedResourcesSize);
 	}
 }
-
+#pragma optimize("",off)
 void SessionClient::SendNodeUpdates()
 {
 	//Insert completed nodes.
+	
+	const std::vector<avs::uid> &completedNodes = geometryCache->GetCompletedNodes();
+	if(completedNodes.size()>0)
 	{
-		std::vector<avs::uid> completedNodes = geometryCache->GetCompletedNodes();
+		size_t n = mReceivedNodes.size();
+		mReceivedNodes.resize(mReceivedNodes.size()+completedNodes.size());
+		memcpy(mReceivedNodes.data()+n,completedNodes.data(),completedNodes.size()*sizeof(avs::uid));
+		//mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 		geometryCache->ClearCompletedNodes();
-		mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 	}
 
 	if(mReceivedNodes.size() != 0 || mLostNodes.size() != 0)

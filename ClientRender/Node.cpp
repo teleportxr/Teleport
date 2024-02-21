@@ -78,19 +78,19 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
 	//TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs()));
 }
-
+#pragma optimize("",off)
 // Here we will extrapolate the transform based on the last received movement update.
 void Node::TickExtrapolatedTransform(double serverTimeS)
 {
 	if (isStatic)
 		return;
 	// timestamp received was in milliseconds Unix time.
-	if (!lastReceivedMovement.server_time_ns)
+	if (!lastReceivedMovement.server_time_us)
 		return;
 	// We want to extrapolate the transform from the last timestamp to the "server time" we received as a parameter.
 	// so we want the difference in seconds between these.
-	double server_datum_time_s = double(lastReceivedMovement.server_time_ns) * 0.000000001;
-	double time_offset = serverTimeS - server_datum_time_s;
+	double lastTimeS = double(lastReceivedMovement.server_time_us) * 0.000001;
+	double time_offset = serverTimeS - lastTimeS;
 	if (time_offset < -5.0)
 		time_offset = -5.0;
 	if (time_offset > 5.0)
@@ -104,7 +104,7 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 		newTranslation +=v * (float)time_offset;
 		smoothingEnabled = true;
 	}
-	clientrender::quat newRotation = lastReceivedMovement.rotation;
+	clientrender::quat newRotation = *((clientrender::quat*)&lastReceivedMovement.rotation);
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
 		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, lastReceivedMovement.angularVelocityAxis);
@@ -140,7 +140,7 @@ void Node::Update( std::chrono::microseconds timestamp_us)
 	if(skeletonInstance&&skeletonInstance->GetSkeleton())
 	{
 		auto animC=GetOrCreateComponent<AnimationComponent>();
-		animC->update(skeletonInstance->GetSkeleton()->GetBones(), timestamp_us.count());
+		animC->update(skeletonInstance->GetSkeleton()->GetExternalBones(), timestamp_us.count());
 	}
 
 	for(std::weak_ptr<Node> child : children)
@@ -293,7 +293,7 @@ void Node::UpdateGlobalTransform() const
 			TELEPORT_BREAK_ONCE("Nodes in loop.");
 			return;
 		}
-		globalTransform =  localTransform * parentPtr->GetGlobalTransform() ;
+		Transform::Multiply(globalTransform,localTransform,parentPtr->GetGlobalTransform());
 	}
 	else
 		globalTransform =  localTransform;
@@ -304,19 +304,19 @@ void Node::UpdateGlobalTransform() const
 void Node::RequestChildrenUpdateTransforms()
 {
 	std::lock_guard lock(childrenMutex);
-	for(size_t i=0;i<children.size();i++)
+	for (auto it = children.begin(); it != children.end();)
 	{
-		std::shared_ptr<Node> child = children[i].lock();
+		std::shared_ptr<Node> child = it->lock();
 
 		//Erase weak pointer from list, if the child node has been removed.
 		if(child)
 		{
 			child->RequestTransformUpdate();
+			it++;
 		}
 		else
 		{
-			children.erase(children.begin()+i);
-			--i;
+			it=children.erase(it);
 		}
 	}
 }

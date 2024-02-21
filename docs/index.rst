@@ -13,10 +13,9 @@ which can be used to build Teleport clients or servers.
 
 
 .. toctree::
+	:maxdepth: 1
 	:numbered:
-	:glob:
-	:maxdepth: 2
-	:caption: Contents:
+	:caption: Contents
 	
 	introduction
 	client/index

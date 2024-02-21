@@ -28,6 +28,7 @@ set(src_files
 	Config.cpp
 	DiscoveryService.h
 	DiscoveryService.cpp
+	GeometryCacheBackendInterface.h
 	Log.cpp
 	Log.h
 	OpenXR.cpp

@@ -94,6 +94,7 @@ namespace avs
 		void receiveOffer(const std::string& offer);
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
 		std::string offer;
+		std::vector<IOInterface *> inputInterfaces;
 	};
 
 } // avs

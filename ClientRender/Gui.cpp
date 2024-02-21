@@ -117,9 +117,15 @@ void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags = 0, const cha
 		txt = str_id;
 	va_list args;
 	va_start(args, txt);
+#ifdef _MSC_VER
 	std::string str = fmt::format(txt, args);
+#else
+	char buf[100];
+	sprintf(buf,txt,args);
+	std::string str = buf;
+#endif
 	va_end(args);
-	bool is_open = ImGui::TreeNodeEx(str_id, flags, str.c_str());
+	bool is_open = ImGui::TreeNodeEx(str_id, flags, "%s",str.c_str());
 	if (is_open && ((flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) == 0))
 		ImGui::TreePop();
 }

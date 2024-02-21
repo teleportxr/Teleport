@@ -6,6 +6,8 @@
 #include "../../firstparty/Platform/CrossPlatform/Shaders/CppSl.sl"
 namespace avs
 {
+/// A model for how 3D space is mapped to X, Y and Z axes. A server may use one standard internally, while clients may use others.
+/// A server must be capable of supporting clients in at least EngineeringStyle and GlStyle.
 	enum class AxesStandard : uint8_t
 	{
 		NotInitialized = 0,

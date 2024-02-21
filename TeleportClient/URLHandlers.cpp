@@ -12,6 +12,7 @@
 #endif
 using namespace teleport;
 using namespace client;
+#ifdef _MSC_VER
 static std::string GetAssocString(IQueryAssociations *pqa, ASSOCSTR stringType)
 {
 	wchar_t *pszExe = nullptr;
@@ -24,7 +25,7 @@ static std::string GetAssocString(IQueryAssociations *pqa, ASSOCSTR stringType)
 	}
 	return "";
 }
-
+#endif
 std::string teleport::client::GetLauncherForProtocol(std::string protocol)
 {
 	std::string exe;
@@ -85,6 +86,7 @@ void teleport::client::LaunchProtocolHandler(std::string protocol, std::string u
 		TELEPORT_CERR << "Regex error for url " << url << "\n";
 	}
 
+#ifdef _MSC_VER
 	SHELLEXECUTEINFOA exInfo = {sizeof(SHELLEXECUTEINFOA)};
 	exInfo.lpVerb = nullptr;
 	exInfo.lpFile = url.c_str();
@@ -97,5 +99,5 @@ void teleport::client::LaunchProtocolHandler(std::string protocol, std::string u
 	catch(...)
 	{
 	}
-
+	#endif
 }

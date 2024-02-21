@@ -13,6 +13,7 @@
 #include "NodeManager.h"
 #include "ResourceManager.h"
 #include "TeleportCore/FontAtlas.h"
+#include "TeleportClient/GeometryCacheBackendInterface.h"
 #include "flecs.h"
 
 namespace teleport
@@ -81,7 +82,7 @@ namespace teleport
 		//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 		//! There is also one GeometryCache for each externally-provided sub-scene, for example a GLTF or GLB file.
 		//! Each cache must have a unique identifier.
-		class GeometryCache : public avs::GeometryCacheBackendInterface
+		class GeometryCache : public client::GeometryCacheBackendInterface
 		{
 			geometry_cache_uid next_geometry_cache_uid = 1;
 			std::map<uint64_t, geometry_cache_uid> uid_mapping;
@@ -225,7 +226,7 @@ namespace teleport
 			std::vector<avs::uid> GetReceivedResources() const override;
 			void ClearReceivedResources() override;
 			// Returns the nodes that have been finished since the call, and clears the list.
-			std::vector<avs::uid> GetCompletedNodes() const override;
+			const std::vector<avs::uid> &GetCompletedNodes() const override;
 			void ClearCompletedNodes() override;
 
 			clientrender::NodeManager mNodeManager;

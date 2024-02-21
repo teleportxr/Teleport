@@ -209,6 +209,21 @@ void android_main(struct android_app* app)
 	perFrameLayout.UseConstantBufferSlot(0);
 	perFrameLayout.UseConstantBufferSlot(1);
 	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
+	// Mark texture slots 19 to 22 as being in resource group 1 (few per-frame)
+	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;
+	fewPerFrameLayout.UseReadOnlyResourceSlot(19);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(20);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(21);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(22);
+	renderPlatform->SetResourceGroupLayout(1, fewPerFrameLayout);
+	// Mark CB 5 and texture slots 15 to 18 as being in resource group 2 (per material)
+	platform::crossplatform::ResourceGroupLayout perMaterialLayout;
+	perMaterialLayout.UseConstantBufferSlot(5);
+	perMaterialLayout.UseReadOnlyResourceSlot(15);
+	perMaterialLayout.UseReadOnlyResourceSlot(16);
+	perMaterialLayout.UseReadOnlyResourceSlot(17);
+	perMaterialLayout.UseReadOnlyResourceSlot(18);
+	renderPlatform->SetResourceGroupLayout(2, perMaterialLayout);
 
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());
 	renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::NEVER_BUILD);
@@ -254,11 +269,10 @@ void android_main(struct android_app* app)
 		static double time_seconds=GetTimeInSeconds();
 		double new_time_seconds=GetTimeInSeconds();
 		float time_step_seconds=new_time_seconds-time_seconds;
-		time_seconds=new_time_seconds;
-		
-		double timestamp_ms = avs::Platform::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::Platform::getTimestamp());
+		time_seconds = new_time_seconds;
+		auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 
-		androidRenderer->Update(timestamp_ms);
+		androidRenderer->Update(microsecondsUTC);
 		androidRenderer->OnFrameMove(float(time_seconds),float(time_step_seconds));
 		renderPlatform->BeginFrame(frame);
 		if (openXR.HaveXRDevice())

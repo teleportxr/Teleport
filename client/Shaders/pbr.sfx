@@ -7,20 +7,19 @@
 #include "depth.sl"
 #include "pbr_constants.sl"
 
-uniform Texture2D diffuseTexture;
-uniform Texture2D normalTexture;
-uniform Texture2D combinedTexture;
-uniform Texture2D emissiveTexture;
-uniform Texture2D globalIlluminationTexture;
-uniform TextureCube diffuseCubemap;
-uniform TextureCube specularCubemap;
-uniform TextureCube lightingCubemap; 
+// Per-material resources are in group 2:
+uniform Texture2D diffuseTexture : register(t15), resource_group(g2);
+uniform Texture2D normalTexture : register(t16), resource_group(g2);
+uniform Texture2D combinedTexture : register(t17), resource_group(g2);
+uniform Texture2D emissiveTexture : register(t18), resource_group(g2);
+
+// Resources that change few times per-frame are in group 1:
+uniform Texture2D globalIlluminationTexture : register(t19), resource_group(g1);
+uniform TextureCube diffuseCubemap : register(t20), resource_group(g1);
+uniform TextureCube specularCubemap : register(t21), resource_group(g1);
+uniform TextureCube lightingCubemap : register(t22), resource_group(g1);
 uniform Texture2D videoTexture;
 
-uniform TextureCube nearFarTextureCube;
-uniform Texture2D loss2dTexture;
-uniform Texture2D shadowTexture;
-uniform Texture3D inscatterVolumeTexture;
 // Ensure that we're treating matrices as column-major. Note, this SHOULD be the default.
 #pragma pack_matrix( column_major )
 // TODO Disable until fully supported
@@ -36,8 +35,8 @@ SamplerComparisonState shadowComparisonState
 	AddressV = Clamp;
 	AddressW = Clamp;
 	Comparison= GREATER;
-};*/
-
+};*/ 
+ 
  vec4 GetShadowCoord( vec3 wpos, LightTag lightTag )
 {
 	vec4 proj_pos=mul (lightTag.worldToShadowMatrix, vec4(wpos,1.0));

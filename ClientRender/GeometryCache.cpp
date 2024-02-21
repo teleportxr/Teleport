@@ -156,7 +156,7 @@ void GeometryCache::ClearReceivedResources()
 	m_ReceivedResources.clear();
 }
 
-std::vector<avs::uid> GeometryCache::GetCompletedNodes() const
+const std::vector<avs::uid> &GeometryCache::GetCompletedNodes() const
 {
 	return m_CompletedNodes;
 }

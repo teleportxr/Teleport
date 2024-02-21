@@ -100,18 +100,25 @@ void ClientMessaging::tick(float deltaTime)
 	avs::Result commandResult=commandPipeline.process();
 	if(commandResult==avs::Result::IO_Full)
 	{
-		commandPipeline.SetPipelineBlocked(true);
-		TELEPORT_CERR << "Client "<<clientID<<": Command pipeline is full. No further commands accepted until it clears.\n";
+		if (!commandPipeline.IsPipelineBlocked())
+		{
+			commandPipeline.SetPipelineBlocked(true);
+			TELEPORT_CERR << "Client "<<clientID<<": Command pipeline is full. No further commands accepted until it clears.\n";
+		}
 	}
 	else
 	{
 		commandPipeline.SetPipelineBlocked(false);
 	}
 	avs::Result messageResult = messagePipeline.process();
+	
 	if (commandResult == avs::Result::IO_Full)
 	{
-		messagePipeline.SetPipelineBlocked(true);
-		TELEPORT_CERR << "Client " << clientID << ": Message pipeline is full. No further messages accepted until it clears.\n";
+		if(!messagePipeline.IsPipelineBlocked())
+		{
+			messagePipeline.SetPipelineBlocked(true);
+			TELEPORT_CERR << "Client " << clientID << ": Message pipeline is full. No further messages accepted until it clears.\n";
+		}
 	}
 	else
 	{

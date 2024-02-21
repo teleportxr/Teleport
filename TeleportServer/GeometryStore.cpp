@@ -1,3 +1,4 @@
+#pragma optimize("",off)
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
 
@@ -6,6 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <regex>
 #include <fmt/core.h>
 
 #if defined ( _WIN32 )
@@ -43,7 +45,6 @@ namespace filesystem = std::filesystem;
 namespace filesystem = std::filesystem;
 #endif
 
-#include <regex>
 std::string StandardizePath(const std::string &file_name,const std::string &path_root)
 {
 	filesystem::path path(file_name);
@@ -517,10 +518,10 @@ void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::
 	skeletons[avs::AxesStandard::GlStyle][id] = avs::Skeleton::convertToStandard(newSkeleton, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
-void GeometryStore::storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
+void GeometryStore::storeAnimation(avs::uid id, std::string path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
 {
 	auto &anim1=animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
-	std::string genericFilePath = UidToPath(id) + ".teleport_anim"s;
+	std::string genericFilePath = path + ".teleport_anim"s;
 	saveResourceBinary(cachePath + "/engineering/"s + genericFilePath, anim1);
 	auto &anim2 = animations[avs::AxesStandard::GlStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
 	saveResourceBinary(cachePath + "/gl/"s + genericFilePath, anim2);
@@ -1497,7 +1498,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 		if(!resource.Verify(verifyResource))
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
-			//teleport::DebugBreak();
+			teleport::DebugBreak();
 			{
 				resource_ofstream saveFile(file_name.c_str(), UidToPath);
 				saveFile << resource;
@@ -1716,11 +1717,111 @@ bool GeometryStore::EnsureResourceIsLoaded(avs::uid u)
 	return false;
 }
 
+avs::uid GeometryStore::LoadResourceFromFile(std::string filename, avs::uid u)
+{
+	std::filesystem::path path(filename);
+	std::string ext=path.extension().u8string();
+	std::filesystem::path rel=path.lexically_relative(cachePath);
+	avs::AxesStandard axesStandard=avs::AxesStandard::EngineeringStyle;
+	std::string path_root=cachePath;
+	if (rel.generic_string().find("engineering/") == 0)
+	{
+		rel = rel.lexically_relative("engineering");
+		path_root+="/engineering/";
+	}
+	if (rel.generic_string().find("gl/") == 0)
+	{
+		rel = rel.lexically_relative("gl");
+		path_root += "/gl/";
+		axesStandard = avs::AxesStandard::GlStyle;
+	}
+	std::string fn=rel.u8string();
+	if(ext==".teleport_anim")
+	{
+		if(loadResourceBinary(filename,path_root,animations.at(axesStandard))!=u)
+		{
+			TELEPORT_WARN("uid mismatch");
+			return 0;
+		}
+		else
+		{
+			return u;
+		}
+	}
+	else
+	{
+		TELEPORT_WARN("Not implemented");
+	}
+	return 0;
+}
+
+	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
+//loadResourcesBinary(cachePath + "/", textures);
+//loadResourcesBinary(cachePath + "/", materials);
+//loadResourcesBinary(cachePath + "/engineering/", meshes.at(avs::AxesStandard::EngineeringStyle));
+//loadResourcesBinary(cachePath + "/gl/", meshes.at(avs::AxesStandard::GlStyle));
+//
+//loadResourceBinary(file_name, path, resourceMap);
+
 bool GeometryStore::LoadResourceAtPath(std::string p,avs::uid u)
 {
 // The resource type depends on the file extension.
-	std::string filename = cachePath + "/"s+p;
-	if(std::filesystem::exists(filename))
-		return true;
-	return false;
+	std::string filename = cachePath + "/"s + p;
+	std::string filename_eng = cachePath + "/engineering/"s + p;
+	std::string filename_gl = cachePath + "/gl/"s + p;
+	// Any file will be filename + ".extension".
+	// The extensions can be: .mesh, .material, .teleport_anim, .basis, .texture
+	bool result=false;
+	if (std::filesystem::exists(filename_eng + ".mesh"s) || std::filesystem::exists(filename_gl + ".mesh"s))
+	{
+		LoadResourceFromFile(filename_eng + ".mesh"s,u);
+		LoadResourceFromFile(filename_gl + ".mesh"s, u);
+		result = true;
+	}
+	if (std::filesystem::exists(filename_eng + ".teleport_anim"s) || std::filesystem::exists(filename_gl + ".teleport_anim"s))
+	{
+		LoadResourceFromFile(filename_eng + ".teleport_anim"s, u);
+		LoadResourceFromFile(filename_gl + ".teleport_anim"s, u);
+		result = true;
+	}
+	if (std::filesystem::exists(filename + ".material"s))
+	{
+		if (LoadResourceFromFile(filename + ".material"s, u))
+			result = true;
+	}
+	if (std::filesystem::exists(filename + ".basis"s))
+	{
+		if (LoadResourceFromFile(filename + ".basis"s, u))
+			result= true;
+	}
+	if (std::filesystem::exists(filename + ".texture"s))
+	{
+		if (LoadResourceFromFile(filename + ".texture"s, u))
+			result = true;
+	}
+	#if 0
+	const std::filesystem::directory_iterator end;
+	try
+	{
+		std::filesystem::path p(filename);
+		std::string regex = filename+"\..*$";
+		for (std::filesystem::directory_iterator iter{p.parent_path()}; iter != end; iter++)
+		{
+			const std::string file_ext = iter->path().extension().string();
+			if (std::filesystem::is_regular_file(*iter))
+			{
+				if (std::regex_match(file_ext, regex))
+				{
+					LoadResourceFromFile(iter->path().string());
+					result = true;
+				}
+			}
+		}
+	}
+	catch (std::exception &)
+	{
+	}
+#endif
+	return result;
+
 }

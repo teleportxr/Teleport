@@ -11,7 +11,7 @@
 #	define __DECL_IMPORT
 #endif
 
-#if defined(LIBAVSTREAM_SHARED)
+#if defined(LIBAVSTREAM_SHARED) && !defined(DOXYGEN)
 #	if defined(LIBAVSTREAM_EXPORTS)
 #		define AVSTREAM_API __DECL_EXPORT
 #	else

@@ -29,6 +29,7 @@ namespace avs
 		/*!
 		 * Configure decoder.
 		 * \param streamId which stream to configure.
+		 * \param server_uid which server this is for.
 		 * \param backend The object that performas the actual decoding.
 		 * \return
 		 *  - Result::OK on success.

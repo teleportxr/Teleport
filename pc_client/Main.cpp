@@ -421,6 +421,19 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 	perFrameLayout.UseConstantBufferSlot(0);
 	perFrameLayout.UseConstantBufferSlot(1);
 	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
+	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;
+	fewPerFrameLayout.UseReadOnlyResourceSlot(19);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(20);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(21);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(22);
+	renderPlatform->SetResourceGroupLayout(1, fewPerFrameLayout);
+	platform::crossplatform::ResourceGroupLayout perMaterialLayout;
+	perMaterialLayout.UseConstantBufferSlot(5);
+	perMaterialLayout.UseReadOnlyResourceSlot(15);
+	perMaterialLayout.UseReadOnlyResourceSlot(16);
+	perMaterialLayout.UseReadOnlyResourceSlot(17);
+	perMaterialLayout.UseReadOnlyResourceSlot(18);
+	renderPlatform->SetResourceGroupLayout(2, perMaterialLayout);
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	// Now renderPlatform is initialized, can init OpenXR:
 
@@ -631,7 +644,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					receive_link = false;
 				}
 				displaySurfaceManager.EndFrame();
-				renderPlatform->EndFrame();
+				//renderPlatform->EndFrame();
 				cpuProfiler.EndFrame();
 			}
         }

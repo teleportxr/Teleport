@@ -200,7 +200,8 @@ void ResourceCreator::CreateLinkNode( avs::uid server_uid, avs::uid id, const av
 	}
 	else
 	{
-		node = geometryCache->mNodeManager.CreateNode(geometryCache->GetSessionTimeUs(),id, avsNode);
+		node = geometryCache->mNodeManager.CreateNode(geometryCache->GetSessionTimeUs(), id, avsNode);
+		geometryCache->CompleteNode(node->id, node);
 	}
 }
 

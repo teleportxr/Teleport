@@ -18,9 +18,6 @@
     <ClCompile Include="..\..\ClientRender\API.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ClientRender\Bone.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ClientRender\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -135,9 +132,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\API.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ClientRender\Bone.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ClientRender\Camera.h">

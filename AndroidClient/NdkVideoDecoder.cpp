@@ -10,7 +10,7 @@
 #include <Platform/Vulkan/RenderPlatform.h>
 #include <TeleportCore/ErrorHandling.h>
 #include <fmt/core.h>
-#include <Platform/External/magic_enum/include/magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include <iostream>
 #include <android/hardware_buffer_jni.h>

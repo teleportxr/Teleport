@@ -228,7 +228,7 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 		total_texels += ii.m_width * ii.m_height;
 	}
 
-	TELEPORT_COUT<<"\nSlice info:\n"<<"\n";
+	//TELEPORT_COUT<<"\nSlice info:\n"<<"\n";
 
 	for (uint32_t i = 0; i < fileinfo.m_slice_info.size(); i++)
 	{
@@ -245,7 +245,7 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 			   sliceinfo.m_unpacked_slice_crc16,
 			   (uint32_t)sliceinfo.m_alpha_flag,
 			   (uint32_t)sliceinfo.m_iframe_flag);
-		TELEPORT_COUT<<s<<"\n";
+//		TELEPORT_COUT<<s<<"\n";
 		}
 		catch(...)
 		{

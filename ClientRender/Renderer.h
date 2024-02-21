@@ -37,7 +37,7 @@ namespace teleport
 		extern avs::Timestamp platformStartTimestamp;
 		//! Renderer that draws for a specific server.
 		//! There will be one instance of a derived class of clientrender::Renderer for each attached server.
-		class Renderer : public platform::crossplatform::RenderDelegaterInterface
+		class Renderer : public platform::crossplatform::RenderDelegatorInterface
 		{
 			void UpdateShaderPasses();
 
@@ -61,7 +61,7 @@ namespace teleport
 			virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void RenderVRView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			float framerate = 0.0f;
-			void Update(std::chrono::microseconds timestamp_us);
+			void Update(std::chrono::microseconds unix_time_us);
 
 			//! e.g. for debug shaders or shader recompilation.
 			void UpdateAllNodeRenders();
@@ -121,8 +121,8 @@ namespace teleport
 				avs::uid hand_skeleton_node_uid = 0; // The skeleton root node, child of hand_node_uid.
 				avs::uid hand_mesh_node_uid = 0;	 // The mesh root node, child of hand_node_uid.
 
-				avs::uid hand_skeleton_uid = 0; // The skeleton asset
-				avs::uid model_uid = 0;			// The mesh asset
+				avs::uid hand_skeleton_uid = 0;		// The skeleton asset
+				avs::uid model_uid = 0;				// The mesh asset
 				clientrender::Transform palm_to_hand;
 				vec3 index_finger_offset = {0, 0, 0};
 			};

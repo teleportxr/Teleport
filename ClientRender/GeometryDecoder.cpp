@@ -1,4 +1,4 @@
-//#pragma warning(4018,off)
+#pragma optimize("",off)
 #include "GeometryDecoder.h"
 
 #include <fstream>
@@ -756,6 +756,12 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 			avs::uid skeleton_uid=skeleton_uids[i];
 			avs::Skeleton &avsSkeleton=subSceneDG.skeletons[skeleton_uid];
 			avsNode.skeletonNodeID = avsSkeleton.boneIDs[0];
+			// Just directly map the bones to joints:
+			avsNode.joint_indices.resize(avsSkeleton.boneIDs.size());
+			for(int j=0;j<avsNode.joint_indices.size();j++)
+			{
+				avsNode.joint_indices[j]=j;
+			}
 			auto &avsSkeletonRootNode = subSceneDG.nodes[avsNode.skeletonNodeID];
 			avsSkeletonRootNode.data_type = avs::NodeDataType::Skeleton;
 			avsSkeletonRootNode.data_uid=skeleton_uid;
@@ -1383,7 +1389,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		teleport::core::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
-		transformKeyframe.boneIndex = NextUint64;
+		transformKeyframe.boneIndex = NextInt16;
 
 		decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes);
 		decodeVector4Keyframes(geometryDecodeData, transformKeyframe.rotationKeyframes);
@@ -1534,7 +1540,8 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecode
 
 avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
-	keyframes.resize(NextUint64);
+	uint16_t numk = NextUint16;
+	keyframes.resize(numk);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
@@ -1546,7 +1553,12 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDe
 
 avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
-	keyframes.resize(NextUint64);
+	uint16_t numk = NextUint16;
+	if(numk==0)
+		return avs::Result::OK;
+	if (geometryDecodeData.bytesRemaining() / numk < sizeof(teleport::core::Vector3Keyframe))
+		return avs::Result::Failed;
+	keyframes.resize(numk);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
@@ -1558,7 +1570,12 @@ avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometry
 
 avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
-	keyframes.resize(NextUint64);
+	uint16_t numk = NextUint16;
+	if (numk == 0)
+		return avs::Result::OK;
+	if (geometryDecodeData.bytesRemaining() / numk < sizeof(teleport::core::Vector4Keyframe))
+		return avs::Result::Failed;
+	keyframes.resize(numk);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;

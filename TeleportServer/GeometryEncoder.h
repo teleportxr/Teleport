@@ -31,7 +31,7 @@ namespace teleport
 		protected:
 			std::vector<char> buffer;			//Buffer used to encode data before checking it can be sent.
 			std::vector<char> queuedBuffer;		//Buffer given to the pipeline to be sent to the client.
-			template<typename T> size_t put(const T& data)
+			template<typename T> size_t put(T data)
 			{
 				size_t pos = buffer.size();
 				buffer.resize(buffer.size() + sizeof(T));

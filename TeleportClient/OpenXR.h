@@ -371,7 +371,7 @@ namespace teleport
 			/// Get the poses relative to the hand root.
 			const std::vector<avs::Pose> &GetTrackedHandJointPoses(int i);
 			/// @brief Get the hand root pose in local space.
-			/// @param pose 
+			/// @param i index of the hand. 
 			/// @return 
 			avs::Pose GetTrackedHandRootPose(int i) const;
 

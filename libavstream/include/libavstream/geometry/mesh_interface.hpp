@@ -869,16 +869,6 @@ namespace avs
 		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
 	};
 
-	class AVSTREAM_API GeometryCacheBackendInterface : public UseInternalAllocator
-	{
-	public:
-		virtual std::vector<avs::uid> GetCompletedNodes() const = 0;
-		virtual std::vector<avs::uid> GetReceivedResources() const = 0;
-		virtual std::vector<avs::uid> GetResourceRequests() const = 0;
-		virtual void ClearCompletedNodes() = 0;
-		virtual void ClearReceivedResources() = 0;
-		virtual void ClearResourceRequests() = 0;
-	};
 
 	//! A Geometry decoder backend converts a 
 	class AVSTREAM_API GeometryDecoderBackendInterface : public UseInternalAllocator

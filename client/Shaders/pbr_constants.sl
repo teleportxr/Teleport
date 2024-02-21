@@ -10,7 +10,7 @@ float roughestMip;
 SIMUL_CONSTANT_BUFFER_END
 
 
-SIMUL_CONSTANT_BUFFER(PbrMaterialConstants,13)
+PLATFORM_GROUPED_CONSTANT_BUFFER(PbrMaterialConstants, 5, 2)
 	vec4 diffuseOutputScalar;
 	vec4 normalOutputScalar;
 	vec4 combinedOutputScalarRoughMetalOcclusion;
@@ -29,7 +29,7 @@ SIMUL_CONSTANT_BUFFER(PbrMaterialConstants,13)
 	int emissiveTexCoordIndex;
 	int lightmapTexCoordIndex;
 
-SIMUL_CONSTANT_BUFFER_END
+PLATFORM_GROUPED_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(PerNodeConstants, 11)
 uniform mat4 model;

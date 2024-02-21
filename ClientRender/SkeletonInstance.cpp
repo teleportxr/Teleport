@@ -29,21 +29,20 @@ void SkeletonInstance::GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCa
 		return;
 	} 
 // external skeleton?
-	const auto &bone_ids = skeleton->GetExternalBoneIds();
-	if(bone_ids.size()>0)
+	const auto &bones = skeleton->GetExternalBones();
+	if (bones.size() > 0)
 	{
 		size_t upperBound = std::min<size_t>(jointIndices.size(), Skeleton::MAX_BONES);
 		boneMatrices.resize(upperBound);
 		for (size_t i = 0; i < upperBound; i++)
 		{
 			TELEPORT_ASSERT(i<jointIndices.size());
-			TELEPORT_ASSERT(jointIndices[i] < bone_ids.size());
-			avs::uid bone_node_uid = bone_ids[jointIndices[i]];
-			auto node=geometryCache->mNodeManager.GetNode(bone_node_uid);
+			TELEPORT_ASSERT(jointIndices[i] < bones.size());
+			auto node=bones[jointIndices[i]];
 			if(!node)
 				return;
-			mat4 joint_matrix = node->GetGlobalTransform().GetTransformMatrix();
-			mat4 inverse_bind_matrix = inverseBindMatrices[i];
+			const mat4 &joint_matrix = node->GetGlobalTransform().GetTransformMatrix();
+			const mat4 &inverse_bind_matrix = inverseBindMatrices[i];
 			mat4 bone_matrix = joint_matrix * inverse_bind_matrix;
 			boneMatrices[i] = bone_matrix;
 		}

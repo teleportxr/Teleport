@@ -28,13 +28,14 @@
     <ClInclude Include="..\..\TeleportClient\ClientTime.h" />
     <ClInclude Include="..\..\TeleportClient\Config.h" />
     <ClInclude Include="..\..\TeleportClient\DiscoveryService.h" />
+    <ClInclude Include="..\..\TeleportClient\GeometryCacheBackendInterface.h" />
     <ClInclude Include="..\..\TeleportClient\Log.h" />
     <ClInclude Include="..\..\TeleportClient\OpenXR.h" />
     <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h" />
-    <ClInclude Include="..\..\TeleportClient\ServerTimestamp.h" />
     <ClInclude Include="..\..\TeleportClient\SessionClient.h" />
     <ClInclude Include="..\..\TeleportClient\SignalingServer.h" />
     <ClInclude Include="..\..\TeleportClient\TabContext.h" />
+    <ClInclude Include="..\..\TeleportClient\URLHandlers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\TeleportClient\ClientDeviceState.cpp" />
@@ -45,10 +46,10 @@
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />
-    <ClCompile Include="..\..\TeleportClient\ServerTimestamp.cpp" />
     <ClCompile Include="..\..\TeleportClient\SessionClient.cpp" />
     <ClCompile Include="..\..\TeleportClient\SignalingServer.cpp" />
     <ClCompile Include="..\..\TeleportClient\TabContext.cpp" />
+    <ClCompile Include="..\..\TeleportClient\URLHandlers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\firstparty\Platform\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
@@ -188,13 +189,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

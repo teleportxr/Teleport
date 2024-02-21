@@ -75,11 +75,10 @@ namespace teleport
 	#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo((fmt::format("{0} ({1}): info: ", __FILE__,__LINE__)+#txt).c_str(),##__VA_ARGS__)
 
 #else
-	#define TELEPORT_INTERNAL_BREAK_ONCE(msg)
-	#define TELEPORT_INTERNAL_LOG_UNSAFE(a,...)
+	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...)
+	#define TELEPORT_INTERNAL_LOG_UNSAFE(...)
 	#define TELEPORT_INTERNAL_CERR(txt, ...)
 	#define TELEPORT_INTERNAL_COUT(txt, ...)
-
 #endif
 #define TELEPORT_ASSERT(c)\
 	if(!(c)){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}

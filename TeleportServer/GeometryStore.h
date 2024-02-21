@@ -99,7 +99,7 @@ namespace teleport
 			void setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose);
 			void storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard);
-			void storeAnimation(avs::uid id, teleport::core::Animation& animation, avs::AxesStandard sourceStandard);
+			void storeAnimation(avs::uid id, std::string path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
 			void storeMesh(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress = false, bool verify = false);
 			void storeMaterial(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Material& newMaterial);
 			void storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& newTexture,  bool genMips, bool highQualityUASTC, bool forceOverwrite);
@@ -166,7 +166,8 @@ namespace teleport
 		
 			std::map<avs::uid, std::string> uid_to_path;
 			std::map<std::string, avs::uid> path_to_uid;
-			bool LoadResourceAtPath(std::string p,avs::uid u);
+			bool LoadResourceAtPath(std::string p, avs::uid u);
+			avs::uid LoadResourceFromFile(std::string p, avs::uid u);
 		};
 	}
 }

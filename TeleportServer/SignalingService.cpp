@@ -422,6 +422,7 @@ bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t
 	}
 }
 
+extern std::set<avs::uid> unlinkedClientIDs; 
 
 void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 {
@@ -429,6 +430,6 @@ void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 	if (c)
 	{
 		c->SetConnectionState(DISCOVERED);
-		Server_AddUnlinkedClientID(clientID);
+		unlinkedClientIDs.insert(clientID);
 	}
 }

@@ -275,7 +275,7 @@ struct InteropTexture
 
 struct InteropTransformKeyframe
 {
-	size_t boneIndex=0;
+	int16_t boneIndex=0;
 
 	int numPositions=0;
 	teleport::core::Vector3Keyframe* positionKeyframes=nullptr;

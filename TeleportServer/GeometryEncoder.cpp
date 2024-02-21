@@ -829,7 +829,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 
 avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
-	put(keyframes.size());
+	put((uint16_t)keyframes.size());
 	for (const teleport::core::FloatKeyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
@@ -841,7 +841,7 @@ avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<teleport::co
 
 avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
-	put(keyframes.size());
+	put((uint16_t)keyframes.size());
 	for (const teleport::core::Vector3Keyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
@@ -853,7 +853,7 @@ avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<teleport::
 
 avs::Result GeometryEncoder::encodeVector4Keyframes(const std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
-	put(keyframes.size());
+	put((uint16_t)keyframes.size());
 	for (const teleport::core::Vector4Keyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);

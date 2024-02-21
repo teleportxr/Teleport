@@ -4,6 +4,14 @@
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "TeleportCore/ErrorHandling.h"
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
+#include <fmt/core.h>
+
+#define VERIFY_EQUALITY_CHECK(a, b)          \
+if (b != a.b)                                 \
+{                                             \
+	TELEPORT_WARN("Verify failed for {0}", #b); \
+	return false;                             \
+}
 
 namespace teleport
 {
@@ -26,11 +34,10 @@ namespace teleport
 			float time; //Milliseconds
 			vec4 value;
 		};
-
 		//! A list of keyframes to be used in an animation.
 		struct TransformKeyframeList
 		{
-			size_t boneIndex = -1; //Index of the bone used in the bones list.
+			int16_t boneIndex = -1; //Index of the bone used in the bones list.
 
 			std::vector<Vector3Keyframe> positionKeyframes;
 			std::vector<Vector4Keyframe> rotationKeyframes;
@@ -40,33 +47,26 @@ namespace teleport
 			}
 			bool operator==(const TransformKeyframeList &t) const
 			{
-				if(boneIndex!=t.boneIndex)
-					return false;
-				if (positionKeyframes.size() != t.positionKeyframes.size())
-					return false;
+				VERIFY_EQUALITY_CHECK(t,boneIndex);
+				VERIFY_EQUALITY_CHECK(t,positionKeyframes.size())
 				for (size_t i = 0; i < t.positionKeyframes.size(); i++)
 				{
-					if(positionKeyframes[i].time!=t.positionKeyframes[i].time)
-						return false;
-					if (positionKeyframes[i].value != t.positionKeyframes[i].value)
-						return false;
+					VERIFY_EQUALITY_CHECK(t, positionKeyframes[i].time)
+					VERIFY_EQUALITY_CHECK(t, positionKeyframes[i].value)
 				}
-				if (rotationKeyframes.size() != t.rotationKeyframes.size())
-					return false;
+				VERIFY_EQUALITY_CHECK(t, rotationKeyframes.size())
 				for (size_t i = 0; i < t.rotationKeyframes.size(); i++)
 				{
-					if (rotationKeyframes[i].time != t.rotationKeyframes[i].time)
-						return false;
-					if (rotationKeyframes[i].value != t.rotationKeyframes[i].value)
-						return false;
+					VERIFY_EQUALITY_CHECK(t, rotationKeyframes[i].time)
+					VERIFY_EQUALITY_CHECK(t, rotationKeyframes[i].value)
 				}
 				return true;
 			}
 			template <typename OutStream>
 			friend OutStream &operator<<(OutStream &out, const TransformKeyframeList &k)
 			{
-				out << k.boneIndex;
-				out << k.positionKeyframes.size();
+				out.writeChunk(k.boneIndex);
+				out.writeChunk(k.positionKeyframes.size());
 				for (size_t i = 0; i < k.positionKeyframes.size(); i++)
 				{
 					out.writeChunk(k.positionKeyframes[i].time);
@@ -74,7 +74,7 @@ namespace teleport
 					out.writeChunk(k.positionKeyframes[i].value.y);
 					out.writeChunk(k.positionKeyframes[i].value.z);
 				}
-				out << k.rotationKeyframes.size();
+				out.writeChunk(k.rotationKeyframes.size());
 				for (size_t i = 0; i < k.rotationKeyframes.size(); i++)
 				{
 					out.writeChunk(k.rotationKeyframes[i].time);
@@ -88,9 +88,9 @@ namespace teleport
 			template <typename InStream>
 			friend InStream &operator>>(InStream &in, TransformKeyframeList &k)
 			{
-				in >> k.boneIndex;
-				size_t n;
-				in >> n;
+				in.readChunk(k.boneIndex);
+				size_t n=0;
+				in.readChunk(n);
 				size_t smallest_size_remaining = n / sizeof(Vector3Keyframe);
 				if (smallest_size_remaining > in.getBytesRemaining())
 				{
@@ -100,12 +100,12 @@ namespace teleport
 				k.positionKeyframes.resize(n);
 				for (size_t i = 0; i < n; i++)
 				{
-					in >> k.positionKeyframes[i].time;
-					in >> k.positionKeyframes[i].value.x;
-					in >> k.positionKeyframes[i].value.y;
-					in >> k.positionKeyframes[i].value.z;
+					in.readChunk(k.positionKeyframes[i].time);
+					in.readChunk(k.positionKeyframes[i].value.x);
+					in.readChunk(k.positionKeyframes[i].value.y);
+					in.readChunk(k.positionKeyframes[i].value.z);
 				}
-				in >> n;
+				in.readChunk(n);
 				smallest_size_remaining = n / sizeof(Vector4Keyframe);
 				if (smallest_size_remaining > in.getBytesRemaining())
 				{
@@ -115,11 +115,11 @@ namespace teleport
 				k.rotationKeyframes.resize(n);
 				for (size_t i = 0; i < n; i++)
 				{
-					in >> k.rotationKeyframes[i].time;
-					in >> k.rotationKeyframes[i].value.x;
-					in >> k.rotationKeyframes[i].value.y;
-					in >> k.rotationKeyframes[i].value.z;
-					in >> k.rotationKeyframes[i].value.w;
+					in.readChunk(k.rotationKeyframes[i].time);
+					in.readChunk(k.rotationKeyframes[i].value.x);
+					in.readChunk(k.rotationKeyframes[i].value.y);
+					in.readChunk(k.rotationKeyframes[i].value.z);
+					in.readChunk(k.rotationKeyframes[i].value.w);
 				}
 				return in;
 			}
@@ -162,7 +162,10 @@ namespace teleport
 			std::string name;
 			float duration;
 			std::vector<TransformKeyframeList> boneKeyframes;
-
+			static const char *fileExtension()
+			{
+				return "teleport_animation";
+			}
 			static Animation convertToStandard(const Animation& animation, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 			{
 				Animation convertedAnimation;
@@ -182,14 +185,11 @@ namespace teleport
 			}
 			bool Verify(const Animation &t) const
 			{
-				if(boneKeyframes.size()!= t.boneKeyframes.size())
-					return false;
-				if(duration!=t.duration)
-					return false;
+				VERIFY_EQUALITY_CHECK(t, boneKeyframes.size());
+				VERIFY_EQUALITY_CHECK(t, duration);
 				for (size_t i = 0; i < t.boneKeyframes.size(); i++)
 				{
-					if(boneKeyframes[i]!=t.boneKeyframes[i])
-						return false;
+					VERIFY_EQUALITY_CHECK(t, boneKeyframes[i]);
 				}
 				return true;
 			}
@@ -198,7 +198,8 @@ namespace teleport
 			{
 				out << animation.name;
 				out.writeChunk(animation.duration);
-				out << animation.boneKeyframes.size();
+				uint16_t n=animation.boneKeyframes.size();
+				out.writeChunk(n);
 				for(size_t i=0;i<animation.boneKeyframes.size();i++)
 				{
 					out<<animation.boneKeyframes[i];
@@ -208,15 +209,15 @@ namespace teleport
 			template <typename InStream>
 			friend InStream &operator>>(InStream &in, Animation &animation)
 			{
-				if (in.filename.rfind(".teleport_anim") != in.filename.length() - 8)
+				if (in.filename.rfind(".teleport_anim") != in.filename.length() - strlen(".teleport_anim"))
 				{
 					TELEPORT_CERR << "Unknown animation file format for " << in.filename << "\n";
 					return in;
 				}
 				in >> animation.name;
-				in >>animation.duration;
-				size_t n;
-				in>>n;
+				in.readChunk(animation.duration);
+				uint16_t n=0;
+				in.readChunk(n);
 				size_t smallest_size_remaining=n/sizeof(TransformKeyframeList);
 				if(smallest_size_remaining>in.getBytesRemaining())
 				{

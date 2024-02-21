@@ -251,6 +251,12 @@ Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 		if(stream.inputName==name)
 			m_data->inputToStreamIndex[slot] = i;
 	}
+	IOInterface *nodeIO = dynamic_cast<IOInterface *>(node);
+	if(slot>=inputInterfaces.size())
+	{
+		inputInterfaces.resize(slot+1);
+	}
+	inputInterfaces[slot]=nodeIO;
 	return Result::OK;
 }
 
@@ -347,6 +353,7 @@ Result WebRtcNetworkSource::deconfigure()
 	{
 		return Result::Node_NotConfigured;
 	}
+	inputInterfaces.clear();
 	webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 	setNumOutputSlots(0);
 	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
@@ -375,14 +382,13 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		std::vector<uint8_t> &buffer,size_t& numBytesRead) -> Result
 	{
 		PipelineNode* node = getInput(inputNodeIndex);
-		//if (inputNodeIndex >= m_streams.size())
-		//	return Result::Failed;
 		auto& stream = m_streams[streamIndex];
 
 		assert(node);
 		//assert(buffer.size() >= stream.chunkSize);
 		static uint64_t frameID = 0;
-		if (IOInterface* nodeIO = dynamic_cast<IOInterface*>(node))
+		IOInterface *nodeIO = inputInterfaces[inputNodeIndex];
+		if (nodeIO)
 		{
 			size_t bufferSize = buffer.size();
 			Result result = nodeIO->read(this, buffer.data(), bufferSize, numBytesRead);

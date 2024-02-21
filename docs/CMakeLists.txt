@@ -16,7 +16,7 @@ set(teleportcore_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportCore)
 set(teleportrenderer_DIR	${TELEPORT_ROOT_DIR}/ClientRender)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR} ${teleportrenderer_DIR}/NodeComponents ${teleportrenderer_DIR}/AVParser)
 
-set(teleportserver_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportServer ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin)
+set(teleportserver_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportServer ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin/PluginMain.cpp ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin/PluginClient.cpp)
 set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${AndroidClient_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportcore_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS} ${teleportserver_HEADER_DIRS})
 #message("DOXYGEN_INPUT_DIR ${DOXYGEN_INPUT_DIR}")
 string (REPLACE ";" "\",\"" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")

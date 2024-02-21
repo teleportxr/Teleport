@@ -438,16 +438,13 @@ void Renderer::HandTrackingChanged(int left_right,bool on_off)
 	auto localInstanceRenderer = GetInstanceRenderer(0);
 	auto &localGeometryCache = localInstanceRenderer->geometryCache;
 	auto &hand = lobbyGeometry.hands[left_right];
-	std::shared_ptr<Node> handNode = localGeometryCache->mNodeManager.GetNode(left_right == 0 ? hand.hand_mesh_node_uid : hand.hand_mesh_node_uid);
+	std::shared_ptr<Node> handNode = localGeometryCache->mNodeManager.GetNode( hand.hand_node_uid);
 	std::shared_ptr<Node> controller_node = GetInstanceRenderer(0)->geometryCache->mNodeManager.GetNode(left_right == 0 ? lobbyGeometry.leftController.controller_node_uid : lobbyGeometry.rightController.controller_node_uid);
-	if(left_right == 0)
-		lobbyGeometry.hands[left_right].visible = on_off;
-	else
-		lobbyGeometry.hands[left_right].visible = on_off;
 	if (controller_node)
 		controller_node->SetVisible(!on_off);
 	if (handNode)
 		handNode->SetVisible(on_off);
+	hand.visible=on_off;
 }
 
 void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
@@ -703,6 +700,13 @@ void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
+	bool mv = (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr);
+	if(renderState.multiview !=mv)
+	{
+		renderState.multiview = mv;
+		renderState.shaderValidity++;
+		UpdateAllNodeRenders();
+	}
 	bool multiview = false;
 	crossplatform::MultiviewGraphicsDeviceContext* mvgdc=nullptr;
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
@@ -739,7 +743,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 	}
 	static bool override_show_local_geometry = false;
-	bool show_local_geometry = (gui.GetGuiType() != GuiType::None && (have_vr_device || config.options.simulateVR)) || override_show_local_geometry;
+	// Local geometry is essentially the UI hands.
+	// We show them if: the UI has been activated,
+	//				or: we are not currently connected to a server.
+	// But only if we're in VR mode.
+	bool show_local_geometry = ((server_uids.size()==0||gui.GetGuiType() != GuiType::None) && (have_vr_device || config.options.simulateVR)) || override_show_local_geometry;
 	if (!server_uids.size())
 	{
 		std::string passName = (int)config.options.lobbyView ? "neon" : "white";

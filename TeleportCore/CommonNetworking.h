@@ -190,7 +190,7 @@ namespace teleport
 		//Contains information to update the transform of a node.
 		struct MovementUpdate
 		{
-			int64_t server_time_ns = 0;		// nanoseconds since the SetupCommand's timestamp.
+			int64_t server_time_us = 0;		// microseconds since the SetupCommand's timestamp.
 			bool isGlobal = true;
 
 			avs::uid nodeID = 0;
@@ -234,12 +234,12 @@ namespace teleport
 
 			avs::uid nodeID = 0;
 			vec3_packed scale;
-			vec3_packed velocity;
+			vec3_packed scale_rate;
 		} AVS_PACKED;
 
 		struct NodeUpdateEnabledState
 		{
-			avs::uid nodeID = 0;			//< ID of the node we are changing the enabled state of.
+			avs::uid nodeID = 0;	//< ID of the node we are changing the enabled state of.
 			bool enabled = false;	//< Whether the node is enabled, and thus should be rendered.
 		} AVS_PACKED;
 

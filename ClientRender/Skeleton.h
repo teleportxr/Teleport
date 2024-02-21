@@ -43,8 +43,9 @@ namespace teleport
 			{
 				return boneIds;
 			}
+			
 			void InitBones(clientrender::GeometryCache &g);
-			const std::vector<std::shared_ptr<clientrender::Node>> &GetBones()
+			const std::vector<std::shared_ptr<clientrender::Node>> &GetExternalBones()
 			{
 				return bones;
 			}

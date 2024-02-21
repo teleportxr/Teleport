@@ -16,7 +16,7 @@ namespace teleport
 			quat m_Rotation = {0, 0, 0, 0};
 			vec3 m_Scale = {0, 0, 0};
 			vec3 m_Velocity = {0, 0, 0};
-
+			bool applyScale=false;
 		private:
 			mat4 m_ModelMatrix;
 
@@ -29,6 +29,8 @@ namespace teleport
 			Transform &operator=(const avs::Transform &transform);
 			Transform &operator=(const Transform &transform);
 
+			/// R=A*B
+			static void Multiply(Transform &R,const Transform &A, const Transform &B);
 			Transform operator*(const Transform &other) const;
 			vec3 LocalToGlobal(const vec3 &local);
 			void UpdateModelMatrix();
