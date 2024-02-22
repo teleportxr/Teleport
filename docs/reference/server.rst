@@ -9,20 +9,6 @@ Introduction
 TeleportServer is a library that provides server functionality in conjunction with a real-time game or simulation engine. The library is usually dynamically-linked, and can be controlled from engine-side
 entirely by means of the functions that the dll exports. Therefore there is no need to include C++ headers from the server library engine-side, and indeed the engine need not be in C++.
 
-Networking
-----------
-
-
-.. mermaid::
-
-	flowchart LR
-		A(Video Queue) -->|1| H(Network Sink)
-		B(Tag Queue) -->|2| H
-		C(Audio Queue) -->|3| H
-		D(Geometry Queue) -->|4| H
-		E(Command Queue) -->|5| H
-		F(Geometry Encoder) --> D
-
 API
 ---
 
@@ -262,3 +248,17 @@ Classes
 
 .. doxygenclass:: teleport::server::VideoEncodePipeline
 	:members:
+
+
+Networking
+----------
+
+.. mermaid::
+
+	flowchart LR
+		A(Video Queue) -->|1| H(Network Sink)
+		B(Tag Queue) -->|2| H
+		C(Audio Queue) -->|3| H
+		D(Geometry Queue) -->|4| H
+		E(Command Queue) -->|5| H
+		F(Geometry Encoder) --> D

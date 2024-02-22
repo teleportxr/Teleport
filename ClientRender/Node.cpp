@@ -231,6 +231,8 @@ void Node::ClearChildren()
 
 void Node::SetVisible(bool visible)
 {
+	if (visible == visibility.getVisibility())
+		return;
 	visibility.setVisibility(visible, InvisibilityReason::OUT_OF_BOUNDS);
 }
 
@@ -298,6 +300,22 @@ void Node::UpdateGlobalTransform() const
 	else
 		globalTransform =  localTransform;
 
+	isTransformDirty = false;
+}
+
+void Node::RecursiveUpdateGlobalTransform(const Transform &parentGlobalTransform) const
+{
+	std::lock_guard lock(childrenMutex);
+	Transform::Multiply(globalTransform, localTransform, parentGlobalTransform);
+	for (auto it = children.begin(); it != children.end();it++)
+	{
+		std::shared_ptr<Node> child = it->lock();
+		// Erase weak pointer from list, if the child node has been removed.
+		if (child)
+		{
+			child->RecursiveUpdateGlobalTransform(globalTransform);
+		}
+	}
 	isTransformDirty = false;
 }
 

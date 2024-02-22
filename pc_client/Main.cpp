@@ -399,12 +399,12 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("Platform/DirectX12/Sfx/");
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
 		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin/DirectX12").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/directx12");
 #endif
 #if TELEPORT_CLIENT_USE_D3D11
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/Sfx").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/directx11");
 #endif
 #if TELEPORT_CLIENT_USE_VULKAN
 		renderPlatform->PushShaderPath("../../../../Platform/Vulkan/Sfx");
@@ -412,7 +412,7 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("Platform/Vulkan/Sfx/");
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
 		renderPlatform->PushShaderBinaryPath((build_dir + "/shaderbin/Vulkan").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
 #endif
 
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);

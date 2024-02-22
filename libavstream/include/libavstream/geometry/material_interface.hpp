@@ -10,6 +10,10 @@
 
 #include "material_extensions.h"
 
+// Who would do this?
+#ifdef verify
+#undef verify
+#endif
 namespace avs
 {
 	template<typename T> bool verify(const T& t1,const T& t2)

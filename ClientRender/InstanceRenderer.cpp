@@ -428,7 +428,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 	}
 	for(const auto &l:linkRenders)
 	{
-		RenderLink(deviceContext,l);
+		RenderLink(deviceContext,*l.get());
 	}
 	if (config.debugOptions.showOverlays)
 	{
@@ -457,7 +457,7 @@ void InstanceRenderer::UpdateMouse(vec3 orig, vec3 dir, float &distance, std::st
 	dir=normalize(dir);
 	for(auto l:linkRenders)
 	{
-		vec3 diff=l.position-orig;
+		vec3 diff=l->position-orig;
 		float along=dot(diff,dir);
 	}
 }
@@ -489,6 +489,9 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 		TELEPORT_CERR << "AddNodeToInstanceRender: no node found.\n";
 		return;
 	}
+	std::shared_ptr<NodeRender> nodeRender = nodeRenders[node.get()];
+	if(!nodeRender)
+		nodeRender=std::make_shared<NodeRender>();
 	if (!node->IsVisible())
 	{
 		TELEPORT_CERR << "AddNodeToInstanceRender:  node not visible.\n";
@@ -510,10 +513,11 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 			}*/
 			if (node->GetURL().length() > 0)
 			{
-				LinkRender lr;
-				lr.url = node->GetURL();
-				lr.position = node->GetGlobalTransform().m_Translation;
-				linkRenders.push_back(std::move(lr));
+				std::shared_ptr<LinkRender> lr=std::make_shared<LinkRender>();
+				lr->url = node->GetURL();
+				lr->position = node->GetGlobalTransform().m_Translation;
+				linkRenders.push_back(lr);
+				//nodeRender->linkRenders.insert(lr);
 			}
 		}
 		else
@@ -770,6 +774,44 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, avs::uid
 	}
 }
 
+void InstanceRenderer::UpdateNodeInInstanceRender(avs::uid cache_uid, avs::uid node_uid)
+{
+	TELEPORT_COUT << "RemoveNodeFromInstanceRender: " << cache_uid << ", " << node_uid << "\n";
+	auto g = GeometryCache::GetGeometryCache(cache_uid);
+	if (!g)
+		return;
+	auto node = g->mNodeManager.GetNode(node_uid);
+	if (!node)
+		return;
+	const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
+	const std::shared_ptr<TextCanvas> textCanvas = node->GetTextCanvas();
+	if (mesh)
+	{
+		const auto &meshInfo = mesh->GetMeshCreateInfo();
+		// iterate through the submeshes.
+		auto &materials = node->GetMaterials();
+		bool rezzing = false;
+		for (uint32_t element = 0; element < meshInfo.indexBuffers.size(); element++)
+		{
+			const clientrender::PassCache *passCache = node->GetCachedEffectPass(element);
+			crossplatform::EffectPass *pass = passCache ? passCache->pass : nullptr;
+			uint64_t node_element_hash = (node->id << uint64_t(12)) + (cache_uid << uint16_t(6)) + element;
+			auto p = passRenders.find(pass);
+			if (p == passRenders.end())
+				continue;
+			PassRender &passRender = *p->second.get();
+			avs::uid material_uid = node->GetMaterial(element)->id;
+			auto m = passRender.materialRenders.find(material_uid);
+			if (m == passRender.materialRenders.end())
+				continue;
+			m->second->meshRenders.erase(node_element_hash);
+			if (m->second->meshRenders.size() == 0)
+				p->second->materialRenders.erase(material_uid);
+		}
+	}
+}
+
+
 void InstanceRenderer::UpdateGeometryCacheForRendering(platform::crossplatform::GraphicsDeviceContext& deviceContext,std::shared_ptr<clientrender::GeometryCache> g)
 {
 	const std::vector<std::weak_ptr<Node>>& nodeList = g->mNodeManager.GetSortedRootNodes();
@@ -802,18 +844,6 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 {
 	if(!node->IsVisible())
 		return;
-	auto renderPlatform=deviceContext.renderPlatform;
-	clientrender::AVSTextureHandle th = instanceRenderState.avsTexture;
-	clientrender::AVSTexture& tx = *th;
-	AVSTextureImpl* ti = static_cast<AVSTextureImpl*>(&tx);
-	if (!node)
-		return;
-	static bool show=false;
-	if(show)
-		std::cout<<"Node "<<node->id<<"\n";
-	bool force_highlight = renderState.selected_uid==node->id;
-	//Only render visible nodes, but still render children that are close enough.
-	if(node->GetPriority()>=0)
 	if(node->IsVisible())
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();

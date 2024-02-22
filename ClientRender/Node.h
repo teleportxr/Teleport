@@ -317,13 +317,14 @@ namespace teleport
 
 			std::weak_ptr<Node> parent;
 			std::vector<std::weak_ptr<Node>> children;
-			std::mutex childrenMutex;
+			mutable std::mutex childrenMutex;
 
 			teleport::core::MovementUpdate lastReceivedMovement;
 
 			bool isHighlighted = false;
 
 			void UpdateGlobalTransform() const;
+			void RecursiveUpdateGlobalTransform(const Transform &parentGlobalTransform) const;
 
 			// Causes the global transforms off all children, and their children, to update whenever their global transform is requested.
 			void RequestChildrenUpdateTransforms();

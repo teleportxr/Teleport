@@ -191,6 +191,13 @@ void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 	nodesWithModifiedMaterials.insert(n);
 }
 
+void NodeManager::NotifyModifiedRendering(std::shared_ptr<Node> node)
+{
+	std::weak_ptr<Node> n = node;
+	//nodesWithModifiedRendering.insert(n);
+	//updateNodeInRender(node);
+}
+
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 {
 	removeNodeFromRender(node->id);
@@ -622,6 +629,7 @@ void NodeManager::Clear()
 	earlyAnimationSpeedUpdates.clear();
 	hiddenNodes.clear();
 	nodesWithModifiedMaterials.clear();
+	nodesWithModifiedRendering.clear();
 }
 
 void NodeManager::ClearAllButExcluded(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)

@@ -1165,7 +1165,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			avs::uid selected_uid = GetSelectedUid();
 			std::shared_ptr<const clientrender::Node> selected_node = geometryCache->mNodeManager.GetNode(selected_uid);
 			std::shared_ptr<const clientrender::Material> selected_material;	   //=geometryCache->mMaterialManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Texture> selected_texture;		   //=geometryCache->mTextureManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Texture> selected_texture			=geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation	   =geometryCache->mAnimationManager.Get(selected_uid);
 		
 			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene; //= geometryCache->mSubsceneManager.Get(selected_uid);

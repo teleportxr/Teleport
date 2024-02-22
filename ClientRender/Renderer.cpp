@@ -439,7 +439,7 @@ void Renderer::HandTrackingChanged(int left_right,bool on_off)
 	auto &localGeometryCache = localInstanceRenderer->geometryCache;
 	auto &hand = lobbyGeometry.hands[left_right];
 	std::shared_ptr<Node> handNode = localGeometryCache->mNodeManager.GetNode( hand.hand_node_uid);
-	std::shared_ptr<Node> controller_node = GetInstanceRenderer(0)->geometryCache->mNodeManager.GetNode(left_right == 0 ? lobbyGeometry.leftController.controller_node_uid : lobbyGeometry.rightController.controller_node_uid);
+	std::shared_ptr<Node> controller_node = localGeometryCache->mNodeManager.GetNode(left_right == 0 ? lobbyGeometry.leftController.controller_node_uid : lobbyGeometry.rightController.controller_node_uid);
 	if (controller_node)
 		controller_node->SetVisible(!on_off);
 	if (handNode)
@@ -1814,5 +1814,22 @@ void Renderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
 	if (r)
 	{
 		r->RemoveNodeFromInstanceRender(cache_uid, node_uid);
+	}
+}
+
+void Renderer::UpdateNodeInRender(avs::uid cache_uid, avs::uid node_uid)
+{
+	auto geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
+	avs::uid renderpass_cache_uid = cache_uid;
+	if (int64_t(parent_cache_uid) != int64_t(-1))
+	{
+		renderpass_cache_uid = parent_cache_uid;
+	}
+	// Add the node's objects to this renderpass.
+	auto r = GetInstanceRenderer(renderpass_cache_uid);
+	if (r)
+	{
+		r->UpdateNodeInInstanceRender(cache_uid, node_uid);
 	}
 }

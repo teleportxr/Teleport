@@ -138,7 +138,7 @@ endif()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
-set(TELEPORT_INSTALLED_CLIENT_EXE "$INSTDIR\\\\bin\\\\Release\\\\TeleportPCClient.exe")
+set(TELEPORT_INSTALLED_CLIENT_EXE "$INSTDIR\\\\build_pc_client\\\\bin\\\\Release\\\\TeleportPCClient.exe")
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
     "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '${TELEPORT_INSTALLED_CLIENT_EXE}' '-log'"
 )
@@ -159,11 +159,12 @@ endif()
 install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
 install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client COMPONENT client)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
 install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
 install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx12 COMPONENT client)
 install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
-
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\shaderbin\\\\Vulkan\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
 install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
 
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "

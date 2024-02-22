@@ -28,6 +28,9 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	mNodeManager.SetFunctionAddNodeForRender(addFn);
 	auto removeFn = std::bind(&Renderer::RemoveNodeFromRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
 	mNodeManager.SetFunctionRemoveNodeFromRender(removeFn);
+	auto updateFn = std::bind(&Renderer::UpdateNodeInRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
+	mNodeManager.SetFunctionUpdateNodeInRender(updateFn);
+	
 }
 
 GeometryCache::~GeometryCache()

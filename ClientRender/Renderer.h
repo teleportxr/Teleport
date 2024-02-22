@@ -68,6 +68,7 @@ namespace teleport
 			// Called by nodemanager:
 			void AddNodeToRender(avs::uid cache_uid, avs::uid node_uid);
 			void RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid);
+			void UpdateNodeInRender(avs::uid cache_uid, avs::uid node_uid);
 
 		protected:
 			bool reload_shaders = false;

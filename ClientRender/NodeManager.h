@@ -92,6 +92,7 @@ namespace teleport
 			bool ReparentNode(const teleport::core::UpdateNodeStructureCommand &updateNodeStructureCommand);
 
 			void NotifyModifiedMaterials(std::shared_ptr<clientrender::Node> node);
+			void NotifyModifiedRendering(std::shared_ptr<clientrender::Node> node);
 			// Tick the node manager along, and remove any nodes that have been invisible for too long.
 			//	timestamp_us : current "server time" - microseconds since server's time datum.
 			void Update(std::chrono::microseconds timestamp_us);
@@ -115,6 +116,11 @@ namespace teleport
 			{
 				removeNodeFromRender = fn;
 			}
+			void SetFunctionUpdateNodeInRender(std::function<void(avs::uid)> fn)
+			{
+				updateNodeInRender = fn;
+			}
+			
 			void CompleteNode(avs::uid id);
 
 		protected:
@@ -126,7 +132,8 @@ namespace teleport
 
 			// Nodes that have been added, or modified, to be sorted into transparent or not.
 			std::set<std::weak_ptr<Node>, weak_ptr_compare<Node>> nodesWithModifiedMaterials;
-
+			std::set<std::weak_ptr<Node>, weak_ptr_compare<Node>> nodesWithModifiedRendering;
+			
 			phmap::flat_hash_map<avs::uid, std::shared_ptr<Node>> nodeLookup;
 
 		private:
@@ -169,6 +176,7 @@ namespace teleport
 			mutable std::mutex distanceSortedTransparentNodes_mutex;
 			std::function<void(avs::uid)> addNodeForRender;
 			std::function<void(avs::uid)> removeNodeFromRender;
+			std::function<void(avs::uid)> updateNodeInRender;
 		};
 	}
 

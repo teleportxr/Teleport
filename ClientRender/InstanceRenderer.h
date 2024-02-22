@@ -167,13 +167,6 @@ namespace teleport
 				}
 			};
 			phmap::flat_hash_map<avs::uid, std::shared_ptr<SkeletonRender>> skeletonRenders;
-			struct NodeRender
-			{
-				mat4 model;
-				std::shared_ptr<clientrender::GeometryCache> geometryCache;
-				std::shared_ptr<clientrender::Node> node;
-				bool transparent_pass;
-			};
 			struct MeshRender
 			{
 				platform::crossplatform::EffectPass *pass;
@@ -205,10 +198,16 @@ namespace teleport
 				vec3 position;
 				std::string url;
 			};
-			std::vector<LinkRender> linkRenders;
+			std::vector<std::shared_ptr<LinkRender>> linkRenders;
 			phmap::flat_hash_map<platform::crossplatform::EffectPass *, std::shared_ptr<PassRender>> passRenders;
 			mutable std::mutex passRenders_mutex;
 
+			struct NodeRender
+			{
+				std::set<MeshRender> meshRenders;
+				std::set<LinkRender> linkRenders;
+			};
+			phmap::flat_hash_map<Node *, std::shared_ptr<NodeRender>> nodeRenders;
 		public:
 			InstanceRenderer(avs::uid server, teleport::client::Config &config, GeometryDecoder &geometryDecoder, RenderState &renderState, teleport::client::SessionClient *sessionClient);
 			virtual ~InstanceRenderer();
@@ -229,10 +228,10 @@ namespace teleport
 			// Updates prior to rendering.
 			void UpdateGeometryCacheForRendering(platform::crossplatform::GraphicsDeviceContext &deviceContext, std::shared_ptr<clientrender::GeometryCache> geometryCache);
 			void UpdateNodeForRendering(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &g, const std::shared_ptr<clientrender::Node> node, bool include_children, bool transparent_pass);
+			
 			// Render everything that uses a given pass:
 			void RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p, platform::crossplatform::EffectPass *pass);
 			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &l);
-
 			void RenderMaterial(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MaterialRender &materialRender);
 			void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
 			void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<TextCanvas> textCanvas);
@@ -268,6 +267,7 @@ namespace teleport
 
 			void AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node_uid);
 			void RemoveNodeFromInstanceRender(avs::uid cache_uid, avs::uid node_uid);
+			void UpdateNodeInInstanceRender(avs::uid cache_uid, avs::uid node_uid);
 			void AddNodeMeshToInstanceRender(avs::uid cache_uid, std::shared_ptr<Node> node, const std::shared_ptr<clientrender::Mesh> mesh);
 			void UpdateNodeRenders();
 		};
