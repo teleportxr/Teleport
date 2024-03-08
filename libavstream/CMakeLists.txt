@@ -6,7 +6,7 @@ set(CMAKE_CUDA_COMPILER "${LIBAV_CUDA_DIR}/bin/nvcc.exe" )
 # Build options
 option(LIBAV_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 option(LIBAV_BUILD_SHARED_LIBS "Build shared library" OFF)
-option(LIBAV_USE_SRT "Use SRT?" ON)
+option(LIBAV_USE_SRT "Use SRT?" OFF)
 option(LIBAV_USE_EFP "Use EFP?" ON)
 option(LIBAV_USE_CUDA "Use CUDA for encoding?" ON)
 set(LIBAVS)

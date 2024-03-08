@@ -4,10 +4,16 @@
 
 #include "ClientNetworkContext.h"
 #include "TeleportAudio/CustomAudioStreamTarget.h"
+#include "ClientManager.h"
 using namespace teleport;
 using namespace server;
 
-extern void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize);
+void ProcessAudioInput(avs::uid clientID, const uint8_t *data, size_t dataSize)
+{
+	processAudioInput(clientID, data, dataSize);
+}
+
+
 
 ClientNetworkContext::ClientNetworkContext()
 {
@@ -15,7 +21,7 @@ ClientNetworkContext::ClientNetworkContext()
 
 void ClientNetworkContext::Init(avs::uid clientID,bool receive_audio)
 {
-	audioStreamTarget.SetPlayCallback(std::bind(&Client_ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2));
+	audioStreamTarget.SetPlayCallback(std::bind(&ProcessAudioInput, clientID, std::placeholders::_1, std::placeholders::_2));
 
 	// Receiving
 	if (receive_audio)

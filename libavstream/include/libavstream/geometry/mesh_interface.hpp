@@ -315,7 +315,6 @@ namespace avs
 		int32_t priority=0;
 
 		uid parentID=0;
-		//std::vector<uid> childrenIDs;
 
 		// The following should be separated out into node components:
 		NodeDataType data_type=NodeDataType::None;

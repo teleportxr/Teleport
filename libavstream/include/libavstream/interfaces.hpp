@@ -39,6 +39,9 @@ public:
 	 */
 	virtual Result read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) = 0;
 
+	/// Discard any data in the buffer: equivalent to performing read until exhausted, then ignoring the data.
+	virtual void drop()=0;
+
 	/*!
 	 * Write bytes.
 	 * \param writer PipelineNode which performs the write operation.

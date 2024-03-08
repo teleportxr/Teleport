@@ -301,6 +301,27 @@ namespace teleport
 			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 			uint64_t		valid_counter = 0;
 		} AVS_PACKED;
+		//! Mode specifying how to light objects.
+		enum class LightingMode : uint8_t
+		{
+			NONE = 0,
+			TEXTURE,
+			VIDEO
+		};
+		//! Setup for dynamically-lit objects on the client.
+		struct ClientDynamicLighting
+		{
+			int2 specularPos = {0, 0};
+			int32_t specularCubemapSize = 0;
+			int32_t specularMips = 0;
+			int2 diffusePos = {0, 0};
+			int32_t diffuseCubemapSize = 0;
+			int2 lightPos = {0, 0};
+			int32_t lightCubemapSize = 0;
+			avs::uid specular_cubemap_texture_uid = 0;
+			avs::uid diffuse_cubemap_texture_uid = 0;
+			LightingMode lightingMode = LightingMode::TEXTURE;
+		} AVS_PACKED; // 57 bytes
 		//! The setup information sent by the server on connection to a given client.
 		struct SetupCommand : public Command
 		{
@@ -324,7 +345,7 @@ namespace teleport
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode		backgroundMode;										//!< 158 Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;									//!< 174 If the background is of the COLOUR type, which colour to use.
-			avs::ClientDynamicLighting clientDynamicLighting;						//!< Setup for dynamic object lighting. 174+57=231 bytes
+			ClientDynamicLighting clientDynamicLighting;						//!< Setup for dynamic object lighting. 174+57=231 bytes
 		} AVS_PACKED;
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.

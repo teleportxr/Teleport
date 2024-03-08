@@ -316,25 +316,6 @@ namespace avs
 		int32_t		shadowmap_size=0;
 	} AVS_PACKED;	// 89 bytes
 
-	
-	enum class LightingMode : uint8_t
-	{
-		NONE = 0, TEXTURE, VIDEO
-	};
-	struct ClientDynamicLighting
-	{
-		int32_t specularPos[2]={0,0};
-		int32_t specularCubemapSize=0;
-		int32_t specularMips=0;
-		int32_t diffusePos[2]={0,0};
-		int32_t diffuseCubemapSize=0;
-		int32_t lightPos[2]={0,0};
-		int32_t lightCubemapSize=0;
-		uid specular_cubemap_texture_uid=0;
-		uid diffuse_cubemap_texture_uid=0;
-		LightingMode lightingMode = LightingMode::TEXTURE;
-	} AVS_PACKED;	// 57 bytes
-
 	struct AudioConfig
 	{
 		uint32_t sampleRate = 44100;

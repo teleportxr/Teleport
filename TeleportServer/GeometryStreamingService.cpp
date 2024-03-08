@@ -7,6 +7,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
 #include "TeleportCore/Profiling.h"
+#include "TeleportServer/ClientManager.h"
 #pragma optimize("", off)
 
 using namespace teleport;
@@ -21,8 +22,8 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-GeometryStreamingService::GeometryStreamingService(const ServerSettings *settings, avs::uid clid)
-	: geometryStore(nullptr), settings(settings), clientNetworkContext(nullptr), geometryEncoder(settings, this, clid)
+GeometryStreamingService::GeometryStreamingService( avs::uid clid)
+	: geometryStore(nullptr),  clientNetworkContext(nullptr), geometryEncoder( this, clid),clientId(clid)
 {
 }
 
@@ -231,30 +232,48 @@ void GeometryStreamingService::stopStreaming()
 
 void GeometryStreamingService::clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID)
 {
+	auto client=ClientManager::instance().GetClient(clientID);
+	if(!client)
+		return;
+	client->clientMessaging->GetGeometryStreamingService().startedRenderingNode(nodeID);
+}
+
+bool GeometryStreamingService::startedRenderingNode( avs::uid nodeID)
+{
 	auto n = streamedNodeIDs.find(nodeID);
-	if (n!= streamedNodeIDs.end())
+	if (n != streamedNodeIDs.end())
 	{
-		bool result=clientStartedRenderingNode_Internal(clientID, nodeID);
-		if(result)
+		bool result = clientStartedRenderingNode_Internal(clientId, nodeID);
+		if (result)
 			clientRenderingNodes.insert(nodeID);
+		return result;
 	}
 	else
 	{
 		TELEPORT_COUT << "Client started rendering non-streamed node with ID of " << nodeID << "!\n";
+		return false;
 	}
 }
-
 void GeometryStreamingService::clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID)
+{
+	auto client = ClientManager::instance().GetClient(clientID);
+	if (!client)
+		return;
+	client->clientMessaging->GetGeometryStreamingService().stoppedRenderingNode(nodeID);
+}
+bool GeometryStreamingService::stoppedRenderingNode(avs::uid nodeID)
 {
 	auto nodePair = clientRenderingNodes.find(nodeID);
 	if (nodePair != clientRenderingNodes.end())
 	{
-		clientStoppedRenderingNode_Internal(clientID, nodeID);
+		bool res=clientStoppedRenderingNode_Internal(clientId, nodeID);
 		clientRenderingNodes.erase(nodeID);
+		return res;
 	}
 	else
 	{
 		TELEPORT_COUT << "Client stopped rendering node with ID of " << nodeID << " - didn't know it was rendering this!\n";
+		return false;
 	}
 }
 
@@ -280,7 +299,7 @@ void GeometryStreamingService::tick(float deltaTime)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	// Might not be initialized... YET
-	if (!avsPipeline || !settings->enableGeometryStreaming)
+	if (!avsPipeline || !serverSettings.enableGeometryStreaming)
 		return;
 	// We can now be confident that all streamable geometries have been initialized, so we will do internal setup.
 	// Each frame we manage a view of which streamable geometries should or shouldn't be rendered on our client.
@@ -290,7 +309,7 @@ void GeometryStreamingService::tick(float deltaTime)
 	{
 		it->second += deltaTime;
 
-		if (it->second > settings->confirmationWaitTime)
+		if (it->second > serverSettings.confirmationWaitTime)
 		{
 		//	TELEPORT_COUT << "Resource " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 

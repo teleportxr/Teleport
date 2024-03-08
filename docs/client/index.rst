@@ -50,4 +50,12 @@ For example:
 
 `teleport://home.teleportvr.io <teleport://home.teleportvr.io>`_
 
+`mmv://L_CyberpunkCity/10,10,10 <mmv://L_CyberpunkCity/10,10,10>`_
 
+`mmv://L_BurningMan/10,10,10 <mmv://L_BurningMan/10,10,10>`_
+
+`mmv://L_Himalayas/10,10,10 <mmv://L_Himalayas/10,10,10>`_
+
+`mmv://L_MetaArcade/10,10,10 <mmv://L_MetaArcade/10,10,10>`_
+
+`mmv://L_Toronto/10,10,10 <mmv://L_Toronto/10,10,10>`_

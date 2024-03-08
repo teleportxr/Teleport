@@ -96,6 +96,8 @@ clientrender::MissingResource& GeometryCache::GetMissingResource(avs::uid id, av
 		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 		m_ResourceRequests.push_back(id);
 		TELEPORT_INTERNAL_COUT("Resource {0} of type {1} is missing so far.",id, stringOf(resourceType));
+		if(m_ResourceRequests.size()>4096)
+			DebugBreak();
 	}
 	if(resourceType!=missingPair->second.resourceType)
 	{
@@ -111,6 +113,8 @@ const std::vector<avs::uid> &GeometryCache::GetResourceRequests()
 std::vector<avs::uid> GeometryCache::GetResourceRequests() const
 {
 	std::lock_guard g(resourceRequestsMutex);
+	if(m_ResourceRequests.size()>8192)
+		DebugBreak();
 	std::vector<avs::uid> resourceRequests = m_ResourceRequests;
 	//Remove duplicates.
 	std::sort(resourceRequests.begin(), resourceRequests.end());

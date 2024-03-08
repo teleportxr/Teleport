@@ -26,7 +26,7 @@ namespace teleport
 		class GeometryStreamingService : public avs::GeometryRequesterBackendInterface
 		{
 		public:
-			GeometryStreamingService(const struct ServerSettings *settings, avs::uid clid);
+			GeometryStreamingService( avs::uid clid);
 			virtual ~GeometryStreamingService();
 
 			virtual bool hasResource(avs::uid resourceID) const override;
@@ -50,9 +50,9 @@ namespace teleport
 			//Stop streaming to client.
 			void stopStreaming();
 
-			void clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID);
-			void clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID);
-			void setNodeVisible(avs::uid clientID, avs::uid nodeID, bool isVisible);
+			static void clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID);
+			static void clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID);
+			static void setNodeVisible(avs::uid clientID, avs::uid nodeID, bool isVisible);
 			bool isClientRenderingNode(avs::uid nodeID);
 
 			virtual void tick(float deltaTime);
@@ -82,9 +82,9 @@ namespace teleport
 
 			virtual bool clientStoppedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
 			virtual bool clientStartedRenderingNode_Internal(avs::uid clientID, avs::uid nodeID) = 0;
+			bool startedRenderingNode(avs::uid nodeID);
+			bool stoppedRenderingNode(avs::uid nodeID);
 			teleport::core::Handshake handshake;
-		private:
-			const struct ServerSettings *settings = nullptr;
 
 			ClientNetworkContext* clientNetworkContext = nullptr;
 			GeometryEncoder geometryEncoder;
@@ -104,7 +104,8 @@ namespace teleport
 
 			//Recursively obtains the resources from the mesh node, and its child nodes.
 			void GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources, int32_t minimumPriority) const;
-			void GetSkeletonNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources> &outSkeletonNodeResources) const;
+			void GetSkeletonNodeResources(avs::uid nodeID, const avs::Node &node, std::vector<avs::MeshNodeResources> &outSkeletonNodeResources) const;
+			avs::uid clientId = 0;
 		};
 
 		typedef bool(TELEPORT_STDCALL* ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
@@ -112,13 +113,12 @@ namespace teleport
 		class PluginGeometryStreamingService : public GeometryStreamingService
 		{
 		public:
-			PluginGeometryStreamingService(const struct ServerSettings *serverSettings, avs::uid clid)
-				: GeometryStreamingService(serverSettings,  clid)
+			PluginGeometryStreamingService( avs::uid clid)
+				: GeometryStreamingService(clid)
 			{
 				this->geometryStore = &GeometryStore::GetInstance();
 			}
 			virtual ~PluginGeometryStreamingService() = default;
-
 
 			static ClientStoppedRenderingNodeFn callback_clientStoppedRenderingNode;
 			static ClientStartedRenderingNodeFn callback_clientStartedRenderingNode;

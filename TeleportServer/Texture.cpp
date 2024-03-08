@@ -4,6 +4,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "GeometryStore.h"
 #include <filesystem>
+#include <fmt/core.h>
 
 using namespace teleport;
 using namespace server;

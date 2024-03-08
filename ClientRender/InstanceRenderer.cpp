@@ -166,6 +166,8 @@ void InstanceRenderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContex
 
 void InstanceRenderer::RecomposeCubemap(crossplatform::GraphicsDeviceContext& deviceContext, crossplatform::Texture* srcTexture, crossplatform::Texture* targetTexture, int mips, int2 sourceOffset)
 {
+	if(targetTexture->width==0||targetTexture->length==0)
+		return;
 	renderState.cubemapConstants.sourceOffset = sourceOffset;
 	deviceContext.renderPlatform->SetTexture(deviceContext, renderState.plainTexture, srcTexture);
 
@@ -407,7 +409,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 		platform::crossplatform::Texture *diffuseCubemapTexture = instanceRenderState.diffuseCubemapTexture;
 		platform::crossplatform::Texture *specularCubemapTexture = instanceRenderState.specularCubemapTexture;
 		// If lighting is via static textures.
-		if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == avs::LightingMode::TEXTURE)
+		if (sessionClient->GetSetupCommand().clientDynamicLighting.lightingMode == teleport::core::LightingMode::TEXTURE)
 		{
 			auto d = geometryCache->mTextureManager.Get(sessionClient->GetSetupCommand().clientDynamicLighting.diffuse_cubemap_texture_uid);
 			if (d)
@@ -428,7 +430,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 	}
 	for(const auto &l:linkRenders)
 	{
-		RenderLink(deviceContext,*l.get());
+		RenderLink(deviceContext,*l.second.get());
 	}
 	if (config.debugOptions.showOverlays)
 	{
@@ -457,9 +459,14 @@ void InstanceRenderer::UpdateMouse(vec3 orig, vec3 dir, float &distance, std::st
 	dir=normalize(dir);
 	for(auto l:linkRenders)
 	{
-		vec3 diff=l->position-orig;
+		vec3 diff=l.second->position-orig;
 		float along=dot(diff,dir);
 	}
+}
+static uint64_t MakeNodeHash(avs::uid cache_uid, avs::uid node_id)
+{
+	uint64_t node_hash = (node_id << uint64_t(12)) + (cache_uid << uint16_t(6));
+	return node_hash;
 }
 
 void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p,platform::crossplatform::EffectPass *pass)
@@ -516,7 +523,7 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 				std::shared_ptr<LinkRender> lr=std::make_shared<LinkRender>();
 				lr->url = node->GetURL();
 				lr->position = node->GetGlobalTransform().m_Translation;
-				linkRenders.push_back(lr);
+				linkRenders[MakeNodeHash(cache_uid,node_uid)] = lr;
 				//nodeRender->linkRenders.insert(lr);
 			}
 		}
@@ -526,11 +533,6 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 		}
 }
 
-static uint64_t MakeNodeHash(avs::uid cache_uid, avs::uid node_id)
-{
-	uint64_t node_hash = (node_id << uint64_t(12)) + (cache_uid << uint16_t(6));
-	return node_hash;
-}
 void InstanceRenderer::UpdateNodeRenders()
 {
 	struct CacheNode
@@ -1279,12 +1281,15 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	}
 	else
 	{
-		instanceRenderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.perspective_width, setupCommand.video_config.perspective_height, 1, 1,
+		if (setupCommand.video_config.perspective_width * setupCommand.video_config.perspective_height > 0)
+			instanceRenderState.videoTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.video_config.perspective_width, setupCommand.video_config.perspective_height, 1, 1,
 			crossplatform::PixelFormat::RGBA_16_FLOAT, empty_data, true, false, false, false);
 	}
 
-	instanceRenderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM,empty_data,true, false, false, true);
-	instanceRenderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, empty_data,true, false, false, true);
+	if (setupCommand.clientDynamicLighting.specularCubemapSize > 0)
+		instanceRenderState.specularCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.specularCubemapSize, setupCommand.clientDynamicLighting.specularCubemapSize, 1, setupCommand.clientDynamicLighting.specularMips, crossplatform::PixelFormat::RGBA_8_UNORM,empty_data,true, false, false, true);
+	if(setupCommand.clientDynamicLighting.diffuseCubemapSize>0)
+		instanceRenderState.diffuseCubemapTexture->ensureTextureArraySizeAndFormat(renderPlatform, setupCommand.clientDynamicLighting.diffuseCubemapSize, setupCommand.clientDynamicLighting.diffuseCubemapSize, 1, 1,crossplatform::PixelFormat::RGBA_8_UNORM, empty_data,true, false, false, true);
 
 	const float aspect = setupCommand.video_config.perspective_width / static_cast<float>(setupCommand.video_config.perspective_height);
 	const float horzFOV = setupCommand.video_config.perspective_fov * clientrender::DEG_TO_RAD;
@@ -1406,7 +1411,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	}
 	{
 		clientPipeline.reliableOutQueue.configure(3000, 64, "Reliable out");
-		clientPipeline.commandDecoder.configure(sessionClient);
+		clientPipeline.commandDecoder.configure(sessionClient,"Reliable Decoder");
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableOutQueue);
 		clientPipeline.pipeline.link({ &clientPipeline.reliableOutQueue, &clientPipeline.commandDecoder });
 	}

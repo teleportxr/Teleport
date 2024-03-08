@@ -3,6 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/ServerSettings.h"    
+#include "TeleportServer/ClientManager.h"    
 #include "TeleportCore/TeleportUtility.h" 
 #include "UnityPlugin/PluginMain.h"
 #include "UnityPlugin/PluginClient.h"
@@ -10,6 +11,7 @@
 #include <rtc/websocketserver.hpp>
 #include <functional>
 #include <regex>
+#include <nlohmann/json.hpp>
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
@@ -66,10 +68,13 @@ bool SignalingService::initialize(std::set<uint16_t> discoPorts,  std::string de
 void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string msg)
 {
 	//TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
-	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
-	auto &c=signalingClients[clientID];
-	if(c)
-		c->messagesReceived.push_back(msg);
+	auto readSignalingClients = signalingClients.readAccess();
+	auto &c = readSignalingClients->find(clientID);
+	if(c!=readSignalingClients->end())
+	{
+		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);
+		c->second->messagesReceived.push_back(msg);
+	}
 	else
 	{
 		TELEPORT_CERR << ": info: Websocket message received but already removed the SignalingClient " << clientID << std::endl;
@@ -79,13 +84,14 @@ void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string m
 void SignalingService::ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::vector<std::byte> &bin)
 {
 	//TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
-	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
-	auto& c = signalingClients[clientID];
-	if (c)
+	auto readSignalingClients = signalingClients.readAccess();
+	auto &c = readSignalingClients->find(clientID);
+	if (c != readSignalingClients->end())
 	{
 		std::vector<uint8_t> b(bin.size());
 		memcpy(b.data(), bin.data(), b.size());
-		c->binaryMessagesReceived.push(b);
+		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);
+		c->second->binaryMessagesReceived.push(b);
 	}
 	else
 	{
@@ -95,24 +101,26 @@ void SignalingService::ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::ve
 
 bool SignalingService::GetNextMessage(avs::uid clientID, std::string& msg)
 {
-	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
-	auto& c = signalingClients[clientID];
-	if (c&&!c->messagesToPassOn.empty())
+	auto readSignalingClients = signalingClients.readAccess();
+	auto &c = readSignalingClients->find(clientID);
+	if (c != readSignalingClients->end()&&!c->second->messagesToPassOn.empty())
 	{
-		msg = c->messagesToPassOn.front();
-		c->messagesToPassOn.pop();
+		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);
+		msg = c->second->messagesToPassOn.front();
+		c->second->messagesToPassOn.pop();
 		return true;
 	}
 	return false;
 }
 bool SignalingService::GetNextBinaryMessage(avs::uid clientID, std::vector<uint8_t>& bin)
 {
-	std::lock_guard<std::mutex> lock(webSocketsMessagesMutex);
-	auto& c = signalingClients[clientID];
-	if (c && !c->binaryMessagesReceived.empty())
+	auto readSignalingClients = signalingClients.readAccess();
+	auto &c = readSignalingClients->find(clientID);
+	if (c != readSignalingClients->end() && !c->second->binaryMessagesReceived.empty())
 	{
-		bin = c->binaryMessagesReceived.front();
-		c->binaryMessagesReceived.pop();
+		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);
+		bin = c->second->binaryMessagesReceived.front();
+		c->second->binaryMessagesReceived.pop();
 		return true;
 	}
 	return false;
@@ -152,9 +160,10 @@ void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 			return;
 		}
 	}
-	std::lock_guard lock(signalingClientsMutex);
-	signalingClients[clientID] = std::make_shared<SignalingClient>();
-	auto& c = signalingClients[clientID];
+	auto writeSignalingClients = signalingClients.writeAccess();
+
+	(*writeSignalingClients)[clientID] = std::make_shared<SignalingClient>();
+	auto &c = (*writeSignalingClients)[clientID];
 	c->clientID = clientID;
 	c->webSocket = ws;
 	c->ip_addr_port = ip_addr_port;
@@ -186,15 +195,15 @@ void SignalingService::shutdown()
 {
 	TELEPORT_COUT<< ": info: SignalingService::shutdown" << std::endl;
 	{
-		std::lock_guard lock(signalingClientsMutex);
-		for (auto c : signalingClients)
+		auto writeSignalingClients = signalingClients.writeAccess();
+		for (auto c : *writeSignalingClients)
 		{
 			if (c.second && c.second->webSocket)
 			{
 				c.second->webSocket->resetCallbacks();
 			}
 		}
-		signalingClients.clear();
+		writeSignalingClients->clear();
 	}
 	for(auto &w:webSocketServers)
 	{
@@ -206,7 +215,7 @@ void SignalingService::shutdown()
 	clientRemapping.clear();
 }
 
-void SignalingService::processDisconnection(avs::uid clientID, std::shared_ptr<SignalingClient> &signalingClient)
+void SignalingService::processDisconnection(avs::uid clientID, safe::Safe<SignalingClientMap>::WriteAccess<> &writeSignalingClients, std::shared_ptr<SignalingClient> &signalingClient)
 {
 	auto c = ClientManager::instance().GetClient(clientID);
 	if (c)
@@ -215,12 +224,14 @@ void SignalingService::processDisconnection(avs::uid clientID, std::shared_ptr<S
 		c->clientMessaging->Disconnect();
 		// Close the Websocket, so that on reconnection, a new one creates a new signalingClient.
 		signalingClient->webSocket->close();
-		signalingClients.erase(clientID);
+		writeSignalingClients->erase(clientID);
 		
 	}
 }
 
-void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<SignalingClient>& signalingClient,json& content)
+void SignalingService::processInitialRequest(avs::uid uid,
+											 safe::Safe<SignalingClientMap>::WriteAccess<> &writeSignalingClients
+											 ,std::shared_ptr<SignalingClient> & signalingClient, json &content)
 {
 	if (content.find("clientID") != content.end())
 	{
@@ -231,8 +242,7 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			clientID = uid;
 		else
 		{
-			std::lock_guard lock(signalingClientsMutex);
-			if (signalingClients.find(clientID) == signalingClients.end())
+			if (writeSignalingClients->find(clientID) == writeSignalingClients->end())
 			{
 				// sent us a client ID that isn't valid. Ignore it, don't waste bandwidth..?
 				// or instead, send the replacement ID in the response, leave it up to
@@ -241,14 +251,14 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			}
 			// identifies as a previous client. Discard the new client ID.
 			//TODO: we're taking the client's word for it that it is clientID. Some kind of token/hash?
-			signalingClients[clientID] = signalingClient;
+			(*writeSignalingClients)[clientID] = signalingClient;
 			signalingClient->clientID = clientID;
 			clientUids.insert(clientID);
 			if (uid != clientID)
 			{
 				TELEPORT_COUT << ": info: Remapped from " << uid << " to " << clientID << std::endl;
 				TELEPORT_COUT << ": info: signalingClient has " << signalingClient->clientID << std::endl;
-				signalingClients[uid] = nullptr;
+				writeSignalingClients->erase(uid);
 				clientUids.erase(uid);
 				uid = clientID;
 			}
@@ -270,7 +280,7 @@ void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<Signa
 			signalingClient->signalingState = core::SignalingState::STREAMING;
 			TELEPORT_COUT << "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them." << std::endl;
 			// It may be just that the connection request was already in flight when we accepted its predecessor.
-			sendResponseToClient(clientID);
+			sendResponseToClient(signalingClient,clientID);
 			return;
 		}
 		if (signalingClient->signalingState != core::SignalingState::REQUESTED)
@@ -302,45 +312,57 @@ void SignalingService::tick()
 	avs::uid clientID = 0; //Newly received ID.
 
 	//Retrieve all packets received since last call, and add any new clients.
-	signalingClientsMutex.lock();
-	for (auto c : signalingClients)
 	{
-		std::shared_ptr<SignalingClient> signalingClient = c.second;
-		if (!signalingClient)
-			continue;
-		std::lock_guard lock(webSocketsMessagesMutex);
-		signalingClientsMutex.unlock();
-		while (signalingClient->messagesReceived.size())
+		auto writeSignalingClients=signalingClients.writeAccess();
+		bool stop=false;
+		for (auto &c : *writeSignalingClients)
 		{
-			std::string msg = signalingClient->messagesReceived[0];
-			signalingClient->messagesReceived.erase(signalingClient->messagesReceived.begin());
-			if (!msg.length())
+			std::shared_ptr<SignalingClient> signalingClient = c.second;
+			if (!signalingClient)
 				continue;
-			json message = json::parse(msg);
-			if (!message.contains("teleport-signal-type"))
-				continue;
-			std::string teleport_signal_type = message["teleport-signal-type"]; 
-			if (teleport_signal_type == "request")
-				processInitialRequest(c.first, signalingClient, message["content"]);
-			else if (teleport_signal_type == "disconnect")
-				processDisconnection(c.first, signalingClient);
-			else
-				signalingClient->messagesToPassOn.push(msg);
+			std::lock_guard<std::mutex> lock(c.second->webSocketsMessagesMutex);
+			while (signalingClient->messagesReceived.size())
+			{
+				std::string msg = signalingClient->messagesReceived[0];
+				signalingClient->messagesReceived.erase(signalingClient->messagesReceived.begin());
+				if (!msg.length())
+					continue;
+				json message = json::parse(msg);
+				if (!message.contains("teleport-signal-type"))
+					continue;
+				std::string teleport_signal_type = message["teleport-signal-type"]; 
+				if (teleport_signal_type == "request")
+				{
+					processInitialRequest(c.first, writeSignalingClients, signalingClient, message["content"]);
+					stop=true;
+					break;
+				}
+				else if (teleport_signal_type == "disconnect")
+				{
+					processDisconnection(c.first, writeSignalingClients, signalingClient);
+					stop = true;
+					break;
+				}
+				else
+					signalingClient->messagesToPassOn.push(msg);
+			}
+			if(stop)
+				break;
 		}
-		signalingClientsMutex.lock();
 	}
-	for (auto c : signalingClients)
 	{
-		std::lock_guard lock(webSocketsMessagesMutex);
-		auto clientID = c.first;
-		if (!c.second)
+		auto writeSignalingClients = signalingClients.writeAccess();
+		for (auto c : *writeSignalingClients)
 		{
-			signalingClients.erase(clientID);
-			clientUids.erase(clientID);
-			break;
+			auto clientID = c.first;
+			if (!c.second)
+			{
+				writeSignalingClients->erase(clientID);
+				clientUids.erase(clientID);
+				break;
+			}
 		}
 	}
-	signalingClientsMutex.unlock();
 }
 
 const std::set<avs::uid> &SignalingService::getClientIds() const
@@ -350,18 +372,15 @@ const std::set<avs::uid> &SignalingService::getClientIds() const
 
 std::shared_ptr<SignalingClient> SignalingService::getSignalingClient(avs::uid u)
 {
-	std::lock_guard lock(signalingClientsMutex);
-	return signalingClients[u];
+	auto readSignalingClients = signalingClients.readAccess();
+	auto c=readSignalingClients->find(u);
+	if(c!=readSignalingClients->end())
+		return c->second;
+	return nullptr;
 }
 
-void SignalingService::sendResponseToClient(uint64_t clientID)
+void SignalingService::sendResponseToClient(std::shared_ptr<SignalingClient> &signalingClient,uint64_t clientID)
 {
-	auto c = signalingClients.find(clientID);
-	if(c == signalingClients.end())
-	{
-		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
-		return;
-	}
 	json message = {
 						{"teleport-signal-type","request-response"},
 						{"content",
@@ -372,8 +391,7 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 	};
 	try
 	{
-		std::lock_guard lock(signalingClientsMutex);
-		signalingClients[clientID]->webSocket->send(message.dump());
+		signalingClient->webSocket->send(message.dump());
 		discoveryCompleteForClient(clientID);
 	}
 	catch (...)
@@ -384,16 +402,16 @@ void SignalingService::sendResponseToClient(uint64_t clientID)
 
 void SignalingService::sendToClient(avs::uid clientID, std::string str)
 {
-	std::lock_guard lock(signalingClientsMutex);
-	auto c = signalingClients.find(clientID);
-	if (c == signalingClients.end())
+	auto readSignalingClients = signalingClients.readAccess();
+	auto c = readSignalingClients->find(clientID);
+	if (c == readSignalingClients->end())
 	{
 		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
 		return;
 	}
 	try
 	{
-		signalingClients[clientID]->webSocket->send(str);
+		c->second->webSocket->send(str);
 		TELEPORT_CERR << "webSocket->send: " << str << "  .\n";
 	}
 	catch (...)
@@ -403,16 +421,16 @@ void SignalingService::sendToClient(avs::uid clientID, std::string str)
 
 bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t> bin)
 {
-	std::lock_guard lock(signalingClientsMutex);
-	auto c = signalingClients.find(clientID);
-	if (c == signalingClients.end())
+	auto readSignalingClients = signalingClients.readAccess();
+	auto c = readSignalingClients->find(clientID);
+	if (c == readSignalingClients->end())
 	{
 		TELEPORT_CERR << "No client with ID: " << clientID << " is trying to connect.\n";
 		return false;
 	}
 	try
 	{
-		signalingClients[clientID]->webSocket->send((std::byte*)bin.data(),bin.size());
+		c->second->webSocket->send((std::byte*)bin.data(),bin.size());
 		TELEPORT_CERR << "webSocket->send: " << bin.size() << " binary bytes .\n";
 		return true;
 	}
@@ -422,14 +440,12 @@ bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t
 	}
 }
 
-extern std::set<avs::uid> unlinkedClientIDs; 
-
 void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 {
 	auto c = ClientManager::instance().GetClient(clientID);
 	if (c)
 	{
 		c->SetConnectionState(DISCOVERED);
-		unlinkedClientIDs.insert(clientID);
+		ClientManager::instance().unlinkedClientIDs.insert(clientID);
 	}
 }

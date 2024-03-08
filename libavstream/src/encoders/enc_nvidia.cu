@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018 Simul.co
+// (c) Copyright 2018-2024 Simul.co
 
 #include <cstdint>
 #include <cuda_fp16.h>

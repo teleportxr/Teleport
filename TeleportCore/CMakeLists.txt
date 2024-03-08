@@ -16,6 +16,7 @@ file(GLOB header_files	AnimationInterface.h
 						TextCanvas.h
 						Threads.h
 						Time.h
+						Time.cpp
 						URLParser.h )
 
 if(ANDROID)
@@ -38,4 +39,5 @@ target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 #Include Platform - only for CppSl.sl
 target_include_directories(TeleportCore PRIVATE ../firstparty)
+target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR}/safe/include)
  

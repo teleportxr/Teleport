@@ -20,7 +20,7 @@ namespace teleport
 		{
 			GeometryStreamingService* geometryStreamingService = nullptr;
 		public:
-			GeometryEncoder(const struct ServerSettings *settings, GeometryStreamingService *srv, avs::uid clientID);
+			GeometryEncoder( GeometryStreamingService *srv, avs::uid clientID);
 			~GeometryEncoder() = default;
 
 			// Inherited via GeometryEncoderBackendInterface
@@ -45,7 +45,6 @@ namespace teleport
 			}
 		private:
 			avs::uid clientID=0;
-			const struct ServerSettings *settings = nullptr;
 			size_t prevBufferSize=0;
 			void putPayloadType(avs::GeometryPayloadType t,avs::uid u);
 			void putPayloadSize();

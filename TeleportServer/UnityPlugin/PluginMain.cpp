@@ -31,31 +31,15 @@
 
 #ifdef _MSC_VER
 #include "../VisualStudioDebugOutput.h"
-VisualStudioDebugOutput debug_buffer(true, "teleport_server.log", 128);
+extern std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
 #else
 #include "../UnixDebugOutput.h"
-DebugOutput debug_buffer(true, "teleport_server.log", 128);
+extern std::shared_ptr<DebugOutput> debug_buffer;
 #endif
 #include <regex>
 
 using namespace teleport;
 using namespace server;
-
-
-static avs::Context avsContext;
-
-AudioSettings audioSettings;
-
-std::set<avs::uid> unlinkedClientIDs; //Client IDs that haven't been linked to a session component.
-
-namespace teleport
-{
-	namespace server
-	{
-		std::vector<avs::uid> lostClients; //Clients who have been lost, and are awaiting deletion.
-	}
-}
-
 
 // Messages related stuff
 avs::MessageHandlerFunc messageHandler = nullptr;
@@ -73,28 +57,6 @@ namespace teleport
 {
 	namespace server
 	{
-	/// The collected values required to initialize a server session; see Server_Teleport_Initialize().
-		struct InitializationSettings
-		{
-			char* clientIP;														///< IP address to match to connecting clients. May be blank.
-			char* httpMountDirectory;											///< Local (server-side) directory for HTTP requests: usually the Teleport cache directory.
-			char* certDirectory;												///< Local directory for HTTP certificates.
-			char* privateKeyDirectory;											///< Local directory for private keys.
-			char* signalingPorts;												///< Optional list of ports to listen for signaling connections and queries.
-
-			ClientStoppedRenderingNodeFn clientStoppedRenderingNode;			///< Delegate to be called when client is no longer rendering a specified node.
-			ClientStartedRenderingNodeFn clientStartedRenderingNode;
-			SetHeadPoseFn headPoseSetter;
-			SetControllerPoseFn controllerPoseSetter;
-			ProcessNewInputStateFn newInputStateProcessing;
-			ProcessNewInputEventsFn newInputEventsProcessing;
-			DisconnectFn disconnect;
-			avs::MessageHandlerFunc messageHandler;
-			ReportHandshakeFn reportHandshake;
-			ProcessAudioInputFn processAudioInput;
-			GetUnixTimestampFn getUnixTimestampNs;
-			int64_t start_unix_time_us;
-		};
 	}
 }
 
@@ -197,7 +159,7 @@ void PipeOutMessages()
 				}
 				if (n == "ClientDynamicLighting")
 				{
-					return sizeof(avs::ClientDynamicLighting);
+					return sizeof(teleport::core::ClientDynamicLighting);
 				}
 				TELEPORT_CERR << "Unknown type for SizeOf: " << str << "\n";
 				return 0;
@@ -273,21 +235,24 @@ void PipeOutMessages()
 			{
 				TELEPORT_PROFILE_AUTOZONE;
 				std::lock_guard<std::mutex> lock(messagesMutex);
-				if(msgh)
+				if(debug_buffer)
 				{
-					debug_buffer.setToOutputWindow(true);
-					messageHandler=msgh;
-					avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr); 
-					debug_buffer.setOutputCallback(&passOnOutput);
-					debug_buffer.setErrorCallback(&passOnError);
-				}
-				else
-				{
-					debug_buffer.setToOutputWindow(true);
-					messageHandler=nullptr;
-					avsContext.setMessageHandler(nullptr, nullptr); 
-					debug_buffer.setOutputCallback(nullptr);
-					debug_buffer.setErrorCallback(nullptr);
+					if(msgh)
+					{
+						debug_buffer->setToOutputWindow(true);
+						messageHandler=msgh;
+						avsContext.setMessageHandler(AccumulateMessagesFromThreads, nullptr); 
+						debug_buffer->setOutputCallback(&passOnOutput);
+						debug_buffer->setErrorCallback(&passOnError);
+					}
+					else
+					{
+						debug_buffer->setToOutputWindow(true);
+						messageHandler=nullptr;
+						avsContext.setMessageHandler(nullptr, nullptr); 
+						debug_buffer->setOutputCallback(nullptr);
+						debug_buffer->setErrorCallback(nullptr);
+					}
 				}
 			}
 #endif
@@ -295,91 +260,18 @@ void PipeOutMessages()
 			/// Initialize the server for a server session.
 			TELEPORT_EXPORT bool Server_Teleport_Initialize(const teleport::server::InitializationSettings *initializationSettings)
 			{
-				unlinkedClientIDs.clear();
+				if(!teleport::server::ApplyInitializationSettings(initializationSettings))
+					return false;
 
-				Server_SetClientStoppedRenderingNodeDelegate(initializationSettings->clientStoppedRenderingNode);
-				Server_SetClientStartedRenderingNodeDelegate(initializationSettings->clientStartedRenderingNode);
-				Server_SetHeadPoseSetterDelegate(initializationSettings->headPoseSetter);
-
-				setControllerPose = initializationSettings->controllerPoseSetter;
-				Server_SetNewInputStateProcessingDelegate(initializationSettings->newInputStateProcessing);
-				Server_SetNewInputEventsProcessingDelegate(initializationSettings->newInputEventsProcessing);
-				Server_SetDisconnectDelegate(initializationSettings->disconnect);
 				Server_SetMessageHandlerDelegate(initializationSettings->messageHandler);
-				Server_SetProcessAudioInputDelegate(initializationSettings->processAudioInput);
-				Server_SetGetUnixTimestampDelegate(initializationSettings->getUnixTimestampNs);
-
-				reportHandshake=initializationSettings->reportHandshake;
-
-				if (!initializationSettings->signalingPorts)
-				{
-					TELEPORT_CERR << "Failed to identify ports as string was null.";
-					return false;
-				}
-				std::string str(initializationSettings->signalingPorts);
-				std::string::size_type pos_begin = { 0 }, pos_end = { 0 };
-				std::set<uint16_t> ports;
-				do
-				{
-					pos_end = str.find_first_of(",", pos_begin);
-					std::string str2 = str.substr(pos_begin, pos_end - pos_begin);
-					uint16_t p=std::stoi(str2);
-					ports.insert(p);
-					pos_begin = pos_end + 1;
-				} while (str.find_first_of(",", pos_end) != std::string::npos);
-				if(!ports.size())
-				{
-					TELEPORT_CERR << "Failed to identify ports from string " << initializationSettings->signalingPorts  << "!\n";
-					return false;
-				}
-				bool result = ClientManager::instance().initialize(ports, initializationSettings->start_unix_time_us,std::string(initializationSettings->clientIP));
-
-				if (!result)
-				{
-					TELEPORT_CERR<<"An error occurred while attempting to initalise clientManager!\n";
-					return false;
-				}
-
-				ClientManager::instance().startAsyncNetworkDataProcessing();
-
-				result = httpService->initialize(initializationSettings->httpMountDirectory
-					, initializationSettings->certDirectory
-					, initializationSettings->privateKeyDirectory
-					,80);
-				return result;
+				return true;
 			}
 
 			/// Shut down the server.
 			TELEPORT_EXPORT void Server_Teleport_Shutdown()
 			{
-				std::lock_guard<std::mutex> videoLock(videoMutex);
-				std::lock_guard<std::mutex> audioLock(audioMutex);
-
-				ClientManager::instance().stopAsyncNetworkDataProcessing(true);
-
-				for(auto& uid : ClientManager::instance().GetClientUids())
-				{
-					auto &client= ClientManager::instance().GetClient(uid);
-					if (!client)
-						continue;
-					if(client->GetConnectionState()!=UNCONNECTED)
-					{
-						// This will add to lost clients and lost clients will be cleared below.
-						// That's okay because the session is being stopped in Client_StopStreaming 
-						// and the clientServices map is being cleared below too.
-						Client_StopStreaming(uid);
-					}
-					else
-					{
-						client->clientMessaging->stopSession();
-					}
-				}
-
 				ClientManager::instance().shutdown();
 				httpService->shutdown();
-
-				lostClients.clear();
-				unlinkedClientIDs.clear();
 
 				PluginGeometryStreamingService::callback_clientStoppedRenderingNode = nullptr;
 				PluginGeometryStreamingService::callback_clientStartedRenderingNode = nullptr;
@@ -394,12 +286,6 @@ void PipeOutMessages()
 			TELEPORT_EXPORT void Server_Tick(float deltaTime)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				//Delete client data for clients who have been lost.
-				for(avs::uid clientID : lostClients)
-				{
-					ClientManager::instance().removeClient(clientID);
-				}
-				lostClients.clear();
 
 				ClientManager::instance().tick(deltaTime);
 
@@ -420,17 +306,8 @@ void PipeOutMessages()
 			TELEPORT_EXPORT avs::uid Server_GetUnlinkedClientID()
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				if(unlinkedClientIDs.size() != 0)
-				{
-					avs::uid clientID = *unlinkedClientIDs.begin();
-					unlinkedClientIDs.erase(unlinkedClientIDs.begin());
-
-					return clientID;
-				}
-				else
-				{
-					return 0;
-				}
+				auto &cm = ClientManager::instance();
+				return cm.popFirstUnlinkedClientUid();
 			}
 
 			//PLUGIN-SPECIFC END
@@ -550,119 +427,21 @@ void PipeOutMessages()
 			TELEPORT_EXPORT void Server_InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams& videoEncodeParams)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				std::lock_guard<std::mutex> lock(videoMutex);
-
-				auto client = ClientManager::instance().GetClient(clientID);
-				if (!client)
-				{
-					TELEPORT_CERR << "Failed to initialise video encoder for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-					return;
-				}
-
-				avs::Queue* cq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.ColorQueue;
-				avs::Queue* tq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.TagDataQueue;
-				Result result = client->videoEncodePipeline->configure(serverSettings,videoEncodeParams, cq, tq);
-				if (!result)
-				{
-					TELEPORT_CERR << "Failed to initialise video encoder for Client " << clientID << "! Error occurred when trying to configure the video encoder pipeline!\n";
-					client->clientMessaging->video_encoder_initialized = false;
-				}
-				else
-					client->clientMessaging->video_encoder_initialized = true;
+				ClientManager::instance().InitializeVideoEncoder(clientID, videoEncodeParams);
 			}
 
 			/// Reconfigure video encoding while running.
 			TELEPORT_EXPORT void Server_ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParams& videoEncodeParams)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				std::lock_guard<std::mutex> lock(videoMutex);
-
-				auto client = ClientManager::instance().GetClient(clientID);
-				if(!client)
-				{
-					TELEPORT_CERR << "Failed to reconfigure video encoder for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-					return;
-				}
-
-				Result result = client->videoEncodePipeline->reconfigure(serverSettings, videoEncodeParams);
-				if (!result)
-				{
-					TELEPORT_CERR << "Failed to reconfigure video encoder for Client " << clientID << "! Error occurred when trying to reconfigure the video encoder pipeline!\n";
-					return;
-				}
-
-				///TODO: Need to retrieve encoder settings from unity.
-				CasterEncoderSettings encoderSettings
-				{
-					videoEncodeParams.encodeWidth,
-					videoEncodeParams.encodeHeight,
-					0, // not used
-					0, // not used
-					false,
-					true,
-					true,
-					10000,
-					0
-					,0
-					,0
-					,0
-				};
-				core::ReconfigureVideoCommand cmd;
-				avs::VideoConfig& videoConfig = cmd.video_config;
-				videoConfig.video_width = encoderSettings.frameWidth;
-				videoConfig.video_height = encoderSettings.frameHeight;
-				videoConfig.depth_height = encoderSettings.depthHeight;
-				videoConfig.depth_width = encoderSettings.depthWidth;
-				videoConfig.perspective_width = serverSettings.perspectiveWidth;
-				videoConfig.perspective_height = serverSettings.perspectiveHeight;
-				videoConfig.perspective_fov = serverSettings.perspectiveFOV;
-				videoConfig.use_10_bit_decoding = serverSettings.use10BitEncoding;
-				videoConfig.use_yuv_444_decoding = serverSettings.useYUV444Decoding;
-				videoConfig.use_alpha_layer_decoding = serverSettings.useAlphaLayerEncoding;
-				videoConfig.colour_cubemap_size = serverSettings.captureCubeSize;
-				videoConfig.compose_cube = encoderSettings.enableDecomposeCube;
-				videoConfig.videoCodec = serverSettings.videoCodec;
-				videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
-
-				client->clientMessaging->sendReconfigureVideoCommand(cmd);
+				ClientManager::instance().ReconfigureVideoEncoder(clientID, videoEncodeParams);
 			}
 
 			/// Encode the given (uncompressed) video frame from memory.
 			TELEPORT_EXPORT void Server_EncodeVideoFrame(avs::uid clientID, const uint8_t* tagData, size_t tagDataSize)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				std::lock_guard<std::mutex> lock(videoMutex);
-
-				auto client = ClientManager::instance().GetClient(clientID);
-				if(!client)
-				{
-					TELEPORT_CERR << "Failed to encode video frame for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-					return;
-				}
-				if (!client->clientMessaging->hasReceivedHandshake())
-				{
-					return;
-				}
-				if (!client->clientMessaging->video_encoder_initialized)
-					return;
-				if (!client->clientMessaging->getClientNetworkContext()->NetworkPipeline.isInitialized())
-					return;
-				Result result = client->videoEncodePipeline->encode(tagData, tagDataSize, client->videoKeyframeRequired);
-				if(result)
-				{
-					client->videoKeyframeRequired = false;
-				}
-				else
-				{
-					TELEPORT_CERR << "Failed to encode video frame for Client " << clientID << "! Error occurred when trying to encode video!\n";
-
-					// repeat the attempt for debugging purposes.
-					result = client->videoEncodePipeline->encode(tagData, tagDataSize, client->videoKeyframeRequired);
-					if(result)
-					{
-						client->videoKeyframeRequired = false;
-					}
-				}
+				ClientManager::instance().EncodeVideoFrame( clientID, tagData, tagDataSize);
 			}
 
 			// GeometryStore START
@@ -671,7 +450,7 @@ void PipeOutMessages()
 			{
 				TELEPORT_PROFILE_AUTOZONE;
 				GeometryStore::GetInstance().saveToDisk();
-				GeometryStore::GetInstance().verify();
+				GeometryStore::GetInstance().Verify();
 			}
 
 			/// Check all resources in memory for errors.
@@ -753,7 +532,7 @@ void PipeOutMessages()
 			{
 				TELEPORT_PROFILE_AUTOZONE;
 				avs::Mesh avsMesh(*mesh);
-				GeometryStore::GetInstance().storeMesh(id, (guid), (path), lastModified, avsMesh, extractToStandard, compress, verify);
+				GeometryStore::GetInstance().storeMesh(id,path, lastModified, avsMesh, extractToStandard, compress, verify);
 			}
 
 			/// Store the given material in memory and on disk.
@@ -917,48 +696,14 @@ void PipeOutMessages()
 			/// Assign new audio settings.
 			TELEPORT_EXPORT void Server_SetAudioSettings(const AudioSettings &newAudioSettings)
 			{
-				audioSettings = newAudioSettings;
+				ClientManager::instance().audioSettings = newAudioSettings;
 			}
 
 			/// Send a chunk of audio data to all clients.
 			TELEPORT_EXPORT void Server_SendAudio(const uint8_t *data, size_t dataSize)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				// Only continue processing if the main thread hasn't hung.
-				double elapsedTime = avs::Platform::getTimeElapsedInSeconds(ClientManager::instance().getLastTickTimestamp(), avs::Platform::getTimestamp());
-				if (elapsedTime > 0.15f)
-				{
-					return;
-				}
-
-				std::lock_guard<std::mutex> lock(audioMutex);
-
-				for (avs::uid clientID : ClientManager::instance().GetClientUids())
-				{
-					auto client = ClientManager::instance().GetClient(clientID);
-					if (!client)
-						continue;
-					// If handshake hasn't been received, the network pipeline is not set up yet, and can't receive packets from the AudioQueue.
-					if (!client->clientMessaging->hasReceivedHandshake())
-						continue;
-					Result result = Result(Result::Code::OK);
-					if (!client->audioEncodePipeline->isConfigured())
-					{
-						result = client->audioEncodePipeline->configure(serverSettings, audioSettings, &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.AudioQueue);
-						if (!result)
-						{
-							TELEPORT_CERR << "Failed to configure audio encoder pipeline for Client " << clientID << "!\n";
-							continue;
-						}
-					}
-
-					result = client->audioEncodePipeline->sendAudio(data, dataSize);
-					if (!result)
-					{
-						TELEPORT_CERR << "Failed to send audio to Client " << clientID << "! Error occurred when trying to send audio"
-									  << "\n";
-					}
-				}
+				ClientManager::instance().SendAudio(data, dataSize);
 			}
 			// AudioEncodePipeline END
 struct EncodeVideoParamsWrapper

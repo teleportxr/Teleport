@@ -252,6 +252,7 @@ namespace teleport
 
 			uint64_t clientID=0;
 			double time=0.0;
+			double lastSendTime=0.0;
 			float latency_milliseconds = 0.0;
 			// State received from server.
 			teleport::core::SetupCommand setupCommand;

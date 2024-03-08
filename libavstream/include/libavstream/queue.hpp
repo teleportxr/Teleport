@@ -21,7 +21,6 @@ namespace avs
 	{
 		AVSTREAM_PUBLICINTERFACE(Queue)
 		Queue::Private *data;
-		std::string name;
 		/** Contiguous memory that contains buffers of equal size */
 		char* m_mem = nullptr;
 		/** Contains sizes of data in each buffer */
@@ -40,6 +39,10 @@ namespace avs
 		const void* frontp(size_t& bufferSize) const;
 		void push(const void* buffer, size_t bufferSize);
 		void pop();
+		/*!
+		 * Flush queue.
+		 */
+		void flush();
 	public:
 		Queue();
 
@@ -68,10 +71,6 @@ namespace avs
 		 */
 		Result deconfigure() override;
 
-		/*!
-		 * Flush queue.
-		 */
-		void flush();
 
 		/*!
 		 * Read buffer at the front of the queue.
@@ -84,6 +83,7 @@ namespace avs
 		 */
 		Result read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
+		void drop();
 		/*!
 		 * Write buffer to the back of the queue.
 		 * \sa IOInterface::write()

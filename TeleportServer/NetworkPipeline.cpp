@@ -19,14 +19,26 @@ namespace
 using namespace teleport;
 using namespace server;
 
+static const char *COLOR_QUEUE = "ColorQueue";
+static const char *TAG_DATA_QUEUE = "TagDataQueue";
+static const char *GEOMETRY_QUEUE = "GeometryQueue";
+static const char *AUDIO_QUEUE = "AudioQueue";
+static const char *RELIABLE_SEND_QUEUE = "Reliable Send Queue";
+static const char *UNRELIABLE_RECEIVE_QUEUE = "Unreliable Receive Queue";
+static const char *UNRELIABLE_SEND_QUEUE = "Unreliable Send Queue";
+static const char *RELIABLE_RECEIVE_QUEUE = "Reliable Receive Queue";
+
 NetworkPipeline::NetworkPipeline()
 {
-	ColorQueue.configure(200000, 16, "ColorQueue");
-	TagDataQueue.configure(200, 16, "TagDataQueue");
-	GeometryQueue.configure(200000, 16, "GeometryQueue");
-	AudioQueue.configure(8192, 120, "AudioQueue");
-	reliableQueue.configure(8192, 120, "Reliable in");
-	MessageQueue.configure(8192, 120, "Unreliable out");
+	ColorQueue.configure(200000, 16, COLOR_QUEUE);
+	TagDataQueue.configure(200, 16, TAG_DATA_QUEUE);
+	GeometryQueue.configure(200000, 16, GEOMETRY_QUEUE);
+	AudioQueue.configure(8192, 120, AUDIO_QUEUE);
+	reliableSendQueue.configure(8192, 120, RELIABLE_SEND_QUEUE);
+	unreliableReceiveQueue.configure(8192, 120, UNRELIABLE_RECEIVE_QUEUE);
+
+	unreliableSendQueue.configure(8192, 120, UNRELIABLE_SEND_QUEUE);
+	reliableReceiveQueue.configure(8192, 120, RELIABLE_RECEIVE_QUEUE);
 }
 
 
@@ -36,8 +48,11 @@ NetworkPipeline::~NetworkPipeline()
 	TagDataQueue.deconfigure();
 	GeometryQueue.deconfigure();
 	AudioQueue.deconfigure();
-	reliableQueue.deconfigure();
-	MessageQueue.deconfigure();
+	reliableSendQueue.deconfigure();
+	unreliableReceiveQueue.deconfigure();
+
+	unreliableSendQueue.deconfigure();
+	reliableReceiveQueue.deconfigure();
 	release();
 }
 
@@ -63,7 +78,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "video";
-		stream.inputName = "ColorQueue";
+		stream.inputName = COLOR_QUEUE;
 		stream.parserType = avs::StreamParserType::AVC_AnnexB;
 		//stream.useParser = false; default
 //			stream.isDataLimitPerFrame = false;
@@ -78,7 +93,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "video_tags";
-		stream.inputName = "TagDataQueue";
+		stream.inputName = TAG_DATA_QUEUE;
 		stream.parserType = avs::StreamParserType::None;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = false;
@@ -93,7 +108,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "audio_server_to_client";
-		stream.inputName = "AudioQueue";
+		stream.inputName = AUDIO_QUEUE;
 		stream.parserType = avs::StreamParserType::Audio;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = false;
@@ -109,7 +124,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "geometry";
-		stream.inputName = "GeometryQueue";
+		stream.inputName = GEOMETRY_QUEUE;
 		stream.parserType = avs::StreamParserType::Geometry;
 		stream.useParser = true;
 		stream.isDataLimitPerFrame = true;
@@ -124,8 +139,8 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "reliable";
-		stream.inputName = "Reliable in";
-		stream.outputName = "Reliable out";
+		stream.inputName = RELIABLE_SEND_QUEUE;
+		stream.outputName = RELIABLE_RECEIVE_QUEUE;
 		stream.parserType = avs::StreamParserType::None;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = true;
@@ -140,8 +155,8 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	{
 		avs::NetworkSinkStream stream;
 		stream.label = "unreliable";
-		stream.inputName = "Unreliable in";
-		stream.outputName = "Unreliable out";
+		stream.inputName = UNRELIABLE_SEND_QUEUE;
+		stream.outputName = UNRELIABLE_RECEIVE_QUEUE;
 		stream.parserType = avs::StreamParserType::None;
 		stream.useParser = false;
 		stream.isDataLimitPerFrame = true;
@@ -153,6 +168,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 		stream.dataType = avs::NetworkDataType::Generic;
 		streams.emplace_back(std::move(stream));
 	}
+	// TODO: connect the other two queues.
 	avs::NetworkSink* networkSink = mNetworkSink.get();
 	if (!networkSink->configure(std::move(streams), SinkParams))
 	{
@@ -207,29 +223,29 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 
 	// Command
 	{
-		if (!avs::PipelineNode::link(reliableQueue, *mNetworkSink))
+		if (!avs::PipelineNode::link(reliableSendQueue, *mNetworkSink))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for commands!" << "\n";
 			initialized = false;
 			return;
 		}
-		mPipeline->add(&reliableQueue);
+		mPipeline->add(&reliableSendQueue);
 	}
 	// Messages
 	{
-		if (!avs::PipelineNode::link(*mNetworkSink, MessageQueue))
+		if (!avs::PipelineNode::link(*mNetworkSink, unreliableReceiveQueue))
 		{
 			TELEPORT_CERR << "Failed to configure network pipeline for messages!" << "\n";
 			initialized = false;
 			return;
 		}
-		mPipeline->add(&MessageQueue);
+		mPipeline->add(&unreliableReceiveQueue);
 	}
 	mPipeline->add(mNetworkSink.get());
 
-#if WITH_REMOTEPLAY_STATS
+#if WITH_TELEPORT_STATS
 	mLastTimestamp = avs::Platform::getTimestamp();
-#endif // WITH_REMOTEPLAY_STATS
+#endif // WITH_TELEPORT_STATS
 
 	mPrevProcResult = avs::Result::OK;
 	initialized = true;

@@ -4,7 +4,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "basisu_comp.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 
 #include "ExtractedTypes.h"
@@ -25,7 +24,7 @@ namespace teleport
 		{
 		public:
 			GeometryStore();
-			~GeometryStore();
+			virtual ~GeometryStore();
 
 			static GeometryStore& GetInstance();
 			bool willDelayTextureCompression = true; //Causes textures to wait for compression in StoreTexture, rather than calling compress them during the function call, when true.
@@ -36,7 +35,7 @@ namespace teleport
 			{
 				return cachePath;
 			}
-			void verify();
+			void Verify();
 			bool saveToDisk() const;
 			//Load from disk.
 			//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
@@ -100,7 +99,7 @@ namespace teleport
 			void storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard);
 			void storeAnimation(avs::uid id, std::string path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
-			void storeMesh(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress = false, bool verify = false);
+			void storeMesh(avs::uid id,std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress = false, bool verify = false);
 			void storeMaterial(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Material& newMaterial);
 			void storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& newTexture,  bool genMips, bool highQualityUASTC, bool forceOverwrite);
 			avs::uid storeFont(std::string ttf_path_utf8, std::string relative_asset_path_utf8, std::time_t lastModified, int size = 32);

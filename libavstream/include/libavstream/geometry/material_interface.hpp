@@ -10,36 +10,35 @@
 
 #include "material_extensions.h"
 
-// Who would do this?
-#ifdef verify
-#undef verify
-#endif
 namespace avs
 {
-	template<typename T> bool verify(const T& t1,const T& t2)
+	template <typename T>
+	bool verify_values(const T &t1, const T &t2)
 	{
 		return (t1==t2);
 	}
-	template<> inline bool verify(const float& t1,const float& t2)
+	template <>
+	inline bool verify_values(const float &t1, const float &t2)
 	{
 		return fabs(t1-t2)/(fabs(t1)+fabs(t2)+0.0001f)<0.0001f;
 	}
-	template<> inline bool verify(const vec2& t1,const vec2& t2)
+	template <>
+	inline bool verify_values(const vec2 &t1, const vec2 &t2)
 	{
-		return verify(t1.x,t2.x)&&verify(t1.y,t2.y);
+		return verify_values(t1.x, t2.x) && verify_values(t1.y, t2.y);
 	}
-	template<> inline bool verify(const vec3& t1,const vec3& t2)
+	template <>
+	inline bool verify_values(const vec3 &t1, const vec3 &t2)
 	{
-		return verify(t1.x,t2.x)&&verify(t1.y,t2.y)
-				&&verify(t1.z,t2.z);
+		return verify_values(t1.x, t2.x) && verify_values(t1.y, t2.y) && verify_values(t1.z, t2.z);
 	}
-	template<> inline bool verify(const vec4& t1,const vec4& t2)
+	template <>
+	inline bool verify_values(const vec4 &t1, const vec4 &t2)
 	{
-		return verify(t1.x,t2.x)&&verify(t1.y,t2.y)
-				&&verify(t1.z,t2.z)&&verify(t1.w,t2.w);
+		return verify_values(t1.x, t2.x) && verify_values(t1.y, t2.y) && verify_values(t1.z, t2.z) && verify_values(t1.w, t2.w);
 	}
 	#define TELEPORT_VERIFY(t1,t2) \
-	if(!verify(t1,t2))\
+	if(!verify_values(t1,t2))\
 	{\
 		std::cerr<<"Verify failed for "<<#t1<<"\n";\
 		return false;\
@@ -362,7 +361,7 @@ namespace avs
 		}
 	};
 
-	template<> inline bool verify(const TextureAccessor& t1,const TextureAccessor& t2)
+	template<> inline bool verify_values(const TextureAccessor& t1,const TextureAccessor& t2)
 	{
 		TELEPORT_VERIFY(t1.index,t2.index);
 		TELEPORT_VERIFY(t1.texCoord,t2.texCoord);
@@ -371,7 +370,7 @@ namespace avs
 		return true;
 	}
 
-	template<> inline bool verify(const PBRMetallicRoughness& t1,const PBRMetallicRoughness& t2)
+	template<> inline bool verify_values(const PBRMetallicRoughness& t1,const PBRMetallicRoughness& t2)
 	{
 		TELEPORT_VERIFY(t1.baseColorTexture,t2.baseColorTexture);
 		TELEPORT_VERIFY(t1.baseColorFactor,t2.baseColorFactor);

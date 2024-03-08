@@ -5,6 +5,8 @@
 
 namespace teleport
 {
+	namespace server
+	{
 	enum class VideoEncoderRateControlMode : uint8_t
 	{
 		RC_CONSTQP = 0, /**< Constant QP mode */
@@ -56,4 +58,5 @@ namespace teleport
 	private:
 		Code m_code;
 	};
+	}
 }

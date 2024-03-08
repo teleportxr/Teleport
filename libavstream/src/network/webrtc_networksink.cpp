@@ -587,9 +587,12 @@ Result WebRtcNetworkSink::onInputLink(int slot, PipelineNode* node)
 	{
 		auto& stream = m_streams[i];
 		if (stream.inputName == name)
+		{
 			m_data->streamIndexToInputIndex[i] = uint8_t(slot);
+			return Result::OK;
+		}
 	}
-	return Result::OK;
+	return Result::Failed;
 }
 
 Result WebRtcNetworkSink::onOutputLink(int slot, PipelineNode* node)
@@ -599,9 +602,12 @@ Result WebRtcNetworkSink::onOutputLink(int slot, PipelineNode* node)
 	{
 		auto& stream = m_streams[i];
 		if (stream.outputName == name)
-			m_data->streamIndexToOutputIndex[i]=uint8_t(slot);
+		{
+			m_data->streamIndexToOutputIndex[i] = uint8_t(slot);
+			return Result::OK;
+		}
 	}
-	return Result::OK;
+	return Result::Failed;
 }
 
 bool WebRtcNetworkSink::getNextStreamingControlMessage(std::string& msg)

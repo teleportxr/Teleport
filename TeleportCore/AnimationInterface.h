@@ -4,7 +4,6 @@
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "TeleportCore/ErrorHandling.h"
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
-#include <fmt/core.h>
 
 #define VERIFY_EQUALITY_CHECK(a, b)          \
 if (b != a.b)                                 \

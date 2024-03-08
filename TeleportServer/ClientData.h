@@ -2,7 +2,6 @@
 
 #include "libavstream/common.hpp"
 
-#include "TeleportServer/ClientManager.h"
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/AudioEncodePipeline.h"
@@ -42,8 +41,7 @@ namespace teleport
 		{
 		public:
 			ClientData(avs::uid clientID, std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
-			void StartStreaming(const ServerSettings &casterSettings
-				, uint32_t connectionTimeout
+			void StartStreaming( uint32_t connectionTimeout
 				, uint64_t sessionid
 				, GetUnixTimestampFn getUnixTimestamp, int64_t startTimestamp_utc_unix_us
 				, bool use_ssl);
@@ -52,7 +50,7 @@ namespace teleport
 			//! Called after reparenting to inform the client of the new parent.
 			void reparentNode(avs::uid nodeID);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
-			avs::ClientDynamicLighting clientDynamicLighting;
+			teleport::core::ClientDynamicLighting clientDynamicLighting;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
 			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;

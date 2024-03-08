@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.8)
 project(TeleportServer)
 
 
-# Build options
-option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
-
 set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
@@ -52,7 +49,7 @@ set(src
 
 #Whether to build dynamic runtime libraries.
 if(TELEPORT_WINDOWS)
-	if(${USE_DYNAMIC_RUNTIME})
+	if(${TELEPORT_USE_DYNAMIC_RUNTIME})
 		set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
 		set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD /Zi")
 	else()
@@ -114,11 +111,13 @@ target_include_directories(TeleportServer PUBLIC ../firstparty)
 target_include_directories(TeleportServer PUBLIC ../firstparty/Platform/External/stb)
 #include libdatachannel
 target_include_directories(TeleportServer PUBLIC ../thirdparty/libdatachannel/include)
+# safe
+target_include_directories(TeleportServer PUBLIC ${CMAKE_BINARY_DIR}/safe/include)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
 endif()
-target_include_directories(TeleportServer PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
+target_include_directories(TeleportServer PUBLIC "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 
 #Include CUDA library location.
 if(UNIX)

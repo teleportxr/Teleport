@@ -148,3 +148,8 @@ void SingleQueue::pop()
 	dataSize = 0;
 }
 
+void SingleQueue::drop()
+{
+	dataSize = 0;
+}
+

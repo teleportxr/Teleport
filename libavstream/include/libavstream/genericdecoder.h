@@ -33,7 +33,7 @@ namespace avs
 		///  - Result::Node_AlreadyConfigured if decoder was already in configured state.
 		///  - Result::Decoder_NoSuitableBackendFound if there's no usable decoder backend on the system.
 		///  - Any error result returned by DecoderBackendInterface::initialize().
-		Result configure(GenericTargetInterface* target);
+		Result configure(GenericTargetInterface* target,const char *name);
 
 		/// 
 		/// Deconfigure decoder and release all associated resources.

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <regex>
 #include <fmt/core.h>
+#include "basisu_comp.h"
 
 #if defined ( _WIN32 )
 #include <sys/stat.h>
@@ -194,7 +195,7 @@ bool GeometryStore::SetCachePath(const char* path)
 	return exist;
 }
 
-void GeometryStore::verify()
+void GeometryStore::Verify()
 {
 	loadResourcesBinary(cachePath , materials);
 }
@@ -219,7 +220,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	loadedMeshes = new LoadedResource[numMeshes];
 	for(auto& meshDataPair : meshes.at(avs::AxesStandard::EngineeringStyle))
 	{
-		loadedMeshes[i] = LoadedResource(meshDataPair.first, meshDataPair.second.guid.c_str(),  meshDataPair.second.path.c_str(), meshDataPair.second.mesh.name.c_str(), meshDataPair.second.lastModified);
+		loadedMeshes[i] = LoadedResource(meshDataPair.first,   meshDataPair.second.path.c_str(), meshDataPair.second.mesh.name.c_str(), meshDataPair.second.lastModified);
 
 		++i;
 	}
@@ -228,7 +229,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	loadedTextures = new LoadedResource[numTextures];
 	for(auto& textureDataPair : textures)
 	{
-		loadedTextures[i] = LoadedResource(textureDataPair.first, textureDataPair.second.guid.c_str(), textureDataPair.second.path.c_str(), textureDataPair.second.texture.name.c_str(), textureDataPair.second.lastModified);
+		loadedTextures[i] = LoadedResource(textureDataPair.first,  textureDataPair.second.path.c_str(), textureDataPair.second.texture.name.c_str(), textureDataPair.second.lastModified);
 
 		++i;
 	}
@@ -238,7 +239,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	for(auto& materialDataPair : materials)
 	{
 		loadedMaterials[i] = LoadedResource(materialDataPair.first, 
-			materialDataPair.second.guid.c_str(), materialDataPair.second.path.c_str(), materialDataPair.second.material.name.c_str(), materialDataPair.second.lastModified);
+			 materialDataPair.second.path.c_str(), materialDataPair.second.material.name.c_str(), materialDataPair.second.lastModified);
 
 		++i;
 
@@ -1100,12 +1101,12 @@ public:
 	}
 };
 
-void GeometryStore::storeMesh(avs::uid id, std::string guid, std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
+void GeometryStore::storeMesh(avs::uid id,  std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
 {
 	std::string p=std::string(path);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
-	auto &mesh=meshes[standard][id] = ExtractedMesh{guid, path, lastModified, newMesh};
+	auto &mesh=meshes[standard][id] = ExtractedMesh{ path, lastModified, newMesh};
 	if(!compress)
 	{
 		std::cerr<<"Mesh must be compressed.\n";

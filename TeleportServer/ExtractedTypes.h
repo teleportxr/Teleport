@@ -38,7 +38,6 @@ namespace teleport
 			{
 				return true;
 			}
-			std::string guid;
 			//! The path to the asset, which is both the relative path from the cache directory, and the URI
 			//! relative to the server.
 			std::string path;
@@ -47,8 +46,6 @@ namespace teleport
 			avs::CompressedMesh compressedMesh;
 			bool operator==(const ExtractedMesh& t) const
 			{
-				if (guid != t.guid)
-					return false;
 				if (path != t.path)
 					return false;
 				if (!(mesh == t.mesh))
@@ -79,8 +76,7 @@ namespace teleport
 			{
 				std::string pathAsString = meshData.path;
 				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
-				out << meshData.guid
-					<< pathAsString;
+				out << pathAsString;
 				out.writeChunk(meshData.lastModified);
 				out << meshData.mesh
 					<< meshData.compressedMesh;
@@ -90,7 +86,6 @@ namespace teleport
 			template<class InStream>
 			friend InStream& operator>> (InStream& in, ExtractedMesh& meshData)
 			{
-				in >> meshData.guid;
 				in >> meshData.path;
 				std::replace(meshData.path.begin(), meshData.path.end(), '%', ' ');
 				in.readChunk(meshData.lastModified);
@@ -211,7 +206,7 @@ namespace teleport
 				}
 				out << textureData.guid;
 				std::string pathAsString = textureData.path;
-				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
+				std::replace(pathAsString.begin(),  pathAsString.end(), ' ', '%');
 				out << pathAsString;
 				out.writeChunk(textureData.lastModified);
 				out << textureData.texture;
@@ -287,8 +282,8 @@ namespace teleport
 			std::time_t lastModified;
 
 			LoadedResource() = default;
-			LoadedResource(avs::uid uid, const char* g, const char* pth, const char* name, std::time_t lastModified)
-				:id(uid), guid(g), path(pth), name(name), lastModified(lastModified)
+			LoadedResource(avs::uid uid,  const char* pth, const char* name, std::time_t lastModified)
+				:id(uid),  path(pth), name(name), lastModified(lastModified)
 			{}
 		};
 	}

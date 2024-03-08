@@ -27,64 +27,9 @@
 #include "TeleportAudio/CustomAudioStreamTarget.h"
 #pragma optimize("", off)
 
-namespace teleport
-{
-	namespace server
-	{
-		std::mutex audioMutex;
-		std::mutex videoMutex;
-
-		ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
-
-		std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
-		SetHeadPoseFn setHeadPose;
-		SetControllerPoseFn setControllerPose;
-		ProcessNewInputStateFn processNewInputState;
-		ProcessNewInputEventsFn processNewInputEvents;
-		DisconnectFn onDisconnect;
-		ProcessAudioInputFn processAudioInput;
-		GetUnixTimestampFn getUnixTimestampNs;
-		ReportHandshakeFn reportHandshake;
-		uint32_t connectionTimeout = 60000;
-	}
-}
-
 using namespace teleport;
 using namespace server;
 
-TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
-{
-	// Early-out if a client with this ID doesn't exist.
-	auto client = ClientManager::instance().GetClient(clientID);
-	if(!client)
-	{
-		TELEPORT_CERR << "Failed to stop session to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	// Shut-down connections to the client.
-	if(client->GetConnectionState()!=UNCONNECTED)
-	{
-		// Will add to lost clients and call shutdown command
-		Client_StopStreaming(clientID);
-	}
-
-	ClientManager::instance().removeClient(clientID);
-
-	auto iter = lostClients.begin();
-	while(iter != lostClients.end())
-	{
-		if(*iter == clientID)
-		{
-			// Continue checking rest of container just in case client ID was added more than once
-			iter = lostClients.erase(iter);
-		}
-		else
-		{
-			++iter;
-		}
-	}
-}
 
 TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int numControls, const char** controlPaths,const InputDefinitionInterop *inputDefinitions)
 {
@@ -138,7 +83,7 @@ TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID,const ClientSett
 	ClientManager::instance().SetClientSettings(clientID,clientSettings);
 }
 
-TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const avs::ClientDynamicLighting &clientDynamicLighting)
+TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const teleport::core::ClientDynamicLighting &clientDynamicLighting)
 {
 	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
@@ -160,19 +105,28 @@ TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size
 	client->setGlobalIlluminationTextures(num,textureIDs);
 }
 
-TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
+TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 {
+	// Early-out if a client with this ID doesn't exist.
 	auto client = ClientManager::instance().GetClient(clientID);
-	if(!client)
+	if (!client)
 	{
-		TELEPORT_CERR << "Failed to stop streaming to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		TELEPORT_CERR << "Failed to stop session to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	client->clientMessaging->stopSession();
-	client->SetConnectionState(UNCONNECTED);
 
-	//Delay deletion of clients.
-	lostClients.push_back(clientID);
+	// Shut-down connections to the client.
+	if (client->GetConnectionState() != UNCONNECTED)
+	{
+		// Will add to lost clients and call shutdown command
+		ClientManager::instance().stopClient(clientID);
+	}
+
+	ClientManager::instance().removeLostClient(clientID);
+}
+TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
+{
+	ClientManager::instance().stopClient(clientID);
 }
 
 TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,avs::uid originNode)
@@ -293,7 +247,8 @@ bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 }
 ///GeometryStreamingService END
 
-///ClientMessaging START
+#ifndef CLIENTMESSAGING 
+/// Mark the node *nodeID* as streamed to client *clientID*. Wraps teleport::server::ClientMessaging::streamNode().
 TELEPORT_EXPORT void Client_NodeEnteredBounds(avs::uid clientID, avs::uid nodeID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
@@ -307,6 +262,7 @@ TELEPORT_EXPORT void Client_NodeEnteredBounds(avs::uid clientID, avs::uid nodeID
 	client->clientMessaging->streamNode(nodeID);
 }
 
+/// Mark the node *nodeID* as not streamed to client *clientID*.
 TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
@@ -570,7 +526,7 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 
 	return true;
 }
-///ClientMessaging END
+#endif //ClientMessaging END
 
 void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize)
 {

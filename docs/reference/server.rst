@@ -253,12 +253,35 @@ Classes
 Networking
 ----------
 
+Each client connection contains a pipeline that gathers data for sending to the client, and distributes incoming data from the client.
+This pipeline is distributed over threads, which communicate using avs::Queue pipeline nodes.
+
 .. mermaid::
 
 	flowchart LR
+		subgraph "Network Thread"
+			H(Network Sink)
+		end
 		A(Video Queue) -->|1| H(Network Sink)
 		B(Tag Queue) -->|2| H
 		C(Audio Queue) -->|3| H
 		D(Geometry Queue) -->|4| H
 		E(Command Queue) -->|5| H
+		subgraph "Geometry Encoding Thread"
+			F(Geometry Encoder)
+		end
 		F(Geometry Encoder) --> D
+		H -->I(Message Queue)
+		subgraph "Main Thread 2"
+			J(Message Decoder)
+		end
+		I --> J(Message Decoder)
+		subgraph "Render Thread"
+			K(Video Encoder)
+		end
+		K --> A
+		K --> B
+		subgraph "Main Thread 1"
+			L(Command Encoder)
+		end
+		L --> E

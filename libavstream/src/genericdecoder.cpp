@@ -28,7 +28,7 @@ GenericDecoder::~GenericDecoder()
 	deconfigure();
 }
 
-Result GenericDecoder::configure(GenericTargetInterface* t)
+Result GenericDecoder::configure(GenericTargetInterface* t,const char *n)
 {
 	if (m_configured)
 	{
@@ -36,6 +36,7 @@ Result GenericDecoder::configure(GenericTargetInterface* t)
 		if (deconf_result != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
+	name=n;
 	m_target =t;
 
 	m_configured = true;
@@ -111,7 +112,9 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 	} 
 	if(result == Result::OK)
 	{
-		AVSLOG(Warning)<<"Processed max messages, must exit loop.\n";
+		AVSLOGONCE(Warning) << "Processed max messages, must exit loop.\n";
+		// TODO: Distinguish between unreliable (can drop messages) and reliable (should keep).
+		input->drop();
 	}
 
 	return result;

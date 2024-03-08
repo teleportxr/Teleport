@@ -203,17 +203,22 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	{
 		if(connectionStatus==ConnectionStatus::CONNECTED)
 		{
-			SendDisplayInfo(displayInfo);
-			if(poseValidCounter)
+			static double sendInterval=0.1;
+			if(time-lastSendTime>sendInterval)
 			{
-				SendNodePoses(headPose,nodePoses);
+				SendDisplayInfo(displayInfo);
+				if(poseValidCounter)
+				{
+					SendNodePoses(headPose,nodePoses);
+				}
+				SendInput(input);
+				SendResourceRequests();
+				SendReceivedResources();
+				SendNodeUpdates();
+				if(requestKeyframe)
+					SendKeyframeRequest();
+				lastSendTime = t;
 			}
-			SendInput(input);
-			SendResourceRequests();
-			SendReceivedResources();
-			SendNodeUpdates();
-			if(requestKeyframe)
-				SendKeyframeRequest();
 		}
 	}
 
@@ -508,6 +513,10 @@ void SessionClient::SendInput(const core::Input& input)
 void SessionClient::SendResourceRequests()
 {
 	std::vector<avs::uid> resourceRequests = geometryCache->GetResourceRequests();
+	if(resourceRequests.size()>8192)
+	{
+		DebugBreak();
+	}
 	geometryCache->ClearResourceRequests();
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
 	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
@@ -688,7 +697,7 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		return;
 	if(!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand, handshake))
 		return;
-	unreliableToServerEncoder.configure(&messageToServerStack);
+	unreliableToServerEncoder.configure(&messageToServerStack,"Unreliable Message Encoder");
 	messageToServerPipeline.link({ &unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue });
 	std::vector<avs::uid> resourceIDs;
 	if(setupCommand.session_id == lastSessionId)

@@ -88,6 +88,13 @@ namespace avs
 		return Result::OK;
 	}
 
+	void Queue::drop()
+	{
+		m_dataSizes[m_front] = 0;
+		m_numElements = 0;
+		m_front = -1;
+	}
+
 	Result Queue::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		if (!m_maxBuffers)

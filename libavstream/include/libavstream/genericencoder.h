@@ -45,7 +45,7 @@ namespace avs
 		/*!
 		 * Configure encoder.
 		 */
-		Result configure(GenericEncoderBackendInterface *backend);
+		Result configure(GenericEncoderBackendInterface *backend,const char *name);
 
 		/*!
 		 * Deconfigure encoder and release all associated resources.

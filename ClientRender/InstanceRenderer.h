@@ -198,15 +198,17 @@ namespace teleport
 				vec3 position;
 				std::string url;
 			};
-			std::vector<std::shared_ptr<LinkRender>> linkRenders;
+			phmap::flat_hash_map<uint64_t,std::shared_ptr<LinkRender>> linkRenders;
 			phmap::flat_hash_map<platform::crossplatform::EffectPass *, std::shared_ptr<PassRender>> passRenders;
 			mutable std::mutex passRenders_mutex;
 
 			struct NodeRender
 			{
-				std::set<MeshRender> meshRenders;
-				std::set<LinkRender> linkRenders;
+				std::set<platform::crossplatform::EffectPass *> storedPasses;
+				std::set<avs::uid> materials;
+				std::set <uint64_t> node_element_hashes;
 			};
+			// Given any node, we can find where it is in the passRenders.
 			phmap::flat_hash_map<Node *, std::shared_ptr<NodeRender>> nodeRenders;
 		public:
 			InstanceRenderer(avs::uid server, teleport::client::Config &config, GeometryDecoder &geometryDecoder, RenderState &renderState, teleport::client::SessionClient *sessionClient);

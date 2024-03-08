@@ -41,8 +41,8 @@ size_t GetNewUIDs(std::vector<avs::uid>& outUIDs, avs::GeometryRequesterBackendI
 	return outUIDs.size();
 }
 
-GeometryEncoder::GeometryEncoder(const ServerSettings *settings, GeometryStreamingService *srv, avs::uid clid)
-	: geometryStreamingService(srv), settings(settings), clientID(clid)
+GeometryEncoder::GeometryEncoder( GeometryStreamingService *srv, avs::uid clid)
+	: geometryStreamingService(srv), clientID(clid)
 {}
 
 avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBackendInterface*)
@@ -363,7 +363,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		put((uint8_t*)node->name.data(), nameLength);
 
 		avs::Transform localTransform = node->localTransform;
-		avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
+		avs::ConvertTransform(serverSettings.serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
 
 		put(localTransform);
 		put((uint8_t)(node->stationary));
@@ -413,7 +413,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 			put(node->lightRadius);
 			put(node->lightRange);
 			vec3 lightDirection = node->lightDirection;
-			avs::ConvertPosition(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
+			avs::ConvertPosition(serverSettings.serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
 			put(lightDirection);
 			put(node->lightType);
 		}
@@ -883,7 +883,7 @@ size_t GeometryEncoder::put(const uint8_t* data, size_t count)
 bool GeometryEncoder::attemptQueueData()
 {
 	//If queueing the data will cause the queuedBuffer to exceed the cutoff size.
-	if (buffer.size() + queuedBuffer.size() > settings->geometryBufferCutoffSize)
+	if (buffer.size() + queuedBuffer.size() > serverSettings.geometryBufferCutoffSize)
 	{
 		//Never leave queuedBuffer empty, if there is something to queue up (even if it is too large).
 		if (queuedBuffer.size() == 0)

@@ -33,6 +33,7 @@ namespace avs
 		PipelineNode(const PipelineNode&) = delete;
 		PipelineNode(PipelineNode&&) = delete;
 		virtual ~PipelineNode();
+		std::string name;
 
 		/*!
 		 * Link two nodes. Data will flow from source node to target node.

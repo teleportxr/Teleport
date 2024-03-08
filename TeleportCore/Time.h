@@ -14,5 +14,6 @@ namespace teleport
 			std::chrono::microseconds us = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch());
 			return us.count();
 		}
+		extern int64_t GetUnixTimeNs();
 	}
 }

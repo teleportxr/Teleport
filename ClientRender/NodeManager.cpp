@@ -213,7 +213,7 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 	else
 	{
 		rootNodes_mutex.lock();
-		auto f = find(distanceSortedRootNodes, node);
+		auto f = find(rootNodes, node);
 		rootNodes.erase(f);
 		rootNodes_mutex.unlock();
 		std::weak_ptr<clientrender::Node> wn=node;

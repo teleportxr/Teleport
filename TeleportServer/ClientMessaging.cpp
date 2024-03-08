@@ -14,8 +14,7 @@
 using namespace teleport;
 using namespace server;
 
-ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
-								 SignalingService &signalingService,
+ClientMessaging::ClientMessaging(SignalingService &signalingService,
 								 SetHeadPoseFn setHeadPose,
 								 SetControllerPoseFn setControllerPose,
 								 ProcessNewInputStateFn processNewInputState,
@@ -23,9 +22,8 @@ ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
 								 DisconnectFn onDisconnect,
 								 uint32_t disconnectTimeout,
 								 ReportHandshakeFn reportHandshakeFn, avs::uid clid)
-	: settings(settings)
-	, signalingService(signalingService)
-	, geometryStreamingService(settings,clid)
+	:  signalingService(signalingService)
+	, geometryStreamingService(clid)
 	, setHeadPose(setHeadPose)
 	, setControllerPose(setControllerPose)
 	, processNewInputState(processNewInputState)
@@ -69,10 +67,12 @@ bool ClientMessaging::startSession(avs::uid clientID, std::string clientIP)
 
 void ClientMessaging::stopSession()
 {
+	// TODO: send shutdown command
+	//teleport::core::ShutdownCommand shutdownCommand;
+	//clientData->clientMessaging->sendCommand(shutdownCommand);
 	receivedHandshake = false;
 	geometryStreamingService.reset();
 	clientNetworkContext.NetworkPipeline.release();
-
 	stopped = true;
 }
 
@@ -132,7 +132,7 @@ void ClientMessaging::tick(float deltaTime)
 	}
 	timeSinceLastGeometryStream += deltaTime;
 
-	float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f/settings->geometryTicksPerSecond;
+	float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / serverSettings.geometryTicksPerSecond;
 
 	//Only tick the geometry streaming service a set amount of times per second.
 	if (timeSinceLastGeometryStream >= TIME_BETWEEN_GEOMETRY_TICKS)
@@ -162,7 +162,7 @@ void ClientMessaging::tick(float deltaTime)
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
-	if (settings->isReceivingAudio )
+	if (serverSettings.isReceivingAudio)
 	{
 		clientNetworkContext.sourceNetworkPipeline.process();
 	}
@@ -238,6 +238,7 @@ bool ClientMessaging::timedOutStartingSession() const
 void ClientMessaging::Disconnect()
 {
 	onDisconnect(clientID);
+	ClientManager::instance().stopClient(clientID);
 	stopped = true;
 }
 
@@ -402,24 +403,24 @@ void ClientMessaging::ensureStreamingPipeline()
 			{
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
-				settings->requiredLatencyMs,
+					serverSettings.requiredLatencyMs,
 				static_cast<int32_t>(disconnectTimeout)
 			};
 
 			clientNetworkContext.NetworkPipeline.initialise(networkSettings);
 
-			MessageDecoder.configure(this);
-			messagePipeline.link({ &clientNetworkContext.NetworkPipeline.MessageQueue,&MessageDecoder });
+			MessageDecoder.configure(this,"MessageDecoder");
+			messagePipeline.link({&clientNetworkContext.NetworkPipeline.unreliableReceiveQueue, &MessageDecoder});
 		}
 		TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
 
-		if (settings->isReceivingAudio)
+		if (serverSettings.isReceivingAudio)
 		{
 			avs::NetworkSourceParams sourceParams;
 			sourceParams.connectionTimeout = disconnectTimeout;
 			sourceParams.remoteIP = clientIP.c_str();
 
-			clientNetworkContext.sourceNetworkPipeline.initialize(settings, sourceParams
+			clientNetworkContext.sourceNetworkPipeline.initialize( sourceParams
 				, &clientNetworkContext.sourceAudioQueue
 				, &clientNetworkContext.audioDecoder
 				, &clientNetworkContext.audioTarget);
@@ -464,8 +465,8 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 		captureComponentDelegates.startStreaming(&clientNetworkContext);
 		geometryStreamingService.startStreaming(&clientNetworkContext, handshake);
 		{
-			commandEncoder.configure(&commandStack);
-			commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.reliableQueue });
+			commandEncoder.configure(&commandStack,"Command Encoder");
+			commandPipeline.link({&commandEncoder, &clientNetworkContext.NetworkPipeline.reliableSendQueue});
 		}
 		receivedHandshake = true;
 	}
@@ -724,8 +725,8 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 				TELEPORT_CERR << "Bad packet size.\n";
 				return;
 			}
-			avs::ConvertRotation(clientNetworkContext.axesStandard, settings->serverAxesStandard, message.headPose.orientation);
-			avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, message.headPose.position);
+			avs::ConvertRotation(clientNetworkContext.axesStandard, serverSettings.serverAxesStandard, message.headPose.orientation);
+			avs::ConvertPosition(clientNetworkContext.axesStandard, serverSettings.serverAxesStandard, message.headPose.position);
 			setHeadPose(clientID, (avs::Pose*)&message.headPose);
 			const uint8_t *src=packet.data()+sizeof(message);
 			for (int i = 0; i < message.numPoses; i++)
@@ -734,10 +735,10 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 				memcpy(&nodePose,src,sizeof(nodePose));
 				src+=sizeof(nodePose);
 				avs::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
-				avs::ConvertRotation(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
-				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
-				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
-				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
+				avs::ConvertRotation(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.orientation);
+				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.position);
+				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.velocity);
+				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.angularVelocity);
 				setControllerPose(clientID, int(nodePose.uid), &nodePoseDynamic);
 			}
 		}

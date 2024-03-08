@@ -17,12 +17,12 @@
 #include "TeleportCore/Input.h"
 #include <libavstream/genericencoder.h>
 
-typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
+typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid client_uid, const avs::Pose*);
 typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
-typedef void(TELEPORT_STDCALL* ProcessNewInputStateFn) (avs::uid uid, const teleport::core::InputState*, const uint8_t**, const float**);
-typedef void(TELEPORT_STDCALL* ProcessNewInputEventsFn) (avs::uid uid, uint16_t,uint16_t,uint16_t,const avs::InputEventBinary**, const avs::InputEventAnalogue**, const avs::InputEventMotion**);
-typedef void(TELEPORT_STDCALL* DisconnectFn) (avs::uid uid);
-typedef void(TELEPORT_STDCALL* ReportHandshakeFn) (avs::uid clientID,const teleport::core::Handshake *h);
+typedef void(TELEPORT_STDCALL *ProcessNewInputStateFn)(avs::uid client_uid, const teleport::core::InputState *, const uint8_t **, const float **);
+typedef void(TELEPORT_STDCALL *ProcessNewInputEventsFn)(avs::uid client_uid, uint16_t, uint16_t, uint16_t, const avs::InputEventBinary **, const avs::InputEventAnalogue **, const avs::InputEventMotion **);
+typedef void(TELEPORT_STDCALL *DisconnectFn)(avs::uid client_uid);
+typedef void(TELEPORT_STDCALL *ReportHandshakeFn)(avs::uid client_uid, const teleport::core::Handshake *h);
 
 namespace teleport
 {
@@ -44,21 +44,20 @@ namespace teleport
 		{
 			std::map<core::CommandPayloadType, OrthogonalNodeState> unconfirmedStates;
 		};
-		//! Per-client messaging handler.
+		/// Per-client messaging handler.
 		class ClientMessaging:public avs::GenericTargetInterface
 		{
 			bool stopped = false;
 			mutable avs::ClientServerMessageStack commandStack;
 		public:
-			ClientMessaging(const struct ServerSettings* settings,
-				SignalingService &signalingService,
+			ClientMessaging(SignalingService &signalingService,
 				SetHeadPoseFn setHeadPose,
 				SetControllerPoseFn setControllerPose,
 				ProcessNewInputStateFn processNewInputState,
 				ProcessNewInputEventsFn processNewInputEvents,
 				DisconnectFn onDisconnect,
 				uint32_t disconnectTimeout,
-							ReportHandshakeFn reportHandshakeFn, avs::uid clid
+				ReportHandshakeFn reportHandshakeFn, avs::uid clid
 				);
 
 			virtual ~ClientMessaging();
@@ -255,15 +254,14 @@ namespace teleport
 			float timeSinceLastClientComm=0.0f;
 			float client_to_server_latency_milliseconds = 0.0f;
 			float server_to_client_latency_milliseconds = 0.0f;
-			const ServerSettings* settings=nullptr;
 			SignalingService &signalingService;
 			PluginGeometryStreamingService geometryStreamingService;
-			SetHeadPoseFn setHeadPose; //Delegate called when a head pose is received.
-			SetControllerPoseFn setControllerPose; //Delegate called when a head pose is received.
-			ProcessNewInputStateFn processNewInputState; //Delegate called when new input is received.
-			ProcessNewInputEventsFn processNewInputEvents; //Delegate called when new input is received.
-			DisconnectFn onDisconnect; //Delegate called when the peer disconnects.
-			ReportHandshakeFn reportHandshake;
+			SetHeadPoseFn setHeadPose=nullptr;								// Delegate called when a head pose is received.
+			SetControllerPoseFn setControllerPose = nullptr;				// Delegate called when a head pose is received.
+			ProcessNewInputStateFn processNewInputState = nullptr;			// Delegate called when new input is received.
+			ProcessNewInputEventsFn processNewInputEvents = nullptr;		// Delegate called when new input is received.
+			DisconnectFn onDisconnect = nullptr;							// Delegate called when the peer disconnects.
+			ReportHandshakeFn reportHandshake = nullptr;
 
 			uint32_t disconnectTimeout=0;
 

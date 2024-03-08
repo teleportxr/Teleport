@@ -1,5 +1,6 @@
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/GeometryStore.h"
+#include "TeleportServer/ClientManager.h"
 using namespace teleport;
 using namespace server;
 
@@ -23,8 +24,7 @@ ClientData::ClientData(avs::uid clid, std::shared_ptr<ClientMessaging> clientMes
 	clientID=clid;
 }
 
-void ClientData::StartStreaming(const ServerSettings& serverSettings
-	,uint32_t connectionTimeout
+void ClientData::StartStreaming(uint32_t connectionTimeout
 	,uint64_t session_id
 	,GetUnixTimestampFn getUnixTimestamp, int64_t startTimestamp_utc_unix_us
 	,bool use_ssl)
