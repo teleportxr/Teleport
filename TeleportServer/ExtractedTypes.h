@@ -283,7 +283,7 @@ namespace teleport
 
 			LoadedResource() = default;
 			LoadedResource(avs::uid uid,  const char* pth, const char* name, std::time_t lastModified)
-				:id(uid),  path(pth), name(name), lastModified(lastModified)
+				:id(uid), guid(nullptr), path(pth), name(name), lastModified(lastModified)
 			{}
 		};
 	}
