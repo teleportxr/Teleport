@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(libavstream )
 set(LIBAV_CUDA_SAMPLES_DIR "C:/ProgramData/NVIDIA Corporation/CUDA Samples/v11.5" CACHE STRING "")
 set(LIBAV_CUDA_DIR "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5" CACHE STRING "")
-set(CMAKE_CUDA_COMPILER "${LIBAV_CUDA_DIR}/bin/nvcc.exe" CACHE STRING "")
+set(CMAKE_CUDA_COMPILER "${LIBAV_CUDA_DIR}/bin/nvcc.exe" )
 # Build options
 option(LIBAV_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 option(LIBAV_BUILD_SHARED_LIBS "Build shared library" OFF)
@@ -55,8 +55,6 @@ if(LIBAV_USE_SRT)
 
 set(src_private_network
 	${src_private_network}
-	src/network/srt_efp_networksink.cpp
-	src/network/srt_efp_networksource.cpp
 	)
 endif()
 
@@ -185,11 +183,9 @@ set(hdr_public_root
 	)
 set(hdr_public_network
 	include/libavstream/network/networksink.h
-	include/libavstream/network/srt_efp_networksink.h
 	include/libavstream/network/webrtc_networksink.h
 	include/libavstream/network/webrtc_observers.h
 	include/libavstream/network/networksource.h
-	include/libavstream/network/srt_efp_networksource.h
 	include/libavstream/network/webrtc_networksource.h)
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)
@@ -202,6 +198,9 @@ set(src_public_surfaces
 	include/libavstream/surfaces/surface_dx11.hpp
 	include/libavstream/surfaces/surface_dx12.hpp
 )
+if(TELEPORT_CLIENT_USE_VULKAN)
+	set(src_public_surfaces ${src_public_surfaces} include/libavstream/surfaces/surface_vulkan.hpp)
+endif()
 set(src_public_platforms
 	include/libavstream/platforms/platform_common.hpp
 	include/libavstream/platforms/platform_windows.hpp
@@ -262,6 +261,9 @@ if(WIN32)
 		src/surfaces/surface_dx12.cpp
 		include/libavstream/surfaces/surface_dx12.hpp
 	)
+if(TELEPORT_CLIENT_USE_VULKAN)
+	set(src_platform ${src_platform} src/surfaces/surface_vulkan.cpp include/libavstream/surfaces/surface_vulkan.hpp)
+endif()
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601 INIT_CUDA_D3D11=1)
 	find_program(xxd NAMES xxd.exe HINTS tools/win32)
 	
@@ -431,6 +433,9 @@ if(NOT ANDROID)
 	add_dependencies(libavstream cuda_kernels)
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
 	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
+    if (Vulkan_FOUND)
+        target_include_directories(libavstream PUBLIC ${Vulkan_INCLUDE_DIRS})
+    endif()
 endif()
 
 # linking with libdatachannel for alternative webrtc support

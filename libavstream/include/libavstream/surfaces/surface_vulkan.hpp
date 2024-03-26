@@ -5,7 +5,6 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
-
 #include <vulkan/vulkan.hpp>
 
 namespace avs
@@ -22,6 +21,9 @@ namespace avs
 		/*!
 		 * Constructor.
 		 * \param resource Vulkan texture resource.
+		 * \param w Width in pixels.
+		 * \param h Height in pixels.
+		 * \param f Graphic format.
 		 */
 		explicit SurfaceVulkan(vk::Image* resource = nullptr,int w=0,int h=0,vk::Format f=vk::Format::eUndefined);
 		~SurfaceVulkan();

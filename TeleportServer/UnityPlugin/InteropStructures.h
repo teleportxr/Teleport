@@ -88,8 +88,7 @@ struct InteropSkeleton
 	char* name;
 	char* path;
 
-	//size_t numInverseBindMatrices;
-	//avs::Mat4x4* inverseBindMatrices;
+	bool useExternalNodes;
 
 	size_t numBones;
 	avs::uid* boneIDs;
@@ -101,6 +100,7 @@ struct InteropSkeleton
 		return
 		{
 			name,
+			useExternalNodes,
 		//	{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
 			{boneIDs, boneIDs + numBones},
 			rootTransform,

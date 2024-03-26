@@ -82,7 +82,7 @@ namespace avs
 		virtual StreamingConnectionState getConnectionState() const {
 			return StreamingConnectionState::UNINITIALIZED;
 		}
-		virtual Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) = 0;
+		virtual Result configure(std::vector<NetworkSinkStream>&& streams,  const NetworkSinkParams& params = {}) = 0;
 		virtual Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) = 0;
 		virtual NetworkSinkCounters getCounters() const=0;
 		virtual void setProcessingEnabled(bool enable)=0;
@@ -98,7 +98,7 @@ namespace avs
 	public:
 		NullNetworkSink() :NetworkSink(nullptr) {}
 		virtual ~NullNetworkSink() {}
-		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) override { return avs::Result::OK; }
+		Result configure(std::vector<NetworkSinkStream>&& streams,  const NetworkSinkParams& params = {}) override { return avs::Result::OK; }
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) override  { return avs::Result::OK; }
 		NetworkSinkCounters getCounters() const override {
 			return NetworkSinkCounters();

@@ -313,6 +313,7 @@ Presently, the video sampler is unused, as we do a HLSL: ``Texture2D.Load()`` / 
 Classes
 -------
 
-.. doxygenclass:: teleport::android::NdkVideoDecoder
-.. doxygenclass:: teleport::android::VideoDecoderBackend
-.. doxygenclass:: avs::DecoderBackendInterface
+teleport::android::NdkVideoDecoder
+teleport::android::VideoDecoderBackend
+
+See also avs::DecoderBackendInterface.

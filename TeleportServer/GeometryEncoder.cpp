@@ -451,13 +451,14 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 				index=-1;
 			return index;
 		};
+		put(true);
 		put(skeleton->boneIDs.size());
 		for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
 		{
 			avs::Node* node = geometryStore->getNode(skeleton->boneIDs[i]);
 			avs::Transform localTransform = node->localTransform;
 			avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
-			//put(skeleton->boneIDs[i]);
+			put(skeleton->boneIDs[i]);
 			int16_t parentIndex = findIndex(skeleton->boneIDs, node->parentID);
 			put(parentIndex);
 			put(localTransform);

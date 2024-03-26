@@ -171,8 +171,8 @@ void android_main(struct android_app* app)
 	gui.SetServerIPs(config.recent_server_urls);
 
 	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer(gui);
-	if(config.recent_server_urls.size())
-		client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
+	//if(config.recent_server_urls.size())
+	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
 

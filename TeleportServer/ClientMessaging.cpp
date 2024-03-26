@@ -381,7 +381,6 @@ void ClientMessaging::ensureStreamingPipeline()
 				static_cast<int32_t>(handshake.udpBufferSize),
 				settings->requiredLatencyMs,
 				static_cast<int32_t>(disconnectTimeout)
-				,avs::StreamingTransportLayer::WEBRTC
 			};
 
 			clientNetworkContext.NetworkPipeline.initialise(networkSettings);
@@ -396,7 +395,6 @@ void ClientMessaging::ensureStreamingPipeline()
 			avs::NetworkSourceParams sourceParams;
 			sourceParams.connectionTimeout = disconnectTimeout;
 			sourceParams.remoteIP = clientIP.c_str();
-			sourceParams.remotePort = handshake.clientStreamingPort;
 
 			clientNetworkContext.sourceNetworkPipeline.initialize(settings, sourceParams
 				, &clientNetworkContext.sourceAudioQueue

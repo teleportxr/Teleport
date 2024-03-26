@@ -3,6 +3,18 @@
 using namespace teleport;
 using namespace server;
 
+void ClientData::SetConnectionState(ConnectionState c)
+{
+	if (connectionState == c)
+		return;
+	connectionState = c;
+	if(connectionState!=CONNECTED)
+	{
+		// Have to assume that client has lost any information it might have had: 
+		_hasOrigin = false;
+		originClientHas = 0;
+	}
+}
 ClientData::ClientData(  std::shared_ptr<ClientMessaging> clientMessaging)
 	:   clientMessaging(clientMessaging)
 {
@@ -46,8 +58,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	encoderSettings.maxDepth = 10000;
 
 	teleport::core::SetupCommand setupCommand;
-	setupCommand.server_http_port = 443;
-	setupCommand.server_streaming_port =0;
 	setupCommand.debug_stream = serverSettings.debugStream;
 	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
@@ -93,13 +103,13 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	memcpy(&setupCommand.clientDynamicLighting,&clientDynamicLighting,sizeof(clientDynamicLighting));
 
 	// Set any static lighting textures to be required-streamable.
-	if(setupCommand.clientDynamicLighting.diffuseCubemapTexture)
+	if(setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid)
 	{
-		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuseCubemapTexture);
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid);
 	}
-	if(setupCommand.clientDynamicLighting.specularCubemapTexture)
+	if(setupCommand.clientDynamicLighting.specular_cubemap_texture_uid)
 	{
-		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specularCubemapTexture);
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specular_cubemap_texture_uid);
 	}
 	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
@@ -219,7 +229,7 @@ bool ClientData::setOrigin(uint64_t ctr,avs::uid uid)
 		originClientHas=uid;
 		return true;
 	}
-	TELEPORT_INTERNAL_CERR("Can't set origin - no handshake yet.\n");
+	TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",uid);
 	return false;
 }
 

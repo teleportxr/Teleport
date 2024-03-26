@@ -62,15 +62,12 @@ namespace clientrender
 		void RenderVRView(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		float framerate = 0.0f;
 		void Update(double timestamp_ms);
-		bool OSDVisible() const
-		{
-			return show_osd;
-		}
 
 	protected:
 		bool reload_shaders=false;
 		std::map<avs::uid,std::shared_ptr<InstanceRenderer>> instanceRenderers;
 		virtual std::shared_ptr<InstanceRenderer> GetInstanceRenderer(avs::uid server_uid);
+		void InitLocalHandGeometry();
 		void InitLocalGeometry();
 		void RemoveInstanceRenderer(avs::uid);
 		void InvalidateDeviceObjects();
@@ -102,29 +99,35 @@ namespace clientrender
 		platform::crossplatform::RenderPlatform		*renderPlatform	=nullptr;
 
 		RenderState renderState;
-		DebugOptions debugOptions;
 		platform::crossplatform::Text3DRenderer text3DRenderer;
-		bool show_osd = false;
 		double previousTimestamp=0.0;
 		int32_t minimumPriority=0;
+		struct ControllerModel
+		{
+			avs::uid controller_node_uid = 0;
+			vec3 index_finger_offset = {0, 0, 0};
+			avs::uid model_uid = 0;
+		};
+		struct HandModel
+		{
+			bool visible=false;
+			
+			avs::uid hand_node_uid = 0;					// The parent node in the local scene:
+				avs::uid hand_skeleton_node_uid = 0;		// The skeleton root node, child of hand_node_uid.
+				avs::uid hand_mesh_node_uid = 0;			// The mesh root node, child of hand_node_uid.
+
+			avs::uid hand_skeleton_uid = 0;				// The skeleton asset
+			avs::uid model_uid = 0;						// The mesh asset
+			clientrender::Transform palm_to_hand;
+			vec3 index_finger_offset = {0, 0, 0};
+		};
 
 		struct LobbyGeometry
 		{
-			avs::uid self_node_uid=0;
-			avs::uid left_hand_node_uid = 0;
-			avs::uid right_hand_node_uid = 0;
-			avs::uid left_hand_skeleton_node_uid = 0;
-			avs::uid right_hand_skeleton_node_uid = 0;
-			avs::uid left_controller_node_uid = 0;
-			avs::uid right_controller_node_uid = 0;
-			avs::uid local_left_hand_uid = 0;
-			clientrender::Transform palm_to_hand_l;
-			avs::uid local_right_hand_uid = 0;
-			clientrender::Transform palm_to_hand_r;
-			avs::uid hand_skeleton_uid = 0;
-			vec3 index_finger_offset;
-			avs::uid left_model_uid=0;
-			avs::uid right_model_uid=0;
+			avs::uid self_node_uid;
+			ControllerModel leftController;
+			ControllerModel rightController;
+			HandModel hands[2];
 		};
 		LobbyGeometry lobbyGeometry;
 
@@ -136,9 +139,9 @@ namespace clientrender
 		
 		// TODO: temporary.
 		const avs::uid local_server_uid=0;
-		const avs::InputId local_menu_input_id=0;
-		const avs::InputId local_cycle_osd_id=1;
-		const avs::InputId local_cycle_shader_id=2;
+		const avs::InputId local_menu_input_id=1;
+		const avs::InputId local_cycle_osd_id=2;
+		const avs::InputId local_cycle_shader_id=3;
 		teleport::Gui &gui;
 		teleport::client::Config &config;
 		ShaderMode shaderMode=ShaderMode::PBR;
@@ -171,8 +174,12 @@ namespace clientrender
 		void RenderDesktopView(int view_id,void* pContext,void* renderTexture,int w,int h, long long frame, void* context_allocator = nullptr);
 		void Init(platform::crossplatform::RenderPlatform *r,teleport::client::OpenXR *u,teleport::PlatformWindow* active_window);
 
+		// callbacks
+		void HandTrackingChanged(int left_right, bool on_off);
 		void XrBindingsChanged(std::string user_path, std::string profile);
 		void XrSessionChanged(bool active);
+
+
 		void RemoveView(int) override;
 		void DrawOSD(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 		void DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext, bool mode_3d);

@@ -68,9 +68,6 @@ namespace avs
 		//! Map input nodes to streams outgoing. One to one relation.
 		std::unordered_map<uint8_t, uint8_t> streamIndexToOutput;
 		Result sendData(uint8_t id, const uint8_t* packet, size_t sz);
-#if TELEPORT_CLIENT
-		HTTPUtil m_httpUtil;
-#endif
 	};
 }
 avs::StreamingConnectionState ConvertConnectionState(rtc::PeerConnection::State rtcState)
@@ -115,12 +112,12 @@ avs::WebRtcNetworkSource *src)
 	pc->onLocalDescription([src](rtc::Description description)
 		{
 			// This is our answer.
-		//	std::bind(&WebRtcNetworkSource::SendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1"
+		//	std::bind(&WebRtcNetworkSource::sendConfigMessage, this, std::placeholders::_1), std::bind(&WebRtcNetworkSource::Private::onDataChannel, m_data, std::placeholders::_1), "1"
 			json message = { {"id", "1"},
 						{"teleport-signal-type", description.typeString()},
 						{"sdp",  std::string(description)} };
 
-			src->SendConfigMessage(message.dump());
+			src->sendConfigMessage(message.dump());
 		});
 
 	pc->onLocalCandidate([ src](rtc::Candidate candidate)
@@ -131,7 +128,7 @@ avs::WebRtcNetworkSource *src)
 						{"mid", candidate.mid()} ,
 						{"mlineindex", 0} };
 
-			src->SendConfigMessage(message.dump());
+			src->sendConfigMessage(message.dump());
 		});
 
 	pc->onDataChannel([src](shared_ptr<rtc::DataChannel> dc)
@@ -153,10 +150,15 @@ WebRtcNetworkSource::WebRtcNetworkSource()
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
 }
 
+WebRtcNetworkSource::~WebRtcNetworkSource()
+{
+	deconfigure();
+}
+
 Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams,int numInputs, const NetworkSourceParams& params)
 {
 	size_t numOutputs = in_streams.size();
-	if (numOutputs == 0 ||  params.remoteHTTPPort == 0)
+	if (numOutputs == 0 )
 	{
 		return Result::Node_InvalidConfiguration;
 	}
@@ -237,16 +239,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 	m_data->dataChannels.resize(m_streams.size());
 	m_data->idToStreamIndex.clear();
 
-#if TELEPORT_CLIENT
-	HTTPUtilConfig httpUtilConfig;
-	//httpUtilConfig.//remoteIP = params.remoteIP;
-	httpUtilConfig.remoteHTTPPort = params.remoteHTTPPort;
-	httpUtilConfig.maxConnections = params.maxHTTPConnections;
-	httpUtilConfig.useSSL = params.useSSL;
-	return m_data->m_httpUtil.initialize(httpUtilConfig);
-#else
 	return Result::OK;
-#endif
 }
 
 Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
@@ -284,8 +277,6 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 			break;
 		config.iceServers.emplace_back(srv);
 	}
-	//"stun:stun.stunprotocol.org:3478");
-	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
@@ -367,11 +358,7 @@ Result WebRtcNetworkSource::deconfigure()
 	m_streams.clear();
 
 	m_data->m_EFPReceiver.reset();
-#if TELEPORT_CLIENT
-	return m_data->m_httpUtil.shutdown();
-#else
 	return Result::OK;
-#endif
 }
 
 Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
@@ -484,11 +471,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			streamStatus[i].outwardBandwidthKps += intro * (float)o / float(deltaTime) * (1000.0f / 1024.0f);
 		}
 	}
-#if TELEPORT_CLIENT
-	return m_data->m_httpUtil.process();
-#else
 	return Result::OK;
-#endif
 }
 
 NetworkSourceCounters WebRtcNetworkSource::getCounterValues() const
@@ -500,14 +483,8 @@ NetworkSourceCounters WebRtcNetworkSource::getCounterValues() const
 __attribute__((optnone))
 #endif
 
-#if TELEPORT_CLIENT
-std::queue<HTTPPayloadRequest>& WebRtcNetworkSource::GetHTTPRequestQueue()
-{
-	return m_data->m_httpUtil.GetRequestQueue();
-}
-#endif
 
-void WebRtcNetworkSource::SendConfigMessage(const std::string& str)
+void WebRtcNetworkSource::sendConfigMessage(const std::string &str)
 {
 	std::lock_guard<std::mutex> lock(messagesMutex);
 	messagesToSend.push_back(str);
@@ -720,7 +697,7 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 			}
 			else
 			{
-				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+ 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
 				return Result::Failed;
 			}
 		}

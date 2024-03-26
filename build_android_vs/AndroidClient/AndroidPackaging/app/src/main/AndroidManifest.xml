@@ -5,6 +5,8 @@
 		android:versionName="1.0" android:installLocation="auto" >
 
 	<uses-feature android:name="android.hardware.vr.headtracking" android:required="true" />
+	<uses-feature android:name="oculus.software.handtracking" android:required="false" />
+	<uses-feature android:name="wave.feature.handtracking" android:required="false" />
 	<uses-feature android:name="com.oculus.feature.PASSTHROUGH" android:required="false" />
 	<uses-feature android:name="com.oculus.feature.RENDER_MODEL" android:required="false" />
 	<uses-feature android:name="oculus.software.body_tracking" android:required="false" />
@@ -18,6 +20,7 @@
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="com.oculus.permission.RENDER_MODEL" />
 	<uses-permission android:name="com.oculus.permission.EYE_TRACKING" />
+	<uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
 	<application
 				android:allowBackup="true"
 				android:icon="@mipmap/ic_launcher"

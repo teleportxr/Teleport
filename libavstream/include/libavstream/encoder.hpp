@@ -174,7 +174,7 @@ private:
 
 	/*!
 	* Register the encoder's surface texture
-	* \param Pointer to surface interface
+	* \param surface Pointer to surface interface
 	* \return
 	*  - Result::OK on success.
 	*  - Result::Encoder_SurfaceAlreadyRegistered if an input surface is already registered.

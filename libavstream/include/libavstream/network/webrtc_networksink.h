@@ -30,8 +30,9 @@ namespace avs
 		virtual StreamingConnectionState getConnectionState() const override;
 
 		/*!
-		 * Configure network sink and bind to local UDP endpoint.
+		 * Configure network node and bind to local UDP endpoint.
 		 * \param streams Collection of configurations for each stream.
+		 * \param local_bind_addr Address this endpoint is bound to.
 		 * \param localPort Local UDP endpoint port number.
 		 * \param remote Remote UDP endpoint name or IP address.
 		 * \param remotePort Remote UDP endpoint port number.
@@ -41,7 +42,7 @@ namespace avs
 		 *  - Result::Node_InvalidConfiguration if numInputs, localPort, or remotePort is zero, or if remote is either nullptr or empty string.
 		 *  - Result::Network_BindFailed if failed to bind to local UDP socket.
 		 */
-		Result configure(std::vector<NetworkSinkStream>&& streams, const char* local_bind_addr, uint16_t localPort, const char* remote, uint16_t remotePort, const NetworkSinkParams& params = {}) override;
+		Result configure(std::vector<NetworkSinkStream>&& streams,  const NetworkSinkParams& params = {}) override;
 
 		/*!
 		 * Deconfigure network sink and release all associated resources.
@@ -50,18 +51,24 @@ namespace avs
 		Result deconfigure() override;
 
 		/*!
-		 * Send data for all streams to remote UDP endpoint.
+		 * Send and receive data for all streams to and from remote UDP endpoint.
 		 * \return
 		 *  - Result::OK on success.
-		 *  - Result::Node_NotConfigured if network sink has not been configured.
+		 *  - Result::Node_NotConfigured if this network node has not been configured.
 		 *  - Result::Network_ResolveFailed if failed to resolve the name of remote UDP endpoint.
 		 *  - Result::Network_SendFailed on general network send failure.
 		 */
 		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
-		//! Get node display name (for reporting & profiling).
+
+		/*!
+		 * Get node display name (for reporting & profiling).
+		 */
 		const char* getDisplayName() const override { return "WebRtcNetworkSink"; }
 
+		/*!
+		 * Get current counter values.
+		 */
 		NetworkSinkCounters getCounters() const override;
 		void setProcessingEnabled(bool enable) override;
 		bool isProcessingEnabled() const override;

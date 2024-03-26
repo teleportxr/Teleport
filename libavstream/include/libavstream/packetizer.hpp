@@ -37,7 +37,9 @@ public:
 	/*!
 	 * Configure packetizer.
 	 * Packetizer node takes ownerhip of the parser instance.
+	 * \param parser Parser, if needed.
 	 * \param numOutputs Number of output slots.
+	 * \param streamIndex Which stream this packetizer operates on.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_InvalidConfiguration if numOutputs is zero.
@@ -54,6 +56,8 @@ public:
 	/*!
 	 * Parse bitstream and broadcast packets to all outputs.
 	 * \sa PipelineNode::process()
+	 * \param timestamp When this happens.
+	 * \param deltaTime Time since last process() call.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if packetizer has not been configured.
@@ -63,6 +67,10 @@ public:
 
 	/*!
 	 * Packetizer node does not support read operations.
+	 * \param reader The node that wants data from this Packetizer.
+	 * \param buffer The buffer to put the data in.
+	 * \param bufferSize How much data can be put in the buffer.
+	 * \param bytesRead how many bytes read() actually puts in the buffer.
 	 * \return Always returns Result::Node_NotSupported.
 	 */
 	Result read(PipelineNode* reader, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
@@ -70,6 +78,10 @@ public:
 	/*!
 	 * Write bitstream to packetizer.
 	 * \sa IOInterface::write()
+	 * \param writer The node that is putting data to this Packetizer.
+	 * \param buffer The buffer the data is in.
+	 * \param bufferSize How much data is in the buffer.
+	 * \param bytesWritten how many bytes write() actually processes in the call.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::IO_OutOfMemory if failed to allocate memory for internal buffer.

@@ -169,7 +169,7 @@ void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingC
 		});
 	signalingClient->webSocket->onError([this, signalingClient](std::string error)
 		{
-			TELEPORT_CERR << "Websocket err " << error << std::endl;
+			TELEPORT_CERR << "Websocket error: " << error << std::endl;
 			; });
 }
 
@@ -195,6 +195,20 @@ void SignalingService::shutdown()
 	webSocketServers.clear();
 	clientUids.clear();
 	clientRemapping.clear();
+}
+
+void SignalingService::processDisconnection(avs::uid clientID, std::shared_ptr<SignalingClient> &signalingClient)
+{
+	auto c = clientManager.GetClient(clientID);
+	if (c)
+	{
+		c->SetConnectionState(UNCONNECTED);
+		c->clientMessaging->Disconnect();
+		// Close the Websocket, so that on reconnection, a new one creates a new signalingClient.
+		signalingClient->webSocket->close();
+		signalingClients.erase(clientID);
+		
+	}
 }
 
 void SignalingService::processInitialRequest(avs::uid uid, std::shared_ptr<SignalingClient>& signalingClient,json& content)
@@ -296,8 +310,11 @@ void SignalingService::tick()
 			json message = json::parse(msg);
 			if (!message.contains("teleport-signal-type"))
 				continue;
-			if (message["teleport-signal-type"] == "request")
+			std::string teleport_signal_type = message["teleport-signal-type"]; 
+			if (teleport_signal_type == "request")
 				processInitialRequest(c.first, signalingClient, message["content"]);
+			else if (teleport_signal_type == "disconnect")
+				processDisconnection(c.first, signalingClient);
 			else
 				signalingClient->messagesToPassOn.push(msg);
 		}

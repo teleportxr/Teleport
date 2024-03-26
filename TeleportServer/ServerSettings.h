@@ -107,7 +107,6 @@ namespace teleport
 			int32_t clientBufferSize;
 			int32_t requiredLatencyMs;
 			int32_t connectionTimeout;
-			avs::StreamingTransportLayer streamingTransportLayer= avs::StreamingTransportLayer::NONE;
 		} AVS_PACKED;
 
 		struct CasterEncoderSettings

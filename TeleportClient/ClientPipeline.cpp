@@ -1,8 +1,5 @@
 #include "ClientPipeline.h"
 #include <libavstream/network/webrtc_networksource.h>
-#if TELEPORT_SUPPORT_SRT
-#include <libavstream/network/srt_efp_networksource.h>
-#endif
 #include "TeleportCore/ErrorHandling.h"
 
 using namespace teleport;
@@ -55,8 +52,6 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	avs::NetworkSourceParams sourceParams;
 	sourceParams.connectionTimeout = setupCommand.idle_connection_timeout;
 	sourceParams.remoteIP = server_ip;
-	sourceParams.remotePort = setupCommand.server_streaming_port;
-	sourceParams.remoteHTTPPort = setupCommand.server_http_port;
 	sourceParams.maxHTTPConnections = 10;
 	sourceParams.httpStreamID = geoStreamID;
 	sourceParams.useSSL = setupCommand.using_ssl;

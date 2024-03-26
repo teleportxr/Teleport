@@ -51,11 +51,11 @@ PlatformWindow* platformWindow = nullptr;
 
 bool Gui::url_input = false;
 
-#define TIMED_TOOLTIP(txt)\
+#define TIMED_TOOLTIP(...)\
 		{if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
-			ImGui::SetTooltip(txt);}\
+			ImGui::SetTooltip(__VA_ARGS__);}\
 
-#define TIMED_TOOLTIP2(txt)\
+#define TIMED_TOOLTIP2(...)\
 	{\
 		static int timer=1200;\
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))\
@@ -63,7 +63,7 @@ bool Gui::url_input = false;
 		else\
 			timer = 1200;\
 		if(timer<=0)\
-			ImGui::SetTooltip(txt);\
+			ImGui::SetTooltip(__VA_ARGS__);\
 	}
 	
 ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
@@ -295,7 +295,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		fileLoader->AcquireFileContents(ttf_data,ttf_size,full_path.c_str(),false);
 		return io.Fonts->AddFontFromMemoryTTF(ttf_data,ttf_size,size_pixels,config,ranges);
 	};
-	defaultFont=AddFont("Exo-SemiBold.ttf");
+	defaultFont=AddFont("Exo2-SemiBold.ttf");
 	// NOTE: imgui expects the ranges pointer to be VERY persistent. Not clear how persistent exactly, but it is used out of the scope of
 	// this function. So we have to have a persistent variable for it!
 	static ImVector<ImWchar> glyph_ranges1;
@@ -311,7 +311,8 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_BOOKMARK);		
 		builder.AddText(ICON_FK_FOLDER_O);			
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);		
-		builder.AddText(ICON_FK_COG);				
+		builder.AddText(ICON_FK_COG);
+		builder.AddText(ICON_FK_WRENCH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);									
@@ -334,7 +335,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 	for(int i=0;i<fontSizes.size();i++)
 	{
 		int sz=fontSizes[i];
-		fontInter[sz] = AddFont("Inter-Medium.ttf", float(sz));
+		fontInter[sz] = AddFont("Inter-Regular.ttf", float(sz));
 		ImFontConfig config;
 		config.MergeMode = true;
 		config.GlyphMinAdvanceX = 20.0f;
@@ -347,6 +348,7 @@ void Gui::RestoreDeviceObjects(RenderPlatform* r,PlatformWindow *w)
 		builder.AddText(ICON_FK_FOLDER_O);
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);
 		builder.AddText(ICON_FK_COG);
+		builder.AddText(ICON_FK_WRENCH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
@@ -393,36 +395,27 @@ void Gui::RecompileShaders()
 	ImGui_ImplPlatform_RecompileShaders();
 }
 
-void Gui::ShowHide()
+void Gui::SetGuiType(GuiType t)
 {
-	if(visible)
+	if(guiType==t)
+		return;
+	guiType = t;
+	if (guiType==GuiType::None)
 	{
-		Hide();
+#ifdef _MSC_VER
+		ImGui_ImplWin32_SetFunction_GetCursorPos(nullptr);
+#endif
+		auto &config = client::Config::GetInstance();
+		config.SaveOptions();
 	}
 	else
 	{
-		Show();
+#ifdef _MSC_VER
+		ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
+#endif
+		reset_menu_pos = true;
+		keys_pressed.clear();
 	}
-}
-
-void Gui::Show()
-{
-#ifdef _MSC_VER
-	ImGui_ImplWin32_SetFunction_GetCursorPos(&Gui::GetCursorPos);
-#endif
-	visible			= true;
-	reset_menu_pos	=true;
-	keys_pressed.clear();
-}
-
-void Gui::Hide()
-{
-#ifdef _MSC_VER
-	ImGui_ImplWin32_SetFunction_GetCursorPos(nullptr);
-#endif
-	auto &config=client::Config::GetInstance();
-	config.SaveOptions();
-	visible = false;
 }
 
 void Gui::SetScaleMetres()
@@ -816,7 +809,7 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 	{
 		if (ImGuiBegin("Rebind Inputs", nullptr, window_flags))
 		{
-			ImGui::Text(binding_filename.c_str());
+			ImGui::Text("%s",binding_filename.c_str());
 			json &actionSets = j["actionSets"];
 			static int chosenSet = -1;
 			static ImGuiTableFlags flags =  0 ;
@@ -866,7 +859,7 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 							choseAction = -1;
 					}
 					ImGui::SameLine();
-					ImGui::Text(localizedName.c_str());
+					ImGui::Text("%s",localizedName.c_str());
 					if(i==choseAction)
 					{
 						json &bindingsList = action["bindings"];
@@ -1113,7 +1106,7 @@ static void DoRow(const char* title, vec4 q)
 {
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::Text( title);
+	ImGui::Text("%s",title);
 	ImGui::TableNextColumn();
 	ImGui::Text("%2.2f", q.x);
 	ImGui::TableNextColumn();
@@ -1212,7 +1205,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 		
 				vec3 gs = selected_node->GetGlobalScale();
 				ImGui::Text("%llu: %s %s", selected_node->id,selected_node->name.c_str(),selected_node->IsHighlighted()?"HIGHLIGHTED":"");
-				ImGui::Text("owners %d", selected_node.use_count());
+				ImGui::Text("owners %lu", selected_node.use_count());
 				avs::uid gi_uid=selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
 				{
@@ -1293,23 +1286,29 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 					}
 					ImGui::EndGroup();
 				}
+				ImGui::Separator();
+				ImGui::LabelText("Materials","Materials");
+				int element=0;
 				for (const auto& m : selected_node->GetMaterials())
 				{
 					if(m)
 					{
+						std::string passName;
+						auto *pass = selected_node->GetCachedEffectPass(element);
 						const char *name=m->GetMaterialCreateInfo().name.c_str();
-						ImGui::TreeNodeEx(name, flags, "%llu: %s", m->id, name);
+						ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, pass?pass->name.c_str():"");
 						if (ImGui::IsItemClicked())
 						{
 							Select(m->id);
 						}
 					}
+					element++;
 				}
 
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %d", s->sub_scene_uid);
+					ImGui::TreeNodeEx("##subsc", flags, " SubScene resource: %llu", (unsigned long long)s->sub_scene_uid);
 					if (ImGui::IsItemClicked())
 					{
 						Select(s->sub_scene_uid);
@@ -1385,12 +1384,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext& deviceContext)
 			}
 			else if(selected_subscene.get())
 			{
-				ImGui::Text("Subscene resource %d",selected_subscene->uid);
+				ImGui::Text("Subscene resource %llu",selected_subscene->uid);
 
 				if (selected_subscene->subscene_uid)
 				{
 					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
-					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %d", selected_subscene->subscene_uid);
+					ImGui::TreeNodeEx("##name111", flags, " Subscene Geometry Cache: %llu", selected_subscene->subscene_uid);
 
 					if (g)
 					{
@@ -1482,6 +1481,26 @@ void Gui::Textures(const ResourceManager<avs::uid,clientrender::Texture>& textur
 	ImGui::EndGroup();
 }
 
+
+void Gui::Skeletons(const ResourceManager<avs::uid,clientrender::Skeleton>& skeletonManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids = skeletonManager.GetAllIDs();
+	for (auto id : ids)
+	{
+		const auto &skeleton = skeletonManager.Get(id);
+		ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str());
+		if (ImGui::IsItemClicked())
+		{
+			if (!show_inspector)
+				show_inspector = true;
+			Select(id);
+		}
+		ImGui::TreePop();
+	}
+	ImGui::EndGroup();
+}
+
 void Gui::Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager)
 {
 	ImGui::BeginGroup();
@@ -1517,11 +1536,11 @@ void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,t
 		{
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##clientActionId", teleport::client::stringof(m.clientActionId));
+			ImGui::LabelText("##clientActionId","%s", teleport::client::stringof(m.clientActionId));
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##inputType", avs::stringof(m.serverInputDefinition.inputType));
+			ImGui::LabelText("##inputType", "%s", avs::stringof(m.serverInputDefinition.inputType));
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##inputType", m.serverInputDefinition.regexPath.c_str());
+			ImGui::LabelText("##inputType", "%s", m.serverInputDefinition.regexPath.c_str());
 			ImGui::TableNextColumn();
 			switch (m.serverInputDefinition.inputType)
 			{
@@ -1537,8 +1556,10 @@ void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,t
 			case avs::InputType::IntegerEvent:
 				val = fmt::format("{0}", I.getLastBinaryEvent(m.serverInputDefinition.inputId).activated);
 				break;
+			default:
+				break;
 			};
-			ImGui::LabelText("##inputVal", val.c_str());
+			ImGui::LabelText("##inputVal", "%s", val.c_str());
 		}
 		ImGui::EndTable();
 	}
@@ -1551,9 +1572,9 @@ void Gui::InputsPanel(avs::uid server_uid,client::SessionClient *sessionClient,t
 		{
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##frst", fmt::format("{0}", p.first).c_str());
+			ImGui::LabelText("##frst", "%s", fmt::format("{0}", p.first).c_str());
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##second", fmt::format("{0}", p.second).c_str());
+			ImGui::LabelText("##second", "%s", fmt::format("{0}", p.second).c_str());
 		}
 		ImGui::EndTable();
 	}
@@ -1580,9 +1601,9 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 			const auto& s = streams[i];
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##chnl", "%d",i);
+			ImGui::LabelText("##chnl", "%zu",i);
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##slabel", s.label.c_str());
+			ImGui::LabelText("##slabel", "%s",s.label.c_str());
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##kps_in", "%3.1f",kps_in);
 			ImGui::TableNextColumn();
@@ -1606,10 +1627,52 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 	LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));*/
 }
 
-void Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
+bool Gui::DebugPanel(clientrender::DebugOptions &debugOptions)
 {
 	ImGui::Checkbox("Global Origin Axes",&debugOptions.showAxes);
-	ImGui::Checkbox("Show Stage Space",&debugOptions.showStageSpace);
+	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
+	const char *debugShaders[]={""
+								,"ps_solid_albedo_only"
+								,"ps_debug_normals"
+								,"ps_debug_normal_vertexnormals"
+								,"ps_debug_lightmaps"
+								,"ps_debug_ambient"
+								,"ps_debug_anim"
+								,"ps_debug_uvs"
+								,"ps_digitizing"
+								};
+	ImGui::LabelText("DebugShaders","Debug Shader");
+	static int chooseDebugShader= 0;
+	int oldChooseDebugShader = chooseDebugShader;
+	ImGui::RadioButton("Default", &chooseDebugShader, 0);
+	ImGui::SameLine();
+	ImGui::RadioButton("Albedo", &chooseDebugShader, 1);
+	ImGui::SameLine();
+	ImGui::RadioButton("Normals", &chooseDebugShader, 2);
+	ImGui::SameLine();
+	ImGui::RadioButton("Vertex Normals", &chooseDebugShader, 3);
+	ImGui::RadioButton("Anim", &chooseDebugShader, 4);
+	ImGui::SameLine();
+	ImGui::RadioButton("Lightmaps", &chooseDebugShader, 5);
+	ImGui::SameLine();
+	ImGui::RadioButton("Ambient", &chooseDebugShader, 6);
+	ImGui::SameLine();
+	ImGui::RadioButton("UVs", &chooseDebugShader, 7);
+	ImGui::RadioButton("Digitizing", &chooseDebugShader, 8);
+	if (oldChooseDebugShader != chooseDebugShader)
+	{
+		if(chooseDebugShader!=0)
+		{
+			debugOptions.debugShader = debugShaders[chooseDebugShader];
+			debugOptions.useDebugShader = true;
+		}
+		else
+		{
+			debugOptions.useDebugShader=false;
+		}
+		return true;
+	}
+	return false;
 }
 
 void Gui::CubemapOSD(crossplatform::Texture *videoTexture)
@@ -1788,6 +1851,11 @@ void Gui::Scene()
 		NodeTree( geometryCache->mNodeManager->GetRootNodes());
 		ImGui::EndTabItem();
 	}
+	if (ImGui::BeginTabItem("Skeletons"))
+	{
+		Skeletons(geometryCache->mSkeletonManager);
+		ImGui::EndTabItem();
+	}
 	if(ImGui::BeginTabItem("Animations"))
 	{
 		Anims(geometryCache->mAnimationManager);
@@ -1798,6 +1866,7 @@ void Gui::Scene()
 		Textures(geometryCache->mTextureManager);
 		ImGui::EndTabItem();
 	}
+	
 	ImGui::EndTabBar();
 }
 
@@ -1938,7 +2007,15 @@ void Gui::MenuBar2D()
 		bool connect_please=false;
 		bool cancel_please=false;
 		ImGui::SameLine();
-		ImGui::PushItemWidth(ImGui::GetWindowWidth() - 5*40-8);
+		int num_buttons=5;
+
+#if TELEPORT_INTERNAL_CHECKS
+		if (config.dev_mode)
+		{
+			num_buttons++;
+		}
+#endif
+		ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons*40-8);
 		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer),ImGuiInputTextFlags_EnterReturnsTrue))
 		{
 			current_url = url_buffer;
@@ -1991,7 +2068,7 @@ void Gui::MenuBar2D()
 				bookmarks_pos = { ImGui::GetWindowWidth(),pos.y };
 			}
 		}
-		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		if (!show_bookmarks&&(ImGui::IsItemActive() || ImGui::IsItemHovered()))
 			TIMED_TOOLTIP("Bookmarks");
 		ImGui::SameLine();
 		if (ImGui::Button(ICON_FK_COG, ImVec2(36, 24)))
@@ -2003,13 +2080,23 @@ void Gui::MenuBar2D()
 				config.SaveOptions();
 			}
 		}
+#if TELEPORT_INTERNAL_CHECKS
+		if (config.dev_mode)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button(ICON_FK_WRENCH, ImVec2(36, 24)))
+			{
+				guiType = GuiType::Debug;
+			}
+		}
+#endif
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 			TIMED_TOOLTIP("Settings");
 	}
 	ImGui::PopStyleColor();
 }
 
-void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
+void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 {
 	LightStyle();
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
@@ -2051,53 +2138,75 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 		ImGuiBegin("dev_overlay",0,window_flags);
 		{
 			dev_overlay_width = ImGui::GetWindowWidth();
-			client::ConnectionStatus status=client::ConnectionStatus::UNCONNECTED;
-			avs::StreamingConnectionState streamingStatus = avs::StreamingConnectionState::UNINITIALIZED;
-			const auto &ids=client::SessionClient::GetSessionClientIds();
-			vec4 white(1.f, 1.f, 1.f, 1.f);
-			ImGui::BeginTable("serverstats", 2);
-			ImGui::TableSetupColumn("name2", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-			ImGui::TableSetupColumn("val21", ImGuiTableColumnFlags_WidthStretch);
 
-			for(auto id:ids)
+			ImGui::BeginTabBar("tabcontexts");
+			const auto &tabs = client::TabContext::GetTabIndices();
+			for(const auto t:tabs)
 			{
-				auto sessionClient = client::SessionClient::GetSessionClient(id);
-				status = sessionClient->GetConnectionStatus();
-				streamingStatus = sessionClient->GetStreamingConnectionState();
+				const auto tabContext = client::TabContext::GetTabContext(t);
+				if(!tabContext)
+					continue;
+				std::string str=fmt::format("{0}",t);
+				if(ImGui::BeginTabItem(str.c_str()))
+				{
+					client::ConnectionStatus status=client::ConnectionStatus::UNCONNECTED;
+					avs::StreamingConnectionState streamingStatus = avs::StreamingConnectionState::UNINITIALIZED;
+					static std::vector<avs::uid > ids;
+					ids.resize(0);
+					ids.push_back(tabContext->GetServerUid());
+					ids.push_back(tabContext->GetNextServerUid());
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Server Id");
-				ImGui::TableNextColumn();
-				ImGui::Text("%llu", id);
+					vec4 white(1.f, 1.f, 1.f, 1.f);
+					ImGui::BeginTable("serverstats", 2);
+					ImGui::TableSetupColumn("name2", ImGuiTableColumnFlags_WidthFixed, 120.0f);
+					ImGui::TableSetupColumn("val21", ImGuiTableColumnFlags_WidthStretch);
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Session Id");
-				ImGui::TableNextColumn();
-				ImGui::Text("%llu", sessionClient->GetSetupCommand().session_id);
+					for(auto id:ids)
+					{
+						if(!id)
+							continue;
+						auto sessionClient = client::SessionClient::GetSessionClient(id);
+						status = sessionClient->GetConnectionStatus();
+						streamingStatus = sessionClient->GetStreamingConnectionState();
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Session Status");
-				ImGui::TableNextColumn();
-				ImGui::Text(teleport::client::StringOf(status));
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Server Id");
+						ImGui::TableNextColumn();
+						ImGui::Text("%llu", id);
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Streaming Status");
-				ImGui::TableNextColumn();
-				ImGui::Text(avs::stringOf(streamingStatus));
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Session Id");
+						ImGui::TableNextColumn();
+						ImGui::Text("%lu", sessionClient->GetSetupCommand().session_id);
 
-				ImGui::TableNextRow();
-				ImGui::TableNextColumn();
-				ImGui::Text("Latency");
-				ImGui::TableNextColumn();
-				ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Session Status");
+						ImGui::TableNextColumn();
+						ImGui::Text("%s", teleport::client::StringOf(status));
 
-				ImGui::TableNextRow();
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Streaming Status");
+						ImGui::TableNextColumn();
+						ImGui::Text("%s", avs::stringOf(streamingStatus));
+
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Latency");
+						ImGui::TableNextColumn();
+						ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+
+						ImGui::TableNextRow();
+					}
+					ImGui::EndTable();
+
+					ImGui::EndTabItem();
+				}
 			}
-			ImGui::EndTable();
+			ImGui::EndTabBar();
 		}
 
 		ImGuiEnd();
@@ -2142,7 +2251,7 @@ void Gui::Render2DGUI(GraphicsDeviceContext& deviceContext)
 		{
 			if(systname)
 			{
-				TIMED_TOOLTIP(("Activate VR: "s+systname).c_str());
+				TIMED_TOOLTIP("%s", ("Activate VR: "s + systname).c_str());
 			}
 			else
 				TIMED_TOOLTIP("Activate VR");
@@ -2258,12 +2367,12 @@ void Gui::DevModeOptions()
 			console("killstreaming");
 	}
 }
-void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
+void Gui::Render3DConnectionGUI(GraphicsDeviceContext& deviceContext )
 {
 	view_pos = deviceContext.viewStruct.cam_pos;
 	view_dir = deviceContext.viewStruct.view_dir;
 	auto& config = client::Config::GetInstance();
-	if(!visible)
+	if(guiType!=GuiType::Connection)
 		return;
 	vec3 pos_diff=view_pos-menu_pos;
 	if(length(pos_diff)>1.4f)
@@ -2292,7 +2401,11 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 	ImGuiIO& io = ImGui::GetIO();
 	static bool in3d=true;
 	static float window_width=720.0f;
-	static float window_height=260.0f;
+	static float window_height = 260.0f;
+#if TELEPORT_INTERNAL_CHECKS
+	if (config.dev_mode)
+		window_height=400.0f;
+#endif
 	ImVec2 size_min(window_width,window_height);
 	ImVec2 size_max(window_width,window_height);
 	ImGui_ImplPlatform_NewFrame(in3d,(int)size_max.x,(int)size_max.y,menu_pos,azimuth,tilt,width_m);
@@ -2414,17 +2527,35 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 			}
 			else
 			{
-				// TODO: Temporary
-				avs::uid server_uid=1;
-				auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-				bool connecting=sessionClient->IsConnecting();
-				bool connected=sessionClient->IsConnected();
+				const std::set<int32_t> &tabIndices = client::TabContext::GetTabIndices();
+				if (!current_tab_context)
+				{
+					current_tab_context = client::TabContext::AddTabContext();
+				}
+				std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
+				avs::uid server_uid = tabContext->GetServerUid();
+				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+				bool connecting = false;
+				bool connected = false;
+				if(sessionClient)
+				{
+				 connecting=sessionClient->IsConnecting();
+					 connected=sessionClient->IsConnected();
+				}
 				ImGui::SameLine();
 				if (refocus == 0)
 				{
 					ImGui::SetKeyboardFocusHere();
 				}
-				ImGui::PushItemWidth(ImGui::GetWindowWidth() - 4 * 80);
+				int num_buttons = 4;
+
+#if TELEPORT_INTERNAL_CHECKS
+				if (config.dev_mode)
+				{
+					 num_buttons++;
+				}
+#endif
+				ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * 80);
 				if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
 				{
 					current_url = url_buffer;
@@ -2454,6 +2585,17 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 				{
 					show_options=!show_options;
 				}
+#if TELEPORT_INTERNAL_CHECKS
+				if (config.dev_mode)
+				{
+					ImGui::SameLine();
+					if (ImGui::Button(ICON_FK_WRENCH, ImVec2(64, 32)))
+					{
+						guiType = GuiType::Debug;
+						openXR.SetOverlayEnabled(true);
+					}
+				}
+#endif
 
 				if (show_keyboard)
 				{
@@ -2525,8 +2667,6 @@ void Gui::Render3DGUI(GraphicsDeviceContext& deviceContext )
 	ImGui::GetForegroundDrawList()->AddRectFilled(handle2_min,handle2_max,handle2Colour,0.5f);
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
-	if(!show_hide)
-		Hide();
 }
 
 void Gui::SetConnectHandler(std::function<void(int32_t,const std::string&)> fn)

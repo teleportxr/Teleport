@@ -87,10 +87,6 @@ namespace avs
 										{"teleport-signal-type",description.typeString()},
 												{"sdp",  std::string(description)}
 									};
-					//json message = { {"id", id},
-						//		{"type", description.typeString()},
-							//	{"sdp",  std::string(description)} };
-
 					sendConfigMessage(message.dump());
 				});
 
@@ -129,8 +125,13 @@ WebRtcNetworkSink::WebRtcNetworkSink()
 	m_data = static_cast<WebRtcNetworkSink::Private*>(m_d);
 }
 
+WebRtcNetworkSink::~WebRtcNetworkSink()
+{
+	deconfigure();
+}
+
 // configure() is called when we have agreed to connect with a specific client.
-Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const char* , uint16_t , const char* , uint16_t , const NetworkSinkParams& params)
+Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const NetworkSinkParams& params)
 {
 	size_t numInputs = streams.size();
 	if (numInputs == 0 )
@@ -163,7 +164,7 @@ Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, co
 
 	// Having completed the above, we are not yet ready to actually send data.
 	// We await the "offer" from webrtc locally and the "candidates" from the STUN server.
-	// Then we must send these using the messaging channel (Websockets or Enet) to the client.
+	// Then we must send these using the messaging channel (eg Websockets) to the client.
 	return Result::OK;
 }
 
@@ -225,11 +226,6 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		// We DO NOT get a callback from creating a dc locally.
 		m_data->onDataChannel(dataChannel.rtcDataChannel);
 	}
-}
-
-WebRtcNetworkSink::~WebRtcNetworkSink()
-{
-	deconfigure();
 }
 
 NetworkSinkCounters WebRtcNetworkSink::getCounters() const

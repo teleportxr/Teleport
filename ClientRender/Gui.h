@@ -30,6 +30,12 @@ namespace teleport
 		class ClientPipeline;
 		class OpenXR;
 	}
+	enum class GuiType
+	{
+		None
+		,Connection
+		,Debug
+	};
 	#ifdef _MSC_VER
 	typedef void* PlatformWindow;
 	#endif
@@ -52,12 +58,13 @@ namespace teleport
 		void InvalidateDeviceObjects();
 		void LoadShaders();
 		void RecompileShaders();
-		void Render3DGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-		void Render2DGUI(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+		void Render3DConnectionGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+		void Render2DConnectionGUI(platform::crossplatform::GraphicsDeviceContext& deviceContext);
 		void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
 		void LinePrint(const std::string& str, const float* clr = nullptr);
 		void LinePrint(const char* txt,const float *clr=nullptr);
-		void Textures(const ResourceManager<avs::uid,clientrender::Texture>& textureManager);
+		void Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager);
+		void Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &animManager);
 		void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
 		void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>&);
 		void CubemapOSD(platform::crossplatform::Texture *videoTexture);
@@ -65,11 +72,17 @@ namespace teleport
 
 		void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
 		void NetworkPanel(const teleport::client::ClientPipeline& clientPipeline);
-		void DebugPanel(clientrender::DebugOptions &debugOptions);
+		/// @returns true if changed.
+		bool DebugPanel(clientrender::DebugOptions &debugOptions);
 		void GeometryOSD();
 		void Scene();
 		bool Tab(const char *txt);
 		void EndTab();
+		GuiType GetGuiType() const
+		{
+			return guiType;
+		}
+		void SetGuiType(GuiType t);
 		// Unitless,relative to debug gui size, [-1,+1]
 		void SetDebugGuiMouse(vec2 m,bool leftButton);
 		void OnKeyboard(unsigned wParam, bool bKeyDown);
@@ -94,14 +107,7 @@ namespace teleport
 			endXRSessionHandler = fn;
 		}
 		void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
-		void ShowHide();
-		void Show();
-		void Hide();
 		void SetScaleMetres();
-		bool IsVisible() const
-		{
-			return visible;
-		}
 		bool URLInputActive() const { return url_input; }
 		void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
 		const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
@@ -116,8 +122,9 @@ namespace teleport
 		void SelectPrevious();
 		void SelectNext();
 		// Replaces Windows GetCursorPos if necessary.
-		static int GetCursorPos(long p[2]) ;
+		static int GetCursorPos(long p[2]);
 	protected:
+		GuiType guiType=GuiType::None;
 		std::function<void(const std::string&)> console;
 		client::OpenXR &openXR;
 		avs::uid cache_uid=0;
@@ -149,7 +156,6 @@ namespace teleport
 		std::function<void(int32_t)> cancelConnectHandler;
 		std::function<void()> startXRSessionHandler;
 		std::function<void()> endXRSessionHandler;
-		bool visible = false;
 		static bool url_input;
 		bool reset_menu_pos=false;
 		avs::DecoderStatus videoStatus;

@@ -15,7 +15,6 @@
 #include "VideoEncodePipeline.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Input.h"
-#include "enet/enet.h"
 #include <libavstream/genericencoder.h>
 
 typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid uid, const avs::Pose*);
@@ -232,7 +231,6 @@ namespace teleport
 				return SendSignalingCommand(std::move(bin));
 			}
 
-			void receive(const ENetEvent& event);
 			void receiveSignaling(const std::vector<uint8_t> &bin);
 			void receiveHandshake(const std::vector<uint8_t> &bin);
 			void receiveInputStates(const std::vector<uint8_t> &bin);

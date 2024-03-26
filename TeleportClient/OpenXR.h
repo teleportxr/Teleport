@@ -10,7 +10,7 @@
 #include <openxr/openxr.h>
 #include <thread>
 
-#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){teleport::client::ReportError(xr_instance,(int)res);}
+#define XR_CHECK(res) if (!XR_UNQUALIFIED_SUCCESS(res)){teleport::client::ReportError(xr_instance,(int)res,__FILE__,__LINE__,#res);}
 #include <openxr/openxr_reflection.h>
 
 // Macro to generate stringify functions for OpenXR enumerations based data provided in openxr_reflection.h
@@ -47,7 +47,7 @@ namespace teleport
 		DECLARE_TO_STRING_FUNC(XrSessionState);
 		DECLARE_TO_STRING_FUNC(XrResult);
 		DECLARE_TO_STRING_FUNC(XrFormFactor);
-		extern void ReportError(XrInstance xr_instance, int result);
+		extern void ReportError(XrInstance xr_instance, int result,const char *file, int line,const char *failed_cmd);
 		extern XrPath MakeXrPath(const XrInstance & xr_instance,const char* str);
 
 		extern std::string FromXrPath(const XrInstance & xr_instance,XrPath path);
@@ -92,6 +92,9 @@ namespace teleport
 			RIGHT_HAPTIC,
 			MOUSE_LEFT_BUTTON,
 			MOUSE_RIGHT_BUTTON,
+			HANDTRACKING_PALM_POSE,
+			GRASP,
+			PINCH,
 			MAX_ACTIONS
 		};
 		const char* stringof(ActionId a);
@@ -101,6 +104,7 @@ namespace teleport
 		{
 			teleport::core::InputDefinition serverInputDefinition;
 			ActionId clientActionId;
+			int8_t subActionIndex=0;
 		};
 		//! State of an input. Note that we store *both* float and integer values,
 		//! allowing for hysteresis in the integer interpretation of float input.
@@ -114,6 +118,8 @@ namespace teleport
 			std::string regexPath;
 			ActionId actionId;		// Which local action is bound to the node.
 			avs::Pose poseOffset;	// In the XR pose's local space, the offset to the node's pose.
+			int subActionIndex = 0; // Basically left or right, where applicable
+			int handJointIndex=-1;	// If ActionId is invalid, it's a hand tracking joint, and should be 0-25.
 		};
 		struct NodePoseState
 		{
@@ -154,10 +160,11 @@ namespace teleport
 			const char* name;
 			const char* localizedName;
 			XrActionType xrActionType;
+			bool subActionPaths=false;
 		};
 
 		// struct to store the state of an XR action:
-		struct ActionState
+		struct SubActionState
 		{
 			union
 			{
@@ -171,11 +178,15 @@ namespace teleport
 			XrVector3f  angularVelocity_stageSpace;
 		};
 
+		struct ActionState
+		{
+			SubActionState subActionStates[2];
+		};
 		//
 		struct XRInputDeviceState
 		{
 			XrBool32	renderThisDevice;
-			XrBool32	handSelect;
+			//XrBool32	handSelect;
 			XrBool32	handMenu;
 		};
 
@@ -184,9 +195,10 @@ namespace teleport
 			XrAction		xrAction;
 			ActionId		actionId;
 			XrActionType	xrActionType;
-			XrSpace			space;
+			XrSpace			spaces[2];
 			std::string name;
 			std::string localizedName;
+			bool subActionPaths;
 		};
 
 		struct InputSession
@@ -199,7 +211,6 @@ namespace teleport
 			// Here we  can set all the actions to be supported.
 			void SetActions( std::initializer_list<ActionInitializer> actions);
 			ActionId AddAction( const char* name,const char* localizedName,XrActionType xrActionType);
-			void InstanceInit(XrInstance& xr_instance);
 			void SessionInit(XrInstance xr_instance,XrSession &xr_session);
 		};
 
@@ -216,6 +227,7 @@ namespace teleport
 			std::string name;
 			std::vector<XrActionSuggestedBinding> xrActionSuggestedBindings;
 			std::vector<std::string> bindingPaths;
+			void Add(XrInstance &xr_instance, std::initializer_list<InteractionProfileBinding> bindings);
 			void Init(XrInstance &xr_instance,const char *pr,std::initializer_list<InteractionProfileBinding> bindings);
 			//! virtual_binding  means that the binding is not a real OpenXR path, but e.g. mouse/keyboard.
 			void Add(XrInstance &xr_instance,XrAction action,const char *complete_path,bool virtual_binding);
@@ -258,8 +270,11 @@ namespace teleport
 			Running,
 			Stopped
 		};
-		typedef std::function<void(bool)> SessionChangedCallback;
-		typedef std::function<void(std::string,std::string)> BindingsChangedCallback;
+		typedef std::function<void(bool)> CallbackTakesBool;
+		typedef std::function<void(int,bool)> CallbackTakesIntBool;
+		typedef std::function<void(std::string, std::string)> CallbackTakesStringString;
+		typedef std::function<void(std::string)> CallbackTakesString;
+		
 		
 		class OpenXR
 		{
@@ -270,21 +285,30 @@ namespace teleport
 			bool InitInstance();
 			void SetRenderPlatform(platform::crossplatform::RenderPlatform* renderPlatform);
 			void Shutdown();
-			virtual bool StartSession()=0;
+			virtual bool StartSession() = 0;
+			virtual void SetCurrentFrameDeviceContext(platform::crossplatform::GraphicsDeviceContext *d)
+			{
+			}
+
 			void EndSession();
-			void SetSessionChangedCallback(SessionChangedCallback s)
+			void SetSessionChangedCallback(CallbackTakesBool s)
 			{
 				sessionChangedCallback=s;
 			}
-			void SetBindingsChangedCallback(BindingsChangedCallback s)
+			void SetBindingsChangedCallback(CallbackTakesStringString s)
 			{
 				bindingsChangedCallback = s;
 			}
+			void SetHandTrackingChangedCallback(CallbackTakesIntBool s)
+			{
+				handTrackingChangedCallback=s;
+			}
+
 			void CreateMouseAndKeyboardProfile();
 			void MakeActions();
 			void AttachSessionActions();
 			void Tick();
-			void PollActions();
+			void PollActions(XrTime predictedTime);
 			void RenderFrame( platform::crossplatform::RenderDelegate &, platform::crossplatform::RenderDelegate &);
 			void PollEvents();
 			bool HaveXRDevice() const;
@@ -336,12 +360,19 @@ namespace teleport
 
 			//! Get the head pose in the device's stage space (axes adapted to the Engineering standard, Z=up).
 			const avs::Pose& GetHeadPose_StageSpace() const;
-			avs::Pose GetActionPose(ActionId id) const;
-			float GetActionFloatState(ActionId actionId) const;
+			avs::Pose GetActionPose(ActionId id,uint8_t subActionIndex=0) const;
+			float GetActionFloatState(ActionId actionId, uint8_t subActionIndex=0) const;
 			 avs::uid GetRootNode(avs::uid server_uid);
 			const std::map<avs::uid,avs::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			
+			/// Get the poses relative to the hand root.
+			const std::vector<avs::Pose> &GetTrackedHandJointPoses(int i);
+			/// @brief Get the hand root pose in local space.
+			/// @param pose 
+			/// @return 
+			avs::Pose GetTrackedHandRootPose(int i) const;
+
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
 			bool IsSessionActive() const
@@ -354,9 +385,8 @@ namespace teleport
 			}
 
 			Overlay overlay;
-			static avs::Pose ConvertGLStageSpacePoseToWorldSpacePose(const avs::Pose &stagePose_worldSpace,const XrPosef &pose) ;
-			static avs::Pose ConvertGLStageSpacePoseToLocalSpacePose(const XrPosef &pose) ;
-			vec3 ConvertGLStageSpaceDirectionToLocalSpace(const XrVector3f &d) const;
+			static avs::Pose ConvertGLSpaceToEngineeringSpace(const XrPosef &pose);
+			vec3 ConvertGLSpaceToEngineeringSpace(const XrVector3f &d) const;
 			platform::crossplatform::ViewStruct CreateViewStructFromXrCompositionLayerProjectionView(XrCompositionLayerProjectionView view, int id, platform::crossplatform::DepthTextureStyle depthTextureStyle);
 			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
 			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const avs::Pose& pose);
@@ -368,8 +398,9 @@ namespace teleport
 			bool internalInitInstance();
 			bool quit=false;
 			std::string applicationName;
-			SessionChangedCallback sessionChangedCallback;
-			BindingsChangedCallback bindingsChangedCallback;
+			CallbackTakesBool sessionChangedCallback;
+			CallbackTakesStringString bindingsChangedCallback;
+			CallbackTakesIntBool handTrackingChangedCallback;
 			
 			MouseState mouseState;
 			std::string GetBoundPath(const ActionDefinition &def) const;
@@ -455,6 +486,27 @@ namespace teleport
 			float overlayAzimuth = 0.0f;
 			float targetOverlayAzimuth = 0.0f;
 			void UpdateOverlayPosition();
+			// The action for getting the hand or controller position and orientation.
+			XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties = {XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT};
+			struct XrTrackedHand
+			{
+				XrHandJointLocationEXT jointLocations[XR_HAND_JOINT_COUNT_EXT];
+				XrHandTrackerEXT handTracker = 0;
+				XrPath path=0;
+				XrActionStatePose poseState = {XR_TYPE_ACTION_STATE_POSE};
+				XrPosef pose;
+				bool hand_tracking_active = false;
+			};
+			XrTrackedHand xrTrackedHands[2];
+			struct TrackedHand
+			{
+				bool active=false;
+				avs::Pose rootPose;						// In local space.
+				std::vector<avs::Pose> jointPoses;		// In space relative to root.
+			};
+			TrackedHand trackedHands[2];
+			void CreateHandTrackers();
+			void InstanceInit(InputSession &input_session, XrInstance &xr_instance);
 		};
 	}
 }

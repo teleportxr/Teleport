@@ -1,12 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(TeleportPCClient)
 
-option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
-if( ${TELEPORT_CLIENT_USE_D3D12})
-	set(TELEPORT_CLIENT_USE_D3D11 OFF)
-else()
-	set(TELEPORT_CLIENT_USE_D3D11 ON)
-endif()
+set(TELEPORT_CLIENT )
 option(TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER "Use Platform video decoder? Currently requires TELEPORT_CLIENT_USE_D3D12" OFF)
 
 if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
@@ -16,7 +11,8 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 	endif()
 endif()
 
-file(GLOB inifiles "*.ini" "assets/*.ini")
+configure_file(client_default.ini assets/client.ini)
+file(GLOB inifiles "client_default.ini" assets/client.ini)
 set(srcs
 	Main.cpp
 	MemoryUtil.cpp
@@ -53,25 +49,35 @@ add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifi
 add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ${CMAKE_SOURCE_DIR}/../thirdparty/enet/include ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
+	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
  
 
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(TeleportPCClient SimulDirectX12_MT)
 	target_link_libraries(TeleportPCClient d3d12)
-else()
+endif()
+if(TELEPORT_CLIENT_USE_D3D11)
+message("TELEPORT_CLIENT_USE_D3D11")
 	target_link_libraries(TeleportPCClient SimulDirectX11_MT)
+endif()
+if(TELEPORT_CLIENT_USE_VULKAN)
+	target_link_libraries(TeleportPCClient SimulVulkan_MT)
+    if (Vulkan_FOUND)
+        target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+        target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
+        target_compile_definitions(${PROJECT_NAME} PUBLIC XR_TUTORIAL_USE_VULKAN)
+    endif()
 endif()
 #target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
 target_link_libraries(TeleportPCClient )
-target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
+target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_VULKAN=$<BOOL:${TELEPORT_CLIENT_USE_VULKAN}> TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>) 	
 
 SetTeleportDefaults(TeleportPCClient)
 set_target_properties( TeleportPCClient PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")
 set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties( TeleportPCClient PROPERTIES FOLDER Client)
 set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=$ENV{$WindowsSdkVerBinPath};$(PATH)"	 )		
-target_include_directories(TeleportPCClient PUBLIC ../thirdparty/enet/Include ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
+target_include_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
 target_compile_features(TeleportPCClient PRIVATE cxx_std_17)
 target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
 
@@ -80,7 +86,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader) 
-target_link_libraries(TeleportPCClient libavstream enet TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
+target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
 target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt)
 
 target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)
@@ -92,10 +98,15 @@ target_link_libraries(TeleportPCClient -ignore:4711)
 target_link_options(TeleportPCClient PUBLIC /ignore:4711)
 target_compile_options(TeleportPCClient PRIVATE /wd4711)
 
-cmake_minimum_required(VERSION 2.9)
-
 file(GLOB global_shader_includes "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders/*.sl")
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+add_custom_command(
+    TARGET TeleportPCClient
+    PRE_BUILD
+    COMMAND (robocopy ${CMAKE_SOURCE_DIR}/client/assets ${CMAKE_CURRENT_SOURCE_DIR}/assets /s /e /NFL /NDL /NJH /NJS /nc /ns /np) ^& IF %ERRORLEVEL% LSS 8 SET ERRORLEVEL = 0
+)
+endif()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 

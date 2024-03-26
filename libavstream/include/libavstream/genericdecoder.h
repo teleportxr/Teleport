@@ -14,11 +14,9 @@ namespace avs
 	public:
 		virtual Result decode(const void* buffer, size_t bufferSizeInBytes) = 0;
 	};
-	/*!
-	 * Generic decoder node `[input-active, output-active, 1/1]`
-	 *
-	 * Reads generic packets    outputs  to a Generic Target.
-	 */
+	/// Generic decoder node `[input-active, output-active, 1/1]`
+	/// 
+	/// Reads generic packets    outputs  to a Generic Target.
 	class AVSTREAM_API GenericDecoder final : public PipelineNode
 	{
 		AVSTREAM_PUBLICINTERFACE(GenericDecoder)
@@ -28,26 +26,31 @@ namespace avs
 
 		~GenericDecoder();
 
-		/*!
-		 * Configure decoder.
-		 * \param backend The object that performas the actual decoding.
-		 * \return
-		 *  - Result::OK on success.
-		 *  - Result::Node_AlreadyConfigured if decoder was already in configured state.
-		 *  - Result::Decoder_NoSuitableBackendFound if there's no usable decoder backend on the system.
-		 *  - Any error result returned by DecoderBackendInterface::initialize().
-		 */
-		Result configure(GenericTargetInterface* t);
+		/// Configure decoder.
+		/// \param target The object that performas the actual decoding.
+		/// \return
+		///  - Result::OK on success.
+		///  - Result::Node_AlreadyConfigured if decoder was already in configured state.
+		///  - Result::Decoder_NoSuitableBackendFound if there's no usable decoder backend on the system.
+		///  - Any error result returned by DecoderBackendInterface::initialize().
+		Result configure(GenericTargetInterface* target);
 
-		/*!
-		 * Deconfigure decoder and release all associated resources.
-		 * \return
-		 *  - Result::OK on success.
-		 *  - Result::Node_NotConfigured if decoder was not in configured state.
-		 *  - Any error result returned by DecoderBackendInterface::shutdown().
-		 */
+		/// 
+		/// Deconfigure decoder and release all associated resources.
+		/// \return
+		///  - Result::OK on success.
+		///  - Result::Node_NotConfigured if decoder was not in configured state.
+		///  - Any error result returned by DecoderBackendInterface::shutdown().
 		Result deconfigure() override;
 
+		/// Perform per-frame processing.
+		/// \param timestamp System time when the processing takes place.
+		/// \param deltaTime Time step in seconds since the previous frame.
+		/// \return
+		///  - Result::OK on success.
+		///  - Result::Node_AlreadyConfigured if decoder was already in configured state.
+		///  - Result::Decoder_NoSuitableBackendFound if there's no usable decoder backend on the system.
+		///  - Any error result returned by DecoderBackendInterface::initialize().
 		Result process(uint64_t timestamp, uint64_t deltaTime) override;
 
 		//! Get node display name (for reporting & profiling).

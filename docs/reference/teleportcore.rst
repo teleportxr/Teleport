@@ -53,6 +53,19 @@ Commands are sent from the server to the client on a reliable data channel. All 
 .. doxygenstruct:: teleport::core::AssignNodePosePathCommand
 	:members:
 
+Client Messages
+---------------
+.. doxygenstruct:: teleport::core::ClientMessage
+   :members:
+.. doxygenstruct:: avs::DisplayInfo
+   :members:
+.. doxygenstruct:: teleport::core::NodeStatusMessage
+   :members:
+.. doxygenstruct:: teleport::core::ReceivedResourcesMessage
+   :members:
+.. doxygenstruct:: teleport::core::ControllerPosesMessage
+   :members:
+
 Animation
 ---------
 
@@ -76,5 +89,3 @@ Text and Fonts
 
 .. doxygenstruct:: teleport::core::TextCanvas
 	:members:
-
-

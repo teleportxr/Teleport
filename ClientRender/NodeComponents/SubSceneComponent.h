@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 #include "NodeComponents/Component.h"
-#include <common.h>
+#include "Common.h"
 
 namespace clientrender
 {

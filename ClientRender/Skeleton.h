@@ -28,8 +28,18 @@ namespace clientrender
 		void SetNumBones(size_t numBones) { bones.resize(numBones); }
 		void SetBone(size_t index, std::shared_ptr<Bone> bone);
 		const Transform& GetSkeletonTransform() { return skeletonTransform; }
+
+		void SetExternalBoneIds(const std::vector<avs::uid> &ids)
+		{
+			boneIds=ids;
+		}
+		const std::vector<avs::uid> &GetExternalBoneIds() const
+		{
+			return boneIds;
+		}
 	protected:
 		std::vector<std::shared_ptr<Bone>> bones;
+		std::vector<avs::uid> boneIds;
 		// TODO: do we need this?
 		Transform skeletonTransform; //Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.
 

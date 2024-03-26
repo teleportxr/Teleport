@@ -56,22 +56,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 
 	mPipeline.reset(new avs::Pipeline);
 
-	// What transport protocol will we use to stream data?
-	switch (inNetworkSettings.streamingTransportLayer )
-	{
-#if TELEPORT_SUPPORT_SRT
-	case avs::StreamingTransportLayer::SRT_EFP:
-		mNetworkSink.reset(new avs::SrtEfpNetworkSink);
-		break;
-		#endif
-	case avs::StreamingTransportLayer::WEBRTC:
-		mNetworkSink.reset(new avs::WebRtcNetworkSink);
-		break;
-	default:
-		mNetworkSink.reset(new avs::NullNetworkSink);
-		break;
-	}
-
+	mNetworkSink.reset(new avs::WebRtcNetworkSink);
 	std::vector<avs::NetworkSinkStream> streams;
 
 	// Video
@@ -169,7 +154,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 		streams.emplace_back(std::move(stream));
 	}
 	avs::NetworkSink* networkSink = mNetworkSink.get();
-	if (!networkSink->configure(std::move(streams), nullptr, 0, nullptr, 0, SinkParams))
+	if (!networkSink->configure(std::move(streams), SinkParams))
 	{
 		TELEPORT_CERR << "Failed to configure network sink!" << "\n";
 		initialized = false;

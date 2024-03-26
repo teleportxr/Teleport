@@ -67,38 +67,61 @@ void TabContext::CancelConnectButtonHandler(int32_t tab_context_id)
 void TabContext::ConnectTo(std::string url)
 {
 	IpPort ipP = GetIpPort(url.c_str());
-	if(server_uid==0)
+	if (next_server_uid == 0)
 	{
-		server_uid=SessionClient::CreateSessionClient();
+		next_server_uid = SessionClient::CreateSessionClient(this);
 	}
-	if(!server_uid)
+	if (!next_server_uid)
 		return;
 	auto currentSessionClient = SessionClient::GetSessionClient(server_uid);
-	if(!currentSessionClient)
-	{
-		server_uid = 0;
-		return;
-	}
-	if(currentSessionClient->IsConnecting())
-	{
-		if(currentSessionClient->GetConnectionURL()==url)
-			return;
-		currentSessionClient->Disconnect(0);
-	}
-	if(currentSessionClient->IsConnected())
+	if (currentSessionClient && currentSessionClient->IsConnected())
 	{
 		if (currentSessionClient->GetConnectionURL() == url)
+		{
+			next_server_uid = 0;
 			return;
-		previous_server_uid = server_uid;
-		server_uid = SessionClient::CreateSessionClient();
-		currentSessionClient = SessionClient::GetSessionClient(server_uid);
+		}
 	}
-	currentSessionClient->RequestConnection(ipP.ip, ipP.port);
-	currentSessionClient->connected_url = url;
+	auto nextSessionClient = SessionClient::GetSessionClient(next_server_uid);
+	if (!nextSessionClient)
+	{
+		next_server_uid = 0;
+		return;
+	}
+	if (nextSessionClient->IsConnecting())
+	{
+		if (nextSessionClient->GetConnectionURL() == url)
+			return;
+		nextSessionClient->Disconnect(0);
+	}
+	nextSessionClient->RequestConnection(ipP.ip, ipP.port);
+	nextSessionClient->connected_url = url;
 }
 
 void TabContext::CancelConnection()
 {
-	auto sc = SessionClient::GetSessionClient(server_uid);
-	sc->Disconnect(0);
+	if (server_uid != 0)
+	{
+		auto sc = SessionClient::GetSessionClient(server_uid);
+		if (sc)
+			sc->Disconnect(0);
+	}
+	if (next_server_uid != 0)
+	{
+		auto next = SessionClient::GetSessionClient(next_server_uid);
+		if (next)
+			next->Disconnect(0);
+	}
+}
+
+void TabContext::ConnectionComplete(avs::uid uid)
+{
+	if (uid==next_server_uid)
+	{
+		auto currentSessionClient = SessionClient::GetSessionClient(server_uid);
+		if (currentSessionClient)
+			currentSessionClient->Disconnect(0);
+		server_uid = next_server_uid;
+		next_server_uid=0;
+	}
 }

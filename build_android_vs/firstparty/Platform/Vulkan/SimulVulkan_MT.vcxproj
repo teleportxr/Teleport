@@ -52,6 +52,7 @@
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <AndroidNdkVersion>25.2.9519653</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -150,13 +151,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

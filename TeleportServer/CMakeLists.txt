@@ -102,8 +102,6 @@ target_include_directories(TeleportServer PUBLIC ../TeleportCore)
 target_include_directories(TeleportServer PUBLIC ../TeleportAudio)
 #Include Basis Universal
 target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
-#Include enet
-target_include_directories(TeleportServer PUBLIC ../thirdparty/enet/include)
 #Include draco
 target_include_directories(TeleportServer PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(TeleportServer PUBLIC ../thirdparty/draco/src)
@@ -129,7 +127,7 @@ if(UNIX)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream enet basisu efp fmt LibDataChannel::LibDataChannelStatic pthreads4w::pthreadVC3)
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream basisu efp fmt LibDataChannel::LibDataChannelStatic pthreads4w::pthreadVC3)
 if(WIN32)
 	target_link_libraries(TeleportServer draco winmm d3d12 Secur32.lib)
 else()

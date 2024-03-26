@@ -5,7 +5,6 @@
 #include <vector>
 #include <unordered_map>
 
-#include "enet/enet.h"
 #include "libavstream/common.hpp"
 
 #include "TeleportServer/ServerSettings.h"
@@ -263,12 +262,6 @@ TELEPORT_EXPORT bool Teleport_Initialize(const InitialiseState *initialiseState)
 
 	reportHandshake=initialiseState->reportHandshake;
 
-	if(enet_initialize() != 0)
-	{
-		TELEPORT_CERR<<"An error occurred while attempting to initalise ENet!\n";
-		return false;
-	}
-	atexit(enet_deinitialize);
 	if (!initialiseState->signalingPorts)
 	{
 		TELEPORT_CERR << "Failed to identify ports as string was null.";

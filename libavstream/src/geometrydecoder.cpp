@@ -44,7 +44,7 @@ GeometryDecoder::~GeometryDecoder()
 	deconfigure();
 }
 
-Result GeometryDecoder::configure(uint8_t streamId, GeometryDecoderBackendInterface* backend)
+Result GeometryDecoder::configure(uint8_t streamId, avs::uid server_uid,GeometryDecoderBackendInterface *backend)
 {
 	if (m_configured)
 	{
@@ -52,6 +52,7 @@ Result GeometryDecoder::configure(uint8_t streamId, GeometryDecoderBackendInterf
 		if (deconf_result != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
+	this->server_uid=server_uid;
 	m_backend=(backend);
 
 	assert(m_backend);
@@ -214,8 +215,6 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			AVSLOG(Error) << "Bad dataSize.\n";
 			return Result::Failed;
 		}
-		// TODO: this only supports one server.
-		avs::uid server_uid=1;
 		result = processPayload(server_uid,ptr, dataSize, payloadType, gti,uid);
 	} while (result == Result::OK);
 

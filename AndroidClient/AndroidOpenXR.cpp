@@ -247,36 +247,38 @@ bool OpenXR::InitSystem()
     // make your motion vector pass more expensive.
     spaceWarpProperties.type = XR_TYPE_SYSTEM_SPACE_WARP_PROPERTIES_FB;
 
-    XrSystemProperties systemProperties = {};
-    systemProperties.type = XR_TYPE_SYSTEM_PROPERTIES;
-    systemProperties.next = &spaceWarpProperties;
+	xr_system_properties.type = XR_TYPE_SYSTEM_PROPERTIES;
+	// Check if hand tracking is supported.
+	xr_system_properties.next = &handTrackingSystemProperties;
+	handTrackingSystemProperties.next = &spaceWarpProperties;
 
-    XR_CHECK(xrGetSystemProperties(xr_instance, xr_system_id, &systemProperties));
+    XR_CHECK(xrGetSystemProperties(xr_instance, xr_system_id, &xr_system_properties));
 
-    fmt::print(
+    TELEPORT_COUT<<fmt::format(
         "System Properties: Name={} VendorId={}",
-        systemProperties.systemName,
-        systemProperties.vendorId);
-    fmt::print(
+		xr_system_properties.systemName,
+		xr_system_properties.vendorId)<<"\n";
+	TELEPORT_COUT << fmt::format(
+		"handTracking Properties: Supported {}",
+						 handTrackingSystemProperties.supportsHandTracking != 0)
+				  << "\n";
+	TELEPORT_COUT << fmt::format(
         "System Graphics Properties: MaxWidth={} MaxHeight={} MaxLayers={}",
-        systemProperties.graphicsProperties.maxSwapchainImageWidth,
-        systemProperties.graphicsProperties.maxSwapchainImageHeight,
-        systemProperties.graphicsProperties.maxLayerCount);
-    fmt::print(
+		xr_system_properties.graphicsProperties.maxSwapchainImageWidth,
+		xr_system_properties.graphicsProperties.maxSwapchainImageHeight,
+						 xr_system_properties.graphicsProperties.maxLayerCount)
+				  << "\n";
+	TELEPORT_COUT << fmt::format(
         "System Tracking Properties: OrientationTracking={} PositionTracking={}",
-        systemProperties.trackingProperties.orientationTracking ? "True" : "False",
-        systemProperties.trackingProperties.positionTracking ? "True" : "False");
+		xr_system_properties.trackingProperties.orientationTracking ? "True" : "False",
+						 xr_system_properties.trackingProperties.positionTracking ? "True" : "False")
+				  << "\n";
 
-    fmt::print(
+    TELEPORT_COUT << fmt::format(
         "SpaceWarp Properties: recommendedMotionVectorImageRectWidth={} recommendedMotionVectorImageRectHeight={}",
         spaceWarpProperties.recommendedMotionVectorImageRectWidth,
-        spaceWarpProperties.recommendedMotionVectorImageRectHeight);
-
-   /* if(ovrMaxLayerCount > systemProperties.graphicsProperties.maxLayerCount);
-	{
-		std::cerr << fmt::format("Insufficient layers\n").c_str() << std::endl;
-		return false;
-	}*/
+						 spaceWarpProperties.recommendedMotionVectorImageRectHeight)
+				  << "\n";
 	return true;
 }
 
@@ -300,7 +302,11 @@ void OpenXR::HandleSessionStateChanges( XrSessionState state)
 		if(sessionChangedCallback)
 			sessionChangedCallback(xr_session_running);
 		if (xr_session_running)
+		{
 			AttachSessionActions();
+			if (handTrackingSystemProperties.supportsHandTracking)
+				CreateHandTrackers();
+		}
         // Set session state once we have entered VR mode and have a valid session object.
         if (result == XR_SUCCESS)
 		{
@@ -680,7 +686,6 @@ std::set<std::string> OpenXR::GetRequiredExtensions() const
 	str.insert(XR_FB_SWAPCHAIN_UPDATE_STATE_EXTENSION_NAME);
 	str.insert(XR_FB_SWAPCHAIN_UPDATE_STATE_VULKAN_EXTENSION_NAME);
 	str.insert(XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME);
-	//str.push_back(XR_FB_SPACE_WARP_EXTENSION_NAME);
 	return str;
 }
 #endif

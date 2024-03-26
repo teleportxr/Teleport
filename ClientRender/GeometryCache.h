@@ -172,6 +172,10 @@ namespace clientrender
 			mAnimationManager.Clear();
 			mTextCanvasManager.Clear();
 			mFontAtlasManager.Clear();
+
+			ClearResourceRequests();
+			ClearReceivedResources();
+			m_CompletedNodes.clear();
 		}
 		
 		MissingResource& GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);
@@ -193,7 +197,7 @@ namespace clientrender
 		ResourceManager<avs::uid,SubSceneCreate>				mSubsceneManager;
 		ResourceManager<avs::uid,clientrender::Texture>			mTextureManager;
 		ResourceManager<avs::uid,clientrender::Mesh>			mMeshManager;
-		ResourceManager<avs::uid,clientrender::Skeleton>			mSkeletonManager;
+		ResourceManager<avs::uid,clientrender::Skeleton>		mSkeletonManager;
 		ResourceManager<avs::uid,clientrender::Light>			mLightManager;
 		ResourceManager<uint64_t,clientrender::Bone>			mBoneManager;
 		ResourceManager<avs::uid,clientrender::Animation>		mAnimationManager;

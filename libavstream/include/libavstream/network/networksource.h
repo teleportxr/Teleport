@@ -29,8 +29,6 @@ namespace avs
 	struct NetworkSourceParams
 	{
 		const char* remoteIP = "";
-		int32_t remotePort = 0;
-		int32_t remoteHTTPPort = 0;
 		uint32_t connectionTimeout = 5000;
 		uint32_t maxHTTPConnections = 10;
 		uint32_t httpStreamID = UINT32_MAX;
@@ -90,7 +88,8 @@ namespace avs
 		virtual bool getNextStreamingControlMessage(std::string& msg) {
 			return false;
 		}
-		virtual StreamingConnectionState GetStreamingConnectionState() const=0;
+		virtual StreamingConnectionState GetStreamingConnectionState() const = 0;
+		virtual void sendConfigMessage(const std::string &msg) = 0;
 		const std::vector<StreamStatus>& GetStreamStatus()
 		{
 			return streamStatus;

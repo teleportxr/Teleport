@@ -17,7 +17,6 @@ uniform TextureCube specularCubemap;
 uniform TextureCube lightingCubemap; 
 uniform Texture2D videoTexture;
 
-//////////////////////////
 uniform TextureCube nearFarTextureCube;
 uniform Texture2D loss2dTexture;
 uniform Texture2D shadowTexture;
@@ -362,8 +361,10 @@ vertexOutput VSAnim(vertexInputAnim IN)
 						+ boneMatrices[int(IN.joints[3])] * w.w;
 	 
 	vec4 opos			= vec4(IN.position.xyz,1.0);
+	vec4 bpos			= mul(opos, boneTransform);
+	//mmbpos=opos;
 	// boneTransform transforms between two positions in object-local space.
-	vec4 wpos			= mul(mul(opos, boneTransform), world);
+	vec4 wpos			= mul(bpos, world);
 	OUT.view			=normalize(wpos.xyz-viewPosition);
 	vec4 viewspace_pos	=mul(view, vec4(wpos.xyz, 1.0));
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
@@ -395,10 +396,12 @@ vertexOutput VSAnimMV(vertexInputAnim IN, uint viewID)
 	float W = w.x + w.y + w.z + w.w;
 	w /= W;
 	mat4 boneTransform = boneMatrices[int(IN.joints[0])] * w.x + boneMatrices[int(IN.joints[1])] * w.y + boneMatrices[int(IN.joints[2])] * w.z + boneMatrices[int(IN.joints[3])] * w.w;
-
+	mat4 world = viewID == 0 ? leftWorld : rightWorld;
 	vec4 opos = vec4(IN.position.xyz, 1.0);
 	// boneTransform transforms between two positions in object-local space.
-	vec4 wpos = mul(mul(opos, boneTransform), viewID == 0 ? leftWorld : rightWorld);
+	vec4 bpos = mul(opos, boneTransform);
+	//bpos=opos;
+	vec4 wpos = mul(bpos, world);
 	// vec4 wpos		= mul(opos, world);
 	// vec4 wpos = mul(opos, world);
 
@@ -412,12 +415,13 @@ vertexOutput VSAnimMV(vertexInputAnim IN, uint viewID)
 	OUT.diffuseNormalUV = BottomUpTextureCoordinates4(diffnorm);
 	vec4 ce = vec4(texCoords[combinedTexCoordIndex], texCoords[emissiveTexCoordIndex]);
 	OUT.combinedEmissiveUV = BottomUpTextureCoordinates4(ce);
-	OUT.lightmapUV.xy = BottomUpTextureCoordinates(texCoords[lightmapTexCoordIndex] * lightmapScaleOffset.xy + lightmapScaleOffset.zw);
+	vec2 lm = texCoords[lightmapTexCoordIndex] * lightmapScaleOffset.xy + lightmapScaleOffset.zw;
+	OUT.lightmapUV.xy = BottomUpTextureCoordinates(lm);
 
-	// OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
-	OUT.normal.xyz = mul(vec4(IN.normal, 0.0), viewID == 0 ? leftWorld : rightWorld).xyz;
-	// OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
-	OUT.tangent.xyz = mul(IN.tangent, viewID == 0 ? leftWorld : rightWorld).xyz;
+	OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), world).xyz;
+	//OUT.normal.xyz = mul(vec4(IN.normal, 0.0), world).xyz;
+	OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
+	//OUT.tangent.xyz = mul(IN.tangent, world).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
 	OUT.debug_colour = IN.weights;
@@ -491,7 +495,7 @@ shader colourVertexOutput VS_Triangle(idOnly IN)
 	OUT.hPosition	=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	return OUT;
 }
-
+ 
 shader vertexOutput VS_Variants(vertexInputVariant IN, variant bool have_normal, variant bool have_tangent, variant int uv_count, variant bool have_colour,variant bool have_anim)
 {
 variant_if(have_anim)
@@ -813,14 +817,10 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,int max_li
 		normal=IN.normal;
 	}
 
-	vec2 diffuseTexCoords	=IN.diffuseNormalUV.xy ;
+	vec2 diffuseTexCoords = IN.diffuseNormalUV.xy;
 	vec4 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,diffuseTexCoords).rgba;
 	diffuseColour			=diffuseColour.rgba * diffuseOutputScalar.rgba;
 	
-	//vec2 lightmapUVs		=vec2(IN.lightmapUV.x,1.0-IN.lightmapUV.y);
-	// lightmapUVs		=lightmapUVs.xy*lightmapScaleOffset.xy+lightmapScaleOffset.zw;
-	// lightmapUVs		=vec2(lightmapUVs.x,1.0-lightmapUVs.y);
-//	lightmapUVs.y			=1.0-lightmapUVs.y;
 	vec3 view				=normalize(diff);
 	vec4 combinedLookup		=combinedTexture.Sample(wrapSamplerState, IN.combinedEmissiveUV.xy);
 	// GLTF spec for rough-metal textures:  green channel contains roughness values
@@ -887,17 +887,9 @@ vec4 Solid_AlbedoOnly(vertexOutput IN)
 	return vec4(diffuseColour.rgb, 1.0);
 }
 
-shader vec4 PS_Solid_Lightmap(vertexOutput IN) : SV_TARGET
-{
-	return Solid(IN,true,false,true,0);
-}
 shader vec4 PS_Solid_AlbedoOnly(vertexOutput IN) : SV_TARGET
 {
 	return Solid_AlbedoOnly(IN);
-}
-shader vec4 PS_Solid_NoLightmap(vertexOutput IN) : SV_TARGET
-{
-	return Solid(IN, false, true, true, 0);
 }
 
 shader vec4 PS_Solid(vertexOutput IN,variant bool lightmap,variant bool ambient,variant bool normal_map,variant int max_lights): SV_TARGET
@@ -1026,6 +1018,29 @@ shader vec4 PS_DebugLightmaps(vertexOutput IN) : SV_TARGET
 	vec4 globalIllumination = globalIlluminationTexture.Sample(clampSamplerState,lightmapUVs);
 	return globalIllumination;
 }
+
+shader vec4 PS_DebugAmbient(vertexOutput IN) : SV_TARGET
+{
+	vec3 diff = IN.wpos.xyz - viewPosition;
+	if (length(diff) > drawDistance)
+		discard;
+	vec3 view = normalize(diff);
+	SurfaceProperties surfaceProperties;
+	surfaceProperties.position = IN.wpos;
+	surfaceProperties.roughness = 1.0;
+	surfaceProperties.metallic = 0.0;
+	surfaceProperties.ao = 1.0;
+	surfaceProperties.normal = IN.normal;
+	surfaceProperties.albedo = vec4(1.0,1.0,1.0,1.0);
+	surfaceProperties.roughness2 = 1.0;
+	surfaceProperties.globalIllumination = vec3(0,0,0);
+	SurfaceState surfaceState = PreprocessSurface(view, surfaceProperties);
+	vec4 clr;
+	clr.rgb=PBRDynamic(surfaceState, view, surfaceProperties);
+	clr.a=1.0;
+	return clr;
+}
+
 VertexShader vs_variants = CompileShader(vs_5_0, VS_Variants());
 VertexShader vs_variants_mv = CompileShader(vs_6_1, VS_Variants_MV());
 
@@ -1045,6 +1060,7 @@ PixelShader ps_solid_albedo_only				= CompileShader(ps_5_0, PS_Solid_AlbedoOnly(
 PixelShader ps_debug_normals					= CompileShader(ps_5_0, PS_DebugNormals());					// Normal view
 PixelShader ps_debug_anim						= CompileShader(ps_5_0, PS_DebugAnim());					// Unreal-basis normal viewdebug_lightmaps
 PixelShader ps_debug_lightmaps					= CompileShader(ps_5_0, PS_DebugLightmaps());				// Unreal-basis normal view
+PixelShader ps_debug_ambient					= CompileShader(ps_5_0, PS_DebugAmbient());					// Realtime ambient lighting
 PixelShader ps_debug_normal_unity				= CompileShader(ps_5_0, PS_DebugNormal_Unity());			// Unity-basis normal view
 PixelShader ps_debug_normal_vertexnormals		= CompileShader(ps_5_0, PS_DebugNormal_VertexNormals());	// Vertex normals
 
@@ -1074,7 +1090,7 @@ technique solid
 								,vs_variants_mv({false,true},{false,true},{0,1,2},{false,true},{false,true}));
 		SetGeometryShader(NULL);
 		SetPixelShaderVariants(ps_local,ps_solid({false,true},{false,true},{false,true},{0}),ps_digitizing,ps_solid_albedo_only,ps_depth,ps_debug_normals
-				,ps_debug_lightmaps,ps_debug_normal_vertexnormals,ps_debug_uvs,ps_local_hand);
+				,ps_debug_lightmaps,ps_debug_ambient,ps_debug_normal_vertexnormals,ps_debug_uvs,ps_local_hand);
 	}
 }
 

@@ -26,9 +26,6 @@
     <ProjectReference Include="..\TeleportCore\TeleportCore_Android.vcxproj">
       <Project>{c5385ffa-b456-40f0-b0c7-3397a7fefe42}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\thirdparty\enet\enet.vcxproj">
-      <Project>{736d5a29-8cb3-4090-a065-efdfbfe76049}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ClientRender\Animation.cpp" />
@@ -137,6 +134,7 @@
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <AndroidNdkVersion>25.2.9519653</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -168,9 +166,9 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>../../ClientRender;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=0;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;DRACO_TRANSCODER_SUPPORTED=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <ErrorFormatSecurity>false</ErrorFormatSecurity>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

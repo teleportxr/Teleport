@@ -120,11 +120,6 @@ void ResourceCreator::Clear()
 	mutex_texturesToTranscode.lock();
 	texturesToTranscode.clear();
 	mutex_texturesToTranscode.unlock();
-	
-	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(1);
-	geometryCache->ClearResourceRequests();
-	geometryCache->ClearReceivedResources();
-	geometryCache->m_CompletedNodes.clear();
 }
 
 void ResourceCreator::Update(float deltaTime)
@@ -525,7 +520,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 		vb_ci.vertexCount = meshElementCreate.m_VertexCount;
 		vb_ci.data = constructedVB;
 		vb->Create(&vb_ci);
-		//vb->GetLayout()->topology=platform::crossplatform::Topology::TRIANGLELIST;
+	
 		std::shared_ptr<IndexBuffer> ib = std::make_shared<clientrender::IndexBuffer>(renderPlatform);
 		IndexBuffer::IndexBufferCreateInfo ib_ci;
 		ib_ci.usage = BufferUsageBit::STATIC_BIT | BufferUsageBit::DRAW_BIT;
@@ -858,7 +853,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 	geometryCache->RemoveFromMissingResources(textCanvas->textCanvasCreateInfo.uid);
 }
 
-void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skeleton& skeleton)
+void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs::Skeleton& skeleton)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	TELEPORT_INTERNAL_COUT ( "CreateSkeleton({0}, {1})",id,skeleton.name);
@@ -870,29 +865,35 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skele
 	incompleteSkeleton->skeleton = std::make_shared<clientrender::Skeleton>(skeleton.name, skeleton.boneIDs.size(), skeleton.skeletonTransform);
 
 	std::vector<avs::uid> bone_ids;
-	bone_ids.resize(skeleton.boneTransforms.size());
-	incompleteSkeleton->skeleton->SetNumBones(bone_ids.size());
+	bone_ids.resize(skeleton.boneIDs.size());
+	incompleteSkeleton->skeleton->SetNumBones(skeleton.boneTransforms.size());
+	// External bones.
+	incompleteSkeleton->skeleton->SetExternalBoneIds(skeleton.boneIDs);
 	//Add bones. This is the full list of transforms for this skeleton.
-	for (size_t i = 0; i < bone_ids.size(); i++)
+	// We do this if the skeleton has internal bones. If not, the boneID's refer to node uid's in the scene or subscene.
+	if(skeleton.boneTransforms.size()==skeleton.boneIDs.size())
 	{
-		static uint64_t next_bone_id=0;
-		next_bone_id++;
-		bone_ids[i]=next_bone_id;
-		std::shared_ptr<clientrender::Bone> bone = std::make_shared<clientrender::Bone>(next_bone_id,skeleton.boneNames[i]);
-		geometryCache->mBoneManager.Add(next_bone_id, bone);
-		std::shared_ptr<clientrender::Bone> parent=geometryCache->mBoneManager.Get(bone_ids[skeleton.parentIndices[i]]);
-		if(parent)
+		for (size_t i = 0; i < bone_ids.size(); i++)
 		{
-			bone->SetParent(parent);
-			parent->AddChild(bone);
-		}
-		else if(skeleton.parentIndices[i]!=-1&&skeleton.parentIndices[i]!=bone_ids.size())
-		{
-			TELEPORT_CERR<<"Error creating skeleton "<<std::endl;
-		}
-		bone->SetLocalTransform(skeleton.boneTransforms[i]);
+			static uint64_t next_bone_id=0;
+			next_bone_id++;
+			bone_ids[i]=next_bone_id;
+			std::shared_ptr<clientrender::Bone> bone = std::make_shared<clientrender::Bone>(next_bone_id,skeleton.boneNames[i]);
+			geometryCache->mBoneManager.Add(next_bone_id, bone);
+			std::shared_ptr<clientrender::Bone> parent=geometryCache->mBoneManager.Get(bone_ids[skeleton.parentIndices[i]]);
+			if(parent)
+			{
+				bone->SetParent(parent);
+				parent->AddChild(bone);
+			}
+			else if(skeleton.parentIndices[i]!=-1&&skeleton.parentIndices[i]!=bone_ids.size())
+			{
+				TELEPORT_CERR<<"Error creating skeleton "<<std::endl;
+			}
+			bone->SetLocalTransform(skeleton.boneTransforms[i]);
 
-		incompleteSkeleton->skeleton->SetBone(i, bone);
+			incompleteSkeleton->skeleton->SetBone(i, bone);
+		}
 	}
 	if (incompleteSkeleton->missingBones.size() == 0)
 	{
@@ -904,8 +905,8 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, avs::Skele
 		{
 			if (waiting->get()->type != avs::GeometryPayloadType::Node)
 			{
-			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
-			continue;
+				TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
+				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
 			incompleteNode->SetSkeleton(incompleteSkeleton->skeleton);
@@ -1137,6 +1138,8 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid,avs::uid id, const avs:
 	{
 		geometryCache->CompleteNode(id, node);
 	}
+	else
+		node->InitDigitizing();
 }
 
 void ResourceCreator::CreateLight(avs::uid server_uid,avs::uid id,const avs::Node& node)

@@ -44,7 +44,7 @@ public:
 
 	/*!
 	 * Configure audio encoder.
-	 * \param AudioEncoderParams Encoder parameters.
+	 * \param params Encoder parameters.
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_AlreadyConfigured if encoder was already in configured state.

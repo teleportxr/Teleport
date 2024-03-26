@@ -23,8 +23,7 @@ target_include_directories(TeleportCore PRIVATE src)
 target_include_directories(TeleportCore PRIVATE ../libavstream/include)
 #Include Basis Universal
 target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
-#Include enet
-target_include_directories(TeleportCore PRIVATE ../thirdparty/enet/include)
+#Include fmt
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 #Include Platform - only for CppSl.sl
 target_include_directories(TeleportCore PRIVATE ../firstparty)

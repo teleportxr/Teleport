@@ -52,6 +52,8 @@ void msgHandler(avs::LogSeverity severity, const char* msg, void* userData)
 		std::cout << msg ;
 }
 
+std::vector<int8_t> bone_to_pose = {1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0};
+
 static const char* ToString(clientrender::Light::Type type)
 {
 	const char* lightTypeName = "";
@@ -97,17 +99,19 @@ static const char *stringof(avs::GeometryPayloadType t)
 
 avs::SurfaceBackendInterface* AVSTextureImpl::createSurface() const 
 {
-	#if TELEPORT_CLIENT_USE_D3D12
-			return new avs::SurfaceDX12(texture->AsD3D12Resource());
-	#endif
-	#if TELEPORT_CLIENT_USE_D3D11
-			return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
-	#endif
-	#if TELEPORT_CLIENT_USE_VULKAN
-			vk::Image* img=((vulkan::Texture*)texture)->AsVulkanImage();
-			return new avs::SurfaceVulkan(img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
-	#endif
+#if TELEPORT_CLIENT_USE_D3D12
+	return new avs::SurfaceDX12(texture->AsD3D12Resource());
+#elif TELEPORT_CLIENT_USE_D3D11
+	return new avs::SurfaceDX11(texture->AsD3D11Texture2D());
+#elif TELEPORT_CLIENT_USE_VULKAN
+	vk::Image* img=((vulkan::Texture*)texture)->AsVulkanImage();
+	return new avs::SurfaceVulkan(img,texture->width,texture->length,vulkan::RenderPlatform::ToVulkanFormat((texture->pixelFormat)));
+#else
+	return nullptr;
+#endif
 }
+platform::crossplatform::RenderDelegate renderDelegate;
+platform::crossplatform::RenderDelegate overlayDelegate;
 
 Renderer::Renderer(teleport::Gui& g)
 	:gui(g)
@@ -122,16 +126,22 @@ Renderer::Renderer(teleport::Gui& g)
 	timestamp_initialized=true;
 
 	clientrender::Tests::RunAllTests();
+	renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, this, std::placeholders::_1);
+	overlayDelegate = std::bind(&clientrender::Renderer::RenderVROverlay, this, std::placeholders::_1);
 }
 
 Renderer::~Renderer()
 {
 	InvalidateDeviceObjects(); 
 }
+
 void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* u, teleport::PlatformWindow* active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
 	u->SetBindingsChangedCallback(std::bind(&Renderer::XrBindingsChanged, this, std::placeholders::_1, std::placeholders::_2));
+
+	u->SetHandTrackingChangedCallback(std::bind(&Renderer::HandTrackingChanged, this, std::placeholders::_1, std::placeholders::_2));
+
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
 	GeometryCache::SetRenderPlatform(r);
@@ -281,167 +291,80 @@ void Renderer::ExecConsoleCommand(const std::string &str)
 		gui.RestoreDeviceObjects(renderPlatform, nullptr);
 	}
 }
+void Renderer::InitLocalHandGeometry()
+{
+	auto localInstanceRenderer = GetInstanceRenderer(0);
+	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
+	avs::Node avsNode;
+	lobbyGeometry.self_node_uid = avs::GenerateUid();
+	localResourceCreator.CreateNode(0, lobbyGeometry.self_node_uid, avsNode);
+	{
+		avs::Node avsNode;
+		auto &hand = lobbyGeometry.hands[0];
+		avsNode.parentID = lobbyGeometry.self_node_uid;
+		hand.model_uid = avs::GenerateUid();
+		geometryDecoder.decodeFromFile(local_server_uid, "assets/localGeometryCache/meshes/Hand_L.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, hand.model_uid, platform::crossplatform::AxesStandard::OpenGL);
+		geometryDecoder.WaitFromDecodeThread();
+		avsNode.name = "Left Hand";
+		avsNode.data_type = avs::NodeDataType::SubScene;
+		avsNode.data_uid = hand.model_uid;
+		hand.hand_node_uid = avs::GenerateUid();
+		localResourceCreator.CreateNode(0, hand.hand_node_uid, avsNode);
+		renderState.openXR->MapNodeToPose(local_server_uid, hand.hand_node_uid, "left/input/grip/pose");
+	}
+	{
+		avs::Node avsNode;
+		auto &hand = lobbyGeometry.hands[1];
+		avsNode.parentID = lobbyGeometry.self_node_uid;
+		hand.model_uid = avs::GenerateUid();
+		geometryDecoder.decodeFromFile(local_server_uid, "assets/localGeometryCache/meshes/Hand_R.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, hand.model_uid, platform::crossplatform::AxesStandard::OpenGL);
+		geometryDecoder.WaitFromDecodeThread();
+		avsNode.name = "Right Hand";
+		avsNode.data_type = avs::NodeDataType::SubScene;
+		avsNode.data_uid = hand.model_uid;
+		hand.hand_node_uid = avs::GenerateUid();
+		localResourceCreator.CreateNode(0, hand.hand_node_uid, avsNode);
+		renderState.openXR->MapNodeToPose(local_server_uid, hand.hand_node_uid, "right/input/grip/pose");
+	}
+}
 
 void Renderer::InitLocalGeometry()
 {
+	InitLocalHandGeometry();
 	auto localInstanceRenderer=GetInstanceRenderer(0);
-	auto &localResourceCreator=localInstanceRenderer->resourceCreator;
-	// initialize the default local geometry:
-	avs::uid hand_mesh_uid = avs::GenerateUid();
-	lobbyGeometry.hand_skeleton_uid = avs::GenerateUid();
-	avs::uid point_anim_uid = avs::GenerateUid();
-	//geometryDecoder.decodeFromFile("assets/localGeometryCache/meshes/2CylinderEngine.gltf",avs::GeometryPayloadType::Mesh,&localResourceCreator,gltf_uid);
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/meshes/Hand.mesh_compressed",avs::GeometryPayloadType::Mesh,&localResourceCreator,hand_mesh_uid);
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/skeletons/Hand.skeleton",avs::GeometryPayloadType::Skeleton,&localResourceCreator, lobbyGeometry.hand_skeleton_uid);
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/animations/Point.anim",avs::GeometryPayloadType::Animation,&localResourceCreator, point_anim_uid);
-	geometryDecoder.WaitFromDecodeThread();
+	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
+	auto &localGeometryCache = localInstanceRenderer->geometryCache;
 	
-	// Generate local uid's for the nodes and resources.
-	lobbyGeometry.left_hand_node_uid	= avs::GenerateUid();
-	lobbyGeometry.right_hand_node_uid	= avs::GenerateUid();
-	avs::uid grey_material_uid			= avs::GenerateUid();
-	avs::uid blue_material_uid			= avs::GenerateUid();
-	avs::uid red_material_uid			= avs::GenerateUid();
-	auto &localGeometryCache=localInstanceRenderer->geometryCache;
-	{
-		avs::Material avsMaterial;
-		avsMaterial.doubleSided=true;
-		avsMaterial.name="local grey";
-		avsMaterial.pbrMetallicRoughness.metallicFactor=0.0f;
-		avsMaterial.pbrMetallicRoughness.baseColorFactor={.5f,.5f,.5f,.5f};
-		localResourceCreator.CreateMaterial(0,grey_material_uid,avsMaterial);// not used just now.
-		avsMaterial.name="local blue glow";
-		avsMaterial.emissiveFactor={0.0f,0.2f,0.5f};
-		localResourceCreator.CreateMaterial(0,blue_material_uid,avsMaterial);
-		avsMaterial.name="local red glow";
-		avsMaterial.emissiveFactor={0.4f,0.1f,0.1f};
-		localResourceCreator.CreateMaterial(0,red_material_uid,avsMaterial);
-
-		localGeometryCache->mMaterialManager.Get(grey_material_uid)->SetShaderOverride("ps_local_hand");
-		localGeometryCache->mMaterialManager.Get(blue_material_uid)->SetShaderOverride("ps_local_hand");
-		localGeometryCache->mMaterialManager.Get(red_material_uid)->SetShaderOverride("ps_local_hand");
-	}
-	avs::Node avsNode;
-	lobbyGeometry.self_node_uid=avs::GenerateUid();
-	localResourceCreator.CreateNode(0,lobbyGeometry.self_node_uid,avsNode);
-	avsNode.parentID					=lobbyGeometry.self_node_uid;
-	avsNode.name		="local Left Root";
-	localResourceCreator.CreateNode(0,lobbyGeometry.left_hand_node_uid,avsNode);
-	avsNode.name		="local Right Root";
-	localResourceCreator.CreateNode(0,lobbyGeometry.right_hand_node_uid,avsNode);
-	
-	{
-		avs::Node leftSkeletonNode;
-		lobbyGeometry.left_hand_skeleton_node_uid=avs::GenerateUid();
-		leftSkeletonNode.data_type	=avs::NodeDataType::Skeleton;
-		leftSkeletonNode.data_uid	=lobbyGeometry.hand_skeleton_uid;
-		leftSkeletonNode.parentID					=lobbyGeometry.left_hand_node_uid;
-		localResourceCreator.CreateNode(0,lobbyGeometry.left_hand_skeleton_node_uid,leftSkeletonNode);
-	}
-	{
-		avs::Node rightSkeletonNode;
-		lobbyGeometry.right_hand_skeleton_node_uid=avs::GenerateUid();
-		rightSkeletonNode.data_type	=avs::NodeDataType::Skeleton;
-		rightSkeletonNode.data_uid	=lobbyGeometry.hand_skeleton_uid;
-		rightSkeletonNode.parentID					=lobbyGeometry.right_hand_node_uid;
-		localResourceCreator.CreateNode(0,lobbyGeometry.right_hand_skeleton_node_uid,rightSkeletonNode);
-	}
-	avsNode.data_type	=avs::NodeDataType::Mesh;
-	
-	avsNode.data_uid	=0;//hand_mesh_uid;
-	avsNode.materials.push_back(blue_material_uid);
-	avsNode.materials.push_back(grey_material_uid);
-	
-	avsNode.name						="local Left Hand";
-	avsNode.skeletonNodeID				=lobbyGeometry.left_hand_skeleton_node_uid;
-	avsNode.animations.push_back(point_anim_uid);
-	avsNode.materials[0]				=blue_material_uid;
-	avsNode.parentID					=lobbyGeometry.left_hand_node_uid;
-	avsNode.skeletonNodeID				=lobbyGeometry.left_hand_skeleton_node_uid;
-	avsNode.localTransform.rotation		={0.707f,0,0,0.707f};
-	avsNode.localTransform.scale		={-1.f,1.f,1.f};
-	// 10cm forward, because root of hand is at fingers.
-	avsNode.localTransform.position		={0.f,0.1f,0.f};
-	lobbyGeometry.local_left_hand_uid	=avs::GenerateUid();
-	localResourceCreator.CreateNode(0,lobbyGeometry.local_left_hand_uid,avsNode);
-
-	avsNode.name="local Right Hand";
-	avsNode.materials[0]				=red_material_uid;
-	avsNode.parentID					=lobbyGeometry.right_hand_node_uid;
-	avsNode.skeletonNodeID				=lobbyGeometry.right_hand_skeleton_node_uid;
-	avsNode.localTransform.scale		={1.f,1.f,1.f};
-	// 10cm forward, because root of hand is at fingers.
-	avsNode.localTransform.position		={0.f,0.1f,0.f};
-	
-	lobbyGeometry.local_right_hand_uid	=avs::GenerateUid();
-	localResourceCreator.CreateNode(0,lobbyGeometry.local_right_hand_uid,avsNode);
-	
-	lobbyGeometry.left_controller_node_uid	=avs::GenerateUid();
-	lobbyGeometry.right_controller_node_uid	=avs::GenerateUid();
+	lobbyGeometry.leftController.controller_node_uid	=avs::GenerateUid();
+	lobbyGeometry.rightController.controller_node_uid	=avs::GenerateUid();
 	if(renderState.openXR)
 	{
 		renderState.openXR->SetFallbackBinding(client::LEFT_AIM_POSE		,"left/input/aim/pose");
 		renderState.openXR->SetFallbackBinding(client::RIGHT_AIM_POSE		,"right/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_hand_node_uid	,"left/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_hand_node_uid	,"right/input/aim/pose");
 		
 		renderState.openXR->SetFallbackBinding(client::LEFT_GRIP_POSE		,"left/input/grip/pose");
 		renderState.openXR->SetFallbackBinding(client::RIGHT_GRIP_POSE		,"right/input/grip/pose");
 
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_controller_node_uid	,"left/input/grip/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_controller_node_uid	,"right/input/grip/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.leftController.controller_node_uid	,"left/input/grip/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.rightController.controller_node_uid	,"right/input/grip/pose");
 		
 		renderState.openXR->SetFallbackBinding(client::MOUSE_LEFT_BUTTON	,"mouse/left/click");
 		renderState.openXR->SetFallbackBinding(client::MOUSE_RIGHT_BUTTON	,"mouse/right/click");
 
 		// Hard-code the menu button
 		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::SHOW_MENU);
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
+		//renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
+		//renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
 	}
-	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
-	lobbyGeometry.palm_to_hand_r=rightHand->GetLocalTransform();
-	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
-	lobbyGeometry.palm_to_hand_l=leftHand->GetLocalTransform();
-	leftHand->SetVisible(false);
-
 	// local lighting.
 	avs::uid diffuse_cubemap_uid=avs::GenerateUid();
 	avs::uid specular_cubemap_uid=avs::GenerateUid();
-	if(1)
-	{
-		geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/diffuseRenderTexture.texture"
-			,avs::GeometryPayloadType::Texture,&localResourceCreator, diffuse_cubemap_uid);
-		geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/specularRenderTexture.texture"
-			,avs::GeometryPayloadType::Texture,&localResourceCreator, specular_cubemap_uid);
+	
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/diffuseRenderTexture.texture"
+		,avs::GeometryPayloadType::Texture,&localResourceCreator, diffuse_cubemap_uid);
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/specularRenderTexture.texture"
+		,avs::GeometryPayloadType::Texture,&localResourceCreator, specular_cubemap_uid);
 
-	}
-	else
-	{
-		std::vector<unsigned int> diffuse_cubemap_data={0xFF808080,0xFF808080,0xFF808080,0xFF808080,0xFFFFFFFF,0};
-		avs::Texture avsTexture={
-			"diffuse_cubemap"
-			,1,1,1
-			,4,6,1
-			,avs::TextureFormat::RGBA8,avs::TextureCompression::UNCOMPRESSED
-			,false,0,1.0f,true 
-			, (uint32_t)(diffuse_cubemap_data.size()*sizeof(unsigned))
-			, (uint8_t*)diffuse_cubemap_data.data()
-			, false};
-		localResourceCreator.CreateTexture(0,diffuse_cubemap_uid,avsTexture);
-
-		std::vector<unsigned int> specular_cubemap_data={0xFFBBBBBB,0xFFBBBBBB,0xFFBBBBBB,0xFFBBBBBB,0xFF808080,0};
-		avs::Texture avsCTexture={
-			"specular_cubemap"
-			,1,1,1
-			,4,6,1
-			,avs::TextureFormat::RGBA8,avs::TextureCompression::UNCOMPRESSED
-			,false,0,1.0f,true 
-			, (uint32_t)(specular_cubemap_data.size()*sizeof(unsigned))
-			, (uint8_t*)specular_cubemap_data.data()
-			, false};
-		localResourceCreator.CreateTexture(0,specular_cubemap_uid,avsCTexture);
-	}
 	// test gltf loading.
 /*	avs::uid gltf_uid = avs::GenerateUid();
 	// gltf_uid will refer to a SubScene asset in cache zero.
@@ -458,9 +381,9 @@ void Renderer::InitLocalGeometry()
 		localResourceCreator.CreateNode(0,avs::GenerateUid(),gltfNode);
 	}*/
 	auto local_session_client=client::SessionClient::GetSessionClient(0);
-	auto setupCommand=local_session_client->GetSetupCommand();
-	setupCommand.clientDynamicLighting.diffuseCubemapTexture=diffuse_cubemap_uid;
-	setupCommand.clientDynamicLighting.specularCubemapTexture=specular_cubemap_uid;
+	teleport::core::SetupCommand setupCommand = local_session_client->GetSetupCommand();
+	setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid=diffuse_cubemap_uid;
+	setupCommand.clientDynamicLighting.specular_cubemap_texture_uid=specular_cubemap_uid;
 	setupCommand.draw_distance=10.0f;
 	localGeometryCache->SetLifetimeFactor(0.f);
 	local_session_client->ApplySetup(setupCommand);
@@ -474,13 +397,33 @@ void Renderer::InitLocalGeometry()
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/go_controller"]			= "oculus-go/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/oculus/touch_controller"]		= "oculus-touch-v3/{SIDE}";
 	xr_profile_to_controller_model_name["/interaction_profiles/valve/index_controller"]			= "valve-index/{SIDE}";
-	XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
-	XrBindingsChanged("/user/hand/right", "/interaction_profiles/khr/simple_controller");
+	xr_profile_to_controller_model_name["/interaction_profiles/microsoft/hand_controller"]		= "valve-index/{SIDE}";
+	//XrBindingsChanged("/user/hand/left", "/interaction_profiles/khr/simple_controller");
+	//XrBindingsChanged("/user/hand/right", "/interaction_profiles/oculus/touch_controller");
 	
+}
+
+void Renderer::HandTrackingChanged(int left_right,bool on_off)
+{
+	TELEPORT_CERR << (left_right == 0 ? "Left" : "Right") << " Hand Tracking " << (on_off ? "enabled" : "disabled") << ".\n";
+	auto localInstanceRenderer = GetInstanceRenderer(0);
+	auto &localGeometryCache = localInstanceRenderer->geometryCache;
+	auto &hand = lobbyGeometry.hands[left_right];
+	std::shared_ptr<Node> handNode = localGeometryCache->mNodeManager->GetNode(left_right == 0 ? hand.hand_mesh_node_uid : hand.hand_mesh_node_uid);
+	std::shared_ptr<Node> controller_node = GetInstanceRenderer(0)->geometryCache->mNodeManager->GetNode(left_right == 0 ? lobbyGeometry.leftController.controller_node_uid : lobbyGeometry.rightController.controller_node_uid);
+	if(left_right == 0)
+		lobbyGeometry.hands[left_right].visible = on_off;
+	else
+		lobbyGeometry.hands[left_right].visible = on_off;
+	if (controller_node)
+		controller_node->SetVisible(!on_off);
+	if (handNode)
+		handNode->SetVisible(on_off);
 }
 
 void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 {
+	std::string systemName=renderState.openXR->GetSystemName();
 	auto localInstanceRenderer = GetInstanceRenderer(0);
 	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
 	std::string source_root="https://simul.co:443/wp-content/uploads/teleport/content";
@@ -495,13 +438,13 @@ void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 			platform::core::find_and_replace(left_model_name, "{SIDE}", "left");
 			avs::Node avsNode;
 			avsNode.parentID = lobbyGeometry.self_node_uid;
-			if (!lobbyGeometry.left_model_uid)
-				lobbyGeometry.left_model_uid = avs::GenerateUid();
-			geometryDecoder.decodeFromWeb(0, source_root + "/"s + left_model_name + ".glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.left_model_uid, platform::crossplatform::AxesStandard::OpenGL);
+			if (!lobbyGeometry.leftController.model_uid)
+				lobbyGeometry.leftController.model_uid = avs::GenerateUid();
+			geometryDecoder.decodeFromWeb(0, source_root + "/"s + left_model_name + ".glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.leftController.model_uid, platform::crossplatform::AxesStandard::OpenGL);
 			avsNode.name = "Left Controller";
 			avsNode.data_type = avs::NodeDataType::SubScene;
-			avsNode.data_uid = lobbyGeometry.left_model_uid;
-			localResourceCreator.CreateNode(0, lobbyGeometry.left_controller_node_uid, avsNode);
+			avsNode.data_uid = lobbyGeometry.leftController.model_uid;
+			localResourceCreator.CreateNode(0, lobbyGeometry.leftController.controller_node_uid, avsNode);
 		}
 		if (user_path == "/user/hand/right")
 		{
@@ -509,13 +452,13 @@ void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 			platform::core::find_and_replace(right_model_name, "{SIDE}", "right");
 			avs::Node avsNode;
 			avsNode.parentID = lobbyGeometry.self_node_uid;
-			if (!lobbyGeometry.right_model_uid)
-				lobbyGeometry.right_model_uid = avs::GenerateUid();
-			geometryDecoder.decodeFromWeb(0, source_root + "/"s + right_model_name + ".glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.right_model_uid, platform::crossplatform::AxesStandard::OpenGL);
+			if (!lobbyGeometry.rightController.model_uid)
+				lobbyGeometry.rightController.model_uid = avs::GenerateUid();
+			geometryDecoder.decodeFromWeb(0, source_root + "/"s + right_model_name + ".glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, lobbyGeometry.rightController.model_uid, platform::crossplatform::AxesStandard::OpenGL);
 			avsNode.name = "Right Controller";
 			avsNode.data_type = avs::NodeDataType::SubScene;
-			avsNode.data_uid = lobbyGeometry.right_model_uid;
-			localResourceCreator.CreateNode(0, lobbyGeometry.right_controller_node_uid, avsNode);
+			avsNode.data_uid = lobbyGeometry.rightController.model_uid;
+			localResourceCreator.CreateNode(0, lobbyGeometry.rightController.controller_node_uid, avsNode);
 		}
 	}
 }
@@ -748,36 +691,51 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		defaultViewStructs[0]=deviceContext.viewStruct;
 	}
 
-	const std::set<avs::uid> &server_uids=client::SessionClient::GetSessionClientIds();
+	const std::set<int32_t> &tab_ids=client::TabContext::GetTabIndices();
+	// Each tab context has one active server at most.
+	static std::set<avs::uid> server_uids;
+	server_uids.clear();
+	for(const auto t:tab_ids)
+	{
+		auto tabContext=client::TabContext::GetTabContext(t);
+		if(!tabContext)
+			continue;
+		auto server_uid = tabContext->GetServerUid();
+		if(server_uid!=0)
+		{
+			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+			if(sessionClient->IsConnected())
+				server_uids.insert(server_uid);
+		}
+	}
+	if(!server_uids.size())
+	{
+		if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
+		{
+			crossplatform::MultiviewGraphicsDeviceContext &mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
+			renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
+			renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
+			renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
+			renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
+		}
+		renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
+		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+		renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+
+		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
+		if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
+			passName += "_multiview";
+		if (!renderState.openXR->IsPassthroughActive())
+		{
+			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+			renderPlatform->DrawQuad(deviceContext);
+			renderState.cubemapClearEffect->Unapply(deviceContext);
+		}
+		server_uids.insert(0);
+	}
 	for (const auto &server_uid : server_uids)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-		// TODO: This should render only if no background clients are connected.
-		if (!sessionClient->IsConnected())
-		{
-			if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
-			{
-				crossplatform::MultiviewGraphicsDeviceContext& mgdc = *deviceContext.AsMultiviewGraphicsDeviceContext();
-				renderState.stereoCameraConstants.leftInvWorldViewProj = mgdc.viewStructs[0].invViewProj;
-				renderState.stereoCameraConstants.rightInvWorldViewProj = mgdc.viewStructs[1].invViewProj;
-				renderState.stereoCameraConstants.stereoViewPosition = mgdc.viewStruct.cam_pos;
-				renderState.cubemapClearEffect->SetConstantBuffer(mgdc, &renderState.stereoCameraConstants);
-			}
-			renderState.cameraConstants.invWorldViewProj = deviceContext.viewStruct.invViewProj;
-			renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-			renderState.cubemapClearEffect->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
-		
-			std::string passName = (int)config.options.lobbyView ? "neon" : "white";
-			if (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr)
-				passName += "_multiview";
-			if(!renderState.openXR->IsPassthroughActive())
-			{
-				renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-				renderPlatform->DrawQuad(deviceContext);
-				renderState.cubemapClearEffect->Unapply(deviceContext);
-			}
-		}
-
 		// Init the viewstruct in global space - i.e. with the server offsets.
 		avs::Pose origin_pose;
 		auto &clientServerState = sessionClient->GetClientServerState();
@@ -788,7 +746,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			origin_pose.orientation=*((vec4*)&origin_node->GetGlobalRotation());
 			SetRenderPose(deviceContext,GetOriginPose(server_uid));
 			GetInstanceRenderer(server_uid)->RenderView(deviceContext);
-			if(debugOptions.showAxes)
+			if(renderState.debugOptions.showAxes)
 			{
 				renderPlatform->DrawAxes(deviceContext,mat4::identity(),2.0f);
 			}
@@ -811,38 +769,109 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 
 	const std::map<avs::uid,teleport::client::NodePoseState> &nodePoseStates
 		=renderState.openXR->GetNodePoseStates(0,renderPlatform->GetFrameNumber());
-	auto l=nodePoseStates.find(lobbyGeometry.left_hand_node_uid);
-	vec4 white={1.f,1.f,1.f,1.f};
 	std::vector<vec4> hand_pos_press;
-	if(l!=nodePoseStates.end())
+	auto localInstanceRenderer = GetInstanceRenderer(0);
+	auto &localGeometryCache = localInstanceRenderer->geometryCache;
+	for(int h=0;h<2;h++)
 	{
-		avs::Pose handPose	= l->second.pose_footSpace.pose;
-		vec3 pos		= LocalToGlobal(handPose,*((vec3*)&lobbyGeometry.index_finger_offset));
-		vec4 pos4;
-		pos4.xyz			= (const float*)&pos;
-		pos4.w				= 0.0f;
-		hand_pos_press.push_back(pos4);
-	}
-
-	auto r=nodePoseStates.find(lobbyGeometry.right_hand_node_uid);
-	if(r!=nodePoseStates.end())
-	{
-		avs::Pose rightHand = r->second.pose_footSpace.pose;
-		vec3 pos = LocalToGlobal(rightHand,*((vec3*)&lobbyGeometry.index_finger_offset));
-		vec4 pos4;
-		pos4.xyz = (const float*)&pos;
-		pos4.w = 0.0f;
-		hand_pos_press.push_back(pos4);
+		auto &hand=lobbyGeometry.hands[h];
+		if(hand.visible)
+		{
+		// can type or press with the tips of each finger.
+			const auto &poses = renderState.openXR->GetTrackedHandJointPoses(h);
+			// The poses are in the hand's local space.
+			auto handNode=localGeometryCache->mNodeManager->GetNode(hand.hand_node_uid);
+			uint8_t fingertips[]={XR_HAND_JOINT_INDEX_TIP_EXT,XR_HAND_JOINT_MIDDLE_TIP_EXT,XR_HAND_JOINT_RING_TIP_EXT,XR_HAND_JOINT_LITTLE_TIP_EXT,XR_HAND_JOINT_THUMB_TIP_EXT};
+			if(handNode)
+			{
+				for(int i=0;i<5;i++)
+				{
+					vec3 pos=handNode->GetGlobalTransform().LocalToGlobal(poses[fingertips[i]].position);
+					vec4 pos4;
+					pos4.xyz			= (const float*)&pos;
+					pos4.w				= 0.0f;
+					hand_pos_press.push_back(pos4);
+				}
+			}
+		}
+		else
+		{
+			auto l = nodePoseStates.find(hand.hand_node_uid);
+			vec4 white={1.f,1.f,1.f,1.f};
+			if(l!=nodePoseStates.end())
+			{
+				avs::Pose handPose	= l->second.pose_footSpace.pose;
+				vec3 pos = LocalToGlobal(handPose, *((vec3 *)&lobbyGeometry.hands[0].index_finger_offset));
+				vec4 pos4;
+				pos4.xyz			= (const float*)&pos;
+				pos4.w				= 0.0f;
+				hand_pos_press.push_back(pos4);
+			}
+		}
 	}
 	static bool override_show_local_geometry = false;
-	gui.Update(hand_pos_press, have_vr_device || config.options.simulateVR);
 	if (have_vr_device || config.options.simulateVR)
-		gui.Render3DGUI(deviceContext);
-	bool show_local_geometry = (gui.IsVisible()&&(have_vr_device || config.options.simulateVR))|| override_show_local_geometry;
-	renderState.selected_uid=gui.GetSelectedUid();
+	{
+		gui.Update(hand_pos_press, have_vr_device || config.options.simulateVR);
+		gui.Render3DConnectionGUI(deviceContext);
+	}
+	bool show_local_geometry = (gui.GetGuiType()!=GuiType::None&&(have_vr_device || config.options.simulateVR))|| override_show_local_geometry;
+	renderState.selected_uid = gui.GetSelectedUid();
+	static bool enable_hand_deformation = true;
 	if (show_local_geometry)
 	{	
 		renderState.pbrConstants.drawDistance = 1000.0f;
+		// hand tracking?
+		auto localInstanceRenderer = GetInstanceRenderer(0);
+		auto &localGeometryCache = localInstanceRenderer->geometryCache;
+		if(enable_hand_deformation)
+		for (int i = 0; i < 2; i++)
+		{
+			auto &hand = lobbyGeometry.hands[i];
+			auto handNode = localGeometryCache->mNodeManager->GetNode(hand.hand_node_uid);
+			const auto &poses = renderState.openXR->GetTrackedHandJointPoses(i);
+			if (hand.visible && poses.size())
+			{
+				if (handNode)
+					handNode->SetVisible(true);
+				// a list of 26 poses. apply them to the 24 joints.
+				auto subScene=localGeometryCache->mSubsceneManager.Get(hand.model_uid);
+				if(subScene)
+				{
+					auto geometryCache=GeometryCache::GetGeometryCache(subScene->subscene_uid);
+					if(geometryCache.get())
+					{
+						const auto &ids = geometryCache->mSkeletonManager.GetAllIDs();
+						if(ids.size())
+						{ 
+							avs::uid sk_uid=ids[0];
+							auto sk=geometryCache->mSkeletonManager.Get(sk_uid);
+							if(sk) 
+							{ 
+								const auto& bone_ids=sk->GetExternalBoneIds();
+								for(int j=0;j<bone_ids.size();j++)
+								{
+									avs::uid b_uid=bone_ids[j];
+									auto node=geometryCache->mNodeManager->GetNode(b_uid);
+									int8_t pose_index = bone_to_pose[j];
+									if(pose_index>=0)
+									{
+										auto &pose = poses[pose_index];
+										clientrender::Transform tr(pose.position,pose.orientation,{1.f,1.f,1.f});
+										node->SetGlobalTransform(tr);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				if (handNode)
+					handNode->SetVisible(false);
+			}
+		}
 		GetInstanceRenderer(0)->RenderLocalNodes(deviceContext, 0);
 	}
 	
@@ -854,32 +883,37 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	shaderMode=newShaderMode;
 	switch(newShaderMode)
 	{
-		case ShaderMode::PBR:
-			renderState.overridePixelShader = "";
-			break;
 		case ShaderMode::ALBEDO:
-			renderState.overridePixelShader = "ps_solid_albedo_only";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_solid_albedo_only";
 			break;
 		case ShaderMode::NORMALS:
-			renderState.overridePixelShader = "ps_debug_normals";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_debug_normals";
 			break;
 		case ShaderMode::DEBUG_ANIM:
-			renderState.overridePixelShader = "ps_debug_anim";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_debug_anim";
 			break;
 		case ShaderMode::LIGHTMAPS:
-			renderState.overridePixelShader = "ps_debug_lightmaps";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_debug_lightmaps";
 			break;
 		case ShaderMode::NORMAL_VERTEXNORMALS:
-			renderState.overridePixelShader = "ps_debug_normal_vertexnormals";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_debug_normal_vertexnormals";
 			break;
 		case ShaderMode::UVS:
-			renderState.overridePixelShader = "ps_debug_uvs";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_debug_uvs";
 			break;
 		case ShaderMode::REZZING:
-			renderState.overridePixelShader = "ps_digitizing";
+			renderState.debugOptions.useDebugShader = true;
+			renderState.debugOptions.debugShader = "ps_digitizing";
 			break;
 		default:
-			renderState.overridePixelShader = "";
+			renderState.debugOptions.useDebugShader = false;
+			renderState.debugOptions.debugShader = "";
 			break;
 	}
 	renderState.shaderValidity++;
@@ -947,10 +981,10 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 		}
 	}
 	if(gained_connection)
-		gui.Hide();
+		gui.SetGuiType(GuiType::None);
 	if (!num_connected_servers)
 	{
-		if (!gui.IsVisible())
+		if (gui.GetGuiType()==GuiType::None)
 		{
 			static float invisibleTime=0.0f;
 			invisibleTime+=time_step;
@@ -1131,13 +1165,17 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		{
 #if TELEPORT_INTERNAL_CHECKS
 		case 'O':
-			show_osd =!show_osd;
+			if(gui.GetGuiType()!=teleport::GuiType::Debug)
+			{
+				gui.SetGuiType(teleport::GuiType::Debug);
+			}
+			else
+			{
+				gui.SetGuiType(teleport::GuiType::None);
+			}
 			if(renderState.openXR)
-				renderState.openXR->SetOverlayEnabled(show_osd);
+				renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == teleport::GuiType::Debug);
 			break;
-		//case 'H':
-			//WriteHierarchies(server_uid);
-			//break;
 		case 'N':
 			renderState.show_node_overlays = !renderState.show_node_overlays;
 			break;
@@ -1188,31 +1226,7 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 		case VK_SPACE:
 			ShowHideGui();
 			break;
-		case VK_NUMPAD0: //Display full PBR rendering.
-			ChangePass(clientrender::ShaderMode::PBR);
-			break;
-		case VK_NUMPAD1: //Display only albedo/diffuse.
-			ChangePass(clientrender::ShaderMode::ALBEDO);
-			break;
-		case VK_NUMPAD4: //Display normals for native PC client frame-of-reference.
-			ChangePass(clientrender::ShaderMode::NORMALS);
-			break;
-		case VK_NUMPAD5: //Display normals swizzled for matching Unreal output.
-			ChangePass(clientrender::ShaderMode::DEBUG_ANIM);
-			break;
-		case VK_NUMPAD6: //Display normals swizzled for matching Unity output.
-			ChangePass(clientrender::ShaderMode::LIGHTMAPS);
-			break;
-		case VK_NUMPAD2: //Display normals swizzled for matching Unity output.
-			ChangePass(clientrender::ShaderMode::NORMAL_VERTEXNORMALS);
-			break;
-		case VK_NUMPAD7: //.
-			ChangePass(clientrender::ShaderMode::REZZING);
-			break;
-		case VK_NUMPAD8: //.
-			ChangePass(clientrender::ShaderMode::UVS);
-			break;
-			#endif
+		#endif
 		default:
 			break;
 		}
@@ -1221,24 +1235,26 @@ void Renderer::OnKeyboard(unsigned wParam,bool bKeyDown,bool gui_shown)
 
 void Renderer::ShowHideGui()
 {
-	gui.ShowHide();
+	if(gui.GetGuiType()==GuiType::None)
+		gui.SetGuiType(GuiType::Connection);
+	else
+		gui.SetGuiType(GuiType::None);
+		/*
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localGeometryCache=localInstanceRenderer->geometryCache;
 		auto selfRoot=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.self_node_uid);
-	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
-	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_left_hand_uid);
+	auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.rightHand.hand_mesh_node_uid);
+	auto leftHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.leftHand.hand_mesh_node_uid);
 	avs::uid point_anim_uid=localGeometryCache->mAnimationManager.GetUidByName("Point");
 	rightHand->GetOrCreateComponent<AnimationComponent>()->setAnimation(point_anim_uid);
 	leftHand->GetOrCreateComponent<AnimationComponent>()->setAnimation(point_anim_uid);
 	AnimationState *leftAnimState=leftHand->GetOrCreateComponent<AnimationComponent>()->GetAnimationState(point_anim_uid);
 	AnimationState *rightAnimState=rightHand->GetOrCreateComponent<AnimationComponent>()->GetAnimationState(point_anim_uid);
-	if(gui.IsVisible())
+	if (gui.GetGuiType()!=GuiType::None)
 	{
 		selfRoot->SetVisible(true);
-		show_osd = false; //TODO: Find a better fix for OSD and Keyboard resource collision in Vulkan/ImGui - AJR.
-
 		if (renderState.openXR)
-			renderState.openXR->SetOverlayEnabled(show_osd);
+			renderState.openXR->SetOverlayEnabled(gui.GetGuiType()==GuiType::Debug);
 		// If we've just started to show the gui, let's make the hands point, so the index finger alone is extended for typing.
 		if(leftAnimState)
 		{
@@ -1252,8 +1268,8 @@ void Renderer::ShowHideGui()
 		}
 		rightHand->GetLocalTransform();
 		// The AIM pose should be mapped to the index finger.
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_hand_node_uid,"left/input/aim/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_hand_node_uid,"right/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.leftHand.hand_node_uid,"left/input/aim/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.rightHand.hand_node_uid,"right/input/aim/pose");
 		// Now adjust the local transform of the hand object based on the root being at the finger.
 		clientrender::Transform finger_to_hand;
 		// "global" transform is in hand's root cooords.
@@ -1285,22 +1301,22 @@ void Renderer::ShowHideGui()
 		if(rightAnimState)
 			rightAnimState->speed=-1.0f;
 		// The GRIP pose should be mapped to the palm.
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.left_hand_node_uid,"left/input/grip/pose");
-		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.right_hand_node_uid,"right/input/grip/pose");
-		rightHand->SetLocalTransform(lobbyGeometry.palm_to_hand_r);
-		leftHand->SetLocalTransform(lobbyGeometry.palm_to_hand_l);
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.leftHand.hand_node_uid, "left/input/grip/pose");
+		renderState.openXR->MapNodeToPose(local_server_uid, lobbyGeometry.rightHand.hand_node_uid, "right/input/grip/pose");
+		rightHand->SetLocalTransform(lobbyGeometry.rightHand.palm_to_hand);
+		leftHand->SetLocalTransform(lobbyGeometry.leftHand.palm_to_hand);
 	}
 	
 	{
-		auto rightHand=localGeometryCache->mNodeManager->GetNode(lobbyGeometry.local_right_hand_uid);
-		auto rSkeleton=localGeometryCache->mSkeletonManager.Get(lobbyGeometry.hand_skeleton_uid);
+		auto rightHand = localGeometryCache->mNodeManager->GetNode(lobbyGeometry.rightHand.hand_mesh_node_uid);
+		auto rSkeleton = localGeometryCache->mSkeletonManager.Get(lobbyGeometry.rightHand.hand_skeleton_uid);
 		if(rSkeleton&&rSkeleton->GetBoneByName("IndexFinger4_R"))
 		{
 			clientrender::Transform hand_to_finger=rSkeleton->GetBoneByName("IndexFinger4_R")->GetGlobalTransform();
 			vec3 v=rightHand->GetLocalTransform().LocalToGlobal(hand_to_finger.m_Translation);
-			lobbyGeometry.index_finger_offset=*((vec3*)&v);
+			lobbyGeometry.rightHand.index_finger_offset = *((vec3 *)&v);
 		}
-	}
+	}*/
 }
 
 void Renderer::WriteHierarchy(int tabDepth, std::shared_ptr<clientrender::Node> node)
@@ -1374,6 +1390,8 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
+	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
@@ -1455,6 +1473,24 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	if(!c)
 		profiling_text=renderPlatform->GetGpuProfiler()->GetDebugText();
 #endif
+
+	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	if (renderState.openXR->HaveXRDevice())
+	{
+		// Note we do this even when the device is inactive.
+		//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
+		renderState.openXR->SetCurrentFrameDeviceContext(&deviceContext);
+		renderState.openXR->RenderFrame(renderDelegate, overlayDelegate);
+		if (renderState.openXR->IsXRDeviceRendering())
+			SetExternalTexture(renderState.openXR->GetRenderTexture());
+	}
+	else
+	{
+		SetExternalTexture(nullptr);
+	}
+	errno = 0;
+	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
+	SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
 }
 
 void Renderer::DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext,bool mode_3d)
@@ -1462,15 +1498,13 @@ void Renderer::DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceCon
 	// Show the 2D GUI on Desktop view, only if the 3D gui is not visible.
 	if(mode_3d)
 	{
-		gui.Render3DGUI(deviceContext);
+		gui.Render3DConnectionGUI(deviceContext);
 	}
 	else
 	{
-		if (gui.IsVisible() && !config.options.simulateVR)
+		if (gui.GetGuiType()==GuiType::Connection && !config.options.simulateVR)
 		{
-			// auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
-			// gui.setSessionClient(sessionClient.get());
-			gui.Render2DGUI(deviceContext);
+			gui.Render2DConnectionGUI(deviceContext);
 		}
 		if (!renderState.openXR || !renderState.openXR->IsSessionActive())
 		{
@@ -1491,7 +1525,7 @@ void Renderer::UpdateVRGuiMouse()
 	// from hand to overlay is diff:
 	vec3 start = *((vec3 *)&p.position);
 	static vec3 y = {0, 1.0f, 0};
-	avs::Pose overlay_pose = renderState.openXR->ConvertGLStageSpacePoseToLocalSpacePose(renderState.openXR->overlay.pose);
+	avs::Pose overlay_pose = renderState.openXR->ConvertGLSpaceToEngineeringSpace(renderState.openXR->overlay.pose);
 	vec3 overlay_centre = *((vec3 *)&overlay_pose.position);
 	crossplatform::Quaternionf ovrl_q = *(crossplatform::Quaternionf *)&overlay_pose.orientation;
 	crossplatform::Quaternionf aim_q = *(crossplatform::Quaternionf *)&p.orientation;
@@ -1537,7 +1571,7 @@ void Renderer::RenderVROverlay(crossplatform::GraphicsDeviceContext &deviceConte
 
 void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 {
-	if (!show_osd||gui.IsVisible())
+	if (gui.GetGuiType()!=GuiType::Debug)
 		return;
 	if(renderState.openXR)
 	{
@@ -1549,14 +1583,15 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	static vec4 text_colour={1.0f,1.0f,0.5f,1.0f};
 	static vec4 background={0.0f,0.0f,0.0f,0.5f};
-	if(renderState.overridePixelShader.length())
+	if(renderState.debugOptions.useDebugShader)
 	{
-		gui.LinePrint(fmt::format("Override Shader: {0}", renderState.overridePixelShader));
+		gui.LinePrint(fmt::format("Override Shader: {0}", renderState.debugOptions.debugShader));
 	}		
 	
 	if(gui.Tab("Debug"))
 	{
-		gui.DebugPanel(debugOptions);
+		if(gui.DebugPanel(renderState.debugOptions))		
+			renderState.shaderValidity++;
 		gui.EndTab();
 	}
 	if(gui.Tab("Network"))
@@ -1583,7 +1618,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 			auto originPose=GetOriginPose(server_uid);
 			gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z)):"Origin:", white);
 			gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
-			gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
+		//	gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
 			if (instanceRenderer->videoPosDecoded)
 			{
 				gui.LinePrint(platform::core::QuickFormat(" Video: %4.4f %4.4f %4.4f", instanceRenderer->videoPos.x, instanceRenderer->videoPos.y, instanceRenderer->videoPos.z), white);
@@ -1744,9 +1779,20 @@ void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 			// do this on *releasing* the button:
 			if(i.activated==false)
 			{
-				show_osd = !show_osd;
+				switch(gui.GetGuiType())
+				{
+					case GuiType::None:
+						gui.SetGuiType(GuiType::Connection);
+					break;
+					case GuiType::Connection:
+						gui.SetGuiType(GuiType::None);
+					break;
+					default:
+						gui.SetGuiType(GuiType::None);
+					break;
+				};
 				if (renderState.openXR)
-					renderState.openXR->SetOverlayEnabled(show_osd);
+					renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == GuiType::Debug);
 			}
 		}
 		else if(i.inputID==local_cycle_shader_id)

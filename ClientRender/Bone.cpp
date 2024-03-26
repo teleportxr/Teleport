@@ -1,4 +1,5 @@
 #include "Bone.h"
+#include "TeleportCore/ErrorHandling.h"
 
 namespace clientrender
 {
@@ -26,6 +27,11 @@ namespace clientrender
 
 	void Bone::SetParent(std::shared_ptr<Bone> parent)
 	{
+		if(parent.get()==this)
+		{
+			TELEPORT_CERR<<"Trying to set bone as its own parent.\n";
+			return;
+		}
 		this->parent = parent;
 		isGlobalTransformDirty = true;
 	}
