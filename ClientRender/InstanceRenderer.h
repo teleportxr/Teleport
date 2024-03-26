@@ -4,6 +4,8 @@
 #include "ClientRender/GeometryCache.h"
 #include "ClientRender/GeometryDecoder.h"
 #include "ClientRender/ResourceCreator.h"
+#include "ClientRender/LinkRenderer.h"
+#include "ClientRender/CanvasTextRenderer.h"
 #include "Common.h"
 #include "GeometryCache.h"
 #include "Node.h"
@@ -58,6 +60,9 @@ namespace teleport
 		struct RenderState
 		{
 			teleport::client::OpenXR *openXR = nullptr;
+			teleport::clientrender::LinkRenderer linkRenderer;
+			teleport::clientrender::CanvasTextRenderer canvasTextRenderer;
+			std::shared_ptr<clientrender::FontAtlas> commonFontAtlas;
 #ifdef __ANDROID__
 			bool multiview = true;
 #else
@@ -193,12 +198,9 @@ namespace teleport
 				// Materials within the pass.
 				phmap::flat_hash_map<avs::uid, std::shared_ptr<MaterialRender>> materialRenders;
 			};
-			struct LinkRender
-			{
-				vec3 position;
-				std::string url;
-			};
-			phmap::flat_hash_map<uint64_t,std::shared_ptr<LinkRender>> linkRenders;
+			phmap::flat_hash_map<uint64_t, std::shared_ptr<LinkRender>> linkRenders;
+			phmap::flat_hash_map<uint64_t, std::shared_ptr<CanvasRender>> canvasRenders;
+			
 			phmap::flat_hash_map<platform::crossplatform::EffectPass *, std::shared_ptr<PassRender>> passRenders;
 			mutable std::mutex passRenders_mutex;
 
@@ -236,7 +238,7 @@ namespace teleport
 			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &l);
 			void RenderMaterial(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MaterialRender &materialRender);
 			void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
-			void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<TextCanvas> textCanvas);
+			void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext &deviceContext,  const CanvasRender *canvasRender);
 			void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &g, const std::shared_ptr<clientrender::Node> node, bool include_children);
 
 			std::shared_ptr<clientrender::GeometryCache> geometryCache;

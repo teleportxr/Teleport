@@ -42,8 +42,8 @@ namespace teleport
 
 		struct IncompleteMaterial : IncompleteResource
 		{
-			IncompleteMaterial(avs::uid id, avs::GeometryPayloadType type)
-				: IncompleteResource(id, type)
+			IncompleteMaterial(avs::uid id, const std::string &path,avs::GeometryPayloadType type)
+				: IncompleteResource(id, path,type)
 			{
 			}
 
@@ -259,7 +259,7 @@ namespace teleport
 			void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
 			void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 			void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo &materialInfo);
-
+			void CompleteFontAtlas(avs::uid id, std::shared_ptr<clientrender::FontAtlas> f);
 			// Add texture to material being created.
 			//	accessor : Data on texture that was received from server.
 			//	colourFactor : Vector factor to multiply texture with to adjust strength.
@@ -274,6 +274,15 @@ namespace teleport
 				lifetimeFactor = f;
 			}
 
+			const std::string &GetURL(avs::uid u) const
+			{
+				auto f=resourceURLs.find(u);
+				if(f==resourceURLs.end())
+					return "";
+				return f->second;
+			}
+			static std::string URLToFilePath(std::string url);
+			bool SaveResource(const IncompleteResource &res);
 		protected:
 			std::chrono::microseconds last_session_time_us = std::chrono::microseconds(0);
 			float lifetimeFactor = 1.0; // The factor lifetimes are adjusted to determine if a resource should be freed. 0.5 = Halve lifetime.
@@ -284,6 +293,7 @@ namespace teleport
 			std::vector<avs::uid> m_ReceivedResources; // Resources received.
 			std::string cacheFolder;
 			phmap::flat_hash_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
+			phmap::flat_hash_map<avs::uid, std::string> resourceURLs;
 		};
 	}
 

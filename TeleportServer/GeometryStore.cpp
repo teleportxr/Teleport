@@ -1,7 +1,8 @@
 #pragma optimize("",off)
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
-
+#include "TeleportCore/Logging.h"
+#include "TeleportCore/ResourceStreams.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -19,7 +20,7 @@
 #include <sys/param.h>
 #include <unistd.h>
 #endif
-#include "TeleportCore/AnimationInterface.h"
+#include "TeleportCore/Animation.h"
 #include "TeleportCore/TextCanvas.h"
 #ifdef _MSC_VER
 // disable Google's compiler warning.
@@ -32,6 +33,7 @@
 #include "Font.h"
 #include "UnityPlugin/InteropStructures.h"
 #include "TeleportCore/StringFunctions.h"
+#include "ClientManager.h"
 using namespace std::string_literals;
 using namespace teleport;
 using namespace server;
@@ -64,6 +66,31 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 	if(last_dot_pos<p.length()&&(last_slash_pos>=p.length()||last_slash_pos<last_dot_pos))
 		p=p.substr(0,last_dot_pos);
 	return p;
+}
+
+bool validate_path(const std::string &p)
+{
+	if (p.length() == 0)
+	{
+		TELEPORT_CERR << "Validation failed for path: paths should not be empty.\n";
+		return false;
+	}
+	if (p.find(' ') < p.length())
+	{
+		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain spaces.\n";
+		return false;
+	}
+	if (p.find('.') < p.length())
+	{
+		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain periods.\n";
+		return false;
+	}
+	if (p.find(',') < p.length())
+	{
+		TELEPORT_CERR << "Validation failed for path " << p << ": paths should not contain commas.\n";
+		return false;
+	}
+	return true;
 }
 #ifdef _MSC_VER
 static avs::guid bstr_to_guid(std::string b)
@@ -161,7 +188,9 @@ GeometryStore::GeometryStore()
 	skeletons[avs::AxesStandard::GlStyle];
 	
 	uid_to_path[0]=".";
-	path_to_uid["."]=0;
+	path_to_uid["."] = 0;
+	if (!debug_buffer)
+		debug_buffer = std::make_shared<VisualStudioDebugOutput>(true, "teleport_server.log", 128);
 }
 
 GeometryStore::~GeometryStore()
@@ -519,13 +548,14 @@ void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::
 	skeletons[avs::AxesStandard::GlStyle][id] = avs::Skeleton::convertToStandard(newSkeleton, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
-void GeometryStore::storeAnimation(avs::uid id, std::string path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
+bool GeometryStore::storeAnimation(avs::uid id, std::string path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
 {
 	auto &anim1=animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
 	std::string genericFilePath = path + ".teleport_anim"s;
 	saveResourceBinary(cachePath + "/engineering/"s + genericFilePath, anim1);
 	auto &anim2 = animations[avs::AxesStandard::GlStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
 	saveResourceBinary(cachePath + "/gl/"s + genericFilePath, anim2);
+	return true;
 }
 
 draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
@@ -613,10 +643,11 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 	// Primitive array elements in each mesh.
 	draco::FaceIndex face_index(0);
 	std::map<avs::uid, avs::AttributeSemantic> attributeSemantics;
+	size_t sm=0;
 	for (size_t i=0;i<sourceMesh.primitiveArrays.size();i++)
 	{
 		const auto& primitive = sourceMesh.primitiveArrays[i];
-		auto &subMesh= compressedMesh.subMeshes[i];
+		auto &subMesh= compressedMesh.subMeshes[sm];
 		const avs::Accessor& indices_accessor = sourceMesh.accessors[primitive.indices_accessor];
 		
 		subMesh.material=primitive.material;
@@ -713,8 +744,11 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
 		if(!status.ok())
 		{
-			TELEPORT_INTERNAL_LOG_UNSAFE("dracoEncoder failed\n");
-			return false;
+			TELEPORT_WARN("dracoEncoder failed to compress submesh {0} due to: {1}",i,status.error_msg_string());
+			compressedMesh.subMeshes.resize(compressedMesh.subMeshes.size() - 1);
+			if(compressedMesh.subMeshes.size()==0)
+				return false;
+			continue;
 		}
 		subMesh.buffer.resize(dracoEncoderBuffer.size());
 		memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
@@ -724,6 +758,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 			TELEPORT_INTERNAL_CERR("Empty compressed submesh {0}\n", sourceMesh.name.c_str());
 			TELEPORT_INTERNAL_BREAK_ONCE("");
 		}
+		sm++;
 	}
 	//TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
 	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO_VERSIONED;
@@ -1007,127 +1042,42 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 	return true;
 }
 
-class resource_ofstream :public std::ofstream
-{
-protected:
-	std::function<std::string(avs::uid)> uid_to_path;
-public:
-	std::string filename;
-	resource_ofstream(const char *fn, std::function<std::string(avs::uid)> f)
-		: filename(fn) 
-		,std::ofstream(fn, std::ofstream::out | std::ofstream::binary)
-		, uid_to_path(f)
-	{
-		unsetf(std::ios_base::skipws);
-	}
-	template<typename T>
-	void writeChunk(const T& t)
-	{
-		write((const char*)&t, sizeof(t));
-	}
-	friend resource_ofstream& operator<<(resource_ofstream& stream, avs::uid u)
-	{
-		if (!u)
-		{
-			size_t sz = 0;
-			stream.write((char*)&sz, sizeof(sz));
-		}
-		else
-		{
-			std::string p = stream.uid_to_path(u);
-			std::replace(p.begin(), p.end(), ' ', '%');
-			std::replace(p.begin(), p.end(), '\\', '/');
-			stream << p;
-		}
-		return stream;
-	}
-	friend resource_ofstream& operator<<(resource_ofstream& stream, const std::string &s)
-	{
-		size_t sz = s.length();
-		stream.write((char*)&sz, sizeof(sz)); 
-		stream.write(s.data(), s.length());
-		return stream;
-	}
-};
-class resource_ifstream :public std::ifstream
-{
-protected:
-	std::function<avs::uid(std::string)> path_to_uid;
-	size_t fileSize=0;
-public:
-	std::string filename;
-	resource_ifstream(const char* fn, std::function<avs::uid(std::string)> f)
-		: filename(fn) 
-		, std::ifstream(fn, resource_ifstream::in | resource_ifstream::binary)
-		, path_to_uid(f)
-	{
-		fileSize=std::filesystem::file_size(fn);
-		unsetf(std::ios_base::skipws);
-	}
-	template<typename T>
-	void readChunk(T& t)
-	{
-		read((char*)&t, sizeof(t));
-	}
-	size_t getFileSize() const
-	{
-		return fileSize;
-	}
-	/// Get the number of bytes until the end of the file.
-	size_t getBytesRemaining() 
-	{
-		return fileSize - (size_t)tellg();
-	}
-	std::vector<char> readData()
-	{
-		std::vector<char> fileContents((std::istreambuf_iterator<char>(*this)),
-									   std::istreambuf_iterator<char>());
-		return fileContents;
-	}
-	friend resource_ifstream& operator>>(resource_ifstream& stream, avs::uid& u)
-	{
-		std::string p;
-		stream >> p;
-		u = stream.path_to_uid(p);
-		return stream;
-	}
-	friend resource_ifstream& operator>>(resource_ifstream& stream, std::string& s)
-	{
-		size_t sz = 0;
-		stream.read((char*)&sz, sizeof(sz));
-		s.resize(sz);
-		stream.read(s.data(), s.length());
-		return stream;
-	}
-};
 
-void GeometryStore::storeMesh(avs::uid id,  std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool compress,bool verify)
+bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
 {
+	if(!validate_path(path))
+	{
+		TELEPORT_WARN("In storeMesh, invalid resource path: {0}",path);
+		return false;
+	}
+	if(!id)
+	{
+		TELEPORT_WARN("In storeMesh, invalid id {0}",id);
+		return false;
+	}
 	std::string p=std::string(path);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 	auto &mesh=meshes[standard][id] = ExtractedMesh{ path, lastModified, newMesh};
-	if(!compress)
+
 	{
-		std::cerr<<"Mesh must be compressed.\n";
-		return;
-	}
-	{
-		CompressMesh(mesh.compressedMesh,mesh.mesh);
+		if(!CompressMesh(mesh.compressedMesh,mesh.mesh))
+			return false;
 		if(verify)
 		{
 			//Save data to new file.
 			{
 				auto f=std::bind(&GeometryStore::UidToPath,this,std::placeholders::_1);
-				resource_ofstream saveFile("verify.mesh", f);
+				core::resource_ofstream saveFile("verify.mesh", f);
 				saveFile << mesh;
 				saveFile.close();
 			}
-			resource_ifstream loadFile("verify.mesh", std::bind(&GeometryStore::PathToUid,this,std::placeholders::_1));
+			core::resource_ifstream loadFile("verify.mesh", std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 		
 			ExtractedMesh testMesh;
 			loadFile >> testMesh;
-			VerifyCompressedMesh(testMesh.compressedMesh, testMesh.mesh);
+			if(!VerifyCompressedMesh(testMesh.compressedMesh, testMesh.mesh))
+				return false;
 		}
 	}
 	for (const auto& resourceData : meshes[standard])
@@ -1141,43 +1091,41 @@ void GeometryStore::storeMesh(avs::uid id,  std::string path,std::time_t lastMod
 			}
 		}
 	}
-}
-
-bool validate_path(const std::string &p)
-{
-	if(p.find(' ')<p.length())
-	{
-		TELEPORT_CERR<<"Validation failed for path "<<p<<": paths should not contain spaces.\n";
-		return false;
-	}
-	if (p.find('.') < p.length())
-	{
-		TELEPORT_CERR<<"Validation failed for path " << p << ": paths should not contain periods.\n";
-		return false;
-	}
-	if (p.find(',') < p.length())
-	{
-		TELEPORT_CERR<<"Validation failed for path " << p << ": paths should not contain commas.\n";
-		return false;
-	}
 	return true;
 }
 
-void GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
+bool GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
 {
-	if(!validate_path(path))
-		return ;
+	if (!validate_path(path))
+	{
+		TELEPORT_WARN("In storeMaterial, invalid resource path: {0}", path);
+		return false;
+	}
+	if (!id)
+	{
+		TELEPORT_WARN("In storeMaterial, invalid id {0}", id);
+		return false;
+	}
 	std::string p=std::string(path);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
  	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
+	return true;
 }
 
-void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newTexture, bool genMips
+bool GeometryStore::storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	if (!validate_path(path))
-		return;
+	{
+		TELEPORT_WARN("In storeTexture, invalid resource path: {0}", path);
+		return false;
+	}
+	if (!id)
+	{
+		TELEPORT_WARN("In storeTexture, invalid id {0}", id);
+		return false;
+	}
 	auto p=std::string(path);
 	bool black = true;
 	for (size_t i = 0; i < newTexture.data.size(); i++)
@@ -1206,7 +1154,7 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 		if(imageSizes[i]>newTexture.data.size())
 		{
 			TELEPORT_BREAK_ONCE("Bad data.");
-			return;
+			return false;
 		}
 	}
 	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
@@ -1255,25 +1203,27 @@ void GeometryStore::storeTexture(avs::uid id, std::string guid,std::string path,
 		}
 	}
 	textures[id] = ExtractedTexture{guid, path, lastModified, newTexture};
+	return true;
 }
 
 avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
 {
 	avs::Texture avsTexture;
 	std::replace(relative_asset_path_utf8.begin(),relative_asset_path_utf8.end(),'.','_');
-	std::string cacheFontFilePath=relative_asset_path_utf8+"_font";
-	std::string cacheTextureFilePath=relative_asset_path_utf8+"_texture";
-	avs::uid font_atlas_uid=GetOrGenerateUid(cacheFontFilePath);
-	avs::uid font_texture_uid=GetOrGenerateUid(cacheTextureFilePath);
+	std::string cacheFontPath = relative_asset_path_utf8;
+	std::string cacheTexturePath=relative_asset_path_utf8+"_tex";
+	avs::uid font_atlas_uid=GetOrGenerateUid(cacheFontPath);
+	avs::uid font_texture_uid=GetOrGenerateUid(cacheTexturePath);
 	ExtractedFontAtlas &fa=fontAtlases[font_atlas_uid];
-	std::vector<int> sizes={size};
-	if(!Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,(cachePath+"/"s+cacheTextureFilePath).c_str(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes))
-		return 0;
-	std::filesystem::path p=std::string(ttf_path_utf8);
-	saveResourceBinary(cacheFontFilePath,fa);
-	loadResourceBinary(cacheFontFilePath, "",fa);
-	storeTexture(font_texture_uid,"",relative_asset_path_utf8,lastModified, avsTexture, true,	 true,true);
+	fa.fontAtlas.uid=font_atlas_uid;
+	fa.fontAtlas.font_texture_path=cacheTexturePath;
 	fa.fontAtlas.font_texture_uid=font_texture_uid;
+	std::vector<int> sizes={size};
+	if(!Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,cacheTexturePath,"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes))
+		return 0;
+	//std::filesystem::path p=std::string(ttf_path_utf8);
+	saveResourceBinary(cachePath+"/"s+cacheFontPath+".font", fa);
+	storeTexture(font_texture_uid, "", cacheTexturePath, lastModified, avsTexture, true, true, true);
 	return font_atlas_uid;
 }
 
@@ -1285,7 +1235,9 @@ avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const 
 	teleport::core::TextCanvas &textCanvas=textCanvases[canvas_uid];
 
 	textCanvas.text=interopTextCanvas->text;
-	std::string cacheFontFilePath=std::string(interopTextCanvas->font)+".font";
+	std::string cacheFontFilePath = std::string(interopTextCanvas->font);
+	std::replace(cacheFontFilePath.begin(), cacheFontFilePath.end(), '.', '_');
+	cacheFontFilePath+=".font";
 	avs::uid font_uid=PathToUid(cacheFontFilePath);
 	if(!font_uid)
 		return 0;
@@ -1405,10 +1357,10 @@ void GeometryStore::compressNextTexture()
 
 					//STBIWDEF int stbi_write_png_to_func(stbi_write_func * func, void *context, int w, int h, int comp, const void *data, int stride_in_bytes);
 
-					int res = stbi_write_png_to_func(write_func, &subImages[n], w, h, 4, (const unsigned char *)(img.data()), w * 4);
+					int res = stbi_write_png_to_func(write_func, &subImages[n], w, h, avsTexture.bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * avsTexture.bytesPerPixel);
 					if (!res)
 					{
-						TELEPORT_CERR << "Texture " << extractedTexture.getName() << " was already a PNG, can't further compress this.\n ";
+						TELEPORT_CERR << "Texture " << extractedTexture.getName() << " could not be compressed as a PNG.\n ";
 						breakout = true;
 						break;
 					}
@@ -1475,7 +1427,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 	auto UidToPath = std::bind(&GeometryStore::UidToPath, this, std::placeholders::_1);
 	auto PathToUid = std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1);
 	{
-		resource_ofstream resourceFile(file_name.c_str(), UidToPath);
+		core::resource_ofstream resourceFile(file_name.c_str(), UidToPath);
 		try
 		{
 			resourceFile << resource;
@@ -1492,19 +1444,19 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 	}
 	// verify:
 	{
-		resource_ifstream verifyFile(file_name.c_str(), PathToUid);
+		core::resource_ifstream verifyFile(file_name.c_str(), PathToUid);
 		ExtractedResource verifyResource;
 		verifyFile>>verifyResource;
 		verifyFile.close();
 		if(!resource.Verify(verifyResource))
 		{
 			TELEPORT_CERR<<"File Verification failed for "<<file_name.c_str()<<"\n";
-			teleport::DebugBreak();
+			TELEPORT_BREAK_ONCE("Verification failed");
 			{
-				resource_ofstream saveFile(file_name.c_str(), UidToPath);
+				core::resource_ofstream saveFile(file_name.c_str(), UidToPath);
 				saveFile << resource;
 			}
-			resource_ifstream verifyFile(file_name.c_str(), PathToUid);
+			core::resource_ifstream verifyFile(file_name.c_str(), PathToUid);
 			ExtractedResource  verifyResource2;
 			verifyFile>>verifyResource2;
 			verifyFile.close();
@@ -1521,7 +1473,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 template<typename ExtractedResource>
 avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const std::string& path_root, std::map<avs::uid, ExtractedResource>& resourceMap)
 {
-	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
+	core::resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 	std::string p = StandardizePath(file_name, path_root);
 	if(!validate_path(p))
 	{
@@ -1663,13 +1615,25 @@ avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 	}
 	p = StandardizePath(p, "");
 	auto i=path_to_uid.find(p);
+	avs::uid uid=0;
 	if(i!=path_to_uid.end())
 	{
-		return i->second;
+		uid=i->second;
+		auto j=uid_to_path.find(uid);
+		if(j!=uid_to_path.end())
+		{
+			if(j->second!=p)
+			{
+				TELEPORT_CERR << "Path mismatch.\n";
+			}
+		}
 	}
-	avs::uid uid=avs::GenerateUid();
-	uid_to_path[uid]=p;
-	path_to_uid[p]=uid;
+	else
+	{
+		uid=avs::GenerateUid();
+		uid_to_path[uid]=p;
+		path_to_uid[p]=uid;
+	}
 	return uid;
 }
 
@@ -1756,13 +1720,6 @@ avs::uid GeometryStore::LoadResourceFromFile(std::string filename, avs::uid u)
 	return 0;
 }
 
-	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
-//loadResourcesBinary(cachePath + "/", textures);
-//loadResourcesBinary(cachePath + "/", materials);
-//loadResourcesBinary(cachePath + "/engineering/", meshes.at(avs::AxesStandard::EngineeringStyle));
-//loadResourcesBinary(cachePath + "/gl/", meshes.at(avs::AxesStandard::GlStyle));
-//
-//loadResourceBinary(file_name, path, resourceMap);
 
 bool GeometryStore::LoadResourceAtPath(std::string p,avs::uid u)
 {

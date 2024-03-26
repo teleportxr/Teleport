@@ -12,8 +12,8 @@
 
 using namespace teleport;
 using namespace server;
-ClientStoppedRenderingNodeFn PluginGeometryStreamingService::callback_clientStoppedRenderingNode=nullptr;
-ClientStartedRenderingNodeFn PluginGeometryStreamingService::callback_clientStartedRenderingNode=nullptr;
+ClientStoppedRenderingNodeFn GeometryStreamingService::callback_clientStoppedRenderingNode=nullptr;
+ClientStartedRenderingNodeFn GeometryStreamingService::callback_clientStartedRenderingNode=nullptr;
 //Remove duplicates, and 0s, from passed vector of UIDs.
 void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 {
@@ -22,9 +22,10 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-GeometryStreamingService::GeometryStreamingService( avs::uid clid)
-	: geometryStore(nullptr),  clientNetworkContext(nullptr), geometryEncoder( this, clid),clientId(clid)
+GeometryStreamingService::GeometryStreamingService(ClientMessaging &c,avs::uid clid)
+	: clientMessaging(c),geometryStore(nullptr), clientNetworkContext(nullptr), geometryEncoder(this, clid), clientId(clid)
 {
+	this->geometryStore = &GeometryStore::GetInstance();
 }
 
 GeometryStreamingService::~GeometryStreamingService()
@@ -230,13 +231,6 @@ void GeometryStreamingService::stopStreaming()
 	reset();
 }
 
-void GeometryStreamingService::clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID)
-{
-	auto client=ClientManager::instance().GetClient(clientID);
-	if(!client)
-		return;
-	client->clientMessaging->GetGeometryStreamingService().startedRenderingNode(nodeID);
-}
 
 bool GeometryStreamingService::startedRenderingNode( avs::uid nodeID)
 {
@@ -254,13 +248,7 @@ bool GeometryStreamingService::startedRenderingNode( avs::uid nodeID)
 		return false;
 	}
 }
-void GeometryStreamingService::clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID)
-{
-	auto client = ClientManager::instance().GetClient(clientID);
-	if (!client)
-		return;
-	client->clientMessaging->GetGeometryStreamingService().stoppedRenderingNode(nodeID);
-}
+
 bool GeometryStreamingService::stoppedRenderingNode(avs::uid nodeID)
 {
 	auto nodePair = clientRenderingNodes.find(nodeID);
@@ -277,17 +265,6 @@ bool GeometryStreamingService::stoppedRenderingNode(avs::uid nodeID)
 	}
 }
 
-void GeometryStreamingService::setNodeVisible(avs::uid clientID, avs::uid nodeID, bool isVisible)
-{
-	if (isVisible)
-	{
-		clientStoppedRenderingNode(clientID, nodeID);
-	}
-	else
-	{
-		clientStartedRenderingNode(clientID, nodeID);
-	}
-}
 
 bool GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 {

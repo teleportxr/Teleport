@@ -6,7 +6,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/platforms/this_platform.h>
-#include "TeleportCore/AnimationInterface.h"
+#include "TeleportCore/Animation.h"
 #include "TeleportCore/TextCanvas.h"
 #include "libavstream/geometry/mesh_interface.hpp"
 #ifdef _MSC_VER
@@ -49,6 +49,7 @@ struct InteropNode
 	int32_t priority;
 
 	const char *url;
+	const char *query_url;
 
 	operator avs::Node() const
 	{
@@ -81,7 +82,8 @@ struct InteropNode
 			lightDirection,
 			lightType,
 			lightRange,
-			url?url:""
+			url ? url : "",
+			query_url ? query_url : ""
 		};
 	}
 };

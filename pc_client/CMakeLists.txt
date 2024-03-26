@@ -44,7 +44,7 @@ endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
-source_group("Shaders Includes" src FILES ${shader_includes} )
+source_group("Shader Includes" src FILES ${shader_includes} )
 
 add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
 

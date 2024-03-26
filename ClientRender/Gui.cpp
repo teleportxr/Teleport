@@ -1820,6 +1820,10 @@ void Gui::Scene()
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
 		return;
+	if(ImGui::Button("Clear Selection"))
+	{
+		Select(0,0);
+	}
 	ImGui::BeginTabBar("Scene");
 	if (ImGui::BeginTabItem("Nodes"))
 	{

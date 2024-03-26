@@ -10,7 +10,7 @@
 #include <cerrno>
 #include <assert.h>
 #include <stdexcept> // for runtime_error
-
+#pragma message("ErrorHandling.h")
 #if TELEPORT_INTERNAL_CHECKS
 #ifdef check
 #undef TELEPORT_INTERNAL_CHECKS
@@ -64,9 +64,6 @@ namespace teleport
 
 #define TELEPORT_CERR\
 	std::cerr<<__FILE__<<"("<<std::dec<<__LINE__<<"): warning: "
-
-#define TELEPORT_WARN(txt, ...)\
-	teleport::InternalWarn( __FILE__, __LINE__,#txt, ##__VA_ARGS__)
 
 #define TELEPORT_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 #define TELEPORT_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);

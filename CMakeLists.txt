@@ -136,6 +136,7 @@ if(TELEPORT_UNITY)
 	get_filename_component(PROJECT_DIR ${CMAKE_BINARY_DIR} DIRECTORY)
 	set(TELEPORT_UNITY_PLUGINS_DIR "${PROJECT_DIR}/Assets/Teleport/Plugins/x86_64" CACHE PATH "Location to build TeleportServer.dll for use by Unity")
 	set(TELEPORT_UNITY_PROJECT_DIR "${PROJECT_DIR}" CACHE PATH "")
+	set(TELEPORT_UNITY_EDITOR_DIR "" CACHE PATH "")
 	set(TELEPORT_UNITY_EDITOR_EXE "${TELEPORT_UNITY_EDITOR_DIR}/Unity.exe" CACHE PATH "Unity Editor or game to run when debugging")
 endif()
 

@@ -9,6 +9,7 @@
 #include "Platform/CrossPlatform/RenderDelegater.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/Text3DRenderer.h"
+#include "Platform/CrossPlatform/Camera.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/basic_linear_algebra.h"

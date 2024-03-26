@@ -23,7 +23,7 @@ ClientMessaging::ClientMessaging(SignalingService &signalingService,
 								 uint32_t disconnectTimeout,
 								 ReportHandshakeFn reportHandshakeFn, avs::uid clid)
 	:  signalingService(signalingService)
-	, geometryStreamingService(clid)
+	, geometryStreamingService(*this,clid)
 	, setHeadPose(setHeadPose)
 	, setControllerPose(setControllerPose)
 	, processNewInputState(processNewInputState)
@@ -140,7 +140,7 @@ void ClientMessaging::tick(float deltaTime)
 		geometryStreamingService.tick(TIME_BETWEEN_GEOMETRY_TICKS);
 
 		//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
-		if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
+	/*	if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
 		{
 			size_t commandSize = sizeof(teleport::core::NodeVisibilityCommand);
 			size_t enteredBoundsSize = sizeof(avs::uid) * nodesEnteredBounds.size();
@@ -158,7 +158,7 @@ void ClientMessaging::tick(float deltaTime)
 			SendCommand(packet.data(),totalSize);
 			nodesEnteredBounds.clear();
 			nodesLeftBounds.clear();
-		}
+		}*/
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
@@ -768,12 +768,12 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 
 			for (avs::uid nodeID : drawn)
 			{
-				geometryStreamingService.clientStartedRenderingNode(clientID, nodeID);
+				geometryStreamingService.startedRenderingNode( nodeID);
 			}
 
 			for (avs::uid nodeID : toRelease)
 			{
-				geometryStreamingService.clientStoppedRenderingNode(clientID, nodeID);
+				geometryStreamingService.stoppedRenderingNode( nodeID);
 			}
 
 		}

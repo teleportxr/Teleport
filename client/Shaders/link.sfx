@@ -1,0 +1,294 @@
+// Copyright (c) 2023 Simul Software Ltd. All rights reserved.
+#include "shader_platform.sl"
+#include "common.sl"
+#include "render_states.sl"
+#include "camera_constants.sl"
+#include "depth.sl"
+#include "text_constants.sl"
+#include "pbr_constants.sl"
+
+uniform StructuredBuffer<FontChar> fontChars;
+uniform Texture2D fontTexture;
+
+// We will send 6 times (number of chars). Each group will be two triangles.
+// The FontChar structure will contain a texcoord quad which
+// indicates what part of the fontTexture it will show. It also has text_rect,
+// which is scaled (-1,1) in the x and y. These are then transformed by the worldViewProj
+// into projection coords.
+shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
+{
+	uint char_index=IN.vertex_id/6;
+	uint vert_index=IN.vertex_id-(6*char_index);
+	uint ids[]={0,1,2,2,3,1};
+	FontChar f=fontChars[char_index];
+	uint vertex_id=ids[vert_index];
+	
+	#ifdef  SFX_OPENGL
+	f.text_rect.y *= -1;
+	f.text_rect.y -= f.text_rect.w;
+	#endif  
+	
+	posTexVertexOutput OUT;
+	vec2 poss[4];
+	poss[0]			=vec2(1.0, 0.0);
+	poss[1]			=vec2(1.0, 1.0);
+	poss[2]			=vec2(0.0, 0.0);
+	poss[3]			=vec2(0.0, 1.0);
+	vec2 pos		=poss[vertex_id];
+	vec4 localPos	=vec4(background_rect[0].xy+(f.text_rect.xy+f.text_rect.zw*pos)*background_rect[0].zw,0.0,1.0);
+	//vec4 localPos	=vec4(background_rect[0].xy+background_rect[0].zw*pos,0.0,1.0);
+	OUT.texCoords	=f.texc.xy+f.texc.zw*pos.xy;
+#ifdef SFX_OPENGL
+	OUT.texCoords.y =1.0 - OUT.texCoords.y;
+#endif
+
+	vec4 opos		=vec4(localPos.xyz,1.0);
+	OUT.hPosition	=mul(opos,viewProj);
+
+	return OUT;
+}
+
+shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
+{
+	uint char_index=IN.vertex_id/6;
+	uint vert_index=IN.vertex_id-(6*char_index);
+	uint ids[]={0,1,2,2,3,1};
+	FontChar f=fontChars[char_index];
+	uint vertex_id=ids[vert_index];
+	
+	#ifdef  SFX_OPENGL
+	f.text_rect.y *= -1;
+	f.text_rect.y -= f.text_rect.w;
+	#endif
+	
+	posTexVertexOutput OUT;
+	vec2 poss[4];
+	poss[0]			=vec2(1.0, 0.0);
+	poss[1]			=vec2(1.0, 1.0);
+	poss[2]			=vec2(0.0, 0.0);
+	poss[3]			=vec2(0.0, 1.0);
+	vec2 pos		=poss[vertex_id];
+	vec4 localPos	=vec4(background_rect[0].xy+(f.text_rect.xy+f.text_rect.zw*pos)*background_rect[0].zw,0.0,1.0);
+	OUT.texCoords	=f.texc.xy+f.texc.zw*pos.xy;
+#ifdef SFX_OPENGL
+	OUT.texCoords.y =1.0 - OUT.texCoords.y;
+#endif
+
+	vec4 wpos			=mul(localPos, model);
+	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
+	OUT.hPosition		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
+
+	return OUT;
+}
+ 
+shader vec4 PS_CanvasText(posTexVertexOutput IN) : SV_TARGET
+{
+	vec2 tc		=IN.texCoords;
+	vec4 lookup	= colour*vec4(1.0,1.0,1.0,texture_clamp_lod(fontTexture,tc,0).r);
+	return lookup;
+}
+
+struct linkVertexOutput
+{
+	vec4 hPosition : SV_POSITION;
+	vec2 texCoords : TEXCOORD0;
+	vec4 colour : TEXCOORD1;
+	vec3 centre_worldspace_pos : TEXCOORD2;
+};
+// Draw at the center of the model matrix, aligned to face the viewer.
+shader linkVertexOutput VS_Link_SV(idOnly IN)
+{
+	uint vertex_id = IN.vertex_id;
+
+	linkVertexOutput OUT;
+	vec2 poss[4];
+	poss[0] = vec2(1.0, -1.0);
+	poss[1] = vec2(1.0, 1.0);
+	poss[2] = vec2(-1.0, -1.0);
+	poss[3] = vec2(-1.0, 1.0);
+	
+	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), model);
+	vec4 centre_viewspace_pos = mul(view, vec4(centre_wpos.xyz, 1.0));
+	
+	float radius_m=0.5;
+
+	float dist_to_ctr=max(0.000001,length(centre_viewspace_pos.xyz));
+	float half_angle_at_radius=asin(radius_m/dist_to_ctr);
+
+	vec2 pos = poss[vertex_id];
+
+	vec3 viewspace_offset=(vec3(pos.xy,0))*radius_m*cos(half_angle_at_radius);
+	viewspace_offset.z=-radius_m*sin(half_angle_at_radius);
+	vec3 viewspace_pos=centre_viewspace_pos.xyz+viewspace_offset;
+
+	OUT.texCoords = pos.xy;
+	OUT.hPosition = mul(proj, vec4(viewspace_pos.xyz, 1.0));
+	OUT.colour = vec4(radius_m, dist_to_ctr, 0, 0);
+	OUT.centre_worldspace_pos = centre_wpos.xyz;
+	return OUT;
+}
+
+shader linkVertexOutput VS_Link_MV(idOnly IN, uint viewID
+										   : SV_ViewID)
+{
+	mat4 this_view = viewID == 0 ? leftView : rightView;
+	uint vertex_id = IN.vertex_id;
+
+	linkVertexOutput OUT;
+	vec2 poss[4];
+	poss[0] = vec2(1.0, -1.0);
+	poss[1] = vec2(1.0, 1.0);
+	poss[2] = vec2(-1.0, -1.0);
+	poss[3] = vec2(-1.0, 1.0);
+
+	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), model);
+	vec4 centre_viewspace_pos = mul(this_view, vec4(centre_wpos.xyz, 1.0));
+
+	float radius_m = 0.5;
+
+	float dist_to_ctr = max(0.000001, length(centre_viewspace_pos.xyz));
+	float half_angle_at_radius = asin(radius_m / dist_to_ctr);
+
+	vec2 pos = poss[vertex_id];
+
+	vec3 viewspace_offset = (vec3(pos.xy, 0)) * radius_m * cos(half_angle_at_radius);
+	viewspace_offset.z = -radius_m * sin(half_angle_at_radius);
+	vec3 viewspace_pos = centre_viewspace_pos.xyz + viewspace_offset;
+
+	OUT.texCoords = pos.xy;
+	OUT.hPosition = mul(proj, vec4(viewspace_pos.xyz, 1.0));
+	OUT.colour = vec4(radius_m, dist_to_ctr, 0, 0);
+	OUT.centre_worldspace_pos = centre_wpos.xyz;
+	return OUT;
+}
+ 
+ vec3 plasma_function(vec3 fragCoord,float time)
+{
+	vec3 uv = (fragCoord - 0.5) * 8.0;
+	vec3 uv0 = uv;
+	float i0 = 1.0;
+	float i1 = 1.0;
+	float i2 = 1.0;
+	float i4 = 0.0;
+	vec3 v[7];
+	v[0] = vec3(1.0,0.0,0.0);
+	v[1] = vec3(0.0,1.0,0.0);
+	v[2] = vec3(0.0,0.0,1.0);
+	v[3] = vec3(0.0, 1.0, 0.0);
+	v[4] = vec3(0.0, 0.0, 1.0);
+	v[5] = vec3(0.0, 1.0, 0.0);
+	v[6] = vec3(1.0, 0.0, 0.0);
+	for (int s = 0; s < 7; s++)
+	{
+		vec3 r = vec3(sin(uv.y * i0 - i4 + time / i1), sin(uv.x * i0 - i4 + time / i1), sin(uv.z * i0 - i4 + time / i1)) / i2;
+		r += cross(v[s],r) * 0.3;
+		uv += r;
+
+		i0 *= 1.93;
+		i1 *= 1.15;
+		i2 *= 1.7;
+		i4 += 0.05 + 0.1 * time * i1;
+	}
+	vec3 rgb;
+	rgb.r = sin(uv.x - time) * 0.5 + 0.5;
+	rgb.b = sin(uv.y + time) * 0.5 + 0.5;
+	rgb.g = sin((uv.x + uv.y + sin(time * 0.5)) * 0.5) * 0.5 + 0.5;
+	return rgb;
+}
+ 
+shader vec4 PS_Link(linkVertexOutput IN) : SV_TARGET
+{
+	float radius=length(IN.texCoords.xy);
+	if (radius > 1.0)
+		discard;
+	vec3 view=ClipPosToView(IN.hPosition.xy / IN.hPosition.w);
+	//vec3 viewDir=normalize(vec3(IN.hPosition.xy / IN.hPosition.w,1.0));
+	// pos in view space is viewDir*dist_to_surface.
+	float D=IN.colour.g;
+	float R=IN.colour.r;
+	float theta=radius*asin(R/D);
+	float B=-2.0*D*cos(theta);
+	float C=D*D-R*R;
+	float distance_to_surface = (-B - sqrt(B * B - 4.0 * C))/2.0;
+	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), model);
+	vec3 pos = (viewPosition + view * distance_to_surface - centre_wpos.xyz)/ R;
+
+	vec3 rgb = plasma_function(pos.xyz,time);
+	return vec4(rgb, 1.0);
+}
+
+BlendState AlphaBlendRGB
+{
+	BlendEnable[0]		= TRUE;
+	SrcBlend			= SRC_ALPHA;
+	DestBlend			= INV_SRC_ALPHA;
+	BlendOp				= ADD;
+	SrcBlendAlpha		= ZERO;
+	DestBlendAlpha		= ZERO;
+	BlendOpAlpha		= ADD;
+	RenderTargetWriteMask[0] = 7;
+};
+
+BlendState AddBlendRGB
+{
+	BlendEnable[0]	=TRUE;
+	BlendEnable[1]	=TRUE;
+	SrcBlend		=ONE;
+	DestBlend		=ONE;
+	RenderTargetWriteMask[0] = 7;
+};
+
+RasterizerState LnkDontCull
+{
+	FillMode = SOLID;
+	CullMode = none;
+	FrontCounterClockwise = false;
+};
+
+
+technique text
+{
+	pass multiview
+	{
+		SetRasterizerState( RenderNoCull );
+		SetTopology( TriangleList );
+		SetDepthStencilState( TestReverseDepth, 0 );
+		SetBlendState(AlphaBlendRGB,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_6_1, VS_CanvasText_MV()));
+		SetPixelShader(CompileShader(ps_4_0, PS_CanvasText()));
+	}
+	pass singleview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetTopology(TriangleList);
+		SetDepthStencilState(TestReverseDepth, 0);
+		SetBlendState(AlphaBlendRGB, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_4_0, VS_CanvasText_SV()));
+		SetPixelShader(CompileShader(ps_4_0, PS_CanvasText()));
+	}
+}
+technique link
+{
+	pass multiview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetTopology(TriangleList);
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_6_1, VS_Link_MV()));
+		SetPixelShader(CompileShader(ps_4_0, PS_Link()));
+	}
+	pass singleview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetTopology(TriangleList);
+		SetDepthStencilState(ReverseDepth, 0);
+		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_4_0, VS_Link_SV()));
+		SetPixelShader(CompileShader(ps_4_0, PS_Link()));
+	}
+}

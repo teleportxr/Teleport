@@ -21,7 +21,7 @@ namespace teleport
 		class FontAtlas : public teleport::core::FontAtlas, public IncompleteFontAtlas
 		{
 		public:
-			FontAtlas(avs::uid u = 0) : teleport::core::FontAtlas(u), IncompleteFontAtlas(u) {}
+			FontAtlas(avs::uid u = 0, const std::string &url = "") : teleport::core::FontAtlas(u), IncompleteFontAtlas(u, url) {}
 			std::shared_ptr<clientrender::Texture> fontTexture;
 			std::string getName() const
 			{
@@ -30,6 +30,12 @@ namespace teleport
 			static const char *getTypeName()
 			{
 				return "FontAtlas";
+			}
+			/// Save the Font atlas to the local file cache.
+			virtual void Save(std::ostream &) const override;
+			virtual const char *GetFileExtension() const override
+			{
+				return "atlas";
 			}
 		};
 	}

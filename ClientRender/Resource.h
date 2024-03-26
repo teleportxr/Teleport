@@ -32,14 +32,14 @@ namespace teleport
 		class Material;
 		struct IncompleteResource
 		{
-			IncompleteResource(avs::uid id, avs::GeometryPayloadType type)
-				: id(id), type(type)
+			IncompleteResource(avs::uid id, const std::string &u,avs::GeometryPayloadType type)
+				: id(id), type(type), url(u)
 			{
 			}
 
 			const avs::uid id;
 			const avs::GeometryPayloadType type;
-
+			std::string url;
 			void IncrementMissingResources()
 			{
 				missingResourceCount++;
@@ -56,7 +56,11 @@ namespace teleport
 			{
 				missingResourceCount = 0;
 			}
-
+			virtual void Save(std::ostream &) const {}
+			virtual const char *GetFileExtension() const
+			{
+				return "";
+			}
 		private:
 			uint32_t missingResourceCount = 0;
 		};
@@ -75,16 +79,16 @@ namespace teleport
 		};
 		struct IncompleteFontAtlas : IncompleteResource
 		{
-			IncompleteFontAtlas(avs::uid id)
-				: IncompleteResource(id, avs::GeometryPayloadType::FontAtlas)
+			IncompleteFontAtlas(avs::uid id,const std::string &path)
+				: IncompleteResource(id, path,avs::GeometryPayloadType::FontAtlas)
 			{
 			}
 			avs::uid missingTextureUid = 0;
 		};
 		struct IncompleteTextCanvas : IncompleteResource
 		{
-			IncompleteTextCanvas(avs::uid id)
-				: IncompleteResource(id, avs::GeometryPayloadType::TextCanvas)
+			IncompleteTextCanvas(avs::uid id, const std::string &path)
+				: IncompleteResource(id, path,avs::GeometryPayloadType::TextCanvas)
 			{
 			}
 			avs::uid missingFontAtlasUid = 0;
@@ -93,7 +97,7 @@ namespace teleport
 		struct IncompleteNode : IncompleteResource
 		{
 			IncompleteNode(avs::uid id)
-				: IncompleteResource(id, avs::GeometryPayloadType::Node)
+				: IncompleteResource(id, "", avs::GeometryPayloadType::Node)
 			{
 			}
 
@@ -104,8 +108,8 @@ namespace teleport
 
 		struct IncompleteSkeleton : IncompleteResource
 		{
-			IncompleteSkeleton(avs::uid id, avs::GeometryPayloadType type)
-				: IncompleteResource(id, type)
+			IncompleteSkeleton(avs::uid id, const std::string &path, avs::GeometryPayloadType type)
+				: IncompleteResource(id,path, type)
 			{
 			}
 

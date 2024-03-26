@@ -9,6 +9,8 @@ configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.h ${CMAKE_CURRENT_BINA
 
 # Source
 set( src_root
+	CanvasTextRenderer.cpp
+	CanvasTextRenderer.h
 	Common.h
 	Common.cpp
 	IndexBuffer.h
@@ -38,6 +40,8 @@ set( src_root
 	InstanceRenderer.h
 	Light.cpp
 	Light.h
+	LinkRenderer.cpp
+	LinkRenderer.h
 	Material.cpp
 	Material.h
 	Mesh.cpp
@@ -97,6 +101,13 @@ set(av_parser
 	AVParser/Parser.cpp
 	AVParser/Parser.h
 )
+set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/link.sfx")
+file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
+file(GLOB global_shader_includes "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders/*.sl")
+source_group("Shaders" src FILES ${shaders} )
+source_group("Shader Includes" src FILES ${shader_includes} )
+source_group("Global Shader Includes" src FILES ${global_shader_includes} )
+
 set(flecs_files ${CMAKE_CURRENT_BINARY_DIR}/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.h
 	)
 source_group("Source Files\\Node Components" src FILES ${src_node_components})
@@ -113,7 +124,7 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_static_library(ClientRender SOURCES ${src_public} ${av_parser} ${flecs_files})  
+add_static_library(ClientRender SOURCES ${src_public} ${av_parser} ${flecs_files} ${shaders} ${shader_includes} ${global_shader_includes})  
 SetTeleportDefaults(ClientRender)
 #Include its root directory
 target_include_directories(ClientRender PRIVATE src)
@@ -160,7 +171,4 @@ elseif(ANDROID)
 			#${log-lib} )
 endif()
 
-#For MD runtime
-#add_library( ClientRender STATIC ${src_public} ) 
-
-#target_compile_features(libavstream PRIVATE cxx_std_17)
+add_multiplatform_sfx_shader_project(ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )

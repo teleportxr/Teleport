@@ -41,6 +41,11 @@ SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)
 	mat4 boneMatrices[64];
 SIMUL_CONSTANT_BUFFER_END
 
+SIMUL_CONSTANT_BUFFER(LinkConstants, 13)
+	float radius;
+	float time;
+SIMUL_CONSTANT_BUFFER_END
+
 struct PbrLight
 {
 	mat4 lightSpaceTransform;

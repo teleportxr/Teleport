@@ -306,6 +306,7 @@ void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext 
 		renderState.cameraConstants.proj = deviceContext.viewStruct.proj;
 		renderState.cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
+		renderState.cameraConstants.frameNumber=(int)renderPlatform->GetFrameNumber();
 		renderState.cameraConstants.SetHasChanged();
 	}
 	renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
@@ -428,10 +429,15 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 	{
 		RenderPass(deviceContext, *p.second.get(),p.first);
 	}
+	for (const auto &c : canvasRenders)
+	{
+		RenderTextCanvas(deviceContext, c.second.get());
+	}
 	for(const auto &l:linkRenders)
 	{
 		RenderLink(deviceContext,*l.second.get());
 	}
+	
 	if (config.debugOptions.showOverlays)
 	{
 		auto &rootNodes = geometryCache->mNodeManager.GetRootNodes();
@@ -449,9 +455,14 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 
 void InstanceRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext,const LinkRender &l)
 {
-	vec4 colour={1.f,1.f,0.f,1.f};
-	vec4 background={0,0,0,1.f};
-	renderPlatform->PrintAt3dPos(deviceContext,l.position,l.url.c_str(),colour,background);
+	ApplyModelMatrix(deviceContext, *l.model);
+	renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
+	renderState.linkRenderer.RenderLink(deviceContext, l);
+	vec4 colour={1.f,1.f,1.f,1.f};
+	float width=1.f;
+	float height=0.5f;
+	vec4 canvas = {-width / 2.0f, height / 2.0f, width, -height};
+	//renderState.canvasTextRenderer.Render(deviceContext,renderState.commonFontAtlas.get(), 64, l.url, colour, canvas, 64.f, l.fontChars);
 }
 
 void InstanceRenderer::UpdateMouse(vec3 orig, vec3 dir, float &distance, std::string &url)
@@ -483,7 +494,6 @@ void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext
 void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node_uid)
 {
 	std::lock_guard<std::mutex> passRenders_lock(passRenders_mutex);
-	TELEPORT_COUT<< "AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << "\n";
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 	if(!g)
 	{
@@ -496,6 +506,7 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 		TELEPORT_CERR << "AddNodeToInstanceRender: no node found.\n";
 		return;
 	}
+	TELEPORT_COUT << "AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << node->name.c_str() << "\n";
 	std::shared_ptr<NodeRender> nodeRender = nodeRenders[node.get()];
 	if(!nodeRender)
 		nodeRender=std::make_shared<NodeRender>();
@@ -513,16 +524,19 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 			{
 				AddNodeMeshToInstanceRender(cache_uid,node,mesh);
 			}
-		/*	if (textCanvas)
+			if (textCanvas)
 			{
-				ApplyModelMatrix(deviceContext, model);
-				RenderTextCanvas(deviceContext, textCanvas);
-			}*/
+				std::shared_ptr<CanvasRender> cr = std::make_shared<CanvasRender>();
+				cr->textCanvas = textCanvas;
+				cr->model = &(node->renderModelMatrix);
+				canvasRenders[MakeNodeHash(cache_uid,node_uid)]=cr;
+			}
 			if (node->GetURL().length() > 0)
 			{
 				std::shared_ptr<LinkRender> lr=std::make_shared<LinkRender>();
 				lr->url = node->GetURL();
 				lr->position = node->GetGlobalTransform().m_Translation;
+				lr->model = &(node->renderModelMatrix);
 				linkRenders[MakeNodeHash(cache_uid,node_uid)] = lr;
 				//nodeRender->linkRenders.insert(lr);
 			}
@@ -874,7 +888,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			}
 			node->renderModelMatrix = *((const mat4 *)(&deviceContext.viewStruct.model));
 		}
-		else if(mesh||textCanvas)
+		else if(mesh||textCanvas||node->GetURL().length()>0)
 		{
 			const mat4 &globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 			node->renderModelMatrix= mul(*((const mat4 *)(&deviceContext.viewStruct.model)), globalTransformMatrix);
@@ -935,6 +949,21 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 {
 	if(!meshRender.model)
 		return;
+#if TELEPORT_INTERNAL_CHECKS
+	static int countmax=100000;
+	static int count=0;
+	static int64_t lastframe=0;
+	if(lastframe!=renderPlatform->GetFrameNumber())
+	{
+		lastframe=renderPlatform->GetFrameNumber();
+		count=0;
+	}
+	count++;
+	if (count > countmax && renderState.selected_uid==0)
+		return;
+	if (renderState.selected_uid!=0&&meshRender.node->id != renderState.selected_uid)
+		return;
+#endif
 	ApplyModelMatrix(deviceContext, *meshRender.model);
 	const auto &meshInfo = meshRender.mesh->GetMeshCreateInfo();
 	if (meshRender.setBoneConstantBuffer)
@@ -994,15 +1023,11 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 	layout->Unapply(deviceContext);
 }
 
-void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext& deviceContext,const std::shared_ptr<TextCanvas> textCanvas)
+void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext &deviceContext, const CanvasRender *canvasRender)
 {
-	auto fontAtlas=geometryCache->mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
-	if(!fontAtlas)
-		return;
-	auto fontTexture=geometryCache->mTextureManager.Get(fontAtlas->font_texture_uid);
-	if(!fontTexture)
-		return;
-	textCanvas->Render(deviceContext,renderState.cameraConstants,renderState.stereoCameraConstants,fontTexture->GetSimulTexture());
+	ApplyModelMatrix(deviceContext, *canvasRender->model);
+	renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
+	renderState.canvasTextRenderer.Render(deviceContext, canvasRender);
 }
 
 void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &geometrySubCache, const std::shared_ptr<clientrender::Node> node, bool include_children)
@@ -1015,10 +1040,6 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext &d
 	auto renderPlatform=deviceContext.renderPlatform;
 
 	avs::uid node_select=renderState.selected_uid;
-
-	std::shared_ptr<clientrender::Texture> globalIlluminationTexture;
-	if (node->GetGlobalIlluminationTextureUid())
-		globalIlluminationTexture = geometryCache->mTextureManager.Get(node->GetGlobalIlluminationTextureUid());
 
 	{
 		const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();

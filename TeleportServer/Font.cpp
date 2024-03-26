@@ -9,11 +9,14 @@
 
 #include <TeleportCore/ErrorHandling.h>
 #include <fstream>
+#include <filesystem>
 #include "libavstream/geometry/mesh_interface.hpp"
 #include <GeometryStore.h>
 
 using namespace teleport;
 using namespace server;
+
+#pragma optimize("",off)
 
 bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_utf8, std::string generate_texture_path_utf8, std::string atlas_chars,avs::Texture &avsTexture
 	,std::vector<int> sizes)
@@ -58,7 +61,8 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
     // make a most likely large enough bitmap, adjust to font type, number of sizes and glyphs and oversampling
     int width = 1024;
     int max_height = 1024;
-    unsigned char* bitmap = new unsigned char[max_height*width];
+	uint32_t mip0_bytesize=max_height *width;
+    unsigned char* bitmap = new unsigned char[mip0_bytesize];
     // do the packing, based on the ranges specified
     stbtt_pack_context pc;
     stbtt_PackBegin(&pc, bitmap, width, max_height, 0, 1, NULL);   
@@ -114,29 +118,31 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 			fontMap.glyphs[j].yOffset2	=metric.yoff2;
         }
     }
-	avsTexture.name=ttf_path_utf8;
+	filesystem::path ttf_path(ttf_path_utf8.c_str());
+	avsTexture.name = ttf_path.filename().u8string();
 	avsTexture.width=width;
 	avsTexture.height=height;
 	avsTexture.depth=1;
-	avsTexture.bytesPerPixel=4;
+	avsTexture.bytesPerPixel=1;
 	avsTexture.arrayCount=1;
 	avsTexture.mipCount=1;
 	avsTexture.format=avs::TextureFormat::G8;
 	avsTexture.compression=avs::TextureCompression::PNG;
 	avsTexture.compressed=true;
-    stbi_write_png(generate_texture_path_utf8.c_str(), width, height, 1, bitmap, 0);
+	/*stbi_write_png((generate_texture_path_utf8+".png").c_str(), width, height, 1, bitmap, 0);
 
 	int len=0;
 	unsigned char *png = stbi_write_png_to_mem(bitmap, 0, width, height, 1, &len);
 	if (!png)
 		return false;
+	STBIW_FREE(png);*/
 
 
 	//std::ifstream ifs_png(generate_texture_path_utf8, std::ios::in | std::ios::binary);
 	//std::vector<uint8_t> contents((std::istreambuf_iterator<char>(ifs_png)), std::istreambuf_iterator<char>());
 
 
-	uint32_t imageSize=len;//height*pc.stride_in_bytes;
+	uint32_t imageSize = mip0_bytesize; 
 	uint16_t numImages=1;
 	uint32_t offset0=uint32_t(sizeof(numImages)+sizeof(imageSize));
 	avsTexture.data.resize(imageSize + offset0);
@@ -145,8 +151,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	target+=sizeof(numImages);
 	memcpy(target,&offset0,sizeof(offset0));
 	target+=sizeof(imageSize);
-	memcpy(target,png,imageSize);
-	STBIW_FREE(png);
+	memcpy(target, bitmap, mip0_bytesize);
 
     // create file
     TELEPORT_INTERNAL_COUT("height = {0}, fill rate = {1}\n", height, 100*filled/(double)(width*height)); fflush(stdout);
