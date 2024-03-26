@@ -235,7 +235,7 @@ namespace teleport
 			
 			// Render everything that uses a given pass:
 			void RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p, platform::crossplatform::EffectPass *pass);
-			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &l);
+			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext,  LinkRender &l);
 			void RenderMaterial(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MaterialRender &materialRender);
 			void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
 			void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext &deviceContext,  const CanvasRender *canvasRender);

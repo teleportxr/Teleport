@@ -70,6 +70,8 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	}
 	if (!effect)
 		return;
+	if (!fontAtlas)
+		return;
 	auto f = fontAtlas->fontMaps.find(size);
 		const auto &fontMap = f->second;
 	int max_chars = (int)text.length();

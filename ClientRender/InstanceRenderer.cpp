@@ -15,7 +15,7 @@
 using namespace teleport;
 using namespace clientrender;
 using namespace platform;
-
+#pragma optimize("",off)
 //TODO: Implement Vector, Matrix and Quaternion conversions between avs:: <-> math:: <-> CppSl.h - AJR
 template<typename T1, typename T2> T1 ConvertVec2(const T2& value) { return T1(value.x, value.y); }
 template<typename T1, typename T2> T1 ConvertVec3(const T2& value) { return T1(value.x, value.y, value.z); }
@@ -453,7 +453,7 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 	}
 }
 
-void InstanceRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext,const LinkRender &l)
+void InstanceRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext,LinkRender &l)
 {
 	ApplyModelMatrix(deviceContext, *l.model);
 	renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
@@ -462,7 +462,10 @@ void InstanceRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext
 	float width=1.f;
 	float height=0.5f;
 	vec4 canvas = {-width / 2.0f, height / 2.0f, width, -height};
-	//renderState.canvasTextRenderer.Render(deviceContext,renderState.commonFontAtlas.get(), 64, l.url, colour, canvas, 64.f, l.fontChars);
+	if (l.url.length() >l.fontChars.count)
+		l.fontChars.RestoreDeviceObjects(renderPlatform,(int) l.url.length(), false, false, nullptr, "fontChars");
+	renderState.canvasTextRenderer.Render(deviceContext,renderState.commonFontAtlas.get(), 64, l.url, colour, canvas, 64.f
+		, l.fontChars);
 }
 
 void InstanceRenderer::UpdateMouse(vec3 orig, vec3 dir, float &distance, std::string &url)
@@ -1027,6 +1030,8 @@ void InstanceRenderer::RenderTextCanvas(crossplatform::GraphicsDeviceContext &de
 {
 	ApplyModelMatrix(deviceContext, *canvasRender->model);
 	renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
+	if(!renderState.commonFontAtlas)
+		renderState.commonFontAtlas=canvasRender->textCanvas->fontAtlas;
 	renderState.canvasTextRenderer.Render(deviceContext, canvasRender);
 }
 

@@ -256,7 +256,7 @@ technique text
 		SetBlendState(AlphaBlendRGB,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
 		SetGeometryShader(NULL);
 		SetVertexShader(CompileShader(vs_6_1, VS_CanvasText_MV()));
-		SetPixelShader(CompileShader(ps_4_0, PS_CanvasText()));
+		SetPixelShader(CompileShader(ps_6_1, PS_CanvasText()));
 	}
 	pass singleview
 	{
@@ -265,8 +265,8 @@ technique text
 		SetDepthStencilState(TestReverseDepth, 0);
 		SetBlendState(AlphaBlendRGB, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
-		SetVertexShader(CompileShader(vs_4_0, VS_CanvasText_SV()));
-		SetPixelShader(CompileShader(ps_4_0, PS_CanvasText()));
+		SetVertexShader(CompileShader(vs_6_1, VS_CanvasText_SV()));
+		SetPixelShader(CompileShader(ps_6_1, PS_CanvasText()));
 	}
 }
 technique link
@@ -279,7 +279,7 @@ technique link
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(CompileShader(vs_6_1, VS_Link_MV()));
-		SetPixelShader(CompileShader(ps_4_0, PS_Link()));
+		SetPixelShader(CompileShader(ps_6_1, PS_Link()));
 	}
 	pass singleview
 	{
@@ -288,7 +288,7 @@ technique link
 		SetDepthStencilState(ReverseDepth, 0);
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
-		SetVertexShader(CompileShader(vs_4_0, VS_Link_SV()));
-		SetPixelShader(CompileShader(ps_4_0, PS_Link()));
+		SetVertexShader(CompileShader(vs_6_1, VS_Link_SV()));
+		SetPixelShader(CompileShader(ps_6_1, PS_Link()));
 	}
 }
