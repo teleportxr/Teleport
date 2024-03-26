@@ -6,6 +6,9 @@
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/Profiling.h"
+#include "TeleportServer/ClientManager.h"
+#pragma optimize("", off)
 
 using namespace teleport;
 using namespace server;
@@ -19,8 +22,8 @@ void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 	cleanedUIDs.erase(std::remove(cleanedUIDs.begin(), cleanedUIDs.end(), 0), cleanedUIDs.end());
 }
 
-GeometryStreamingService::GeometryStreamingService(const ServerSettings* settings)
-	:geometryStore(nullptr), settings(settings), clientNetworkContext(nullptr), geometryEncoder(settings,this)
+GeometryStreamingService::GeometryStreamingService( avs::uid clid)
+	: geometryStore(nullptr),  clientNetworkContext(nullptr), geometryEncoder( this, clid),clientId(clid)
 {
 }
 
@@ -48,7 +51,35 @@ void GeometryStreamingService::requestResource(avs::uid resource_uid)
 
 void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 {
+	TELEPORT_PROFILE_AUTOZONE;
+	if(unconfirmedResourceTimes.find(resource_uid)==unconfirmedResourceTimes.end())
+		return;
 	unconfirmedResourceTimes.erase(resource_uid);
+	// Is this resource a node?
+	if(auto node=geometryStore->getNode(resource_uid))
+	{
+		if (streamedNodeIDs.find(resource_uid) == streamedNodeIDs.end())
+		{
+			// this node wasn't meant to be sent. Ignore this, it CAN happen e.g. if 
+			// the client is out-of-date with the current state.
+		}
+		else if (unconfirmed_priority_counts.find(node->priority) == unconfirmed_priority_counts.end())
+		{
+			TELEPORT_INTERNAL_BREAK_ONCE("GeometryStreamingService::confirmResource Trying to decrement Node {0} priority {1} but it's not in the list.", resource_uid,node->priority);
+		}
+		else
+		{
+			unconfirmed_priority_counts[node->priority]--;
+#if TELEPORT_DEBUG_NODE_STREAMING
+			TELEPORT_COUT << "GeometryStreamingService::confirmResource Node " << resource_uid << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority] << "\n";
+#endif
+			if(unconfirmed_priority_counts[node->priority]==0)
+			{
+				unconfirmed_priority_counts.erase(node->priority);
+				TELEPORT_COUT<<"Got all nodes of priority "<<node->priority<<"\n";
+			}
+		}
+	}
 	//Confirm again; in case something just elapsed the timer, but has yet to be sent.
 	sentResources[resource_uid] = true;
 }
@@ -61,12 +92,21 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 		,std::vector<avs::uid> &fontAtlases
 		,int32_t minimumPriority) const
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	for(const auto &r:streamedGenericTextureUids)
 	{
 		genericTextureUids.insert(r);
 	}
 	if(originNodeId)
 		outNodeIDs.insert(originNodeId);
+
+	int32_t lowest_confirmed_node_priority = -100000;
+	// What is the lowest priority that has no unconfirmed nodes?
+	// This unconfirmed_priority_counts is an ordered list of how many unconfirmed nodes each priority level has.
+	// So the last value in that list gives the lowest priority we should stream.
+	// When any value reaches zero, it's removed from the list.
+	if(unconfirmed_priority_counts.size())
+		lowest_confirmed_node_priority = unconfirmed_priority_counts.rbegin()->first;
 	for (avs::uid nodeID : streamedNodeIDs)
 	{
 		avs::Node* node = geometryStore->getNode(nodeID);
@@ -74,6 +114,10 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 		{
 			continue;
 		}
+		if(node->priority<lowest_confirmed_node_priority)
+			continue;
+		if (node->priority < minimumPriority)
+			continue;
 		outNodeIDs.insert(nodeID);
 
 		switch (node->data_type)
@@ -103,6 +147,13 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 					{
 						outNodeIDs.insert(node->skeletonNodeID);
 						GetSkeletonNodeResources(node->skeletonNodeID, *skeletonnode, outMeshResources);
+						for(auto r:outMeshResources)
+						{
+							for(auto b:r.boneIDs)
+							{
+								outNodeIDs.insert(b);
+							}
+						}
 					}
 				}
 			}
@@ -181,30 +232,48 @@ void GeometryStreamingService::stopStreaming()
 
 void GeometryStreamingService::clientStartedRenderingNode(avs::uid clientID, avs::uid nodeID)
 {
+	auto client=ClientManager::instance().GetClient(clientID);
+	if(!client)
+		return;
+	client->clientMessaging->GetGeometryStreamingService().startedRenderingNode(nodeID);
+}
+
+bool GeometryStreamingService::startedRenderingNode( avs::uid nodeID)
+{
 	auto n = streamedNodeIDs.find(nodeID);
-	if (n!= streamedNodeIDs.end())
+	if (n != streamedNodeIDs.end())
 	{
-		bool result=clientStartedRenderingNode_Internal(clientID, nodeID);
-		if(result)
+		bool result = clientStartedRenderingNode_Internal(clientId, nodeID);
+		if (result)
 			clientRenderingNodes.insert(nodeID);
+		return result;
 	}
 	else
 	{
 		TELEPORT_COUT << "Client started rendering non-streamed node with ID of " << nodeID << "!\n";
+		return false;
 	}
 }
-
 void GeometryStreamingService::clientStoppedRenderingNode(avs::uid clientID, avs::uid nodeID)
+{
+	auto client = ClientManager::instance().GetClient(clientID);
+	if (!client)
+		return;
+	client->clientMessaging->GetGeometryStreamingService().stoppedRenderingNode(nodeID);
+}
+bool GeometryStreamingService::stoppedRenderingNode(avs::uid nodeID)
 {
 	auto nodePair = clientRenderingNodes.find(nodeID);
 	if (nodePair != clientRenderingNodes.end())
 	{
-		clientStoppedRenderingNode_Internal(clientID, nodeID);
+		bool res=clientStoppedRenderingNode_Internal(clientId, nodeID);
 		clientRenderingNodes.erase(nodeID);
+		return res;
 	}
 	else
 	{
 		TELEPORT_COUT << "Client stopped rendering node with ID of " << nodeID << " - didn't know it was rendering this!\n";
+		return false;
 	}
 }
 
@@ -222,13 +291,15 @@ void GeometryStreamingService::setNodeVisible(avs::uid clientID, avs::uid nodeID
 
 bool GeometryStreamingService::isClientRenderingNode(avs::uid nodeID)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	return clientRenderingNodes.find(nodeID) != clientRenderingNodes.end();
 }
 
 void GeometryStreamingService::tick(float deltaTime)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	// Might not be initialized... YET
-	if (!avsPipeline || !settings->enableGeometryStreaming)
+	if (!avsPipeline || !serverSettings.enableGeometryStreaming)
 		return;
 	// We can now be confident that all streamable geometries have been initialized, so we will do internal setup.
 	// Each frame we manage a view of which streamable geometries should or shouldn't be rendered on our client.
@@ -238,7 +309,7 @@ void GeometryStreamingService::tick(float deltaTime)
 	{
 		it->second += deltaTime;
 
-		if (it->second > settings->confirmationWaitTime)
+		if (it->second > serverSettings.confirmationWaitTime)
 		{
 		//	TELEPORT_COUT << "Resource " << it->first << " was not confirmed within " << settings->confirmationWaitTime << " seconds, and will be resent.\n";
 
@@ -265,6 +336,8 @@ void GeometryStreamingService::reset()
 	unconfirmedResourceTimes.clear();
 	streamedNodeIDs.clear();
 	clientRenderingNodes.clear();
+
+	unconfirmed_priority_counts.clear();
 }
 
 void GeometryStreamingService::setOriginNode(avs::uid nodeID)
@@ -276,13 +349,46 @@ void GeometryStreamingService::addNode(avs::uid nodeID)
 {
 	if (nodeID != 0)
 	{
-		streamedNodeIDs.insert(nodeID);
+		if(streamedNodeIDs.find(nodeID)==streamedNodeIDs.end())
+		{
+			streamedNodeIDs.insert(nodeID);
+			auto node = geometryStore->getNode(nodeID);
+			unconfirmed_priority_counts[node->priority]++;
+			#if TELEPORT_DEBUG_NODE_STREAMING
+			TELEPORT_COUT << "AddNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority]<<"\n";
+			#endif
+		}
 	}
 }
 
 void GeometryStreamingService::removeNode(avs::uid nodeID)
 {
-	streamedNodeIDs.erase(nodeID);
+	if (streamedNodeIDs.find(nodeID) != streamedNodeIDs.end())
+	{
+		streamedNodeIDs.erase(nodeID);
+		if(unconfirmedResourceTimes.find(nodeID)!=unconfirmedResourceTimes.end())
+		{
+			unconfirmedResourceTimes.erase(nodeID);
+		
+			auto node = geometryStore->getNode(nodeID);
+			if(unconfirmed_priority_counts.find(node->priority)==unconfirmed_priority_counts.end())
+			{
+				TELEPORT_INTERNAL_BREAK_ONCE( "Trying to decrement Node {0} priority {1} but it's not in the list.",nodeID,node->priority);
+			}
+			else
+			{
+				unconfirmed_priority_counts[node->priority]--;
+	#if TELEPORT_DEBUG_NODE_STREAMING
+					TELEPORT_COUT << "removeNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority] << "\n";
+	#endif
+				if (unconfirmed_priority_counts[node->priority] == 0)
+				{
+					unconfirmed_priority_counts.erase(node->priority);
+					TELEPORT_COUT << "Got all nodes of priority " << node->priority << "\n";
+				}
+			}
+		}
+	}
 }
 
 bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
@@ -297,6 +403,7 @@ void GeometryStreamingService::addGenericTexture(avs::uid id)
 
 void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources>& outMeshResources,int32_t minimumPriority) const
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (node.data_type != avs::NodeDataType::Mesh)
 	{
 		return;
@@ -353,6 +460,7 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 
 void GeometryStreamingService::GetSkeletonNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources> &outMeshNodeResources) const
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (node.data_type != avs::NodeDataType::Skeleton)
 	{
 		return;

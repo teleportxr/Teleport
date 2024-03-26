@@ -10,7 +10,7 @@
 // C RunTime Header Files
 #include <stdlib.h>
 #include <filesystem>
-//#include <Shlobj.h>
+#include <regex>
 #include <Shlobj_core.h>
 #include "Resource.h"
 #include "Platform/Core/EnvironmentVariables.h"
@@ -19,10 +19,13 @@
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/DisplaySurface.h"
 #include "Platform/Core/Timer.h"
-
+#include "Platform/Core/StringFunctions.h"
+#include "TeleportClient/URLHandlers.h"
+#include "TeleportClient/TabContext.h"
 #include "ClientRender/Renderer.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "Config.h"
+#include "ProcessHandler.h"
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 #include "TeleportClient/ClientDeviceState.h"
@@ -46,13 +49,15 @@ platform::dx11::DeviceManager deviceManager;
 #endif
 #include "UseOpenXR.h"
 #include "Platform/CrossPlatform/GpuProfiler.cpp"
-
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+#include "TeleportClient/IPSME_MsgEnv.h"
+#endif
 using namespace teleport;
 
 clientrender::Renderer *clientRenderer=nullptr;
 teleport::client::SessionClient *sessionClient=nullptr;
 UseOpenXR useOpenXR("Teleport PC Client");
-Gui gui(useOpenXR);
+clientrender::Gui gui(useOpenXR);
 platform::crossplatform::GraphicsDeviceInterface *gdi = nullptr;
 platform::crossplatform::DisplaySurfaceManagerInterface *dsmi = nullptr;
 platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
@@ -63,12 +68,14 @@ std::string teleport_path;
 std::string storage_folder;
 // Need ONE global instance of this:
 avs::Context context;
+bool receive_link = false;
+std::string cmdLine ;
 
 #define MAX_LOADSTRING 100
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
-WCHAR szWindowClass[]=L"MainWindow";            // the main window class name
+WCHAR szWindowClass[] = L"TeleportPCClientWindowClass"; // the main window class name
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -78,13 +85,39 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND,bool,bool);
 void ShutdownRenderer(HWND);
 #include "Platform/Core/FileLoader.h"
+#include <shellapi.h>
+
+void ReceiveCmdLine()
+{
+	using std::string, std::regex;
+	try
+	{
+		string re_str = R"(\"([^\"]*)\")";
+		regex re(re_str, std::regex_constants::icase);
+		std::smatch match;
+		if (std::regex_search(cmdLine, match, re))
+		{
+			cmdLine = (match.size() > 1 && match[1].matched) ? match[1].str() : "";
+		}
+	}
+	catch (...)
+	{
+	}
+
+	if (cmdLine.length() > 0)
+		receive_link = true;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	std::wstring wcmdline = lpCmdLine;
+	cmdLine = platform::core::WStringToUtf8(wcmdline);
+	if(EnsureSingleProcess(cmdLine))
+		return 0;
 	
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	fileLoader->SetRecordFilesLoaded(true);
@@ -96,9 +129,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return 0;
 	}
 	// run from pc_client directory.
-	if(!std::filesystem::exists("assets/client.ini"))
+	std::filesystem::path current_path = std::filesystem::current_path();
+	if(!std::filesystem::exists("pc_client/client_default.ini"))
 	{
-		std::filesystem::path current_path=std::filesystem::current_path();
 		wchar_t filename[700];
 		DWORD res=GetModuleFileNameW(nullptr,filename,700);
 		if(res)
@@ -106,17 +139,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			current_path=filename;
 			current_path=current_path.remove_filename();
 		}
-		while(!current_path.empty()&&!std::filesystem::exists("assets/client.ini"))
+		// Get into the pc_client directory.
+		while (!current_path.empty() && !std::filesystem::exists("pc_client/client_default.ini"))
 		{
-			auto prev_path=current_path;
-			std::string rel_pc_client="../../pc_client";
-			current_path=current_path.append(rel_pc_client).lexically_normal();
+			std::filesystem::path prev_path = current_path;
+			//std::string rel_pc_client="../../pc_client";
+			current_path=current_path.append("../").lexically_normal();
 			if(prev_path==current_path)
 				break;
 			if(std::filesystem::exists(current_path))
 				std::filesystem::current_path(current_path);
+			else
+				break;
 		}
 	}
+	current_path = current_path.append("pc_client").lexically_normal();
+	if (!std::filesystem::exists(current_path))
+		return -1;
+	std::filesystem::current_path(current_path);
 	auto &config=client::Config::GetInstance();
 	// Get a folder we can write to:
 	
@@ -131,7 +171,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		storage_folder = std::string(szPath)+"/TeleportVR";
 	}
-	
 	config.SetStorageFolder(storage_folder.c_str());
 	clientApp.Initialize();
 	gui.SetServerIPs(config.recent_server_urls);
@@ -144,28 +183,44 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		debug_buffer.setLogFile(config.log_filename.c_str());
 	}
-	errno=0;
+	errno = 0;
     // Initialize global strings
-    MyRegisterClass(hInstance);
+	MyRegisterClass(hInstance);
     // Perform application initialization:
 	HWND hWnd = InitInstance(hInstance, nCmdShow);
+	if (!hWnd)
+	{
+		return FALSE;
+	}
 	InitRenderer(hWnd, config.enable_vr, config.dev_mode);
-	if(!hWnd)
-    {
-        return FALSE;
-    }
+	receive_link=false;
+	// remove quotes etc.
+	ReceiveCmdLine();
+
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+    mosquitto_lib_init();
+#endif
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WORLDSPACE));
 	MSG msg;
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
-       // if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		{
+			// Have we entered a URL or followed a link that is not a teleport protocol link?
+			if(client::TabContext::ShouldFollowExternalURL())
+			{
+				std::string url=client::TabContext::PopExternalURL();
+				teleport::client::LaunchProtocolHandler( url);
+			}
             TranslateMessage(&msg);
             DispatchMessage(&msg);
-        }
-    }
-	
+		}
+	}
+
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+	mosquitto_lib_cleanup();
+#endif
 	if(fileLoader->GetRecordFilesLoaded())
 	{
 		auto l=fileLoader->GetFilesLoaded();
@@ -190,20 +245,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     WNDCLASSEXW wcex;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
-	fs::current_path("C:/Teleport/pc_client");
-	while(fs::current_path().has_parent_path()&&fs::current_path().filename()!="pc_client")
-	{
-		fs::current_path(fs::current_path().parent_path());
-		for (auto const& dir_entry : std::filesystem::directory_iterator{fs::current_path()}) 
-		{
-			auto str=dir_entry.path().filename();
-			if(str=="pc_client")
-			{
-				fs::current_path(dir_entry.path());
-				break;
-			}
-		}
-	}
 	teleport_path = fs::current_path().parent_path().string();
 
 	// replacing Windows' broken resource system, just load our icon from a png:
@@ -224,12 +265,35 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
     wcex.lpszMenuName   = 0;
-    wcex.lpszClassName  = L"MainWindow";
+	wcex.lpszClassName = szWindowClass;
 
 	wcex.hIconSm = CreateIconFromResourceEx(buffer.data(), (DWORD)bufferSize, 1, 0x30000, 32, 32, LR_DEFAULTCOLOR);
  
     return RegisterClassExW(&wcex);
 }
+
+int TeleportClientReportHook(int reportType, char *message, int *returnValue)
+{
+	//_CRT_WARN, _CRT_ERROR, or _CRT_ASSERT
+	TELEPORT_CERR<<message<<"\n";
+	if(reportType==_CRT_ASSERT)
+		SIMUL_BREAK("Assertion Failed!");
+	if (reportType == _CRT_ERROR)
+		SIMUL_BREAK("Error!");
+	return 0;
+}
+
+int TeleportClientReportHookW(int reportType, wchar_t *message, int *returnValue)
+{
+	//_CRT_WARN, _CRT_ERROR, or _CRT_ASSERT
+	TELEPORT_CERR << message << "\n";
+	if (reportType == _CRT_ASSERT)
+		SIMUL_BREAK("Assertion Failed!");
+	if (reportType == _CRT_ERROR)
+		SIMUL_BREAK("Error!");
+	return 0;
+}
+
 
 HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
@@ -242,10 +306,16 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
    {
       return FALSE;
    }
-   SetWindowPos(hWnd
-   , HWND_TOP// or HWND_TOPMOST
-   , 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);	
+	   SetWindowPos(hWnd, HWND_TOP// or HWND_TOPMOST
+				,0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
    ShowWindow(hWnd, nCmdShow);
+	 _CrtSetReportHook(&TeleportClientReportHook);
+   _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL ,&TeleportClientReportHook);
+	 _CrtSetReportHookW2(_CRT_RPTHOOK_INSTALL ,&TeleportClientReportHookW);
+   _set_error_mode(_OUT_TO_STDERR);
+	// std::cout<<"asserting\n";
+	// assert(false);
+	// std::cout << "asserting done\n";
    UpdateWindow(hWnd);
    return hWnd;
 }
@@ -329,12 +399,12 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("Platform/DirectX12/Sfx/");
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
 		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin/DirectX12").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/directx12");
 #endif
 #if TELEPORT_CLIENT_USE_D3D11
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/DirectX11/Sfx").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir+"/shaderbin").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/directx11");
 #endif
 #if TELEPORT_CLIENT_USE_VULKAN
 		renderPlatform->PushShaderPath("../../../../Platform/Vulkan/Sfx");
@@ -342,17 +412,34 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->PushShaderPath("Platform/Vulkan/Sfx/");
 		// Must do this before RestoreDeviceObjects so the rootsig can be found
 		renderPlatform->PushShaderBinaryPath((build_dir + "/shaderbin/Vulkan").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
 #endif
 
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
+	platform::crossplatform::ResourceGroupLayout perFrameLayout;
+	perFrameLayout.UseConstantBufferSlot(0);
+	perFrameLayout.UseConstantBufferSlot(1);
+	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
+	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;
+	fewPerFrameLayout.UseReadOnlyResourceSlot(19);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(20);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(21);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(22);
+	renderPlatform->SetResourceGroupLayout(1, fewPerFrameLayout);
+	platform::crossplatform::ResourceGroupLayout perMaterialLayout;
+	perMaterialLayout.UseConstantBufferSlot(5);
+	perMaterialLayout.UseReadOnlyResourceSlot(15);
+	perMaterialLayout.UseReadOnlyResourceSlot(16);
+	perMaterialLayout.UseReadOnlyResourceSlot(17);
+	perMaterialLayout.UseReadOnlyResourceSlot(18);
+	renderPlatform->SetResourceGroupLayout(2, perMaterialLayout);
 	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
 	// Now renderPlatform is initialized, can init OpenXR:
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	auto &config=client::Config::GetInstance();
-	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::PlatformWindow*)GetActiveWindow());
+	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)GetActiveWindow());
 	//if(config.recent_server_urls.size())
 	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
@@ -371,8 +458,9 @@ extern  void		ImGui_ImplPlatform_SetMousePos(int x, int y,int w,int h);
 #include <imgui.h>
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	//return 0;
 	bool ui_handled=false;
+	//if(message!=15)
+	//	std::cout<<"\tWndProc "<<std::hex<<message<<std::endl;
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
 	{
 		ui_handled=true;
@@ -390,6 +478,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 			}
 			break;
+		case WM_IME_NOTIFY:
+		case WM_ENABLE:
+		//case WM_NCACTIVATE:
+	//	case WM_ACTIVATE:
+			//SIMUL_BREAK("WMW");
+			break;
 		default:
 			break;
 		}
@@ -405,14 +499,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		switch (message)
 		{
+		case WM_COPYDATA:
+		// An external application has sent us a message.
+			{
+				cmdLine=GetExternalCommandLine(lParam);
+				ReceiveCmdLine();
+			}
+			break;
 		case WM_RBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, true, false, 0);
-			if(gui.GetGuiType()==teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(false, true, false, 0);
 			break;
 		case WM_RBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, true, false, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(false, true, false, 0);
 			break;
 		case WM_MOUSEMOVE:
@@ -436,13 +537,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (message)
 		{
 		case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() != teleport::GuiType::None);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() != teleport::GuiType::None);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnKeyboard((unsigned)wParam, false);
 			break;
 		default:
@@ -450,28 +551,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 	}
 
-	if (!ui_handled && gui.GetGuiType()== teleport::GuiType::None)
+	if (!ui_handled && gui.GetGuiType() == teleport::clientrender::GuiType::None)
 	{
 		switch (message)
 		{
 		case WM_LBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(true, false, false, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(true, false, false, 0);
 			break;
 		case WM_LBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(true, false, false, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(true, false, false, 0);
 			break;
 		case WM_MBUTTONDOWN:
 			clientRenderer->OnMouseButtonPressed(false, false, true, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonPressed(false, false, true, 0);
 			break;
 		case WM_MBUTTONUP:
 			clientRenderer->OnMouseButtonReleased(false, false, true, 0);
-			if (gui.GetGuiType() == teleport::GuiType::None)
+			if (gui.GetGuiType() == teleport::clientrender::GuiType::None)
 				useOpenXR.OnMouseButtonReleased(false, false, true, 0);
 			break;
 		case WM_MOUSEWHEEL:
@@ -509,9 +610,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
 			if(gdi)
 			{
-				double timestamp_ms = avs::PlatformWindows::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::PlatformWindows::getTimestamp());
-
-				clientRenderer->Update(timestamp_ms);
+				auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
+			
+				clientRenderer->Update(microsecondsUTC);
 				useOpenXR.Tick();
 #ifndef FIX_BROKEN
 				static double fTime=0.0;
@@ -536,8 +637,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					dsmi->Render(hWnd);
 				}
 #endif
+				if(receive_link)
+				{
+					gui.SetGuiType(teleport::clientrender::GuiType::Connection);
+					gui.Navigate(cmdLine);
+					receive_link = false;
+				}
 				displaySurfaceManager.EndFrame();
-				renderPlatform->EndFrame();
+				//renderPlatform->EndFrame();
 				cpuProfiler.EndFrame();
 			}
         }

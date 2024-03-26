@@ -4,7 +4,7 @@
 
 #include <ClientRender/MemoryUtil.h>
 
-class PC_MemoryUtil : public clientrender::MemoryUtil
+class PC_MemoryUtil : public teleport::clientrender::MemoryUtil
 {
 public:
 	long getAvailableMemory() const override;

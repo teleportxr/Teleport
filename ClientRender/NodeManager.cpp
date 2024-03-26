@@ -1,6 +1,8 @@
 #include "NodeManager.h"
 
+using namespace teleport;
 using namespace clientrender;
+using avs::Pose;
 
 using InvisibilityReason = VisibilityComponent::InvisibilityReason;
 
@@ -26,31 +28,70 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 	return f;
 }
 
-std::shared_ptr<Node> NodeManager::CreateNode(avs::uid id, const avs::Node &avsNode) 
+NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
+{
+	using avs::Pose;
+	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
+}
+
+std::shared_ptr<Node> NodeManager::CreateNode(std::chrono::microseconds session_time_us,avs::uid id, const avs::Node &avsNode)
 {
 	std::shared_ptr<Node> node= std::make_shared<Node>(id, avsNode.name);
 
 	//Create MeshNode even if it is missing resources
-	AddNode(node, avsNode);
+	AddNode(session_time_us,node, avsNode);
 	return node;
 }
-
-void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
+ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
 {
+	ecs_ensure(flecs_world, node_id);
+	return (ecs_entity_t)node_id;
+#if 0
+	auto f = flecs_entity_map.find(node_id);
+	ecs_entity_t e;
+	if (f == flecs_entity_map.end())
+	{
+		e = flecs_world.entity();
+	}
+	else
+	{
+		e = f->second;
+	}
+	flecs_entity_map[node_id] = e;
+	return e;
+#endif
+}
+
+void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_ptr<Node> node, const avs::Node &avsNode)
+{
+	using avs::Pose;
 	{
 		rootNodes_mutex.lock();
 		rootNodes.push_back(node);
 		rootNodes_mutex.unlock();
 		distanceSortedRootNodes.push_back(node);
 	}
-	nodeLookup_mutex.lock();
+	// Should not do this on the main thread, or any perf-critical thread.
+	while(!nodeLookup_mutex.try_lock())
+	{
+	}
 	nodeLookup[node->id] = node;
 	avs::uid node_id = node->id;
+
+	ecs_entity_t e=FlecsEntity(node_id);
+	ecs_ensure(flecs_world, node_id);
+	flecs_world.entity(e).set_doc_name(avsNode.name.c_str());
+
+//	flecs_world.entity(e)
+	//				.set<flecs_local_pos>({{0, 0, 0}})
+		//			.set<flecs_local_orientation>({{0, 0, 0,1.0f}});
+
 	nodeLookup_mutex.unlock();
 	if(avsNode.parentID)
 	{
 		parentLookup[node_id]=avsNode.parentID;
 		childLookup[avsNode.parentID].insert(node_id);
+//		flecs_world.entity(e).child_of(FlecsEntity(avsNode.parentID));
 	}
 	//Link new node to parent.
 	LinkToParentNode(node);
@@ -100,7 +141,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		auto animationIt = earlyAnimationUpdates.find(node_id);
 		if (animationIt != earlyAnimationUpdates.end())
 		{
-			animC->setAnimation(animationIt->second.animationID, animationIt->second.timestamp);
+			animC->setAnimationState(session_time_us, animationIt->second);
 			earlyAnimationUpdates.erase(animationIt);
 		}
 
@@ -110,7 +151,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		{
 			for (const EarlyAnimationControl& earlyControlUpdate : animationControlIt->second)
 			{
-				animC->setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
+				//animC->setAnimationTimeOverride(earlyControlUpdate.animationID, earlyControlUpdate.timeOverride, earlyControlUpdate.overrideMaximum);
 			}
 			earlyAnimationControlUpdates.erase(animationControlIt);
 		}
@@ -121,7 +162,7 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 		{
 			for (const EarlyAnimationSpeed& earlySpeedUpdate : animationSpeedIt->second)
 			{
-				animC->setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
+				//animC->setAnimationSpeed(earlySpeedUpdate.animationID, earlySpeedUpdate.speed);
 			}
 			earlyAnimationSpeedUpdates.erase(animationSpeedIt);
 		}
@@ -139,6 +180,9 @@ void NodeManager::AddNode(std::shared_ptr<Node> node, const avs::Node& avsNode)
 	node->SetHolderClientId(avsNode.holder_client_id);
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
+
+	if(avsNode.url.length())
+		node->AddLink(avsNode.url);
 }
 
 void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
@@ -147,8 +191,16 @@ void NodeManager::NotifyModifiedMaterials(std::shared_ptr<Node> node)
 	nodesWithModifiedMaterials.insert(n);
 }
 
+void NodeManager::NotifyModifiedRendering(std::shared_ptr<Node> node)
+{
+	std::weak_ptr<Node> n = node;
+	//nodesWithModifiedRendering.insert(n);
+	//updateNodeInRender(node);
+}
+
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 {
+	removeNodeFromRender(node->id);
 	nodeLookup_mutex.lock();
 	//Remove node from parent's child list.
 	if(!node->GetParent().expired())
@@ -161,7 +213,7 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 	else
 	{
 		rootNodes_mutex.lock();
-		auto f = find(distanceSortedRootNodes, node);
+		auto f = find(rootNodes, node);
 		rootNodes.erase(f);
 		rootNodes_mutex.unlock();
 		std::weak_ptr<clientrender::Node> wn=node;
@@ -200,6 +252,7 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(avs::uid nodeID)
 {
+	flecs_world.delete_with(flecs_world.entity(FlecsEntity(nodeID)));
 	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
 	auto nodeIt = nodeLookup.find(nodeID);
 	if (nodeIt != nodeLookup.end())
@@ -267,6 +320,8 @@ const std::vector<std::weak_ptr<Node>>& NodeManager::GetSortedTransparentNodes()
 	while(n!=nodesWithModifiedMaterials.end())
 	{
 		auto N=n->lock();
+		if(!N)
+			break;
 		const auto &m=N->GetMaterials();
 		bool transparent=false;
 		bool unknown=false;
@@ -445,50 +500,18 @@ void NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	}
 }
 
-void NodeManager::UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate)
+void NodeManager::UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate)
 {
 	std::shared_ptr<Node> node = GetNode(animationUpdate.nodeID);
 	if(node)
 	{
 		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimation(animationUpdate.animationID, animationUpdate.timestamp);
+		animC->setAnimationState(timestampUs,animationUpdate);
 	}
 	else
 	{
 		std::lock_guard<std::mutex> lock(early_mutex);
 		earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
-	}
-}
-
-void NodeManager::UpdateNodeAnimationControl(avs::uid nodeID, avs::uid animationID, float animationTimeOverride, float overrideMaximum)
-{
-	std::shared_ptr<Node> node = GetNode(nodeID);
-	if(node)
-	{
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationTimeOverride(animationID, animationTimeOverride, overrideMaximum);
-	}
-	else
-	{
-		std::lock_guard<std::mutex> lock(early_mutex);
-		std::vector<EarlyAnimationControl>& earlyControlUpdates = earlyAnimationControlUpdates[nodeID];
-		earlyControlUpdates.emplace_back(EarlyAnimationControl{animationID, animationTimeOverride, overrideMaximum});
-	}
-}
-
-void NodeManager::SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed)
-{
-	std::shared_ptr<Node> node = GetNode(nodeID);
-	if(node)
-	{
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationSpeed(animationID, speed);
-	}
-	else
-	{
-		std::lock_guard<std::mutex> lock(early_mutex);
-		std::vector<EarlyAnimationSpeed>& earlySpeedUpdates = earlyAnimationSpeedUpdates[nodeID];
-		earlySpeedUpdates.emplace_back(EarlyAnimationSpeed{animationID, speed});
 	}
 }
 
@@ -541,7 +564,7 @@ void NodeManager::UpdateExtrapolatedPositions(double serverTimeS)
 	}
 }
 
-void NodeManager::Update( float deltaTime)
+void NodeManager::Update( std::chrono::microseconds timestamp_us)
 {
 	rootNodes_mutex.lock();
 	nodeList_t expiredNodes;
@@ -549,7 +572,7 @@ void NodeManager::Update( float deltaTime)
 	{
 		auto n=node.lock();
 		if(n)
-			n->Update(deltaTime);
+			n->Update(timestamp_us);
 	}
 	rootNodes_mutex.unlock();
 	for(const avs::uid u : hiddenNodes)
@@ -558,7 +581,7 @@ void NodeManager::Update( float deltaTime)
 		if(n!=nodeLookup.end())
 		{
 			std::shared_ptr<Node> node =n->second;
-			if(node->GetTimeSinceLastVisible() >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
+			if (node->GetTimeSinceLastVisibleS(timestamp_us) >= nodeLifetime && node->visibility.getInvisibilityReason() == InvisibilityReason::OUT_OF_BOUNDS)
 			{
 				expiredNodes.push_back(node);
 			}
@@ -580,6 +603,8 @@ const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
 
 void NodeManager::Clear()
 {
+	for(auto n:nodeLookup)
+		removeNodeFromRender(n.first);
 	rootNodes_mutex.lock();
 	rootNodes.clear();
 	rootNodes_mutex.unlock();
@@ -604,6 +629,7 @@ void NodeManager::Clear()
 	earlyAnimationSpeedUpdates.clear();
 	hiddenNodes.clear();
 	nodesWithModifiedMaterials.clear();
+	nodesWithModifiedRendering.clear();
 }
 
 void NodeManager::ClearAllButExcluded(std::vector<uid>& excludeList, std::vector<uid>& outExistingNodes)
@@ -690,4 +716,10 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 	if(r!=rootNodes.end())
 		rootNodes.erase(r);
 	rootNodes_mutex.unlock();
+}
+
+void NodeManager::CompleteNode(avs::uid id)
+{
+	TELEPORT_COUT<<"CompleteNode "<<id<<"\n";
+	addNodeForRender(id);
 }

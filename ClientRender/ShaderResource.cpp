@@ -4,6 +4,7 @@
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 ShaderResource::ShaderResource(const ShaderResourceLayout& shaderResourceLayout)

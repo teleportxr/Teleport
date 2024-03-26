@@ -1,4 +1,4 @@
-//#pragma warning(4018,off)
+#pragma optimize("",off)
 #include "GeometryDecoder.h"
 
 #include <fstream>
@@ -21,6 +21,9 @@
 avs::HTTPUtil hTTPUtil;
 #include <filesystem>
 using std::filesystem::path;
+using namespace std::chrono_literals;
+using namespace teleport;
+using namespace clientrender;
 
 #define TELEPORT_GEOMETRY_DECODER_ASYNC 1
 
@@ -191,8 +194,14 @@ avs::Result GeometryDecoder::decodeFromBuffer(avs::uid server_uid,const uint8_t 
 void GeometryDecoder::decodeAsync()
 {
 	SetThisThreadName("GeometryDecoder::decodeAsync");
+	auto &config = teleport::client::Config::GetInstance();
 	while (decodeThreadActive)
 	{
+		if (!config.debugOptions.enableGeometryTranscodingThread)
+		{
+			std::this_thread::sleep_for(2000ms);
+			continue;
+		}
 #if TELEPORT_GEOMETRY_DECODER_ASYNC
 		if (!decodeData.empty())
 		{
@@ -456,7 +465,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 	subSceneCreate.subscene_uid=subSceneDG.server_or_cache_uid;
 	avs::Result result = target->CreateSubScene(server_or_cache_uid, subSceneCreate);
 	// this is a new cache, so create it:
-	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid);
+	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid,server_or_cache_uid,filename_url);
 	auto &dracoMaterials=dracoScene.GetMaterialLibrary();
 	auto &dracoTextures = dracoMaterials.GetTextureLibrary();
 	std::map<const draco::Texture*,avs::uid> texture_uids;
@@ -571,13 +580,13 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 		if(!name.length())
 		{
 			name=filename_url;
-			size_t slash=filename_url.find_last_of("/");
+			size_t slash=filename_url.rfind("/");
 			if(slash<filename_url.size())
 				name=filename_url.substr(slash+1,filename_url.size()-slash-1);
 			name+="_"s+texture_types[texture_uid];
 		}
 	/*	{
-			size_t slash=mime.find_last_of("/");
+			size_t slash=mime.rfind("/");
 			std::string ext=mime.substr(slash+1,mime.size()-slash-1);
 			std::ofstream ofs("temp/"s+name+"."s+ext,std::ios_base::binary);
 			ofs.write((const char*)img.encoded_data().data(),img.encoded_data().size());
@@ -595,9 +604,8 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 								, 0
 								,1.0f
 								,false
-								,(uint32_t)data.size()
-								,(const unsigned char*)data.data()
-								,false};
+								,std::move(data)
+								};
 		target->CreateTexture(subSceneCreate.subscene_uid,texture_uid,avsTexture);
 	}
 	for(int m=0;m<dracoScene.NumMeshGroups();m++)
@@ -649,12 +657,12 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 			
 			auto tr=aff.translation();
 			avsNode.localTransform.position=vec3(tr.coeff(0),tr.coeff(1),tr.coeff(2));
-			//if(!mt.RotationSet())
+		
 			{
 				auto rt=aff.rotation();
 				Eigen::Quaterniond q(rt);
 				avsNode.localTransform.rotation={(float)q.x(),(float)q.y(),(float)q.z(),(float)q.w()};
-				//mt.SetRotation(q);
+		
 			}
 		}
 		else
@@ -748,6 +756,12 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 			avs::uid skeleton_uid=skeleton_uids[i];
 			avs::Skeleton &avsSkeleton=subSceneDG.skeletons[skeleton_uid];
 			avsNode.skeletonNodeID = avsSkeleton.boneIDs[0];
+			// Just directly map the bones to joints:
+			avsNode.joint_indices.resize(avsSkeleton.boneIDs.size());
+			for(int j=0;j<avsNode.joint_indices.size();j++)
+			{
+				avsNode.joint_indices[j]=j;
+			}
 			auto &avsSkeletonRootNode = subSceneDG.nodes[avsNode.skeletonNodeID];
 			avsSkeletonRootNode.data_type = avs::NodeDataType::Skeleton;
 			avsSkeletonRootNode.data_uid=skeleton_uid;
@@ -938,7 +952,7 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 	// TODO: Is there any point in FIRST creating DecodedGeometry THEN translating that to MeshCreate, THEN using MeshCreate to
 	// 	   create the mesh? Why not go direct to MeshCreate??
 	// dg is complete, now send to avs::GeometryTargetBackendInterface
-	for (std::unordered_map<avs::uid, std::vector<PrimitiveArray>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
+	for (phmap::flat_hash_map<avs::uid, std::vector<PrimitiveArray>>::iterator it = dg.primitiveArrays.begin(); it != dg.primitiveArrays.end(); it++)
 	{
 		size_t index = 0;
 		avs::MeshCreate meshCreate;
@@ -1344,8 +1358,9 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	texture.compression = static_cast<avs::TextureCompression>(NextUint32);
 	texture.valueScale = NextFloat;
 
-	texture.dataSize = NextUint32;
-	texture.data = (geometryDecodeData.data.data() + geometryDecodeData.offset);
+	uint32_t dataSize = NextUint32;
+	texture.data.resize(dataSize);
+	memcpy(texture.data.data(),geometryDecodeData.data.data() + geometryDecodeData.offset,dataSize);
 
 	texture.sampler_uid = NextUint64;
 
@@ -1362,18 +1377,19 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 		geometryDecodeData.data.erase(geometryDecodeData.data.begin(), geometryDecodeData.data.begin() + skip);
 	}
 	teleport::core::Animation animation;
-	avs::uid animationID = geometryDecodeData.uid;
-	size_t nameLength = NextUint64;
+	avs::uid animationID	= geometryDecodeData.uid;
+	size_t nameLength		= NextUint64;
 	animation.name.resize(nameLength);
 	copy<char>(animation.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("animations/"+animation.name+".anim"));
 
+	animation.duration=NextFloat;
 	animation.boneKeyframes.resize(NextUint64);
 	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		teleport::core::TransformKeyframeList& transformKeyframe = animation.boneKeyframes[i];
-		transformKeyframe.boneIndex = NextUint64;
+		transformKeyframe.boneIndex = NextInt16;
 
 		decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes);
 		decodeVector4Keyframes(geometryDecodeData, transformKeyframe.rotationKeyframes);
@@ -1429,6 +1445,13 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 			node.lightDirection = NextVec3;
 			node.lightType		= NextByte;
 			break;
+		case avs::NodeDataType::Link:
+			{
+				size_t url_length=NextUint64;
+				node.url.resize(url_length);
+				copy<char>(node.url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, url_length);
+			}
+		break;
 		default:
 			break;
 	};
@@ -1454,13 +1477,7 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeDa
 	copy<char>(skeleton.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("skeletons/"+skeleton.name+".skeleton"));
-/*
-	skeleton.inverseBindMatrices.resize(NextUint64);
-	for(size_t i = 0; i < skeleton.inverseBindMatrices.size(); i++)
-	{
-		skeleton.inverseBindMatrices[i] = NextChunk(avs::Mat4x4);
-	}*/
-	skeleton.useExternalBones=NextByte;
+
 	skeleton.boneTransforms.resize(NextUint64);
 	skeleton.parentIndices.resize(skeleton.boneTransforms.size());
 	skeleton.boneNames.resize(skeleton.boneTransforms.size());
@@ -1468,11 +1485,7 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeDa
 	for (size_t i = 0; i < skeleton.boneTransforms.size(); i++)
 	{
 		skeleton.boneIDs[i]=NextUint64;
-		skeleton.parentIndices[i]=NextUint16;
-		skeleton.boneTransforms[i] = NextChunk(avs::Transform);
-		size_t nameLength = NextUint64;
-		skeleton.boneNames[i].resize(nameLength);
-		copy<char>(skeleton.boneNames[i].data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+		//skeleton.parentIndices[i]=NextUint16;
 	}
 	skeleton.skeletonTransform = NextChunk(avs::Transform);
 
@@ -1527,7 +1540,8 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecode
 
 avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
-	keyframes.resize(NextUint64);
+	uint16_t numk = NextUint16;
+	keyframes.resize(numk);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
@@ -1539,7 +1553,12 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData& geometryDe
 
 avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
-	keyframes.resize(NextUint64);
+	uint16_t numk = NextUint16;
+	if(numk==0)
+		return avs::Result::OK;
+	if (geometryDecodeData.bytesRemaining() / numk < sizeof(teleport::core::Vector3Keyframe))
+		return avs::Result::Failed;
+	keyframes.resize(numk);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;
@@ -1551,7 +1570,12 @@ avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData& geometry
 
 avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData& geometryDecodeData, std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
-	keyframes.resize(NextUint64);
+	uint16_t numk = NextUint16;
+	if (numk == 0)
+		return avs::Result::OK;
+	if (geometryDecodeData.bytesRemaining() / numk < sizeof(teleport::core::Vector4Keyframe))
+		return avs::Result::Failed;
+	keyframes.resize(numk);
 	for(size_t i = 0; i < keyframes.size(); i++)
 	{
 		keyframes[i].time = NextFloat;

@@ -4,8 +4,19 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp )
-file(GLOB header_files *.h)
+set(src_files TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp URLParser.cpp Time.cpp)
+file(GLOB header_files	AnimationInterface.h
+						CommonNetworking.h
+						ErrorHandling.h
+						FontAtlas.h
+						Input.h
+						Protocol.h
+						StringFunctions.h
+						TeleportUtility.h
+						TextCanvas.h
+						Threads.h
+						Time.h
+						URLParser.h )
 
 if(ANDROID)
 	include_directories(../client/VrApi/Include) 
@@ -27,4 +38,5 @@ target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 #Include Platform - only for CppSl.sl
 target_include_directories(TeleportCore PRIVATE ../firstparty)
+target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR}/safe/include)
  

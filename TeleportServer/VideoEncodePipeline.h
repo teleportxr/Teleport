@@ -3,7 +3,6 @@
 #include <memory>
 #include "ClientNetworkContext.h"
 #include "ServerSettings.h"
-#include "UnityPlugin/PluginGraphics.h"
 
 // Forward declare so classes that include don't have to know about them
 namespace avs

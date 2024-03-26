@@ -6,7 +6,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "ServerSettings.h"
 
-#include "AudioStreamTarget.h"
+#include "TeleportAudio/AudioStreamTarget.h"
 #include "libavstream/network/webrtc_networksource.h"
 
 using namespace teleport;
@@ -21,9 +21,8 @@ SourceNetworkPipeline::~SourceNetworkPipeline()
 	release();
 }
 
-void SourceNetworkPipeline::initialize(const ServerSettings* inSettings,const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget)
+void SourceNetworkPipeline::initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget)
 {
-	settings=inSettings;
 	pipeline.reset(new avs::Pipeline);
 	networkSource.reset(new avs::WebRtcNetworkSource);
 

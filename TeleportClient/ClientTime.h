@@ -14,10 +14,11 @@ namespace teleport
 			static ClientTime& GetInstance();
 			//! Get the time since start, in seconds, to nanosecond accuracy.
 			double GetTimeS() const;
+			long long GetTimeUs() const;
 			long long GetTimeNs() const;
 			double ClientToServerTimeS(long long server_start_unix_time_ns,double clientTimeS) const;
 		protected:
-			long long start_nanoseconds_since_epoch = 0;
+			long long start_microseconds_since_epoch = 0;
 		};
 	}
 }

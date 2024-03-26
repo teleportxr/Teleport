@@ -3,10 +3,10 @@ project(Teleport_Docs)
 find_package(Doxygen REQUIRED)
 cmake_path(CONVERT "${CMAKE_CURRENT_SOURCE_DIR}/../" TO_CMAKE_PATH_LIST TELEPORT_ROOT_DIR NORMALIZE)
 # Find all the public headers
-message("TELEPORT_ROOT_DIR ${TELEPORT_ROOT_DIR}")
+#message("TELEPORT_ROOT_DIR ${TELEPORT_ROOT_DIR}")
 set(pc_client_HEADER_DIRS ${TELEPORT_ROOT_DIR}/pc_client)
 set(AndroidClient_HEADER_DIRS ${TELEPORT_ROOT_DIR}/AndroidClient)
-message("pc_client_HEADER_DIRS ${pc_client_HEADER_DIRS}")
+#message("pc_client_HEADER_DIRS ${pc_client_HEADER_DIRS}")
 set(AV ${TELEPORT_ROOT_DIR}/libavstream/include/libavstream)
 set(libavstream_HEADER_DIRS ${AV} ${AV}/audio ${AV}/decoders ${AV}/encoders ${AV}/geometry ${AV}/network ${AV}/platforms ${AV}/stream ${AV}/surfaces)
 
@@ -16,7 +16,7 @@ set(teleportcore_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportCore)
 set(teleportrenderer_DIR	${TELEPORT_ROOT_DIR}/ClientRender)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR} ${teleportrenderer_DIR}/NodeComponents ${teleportrenderer_DIR}/AVParser)
 
-set(teleportserver_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportServer ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin)
+set(teleportserver_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportServer ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin/PluginMain.cpp ${TELEPORT_ROOT_DIR}/TeleportServer/UnityPlugin/PluginClient.cpp)
 set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${AndroidClient_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportcore_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS} ${teleportserver_HEADER_DIRS})
 #message("DOXYGEN_INPUT_DIR ${DOXYGEN_INPUT_DIR}")
 string (REPLACE ";" "\",\"" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
@@ -76,14 +76,14 @@ file(GLOB RST_FILES "*.rst" )
 file(GLOB PY_FILES "*.py" ) 
 file(GLOB THEME_FILES "teleport_sphinx_theme/*.html" ) 
 file(GLOB THEME_CSS_FILES "teleport_sphinx_theme/static/css/*.css" ) 
-message("THEME_CSS_FILES ${THEME_CSS_FILES}")
+
 file(GLOB RST_REF_FILES "reference/*.rst" )
 file(GLOB RST_PROTOCOL_FILES "protocol/*.rst" )
 file(GLOB RST_PROTOCOL_SERVICE_FILES "protocol/service/*.rst" )
 file(GLOB RST_UNITY_FILES "unity/*.rst" )
 file(GLOB RST_CLIENT_FILES "client/*.rst" )
 
-message("teleportrenderer_HEADER_DIRS ${teleportrenderer_HEADER_DIRS}")
+#message("teleportrenderer_HEADER_DIRS ${teleportrenderer_HEADER_DIRS}")
 source_group("Theme" FILES ${THEME_FILES} )
 source_group("Theme/Css" FILES ${THEME_CSS_FILES} )
 source_group("Documentation" FILES ${RST_FILES} )
@@ -91,7 +91,7 @@ source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
 source_group("Documentation/Protocol" FILES ${RST_PROTOCOL_FILES} )
 source_group("Documentation/Protocol/Service" FILES ${RST_PROTOCOL_SERVICE_FILES} )
 source_group("Documentation/Unity" FILES ${RST_UNITY_FILES} )
-source_group("Documentation/Client" FILES ${RST_CLIENT_FILES} )
+source_group("Documentation/Client" FILES ${RST_CLIENT_FILES} ) 
 set(ALL_RST_FILES ${RST_FILES} ${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES} ${RST_UNITY_FILES} ${RST_CLIENT_FILES} ${THEME_FILES} ${THEME_CSS_FILES} ${PY_FILES})
 add_custom_target(Sphinx ALL
 					COMMAND
@@ -105,7 +105,7 @@ add_custom_target(Sphinx ALL
 					${CMAKE_CURRENT_SOURCE_DIR}/index.rst 
 					${DOXYGEN_INDEX_FILE}
 					MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-					COMMENT "Generating documentation with Sphinx"
+					COMMENT "Generating documentation at ${CMAKE_CURRENT_BINARY_DIR}/sphinx/index.html"
 					SOURCES ${ALL_RST_FILES})
 set_target_properties( Sphinx PROPERTIES FOLDER Docs)
 
@@ -137,7 +137,7 @@ endif()
 # see https://validator.github.io/validator/
 set(TELEPORT_DOCS_VALIDATOR_EXECUTABLE "C:/Program Files/vnu-runtime-image/bin/vnu.bat" CACHE FILEPATH "path to vnu.bat")
 
-set(ALL_HTML_FILES ${SPHINX_BUILD})
+file(GLOB_RECURSE ALL_HTML_FILES ${SPHINX_BUILD}/*.html)
 if(TELEPORT_DOCS_VALIDATOR_EXECUTABLE)
 	add_custom_target(Validator ALL
 					COMMAND

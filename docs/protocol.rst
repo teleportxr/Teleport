@@ -41,7 +41,7 @@ The Service Connection controls the others and is the main line of information b
 
 .. toctree::
 	:glob:
-	:maxdepth: 4
+	:maxdepth: 2
 	:caption: Contents:
 	
 	protocol/signaling

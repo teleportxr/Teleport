@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.8)
 project(TeleportServer)
 
 
-# Build options
-option(USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
-
 set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
@@ -45,12 +42,14 @@ set(src
 	HTTPService.h 
 	DefaultHTTPService.cpp
 	DefaultHTTPService.h 
+	Texture.h 
+	Texture.cpp
 	UnixDebugOutput.h 
 )
 
 #Whether to build dynamic runtime libraries.
 if(TELEPORT_WINDOWS)
-	if(${USE_DYNAMIC_RUNTIME})
+	if(${TELEPORT_USE_DYNAMIC_RUNTIME})
 		set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
 		set( CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MD /Zi")
 	else()
@@ -73,7 +72,7 @@ if(TELEPORT_UNITY)
 	)
 	add_library(TeleportServer SHARED ${src} ${src_plugin})
 	set_target_properties( TeleportServer PROPERTIES 
-		VS_DEBUGGER_COMMAND ${TELEPORT_UNITY_EDITOR_DIR}/${TELEPORT_UNITY_EDITOR_EXE}
+		VS_DEBUGGER_COMMAND ${TELEPORT_UNITY_EDITOR_EXE}
 		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${TELEPORT_UNITY_PROJECT_DIR}\""
 		VS_DEBUGGER_ENVIRONMENT ""
 		)
@@ -81,10 +80,11 @@ if(TELEPORT_UNITY)
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_UNITY_EDITOR_DIR}/Data/PluginAPI)
 
 	set_target_properties(TeleportServer PROPERTIES
-		ARCHIVE_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
-		LIBRARY_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
-		RUNTIME_OUTPUT_DIRECTORY "${TELEPORT_UNITY_PLUGINS_DIR}"
+		ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_UNITY_PLUGINS_DIR}/"
+		LIBRARY_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_UNITY_PLUGINS_DIR}/"
+		RUNTIME_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_UNITY_PLUGINS_DIR}/"
 		)
+	target_compile_definitions(TeleportServer PRIVATE TELEPORT_UNITY_SERVER=1)
 else()
 	add_library(TeleportServer STATIC ${src})
 endif()
@@ -96,10 +96,6 @@ target_include_directories(TeleportServer PUBLIC .)
 target_include_directories(TeleportServer PUBLIC .. )
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
-#Include TeleportCore
-target_include_directories(TeleportServer PUBLIC ../TeleportCore)
-#Include TeleportAudio
-target_include_directories(TeleportServer PUBLIC ../TeleportAudio)
 #Include Basis Universal
 target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include draco
@@ -115,11 +111,13 @@ target_include_directories(TeleportServer PUBLIC ../firstparty)
 target_include_directories(TeleportServer PUBLIC ../firstparty/Platform/External/stb)
 #include libdatachannel
 target_include_directories(TeleportServer PUBLIC ../thirdparty/libdatachannel/include)
+# safe
+target_include_directories(TeleportServer PUBLIC ${CMAKE_BINARY_DIR}/safe/include)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
 endif()
-target_include_directories(TeleportServer PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
+target_include_directories(TeleportServer PUBLIC "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 
 #Include CUDA library location.
 if(UNIX)

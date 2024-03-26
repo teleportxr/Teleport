@@ -22,7 +22,7 @@ namespace teleport
 			SourceNetworkPipeline();
 			virtual ~SourceNetworkPipeline();
 
-			void initialize(const ServerSettings* inSettings,const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget);
+			void initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget);
 
 			virtual void release();
 			virtual bool process();
@@ -38,8 +38,6 @@ namespace teleport
 				avs::AudioDecoder* decoder;
 				avs::AudioTarget* target;
 			};
-
-			const ServerSettings* settings;
 
 			std::unique_ptr<avs::Pipeline> pipeline;
 			std::vector<std::unique_ptr<AudioPipe>> audioPipes;

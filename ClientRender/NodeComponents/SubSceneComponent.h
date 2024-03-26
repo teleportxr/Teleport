@@ -1,17 +1,20 @@
 #pragma once
 
+#include "Common.h"
+#include "NodeComponents/Component.h"
 #include <map>
 #include <memory>
 #include <vector>
-#include "NodeComponents/Component.h"
-#include "Common.h"
 
-namespace clientrender
+namespace teleport
 {
-	class SubSceneComponent:public Component
+	namespace clientrender
 	{
-	public:
-		virtual ~SubSceneComponent(){}
-		avs::uid sub_scene_uid=0;
-	};
+		class SubSceneComponent : public Component
+		{
+		public:
+			virtual ~SubSceneComponent() {}
+			avs::uid sub_scene_uid = 0;
+		};
+	}
 }

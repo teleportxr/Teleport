@@ -4,150 +4,81 @@
 #include <libavstream/src/platform.hpp>
 
 #include "ClientRender/Animation.h"
+#include "TeleportCore/CommonNetworking.h"
+#include "GeometryCache.h"
 
-#include "TeleportClient/ServerTimestamp.h"
-
-#define CYCLE_ANIMATIONS 0
-
-namespace clientrender
+using namespace teleport::clientrender;
+	
+AnimationComponent::AnimationComponent()
 {
-	AnimationComponent::AnimationComponent()
-	{}
+}
 
-	AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<clientrender::Animation>>& animations)
+AnimationComponent::AnimationComponent(const std::map<avs::uid, std::shared_ptr<Animation>> &anims)
+{
+	animations=anims;
+}
+
+void AnimationComponent::addAnimation(avs::uid id, std::shared_ptr<Animation> a)
+{
+	animations[id]=a;
+	TELEPORT_LOG("Animation {0}, {1} refs",a->name,a.use_count());
+}
+
+void AnimationComponent::removeAnimation(avs::uid id)
+{
+	animations.erase(id);
+}
+
+void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation)
+{
+	if(applyAnimation.animLayer>=32)
 	{
-		for(const auto& animationPair : animations)
+		TELEPORT_WARN("Exceeded maximum animation layer number.");
+		return;
+	}
+	if (applyAnimation.animLayer >= animationLayerStates.size())
+		animationLayerStates.resize(applyAnimation.animLayer + 1);
+	AnimationState st;
+	st.animationId		=applyAnimation.animationID;
+	st.animationTimeS	=applyAnimation.animTimeAtTimestamp;
+	st.speedUnitsPerS	=applyAnimation.speedUnitsPerSecond;
+	// The timestamp where the state applies.
+	st.timestampUs=applyAnimation.timestampUs;
+	st.loop=applyAnimation.loop;
+	animationLayerStates[applyAnimation.animLayer].AddState(timestampUs,st);
+}
+
+void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs)
+{
+	// Early-out if we have no layers.
+	if (!animationLayerStates.size())
+	{
+		return;
+	}
+	// each animation layer is applied on top of the previous one.
+	for (const auto &s : animationLayerStates)
+	{
+		InstantaneousAnimationState state = s.getState(timestampUs);
+		// This state provides:
+		//	two animationStates, previous and next.
+		//	an interpolation value between 0 and 1.0
+		const AnimationState &s1 = state.previousAnimationState;
+		const AnimationState &s2 = state.animationState;
+		auto a1 = animations.find(s1.animationId);
+		if(state.interpolation<1.f&&a1!=animations.end()&&a1->second)
 		{
-			animationStates.emplace(animationPair.first, AnimationState(animationPair.second));
+			a1->second->seekTime(boneList, s1.animationTimeS, 1.0f,s1.loop);
 		}
-
-		currentAnimationState = animationStates.begin();
-	}
-
-	void AnimationComponent::addAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)
-	{
-		animationStates[id] = animation;
-
-		//We only need to set a starting animation if we are cycling the animations.
-#if CYCLE_ANIMATIONS
-		if(currentAnimationState == animationStates.end())
+		auto a2 = animations.find(s2.animationId);
+		if (state.interpolation >0.f && a2 != animations.end() && a2->second)
 		{
-			currentAnimationState = animationStates.begin();
-		}
-#else
-		//Start playing the animation if we couldn't start it earlier, as we had yet to receive the animation.
-		if(id == latestAnimationID)
-		{
-			auto animationIterator = animationStates.find(id);
-			startAnimation(animationIterator, latestAnimationStartTimestampUnixUTCMs);
-		}
-#endif
-	}
-
-	void AnimationComponent::setAnimation(avs::uid animationID, uint64_t startTimestampUtcMs)
-	{
-#if !CYCLE_ANIMATIONS
-		auto animationItr = animationStates.find(animationID);
-		if(animationItr != animationStates.end())
-		{
-			startAnimation(animationItr, startTimestampUtcMs);
-		}
-
-		latestAnimationID = animationID;
-		latestAnimationStartTimestampUnixUTCMs = startTimestampUtcMs;
-#endif
-	}
-
-	void AnimationComponent::setAnimation(avs::uid animationID)
-	{
-		static auto tBegin = avs::Platform::getTimestamp();
-		auto ts = avs::Platform::getTimestamp();
-		double ms=avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts);
- 		setAnimation(animationID,(uint64_t)ms);
-	}
-	
-		
-	void AnimationComponent::setAnimationTimeOverride(avs::uid animationID, float timeOverride, float overrideMaximum)
-	{
-		auto animationIt = animationStates.find(animationID);
-		if(animationIt == animationStates.end())
-		{
-			return;
-		}
-		animationIt->second.setTimeOverride(timeOverride, overrideMaximum);
-	}
-
-	void AnimationComponent::setAnimationSpeed(avs::uid animationID, float speed)
-	{
-		auto animationIt = animationStates.find(animationID);
-		if(animationIt == animationStates.end())
-		{
-			return;
-		}
-		
-		animationIt->second.speed = speed;
-	}
-
-	void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTimeS)
-	{
-		//Early-out if we're not playing an animation; either from having no animations or the node isn't currently playing an animation.
-		if(currentAnimationState == animationStates.end())
-		{
-			return;
-		}
-
-		std::shared_ptr<Animation> animation = currentAnimationState->second.getAnimation();
-		currentAnimationState->second.currentAnimationTimeS+=deltaTimeS * currentAnimationState->second.speed;
-		currentAnimationState->second.currentAnimationTimeS = std::max(0.0f,std::min(currentAnimationState->second.currentAnimationTimeS, animation->getAnimationLengthSeconds()));
-		animation->seekTime(boneList, currentAnimationState->second.currentAnimationTimeS);
-
-#if CYCLE_ANIMATIONS
-		if(currentAnimationState->second.currentAnimationTimeS >= animation->getAnimationLengthSeconds())
-		{
-			//Increment animations, and loop back to the start of the list if we reach the end.
-			++currentAnimationState;
-			if(currentAnimationState == animationStates.end())
-			{
-				currentAnimationState = animationStates.begin();
-			}
-
-			currentAnimationState->second.currentAnimationTimeS = 0.0f;
-			animation->seekTime(boneList, currentAnimationState->second.currentAnimationTimeS);
-		}
-#endif
-	}
-
-	const AnimationStateMap& AnimationComponent::GetAnimationStates() const
-	{
-		return animationStates;
-	}
-	
-	AnimationState* AnimationComponent:: GetAnimationState(avs::uid u) 
-	{
- 		auto i=animationStates.find(u);
-		if(i==animationStates.end())
-			return nullptr;
-		return &i->second;
-	}
-
-	const AnimationState *AnimationComponent::GetCurrentAnimationState() const
-	{
-		if(currentAnimationState==animationStates.end())
-			return nullptr;
-		return &currentAnimationState->second;
-	}
-
-	float AnimationComponent::GetCurrentAnimationTimeSeconds() const
-	{
-		return currentAnimationState->second.currentAnimationTimeS;
-	}
-
-	void AnimationComponent::startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestampUtcMs)
-	{
- 		if(currentAnimationState != animationIterator)
-		{
- 			currentAnimationState = animationIterator;
-			currentAnimationState->second.currentAnimationTimeS = 0.f;//float(0.001 * (teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs() - startTimestampUtcMs));
+			a2->second->seekTime(boneList, s2.animationTimeS, state.interpolation, s2.loop);
 		}
 	}
 }
+
+const std::vector<AnimationLayerStateSequence> &AnimationComponent::GetAnimationLayerStates() const
+{
+	return animationLayerStates;
+}
+

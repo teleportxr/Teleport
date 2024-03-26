@@ -10,7 +10,7 @@
 #include <Platform/Vulkan/RenderPlatform.h>
 #include <TeleportCore/ErrorHandling.h>
 #include <fmt/core.h>
-#include <Platform/External/magic_enum/include/magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include <iostream>
 #include <android/hardware_buffer_jni.h>
@@ -410,7 +410,7 @@ void NdkVideoDecoder::CopyVideoTexture(platform::crossplatform::GraphicsDeviceCo
 	auto srcResource = effect->GetShaderResource("ycbcrTexture");
 	auto dstResource = effect->GetShaderResource("rgbTexture");
 	renderPlatform->SetTexture(deviceContext, srcResource, reflectedTexture.sourceTexture);
-	effect->SetUnorderedAccessView(deviceContext, dstResource, targetTexture);
+	renderPlatform->SetUnorderedAccessView(deviceContext, dstResource, targetTexture);
 	renderPlatform->ApplyPass(deviceContext, effectPass);
 	int w = (targetTexture->width + 7) / 8;
 	int l = (targetTexture->length + 7) / 8;
@@ -599,7 +599,6 @@ void NdkVideoDecoder::FreeTexture(int index)
 	}
 }
 
-#pragma clang optimize off
 int32_t NdkVideoDecoder::QueueInputBuffer(std::vector<uint8_t>& bytes, int flags, bool send)
 {
 	buffers_mutex.lock();

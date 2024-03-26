@@ -2,22 +2,24 @@ cmake_minimum_required(VERSION 3.11)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(TELEPORT_VERSION 1.0.0)
 if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
-	if(TELEPORT_BUILD_DOCS)
+	if(TELEPORT_UNITY)
+		project(Teleport_Server_Unity VERSION ${TELEPORT_VERSION})
+	elseif(TELEPORT_SERVER)
+		project(Teleport_Server VERSION ${TELEPORT_VERSION})
+	elseif(TELEPORT_CLIENT)
+		project(Teleport_Client VERSION ${TELEPORT_VERSION})
+	elseif(TELEPORT_BUILD_DOCS)
 		project(Teleport_Docs VERSION ${TELEPORT_VERSION})
 		set(VS_STARTUP_PROJECT Sphinx)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sphinx)
-	elseif(TELEPORT_UNITY)
-		project(Teleport_Server_Unity VERSION ${TELEPORT_VERSION})
-	else()
-		if(TELEPORT_SERVER)
-			project(Teleport_Server VERSION ${TELEPORT_VERSION})
-		else()
-			project(Teleport_Client VERSION ${TELEPORT_VERSION})
-		endif()
 	endif()
 else()
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
+
+# FetchContent download timestamp policy:
+cmake_policy(SET CMP0135 NEW)
+cmake_policy(SET CMP0077 NEW)
 
 set(PLATFORM_USE_FMT ON)
 set(PLATFORM_SUPPORT_D3D12 ON)
@@ -25,7 +27,7 @@ set(PLATFORM_SUPPORT_D3D11 OFF)
 set(PLATFORM_SUPPORT_OPENGL OFF)
 set(PLATFORM_BUILD_MD_LIBS OFF)
 set(TELEPORT_SOLUTION_NAME "" CACHE STRING "")
-option(TELEPORT_SERVER_SUPPORT_WEBRTC "Should the server support WebRTC connections from browsers?" OFF)
+option(TELEPORT_SERVER_SUPPORT_WEBRTC "Should the server support WebRTC connections?" ON)
 set(TELEPORT_LIBWEBRTC_BUILD_DIR "" CACHE PATH "WebRTC Build path")
 set(TELEPORT_PLATFORM_DIR "${CMAKE_SOURCE_DIR}/firstparty/Platform" )
 set(SIMUL_PLATFORM_FOLDER_PREFIX "Platform" )
@@ -34,17 +36,58 @@ set(PLATFORM_IMGUI ON)
 option(TELEPORT_UNITY "Build for Unity?" ${TELEPORT_UNITY})
 option(TELEPORT_BUILD_DOCS "Build documentation?" OFF)
 option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
+option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
+option(TELEPORT_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime? Only for server builds." OFF)
+if(TELEPORT_USE_DYNAMIC_RUNTIME)
+	set(TELEPORT_RUNTIME dynamic)
+else()
+	set(TELEPORT_RUNTIME static)
+endif()
+Include(FetchContent)
+
+# Get the "safe" header library for lockable resources
+FetchContent_Declare(
+  safe
+  GIT_REPOSITORY https://github.com/LouisCharlesC/safe.git
+  GIT_TAG        v1.1.0
+  SOURCE_DIR safe
+)
+FetchContent_MakeAvailable(safe)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.4.0 # or a later release
+)
+
+FetchContent_MakeAvailable(Catch2)
+
+if(TELEPORT_TRACY_PROFILING)
+	FetchContent_Declare (
+		tracy
+		GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+		GIT_TAG master
+		GIT_SHALLOW TRUE
+		GIT_PROGRESS TRUE
+	)
+	FetchContent_MakeAvailable(tracy)
+endif()
 if(TELEPORT_UNITY)
 	set(TELEPORT_SERVER true)
-	set(TELEPORT_CLIENT false)
 else()
 	option(TELEPORT_SERVER "Build for server? If true, client will not be built." ${TELEPORT_SERVER})
 endif()
-if(TELEPORT_SERVER OR TELEPORT_BUILD_DOCS)
+if(TELEPORT_SERVER)
 	set(TELEPORT_CLIENT OFF)
 else()
-	set(TELEPORT_CLIENT ON)
-	option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" ON)
+	if(TELEPORT_BUILD_DOCS)
+		option(TELEPORT_CLIENT "Build for client?" OFF)
+	else()
+		option(TELEPORT_CLIENT "Build for client?" ON)
+	endif()
+endif()
+if(TELEPORT_CLIENT)
+	option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
 	option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	if( ${TELEPORT_CLIENT_USE_D3D12})
 		set(TELEPORT_CLIENT_USE_D3D11 OFF)
@@ -93,24 +136,11 @@ if(TELEPORT_UNITY)
 	get_filename_component(PROJECT_DIR ${CMAKE_BINARY_DIR} DIRECTORY)
 	set(TELEPORT_UNITY_PLUGINS_DIR "${PROJECT_DIR}/Assets/Teleport/Plugins/x86_64" CACHE PATH "Location to build TeleportServer.dll for use by Unity")
 	set(TELEPORT_UNITY_PROJECT_DIR "${PROJECT_DIR}" CACHE PATH "")
-	set(TELEPORT_UNITY_EDITOR_DIR "C:/Program Files/Unity/Editor" CACHE PATH "")
-	set(TELEPORT_UNITY_EDITOR_EXE "Unity.exe")
-	find_program(TELEPORT_UNITY_EDITOR_EXE Unity.exe PATHS ${TELEPORT_UNITY_EDITOR_DIR})
-endif()
-set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "")
-
-#Override srt encryption to be off.
-set(ENABLE_ENCRYPTION OFF CACHE BOOL "Enable encryption in SRT")
-
-#Hide Basis Universal STATIC option, and set to opposite of USE_DYNAMIC_RUNTIME.
-if(LIBAV_USE_DYNAMIC_RUNTIME)
-	set(STATIC OFF CACHE INTERNAL "Static linking for Basis Universal" FORCE)
-else()
-	set(STATIC ON CACHE INTERNAL "Static linking for Basis Universal" FORCE)
+	set(TELEPORT_UNITY_EDITOR_EXE "${TELEPORT_UNITY_EDITOR_DIR}/Unity.exe" CACHE PATH "Unity Editor or game to run when debugging")
 endif()
 
 set(CONFIG_NAME $<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
-#message(STATUS "CONFIG_NAME ${CONFIG_NAME}")
+
 
 #defaults for srt:
 if(TELEPORT_WINDOWS)
@@ -126,10 +156,13 @@ option(ENABLE_SHARED "" OFF)
 option(ENABLE_STATIC "" ON)
 
 if(TELEPORT_WINDOWS)
-	set(CMAKE_CXX_FLAGS_RELEASE "/Od /Ob0 /Zi /DNDEBUG /DNOMINMAX /MT")
-	set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1 /DNOMINMAX /MTd")
-	set(CMAKE_C_FLAGS_RELEASE "/MT  /O2 /Ob2 /DNDEBUG /DNOMINMAX")
-	set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
+	if(TELEPORT_USE_DYNAMIC_RUNTIME)
+	else()
+		set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /Zi /DNDEBUG /DNOMINMAX /MT")
+		set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1 /DNOMINMAX /MTd")
+		set(CMAKE_C_FLAGS_RELEASE "/MT  /O2 /Ob2 /DNDEBUG /DNOMINMAX")
+		set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
+	endif()
 	#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
 endif()
 
@@ -148,8 +181,12 @@ if(TELEPORT_WINDOWS)
 	set(LIB_EAY_RELEASE ${OPENSSL_LIBRARIES}/libcrypto.lib CACHE STRING "" )
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
-		add_subdirectory(thirdparty/srt/submodules/pthread-win32)
-	endif()
+	add_subdirectory(thirdparty/srt/submodules/pthread-win32)
+
+	option(TELEPORT_CLIENT_SUPPORT_IPSME "Should IPSME be included?" OFF)
+	set(TELEPORT_CLIENT_MOSQUITTO_LIB_DIR "E:/Code/Teleport/IPSME/mosquitto-2.0.18/build/lib" CACHE PATH "Mosquitto install path for IPSME support")
+	set(TELEPORT_CLIENT_MOSQUITTO_INCLUDE_DIR "E:/Code/Teleport/IPSME/mosquitto-2.0.18/include" CACHE PATH "Mosquitto install path for IPSME support")
+endif()
 
 # This must go before the openssl settings, or it won't generate:
 # Settings for libdatachannel:
@@ -178,8 +215,6 @@ option(NO_TESTS "" ON)
 set_target_properties( usrsctp PROPERTIES FOLDER thirdparty/datachannel)
 
 if(TELEPORT_UNITY)
-	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${TELEPORT_UNITY_PLUGINS_DIR} )
-	message("Outputting to ${TELEPORT_UNITY_PLUGINS_DIR}")
 else()
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
 endif()
@@ -220,31 +255,15 @@ function(SetTeleportDefaults targname)
 	set_target_properties( ${targname} PROPERTIES PREFIX "" )
 	set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR ON)
 	add_definitions(-DUNICODE -D_UNICODE)
+	if(TELEPORT_TRACY_PROFILING)
+		target_include_directories(${targname} PUBLIC ${CMAKE_BINARY_DIR}/_deps/tracy-src/public)
+		target_compile_definitions(${targname} PRIVATE TRACY_ENABLE=1 )
+		target_link_libraries(${targname} TracyClient )
+	endif()
 	if(MSVC)
 	# Treat angle-brackets as representing external headers. Minimal warnings for external headers.
 		target_compile_options(${targname} PRIVATE /W3 /wd4011 /wd4514 /external:anglebrackets /external:W0)
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=__stdcall)
-	# attempting to get WebRTC not to crash:
-	#target_compile_definitions(${targname} PRIVATE   
-	#					  _WEBSOCKETPP_CPP11_INTERNAL_
-    #                        #USE_AURA=1
-	#						_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
-	#						_CRT_SECURE_NO_DEPRECATE
-    #                        _SCL_SECURE_NO_DEPRECATE
-	#						_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-	#						#_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
-    #                        #PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
-    #                        #WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
-    #                        #NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
-    #                        #NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
-	#						WEBRTC_ENABLE_PROTOBUF=0
-    #                        WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
-    #                        WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
-    #                        WEBRTC_WIN
-	#						ABSL_ALLOCATOR_NOTHROW=1
-	#						ABSL_USES_STD_OPTIONAL=0
-	#						HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
-	#)
 	else()
 	#TODO: -Wno-deprecated-copy should be removed when possible.
 		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
@@ -264,14 +283,14 @@ endfunction()
 
 function(add_teleport_static_library targname)
   add_library(${ARGV})
-  set_target_runtime(${targname} static)
+  set_target_runtime(${targname} ${TELEPORT_RUNTIME})
   SetTeleportDefaults( ${targname} )
 endfunction()
 
 function(add_teleport_static_executable targname)
 	add_executable(${ARGV})
 	#message( STATUS set_target_runtime ${targname})
-	set_target_runtime(${targname} static)
+	set_target_runtime(${targname} ${TELEPORT_RUNTIME})
 	SetTeleportDefaults( ${targname} )
 endfunction()
 
@@ -282,7 +301,7 @@ add_subdirectory(TeleportCore)
 if(TELEPORT_SERVER)
 	# Server doesn't include Platform, so load fmt separately.
 	add_subdirectory(firstparty/Platform/External/fmt)
-	set(LIBAV_USE_DYNAMIC_RUNTIME OFF CACHE BOOL "" FORCE)
+	set(LIBAV_USE_DYNAMIC_RUNTIME ${TELEPORT_USE_DYNAMIC_RUNTIME} CACHE BOOL "" FORCE)
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "" FORCE)
 	add_subdirectory(thirdparty/cpp-httplib)
@@ -311,8 +330,8 @@ if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 	#message("2 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
 	add_subdirectory(TeleportClient)
 	#message("3 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
-		add_subdirectory(client/Shaders/Vulkan)
 	set(LIBAV_USE_DYNAMIC_RUNTIME OFF CACHE BOOL "")
+	set(TELEPORT_USE_DYNAMIC_RUNTIME OFF CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS OFF CACHE BOOL "")
 	set(SA_BUILD_SHARED_LIB OFF CACHE BOOL "")
 endif()
@@ -356,6 +375,8 @@ add_subdirectory(thirdparty/draco)
 		#message(${targ})
 	endforeach()
 
+
+if(LIBAV_USE_SRT)
 	add_subdirectory(thirdparty/srt)
 	if(TELEPORT_UNIX)
 		target_compile_options(srt_virtual PRIVATE -fPIC)
@@ -367,10 +388,12 @@ add_subdirectory(thirdparty/draco)
 	endif()
 	set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
 
+endif()
 
 if(TELEPORT_BUILD_DOCS)
 	add_subdirectory ("docs")
 endif()
+add_subdirectory(test)
 
 set(KTX_FEATURE_GL_UPLOAD Off)
 set(KTX_FEATURE_STATIC_LIBRARY On)

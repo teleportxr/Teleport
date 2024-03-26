@@ -23,9 +23,6 @@ Classes
 
 .. doxygenclass:: teleport::client::OpenXR
 	:members:
-
-.. doxygenclass:: teleport::client::ServerTimestamp
-	:members:
 	
 .. doxygenclass:: teleport::client::SessionClient
 	:members:

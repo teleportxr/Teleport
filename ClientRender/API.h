@@ -4,26 +4,29 @@
 #include "Common.h"
 
 //Graphics API
-namespace clientrender
+namespace teleport
 {
-	class API
+	namespace clientrender
 	{
-	public:
-		enum class APIType : uint32_t
+		class API
 		{
-			UNKNOWN,
-			D3D11,
-			D3D12,
-			OPENGL,
-			OPENGLES,
-			VULKAN
+		public:
+			enum class APIType : uint32_t
+			{
+				UNKNOWN,
+				D3D11,
+				D3D12,
+				OPENGL,
+				OPENGLES,
+				VULKAN
+			};
+
+		private:
+			static APIType s_API;
+
+		public:
+			static inline void SetAPI(APIType api) { s_API = api; }
+			static inline const APIType& GetAPI() { return s_API; }
 		};
-
-	private:
-		static APIType s_API;
-
-	public:
-		static inline void SetAPI(APIType api) { s_API = api; }
-		static inline const APIType& GetAPI() { return s_API; }
-	};
+	}
 }

@@ -81,7 +81,6 @@ namespace avs
 		virtual void kill() =0;
 		virtual NetworkSourceCounters getCounterValues() const=0;
 		virtual void setDebugStream(uint32_t) = 0;
-		virtual void setDoChecksums(bool) = 0;
 		virtual void setDebugNetworkPackets(bool s) = 0;
 		virtual size_t getSystemBufferSize() const =0;
 		virtual void receiveStreamingControlMessage(const std::string &) {}

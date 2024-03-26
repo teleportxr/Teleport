@@ -12,7 +12,7 @@
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define AVSLOG(Severity) std::cerr<<__FILENAME__<<"("<<__LINE__<<"): "<<#Severity<<": "
 #define AVSLOGONCE(Severity) static bool done=false;bool do_now=!done;avs::Logger(((done=true)&&do_now)?avs::LogSeverity::Severity:avs::LogSeverity::Never)
-
+#define AVSLOG_NOSPAM(Severity) static uint16_t ctr=1;ctr--;bool do_now=(ctr==0);avs::Logger(do_now?avs::LogSeverity::Severity:avs::LogSeverity::Never)
 namespace avs
 {
 

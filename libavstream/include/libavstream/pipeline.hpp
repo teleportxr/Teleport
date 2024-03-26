@@ -7,6 +7,8 @@
 #include <../src/platform.hpp>
 #include <initializer_list>
 #include <fstream>
+#include <thread>
+
 
 namespace avs
 {
@@ -35,9 +37,22 @@ class AVSTREAM_API Pipeline final
 	void writeTimingsHeader();
 	void writeTimings(uint32_t timestamp, const std::vector<double>& timings);
 
+	bool m_blocked = false;
+	std::thread pipelineThread;
+	std::atomic<bool> pipelineThreadActive=false;
+	void processAsyncFn();
 public:
 	Pipeline();
 	~Pipeline();
+
+	void SetPipelineBlocked(bool b)
+	{
+		m_blocked = b;
+	}
+	bool IsPipelineBlocked() const
+	{
+		return m_blocked;
+	}
 
 	uint64_t GetStartTimestamp() const;
 	uint64_t GetTimestamp() const;
@@ -87,6 +102,9 @@ public:
 	 */
 	Result process();
 	
+	//! @brief Process continuously on a thread until stopped.
+	void processAsync();
+
 	/*!
 	 * Deconfigure all nodes in the pipeline.
 	 */

@@ -7,6 +7,7 @@
 
 #include "libavstream/common.hpp"
 
+#include "TeleportCore/Profiling.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
 #include "TeleportServer/ClientData.h"
@@ -23,72 +24,16 @@
 #include "PluginClient.h"
 #include "PluginMain.h"
 #include "TeleportCore/ErrorHandling.h"
-#include "CustomAudioStreamTarget.h"
-
-namespace teleport
-{
-	namespace server
-	{
-		std::mutex audioMutex;
-		std::mutex videoMutex;
-
-		ServerSettings serverSettings; //Engine-side settings are copied into this, so inner-classes can reference this rather than managed code instance.
-
-		std::unique_ptr<DefaultHTTPService> httpService = std::make_unique<DefaultHTTPService>();
-		SetHeadPoseFn setHeadPose;
-		SetControllerPoseFn setControllerPose;
-		ProcessNewInputStateFn processNewInputState;
-		ProcessNewInputEventsFn processNewInputEvents;
-		DisconnectFn onDisconnect;
-		ProcessAudioInputFn processAudioInput;
-		GetUnixTimestampFn getUnixTimestampNs;
-		ReportHandshakeFn reportHandshake;
-		uint32_t connectionTimeout = 60000;
-
-		ClientManager clientManager;
-	}
-}
+#include "TeleportAudio/CustomAudioStreamTarget.h"
+#pragma optimize("", off)
 
 using namespace teleport;
 using namespace server;
 
-TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
-{
-	// Early-out if a client with this ID doesn't exist.
-	auto client = clientManager.GetClient(clientID);
-	if(!client)
-	{
-		TELEPORT_CERR << "Failed to stop session to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	// Shut-down connections to the client.
-	if(client->GetConnectionState()!=UNCONNECTED)
-	{
-		// Will add to lost clients and call shutdown command
-		Client_StopStreaming(clientID);
-	}
-
-	clientManager.removeClient(clientID);
-
-	auto iter = lostClients.begin();
-	while(iter != lostClients.end())
-	{
-		if(*iter == clientID)
-		{
-			// Continue checking rest of container just in case client ID was added more than once
-			iter = lostClients.erase(iter);
-		}
-		else
-		{
-			++iter;
-		}
-	}
-}
 
 TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int numControls, const char** controlPaths,const InputDefinitionInterop *inputDefinitions)
 {
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to set Input definitions to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -129,19 +74,18 @@ TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID,const ClientSett
 {
 	size_t sz=sizeof(ClientSettings);
 	TELEPORT_INTERNAL_COUT("sizeof ClientSettings is {0}", sz);
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to set clientSettings to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	client->clientSettings = clientSettings;
-	client->validClientSettings = true;
+	ClientManager::instance().SetClientSettings(clientID,clientSettings);
 }
 
-TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const avs::ClientDynamicLighting &clientDynamicLighting)
+TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const teleport::core::ClientDynamicLighting &clientDynamicLighting)
 {
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to set clientDynamicLighting to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -152,7 +96,7 @@ TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const av
 
 TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size_t num,const avs::uid * textureIDs)
 {
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Client_SetGlobalIlluminationTexture: No client exists with ID " << clientID << "!\n";
@@ -161,24 +105,34 @@ TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size
 	client->setGlobalIlluminationTextures(num,textureIDs);
 }
 
-TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
+TELEPORT_EXPORT void Client_StopSession(avs::uid clientID)
 {
-	auto client = clientManager.GetClient(clientID);
-	if(!client)
+	// Early-out if a client with this ID doesn't exist.
+	auto client = ClientManager::instance().GetClient(clientID);
+	if (!client)
 	{
-		TELEPORT_CERR << "Failed to stop streaming to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		TELEPORT_CERR << "Failed to stop session to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	client->clientMessaging->stopSession();
-	client->SetConnectionState(UNCONNECTED);
 
-	//Delay deletion of clients.
-	lostClients.push_back(clientID);
+	// Shut-down connections to the client.
+	if (client->GetConnectionState() != UNCONNECTED)
+	{
+		// Will add to lost clients and call shutdown command
+		ClientManager::instance().stopClient(clientID);
+	}
+
+	ClientManager::instance().removeLostClient(clientID);
+}
+TELEPORT_EXPORT void Client_StopStreaming(avs::uid clientID)
+{
+	ClientManager::instance().stopClient(clientID);
 }
 
 TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,avs::uid originNode)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to set client origin of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -191,7 +145,8 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,avs::uid originNode)
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		//TELEPORT_CERR << "Failed to check Client " << clientID << " is connected! No client exists with ID " << clientID << "!\n";
@@ -202,7 +157,8 @@ TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
 
 TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to check Client " << clientID << " has origin! No client exists with ID " << clientID << "!\n";
@@ -214,7 +170,8 @@ TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID)
 //! Add the specified texture to be sent to the client.
 TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textureID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to start streaming Texture " << textureID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -226,7 +183,8 @@ TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textur
 //! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
 TELEPORT_EXPORT size_t Client_AddNode(avs::uid clientID, avs::uid nodeID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to start streaming Node_" << nodeID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -239,7 +197,8 @@ TELEPORT_EXPORT size_t Client_AddNode(avs::uid clientID, avs::uid nodeID)
 
 TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to stop streaming Node_" << nodeID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -251,7 +210,8 @@ TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
 
 TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid nodeID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to check if Node_" << nodeID << "exists! No client exists with ID " << clientID << "!\n";
@@ -263,7 +223,8 @@ TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid nodeID
 
 TELEPORT_EXPORT bool Client_IsClientRenderingNodeID(avs::uid clientID, avs::uid nodeID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to check if Client " << clientID << " is rendering Node_" << nodeID << "! No client exists with ID " << clientID << "!\n";
@@ -275,7 +236,8 @@ TELEPORT_EXPORT bool Client_IsClientRenderingNodeID(avs::uid clientID, avs::uid 
 
 bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to check if Client " << clientID << " has Resource_" << resourceID << "! No client exists with ID " << clientID << "!\n";
@@ -285,34 +247,39 @@ bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 }
 ///GeometryStreamingService END
 
-///ClientMessaging START
+#ifndef CLIENTMESSAGING 
+/// Mark the node *nodeID* as streamed to client *clientID*. Wraps teleport::server::ClientMessaging::streamNode().
 TELEPORT_EXPORT void Client_NodeEnteredBounds(avs::uid clientID, avs::uid nodeID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to mark node as entering bounds for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
 
-	client->clientMessaging->nodeEnteredBounds(nodeID);
+	client->clientMessaging->streamNode(nodeID);
 }
 
+/// Mark the node *nodeID* as not streamed to client *clientID*.
 TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to mark node as leaving bounds for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
 
-	client->clientMessaging->nodeLeftBounds(nodeID);
+	client->clientMessaging->unstreamNode(nodeID);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core::MovementUpdate* updates, int numUpdates)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to update node movement for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -321,6 +288,8 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core
 
 	std::vector<teleport::core::MovementUpdate> updateList(numUpdates);
 	auto axesStandard = client->clientMessaging->getClientNetworkContext()->axesStandard;
+	if(axesStandard==avs::AxesStandard::NotInitialized)
+		return;
 	for(int i = 0; i < numUpdates; i++)
 	{
 		updateList[i] = updates[i];
@@ -337,7 +306,8 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core
 
 TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::core::NodeUpdateEnabledState* updates, int numUpdates)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to update enabled state for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -350,7 +320,8 @@ TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::
 
 TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, teleport::core::ApplyAnimation update)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to update node animation for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -363,7 +334,8 @@ TELEPORT_EXPORT void Client_UpdateNodeAnimation(avs::uid clientID, teleport::cor
 
 TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRenderState update)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to update node animation control for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -374,7 +346,8 @@ TELEPORT_EXPORT void Client_UpdateNodeRenderState(avs::uid clientID, avs::NodeRe
 
 TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid nodeID, avs::uid animationID, float speed)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to set node animation speed for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -385,7 +358,8 @@ TELEPORT_EXPORT void Client_SetNodeAnimationSpeed(avs::uid clientID, avs::uid no
 
 TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeID, bool isHighlighted)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to set node highlighting for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -397,7 +371,8 @@ TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeI
 
 TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID,avs::Pose relPose )
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
@@ -410,7 +385,8 @@ TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs
 
 TELEPORT_EXPORT void Client_SetNodePosePath(avs::uid clientID, avs::uid nodeID, const char* regexPath)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "No client exists with ID " << clientID << "!\n";
@@ -421,18 +397,20 @@ TELEPORT_EXPORT void Client_SetNodePosePath(avs::uid clientID, avs::uid nodeID, 
 
 TELEPORT_EXPORT bool Client_HasHost(avs::uid clientID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to check if Client " << clientID << " has host! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return !clientManager.hasHost() && clientManager.hasClient(clientID);
+	return !ClientManager::instance().hasHost() && ClientManager::instance().hasClient(clientID);
 }
 
 TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
 		TELEPORT_CERR << "Failed to check if Client " << clientID << " has peer! No client exists with ID " << clientID << "!\n";
@@ -441,12 +419,31 @@ TELEPORT_EXPORT bool Client_HasPeer(avs::uid clientID)
 	return true;
 }
 
+TELEPORT_EXPORT unsigned int Client_GetSignalingPath(avs::uid clientID, unsigned int bufferLength, char *lpBuffer)
+{
+	TELEPORT_PROFILE_AUTOZONE;
+	auto c = ClientManager::instance().signalingService.getSignalingClient(clientID);
+	if(c)
+	{
+		size_t final_len = std::min(static_cast<size_t>(bufferLength), c->path.length());
+		if (final_len == c->path.length())
+		{
+			memcpy(reinterpret_cast<void *>(lpBuffer), c->path.c_str(), final_len);
+			lpBuffer[final_len] = 0;
+		}
+		return static_cast<unsigned int>(c->path.length());
+	}
+	if(lpBuffer)
+		lpBuffer[0] = 0;
+	return 0;
+}
 
 TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int bufferLength,  char* lpBuffer)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	static std::string str;
 
-	auto client = clientManager.GetClient(clientID);
+	auto client = ClientManager::instance().GetClient(clientID);
 	if(client)
 	{
 		str = client->clientMessaging->getClientIP();
@@ -468,7 +465,8 @@ TELEPORT_EXPORT unsigned int Client_GetClientIP(avs::uid clientID, unsigned int 
 
 TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::NetworkSinkCounters& counters)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	static bool failed=false;
 	if (!client)
 	{
@@ -488,7 +486,8 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 }
 TELEPORT_EXPORT bool Client_GetClientDisplayInfo(avs::uid clientID, avs::DisplayInfo& displayInfo)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	static bool failed = false;
 	if (!client)
 	{
@@ -509,7 +508,8 @@ TELEPORT_EXPORT bool Client_GetClientDisplayInfo(avs::uid clientID, avs::Display
 
 TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::EncoderStats& stats)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
 		TELEPORT_CERR << "Failed to retrieve video encoder stats of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
@@ -526,20 +526,22 @@ TELEPORT_EXPORT bool Client_GetClientVideoEncoderStats(avs::uid clientID, avs::E
 
 	return true;
 }
-///ClientMessaging END
+#endif //ClientMessaging END
 
 void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dataSize)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	processAudioInput(clientID, data, dataSize);
 }
 
 
 TELEPORT_EXPORT bool Client_GetNetworkState(avs::uid clientID,core::ClientNetworkState &st)
 {
-	auto client = clientManager.GetClient(clientID);
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
-		auto c= clientManager.signalingService.getSignalingClient(clientID);
+		auto c= ClientManager::instance().signalingService.getSignalingClient(clientID);
 		if (!c)
 		{
 			TELEPORT_CERR << "Failed to retrieve state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";

@@ -48,6 +48,8 @@ struct InteropNode
 
 	int32_t priority;
 
+	const char *url;
+
 	operator avs::Node() const
 	{
 		return
@@ -78,7 +80,8 @@ struct InteropNode
 			lightRadius,
 			lightDirection,
 			lightType,
-			lightRange
+			lightRange,
+			url?url:""
 		};
 	}
 };
@@ -87,8 +90,6 @@ struct InteropSkeleton
 {
 	char* name;
 	char* path;
-
-	bool useExternalNodes;
 
 	size_t numBones;
 	avs::uid* boneIDs;
@@ -100,7 +101,6 @@ struct InteropSkeleton
 		return
 		{
 			name,
-			useExternalNodes,
 		//	{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
 			{boneIDs, boneIDs + numBones},
 			rootTransform,
@@ -268,15 +268,14 @@ struct InteropTexture
 			sampler_uid,
 			valueScale,
 			cubemap,
-			dataSize,
-			data
+			std::vector<uint8_t>(data, data+dataSize)
 		};
 	}
 };
 
 struct InteropTransformKeyframe
 {
-	size_t boneIndex=0;
+	int16_t boneIndex=0;
 
 	int numPositions=0;
 	teleport::core::Vector3Keyframe* positionKeyframes=nullptr;
@@ -295,22 +294,30 @@ struct InteropTransformKeyframe
 	}
 };
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 struct InteropTransformAnimation
 {
-	const char *name;
-	const char * path;
-	int64_t boneCount;
-	InteropTransformKeyframe* boneKeyframes=nullptr;
+	const char *name;	// 8
+	const char *path;	// 8
+	int64_t boneCount;	// 8
+	InteropTransformKeyframe *boneKeyframes = nullptr; // 8
+	float duration;									   // 4
 
 	operator teleport::core::Animation() const
 	{
 		return
 		{
 			name,
+			duration,
 			{boneKeyframes, boneKeyframes + boneCount}
 		};
 	}
 };
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 struct InteropTextCanvas
 {

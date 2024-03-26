@@ -130,8 +130,8 @@ bool UseOpenXR::StartSession()
 	// A session represents this application's desire to display things! This is where we hook up our graphics API.
 	// This does not start the session, for that, you'll need a call to xrBeginSession, which we do in openxr_poll_events
 	XrGraphicsBindingVulkanKHR binding = {XR_TYPE_GRAPHICS_BINDING_D3D12_KHR};
-	binding.device = renderPlatform->AsVulkanDevice()->operator VkDevice();
-	binding.instance = renderPlatform->AsVulkanInstance()->operator VkInstance();
+	binding.device = ((vulkan::RenderPlatform *)renderPlatform)->AsVulkanDevice()->operator VkDevice();
+	binding.instance = ((vulkan::RenderPlatform *)renderPlatform)->AsVulkanInstance()->operator VkInstance();
 	PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR;
 	xrGetInstanceProcAddr(xr_instance, "xrGetVulkanGraphicsDeviceKHR", (PFN_xrVoidFunction *)&xrGetVulkanGraphicsDeviceKHR);
 	VkPhysicalDevice vkPhysicalDevice;

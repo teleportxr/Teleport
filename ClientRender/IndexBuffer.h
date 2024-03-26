@@ -11,7 +11,9 @@ namespace platform
 	}
 }
 
-namespace clientrender
+namespace teleport
+{
+	namespace clientrender
 {
 	/// Wrapper for an IndexBuffer
 	class IndexBuffer :public APIObject
@@ -25,6 +27,14 @@ namespace clientrender
 			std::shared_ptr<std::vector<uint8_t>> data;
 		};
 
+		std::string getName() const
+		{
+			return "IndexBuffer";
+		}
+		static const char *getTypeName()
+		{
+			return "IndexBuffer";
+		}
 	protected:
 		IndexBufferCreateInfo m_CI;
 	
@@ -62,4 +72,5 @@ namespace clientrender
 	protected:
 		platform::crossplatform::Buffer *m_SimulBuffer=nullptr;
 	};
+}
 }

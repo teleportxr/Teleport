@@ -21,7 +21,6 @@ namespace avs
 	{
 		AVSTREAM_PUBLICINTERFACE(SingleQueue)
 		SingleQueue::Private *data;
-		std::string name;
 		std::vector<uint8_t> buffer;
 		size_t dataSize = 0;
 		std::mutex m_mutex;
@@ -29,6 +28,7 @@ namespace avs
 		void increaseBufferSize(size_t requestedSize);
 		void push(const void* buffer, size_t bufferSize);
 		void pop();
+		void drop();
 	public:
 		SingleQueue();
 

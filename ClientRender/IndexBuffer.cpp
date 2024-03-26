@@ -2,6 +2,7 @@
 #include "IndexBuffer.h"
 #include "Platform/CrossPlatform/Buffer.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
+using namespace teleport;
 using namespace clientrender;
 
 void IndexBuffer::Destroy()

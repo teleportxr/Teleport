@@ -10,6 +10,7 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 
 #include "TeleportClient/Log.h"
+#include "TeleportClient/GeometryCacheBackendInterface.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "DiscoveryService.h"
 #include "Config.h"
@@ -19,26 +20,21 @@ using namespace teleport;
 using namespace client;
 using namespace clientrender;
 avs::Timestamp tBegin;
+using std::string;
 
+using namespace std::string_literals;
 static std::map<avs::uid,std::shared_ptr<teleport::client::SessionClient>> sessionClients;
 static std::set<avs::uid> sessionClientIds;
 
-IpPort teleport::client::GetIpPort(const char *ip_port)
+
+const std::string &SessionClient::GetServerURL() const
 {
-	std::string ip = ip_port;
-	size_t pos = ip.find(":");
-	IpPort ipPort;
-	if (pos >= ip.length())
+	if (!server_domain_valid)
 	{
-		ipPort.port = 0;
-		ipPort.ip = ip;
+		server_domain = domain + "/"s + server_path;
+		server_domain_valid=true;
 	}
-	else
-	{
-		ipPort.port = (atoi(ip.substr(pos + 1, ip.length() - pos - 1).c_str()));
-		ipPort.ip = ip.substr(0, pos);
-	}
-	return ipPort;
+	return server_domain;
 }
 
 const std::set<avs::uid> &SessionClient::GetSessionClientIds()
@@ -54,9 +50,10 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	// We can create client zero, but any other must use CreateSessionClient() via TabContext.
 		if(server_uid==0)
 		{
-			auto r = std::make_shared<client::SessionClient>(0,nullptr);
+			auto r = std::make_shared<client::SessionClient>(0,nullptr,"");
 			sessionClients[0] = r;
 			sessionClientIds.insert(0);
+			
 			return r;
 		}
 		return nullptr;
@@ -64,7 +61,7 @@ std::shared_ptr<teleport::client::SessionClient> SessionClient::GetSessionClient
 	return i->second;
 }
 
-avs::uid SessionClient::CreateSessionClient(TabContext *tabContext)
+avs::uid SessionClient::CreateSessionClient(TabContext *tabContext,const std::string &domain)
 {
 	avs::uid server_uid=avs::GenerateUid();
 	auto i = sessionClients.find(server_uid);
@@ -73,7 +70,7 @@ avs::uid SessionClient::CreateSessionClient(TabContext *tabContext)
 		server_uid = avs::GenerateUid();
 		i = sessionClients.find(server_uid);
 	}
-	auto r = std::make_shared<client::SessionClient>(server_uid,tabContext);
+	auto r = std::make_shared<client::SessionClient>(server_uid, tabContext, domain);
 	sessionClients[server_uid] = r;
 	sessionClientIds.insert(server_uid);
 	return server_uid;
@@ -89,9 +86,11 @@ void SessionClient::DestroySessionClients()
 	sessionClients.clear();
 }
 
-SessionClient::SessionClient(avs::uid s, TabContext *tc)
-	: server_uid(s), tabContext(tc)
+SessionClient::SessionClient(avs::uid s, TabContext *tc,const std::string &dom)
+	: server_uid(s), domain(dom), tabContext(tc)
 {
+	if(server_uid==0)
+		setupCommand.startTimestamp_utc_unix_us =std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 SessionClient::~SessionClient()
@@ -99,13 +98,14 @@ SessionClient::~SessionClient()
 	//Disconnect(0); causes crash. trying to access deleted objects.
 }
 
-void SessionClient::RequestConnection(const std::string &ip,int port)
+void SessionClient::RequestConnection(const std::string &path,int port)
 {
 	if (connectionStatus != client::ConnectionStatus::UNCONNECTED)
 		return;
-	if (server_ip != ip || server_discovery_port != port )
+	std::string ip=domain+"/"s+path;
+	if (server_path != path || server_discovery_port != port)
 	{
-		SetServerIP(ip);
+		SetServerPath(path);
 		SetServerDiscoveryPort(port);
 	}
 	connectionStatus = client::ConnectionStatus::OFFERING;
@@ -116,7 +116,7 @@ void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
 	mCommandInterface=s;
 }
 
-void SessionClient::SetGeometryCache(avs::GeometryCacheBackendInterface* r)
+void SessionClient::SetGeometryCache(GeometryCacheBackendInterface* r)
 {
 	geometryCache = r;
 }
@@ -128,8 +128,8 @@ bool SessionClient::HandleConnections()
 		auto &config=Config::GetInstance();
 		if (connectionStatus == client::ConnectionStatus::OFFERING)
 		{
-			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid, server_ip.c_str(), server_discovery_port);
-			if(cl_id!=0&&Connect( server_ip.c_str(),config.options.connectionTimeout,cl_id))
+			uint64_t cl_id=teleport::client::DiscoveryService::GetInstance().Discover(server_uid, GetServerURL().c_str(), server_discovery_port);
+			if (cl_id != 0 && Connect(GetServerURL().c_str(), config.options.connectionTimeout, cl_id))
 			{
 				return true;
 			}
@@ -203,17 +203,22 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	{
 		if(connectionStatus==ConnectionStatus::CONNECTED)
 		{
-			SendDisplayInfo(displayInfo);
-			if(poseValidCounter)
+			static double sendInterval=0.1;
+			if(time-lastSendTime>sendInterval)
 			{
-				SendNodePoses(headPose,nodePoses);
+				SendDisplayInfo(displayInfo);
+				if(poseValidCounter)
+				{
+					SendNodePoses(headPose,nodePoses);
+				}
+				SendInput(input);
+				SendResourceRequests();
+				SendReceivedResources();
+				SendNodeUpdates();
+				if(requestKeyframe)
+					SendKeyframeRequest();
+				lastSendTime = t;
 			}
-			SendInput(input);
-			SendResourceRequests();
-			SendReceivedResources();
-			SendNodeUpdates();
-			if(requestKeyframe)
-				SendKeyframeRequest();
 		}
 	}
 
@@ -232,8 +237,9 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	}
 	// TODO: These pipelines could be on different threads,
 	messageToServerPipeline.process();
-	avs::Result result = clientPipeline.pipeline.process();
-	if (result == avs::Result::Network_Disconnection)
+
+	//avs::Result result = clientPipeline.pipeline.asyncResult();
+/*	if (result == avs::Result::Network_Disconnection)
 	{
 		TELEPORT_INTERNAL_CERR("Got avs::Result::Network_Disconnection. We should try to reconnect here.\n");
 		Disconnect(0);
@@ -244,15 +250,13 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		TELEPORT_INTERNAL_CERR("Got avs::Result::GeometryDecoder_InvalidBufferSize. Disconnecting as no-one is listening.\n");
 		Disconnect(0);
 		return;
-	}
+	}*/
 }
 
 
-void SessionClient::SetServerIP(std::string s) 
+void SessionClient::SetServerPath(std::string path)
 {
-	IpPort ipP=GetIpPort(s.c_str());
-	server_ip=ipP.ip;
-	server_discovery_port=ipP.port;
+	server_path=path;
 }
 
 void SessionClient::SetServerDiscoveryPort(int p) 
@@ -301,6 +305,13 @@ bool SessionClient::IsConnected() const
 				||connectionStatus== ConnectionStatus::AWAITING_SETUP);
 }
 
+bool SessionClient::IsReadyToRender() const
+{
+	if(IsConnected())
+		return true;
+	return false;
+}
+
 avs::Result SessionClient::decode(const void* buffer, size_t bufferSizeInBytes)
 {
 	if (!buffer || bufferSizeInBytes < 1)
@@ -317,6 +328,11 @@ void SessionClient::KillStreaming()
 	{
 		clientPipeline.source->kill();
 	}
+}
+
+void SessionClient::SetTimestamp(std::chrono::microseconds t)
+{
+	session_time_us=t;
 }
 
 void SessionClient::ReceiveCommand(const std::vector<uint8_t> &buffer)
@@ -358,12 +374,6 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 			break;
 		case teleport::core::CommandPayloadType::ApplyNodeAnimation:
 			ReceiveNodeAnimationUpdate(packet);
-			break;
-		/*case teleport::core::CommandPayloadType::UpdateNodeAnimationControl:
-			ReceiveNodeAnimationControlUpdate(packet);
-			break;*/
-		case teleport::core::CommandPayloadType::SetNodeAnimationSpeed:
-			ReceiveNodeAnimationSpeedUpdate(packet);
 			break;
 		case teleport::core::CommandPayloadType::SetupLighting:
 			ReceiveSetupLightingCommand(packet);
@@ -503,6 +513,10 @@ void SessionClient::SendInput(const core::Input& input)
 void SessionClient::SendResourceRequests()
 {
 	std::vector<avs::uid> resourceRequests = geometryCache->GetResourceRequests();
+	if(resourceRequests.size()>8192)
+	{
+		DebugBreak();
+	}
 	geometryCache->ClearResourceRequests();
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
 	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
@@ -567,14 +581,19 @@ void SessionClient::SendReceivedResources()
 		SendMessageToServer(packet.data(), messageSize + receivedResourcesSize);
 	}
 }
-
+#pragma optimize("",off)
 void SessionClient::SendNodeUpdates()
 {
 	//Insert completed nodes.
+	
+	const std::vector<avs::uid> &completedNodes = geometryCache->GetCompletedNodes();
+	if(completedNodes.size()>0)
 	{
-		std::vector<avs::uid> completedNodes = geometryCache->GetCompletedNodes();
+		size_t n = mReceivedNodes.size();
+		mReceivedNodes.resize(mReceivedNodes.size()+completedNodes.size());
+		memcpy(mReceivedNodes.data()+n,completedNodes.data(),completedNodes.size()*sizeof(avs::uid));
+		//mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 		geometryCache->ClearCompletedNodes();
-		mReceivedNodes.insert(mReceivedNodes.end(), completedNodes.begin(), completedNodes.end());
 	}
 
 	if(mReceivedNodes.size() != 0 || mLostNodes.size() != 0)
@@ -671,8 +690,6 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet.size());
 		return;
 	}
-
-	connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	const teleport::core::SetupCommand *s=reinterpret_cast<const teleport::core::SetupCommand*>(packet.data());
 	ApplySetup(*s);
 	teleport::core::Handshake handshake;
@@ -680,7 +697,7 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		return;
 	if(!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand, handshake))
 		return;
-	unreliableToServerEncoder.configure(&messageToServerStack);
+	unreliableToServerEncoder.configure(&messageToServerStack,"Unreliable Message Encoder");
 	messageToServerPipeline.link({ &unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue });
 	std::vector<avs::uid> resourceIDs;
 	if(setupCommand.session_id == lastSessionId)
@@ -693,10 +710,14 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		mCommandInterface->ClearGeometryResources();
 	}
 
+	connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	SendHandshake(handshake, resourceIDs);
 	lastSessionId = setupCommand.session_id;
 	if(tabContext)
 		tabContext->ConnectionComplete(server_uid);
+
+	// Set it running.
+	clientPipeline.pipeline.processAsync();
 }
 
 void SessionClient::ApplySetup(const teleport::core::SetupCommand &s)
@@ -846,22 +867,7 @@ void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packe
 		return;
 	}
 	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
-	TELEPORT_COUT<<"Animation: node "<<command.animationUpdate.nodeID<<", animation "<<command.animationUpdate.animationID<<", timestamp "<<command.animationUpdate.timestamp<<"\n";
-	mCommandInterface->UpdateNodeAnimation(command.animationUpdate);
-}
-
-void SessionClient::ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet)
-{
-	teleport::core::SetNodeAnimationSpeedCommand command;
-	size_t commandSize = command.getCommandSize();
-	if (packet.size() != commandSize)
-	{
-		TELEPORT_INTERNAL_CERR("Bad packet size");
-		return;
-	}
-
-	memcpy(static_cast<void*>(&command), packet.data(), command.getCommandSize());
-	mCommandInterface->SetNodeAnimationSpeed(command.nodeID, command.animationID, command.speed);
+	mCommandInterface->UpdateNodeAnimation(GetTimestamp(),command.animationUpdate);
 }
 
 void SessionClient::ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet)

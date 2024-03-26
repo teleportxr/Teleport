@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Teleport VR'
-copyright = '2018-2023, Simul Software Ltd'
+copyright = '2018-2024, Simul Software Ltd'
 author = 'Roderick Kennedy'
 
 
@@ -44,6 +44,7 @@ html_logo = "images/TeleportLogo-64.png"
 html_theme_options = {
     'logo_only': False,
     'display_version': False,
+    'navigation_depth':2
 }
 numfig = True
 html_favicon = 'favicon.ico'
@@ -63,6 +64,8 @@ html_static_path = ['_static']
 
 breathe_default_project = "TeleportVR"
 breathe_show_include = True
+# Don't ignore cpp files if that's where the documentation is found.
+breathe_implementation_filename_extensions = []
 
 cpp_index_common_prefix = ['avs::','teleport::','teleport::core','teleport::server','teleport::client','teleport::clientrender']
 

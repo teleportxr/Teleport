@@ -2,7 +2,7 @@
 #include "Platform/Core/SimpleIni.h"
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
-#include "Platform/External/magic_enum/include/magic_enum.hpp"
+#include <magic_enum/magic_enum.hpp>
 #include <fmt/core.h>
 #include <sstream>
 #include <filesystem>

@@ -58,13 +58,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty/Platform/Android;../../../../firstparty/Platform/External/imgui;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty/Platform/External;../../../../firstparty;../../../../firstparty/Platform/Android;../../../../firstparty/Platform/External/imgui;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;UNIX=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../../../firstparty;../../../../firstparty/Platform/Android;../../../../firstparty/Platform/External/imgui;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../../../firstparty/Platform/External;../../../../firstparty;../../../../firstparty/Platform/Android;../../../../firstparty/Platform/External/imgui;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

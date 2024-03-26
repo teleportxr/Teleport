@@ -23,7 +23,7 @@ struct AVSTextureImpl :public clientrender::AVSTexture
 	}
 };
 
-AndroidInstanceRenderer::AndroidInstanceRenderer(avs::uid server,teleport::client::Config &config,GeometryDecoder &geometryDecoder,clientrender::RenderState &renderState,teleport::client::SessionClient *sessionClient)
+AndroidInstanceRenderer::AndroidInstanceRenderer(avs::uid server, teleport::client::Config &config, clientrender::GeometryDecoder &geometryDecoder, clientrender::RenderState &renderState, teleport::client::SessionClient *sessionClient)
 	:clientrender::InstanceRenderer( server, config,geometryDecoder,renderState,sessionClient)
 {
 }
@@ -60,7 +60,7 @@ void AndroidInstanceRenderer::RenderView(platform::crossplatform::GraphicsDevice
 	clientrender::InstanceRenderer::RenderView(deviceContext);
 }
 
-AndroidRenderer::AndroidRenderer(teleport::Gui &g)
+AndroidRenderer::AndroidRenderer(teleport::clientrender::Gui &g)
 	:Renderer(g)
 {
 }

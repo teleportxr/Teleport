@@ -10,10 +10,12 @@
 
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/Profiling.h"
 #include "GeometryStreamingService.h"
 #include "GeometryStore.h"
+#include "ClientManager.h"
 
-
+#pragma optimize("", off)
 using namespace teleport;
 using namespace server;
 
@@ -39,12 +41,13 @@ size_t GetNewUIDs(std::vector<avs::uid>& outUIDs, avs::GeometryRequesterBackendI
 	return outUIDs.size();
 }
 
-GeometryEncoder::GeometryEncoder(const ServerSettings* settings, GeometryStreamingService* srv)
-	: geometryStreamingService(srv),settings(settings)
+GeometryEncoder::GeometryEncoder( GeometryStreamingService *srv, avs::uid clid)
+	: geometryStreamingService(srv), clientID(clid)
 {}
 
 avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBackendInterface*)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (!geometryStreamingService || geometryStreamingService->getClientAxesStandard() == avs::AxesStandard::NotInitialized)
 		return avs::Result::Failed;
 	queuedBuffer.clear();
@@ -54,7 +57,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 
 	//Encode data onto buffer, and then move it onto queuedBuffer.
 	//Unless queueing the data would causes queuedBuffer to exceed the recommended buffer size, which will cause the data to stay in buffer until the next encode call.
-	//Data may still be queued, and exceed the recommeneded size, if not queueing the data may leave it empty.
+	//Data may still be queued, and exceed the recommended size, if not queueing the data may leave it empty.
 
 	//Queue what may have been left since last time, and keep queueing if there is still some space.
 	bool keepQueueing = attemptQueueData();
@@ -67,6 +70,9 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 		std::vector<avs::uid> font_uids;
 		std::set<avs::uid> genericTexturesToStream;
 
+		int32_t minimumPriority = 0;
+		auto *clientSettings = ClientManager::instance().GetClientSettings(clientID);
+		minimumPriority=clientSettings->minimumNodePriority;
 		geometryStreamingService->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream
 			, textCanvas_uids, font_uids, minimumPriority);
 
@@ -254,10 +260,6 @@ avs::Result GeometryEncoder::unmapOutputBuffer()
 	return avs::Result::OK;
 }
 
-void GeometryEncoder::setMinimumPriority(int32_t p)
-{
-	minimumPriority = p;
-}
 
 avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 {
@@ -361,7 +363,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		put((uint8_t*)node->name.data(), nameLength);
 
 		avs::Transform localTransform = node->localTransform;
-		avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
+		avs::ConvertTransform(serverSettings.serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
 
 		put(localTransform);
 		put((uint8_t)(node->stationary));
@@ -411,7 +413,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 			put(node->lightRadius);
 			put(node->lightRange);
 			vec3 lightDirection = node->lightDirection;
-			avs::ConvertPosition(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
+			avs::ConvertPosition(serverSettings.serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
 			put(lightDirection);
 			put(node->lightType);
 		}
@@ -421,6 +423,13 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 		}
 		if (node->data_type == avs::NodeDataType::Skeleton)
 		{
+		}
+		if (node->data_type == avs::NodeDataType::Link)
+		{
+			size_t urlLength = node->url.length();
+			put(urlLength);
+			put((uint8_t *)node->url.data(), urlLength);
+
 		}
 		geometryStreamingService->encodedResource(uid);
 	}
@@ -451,9 +460,9 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 				index=-1;
 			return index;
 		};
-		put(true);
 		put(skeleton->boneIDs.size());
-		for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
+		put((const uint8_t *)skeleton->boneIDs.data(), sizeof(avs::uid) * skeleton->boneIDs.size());
+	/*	for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
 		{
 			avs::Node* node = geometryStore->getNode(skeleton->boneIDs[i]);
 			avs::Transform localTransform = node->localTransform;
@@ -466,7 +475,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 			put(nameLength);
 			//Push name.
 			put((uint8_t*)node->name.data(), nameLength);
-		}
+		}*/
 		put(skeleton->skeletonTransform);
 
 		putPayloadSize();
@@ -489,7 +498,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterf
 		put(nameLength);
 		//Push name.
 		put((uint8_t*)animation->name.data(), nameLength);
-
+		put(animation->duration);
 		put(animation->boneKeyframes.size());
 		for (const teleport::core::TransformKeyframeList& transformKeyframe : animation->boneKeyframes)
 		{
@@ -533,7 +542,7 @@ void GeometryEncoder::putPayloadSize()
 
 	avs::GeometryPayloadType type;
 	memcpy(&type,(buffer.data()+prevBufferSize+sizeof(size_t)),sizeof(type));
-	std::cout<<" payloadSize "<<payloadSize<<" for "<<stringOf(type)<<"\n";
+	//std::cout<<" payloadSize "<<payloadSize<<" for "<<stringOf(type)<<"\n";
 
 	prevBufferSize = 0;
 }
@@ -750,18 +759,21 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		texture = geometryStore->getTexture(uid);
 		if (texture)
 		{
-			if(texture->dataSize==0)
+			if(texture->data.size()==0)
 			{
-				TELEPORT_CERR << "Trying to send a zero-size texture. Never do this!\n";
+				TELEPORT_CERR << "Trying to send a zero-size texture " << texture->name << ". Never do this!\n";
 				continue;
 			}
 			if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
 			{
-				TELEPORT_CERR << "Trying to send uncompressed texture. Never do this!\n";
+				TELEPORT_CERR << "Trying to send uncompressed texture " << texture->name << ". Never do this!\n";
 				continue;
 			}
-			//size_t oldBufferSize = buffer.size();
-
+			if (texture->width == 0 || texture->height == 0)
+			{
+				TELEPORT_CERR << "Trying to send texture "<<texture->name<<" of zero size. Never do this!\n";
+				continue;
+			}
 			//Place payload type onto the buffer.
 			putPayloadType(avs::GeometryPayloadType::Texture,uid);
 
@@ -793,8 +805,8 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 			put(texture->valueScale);
 
 			//Push size, and data.
-			put(texture->dataSize);
-			put(texture->data, texture->dataSize);
+			put((uint32_t)texture->data.size());
+			put(texture->data.data(), texture->data.size());
 
 			//Push sampler identifier.
 			put(texture->sampler_uid);
@@ -817,7 +829,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 
 avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<teleport::core::FloatKeyframe>& keyframes)
 {
-	put(keyframes.size());
+	put((uint16_t)keyframes.size());
 	for (const teleport::core::FloatKeyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
@@ -829,7 +841,7 @@ avs::Result GeometryEncoder::encodeFloatKeyframes(const std::vector<teleport::co
 
 avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<teleport::core::Vector3Keyframe>& keyframes)
 {
-	put(keyframes.size());
+	put((uint16_t)keyframes.size());
 	for (const teleport::core::Vector3Keyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
@@ -841,7 +853,7 @@ avs::Result GeometryEncoder::encodeVector3Keyframes(const std::vector<teleport::
 
 avs::Result GeometryEncoder::encodeVector4Keyframes(const std::vector<teleport::core::Vector4Keyframe>& keyframes)
 {
-	put(keyframes.size());
+	put((uint16_t)keyframes.size());
 	for (const teleport::core::Vector4Keyframe& keyframe : keyframes)
 	{
 		put(keyframe.time);
@@ -871,7 +883,7 @@ size_t GeometryEncoder::put(const uint8_t* data, size_t count)
 bool GeometryEncoder::attemptQueueData()
 {
 	//If queueing the data will cause the queuedBuffer to exceed the cutoff size.
-	if (buffer.size() + queuedBuffer.size() > settings->geometryBufferCutoffSize)
+	if (buffer.size() + queuedBuffer.size() > serverSettings.geometryBufferCutoffSize)
 	{
 		//Never leave queuedBuffer empty, if there is something to queue up (even if it is too large).
 		if (queuedBuffer.size() == 0)

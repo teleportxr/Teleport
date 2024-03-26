@@ -42,7 +42,7 @@ namespace avs
 				std::cerr<<"Bad dataSize for "<<stringOf(type)<<".\n";
 				break;
 			}
-			std::cout<<" dataSize "<<dataSize<<" for "<<stringOf(type)<<"\n";
+			//std::cout<<" dataSize "<<dataSize<<" for "<<stringOf(type)<<"\n";
 			result = m_callback(m_node, m_inputNodeIndex, buffer, dataSize, parseOffset + HEADER_SIZE, true);
 			if (!result)
 			{

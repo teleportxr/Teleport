@@ -1,49 +1,53 @@
 #include "Tests.h"
 
-#include "libavstream/common_maths.h"
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "libavstream/common_maths.h"
 
 #include "Common.h"
 #include "Transform.h"
 
-namespace clientrender
+namespace teleport
 {
-	void Tests::RunAllTests()
+	namespace clientrender
 	{
-		RunConversionEquivalenceTests();
-	}
-
-	void Tests::RunConversionEquivalenceTests()
-	{
-		//Test conversions from Unity server.
-		RunConversionEquivalenceTest(avs::AxesStandard::UnityStyle, avs::AxesStandard::EngineeringStyle);
-		RunConversionEquivalenceTest(avs::AxesStandard::UnityStyle, avs::AxesStandard::GlStyle);
-	
-		//Test conversions from Unreal server.
-		RunConversionEquivalenceTest(avs::AxesStandard::UnrealStyle, avs::AxesStandard::EngineeringStyle);
-		RunConversionEquivalenceTest(avs::AxesStandard::UnrealStyle, avs::AxesStandard::GlStyle);
-	}
-
-	void Tests::RunConversionEquivalenceTest(avs::AxesStandard fromStandard, avs::AxesStandard toStandard)
-	{
-		avs::Transform transformAVS;
-		transformAVS.position = vec3(1.0f, 2.0f, 3.0f);
-		transformAVS.rotation = {4.0f, 5.0f, 6.0f, 7.0f};
-		transformAVS.scale = vec3(8.0f, 9.0f, 10.0f);
-
-		avs::Transform convertedTransformAVS(transformAVS);
-		avs::ConvertTransform(fromStandard, toStandard, convertedTransformAVS);
-
-		clientrender::Transform transformSCR(transformAVS);
-		clientrender::Transform convertedTransformSCR(convertedTransformAVS);
-
-		mat4 matrix = transformSCR.GetTransformMatrix();
-		avs::Mat4x4 convertedMatrix = avs::Mat4x4::convertToStandard(*((avs::Mat4x4*)&matrix), fromStandard, toStandard);
-
-		if(*((mat4*)&convertedMatrix)!= convertedTransformSCR.GetTransformMatrix())
+		void Tests::RunAllTests()
 		{
-			TELEPORT_CERR_BREAK("Test failure! Failed equivalence check between transform conversion and matrix conversion!", EPROTO)
+			RunConversionEquivalenceTests();
+		}
+
+		void Tests::RunConversionEquivalenceTests()
+		{
+			// Test conversions from Unity server.
+			RunConversionEquivalenceTest(avs::AxesStandard::UnityStyle, avs::AxesStandard::EngineeringStyle);
+			RunConversionEquivalenceTest(avs::AxesStandard::UnityStyle, avs::AxesStandard::GlStyle);
+
+			// Test conversions from Unreal server.
+			RunConversionEquivalenceTest(avs::AxesStandard::UnrealStyle, avs::AxesStandard::EngineeringStyle);
+			RunConversionEquivalenceTest(avs::AxesStandard::UnrealStyle, avs::AxesStandard::GlStyle);
+		}
+
+		void Tests::RunConversionEquivalenceTest(avs::AxesStandard fromStandard, avs::AxesStandard toStandard)
+		{
+			avs::Transform transformAVS;
+			transformAVS.position = vec3(1.0f, 2.0f, 3.0f);
+			transformAVS.rotation = {4.0f, 5.0f, 6.0f, 7.0f};
+			transformAVS.scale = vec3(8.0f, 9.0f, 10.0f);
+
+			avs::Transform convertedTransformAVS(transformAVS);
+			avs::ConvertTransform(fromStandard, toStandard, convertedTransformAVS);
+
+			clientrender::Transform transformSCR(transformAVS);
+			clientrender::Transform convertedTransformSCR(convertedTransformAVS);
+
+			mat4 matrix = transformSCR.GetTransformMatrix();
+			avs::Mat4x4 convertedMatrix = avs::Mat4x4::convertToStandard(*((avs::Mat4x4 *)&matrix), fromStandard, toStandard);
+
+			if (*((mat4 *)&convertedMatrix) != convertedTransformSCR.GetTransformMatrix())
+			{
+				TELEPORT_CERR_BREAK("Test failure! Failed equivalence check between transform conversion and matrix conversion!", EPROTO)
+			}
 		}
 	}
+
 }

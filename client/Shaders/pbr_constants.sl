@@ -1,13 +1,16 @@
-//  Copyright (c) 2019 Simul Software Ltd. All rights reserved.
+//  Copyright (c) 2019-2024 Simul Software Ltd. All rights reserved.
 #ifndef PBR_CONSTANTS_SL
 #define PBR_CONSTANTS_SL
 
-SIMUL_CONSTANT_BUFFER(PbrConstants,13)
-	int lightCount;
-	int reverseDepth;
-	float drawDistance;
-	float roughestMip;
+SIMUL_CONSTANT_BUFFER(TeleportSceneConstants, 10)
+int lightCount;
+int reverseDepth;
+float drawDistance;
+float roughestMip;
+SIMUL_CONSTANT_BUFFER_END
 
+
+PLATFORM_GROUPED_CONSTANT_BUFFER(PbrMaterialConstants, 5, 2)
 	vec4 diffuseOutputScalar;
 	vec4 normalOutputScalar;
 	vec4 combinedOutputScalarRoughMetalOcclusion;
@@ -26,9 +29,10 @@ SIMUL_CONSTANT_BUFFER(PbrConstants,13)
 	int emissiveTexCoordIndex;
 	int lightmapTexCoordIndex;
 
-SIMUL_CONSTANT_BUFFER_END
+PLATFORM_GROUPED_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(PerNodeConstants, 11)
+uniform mat4 model;
 vec4 lightmapScaleOffset;
 float rezzing;
 SIMUL_CONSTANT_BUFFER_END

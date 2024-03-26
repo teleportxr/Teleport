@@ -20,7 +20,7 @@ namespace teleport
 			int64_t throttleKpS = 0;
 
 			bool enableGeometryStreaming = false;
-			uint32_t geometryTicksPerSecond = 0;
+			uint32_t geometryTicksPerSecond = 1;
 			int32_t geometryBufferCutoffSize = 0;	// Size we stop encoding nodes at.
 			float confirmationWaitTime = 0.0f;		// Seconds to wait before resending a resource.
 			float clientDrawDistanceOffset = 0.0f;	// Offset for distance pixels are clipped at for geometry on the client.
@@ -38,7 +38,7 @@ namespace teleport
 			int32_t targetFPS = 0;
 			int32_t idrInterval = 0;
 			avs::VideoCodec videoCodec = avs::VideoCodec::Invalid;
-			VideoEncoderRateControlMode rateControlMode = teleport::VideoEncoderRateControlMode::RC_CONSTQP;
+			VideoEncoderRateControlMode rateControlMode = teleport::server::VideoEncoderRateControlMode::RC_CONSTQP;
 			int32_t averageBitrate = 0;
 			int32_t maxBitrate = 0;
 			bool enableAutoBitRate = false;
@@ -61,7 +61,6 @@ namespace teleport
 			int32_t debugStream = 0;
 			bool enableDebugNetworkPackets = false;
 			bool enableDebugControlPackets = false;
-			bool enableChecksums = false;
 			bool willCacheReset = false;
 			bool pipeDllOutputToUnity = false;
 			uint8_t estimatedDecodingFrequency = 0; //An estimate of how frequently the client will decode the packets sent to it; used by throttling.
@@ -80,20 +79,19 @@ namespace teleport
 			int32_t defaultDiffuseCubemapSize = 0;
 			int32_t defaultLightCubemapSize = 0;
 			int32_t defaultShadowmapSize = 0;
-
-			teleport::core::ControlModel controlModel = teleport::core::ControlModel::SERVER_ORIGIN_CLIENT_LOCAL;
 		} AVS_PACKED;
 		struct ClientSettings
 		{
-			int32_t videoTextureSize[2];
-			int32_t shadowmapPos[2];
+			int2 videoTextureSize;
+			int2 shadowmapPos;
 			int32_t shadowmapSize;
-			int32_t webcamPos[2];
-			int32_t webcamSize[2];
+			int2 webcamPos;
+			int2 webcamSize;
 			int32_t captureCubeTextureSize;
 			teleport::core::BackgroundMode backgroundMode;
 			vec4 backgroundColour;
 			float drawDistance;
+			int32_t minimumNodePriority;
 		} AVS_PACKED;
 		struct InputDefinitionInterop
 		{

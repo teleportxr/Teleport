@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <chrono>
 
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
@@ -17,25 +18,20 @@
 #include "TeleportClient/basic_linear_algebra.h"
 #include "ClientPipeline.h"
 #include "ClientDeviceState.h"
+#include "TeleportCore/URLParser.h"
 
 typedef unsigned int uint;
 
 namespace avs
 {
 	class GeometryTargetBackendInterface;
-	class GeometryCacheBackendInterface;
 }
 
 namespace teleport
 {
 	namespace client
 	{
-		struct IpPort
-		{
-			std::string ip;
-			int port = 0;
-		};
-		extern IpPort GetIpPort(const char *ip_port);
+		class GeometryCacheBackendInterface;
 		class TabContext;
 		class SessionCommandInterface
 		{
@@ -59,18 +55,8 @@ namespace teleport
 			virtual void UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList) = 0;
 			virtual void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList) = 0;
 			virtual void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) = 0;
-			virtual void UpdateNodeAnimation(const teleport::core::ApplyAnimation& animationUpdate) = 0;
-			virtual void SetNodeAnimationSpeed(avs::uid nodeID, avs::uid animationID, float speed) = 0;
+			virtual void UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate) = 0;
 			virtual void OnStreamingControlMessage(const std::string& str) = 0;
-		};
-		
-		enum class WebspaceLocation : uint8_t
-		{
-			UNKNOWN,
-			LOBBY,
-			SERVER,
-
-			HOME = LOBBY,
 		};
 		enum class ConnectionStatus : uint8_t
 		{
@@ -96,7 +82,12 @@ namespace teleport
 		class SessionClient:public avs::GenericTargetInterface
 		{
 			avs::uid server_uid=0;
-			std::string server_ip;
+			const std::string domain;
+			std::string server_path;
+			const std::string &GetServerURL() const;
+			mutable std::string server_domain;
+			mutable bool server_domain_valid=false;
+
 			int server_discovery_port=0;
 
 			teleport::client::ClientPipeline clientPipeline;
@@ -106,9 +97,9 @@ namespace teleport
 			avs::GenericEncoder unreliableToServerEncoder;
 			ClientServerState clientServerState;
 		protected:
-			static avs::uid CreateSessionClient(TabContext *tabContext);
-			void RequestConnection(const std::string &ip, int port);
-			void SetServerIP(std::string);
+			static avs::uid CreateSessionClient(TabContext *tabContext, const std::string &domain);
+			void RequestConnection(const std::string &path, int port);
+			void SetServerPath(std::string);
 			void SetServerDiscoveryPort(int);
 			friend class TabContext;
 			TabContext *tabContext = nullptr;
@@ -119,7 +110,7 @@ namespace teleport
 			// Implementing avs::GenericTargetInterface:
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		public:
-			SessionClient(avs::uid server_uid, TabContext *tabContext);
+			SessionClient(avs::uid server_uid, TabContext *tabContext, const std::string &domain);
 			~SessionClient();
 			
 			ClientServerState &GetClientServerState()
@@ -130,19 +121,21 @@ namespace teleport
 			void ApplySetup(const teleport::core::SetupCommand &s);
 			bool HandleConnections();
 			void SetSessionCommandInterface(SessionCommandInterface*);
-			void SetGeometryCache(avs::GeometryCacheBackendInterface* r);
+			void SetGeometryCache(GeometryCacheBackendInterface *r);
 			bool Connect(const char *remoteIP,  uint timeout,avs::uid client_id);
 			void Disconnect(uint timeout, bool resetClientID = true);
 			void Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
 					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
-			long long GetServerStartTimeNs() const;
 			float GetLatencyMs() const;
 			ConnectionStatus GetConnectionStatus() const;
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;
 			bool IsConnected() const;
+			//! Is this client ready to render, i.e. does it have the final setup from the server required to initialize rendering?
+			//! return true if ready, false if not.
+			bool IsReadyToRender() const;
 
 			std::string GetServerIP() const;
 			
@@ -187,6 +180,11 @@ namespace teleport
 			}
 			// Debugging:
 			void KillStreaming();
+			void SetTimestamp(std::chrono::microseconds t);
+			std::chrono::microseconds GetTimestamp() const
+			{
+				return session_time_us;
+			}
 		private:
 			void ConfirmOrthogonalStateToClient(uint64_t confNumber);
 			void ReceiveCommand(const std::vector<uint8_t> &buffer);
@@ -231,7 +229,6 @@ namespace teleport
 			void ReceiveNodeHighlightUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveNodeAnimationControlUpdate(const std::vector<uint8_t> &packet);
-			void ReceiveNodeAnimationSpeedUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet);
 			void ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet);
 			void ReceiveUpdateNodeStructureCommand(const std::vector<uint8_t> &packet);
@@ -244,7 +241,7 @@ namespace teleport
 
 			SessionCommandInterface* mCommandInterface=nullptr;
 
-			avs::GeometryCacheBackendInterface* geometryCache = nullptr;
+			GeometryCacheBackendInterface* geometryCache = nullptr;
 
 
 			/// Requests the session client has discovered need to be made.
@@ -255,6 +252,7 @@ namespace teleport
 
 			uint64_t clientID=0;
 			double time=0.0;
+			double lastSendTime=0.0;
 			float latency_milliseconds = 0.0;
 			// State received from server.
 			teleport::core::SetupCommand setupCommand;
@@ -269,6 +267,7 @@ namespace teleport
 			double mTimeSinceLastServerComm = 0;
 
 			ConnectionStatus connectionStatus = ConnectionStatus::UNCONNECTED;
+			std::chrono::microseconds session_time_us = std::chrono::microseconds(0);
 		};
 	}
 }

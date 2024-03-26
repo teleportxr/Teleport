@@ -11,6 +11,9 @@
 #include <libavstream/surfaces/surface_dx11.hpp>
 #include <libavstream/surfaces/surface_dx12.hpp>
 #endif
+#if TELEPORT_UNITY_SERVER
+#include "UnityPlugin/PluginGraphics.h"
+#endif
 
 using namespace teleport;
 using namespace server;
@@ -232,12 +235,13 @@ Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, cons
 		return Result::Code::EncoderAlreadyConfigured;
 	}
 
+#if TELEPORT_UNITY_SERVER
 	if (!GraphicsManager::mGraphicsDevice)
 	{
 		TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
 		return Result::Code::InvalidGraphicsDevice;
 	}
-
+#endif
 	if (!videoEncodeParams.inputSurfaceResource)
 	{
 		TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to initialize video encode pipeline." << "\n";
@@ -245,11 +249,14 @@ Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, cons
 	}
 
 	inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
+#if TELEPORT_UNITY_SERVER
 	// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
 	encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
-
+#endif
 	VideoEncodeParams params = videoEncodeParams;
+#if TELEPORT_UNITY_SERVER
 	params.deviceHandle = GraphicsManager::mGraphicsDevice;
+#endif
 	params.inputSurfaceResource = encoderSurfaceResource;
 
 	Result result = teleport::server::VideoEncodePipeline::initialize(serverSettings, params, colorQueue, tagDataQueue);
@@ -268,12 +275,13 @@ Result VideoEncodePipeline::reconfigure(const ServerSettings& serverSettings, co
 		return Result::Code::EncoderNotConfigured;
 	}
 
+#if TELEPORT_UNITY_SERVER
 	if (!GraphicsManager::mGraphicsDevice)
 	{
 		TELEPORT_CERR << "Graphics device handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
 		return Result::Code::InvalidGraphicsDevice;
 	}
-
+#endif
 	if (videoEncodeParams.inputSurfaceResource)
 	{
 		TELEPORT_CERR << "Surface resource handle is null. Cannot attempt to reconfigure video encode pipeline." << "\n";
@@ -281,14 +289,17 @@ Result VideoEncodePipeline::reconfigure(const ServerSettings& serverSettings, co
 	}
 
 	VideoEncodeParams params = videoEncodeParams;
+#if TELEPORT_UNITY_SERVER
 	params.deviceHandle = GraphicsManager::mGraphicsDevice;
-
+#endif
 	if (videoEncodeParams.inputSurfaceResource)
 	{
 		inputSurfaceResource = videoEncodeParams.inputSurfaceResource;
 		// Need to make a copy because Unity uses a typeless format which is not compatible with CUDA
+#if TELEPORT_UNITY_SERVER
 		encoderSurfaceResource = GraphicsManager::CreateTextureCopy(inputSurfaceResource);
 		params.inputSurfaceResource = encoderSurfaceResource;
+#endif
 	}
 	else
 	{
@@ -306,9 +317,10 @@ Result VideoEncodePipeline::encode(const uint8_t* tagData, size_t tagDataSize, b
 		return Result::Code::EncoderNotConfigured;
 	}
 
+#if TELEPORT_UNITY_SERVER
 	// Copy data from Unity texture to its CUDA compatible copy
 	GraphicsManager::CopyResource(encoderSurfaceResource, inputSurfaceResource);
-
+#endif
 	return server::VideoEncodePipeline::process(tagData, tagDataSize, forceIDR);
 }
 
@@ -326,7 +338,9 @@ Result VideoEncodePipeline::deconfigure()
 		return result;
 	}
 
+#if TELEPORT_UNITY_SERVER
 	GraphicsManager::ReleaseResource(encoderSurfaceResource);
+#endif
 	inputSurfaceResource = nullptr;
 
 	configured = false;

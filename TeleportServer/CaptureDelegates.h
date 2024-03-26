@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "libavstream/common_maths.h"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 
 namespace teleport
 {

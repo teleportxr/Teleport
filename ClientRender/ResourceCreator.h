@@ -12,88 +12,85 @@
 #include <libavstream/mesh.hpp>
 
 #include "API.h"
-#include "Platform/CrossPlatform/Shaders/CppSl.sl"
+#include "FontAtlas.h"
+#include "GeometryCache.h"
 #include "Light.h"
 #include "MemoryUtil.h"
 #include "NodeManager.h"
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "ResourceManager.h"
 #include "Skeleton.h"
-#include "GeometryCache.h"
-#include "FontAtlas.h"
 #include "TextCanvas.h"
 
-namespace clientrender
+namespace teleport
 {
-	class Animation;
-	class Material;
-}
-
-namespace clientrender
-{
-	/*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.*/
-	class ResourceCreator final : public avs::GeometryTargetBackendInterface
+	namespace clientrender
 	{
-	public:
+		class Animation;
+		class Material;
+	}
 
-		std::shared_ptr<clientrender::Material> placeholderMaterial;
+	namespace clientrender
+	{
+		/*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.*/
+		class ResourceCreator final : public avs::GeometryTargetBackendInterface
+		{
+		public:
+			std::shared_ptr<clientrender::Material> placeholderMaterial;
 
-		ResourceCreator();
-		~ResourceCreator();
-	
-		void Initialize(platform::crossplatform::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
-		/// Full reset, when the server has changed.
-		void Clear();
+			ResourceCreator();
+			~ResourceCreator();
 
-		//Updates any processes that need to happen on a regular basis; should be called at least once per second.
-		//	deltaTime : Milliseconds that has passed since the last call to Update();
-		void Update(float deltaTime);
+			void Initialize(platform::crossplatform::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
+			/// Full reset, when the server has changed.
+			void Clear();
 
-		// Inherited via GeometryTargetBackendInterface
-		avs::Result CreateMesh(avs::MeshCreate& meshCreate) override;
-		avs::Result CreateSubScene(avs::uid server_uid,const SubSceneCreate& meshCreate);
-		
-		void CreateTexture(avs::uid server_uid,avs::uid id, const avs::Texture& texture) override;
-		void CreateMaterial(avs::uid server_uid,avs::uid id, const avs::Material& material) override;
-		void CreateNode(avs::uid server_uid,avs::uid id,const avs::Node& node) override;
-		void CreateFontAtlas(avs::uid server_uid,avs::uid id,teleport::core::FontAtlas &fontAtlas);
-		void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
+			// Inherited via GeometryTargetBackendInterface
+			avs::Result CreateMesh(avs::MeshCreate &meshCreate) override;
+			avs::Result CreateSubScene(avs::uid server_uid, const SubSceneCreate &meshCreate);
 
-		void CreateSkeleton(avs::uid server_uid, avs::uid id, const avs::Skeleton &skeleton) override;
-		void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) override;
+			void CreateTexture(avs::uid server_uid, avs::uid id, const avs::Texture &texture) override;
+			void CreateMaterial(avs::uid server_uid, avs::uid id, const avs::Material &material) override;
+			void CreateNode(avs::uid server_uid, avs::uid id, const avs::Node &node) override;
+			void CreateFontAtlas(avs::uid server_uid, avs::uid id, teleport::core::FontAtlas &fontAtlas);
+			void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
-		std::shared_ptr<clientrender::Texture> m_DummyWhite;
-		std::shared_ptr<clientrender::Texture> m_DummyNormal;
-		std::shared_ptr<clientrender::Texture> m_DummyCombined;
-		std::shared_ptr<clientrender::Texture> m_DummyBlack;
-		std::shared_ptr<clientrender::Texture> m_DummyGreen;
+			void CreateSkeleton(avs::uid server_uid, avs::uid id, const avs::Skeleton &skeleton) override;
+			void CreateAnimation(avs::uid server_uid, avs::uid id, teleport::core::Animation &animation) override;
 
-	private:
-		void CreateMeshNode(avs::uid server_id,avs::uid id,const avs::Node& node);
-		void CreateLight(avs::uid server_id,avs::uid id, const avs::Node& node);
-		void CreateBone(avs::uid server_id,avs::uid id, const avs::Node& node);
+			std::shared_ptr<clientrender::Texture> m_DummyWhite;
+			std::shared_ptr<clientrender::Texture> m_DummyNormal;
+			std::shared_ptr<clientrender::Texture> m_DummyCombined;
+			std::shared_ptr<clientrender::Texture> m_DummyBlack;
+			std::shared_ptr<clientrender::Texture> m_DummyGreen;
 
-		void BasisThread_TranscodeTextures();
+		private:
+			void CreateMeshNode( avs::uid server_id, avs::uid id, const avs::Node &node);
+			void CreateLight(avs::uid server_id, avs::uid id, const avs::Node &node);
+			void CreateLinkNode( avs::uid server_uid, avs::uid id, const avs::Node &node);
 
-		platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
-		clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
+			void BasisThread_TranscodeTextures();
 
-	#ifdef _MSC_VER
-		basist::transcoder_texture_format basis_transcoder_textureFormat =basist::transcoder_texture_format::cTFBC3;
-	#else
-		basist::transcoder_texture_format basis_transcoder_textureFormat =basist::transcoder_texture_format::cTFETC2;
-	#endif
+			platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
+			clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
 
-		std::vector<std::shared_ptr<UntranscodedTexture>> texturesToTranscode;
-		std::mutex mutex_texturesToTranscode;
-		std::atomic_bool shouldBeTranscoding = true;	//Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
-		std::thread basisThread;						//Thread where we transcode basis files to mip data.
-	
-		const uint32_t whiteBGRA = 0xFFFFFFFF;
-		const uint32_t normalRGBA = 0xFFFF7F7F;
-		const uint32_t combinedBGRA = 0xFFFFFFFF;
-		const uint32_t blackBGRA = 0x0;
-		const uint32_t greenBGRA = 0xFF337744;
-	};
+#ifdef _MSC_VER
+			basist::transcoder_texture_format basis_transcoder_textureFormat = basist::transcoder_texture_format::cTFBC3;
+#else
+			basist::transcoder_texture_format basis_transcoder_textureFormat = basist::transcoder_texture_format::cTFETC2;
+#endif
 
+			std::vector<std::shared_ptr<UntranscodedTexture>> texturesToTranscode;
+			std::mutex mutex_texturesToTranscode;
+			std::atomic_bool shouldBeTranscoding = true; // Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
+			std::thread basisThread;					 // Thread where we transcode basis files to mip data.
 
+			const uint32_t whiteBGRA = 0xFFFFFFFF;
+			const uint32_t normalRGBA = 0xFFFF7F7F;
+			const uint32_t combinedBGRA = 0xFFFFFFFF;
+			const uint32_t blackBGRA = 0x0;
+			const uint32_t greenBGRA = 0xFF337744;
+		};
+
+	}
 }

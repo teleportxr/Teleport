@@ -241,7 +241,6 @@ namespace avs
 		Animation,
 		Node,
 		Skeleton,
-		Bone,
 		FontAtlas,
 		TextCanvas,
 	};
@@ -256,8 +255,7 @@ namespace avs
 			case GeometryPayloadType::Texture:			return "Texture";
 			case GeometryPayloadType::Animation:		return "Animation";
 			case GeometryPayloadType::Node:				return "Node";
-			case GeometryPayloadType::Skeleton:				return "Skeleton";
-			case GeometryPayloadType::Bone:				return "Bone";
+			case GeometryPayloadType::Skeleton:			return "Skeleton";
 			case GeometryPayloadType::FontAtlas:		return "FontAtlas";
 			case GeometryPayloadType::TextCanvas:		return "TextCanvas";
 			default:
@@ -275,10 +273,10 @@ namespace avs
 		None,
 		Mesh,
 		Light,
-		Bone,
 		TextCanvas,
 		SubScene,
-		Skeleton
+		Skeleton,
+		Link
 	};
 
 	//! Information on the resolution of a client's display.
@@ -317,25 +315,6 @@ namespace avs
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
 	} AVS_PACKED;	// 89 bytes
-
-	
-	enum class LightingMode : uint8_t
-	{
-		NONE = 0, TEXTURE, VIDEO
-	};
-	struct ClientDynamicLighting
-	{
-		int32_t specularPos[2]={0,0};
-		int32_t specularCubemapSize=0;
-		int32_t specularMips=0;
-		int32_t diffusePos[2]={0,0};
-		int32_t diffuseCubemapSize=0;
-		int32_t lightPos[2]={0,0};
-		int32_t lightCubemapSize=0;
-		uid specular_cubemap_texture_uid=0;
-		uid diffuse_cubemap_texture_uid=0;
-		LightingMode lightingMode = LightingMode::TEXTURE;
-	} AVS_PACKED;	// 57 bytes
 
 	struct AudioConfig
 	{

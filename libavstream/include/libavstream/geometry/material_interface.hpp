@@ -12,30 +12,33 @@
 
 namespace avs
 {
-	template<typename T> bool verify(const T& t1,const T& t2)
+	template <typename T>
+	bool verify_values(const T &t1, const T &t2)
 	{
 		return (t1==t2);
 	}
-	template<> inline bool verify(const float& t1,const float& t2)
+	template <>
+	inline bool verify_values(const float &t1, const float &t2)
 	{
 		return fabs(t1-t2)/(fabs(t1)+fabs(t2)+0.0001f)<0.0001f;
 	}
-	template<> inline bool verify(const vec2& t1,const vec2& t2)
+	template <>
+	inline bool verify_values(const vec2 &t1, const vec2 &t2)
 	{
-		return verify(t1.x,t2.x)&&verify(t1.y,t2.y);
+		return verify_values(t1.x, t2.x) && verify_values(t1.y, t2.y);
 	}
-	template<> inline bool verify(const vec3& t1,const vec3& t2)
+	template <>
+	inline bool verify_values(const vec3 &t1, const vec3 &t2)
 	{
-		return verify(t1.x,t2.x)&&verify(t1.y,t2.y)
-				&&verify(t1.z,t2.z);
+		return verify_values(t1.x, t2.x) && verify_values(t1.y, t2.y) && verify_values(t1.z, t2.z);
 	}
-	template<> inline bool verify(const vec4& t1,const vec4& t2)
+	template <>
+	inline bool verify_values(const vec4 &t1, const vec4 &t2)
 	{
-		return verify(t1.x,t2.x)&&verify(t1.y,t2.y)
-				&&verify(t1.z,t2.z)&&verify(t1.w,t2.w);
+		return verify_values(t1.x, t2.x) && verify_values(t1.y, t2.y) && verify_values(t1.z, t2.z) && verify_values(t1.w, t2.w);
 	}
 	#define TELEPORT_VERIFY(t1,t2) \
-	if(!verify(t1,t2))\
+	if(!verify_values(t1,t2))\
 	{\
 		std::cerr<<"Verify failed for "<<#t1<<"\n";\
 		return false;\
@@ -164,8 +167,6 @@ namespace avs
 	{
 		~Texture()
 		{
-			if(own_data)
-				delete[] data;
 		}
 		std::string name;
 
@@ -185,22 +186,50 @@ namespace avs
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
 
 		bool cubemap=false;
-		uint32_t dataSize;
-		const unsigned char* data = nullptr;
-		bool own_data = false;
+		
+		std::vector<uint8_t> data ;
+		
 
 		bool operator==(const Texture& t) const
 		{
 			if (t.name != name)
 				return false;
 			const unsigned char* start1 = (const unsigned char*)&width;
-			const unsigned char* end1 = (const unsigned char*)&data;
+			const unsigned char* end1 = (const unsigned char*)&cubemap+sizeof(cubemap);
 			const unsigned char* start2 = (const unsigned char*)&t.width;
-			const unsigned char* end2 = (const unsigned char*)&t.data;
+			const unsigned char *end2 = (const unsigned char *)&t.cubemap + sizeof(t.cubemap);
 			auto c = memcmp(start1, start2, size_t(end1 - start1));
 			if (c != 0)
+			{
+			// memory check fails but could be junk data in between aligned members, so check individually:
+				if (width != t.width)
+					return false;
+				if (height != t.height)
+					return false;
+				if (depth != t.depth)
+					return false;
+				if (bytesPerPixel != t.bytesPerPixel)
+					return false;
+				if (arrayCount != t.arrayCount)
+					return false;
+				if (mipCount != t.mipCount)
+					return false;
+				if (format != t.format)
+					return false;
+				if (compression != t.compression)
+					return false;
+				if (compressed != t.compressed)
+					return false;
+				if (sampler_uid != t.sampler_uid)
+					return false;
+				if (valueScale != t.valueScale)
+					return false;
+				if (cubemap != t.cubemap)
+					return false;
+			}
+			if(data.size()!=t.data.size())
 				return false;
-			auto d = memcmp(data, t.data, dataSize);
+			auto d = memcmp(data.data(), t.data.data(), data.size());
 			if (d != 0)
 				return false;
 			return true;
@@ -212,8 +241,10 @@ namespace avs
 			out<< texture.name;
 			const unsigned char*start=(const unsigned char*)&texture.width;
 			const unsigned char* end = (const unsigned char*)&texture.data;
-			out.write((const char*)start,(size_t)(end -start));
-			out.write((const char*)texture.data, texture.dataSize);
+			out.write((const char *)start, (size_t)(end - start));
+			uint32_t sz=texture.data.size();
+			out.write((char*)&sz,sizeof(sz));
+			out.write((const char*)texture.data.data(), sz);
 			return out;
 		}
 		
@@ -224,11 +255,10 @@ namespace avs
 			unsigned char* start = ( unsigned char*)&texture.width;
 			const unsigned char* end = (const unsigned char*)&texture.data;
 			in.read((char*)start, (size_t)(end - start));
-			if(texture.own_data)
-				delete[] texture.data;
-			texture.data = new unsigned char[texture.dataSize];
-			texture.own_data = true;
-			in.read((char*)texture.data, texture.dataSize);
+			uint32_t sz=0;
+			in.read((char*)&sz,sizeof(sz));
+			texture.data.resize(sz);
+			in.read((char*)texture.data.data(), sz);
 			return in;
 		}
 	};
@@ -331,7 +361,7 @@ namespace avs
 		}
 	};
 
-	template<> inline bool verify(const TextureAccessor& t1,const TextureAccessor& t2)
+	template<> inline bool verify_values(const TextureAccessor& t1,const TextureAccessor& t2)
 	{
 		TELEPORT_VERIFY(t1.index,t2.index);
 		TELEPORT_VERIFY(t1.texCoord,t2.texCoord);
@@ -340,7 +370,7 @@ namespace avs
 		return true;
 	}
 
-	template<> inline bool verify(const PBRMetallicRoughness& t1,const PBRMetallicRoughness& t2)
+	template<> inline bool verify_values(const PBRMetallicRoughness& t1,const PBRMetallicRoughness& t2)
 	{
 		TELEPORT_VERIFY(t1.baseColorTexture,t2.baseColorTexture);
 		TELEPORT_VERIFY(t1.baseColorFactor,t2.baseColorFactor);

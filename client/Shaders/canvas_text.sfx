@@ -5,6 +5,7 @@
 #include "camera_constants.sl"
 #include "depth.sl"
 #include "text_constants.sl"
+#include "pbr_constants.sl"
 
 uniform StructuredBuffer<FontChar> fontChars;
 uniform Texture2D fontTexture;
@@ -25,7 +26,7 @@ shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
 	#ifdef  SFX_OPENGL
 	f.text_rect.y *= -1;
 	f.text_rect.y -= f.text_rect.w;
-	#endif 
+	#endif  
 	
 	posTexVertexOutput OUT;
 	vec2 poss[4];
@@ -42,7 +43,7 @@ shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
 #endif
 
 	vec4 opos		=vec4(localPos.xyz,1.0);
-	OUT.hPosition	=mul(opos,worldViewProj);
+	OUT.hPosition	=mul(opos,viewProj);
 
 	return OUT;
 }
@@ -73,7 +74,7 @@ shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
 
-	vec4 wpos			=mul(localPos, viewID == 0 ? leftWorld : rightWorld);
+	vec4 wpos			=mul(localPos, model);
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.hPosition		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 

@@ -39,7 +39,7 @@ void teleport::client::DiscoveryService::ShutdownInstance()
 
 DiscoveryService::DiscoveryService()
 {
-	cyclePorts={ 8080,80,443,10600,10700,10800};
+	cyclePorts={ 8080};//,80,443,10600,10700,10800};
 }
 
 DiscoveryService::~DiscoveryService()
@@ -75,7 +75,16 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	}
 	signalingServer->Reset();
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
-	std::string ws_url=fmt::format("ws://{0}:{1}",url, serverDiscoveryPort);
+	size_t first_slash=url.find('/');
+	std::string base_url = url;
+	std::string path;
+	if (first_slash < url.length())
+	{
+		base_url=url.substr(0,first_slash);
+		path=url.substr(first_slash+1,url.length()-first_slash-1);
+	}
+	std::string ws_url = fmt::format("ws://{0}:{1}/{2}", base_url, serverDiscoveryPort,path);
+	
 	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
 	if(url.length()>0)
 	{
@@ -259,7 +268,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	}
 	try
 	{
-		if (ws->isOpen())
+		if (ws&&ws->isOpen())
 		{
 			signalingServer->SendMessages();
 		}

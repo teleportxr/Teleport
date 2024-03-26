@@ -9,25 +9,21 @@
 #include "SignalingService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ClientManager.h"
-#include "StringFunctions.h"
+#include "TeleportCore/StringFunctions.h"
 
 using namespace teleport;
 using namespace server;
 
-ClientMessaging::ClientMessaging(const struct ServerSettings* settings,
-								 SignalingService &signalingService,
+ClientMessaging::ClientMessaging(SignalingService &signalingService,
 								 SetHeadPoseFn setHeadPose,
 								 SetControllerPoseFn setControllerPose,
 								 ProcessNewInputStateFn processNewInputState,
 								ProcessNewInputEventsFn processNewInputEvents,
 								 DisconnectFn onDisconnect,
 								 uint32_t disconnectTimeout,
-								 ReportHandshakeFn reportHandshakeFn,
-								 ClientManager* clientManager)
-	: settings(settings)
-	, signalingService(signalingService)
-	, geometryStreamingService(settings)
-	, clientManager(clientManager)
+								 ReportHandshakeFn reportHandshakeFn, avs::uid clid)
+	:  signalingService(signalingService)
+	, geometryStreamingService(clid)
 	, setHeadPose(setHeadPose)
 	, setControllerPose(setControllerPose)
 	, processNewInputState(processNewInputState)
@@ -71,10 +67,12 @@ bool ClientMessaging::startSession(avs::uid clientID, std::string clientIP)
 
 void ClientMessaging::stopSession()
 {
+	// TODO: send shutdown command
+	//teleport::core::ShutdownCommand shutdownCommand;
+	//clientData->clientMessaging->sendCommand(shutdownCommand);
 	receivedHandshake = false;
 	geometryStreamingService.reset();
 	clientNetworkContext.NetworkPipeline.release();
-
 	stopped = true;
 }
 
@@ -99,8 +97,33 @@ void ClientMessaging::tick(float deltaTime)
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
-	commandPipeline.process();
-	messagePipeline.process();
+	avs::Result commandResult=commandPipeline.process();
+	if(commandResult==avs::Result::IO_Full)
+	{
+		if (!commandPipeline.IsPipelineBlocked())
+		{
+			commandPipeline.SetPipelineBlocked(true);
+			TELEPORT_CERR << "Client "<<clientID<<": Command pipeline is full. No further commands accepted until it clears.\n";
+		}
+	}
+	else
+	{
+		commandPipeline.SetPipelineBlocked(false);
+	}
+	avs::Result messageResult = messagePipeline.process();
+	
+	if (commandResult == avs::Result::IO_Full)
+	{
+		if(!messagePipeline.IsPipelineBlocked())
+		{
+			messagePipeline.SetPipelineBlocked(true);
+			TELEPORT_CERR << "Client " << clientID << ": Message pipeline is full. No further messages accepted until it clears.\n";
+		}
+	}
+	else
+	{
+		messagePipeline.SetPipelineBlocked(false);
+	}
 	if (!clientNetworkContext.NetworkPipeline.isProcessingEnabled())
 	{
 		TELEPORT_COUT << "Network error occurred with client " << getClientIP() <<", disconnecting." << "\n";
@@ -109,7 +132,7 @@ void ClientMessaging::tick(float deltaTime)
 	}
 	timeSinceLastGeometryStream += deltaTime;
 
-	float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f/settings->geometryTicksPerSecond;
+	float TIME_BETWEEN_GEOMETRY_TICKS = 1.0f / serverSettings.geometryTicksPerSecond;
 
 	//Only tick the geometry streaming service a set amount of times per second.
 	if (timeSinceLastGeometryStream >= TIME_BETWEEN_GEOMETRY_TICKS)
@@ -139,7 +162,7 @@ void ClientMessaging::tick(float deltaTime)
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
-	if (settings->isReceivingAudio )
+	if (serverSettings.isReceivingAudio)
 	{
 		clientNetworkContext.sourceNetworkPipeline.process();
 	}
@@ -215,6 +238,7 @@ bool ClientMessaging::timedOutStartingSession() const
 void ClientMessaging::Disconnect()
 {
 	onDisconnect(clientID);
+	ClientManager::instance().stopClient(clientID);
 	stopped = true;
 }
 
@@ -238,14 +262,13 @@ void ClientMessaging::sendSetupLightingCommand(const teleport::core::SetupLighti
 	sendCommand(setupLightingCommand, global_illumination_texture_uids);
 }
 
-
-void ClientMessaging::nodeEnteredBounds(avs::uid nodeID)
+void ClientMessaging::streamNode(avs::uid nodeID)
 {
 	nodesEnteredBounds.push_back(nodeID);
 	nodesLeftBounds.erase(std::remove(nodesLeftBounds.begin(), nodesLeftBounds.end(), nodeID), nodesLeftBounds.end());
 }
 
-void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
+void ClientMessaging::unstreamNode(avs::uid nodeID)
 {
 	nodesLeftBounds.push_back(nodeID);
 	nodesEnteredBounds.erase(std::remove(nodesEnteredBounds.begin(), nodesEnteredBounds.end(), nodeID), nodesEnteredBounds.end());
@@ -253,6 +276,8 @@ void ClientMessaging::nodeLeftBounds(avs::uid nodeID)
 
 void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
 {
+	if(!updateList.size())
+		return;
 	teleport::core::UpdateNodeMovementCommand command(updateList.size());
 	sendCommand<>(command, updateList);
 }
@@ -289,12 +314,6 @@ void ClientMessaging::updateNodeAnimation(teleport::core::ApplyAnimation update)
 	teleport::core::ApplyAnimationCommand command(update);
 	sendCommand(command);
 }
-/*
-void ClientMessaging::updateNodeAnimationControl(teleport::core::NodeUpdateAnimationControl update)
-{
-	teleport::core::SetAnimationControlCommand command(update);
-	sendCommand(command);
-}*/
 
 void ClientMessaging::updateNodeRenderState(avs::uid nodeID,avs::NodeRenderState update)
 {
@@ -320,6 +339,11 @@ void ClientMessaging::pingForLatency()
 size_t ClientMessaging::SendCommand(const void* c, size_t sz) const
 {
 	if (sz > 16384)
+	{
+		TELEPORT_CERR << "Command too large, size is "<<sz<<".\n";
+		return 0;
+	}
+	if(commandPipeline.IsPipelineBlocked())
 		return 0;
 	auto b=std::make_shared<std::vector<uint8_t>>(sz);
 	memcpy(b->data(), c, sz);
@@ -379,24 +403,24 @@ void ClientMessaging::ensureStreamingPipeline()
 			{
 				static_cast<int32_t>(handshake.maxBandwidthKpS),
 				static_cast<int32_t>(handshake.udpBufferSize),
-				settings->requiredLatencyMs,
+					serverSettings.requiredLatencyMs,
 				static_cast<int32_t>(disconnectTimeout)
 			};
 
 			clientNetworkContext.NetworkPipeline.initialise(networkSettings);
 
-			MessageDecoder.configure(this);
-			messagePipeline.link({ &clientNetworkContext.NetworkPipeline.MessageQueue,&MessageDecoder });
+			MessageDecoder.configure(this,"MessageDecoder");
+			messagePipeline.link({&clientNetworkContext.NetworkPipeline.unreliableReceiveQueue, &MessageDecoder});
 		}
 		TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
 
-		if (settings->isReceivingAudio)
+		if (serverSettings.isReceivingAudio)
 		{
 			avs::NetworkSourceParams sourceParams;
 			sourceParams.connectionTimeout = disconnectTimeout;
 			sourceParams.remoteIP = clientIP.c_str();
 
-			clientNetworkContext.sourceNetworkPipeline.initialize(settings, sourceParams
+			clientNetworkContext.sourceNetworkPipeline.initialize( sourceParams
 				, &clientNetworkContext.sourceAudioQueue
 				, &clientNetworkContext.audioDecoder
 				, &clientNetworkContext.audioTarget);
@@ -441,8 +465,8 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 		captureComponentDelegates.startStreaming(&clientNetworkContext);
 		geometryStreamingService.startStreaming(&clientNetworkContext, handshake);
 		{
-			commandEncoder.configure(&commandStack);
-			commandPipeline.link({ &commandEncoder, &clientNetworkContext.NetworkPipeline.reliableQueue });
+			commandEncoder.configure(&commandStack,"Command Encoder");
+			commandPipeline.link({&commandEncoder, &clientNetworkContext.NetworkPipeline.reliableSendQueue});
 		}
 		receivedHandshake = true;
 	}
@@ -701,8 +725,8 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 				TELEPORT_CERR << "Bad packet size.\n";
 				return;
 			}
-			avs::ConvertRotation(clientNetworkContext.axesStandard, settings->serverAxesStandard, message.headPose.orientation);
-			avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, message.headPose.position);
+			avs::ConvertRotation(clientNetworkContext.axesStandard, serverSettings.serverAxesStandard, message.headPose.orientation);
+			avs::ConvertPosition(clientNetworkContext.axesStandard, serverSettings.serverAxesStandard, message.headPose.position);
 			setHeadPose(clientID, (avs::Pose*)&message.headPose);
 			const uint8_t *src=packet.data()+sizeof(message);
 			for (int i = 0; i < message.numPoses; i++)
@@ -711,10 +735,10 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 				memcpy(&nodePose,src,sizeof(nodePose));
 				src+=sizeof(nodePose);
 				avs::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
-				avs::ConvertRotation(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.orientation);
-				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.pose.position);
-				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.velocity);
-				avs::ConvertPosition(clientNetworkContext.axesStandard, settings->serverAxesStandard, nodePoseDynamic.angularVelocity);
+				avs::ConvertRotation(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.orientation);
+				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.position);
+				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.velocity);
+				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.angularVelocity);
 				setControllerPose(clientID, int(nodePose.uid), &nodePoseDynamic);
 			}
 		}

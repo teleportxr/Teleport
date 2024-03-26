@@ -42,6 +42,16 @@ namespace teleport
 			bool simulateVR = false;
 			bool passThrough=false;
 		};
+		struct DebugOptions
+		{
+			bool showAxes = false;
+			bool showOverlays = false;
+			bool showStageSpace = false;
+			bool useDebugShader = false;
+			bool enableTextureTranscodingThread = true;
+			bool enableGeometryTranscodingThread = true;
+			std::string debugShader;
+		};
 		class Config
 		{
 			std::vector<Bookmark> bookmarks;
@@ -61,6 +71,7 @@ namespace teleport
 			std::string log_filename="TeleportClient.log";
 			
 			Options options;
+			DebugOptions debugOptions;
 			void LoadOptions();
 			void SaveOptions();
 			const std::vector<std::string> &GetRecent() const;

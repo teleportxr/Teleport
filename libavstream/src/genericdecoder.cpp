@@ -28,7 +28,7 @@ GenericDecoder::~GenericDecoder()
 	deconfigure();
 }
 
-Result GenericDecoder::configure(GenericTargetInterface* t)
+Result GenericDecoder::configure(GenericTargetInterface* t,const char *n)
 {
 	if (m_configured)
 	{
@@ -36,6 +36,7 @@ Result GenericDecoder::configure(GenericTargetInterface* t)
 		if (deconf_result != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
+	name=n;
 	m_target =t;
 
 	m_configured = true;
@@ -74,7 +75,10 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		return Result::Node_InvalidInput;
 	}
 	Result result = Result::OK;
-	do
+	// Process at most 100 messages, to prevent getting caught in an infinite loop as more
+	// data arrives than we can process in the time.
+	const size_t MAX_GENERIC_MESSAGES=100;
+	for(size_t i=0;i<MAX_GENERIC_MESSAGES&&(result == Result::OK);i++)
 	{
 		size_t bufferSize = m_buffer.size();
 		size_t bytesRead;
@@ -105,8 +109,13 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		//ptr += sizeof(StreamPayloadInfo);
 		//size_t sz = bytesRead - sizeof(StreamPayloadInfo);
 		result = processPayload(ptr, bytesRead);
-	} while (result == Result::OK);
-
+	} 
+	if(result == Result::OK)
+	{
+		AVSLOGONCE(Warning) << "Processed max messages, must exit loop.\n";
+		// TODO: Distinguish between unreliable (can drop messages) and reliable (should keep).
+		input->drop();
+	}
 
 	return result;
 }

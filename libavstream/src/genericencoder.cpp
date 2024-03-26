@@ -73,12 +73,13 @@ GenericEncoder::~GenericEncoder()
 	deconfigure();
 }
 
-Result GenericEncoder::configure(GenericEncoderBackendInterface *backend)
+Result GenericEncoder::configure(GenericEncoderBackendInterface *backend,const char *n)
 {
 	if (d().m_configured)
 	{
 		return Result::Node_AlreadyConfigured;
 	}
+	name=n;
 	d().m_configured = true;
 	d().m_backend=backend;
 	Result result = Result::OK;

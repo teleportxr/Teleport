@@ -6,10 +6,10 @@ The client renderer library provides generic rendering functions for Teleport cl
 Classes
 -------
 
-.. doxygenclass:: clientrender::NodeManager
+.. doxygenclass:: teleport::clientrender::NodeManager
    :members:
 
-.. doxygenclass:: clientrender::GeometryCache
+.. doxygenclass:: teleport::clientrender::GeometryCache
    :members:
 
 Structs

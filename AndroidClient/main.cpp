@@ -57,7 +57,7 @@ struct AppState
 {
 	bool resumed=false;
 	ANativeWindow* nativeWindow = nullptr;
-	Gui *gui = nullptr;
+	clientrender::Gui *gui = nullptr;
 };
 AppState appState;
 
@@ -137,7 +137,7 @@ void android_main(struct android_app* app)
 	prctl(PR_SET_NAME, (long)"Teleport Main", 0, 0, 0);
 	
 	teleport::android::OpenXR openXR(app->activity->vm,app->activity->clazz);
-	teleport::Gui gui(openXR);
+	teleport::clientrender::Gui gui(openXR);
 	appState.gui=&gui;
 	app->onAppCmd = handle_cmd;
 	int events;
@@ -204,6 +204,27 @@ void android_main(struct android_app* app)
 	renderPlatform->PushShaderBinaryPath("shaders");
 	renderPlatform->PushShaderBinaryPath("assets/shaders");
 
+	// Mark CB's 0 and 1 as being in resource group 0 (per-frame)
+	platform::crossplatform::ResourceGroupLayout perFrameLayout;
+	perFrameLayout.UseConstantBufferSlot(0);
+	perFrameLayout.UseConstantBufferSlot(1);
+	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
+	// Mark texture slots 19 to 22 as being in resource group 1 (few per-frame)
+	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;
+	fewPerFrameLayout.UseReadOnlyResourceSlot(19);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(20);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(21);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(22);
+	renderPlatform->SetResourceGroupLayout(1, fewPerFrameLayout);
+	// Mark CB 5 and texture slots 15 to 18 as being in resource group 2 (per material)
+	platform::crossplatform::ResourceGroupLayout perMaterialLayout;
+	perMaterialLayout.UseConstantBufferSlot(5);
+	perMaterialLayout.UseReadOnlyResourceSlot(15);
+	perMaterialLayout.UseReadOnlyResourceSlot(16);
+	perMaterialLayout.UseReadOnlyResourceSlot(17);
+	perMaterialLayout.UseReadOnlyResourceSlot(18);
+	renderPlatform->SetResourceGroupLayout(2, perMaterialLayout);
+
 	renderPlatform->RestoreDeviceObjects(vulkanDeviceManager.GetDevice());
 	renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::NEVER_BUILD);
 	androidRenderer->Init(renderPlatform,&openXR,app->window);
@@ -248,11 +269,10 @@ void android_main(struct android_app* app)
 		static double time_seconds=GetTimeInSeconds();
 		double new_time_seconds=GetTimeInSeconds();
 		float time_step_seconds=new_time_seconds-time_seconds;
-		time_seconds=new_time_seconds;
-		
-		double timestamp_ms = avs::Platform::getTimeElapsedInMilliseconds(clientrender::platformStartTimestamp, avs::Platform::getTimestamp());
+		time_seconds = new_time_seconds;
+		auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 
-		androidRenderer->Update(timestamp_ms);
+		androidRenderer->Update(microsecondsUTC);
 		androidRenderer->OnFrameMove(float(time_seconds),float(time_step_seconds));
 		renderPlatform->BeginFrame(frame);
 		if (openXR.HaveXRDevice())
@@ -261,7 +281,6 @@ void android_main(struct android_app* app)
 			deviceContext.renderPlatform = renderPlatform;
 			// This context is active. So we will use it.
 			deviceContext.platform_context = vulkanDeviceManager.GetDeviceContext();
-	
 			// Note we do this even when the device is inactive.
 			//  if we don't, we will never receive the transition from XR_SESSION_STATE_READY to XR_SESSION_STATE_FOCUSED
 			openXR.RenderFrame(renderDelegate, overlayDelegate);

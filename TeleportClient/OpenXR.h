@@ -112,6 +112,7 @@ namespace teleport
 		{
 			float float32;
 			uint32_t uint32;
+			bool isValid=false;
 		};
 		struct NodePoseMapping
 		{
@@ -173,6 +174,7 @@ namespace teleport
 				float vec2f[2];
 				bool poseActive;
 			};
+			bool isValid=false;
 			XrPosef		pose_stageSpace;
 			XrVector3f  velocity_stageSpace;
 			XrVector3f  angularVelocity_stageSpace;
@@ -369,7 +371,7 @@ namespace teleport
 			/// Get the poses relative to the hand root.
 			const std::vector<avs::Pose> &GetTrackedHandJointPoses(int i);
 			/// @brief Get the hand root pose in local space.
-			/// @param pose 
+			/// @param i index of the hand. 
 			/// @return 
 			avs::Pose GetTrackedHandRootPose(int i) const;
 
@@ -393,6 +395,11 @@ namespace teleport
 
 			// extensions:
 			std::shared_ptr<OpenXRRenderModel> openXRRenderModel;
+
+			bool IsHandTrackingActive(int i) const
+			{
+				return xrTrackedHands[i].hand_tracking_active;
+			}
 		protected:
 			bool threadedInitInstance();
 			bool internalInitInstance();
@@ -482,9 +489,12 @@ namespace teleport
 			bool add_overlay = false;
 			// enabled extensions:
 			bool cylinderOverlayExt=false;
+			public:
 			float viewAzimuth=0.0f;
-			float overlayAzimuth = 0.0f;
+			float overlayAzimuth = 20.0f;
 			float targetOverlayAzimuth = 0.0f;
+			float azimuthDiffAngle=0.0f;
+			protected:
 			void UpdateOverlayPosition();
 			// The action for getting the hand or controller position and orientation.
 			XrSystemHandTrackingPropertiesEXT handTrackingSystemProperties = {XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT};

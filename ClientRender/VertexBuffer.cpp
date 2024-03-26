@@ -3,6 +3,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "TeleportCore/ErrorHandling.h"
 
+using namespace teleport;
 using namespace clientrender;
 
 const char * GetAttributeSemantic(avs::AttributeSemantic sem)

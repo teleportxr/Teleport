@@ -315,7 +315,6 @@ namespace avs
 		int32_t priority=0;
 
 		uid parentID=0;
-		//std::vector<uid> childrenIDs;
 
 		// The following should be separated out into node components:
 		NodeDataType data_type=NodeDataType::None;
@@ -339,6 +338,7 @@ namespace avs
 		uint8_t lightType	=0;
 		float lightRange	=0.f;			//! Maximum distance the light is effective at, in metres.
 
+		std::string url;		// if node is a link/portal
 	};
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -387,7 +387,6 @@ namespace avs
 	struct Skeleton
 	{
 		std::string name;
-		bool useExternalBones=false;
 		std::vector<uid> boneIDs;
 		Transform skeletonTransform;
 		// New method, bones are built into the skeleton:
@@ -399,7 +398,6 @@ namespace avs
 		{
 			avs::Skeleton convertedSkeleton;
 			convertedSkeleton.name = skeleton.name;
-			convertedSkeleton.useExternalBones = skeleton.useExternalBones;
 			convertedSkeleton.boneIDs = skeleton.boneIDs;
 
 			convertedSkeleton.skeletonTransform = skeleton.skeletonTransform;
@@ -813,7 +811,6 @@ namespace avs
 		virtual Result encode(uint64_t timestamp, GeometryRequesterBackendInterface* requester) = 0;
 		virtual Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual Result unmapOutputBuffer() = 0;
-		virtual void setMinimumPriority(int32_t) =0;
 	};
 
 	/*! Structure to pass to GeometryTargetBackendInterface 
@@ -871,16 +868,6 @@ namespace avs
 		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
 	};
 
-	class AVSTREAM_API GeometryCacheBackendInterface : public UseInternalAllocator
-	{
-	public:
-		virtual std::vector<avs::uid> GetCompletedNodes() const = 0;
-		virtual std::vector<avs::uid> GetReceivedResources() const = 0;
-		virtual std::vector<avs::uid> GetResourceRequests() const = 0;
-		virtual void ClearCompletedNodes() = 0;
-		virtual void ClearReceivedResources() = 0;
-		virtual void ClearResourceRequests() = 0;
-	};
 
 	//! A Geometry decoder backend converts a 
 	class AVSTREAM_API GeometryDecoderBackendInterface : public UseInternalAllocator

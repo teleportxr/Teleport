@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cmath>
 #include <functional>
+#include <parallel_hashmap/phmap.h>
 
 #include <rtc/rtc.hpp>
 #include <nlohmann/json.hpp>
@@ -46,14 +47,14 @@ namespace avs
 	struct WebRtcNetworkSink::Private final : public PipelineNode::Private
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSink, PipelineNode)
-		std::unordered_map<uint64_t, ServerDataChannel> dataChannels;
+		phmap::flat_hash_map<uint64_t, ServerDataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
 			void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
-		std::unordered_map<int, uint8_t> idToStreamIndex;
-		std::unordered_map<uint8_t, uint8_t> streamIndexToInputIndex;
-		std::unordered_map<uint8_t, uint8_t> streamIndexToOutputIndex;
-		std::unordered_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
+		phmap::flat_hash_map<int, uint8_t> idToStreamIndex;
+		phmap::flat_hash_map<uint8_t, uint8_t> streamIndexToInputIndex;
+		phmap::flat_hash_map<uint8_t, uint8_t> streamIndexToOutputIndex;
+		phmap::flat_hash_map<uint32_t, std::unique_ptr<StreamParserInterface>> m_parsers;
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		bool recreateConnection = false;
 		rtc::PeerConnection::State currentState = rtc::PeerConnection::State::New;
@@ -505,7 +506,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 		}
 		catch (std::runtime_error err)
 		{
-			if (err.what())
+			if (err.what()) 
 				AVSLOG(Warning) << err.what() << std::endl;
 			else
 				AVSLOG(Warning) << "std::runtime_error." << std::endl;
@@ -586,9 +587,12 @@ Result WebRtcNetworkSink::onInputLink(int slot, PipelineNode* node)
 	{
 		auto& stream = m_streams[i];
 		if (stream.inputName == name)
+		{
 			m_data->streamIndexToInputIndex[i] = uint8_t(slot);
+			return Result::OK;
+		}
 	}
-	return Result::OK;
+	return Result::Failed;
 }
 
 Result WebRtcNetworkSink::onOutputLink(int slot, PipelineNode* node)
@@ -598,9 +602,12 @@ Result WebRtcNetworkSink::onOutputLink(int slot, PipelineNode* node)
 	{
 		auto& stream = m_streams[i];
 		if (stream.outputName == name)
-			m_data->streamIndexToOutputIndex[i]=uint8_t(slot);
+		{
+			m_data->streamIndexToOutputIndex[i] = uint8_t(slot);
+			return Result::OK;
+		}
 	}
-	return Result::OK;
+	return Result::Failed;
 }
 
 bool WebRtcNetworkSink::getNextStreamingControlMessage(std::string& msg)
@@ -717,17 +724,18 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 			auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
 			if (!stream.framed)
 			{
-				size_t numBytesWrittenToOutput=0;
-				auto outputNode = dynamic_cast<IOInterface*>(q_ptr()->getOutput(outputIndex));
+				size_t numBytesWrittenToOutput = 0;
+				auto outputNode = q_ptr()->getOutput(outputIndex);
+				auto ioInterface = dynamic_cast<IOInterface *>(outputNode);
 				if (!outputNode)
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.\n";
 					return;
 				}
-				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+				auto result = ioInterface->write(q_ptr(), (const void *)b.data(), b.size(), numBytesWrittenToOutput);
 				if (numBytesWrittenToOutput != b.size())
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: failed to write all to output Node.";
+					AVSLOG_NOSPAM(Warning) << "WebRtcNetworkSource EFP Callback: failed to write received message to output Queue node " << outputNode->getDisplayName() << "\n";
 					return;
 				}
 			}

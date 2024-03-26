@@ -1,5 +1,6 @@
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/GeometryStore.h"
+#include "TeleportServer/ClientManager.h"
 using namespace teleport;
 using namespace server;
 
@@ -15,27 +16,27 @@ void ClientData::SetConnectionState(ConnectionState c)
 		originClientHas = 0;
 	}
 }
-ClientData::ClientData(  std::shared_ptr<ClientMessaging> clientMessaging)
+ClientData::ClientData(avs::uid clid, std::shared_ptr<ClientMessaging> clientMessaging)
 	:   clientMessaging(clientMessaging)
 {
 	videoEncodePipeline = std::make_shared<VideoEncodePipeline>();
 	audioEncodePipeline = std::make_shared<AudioEncodePipeline>();
-	memset(&clientSettings,0,sizeof(clientSettings));
+	clientID=clid;
 }
 
-void ClientData::StartStreaming(const ServerSettings& serverSettings
-	,uint32_t connectionTimeout
+void ClientData::StartStreaming(uint32_t connectionTimeout
 	,uint64_t session_id
-	,GetUnixTimestampFn getUnixTimestamp
-	,int64_t startTimestamp_utc_unix_ns
+	,GetUnixTimestampFn getUnixTimestamp, int64_t startTimestamp_utc_unix_us
 	,bool use_ssl)
 {
 	orthogonalNodeStates.clear();
 	CasterEncoderSettings encoderSettings{};
-
-	encoderSettings.frameWidth = clientSettings.videoTextureSize[0];
-	encoderSettings.frameHeight = clientSettings.videoTextureSize[1];
-
+	const ClientSettings *clientSettings = ClientManager::instance().GetClientSettings(clientID);
+	if(clientSettings)
+	{
+		encoderSettings.frameWidth = clientSettings->videoTextureSize[0];
+		encoderSettings.frameHeight = clientSettings->videoTextureSize[1];
+	}
 	if (serverSettings.useAlphaLayerEncoding)
 	{
 		encoderSettings.depthWidth = 0;
@@ -59,7 +60,6 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 
 	teleport::core::SetupCommand setupCommand;
 	setupCommand.debug_stream = serverSettings.debugStream;
-	setupCommand.do_checksums = serverSettings.enableChecksums ? 1 : 0;
 	setupCommand.debug_network_packets = serverSettings.enableDebugNetworkPackets;
 	setupCommand.requiredLatencyMs = serverSettings.requiredLatencyMs;
 	setupCommand.idle_connection_timeout = connectionTimeout;
@@ -68,12 +68,11 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	// TODO: this must change:
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
-	setupCommand.control_model = serverSettings.controlModel;
-	setupCommand.startTimestamp_utc_unix_ns = startTimestamp_utc_unix_ns;
+	setupCommand.startTimestamp_utc_unix_us = startTimestamp_utc_unix_us;
 	setupCommand.using_ssl = use_ssl;
-	setupCommand.backgroundMode = clientSettings.backgroundMode;
-	setupCommand.backgroundColour = clientSettings.backgroundColour;
-	setupCommand.draw_distance = clientSettings.drawDistance;
+	setupCommand.backgroundMode = clientSettings->backgroundMode;
+	setupCommand.backgroundColour = clientSettings->backgroundColour;
+	setupCommand.draw_distance = clientSettings->drawDistance;
 
 	// Often drawDistance will equal serverSettings.detectionSphereRadius + serverSettings.clientDrawDistanceOffset;
 	// but this is for the server operator to decide.
@@ -86,10 +85,10 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	videoConfig.perspective_width = serverSettings.perspectiveWidth;
 	videoConfig.perspective_height = serverSettings.perspectiveHeight;
 	videoConfig.perspective_fov = serverSettings.perspectiveFOV;
-	videoConfig.webcam_width = clientSettings.webcamSize[0];
-	videoConfig.webcam_height = clientSettings.webcamSize[1];
-	videoConfig.webcam_offset_x = clientSettings.webcamPos[0];
-	videoConfig.webcam_offset_y = clientSettings.webcamPos[1];
+	videoConfig.webcam_width = clientSettings->webcamSize[0];
+	videoConfig.webcam_height = clientSettings->webcamSize[1];
+	videoConfig.webcam_offset_x = clientSettings->webcamPos[0];
+	videoConfig.webcam_offset_y = clientSettings->webcamPos[1];
 	videoConfig.use_10_bit_decoding = serverSettings.use10BitEncoding;
 	videoConfig.use_yuv_444_decoding = serverSettings.useYUV444Decoding;
 	videoConfig.use_alpha_layer_decoding = serverSettings.useAlphaLayerEncoding;
@@ -111,11 +110,11 @@ void ClientData::StartStreaming(const ServerSettings& serverSettings
 	{
 		clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specular_cubemap_texture_uid);
 	}
-	videoConfig.shadowmap_x = clientSettings.shadowmapPos[0];
-	videoConfig.shadowmap_y = clientSettings.shadowmapPos[1];
-	videoConfig.shadowmap_size = clientSettings.shadowmapSize;
+	videoConfig.shadowmap_x = clientSettings->shadowmapPos[0];
+	videoConfig.shadowmap_y = clientSettings->shadowmapPos[1];
+	videoConfig.shadowmap_size = clientSettings->shadowmapSize;
 
-	auto global_illumination_texture_uids = getGlobalIlluminationTextures();
+	auto &global_illumination_texture_uids = getGlobalIlluminationTextures();
 	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
 
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
@@ -160,7 +159,7 @@ void ClientData::reparentNode(avs::uid nodeID)
 	auto& st = s->unconfirmedStates[command.commandPayloadType];
 	st.confirmationNumber = command.confirmationNumber;
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	st.serverTimeSentNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_ns;
+	st.serverTimeSentNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_us;
 	clientMessaging->reparentNode(command);
 }
 
@@ -187,7 +186,7 @@ void ClientData::tick(float deltaTime)
 void ClientData::resendUnconfirmedOrthogonalStates()
 {
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	int64_t serverTimeNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_ns;
+	int64_t serverTimeNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_us;
 	// wait one second before resending
 	static int64_t resendOrthogonalStateTimeout = 1000000 * 1000;
 	for (auto& nodeState : orthogonalNodeStates)

@@ -12,6 +12,7 @@ ClientPipeline::ClientPipeline()
 
 ClientPipeline::~ClientPipeline()
 {
+	Shutdown();
 	unreliableToServerQueue.deconfigure();
 	nodePosesQueue.deconfigure();
 	inputStateQueue.deconfigure();
@@ -64,7 +65,6 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	}
 
 	source->setDebugStream(setupCommand.debug_stream);
-	source->setDoChecksums(setupCommand.do_checksums);
 	source->setDebugNetworkPackets(setupCommand.debug_network_packets);
 
 	//test
@@ -77,7 +77,7 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	decoderParams.useAlphaLayerDecoding = setupCommand.video_config.use_alpha_layer_decoding;
 
 	pipeline.reset();
-	// Top of the pipeline, we have the network source->
+	// Top of the pipeline, we have the network source.
 	pipeline.add(source.get());
 	return true;
 }

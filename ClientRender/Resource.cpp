@@ -1,6 +1,7 @@
 
 #include "Resource.h"
 #include "TeleportCore/ErrorHandling.h"
+using namespace teleport;
 using namespace clientrender;
 
 void IncompleteResource::DecrementMissingResources()

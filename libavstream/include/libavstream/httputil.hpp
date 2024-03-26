@@ -51,6 +51,7 @@ namespace avs
 			std::string getModifiedSinceHeader();
 			void addBufferHeader();
 			void write(const char* data, size_t dataSize);
+			void headers(const char *data, size_t dataSize);
 			CURL* getHandle() const { return mHandle; };
 			bool isActive() const { return mActive; }
 			const uint8_t* getReceivedData() const { return mBuffer.data(); }
@@ -85,7 +86,8 @@ namespace avs
 		std::string cacheDirectory;
 		static std::string cert_path;
 		bool AddRequest(const HTTPPayloadRequest& request);
-		static size_t writeCallback(char* ptr, size_t size, size_t nmemb, void* userData);
+		static size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userData);
+		static size_t headerCallback(char *buffer, size_t size,size_t nitems, void *userdata);
 
 		HTTPUtilConfig mConfig;
 		CURLM *mMultiHandle;
@@ -94,6 +96,7 @@ namespace avs
 		std::unordered_map<CURL*, int> mHandleTransferMap;
 		int mTransferIndex;
 		bool mInitialized;
+		int numActive=0;
 
 		static constexpr size_t mMinTransferBufferSize = 300000; //bytes
 		void CheckForCachedFile(HTTPPayloadRequest &request);

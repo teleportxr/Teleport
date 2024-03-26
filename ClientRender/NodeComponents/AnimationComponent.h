@@ -3,58 +3,50 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <set>
 
 #include "libavstream/common.hpp"
 
 #include "AnimationState.h"
 #include "Component.h"
 
-namespace clientrender
+namespace teleport
 {
-	class Animation;
-	class Bone;
-	typedef std::map<avs::uid, AnimationState> AnimationStateMap;
-
-	class AnimationComponent:public Component
+	namespace core
 	{
-	public:
-		AnimationComponent();
-		virtual ~AnimationComponent(){}
-		AnimationComponent(const std::map<avs::uid, std::shared_ptr<clientrender::Animation>>& animations);
+		struct ApplyAnimation;
+	}
+	namespace clientrender
+	{
+		class Animation;
+		class Node;
+		class GeometryCache;
 
-		void addAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
-		//Set animation the component is playing.
-		//	animationID : ID of the animation to start playing.
-		//	startTimestamp : Timestamp of when the animation started playing on the server.
-		void setAnimation(avs::uid animationID, uint64_t startTimestamp);
-		void setAnimation(avs::uid animationID);
-		//Causes the time used to seek the animation position to be overriden by the passed value.
-		//Passing in a nullptr will cause the animation to use the default; i.e. the current time in the animation controller.
-		//	animationID : ID of the animation we are changing the target for.
-		//	timeOverride : Pointer to the float that will be used as the current animation time.
-		//	valueMaximum : Maximum value the override can be; i.e. number is of the range [0.0, valueMaximum].
-		void setAnimationTimeOverride(avs::uid animationID,  float timeOverride , float overrideMaximum = 0.0f);
+		class AnimationComponent : public Component
+		{
+		public:
+			AnimationComponent();
+			AnimationComponent(const std::map<avs::uid, std::shared_ptr<Animation>> &anims);
+			virtual ~AnimationComponent() {}
 
-		void setAnimationSpeed(avs::uid animationID, float speed);
+			//! This informs the component that an animation is ready for use.
+			void addAnimation(avs::uid id, std::shared_ptr<Animation>);
+			//! This informs the component that an animation is no longer available.
+			void removeAnimation(avs::uid id);
+			// Update the animation state.
+			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate);
 
-		void update(const std::vector<std::shared_ptr<clientrender::Bone>>& boneList, float deltaTime);
+			//! @brief Update all animations, given the current timestamp, which is the time in microseconds since the server's datum timestamp.
+			//! @param boneList 
+			//! @param timestampUs 
+			void update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs);
 
-		const AnimationStateMap &GetAnimationStates() const;
-		AnimationState* GetAnimationState(avs::uid);
-		const AnimationState* GetCurrentAnimationState() const;
-		float GetCurrentAnimationTimeSeconds() const;
-	private:
-		AnimationStateMap animationStates;
-		AnimationStateMap::iterator currentAnimationState = animationStates.end();
+			const std::vector<AnimationLayerStateSequence> &GetAnimationLayerStates() const;
 
-		//Variables for if we can't start the animation because it has yet to be received, but we want to start when the animation is received.
-		avs::uid latestAnimationID = 0;
-		uint64_t latestAnimationStartTimestampUnixUTCMs = 0;
+		private:
+			std::vector<AnimationLayerStateSequence> animationLayerStates;
+			std::map<avs::uid,std::shared_ptr<Animation>> animations;
+		};
+	}
 
-		//Starts playing animation as if it had started at the passed time.
-		//	animationIterator : Iterator for animation to play from animations lookup.
-		//	startTimestamp : The timestamp of when the animation started on the server.
-		void startAnimation(AnimationStateMap::iterator animationIterator, uint64_t startTimestamp);
-
-	};
 }

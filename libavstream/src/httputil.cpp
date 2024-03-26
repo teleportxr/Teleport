@@ -85,19 +85,22 @@ namespace avs
 		{
 			return Result::HTTPUtil_NotInitialized;
 		}
-
 		// Try find a transfer but if none available, wait until next time.
 		while (!mRequestQueue.empty())
 		{
 			if (AddRequest(mRequestQueue.front()))
 			{
 				mRequestQueue.pop();
+				// A new request reactivates the HTTP processor.
+				numActive++;
 			}
 			else
 			{
 				break;
 			}
 		}
+		if (!numActive)
+			return Result::OK;
 
 		int runningHandles;
 		curl_multi_wait ( mMultiHandle, NULL, 0, 0, NULL);
@@ -145,12 +148,22 @@ namespace avs
 								}
 							}
 						}
+						else if(response_code==404)
+						{
+						// nothing at this address right now.
+						}
+						else if (response_code == 302)
+						{
+						// A redirect! Should handle this.
+						}
 					}
 					else
 					{
 						AVSLOG(Error)<<"CURL transfer failed. \n";
 					}
 					transfer.stop();
+					// If that was the last active handle, stop doing stuff until we get a new request.
+					numActive--;
 				}
 			}
 		}
@@ -260,7 +273,15 @@ namespace avs
 
 		return realSize;
 	}
+	size_t HTTPUtil::headerCallback(char *buffer, size_t size,
+									size_t nitems, void *userData)
 	
+	{
+		size_t realSize = nitems * size;
+		Transfer *transfer = reinterpret_cast<Transfer *>(userData);
+		transfer->headers(buffer,realSize);
+		return realSize;
+	}
 	std::string HTTPUtil::cert_path;
 	HTTPUtil::Transfer::Transfer(CURLM* multi, std::string remoteURL, size_t bufferSize)
 		: mMulti(multi)
@@ -270,6 +291,7 @@ namespace avs
 	{
 		mHandle = curl_easy_init();
 		mBuffer.resize(bufferSize);
+		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_HEADERDATA, this));
 		// Set to 1 to verify SSL certificates.
 	#ifdef __ANDROID__
 		CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYPEER, 0L));
@@ -298,7 +320,8 @@ namespace avs
 		// Wait for pipe connection to confirm 
 		curl_easy_setopt(mHandle, CURLOPT_PIPEWAIT, 1L); 
 		// Use CURLOPT_SSLCERT later.
-	#endif
+#endif
+		curl_easy_setopt(mHandle, CURLOPT_HEADERFUNCTION, &HTTPUtil::headerCallback);
 	}
 
 	HTTPUtil::Transfer::~Transfer()
@@ -392,5 +415,8 @@ namespace avs
 		}
 		memcpy(&mBuffer[mCurrentSize], data, dataSize);
 		mCurrentSize = newSize;
+	}
+	void HTTPUtil::Transfer::headers(const char *data, size_t dataSize)
+	{
 	}
 } 

@@ -6,9 +6,9 @@
 #include <libavstream/platforms/this_platform.h>
 
 #include <libavstream/libavstream.hpp>
-#include <genericdecoder.h>
+#include <libavstream/genericdecoder.h>
 
-#define WITH_REMOTEPLAY_STATS 1
+#define WITH_TELEPORT_STATS 1
 
 namespace teleport
 {
@@ -46,8 +46,10 @@ namespace teleport
 			avs::Queue TagDataQueue;
 			avs::Queue GeometryQueue;
 			avs::Queue AudioQueue;
-			avs::Queue reliableQueue;
-			avs::Queue MessageQueue;
+			avs::Queue reliableSendQueue;
+			avs::Queue unreliableReceiveQueue;
+			avs::Queue unreliableSendQueue;
+			avs::Queue reliableReceiveQueue;
 			std::unique_ptr<avs::NetworkSink> mNetworkSink;
 		private:
 			bool initialized = false;
@@ -55,9 +57,9 @@ namespace teleport
 			std::unique_ptr<avs::Pipeline> mPipeline;
 			avs::Result mPrevProcResult = avs::Result::OK;
 
-#if WITH_REMOTEPLAY_STATS
+#if WITH_TELEPORT_STATS
 			avs::Timestamp mLastTimestamp;
-#endif // WITH_REMOTEPLAY_STATS
+#endif // WITH_TELEPORT_STATS
 		};
 	}
 }

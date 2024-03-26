@@ -88,6 +88,13 @@ namespace avs
 		return Result::OK;
 	}
 
+	void Queue::drop()
+	{
+		m_dataSizes[m_front] = 0;
+		m_numElements = 0;
+		m_front = -1;
+	}
+
 	Result Queue::write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten)
 	{
 		if (!m_maxBuffers)
@@ -103,18 +110,18 @@ namespace avs
 				increaseBufferCount();
 			else
 			{
-				std::cerr << name.c_str() << " Queue::write: Max buffers " << m_maxBuffers << ", can't increase any more.\n";
-				return Result::GeometryDecoder_InvalidBufferSize;
+				AVSLOG_NOSPAM(Warning) << name.c_str() << " Queue::write: Max buffers " << m_maxBuffers << ", can't increase any more.\n";
+				return Result::IO_Full;
 			}
 #if LIBAVSTREAM_DEBUG_MESSAGES
-			std::cerr << name.c_str()<<" Queue::write: Max buffers "<<oldsize<<" reached. Increasing max to "<<m_maxBuffers<<".\n";
+			AVSLOG(Warning) << name.c_str() << " Queue::write: Max buffers " << oldsize << " reached. Increasing max to " << m_maxBuffers << ".\n";
 #endif
 		}
 		if (bufferSize > m_maxBufferSize)
 		{
 			increaseBufferSize(bufferSize);
 #if LIBAVSTREAM_DEBUG_MESSAGES
-			std::cerr << name.c_str() << " Queue::write: Buffer size is "<<bufferSize<<" exceeding max. Increasing max to "<<m_maxBufferSize<<" Have "<<m_numElements<<" buffers.\n";
+			AVSLOG(Warning) << name.c_str() << " Queue::write: Buffer size is " << bufferSize << " exceeding max. Increasing max to " << m_maxBufferSize << " Have " << m_numElements << " buffers.\n";
 #endif
 		}
 		
