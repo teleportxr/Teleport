@@ -8,6 +8,7 @@
 #include "libavstream/common.hpp"
 
 #include "TeleportCore/Profiling.h"
+#include "TeleportCore/Logging.h"
 
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
@@ -28,14 +29,6 @@
 #include "PluginMain.h"
 
 //#include <OAIdl.h>	// for SAFE_ARRAY
-
-#ifdef _MSC_VER
-#include "../VisualStudioDebugOutput.h"
-extern std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
-#else
-#include "../UnixDebugOutput.h"
-extern std::shared_ptr<DebugOutput> debug_buffer;
-#endif
 #include <regex>
 
 using namespace teleport;
@@ -189,12 +182,12 @@ void PipeOutMessages()
 			/// Tell the dll what delegate to use when a client has stopped rendering a node.
 			TELEPORT_EXPORT void Server_SetClientStoppedRenderingNodeDelegate(ClientStoppedRenderingNodeFn clientStoppedRenderingNode)
 			{
-				PluginGeometryStreamingService::callback_clientStoppedRenderingNode = clientStoppedRenderingNode;
+				GeometryStreamingService::callback_clientStoppedRenderingNode = clientStoppedRenderingNode;
 			}
 			/// Tell the dll what delegate to use when a client has started rendering a node.
 			TELEPORT_EXPORT void Server_SetClientStartedRenderingNodeDelegate(ClientStartedRenderingNodeFn clientStartedRenderingNode)
 			{
-				PluginGeometryStreamingService::callback_clientStartedRenderingNode = clientStartedRenderingNode;
+				GeometryStreamingService::callback_clientStartedRenderingNode = clientStartedRenderingNode;
 			}
 
 			/// Tell the dll what delegate to use when a client has updated its head pose.
@@ -273,8 +266,8 @@ void PipeOutMessages()
 				ClientManager::instance().shutdown();
 				httpService->shutdown();
 
-				PluginGeometryStreamingService::callback_clientStoppedRenderingNode = nullptr;
-				PluginGeometryStreamingService::callback_clientStartedRenderingNode = nullptr;
+				GeometryStreamingService::callback_clientStoppedRenderingNode = nullptr;
+				GeometryStreamingService::callback_clientStartedRenderingNode = nullptr;
 
 				setHeadPose = nullptr;
 				setControllerPose = nullptr;
@@ -520,41 +513,86 @@ void PipeOutMessages()
 			}
 
 			/// Store the given animation in memory and on disk.
-			TELEPORT_EXPORT void Server_StoreTransformAnimation(avs::uid animationID, const char *path, InteropTransformAnimation *animation)
+			TELEPORT_EXPORT bool Server_StoreTransformAnimation(avs::uid animationID, const char *path, InteropTransformAnimation *animation)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
+				if (!path)
+				{
+					TELEPORT_WARN("Unable to store animation due to null path.");
+					return false;
+				}
 				teleport::core::Animation a(*animation);
-				GeometryStore::GetInstance().storeAnimation(animationID, path, a, avs::AxesStandard::UnityStyle);
+				return GeometryStore::GetInstance().storeAnimation(animationID, path, a, avs::AxesStandard::UnityStyle);
 			}
 
 			/// Store the given mesh in memory and on disk.
-			TELEPORT_EXPORT void Server_StoreMesh(avs::uid id, const char *guid, const char *path, std::time_t lastModified, const InteropMesh *mesh, avs::AxesStandard extractToStandard, bool compress, bool verify)
+			TELEPORT_EXPORT bool Server_StoreMesh(avs::uid id, const char *guid, const char *path, std::time_t lastModified, const InteropMesh *mesh, avs::AxesStandard extractToStandard, bool verify)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
+				if (!path)
+				{
+					TELEPORT_WARN("Unable to store mesh due to null path.");
+					return false;
+				}
+				if (!id)
+				{
+					TELEPORT_WARN("Unable to store mesh due to id=0.");
+					return false;
+				}
 				avs::Mesh avsMesh(*mesh);
-				GeometryStore::GetInstance().storeMesh(id,path, lastModified, avsMesh, extractToStandard, compress, verify);
+				return GeometryStore::GetInstance().storeMesh(id,path, lastModified, avsMesh, extractToStandard,  verify);
 			}
 
 			/// Store the given material in memory and on disk.
-			TELEPORT_EXPORT void Server_StoreMaterial(avs::uid id, const char *guid, const char *path, std::time_t lastModified, InteropMaterial material)
+			TELEPORT_EXPORT bool Server_StoreMaterial(avs::uid id, const char *guid, const char *path, std::time_t lastModified, InteropMaterial material)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
+				if (!path)
+				{
+					TELEPORT_WARN("Unable to store material due to null path.");
+					return false;
+				}
+				if (!id)
+				{
+					TELEPORT_WARN("Unable to store material due to id=0.");
+					return false;
+				}
 				avs::Material avsMaterial(material);
-				GeometryStore::GetInstance().storeMaterial(id, (guid), (path), lastModified, avsMaterial);
+				return GeometryStore::GetInstance().storeMaterial(id, (guid), (path), lastModified, avsMaterial);
 			}
 
 			/// Store the given texture in memory and on disk.
-			TELEPORT_EXPORT void Server_StoreTexture(avs::uid id, const char *guid, const char *relative_asset_path, std::time_t lastModified, InteropTexture texture, bool genMips, bool highQualityUASTC, bool forceOverwrite)
+			TELEPORT_EXPORT bool Server_StoreTexture(avs::uid id, const char *guid, const char *relative_asset_path, std::time_t lastModified, InteropTexture texture, bool genMips, bool highQualityUASTC, bool forceOverwrite)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
+				if (!relative_asset_path )
+				{
+					TELEPORT_WARN("Unable to store texture due to null path.");
+					return false;
+				}
+				if (!id)
+				{
+					TELEPORT_WARN("Unable to store texture due to id=0.");
+					return false;
+				}
 				avs::Texture avsTexture(texture);
-				GeometryStore::GetInstance().storeTexture(id, (guid), (relative_asset_path), lastModified, avsTexture, genMips, highQualityUASTC, forceOverwrite);
+				return GeometryStore::GetInstance().storeTexture(id, (guid), (relative_asset_path), lastModified, avsTexture, genMips, highQualityUASTC, forceOverwrite);
 			}
 
 			/// Store the given font in memory and on disk.
 			TELEPORT_EXPORT avs::uid Server_StoreFont(const char *ttf_path, const char *relative_asset_path, std::time_t lastModified, int size)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
+				if (!relative_asset_path)
+				{
+					TELEPORT_WARN("Unable to store font due to null path.");
+					return false;
+				}
+				if (!ttf_path)
+				{
+					TELEPORT_WARN("Unable to store font due to null ttf path.");
+					return false;
+				}
 				return GeometryStore::GetInstance().storeFont((ttf_path), (relative_asset_path), lastModified, size);
 			}
 
@@ -562,6 +600,11 @@ void PipeOutMessages()
 			TELEPORT_EXPORT avs::uid Server_StoreTextCanvas(const char *relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
+				if (!relative_asset_path)
+				{
+					TELEPORT_WARN("Unable to store canvas due to null path.");
+					return false;
+				}
 				avs::uid u = GeometryStore::GetInstance().storeTextCanvas((relative_asset_path), interopTextCanvas);
 				if (u)
 				{

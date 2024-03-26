@@ -6,7 +6,7 @@
 #include "Common.h"
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
-#include "TeleportCore/AnimationInterface.h"
+#include "TeleportCore/Animation.h"
 #include "TeleportClient/Config.h"
 #include "ThisPlatform/Threads.h"
 #include "ResourceCreator.h"
@@ -38,6 +38,8 @@ using namespace clientrender;
 #define NextVec3 get<vec3>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextChunk(T) get<T>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define CopyChunk(target,size) copy_chunk(target,geometryDecodeData.data.data(), &geometryDecodeData.offset,size)
+#define NextString64 {\
+	get<size_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 
 template <typename T>
 void copy(T *target, const uint8_t *data, size_t &dataOffset, size_t count)
@@ -1450,6 +1452,9 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 				size_t url_length=NextUint64;
 				node.url.resize(url_length);
 				copy<char>(node.url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, url_length);
+				size_t query_length = NextUint64;
+				node.query_url.resize(query_length);
+				copy<char>(node.query_url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, query_length);
 			}
 		break;
 		default:
@@ -1497,6 +1502,7 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeD
 {
 	avs::uid fontAtlasUid = geometryDecodeData.uid;
 	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
+	fontAtlas.name=geometryDecodeData.filename_or_url;
 	fontAtlas.font_texture_uid= NextUint64;
 	int numMaps=NextByte;
 	for(int i=0;i<numMaps;i++)
@@ -1512,7 +1518,7 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeD
 			copy<char>((char*)&glyph, geometryDecodeData.data.data(), geometryDecodeData.offset, sizeof(glyph));
 		}
 	}
-	geometryDecodeData.target->CreateFontAtlas(geometryDecodeData.server_or_cache_uid,fontAtlasUid, fontAtlas);
+	geometryDecodeData.target->CreateFontAtlas(geometryDecodeData.server_or_cache_uid, fontAtlasUid, geometryDecodeData.filename_or_url,fontAtlas);
 	return avs::Result::OK;
 }
 

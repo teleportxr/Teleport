@@ -187,7 +187,6 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	text3DRenderer.RestoreDeviceObjects(renderPlatform);
 	renderState.hDRRenderer->RestoreDeviceObjects(renderPlatform);
 	renderState.hdrFramebuffer->RestoreDeviceObjects(renderPlatform);
-
 	gui.RestoreDeviceObjects(renderPlatform, active_window);
 	auto connectButtonHandler = std::bind(&client::TabContext::ConnectButtonHandler, std::placeholders::_1, std::placeholders::_2);
 	gui.SetConnectHandler(connectButtonHandler);
@@ -211,6 +210,8 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	errno = 0;
 	LoadShaders();
 
+	renderState.linkRenderer.RestoreDeviceObjects(renderPlatform);
+	renderState.canvasTextRenderer.RestoreDeviceObjects(renderPlatform);
 	renderState.teleportSceneConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.perNodeConstants.RestoreDeviceObjects(renderPlatform);
 	renderState.cubemapConstants.RestoreDeviceObjects(renderPlatform);
@@ -246,7 +247,7 @@ void Renderer::SelectionChanged()
 				selected_node->ResetCachedPasses();
 		}
 	}
-	renderState.selected_uid=gui.GetSelectedUid();
+	renderState.selected_uid = gui.GetGuiType() == GuiType::Debug? gui.GetSelectedUid():0;
 	renderState.selected_cache = gui.GetSelectedCache();
 	{
 		auto geometryCache = GeometryCache::GetGeometryCache(renderState.selected_cache);
@@ -360,7 +361,18 @@ void Renderer::InitLocalGeometry()
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
 	auto &localGeometryCache = localInstanceRenderer->geometryCache;
+	/*
+	teleport::core::FontAtlas commonFontAtlas;
 	
+	avs::uid common_font_atlas_uid = avs::GenerateUid();
+	avs::uid font_texture_uid = avs::GenerateUid();
+
+	commonFontAtlas.font_texture_path = "assets/localGeometryCache/textures/ARIBLK.TTF.texture";
+	commonFontAtlas.font_texture_uid=font_texture_uid;
+	commonFontAtlas.fontMaps[64];
+	geometryDecoder.decodeFromFile(0, commonFontAtlas.font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
+	localResourceCreator.CreateFontAtlas(0,common_font_atlas_uid,commonFontAtlas);*/
+
 	lobbyGeometry.leftController.controller_node_uid	=avs::GenerateUid();
 	lobbyGeometry.rightController.controller_node_uid	=avs::GenerateUid();
 	if(renderState.openXR)
@@ -511,8 +523,10 @@ void Renderer::RecompileShaders()
 	renderPlatform->RecompileShaders();
 	text3DRenderer.RecompileShaders();
 	renderState.hDRRenderer->RecompileShaders();
+	renderState.linkRenderer.RecompileShaders();
+	renderState.canvasTextRenderer.RecompileShaders();
 	gui.RecompileShaders();
-	TextCanvas::RecompileShaders();
+	renderState.canvasTextRenderer.RecompileShaders();
 }
 
 void Renderer::LoadShaders()
@@ -541,6 +555,7 @@ void Renderer::LoadShaders()
 	renderState.pbrEffect_combinedTexture				=renderState.pbrEffect->GetShaderResource("combinedTexture");
 	renderState.pbrEffect_emissiveTexture				=renderState.pbrEffect->GetShaderResource("emissiveTexture");
 	renderState.pbrEffect_globalIlluminationTexture		=renderState.pbrEffect->GetShaderResource("globalIlluminationTexture");
+	UpdateAllNodeRenders();
 }
 
 std::shared_ptr<InstanceRenderer> Renderer::GetInstanceRenderer(avs::uid server_uid)
@@ -591,6 +606,8 @@ void Renderer::InvalidateDeviceObjects()
 	SAFE_DELETE(renderState.hdrFramebuffer);
 	SAFE_DELETE(renderState.pbrEffect);
 	SAFE_DELETE(renderState.cubemapClearEffect);
+	renderState.linkRenderer.InvalidateDeviceObjects();
+	renderState.canvasTextRenderer.InvalidateDeviceObjects();
 }
 
 void Renderer::FillInControllerPose(int index, float offset)

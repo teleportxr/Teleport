@@ -7,10 +7,8 @@
 #include <vector>
 
 #include "libavstream/common_input.h"
-
 #include "CaptureDelegates.h"
 #include "ServerSettings.h"
-#include "TeleportCore/ErrorHandling.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -255,7 +253,7 @@ namespace teleport
 			float client_to_server_latency_milliseconds = 0.0f;
 			float server_to_client_latency_milliseconds = 0.0f;
 			SignalingService &signalingService;
-			PluginGeometryStreamingService geometryStreamingService;
+			GeometryStreamingService geometryStreamingService;
 			SetHeadPoseFn setHeadPose=nullptr;								// Delegate called when a head pose is received.
 			SetControllerPoseFn setControllerPose = nullptr;				// Delegate called when a head pose is received.
 			ProcessNewInputStateFn processNewInputState = nullptr;			// Delegate called when new input is received.

@@ -1,6 +1,8 @@
 #include "GeometryCache.h"
 #include "InstanceRenderer.h"
 #include "Renderer.h"
+#include <filesystem>
+#include "TeleportCore/ResourceStreams.h"
 using namespace teleport;
 using namespace clientrender;
 #define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt, ##__VA_ARGS__)
@@ -264,8 +266,7 @@ void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCrea
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 			incompleteNode->SetMesh(mesh);
 			RESOURCE_RECEIVES(incompleteNode, id);
-			size_t num_remaining = RESOURCES_AWAITED(*it);
-			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got Mesh {2}({3}), missing {4} or {5}", incompleteNode->id, incompleteNode->name, id, meshInfo.name, num_remaining,incompleteNode->GetMissingResourceCount());
+			RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Mesh {2}({3}), now missing {4}", incompleteNode->id, incompleteNode->name, id, meshInfo.name, incompleteNode->GetMissingResourceCount());
 
 			//If only this mesh and this function are pointing to the node, then it is complete.
 			if (RESOURCE_IS_COMPLETE(*it))
@@ -324,8 +325,9 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 					{
 						std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
 						RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})", incompleteFontAtlas->id,id,textureInfo.name);
-
 						RemoveFromMissingResources(incompleteFontAtlas->id);
+						std::shared_ptr<FontAtlas> fontAtlas = std::static_pointer_cast<FontAtlas>(*it);
+						CompleteFontAtlas(incompleteFontAtlas->id, fontAtlas);
 					}
 					break;
 				case avs::GeometryPayloadType::Material:
@@ -375,6 +377,66 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 	}
 	//Resource has arrived, so we are no longer waiting for it.
 	RemoveFromMissingResources(id);
+}
+
+void GeometryCache::CompleteFontAtlas(avs::uid id, std::shared_ptr<clientrender::FontAtlas> fontAtlas)
+{
+	fontAtlas->fontTexture = mTextureManager.Get(fontAtlas->font_texture_uid);
+	// If the font atlas wasn't sent via a url it may not have one.
+	if(fontAtlas->url.length()==0)
+	{
+		std::string name = std::string(fontAtlas->fontTexture->getName());
+		std::replace(name.begin(),name.end(),'.','#');
+		fontAtlas->url=name+"_atlas";
+	}
+	SaveResource(*fontAtlas);
+}
+
+std::string GeometryCache::URLToFilePath(std::string url)
+{
+	if(url.length()==0)
+		return "";
+	using namespace std::filesystem;
+	size_t protocol_end = url.find("://");
+	std::string filepath = url.substr(protocol_end + 3, url.length() - protocol_end - 3);
+	size_t first_slash = filepath.find("/");
+	if (first_slash >= filepath.length())
+		first_slash = filepath.length();
+	std::string base_url = filepath.substr(0, first_slash);
+	filepath = filepath.substr(first_slash, filepath.length() - first_slash);
+	size_t colon_pos = base_url.find(":");
+	if (colon_pos < base_url.length())
+		base_url = base_url.substr(0, colon_pos);
+	filepath = base_url + filepath;
+	// TODO: check path length is not too long.
+	return filepath;
+}
+
+bool GeometryCache::SaveResource(const IncompleteResource &res)
+{
+	std::string filename = URLToFilePath(res.url);
+	if(filename=="")
+		return false;
+	auto *fileLoader = platform::core::FileLoader::GetFileLoader();
+	if (!fileLoader)
+		return false;
+	using namespace std::filesystem;
+	filename+=".";
+	filename+=res.GetFileExtension();
+	std::string f = cacheFolder.length() ? (cacheFolder + "/") + filename : filename;
+	path fullPath = path(f);
+	try
+	{
+	std::filesystem::create_directories(fullPath.parent_path());
+	}
+	catch(...)
+	{
+	}
+	std::stringstream s;
+	res.Save(s);
+	std::string buffer=s.str();
+	fileLoader->Save(buffer.c_str(),(uint32_t)buffer.length(),f.c_str(),false);
+	return true;
 }
 
 void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation)

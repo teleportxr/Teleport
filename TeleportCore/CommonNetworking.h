@@ -518,7 +518,8 @@ namespace teleport
 			UpdateNodeStructureCommand(avs::uid n, avs::uid p,avs::Pose relPose)
 				:NodeStateCommand(CommandPayloadType::UpdateNodeStructure,n), parentID(p)
 			{
-				relativePose={*((vec4_packed*)&relPose.orientation),*((vec3_packed*)&relPose.position)};
+				relativePose.position = *((vec3_packed *)&relPose.position);
+				relativePose.orientation = *((vec4_packed *)&relPose.orientation);
 			}
 
 			static size_t getCommandSize()

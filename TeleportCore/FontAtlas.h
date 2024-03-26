@@ -62,6 +62,7 @@ namespace teleport
 		{
 			FontAtlas(avs::uid u = 0);
 			avs::uid uid = 0;
+			std::string name;
 			std::string font_texture_path;
 			// Not saved! path is the ground-truth.
 			avs::uid font_texture_uid = 0;

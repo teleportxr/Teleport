@@ -4,7 +4,7 @@
 #include <set>
 
 #include "libavstream/common.hpp"
-#include "TeleportCore/AnimationInterface.h"
+#include "TeleportCore/Animation.h"
 
 #include "ServerSettings.h"
 
@@ -429,6 +429,9 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 			size_t urlLength = node->url.length();
 			put(urlLength);
 			put((uint8_t *)node->url.data(), urlLength);
+			size_t queryLength = node->query_url.length();
+			put(queryLength);
+			put((uint8_t *)node->query_url.data(), queryLength);
 
 		}
 		geometryStreamingService->encodedResource(uid);

@@ -700,7 +700,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 		geometryCache->ReceivedResource(id);
 	if(geometryCache->mMaterialManager.Get(id))
 		return;
-	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, avs::GeometryPayloadType::Material);
+	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, "",avs::GeometryPayloadType::Material);
 	//A list of unique resources that the material is missing, and needs to be completed.
  	std::set<avs::uid> missingResources;
 
@@ -787,10 +787,10 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 	}
 }
 
-void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,teleport::core::FontAtlas &fontAtlas)
+void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,const std::string &path,teleport::core::FontAtlas &fontAtlas)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
-	std::shared_ptr<clientrender::FontAtlas> f = std::make_shared<clientrender::FontAtlas>(id);
+	std::shared_ptr<clientrender::FontAtlas> f = std::make_shared<clientrender::FontAtlas>(id,path);
 	clientrender::FontAtlas &F=*f;
 	*(static_cast<teleport::core::FontAtlas*>(&F))=fontAtlas;
 	geometryCache->mFontAtlasManager.Add(id, f);
@@ -800,13 +800,16 @@ void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,teleport::
 	// The texture hasn't arrived yet. Mark it as missing.
 	if (!texture)
 	{
-		RESOURCECREATOR_DEBUG_COUT( "FontAtlas {0} missing Texture {1}",id,f->font_texture_uid);
+		RESOURCECREATOR_DEBUG_COUT("FontAtlas {0} missing Texture {1}", id, f->font_texture_uid);
 		clientrender::MissingResource& missing=geometryCache->GetMissingResource(f->font_texture_uid, avs::GeometryPayloadType::Texture);
 		std::shared_ptr<IncompleteFontAtlas> i = f;
+		RESOURCE_AWAITS(i, f->font_texture_uid);
 		missing.waitingResources.insert(i);
 		RESOURCE_AWAITS(f,f->font_texture_uid);
 		f->missingTextureUid=fontAtlas.font_texture_uid;
 	}
+	else
+		geometryCache->CompleteFontAtlas(id,f);
 	// Was this resource being awaited?
 	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::FontAtlas);
 	if(missingResource)
@@ -866,10 +869,12 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		}
 		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
 		incompleteNode->SetTextCanvas(textCanvas);
+		RESOURCE_RECEIVES(incompleteNode, textCanvas->textCanvasCreateInfo.uid);
 		// modified "material" - add to transparent list.
 		geometryCache->mNodeManager.NotifyModifiedMaterials(incompleteNode);
-		RESOURCECREATOR_DEBUG_COUT( "Waiting Node {0}({1}) got Canvas {2}({3})" , incompleteNode->id,incompleteNode->name,textCanvas->textCanvasCreateInfo.uid,"");
 
+		size_t num_remaining = RESOURCES_AWAITED(incompleteNode);
+		RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Canvas {2}, still awaiting {3}", incompleteNode->id, incompleteNode->name, textCanvas->textCanvasCreateInfo.uid, num_remaining);
 		//If the waiting resource has no incomplete resources, it is now itself complete.
 		if (RESOURCE_IS_COMPLETE((*waiting)))
 		{
@@ -888,7 +893,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 	TELEPORT_INTERNAL_COUT ( "CreateSkeleton({0}, {1})",id,skeleton.name);
 	geometryCache->ReceivedResource(id);
 
-	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id, avs::GeometryPayloadType::Skeleton);
+	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id,skeleton.name, avs::GeometryPayloadType::Skeleton);
 
 	incompleteSkeleton->ResetMissingResourceCount();
 	//Create skeleton.
@@ -1038,10 +1043,10 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 			node->SetMesh(geometryCache->mMeshManager.Get(avsNode.data_uid));
 			if (!node->GetMesh())
 			{
-				TELEPORT_COUT<< "MeshNode_" << id << "(" << avsNode.name << ") missing Mesh_" << avsNode.data_uid << std::endl;
 
 				isMissingResources = true;
 				node->IncrementMissingResources();
+				TELEPORT_INTERNAL_COUT("Node {0} ({1}) missing Mesh {2}, total missing resources: {3}",id,avsNode.name,avsNode.data_uid,node->GetMissingResourceCount());
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(node);
 			}
 			if(avsNode.skeletonNodeID!=0)
@@ -1145,6 +1150,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 			geometryCache->GetMissingResource(avsNode.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.insert(node);
 		}
 	}
+	std::set<avs::uid> missing_material_uids;
 	for (size_t i = 0; i < avsNode.materials.size(); i++)
 	{
 		auto mat_uid=avsNode.materials[i];
@@ -1157,21 +1163,24 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 		}
 		else 
 		{
+			// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
+			node->SetMaterial(i, placeholderMaterial);
 			// but if the material is uid 0, this means *no* material, so we will either use the subMesh's internal material,
 			// or not draw the subMesh.
 			if(mat_uid!=0)
 			{
-				// If we don't know have the information on the material yet, we use placeholder OVR surfaces.
-				node->SetMaterial(i, placeholderMaterial);
-
-			//	TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material " << avsNode.materials[i] << std::endl;
-
+				missing_material_uids.insert(mat_uid);
+				node->materialSlots[mat_uid].push_back(i);
 				isMissingResources = true;
-				node->IncrementMissingResources();
-				geometryCache->GetMissingResource(avsNode.materials[i], avs::GeometryPayloadType::Material).waitingResources.insert(node);
-				node->materialSlots[avsNode.materials[i]].push_back(i);
 			}
 		}
+	}
+	for (avs::uid mat_uid : missing_material_uids)
+	{
+		geometryCache->GetMissingResource(mat_uid, avs::GeometryPayloadType::Material).waitingResources.insert(node);
+		node->IncrementMissingResources();
+		//	TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material " << avsNode.materials[i] << std::endl;
+		TELEPORT_INTERNAL_COUT("Node {0} ({1}) missing Material {2}, total missing resources: {3}", id, avsNode.name, mat_uid, node->GetMissingResourceCount());
 	}
 
 	size_t num_remaining = RESOURCES_AWAITED(node);

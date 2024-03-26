@@ -41,9 +41,9 @@ shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
 #ifdef SFX_OPENGL
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
-
-	vec4 opos		=vec4(localPos.xyz,1.0);
-	OUT.hPosition	=mul(opos,viewProj);
+	vec4 wpos		= mul(vec4(localPos.xyz, 1.0), model);
+	//vec4 opos		=vec4(localPos.xyz,1.0);
+	OUT.hPosition = mul(wpos, viewProj);
 
 	return OUT;
 }

@@ -233,6 +233,12 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 		{
 //			TELEPORT_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
 			mQueuedResourceRequests.push_back(sentResource.first);
+			if (mQueuedResourceRequests.size() > 8192)
+			{
+				DebugBreak();
+				mQueuedResourceRequests.clear();
+				break;
+			}
 		}
 	}
 	// TODO: These pipelines could be on different threads,
@@ -518,8 +524,16 @@ void SessionClient::SendResourceRequests()
 		DebugBreak();
 	}
 	geometryCache->ClearResourceRequests();
+	if (mQueuedResourceRequests.size() > 8192)
+	{
+		DebugBreak();
+	}
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
 	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
+	if (mQueuedResourceRequests.size() > 8192)
+	{
+		DebugBreak();
+	}
 
 	if(mQueuedResourceRequests.size() != 0)
 	{
@@ -783,7 +797,15 @@ void SessionClient::ReceiveNodeVisibilityUpdate(const std::vector<uint8_t> &pack
 			mReceivedNodes.push_back(node_uid);
 		}
 	}
+	if (mQueuedResourceRequests.size() > 8192)
+	{
+		DebugBreak();
+	}
 	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), missingNodes.begin(), missingNodes.end());
+	if (mQueuedResourceRequests.size() > 8192)
+	{
+		DebugBreak();
+	}
 
 	//Tell renderer to hide nodes that have left bounds.
 	for(avs::uid node_uid : leftNodes)

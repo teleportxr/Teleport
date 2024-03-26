@@ -171,6 +171,7 @@ void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 	SetCallbacks(c);
 	clientUids.insert(clientID);
 }
+
 void SignalingService::SetCallbacks(std::shared_ptr<SignalingClient> &signalingClient)
 {
 	signalingClient->webSocket->onMessage([this, signalingClient](rtc::message_variant message) {

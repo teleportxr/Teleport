@@ -4,13 +4,16 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp URLParser.cpp Time.cpp)
-file(GLOB header_files	AnimationInterface.h
+set(src_files			Animation.cpp TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp 
+						Time.cpp URLParser.cpp)
+file(GLOB header_files	Animation.h
 						CommonNetworking.h
 						ErrorHandling.h
 						FontAtlas.h
 						Input.h
+						Logging.h
 						Protocol.h
+						ResourceStreams.h
 						StringFunctions.h
 						TeleportUtility.h
 						TextCanvas.h

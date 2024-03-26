@@ -52,7 +52,7 @@ namespace teleport
 			void CreateTexture(avs::uid server_uid, avs::uid id, const avs::Texture &texture) override;
 			void CreateMaterial(avs::uid server_uid, avs::uid id, const avs::Material &material) override;
 			void CreateNode(avs::uid server_uid, avs::uid id, const avs::Node &node) override;
-			void CreateFontAtlas(avs::uid server_uid, avs::uid id, teleport::core::FontAtlas &fontAtlas);
+			void CreateFontAtlas(avs::uid server_uid, avs::uid id, const std::string &path, teleport::core::FontAtlas &fontAtlas);
 			void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
 			void CreateSkeleton(avs::uid server_uid, avs::uid id, const avs::Skeleton &skeleton) override;

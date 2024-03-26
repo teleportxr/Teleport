@@ -5,6 +5,7 @@
 
 #include "ClientRender/Animation.h"
 #include "TeleportCore/CommonNetworking.h"
+#include "TeleportCore/Logging.h"
 #include "GeometryCache.h"
 
 using namespace teleport::clientrender;

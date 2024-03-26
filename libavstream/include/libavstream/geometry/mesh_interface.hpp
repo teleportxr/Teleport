@@ -285,9 +285,9 @@ namespace avs
 #endif
 	struct Transform
 	{
-		vec3 position = { 0, 0, 0 };
-		vec4 rotation = { 0, 0, 0, 1 };
-		vec3 scale = { 1, 1, 1 };
+		vec3 position = { 0.f, 0.f, 0.f };
+		vec4 rotation = { 0.f, 0.f, 0.f, 1.f };
+		vec3 scale = { 1.f, 1.f, 1.f };
 	};
 
 	struct NodeRenderState
@@ -339,6 +339,7 @@ namespace avs
 		float lightRange	=0.f;			//! Maximum distance the light is effective at, in metres.
 
 		std::string url;		// if node is a link/portal
+		std::string query_url; // if node is a link/portal
 	};
 #ifdef _MSC_VER
 #pragma pack(pop)

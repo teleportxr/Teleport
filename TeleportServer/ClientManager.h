@@ -18,6 +18,15 @@
 #include "TeleportServer/ClientData.h"
 
 
+#ifdef _MSC_VER
+#include "VisualStudioDebugOutput.h"
+extern std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
+#else
+#include "UnixDebugOutput.h"
+extern std::shared_ptr<DebugOutput> debug_buffer;
+#endif
+
+
 typedef void(TELEPORT_STDCALL *ProcessAudioInputFn)(avs::uid uid, const uint8_t *data, size_t dataSize);
 namespace teleport
 {

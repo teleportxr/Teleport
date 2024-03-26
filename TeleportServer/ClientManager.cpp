@@ -47,8 +47,8 @@ using namespace teleport;
 using namespace server;
 bool teleport::server::ApplyInitializationSettings(const InitializationSettings *initializationSettings)
 {
-	PluginGeometryStreamingService::callback_clientStoppedRenderingNode = initializationSettings->clientStoppedRenderingNode;
-	PluginGeometryStreamingService::callback_clientStartedRenderingNode = initializationSettings->clientStartedRenderingNode;
+	GeometryStreamingService::callback_clientStoppedRenderingNode = initializationSettings->clientStoppedRenderingNode;
+	GeometryStreamingService::callback_clientStartedRenderingNode = initializationSettings->clientStartedRenderingNode;
 	setHeadPose = initializationSettings->headPoseSetter;
 	processNewInputState = initializationSettings->newInputStateProcessing;
 	processNewInputEvents = initializationSettings->newInputEventsProcessing;
@@ -108,7 +108,8 @@ ClientManager &ClientManager::instance()
 ClientManager::ClientManager()
 {
 	mLastTickTimestamp = avs::Platform::getTimestamp();
-	debug_buffer=std::make_shared<VisualStudioDebugOutput>(true, "teleport_server.log", 128);
+	if(!debug_buffer)	
+		debug_buffer=std::make_shared<VisualStudioDebugOutput>(true, "teleport_server.log", 128);
 }
 
 ClientManager::~ClientManager()

@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "TeleportCore/AnimationInterface.h"
+#include "TeleportCore/Animation.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 
 namespace teleport

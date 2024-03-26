@@ -14,6 +14,7 @@
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "Platform/Math/Orientation.h"
 #include "Platform/Core/StringFunctions.h"
+#include "Platform/Math/Orientation.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ThisPlatform/StringFunctions.h"
 #include "Log.h"
