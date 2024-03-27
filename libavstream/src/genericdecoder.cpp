@@ -92,6 +92,8 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		if (result == Result::IO_Retry)
 		{
 			m_buffer.resize(bufferSize);
+			if(m_buffer.size()!=bufferSize)
+				return Result::Failed;
 			result = input->read(this, m_buffer.data(), bufferSize, bytesRead);
 		}
 

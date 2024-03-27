@@ -429,15 +429,15 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 	{
 		RenderPass(deviceContext, *p.second.get(),p.first);
 	}
-	for (const auto &c : canvasRenders)
-	{
-		RenderTextCanvas(deviceContext, c.second.get());
-	}
 	for(const auto &l:linkRenders)
 	{
 		RenderLink(deviceContext,*l.second.get());
 	}
 	
+	for (const auto &c : canvasRenders)
+	{
+		RenderTextCanvas(deviceContext, c.second.get());
+	}
 	if (config.debugOptions.showOverlays)
 	{
 		auto &rootNodes = geometryCache->mNodeManager.GetRootNodes();
