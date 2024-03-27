@@ -36,7 +36,7 @@ void LinkRenderer::RecompileShaders()
 											 { reload_shaders = true; });
 }
 
-void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &linkRender)
+void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &linkRender,bool highlight)
 {
 	if (!linkEffect || reload_shaders)
 	{
@@ -46,6 +46,9 @@ void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &de
 	if(!linkEffect)
 		return;
 	linkConstants.radius=1.0f;
+	vec4 highlight_colour={0.8f, 0.8f,0.8f, 1.f};
+	vec4 colour={0.1f, 0.3f, 0.6f, 1.f};
+	linkConstants.linkColour = highlight?highlight_colour:colour;
 	linkConstants.time = (float)deviceContext.predictedDisplayTimeS;
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &linkConstants);
 	auto *pass=linkEffect->GetTechniqueByName("link")->GetPass("singleview");
@@ -53,8 +56,4 @@ void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &de
 	renderPlatform->SetTopology(deviceContext, platform::crossplatform::Topology::TRIANGLESTRIP);
 	renderPlatform->DrawQuad(deviceContext);
 	renderPlatform->UnapplyPass(deviceContext);
-	//
-	vec4 colour = {1.f, 1.f, 0.f, 1.f};
-	vec4 background = {0, 0, 0, 1.f};
-	//renderPlatform->PrintAt3dPos(deviceContext, l.position, l.url.c_str(), colour, background);
 }

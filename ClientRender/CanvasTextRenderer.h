@@ -22,8 +22,11 @@ namespace teleport
 			platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 			bool reload_shaders = true;
 			platform::crossplatform::EffectTechnique *tech = nullptr;
+			platform::crossplatform::EffectTechnique *link_tech = nullptr;
 			platform::crossplatform::EffectPass *singleViewPass = nullptr;
 			platform::crossplatform::EffectPass *multiViewPass = nullptr;
+			platform::crossplatform::EffectPass *link_singleViewPass = nullptr;
+			platform::crossplatform::EffectPass *link_multiViewPass = nullptr;
 			platform::crossplatform::ShaderResource textureResource;
 			platform::crossplatform::ShaderResource _fontChars;
 			platform::crossplatform::ConstantBuffer<TextConstants> textConstants;
@@ -36,7 +39,7 @@ namespace teleport
 			void InvalidateDeviceObjects();
 			void RecompileShaders();
 			void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const CanvasRender *canvasRender);
-			void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas, int size, const std::string &text, vec4 colour, vec4 canvas, float lineHeight, platform::crossplatform::StructuredBuffer<FontChar> &fontChars);
+			void Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas, int size, const std::string &text, vec4 colour, vec4 canvas, float lineHeight, platform::crossplatform::StructuredBuffer<FontChar> &fontChars,bool link=false);
 		};
 	}
 }

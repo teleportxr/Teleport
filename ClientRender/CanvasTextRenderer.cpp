@@ -53,17 +53,31 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 		{-textCanvasCreateInfo.width / 2.0f, textCanvasCreateInfo.height / 2.0f, textCanvasCreateInfo.width, -textCanvasCreateInfo.height}, textCanvasCreateInfo.lineHeight, canvasRender->textCanvas->fontChars);
 }
 
-void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas, int size, const std::string &text, vec4 colour, vec4 canvas, float lineHeight, platform::crossplatform::StructuredBuffer<FontChar> &fontChars)
+void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas
+									,int size
+									,const std::string &text
+									,vec4 colour
+									,vec4 canvas
+									,float lineHeight
+									,platform::crossplatform::StructuredBuffer<FontChar> &fontChars
+									,bool link)
 {
 	if (!effect || reload_shaders)
 	{
 		SAFE_DELETE(effect);
 		effect = renderPlatform->CreateEffect("canvas_text");
 		tech = effect->GetTechniqueByName("text");
-
-		singleViewPass = tech->GetPass("singleview");
-		multiViewPass = tech->GetPass("multiview");
-
+		link_tech = effect->GetTechniqueByName("link_text");
+		if(tech)
+		{
+			singleViewPass = tech->GetPass("singleview");
+			multiViewPass = tech->GetPass("multiview");
+		}
+		if(link_tech)
+		{
+			link_singleViewPass = link_tech->GetPass("singleview");
+			link_multiViewPass = link_tech->GetPass("multiview");
+		}
 		textureResource = effect->GetShaderResource("fontTexture");
 		_fontChars = effect->GetShaderResource("fontChars");
 		reload_shaders = false;
@@ -88,9 +102,6 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	if (!fontTexture)
 		return;
 	vec4 transp = {0.f, 0.f, 0.f, 0.5f};
-	vec4 white = {1.f, 1.f, 1.f, 1.f};
-	textConstants.colour = colour;
-	textConstants.background_rect[0] = canvas;
 	// Calc width and draw background:
 	float W = 0;
 	float maxw = 0;
@@ -120,19 +131,21 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	platform::crossplatform::MultiviewGraphicsDeviceContext *mgdc = nullptr;
 	size_t viewCount = 1;
 	int passIndex = 0;
-	EffectPass *pass = singleViewPass;
+	EffectPass *pass = link?link_singleViewPass:singleViewPass;
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 	{
 		mgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 		if (mgdc)
 		{
-			pass = multiViewPass;
+			pass = link?link_multiViewPass:multiViewPass;
 			viewCount = mgdc->viewStructs.size();
 			bool supportShaderViewID = renderPlatform->GetType() == crossplatform::RenderPlatformType::D3D11 ? false : true;
 			passIndex = supportShaderViewID ? 0 : 1;
 			SIMUL_ASSERT_WARN(supportShaderViewID, "Graphics API doesn't support SV_ViewID/gl_ViewIndex in the shader. Falling back to single view rendering.");
 		}
 	}
+	if(!pass)
+		return;
 	float w = float(fontTexture->width);
 	float h = float(fontTexture->length);
 	// what size is a pixel, in metres?
@@ -147,7 +160,7 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	{
 		// line height in scale (0,1) relative to canvas height.
 		float pixelHeight = (pixelSizeMetres / fabs(canvas.w));
-		float pixelWidth = (pixelSizeMetres / fabs(canvas.z));
+		float pixelWidth = pixelHeight;//(pixelSizeMetres / fabs(canvas.z));
 		float lineHeight = fontMap.lineHeight * pixelHeight;
 		float ytexel = 1.0f;
 		// start at 0,1. Don't set x size yet.
@@ -189,6 +202,8 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 		}
 	}
 	n /= static_cast<uint>(viewCount);
+	textConstants.colour = colour;
+	textConstants.background_rect[0] = canvas;
 	textConstants.numChars = n;
 	if (n > 0)
 	{

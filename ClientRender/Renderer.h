@@ -82,6 +82,7 @@ namespace teleport
 			void InvalidateDeviceObjects();
 			void CreateTexture(clientrender::AVSTextureHandle &th, int width, int height);
 			void FillInControllerPose(int index, float offset);
+			void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose);
 			struct ControllerSim
 			{
 				vec3 controller_dir;

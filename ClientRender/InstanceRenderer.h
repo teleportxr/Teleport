@@ -109,6 +109,20 @@ namespace teleport
 			platform::crossplatform::ConstantBuffer<PerNodeConstants> perNodeConstants;
 			platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 			platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
+
+			vec3 controller_dir;
+			vec3 view_dir;
+			// In local frame for an instance:
+			vec3 current_controller_dir;
+			vec3 current_view_dir;
+			avs::uid nearest_link_cache_uid=0;
+			avs::uid nearest_link_uid=0;
+			float nearest_link_distance=1e10f;
+			
+			avs::uid next_nearest_link_cache_uid=0;
+			avs::uid next_nearest_link_uid=0;
+			float next_nearest_link_distance=1e10f;
+			
 		};
 		//! API objects that are per-server.
 		//! There exists one of these for each server, plus one for the null server (local state).

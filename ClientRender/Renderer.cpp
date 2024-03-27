@@ -616,14 +616,12 @@ void Renderer::FillInControllerPose(int index, float offset)
 		return;
 	float x= mouseCameraInput.MouseX / (float)renderState.hdrFramebuffer->GetWidth();
 	float y= mouseCameraInput.MouseY / (float)renderState.hdrFramebuffer->GetHeight();
-	vec3 controller_dir	=camera.ScreenPositionToDirection(x, y, renderState.hdrFramebuffer->GetWidth() / static_cast<float>(renderState.hdrFramebuffer->GetHeight()));
-	vec3 view_dir			=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
 	// we seek the angle positive on the Z-axis representing the view direction azimuth:
 	static float cc=0.0f;
 	cc+=0.01f;
-	float angle=atan2f(-view_dir.x, view_dir.y);
+	float angle=atan2f(-renderState.view_dir.x, renderState.view_dir.y);
 	float sine= sin(angle), cosine=cos(angle);
-	float sine_elev= view_dir.z;
+	float sine_elev= renderState.view_dir.z;
 	static float hand_dist=0.7f;
 	// Position the hand based on mouse pos.
 	static float xmotion_scale = 1.0f;
@@ -665,7 +663,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	renderState.openXR->SetFallbackPoseState(index?client::RIGHT_AIM_POSE:client::LEFT_AIM_POSE,pose);
 }
 
-void SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)
+void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)
 {
 // Here we must transform the viewstructs in the device context by the specified origin pose,
 // so that the new view matrices will be in a global space which has the stage space at the specified origin.
@@ -676,6 +674,10 @@ void SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const av
 	Multiply4x4(deviceContext.viewStruct.view,originMat,tmp);
 	// MUST call init each frame, or whenever the matrices change.
 	deviceContext.viewStruct.Init();
+	// transform current mouse/pointer direction:
+	// 
+	platform::crossplatform::Quaternionf q=originPose.orientation;
+	renderState.current_controller_dir=(!q).RotateVector(renderState.controller_dir);
 
 	crossplatform::MultiviewGraphicsDeviceContext* mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 	if (mvgdc)
@@ -779,6 +781,9 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 		server_uids.insert(0);
 	}
+	renderState.next_nearest_link_uid=0;
+	renderState.next_nearest_link_cache_uid=0;
+	renderState.next_nearest_link_distance=1e10f;
 	for (const auto &server_uid : server_uids)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
@@ -921,6 +926,9 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			GetInstanceRenderer(0)->RenderLocalNodes(deviceContext);
 		}
 	}
+	renderState.nearest_link_uid=renderState.next_nearest_link_uid;
+	renderState.nearest_link_cache_uid=renderState.next_nearest_link_uid;
+	renderState.nearest_link_distance=renderState.next_nearest_link_distance;
 	
 	renderState.pbrEffect->UnbindTextures(deviceContext);
 }
@@ -1159,6 +1167,16 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 		FillInControllerPose(0, -1.f);
 		FillInControllerPose(1, 1.f);
 	}
+	else if(!have_vr_device)
+	{
+		if(renderState.hdrFramebuffer->GetHeight())
+		{
+			float x= mouseCameraInput.MouseX / (float)renderState.hdrFramebuffer->GetWidth();
+			float y= mouseCameraInput.MouseY / (float)renderState.hdrFramebuffer->GetHeight();
+			renderState.controller_dir		=camera.ScreenPositionToDirection(x, y, renderState.hdrFramebuffer->GetWidth() / static_cast<float>(renderState.hdrFramebuffer->GetHeight()));
+			renderState.view_dir			=camera.ScreenPositionToDirection(0.5f,0.5f,1.0f);
+		}
+	}
 	ExecConsoleCommands();
 }
 
@@ -1176,6 +1194,29 @@ void Renderer::OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButton
 		&= (bLeftButtonReleased ? ~crossplatform::MouseCameraInput::LEFT_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS)
 		& (bRightButtonReleased ? ~crossplatform::MouseCameraInput::RIGHT_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS)
 		& (bMiddleButtonReleased ? ~crossplatform::MouseCameraInput::MIDDLE_BUTTON : crossplatform::MouseCameraInput::ALL_BUTTONS);
+	if(bLeftButtonReleased &&renderState.nearest_link_uid!=0)
+	{
+		auto cache=GeometryCache::GetGeometryCache(renderState.nearest_link_cache_uid);
+		if(cache)
+		{
+			auto node=cache->mNodeManager.GetNode(renderState.nearest_link_uid);
+
+			if(node)
+			{
+				const std::set<int32_t> &tab_ids=client::TabContext::GetTabIndices();
+				for(const auto t:tab_ids)
+				{
+					auto tabContext=client::TabContext::GetTabContext(t);
+					if(!tabContext)
+						continue;
+					auto server_uid = tabContext->GetServerUid();
+					if(server_uid!=renderState.nearest_link_cache_uid)
+						continue;
+					client::TabContext::ConnectButtonHandler(t,node->GetURL());
+				}
+			}
+		}
+	}
 }
 
 void Renderer::OnMouseMove(int xPos

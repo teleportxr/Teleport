@@ -455,17 +455,43 @@ void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &de
 
 void InstanceRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext,LinkRender &l)
 {
+	// Are we pointing at the link?
+	{
+		vec3 cam_to_link=l.position-deviceContext.viewStruct.cam_pos;
+		float d=length(cam_to_link);
+		if(d>0&&d<renderState.next_nearest_link_distance)
+		{
+			vec3 cam_to_link_dir=cam_to_link/d;
+			float cosine=dot(cam_to_link_dir,renderState.current_controller_dir);
+			if(cosine>0)
+			{
+				float along_controller_dir=d/cosine;
+				vec3 nearest=deviceContext.viewStruct.cam_pos+along_controller_dir*renderState.current_controller_dir;
+				vec3 diff=nearest-l.position;
+				float nearest_dist=length(diff);
+				if(nearest_dist<0.5f)
+				{
+					renderState.next_nearest_link_distance=d;
+					// TODO: what about prefabs/subcaches?
+					renderState.next_nearest_link_cache_uid=this->server_uid;
+					renderState.next_nearest_link_uid=l.uid;
+				}
+			}
+		}
+	}
+	bool highlight=renderState.nearest_link_uid==l.uid;
 	ApplyModelMatrix(deviceContext, *l.model);
 	renderPlatform->SetConstantBuffer(deviceContext, &renderState.perNodeConstants);
-	renderState.linkRenderer.RenderLink(deviceContext, l);
-	vec4 colour={1.f,1.f,1.f,1.f};
+	renderState.linkRenderer.RenderLink(deviceContext, l,highlight);
+	vec4 colour={0.f,0.4f,0.7f,1.f};
+	vec4 highlight_colour={1.0f,0.8f,0.5f,1.f};
 	float width=1.f;
-	float height=0.5f;
+	float height=1.0f;
 	vec4 canvas = {-width / 2.0f, height / 2.0f, width, -height};
 	if (l.url.length() >l.fontChars.count)
 		l.fontChars.RestoreDeviceObjects(renderPlatform,(int) l.url.length(), false, false, nullptr, "fontChars");
-	renderState.canvasTextRenderer.Render(deviceContext,renderState.commonFontAtlas.get(), 64, l.url, colour, canvas, 64.f
-		, l.fontChars);
+	renderState.canvasTextRenderer.Render(deviceContext,renderState.commonFontAtlas.get(), 64, l.url,highlight?highlight_colour: colour, canvas, 0.1f
+		, l.fontChars,true);
 }
 
 void InstanceRenderer::UpdateMouse(vec3 orig, vec3 dir, float &distance, std::string &url)
@@ -540,6 +566,7 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, avs::uid node
 				lr->url = node->GetURL();
 				lr->position = node->GetGlobalTransform().m_Translation;
 				lr->model = &(node->renderModelMatrix);
+				lr->uid=node->id;
 				linkRenders[MakeNodeHash(cache_uid,node_uid)] = lr;
 				//nodeRender->linkRenders.insert(lr);
 			}

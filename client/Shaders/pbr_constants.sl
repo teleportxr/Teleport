@@ -42,6 +42,7 @@ SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)
 SIMUL_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(LinkConstants, 13)
+	vec4 linkColour;
 	float radius;
 	float time;
 SIMUL_CONSTANT_BUFFER_END

@@ -7,12 +7,17 @@
 #include "client/Shaders/pbr_constants.sl"
 #include "Platform/CrossPlatform/Shaders/text_constants.sl"
 
+namespace avs
+{
+	typedef uint64_t uid;
+}
 namespace teleport
 {
 	namespace clientrender
 	{
 		struct LinkRender
 		{
+			avs::uid uid;
 			mat4 *model;
 			vec3 position;
 			std::string url;
@@ -34,7 +39,7 @@ namespace teleport
 			void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 			void InvalidateDeviceObjects();
 			void RecompileShaders();
-			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &linkRender);
+			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext, const LinkRender &linkRender,bool highlight);
 		};
 	}
 }

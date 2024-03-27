@@ -195,9 +195,15 @@ shader linkVertexOutput VS_Link_MV(idOnly IN, uint viewID
 	rgb.g = sin((uv.x + uv.y + sin(time * 0.5)) * 0.5) * 0.5 + 0.5;
 	return rgb;
 }
- 
-shader vec4 PS_Link(linkVertexOutput IN) : SV_TARGET
+
+struct ColourDepthWrite
 {
+    vec4 colour : SV_TARGET;
+    float depth : SV_DEPTH;
+};
+shader ColourDepthWrite PS_Link(linkVertexOutput IN) 
+{
+	ColourDepthWrite OUT;
 	float radius=length(IN.texCoords.xy);
 	if (radius > 1.0)
 		discard;
@@ -214,7 +220,9 @@ shader vec4 PS_Link(linkVertexOutput IN) : SV_TARGET
 	vec3 pos = (viewPosition + view * distance_to_surface - centre_wpos.xyz)/ R;
 
 	vec3 rgb = plasma_function(pos.xyz,time);
-	return vec4(rgb, 1.0);
+	OUT.colour=vec4(rgb, 1.0)*linkColour;
+	OUT.depth=IN.hPosition.z/IN.hPosition.w;
+	return OUT;
 }
 
 BlendState AlphaBlendRGB
