@@ -72,6 +72,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../firstparty/Platform/CMake"
 find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sphinx) #Sphinx won't create this for us
 file(GLOB RST_FILES "*.rst" ) 
 file(GLOB PY_FILES "*.py" ) 
 file(GLOB THEME_FILES "teleport_sphinx_theme/*.html" ) 

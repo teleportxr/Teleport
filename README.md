@@ -104,6 +104,24 @@ The UE4 plugin is not currently functional, it will be updated in 2024.
 9. Put r.ShaderDevelopmentMode=1 in your UE4 directory\Engine\Config\ConsoleVariables.ini
 10. (OPTIONAL) Package the project for `Windows 64-bit` platform. This is recommended for best performance during testing.
 
+## Building the docs
+
+1. Install Doxygen.
+2. Install Python.
+3. Install the following Python packages:
+
+    pip install sphinx
+    pip install breathe
+    pip install myst_parser
+    pip install sphinxcontrib.mermaid
+    pip install sphinxcontrib.jquery
+
+4. In CMakeGUI, enable TELEPORT_BUILD_DOCS.
+
+    This adds the projects "doxygen" and "sphinx" to the Visual Studio solution.
+
+5. Build the projects: this installs the html documentation to [BUILD_FOLDER]/docs/sphinx/index.html
+
 ## Firewall setup
 1. Go to Windows Security->Firewall & Network->Advanced Settings.
 2. Choose Inbound Rules->New Rule->Port->UDP.
