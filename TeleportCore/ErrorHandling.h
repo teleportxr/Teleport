@@ -10,7 +10,7 @@
 #include <cerrno>
 #include <assert.h>
 #include <stdexcept> // for runtime_error
-#pragma message("ErrorHandling.h")
+
 #if TELEPORT_INTERNAL_CHECKS
 #ifdef check
 #undef TELEPORT_INTERNAL_CHECKS

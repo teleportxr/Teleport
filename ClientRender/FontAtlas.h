@@ -21,7 +21,7 @@ namespace teleport
 		class FontAtlas : public teleport::core::FontAtlas, public IncompleteFontAtlas
 		{
 		public:
-			FontAtlas(avs::uid u = 0, const std::string &url = "") : teleport::core::FontAtlas(u), IncompleteFontAtlas(u, url) {}
+			FontAtlas(avs::uid u = 0, const std::string &url = "") ;
 			std::shared_ptr<clientrender::Texture> fontTexture;
 			std::string getName() const
 			{

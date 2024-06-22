@@ -144,6 +144,7 @@ Result Pipeline::process()
 			profileStartTimestamp = Platform::getTimestamp();
 		}
 		result = node->process(timestamp, deltaTime);
+		node->setResult(result);
 		if (isProfiling)
 		{
 			const Timestamp profileEndTimestamp = Platform::getTimestamp();

@@ -145,12 +145,9 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	uint32_t imageSize = mip0_bytesize; 
 	uint16_t numImages=1;
 	uint32_t offset0=uint32_t(sizeof(numImages)+sizeof(imageSize));
-	avsTexture.data.resize(imageSize + offset0);
-	uint8_t *target = avsTexture.data.data();
-	memcpy(target,&numImages,sizeof(numImages));
-	target+=sizeof(numImages);
-	memcpy(target,&offset0,sizeof(offset0));
-	target+=sizeof(imageSize);
+	avsTexture.images.resize(numImages);
+	avsTexture.images[0].data.resize(imageSize);
+	uint8_t *target = avsTexture.images[0].data.data();
 	memcpy(target, bitmap, mip0_bytesize);
 
     // create file
@@ -187,7 +184,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	
 void server::Font::Free(avs::Texture &avsTexture)
 {
-	avsTexture.data.clear();
+	avsTexture.images.clear();
 }
 
 server::Font &server::Font::GetInstance()

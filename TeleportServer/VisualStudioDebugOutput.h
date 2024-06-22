@@ -157,28 +157,59 @@ public:
 	{
 		to_output_window=o;
 	}
+	struct ThreadLog
+	{
+		std::string accumulated_text;
+		std::string accumulated_error;
+	};
+	std::map<DWORD,ThreadLog> threadLogs;
     void writeString(const std::string &str,bool error)
     {
-		if(to_logfile)
-			logFile<<str.c_str();
-		if(error&&errorCallback)
+		ThreadLog &threadLog = threadLogs[GetCurrentThreadId()];
+		auto Accumulate=[&](std::string &acc,const std::string &str,std::string &ret)
 		{
-			errorCallback(str.c_str());
-		}
-		else if(!error&&outputCallback)
+			if (acc.size() + str.length() > acc.capacity())
+			{
+				acc.reserve(acc.size() + str.length() * 2);
+			}
+			ret="";
+			for (size_t i = 0; i < str.length(); i++)
+			{
+				char c=str[i];
+				if(c==0)
+				{
+					ret = acc;
+					acc = str.substr(i + 1, str.length() - i - 1);
+					return true;
+				}
+				if (c == '\n')
+				{
+					acc+=c;
+					ret = acc;
+					acc=str.substr(i+1,str.length()-i-1);
+					return true;
+				}
+				acc += c;
+			}
+			return false;
+		};
+		std::string ret;
+		if(Accumulate((error?threadLog.accumulated_error:threadLog.accumulated_text),str,ret))
 		{
-			outputCallback(str.c_str());
-		}
-		if(to_output_window)
-		{
-#ifdef UNICODE
-			std::wstring wstr(str.length(), L' '); // Make room for characters
-			// Copy string to wstring.
-			std::copy(str.begin(), str.end(), wstr.begin());
-			OutputDebugString(wstr.c_str());
-#else
-	        OutputDebugString(str.c_str());
-#endif
+			if(to_logfile)
+				logFile<<ret.c_str();
+			if(error&&errorCallback)
+			{
+				errorCallback(ret.c_str());
+			}
+			else if(!error&&outputCallback)
+			{
+				outputCallback(ret.c_str());
+			}
+			if(to_output_window)
+			{
+				OutputDebugStringA(ret.c_str());
+			}
 		}
     }
 protected:

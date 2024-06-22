@@ -94,13 +94,12 @@ namespace teleport
 	
 		//! The payload type, or how to interpret the server's message.
 		enum class CommandPayloadType : uint8_t
-		{									// confirm?
-			Invalid,	
+		{									
+			Invalid=0,	
 			Shutdown,
 			Setup,
 			AcknowledgeHandshake,
 			ReconfigureVideo,
-			SetStageSpaceOriginNode,		// 0
 			NodeVisibility,					// id
 			UpdateNodeMovement,				//
 			UpdateNodeEnabledState,			// id
@@ -112,7 +111,8 @@ namespace teleport
 			UpdateNodeStructure,			// id
 			AssignNodePosePath,				// id
 			SetupInputs,					// 0
-			PingForLatency
+			PingForLatency,
+			SetStageSpaceOriginNode=128		// 0
 		} AVS_PACKED;
 		inline const char *StringOf(CommandPayloadType type)
 		{
@@ -152,7 +152,8 @@ namespace teleport
 			DisplayInfo,
 			KeyframeRequest,
 			PongForLatency,
-			OrthogonalAcknowledgement
+			OrthogonalAcknowledgement,
+			Acknowledgement
 		} AVS_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
@@ -288,19 +289,6 @@ namespace teleport
 			size_t visibleNodeCount = 0; //!<Count of visible node IDs appended to the command payload.
 		} AVS_PACKED;
 
-		//! Sent from server to client to set the origin of the client's space.
-		struct SetStageSpaceOriginNodeCommand : public Command
-		{
-			SetStageSpaceOriginNodeCommand() : Command(CommandPayloadType::SetStageSpaceOriginNode) {}
-
-			static size_t getCommandSize()
-			{
-				return sizeof(SetStageSpaceOriginNodeCommand);
-			}
-			avs::uid		origin_node=0;		//!< The session uid of the node to use as the origin.
-			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
-			uint64_t		valid_counter = 0;
-		} AVS_PACKED;
 		//! Mode specifying how to light objects.
 		enum class LightingMode : uint8_t
 		{
@@ -345,7 +333,8 @@ namespace teleport
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode		backgroundMode;										//!< 158 Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;									//!< 174 If the background is of the COLOUR type, which colour to use.
-			ClientDynamicLighting clientDynamicLighting;						//!< Setup for dynamic object lighting. 174+57=231 bytes
+			ClientDynamicLighting clientDynamicLighting;							//!< Setup for dynamic object lighting. 174+57=231 bytes
+			avs::uid			backgroundTexture=0;
 		} AVS_PACKED;
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
@@ -362,6 +351,28 @@ namespace teleport
 			}
 			//! If this is nonzero, implicitly gi should be enabled.
 			uint8_t num_gi_textures=0;
+		} AVS_PACKED;
+
+		//! A command that expects an acknowledgement of receipt from the client using an AcknowledgementMessage.
+		struct AckedCommand : public Command
+		{
+			AckedCommand(CommandPayloadType t) : Command(t) {}
+			//! The id that is used to acknowledge receipt via AcknowledgementMessage. Should increase monotonically per-full-client-session: clients can ignore any id less than or equal to a previously received id.
+			uint64_t		ack_id = 0;
+		} AVS_PACKED;
+		
+		//! Sent from server to client to set the origin of the client's space.
+		struct SetStageSpaceOriginNodeCommand : public AckedCommand
+		{
+			SetStageSpaceOriginNodeCommand() : AckedCommand(CommandPayloadType::SetStageSpaceOriginNode) {}
+
+			static size_t getCommandSize()
+			{
+				return sizeof(SetStageSpaceOriginNodeCommand);
+			}
+			avs::uid		origin_node=0;		//!< The session uid of the node to use as the origin.
+			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
+			uint64_t		valid_counter = 0;
 		} AVS_PACKED;
 
 		//! The definition of a single input that the server expects the client to provide when needed.
@@ -676,7 +687,15 @@ namespace teleport
 				:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 			{}
 		} AVS_PACKED;
-
+		
+		//! Acknowledges receipt of an AckedCommand.
+		struct AcknowledgementMessage : public ClientMessage
+		{
+			uint64_t ack_id=0;
+			AcknowledgementMessage()
+				:ClientMessage(ClientMessagePayloadType::Acknowledgement)
+			{}
+		} AVS_PACKED;
 
 		//! Message info struct containing a request for resources, to be followed by the list of uid's.
 		struct ResourceRequestMessage : public ClientMessage
@@ -733,7 +752,7 @@ namespace teleport
 			{}
 		} AVS_PACKED;
 
-		enum class SignalingState
+		enum class SignalingState : uint8_t
 		{
 			START,			// Received a WebSocket connection.
 			REQUESTED,		// Got an initial connection request message
@@ -745,7 +764,7 @@ namespace teleport
 		{
 			float server_to_client_latency_ms = 0.0f;
 			float client_to_server_latency_ms = 0.0f;
-			core::SignalingState signalingState = core::SignalingState::START;
+			core::SignalingState signalingState = core::SignalingState::INVALID;
 			avs::StreamingConnectionState streamingConnectionState = avs::StreamingConnectionState::ERROR_STATE;
 		};
 	} //namespace 

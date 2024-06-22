@@ -29,6 +29,8 @@ using namespace std::string_literals;
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/TabContext.h"
+#include "libavstream/Pipeline.hpp"
+
 
 #ifdef __ANDROID__
 #define VK_BACK 0x01
@@ -110,25 +112,19 @@ void ImGuiEnd()
 	begin_end_stack.pop_back();
 	ImGui::End();
 }
-
-void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags = 0, const char *txt = 0, ...)
+void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags, const char *txt)
 {
 	if (!txt)
 		txt = str_id;
-	va_list args;
-	va_start(args, txt);
-#ifdef _MSC_VER
-	std::string str = fmt::format(txt, args);
-#else
-	char buf[100];
-	sprintf(buf,txt,args);
-	std::string str = buf;
-#endif
-	va_end(args);
-	bool is_open = ImGui::TreeNodeEx(str_id, flags, "%s",str.c_str());
+	bool is_open = ImGui::TreeNodeEx(str_id, flags, txt);
 	if (is_open && ((flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) == 0))
 		ImGui::TreePop();
 }
+#define IMGUITREENODEEX(str_id, flags, txt, ...)           \
+	{                                                    \
+		std::string str = fmt::format(txt, __VA_ARGS__); \
+		ImGuiTreeNodeEx(str_id, flags, str.c_str());             \
+	}
 static inline ImVec4 ImLerp(const ImVec4 &a, const ImVec4 &b, float t)
 {
 	return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
@@ -1164,7 +1160,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			avs::uid selected_uid = GetSelectedUid();
 			std::shared_ptr<const clientrender::Node> selected_node = geometryCache->mNodeManager.GetNode(selected_uid);
-			std::shared_ptr<const clientrender::Material> selected_material;	   //=geometryCache->mMaterialManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Material> selected_material	   =geometryCache->mMaterialManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Texture> selected_texture			=geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation	   =geometryCache->mAnimationManager.Get(selected_uid);
 		
@@ -1311,7 +1307,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					ImGuiTreeNodeEx("##subsc", flags, " SubScene resource: {0}", s->sub_scene_uid);
+					IMGUITREENODEEX("##subsc", flags, " SubScene resource: {0}", s->sub_scene_uid);
 
 					if (ImGui::IsItemClicked())
 					{
@@ -1327,11 +1323,27 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				if (mci.diffuse.texture.get())
 				{
 					const char *name = mci.diffuse.texture->GetTextureCreateInfo().name.c_str();
-					if (ImGui::TreeNodeEx(name, flags, " Diffuse: %s", name))
+					if (ImGui::TreeNodeEx(name, flags, "Diffuse: %s", name))
 					{
 						if (ImGui::IsItemClicked())
 						{
 							Select(cache_uid, mci.diffuse.texture->GetTextureCreateInfo().uid);
+						}
+						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
+					}
+					if (ImGui::TreeNodeEx("diffuseColour", flags, "%3.3f %3.3f %3.3f", mci.diffuse.textureOutputScalar.x, mci.diffuse.textureOutputScalar.y, mci.diffuse.textureOutputScalar.z))
+					{
+					}
+				}
+				if (mci.normal.texture.get())
+				{
+					const char *name = mci.normal.texture->GetTextureCreateInfo().name.c_str();
+
+					if (ImGui::TreeNodeEx(name, flags, "Normal: %s", name))
+					{
+						if (ImGui::IsItemClicked())
+						{
+							Select(cache_uid, mci.normal.texture->GetTextureCreateInfo().uid);
 						}
 						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
@@ -1340,10 +1352,17 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				if (mci.combined.texture.get())
 				{
 					const char *name = mci.combined.texture->GetTextureCreateInfo().name.c_str();
-
-					ImGuiTreeNodeEx(name, flags, "Combined: {0}", name);
-					ImGuiTreeNodeEx(name, flags, "Metal: {0}", md.combinedOutputScalarRoughMetalOcclusion.y);
-					ImGuiTreeNodeEx(name, flags, "Roughness: R = {0} a + {0}", md.combinedOutputScalarRoughMetalOcclusion.x, md.combinedOutputScalarRoughMetalOcclusion.w);
+					
+					if (ImGui::TreeNodeEx(name, flags, "Combined: %s", name))
+					{
+						if (ImGui::IsItemClicked())
+						{
+							Select(cache_uid, mci.combined.texture->GetTextureCreateInfo().uid);
+						}
+						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
+					}
+					IMGUITREENODEEX(name, flags, "Metal: {0}", md.combinedOutputScalarRoughMetalOcclusion.y);
+					IMGUITREENODEEX(name, flags, "Roughness: R = {0} a + {1}", md.combinedOutputScalarRoughMetalOcclusion.x, md.combinedOutputScalarRoughMetalOcclusion.w);
 
 					if (ImGui::IsItemClicked())
 					{
@@ -1352,7 +1371,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				}
 				if (mci.emissive.texture.get())
 				{
-					ImGuiTreeNodeEx("", flags, "Emissive: {0}", mci.emissive.texture->GetTextureCreateInfo().name.c_str());
+					IMGUITREENODEEX("", flags, "Emissive: {0}", mci.emissive.texture->GetTextureCreateInfo().name.c_str());
 
 					if (ImGui::IsItemClicked())
 					{
@@ -1402,7 +1421,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				if (selected_subscene->subscene_uid)
 				{
 					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
-					ImGuiTreeNodeEx("##name111", flags, " Subscene Geometry Cache: {0}", selected_subscene->subscene_uid);
+					IMGUITREENODEEX("##name111", flags, " Subscene Geometry Cache: {0}", selected_subscene->subscene_uid);
 
 					if (g)
 					{
@@ -1469,7 +1488,7 @@ void Gui::Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &ske
 	for (auto id : ids)
 	{
 		const auto &skeleton = skeletonManager.Get(id);
-		ImGuiTreeNodeEx(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str());
+		IMGUITREENODEEX(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str(),0,nullptr);
 		if (ImGui::IsItemClicked())
 		{
 			if (!show_inspector)
@@ -1592,7 +1611,7 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 		}
 		ImGui::EndTable();
 	}
-
+	DrawPipeline(clientPipeline.pipeline);
 	/*	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
 		LinePrint(platform::core::QuickFormat("Current timestamp: %d", clientPipeline.pipeline.GetTimestamp()));
 		LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
@@ -1606,6 +1625,66 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 		LinePrint(platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
 		LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));*/
 }
+void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
+{
+	static float xspacing = 150.0f;
+	static float yspacing =20.0f;
+	static float thickness = 3.0f;
+	static float sz = 36.0f;
+	static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
+	ImU32 col = ImColor(colf);
+	const ImU32 join_colour = ImColor(255, 255, 255, 90);
+	const ImU32 fill_colour = ImColor(64, 64, 16, 255);
+	ImDrawList *draw_list = ImGui::GetWindowDrawList();
+
+	size_t outp = node.getNumOutputSlots();
+	ImVec2 pos (x , y );
+	for(int i=0;i<outp;i++)
+	{
+		const auto *n=node.getOutput(i);
+		if(n)
+		{
+			float nextx = x + float(sz + xspacing);
+			float nexty = y + float(i) * (sz + yspacing);
+			draw_list->AddLine(pos, ImVec2(nextx, nexty), join_colour, thickness);
+			DrawPipelineNode(*n, nextx,nexty); // N-gon
+		}
+	}
+	const ImU32 fail_colour = ImColor(255, 0, 0, 90);
+	avs::Result r = node.getLastResult();
+	if (r != avs::Result::OK && r != avs::Result::IO_Empty)
+	{
+		col=fail_colour;
+	}
+	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
+	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
+	draw_list->AddText(pos, col, node.name.c_str());
+}
+
+void Gui::DrawPipeline(const avs::Pipeline &pipeline)
+{
+	const ImVec2 p = ImGui::GetCursorScreenPos();
+	float x = p.x + 40.0f;
+	float y = p.y + 40.0f;
+	ImGui::PushItemWidth(-ImGui::GetFontSize() * 15);
+	ImDrawList *draw_list = ImGui::GetWindowDrawList();
+	const auto &nodes = pipeline.getNodes();
+	if(nodes.size())
+	{
+		if(nodes[0])
+		DrawPipelineNode(*nodes[0],x,y);
+	}
+	//ImGui::Dummy(ImVec2((sz + spacing) * 11.2f, (sz + spacing) * 3.0f));
+	ImGui::PopItemWidth();
+}
+
+void Gui::ProfilingPanel()
+{
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
+	ImGui::BeginChild("Prof", ImVec2(-1, -1), true, window_flags);
+	ImGui::Text(profilingText.c_str());
+	ImGui::EndChild();
+}
 
 bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 {
@@ -1614,7 +1693,14 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
 	ImGui::Checkbox("Texture Transcoding Thread", &debugOptions.enableTextureTranscodingThread);
 	ImGui::Checkbox("Geometry Transcoding Thread", &debugOptions.enableGeometryTranscodingThread);
-	const char *debugShaders[] = {"", "ps_solid_albedo_only", "ps_debug_normals", "ps_debug_normal_vertexnormals", "ps_debug_lightmaps", "ps_debug_ambient", "ps_debug_uvs", "ps_debug_anim", "ps_digitizing"};
+	const char *debugShaders[] = {"", "ps_solid_albedo_only"
+	, "ps_debug_normals", "ps_debug_normal_vertexnormals"
+	, "ps_debug_lightmaps", "ps_debug_ambient"
+	, "ps_debug_uvs"
+	, "ps_debug_surface_fresnel","ps_debug_surface_refl"
+	,"ps_debug_surface_ks","ps_debug_surface_kd"
+	
+	, "ps_debug_anim", "ps_digitizing"};
 	ImGui::LabelText("DebugShaders", "Debug Shader");
 	static int chooseDebugShader = 0;
 	int oldChooseDebugShader = chooseDebugShader;
@@ -1629,6 +1715,16 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::RadioButton("Ambient", &chooseDebugShader, (int)ShaderMode::AMBIENT);
 	ImGui::SameLine();
 	ImGui::RadioButton("UVs", &chooseDebugShader, (int)ShaderMode::UVS);
+
+	
+	ImGui::RadioButton("Fresnel", &chooseDebugShader, (int)ShaderMode::DEBUG_FRESNEL);
+	ImGui::SameLine();
+	ImGui::RadioButton("Refl", &chooseDebugShader, (int)ShaderMode::DEBUG_REFL);
+
+	ImGui::RadioButton("kS", &chooseDebugShader, (int)ShaderMode::DEBUG_KS);
+	ImGui::SameLine();
+	ImGui::RadioButton("kD", &chooseDebugShader, (int)ShaderMode::DEBUG_KD);
+
 	ImGui::RadioButton("Anim", &chooseDebugShader, (int)ShaderMode::DEBUG_ANIM);
 	ImGui::SameLine();
 	ImGui::RadioButton("Digitizing", &chooseDebugShader, (int)ShaderMode::REZZING);
@@ -1717,6 +1813,10 @@ void Gui::GeometryOSD()
 	ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(), (int)cache_strings.size());
 
 	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
+	if(sessionClient)
+	{
+		LinePrint(fmt::format("Client ID {0}",sessionClient->GetClientID()));
+	}
 
 	if (current_choice >= 0 && current_choice < cache_uids.size())
 		cache_uid = cache_uids[current_choice];
@@ -1725,20 +1825,30 @@ void Gui::GeometryOSD()
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
 		return;
-	LinePrint(fmt::format(" session time {0}", double(geometryCache->GetSessionTimeUs().count()) / 1000000.0).c_str());
+	LinePrint(fmt::format("Session time {0}", double(geometryCache->GetSessionTimeUs().count()) / 1000000.0).c_str());
 	if (sessionClient)
 	{
-		LinePrint(fmt::format("session start {0}", double(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us) / 1000000.0).c_str());
+		LinePrint(fmt::format("Session start {0}", double(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us) / 1000000.0).c_str());
 	}
-	LinePrint(platform::core::QuickFormat("Nodes: %d", geometryCache->mNodeManager.GetNodeCount()), white);
+	if (ImGui::BeginTable("numResources", 3))
+	{
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("Nodes: {0}", geometryCache->mNodeManager.GetNodeCount()),white);
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("Meshes: {0}", geometryCache->mMeshManager.GetCache(cacheLock).size()),white);
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("Lights: {0}",geometryCache->mLightManager.GetCache(cacheLock).size()),white);
+		ImGui::EndTable();
+	}
 
 	static int nodeLimit = 5;
 	auto &rootNodes = geometryCache->mNodeManager.GetRootNodes();
 	static int lineLimit = 50;
 
-	LinePrint(platform::core::QuickFormat("Meshes: %d\nLights: %d", geometryCache->mMeshManager.GetCache(cacheLock).size(),
-										  geometryCache->mLightManager.GetCache(cacheLock).size()),
-			  white);
 	LinePrint(platform::core::QuickFormat("Transparent Nodes: %d", geometryCache->mNodeManager.GetSortedTransparentNodes().size()), white);
 
 	Scene();

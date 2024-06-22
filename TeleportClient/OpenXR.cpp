@@ -739,6 +739,11 @@ bool OpenXR::internalInitInstance()
 		// Extension classes:
 		openXRRenderModel=std::make_shared<OpenXRRenderModel>(xr_instance);
 	}
+	else
+	{
+		auto &config = client::Config::GetInstance();
+		config.enable_vr=false;
+	}
 	initInstanceThreadState=ThreadState::FINISHED;
 	TELEPORT_CERR<<"initInstanceThreadState = ThreadState::FINISHED\n";
 

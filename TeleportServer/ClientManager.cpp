@@ -40,6 +40,10 @@ namespace teleport
 		GetUnixTimestampFn getUnixTimestampNs = nullptr;
 		ReportHandshakeFn reportHandshake = nullptr;
 		uint32_t connectionTimeout = 60000;
+		ServerSettings TELEPORT_SERVER_API &GetServerSettings()
+		{
+			return serverSettings;
+		}
 	}
 }
 
@@ -95,6 +99,42 @@ bool teleport::server::ApplyInitializationSettings(const InitializationSettings 
 	result = httpService->initialize(initializationSettings->httpMountDirectory, initializationSettings->certDirectory, initializationSettings->privateKeyDirectory, 80);
 	return true;
 }
+static OutputLogFn outputLogFn;
+static THREAD_TYPE logging_thread=0;
+void outp(const char *txt)
+{
+	static std::string out_str;
+	out_str += txt;
+	// if main thread, output. If not, accumulate
+	if (GetThreadId() == logging_thread)
+	{
+		if(outputLogFn)
+			outputLogFn(2, out_str.c_str());
+		out_str.resize(0);
+	}
+}
+void errf(const char *txt)
+{
+	static std::string err_str;
+	err_str+=txt;
+	if(GetThreadId()==logging_thread)
+	{
+		if (outputLogFn)
+			outputLogFn(1, err_str.c_str());
+		err_str.resize(0);
+	}
+}
+
+void teleport::server::SetOutputLogCallback(OutputLogFn fn) 
+{
+	// ensure debug_buffer exists.
+	ClientManager::instance();
+	logging_thread=GetThreadId();
+	outputLogFn = fn;
+	debug_buffer->setOutputCallback(outp);
+	debug_buffer->setErrorCallback(errf);
+}
+
 
 std::shared_ptr<ClientManager> clientManagerInstance;
 
@@ -199,7 +239,7 @@ bool ClientManager::shutdown()
 	unlinkedClientIDs.clear();
 	return true;
 }
-
+#include "TeleportCore/Logging.h"
 void ClientManager::startStreaming(avs::uid clientID)
 {
 	auto client = GetClient(clientID);
@@ -211,7 +251,7 @@ void ClientManager::startStreaming(avs::uid clientID)
 	//not yet received client settings from the engine?
 	if (clientSettings.find(clientID)==clientSettings.end())
 	{
-		TELEPORT_CERR << "Failed to start streaming to Client " << clientID << ". validClientSettings is false!  " << clientID << "!\n";
+		TELEPORT_WARN_NOSPAM("Failed to start streaming to Client {0}. clientSettings is not found!  ",clientID);
 		return;
 	}
 

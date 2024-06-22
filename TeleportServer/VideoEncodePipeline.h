@@ -3,6 +3,7 @@
 #include <memory>
 #include "ClientNetworkContext.h"
 #include "ServerSettings.h"
+#include "Export.h"
 
 // Forward declare so classes that include don't have to know about them
 namespace avs
@@ -26,7 +27,7 @@ namespace teleport
 		};
 
 		//! Wrapper for the video encoding pipeline objects.
-		class VideoEncodePipeline
+		class TELEPORT_SERVER_API VideoEncodePipeline
 		{
 		public:
 			VideoEncodePipeline() = default;

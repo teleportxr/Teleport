@@ -29,7 +29,6 @@ set(srcs
 ) 
 set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/canvas_text.sfx"
 			"${CMAKE_SOURCE_DIR}/client/Shaders/cubemap_clear.sfx"
-			"${CMAKE_SOURCE_DIR}/client/Shaders/pbr.sfx"
 			"${CMAKE_SOURCE_DIR}/client/Shaders/texture_conversion.sfx")
 file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
 
@@ -46,7 +45,7 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
 source_group("Shaders" src FILES ${shaders} )
 source_group("Shader Includes" src FILES ${shader_includes} )
 
-add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${inifiles} Icon.rc)
+add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles} Icon.rc)
 
 if(LIBAV_USE_CUDA)
 	add_custom_command(

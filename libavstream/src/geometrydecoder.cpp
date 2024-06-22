@@ -52,6 +52,7 @@ Result GeometryDecoder::configure(uint8_t streamId, avs::uid server_uid,Geometry
 		if (deconf_result != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
+	name="Geometry Decoder";
 	this->server_uid=server_uid;
 	m_backend=(backend);
 
@@ -157,6 +158,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 				std::cerr<<"Invalid Geometry payload\n";
 				continue;
 			};
+			AVSLOG(Info)<<"geometrydecoder got payload: "<<bufferSize<<" for "<< stringOf(payloadType)<<"\n";
 
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 			if (dataSize>m_buffer.size())

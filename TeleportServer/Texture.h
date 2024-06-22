@@ -14,7 +14,7 @@ namespace teleport
 	{
 		struct ExtractedTexture;
 		struct PrecompressedTexture;
-		extern bool ApplyBasisCompression(ExtractedTexture &extractedTexture
+		extern bool ApplyBasisCompression(ExtractedTexture &extractedTexture,std::string path
 											,std::shared_ptr<PrecompressedTexture> compressionData
 											,uint8_t compressionStrength
 											,uint8_t compressionQuality);

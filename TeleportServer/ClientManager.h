@@ -28,6 +28,8 @@ extern std::shared_ptr<DebugOutput> debug_buffer;
 
 
 typedef void(TELEPORT_STDCALL *ProcessAudioInputFn)(avs::uid uid, const uint8_t *data, size_t dataSize);
+typedef void(TELEPORT_STDCALL *OutputLogFn)(int severity,const char *txt);
+
 namespace teleport
 {
 	namespace server
@@ -67,7 +69,9 @@ namespace teleport
 			GetUnixTimestampFn getUnixTimestampNs;
 			int64_t start_unix_time_us;
 		};
-		extern bool ApplyInitializationSettings(const InitializationSettings *initializationSettings);
+		extern bool TELEPORT_SERVER_API ApplyInitializationSettings(const InitializationSettings *initializationSettings);
+		extern void TELEPORT_SERVER_API SetOutputLogCallback(OutputLogFn fn);
+		extern ServerSettings TELEPORT_SERVER_API &GetServerSettings();
 	}
 }
 
@@ -86,7 +90,7 @@ namespace teleport
 		class ClientData;
 		struct ClientSettings;
 		//! Container for the client-specific data objects.
-		class ClientManager
+		class TELEPORT_SERVER_API ClientManager
 		{
 		public: 
 			ClientManager();

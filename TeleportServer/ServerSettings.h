@@ -3,6 +3,7 @@
 #include "TeleportCore/CommonNetworking.h"
 
 #include "CasterTypes.h"
+#include "Export.h"
 
 namespace teleport
 {
@@ -11,7 +12,7 @@ namespace teleport
 #pragma pack(push)
 #pragma pack(1)
 		//! Settings specific to the server state, shared across all clients.
-		struct ServerSettings
+		struct TELEPORT_SERVER_API ServerSettings
 		{
 			int32_t requiredLatencyMs = 0;
 
@@ -92,6 +93,7 @@ namespace teleport
 			vec4 backgroundColour;
 			float drawDistance;
 			int32_t minimumNodePriority;
+			avs::uid backgroundTexture;
 		} AVS_PACKED;
 		struct InputDefinitionInterop
 		{

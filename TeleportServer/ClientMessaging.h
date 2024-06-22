@@ -13,6 +13,7 @@
 #include "VideoEncodePipeline.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Input.h"
+#include "Export.h"
 #include <libavstream/genericencoder.h>
 
 typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid client_uid, const avs::Pose*);
@@ -31,7 +32,7 @@ namespace teleport
 
 		struct OrthogonalNodeState
 		{
-			int64_t serverTimeSentNs = 0;
+			int64_t serverTimeSentUs = 0;
 			uint64_t confirmationNumber=0;
 		};
 		// A representation of the node state that has been sent to a specific client.
@@ -43,7 +44,7 @@ namespace teleport
 			std::map<core::CommandPayloadType, OrthogonalNodeState> unconfirmedStates;
 		};
 		/// Per-client messaging handler.
-		class ClientMessaging:public avs::GenericTargetInterface
+		class TELEPORT_SERVER_API ClientMessaging:public avs::GenericTargetInterface
 		{
 			bool stopped = false;
 			mutable avs::ClientServerMessageStack commandStack;
@@ -59,8 +60,10 @@ namespace teleport
 				);
 
 			virtual ~ClientMessaging();
+			//! Get current server-time in nanoseconds (i.e. time since server started).
+			int64_t GetServerTimeUs() const;
 
-			const core::ClientNetworkState& getClientNetworkState() const;
+			avs::StreamingConnectionState getStreamingState() const;
 			bool isInitialised() const;
 			void initialize( CaptureDelegates captureDelegates);
 			void unInitialise();
@@ -74,6 +77,21 @@ namespace teleport
 			void tick(float deltaTime);
 			void handleEvents(float deltaTime);
 			void Disconnect();
+			
+			bool hasOrigin() const
+			{
+				return(currentOriginState.originClientHas!=0&&currentOriginState.sent);
+			}
+			void setHasOrigin(bool o)
+			{
+				currentOriginState.sent=o;
+				if(!o)
+					currentOriginState.acknowledged=false;
+				currentOriginState.originClientHas = 0;
+			}
+
+			bool setOrigin(avs::uid uid);
+			avs::uid getOrigin() const;
 
 			void sendSetupCommand(const teleport::core::SetupCommand& setupCommand
 				, const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids
@@ -98,8 +116,6 @@ namespace teleport
 			void pingForLatency();
 
 			bool hasReceivedHandshake() const;
-
-			bool setOrigin(uint64_t valid_counter, avs::uid originNode); 
 
 			std::string getClientIP() const
 			{
@@ -136,7 +152,12 @@ namespace teleport
 			{
 				return std::move(confirmationsReceived);
 			}
+			const teleport::core::SetupCommand &GetLastSetupCommand() const
+			{
+				return lastSetupCommand;
+			}
 		private:
+			uint64_t next_ack_id=0;
 			std::set<uint64_t> confirmationsReceived;
 			float timeSinceLastGeometryStream = 0;
 			int framesSinceLastPing = 99;
@@ -239,6 +260,7 @@ namespace teleport
 			void receiveClientMessage(const std::vector<uint8_t> &bin);
 			void receiveStreamingControl(const std::vector<uint8_t> &bin);
 			void receivePongForLatency(const std::vector<uint8_t>& packet);
+			void receiveAcknowledgement(const std::vector<uint8_t> &packet);
 
 			void sendStreamingControlMessage(const std::string& msg);
 			teleport::core::Handshake handshake;
@@ -246,6 +268,16 @@ namespace teleport
 			avs::uid clientID=0;
 			std::string clientIP;
 			avs::DisplayInfo displayInfo;
+			struct OriginState
+			{
+				bool sent=false;
+				avs::uid originClientHas=0;
+				uint64_t ack_id=0;
+				bool acknowledged=false;
+				int64_t serverTimeSentUs=0;
+				uint64_t valid_counter=0;
+			};
+			OriginState currentOriginState;
 			bool initialized = false;
 			bool startingSession=false;
 			float timeStartingSession=0.0f;
@@ -277,6 +309,7 @@ namespace teleport
 			// Seconds
 			static constexpr float startSessionTimeout = 3;
 			mutable core::ClientNetworkState clientNetworkState;
+			teleport::core::SetupCommand lastSetupCommand;
 		};
 	}
 }

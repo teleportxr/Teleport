@@ -146,6 +146,52 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	return lookup;
 }
 
+shader vec4 PS_FarCubemap(posTexVertexOutput IN) : SV_TARGET
+{
+	const float PI = 3.1415926536;
+	const float TwoPI = 2.0 * PI;
+	vec3 view = TexCoordsToView(IN.texCoords);
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0.0);
+	//lookup.xyz += view.xyz;
+	return lookup;
+}
+
+shader vec4 PS_FarPerspective(posTexVertexOutput IN) : SV_TARGET
+{
+	vec3 view_orig = -TexCoordsToView(IN.texCoords).xzy; // TODO: Remove swizzle
+	view_orig.xz *= -1.0;
+	view_orig = normalize(rotate_by_quaternion(cameraRotation, view_orig));
+	view_orig.xy *= -1.0;
+	vec2 uv = ViewToServerScreenSpace(view_orig);
+	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, uv, 0);
+	return lookup;
+}
+shader vec4 PS_FarCubemap_MV(posTexVertexOutput IN, uint viewID
+							 : SV_ViewID) : SV_TARGET
+{
+	const float PI = 3.1415926536;
+	const float TwoPI = 2.0 * PI;
+	vec3 view_orig = -TexCoordsToView(IN.texCoords, viewID);
+	view_orig.xy = -view_orig.xy;
+	view_orig.z *= -1.0;
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
+	return lookup;
+}
+
+shader vec4 PS_FarPerspective_MV(posTexVertexOutput IN, uint viewID
+								 : SV_ViewID) : SV_TARGET
+{
+	vec3 view_orig = -TexCoordsToView(IN.texCoords, viewID).xzy; // TODO: Remove swizzle
+	// Negate because rotations are set up for forward y
+	view_orig.xz *= -1.0;
+	// Transform to world space
+	view_orig = normalize(rotate_by_quaternion(cameraRotation, view_orig));
+	view_orig.xy *= -1.0;
+	vec2 uv = ViewToServerScreenSpace(view_orig);
+	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, uv, 0);
+	return lookup;
+}
+
 shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET
 {
 	int id = int(TagDataIDBuffer[0].x);
@@ -614,6 +660,27 @@ technique show_texture
 		SetPixelShader(CompileShader(ps_5_0, PS_ShowTexture()));
 	}
 }
+technique far_cubemap
+{
+	pass multiview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_6_1, PS_FarCubemap_MV()));
+	}
+	pass singleview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_5_0, PS_FarCubemap()));
+	}
+}
 technique use_cubemap
 {
 	pass multiview
@@ -654,6 +721,27 @@ technique use_perspective
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
 		SetPixelShader(CompileShader(ps_5_0, PS_UsePerspective()));
+	}
+}
+technique far_perspective
+{
+	pass multiview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_6_1, PS_FarPerspective_MV()));
+	}
+	pass singleview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(vs);
+		SetPixelShader(CompileShader(ps_5_0, PS_FarPerspective()));
 	}
 }
 technique unconnected

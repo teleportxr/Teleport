@@ -15,6 +15,7 @@ namespace teleport
 			avs::uid server_uid=0;
 			avs::uid next_server_uid=0;
 		public:
+			TabContext();
 			static const std::set<int32_t> &GetTabIndices();
 			static std::shared_ptr<TabContext> GetTabContext(int32_t index);
 			static int32_t GetEmptyTabContext();

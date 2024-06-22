@@ -28,15 +28,20 @@
 #endif
 #include "draco/compression/encode.h"
 #include "draco/compression/decode.h"
+#include "draco/io/gltf_encoder.h"
+#include "draco/scene/scene.h"
 
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Font.h"
 #include "UnityPlugin/InteropStructures.h"
 #include "TeleportCore/StringFunctions.h"
+#include "TeleportCore/DecodeMesh.h"
 #include "ClientManager.h"
 using namespace std::string_literals;
 using namespace teleport;
 using namespace server;
+using std::string;
+using std::vector;
 #ifdef _MSC_VER
 //We need to use the experimental namespace if we are using MSVC 2017, but not for 2019+.
 #if _MSC_VER < 1920
@@ -215,11 +220,14 @@ bool GeometryStore::saveToDisk() const
 	return true;
 }
 
-bool GeometryStore::SetCachePath(const char* path)
+bool GeometryStore::SetCachePath(const char* dir)
 {
-	bool exist = std::filesystem::exists(std::filesystem::path(path));
-	if (exist)
-		cachePath = path;
+	std::filesystem::path path(dir);
+	bool exist = std::filesystem::exists(path);
+	if (!exist)
+		std::filesystem::create_directories(path);
+	cachePath = dir;
+
 
 	return exist;
 }
@@ -249,7 +257,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	loadedMeshes = new LoadedResource[numMeshes];
 	for(auto& meshDataPair : meshes.at(avs::AxesStandard::EngineeringStyle))
 	{
-		loadedMeshes[i] = LoadedResource(meshDataPair.first,   meshDataPair.second.path.c_str(), meshDataPair.second.mesh.name.c_str(), meshDataPair.second.lastModified);
+		loadedMeshes[i] = LoadedResource(meshDataPair.first, meshDataPair.second.mesh.name.c_str(), meshDataPair.second.lastModified);
 
 		++i;
 	}
@@ -258,7 +266,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	loadedTextures = new LoadedResource[numTextures];
 	for(auto& textureDataPair : textures)
 	{
-		loadedTextures[i] = LoadedResource(textureDataPair.first,  textureDataPair.second.path.c_str(), textureDataPair.second.texture.name.c_str(), textureDataPair.second.lastModified);
+		loadedTextures[i] = LoadedResource(textureDataPair.first,textureDataPair.second.texture.name.c_str(), textureDataPair.second.lastModified);
 
 		++i;
 	}
@@ -268,7 +276,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 	for(auto& materialDataPair : materials)
 	{
 		loadedMaterials[i] = LoadedResource(materialDataPair.first, 
-			 materialDataPair.second.path.c_str(), materialDataPair.second.material.name.c_str(), materialDataPair.second.lastModified);
+			  materialDataPair.second.material.name.c_str(), materialDataPair.second.lastModified);
 
 		++i;
 
@@ -312,13 +320,14 @@ void GeometryStore::clear(bool freeMeshBuffers)
 	//Free memory for texture pixel data.
 	for(auto& idTexturePair : textures)
 	{
-		idTexturePair.second.texture.data.clear();
+		idTexturePair.second.texture.images.clear();
+		idTexturePair.second.texture.compressedData.clear();
 	}
 
 	//Free memory for shadow map pixel data.
 	for(auto& idShadowPair : shadowMaps)
 	{
-		idShadowPair.second.texture.data.clear();
+		idShadowPair.second.texture.compressedData.clear();
 	}
 
 	//Clear lookup tables; we want to clear the resources inside them, not their structure.
@@ -529,8 +538,22 @@ void GeometryStore::setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose rel
 	nodes[id].localTransform.rotation = relPose.orientation;
 	nodes[id].parentID = parent_id;
 }
-void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
+
+bool GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 {
+	// test:
+	switch(newNode.data_type)
+	{
+		case avs::NodeDataType::Mesh:
+		if(newNode.data_uid==0)
+		{
+			// This is not valid. if type is mesh, it must have a data uid.
+			TELEPORT_WARN("Invalid node {0} {1}: data_uid is zero.",newNode.name,id);
+			return false;
+		}
+		default:
+		break;
+	};
 	nodes[id] = newNode;
 	if (newNode.parentID != 0)
 	{
@@ -540,6 +563,7 @@ void GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
 	{
 		lightNodes[id]=avs::LightNodeResources{id, newNode.data_uid};
 	}
+	return true;
 }
 
 void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard)
@@ -600,12 +624,16 @@ draco::GeometryAttribute::Type ToDracoGeometryAttribute(avs::AttributeSemantic a
 		return draco::GeometryAttribute::Type::TEX_COORD;
 	case avs::AttributeSemantic::TEXCOORD_1:
 		return draco::GeometryAttribute::Type::TEX_COORD;
+	case avs::AttributeSemantic::TEXCOORD_2:
+		return draco::GeometryAttribute::Type::TEX_COORD;
+	case avs::AttributeSemantic::TEXCOORD_3:
+		return draco::GeometryAttribute::Type::TEX_COORD;
 	case avs::AttributeSemantic::COLOR_0:
 		return draco::GeometryAttribute::Type::COLOR;
 	case avs::AttributeSemantic::JOINTS_0:
-		return draco::GeometryAttribute::Type::GENERIC;
+		return draco::GeometryAttribute::Type::JOINTS;
 	case avs::AttributeSemantic::WEIGHTS_0:
-		return draco::GeometryAttribute::Type::GENERIC;
+		return draco::GeometryAttribute::Type::WEIGHTS;
 	case avs::AttributeSemantic::TANGENTNORMALXZ:
 		return draco::GeometryAttribute::Type::GENERIC;
 	default:
@@ -614,181 +642,52 @@ draco::GeometryAttribute::Type ToDracoGeometryAttribute(avs::AttributeSemantic a
 	return draco::GeometryAttribute::Type::INVALID;
 }
 
-static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMesh)
+static bool CheckMesh(avs::Mesh &sourceMesh)
 {
-	compressedMesh.meshCompressionType = avs::MeshCompressionType::NONE;
-	compressedMesh.name=sourceMesh.name;
-	draco::Encoder dracoEncoder;
-	static int encode_speed=3, decode_speed =7;
-	static int pos_quantization=11;
-	static int normal_quantization = 8;
-	static int texc_quantization = 8;
-	static int colour_quantization = 8;
-	static int generic_quantization = 8;
-	static bool allow_edgebreaker_encoding = true;
-	dracoEncoder.SetSpeedOptions(encode_speed, decode_speed);
-	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::POSITION, pos_quantization);
-	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::NORMAL, normal_quantization);
-	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::COLOR, colour_quantization);
-	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::TEX_COORD, texc_quantization);
-	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::GENERIC, generic_quantization);
-	if (allow_edgebreaker_encoding)
-		dracoEncoder.SetEncodingMethod(draco::MESH_EDGEBREAKER_ENCODING);
-	else
-		dracoEncoder.SetEncodingMethod(draco::MESH_SEQUENTIAL_ENCODING);
-	size_t sourceSize=0;
-	size_t compressedSize = 0;
-	// create zero-based material indices:
-	compressedMesh.subMeshes.resize(sourceMesh.primitiveArrays.size());
-	// Primitive array elements in each mesh.
-	draco::FaceIndex face_index(0);
-	std::map<avs::uid, avs::AttributeSemantic> attributeSemantics;
-	size_t sm=0;
-	for (size_t i=0;i<sourceMesh.primitiveArrays.size();i++)
+	for(auto a:sourceMesh.accessors)
 	{
-		const auto& primitive = sourceMesh.primitiveArrays[i];
-		auto &subMesh= compressedMesh.subMeshes[sm];
-		const avs::Accessor& indices_accessor = sourceMesh.accessors[primitive.indices_accessor];
-		
-		subMesh.material=primitive.material;
-		subMesh.indices_accessor=primitive.indices_accessor;
-		subMesh.first_index= 0;
-		subMesh.num_indices = (uint32_t)indices_accessor.count;
-		size_t numTriangles = indices_accessor.count / 3;
-	
-		draco::Mesh dracoMesh;
-		draco::EncoderBuffer dracoEncoderBuffer;
-		size_t numVertices = 0;
-		for (size_t j = 0; j < primitive.attributeCount; j++)
+		if(a.second.componentType==avs::Accessor::ComponentType::FLOAT)
 		{
-			const avs::Attribute& attrib = primitive.attributes[j];
-			const auto &attrib_accessor=sourceMesh.accessors[attrib.accessor];
-			numVertices=std::max(numVertices, attrib_accessor.count);
-			auto s=attributeSemantics.find(attrib.accessor);
-			if(s==attributeSemantics.end())
-				attributeSemantics[attrib.accessor]=attrib.semantic;
-			 if(attrib.semantic!= attributeSemantics[attrib.accessor])
+			auto &bv=sourceMesh.bufferViews[a.second.bufferView];
+			size_t accSize = a.second.count * GetDataTypeSize(a.second.type) * GetComponentSize(a.second.componentType);
+			if (a.second.byteOffset+accSize > bv.byteLength)
 			{
-				TELEPORT_CERR<<"Different attributes for submeshes, can't compress this: "<<sourceMesh.name.c_str()<<"\n";
+				TELEPORT_WARN("Bad accessor {0} size {1} > buffer {2} size {3}", a.first, a.second.byteOffset + accSize, a.second.bufferView, bv.byteLength);
 				return false;
 			}
-		}
-		dracoMesh.set_num_points((uint32_t)numVertices);
-		dracoMesh.SetNumFaces(numTriangles);
-		for (const auto& a : sourceMesh.accessors)
-		{
-			const auto &accessor=a.second;
-			draco::DataType dracoDataType = ToDracoDataType(accessor.componentType);
-			auto s = attributeSemantics.find(a.first);
-			if (s == attributeSemantics.end())
-				continue;	// not an attribute.
-			auto semantic=s->second;
-			draco::GeometryAttribute::Type dracoGeometryAttributeType = ToDracoGeometryAttribute(semantic);
-			
-			avs::BufferView& bufferView = sourceMesh.bufferViews[accessor.bufferView];
-			avs::GeometryBuffer& geometryBuffer = sourceMesh.buffers[bufferView.buffer];
-			const uint8_t* data = geometryBuffer.data + bufferView.byteOffset;
-			// Naively convert enum to integer.
-			int8_t num_components = (int8_t)accessor.type;	
-			int att_id = -1;
-			draco::PointAttribute* attr = nullptr;
-			draco::GeometryAttribute dracoGeometryAttribute;
-			size_t stride = draco::DataTypeLength(dracoDataType) * num_components;
-			dracoGeometryAttribute.Init(dracoGeometryAttributeType, nullptr, num_components, dracoDataType, semantic == avs::AttributeSemantic::NORMAL, stride, 0);
-			att_id = dracoMesh.AddAttribute(dracoGeometryAttribute, true, (uint32_t)(geometryBuffer.byteLength / stride));
-			subMesh.attributeSemantics[att_id]=semantic;
-			attr = dracoMesh.attribute(att_id);
-			for (size_t j = 0; j < accessor.count; j++)
+			auto &b=sourceMesh.buffers[bv.buffer];
+			float *data=(float*)b.data;
+			for(size_t i=0;i<b.byteLength/sizeof(float);i++)
 			{
-				attr->SetAttributeValue(draco::AttributeValueIndex((uint32_t)j), data + j * bufferView.byteStride);
-			}
-			sourceSize += bufferView.byteLength;
-		}
-		//Indices
-		const avs::BufferView& indicesBufferView = sourceMesh.bufferViews[indices_accessor.bufferView];
-		sourceSize += indicesBufferView.byteLength;
-		const avs::GeometryBuffer& indicesBuffer = sourceMesh.buffers[indicesBufferView.buffer];
-		//size_t componentSize = avs::GetComponentSize(indices_accessor.componentType);
-		size_t triangleCount= indices_accessor.count / 3;
-		if(indicesBufferView.byteStride==4)
-		{
-			uint32_t* data=(uint32_t*)(indicesBuffer.data + indicesBufferView.byteOffset+ indices_accessor.byteOffset);
-			for(size_t j=0;j< triangleCount;j++)
-			{
-				draco::Mesh::Face dracoMeshFace;
-				for(int k=0;k<3;k++)
-					dracoMeshFace[k]= data[j*3+k];
-				dracoMesh.SetFace(face_index,dracoMeshFace);
-				++face_index;
+				float f=data[i];
+				if(isnan(f)||isinf(f))
+				{
+					TELEPORT_WARN("Bad data in accessor {0} buffer {1}, index {2}",a.first,bv.buffer,i);
+					return false;
+				}
 			}
 		}
-		else if (indicesBufferView.byteStride == 2)
-		{
-			uint16_t* data = (uint16_t*)(indicesBuffer.data + indicesBufferView.byteOffset + indices_accessor.byteOffset);
-			for (size_t j = 0; j < triangleCount; j++)
-			{
-				draco::Mesh::Face dracoMeshFace;
-				for (int k = 0; k < 3; k++)
-					dracoMeshFace[k] = data[j * 3 + k];
-				dracoMesh.SetFace(face_index, dracoMeshFace);
-				++face_index;
-			}
-		}
-		else
-		{
-			TELEPORT_ASSERT(false);
-		}
-		//dracoMesh.DeduplicateAttributeValues();
-		//dracoMesh.DeduplicatePointIds();
-		
-		draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
-		if(!status.ok())
-		{
-			TELEPORT_WARN("dracoEncoder failed to compress submesh {0} due to: {1}",i,status.error_msg_string());
-			compressedMesh.subMeshes.resize(compressedMesh.subMeshes.size() - 1);
-			if(compressedMesh.subMeshes.size()==0)
-				return false;
-			continue;
-		}
-		subMesh.buffer.resize(dracoEncoderBuffer.size());
-		memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
-		compressedSize+= subMesh.buffer.size();
-		if (subMesh.buffer.size() == 0)
-		{
-			TELEPORT_INTERNAL_CERR("Empty compressed submesh {0}\n", sourceMesh.name.c_str());
-			TELEPORT_INTERNAL_BREAK_ONCE("");
-		}
-		sm++;
 	}
-	//TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
-	compressedMesh.meshCompressionType=avs::MeshCompressionType::DRACO_VERSIONED;
-/*
-	draco::Decoder dracoDecoder;
-	draco::DecoderBuffer dracoDecoderBuffer;
-	dracoDecoderBuffer.Init((const char*)dracoEncoderBuffer.data(), dracoEncoderBuffer.size());
-	draco::Mesh dracoMesh2;
-	dracoDecoder.DecodeBufferToGeometry(&dracoDecoderBuffer,&dracoMesh2);*/
 	return true;
 }
-
-static bool FloatCompare(float a,float b)
+static bool FloatCompare(float a, float b)
 {
-	float diff=(a-b);
-	float m=std::max(b,1.0f);
-	float dif_rel=diff/m;
-	if(dif_rel>0.1f)
+	float diff = (a - b);
+	float m = std::max(b, 1.0f);
+	float dif_rel = diff / m;
+	if (dif_rel > 0.1f)
 		return false;
 	return true;
 }
 
 static bool VecCompare(vec2 a, vec2 b)
 {
-	float A=sqrt(a.x*a.x+a.y*a.y);
-	float B=sqrt(b.x*b.x+b.y*b.y);
+	float A = sqrt(a.x * a.x + a.y * a.y);
+	float B = sqrt(b.x * b.x + b.y * b.y);
 	float m = std::max(B, 1.0f);
-	m=std::max(m,A);
+	m = std::max(m, A);
 	vec2 diff = a - b;
-	float dif_rel = abs(diff.x+diff.y)/ m;
+	float dif_rel = abs(diff.x + diff.y) / m;
 	if (dif_rel > 0.1f)
 		return false;
 	return true;
@@ -823,10 +722,10 @@ static bool MatCompare(mat4 a, mat4 b)
 	float m = std::max(B, 1.0f);
 	m = std::max(m, A);
 	mat4 diff = a - b;
-	float total=0;
-	for(int i=0;i<16;i++)
+	float total = 0;
+	for (int i = 0; i < 16; i++)
 	{
-		total+=diff.m[i];
+		total += diff.m[i];
 	}
 	float dif_rel = abs(total) / m;
 	if (dif_rel > 0.1f)
@@ -834,170 +733,173 @@ static bool MatCompare(mat4 a, mat4 b)
 	return true;
 }
 
-template<int n> bool IntCompare(const int*a,const int*b)
+template <int n>
+bool IntCompare(const int *a, const int *b)
 {
-	for(size_t i=0;i<n;i++)
+	for (size_t i = 0; i < n; i++)
 	{
-		if(a[i]!=b[i])
+		if (a[i] != b[i])
 			return false;
 	}
 	return true;
 }
 
-static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::Mesh& sourceMesh)
+
+static bool VerifyCompressedMesh(avs::CompressedMesh &compressedMesh, const avs::Mesh &sourceMesh)
 {
-	for(int i=0;i<compressedMesh.subMeshes.size();i++)
+return true;
+	for (int i = 0; i < compressedMesh.subMeshes.size(); i++)
 	{
-		auto &subMesh=compressedMesh.subMeshes[i];
+		auto &subMesh = compressedMesh.subMeshes[i];
 		draco::Decoder dracoDecoder;
 		draco::DecoderBuffer dracoDecoderBuffer;
-		dracoDecoderBuffer.Init((const char*)subMesh.buffer.data(), subMesh.buffer.size());
-		const auto &primitiveArray=sourceMesh.primitiveArrays[i];
+		dracoDecoderBuffer.Init((const char *)subMesh.buffer.data(), subMesh.buffer.size());
+		const auto &primitiveArray = sourceMesh.primitiveArrays[i];
 		auto statusor = dracoDecoder.DecodeMeshFromBuffer(&dracoDecoderBuffer);
-		auto &dm=statusor.value();
-		if(!dm.get())
+		auto &dm = statusor.value();
+		if (!dm.get())
 			return false;
 		// are there the same number of members for each attrib?
-		size_t num_elements=0;
-		for(int a=0;a<dm->num_attributes();a++)
+		size_t num_elements = 0;
+		for (int a = 0; a < dm->num_attributes(); a++)
 		{
-			const draco::PointAttribute *attr=dm->attribute(a);
-			if(!attr)
+			const draco::PointAttribute *attr = dm->attribute(a);
+			if (!attr)
 				continue;
-			if(!num_elements)
-				num_elements =attr->size();
-			else if(attr->size()!= num_elements)
+			if (!num_elements)
+				num_elements = attr->size();
+			else if (attr->size() != num_elements)
 			{
-				TELEPORT_INTERNAL_LOG_UNSAFE("Attr size mismatch %ull != %ull",attr->size(), num_elements);
+				TELEPORT_WARN("Attr size mismatch %ull != %ull", attr->size(), num_elements);
 			}
-			const uint8_t *dracoDatabuffer=attr->GetAddress(draco::AttributeValueIndex(0));
-			const auto &attribute=primitiveArray.attributes[a];
-			if(attribute.semantic!=subMesh.attributeSemantics[a])
+			const uint8_t *dracoDatabuffer = attr->GetAddress(draco::AttributeValueIndex(0));
+			const auto &attribute = primitiveArray.attributes[a];
+			if (attribute.semantic != subMesh.attributeSemantics[a])
 			{
-				TELEPORT_INTERNAL_LOG_UNSAFE("Attr semantic mismatch");
+				TELEPORT_WARN("Attr semantic mismatch");
 				continue;
 			}
-			const avs::Accessor  &attr_accessor=sourceMesh.accessors.find(attribute.accessor).operator*().second;
-			const avs::BufferView& attr_bufferView=(*(sourceMesh.bufferViews.find(attr_accessor.bufferView))).second;
-			const avs::GeometryBuffer &attr_buffer=(*(sourceMesh.buffers.find(attr_bufferView.buffer))).second;
-			const uint8_t *src_data=attr_buffer.data+attr_bufferView.byteOffset+attr_accessor.byteOffset; 
+			const avs::Accessor &attr_accessor = sourceMesh.accessors.find(attribute.accessor).operator*().second;
+			const avs::BufferView &attr_bufferView = (*(sourceMesh.bufferViews.find(attr_accessor.bufferView))).second;
+			const avs::GeometryBuffer &attr_buffer = (*(sourceMesh.buffers.find(attr_bufferView.buffer))).second;
+			const uint8_t *src_data = attr_buffer.data + attr_bufferView.byteOffset + attr_accessor.byteOffset;
 			for (int i = 0; i < attr->size(); i++)
 			{
-				if(attr_accessor.componentType==avs::Accessor::ComponentType::INT)
+				if (attr_accessor.componentType == avs::Accessor::ComponentType::INT)
 				{
-					size_t sz=(size_t)attr_accessor.type;
-					const int *compare=nullptr;
-					switch(sz)
+					size_t sz = (size_t)attr_accessor.type;
+					const int *compare = nullptr;
+					switch (sz)
 					{
-						case 1:
+					case 1:
+					{
+						auto val = (attr->GetValue<int, 1>(draco::AttributeValueIndex(i)));
+						compare = ((const int *)&val);
+						if (!IntCompare<1>(compare, (const int *)src_data))
 						{
-							auto val=(attr->GetValue<int, 1>(draco::AttributeValueIndex(i)));
-							compare = ((const int *)&val);
-							if (!IntCompare<1>(compare, (const int*)src_data))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-								break;
-						case 2:
-							{
-								auto val=attr->GetValue<int, 2>(draco::AttributeValueIndex(i));
-								compare = ((const int*)&(val));
-								if (!IntCompare<1>(compare, (const int*)src_data))
-								{
-									TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-									break;
-								}
-							}
-								break;
-						case 3:
+					}
+					break;
+					case 2:
+					{
+						auto val = attr->GetValue<int, 2>(draco::AttributeValueIndex(i));
+						compare = ((const int *)&(val));
+						if (!IntCompare<1>(compare, (const int *)src_data))
 						{
-							auto val=attr->GetValue<int, 3>(draco::AttributeValueIndex(i));
-							compare = ((const int*)&(val));
-							if (!IntCompare<1>(compare, (const int*)src_data))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-								break;
-						case 4:
+					}
+					break;
+					case 3:
+					{
+						auto val = attr->GetValue<int, 3>(draco::AttributeValueIndex(i));
+						compare = ((const int *)&(val));
+						if (!IntCompare<1>(compare, (const int *)src_data))
 						{
-							auto val=attr->GetValue<int, 4>(draco::AttributeValueIndex(i));
-							compare = ((const int*)&(val));
-							if (!IntCompare<1>(compare, (const int*)src_data))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-								break;
-						default:
+					}
+					break;
+					case 4:
+					{
+						auto val = attr->GetValue<int, 4>(draco::AttributeValueIndex(i));
+						compare = ((const int *)&(val));
+						if (!IntCompare<1>(compare, (const int *)src_data))
+						{
+							TELEPORT_WARN("Verify failed");
+							return false;
+						}
+					}
+					break;
+					default:
 						break;
 					}
-					src_data+=sz*sizeof(int);
+					src_data += sz * sizeof(int);
 				}
 				else if (attr_accessor.componentType == avs::Accessor::ComponentType::FLOAT)
 				{
-					switch(attr_accessor.type)
+					switch (attr_accessor.type)
 					{
-						case avs::Accessor::DataType::SCALAR:
+					case avs::Accessor::DataType::SCALAR:
+					{
+						float compare = attr->GetValue<float, 1>(draco::AttributeValueIndex(i))[0];
+						if (!FloatCompare(compare, *((const float *)src_data)))
 						{
-							float compare = attr->GetValue<float,1>(draco::AttributeValueIndex(i))[0];
-							if(!FloatCompare(compare,*((const float*)src_data)))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-						break;
-						case avs::Accessor::DataType::VEC2:
+					}
+					break;
+					case avs::Accessor::DataType::VEC2:
+					{
+						auto c = attr->GetValue<float, 2>(draco::AttributeValueIndex(i));
+						vec2 compare = *((const vec2 *)&c);
+						if (!VecCompare(compare, *((const vec2 *)src_data)))
 						{
-							auto c= attr->GetValue<float, 2>(draco::AttributeValueIndex(i));
-							vec2 compare = *((const vec2*)&c);
-							if (!VecCompare(compare,*((const vec2*)src_data)))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-						break;
-						case avs::Accessor::DataType::VEC3:
+					}
+					break;
+					case avs::Accessor::DataType::VEC3:
+					{
+						auto c = attr->GetValue<float, 3>(draco::AttributeValueIndex(i));
+						vec3 compare = *((const vec3 *)&c);
+						if (!VecCompare(compare, *((const vec3 *)src_data)))
 						{
-							auto c = attr->GetValue<float, 3>(draco::AttributeValueIndex(i));
-							vec3 compare = *((const vec3*)&c);
-							if (!VecCompare(compare, *((const vec3*)src_data)))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-						break;
-						case avs::Accessor::DataType::VEC4:
+					}
+					break;
+					case avs::Accessor::DataType::VEC4:
+					{
+						auto c = attr->GetValue<float, 4>(draco::AttributeValueIndex(i));
+						vec4 compare = *((const vec4 *)&c);
+						if (!VecCompare(compare, *((const vec4 *)src_data)))
 						{
-							auto c = attr->GetValue<float, 4>(draco::AttributeValueIndex(i));
-							vec4 compare = *((const vec4*)&c);
-							if (!VecCompare(compare, *((const vec4*)src_data)))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
-						break;
-						case avs::Accessor::DataType::MAT4:
+					}
+					break;
+					case avs::Accessor::DataType::MAT4:
+					{
+						auto c = attr->GetValue<float, 16>(draco::AttributeValueIndex(i));
+						mat4 compare = *((const mat4 *)&c);
+						if (!MatCompare(compare, *((const mat4 *)src_data)))
 						{
-							auto c = attr->GetValue<float, 16>(draco::AttributeValueIndex(i));
-							mat4 compare = *((const mat4*)&c);
-							if (!MatCompare(compare, *((const mat4*)src_data)))
-							{
-								TELEPORT_INTERNAL_LOG_UNSAFE("Verify failed");
-								break;
-							}
+							TELEPORT_WARN("Verify failed");
+							return false;
 						}
+					}
+					break;
+					default:
 						break;
-						default:
-							break;
 					}
 				}
 			}
@@ -1011,7 +913,7 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 		for(uint32_t idx=0;idx<dracoMesh.num_points();idx++)
 		{
 			max_index = std::max(max_index, idx);
-			//TELEPORT_INTERNAL_LOG_UNSAFE("Point %u:",idx);
+			//TELEPORT_WARN("Point %u:",idx);
 			uint32_t index = unset;
 			bool mismatch=false;
 			for (int a = 0; a < dm->num_attributes(); a++)
@@ -1020,9 +922,9 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 				uint32_t val = attr->mapped_index(draco::PointIndex(idx)).value();
 				if(a)
 				{
-				//	TELEPORT_INTERNAL_LOG_UNSAFE(",");
+				//	TELEPORT_WARN(",");
 				}
-			//	TELEPORT_INTERNAL_LOG_UNSAFE(" %u", val);
+			//	TELEPORT_WARN(" %u", val);
 				max_value = std::max(max_value, val);
 				if (index == unset)
 					index = val;
@@ -1033,17 +935,270 @@ static bool VerifyCompressedMesh(avs::CompressedMesh& compressedMesh,const avs::
 			}
 			if(mismatch)
 			{
-				TELEPORT_INTERNAL_LOG_UNSAFE("Mismatch");
+				TELEPORT_WARN("Mismatch");
 			}
-			TELEPORT_INTERNAL_LOG_UNSAFE("\n");
+			TELEPORT_WARN("\n");
 		}
-		#endif
+#endif
 	}
 	return true;
 }
 
+static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMesh,const std::string &filePath,const std::string &meshFilename)
+{
+	if(!CheckMesh(sourceMesh))
+		return false;
+	compressedMesh.meshCompressionType = avs::MeshCompressionType::NONE;
+	compressedMesh.name = sourceMesh.name;
+	compressedMesh.meshCompressionType = avs::MeshCompressionType::DRACO;
+	draco::Encoder dracoEncoder;
+	draco::GltfEncoder gltfEncoder;
+	static int encode_speed=3, decode_speed =7;
+	static int pos_quantization=11;
+	static int normal_quantization = 8;
+	static int texc_quantization = 11;
+	static int colour_quantization = 8;
+	static int generic_quantization = 8;
+	static bool allow_edgebreaker_encoding = true;
+	dracoEncoder.SetSpeedOptions(encode_speed, decode_speed);
+	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::POSITION, pos_quantization);
+	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::NORMAL, normal_quantization);
+	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::COLOR, colour_quantization);
+	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::TEX_COORD, texc_quantization);
+	dracoEncoder.SetAttributeQuantization(draco::GeometryAttribute::Type::GENERIC, generic_quantization);
+	if (allow_edgebreaker_encoding)
+		dracoEncoder.SetEncodingMethod(draco::MESH_EDGEBREAKER_ENCODING);
+	else
+		dracoEncoder.SetEncodingMethod(draco::MESH_SEQUENTIAL_ENCODING);
+	size_t sourceSize=0;
+	size_t compressedSize = 0;
+	// create zero-based material indices:
+	compressedMesh.subMeshes.resize(sourceMesh.primitiveArrays.size());
+	// Primitive array elements in each mesh.
+	size_t sm = 0;
+	draco::Scene dracoScene;
+	for (size_t i=0;i<sourceMesh.primitiveArrays.size();i++)
+	{
+		std::vector<avs::uid> accessors;
+		std::map<avs::uid, avs::AttributeSemantic> attributeSemantics;
+		const auto& primitive = sourceMesh.primitiveArrays[i];
+		auto &subMesh= compressedMesh.subMeshes[sm];
+		const avs::Accessor& indices_accessor = sourceMesh.accessors[primitive.indices_accessor];
+		accessors.push_back(primitive.indices_accessor);
+		subMesh.material=primitive.material;
+		subMesh.indices_accessor=primitive.indices_accessor;
 
-bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
+		size_t indexStride = avs::GetDataTypeSize(indices_accessor.type) * avs::GetComponentSize(indices_accessor.componentType);
+
+		subMesh.first_index = indices_accessor.byteOffset / indexStride;
+		subMesh.num_indices = (uint32_t)indices_accessor.count;
+		size_t numTriangles = indices_accessor.count / 3;
+	
+		draco::Mesh dracoMesh;
+		draco::FaceIndex face_index(0);
+		draco::EncoderBuffer dracoEncoderBuffer;
+		size_t numVertices = 0;
+		uint32_t startIndex=0xFFFFFFFF;
+		for (size_t j = 0; j < primitive.attributeCount; j++)
+		{
+			const avs::Attribute &attrib = primitive.attributes[j];
+			accessors.push_back(attrib.accessor);
+			const auto &attrib_accessor=sourceMesh.accessors[attrib.accessor];
+			numVertices=std::max(numVertices, attrib_accessor.count);
+			auto s=attributeSemantics.find(attrib.accessor);
+			if(s==attributeSemantics.end())
+				attributeSemantics[attrib.accessor]=attrib.semantic;
+			 if(attrib.semantic!= attributeSemantics[attrib.accessor])
+			{
+				TELEPORT_CERR<<"Different attributes for submeshes, can't compress this: "<<sourceMesh.name.c_str()<<"\n";
+				return false;
+			}
+		}
+		dracoMesh.set_num_points((uint32_t)numVertices);
+		dracoMesh.SetNumFaces(numTriangles);
+		for ( auto a : accessors)
+		{
+			const auto &accessor = sourceMesh.accessors[a];
+			draco::DataType dracoDataType = ToDracoDataType(accessor.componentType);
+			auto s = attributeSemantics.find(a);
+			if (s == attributeSemantics.end())
+				continue;	// not an attribute.
+			auto semantic=s->second;
+			draco::GeometryAttribute::Type dracoGeometryAttributeType = ToDracoGeometryAttribute(semantic);
+			// Unsupported attribute.
+			if(dracoGeometryAttributeType==draco::GeometryAttribute::Type::INVALID)
+			{
+				TELEPORT_WARN("For mesh {0}, unsupported attribute {1}",sourceMesh.name,avs::stringOf(semantic));
+				continue;
+			}
+			avs::BufferView &bufferView = sourceMesh.bufferViews[accessor.bufferView];
+			if (bufferView.byteLength == 0)
+				continue;
+			avs::GeometryBuffer& geometryBuffer = sourceMesh.buffers[bufferView.buffer];
+			if(geometryBuffer.byteLength==0)
+				continue;
+			const uint8_t *data = geometryBuffer.data + bufferView.byteOffset + accessor.byteOffset;
+			startIndex = std::min(startIndex,uint32_t((bufferView.byteOffset + accessor.byteOffset) / bufferView.byteStride));
+			// Naively convert enum to integer.
+			int8_t num_components = (int8_t)accessor.type;	
+			int att_id = -1;
+			draco::PointAttribute* attr = nullptr;
+			draco::GeometryAttribute dracoGeometryAttribute;
+			size_t dracoStride = draco::DataTypeLength(dracoDataType) * num_components;
+			assert(dracoStride == bufferView.byteStride);
+			dracoGeometryAttribute.Init(dracoGeometryAttributeType, nullptr, num_components, dracoDataType, semantic == avs::AttributeSemantic::NORMAL, dracoStride, 0);
+			att_id = dracoMesh.AddAttribute(dracoGeometryAttribute,true, (uint32_t)(accessor.count));
+
+			subMesh.attributeSemantics[att_id]=semantic;
+			attr = dracoMesh.attribute(att_id);
+			for (size_t j = 0; j < accessor.count; j++)
+			{
+				const uint8_t *ptr = data +  j * bufferView.byteStride;
+				attr->SetAttributeValue(draco::AttributeValueIndex((uint32_t)j), ptr);
+				if(dracoDataType==draco::DT_FLOAT32)
+				{
+					float *f=(float*)ptr;
+					for(size_t k=0;k<dracoStride/sizeof(float);k++)
+					{
+						if(isnan(f[k])||isinf(f[k]))
+						{
+							TELEPORT_WARN_NOSPAM("Bad float at {0} of accessor {1}",j,a);
+						}
+					}
+				}
+			}
+			sourceSize += accessor.count*bufferView.byteStride;
+		}
+		//Indices
+		const avs::BufferView& indicesBufferView = sourceMesh.bufferViews[indices_accessor.bufferView];
+		sourceSize += indices_accessor.count*indicesBufferView.byteStride;
+		const avs::GeometryBuffer& indicesBuffer = sourceMesh.buffers[indicesBufferView.buffer];
+		//size_t componentSize = avs::GetComponentSize(indices_accessor.componentType);
+		size_t triangleCount= indices_accessor.count / 3;
+		if(indicesBufferView.byteStride==4)
+		{
+			uint32_t* data=(uint32_t*)(indicesBuffer.data + indicesBufferView.byteOffset+ indices_accessor.byteOffset);
+			for(size_t j=0;j< triangleCount;j++)
+			{
+				draco::Mesh::Face dracoMeshFace;
+				for(int k=0;k<3;k++)
+					dracoMeshFace[k] = data[j * 3 + k] - startIndex;
+				dracoMesh.SetFace(face_index, dracoMeshFace);
+				for (int k = 0; k < 3; k++)
+				{
+					uint32_t point=dracoMesh.face(face_index)[k].value();
+					if(point>=dracoMesh.num_points())
+					{
+						TELEPORT_WARN_NOSPAM("point index out of range.");
+					}
+				}
+				++face_index;
+			}
+		}
+		else if (indicesBufferView.byteStride == 2)
+		{
+			uint16_t* data = (uint16_t*)(indicesBuffer.data + indicesBufferView.byteOffset + indices_accessor.byteOffset);
+			for (size_t j = 0; j < triangleCount; j++)
+			{
+				draco::Mesh::Face dracoMeshFace;
+				for (int k = 0; k < 3; k++)
+					dracoMeshFace[k] = (uint32_t)data[j * 3 + k]-startIndex;
+				dracoMesh.SetFace(face_index, dracoMeshFace);
+				for (int k = 0; k < 3; k++)
+				{
+					uint32_t point = dracoMesh.face(face_index)[k].value();
+					if (point >= dracoMesh.num_points())
+					{
+						TELEPORT_WARN_NOSPAM("point index out of range.");
+					}
+				}
+				++face_index;
+			}
+		}
+		else
+		{
+			TELEPORT_ASSERT(false);
+		}
+		//dracoMesh.DeduplicateAttributeValues();
+		//dracoMesh.DeduplicatePointIds();
+		try
+		{
+			std::filesystem::path p = filePath + meshFilename;
+			string dracoFilename = p.replace_extension(fmt::format("_{0}.draco", i)).string();
+			// Encode as draco native:
+			draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
+			if(!status.ok())
+			{
+				TELEPORT_WARN("dracoEncoder failed to compress submesh {0} of {1} due to: {2}", i, compressedMesh.name, status.error_msg_string());
+				compressedMesh.subMeshes.resize(compressedMesh.subMeshes.size() - 1);
+				if(compressedMesh.subMeshes.size()==0)
+					return false;
+				continue;
+			}
+			std::vector<char> *buf = dracoEncoderBuffer.buffer();
+			if (buf)
+			{
+				std::ofstream ofs(dracoFilename.c_str(), std::ios::binary);
+				ofs.write((const char *)buf->data(), buf->size());
+				if (compressedMesh.meshCompressionType == avs::MeshCompressionType::DRACO)
+				{
+					subMesh.buffer.resize(dracoEncoderBuffer.size());
+					memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
+				}
+			}
+			// And encode as glb.
+			string glbSubFilename = p.replace_extension(fmt::format("_{0}.glb", i)).string();
+			dracoEncoderBuffer.Clear();
+			gltfEncoder.EncodeToBuffer(dracoMesh, &dracoEncoderBuffer);
+			buf = dracoEncoderBuffer.buffer();
+			if (buf)
+			{
+				std::ofstream ofs(glbSubFilename.c_str(), std::ios::binary);
+				ofs.write((const char *)buf->data(), buf->size());
+				if (compressedMesh.meshCompressionType == avs::MeshCompressionType::GLB_SEPARATE)
+				{
+					subMesh.buffer.resize(dracoEncoderBuffer.size());
+					memcpy(subMesh.buffer.data(), dracoEncoderBuffer.data(), subMesh.buffer.size());
+				}
+			}
+			// Problem is draco reorders the vertices, so we can't compare like with like.
+			if (!VerifyCompressedMesh(compressedMesh, sourceMesh))
+			{
+				TELEPORT_WARN("Failed to verify submesh {0} of {1}", i, compressedMesh.name);
+				return false;
+			}
+			TELEPORT_LOG("dracoEncoder compressed submesh {0} of {1}.", i, compressedMesh.name);
+		}
+		catch(std::runtime_error err)
+		{
+			TELEPORT_WARN("Runtime Error in draco encoding of submesh {0} of {1}: {2}\n", i, sourceMesh.name.c_str(),err.what()?err.what():"");
+			return false;
+		}
+		catch(...)
+		{
+			TELEPORT_WARN("Exception in draco encoding of submesh {0} of {1}\n",i, sourceMesh.name.c_str());
+			return false;
+		}
+		compressedSize+= subMesh.buffer.size();
+		if (subMesh.buffer.size() == 0)
+		{
+			TELEPORT_WARN("Empty compressed submesh {0}\n", sourceMesh.name.c_str());
+			TELEPORT_INTERNAL_BREAK_ONCE("");
+		}
+		sm++;
+	}
+	//TELEPORT_INTERNAL_COUT("Compressed {0} from {1} to {2}\n",sourceMesh.name.c_str(),(sourceSize+1023)/1024,(compressedSize +1023)/1024);
+	return true;
+}
+
+
+bool GeometryStore::storeMesh(avs::uid id, std::string path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify)
+{
+	avs::Mesh avsMesh(*iMesh);
+	return storeMesh(id,path,lastModified,avsMesh,standard,verify);
+}
+
+bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModified,const avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
 {
 	if(!validate_path(path))
 	{
@@ -1055,14 +1210,31 @@ bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModif
 		TELEPORT_WARN("In storeMesh, invalid id {0}",id);
 		return false;
 	}
-	std::string p=std::string(path);
+	std::string filePath = cachePath + "/";
+	if (standard == avs::AxesStandard::EngineeringStyle)
+		filePath += "engineering/";
+	if (standard == avs::AxesStandard::GlStyle)
+		filePath += "gl/";
+	std::string p=path;
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
-	auto &mesh=meshes[standard][id] = ExtractedMesh{ path, lastModified, newMesh};
+	auto &mesh=meshes[standard][id] = ExtractedMesh{  lastModified, newMesh};
 
 	{
-		if(!CompressMesh(mesh.compressedMesh,mesh.mesh))
+		string meshFilename=mesh.MakeFilename(path);
+		if (!CompressMesh(mesh.compressedMesh, mesh.mesh, filePath, meshFilename))
 			return false;
+		// Let's save the compressed submeshes as individual glb's:
+		for(size_t i=0;i<mesh.compressedMesh.subMeshes.size();i++)
+		{
+			const auto &subMesh=mesh.compressedMesh.subMeshes[i];
+			
+			std::string subFilename = filePath+meshFilename;
+			std::filesystem::path p=subFilename;
+			p = p.replace_extension(fmt::format("_{0}.glb", i));
+			subFilename = p.string();
+
+		}
 		if(verify)
 		{
 			//Save data to new file.
@@ -1091,6 +1263,8 @@ bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModif
 			}
 		}
 	}
+	if (!saveResourceBinary(filePath + mesh.MakeFilename(path), mesh))
+		return false;
 	return true;
 }
 
@@ -1109,11 +1283,13 @@ bool GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path
 	std::string p=std::string(path);
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
- 	materials[id] = ExtractedMaterial{guid, path, lastModified, newMaterial};
+	materials[id] = ExtractedMaterial{ lastModified, newMaterial};
+	if (!saveResourceBinary(cachePath + "/"s + materials[id].MakeFilename(path), materials[id]))
+		return false;
 	return true;
 }
 
-bool GeometryStore::storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips
+bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	if (!validate_path(path))
@@ -1126,14 +1302,22 @@ bool GeometryStore::storeTexture(avs::uid id, std::string guid, std::string path
 		TELEPORT_WARN("In storeTexture, invalid id {0}", id);
 		return false;
 	}
+	if(!newTexture.images.size()||!newTexture.images[0].data.size())
+	{
+		TELEPORT_WARN("In storeTexture, data is empty.");
+		return false;
+	}
 	auto p=std::string(path);
 	bool black = true;
-	for (size_t i = 0; i < newTexture.data.size(); i++)
+	for (size_t i = 0; i < newTexture.images.size(); i++)
 	{
-		if (newTexture.data[i] != 0)
+		for (size_t j = 0; j < newTexture.images[i].data.size(); j++)
 		{
-			black = false;
-			break;
+			if (newTexture.images[i].data[i] != 0)
+			{
+				black = false;
+				break;
+			}
 		}
 	}
 	if (black)
@@ -1143,66 +1327,38 @@ bool GeometryStore::storeTexture(avs::uid id, std::string guid, std::string path
 	}
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
-	uint16_t numImages=*((uint16_t*)newTexture.data.data());
-	std::vector<uint32_t> imageOffsets(numImages);
-	memcpy(imageOffsets.data(),newTexture.data.data()+2,sizeof(int32_t)*numImages);
-	imageOffsets.push_back((uint32_t)newTexture.data.size());
-	std::vector<size_t> imageSizes(numImages);
-	for(size_t i=0;i<numImages;i++)
-	{
-		imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
-		if(imageSizes[i]>newTexture.data.size())
-		{
-			TELEPORT_BREAK_ONCE("Bad data.");
-			return false;
-		}
-	}
 	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
 	if(newTexture.compression==avs::TextureCompression::BASIS_COMPRESSED&&newTexture.bytesPerPixel != 4)
 	{
 		newTexture.compression=avs::TextureCompression::UNCOMPRESSED;
 	}
+	
+	//queue the texture for compression.
+	 // UASTC doesn't work from inside the dll. Unclear why.
 	{
-	/*	bool validFileExists = false;
-		filesystem::path fsFilePath = cacheFilePath;
-		if(filesystem::exists(fsFilePath))
+		std::shared_ptr<PrecompressedTexture> pct = std::make_shared<PrecompressedTexture>();
+	
+		pct->numMips=newTexture.mipCount;
+		pct->genMips=genMips;
+		pct->highQualityUASTC=highQualityUASTC;
+		pct->textureCompression=newTexture.compression;
+		pct->format = newTexture.format;
+		size_t totalSize=0;
+		for(size_t i=0;i<newTexture.images.size();i++)
 		{
-			//Read last write time.
-			filesystem::file_time_type rawFileTime = filesystem::last_write_time(fsFilePath);
-
-			//Convert to std::time_t; imprecise, but good enough.
-			std::time_t basisModified = rawFileTime.time_since_epoch().count();
-
-			//The file is valid if the basis file is younger than the texture file.
-			validFileExists = basisModified >= lastModified;
-		}*/
-		//Otherwise, queue the texture for compression.
-		 	// UASTC doesn't work from inside the dll. Unclear why.
-		{
-			std::shared_ptr<PrecompressedTexture> pct = std::make_shared<PrecompressedTexture>();
-		
-			pct->numMips=newTexture.mipCount;
-			pct->genMips=genMips;
-			pct->highQualityUASTC=highQualityUASTC;
-			pct->textureCompression=newTexture.compression;
-			pct->format = newTexture.format;
-			for(size_t i=0;i<imageSizes.size();i++)
-			{
-				size_t offset=(size_t)imageOffsets[i];
-				size_t imageSize=(size_t)imageSizes[i];
-				const uint8_t *src=newTexture.data.data()+offset;
-				std::vector<uint8_t> img;
-				img.resize(imageSize);
-				//Copy data from source, so it isn't lost.
-				memcpy(img.data(), src, img.size());
-				pct->images.push_back(std::move(img));
-			}
- 			newTexture.data.clear();
-			
-			texturesToCompress.emplace(id, pct);
+			pct->images.push_back(newTexture.images[i].data);
+			totalSize+=newTexture.images[i].data.size();
 		}
+	
+		if(totalSize==0)
+		{
+			TELEPORT_WARN("In storeTexture, data is empty.");
+			return false;
+		}
+		
+		texturesToCompress.emplace(id, pct);
 	}
-	textures[id] = ExtractedTexture{guid, path, lastModified, newTexture};
+	textures[id] = ExtractedTexture{  lastModified, newTexture};
 	return true;
 }
 
@@ -1223,7 +1379,7 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 		return 0;
 	//std::filesystem::path p=std::string(ttf_path_utf8);
 	saveResourceBinary(cachePath+"/"s+cacheFontPath+".font", fa);
-	storeTexture(font_texture_uid, "", cacheTexturePath, lastModified, avsTexture, true, true, true);
+	storeTexture(font_texture_uid, cacheTexturePath, lastModified, avsTexture, true, true, true);
 	return font_atlas_uid;
 }
 
@@ -1253,9 +1409,9 @@ avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const 
 	return canvas_uid;
 }
 
-void GeometryStore::storeShadowMap(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Texture& newShadowMap)
+void GeometryStore::storeShadowMap(avs::uid id, std::string path, std::time_t lastModified, avs::Texture& newShadowMap)
 {
-	shadowMaps[id] = ExtractedTexture{ guid,path, lastModified, newShadowMap};
+	shadowMaps[id] = ExtractedTexture{lastModified, newShadowMap};
 }
 
 void GeometryStore::removeNode(avs::uid id)
@@ -1279,16 +1435,20 @@ size_t GeometryStore::getNumberOfTexturesWaitingForCompression() const
 	return texturesToCompress.size();
 }
 
-const avs::Texture* GeometryStore::getNextTextureToCompress() const
+TextureToCompress GeometryStore::getNextTextureToCompress() const
 {
 	//No textures to compress.
+	TextureToCompress t;
 	if(texturesToCompress.size() == 0)
-		return nullptr;
+		return t;
 	auto compressionPair = texturesToCompress.begin();
 	auto foundTexture = textures.find(compressionPair->first);
-	assert(foundTexture != textures.end());
-
-	return &foundTexture->second.texture;
+	if(foundTexture==textures.end())
+		return t;
+	t.name=foundTexture->second.getName();
+	t.width=foundTexture->second.texture.width;
+	t.height=foundTexture->second.texture.height;
+	return t;
 }
 //#define STB_IMAGE_WRITE_IMPLEMENTATION 1
 #pragma warning(disable:4996)
@@ -1303,15 +1463,17 @@ void GeometryStore::compressNextTexture()
 		return;
 	auto compressionPair = texturesToCompress.begin();
 	auto foundTexture = textures.find(compressionPair->first);
+	string path=UidToPath(compressionPair->first);
 	assert(foundTexture != textures.end());
 	ExtractedTexture& extractedTexture = foundTexture->second;
 	avs::Texture& avsTexture = extractedTexture.texture;
 	std::shared_ptr<PrecompressedTexture> compressionData = compressionPair->second;
-	std::string file_name = (cachePath + "/") + extractedTexture.MakeFilename();
+	std::string file_name = (cachePath + "/") + extractedTexture.MakeFilename(path);
 	if (compressionData->textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
 	{
-		if (!ApplyBasisCompression(extractedTexture, compressionData, compressionStrength,  compressionQuality))
+		if (!ApplyBasisCompression(extractedTexture,path, compressionData, compressionStrength,  compressionQuality))
 		{
+			TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
 			texturesToCompress.erase(texturesToCompress.begin());
 			return ;
 		}
@@ -1364,6 +1526,11 @@ void GeometryStore::compressNextTexture()
 						breakout = true;
 						break;
 					}
+					if(m==0)
+					{
+						std::string filename = fmt::format("{0}/{1}-{2}-{3}.png", cachePath,extractedTexture.getName(),m, i);
+						stbi_write_png(filename.c_str(),w,h,avsTexture.bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * avsTexture.bytesPerPixel);
+					}
 					n++;
 					w = (w + 1) / 2;
 					h = (h + 1) / 2;
@@ -1380,8 +1547,8 @@ void GeometryStore::compressNextTexture()
 		{
 			dataSize+=img.size();
 		}
-		avsTexture.data.resize(dataSize);
-		uint8_t *target = avsTexture.data.data();
+		avsTexture.compressedData.resize(dataSize);
+		uint8_t *target = avsTexture.compressedData.data();
 		memcpy(target, &imageCount, sizeof(imageCount));
 		target+=sizeof(imageCount);
 		uint32_t offset=sizeof(imageCount)+imageCount*sizeof(uint32_t);
@@ -1401,9 +1568,13 @@ void GeometryStore::compressNextTexture()
 			target += img.size();
 		}
 	}
-	if (compressionData->textureCompression == avs::TextureCompression::UNCOMPRESSED && avsTexture.data.size() > 1048576)
+	if (compressionData->textureCompression == avs::TextureCompression::UNCOMPRESSED)
 	{
-		TELEPORT_WARN("Texture \"{0}\" was stored UNCOMPRESSED with a data size larger than 1MB! Size: {1}B ({2}MB).\n",avsTexture.name, avsTexture.data.size(),avsTexture.data.size() / 1048576.0f);
+		TELEPORT_WARN("Texture \"{0}\" was stored UNCOMPRESSED .\n",avsTexture.name);
+	}
+	if(!avsTexture.compressedData.size())
+	{
+		TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
 	}
 	saveResourceBinary(file_name, extractedTexture);
 	
@@ -1416,12 +1587,39 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 
 	//Rename old file.
 	if (oldFileExists)
-		filesystem::rename(file_name, file_name + ".bak");
+	{
+		try
+		{
+			filesystem::rename(file_name, file_name + ".bak");
+		}
+		catch(std::filesystem::filesystem_error err)
+		{
+			TELEPORT_WARN("Filesystem error - filename too long?");
+			return false;
+		}
+		catch(...)
+		{
+			return false;
+		}
+	}
 	else
 	{
 		const std::filesystem::path fspath{ file_name.c_str() };
-		auto p=fspath.parent_path();
-		std::filesystem::create_directories(p);
+		auto p = fspath.parent_path();
+		try
+		{
+			std::filesystem::create_directories(p);
+		}
+		catch (std::filesystem::filesystem_error err)
+		{
+			TELEPORT_WARN("Filesystem error - create_directories failed for {0}.", p.string());
+			return false;
+		}
+		catch (...)
+		{
+			TELEPORT_WARN("Create_directories failed for {0}.", p.string());
+			return false;
+		}
 	}
 	//Save data to new file.
 	auto UidToPath = std::bind(&GeometryStore::UidToPath, this, std::placeholders::_1);
@@ -1461,6 +1659,8 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 			verifyFile>>verifyResource2;
 			verifyFile.close();
 			resource.Verify(verifyResource2);
+	if (oldFileExists)
+		filesystem::remove(file_name + ".bak");
 			return false;
 		}
 	}
@@ -1473,6 +1673,11 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 template<typename ExtractedResource>
 avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const std::string& path_root, std::map<avs::uid, ExtractedResource>& resourceMap)
 {
+	if(file_name.length()>240)
+	{
+		TELEPORT_WARN("Filename too long: {0}",file_name);
+		return 0;
+	}
 	core::resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 	std::string p = StandardizePath(file_name, path_root);
 	if(!validate_path(p))
@@ -1527,6 +1732,10 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 }
 template<typename ExtractedResource> bool GeometryStore::loadResourceBinary(const std::string file_name,const std::string &path_root, ExtractedResource &resource)
 {
+	if(file_name.length()>240)
+	{
+		return false;
+	}
 	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 	//auto write_time= std::filesystem::last_write_time(file_name);
 	try
@@ -1541,15 +1750,14 @@ template<typename ExtractedResource> bool GeometryStore::loadResourceBinary(cons
 	return true;
 }
 
-template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(const std::string path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
+template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(const std::string cache_path, const std::map<avs::uid, ExtractedResource>& resourceMap) const
 {
-	const std::filesystem::path fspath{ path.c_str() };
+	const std::filesystem::path fspath{ cache_path.c_str() };
 	std::filesystem::create_directories(fspath);
 	for (const auto& resourceData : resourceMap)
 	{
-		if (resourceData.second.path.length() == 0)
-			continue;
-		std::string file_name = (path + "/") + resourceData.second.MakeFilename();
+		std::string resource_path=UidToPath(resourceData.first);
+		std::string file_name = (cache_path + "/") + resourceData.second.MakeFilename(resource_path);
 		saveResourceBinary(file_name, resourceData.second);
 	}
 	return true;
@@ -1583,7 +1791,7 @@ bool GeometryStore::CheckForErrors()
 	{
 		ExtractedTexture& textureData = t.second;
 		
-		if(textureData.texture.data.size()==0)
+		if(textureData.texture.images.size()==0)
 		{
 			TELEPORT_CERR<<"Texture "<<t.second.getName()<<" is empty.\n";
 			return false;

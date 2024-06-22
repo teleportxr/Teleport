@@ -15,7 +15,7 @@ namespace avs
 		virtual bool mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual void unmapOutputBuffer() = 0;
 	};
-	class AVSTREAM_API ClientServerMessageStack :public avs::GenericEncoderBackendInterface
+	class AVSTREAM_API ClientServerMessageStack final:public avs::GenericEncoderBackendInterface
 	{
 	public:
 		void PushBuffer(std::shared_ptr<std::vector<uint8_t>> b);

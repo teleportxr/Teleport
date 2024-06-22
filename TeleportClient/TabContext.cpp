@@ -20,7 +20,9 @@ using namespace client;
 static std::set<int32_t> tabIndices;
 static std::map<int32_t, std::shared_ptr<TabContext>> tabContexts;
 static int32_t next_tab = 1;
-
+TabContext::TabContext()
+{
+}
 const std::set<int32_t> &TabContext::GetTabIndices()
 {
 	return tabIndices;

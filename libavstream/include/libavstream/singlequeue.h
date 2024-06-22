@@ -28,7 +28,7 @@ namespace avs
 		void increaseBufferSize(size_t requestedSize);
 		void push(const void* buffer, size_t bufferSize);
 		void pop();
-		void drop();
+		void drop() override;
 	public:
 		SingleQueue();
 

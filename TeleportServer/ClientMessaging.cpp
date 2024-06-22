@@ -13,6 +13,7 @@
 
 using namespace teleport;
 using namespace server;
+#pragma optimize("",off)
 
 ClientMessaging::ClientMessaging(SignalingService &signalingService,
 								 SetHeadPoseFn setHeadPose,
@@ -93,10 +94,16 @@ void ClientMessaging::tick(float deltaTime)
 	if ( clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
 	{
 		sendStreamingControlMessage(msg);
-	}
+	} 
 	//Don't stream to the client before we've received the handshake.
 	if (!receivedHandshake)
 		return;
+	int64_t server_time_us = GetServerTimeUs();
+	if(!currentOriginState.acknowledged)
+	{
+		if(server_time_us-currentOriginState.serverTimeSentUs>5000000)
+			setOrigin(currentOriginState.originClientHas);
+	}
 	avs::Result commandResult=commandPipeline.process();
 	if(commandResult==avs::Result::IO_Full)
 	{
@@ -250,6 +257,7 @@ void ClientMessaging::sendSetupCommand(const teleport::core::SetupCommand &setup
 	sendSignalingCommand(setupCommand);
 	sendSignalingCommand(setupLightingCommand, global_illumination_texture_uids);
 	sendSignalingCommand(setupInputsCommand, inputDefinitions);
+	lastSetupCommand = setupCommand;
 }
 
 void ClientMessaging::sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd)
@@ -489,18 +497,39 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	}
 	reportHandshake(this->clientID, &handshake);
 	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}.\n", clientID, clientIP);
+	setOrigin(currentOriginState.originClientHas);
+}
+avs::uid ClientMessaging::getOrigin() const
+{
+	return currentOriginState.originClientHas;
 }
 
-bool ClientMessaging::setOrigin(uint64_t valid_counter, avs::uid originNode)
+int64_t ClientMessaging::GetServerTimeUs() const 
 {
-	if (!hasReceivedHandshake())
-		return false;
+	int64_t unix_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	int64_t serverTimeNs = unix_time_us - lastSetupCommand.startTimestamp_utc_unix_us;
+	return serverTimeNs;
+}
+bool ClientMessaging::setOrigin( avs::uid originNode)
+{
+	currentOriginState.valid_counter++;
 	geometryStreamingService.setOriginNode(originNode);
 	teleport::core::SetStageSpaceOriginNodeCommand setp;
-	
+	setp.ack_id=next_ack_id++;
 	setp.origin_node=originNode;
-	setp.valid_counter = valid_counter;
-	TELEPORT_LOG("Send origin node {0} with counter {1} to clientID {2}.\n", originNode, valid_counter, clientID);
+	setp.valid_counter = currentOriginState.valid_counter;
+	
+	// This is now the valid origin.
+	currentOriginState.originClientHas=originNode;
+	currentOriginState.sent=true;
+	currentOriginState.ack_id=setp.ack_id;
+	currentOriginState.acknowledged=false;
+	currentOriginState.serverTimeSentUs=GetServerTimeUs();
+	if (!hasReceivedHandshake())
+	{
+		TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",uid);
+		return false;
+	}
 	bool result=sendCommand(setp);
 	return result;
 }
@@ -644,6 +673,21 @@ const avs::DisplayInfo& ClientMessaging::getDisplayInfo() const
 	return displayInfo;
 }
 
+void ClientMessaging::receiveAcknowledgement(const std::vector<uint8_t> &packet)
+{
+	core::AcknowledgementMessage msg;
+	if (packet.size()!=sizeof(core::AcknowledgementMessage))
+	{
+		TELEPORT_COUT << "Session: Received malformed OriginRequest packet of length: " << packet.size() << "\n";
+		return;
+	}
+	memcpy(&msg, packet.data(), sizeof(msg));
+	if(msg.ack_id==currentOriginState.ack_id)
+	{
+		currentOriginState.acknowledged=true;
+	}
+}
+
 void ClientMessaging::receiveResourceRequest(const std::vector<uint8_t> &packet)
 {
 	core::ResourceRequestMessage msg;
@@ -719,7 +763,7 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 				return;
 			}
 			memcpy(&message, packet.data(), sizeof(message));
-			//std::cout << "timestamp_unix_ms: "<<(message.timestamp_unix_ms/1000.0) << std::endl;
+			
 			if(packet.size()!=sizeof(message)+sizeof(teleport::core::NodePose)*message.numPoses)
 			{
 				TELEPORT_CERR << "Bad packet size.\n";
@@ -818,17 +862,19 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 		case teleport::core::ClientMessagePayloadType::PongForLatency:
 			receivePongForLatency(packet);
 			break;
+		case teleport::core::ClientMessagePayloadType::Acknowledgement:
+			receiveAcknowledgement(packet);
+			break;
 		default:
 			TELEPORT_CERR<<"Unknown client message: "<<(int)clientMessagePayloadType<<"\n";
 		break;
 	};
 }
 
-const core::ClientNetworkState& ClientMessaging::getClientNetworkState() const
+avs::StreamingConnectionState ClientMessaging::getStreamingState() const
 {
 	if (clientNetworkContext.NetworkPipeline.mNetworkSink)
-		clientNetworkState.streamingConnectionState = clientNetworkContext.NetworkPipeline.mNetworkSink->getConnectionState();
+		return clientNetworkContext.NetworkPipeline.mNetworkSink->getConnectionState();
 	else
-		clientNetworkState.streamingConnectionState = avs::StreamingConnectionState::UNINITIALIZED;
-	return clientNetworkState;
+		return avs::StreamingConnectionState::UNINITIALIZED;
 }

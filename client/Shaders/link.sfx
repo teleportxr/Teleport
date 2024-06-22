@@ -74,7 +74,7 @@ shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
 
-	vec4 wpos			=mul(localPos, model);
+	vec4 wpos			=mul(localPos, perNodeConstants.model);
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.hPosition		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 
@@ -95,7 +95,7 @@ struct linkVertexOutput
 	vec4 colour : TEXCOORD1;
 	vec3 centre_worldspace_pos : TEXCOORD2;
 };
-// Draw at the center of the model matrix, aligned to face the viewer.
+// Draw at the center of the perNodeConstants.model matrix, aligned to face the viewer.
 shader linkVertexOutput VS_Link_SV(idOnly IN)
 {
 	uint vertex_id = IN.vertex_id;
@@ -107,7 +107,7 @@ shader linkVertexOutput VS_Link_SV(idOnly IN)
 	poss[2] = vec2(-1.0, -1.0);
 	poss[3] = vec2(-1.0, 1.0);
 	
-	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), model);
+	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), perNodeConstants.model);
 	vec4 centre_viewspace_pos = mul(view, vec4(centre_wpos.xyz, 1.0));
 	
 	float radius_m=0.5;
@@ -141,7 +141,7 @@ shader linkVertexOutput VS_Link_MV(idOnly IN, uint viewID
 	poss[2] = vec2(-1.0, -1.0);
 	poss[3] = vec2(-1.0, 1.0);
 
-	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), model);
+	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), perNodeConstants.model);
 	vec4 centre_viewspace_pos = mul(this_view, vec4(centre_wpos.xyz, 1.0));
 
 	float radius_m = 0.5;
@@ -216,12 +216,12 @@ shader ColourDepthWrite PS_Link(linkVertexOutput IN)
 	float B=-2.0*D*cos(theta);
 	float C=D*D-R*R;
 	float distance_to_surface = (-B - sqrt(B * B - 4.0 * C))/2.0;
-	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), model);
+	vec4 centre_wpos = mul(vec4(0, 0, 0, 1.0), perNodeConstants.model);
 	vec3 pos = (viewPosition + view * distance_to_surface - centre_wpos.xyz)/ R;
 
 	vec3 rgb = plasma_function(pos.xyz,time);
 	OUT.colour=vec4(rgb, 1.0)*linkColour;
-	OUT.depth=IN.hPosition.z/IN.hPosition.w;
+	OUT.depth = distanceToDepthParam / distance_to_surface; // IN.hPosition.z / IN.hPosition.w;
 	return OUT;
 }
 

@@ -6,7 +6,7 @@
 
 namespace avs
 {
-	typedef unsigned long long uid;
+	typedef uint64_t uid;
 
 	//One identifier per extension class.
 	enum class MaterialExtensionIdentifier: uint32_t

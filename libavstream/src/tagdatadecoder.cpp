@@ -36,7 +36,7 @@ Result TagDataDecoder::configure(uint8_t streamId, std::function<void(const uint
 		if (deconf_result != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
-
+	name="Tag Decoder";
 	m_configured = true;
 	d().m_streamId = streamId;
 	m_frameBuffer.resize(200);

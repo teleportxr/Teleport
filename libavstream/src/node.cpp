@@ -64,6 +64,11 @@ Result PipelineNode::link(PipelineNode& source, PipelineNode& target)
 			sourceSlot = i;
 			break;
 		}
+		else if(source.getOutput(i)==&target)
+		{
+			// already linked.
+			return avs::Result::OK;
+		}
 	}
 	if (!sourceSlot.has_value())
 	{
@@ -219,6 +224,42 @@ Result PipelineNode::isOutputLinked(int slot) const
 	return d().m_outputs[slot].targetNode ? Result::OK : Result::Node_NotLinked;
 }
 
+PipelineNode *PipelineNode::getOutput(int slot)
+{
+	if (slot < 0 || size_t(slot) >= d().m_outputs.size())
+	{
+		return nullptr;
+	}
+	return d().m_outputs[slot].targetNode;
+}
+
+PipelineNode *PipelineNode::getInput(int slot)
+{
+	if (slot < 0 || size_t(slot) >= d().m_inputs.size())
+	{
+		return nullptr;
+	}
+	return d().m_inputs[slot].targetNode ;
+}
+
+const PipelineNode *PipelineNode::getOutput(int slot) const
+{
+	if (slot < 0 || size_t(slot) >= d().m_outputs.size())
+	{
+		return nullptr;
+	}
+	return d().m_outputs[slot].targetNode;
+}
+
+const PipelineNode *PipelineNode::getInput(int slot) const
+{
+	if (slot < 0 || size_t(slot) >= d().m_inputs.size())
+	{
+		return nullptr;
+	}
+	return d().m_inputs[slot].targetNode;
+}
+
 void PipelineNode::setNumInputSlots(size_t numSlots)
 {
 	for (size_t slot = numSlots; slot < d().m_inputs.size(); ++slot)
@@ -243,19 +284,6 @@ void PipelineNode::setNumSlots(size_t numInputSlots, size_t numOutputSlots)
 	setNumOutputSlots(numOutputSlots);
 }
 
-PipelineNode* PipelineNode::getInput(int slot) const
-{
-	if (size_t(slot) >= d().m_inputs.size())
-		return nullptr;
-	return d().m_inputs[slot].targetNode;
-}
-
-PipelineNode* PipelineNode::getOutput(int slot) const
-{
-	if(size_t(slot) >= d().m_outputs.size())
-		return nullptr;
-	return d().m_outputs[slot].targetNode;
-}
 
 int PipelineNode::getInputIndex(const PipelineNode* node) const
 {

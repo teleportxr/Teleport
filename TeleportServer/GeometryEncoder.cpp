@@ -10,6 +10,7 @@
 
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/Logging.h"
 #include "TeleportCore/Profiling.h"
 #include "GeometryStreamingService.h"
 #include "GeometryStore.h"
@@ -260,7 +261,6 @@ avs::Result GeometryEncoder::unmapOutputBuffer()
 	return avs::Result::OK;
 }
 
-
 avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
 {
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
@@ -269,17 +269,19 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 		if(uid==0)
 			continue;
 		const avs::Mesh* mesh = geometryStore->getMesh(uid, geometryStreamingService->getClientAxesStandard());
-		const avs::CompressedMesh* compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
+		const avs::CompressedMesh *compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
+		if (!compressedMesh || compressedMesh->meshCompressionType == avs::MeshCompressionType::NONE)
+		{
+			TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " MeshCompressionType::NONE is not supported!\n";
+			continue;
+		}
 		putPayloadType(avs::GeometryPayloadType::Mesh,uid);
 		if (compressedMesh && compressedMesh->meshCompressionType != avs::MeshCompressionType::NONE)
 		{
 			uint64_t lowest_accessor = 0xFFFFFFFFFFFFFFFF, highest_accessor = 0;
 			compressedMesh->GetAccessorRange(lowest_accessor, highest_accessor);
 			uint64_t accessor_subtract = lowest_accessor;
-			if(compressedMesh->meshCompressionType==avs::MeshCompressionType::DRACO)
-				put(avs::MeshCompressionType::DRACO_VERSIONED);
-			else
-				put(compressedMesh->meshCompressionType);
+			put(compressedMesh->meshCompressionType);
 			uint16_t version=1;
 			put(version);
 			static const int32_t DRACO_COMPRESSED_MESH_VERSION_NUMBER = 1;
@@ -303,17 +305,17 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 			for (size_t i = 0; i < num_elements; i++)
 			{
 				auto& subMesh = compressedMesh->subMeshes[i];
-				put(subMesh.indices_accessor - accessor_subtract);
-				put(subMesh.material);
-				put(subMesh.first_index);
-				put(subMesh.num_indices);
-				size_t numAttrs = subMesh.attributeSemantics.size();
+				//put(subMesh.indices_accessor - accessor_subtract);
+				//put(subMesh.material);
+				//put(subMesh.first_index);
+				//put(subMesh.num_indices);
+				/*size_t numAttrs = subMesh.attributeSemantics.size();
 				put(numAttrs);
 				for (auto a : subMesh.attributeSemantics)
 				{
 					put((int32_t)a.first);
 					put((uint8_t)a.second);
-				}
+				}*/
 				size_t bufferSize = subMesh.buffer.size();
 				if (bufferSize == 0)
 				{
@@ -324,13 +326,8 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 				put((uint8_t*)subMesh.buffer.data(), bufferSize);
 			}
 		}
-		if (!compressedMesh || compressedMesh->meshCompressionType == avs::MeshCompressionType::NONE)
-		{
-			TELEPORT_CERR << "Mesh encoding error! Mesh " << uid << " MeshCompressionType::NONE is not supported!\n";
-			continue;
-		}
 		// Actual size is now known so update payload size
-		putPayloadSize();
+		putPayloadSize(uid);
 
 		geometryStreamingService->encodedResource(uid);
 	}
@@ -401,6 +398,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 			}
 			put(node->renderState.lightmapScaleOffset);
 			put(node->renderState.globalIlluminationUid);
+			//put(node->renderState.lightmapTextureCoordinate);
 		}
 		else
 		{
@@ -438,7 +436,10 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 	}
 
 	// Actual size is now known so update payload size
-	putPayloadSize();
+	if (missingUIDs.size() == 1)
+		putPayloadSize(missingUIDs[0]);
+	else
+	putPayloadSize(0);
 
 	return avs::Result::OK;
 }
@@ -481,7 +482,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 		}*/
 		put(skeleton->skeletonTransform);
 
-		putPayloadSize();
+		putPayloadSize(skeletonID);
 		geometryStreamingService->encodedResource(skeletonID);
 	}
 
@@ -511,7 +512,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterf
 			encodeVector4Keyframes(transformKeyframe.rotationKeyframes);
 		}
 
-		putPayloadSize();
+		putPayloadSize(animationID);
 		geometryStreamingService->encodedResource(animationID);
 	}
 
@@ -530,7 +531,7 @@ void GeometryEncoder::putPayloadType(avs::GeometryPayloadType t,avs::uid uid)
 	put(uid);
 }
 
-void GeometryEncoder::putPayloadSize()
+void GeometryEncoder::putPayloadSize(avs::uid uid)
 {
 	if (!buffer.size())
 	{
@@ -545,7 +546,7 @@ void GeometryEncoder::putPayloadSize()
 
 	avs::GeometryPayloadType type;
 	memcpy(&type,(buffer.data()+prevBufferSize+sizeof(size_t)),sizeof(type));
-	//std::cout<<" payloadSize "<<payloadSize<<" for "<<stringOf(type)<<"\n";
+	TELEPORT_LOG("GeometryEncoder put payload: {0} for {1} {2}", payloadSize, stringOf(type), uid);
 
 	prevBufferSize = 0;
 }
@@ -583,7 +584,7 @@ avs::Result GeometryEncoder::encodeFontAtlas(avs::uid uid)
 		}
 	}
 	// Actual size is now known so update payload size
-	putPayloadSize();
+	putPayloadSize(uid);
 	//Flag we have encoded the material.
 	geometryStreamingService->encodedResource(uid);
 	return avs::Result::OK;
@@ -606,7 +607,7 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 	put(textCanvas->text.length());
 	put((const uint8_t*)textCanvas->text.data(), textCanvas->text.length());
 	// Actual size is now known so update payload size
-	putPayloadSize();
+	putPayloadSize(uid);
 	//Flag we have encoded the material.
 	geometryStreamingService->encodedResource(uid);
 	return avs::Result::OK;
@@ -730,7 +731,7 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 			put(materialTexture_uids.size());
 
 			// Actual size is now known so update payload size
-			putPayloadSize();
+			putPayloadSize(uid);
 
 			if (materialTexture_uids.size() != 0)
 			{
@@ -762,9 +763,9 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		texture = geometryStore->getTexture(uid);
 		if (texture)
 		{
-			if(texture->data.size()==0)
+			if(texture->images.size()==0||texture->images[0].data.size()==0)
 			{
-				TELEPORT_CERR << "Trying to send a zero-size texture " << texture->name << ". Never do this!\n";
+				TELEPORT_WARN_NOSPAM("Trying to send a zero-size texture {0}. Never do this!\n",texture->name);
 				continue;
 			}
 			if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
@@ -772,7 +773,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 				TELEPORT_CERR << "Trying to send uncompressed texture " << texture->name << ". Never do this!\n";
 				continue;
 			}
-			if (texture->width == 0 || texture->height == 0)
+ 			if (texture->width == 0 || texture->height == 0)
 			{
 				TELEPORT_CERR << "Trying to send texture "<<texture->name<<" of zero size. Never do this!\n";
 				continue;
@@ -808,14 +809,15 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 			put(texture->valueScale);
 
 			//Push size, and data.
-			put((uint32_t)texture->data.size());
-			put(texture->data.data(), texture->data.size());
+			put((uint32_t)texture->compressedData.size());
+			put((uint32_t)texture->compressedData.size());
+			put(texture->compressedData.data(), texture->compressedData.size());
 
 			//Push sampler identifier.
 			put(texture->sampler_uid);
 
 			// Actual size is now known so update payload size
-			putPayloadSize();
+			putPayloadSize(uid);
 
 			//Flag we have encoded the texture.
 			geometryStreamingService->encodedResource(uid);
@@ -823,7 +825,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		else
 		{
 			//DEBUG_BREAK_ONCE("Missing texture");
-			TELEPORT_CERR << "Trying to encode texture " << uid << " but it is not there.\n";
+			TELEPORT_WARN_NOSPAM("Trying to encode texture {0} but it is not there.",uid);
 		}
 	}
 

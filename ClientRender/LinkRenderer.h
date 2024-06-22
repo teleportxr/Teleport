@@ -21,6 +21,7 @@ namespace teleport
 			mat4 *model;
 			vec3 position;
 			std::string url;
+			mutable float time=0.f;
 			platform::crossplatform::StructuredBuffer<FontChar> fontChars;
 		};
 		//! Renderer that draws a Portal Link.

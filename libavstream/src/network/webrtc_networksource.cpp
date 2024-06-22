@@ -157,6 +157,7 @@ WebRtcNetworkSource::~WebRtcNetworkSource()
 
 Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_streams,int numInputs, const NetworkSourceParams& params)
 {
+	name="Network Source";
 	size_t numOutputs = in_streams.size();
 	if (numOutputs == 0 )
 	{
@@ -406,6 +407,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			return Result::Node_Incompatible;
 		}
 	};
+	bool disconnected=false;
 	for (uint32_t i = 0; i < (uint32_t)getNumInputSlots(); ++i)
 	{
 		uint32_t streamIndex = m_data->inputToStreamIndex[i];
@@ -452,12 +454,16 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			{
 				res = m_data->sendData(stream.id, dataChannel.sendBuffer.data(), numBytesRead);
 			}
+			if(res==Result::Network_Disconnection)
+				disconnected=true;
 			if (!res)
 			{
 				break;
 			}
 		}
 	}
+	if(disconnected)
+		return Result::Network_Disconnection;
 	static float intro = 0.01f;
 	// update the stream stats.
 	if(deltaTime>0)

@@ -418,8 +418,13 @@ void InitRenderer(HWND hWnd,bool try_init_vr,bool dev_mode)
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
 	platform::crossplatform::ResourceGroupLayout perFrameLayout;
-	perFrameLayout.UseConstantBufferSlot(0);
-	perFrameLayout.UseConstantBufferSlot(1);
+	perFrameLayout.UseConstantBufferSlot(0);	// Camera
+	perFrameLayout.UseConstantBufferSlot(1);	// Stereo camera
+	perFrameLayout.UseConstantBufferSlot(10);	// Scene constants
+	perFrameLayout.UseSamplerSlot(4);
+	perFrameLayout.UseSamplerSlot(6);
+	perFrameLayout.UseSamplerSlot(9);
+	perFrameLayout.UseSamplerSlot(11);
 	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
 	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;
 	fewPerFrameLayout.UseReadOnlyResourceSlot(19);

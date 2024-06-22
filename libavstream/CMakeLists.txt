@@ -362,11 +362,12 @@ if(LIBAV_USE_EFP)
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
 
+# don't want curl tests.
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 if(TELEPORT_CLIENT )
     set(BUILD_CURL_EXE OFF CACHE BOOL "")
     set(CURL_STATIC_CRT ON CACHE BOOL "")
 	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
-	set(BUILD_TESTING OFF CACHE BOOL "")
 message("curl")
 	set(CURL_USE_SCHANNEL ON CACHE BOOL "")
     add_subdirectory(thirdparty/curl)

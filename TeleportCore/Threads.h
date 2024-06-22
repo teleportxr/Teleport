@@ -8,7 +8,11 @@ typedef unsigned int THREAD_TYPE;
 #include "ErrorHandling.h"
 #include "StringFunctions.h"
 
-const DWORD MS_VC_SETTHREADNAME_EXCEPTION = 0x406D1388;  
+		THREAD_TYPE GetThreadId()
+		{
+			return GetCurrentThreadId();
+		}
+		const DWORD MS_VC_SETTHREADNAME_EXCEPTION = 0x406D1388;  
 
 #pragma pack(push,8)  
 struct THREADNAME_INFO  
@@ -104,6 +108,10 @@ inline void SetThreadPriority(std::thread &thread,int p)
 #include <thread>
 #include <sys/prctl.h>
 
+THREAD_TYPE GetThreadId()
+{
+return pthread_self();
+}
 inline void SetThreadName(std::thread& thread, const char* name)
 {
 	pthread_setname_np(thread.native_handle(), name);

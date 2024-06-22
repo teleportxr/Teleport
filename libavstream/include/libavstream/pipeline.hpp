@@ -84,7 +84,12 @@ public:
 	/*!
 	 * Get node at the back (end) of the pipeline; returns nullptr if pipeline is empty.
 	 */
-	PipelineNode* back() const;
+	PipelineNode *back() const;
+
+	const std::vector<PipelineNode *> &getNodes() const
+	{
+		return m_nodes;
+	}
 
 	/*!
 	 * Get pipeline length (number of nodes in the pipeline).

@@ -13,6 +13,11 @@ struct ANativeWindow;
 #endif
 #include <client/Shaders/video_types.sl>
 #define MAX_URL_SIZE (2500)
+namespace avs
+{
+	class  Pipeline ;
+}
+
 namespace teleport
 {
 	namespace client
@@ -75,7 +80,10 @@ namespace teleport
 			void TagOSD(std::vector<SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
 
 			void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
-			void NetworkPanel(const teleport::client::ClientPipeline& clientPipeline);
+			void NetworkPanel(const teleport::client::ClientPipeline &clientPipeline);
+			void DrawPipelineNode(const avs::PipelineNode &node, float x, float y);
+			void DrawPipeline(const avs::Pipeline &pipeline);
+			void ProfilingPanel();
 			/// @returns true if changed.
 			bool DebugPanel(client::DebugOptions &debugOptions);
 			void GeometryOSD();
@@ -139,7 +147,12 @@ namespace teleport
 			void SelectNext();
 			// Replaces Windows GetCursorPos if necessary.
 			static int GetCursorPos(long p[2]);
+			std::string &GetProfilingText()
+			{
+				return profilingText;	
+			}
 		protected:
+			std::string profilingText;
 			GuiType guiType=GuiType::None;
 			std::function<void(const std::string &)> console;
 			std::function<void(ShaderMode newShaderMode)> changeRender;

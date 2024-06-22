@@ -37,6 +37,7 @@ Result GeometrySource::configure(GeometryRequesterBackendInterface *req)
 		if (deconf_res != Result::OK)
 			return Result::Node_AlreadyConfigured;
 	}
+	name="Geometry Source";
 	d().m_requesterBackend = req;
 	setNumSlots(1, 1);
 	return Result::OK;

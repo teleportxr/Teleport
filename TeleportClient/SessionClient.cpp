@@ -3,15 +3,14 @@
 
 #include <limits>
 #include <fmt/core.h>
-
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
 #include "libavstream/common_input.h"
 #include <libavstream/geometry/mesh_interface.hpp>
-
 #include "TeleportClient/Log.h"
 #include "TeleportClient/GeometryCacheBackendInterface.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Logging.h"
 #include "DiscoveryService.h"
 #include "Config.h"
 #include "TabContext.h"
@@ -235,7 +234,8 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 			mQueuedResourceRequests.push_back(sentResource.first);
 			if (mQueuedResourceRequests.size() > 8192)
 			{
-				DebugBreak();
+				//DebugBreak();
+				TELEPORT_WARN("Too many resource requests stacking up.");
 				mQueuedResourceRequests.clear();
 				break;
 			}
@@ -243,20 +243,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 	}
 	// TODO: These pipelines could be on different threads,
 	messageToServerPipeline.process();
-
-	//avs::Result result = clientPipeline.pipeline.asyncResult();
-/*	if (result == avs::Result::Network_Disconnection)
-	{
-		TELEPORT_INTERNAL_CERR("Got avs::Result::Network_Disconnection. We should try to reconnect here.\n");
-		Disconnect(0);
-		return;
-	}
-	if (result==avs::Result::GeometryDecoder_InvalidBufferSize)
-	{
-		TELEPORT_INTERNAL_CERR("Got avs::Result::GeometryDecoder_InvalidBufferSize. Disconnecting as no-one is listening.\n");
-		Disconnect(0);
-		return;
-	}*/
 }
 
 
@@ -413,12 +399,16 @@ void SessionClient::SendDisplayInfo(const avs::DisplayInfo &displayInfo)
 	SendMessageToServer(&displayInfoMessage, sizeof(displayInfoMessage));
 }
 
+void SessionClient::TimestampMessage(teleport::core::ClientMessage &msg)
+{
+	auto ts = avs::Platform::getTimestamp();
+	msg.timestamp_unix_ms=(uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
+}
+
 void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses)
 {
 	teleport::core::ControllerPosesMessage message;
-
-	auto ts = avs::Platform::getTimestamp();
-	message.timestamp_unix_ms=(uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
+	TimestampMessage(message);
 #if 0
 	static uint8_t c = 0;
 	c--;
@@ -518,6 +508,7 @@ void SessionClient::SendInput(const core::Input& input)
 
 void SessionClient::SendResourceRequests()
 {
+	auto &clientServerState = GetClientServerState();
 	std::vector<avs::uid> resourceRequests = geometryCache->GetResourceRequests();
 	if(resourceRequests.size()>8192)
 	{
@@ -529,7 +520,15 @@ void SessionClient::SendResourceRequests()
 		DebugBreak();
 	}
 	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
-	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), resourceRequests.begin(), resourceRequests.end());
+	mQueuedResourceRequests.reserve(mQueuedResourceRequests.size()+resourceRequests.size());
+	for(size_t i=0;i<resourceRequests.size();i++)
+	{
+		avs::uid r=resourceRequests[i];
+		if(std::find(mQueuedResourceRequests.begin(), mQueuedResourceRequests.end(), r) == mQueuedResourceRequests.end())
+		{
+			mQueuedResourceRequests.push_back(r);
+		}
+	}
 	if (mQueuedResourceRequests.size() > 8192)
 	{
 		DebugBreak();
@@ -537,6 +536,16 @@ void SessionClient::SendResourceRequests()
 
 	if(mQueuedResourceRequests.size() != 0)
 	{
+		for(int i=0;i<mQueuedResourceRequests.size();i++)
+		{
+			for(int j=i+1;j<mQueuedResourceRequests.size();j++)
+			{
+				if(mQueuedResourceRequests[i]==mQueuedResourceRequests[j])
+				{
+					TELEPORT_INTERNAL_CERR("Duplicate resource request {0}", mQueuedResourceRequests[i]);
+				}
+			}
+		}
 		resourceRequests.clear();
 		teleport::core::ResourceRequestMessage resourceRequestMessage;
 		resourceRequestMessage.resourceCount = (uint16_t)mQueuedResourceRequests.size();
@@ -546,7 +555,7 @@ void SessionClient::SendResourceRequests()
 			return;
 		}
 		std::vector<uint8_t> packet (sizeof(resourceRequestMessage));
-		//ENetPacket* packet = enet_packet_create(&resourceRequestMessage, sizeof(resourceRequestMessage), ENET_PACKET_FLAG_RELIABLE);
+		
 		memcpy(packet.data() , &resourceRequestMessage, sizeof(resourceRequestMessage));
 
 		size_t totalSize = sizeof(resourceRequestMessage) + sizeof(avs::uid) * resourceRequestMessage.resourceCount;
@@ -753,7 +762,11 @@ void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &p
 void SessionClient::ReceiveStageSpaceOriginNodeId(const std::vector<uint8_t> &packet)
 {
 	size_t commandSize = sizeof(teleport::core::SetStageSpaceOriginNodeCommand);
-
+	if(packet.size()!=commandSize)
+	{
+		TELEPORT_INTERNAL_CERR("SetStageSpaceOriginNodeCommand size is wrong. Struct is {0}, but packet was {1}.",commandSize,packet.size());
+		return;
+	}
 	teleport::core::SetStageSpaceOriginNodeCommand command;
 	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
 	if(command.valid_counter > receivedInitialPos)
@@ -766,6 +779,16 @@ void SessionClient::ReceiveStageSpaceOriginNodeId(const std::vector<uint8_t> &pa
 	{
 		TELEPORT_INTERNAL_CERR("Received out-of-date origin node {0}, counter was {1}, but last update was {2}.",command.origin_node,command.valid_counter,receivedInitialPos);
 	}
+	// And acknowledge it.
+	Ack(command.ack_id);
+}
+
+void SessionClient::Ack(uint64_t ack_id)
+{
+	teleport::core::AcknowledgementMessage msg;
+	TimestampMessage(msg);
+	msg.ack_id=ack_id;
+	sendMessageToServer(msg);
 }
 
 void SessionClient::ReceiveNodeVisibilityUpdate(const std::vector<uint8_t> &packet)

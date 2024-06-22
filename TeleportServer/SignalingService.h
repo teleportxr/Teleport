@@ -8,7 +8,7 @@
 #include <map>
 #include <nlohmann/json.hpp>
 #include <safe/safe.h>
-#include "TeleportServer/UnityPlugin/Export.h"
+#include "Export.h"
 #include "TeleportCore/CommonNetworking.h"
 
 namespace rtc
@@ -21,7 +21,7 @@ namespace teleport
 {
 	namespace server
 	{
-		struct SignalingClient
+		struct TELEPORT_SERVER_API SignalingClient
 		{
 			~SignalingClient();
 			avs::uid clientID = 0;
@@ -35,7 +35,7 @@ namespace teleport
 			std::mutex webSocketsMessagesMutex;
 		};
 		//! Signaling service for establishing connections with clients.
-		class SignalingService
+		class TELEPORT_SERVER_API SignalingService
 		{
 		public:
 			~SignalingService()

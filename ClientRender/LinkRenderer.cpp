@@ -46,10 +46,13 @@ void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &de
 	if(!linkEffect)
 		return;
 	linkConstants.radius=1.0f;
-	vec4 highlight_colour={0.8f, 0.8f,0.8f, 1.f};
-	vec4 colour={0.1f, 0.3f, 0.6f, 1.f};
+	vec4 highlight_colour={1.8f, 1.8f,0.8f, 1.f};
+	vec4 colour = {0.8f, 0.8f, 0.9f, 1.f};
 	linkConstants.linkColour = highlight?highlight_colour:colour;
-	linkConstants.time = (float)deviceContext.predictedDisplayTimeS;
+	linkConstants.time = linkRender.time;
+	static float dtS=0.001f;
+	linkRender.time+=(float) dtS *(highlight ? 5.f : 1.f);
+	linkConstants.distanceToDepthParam = deviceContext.viewStruct.GetDepthToLinearDistanceParameters(1.0f).x;
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &linkConstants);
 	auto *pass=linkEffect->GetTechniqueByName("link")->GetPass("singleview");
 	renderPlatform->ApplyPass(deviceContext, pass);

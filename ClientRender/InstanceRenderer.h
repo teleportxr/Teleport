@@ -105,7 +105,7 @@ namespace teleport
 			platform::crossplatform::ConstantBuffer<CameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> cameraConstants;
 			platform::crossplatform::ConstantBuffer<StereoCameraConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> stereoCameraConstants;
 			platform::crossplatform::ConstantBuffer<CubemapConstants> cubemapConstants;
-			platform::crossplatform::ConstantBuffer<TeleportSceneConstants, platform::crossplatform::ResourceUsageFrequency::ONCE_PER_FRAME> teleportSceneConstants;
+			platform::crossplatform::ConstantBuffer<TeleportSceneConstants, platform::crossplatform::ResourceUsageFrequency::FEW_PER_FRAME> teleportSceneConstants;
 			platform::crossplatform::ConstantBuffer<PerNodeConstants> perNodeConstants;
 			platform::crossplatform::StructuredBuffer<VideoTagDataCube> tagDataCubeBuffer;
 			platform::crossplatform::StructuredBuffer<PbrLight> lightsBuffer;
@@ -122,7 +122,10 @@ namespace teleport
 			avs::uid next_nearest_link_cache_uid=0;
 			avs::uid next_nearest_link_uid=0;
 			float next_nearest_link_distance=1e10f;
-			
+			platform::crossplatform::SamplerState *cubeSamplerState=nullptr;
+			platform::crossplatform::SamplerState *wrapSamplerState = nullptr;
+			platform::crossplatform::SamplerState *clampSamplerState = nullptr;
+			platform::crossplatform::SamplerState *samplerStateNearest = nullptr;
 		};
 		//! API objects that are per-server.
 		//! There exists one of these for each server, plus one for the null server (local state).
@@ -188,29 +191,47 @@ namespace teleport
 			phmap::flat_hash_map<avs::uid, std::shared_ptr<SkeletonRender>> skeletonRenders;
 			struct MeshRender
 			{
-				platform::crossplatform::EffectPass *pass;
 				const mat4 *model;
 				avs::uid cache_uid;
 				std::shared_ptr<clientrender::Material> material;
 				std::shared_ptr<clientrender::Mesh> mesh;
 				std::shared_ptr<clientrender::Node> node;
 				avs::uid gi_texture_id;
-				bool transparent_pass;
 				bool setBoneConstantBuffer;
 				bool clockwise;
 				uint16_t element;
 				std::weak_ptr<clientrender::SkeletonInstance> skeletonInstance;
 			};
+			struct MeshInstanceRender
+			{
+				const mat4 *model;
+			};
+			struct InstancedRender
+			{
+				mutable std::shared_ptr<platform::crossplatform::Buffer> instanceBuffer;
+				phmap::flat_hash_map<clientrender::Node*,MeshInstanceRender> meshInstanceRenders;
+				mutable bool valid=false;
+				avs::uid cache_uid;
+				std::shared_ptr<clientrender::Material> material;
+				std::shared_ptr<clientrender::Mesh> mesh;
+				avs::uid gi_texture_id;
+				bool clockwise;
+				uint16_t element;
+			};
 			struct MaterialRender
 			{
 				std::shared_ptr<clientrender::Material> material;
 				phmap::flat_hash_map<uint64_t, std::shared_ptr<MeshRender>> meshRenders;
+				// key is combo of cache_uid,gi_texture_id, element
+				phmap::flat_hash_map<uint64_t, std::shared_ptr<InstancedRender>> instancedRenders;
 			};
 			// Group everything that uses a given pass together.
 			struct PassRender
 			{
 				// Materials within the pass.
 				phmap::flat_hash_map<avs::uid, std::shared_ptr<MaterialRender>> materialRenders;
+				// Each pass is associated with a specific layout.
+				std::shared_ptr<platform::crossplatform::Layout> layout;
 			};
 			phmap::flat_hash_map<uint64_t, std::shared_ptr<LinkRender>> linkRenders;
 			phmap::flat_hash_map<uint64_t, std::shared_ptr<CanvasRender>> canvasRenders;
@@ -234,6 +255,7 @@ namespace teleport
 
 			void UpdateMouse(vec3 orig, vec3 dir,float &distance,std::string &url);
 
+			void RenderBackgroundTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture *srcTexture, platform::crossplatform::Texture *targetTexture, const char *technique, const char *shaderTexture);
 			void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture *srcTexture, platform::crossplatform::Texture *targetTexture, const char *technique);
 			void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture *srcTexture, platform::crossplatform::Texture *targetTexture, int mips, int2 sourceOffset);
@@ -252,6 +274,7 @@ namespace teleport
 			void RenderLink(platform::crossplatform::GraphicsDeviceContext &deviceContext,  LinkRender &l);
 			void RenderMaterial(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MaterialRender &materialRender);
 			void RenderMesh(platform::crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender);
+			void RenderInstancedMeshes(platform::crossplatform::GraphicsDeviceContext &deviceContext, const InstancedRender &instancedRender);
 			void RenderTextCanvas(platform::crossplatform::GraphicsDeviceContext &deviceContext,  const CanvasRender *canvasRender);
 			void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &g, const std::shared_ptr<clientrender::Node> node, bool include_children);
 

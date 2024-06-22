@@ -10,12 +10,13 @@
 #include <parallel_hashmap/phmap.h>
 #include "MemoryUtil.h"
 #include "Resource.h"
+#include "TeleportCore/Logging.h"
 #include "TeleportCore/ErrorHandling.h"
 
 typedef unsigned long long uid; //Unique identifier for a resource.
 
-//A class for managing resources that are destroyed after a set amount of time.
-//Get resources by claiming them, and then unclaim them when you no longer are using them; i.e. when the object instant is destructed.
+// A class for managing resources that are destroyed after a set amount of time.
+// Get resources by claiming them, and then unclaim them when you no longer are using them; i.e. when the object instant is destructed.
 template<typename u,class T>
 class ResourceManager
 {
@@ -110,6 +111,12 @@ template<typename u,class T>
 void ResourceManager<u,T>::Add(u id, std::shared_ptr<T> & newItem, float postUseLifetime_s)
 {
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
+	auto f = cachedItems.find(id);
+	if(f!=cachedItems.end())
+	{
+		TELEPORT_WARN("Trying to add an id that's already present.");
+		return;
+	}
 	ResourceData resd = {newItem, postUseLifetime_s, 0};
 	auto res= cachedItems.emplace(id, resd);
 	if(res.second==false)
@@ -245,7 +252,7 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 {
 	if(!lifetimeFactor)
 		return;
-	const bool sufficientMemory = false;//clientrender::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
+	const bool sufficientMemory = true;//clientrender::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
 
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.

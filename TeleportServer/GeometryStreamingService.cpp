@@ -6,6 +6,7 @@
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/Logging.h"
 #include "TeleportCore/Profiling.h"
 #include "TeleportServer/ClientManager.h"
 #pragma optimize("", off)
@@ -322,7 +323,7 @@ void GeometryStreamingService::setOriginNode(avs::uid nodeID)
 	originNodeId = nodeID;
 }
 
-void GeometryStreamingService::addNode(avs::uid nodeID)
+bool GeometryStreamingService::addNode(avs::uid nodeID)
 {
 	if (nodeID != 0)
 	{
@@ -330,12 +331,18 @@ void GeometryStreamingService::addNode(avs::uid nodeID)
 		{
 			streamedNodeIDs.insert(nodeID);
 			auto node = geometryStore->getNode(nodeID);
+			if(!node)
+			{
+				TELEPORT_WARN("Node {0} not found in GeometryStore.",nodeID);
+				return false;
+			}
 			unconfirmed_priority_counts[node->priority]++;
 			#if TELEPORT_DEBUG_NODE_STREAMING
 			TELEPORT_COUT << "AddNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority]<<"\n";
 			#endif
 		}
 	}
+	return true;
 }
 
 void GeometryStreamingService::removeNode(avs::uid nodeID)
@@ -389,6 +396,10 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 	if(node.priority<minimumPriority)
 	{
 		return;
+	}
+	if(node.data_uid==0)
+	{
+		TELEPORT_WARN_NOSPAM("No mesh uid for node {0} {1}",nodeID,node.name);
 	}
 	avs::MeshNodeResources meshNode;
 	meshNode.node_uid = nodeID;

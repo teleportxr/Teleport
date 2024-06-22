@@ -5,6 +5,7 @@
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/AudioEncodePipeline.h"
+#include "Export.h"
 
 namespace teleport
 {
@@ -37,7 +38,7 @@ namespace teleport
 		};
 		
 		//! Data object for a connected client.
-		class ClientData
+		class TELEPORT_SERVER_API ClientData
 		{
 		public:
 			ClientData(avs::uid clientID, std::shared_ptr<teleport::server::ClientMessaging> clientMessaging);
@@ -65,10 +66,6 @@ namespace teleport
 
 			bool videoKeyframeRequired = false;
 
-			bool setOrigin(uint64_t ctr,avs::uid uid);
-			bool hasOrigin() const;
-			avs::uid getOrigin() const;
-
 			void setGlobalIlluminationTextures(size_t num, const avs::uid *uids);
 			const std::vector<avs::uid> &getGlobalIlluminationTextures() const
 			{
@@ -77,12 +74,9 @@ namespace teleport
 			void resendUnconfirmedOrthogonalStates();
 		protected:
 			avs::uid clientID=0;
-			teleport::core::SetupCommand lastSetupCommand;
 			std::map<avs::uid, std::shared_ptr<OrthogonalNodeStateMap>> orthogonalNodeStates;
 			uint64_t nextConfirmationNumber = 1;
 			ConnectionState connectionState = UNCONNECTED;
-			mutable bool _hasOrigin=false;
-			avs::uid originClientHas=0;
 			std::vector<avs::uid> global_illumination_texture_uids;
 			struct NodeSubtypeState
 			{

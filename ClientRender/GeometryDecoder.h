@@ -1,9 +1,10 @@
-// (C) Copyright 2018-2022 Simul Software Ltd
+// (C) Copyright 2018-2024 Simul Software Ltd
 #pragma once
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/mesh.hpp>
 
 #include "Platform/CrossPlatform/AxesStandard.h"
+#include "TeleportCore/DecodeMesh.h"
 #include <map>
 #include <parallel_hashmap/phmap.h>
 #include <thread>
@@ -35,9 +36,6 @@ namespace teleport
 		 */
 		class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
 		{
-		private:
-			struct DecodedGeometry;
-
 		private:
 			struct GeometryDecodeData
 			{
@@ -94,11 +92,10 @@ namespace teleport
 			void decodeAsync();
 			avs::Result decodeInternal(GeometryDecodeData &geometryDecodeData);
 			avs::Result DecodeGltf(const GeometryDecodeData &geometryDecodeData);
-			avs::Result DracoMeshToPrimitiveArray(avs::uid primitiveArrayUid, DecodedGeometry &dg, const draco::Mesh &dracoMesh, const avs::CompressedSubMesh &compressedSubMesh, platform::crossplatform::AxesStandard axesStandard);
-			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry &dg, draco::Mesh &dracoMesh, platform::crossplatform::AxesStandard axesStandard);
-			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh, platform::crossplatform::AxesStandard axesStandard);
+			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, core::DecodedGeometry &dg, draco::Mesh &dracoMesh, platform::crossplatform::AxesStandard axesStandard);
+			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,core::DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh, platform::crossplatform::AxesStandard axesStandard);
 			avs::Result DecodeDracoScene(clientrender::ResourceCreator *target, std::string filename_url, avs::uid server_or_cache_uid, avs::uid primitiveArrayUid, draco::Scene &dracoScene, platform::crossplatform::AxesStandard axesStandard);
-			avs::Result CreateFromDecodedGeometry(clientrender::ResourceCreator *target, DecodedGeometry &dg, const std::string &name);
+			avs::Result CreateFromDecodedGeometry(clientrender::ResourceCreator *target, core::DecodedGeometry &dg, const std::string &name);
 
 			avs::Result decodeMesh(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeMaterial(GeometryDecodeData &geometryDecodeData);
@@ -127,58 +124,6 @@ namespace teleport
 
 		private:
 			std::string cacheFolder;
-			struct PrimitiveArray
-			{
-				size_t attributeCount;
-				std::vector<avs::Attribute> attributes;
-				avs::uid indices_accessor;
-				avs::uid material;
-				avs::PrimitiveMode primitiveMode;
-				vec4 transform; // to be applied on creation.
-			};
-			struct DecodedGeometry
-			{
-				avs::uid server_or_cache_uid = 0;
-				platform::crossplatform::AxesStandard axesStandard = platform::crossplatform::AxesStandard::Engineering;
-				// Optional, for creating local subgraphs.
-				phmap::flat_hash_map<avs::uid, avs::Node> nodes;
-				phmap::flat_hash_map<avs::uid, avs::Skeleton> skeletons;
-				phmap::flat_hash_map<avs::uid, std::vector<PrimitiveArray>> primitiveArrays;
-				phmap::flat_hash_map<uint64_t, avs::Accessor> accessors;
-				phmap::flat_hash_map<uint64_t, avs::BufferView> bufferViews;
-				phmap::flat_hash_map<uint64_t, avs::GeometryBuffer> buffers;
-				phmap::flat_hash_map<avs::uid, avs::Material> internalMaterials;
-				std::vector<mat4> inverseBindMatrices;
-				bool clockwiseFaces = true;
-				// For internal numbering of accessors etc.
-				uint64_t next_id = 0;
-				void clear()
-				{
-					primitiveArrays.clear();
-					accessors.clear();
-					bufferViews.clear();
-					buffers.clear();
-					internalMaterials.clear();
-					next_id = 0;
-					clockwiseFaces = true;
-				}
-				~DecodedGeometry()
-				{
-					for (auto &primitiveArray : primitiveArrays)
-					{
-						for (auto &primitive : primitiveArray.second)
-						{
-							primitive.attributes.clear();
-						}
-						primitiveArray.second.clear();
-					}
-					primitiveArrays.clear();
-					accessors.clear();
-					bufferViews.clear();
-					buffers.clear();
-					internalMaterials.clear();
-				}
-			};
 		};
 	}
 }

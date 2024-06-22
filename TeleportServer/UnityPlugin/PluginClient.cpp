@@ -8,6 +8,7 @@
 #include "libavstream/common.hpp"
 
 #include "TeleportCore/Profiling.h"
+#include "TeleportCore/Logging.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
 #include "TeleportServer/ClientData.h"
@@ -181,17 +182,29 @@ TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textur
 }
 
 //! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
-TELEPORT_EXPORT size_t Client_AddNode(avs::uid clientID, avs::uid nodeID)
+TELEPORT_EXPORT bool Client_AddNode(avs::uid clientID, avs::uid nodeID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
-		TELEPORT_CERR << "Failed to start streaming Node_" << nodeID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return 0;
+		TELEPORT_WARN("Failed to start streaming Node_{0} to Client {1}! No such client exists.",nodeID,clientID);
+		return false;
 	}
 
-	client->clientMessaging->GetGeometryStreamingService().addNode(nodeID);
+	return client->clientMessaging->GetGeometryStreamingService().addNode(nodeID);
+}
+	
+//! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
+TELEPORT_EXPORT size_t Client_GetNumStreamedNodes(avs::uid clientID)
+{
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
+	if(!client)
+	{
+		TELEPORT_WARN("No such client {0}!",clientID);
+		return 0;
+	}
 	return client->clientMessaging->GetGeometryStreamingService().getStreamedNodeIDs().size();
 }
 
@@ -538,19 +551,15 @@ void Client_ProcessAudioInput(avs::uid clientID, const uint8_t* data, size_t dat
 TELEPORT_EXPORT bool Client_GetNetworkState(avs::uid clientID,core::ClientNetworkState &st)
 {
 	TELEPORT_PROFILE_AUTOZONE;
+	st = {};
 	auto client = ClientManager::instance().GetClient(clientID);
-	if (!client)
+	auto c= ClientManager::instance().signalingService.getSignalingClient(clientID);
+	if (!c)
 	{
-		auto c= ClientManager::instance().signalingService.getSignalingClient(clientID);
-		if (!c)
-		{
-			TELEPORT_CERR << "Failed to retrieve state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-			return false;
-		}
-		st = {};
-		st.signalingState = c->signalingState;
-		return true;
+		TELEPORT_CERR << "Failed to retrieve state of Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return false;
 	}
-	st = client->clientMessaging->getClientNetworkState();
+	st.signalingState = c->signalingState;
+	st.streamingConnectionState=client->clientMessaging->getStreamingState();
 	return true;
 }

@@ -129,6 +129,8 @@ namespace teleport
 					const avs::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
 			float GetLatencyMs() const;
+			//! @brief Returns the current connection status as determined by the signaling
+			//! @return 
 			ConnectionStatus GetConnectionStatus() const;
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
 			bool IsConnecting() const;
@@ -197,11 +199,13 @@ namespace teleport
 			void SendReceivedResources();
 			void SendNodeUpdates();
 			void SendKeyframeRequest();
+			void Ack(uint64_t ack_id);
 
+			void TimestampMessage(teleport::core::ClientMessage &msg);
 			// WebRTC:
-			template<typename C> bool sendMessageToServer(const C& command) const
+			template<typename C> bool sendMessageToServer(const C& message) const
 			{
-				return SendMessageToServer(&command, sizeof(command));
+				return SendMessageToServer(&message, sizeof(message));
 			}
 			template<typename M, typename T> bool sendMessageToServer(const M& msg, const std::vector<T>& appendedList) const
 			{
@@ -254,6 +258,7 @@ namespace teleport
 			double time=0.0;
 			double lastSendTime=0.0;
 			float latency_milliseconds = 0.0;
+			int time_since_origin_request=0;
 			// State received from server.
 			teleport::core::SetupCommand setupCommand;
 			teleport::core::SetupLightingCommand setupLightingCommand;

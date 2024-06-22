@@ -154,6 +154,26 @@ namespace avs
 		 */
 		virtual const char* getDisplayName() const = 0;
 
+		
+		/*!
+		 * Get the output node at the given slot.
+		 */
+		PipelineNode *getOutput(int slot);
+		const PipelineNode *getOutput(int slot) const;
+		/*!
+		 * Get the input node at the given slot.
+		 */
+		PipelineNode *getInput(int slot);
+		const PipelineNode *getInput(int slot) const;
+
+		void setResult(Result r)
+		{
+			lastResult=r;
+		}
+		Result getLastResult() const
+		{
+			return lastResult;
+		}
 	protected:
 		/*! Configure number of input slots for this node. */
 		void setNumInputSlots(size_t numSlots);
@@ -162,17 +182,13 @@ namespace avs
 		/*! Configure number of input and output slots for this node. */
 		void setNumSlots(size_t numInputSlots, size_t numOutputSlots);
 
-		/*! Get node linked to a given input slot; returns nullptr if nothing is linked. */
-		PipelineNode* getInput(int slot) const;
-		/*! Get node linked to a given output slot; returns nullptr if nothing is linked. */
-		PipelineNode* getOutput(int slot) const;
-
 		/*! Get index of input slot a given node is linked to; returns -1 if given node is not linked to any input slot. */
 		int getInputIndex(const PipelineNode* node) const;
 		/*! Get index of output slot a given node is linked to; returns -1 if given node is not linked to any input slot. */
 		int getOutputIndex(const PipelineNode* node) const;
 
 	private:
+		Result lastResult = avs::Result::OK;
 		/*!
 		 * Input link event: Called when a node is about to be linked to an input slot.
 		 * \param slot Input slot index.

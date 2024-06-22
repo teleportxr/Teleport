@@ -32,7 +32,6 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	mNodeManager.SetFunctionRemoveNodeFromRender(removeFn);
 	auto updateFn = std::bind(&Renderer::UpdateNodeInRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
 	mNodeManager.SetFunctionUpdateNodeInRender(updateFn);
-	
 }
 
 GeometryCache::~GeometryCache()
@@ -145,12 +144,10 @@ void GeometryCache::ReceivedResource(avs::uid id)
 
 void GeometryCache::RemoveFromMissingResources(avs::uid id)
 {
-	{
-		std::lock_guard g(missingResourcesMutex);
-		auto m = m_MissingResources.find(id);
-		if (m != m_MissingResources.end())
-			m_MissingResources.erase(m);
-	}
+	std::lock_guard g(missingResourcesMutex);
+	auto m = m_MissingResources.find(id);
+	if (m != m_MissingResources.end())
+		m_MissingResources.erase(m);
 }
 
 std::vector<avs::uid> GeometryCache::GetReceivedResources() const
@@ -344,7 +341,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 							incompleteMaterial->materialInfo.combined.texture=scrTexture;
 						if(incompleteMaterial->materialInfo.emissive.texture_uid==id)
 							incompleteMaterial->materialInfo.emissive.texture=scrTexture;
-						RESOURCECREATOR_DEBUG_COUT( "Waiting Material ",") got Texture ",incompleteMaterial->id,incompleteMaterial->materialInfo.name,id,textureInfo.name);
+						TELEPORT_LOG("Waiting Material {0}({1}) got Texture {2}({3})",incompleteMaterial->id,incompleteMaterial->materialInfo.name,id,textureInfo.name);
 
 						//If only this texture and this function are pointing to the material, then it is complete.
 						if (RESOURCE_IS_COMPLETE(*it))
@@ -353,7 +350,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 						}
 						else
 						{
-							RESOURCECREATOR_DEBUG_COUT(" Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
+							TELEPORT_LOG(" Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
 						}
 					}
 					break;
@@ -539,11 +536,13 @@ void GeometryCache::AddTextureToMaterial(const avs::TextureAccessor& accessor, c
 		}
 		else
 		{
-			//TELEPORT_DEBUG_COUT( "Material {0}({1}) missing Texture ",incompleteMaterial->id,"(",incompleteMaterial->id,accessor.index);
-			clientrender::MissingResource& missing=GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture);
-			missing.waitingResources.insert(incompleteMaterial);
-			RESOURCE_AWAITS(incompleteMaterial,accessor.index);
-			incompleteMaterial->missingTextureUids.insert(accessor.index);
+			if(incompleteMaterial->missingTextureUids.find(accessor.index)==incompleteMaterial->missingTextureUids.end())
+			{
+				clientrender::MissingResource& missing=GetMissingResource(accessor.index, avs::GeometryPayloadType::Texture);
+				missing.waitingResources.insert(incompleteMaterial);
+				RESOURCE_AWAITS(incompleteMaterial,accessor.index);
+				incompleteMaterial->missingTextureUids.insert(accessor.index);
+			}
 		}
 
 		vec2 tiling = { accessor.tiling.x, accessor.tiling.y };

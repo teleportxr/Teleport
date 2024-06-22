@@ -49,29 +49,34 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	if(!effect)
 		return;
 	const auto &textCanvasCreateInfo = canvasRender->textCanvas->textCanvasCreateInfo;
+	const vec4 no_background={0,0,0,0};
 	Render(deviceContext, canvasRender->textCanvas->fontAtlas.get(), textCanvasCreateInfo.size, textCanvasCreateInfo.text, textCanvasCreateInfo.colour, 
-		{-textCanvasCreateInfo.width / 2.0f, textCanvasCreateInfo.height / 2.0f, textCanvasCreateInfo.width, -textCanvasCreateInfo.height}, textCanvasCreateInfo.lineHeight, canvasRender->textCanvas->fontChars);
+		{-textCanvasCreateInfo.width / 2.0f, textCanvasCreateInfo.height / 2.0f, textCanvasCreateInfo.width, -textCanvasCreateInfo.height}, no_background, textCanvasCreateInfo.lineHeight, canvasRender->textCanvas->fontChars);
 }
 
 void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas
 									,int size
 									,const std::string &text
-									,vec4 colour
-									,vec4 canvas
+									,vec4 colour, vec4 canvas, vec4 bkg
 									,float lineHeight
 									,platform::crossplatform::StructuredBuffer<FontChar> &fontChars
 									,bool link)
 {
+bool centre=link;
 	if (!effect || reload_shaders)
 	{
 		SAFE_DELETE(effect);
 		effect = renderPlatform->CreateEffect("canvas_text");
 		tech = effect->GetTechniqueByName("text");
 		link_tech = effect->GetTechniqueByName("link_text");
+		auto bkgTech = effect->GetTechniqueByName("background");
 		if(tech)
 		{
 			singleViewPass = tech->GetPass("singleview");
 			multiViewPass = tech->GetPass("multiview");
+			backgroundPass = bkgTech->GetPass("singleview");
+			backgroundPassMV = bkgTech->GetPass("multiview");
+			
 		}
 		if(link_tech)
 		{
@@ -131,13 +136,16 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	platform::crossplatform::MultiviewGraphicsDeviceContext *mgdc = nullptr;
 	size_t viewCount = 1;
 	int passIndex = 0;
-	EffectPass *pass = link?link_singleViewPass:singleViewPass;
+	EffectPass *pass = link ? link_singleViewPass : singleViewPass;
+	EffectPass *bkg_pass = backgroundPass;
+	
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 	{
 		mgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
 		if (mgdc)
 		{
 			pass = link?link_multiViewPass:multiViewPass;
+			bkg_pass = backgroundPassMV;
 			viewCount = mgdc->viewStructs.size();
 			bool supportShaderViewID = renderPlatform->GetType() == crossplatform::RenderPlatformType::D3D11 ? false : true;
 			passIndex = supportShaderViewID ? 0 : 1;
@@ -160,7 +168,7 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	{
 		// line height in scale (0,1) relative to canvas height.
 		float pixelHeight = (pixelSizeMetres / fabs(canvas.w));
-		float pixelWidth = pixelHeight;//(pixelSizeMetres / fabs(canvas.z));
+		float pixelWidth = pixelSizeMetres / fabs(canvas.z);
 		float lineHeight = fontMap.lineHeight * pixelHeight;
 		float ytexel = 1.0f;
 		// start at 0,1. Don't set x size yet.
@@ -200,19 +208,33 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 			}
 			_x += (g.xAdvance + 1) * pixelWidth;
 		}
+		float startpoint=0.5f-_x/2.f;
+		if (centre)
+		for (int i = 0; i < fontChars.count; i++)
+		{
+				FontChar &fontChar = charList[n];
+				fontChar.text_rect.x += startpoint;
+		}
 	}
 	n /= static_cast<uint>(viewCount);
 	textConstants.colour = colour;
+	textConstants.background = bkg;
 	textConstants.background_rect[0] = canvas;
 	textConstants.numChars = n;
 	if (n > 0)
 	{
-		renderPlatform->SetTexture(deviceContext, textureResource, fontTexture);
-		renderPlatform->ApplyPass(deviceContext, pass);
 		renderPlatform->SetConstantBuffer(deviceContext, &textConstants);
 		renderPlatform->SetVertexBuffers(deviceContext, 0, 0, nullptr, nullptr);
-		fontChars.Apply(deviceContext, effect, _fontChars);
+		renderPlatform->SetTexture(deviceContext, textureResource, fontTexture);
 		renderPlatform->SetTopology(deviceContext, Topology::TRIANGLELIST);
+		if(link)
+		{
+		renderPlatform->ApplyPass(deviceContext, bkg_pass);
+		renderPlatform->Draw(deviceContext, 6, 0);
+		renderPlatform->UnapplyPass(deviceContext);
+		}
+		renderPlatform->ApplyPass(deviceContext, pass);
+		fontChars.Apply(deviceContext, effect, _fontChars);
 #if !defined(__ANDROID__)
 		renderPlatform->Draw(deviceContext, 6 * n, 0);
 #endif

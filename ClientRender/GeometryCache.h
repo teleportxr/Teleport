@@ -35,6 +35,10 @@ namespace teleport
 			AMBIENT,
 			UVS,
 			DEBUG_ANIM,
+			DEBUG_FRESNEL,
+			DEBUG_KS,
+			DEBUG_KD,
+			DEBUG_REFL,
 			REZZING,
 			NUM
 		};
@@ -277,8 +281,9 @@ namespace teleport
 			const std::string &GetURL(avs::uid u) const
 			{
 				auto f=resourceURLs.find(u);
+				static std::string s;
 				if(f==resourceURLs.end())
-					return "";
+					return s;
 				return f->second;
 			}
 			static std::string URLToFilePath(std::string url);

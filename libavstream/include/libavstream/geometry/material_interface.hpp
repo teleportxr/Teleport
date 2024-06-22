@@ -187,13 +187,27 @@ namespace avs
 
 		bool cubemap=false;
 		
-		std::vector<uint8_t> data ;
-		
+		struct Image
+		{
+			std::vector<uint8_t> data;
+		};
+
+		std::vector<Image> images;
+
+		std::vector<uint8_t> compressedData;
 
 		bool operator==(const Texture& t) const
 		{
-			if (t.name != name)
-				return false;
+			TELEPORT_VERIFY(t.name, name);
+			TELEPORT_VERIFY(t.width, width);
+			TELEPORT_VERIFY(t.height, height);
+			TELEPORT_VERIFY(t.depth, depth);
+			TELEPORT_VERIFY(t.bytesPerPixel, bytesPerPixel);
+			TELEPORT_VERIFY(t.arrayCount, arrayCount);
+			TELEPORT_VERIFY(t.mipCount, mipCount);
+			TELEPORT_VERIFY(t.format, format);
+			TELEPORT_VERIFY(t.compression, compression);
+			TELEPORT_VERIFY(t.valueScale, valueScale);
 			const unsigned char* start1 = (const unsigned char*)&width;
 			const unsigned char* end1 = (const unsigned char*)&cubemap+sizeof(cubemap);
 			const unsigned char* start2 = (const unsigned char*)&t.width;
@@ -202,8 +216,7 @@ namespace avs
 			if (c != 0)
 			{
 			// memory check fails but could be junk data in between aligned members, so check individually:
-				if (width != t.width)
-					return false;
+				TELEPORT_VERIFY(width ,t.width);
 				if (height != t.height)
 					return false;
 				if (depth != t.depth)
@@ -227,11 +240,15 @@ namespace avs
 				if (cubemap != t.cubemap)
 					return false;
 			}
-			if(data.size()!=t.data.size())
+			if(images.size()!=t.images.size())
 				return false;
-			auto d = memcmp(data.data(), t.data.data(), data.size());
-			if (d != 0)
-				return false;
+			for(size_t i=0;i<images.size();i++) {
+				if(images[i].data.size()!=t.images[i].data.size())
+					return false;
+				auto d = memcmp(images[i].data.data(), t.images[i].data.data(), images[i].data.size());
+				if (d != 0)
+					return false;
+			}
 			return true;
 		}
 		template<typename OutStream>
@@ -240,11 +257,11 @@ namespace avs
 			//Name needs its own line, so spaces can be included.
 			out<< texture.name;
 			const unsigned char*start=(const unsigned char*)&texture.width;
-			const unsigned char* end = (const unsigned char*)&texture.data;
+			const unsigned char* end = (const unsigned char*)&texture.images;
 			out.write((const char *)start, (size_t)(end - start));
-			uint32_t sz=texture.data.size();
+			uint32_t sz=texture.compressedData.size();
 			out.write((char*)&sz,sizeof(sz));
-			out.write((const char*)texture.data.data(), sz);
+			out.write((const char*)texture.compressedData.data(), sz);
 			return out;
 		}
 		
@@ -253,16 +270,21 @@ namespace avs
 		{
 			in>>texture.name;
 			unsigned char* start = ( unsigned char*)&texture.width;
-			const unsigned char* end = (const unsigned char*)&texture.data;
+			const unsigned char* end = (const unsigned char*)&texture.images;
 			in.read((char*)start, (size_t)(end - start));
 			uint32_t sz=0;
 			in.read((char*)&sz,sizeof(sz));
-			texture.data.resize(sz);
-			in.read((char*)texture.data.data(), sz);
+			
+			if(sz==0)
+			{
+				throw(std::runtime_error("No data in texture."));
+			}
+			texture.compressedData.resize(sz);
+			in.read((char*)texture.compressedData.data(), sz);
 			return in;
 		}
 	};
-	
+	#pragma pack(push,1)
 	struct TextureAccessor
 	{
 		uid index = 0;			// Session uid of the texture.
@@ -380,6 +402,7 @@ namespace avs
 		TELEPORT_VERIFY(t1.roughnessOffset,t2.roughnessOffset);
 		return true;
 	}
+	#pragma pack(pop)
 
 	struct Material
 	{

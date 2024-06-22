@@ -19,6 +19,7 @@ set(src
 	ClientManager.h
 	SignalingService.cpp
 	SignalingService.h 
+	Export.h
 	ExtractedTypes.h
 	Font.h
 	Font.cpp
@@ -61,7 +62,6 @@ endif()
 #Create static library with source files from group.
 if(TELEPORT_UNITY)
 	set(src_plugin
-		UnityPlugin/Export.h
 		UnityPlugin/InteropStructures.h
 		UnityPlugin/PluginGraphics.h
 		UnityPlugin/PluginGraphics.cpp
@@ -79,15 +79,19 @@ if(TELEPORT_UNITY)
 	#Include Unity's native plugin interface headers
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_UNITY_EDITOR_DIR}/Data/PluginAPI)
 
-	set_target_properties(TeleportServer PROPERTIES
-		ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_UNITY_PLUGINS_DIR}/"
-		LIBRARY_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_UNITY_PLUGINS_DIR}/"
-		RUNTIME_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_UNITY_PLUGINS_DIR}/"
-		)
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_UNITY_SERVER=1)
+	set_target_properties(TeleportServer PROPERTIES
+			LIBRARY_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
+			ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
+			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
+			)
 else()
 	add_library(TeleportServer STATIC ${src})
+	#set_target_properties(TeleportServer PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/TeleportServer/Release"	)
+	#add_library(TeleportServer SHARED ${src})
+	#target_compile_definitions(TeleportServer PRIVATE TELEPORT_SERVER_DLL=1 TELEPORT_DYNAMIC_LINK=1)
 endif()
+
 
 SetTeleportDefaults( TeleportServer )
 

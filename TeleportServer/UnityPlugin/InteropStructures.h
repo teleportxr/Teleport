@@ -13,43 +13,46 @@
 #include <wtypes.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 
 //! Interop struct to receive nodes from external code.
 struct InteropNode
 {
-	const char* name;
+	const char* name;					   // 8
+										   //
+	avs::Transform localTransform;		   // (3+4+3)*4==40 // 48
+										   //
+	uint8_t stationary;					   // 49
+	avs::uid holder_client_id;			   // 57
+										   //
+	avs::NodeDataType dataType;			   // 58
+	avs::uid parentID;					   // 66
+	avs::uid dataID;					   // 74
+	avs::uid skeletonID;				   // 82
+										   //
+	vec4 lightColour;					   // 98
+	vec3 lightDirection;		// 110 constant, determined why whatever axis the engine uses for light direction.
+	float lightRadius;			// 114 i.e. light is a sphere, where lightColour is the irradiance on its surface.
+	float lightRange;			//118
+	uint8_t lightType;			//119
 
-	avs::Transform localTransform;
+	size_t jointCount;			//127
+	int32_t* jointIndices;		//135
 
-	uint8_t stationary;
-	avs::uid holder_client_id;
+	size_t animationCount;		//143
+	avs::uid* animationIDs;		//151
 
-	avs::NodeDataType dataType;
-	avs::uid parentID;
-	avs::uid dataID;
-	avs::uid skeletonID;
-
-	vec4 lightColour;
-	vec3 lightDirection;		// constant, determined why whatever axis the engine uses for light direction.
-	float lightRadius;				// i.e. light is a sphere, where lightColour is the irradiance on its surface.
-	float lightRange;
-	uint8_t lightType;
-
-	size_t jointCount;
-	int32_t* jointIndices;
-
-	size_t animationCount;
-	avs::uid* animationIDs;
-
-	size_t materialCount;
-	avs::uid* materialIDs;
+	size_t materialCount;		//159
+	avs::uid* materialIDs;		//167
 	
-	avs::NodeRenderState renderState;
+	avs::NodeRenderState renderState;	// 192
 
-	int32_t priority;
+	int32_t priority;					// 196
 
-	const char *url;
-	const char *query_url;
+	const char *url;					// 204
+	const char *query_url;				// 212
 
 	operator avs::Node() const
 	{
@@ -178,19 +181,19 @@ struct InteropMesh
 
 struct InteropMaterial
 {
-	const char* name;
-	const char* path;
-	avs::MaterialMode materialMode;
-	avs::PBRMetallicRoughness pbrMetallicRoughness;
-	avs::TextureAccessor normalTexture;
-	avs::TextureAccessor occlusionTexture;
-	avs::TextureAccessor emissiveTexture;
-	vec3 emissiveFactor;
-	bool doubleSided;
-	uint8_t lightmapTexCoord;
-	size_t extensionCount;
-	avs::MaterialExtensionIdentifier* extensionIDs;
-	avs::MaterialExtension** extensions;
+	const char* name;											// 8	//
+	const char* path;											// 8	// 16
+	avs::MaterialMode materialMode;								// 1	// 17
+	avs::PBRMetallicRoughness pbrMetallicRoughness;				// 70	// 87
+	avs::TextureAccessor normalTexture;							// 21	// 108
+	avs::TextureAccessor occlusionTexture;						// 21	// 129
+	avs::TextureAccessor emissiveTexture;						// 21	// 150
+	vec3 emissiveFactor;										// 12	// 162
+	bool doubleSided;											// 1	// 163
+	uint8_t lightmapTexCoord;									// 1	// 164
+	size_t extensionCount;										// 8	// 172
+	avs::MaterialExtensionIdentifier* extensionIDs;				// 8	// 180
+	avs::MaterialExtension** extensions;						// 8	// 188
 	const InteropMaterial &operator=(const avs::Material& avsMaterial)
 	{
 		return *this;
@@ -255,7 +258,7 @@ struct InteropTexture
 	bool cubemap=false;
 	operator avs::Texture() const
 	{
-		return
+		avs::Texture t=
 		{
 			name,
 			width,
@@ -269,9 +272,24 @@ struct InteropTexture
 			compressed,
 			sampler_uid,
 			valueScale,
-			cubemap,
-			std::vector<uint8_t>(data, data+dataSize)
+			cubemap
 		};
+		
+		uint8_t *target=(uint8_t *)data;
+		uint16_t numImages=*((uint16_t *)target);
+		target += sizeof(uint16_t);
+		std::vector<uint32_t> imageOffsets(numImages);
+		memcpy(target, imageOffsets.data(), numImages * sizeof(uint32_t));
+		imageOffsets.push_back(dataSize);
+		target += numImages * sizeof(uint32_t);
+		t.images.resize(numImages);
+		for(size_t i=0;i<numImages;i++)
+		{
+			auto &image=t.images[i];
+			size_t imgSize=imageOffsets[i+1]-imageOffsets[i];
+			image.data.resize(imgSize);
+			memcpy(image.data.data(),target,imgSize);
+		}
 	}
 };
 
@@ -296,9 +314,6 @@ struct InteropTransformKeyframe
 	}
 };
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 struct InteropTransformAnimation
 {
 	const char *name;	// 8
@@ -317,9 +332,6 @@ struct InteropTransformAnimation
 		};
 	}
 };
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
 struct InteropTextCanvas
 {
@@ -354,3 +366,6 @@ struct InteropFontAtlas
 	int numMaps=0;
 	InteropFontMap *fontMaps=nullptr;
 };
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif

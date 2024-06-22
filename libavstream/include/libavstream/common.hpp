@@ -29,7 +29,7 @@ namespace avs
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
-	typedef unsigned long long uid;
+	typedef uint64_t uid;
 	extern AVSTREAM_API uid GenerateUid();
 	extern AVSTREAM_API void ClaimUidRange(avs::uid last);
 	

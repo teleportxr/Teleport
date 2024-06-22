@@ -12,8 +12,7 @@ void ClientData::SetConnectionState(ConnectionState c)
 	if(connectionState!=CONNECTED)
 	{
 		// Have to assume that client has lost any information it might have had: 
-		_hasOrigin = false;
-		originClientHas = 0;
+		clientMessaging->setHasOrigin(false);
 	}
 }
 ClientData::ClientData(avs::uid clid, std::shared_ptr<ClientMessaging> clientMessaging)
@@ -73,6 +72,7 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	setupCommand.backgroundMode = clientSettings->backgroundMode;
 	setupCommand.backgroundColour = clientSettings->backgroundColour;
 	setupCommand.draw_distance = clientSettings->drawDistance;
+	setupCommand.backgroundTexture = clientSettings->backgroundTexture;
 
 	// Often drawDistance will equal serverSettings.detectionSphereRadius + serverSettings.clientDrawDistanceOffset;
 	// but this is for the server operator to decide.
@@ -120,7 +120,6 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	clientMessaging->sendSetupCommand(setupCommand, setupLightingCommand, global_illumination_texture_uids, setupInputsCommand, inputDefinitions);
 
-	lastSetupCommand = setupCommand;
 	connectionState = CONNECTED;
 
 	for (auto s : nodeSubTypes)
@@ -149,6 +148,7 @@ void ClientData::reparentNode(avs::uid nodeID)
 	avs::Pose pose;
 	pose.orientation	= node->localTransform.rotation;
 	pose.position		= node->localTransform.position;
+	const auto &lastSetupCommand=clientMessaging->GetLastSetupCommand();
 	avs::ConvertRotation(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.orientation);
 	avs::ConvertPosition(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.position);
 	teleport::core::UpdateNodeStructureCommand command(nodeID, node->parentID, pose);
@@ -158,8 +158,7 @@ void ClientData::reparentNode(avs::uid nodeID)
 		s = std::make_shared<OrthogonalNodeStateMap>();
 	auto& st = s->unconfirmedStates[command.commandPayloadType];
 	st.confirmationNumber = command.confirmationNumber;
-	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	st.serverTimeSentNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_us;
+	st.serverTimeSentUs = clientMessaging->GetServerTimeUs();
 	clientMessaging->reparentNode(command);
 }
 
@@ -185,10 +184,9 @@ void ClientData::tick(float deltaTime)
 
 void ClientData::resendUnconfirmedOrthogonalStates()
 {
-	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	int64_t serverTimeNs = unix_time_ns - lastSetupCommand.startTimestamp_utc_unix_us;
+	int64_t serverTimeUs = clientMessaging->GetServerTimeUs();
 	// wait one second before resending
-	static int64_t resendOrthogonalStateTimeout = 1000000 * 1000;
+	static int64_t resendOrthogonalStateTimeout = 1000000 ;
 	for (auto& nodeState : orthogonalNodeStates)
 	{
 		if (!nodeState.second)
@@ -197,10 +195,10 @@ void ClientData::resendUnconfirmedOrthogonalStates()
 		{
 			if (unconfirmedState.second.confirmationNumber == 0)
 				continue;
-			if (serverTimeNs - unconfirmedState.second.serverTimeSentNs > resendOrthogonalStateTimeout)
+			if (serverTimeUs - unconfirmedState.second.serverTimeSentUs > resendOrthogonalStateTimeout)
 			{
 				TELEPORT_COUT << "Resending unconfirmed state for node " << nodeState.first << std::endl;
-				unconfirmedState.second.serverTimeSentNs = serverTimeNs;
+				unconfirmedState.second.serverTimeSentUs = serverTimeUs;
 				switch (unconfirmedState.first)
 				{
 				case core::CommandPayloadType::UpdateNodeStructure:
@@ -218,29 +216,7 @@ void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefi
 	inputDefinitions = inputDefs;
 }
 
-bool ClientData::setOrigin(uint64_t ctr,avs::uid uid)
-{
-	if(clientMessaging->setOrigin(ctr,uid))
-	{
-	// ASSUME the message was received...
-	// TODO: Only set this when client confirms.
-		_hasOrigin=true;
-		originClientHas=uid;
-		return true;
-	}
-	TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",uid);
-	return false;
-}
 
-bool ClientData::hasOrigin() const
-{
-	return _hasOrigin;
-}
-
-avs::uid ClientData::getOrigin() const
-{
-	return originClientHas;
-}
 
 void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 {

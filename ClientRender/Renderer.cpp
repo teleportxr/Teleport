@@ -220,7 +220,11 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 	renderState.tagDataIDBuffer.RestoreDeviceObjects(renderPlatform, 1, true);
 	renderState.tagDataCubeBuffer.RestoreDeviceObjects(renderPlatform, RenderState::maxTagDataSize, false, true);
 	renderState.lightsBuffer.RestoreDeviceObjects(renderPlatform, 10, false, true);
-	
+	// These states MUST already exist, having been loaded in any sfxo.
+	renderState.wrapSamplerState = renderPlatform->GetOrCreateSamplerStateByName("wrapSamplerState");
+	renderState.clampSamplerState = renderPlatform->GetOrCreateSamplerStateByName("clampSamplerState");
+	renderState.cubeSamplerState = renderPlatform->GetOrCreateSamplerStateByName("cubeSamplerState");
+	renderState.samplerStateNearest = renderPlatform->GetOrCreateSamplerStateByName("samplerStateNearest");
 	avs::Context::instance()->setMessageHandler(msgHandler, nullptr);
 
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
@@ -520,12 +524,11 @@ void Renderer::RecompileShaders()
 {
 	renderPlatform->ScheduleRecompileEffects({"pbr", "cubemap_clear"}, [this]()
 											 { reload_shaders = true; });
-	renderPlatform->RecompileShaders();
+/*	renderPlatform->RecompileShaders();
 	text3DRenderer.RecompileShaders();
 	renderState.hDRRenderer->RecompileShaders();
+	gui.RecompileShaders();*/
 	renderState.linkRenderer.RecompileShaders();
-	renderState.canvasTextRenderer.RecompileShaders();
-	gui.RecompileShaders();
 	renderState.canvasTextRenderer.RecompileShaders();
 }
 
@@ -712,6 +715,11 @@ void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	if(reload_shaders)
 		LoadShaders();
+	renderPlatform->SetSamplerState(deviceContext, 4, renderState.cubeSamplerState);
+	renderPlatform->SetSamplerState(deviceContext, 6, renderState.wrapSamplerState);
+	renderPlatform->SetSamplerState(deviceContext, 9, renderState.clampSamplerState);
+	renderPlatform->SetSamplerState(deviceContext, 11, renderState.samplerStateNearest);
+	renderPlatform->ApplyResourceGroup(deviceContext, 0);
 	RenderView(deviceContext);
 	DrawGUI(deviceContext, true);
 }
@@ -719,6 +727,7 @@ void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
+	SIMUL_COMBINED_PROFILE_START(deviceContext, "Setup");
 	bool mv = (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr);
 	if(renderState.multiview !=mv)
 	{
@@ -734,7 +743,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		multiview = true;
 	}
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
-	renderState.pbrEffect->UnbindTextures(deviceContext);
+	//renderState.pbrEffect->UnbindTextures(deviceContext);
 	static std::vector<crossplatform::ViewStruct> defaultViewStructs;
 	if(mvgdc)
 		defaultViewStructs=mvgdc->viewStructs;
@@ -783,7 +792,9 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	}
 	renderState.next_nearest_link_uid=0;
 	renderState.next_nearest_link_cache_uid=0;
-	renderState.next_nearest_link_distance=1e10f;
+	renderState.next_nearest_link_distance = 1e10f;
+	SIMUL_COMBINED_PROFILE_END(deviceContext)
+	SIMUL_COMBINED_PROFILE_START(deviceContext,"Servers");
 	for (const auto &server_uid : server_uids)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
@@ -803,6 +814,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			}
 		}
 	}
+	SIMUL_COMBINED_PROFILE_END(deviceContext);
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 
 	// Init the viewstruct in local space - i.e. with no server offsets.
@@ -927,10 +939,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		}
 	}
 	renderState.nearest_link_uid=renderState.next_nearest_link_uid;
-	renderState.nearest_link_cache_uid=renderState.next_nearest_link_uid;
+	renderState.nearest_link_cache_uid=renderState.next_nearest_link_cache_uid;
 	renderState.nearest_link_distance=renderState.next_nearest_link_distance;
 	
-	renderState.pbrEffect->UnbindTextures(deviceContext);
+//	renderState.pbrEffect->UnbindTextures(deviceContext);
 }
 
 void Renderer::ChangePass(ShaderMode newShaderMode)
@@ -965,6 +977,22 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 		case ShaderMode::UVS:
 			config.debugOptions.useDebugShader = true;
 			config.debugOptions.debugShader = "ps_debug_uvs";
+			break;
+		case ShaderMode::DEBUG_FRESNEL:
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_surface_fresnel";
+			break;
+		case ShaderMode::DEBUG_KS:
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_surface_ks";
+			break;
+		case ShaderMode::DEBUG_KD:
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_surface_kd";
+			break;
+		case ShaderMode::DEBUG_REFL:
+			config.debugOptions.useDebugShader = true;
+			config.debugOptions.debugShader = "ps_debug_surface_refl";
 			break;
 		case ShaderMode::REZZING:
 			config.debugOptions.useDebugShader = true;
@@ -1103,7 +1131,7 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 		have_vr_device = false;
 	if (!have_vr_device)
 	{
-		static float spd = 0.5f;
+		static float spd = 1.f;
 		crossplatform::UpdateMouseCamera(&camera
 			, time_step
 			, spd
@@ -1115,14 +1143,16 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 		// consider this to be the position relative to the local origin. Don't let it get too far from centre.
 		vec3 cam_pos = camera.GetPosition();
 		float r = sqrt(cam_pos.x * cam_pos.x + cam_pos.y * cam_pos.y);
-		if (cam_pos.z > 2.0f)
+		static float maxh=2.5f;
+		static float minh=0.5f;
+		if (cam_pos.z > maxh)
 		{
-			cam_pos.z = 2.0f;
+			cam_pos.z = maxh;
 			camera.SetPosition(cam_pos);
 		}
-		if (cam_pos.z < 1.0f)
+		if (cam_pos.z < minh)
 		{
-			cam_pos.z = 1.0f;
+			cam_pos.z = minh;
 			camera.SetPosition(cam_pos);
 		}
 		math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(1.f, 0.0f, 0.0f));
@@ -1385,7 +1415,11 @@ void Renderer::ResizeView(int view_id,int W,int H)
 		renderState.hdrFramebuffer->SetAntialiasing(1);
 	}
 }
+#define ONSCREEN_PROF 1
+#if ONSCREEN_PROF
 
+platform::core::DefaultProfiler cpuProfiler;
+#endif
 void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture, int w, int h, long long frame, void* context_allocator)
 {
 	if(reload_shaders)
@@ -1407,7 +1441,10 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 
 	// For desktop, we will use ClientTime for the predicted display time.
 	deviceContext.predictedDisplayTimeS = client::ClientTime::GetInstance().GetTimeS();
+#if ONSCREEN_PROF
 #if PLATFORM_INTERNAL_PROFILING
+	platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
+	cpuProfiler.SetMaxLevel(12);
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
@@ -1415,6 +1452,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
+#endif
+
+
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	if (renderState.openXR&&renderState.openXR->IsSessionActive())
@@ -1425,7 +1465,6 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 	else
 	{
 		renderState.hdrFramebuffer->Activate(deviceContext);
-		renderState.hdrFramebuffer->Clear(deviceContext, 0.5f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
 
 		float aspect = (float)viewport.w / (float)viewport.h;
 		if (reverseDepth)
@@ -1454,7 +1493,14 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 			}
 			deviceContext.viewStruct.Init();
 		}
+		// Must apply the sampler states first thing:
+		renderPlatform->SetSamplerState(deviceContext, 4, renderState.cubeSamplerState);
+		renderPlatform->SetSamplerState(deviceContext, 6, renderState.wrapSamplerState);
+		renderPlatform->SetSamplerState(deviceContext, 9, renderState.clampSamplerState);
+		renderPlatform->SetSamplerState(deviceContext, 11, renderState.samplerStateNearest);
+		renderPlatform->ApplyResourceGroup(deviceContext, 0);
 
+		renderState.hdrFramebuffer->Clear(deviceContext, 0.5f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);
 		if (externalTexture)
 		{
 			renderPlatform->DrawTexture(deviceContext, 0, 0, w, h, externalTexture);
@@ -1464,39 +1510,25 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 			RenderView(deviceContext);
 		}	
 		vec4 white(1.f, 1.f, 1.f, 1.f);
-		// We must deactivate the depth buffer here, in order to use it as a texture:
-  	/*	renderState.hdrFramebuffer->DeactivateDepth(deviceContext);
-		static int lod = 0;
-		static int tt = 1000;
-		tt--;
-		if (!tt)
-		{
-			lod++;
-		}
-		lod = lod % 8;
-		//auto instanceRenderer=GetInstanceRenderer(server_uid);
-		//auto &geometryCache=instanceRenderer->geometryCache;
-		if (!tt)
-		{
-			tt=1000;
-		}*/
 		DrawGUI(deviceContext, false);
 		renderState.hdrFramebuffer->Deactivate(deviceContext);
 		renderState.hDRRenderer->Render(deviceContext, renderState.hdrFramebuffer->GetTexture(), 1.0f, gamma);
-	#ifdef ONSCREEN_PROF
-		static std::string profiling_text;
-		renderPlatform->LinePrint(deviceContext, profiling_text.c_str());
-	#endif
+	//#ifdef ONSCREEN_PROF
+		//gui.GetProfilingText();
+	//#endif
 	}
+#if ONSCREEN_PROF
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
-#ifdef ONSCREEN_PROF
 	static char c = 0;
 	c--;
 	if(!c)
-		profiling_text=renderPlatform->GetGpuProfiler()->GetDebugText();
-#endif
+	{
+		std::string &profiling_text = gui.GetProfilingText();
+		profiling_text = cpuProfiler.GetDebugText();
+	}
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
+#endif
 	if (renderState.openXR->HaveXRDevice())
 	{
 		// Note we do this even when the device is inactive.
@@ -1511,10 +1543,12 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		SetExternalTexture(nullptr);
 	}
 	errno = 0;
+#if ONSCREEN_PROF
 #if PLATFORM_INTERNAL_PROFILING
 	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
 #endif
 	SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
+#endif
 }
 
 void Renderer::DrawGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext,bool mode_3d)
@@ -1616,6 +1650,11 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		if (gui.DebugPanel(config.debugOptions))		
 			renderState.shaderValidity++;
+		gui.EndTab();
+	}
+	if (gui.Tab("Profiling"))
+	{
+		gui.ProfilingPanel();
 		gui.EndTab();
 	}
 	if(gui.Tab("Network"))

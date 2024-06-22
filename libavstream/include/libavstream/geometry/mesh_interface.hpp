@@ -17,7 +17,9 @@ namespace teleport::core
 {
 	struct Animation;
 }
-
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 namespace avs
 {
 
@@ -51,6 +53,11 @@ namespace avs
 		TEXCOORD_1,			//"VEC2"	5126 (FLOAT)
 							//			5121 (UNSIGNED_BYTE) normalized
 							//			5123 (UNSIGNED_SHORT) normalized	UV texture coordinates for the second set
+		TEXCOORD_2,
+		TEXCOORD_3,
+		TEXCOORD_4,
+		TEXCOORD_5,
+		TEXCOORD_6,
 		COLOR_0,			//"VEC3"
 							//"VEC4"	5126 (FLOAT)
 							//			5121 (UNSIGNED_BYTE) normalized
@@ -65,6 +72,28 @@ namespace avs
 		COUNT				//This is the number of elements in enum class AttributeSemantic{};
 							//Must always be the last element in this enum class. 
 	};
+	inline const char* stringOf(avs::AttributeSemantic s)
+	{
+		switch(s)
+		{
+		case avs::AttributeSemantic::POSITION		:				return "POSITION";
+		case avs::AttributeSemantic::NORMAL			:				return "NORMAL";
+		case avs::AttributeSemantic::TANGENT		:				return "TANGENT";
+		case avs::AttributeSemantic::TEXCOORD_0		:				return "TEXCOORD_0";
+		case avs::AttributeSemantic::TEXCOORD_1		:				return "TEXCOORD_1";
+		case avs::AttributeSemantic::TEXCOORD_2		:				return "TEXCOORD_2";
+		case avs::AttributeSemantic::TEXCOORD_3		:				return "TEXCOORD_3";
+		case avs::AttributeSemantic::TEXCOORD_4		:				return "TEXCOORD_4";
+		case avs::AttributeSemantic::TEXCOORD_5		:				return "TEXCOORD_5";
+		case avs::AttributeSemantic::TEXCOORD_6		:				return "TEXCOORD_6";
+		case avs::AttributeSemantic::COLOR_0		:				return "COLOR_0";
+		case avs::AttributeSemantic::JOINTS_0		:				return "JOINTS_0";
+		case avs::AttributeSemantic::WEIGHTS_0		:				return "WEIGHTS_0";
+		case avs::AttributeSemantic::TANGENTNORMALXZ:				return "TANGENTNORMALXZ";
+		case avs::AttributeSemantic::COUNT			:				return "COUNT";
+		default:							return "INVALID";
+		};
+	}
 	struct Attribute
 	{
 		AttributeSemantic semantic;
@@ -280,9 +309,6 @@ namespace avs
 		}
 	};
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 	struct Transform
 	{
 		vec3 position = { 0.f, 0.f, 0.f };
@@ -294,6 +320,7 @@ namespace avs
 	{
 		vec4 lightmapScaleOffset={0,0,0,0};
 		uid globalIlluminationUid = 0;
+		uint8_t lightmapTextureCoordinate=0;
 	};
 
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
@@ -341,9 +368,6 @@ namespace avs
 		std::string url;		// if node is a link/portal
 		std::string query_url; // if node is a link/portal
 	};
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
 	inline size_t GetComponentSize(Accessor::ComponentType t)
 	{
@@ -629,7 +653,8 @@ namespace avs
 	{
 		NONE=0,
 		DRACO=1,
-		DRACO_VERSIONED=3
+		GLB_SEPARATE=2,
+		GLB_SCENE=3
 	};
 	struct CompressedSubMesh
 	{
@@ -878,3 +903,6 @@ namespace avs
 		virtual Result decode(avs::uid server_uid,const void* buffer, size_t bufferSizeInBytes, GeometryPayloadType type, GeometryTargetBackendInterface *target,avs::uid uid) = 0;
 	};
 } // avs
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif

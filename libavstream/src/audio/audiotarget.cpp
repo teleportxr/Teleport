@@ -36,7 +36,7 @@ namespace avs
 		{
 			return Result::AudioTarget_InvalidBackend;
 		}
-
+		name="Audio Target";
 		d().m_backend = audioBackend;
 		setNumInputSlots(1);
 

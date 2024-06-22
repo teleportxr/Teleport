@@ -47,7 +47,7 @@ namespace teleport
 			avs::uid clientID=0;
 			size_t prevBufferSize=0;
 			void putPayloadType(avs::GeometryPayloadType t,avs::uid u);
-			void putPayloadSize();
+			void putPayloadSize(avs::uid u);
 
 			//Following functions push the data from the source onto the buffer, depending on what the requester needs.
 			//	src : Source we are taking the data from.

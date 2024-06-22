@@ -3,6 +3,7 @@
 #include <ctime>
 #include <algorithm>
 #include <vector>
+#include <filesystem>
 
 #ifdef _MSC_VER
 #include "comdef.h"
@@ -24,7 +25,7 @@ namespace teleport
 			{
 				return ".mesh";
 			}
-			std::string MakeFilename() const
+			std::string MakeFilename(std::string path) const
 			{
 				std::string file_name;
 				file_name = path + fileExtension();
@@ -38,16 +39,11 @@ namespace teleport
 			{
 				return true;
 			}
-			//! The path to the asset, which is both the relative path from the cache directory, and the URI
-			//! relative to the server.
-			std::string path;
 			std::time_t lastModified;
 			avs::Mesh mesh;
 			avs::CompressedMesh compressedMesh;
 			bool operator==(const ExtractedMesh& t) const
 			{
-				if (path != t.path)
-					return false;
 				if (!(mesh == t.mesh))
 					return false;
 				return compressedMesh ==t.compressedMesh;
@@ -74,9 +70,6 @@ namespace teleport
 			template<class OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedMesh& meshData)
 			{
-				std::string pathAsString = meshData.path;
-				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
-				out << pathAsString;
 				out.writeChunk(meshData.lastModified);
 				out << meshData.mesh
 					<< meshData.compressedMesh;
@@ -86,8 +79,6 @@ namespace teleport
 			template<class InStream>
 			friend InStream& operator>> (InStream& in, ExtractedMesh& meshData)
 			{
-				in >> meshData.path;
-				std::replace(meshData.path.begin(), meshData.path.end(), '%', ' ');
 				in.readChunk(meshData.lastModified);
 				in >> meshData.mesh >> meshData.compressedMesh;
 				// having loaded, now rescale the uid's:
@@ -106,7 +97,7 @@ namespace teleport
 			{
 				return material.name;
 			}
-			std::string MakeFilename() const
+			std::string MakeFilename(std::string path) const
 			{
 				std::string file_name;
 				file_name = path + fileExtension();
@@ -116,10 +107,6 @@ namespace teleport
 			{
 				return true;
 			}
-			std::string guid;
-			//! The path to the asset, which is both the relative path from the cache directory, and the URI
-			//! relative to the server.
-			std::string path;
 			std::time_t lastModified;
 			avs::Material material;
 
@@ -130,10 +117,6 @@ namespace teleport
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedMaterial& materialData)
 			{
-				std::string pathAsString = materialData.path;
-				std::replace(pathAsString.begin(), pathAsString.end(), ' ', '%');
-				out << materialData.guid
-					<< pathAsString;
 				out.writeChunk(materialData.lastModified);
 				out << materialData.material;
 				return out;
@@ -142,9 +125,6 @@ namespace teleport
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedMaterial& materialData)
 			{
-				in >> materialData.guid;
-				in >> materialData.path;
-				std::replace(materialData.path.begin(), materialData.path.end(), '%', ' ');
 				in.readChunk(materialData.lastModified);
 				in >> materialData.material;
 				return in;
@@ -170,27 +150,31 @@ namespace teleport
 			{
 				return texture.name;
 			}
-			std::string MakeFilename() const
+			std::string MakeFilename(std::string path) const
 			{
 				std::string file_name;
 				file_name += path;
 				if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
-					file_name += ".basis";
+					file_name += ".ktx2";
 				else if (texture.compression == avs::TextureCompression::PNG)
 					file_name += ".texture";
 				// if (resource.texture.compression == avs::TextureCompression::KTX)
 				//		file_name += ".ktx";
 				return file_name;
 			}
-			std::string guid;
-			//! The path to the asset, which is both the relative path from the cache directory, and the URI
-			//! relative to the server.
-			std::string path;
+
+			void SetNameFromPath(std::string path)
+			{
+				texture.name = std::filesystem::path(path).filename().generic_u8string();
+				size_t hash_pos = texture.name.rfind('#');
+				if (hash_pos < texture.name.length())
+					texture.name = texture.name.substr(hash_pos + 1, texture.name.length() - hash_pos - 1);
+			}
 			std::time_t lastModified;
 			avs::Texture texture;
 			bool IsValid() const
 			{
-				return texture.data.size()!=0;
+				return texture.images.size()!=0;
 			}
 			bool Verify(const ExtractedTexture& t) const
 			{
@@ -201,13 +185,19 @@ namespace teleport
 			{
 				if (out.filename.find(".basis") == out.filename.length() - 6)
 				{
-					out.write((const char*)textureData.texture.data.data(),textureData.texture.data.size());
+					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
 					return out;
 				}
-				out << textureData.guid;
-				std::string pathAsString = textureData.path;
-				std::replace(pathAsString.begin(),  pathAsString.end(), ' ', '%');
-				out << pathAsString;
+				else if (out.filename.find(".ktx") == out.filename.length() - 4)
+				{
+					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
+					return out;
+				}
+				else if (out.filename.find(".ktx2") == out.filename.length() - 5)
+				{
+					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
+					return out;
+				}
 				out.writeChunk(textureData.lastModified);
 				out << textureData.texture;
 				return out;
@@ -215,21 +205,11 @@ namespace teleport
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedTexture& textureData)
 			{
-				if (in.filename.rfind(".basis") == in.filename.length() - 6)
+				if (in.filename.rfind(".basis") == in.filename.length() - 6||in.filename.rfind(".ktx2") == in.filename.length() - 5||in.filename.rfind(".ktx") == in.filename.length() - 4)
 				{
 					LoadAsBasisFile(textureData, in.readData(), in.filename);
 					return in;
 				}
-				if (in.filename.rfind(".texture") != in.filename.length() - 8)
-				{
-					TELEPORT_CERR<<"Unknown texture file format for "<<in.filename<<"\n";
-					return in;
-				}
-				in >> textureData.guid;
-				std::string pathAsString;
-				in >> pathAsString;
-				std::replace(pathAsString.begin(), pathAsString.end(), '%', ' ');
-				textureData.path = pathAsString;
 				in.readChunk(textureData.lastModified);
 				in >> textureData.texture;
 				return in;
@@ -276,14 +256,12 @@ namespace teleport
 		struct LoadedResource
 		{
 			avs::uid id;		// The id of the resource in this session.
-			const char* guid;	// 
-			const char* path;	// Uniquely identifying string that the engine uses to identify assets.
 			const char* name;	// Name of the asset to tell it apart from assets with the GUID; i.e. they come from the same source file.
 			std::time_t lastModified;
 
 			LoadedResource() = default;
-			LoadedResource(avs::uid uid,  const char* pth, const char* name, std::time_t lastModified)
-				:id(uid), guid(nullptr), path(pth), name(name), lastModified(lastModified)
+			LoadedResource(avs::uid uid,  const char* name, std::time_t lastModified)
+				:id(uid),  name(name), lastModified(lastModified)
 			{}
 		};
 	}

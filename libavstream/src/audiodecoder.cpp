@@ -57,7 +57,7 @@ namespace avs
 			if (deconf_result != Result::OK)
 				return Result::Node_AlreadyConfigured;
 		}
-
+		name="Audio Decoder";
 		d().m_configured = true;
 		d().m_streamId = streamId;
 		d().m_frameBuffer.resize(2048);

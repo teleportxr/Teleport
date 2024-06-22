@@ -158,6 +158,7 @@ namespace avs
 			memcpy(m_mem, &oldMem[m_front * m_maxBufferSize], firstCopySize);
 			memcpy(m_dataSizes, &oldSizes[m_front], sizeof(size_t) * frontToEnd);
 
+
 			// Account for potential wrap around items stored before front in memory
 			const int64_t startToFront = m_numElements - frontToEnd;
 			if (startToFront > 0)

@@ -2,12 +2,12 @@
 #ifndef PBR_CONSTANTS_SL
 #define PBR_CONSTANTS_SL
 
-SIMUL_CONSTANT_BUFFER(TeleportSceneConstants, 10)
+PLATFORM_GROUPED_CONSTANT_BUFFER(TeleportSceneConstants, 10, 0)
 int lightCount;
 int reverseDepth;
 float drawDistance;
 float roughestMip;
-SIMUL_CONSTANT_BUFFER_END
+PLATFORM_GROUPED_CONSTANT_BUFFER_END
 
 
 PLATFORM_GROUPED_CONSTANT_BUFFER(PbrMaterialConstants, 5, 2)
@@ -31,11 +31,11 @@ PLATFORM_GROUPED_CONSTANT_BUFFER(PbrMaterialConstants, 5, 2)
 
 PLATFORM_GROUPED_CONSTANT_BUFFER_END
 
-SIMUL_CONSTANT_BUFFER(PerNodeConstants, 11)
+PLATFORM_NAMED_CONSTANT_BUFFER(PerNodeConstants, perNodeConstants, 11, 3)
 uniform mat4 model;
 vec4 lightmapScaleOffset;
 float rezzing;
-SIMUL_CONSTANT_BUFFER_END
+PLATFORM_NAMED_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)
 	mat4 boneMatrices[64];
@@ -45,7 +45,8 @@ SIMUL_CONSTANT_BUFFER(LinkConstants, 13)
 	vec4 linkColour;
 	float radius;
 	float time;
-SIMUL_CONSTANT_BUFFER_END
+	float distanceToDepthParam;
+	SIMUL_CONSTANT_BUFFER_END
 
 struct PbrLight
 {
@@ -61,4 +62,12 @@ struct PbrLight
 	float pad1;
 };						
 
+struct SurfaceState
+{
+	vec3 F;
+	vec3 kS;
+	vec3 kD;
+	vec3 refl;
+	float n_v;
+};
 #endif

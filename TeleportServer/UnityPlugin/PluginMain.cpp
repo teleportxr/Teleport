@@ -482,11 +482,11 @@ void PipeOutMessages()
 			}
 
 			/// Store the given node in memory.
-			TELEPORT_EXPORT void Server_StoreNode(avs::uid id, InteropNode node)
+			TELEPORT_EXPORT bool Server_StoreNode(avs::uid id, InteropNode node)
 			{
-				TELEPORT_PROFILE_AUTOZONE;
+				//TELEPORT_PROFILE_AUTOZONE;
 				avs::Node avsNode(node);
-				GeometryStore::GetInstance().storeNode(id, avsNode);
+				return GeometryStore::GetInstance().storeNode(id, avsNode);
 			}
 
 			/// Get the given node's data if stored.
@@ -562,7 +562,7 @@ void PipeOutMessages()
 			}
 
 			/// Store the given texture in memory and on disk.
-			TELEPORT_EXPORT bool Server_StoreTexture(avs::uid id, const char *guid, const char *relative_asset_path, std::time_t lastModified, InteropTexture texture, bool genMips, bool highQualityUASTC, bool forceOverwrite)
+			TELEPORT_EXPORT bool Server_StoreTexture(avs::uid id,  const char *relative_asset_path, std::time_t lastModified, InteropTexture texture, bool genMips, bool highQualityUASTC, bool forceOverwrite)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
 				if (!relative_asset_path )
@@ -576,7 +576,7 @@ void PipeOutMessages()
 					return false;
 				}
 				avs::Texture avsTexture(texture);
-				return GeometryStore::GetInstance().storeTexture(id, (guid), (relative_asset_path), lastModified, avsTexture, genMips, highQualityUASTC, forceOverwrite);
+				return GeometryStore::GetInstance().storeTexture(id,  (relative_asset_path), lastModified, avsTexture, genMips, highQualityUASTC, forceOverwrite);
 			}
 
 			/// Store the given font in memory and on disk.
@@ -644,11 +644,11 @@ void PipeOutMessages()
 			}
 
 			/// Store a shadow map in memory.
-			TELEPORT_EXPORT void Server_StoreShadowMap(avs::uid id, const char *guid, const char *path, std::time_t lastModified, InteropTexture shadowMap)
+			TELEPORT_EXPORT void Server_StoreShadowMap(avs::uid id,  const char *path, std::time_t lastModified, InteropTexture shadowMap)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
 				avs::Texture avsTexture(shadowMap);
-				GeometryStore::GetInstance().storeShadowMap(id, guid, path, lastModified, avsTexture);
+				GeometryStore::GetInstance().storeShadowMap(id,  path, lastModified, avsTexture);
 			}
 
 			/// Returns true if id is the id of a node stored in memory.
@@ -712,15 +712,15 @@ void PipeOutMessages()
 			TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t len)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				const avs::Texture *texture = GeometryStore::GetInstance().getNextTextureToCompress();
-				if (!texture)
+				auto nextt= GeometryStore::GetInstance().getNextTextureToCompress();
+				if (!nextt.name.length())
 				{
 					return false;
 				}
 				std::stringstream messageStream;
 				// Write compression message to  string stream.
 				messageStream << "Compressing texture "
-							  << " (" << texture->name.data() << " [" << texture->width << " x " << texture->height << "])";
+							  << " (" << nextt.name << " [" << nextt.width << " x " << nextt.height << "])";
 
 				memcpy(str, messageStream.str().data(), std::min(len, messageStream.str().length()));
 				return true;
@@ -794,3 +794,58 @@ TELEPORT_EXPORT UnityRenderingEventAndData Server_GetRenderEventWithDataCallback
 	return OnRenderEventWithData;
 }
 ///VideoEncodePipeline END
+#ifdef _MSC_VER 
+//not #if defined(_WIN32) || defined(_WIN64) because we have strncasecmp in mingw
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#endif
+
+
+TELEPORT_EXPORT int Server_GetStructSize(const char* name)
+{
+	if (strcasecmp(name, "InteropMaterial") == 0)
+	{
+		return sizeof(InteropMaterial);
+	}
+	
+	if (strcasecmp(name, "PBRMetallicRoughness") == 0)
+	{
+		return sizeof(avs::PBRMetallicRoughness);
+	}
+	if (strcasecmp(name, "TextureAccessor") == 0)
+	{
+		return sizeof(avs::TextureAccessor);
+	}
+		
+	if (strcasecmp(name, "InteropMesh") == 0)
+	{
+		return sizeof(InteropMesh);
+	}
+	if (strcasecmp(name, "InteropTexture") == 0)
+	{
+		return sizeof(InteropTexture);
+	}
+	if (strcasecmp(name, "NodeRenderState") == 0)
+	{
+		return sizeof(avs::NodeRenderState);
+	}
+	if (strcasecmp(name, "InteropNode") == 0)
+	{
+		return sizeof(InteropNode);
+	}
+	if (strcasecmp(name, "InteropSkeleton") == 0)
+	{
+		return sizeof(InteropSkeleton);
+	}
+	if (strcasecmp(name, "InteropTransformAnimation") == 0)
+	{
+		return sizeof(InteropTransformAnimation);
+	}
+	if (strcasecmp(name, "InteropTransformKeyframe") == 0)
+	{
+		return sizeof(InteropTransformKeyframe);
+	}
+	return 0;
+}
+
+

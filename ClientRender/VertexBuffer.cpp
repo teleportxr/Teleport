@@ -191,7 +191,7 @@ void VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
 
 	delete m_layout;
 	m_layout = renderPlatform->CreateLayout(static_cast<int>(m_CI.layout->m_Attributes.size()), desc, m_CI.layout->m_PackingStyle == VertexBufferLayout::PackingStyle::INTERLEAVED);
-	m_SimulBuffer->EnsureVertexBuffer(renderPlatform, (int)m_CI.vertexCount, m_layout, m_CI.data);
+	m_SimulBuffer->EnsureVertexBuffer(renderPlatform, (int)m_CI.vertexCount, m_layout->GetStructSize(), m_CI.data);
 	delete[] desc;
 }
 

@@ -41,7 +41,7 @@ shader posTexVertexOutput VS_CanvasText_SV(idOnly IN)
 #ifdef SFX_OPENGL
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
-	vec4 wpos		= mul(vec4(localPos.xyz, 1.0), model);
+	vec4 wpos		= mul(vec4(localPos.xyz, 1.0), perNodeConstants.model);
 	//vec4 opos		=vec4(localPos.xyz,1.0);
 	OUT.hPosition = mul(wpos, viewProj);
 
@@ -60,7 +60,7 @@ shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
 	f.text_rect.y *= -1;
 	f.text_rect.y -= f.text_rect.w;
 	#endif
-	
+
 	posTexVertexOutput OUT;
 	vec2 poss[4];
 	poss[0]			=vec2(1.0, 0.0);
@@ -74,13 +74,52 @@ shader posTexVertexOutput VS_CanvasText_MV(idOnly IN, uint viewID : SV_ViewID)
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
 
-	vec4 wpos			=mul(localPos, model);
+	vec4 wpos			=mul(localPos, perNodeConstants.model);
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.hPosition		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 
 	return OUT;
 }
 
+shader posTexVertexOutput VS_Background_SV(idOnly IN)
+{
+	uint ids[] = {0, 1, 2, 2, 3, 1};
+	uint vertex_id = ids[IN.vertex_id];
+
+	posTexVertexOutput OUT;
+	vec2 poss[4];
+	poss[0] = vec2(1.0, 0.0);
+	poss[1] = vec2(1.0, 1.0);
+	poss[2] = vec2(0.0, 0.0);
+	poss[3] = vec2(0.0, 1.0);
+	vec2 pos = poss[vertex_id];
+	vec4 localPos = vec4(background_rect[0].xy +  pos* background_rect[0].zw, 0.0, 1.0);
+	OUT.texCoords = pos;
+	vec4 wpos = mul(vec4(localPos.xzy, 1.0), perNodeConstants.model);
+	OUT.hPosition = mul(wpos, viewProj);
+	return OUT;
+} 
+
+shader posTexVertexOutput VS_Background_MV(idOnly IN, uint viewID
+										   : SV_ViewID)
+{
+	uint ids[] = {0, 1, 2, 2, 3, 1};
+	uint vertex_id = ids[IN.vertex_id];
+	posTexVertexOutput OUT;
+	vec2 poss[4];
+	poss[0] = vec2(1.0, 0.0);
+	poss[1] = vec2(1.0, 1.0);
+	poss[2] = vec2(0.0, 0.0);
+	poss[3] = vec2(0.0, 1.0);
+	vec2 pos = poss[vertex_id];
+	vec4 localPos = vec4(background_rect[0].xy + pos * background_rect[0].zw, 0.0, 1.0);
+	OUT.texCoords = pos;
+	vec4 wpos = mul(vec4(localPos.xzy, 1.0), perNodeConstants.model);
+	vec4 viewspace_pos = mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
+	OUT.hPosition = mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz, 1.0));
+
+	return OUT;
+}
 
 shader posTexVertexOutput VS_LinkText_SV(idOnly IN)
 {
@@ -108,7 +147,7 @@ shader posTexVertexOutput VS_LinkText_SV(idOnly IN)
 #ifdef SFX_OPENGL
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
-	vec4 wpos		= mul(vec4(localPos.xzy, 1.0), model);
+	vec4 wpos		= mul(vec4(localPos.xzy, 1.0), perNodeConstants.model);
 	//vec4 opos		=vec4(localPos.xyz,1.0);
 	OUT.hPosition = mul(wpos, viewProj);
 
@@ -141,11 +180,17 @@ shader posTexVertexOutput VS_LinkText_MV(idOnly IN, uint viewID : SV_ViewID)
 	OUT.texCoords.y =1.0 - OUT.texCoords.y;
 #endif
 
-	vec4 wpos			=mul(vec4(localPos.xzy, 1.0), model);
+	vec4 wpos			=mul(vec4(localPos.xzy, 1.0), perNodeConstants.model);
 	vec4 viewspace_pos	=mul(viewID == 0 ? leftView : rightView, vec4(wpos.xyz, 1.0));
 	OUT.hPosition		=mul(viewID == 0 ? leftProj : rightProj, vec4(viewspace_pos.xyz,1.0));
 
 	return OUT;
+}
+
+shader vec4 PS_Background(posTexVertexOutput IN) : SV_TARGET
+{
+	vec2 tc = IN.texCoords;
+	return background;
 }
  
 
@@ -200,13 +245,36 @@ technique text
 		SetPixelShader(CompileShader(ps_6_0, PS_CanvasText()));
 	}
 }
+technique background
+{
+	pass multiview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetTopology(TriangleList);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(AlphaBlendRGB, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_6_1, VS_Background_MV()));
+		SetPixelShader(CompileShader(ps_6_0, PS_Background()));
+	}
+	pass singleview
+	{
+		SetRasterizerState(RenderNoCull);
+		SetTopology(TriangleList);
+		SetDepthStencilState(DisableDepth, 0);
+		SetBlendState(AlphaBlendRGB, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
+		SetGeometryShader(NULL);
+		SetVertexShader(CompileShader(vs_6_0, VS_Background_SV()));
+		SetPixelShader(CompileShader(ps_6_0, PS_Background()));
+	}
+}
 technique link_text
 {
 	pass multiview
 	{
 		SetRasterizerState( RenderNoCull );
 		SetTopology( TriangleList );
-		SetDepthStencilState( TestReverseDepth, 0 );
+		SetDepthStencilState( DisableDepth, 0 );
 		SetBlendState(AlphaBlendRGB,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
 		SetGeometryShader(NULL);
 		SetVertexShader(CompileShader(vs_6_1, VS_LinkText_MV()));
@@ -216,7 +284,7 @@ technique link_text
 	{
 		SetRasterizerState(RenderNoCull);
 		SetTopology(TriangleList);
-		SetDepthStencilState(TestReverseDepth, 0);
+		SetDepthStencilState(DisableDepth, 0);
 		SetBlendState(AlphaBlendRGB, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(CompileShader(vs_6_0, VS_LinkText_SV()));

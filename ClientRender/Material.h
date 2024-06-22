@@ -71,7 +71,7 @@ namespace teleport
 			{
 				return "Material";
 			}
-			std::string getName() const
+			const std::string &getName() const
 			{
 				return m_CI.name;
 			}

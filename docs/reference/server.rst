@@ -14,6 +14,9 @@ API
 
 The server library's exported functions are described below. These global functions are declared as exports.
 
+Structure
+~~~~~~~~~~~
+
 Preparation
 ~~~~~~~~~~~
 

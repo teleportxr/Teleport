@@ -6,6 +6,7 @@
 
 #include "libavstream/geometry/mesh_interface.hpp"
 
+#include "Export.h"
 #include "ExtractedTypes.h"
 struct InteropTextCanvas;
 
@@ -17,10 +18,22 @@ namespace teleport
 	}
 	namespace server
 	{
+		//! Resource state replication. Each resource is either not present or present.
+		//! Additionally, we track whether the server is aware of that state.
+		struct ResourceReplication
+		{
+		};
+
+		struct TextureToCompress
+		{
+			std::string name;
+			int width=0;
+			int height=0;
+		};
 		//! Singleton for storing geometry data and managing the geometry file cache.
 		//! The definitive geometry store is the file structure pointed to by SetCachePath().
 		//! The structure in  GeometryStore is the *session* structure, using uid's for quick reference.
-		class GeometryStore
+		class TELEPORT_SERVER_API GeometryStore final
 		{
 		public:
 			GeometryStore();
@@ -39,7 +52,7 @@ namespace teleport
 			bool saveToDisk() const;
 			//Load from disk.
 			//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
-			void loadFromDisk(size_t& meshAmount, LoadedResource*& loadedMeshes, size_t& textureAmount, LoadedResource*& loadedTextures, size_t& materialAmount, LoadedResource*& loadedMaterials);
+			void loadFromDisk(size_t& meshCount, LoadedResource*& loadedMeshes, size_t& textureCount, LoadedResource*& loadedTextures, size_t& materialCount, LoadedResource*& loadedMaterials);
 
 			void clear(bool freeMeshBuffers);
 
@@ -96,15 +109,16 @@ namespace teleport
 			bool hasShadowMap(avs::uid id) const;
 
 			void setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose);
-			void storeNode(avs::uid id, avs::Node& newNode);
+			bool storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard);
 			bool storeAnimation(avs::uid id, std::string path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
-			bool storeMesh(avs::uid id,std::string path, std::time_t lastModified, avs::Mesh& newMesh, avs::AxesStandard standard, bool verify = false);
+			bool storeMesh(avs::uid id, std::string path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify=false);
+			bool storeMesh(avs::uid id, std::string path, std::time_t lastModified, const avs::Mesh &newMesh, avs::AxesStandard standard, bool verify = false);
 			bool storeMaterial(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Material& newMaterial);
-			bool storeTexture(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips, bool highQualityUASTC, bool forceOverwrite);
+			bool storeTexture(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips, bool highQualityUASTC, bool forceOverwrite);
 			avs::uid storeFont(std::string ttf_path_utf8, std::string relative_asset_path_utf8, std::time_t lastModified, int size = 32);
 			avs::uid storeTextCanvas(std::string relative_asset_path, const InteropTextCanvas* interopTextCanvas);
-			void storeShadowMap(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Texture& shadowMap);
+			void storeShadowMap(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture& shadowMap);
 
 			void removeNode(avs::uid id);
 
@@ -113,7 +127,7 @@ namespace teleport
 			//Returns amount of textures waiting to be compressed.
 			size_t getNumberOfTexturesWaitingForCompression() const;
 			//Returns the texture that will be compressed next.
-			const avs::Texture* getNextTextureToCompress() const;
+			TextureToCompress getNextTextureToCompress() const;
 			//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
 			void compressNextTexture();
 

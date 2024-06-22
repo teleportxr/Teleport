@@ -4,10 +4,11 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files			Animation.cpp TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp 
+set(src_files			Animation.cpp DecodeMesh.cpp TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp 
 						Time.cpp URLParser.cpp)
 file(GLOB header_files	Animation.h
 						CommonNetworking.h
+						DecodeMesh.h
 						ErrorHandling.h
 						FontAtlas.h
 						Input.h
@@ -39,7 +40,14 @@ target_include_directories(TeleportCore PRIVATE ../libavstream/include)
 target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 #Include fmt
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
+target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External )
 #Include Platform - only for CppSl.sl
 target_include_directories(TeleportCore PRIVATE ../firstparty)
 target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR}/safe/include)
+#draco
+#Include draco
+target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR})
+target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/src)
+target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/third_party/eigen)
+target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/third_party/tinygltf)
  

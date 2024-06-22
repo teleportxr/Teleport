@@ -101,7 +101,7 @@ set(av_parser
 	AVParser/Parser.cpp
 	AVParser/Parser.h
 )
-set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/link.sfx")
+set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/link.sfx" "${CMAKE_SOURCE_DIR}/client/Shaders/pbr.sfx")
 file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
 file(GLOB global_shader_includes "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders/*.sl")
 source_group("Shaders" src FILES ${shaders} )

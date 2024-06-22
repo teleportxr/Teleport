@@ -35,6 +35,7 @@ Decoder::~Decoder()
 
 Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameHeight, const DecoderParams& params, uint8_t streamId)
 {
+	name="Decoder";
 	m_interimFramesProcessed = 0;
 	m_currentFrameNumber = 0;
 	m_surfaceRegistered = false;

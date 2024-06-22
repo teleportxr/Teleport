@@ -9,6 +9,7 @@
 #include "Material.h"
 #include <magic_enum/magic_enum.hpp>
 #include "ThisPlatform/Threads.h"
+#include "TeleportCore/Logging.h"
 #include "draco/compression/decode.h"
 #include <fmt/core.h>
 #include <fstream>
@@ -20,6 +21,7 @@
 #include <cmath>		// for isinf()
 #endif
 using namespace std::chrono_literals;
+#pragma optimize("", off)
 
 //#define STB_IMAGE_IMPLEMENTATION
 namespace teleport
@@ -194,6 +196,7 @@ bool GenerateTangents(avs::MeshElementCreate& meshElementCreate,std::vector<vec4
 void ResourceCreator::CreateLinkNode( avs::uid server_uid, avs::uid id, const avs::Node &avsNode)
 {
 	std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(server_uid);
+	geometryCache->ReceivedResource(id);
 	std::shared_ptr<Node> node;
 	if (geometryCache->mNodeManager.HasNode(id))
 	{
@@ -624,9 +627,11 @@ clientrender::Texture::CompressionFormat toSCRCompressionFormat(basist::transcod
 void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::Texture& texture)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
-	if(geometryCache->mTextureManager.Get(id))
-		return;
 	geometryCache->ReceivedResource(id);
+	if(geometryCache->mTextureManager.Get(id))
+	{
+		return;
+	}
 	clientrender::Texture::CompressionFormat scrTextureCompressionFormat= clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
 	{
@@ -654,43 +659,16 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	texInfo->sampleCount	=clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT; //Assumed
 	texInfo->compression	=(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 
+	TELEPORT_LOG("Received texture {0} ({1}), awaiting decompression.",id, texture.name);
 	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
-		texturesToTranscode.emplace_back(std::make_shared<UntranscodedTexture>(server_uid, id, texture.data, texInfo, texture.name, texture.compression, texture.valueScale));
+		texturesToTranscode.emplace_back(std::make_shared<UntranscodedTexture>(server_uid, id, texture.compressedData, texInfo, texture.name, texture.compression, texture.valueScale));
 	}
 	else
 	{
-		size_t numImages=texInfo->arrayCount*texInfo->mipCount;
-		texInfo->images = std::make_shared<std::vector<std::vector<uint8_t>>>(numImages);
-		int m=0;
-		int mip_width=texInfo->width;
-		int mip_length = texInfo->height;
-		const unsigned char *src=texture.data.data();
-		for (size_t i=0;i<numImages;i++)
-		{
-			if(m==texInfo->mipCount)
-			{
-				mip_width = texInfo->width;
-				mip_length = texInfo->height;
-				m=0;
-			}
-			size_t dataSize=mip_width*mip_length*texInfo->bytesPerPixel;
-			(*texInfo->images)[i].resize(dataSize);
-			if(src>=texture.data.data()+texture.data.size())
-			{
-				std::cerr<<"Bad data size for texture.\n";
-				return ;
-			}
-			memcpy((*texInfo->images)[i].data(), src, dataSize);
-			src+=dataSize;
-			mip_width = (mip_width + 1) / 2;
-			mip_length = (mip_length + 1) / 2;
-			m++;
-		}
-
-		geometryCache->CompleteTexture(id, *texInfo);
-	}
+		TELEPORT_WARN("Received uncompressed texture: this is not supported.");
+	}	
 }
 
 void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs::Material& material)
@@ -754,7 +732,12 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 	}
 	else
 	{
-		TELEPORT_INTERNAL_COUT("CreateMaterial {0} ({1}) as incomplete", id, material.name);
+		std::string texlist;
+		for(auto t_uid:incompleteMaterial->missingTextureUids)
+		{
+			texlist+=fmt::format("{0},",t_uid);
+		}
+		TELEPORT_INTERNAL_COUT("CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.", id, material.name, texlist, RESOURCES_AWAITED(incompleteMaterial));
 	}
 }
 
@@ -790,11 +773,13 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,const std::string &path,teleport::core::FontAtlas &fontAtlas)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
+	geometryCache->ReceivedResource(id);
+	if(geometryCache->mFontAtlasManager.Get(id))
+		return;
 	std::shared_ptr<clientrender::FontAtlas> f = std::make_shared<clientrender::FontAtlas>(id,path);
 	clientrender::FontAtlas &F=*f;
 	*(static_cast<teleport::core::FontAtlas*>(&F))=fontAtlas;
 	geometryCache->mFontAtlasManager.Add(id, f);
-	geometryCache->ReceivedResource(id);
 
 	const std::shared_ptr<clientrender::Texture> texture = geometryCache->mTextureManager.Get(fontAtlas.font_texture_uid);
 	// The texture hasn't arrived yet. Mark it as missing.
@@ -832,6 +817,7 @@ void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,const std:
 void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo)
 {
 	std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(textCanvasCreateInfo.server_uid);
+	geometryCache->ReceivedResource(textCanvasCreateInfo.uid);
 	std::shared_ptr<clientrender::TextCanvas> textCanvas=geometryCache->mTextCanvasManager.Get(textCanvasCreateInfo.uid);
 	if(!textCanvas)
 	{
@@ -841,8 +827,6 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 	else
 		return;
 	textCanvas->textCanvasCreateInfo=textCanvasCreateInfo;
-
-	geometryCache->ReceivedResource(textCanvas->textCanvasCreateInfo.uid);
 	
 	const std::shared_ptr<clientrender::FontAtlas> fontAtlas = geometryCache->mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
 	// The fontAtlas hasn't arrived yet. Mark it as missing.
@@ -888,10 +872,10 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs::Skeleton& skeleton)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
+	geometryCache->ReceivedResource(id);
 	if(geometryCache->mSkeletonManager.Get(id))
 		return;
 	TELEPORT_INTERNAL_COUT ( "CreateSkeleton({0}, {1})",id,skeleton.name);
-	geometryCache->ReceivedResource(id);
 
 	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id,skeleton.name, avs::GeometryPayloadType::Skeleton);
 
@@ -945,10 +929,10 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 void ResourceCreator::CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
+	geometryCache->ReceivedResource(id);
 	if(geometryCache->mAnimationManager.Get(id))
 		return;
 	RESOURCECREATOR_DEBUG_COUT("CreateAnimation({0}, {1})", id ,animation.name);
-	geometryCache->ReceivedResource(id);
 
 	std::vector<clientrender::BoneKeyframeList> boneKeyframeLists;
 	boneKeyframeLists.reserve(animation.boneKeyframes.size());
@@ -1203,7 +1187,8 @@ void ResourceCreator::CreateLight(avs::uid server_uid,avs::uid id,const avs::Nod
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	RESOURCECREATOR_DEBUG_COUT( "CreateLight {0}({1})" , id , node.name);
 	geometryCache->ReceivedResource(id);
-
+	if(geometryCache->mLightManager.Get(id))
+		return;
 	clientrender::Light::LightCreateInfo lci;
 	lci.renderPlatform = renderPlatform;
 	lci.type = (clientrender::Light::Type)node.lightType;

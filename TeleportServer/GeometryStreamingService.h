@@ -10,6 +10,7 @@
 #include "ClientNetworkContext.h"
 #include "GeometryEncoder.h"
 #include "GeometryStore.h"
+#include "Export.h"
 
 #if TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_DEBUG_NODE_STREAMING 1
@@ -26,7 +27,7 @@ namespace teleport
 		class ClientMessaging;
 		//! This per-client class tracks the resources and nodes that the client needs,
 		//! and returns them via GeometryRequesterBackendInterface to the encoder.
-		class GeometryStreamingService : public avs::GeometryRequesterBackendInterface
+		class TELEPORT_SERVER_API GeometryStreamingService : public avs::GeometryRequesterBackendInterface
 		{
 			ClientMessaging &clientMessaging;
 		public:
@@ -66,7 +67,8 @@ namespace teleport
 			}
 			// The origin node for the client - must have this in order to stream geometry.
 			void setOriginNode(avs::uid nodeID);
-			void addNode(avs::uid nodeID);
+			/// Returns true if the node is in the GeometryStore and thus could be added.
+			bool addNode(avs::uid nodeID);
 			void removeNode(avs::uid nodeID);
 			bool isStreamingNode(avs::uid nodeID);
 			void addGenericTexture(avs::uid id);

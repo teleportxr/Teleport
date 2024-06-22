@@ -134,6 +134,7 @@ WebRtcNetworkSink::~WebRtcNetworkSink()
 // configure() is called when we have agreed to connect with a specific client.
 Result WebRtcNetworkSink::configure(std::vector<NetworkSinkStream>&& streams, const NetworkSinkParams& params)
 {
+	name = "Network Sink";
 	size_t numInputs = streams.size();
 	if (numInputs == 0 )
 	{
@@ -526,7 +527,7 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 
 void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
 {
-	AVSLOG(Warning) << "WebRtcNetworkSink::receiveAnswer "<<sdp.c_str()<<std::endl;
+	AVSLOG(Info) << "WebRtcNetworkSink::receiveAnswer "<<sdp.c_str()<<std::endl;
 	try
 	{
 		rtc::Description rtcDescription(sdp, "offer");
@@ -554,7 +555,7 @@ void WebRtcNetworkSink::receiveAnswer(const std::string& sdp)
 
 void WebRtcNetworkSink::receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex)
 {
-	AVSLOG(Warning) << "addRemoteCandidate " << candidate.c_str() << std::endl;
+	AVSLOG(Info) << "addRemoteCandidate " << candidate.c_str() << std::endl;
 	try
 	{
 		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate));

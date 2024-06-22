@@ -5,6 +5,7 @@
 #include "TeleportServer/ServerSettings.h"    
 #include "TeleportServer/ClientManager.h"    
 #include "TeleportCore/TeleportUtility.h" 
+#include "TeleportCore/Logging.h" 
 #include "UnityPlugin/PluginMain.h"
 #include "UnityPlugin/PluginClient.h"
 #include <rtc/websocket.hpp>
@@ -129,7 +130,7 @@ bool SignalingService::GetNextBinaryMessage(avs::uid clientID, std::vector<uint8
 
 void SignalingService::OnWebSocket(std::shared_ptr<rtc::WebSocket> ws)
 {
-	TELEPORT_CERR << "SignalingService::OnWebSocket." << std::endl;
+	TELEPORT_INFO("SignalingService::OnWebSocket");
 
 	std::optional<std::string> addr = ws->remoteAddress();
 	if (!addr.has_value())
@@ -413,7 +414,7 @@ void SignalingService::sendToClient(avs::uid clientID, std::string str)
 	try
 	{
 		c->second->webSocket->send(str);
-		TELEPORT_CERR << "webSocket->send: " << str << "  .\n";
+		TELEPORT_INFO("webSocket->send: {0}",str);
 	}
 	catch (...)
 	{
@@ -432,7 +433,7 @@ bool SignalingService::sendBinaryToClient(avs::uid clientID, std::vector<uint8_t
 	try
 	{
 		c->second->webSocket->send((std::byte*)bin.data(),bin.size());
-		TELEPORT_CERR << "webSocket->send: " << bin.size() << " binary bytes .\n";
+		TELEPORT_INFO("webSocket->send {0} binary bytes",bin.size());
 		return true;
 	}
 	catch (...)
