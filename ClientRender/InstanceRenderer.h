@@ -299,7 +299,8 @@ namespace teleport
 			void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState> &updateList) override;
 			void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted) override;
 			void UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate) override;
-			bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand, teleport::core::Handshake &handshake) override;
+			bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand) override;
+			bool GetHandshake( teleport::core::Handshake& handshake) override;
 			void OnVideoStreamClosed() override;
 			void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand) override;
 			void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions) override;

@@ -7,14 +7,15 @@
 #include "camera_constants.sl"
 #include "quaternion.sl"
 #include "cubemap_constants.sl"
+#include "random.sl"
 
 uniform TextureCube cubemapTexture;
-uniform Texture2D<float4> perspectiveTexture; 
-uniform Texture2D<float4> plainTexture; 
+uniform Texture2D<vec4> perspectiveTexture; 
+uniform Texture2D<vec4> plainTexture; 
 uniform RWStructuredBuffer<uint4> RWTagDataIDBuffer;
 uniform StructuredBuffer<uint4> TagDataIDBuffer;
 uniform RWTexture2DArray<uchar4> RWTextureTargetArray;
-uniform RWTexture2D<float4> RWTextureTarget;
+uniform RWTexture2D<vec4> RWTextureTarget;
 uniform StructuredBuffer<VideoTagDataCube> TagDataCubeBuffer;
  
 vec2 OffsetScale(vec2 uv, vec4 offsc)
@@ -60,29 +61,29 @@ uint UVWToFaceIndex(float3 view)
 	return faceIndex;
 }
 
-float4 CubemapFaceColour(uint faceIndex)
+vec4 CubemapFaceColour(uint faceIndex)
 {
-	float4 result = float4(0.0, 0.0, 0.0, 1.0);
+	vec4 result = vec4(0.0, 0.0, 0.0, 1.0);
 
 	switch (faceIndex)
 	{
 		case 0:
-			result = float4(1.0, 0.0, 0.0, 1.0);
+			result = vec4(1.0, 0.0, 0.0, 1.0);
 			break;
 		case 1:
-			result = float4(0.0, 1.0, 1.0, 1.0);
+			result = vec4(0.0, 1.0, 1.0, 1.0);
 			break;
 		case 2:
-			result = float4(0.0, 1.0, 0.0, 1.0);
+			result = vec4(0.0, 1.0, 0.0, 1.0);
 			break;
 		case 3:
-			result = float4(1.0, 0.0, 1.0, 1.0);
+			result = vec4(1.0, 0.0, 1.0, 1.0);
 			break;
 		case 4:
-			result = float4(0.0, 0.0, 1.0, 1.0);
+			result = vec4(0.0, 0.0, 1.0, 1.0);
 			break;
 		case 5:
-			result = float4(1.0, 1.0, 0.0, 1.0);
+			result = vec4(1.0, 1.0, 0.0, 1.0);
 			break;
 	}
 
@@ -357,6 +358,21 @@ shader vec4 PS_UsePerspective_MV(posTexVertexOutput IN, uint viewID : SV_ViewID)
 	}
 	return lookup;
 }
+            // grid function from Best Darn Grid article
+float PristineGrid(vec2 uv, float lineWidth)
+{
+    vec4 uvDDXY = vec4(ddx(uv), ddy(uv));
+    vec2 uvDeriv = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
+	vec2 W=vec2(lineWidth,lineWidth);
+    vec2 drawWidth = clamp(W, uvDeriv,vec2(0.5,0.5));
+    vec2 lineAA = max(uvDeriv, 0.000001) * 1.7;
+    vec2 gridUV = abs(frac(uv) * 2.0 - 1.0);
+    gridUV =  1.0 - gridUV;
+    vec2 grid2 = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
+    grid2 *= saturate(lineWidth / drawWidth);
+    grid2 = lerp(grid2, W, saturate(uvDeriv * 2.0 - 1.0));
+    return lerp(grid2.x, 1.0, grid2.y);
+}
 
 shader vec4 PS_UnconnectedNeon(posTexVertexOutput IN) : SV_TARGET
 {
@@ -364,7 +380,7 @@ shader vec4 PS_UnconnectedNeon(posTexVertexOutput IN) : SV_TARGET
 	vec4 res=vec4(0,0,0,0.5);
 	// flat surface at 0:
 	float h=viewPosition.z;
-	if(view.z<-0.1f)
+	if(view.z<-0.001f)
 	{
 		float distance=h/-view.z;
 		vec3 targetPosition=viewPosition+distance*view;
@@ -374,45 +390,67 @@ shader vec4 PS_UnconnectedNeon(posTexVertexOutput IN) : SV_TARGET
 		float m=min(ln.x,ln.y);
 		vec2 e=exp(-50.0*ln);
 		float br=saturate(step(m,0.02)+(e.x+e.y));
-		//vec3(0.4f,0.8f,0.9f)*
-		vec3 clr=view+vec3(.5,.5,.5);
-		res.rgb=clr*br*exp(-distance);
-		//res.rgb+=frac(vec3(distance,distance,distance));
+		vec3 dir=normalize(vec3(targetPosition.xy,0.0));
+		vec3 clr=dir+vec3(.5,.5,.5);
+		float lineWidth=0.01;
+		float grid=PristineGrid(targetPosition.xy,lineWidth);
+		res.rgb=lerp(res.rgb,clr,grid*exp(-.03*distance));
 	}
 	if(view.z>0)
 	{
 		res.b+=0.2*exp(-10.0*view.z);
 		res.rb+=0.4*exp(-50.0*view.z);
+
+		float azimuth	=atan2(view.x,view.y);
+		float a			=30.0*(1.0+azimuth/2.0/3.1415926);
+		float rnd1		=PcgRand(uint(a));
+		float rnd2		=PcgRand((uint(a)+1)%30);
+		float a1		=a+0.2*rnd1;
+		float tooth1	=2.0*min(frac(a1),1.0-frac(a1))*rnd1;
+		float a2		=a+1.0+0.2*rnd2;
+		float tooth2	=2.0*min(frac(a2),1.0-frac(a2))*rnd2;
+		float tooth		=max(tooth1,tooth2);
+		float Z			=0.02*tooth;
+		if(view.z<Z)
+			res.rgb*=0;
 	}
 	return res;
 }
+
 shader vec4 PS_UnconnectedWhite(posTexVertexOutput IN) : SV_TARGET
 {
 	vec3 view = normalize(TexCoordsToView(IN.texCoords).xyz);
-	//vec3 view = normalize(TexCoordsToView(IN.texCoords).xyz);
+	// framenumber to phase time.
 	vec4 res=vec4(0.9,0.9,0.9,0.5);
 	// flat surface at 0:
 	float h=viewPosition.z;
-	if(view.z<-0.1f)
+	if (view.z <=0)
+	{
+		res.rgb=lerp(res.rgb,res.rgb*0.7,exp(5.0*view.z));
+	}
+	if(view.z<-0.01f)
 	{
 		float distance=h/-view.z;
 		vec3 targetPosition=viewPosition+distance*view;
-		vec2 fr=frac(targetPosition.xy);
-		fr-=vec2(0.5,0.5);
-		vec2 ln=abs(fr);
-		float m=min(ln.x,ln.y);
-		vec2 e=exp(-50.0*ln);
-		float br=saturate(step(m,0.02)+(e.x+e.y));
-		//vec3(0.4f,0.8f,0.9f)*
-		vec3 clr=view*vec3(.5,.5,.5);
-		res.rgb=lerp(res.rgb,res.rgb*clr,br*exp(-.3*distance));
-	//res.r=distance;
+		float phase_length=length(targetPosition.xy);
+		float phase_time=time_seconds/1.0;
+		float cos_time=cos(phase_time*3.1415926536*2.0);
+		float pulse=saturate(cos_time-0.9);
+		float cosine=cos(phase_length*3.1415926536*2.0);
+		float ring=1.0/(1.0-0.9+pulse)*saturate(cosine-0.9+pulse);
+		float lineWidth=0.01;//*(1.0+5.0*ring);
+		vec3 clr=view*vec3(.5,.5,.5);//+ring*vec3(5.0,5.0,5.0);
+		float grid=PristineGrid(targetPosition.xy,lineWidth);
+		//grid=max(grid,0.2*ring*exp(-.3*distance));
+		res.rgb=lerp(res.rgb,res.rgb*clr,grid*exp(-.03*distance));
+		res.rgb+=0.2*ring*exp(-.3*distance)*vec3(1.0,1.0,1.0);
 	}
 	if(view.z>0)
 	{
-		res.rgb=lerp(res.rgb,res.rgb*0.2,exp(-10.0*view.z));
-		res.rgb=lerp(res.rgb,res.rgb*0.4,exp(-50.0*view.z));
+		res.rgb=lerp(res.rgb,res.rgb*0.4,exp(-10.0*view.z));
+		res.rgb=lerp(res.rgb,res.rgb*0.7,exp(-50.0*view.z));
 	}
+	//res.r=frac(cosine);
 	return res;
 }
 shader vec4 PS_UnconnectedNeon_MV(posTexVertexOutput IN, uint viewID : SV_ViewID) : SV_TARGET
@@ -434,8 +472,9 @@ shader vec4 PS_UnconnectedNeon_MV(posTexVertexOutput IN, uint viewID : SV_ViewID
 		float br = saturate(step(m, 0.02) + (e.x + e.y));
 		//vec3(0.4f,0.8f,0.9f)*
 		vec3 clr = view + vec3(.5, .5, .5);
-		res.rgb = clr * br * exp(-distance);
-		//res.rgb+=frac(vec3(distance,distance,distance));
+		float lineWidth=0.01;
+		float grid=PristineGrid(targetPosition.xy,lineWidth);
+		res.rgb=lerp(res.rgb,res.rgb*clr,grid*exp(-.03*distance));
 	}
 	if (view.z > 0)
 	{
@@ -493,7 +532,7 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
 	int3 pos = int3(ThreadID);
 	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
-	float4 SceneColor = plainTexture.Load(int3(pos.xy+sourceOffset+ OutputW*FaceOffsets[ThreadID.z],0));
+	vec4 SceneColor = plainTexture.Load(int3(pos.xy+sourceOffset+ OutputW*FaceOffsets[ThreadID.z],0));
 	SceneColor.rgb *= SceneColor.rgb;
 	RWTextureTargetArray[pos] = SceneColor;
 }
@@ -507,7 +546,7 @@ shader void CS_ExtractTagDataID(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID
 	uint2 pos		= sourceOffset+4*ThreadID.xy;
 	uint2 pos_x		= pos +uint2(2,2);
 	// The offset is to the X component. The thread index gives us the bit mask.
-	float4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));
+	vec4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));
 	// Convert the green component to a 0 or 1 uint. shift to get the binary.
 	int bitX		= int(lookupX.g+0.5) << int(ThreadID.x);
 	accumulate_position[ThreadID.x] = uint(bitX);
@@ -553,7 +592,7 @@ shader void CS_RecomposeWithDepthAlpha(uint3 g : SV_GroupID, uint3 t : SV_GroupT
 	// RGB values must be squared here because the server used their square root to improve colour quantization in the video encoder. 
 	SceneColor.rgb *= SceneColor.rgb;
 	SceneColor.a = d;
-	RWTextureTargetArray[pos] = SceneColor; // float4(SceneColor.rgba);
+	RWTextureTargetArray[pos] = SceneColor; // vec4(SceneColor.rgba);
 }
 
 [numthreads(16, 16, 1)]
@@ -562,11 +601,11 @@ shader void CS_RecomposePerspective(uint3 g : SV_GroupID, uint3 t : SV_GroupThre
 	int3 pos = int3(g.xy * 16 + t.xy, 0);
 	uint InputW, InputH;
 	plainTexture.GetDimensions(InputW, InputH);
-	float4 SceneColor = plainTexture.Load(pos);
+	vec4 SceneColor = plainTexture.Load(pos);
 	// RGB values are squared here because the server used their square root to improve colour quantization in the video encoder. 
 	SceneColor.rgb *= SceneColor.rgb;
 	float alpha = SceneColor.a;
-	RWTextureTargetArray[pos] = SceneColor;//float4(alpha, alpha, alpha, 1.0);
+	RWTextureTargetArray[pos] = SceneColor;//vec4(alpha, alpha, alpha, 1.0);
 }
 
 [numthreads(16, 16, 1)]
@@ -581,7 +620,7 @@ shader void CS_RecomposePerspectiveWithDepthAlpha(uint3 g : SV_GroupID, uint3 t 
 
 	uint OutputW, OutputH, OutputD;
 	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
-	float4 SceneColor = plainTexture.Load(pos);
+	vec4 SceneColor = plainTexture.Load(pos);
 
 	int2 depthPos	    = int2(0, OutputH) + (pos.xy / 2);
 	int2 offsetToPos	= pos.xy % 2;
@@ -597,43 +636,43 @@ shader void CS_RecomposePerspectiveWithDepthAlpha(uint3 g : SV_GroupID, uint3 t 
 [numthreads(16, 16, 1)]
 shader void CS_Test(uint3 ThreadID : SV_DispatchThreadID)
 {
-	float4 sampleColour = plainTexture.SampleLevel(wwcNearestSamplerState, vec2(ThreadID.xy) / 8.0, 0).rgba;
-	float4 texelFetchColour = plainTexture.Load(int3((ThreadID.xy / 4) % int2(2, 2), 0));
+	vec4 sampleColour = plainTexture.SampleLevel(wwcNearestSamplerState, vec2(ThreadID.xy) / 8.0, 0).rgba;
+	vec4 texelFetchColour = plainTexture.Load(int3((ThreadID.xy / 4) % int2(2, 2), 0));
 	sampleColour.rgb += vec3(0.1, 0.1, 0.1);
-	RWTextureTargetArray[ThreadID] = 0.5 * (texelFetchColour + sampleColour); // float4(SceneColor.rgba);
+	RWTextureTargetArray[ThreadID] = 0.5 * (texelFetchColour + sampleColour); // vec4(SceneColor.rgba);
 }
 
 [numthreads(16, 16, 1)]
 shader void CS_Test_Face_Colour(uint3 ThreadID : SV_DispatchThreadID)
 {
-	float4 colour = float4(0.0, 0.0, 0.0, 1.0);
+	vec4 colour = vec4(0.0, 0.0, 0.0, 1.0);
 	switch (ThreadID.z)
 	{
 		default:
 		case 0:
-			colour = float4(1.0, 0.0, 0.0, 1.0);
+			colour = vec4(1.0, 0.0, 0.0, 1.0);
 			break;
 		case 1:
-			colour = float4(0.0, 1.0, 1.0, 1.0);
+			colour = vec4(0.0, 1.0, 1.0, 1.0);
 			break;
 		case 2:
-			colour = float4(0.0, 1.0, 0.0, 1.0);
+			colour = vec4(0.0, 1.0, 0.0, 1.0);
 			break;
 		case 3:
-			colour = float4(1.0, 0.0, 1.0, 1.0);
+			colour = vec4(1.0, 0.0, 1.0, 1.0);
 			break;
 		case 4:
-			colour = float4(0.0, 0.0, 1.0, 1.0);
+			colour = vec4(0.0, 0.0, 1.0, 1.0);
 			break;
 		case 5:
-			colour = float4(1.0, 1.0, 0.0, 1.0);
+			colour = vec4(1.0, 1.0, 0.0, 1.0);
 			break;
 	}
 	
 	RWTextureTargetArray[ThreadID] = 0.25 * colour;
 }
 
-VertexShader vs = CompileShader(vs_5_0, VS_SimpleFullscreen());
+VertexShader vs = CompileShader(vs_6_0, VS_SimpleFullscreen());
 
 technique normal_view
 {
@@ -644,7 +683,7 @@ technique normal_view
 		SetBlendState(DontBlend,vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_NormalView()));
+		SetPixelShader(CompileShader(ps_6_0, PS_NormalView()));
 	}
 }
 
@@ -657,7 +696,7 @@ technique show_texture
 		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_ShowTexture()));
+		SetPixelShader(CompileShader(ps_6_0, PS_ShowTexture()));
 	}
 }
 technique far_cubemap
@@ -678,7 +717,7 @@ technique far_cubemap
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_FarCubemap()));
+		SetPixelShader(CompileShader(ps_6_0, PS_FarCubemap()));
 	}
 }
 technique use_cubemap
@@ -699,7 +738,7 @@ technique use_cubemap
 		SetBlendState(DontBlend,vec4( 0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF );
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_UseCubemap()));
+		SetPixelShader(CompileShader(ps_6_0, PS_UseCubemap()));
 	}
 }
 technique use_perspective
@@ -720,7 +759,7 @@ technique use_perspective
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_UsePerspective()));
+		SetPixelShader(CompileShader(ps_6_0, PS_UsePerspective()));
 	}
 }
 technique far_perspective
@@ -741,7 +780,7 @@ technique far_perspective
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_FarPerspective()));
+		SetPixelShader(CompileShader(ps_6_0, PS_FarPerspective()));
 	}
 }
 technique unconnected
@@ -771,7 +810,7 @@ technique unconnected
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_UnconnectedWhite()));
+		SetPixelShader(CompileShader(ps_6_0, PS_UnconnectedWhite()));
 	}
 	pass neon
 	{
@@ -780,7 +819,7 @@ technique unconnected
 		SetBlendState(DontBlend, vec4(0.0, 0.0, 0.0, 0.0), 0xFFFFFFFF);
 		SetGeometryShader(NULL);
 		SetVertexShader(vs);
-		SetPixelShader(CompileShader(ps_5_0, PS_UnconnectedNeon()));
+		SetPixelShader(CompileShader(ps_6_0, PS_UnconnectedNeon()));
 	}
 }
 
@@ -788,7 +827,7 @@ technique extract_tag_data_id
 {
 	pass p0
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_ExtractTagDataID()));
+		SetComputeShader(CompileShader(cs_6_0, CS_ExtractTagDataID()));
 	}
 }
 
@@ -796,14 +835,14 @@ technique recompose
 {
 	pass p0
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_Recompose()));
+		SetComputeShader(CompileShader(cs_6_0, CS_Recompose()));
 	}
 }
 technique recompose_with_depth_alpha
 {
 	pass p0
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_RecomposeWithDepthAlpha()));
+		SetComputeShader(CompileShader(cs_6_0, CS_RecomposeWithDepthAlpha()));
 	}
 
 }
@@ -811,14 +850,14 @@ technique recompose_perspective
 {
 	pass p0
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_RecomposePerspective()));
+		SetComputeShader(CompileShader(cs_6_0, CS_RecomposePerspective()));
 	}
 }
 technique recompose_perspective_with_depth_alpha
 {
 	pass p0
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_RecomposePerspectiveWithDepthAlpha()));
+		SetComputeShader(CompileShader(cs_6_0, CS_RecomposePerspectiveWithDepthAlpha()));
 	}
 }
 
@@ -826,10 +865,10 @@ technique test
 {
 	pass test
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_Test()));
+		SetComputeShader(CompileShader(cs_6_0, CS_Test()));
 	}
 	pass test_face_colour
 	{
-		SetComputeShader(CompileShader(cs_5_0, CS_Test_Face_Colour()));
+		SetComputeShader(CompileShader(cs_6_0, CS_Test_Face_Colour()));
 	}
 }

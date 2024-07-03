@@ -36,7 +36,8 @@ namespace teleport
 		class SessionCommandInterface
 		{
 		public:
-			virtual bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand& setupCommand, teleport::core::Handshake& handshake) = 0;
+			virtual bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand& setupCommand) = 0;
+			virtual bool GetHandshake( teleport::core::Handshake& handshake) = 0;
 			virtual void OnVideoStreamClosed() = 0;
 
 			virtual void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
@@ -151,9 +152,6 @@ namespace teleport
 				return clientID;
 			}
 				
-			const std::map<avs::uid, double> &GetSentResourceRequests() const{
-				return mSentResourceRequests;
-			};
 
 			void SendStreamingControlMessage(const std::string& str);
 			const std::vector<teleport::core::InputDefinition>& GetInputDefinitions() const
@@ -195,7 +193,6 @@ namespace teleport
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 			void SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses);
 			void SendInput(const teleport::core::Input& input);
-			void SendResourceRequests();
 			void SendReceivedResources();
 			void SendNodeUpdates();
 			void SendKeyframeRequest();
@@ -248,9 +245,6 @@ namespace teleport
 			GeometryCacheBackendInterface* geometryCache = nullptr;
 
 
-			/// Requests the session client has discovered need to be made.
-			std::vector<avs::uid> mQueuedResourceRequests;			
-			std::map<avs::uid, double> mSentResourceRequests;	/// <ID of requested resource, time we sent the request> Resource requests we have received, but have yet to receive confirmation of their receipt.
 			std::vector<avs::uid> mReceivedNodes;				/// Nodes that have entered bounds, are about to be drawn, and need to be confirmed to the server.
 			std::vector<avs::uid> mLostNodes;					/// Node that have left bounds, are about to be hidden, and need to be confirmed to the server.
 

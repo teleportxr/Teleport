@@ -8,6 +8,7 @@
 #endif
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/StringFunctions.h"
+#include "TeleportCore/Profiling.h"
 #include "ServerSettings.h"
 
 namespace
@@ -262,6 +263,7 @@ void NetworkPipeline::release()
 
 bool NetworkPipeline::process()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	const avs::Result result = mPipeline->process();
 	// Prevent spamming of errors from NetworkSink. This happens when there is a connection issue.
 	if (!result && result != avs::Result::IO_Empty)

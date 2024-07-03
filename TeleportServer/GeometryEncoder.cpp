@@ -20,33 +20,12 @@
 using namespace teleport;
 using namespace server;
 
-//Clear a passed vector of UIDs that are believed to have already been sent to the client.
-//	outUIDs : Vector of all UIDs of resources that could potentially need to be sent across.
-//	req : Object that defines what needs to transfered across.
-//Returns the size of the vector after having UIDs of already sent resources removed, and puts the new UIDs in the outUIDs vector.
-size_t GetNewUIDs(std::vector<avs::uid>& outUIDs, avs::GeometryRequesterBackendInterface* req)
-{
-	//Remove uids the requester has.
-	for (auto it = outUIDs.begin(); it != outUIDs.end();)
-	{
-		if (req->hasResource(*it))
-		{
-			it = outUIDs.erase(it);
-		}
-		else
-		{
-			++it;
-		}
-	}
-
-	return outUIDs.size();
-}
 
 GeometryEncoder::GeometryEncoder( GeometryStreamingService *srv, avs::uid clid)
 	: geometryStreamingService(srv), clientID(clid)
 {}
 
-avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBackendInterface*)
+avs::Result GeometryEncoder::encode(uint64_t timestamp)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	if (!geometryStreamingService || geometryStreamingService->getClientAxesStandard() == avs::AxesStandard::NotInitialized)
@@ -62,115 +41,106 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 
 	//Queue what may have been left since last time, and keep queueing if there is still some space.
 	bool keepQueueing = attemptQueueData();
-	if (keepQueueing)
+	if (!keepQueueing)
+		return avs::Result::OK;
+	std::set<avs::uid> nodeIDsToStream;
+	std::set<avs::uid> genericTexturesToStream;
+	std::set<avs::uid> meshes;
+	std::set<avs::uid> materials;
+	std::set<avs::uid> textures;
+	std::set<avs::uid> skeletons;
+	std::set<avs::uid> bones;
+	std::set<avs::uid> animations;
+	std::set<avs::uid> textCanvases;
+	std::set<avs::uid> fontAtlases;
+
+	int32_t minimumPriority = 0;
+	auto *clientSettings = ClientManager::instance().GetClientSettings(clientID);
+	minimumPriority=clientSettings->minimumNodePriority;
+	geometryStreamingService->updateResourcesToStream(minimumPriority);
+	geometryStreamingService->getResourcesToStream(nodeIDsToStream, genericTexturesToStream,meshes,materials,textures,skeletons,bones,animations,textCanvases,fontAtlases);
+
+	for (avs::uid nodeID : nodeIDsToStream)
 	{
-		std::set<avs::uid> nodeIDsToStream;
-		std::vector<avs::MeshNodeResources> meshNodeResources;
-		std::vector<avs::LightNodeResources> lightNodeResources;
-		std::vector<avs::uid> textCanvas_uids;
-		std::vector<avs::uid> font_uids;
-		std::set<avs::uid> genericTexturesToStream;
+		encodeNodes( { nodeID });
 
-		int32_t minimumPriority = 0;
-		auto *clientSettings = ClientManager::instance().GetClientSettings(clientID);
-		minimumPriority=clientSettings->minimumNodePriority;
-		geometryStreamingService->getResourcesToStream(nodeIDsToStream, meshNodeResources, lightNodeResources, genericTexturesToStream
-			, textCanvas_uids, font_uids, minimumPriority);
-
-		for (avs::uid nodeID : nodeIDsToStream)
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
 		{
-			if (!geometryStreamingService->hasResource(nodeID))
-			{
-				encodeNodes(geometryStreamingService, { nodeID });
-
-				keepQueueing = attemptQueueData();
-				if (!keepQueueing)
-				{
-					break;
-				}
-			}
+			break;
 		}
+	}
 
-		//Encode mesh nodes first, as they should be sent before lighting data.
-		for (avs::MeshNodeResources meshResourceInfo : meshNodeResources)
+	//Encode mesh nodes first, as they should be sent before lighting data.
+	for (avs::uid u : meshes)
+	{
+		encodeMeshes( { u });
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
 		{
-			if(meshResourceInfo.mesh_uid!=0&&!geometryStreamingService->hasResource(meshResourceInfo.mesh_uid))
-			{
-				encodeMeshes(geometryStreamingService, { meshResourceInfo.mesh_uid });
+			break;
+		}
+	}
+	for (avs::uid u : skeletons)
+	{
+		encodeSkeleton( u);
 
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
+	}
+
+	for (avs::uid u : animations)
+	{
+		encodeAnimation( u);
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
+	}
+	if (!keepQueueing)
+		return avs::Result::OK;
+	for (avs::uid u : materials)
+	{
+		encodeMaterials( { u });
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
+	}
+	/*	if (geometryStreamingService->GetNewUIDs(material.texture_uids, eometryStreamingService) != 0)
+		{
+			for (avs::uid textureID : material.texture_uids)
+			{
+				if(textureID==0)
+					continue;
+				encodeTextures( { textureID });
 				keepQueueing = attemptQueueData();
 				if (!keepQueueing)
 				{
 					break;
-				}
-			}
-			if (meshResourceInfo.skeletonAssetID != 0&&!geometryStreamingService->hasResource(meshResourceInfo.skeletonAssetID))
-			{
-				encodeSkeleton(geometryStreamingService, meshResourceInfo.skeletonAssetID);
-
-				keepQueueing = attemptQueueData();
-				if (!keepQueueing)
-				{
-					break;
-				}
-			}
-
-			for (avs::uid animationID : meshResourceInfo.animationIDs)
-			{
-				if (animationID!=0&&!geometryStreamingService->hasResource(animationID))
-				{
-					encodeAnimation(geometryStreamingService, animationID);
-
-					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-					{
-						break;
-					}
 				}
 			}
 			if (!keepQueueing)
 			{
 				break;
 			}
-
-			for (avs::MaterialResources material : meshResourceInfo.materials)
+		}*/
+	if (!keepQueueing)
+	{
+		return avs::Result::OK;
+	}
+	/*
+	for (avs::uid lightResourceInfo : lights)
+	{
+		if (lightResourceInfo.shadowmap_uid)
+		{
 			{
-				if (material.material_uid!=0&&!geometryStreamingService->hasResource(material.material_uid))
-				{
-					encodeMaterials(geometryStreamingService, { material.material_uid });
-					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-					{
-						break;
-					}
-				}
-				if (GetNewUIDs(material.texture_uids, geometryStreamingService) != 0)
-				{
-					for (avs::uid textureID : material.texture_uids)
-					{
-						if(textureID==0)
-							continue;
-						encodeTextures(geometryStreamingService, { textureID });
-						keepQueueing = attemptQueueData();
-						if (!keepQueueing)
-						{
-							break;
-						}
-					}
-					if (!keepQueueing)
-					{
-						break;
-					}
-				}
-			}
-			if (!keepQueueing)
-			{
-				break;
-			}
-
-			if (!geometryStreamingService->hasResource(meshResourceInfo.node_uid))
-			{
-				encodeNodes(geometryStreamingService, { meshResourceInfo.node_uid });
+				encodeTextures( { lightResourceInfo.shadowmap_uid });
 
 				keepQueueing = attemptQueueData();
 				if (!keepQueueing)
@@ -180,69 +150,53 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp, avs::GeometryRequesterBa
 			}
 		}
 
-		for (avs::LightNodeResources lightResourceInfo : lightNodeResources)
 		{
-			if (lightResourceInfo.shadowmap_uid)
-			{
-				if (!geometryStreamingService->hasResource(lightResourceInfo.shadowmap_uid))
-				{
-					encodeTextures(geometryStreamingService, { lightResourceInfo.shadowmap_uid });
+			encodeNodes( { lightResourceInfo.node_uid });
 
-					keepQueueing = attemptQueueData();
-					if (!keepQueueing)
-					{
-						break;
-					}
-				}
-			}
-
-			if (!geometryStreamingService->hasResource(lightResourceInfo.node_uid))
-			{
-				encodeNodes(geometryStreamingService, { lightResourceInfo.node_uid });
-
-				keepQueueing = attemptQueueData();
-				if (!keepQueueing)
-				{
-					break;
-				}
-			}
-		}
-
-		//Encode mesh nodes first, as they should be sent before lighting data.
-		for (avs::uid texture_uid : genericTexturesToStream)
-		{
-			if (geometryStreamingService->hasResource(texture_uid))
-				continue;
-			encodeTextures(geometryStreamingService, { texture_uid });
 			keepQueueing = attemptQueueData();
 			if (!keepQueueing)
 			{
 				break;
 			}
 		}
-		for (avs::uid font_uid : font_uids)
-		{
-			if (geometryStreamingService->hasResource(font_uid))
-				continue;
-			encodeFontAtlas(font_uid);
-			keepQueueing = attemptQueueData();
-			if (!keepQueueing)
-			{
-				break;
-			}
-		}
-		for (avs::uid canvas_uid : textCanvas_uids)
-		{
-			if (geometryStreamingService->hasResource(canvas_uid))
-				continue;
-			encodeTextCanvas(canvas_uid);
-			keepQueueing = attemptQueueData();
-			if (!keepQueueing)
-			{
-				break;
-			}
-		}
+	}*/
 
+	//Encode mesh nodes first, as they should be sent before lighting data.
+	for (avs::uid texture_uid : genericTexturesToStream)
+	{
+		encodeTextures( { texture_uid });
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
+	}
+	for (avs::uid texture_uid : textures)
+	{
+		encodeTextures( { texture_uid });
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
+	}
+	for (avs::uid font_uid : fontAtlases)
+	{
+		encodeFontAtlas(font_uid);
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
+	}
+	for (avs::uid canvas_uid : textCanvases)
+	{
+		encodeTextCanvas(canvas_uid);
+		keepQueueing = attemptQueueData();
+		if (!keepQueueing)
+		{
+			break;
+		}
 	}
 
 	return avs::Result::OK;
@@ -261,7 +215,7 @@ avs::Result GeometryEncoder::unmapOutputBuffer()
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
+avs::Result GeometryEncoder::encodeMeshes( std::vector<avs::uid> missingUIDs)
 {
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
 	for (avs::uid uid : missingUIDs)
@@ -334,7 +288,7 @@ avs::Result GeometryEncoder::encodeMeshes(avs::GeometryRequesterBackendInterface
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs)
+avs::Result GeometryEncoder::encodeNodes( std::vector<avs::uid> missingUIDs)
 {
 	GeometryStore* geometryStore = &GeometryStore::GetInstance();
 	//Place payload type onto the buffer.
@@ -444,7 +398,7 @@ avs::Result GeometryEncoder::encodeNodes(avs::GeometryRequesterBackendInterface*
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterface*, avs::uid skeletonID)
+avs::Result GeometryEncoder::encodeSkeleton( avs::uid skeletonID)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	const avs::Skeleton* skeleton = geometryStore->getSkeleton(skeletonID, geometryStreamingService->getClientAxesStandard());
@@ -489,7 +443,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::GeometryRequesterBackendInterfa
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeAnimation(avs::GeometryRequesterBackendInterface*, avs::uid animationID)
+avs::Result GeometryEncoder::encodeAnimation( avs::uid animationID)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	const teleport::core::Animation* animation = geometryStore->getAnimation(animationID, geometryStreamingService->getClientAxesStandard());
@@ -614,16 +568,13 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 }
 
 
-avs::Result GeometryEncoder::encodeTextures(avs::GeometryRequesterBackendInterface*
-	, std::vector<avs::uid> missingUIDs)
+avs::Result GeometryEncoder::encodeTextures( std::vector<avs::uid> missingUIDs)
 {
-
-	encodeTexturesBackend(geometryStreamingService, missingUIDs);
+	encodeTexturesBackend( missingUIDs);
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterface*
-	, std::vector<avs::uid> missingUIDs)
+avs::Result GeometryEncoder::encodeMaterials( std::vector<avs::uid> missingUIDs)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	auto renderingFeatures = geometryStreamingService->getClientRenderingFeatures();
@@ -725,7 +676,7 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 			materialTexture_uids.erase(std::remove(materialTexture_uids.begin(), materialTexture_uids.end(), 0), materialTexture_uids.end());
 
 			//Only send textures that we have not already sent to the client.
-			GetNewUIDs(materialTexture_uids, geometryStreamingService);
+			geometryStreamingService->GetNewUIDs(materialTexture_uids);
 
 			//Push amount of textures we are sending.
 			put(materialTexture_uids.size());
@@ -736,7 +687,7 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 			if (materialTexture_uids.size() != 0)
 			{
 				//Push textures.
-				encodeTexturesBackend(geometryStreamingService, materialTexture_uids);
+				encodeTexturesBackend( materialTexture_uids);
 			}
 
 			//Flag we have encoded the material.
@@ -747,13 +698,13 @@ avs::Result GeometryEncoder::encodeMaterials(avs::GeometryRequesterBackendInterf
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeShadowMaps(avs::GeometryRequesterBackendInterface*, std::vector<avs::uid> missingUIDs)
+avs::Result GeometryEncoder::encodeShadowMaps( std::vector<avs::uid> missingUIDs)
 {
-	encodeTexturesBackend(geometryStreamingService, missingUIDs, true);
+	encodeTexturesBackend( missingUIDs, true);
 	return avs::Result::OK;
 }
 
-avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackendInterface*, std::vector<avs::uid> missingUIDs, bool)
+avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missingUIDs, bool)
 {
 	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
 	for (avs::uid uid : missingUIDs)
@@ -763,7 +714,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		texture = geometryStore->getTexture(uid);
 		if (texture)
 		{
-			if(texture->images.size()==0||texture->images[0].data.size()==0)
+			if(texture->compressedData.size()==0)
 			{
 				TELEPORT_WARN_NOSPAM("Trying to send a zero-size texture {0}. Never do this!\n",texture->name);
 				continue;
@@ -787,7 +738,8 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 			put(nameLength);
 			//Push name.
 			put((uint8_t*)texture->name.data(), nameLength);
-
+			
+			put(texture->compression);
 			// TODO: make this a more generic texture type.
 			put(texture->cubemap);
 
@@ -803,13 +755,11 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 
 			//Push format.
 			put(texture->format);
-			put(texture->compression);
 
 			//Value scale - brightness number to scale the final texel by.
 			put(texture->valueScale);
 
 			//Push size, and data.
-			put((uint32_t)texture->compressedData.size());
 			put((uint32_t)texture->compressedData.size());
 			put(texture->compressedData.data(), texture->compressedData.size());
 
@@ -824,7 +774,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(avs::GeometryRequesterBackend
 		}
 		else
 		{
-			//DEBUG_BREAK_ONCE("Missing texture");
+			DEBUG_BREAK_ONCE("Missing texture");
 			TELEPORT_WARN_NOSPAM("Trying to encode texture {0} but it is not there.",uid);
 		}
 	}

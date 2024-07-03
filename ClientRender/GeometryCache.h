@@ -162,9 +162,9 @@ namespace teleport
 			void setCacheFolder(const std::string &f);
 			void SaveNodeTree(const std::shared_ptr<clientrender::Node> &n) const;
 
-			std::vector<uid> GetAllResourceIDs()
+			std::vector<avs::uid> GetAllResourceIDs()
 			{
-				std::vector<uid> resourceIDs;
+				std::vector<avs::uid> resourceIDs;
 
 				const auto &m = mMaterialManager.GetAllIDs();
 				resourceIDs.insert(resourceIDs.end(), m.begin(), m.end());

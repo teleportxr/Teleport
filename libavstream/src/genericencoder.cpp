@@ -8,6 +8,7 @@
 #include <libavstream/genericencoder.h>
 
 #include <libavstream/buffer.hpp>
+#include "profiling.h"
 namespace avs
 {
 	struct GenericEncoder::Private final : public PipelineNode::Private
@@ -39,6 +40,7 @@ void ClientServerMessageStack::PushBuffer(std::shared_ptr<std::vector<uint8_t>> 
 
 bool ClientServerMessageStack::mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	mutex.lock();
 	if (!buffers.size())
 	{

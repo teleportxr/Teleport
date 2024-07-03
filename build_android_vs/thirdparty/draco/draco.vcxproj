@@ -117,8 +117,10 @@
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\metadata.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\metadata_decoder.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\metadata_encoder.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\property_attribute.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\property_table.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\structural_metadata.h" />
+    <ClInclude Include="..\..\..\thirdparty\draco\src\draco\metadata\structural_metadata_schema.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\instance_array.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\light.h" />
     <ClInclude Include="..\..\..\thirdparty\draco\src\draco\scene\mesh_group.h" />
@@ -248,8 +250,10 @@
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_features.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_splitter.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\mesh\mesh_utils.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\metadata\property_attribute.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\metadata\property_table.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\metadata\structural_metadata.cc" />
+    <ClCompile Include="..\..\..\thirdparty\draco\src\draco\metadata\structural_metadata_schema.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\instance_array.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\light.cc" />
     <ClCompile Include="..\..\..\thirdparty\draco\src\draco\scene\scene.cc" />

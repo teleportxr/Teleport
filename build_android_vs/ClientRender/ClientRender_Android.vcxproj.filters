@@ -126,6 +126,10 @@
     <ClCompile Include="flecs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ClientRender\LinkRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ClientRender\CanvasTextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h">
@@ -260,5 +264,9 @@
     <ClInclude Include="flecs.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ClientRender\LinkRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ClientRender\CanvasTextRenderer.h" />
   </ItemGroup>
 </Project>

@@ -24,8 +24,7 @@ namespace teleport
 			~GeometryEncoder() = default;
 
 			// Inherited via GeometryEncoderBackendInterface
-			avs::Result encode(uint64_t timestamp
-				, avs::GeometryRequesterBackendInterface* geometryRequester) override;
+			avs::Result encode(uint64_t timestamp) override;
 			avs::Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) override;
 			avs::Result unmapOutputBuffer() override;
 		protected:
@@ -53,16 +52,16 @@ namespace teleport
 			//	src : Source we are taking the data from.
 			//	req : Object that defines what needs to transfered across.
 			//Returns a code to determine how the encoding went.
-			avs::Result encodeAnimation(avs::GeometryRequesterBackendInterface* req, avs::uid animationID);
-			avs::Result encodeMaterials(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-			avs::Result encodeMeshes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-			avs::Result encodeNodes(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-			avs::Result encodeShadowMaps(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
-			avs::Result encodeSkeleton(avs::GeometryRequesterBackendInterface* req, avs::uid skeletonID);
-			avs::Result encodeTextures(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs);
+			avs::Result encodeAnimation( avs::uid animationID);
+			avs::Result encodeMaterials( std::vector<avs::uid> missingUIDs);
+			avs::Result encodeMeshes( std::vector<avs::uid> missingUIDs);
+			avs::Result encodeNodes( std::vector<avs::uid> missingUIDs);
+			avs::Result encodeShadowMaps( std::vector<avs::uid> missingUIDs);
+			avs::Result encodeSkeleton( avs::uid skeletonID);
+			avs::Result encodeTextures( std::vector<avs::uid> missingUIDs);
 
 			//The actual implementation of encode textures that can be used by encodeMaterials to package textures with it.
-			avs::Result encodeTexturesBackend(avs::GeometryRequesterBackendInterface* req, std::vector<avs::uid> missingUIDs, bool isShadowMap = false);
+			avs::Result encodeTexturesBackend( std::vector<avs::uid> missingUIDs, bool isShadowMap = false);
 
 			avs::Result encodeFloatKeyframes(const std::vector<teleport::core::FloatKeyframe>& keyframes);
 			avs::Result encodeVector3Keyframes(const std::vector<teleport::core::Vector3Keyframe>& keyframes);

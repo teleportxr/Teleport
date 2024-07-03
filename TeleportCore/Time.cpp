@@ -1,5 +1,3 @@
-#pragma once
-
 #include "TeleportCore/Time.h"
 using namespace teleport;
 

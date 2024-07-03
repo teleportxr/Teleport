@@ -1431,6 +1431,74 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to start transcoding." << std::endl;
 				}
 			}
+			else if(transcoding->compressionFormat==avs::TextureCompression::KTX)
+			{
+				basist::ktx2_transcoder ktx_transcoder;
+	
+				ktx_transcoder.init(transcoding->data.data(), (uint32_t)transcoding->data.size());
+				if (!ktx_transcoder.start_transcoding())
+				{
+					TELEPORT_WARN("Texture \"{0}\" failed to start transcoding.", transcoding->name);
+				}
+				else
+				{
+					basist::transcoder_texture_format basis_transcoder_textureFormat = basist::transcoder_texture_format::cTFRGBA32;
+					basist::basis_tex_format basis_tex_format = ktx_transcoder.get_format();
+					transcoding->textureCI->mipCount = ktx_transcoder.get_levels();
+					transcoding->textureCI->arrayCount = ktx_transcoder.get_layers();
+					transcoding->textureCI->arrayCount=transcoding->textureCI->arrayCount?transcoding->textureCI->arrayCount:1;
+					bool cubemap=(ktx_transcoder.get_faces()==6);
+					transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+					uint32_t numFaces=cubemap?6:1;
+					uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
+					transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+					transcoding->textureCI->images->resize(numImages);
+			
+					uint16_t imageIndex = 0;
+					size_t totalSize=0;
+					for (uint32_t mipIndex = 0; mipIndex < transcoding->textureCI->mipCount; mipIndex++)
+					{
+						for (uint32_t arrayIndex = 0; arrayIndex < transcoding->textureCI->arrayCount; arrayIndex++)
+						{
+							for (uint32_t faceIndex = 0; faceIndex < numFaces; faceIndex++)
+							{
+								//auto &image=(*transcoding->textureCI->images)[imageIndex];
+								basist::ktx2_image_level_info ktx2_image_level_info;
+								ktx_transcoder.get_image_level_info(ktx2_image_level_info,arrayIndex,mipIndex,faceIndex);
+				
+								transcoding->textureCI->bytesPerPixel=basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat);
+								size_t num_pixels=ktx2_image_level_info.m_width * ktx2_image_level_info.m_height;
+								uint32_t outDataSize = transcoding->textureCI->bytesPerPixel * (uint32_t)num_pixels;
+					
+								auto &img = (*transcoding->textureCI->images)[imageIndex];
+								img.resize(outDataSize);
+								if (!ktx_transcoder.transcode_image_level(mipIndex,arrayIndex,faceIndex,img.data(), (uint32_t)num_pixels, basis_transcoder_textureFormat))
+								{
+									TELEPORT_WARN("Texture \"{0}\" failed to transcode mipmap level {1}.", transcoding->name,mipIndex);
+								}
+								imageIndex++;
+								if(arrayIndex==0&&mipIndex==0&&faceIndex==0)
+								{
+									transcoding->textureCI->width = ktx2_image_level_info.m_width;
+									transcoding->textureCI->height = ktx2_image_level_info.m_height;
+									transcoding->textureCI->depth = 1;
+								}
+							}
+						}
+					}
+					transcoding->textureCI->format = clientrender::Texture::Format::RGBA8;
+
+					if (transcoding->textureCI->images->size() != 0)
+					{
+						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
+					}
+					else
+					{
+						TELEPORT_WARN("Texture \"{0}\" failed to transcode, but was a valid ktx2 file.", transcoding->name);
+					
+					}
+				}
+			}
 		}
 	}
 }

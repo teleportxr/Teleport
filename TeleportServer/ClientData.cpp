@@ -1,4 +1,5 @@
 #include "TeleportServer/ClientData.h"
+#include "TeleportCore/Profiling.h" 
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/ClientManager.h"
 using namespace teleport;
@@ -164,7 +165,7 @@ void ClientData::reparentNode(avs::uid nodeID)
 
 void ClientData::tick(float deltaTime)
 {
-
+	TELEPORT_PROFILE_AUTOZONE;
 	std::set<uint64_t> conf = clientMessaging->GetAndResetConfirmationsReceived();
 	for (auto& nodeState : orthogonalNodeStates)
 	{

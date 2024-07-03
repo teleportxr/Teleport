@@ -1169,6 +1169,11 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	const uint64_t MAX_TEXTURE_SIZE = 4096;
 	const uint64_t MAX_TEXTURE_BYTES = 16;
 
+	// compression, or really the wrapper format, e.g. .ktx2, .basis, array-of-png's:
+	texture.compression = static_cast<avs::TextureCompression>(NextUint32);
+	if (texture.compression > avs::TextureCompression::KTX)
+		return avs::Result::Failed;
+
 	texture.cubemap= NextByte!=0;
 	
 	texture.width = NextUint32;
@@ -1188,9 +1193,6 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	texture.format = static_cast<avs::TextureFormat>(NextUint32);
 	if(texture.format == avs::TextureFormat::INVALID)
 		texture.format = avs::TextureFormat::G8;
-	texture.compression = static_cast<avs::TextureCompression>(NextUint32);
-	if (texture.compression > avs::TextureCompression::KTX)
-		return avs::Result::Failed;
 	texture.valueScale = NextFloat;
 	if (_isnanf(texture.valueScale))
 		return avs::Result::Failed;

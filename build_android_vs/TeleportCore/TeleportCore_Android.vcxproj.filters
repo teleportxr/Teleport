@@ -16,6 +16,9 @@
     <ClCompile Include="..\..\TeleportCore\URLParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\TeleportCore\DecodeMesh.cpp" />
+    <ClCompile Include="..\..\TeleportCore\Time.cpp" />
+    <ClCompile Include="..\..\TeleportCore\Test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h">
@@ -39,6 +42,14 @@
     <ClInclude Include="..\..\TeleportCore\URLParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\TeleportCore\DecodeMesh.h" />
+    <ClInclude Include="..\..\TeleportCore\Logging.h" />
+    <ClInclude Include="..\..\TeleportCore\Profiling.h" />
+    <ClInclude Include="..\..\TeleportCore\Protocol.h" />
+    <ClInclude Include="..\..\TeleportCore\ResourceStreams.h" />
+    <ClInclude Include="..\..\TeleportCore\StringFunctions.h" />
+    <ClInclude Include="..\..\TeleportCore\Threads.h" />
+    <ClInclude Include="..\..\TeleportCore\Time.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">

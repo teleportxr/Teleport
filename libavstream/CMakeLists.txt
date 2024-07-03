@@ -361,6 +361,10 @@ if(LIBAV_USE_EFP)
 	set(efp_include_paths ${efp_SOURCE_DIR} ${efp_BINARY_DIR})
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
+if(TELEPORT_TRACY_PROFILING)
+	target_include_directories(libavstream PUBLIC ${CMAKE_BINARY_DIR}/_deps/tracy-src/public)
+	target_compile_definitions(libavstream PRIVATE TRACY_ENABLE=1 )
+endif()
 
 # don't want curl tests.
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)

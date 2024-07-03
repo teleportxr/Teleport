@@ -6,6 +6,7 @@
 #include "TeleportServer/ClientManager.h"    
 #include "TeleportCore/TeleportUtility.h" 
 #include "TeleportCore/Logging.h" 
+#include "TeleportCore/Profiling.h" 
 #include "UnityPlugin/PluginMain.h"
 #include "UnityPlugin/PluginClient.h"
 #include <rtc/websocket.hpp>
@@ -310,7 +311,7 @@ void SignalingService::tick()
 		TELEPORT_INTERNAL_CERR("Attempted to call tick on client discovery service without initalizing!",0);
 		return;
 	}
-
+	TELEPORT_PROFILE_AUTOZONE;
 	avs::uid clientID = 0; //Newly received ID.
 
 	//Retrieve all packets received since last call, and add any new clients.

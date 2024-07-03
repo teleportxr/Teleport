@@ -13,6 +13,7 @@ typedef vec2 vec2_packed;
 typedef vec3 vec3_packed;
 typedef vec4 vec4_packed;
 #else
+#pragma pack(1)
 struct vec2_packed
 {
 	float x, y;
@@ -146,7 +147,7 @@ namespace teleport
 			NodeStatus,
 			ReceivedResources,
 			ControllerPoses,
-			ResourceRequest,
+			ResourceLost,		//! Inform the server that client "lost" a previously confirmed resource, e.g. due to some bug or error. Should *rarely* be used.
 			InputStates,
 			InputEvents,
 			DisplayInfo,
@@ -295,7 +296,7 @@ namespace teleport
 			NONE = 0,
 			TEXTURE,
 			VIDEO
-		};
+		} AVS_PACKED;
 		//! Setup for dynamically-lit objects on the client.
 		struct ClientDynamicLighting
 		{
@@ -307,9 +308,10 @@ namespace teleport
 			int2 lightPos = {0, 0};
 			int32_t lightCubemapSize = 0;
 			avs::uid specular_cubemap_texture_uid = 0;
-			avs::uid diffuse_cubemap_texture_uid = 0;
-			LightingMode lightingMode = LightingMode::TEXTURE;
+			avs::uid diffuse_cubemap_texture_uid = 0;	//14*4=56
+			LightingMode lightingMode = LightingMode::TEXTURE;// 57
 		} AVS_PACKED; // 57 bytes
+		static_assert (sizeof(ClientDynamicLighting) == 57, "ClientDynamicLighting Size is not correct");
 		//! The setup information sent by the server on connection to a given client.
 		struct SetupCommand : public Command
 		{
@@ -318,24 +320,25 @@ namespace teleport
 			static size_t getCommandSize()
 			{
 				return sizeof(SetupCommand);
-			}
-			uint32_t			debug_stream = 0;									//!< 13
-			uint32_t			debug_network_packets = 0;							//!< 21
-			int32_t				requiredLatencyMs = 0;								//!< 25
-			uint32_t			idle_connection_timeout = 5000;						//!< 29
-			uint64_t			session_id = 0;										//!< The server's session id changes when the server session changes.	37 bytes
-			avs::VideoConfig	video_config;										//!< Video setup structure. 41+89=130 bytes
-			float				draw_distance = 0.0f;								//!< Maximum distance in metres to render locally. 134
-			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< The axis standard that the server uses, may be different from the client's. 147
-			uint8_t				audio_input_enabled = 0;							//!< 148 Server accepts audio stream from client.
-			bool				using_ssl = true;									//!< 147 Not in use, for later.
-			int64_t				startTimestamp_utc_unix_us = 0;						//!< 157 UTC Unix Timestamp in microseconds when the server session began.
-			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
-			BackgroundMode		backgroundMode;										//!< 158 Whether the server supplies a background, and of which type.
-			vec4_packed			backgroundColour;									//!< 174 If the background is of the COLOUR type, which colour to use.
-			ClientDynamicLighting clientDynamicLighting;							//!< Setup for dynamic object lighting. 174+57=231 bytes
+			}																		//   Command=1
+			uint32_t			debug_stream = 0;									//!< 1+4=5
+			uint32_t			debug_network_packets = 0;							//!< 5+4=9
+			int32_t				requiredLatencyMs = 0;								//!< 9+4=13
+			uint32_t			idle_connection_timeout = 5000;						//!< 13+4=17
+			uint64_t			session_id = 0;										//!< 17+8=25	The server's session id changes when the server session changes.	37 bytes
+			avs::VideoConfig	video_config;										//!< 25+89=114	Video setup structure. 41+89=130 bytes
+			float				draw_distance = 0.0f;								//!< 114+4=118	Maximum distance in metres to render locally. 134
+			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< 118+1=119	The axis standard that the server uses, may be different from the client's. 147
+			uint8_t				audio_input_enabled = 0;							//!< 119+1=120	Server accepts audio stream from client.
+			bool				using_ssl = true;									//!< 120+1=121	Not in use, for later.
+			int64_t				startTimestamp_utc_unix_us = 0;						//!< 121+8=129	UTC Unix Timestamp in microseconds when the server session began.
+			// TODO: replace this with a background Material, which MAY contain video, te			xture and/or plain colours.
+			BackgroundMode		backgroundMode;										//!< 129+1=130	Whether the server supplies a background, and of which type.
+			vec4_packed			backgroundColour;									//!< 130+16=146 If the background is of the COLOUR type, which colour to use.
+			ClientDynamicLighting clientDynamicLighting;							//!<			Setup for dynamic object lighting. 174+57=231 bytes
 			avs::uid			backgroundTexture=0;
 		} AVS_PACKED;
+		static_assert (sizeof(SetupCommand) == 211, "SetupCommand Size is not correct");
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
 		struct SetupLightingCommand : public Command
@@ -698,13 +701,13 @@ namespace teleport
 		} AVS_PACKED;
 
 		//! Message info struct containing a request for resources, to be followed by the list of uid's.
-		struct ResourceRequestMessage : public ClientMessage
+		struct ResourceLostMessage : public ClientMessage
 		{
-			//! Poses of the  controllers.
+			//! Number of resource uid's to follow the structure body.
 			uint16_t resourceCount = 0;
 
-			ResourceRequestMessage()
-				:ClientMessage(ClientMessagePayloadType::ResourceRequest)
+			ResourceLostMessage()
+				:ClientMessage(ClientMessagePayloadType::ResourceLost)
 			{}
 		} AVS_PACKED;
 
@@ -772,4 +775,6 @@ namespace teleport
 }
 #ifdef _MSC_VER
 #pragma pack(pop)
+#else
+#pragma pack()
 #endif

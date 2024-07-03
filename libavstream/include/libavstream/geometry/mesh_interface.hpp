@@ -818,8 +818,6 @@ namespace avs
 
 		//Flags the resource as being sent to this user; the client may send a request response if it didn't actually receive the resource.
 		virtual void encodedResource(uid resourceID) = 0;
-		//Flags the resource as needing to be sent to this user.
-		virtual void requestResource(uid resourceID) = 0;
 		//Flags the resources as having been received; prevents the resource being resent after a set amount of time.
 		virtual void confirmResource(uid resourceID) = 0;
 
@@ -834,7 +832,7 @@ namespace avs
 	{
 	public:
 		virtual ~GeometryEncoderBackendInterface() = default;
-		virtual Result encode(uint64_t timestamp, GeometryRequesterBackendInterface* requester) = 0;
+		virtual Result encode(uint64_t timestamp) = 0;
 		virtual Result mapOutputBuffer(void*& bufferPtr, size_t& bufferSizeInBytes) = 0;
 		virtual Result unmapOutputBuffer() = 0;
 	};

@@ -4,6 +4,7 @@
 #include "libavstream/network/webrtc_networksink.h"
 #include "network/webrtc_common.h"
 #include "network/packetformat.hpp"
+#include "profiling.h"
 
 #include <iostream>
 #include <cmath>
@@ -328,8 +329,10 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			return Result::Node_Incompatible;
 		}
 	};
+	TELEPORT_PROFILE_AUTOZONE;
 	for (uint32_t i = 0; i <m_streams.size(); ++i)
 	{
+		TELEPORT_PROFILE_ZONE_NUM(i);
 		auto inp = m_data->streamIndexToInputIndex.find(i);
 		if (inp == m_data->streamIndexToInputIndex.end())
 			continue;

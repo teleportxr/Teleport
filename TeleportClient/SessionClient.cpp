@@ -15,6 +15,8 @@
 #include "Config.h"
 #include "TabContext.h"
 
+static_assert (sizeof(teleport::core::ClientDynamicLighting) == 57, "ClientDynamicLighting Size is not correct");
+
 using namespace teleport;
 using namespace client;
 using namespace clientrender;
@@ -211,7 +213,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 					SendNodePoses(headPose,nodePoses);
 				}
 				SendInput(input);
-				SendResourceRequests();
 				SendReceivedResources();
 				SendNodeUpdates();
 				if(requestKeyframe)
@@ -223,24 +224,6 @@ void SessionClient::Frame(const avs::DisplayInfo &displayInfo
 
 	mTimeSinceLastServerComm += deltaTime;
 
-
-	//Append resource requests to the request list again, if it has been too long since we sent the request.
-	for(auto sentResource : mSentResourceRequests)
-	{
-		double timeSinceSent = time - sentResource.second;
-		if(timeSinceSent > RESOURCE_REQUEST_RESEND_TIME)
-		{
-//			TELEPORT_COUT << "Requesting resource " << sentResource.first << " again, as it has been " << timeSinceSent << " seconds since we sent the last request." << std::endl;
-			mQueuedResourceRequests.push_back(sentResource.first);
-			if (mQueuedResourceRequests.size() > 8192)
-			{
-				//DebugBreak();
-				TELEPORT_WARN("Too many resource requests stacking up.");
-				mQueuedResourceRequests.clear();
-				break;
-			}
-		}
-	}
 	// TODO: These pipelines could be on different threads,
 	messageToServerPipeline.process();
 }
@@ -506,74 +489,6 @@ void SessionClient::SendInput(const core::Input& input)
 	}
 }
 
-void SessionClient::SendResourceRequests()
-{
-	auto &clientServerState = GetClientServerState();
-	std::vector<avs::uid> resourceRequests = geometryCache->GetResourceRequests();
-	if(resourceRequests.size()>8192)
-	{
-		DebugBreak();
-	}
-	geometryCache->ClearResourceRequests();
-	if (mQueuedResourceRequests.size() > 8192)
-	{
-		DebugBreak();
-	}
-	//Append GeometryTargetBackendInterface's resource requests to SessionClient's resource requests.
-	mQueuedResourceRequests.reserve(mQueuedResourceRequests.size()+resourceRequests.size());
-	for(size_t i=0;i<resourceRequests.size();i++)
-	{
-		avs::uid r=resourceRequests[i];
-		if(std::find(mQueuedResourceRequests.begin(), mQueuedResourceRequests.end(), r) == mQueuedResourceRequests.end())
-		{
-			mQueuedResourceRequests.push_back(r);
-		}
-	}
-	if (mQueuedResourceRequests.size() > 8192)
-	{
-		DebugBreak();
-	}
-
-	if(mQueuedResourceRequests.size() != 0)
-	{
-		for(int i=0;i<mQueuedResourceRequests.size();i++)
-		{
-			for(int j=i+1;j<mQueuedResourceRequests.size();j++)
-			{
-				if(mQueuedResourceRequests[i]==mQueuedResourceRequests[j])
-				{
-					TELEPORT_INTERNAL_CERR("Duplicate resource request {0}", mQueuedResourceRequests[i]);
-				}
-			}
-		}
-		resourceRequests.clear();
-		teleport::core::ResourceRequestMessage resourceRequestMessage;
-		resourceRequestMessage.resourceCount = (uint16_t)mQueuedResourceRequests.size();
-		if ((size_t)resourceRequestMessage.resourceCount != mQueuedResourceRequests.size())
-		{
-			TELEPORT_INTERNAL_CERR("Bad resourceCount {0}", mQueuedResourceRequests.size());
-			return;
-		}
-		std::vector<uint8_t> packet (sizeof(resourceRequestMessage));
-		
-		memcpy(packet.data() , &resourceRequestMessage, sizeof(resourceRequestMessage));
-
-		size_t totalSize = sizeof(resourceRequestMessage) + sizeof(avs::uid) * resourceRequestMessage.resourceCount;
-		packet.resize( totalSize);
-		memcpy(packet.data() + sizeof(resourceRequestMessage), mQueuedResourceRequests.data(), sizeof(avs::uid)*resourceRequestMessage.resourceCount);
-#ifndef FIX_BROKEN
-		SendMessageToServer(packet.data(), totalSize);
-#endif
-		//Store sent resource requests, so we can resend them if it has been too long since the request.
-		for(avs::uid id : mQueuedResourceRequests)
-		{
-			mSentResourceRequests[id] = time;
-//			TELEPORT_INTERNAL_COUT("SessionClient::SendResourceRequests Requested {0}",id);
-		}
-		mQueuedResourceRequests.clear();
-	}
-}
-
 void SessionClient::SendReceivedResources()
 {
 	std::vector<avs::uid> receivedResources = geometryCache->GetReceivedResources();
@@ -581,16 +496,6 @@ void SessionClient::SendReceivedResources()
 
 	if(receivedResources.size() != 0)
 	{
-		//Stop tracking resource requests we have now received.
-		for(avs::uid id : receivedResources)
-		{
-			auto sentRequestIt = mSentResourceRequests.find(id);
-			if(sentRequestIt != mSentResourceRequests.end())
-			{
-//				TELEPORT_INTERNAL_COUT("mSentResourceRequests Received {0}", id);
-				mSentResourceRequests.erase(sentRequestIt);
-			}
-		}
 
 		teleport::core::ReceivedResourcesMessage message(receivedResources.size());
 
@@ -702,26 +607,27 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &
 void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 {
 	TELEPORT_CERR<<"ReceiveSetupCommand "<<std::endl;
-	if(connectionStatus != client::ConnectionStatus::AWAITING_SETUP)
+	if(connectionStatus == client::ConnectionStatus::AWAITING_SETUP||setupCommand.session_id!= lastSessionId)
 	{
-		TELEPORT_INTERNAL_CERR("But not in AWAITING_SETUP state.\n");
-		return;
+		size_t commandSize= sizeof(teleport::core::SetupCommand);
+		if(packet.size()!=commandSize)
+		{
+			TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet.size());
+			return;
+		}
+		const teleport::core::SetupCommand *s=reinterpret_cast<const teleport::core::SetupCommand*>(packet.data());
+		ApplySetup(*s);
+		if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
+			return;
+		unreliableToServerEncoder.configure(&messageToServerStack,"Unreliable Message Encoder");
+		messageToServerPipeline.link({ &unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue });
+		if(!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand))
+			return;
+		// Set it running.
+		clientPipeline.pipeline.processAsync();
 	}
-	size_t commandSize= sizeof(teleport::core::SetupCommand);
-	if(packet.size()!=commandSize)
-	{
-		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}",commandSize,packet.size());
-		return;
-	}
-	const teleport::core::SetupCommand *s=reinterpret_cast<const teleport::core::SetupCommand*>(packet.data());
-	ApplySetup(*s);
 	teleport::core::Handshake handshake;
-	if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
-		return;
-	if(!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand, handshake))
-		return;
-	unreliableToServerEncoder.configure(&messageToServerStack,"Unreliable Message Encoder");
-	messageToServerPipeline.link({ &unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue });
+	mCommandInterface->GetHandshake( handshake);
 	std::vector<avs::uid> resourceIDs;
 	if(setupCommand.session_id == lastSessionId)
 	{
@@ -732,15 +638,13 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 	{
 		mCommandInterface->ClearGeometryResources();
 	}
-
-	connectionStatus = client::ConnectionStatus::HANDSHAKING;
+	if(connectionStatus == client::ConnectionStatus::AWAITING_SETUP)
+		connectionStatus = client::ConnectionStatus::HANDSHAKING;
 	SendHandshake(handshake, resourceIDs);
 	lastSessionId = setupCommand.session_id;
 	if(tabContext)
 		tabContext->ConnectionComplete(server_uid);
 
-	// Set it running.
-	clientPipeline.pipeline.processAsync();
 }
 
 void SessionClient::ApplySetup(const teleport::core::SetupCommand &s)
@@ -820,16 +724,6 @@ void SessionClient::ReceiveNodeVisibilityUpdate(const std::vector<uint8_t> &pack
 			mReceivedNodes.push_back(node_uid);
 		}
 	}
-	if (mQueuedResourceRequests.size() > 8192)
-	{
-		DebugBreak();
-	}
-	mQueuedResourceRequests.insert(mQueuedResourceRequests.end(), missingNodes.begin(), missingNodes.end());
-	if (mQueuedResourceRequests.size() > 8192)
-	{
-		DebugBreak();
-	}
-
 	//Tell renderer to hide nodes that have left bounds.
 	for(avs::uid node_uid : leftNodes)
 	{

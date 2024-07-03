@@ -784,6 +784,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		if (!renderState.openXR->IsPassthroughActive())
 		{
 			GetInstanceRenderer(0)->ApplyCameraMatrices(deviceContext);
+			double timeElapsed_s = double( previousTimestampUs.count()) / 1000000.0; // ms to seconds
+			int64_t timeElapsed_u=(int64_t(timeElapsed_s)/1024)*1024;
+			timeElapsed_s-=double(timeElapsed_u);
+			renderState.cubemapConstants.time_seconds = float(timeElapsed_s);
+			deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
 			renderPlatform->DrawQuad(deviceContext);
 			renderState.cubemapClearEffect->Unapply(deviceContext);

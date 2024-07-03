@@ -14,19 +14,30 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\TeleportCore\DecodeMesh.cpp" />
     <ClCompile Include="..\..\TeleportCore\ErrorHandling.cpp" />
     <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp" />
     <ClCompile Include="..\..\TeleportCore\Input.cpp" />
     <ClCompile Include="..\..\TeleportCore\TeleportCore.cpp" />
+    <ClCompile Include="..\..\TeleportCore\Test.cpp" />
+    <ClCompile Include="..\..\TeleportCore\Time.cpp" />
     <ClCompile Include="..\..\TeleportCore\URLParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\CommonNetworking.h" />
+    <ClInclude Include="..\..\TeleportCore\DecodeMesh.h" />
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h" />
     <ClInclude Include="..\..\TeleportCore\FontAtlas.h" />
     <ClInclude Include="..\..\TeleportCore\Input.h" />
+    <ClInclude Include="..\..\TeleportCore\Logging.h" />
+    <ClInclude Include="..\..\TeleportCore\Profiling.h" />
+    <ClInclude Include="..\..\TeleportCore\Protocol.h" />
+    <ClInclude Include="..\..\TeleportCore\ResourceStreams.h" />
+    <ClInclude Include="..\..\TeleportCore\StringFunctions.h" />
     <ClInclude Include="..\..\TeleportCore\TeleportUtility.h" />
     <ClInclude Include="..\..\TeleportCore\TextCanvas.h" />
+    <ClInclude Include="..\..\TeleportCore\Threads.h" />
+    <ClInclude Include="..\..\TeleportCore\Time.h" />
     <ClInclude Include="..\..\TeleportCore\URLParser.h" />
   </ItemGroup>
   <ItemGroup>
@@ -79,14 +90,14 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include;../../thirdparty/draco/src;../../thirdparty/draco/third_party/eigen;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/ndk-projects</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include;../../thirdparty/draco/src;../../thirdparty/draco/third_party/eigen;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/ndk-projects</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>

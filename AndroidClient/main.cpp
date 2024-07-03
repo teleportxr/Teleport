@@ -173,7 +173,7 @@ void android_main(struct android_app* app)
 	teleport::android::AndroidRenderer *androidRenderer=new teleport::android::AndroidRenderer(gui);
 	//if(config.recent_server_urls.size())
 	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
-	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderView, androidRenderer, std::placeholders::_1);
+	platform::crossplatform::RenderDelegate renderDelegate = std::bind(&clientrender::Renderer::RenderVRView, androidRenderer, std::placeholders::_1);
 	platform::crossplatform::RenderDelegate overlayDelegate = std::bind(&clientrender::Renderer::DrawOSD, androidRenderer, std::placeholders::_1);
 
 	openXR.InitInstance();
@@ -208,6 +208,11 @@ void android_main(struct android_app* app)
 	platform::crossplatform::ResourceGroupLayout perFrameLayout;
 	perFrameLayout.UseConstantBufferSlot(0);
 	perFrameLayout.UseConstantBufferSlot(1);
+	perFrameLayout.UseConstantBufferSlot(10);	// Scene constants
+	perFrameLayout.UseSamplerSlot(4);
+	perFrameLayout.UseSamplerSlot(6);
+	perFrameLayout.UseSamplerSlot(9);
+	perFrameLayout.UseSamplerSlot(11);
 	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
 	// Mark texture slots 19 to 22 as being in resource group 1 (few per-frame)
 	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;

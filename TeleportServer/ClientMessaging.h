@@ -255,7 +255,6 @@ namespace teleport
 			void receiveInputStates(const std::vector<uint8_t> &bin);
 			void receiveInputEvents(const std::vector<uint8_t> &bin); 
 			void receiveDisplayInfo(const std::vector<uint8_t> &bin);
-			void receiveResourceRequest(const std::vector<uint8_t> &bin);
 			void receiveKeyframeRequest(const std::vector<uint8_t> &bin);
 			void receiveClientMessage(const std::vector<uint8_t> &bin);
 			void receiveStreamingControl(const std::vector<uint8_t> &bin);

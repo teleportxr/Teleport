@@ -7,6 +7,7 @@ typedef unsigned int THREAD_TYPE;
 #include <processthreadsapi.h>
 #include "ErrorHandling.h"
 #include "StringFunctions.h"
+#include "Profiling.h"
 
 		THREAD_TYPE GetThreadId()
 		{
@@ -53,6 +54,9 @@ inline void SetThisThreadName(const char *name)
     THREADNAME_INFO info;
     info.szName = name;  
     info.dwThreadID = ThreadId;
+#if TRACY_ENABLE
+	tracy::SetThreadName(name);
+#endif
 #pragma warning(push)  
 #pragma warning(disable: 6320 6322)  
     __try

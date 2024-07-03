@@ -159,7 +159,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../../../../firstparty/Platform/External;../../../../firstparty;../../../../firstparty\Platform\Android;../../../../firstparty\Platform\External\stb;../../../../firstparty\Platform\External\fmt/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SIMUL_INTERNAL_CHECKS=1;</PreprocessorDefinitions>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

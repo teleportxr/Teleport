@@ -5,6 +5,7 @@
 
 #include "common_p.hpp"
 #include "node_p.hpp"
+#include "profiling.h"
 #include <libavstream/genericdecoder.h>
 
 namespace avs
@@ -65,6 +66,7 @@ Result GenericDecoder::deconfigure()
 
 Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (!m_configured)
 	{
 		return Result::Node_NotConfigured;

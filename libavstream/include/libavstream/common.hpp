@@ -282,9 +282,9 @@ namespace avs
 	//! Information on the resolution of a client's display.
 	struct DisplayInfo
 	{
-		uint32_t width;		//!< Width of the display.
-		uint32_t height;	//!< Height of the display.
-		float framerate;	//!< Measured recent framerate.
+		uint32_t width=0;		//!< Width of the display.
+		uint32_t height=0;		//!< Height of the display.
+		float framerate=0.f;	//!< Measured recent framerate.
 	} AVS_PACKED;
 	
 	//! Information on the configuration of a video stream.

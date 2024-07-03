@@ -70,7 +70,7 @@
       <ShowProgress>true</ShowProgress>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;../ClientRender;../_deps/magic_enum_src/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;../ClientRender;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_STD_FILESYSTEM=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
     <PreBuildEvent>
@@ -93,7 +93,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ShowProgress>true</ShowProgress>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;../ClientRender;../_deps/magic_enum_src/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;../ClientRender;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;PLATFORM_STD_FILESYSTEM=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

@@ -337,8 +337,7 @@ Result GeometryEncoder::Private::process(uint64_t timestamp, GeometrySourceInter
 		}
 	}
 	// Next tell the backend encoder to actually encode. It will store the data for later retrieval.
-	if (Result result = m_backend->encode(timestamp, 
-		geometrySourceInterface->getGeometryRequesterBackendInterface()); !result)
+	if (Result result = m_backend->encode(timestamp); !result)
 	{
 		return result;
 	}

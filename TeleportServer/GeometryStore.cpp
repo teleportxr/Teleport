@@ -439,6 +439,12 @@ std::vector<avs::uid> GeometryStore::getTextureIDs() const
 avs::Texture* GeometryStore::getTexture(avs::uid textureID)
 {
 	ExtractedTexture* textureData = getResource(textures, textureID);
+	if(!textureData||!textureData->texture.compressedData.size())
+	{
+		string path=UidToPath(textureID);
+		loadResourceFromPath( path,cachePath + "/",textures[textureID]);
+		textureData = getResource(textures, textureID);
+	}
 	return (textureData ? &textureData->texture : nullptr);
 }
 
@@ -1659,8 +1665,8 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 			verifyFile>>verifyResource2;
 			verifyFile.close();
 			resource.Verify(verifyResource2);
-	if (oldFileExists)
-		filesystem::remove(file_name + ".bak");
+			if (oldFileExists)
+				filesystem::remove(file_name + ".bak");
 			return false;
 		}
 	}
@@ -1730,13 +1736,42 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 	path_to_uid[p] = newID;
 	return newID;
 }
+template <typename ExtractedResource>
+bool GeometryStore::loadResourceFromPath(const std::string &resource_path, const std::string &filepath_root, ExtractedResource &extractedResource)
+{
+	//Load resources if the file exists.
+	std::filesystem::path fspath(filepath_root+resource_path);
+	std::filesystem::path parent_path=fspath.parent_path();
+	string filename=fspath.filename().generic_string();
+	if(!std::filesystem::exists(parent_path))
+		return false;
+	std::string search_str = ExtractedResource::fileExtension();
+    // Use find function to find 1st position of delimiter.
+	int end = search_str.find(';'); 
+    while (end != -1)
+	{ // Loop until no delimiter is left in the string.
+		if(end>0)
+		{
+			string ext= search_str.substr(1, end-1);
+			string full_filename=parent_path.generic_string()+"/"s+filename+"."s+ext;
+			if (filesystem::exists(full_filename))
+			{
+				if(loadResourceBinary(full_filename, filepath_root, extractedResource))
+				return true;
+			}
+		}
+        search_str.erase(search_str.begin(), search_str.begin() + end + 1);
+        end = search_str.find(';');
+    }
+	return false;
+}
 template<typename ExtractedResource> bool GeometryStore::loadResourceBinary(const std::string file_name,const std::string &path_root, ExtractedResource &resource)
 {
 	if(file_name.length()>240)
 	{
 		return false;
 	}
-	resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
+	core::resource_ifstream resourceFile(file_name.c_str(), std::bind(&GeometryStore::PathToUid, this, std::placeholders::_1));
 	//auto write_time= std::filesystem::last_write_time(file_name);
 	try
 	{
@@ -1763,10 +1798,10 @@ template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(con
 	return true;
 }
 
-template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(const std::string path, std::map<avs::uid, ExtractedResource>& resourceMap)
+template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(const std::string filepath_root, std::map<avs::uid, ExtractedResource>& resourceMap)
 {
 	//Load resources if the file exists.
-	const std::filesystem::path fspath{ path.c_str() };
+	const std::filesystem::path fspath{ filepath_root.c_str() };
 	std::filesystem::create_directories(fspath);
 	std::string search_str = ExtractedResource::fileExtension();
 	std::map<avs::uid, std::filesystem::file_time_type> timestamps;
@@ -1778,7 +1813,7 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 			std::string file_name = dir_entry.path().string();
 			if (filesystem::exists(file_name))
 			{
-				loadResourceBinary(file_name, path, resourceMap);
+				loadResourceBinary(file_name, filepath_root, resourceMap);
 			}
 		}
 	}

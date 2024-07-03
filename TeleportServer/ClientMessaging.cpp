@@ -5,11 +5,13 @@
 
 #include "libavstream/common_input.h"
 #include "TeleportCore/CommonNetworking.h"
+#include "TeleportCore/Profiling.h" 
 
 #include "SignalingService.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "ClientManager.h"
 #include "TeleportCore/StringFunctions.h"
+#include "TeleportCore/Logging.h"
 
 using namespace teleport;
 using namespace server;
@@ -90,6 +92,7 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 
 void ClientMessaging::tick(float deltaTime)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	std::string msg;
 	if ( clientNetworkContext.NetworkPipeline.getNextStreamingControlMessage(msg))
 	{
@@ -512,6 +515,8 @@ int64_t ClientMessaging::GetServerTimeUs() const
 }
 bool ClientMessaging::setOrigin( avs::uid originNode)
 {
+	if(originNode==0)
+		return false;
 	currentOriginState.valid_counter++;
 	geometryStreamingService.setOriginNode(originNode);
 	teleport::core::SetStageSpaceOriginNodeCommand setp;
@@ -688,29 +693,6 @@ void ClientMessaging::receiveAcknowledgement(const std::vector<uint8_t> &packet)
 	}
 }
 
-void ClientMessaging::receiveResourceRequest(const std::vector<uint8_t> &packet)
-{
-	core::ResourceRequestMessage msg;
-	if (packet.size() <sizeof(core::ResourceRequestMessage))
-	{
-		TELEPORT_COUT << "Session: Received malformed ResourceRequest packet of length: " << packet.size() << "\n";
-		return;
-	}
-	memcpy(&msg, packet.data(), sizeof(msg));
-	if (packet.size() < sizeof(core::ResourceRequestMessage)+msg.resourceCount*sizeof(avs::uid))
-	{
-		TELEPORT_COUT << "Session: Received malformed ResourceRequest packet of length: " << packet.size() << "\n";
-		return;
-	}
-	std::vector<avs::uid> resourceRequests(msg.resourceCount);
-	memcpy(resourceRequests.data(), packet.data() + sizeof(msg), sizeof(avs::uid) * msg.resourceCount);
-
-	for (avs::uid id : resourceRequests)
-	{
-		geometryStreamingService.requestResource(id);
-	}
-}
-
 void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t>& packet)
 {
 	if (packet.size() < sizeof(core::KeyframeRequestMessage))
@@ -844,8 +826,9 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 			}
 		}
 		break;
-		case teleport::core::ClientMessagePayloadType::ResourceRequest:
-			receiveResourceRequest(packet);
+		case teleport::core::ClientMessagePayloadType::ResourceLost:
+			//receiveResourceLost(packet);
+			TELEPORT_WARN("Received ResourceLost, but this is not yet supported.");
 			break;
 		case teleport::core::ClientMessagePayloadType::InputStates:
 			receiveInputStates(packet);

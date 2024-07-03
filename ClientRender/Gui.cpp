@@ -1484,11 +1484,12 @@ void Gui::Textures(const ResourceManager<avs::uid, clientrender::Texture> &textu
 void Gui::Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &skeletonManager)
 {
 	ImGui::BeginGroup();
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 	const auto &ids = skeletonManager.GetAllIDs();
 	for (auto id : ids)
 	{
 		const auto &skeleton = skeletonManager.Get(id);
-		IMGUITREENODEEX(fmt::format("{0}: {1} ", id, skeleton->name.c_str()).c_str(),0,nullptr);
+		IMGUITREENODEEX("##skk", flags, " {0}: {1}", id, skeleton->name.c_str());
 		if (ImGui::IsItemClicked())
 		{
 			if (!show_inspector)
@@ -1877,31 +1878,6 @@ void Gui::GeometryOSD()
 			LinePrint(txt.c_str());
 		}
 	}
-	const auto &req = geometryCache->GetResourceRequests();
-	LinePrint(fmt::format("{0} Requests", req.size()).c_str());
-	if (req.size())
-	{
-		std::string lst;
-		for (const auto &r : req)
-		{
-			lst += fmt::format("%d ", r);
-		}
-		LinePrint(lst.c_str());
-	}
-	/*	if(sessionClient)
-		{
-			const auto &sent_req=sessionClient->GetSentResourceRequests();
-			LinePrint(fmt::format("{0}: {1} Requests Sent",sessionClient->GetServerIP(),sent_req.size()).c_str());
-			if(sent_req.size())
-			{
-				std::string lst;
-				for(const auto &r:sent_req)
-				{
-					lst+=fmt::format("{0} ",r.first);
-				}
-				LinePrint(lst.c_str());
-			}
-		}*/
 }
 
 void Gui::BeginTabBar(const char *txt)

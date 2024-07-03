@@ -173,10 +173,14 @@ bool teleport::server::ApplyBasisCompression(ExtractedTexture &extractedTexture,
 				basisTex= basisCompressor.get_output_basis_file();
 				avsTexture.compressedData.resize(basisCompressor.get_basis_file_size());
 				assert(basisCompressor.get_basis_file_size()==basisTex.size());
+				extractedTexture.texture.compression=avs::TextureCompression::BASIS_COMPRESSED;
+				compressionData->textureCompression=avs::TextureCompression::BASIS_COMPRESSED;
 			}
 			else if(filePath.extension().generic_string()==".ktx2")
 			{
 				basisTex= basisCompressor.get_output_ktx2_file();
+				extractedTexture.texture.compression=avs::TextureCompression::KTX;
+				compressionData->textureCompression=avs::TextureCompression::KTX;
 			}
 			else
 				return false;
@@ -196,7 +200,7 @@ bool teleport::server::ApplyBasisCompression(ExtractedTexture &extractedTexture,
 	}
 	delete basisCompressorParams.m_pJob_pool;
 	basisCompressorParams.m_pJob_pool = nullptr;
-	geometryStore.saveResourceBinary(file_name, extractedTexture);
+	//geometryStore.saveResourceBinary(file_name, extractedTexture);
 	
 	return true;
 }

@@ -1497,7 +1497,7 @@ void InstanceRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSiz
 }
 
 
-std::vector<uid> InstanceRenderer::GetGeometryResources()
+std::vector<avs::uid> InstanceRenderer::GetGeometryResources()
 {
 	return geometryCache->GetAllResourceIDs();
 }
@@ -1524,7 +1524,7 @@ void InstanceRenderer::SetOrigin(unsigned long long ctr,avs::uid origin_uid)
 	receivedInitialPos=ctr;
 }
 
-bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const teleport::core::SetupCommand &setupCommand,teleport::core::Handshake &handshake)
+bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const teleport::core::SetupCommand &setupCommand)
 {
 	videoPosDecoded=false;
 
@@ -1647,10 +1647,13 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		// Audio Input
 		if (setupCommand.audio_input_enabled)
 		{
+			int framerate = 60;
+			uint32_t udpBufferSize = static_cast<uint32_t>(clientPipeline.source->getSystemBufferSize());
+			int maxBandwidthKpS = udpBufferSize * framerate;
 			audio::NetworkSettings networkSettings =
 			{
-					static_cast<int32_t>(handshake.maxBandwidthKpS)
-					, static_cast<int32_t>(handshake.udpBufferSize)
+					static_cast<int32_t>(maxBandwidthKpS)
+					, static_cast<int32_t>(udpBufferSize)
 					, setupCommand.requiredLatencyMs
 					, (int32_t)setupCommand.idle_connection_timeout
 			};
@@ -1704,6 +1707,12 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		avs::PipelineNode::link(clientPipeline.nodePosesQueue, *(clientPipeline.source.get()));
 		avs::PipelineNode::link(clientPipeline.inputStateQueue, *(clientPipeline.source.get()));
 	}
+
+	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
+	return true;
+}
+bool InstanceRenderer::GetHandshake( teleport::core::Handshake& handshake) 
+{
 	handshake.startDisplayInfo.width = renderState.hdrFramebuffer->GetWidth();
 	handshake.startDisplayInfo.height = renderState.hdrFramebuffer->GetHeight();
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
@@ -1711,11 +1720,10 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	handshake.FOV = 90.0f;
 	handshake.isVR = false;
 	handshake.framerate = 60;
+	auto& clientPipeline = sessionClient->GetClientPipeline();
 	handshake.udpBufferSize = static_cast<uint32_t>(clientPipeline.source->getSystemBufferSize());
 	handshake.maxBandwidthKpS = handshake.udpBufferSize * handshake.framerate;
 	handshake.maxLightsSupported=10;
-
-	//java->Env->CallVoidMethod(java->ActivityObject, jni.initializeVideoStreamMethod, port, width, height, mVideoSurfaceTexture->GetJavaObject());
 	return true;
 }
 

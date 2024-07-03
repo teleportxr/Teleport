@@ -16,6 +16,8 @@
 #include "TeleportCore/Threads.h"
 #include "TeleportCore/Time.h"
 #include "UnityPlugin/PluginClient.h"
+#include "TeleportCore/Logging.h"
+#include "TeleportCore/Profiling.h"
 #ifdef _MSC_VER
 #include "VisualStudioDebugOutput.h"
 std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
@@ -23,7 +25,7 @@ std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
 #include "UnixDebugOutput.h"
 std::shared_ptr<DebugOutput> debug_buffer(true, "teleport_server.log", 128);
 #endif
-
+#pragma optimize("",off)
 namespace teleport
 {
 	namespace server
@@ -178,6 +180,7 @@ bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_uni
 	{
 		return false;
 	}
+	TELEPORT_PROFILE_AUTOZONE;
 	ClientManager::instance().unlinkedClientIDs.clear();
 	if(!start_unix_time_us)
 		start_unix_time_us=teleport::core::GetUnixTimeUs();
@@ -239,7 +242,7 @@ bool ClientManager::shutdown()
 	unlinkedClientIDs.clear();
 	return true;
 }
-#include "TeleportCore/Logging.h"
+
 void ClientManager::startStreaming(avs::uid clientID)
 {
 	auto client = GetClient(clientID);
@@ -261,6 +264,7 @@ void ClientManager::startStreaming(avs::uid clientID)
 
 void ClientManager::tick(float deltaTime)
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	// Delete client data for clients who have been lost.
 	for (avs::uid clientID : lostClients)
 	{
@@ -666,6 +670,7 @@ void ClientManager::processNetworkDataAsync()
 			receiveMessages();
 			handleStreaming();
 		}
+		std::this_thread::yield();
 	}
 }
 void ClientManager::handleStoppedClients()
@@ -692,6 +697,7 @@ void ClientManager::receiveMessages()
 
 void ClientManager::handleStreaming()
 {
+	TELEPORT_PROFILE_AUTOZONE;
 	if (!clientsMutex.try_lock())
 		return;
 	for (auto &c : clients)

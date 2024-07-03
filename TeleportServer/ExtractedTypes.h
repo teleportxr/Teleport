@@ -142,9 +142,10 @@ namespace teleport
 		};
 		struct ExtractedTexture
 		{
+		// In order of preference:
 			static const char* fileExtension()
 			{
-				return ".basis;.ktx;.ktx2;.png;.texture";
+				return ".ktx2;.basis;.ktx;.texture;.png";
 			}
 			std::string getName() const
 			{

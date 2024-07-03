@@ -34,6 +34,7 @@
     <ClCompile Include="..\..\ClientRender\AVParser\HevcParser.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\Parser.cpp" />
     <ClCompile Include="..\..\ClientRender\Camera.cpp" />
+    <ClCompile Include="..\..\ClientRender\CanvasTextRenderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Common.cpp" />
     <ClCompile Include="..\..\ClientRender\FontAtlas.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryCache.cpp" />
@@ -42,6 +43,7 @@
     <ClCompile Include="..\..\ClientRender\IndexBuffer.cpp" />
     <ClCompile Include="..\..\ClientRender\InstanceRenderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Light.cpp" />
+    <ClCompile Include="..\..\ClientRender\LinkRenderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Material.cpp" />
     <ClCompile Include="..\..\ClientRender\MemoryUtil.cpp" />
     <ClCompile Include="..\..\ClientRender\Mesh.cpp" />
@@ -79,6 +81,7 @@
     <ClInclude Include="..\..\ClientRender\AVParser\HevcTypes.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\Parser.h" />
     <ClInclude Include="..\..\ClientRender\Camera.h" />
+    <ClInclude Include="..\..\ClientRender\CanvasTextRenderer.h" />
     <ClInclude Include="..\..\ClientRender\Common.h" />
     <ClInclude Include="..\..\ClientRender\DeviceContext.h" />
     <ClInclude Include="..\..\ClientRender\FontAtlas.h" />
@@ -88,6 +91,7 @@
     <ClInclude Include="..\..\ClientRender\IndexBuffer.h" />
     <ClInclude Include="..\..\ClientRender\InstanceRenderer.h" />
     <ClInclude Include="..\..\ClientRender\Light.h" />
+    <ClInclude Include="..\..\ClientRender\LinkRenderer.h" />
     <ClInclude Include="..\..\ClientRender\Material.h" />
     <ClInclude Include="..\..\ClientRender\MemoryUtil.h" />
     <ClInclude Include="..\..\ClientRender\Mesh.h" />
@@ -161,14 +165,14 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include;.</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include;.</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
       <ErrorFormatSecurity>false</ErrorFormatSecurity>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include;../_deps/magic_enum_src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;$(VS_NdkRoot)sources/third_party/vulkan/src/include;../_deps/magic_enum_src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;DRACO_TRANSCODER_SUPPORTED=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <ErrorFormatSecurity>false</ErrorFormatSecurity>
       <Optimization>Disabled</Optimization>

@@ -5,7 +5,7 @@
 SIMUL_CONSTANT_BUFFER(CubemapConstants, 4)
 uniform mat4 serverProj;
 uniform vec3 offsetFromVideo;
-uniform int _pad1;
+uniform float time_seconds;
 uniform vec3 cameraPosition;
 uniform int _pad2;
 uniform vec4 cameraRotation;

@@ -726,8 +726,8 @@ vec3 GetNormal(vertexOutput IN,bool normal_map)
 vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,bool do_emissive,int max_lights)
 {
 	vec3 diff				=IN.wpos.xyz - viewPosition;
-	if(length(diff) > drawDistance)
-		discard;
+	//if(length(diff) > drawDistance)
+	//	discard;
 	vec3 normal				=GetNormal(IN,normal_map);
 
 	vec4 diffuseColour		=diffuseTexture.Sample(wrapSamplerState,IN.diffuseNormalUV.xy).rgba;
