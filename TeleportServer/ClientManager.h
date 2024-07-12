@@ -98,7 +98,8 @@ namespace teleport
 			virtual ~ClientManager();
 
 			static ClientManager &instance();
-			avs::uid popFirstUnlinkedClientUid();
+			avs::uid firstUnlinkedClientUid();
+			avs::uid popFirstUnlinkedClientUid(avs::uid u);
 			bool initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_us, std::string client_ip_match = "", uint32_t maxClients = 100);
 			bool shutdown();
 			void tick(float deltaTime);

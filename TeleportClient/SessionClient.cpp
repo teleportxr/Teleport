@@ -405,7 +405,7 @@ void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::
 	message.numPoses=(uint16_t)poses.size();
 	if(isnan(headPose.position.x))
 	{
-		TELEPORT_CLIENT_WARN("Trying to send NaN\n");
+		TELEPORT_WARN("Trying to send NaN\n");
 		return;
 	}
 	size_t messageSize = sizeof(teleport::core::ControllerPosesMessage)+message.numPoses*sizeof(teleport::core::NodePose);

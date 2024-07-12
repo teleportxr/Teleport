@@ -144,6 +144,7 @@ namespace teleport
 		enum class ClientMessagePayloadType : uint8_t
 		{
 			Invalid=0,
+			Handshake,
 			NodeStatus,
 			ReceivedResources,
 			ControllerPoses,
@@ -165,23 +166,6 @@ namespace teleport
 			uint16_t remotePort;	//!< The port the client should use for data.
 		} AVS_PACKED;
 
-		//! The handshake sent by a connecting client to the server on initialization.
-		//! Acknowledged by returning a avs::AcknowledgeHandshakeCommand to the client.
-		struct Handshake
-		{
-			avs::DisplayInfo startDisplayInfo = avs::DisplayInfo();
-			float MetresPerUnit = 1.0f;
-			float FOV = 90.0f;
-			uint32_t udpBufferSize = 0;			// In kilobytes.
-			uint32_t maxBandwidthKpS = 0;		// In kilobytes per second
-			avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
-			uint8_t framerate = 0;				// In hertz
-			bool isVR = true;
-			uint64_t resourceCount = 0;			//Count of resources the client has, and are appended to the handshake.
-			uint32_t maxLightsSupported = 0;
-			int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
-			avs::RenderingFeatures renderingFeatures;
-		} AVS_PACKED;
 
 		struct InputState
 		{
@@ -335,8 +319,8 @@ namespace teleport
 			// TODO: replace this with a background Material, which MAY contain video, te			xture and/or plain colours.
 			BackgroundMode		backgroundMode;										//!< 129+1=130	Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;									//!< 130+16=146 If the background is of the COLOUR type, which colour to use.
-			ClientDynamicLighting clientDynamicLighting;							//!<			Setup for dynamic object lighting. 174+57=231 bytes
-			avs::uid			backgroundTexture=0;
+			ClientDynamicLighting clientDynamicLighting;							//!<			Setup for dynamic object lighting. 146+57=203 bytes
+			avs::uid			backgroundTexture=0;								//!< 203+8=211
 		} AVS_PACKED;
 		static_assert (sizeof(SetupCommand) == 211, "SetupCommand Size is not correct");
 
@@ -625,6 +609,27 @@ namespace teleport
 			uint64_t timestamp_unix_ms = 0;
 			ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
+		} AVS_PACKED;
+		
+		//! The handshake sent by a connecting client to the server on initialization.
+		//! Acknowledged by returning an avs::AcknowledgeHandshakeCommand to the client.
+		struct Handshake: public ClientMessage
+		{
+			Handshake()
+				:ClientMessage(ClientMessagePayloadType::Handshake)
+			{}
+			avs::DisplayInfo startDisplayInfo = avs::DisplayInfo();
+			float MetresPerUnit = 1.0f;
+			float FOV = 90.0f;
+			uint32_t udpBufferSize = 0;			// In kilobytes.
+			uint32_t maxBandwidthKpS = 0;		// In kilobytes per second
+			avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
+			uint8_t framerate = 0;				// In hertz
+			bool isVR = true;
+			uint64_t resourceCount = 0;			//Count of resources the client has, which are appended to the handshake.
+			uint32_t maxLightsSupported = 0;
+			int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
+			avs::RenderingFeatures renderingFeatures;
 		} AVS_PACKED;
 		// TODO: this should be a separate message type, not a client message.
 		struct OrthogonalAcknowledgementMessage: public ClientMessage

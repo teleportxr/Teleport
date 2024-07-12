@@ -92,6 +92,7 @@ set(hdr_private_root
 	src/file_p.hpp
 	src/forwarder_p.hpp
 	src/packetizer_p.hpp
+	src/profiling.h
 	src/libraryloader.hpp)
 
 set(hdr_private_api 

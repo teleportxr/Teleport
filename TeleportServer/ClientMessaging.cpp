@@ -150,25 +150,7 @@ void ClientMessaging::tick(float deltaTime)
 		geometryStreamingService.tick(TIME_BETWEEN_GEOMETRY_TICKS);
 
 		//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
-	/*	if (!nodesEnteredBounds.empty() || !nodesLeftBounds.empty())
-		{
-			size_t commandSize = sizeof(teleport::core::NodeVisibilityCommand);
-			size_t enteredBoundsSize = sizeof(avs::uid) * nodesEnteredBounds.size();
-			size_t leftBoundsSize = sizeof(avs::uid) * nodesLeftBounds.size();
-
-			teleport::core::NodeVisibilityCommand boundsCommand(nodesEnteredBounds.size(), nodesLeftBounds.size());
-		
-			//Resize packet, and insert node lists.
-			size_t totalSize = commandSize + enteredBoundsSize + leftBoundsSize;
-			std::vector<uint8_t> packet(totalSize);
-			memcpy(packet.data() , &boundsCommand, commandSize);
-			memcpy(packet.data() + commandSize, nodesEnteredBounds.data(), enteredBoundsSize);
-			memcpy(packet.data() + commandSize + enteredBoundsSize, nodesLeftBounds.data(), leftBoundsSize);
-
-			SendCommand(packet.data(),totalSize);
-			nodesEnteredBounds.clear();
-			nodesLeftBounds.clear();
-		}*/
+	
 		timeSinceLastGeometryStream -= TIME_BETWEEN_GEOMETRY_TICKS;
 	}
 
@@ -271,18 +253,6 @@ void ClientMessaging::sendReconfigureVideoCommand(const core::ReconfigureVideoCo
 void ClientMessaging::sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids)
 {
 	sendCommand(setupLightingCommand, global_illumination_texture_uids);
-}
-
-void ClientMessaging::streamNode(avs::uid nodeID)
-{
-	nodesEnteredBounds.push_back(nodeID);
-	nodesLeftBounds.erase(std::remove(nodesLeftBounds.begin(), nodesLeftBounds.end(), nodeID), nodesLeftBounds.end());
-}
-
-void ClientMessaging::unstreamNode(avs::uid nodeID)
-{
-	nodesLeftBounds.push_back(nodeID);
-	nodesEnteredBounds.erase(std::remove(nodesEnteredBounds.begin(), nodesEnteredBounds.end(), nodeID), nodesEnteredBounds.end());
 }
 
 void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
@@ -513,6 +483,7 @@ int64_t ClientMessaging::GetServerTimeUs() const
 	int64_t serverTimeNs = unix_time_us - lastSetupCommand.startTimestamp_utc_unix_us;
 	return serverTimeNs;
 }
+
 bool ClientMessaging::setOrigin( avs::uid originNode)
 {
 	if(originNode==0)
@@ -532,7 +503,7 @@ bool ClientMessaging::setOrigin( avs::uid originNode)
 	currentOriginState.serverTimeSentUs=GetServerTimeUs();
 	if (!hasReceivedHandshake())
 	{
-		TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",uid);
+		TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",clientID);
 		return false;
 	}
 	bool result=sendCommand(setp);

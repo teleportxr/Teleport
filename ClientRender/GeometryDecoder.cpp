@@ -42,6 +42,10 @@ using namespace clientrender;
 #define NextString64 {\
 	get<size_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 
+#define FAIL_IF_INSUFFICIENT_BYTES_REMAINING(bytes) \
+	{if(geometryDecodeData.offset+(size_t)bytes>geometryDecodeData.data.size())\
+		return avs::Result::Failed;}
+
 template <typename T>
 void copy(T *target, const uint8_t *data, size_t &dataOffset, size_t count)
 {
@@ -1160,6 +1164,7 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	avs::uid texture_uid = geometryDecodeData.uid;
 
 	size_t nameLength = NextUint64;
+	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(nameLength);
 	texture.name.resize(nameLength);
 	copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	
@@ -1353,6 +1358,8 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeD
 	avs::uid fontAtlasUid = geometryDecodeData.uid;
 	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
 	fontAtlas.name=geometryDecodeData.filename_or_url;
+	if(geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("fonts/"+fontAtlas.name+".fontaAtlas"));
 	fontAtlas.font_texture_uid= NextUint64;
 	int numMaps=NextByte;
 	for(int i=0;i<numMaps;i++)

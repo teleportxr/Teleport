@@ -43,6 +43,12 @@ namespace avs
 		std::cerr<<"Verify failed for "<<#t1<<"\n";\
 		return false;\
 	}
+	#define TELEPORT_VERIFY_ASSERT(t) \
+	if(!t)\
+	{\
+		std::cerr<<"Verify failed for "<<#t<<"\n";\
+		return false;\
+	}
 
 	//Convert from wide char to byte char.
 	//We should really NOT use wide strings for the names of textures and materials, as we will want to support UTF-8.
@@ -240,14 +246,20 @@ namespace avs
 				if (cubemap != t.cubemap)
 					return false;
 			}
-			if(images.size()!=t.images.size())
-				return false;
-			for(size_t i=0;i<images.size();i++) {
-				if(images[i].data.size()!=t.images[i].data.size())
-					return false;
-				auto d = memcmp(images[i].data.data(), t.images[i].data.data(), images[i].data.size());
-				if (d != 0)
-					return false;
+			if(compressedData.size()&&t.compressedData.size()){
+				TELEPORT_VERIFY(compressedData.size(), t.compressedData.size());
+				auto compressedDataCompare = memcmp(compressedData.data(), t.compressedData.data(), t.compressedData.size());
+				TELEPORT_VERIFY_ASSERT (compressedDataCompare == 0);
+			}
+			else if(images.size()&&t.images.size()){
+				for(size_t i=0;i<images.size();i++) {
+					TELEPORT_VERIFY(images[i].data.size(), t.images[i].data.size());
+					auto uncompressedDataCompare = memcmp(images[i].data.data(), t.images[i].data.data(), images[i].data.size());
+					TELEPORT_VERIFY_ASSERT (uncompressedDataCompare == 0);
+				}
+			}
+			else{
+				std::cerr<<"Can't compare compressed with uncompressed texture.\n";
 			}
 			return true;
 		}

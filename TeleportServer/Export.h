@@ -24,7 +24,7 @@
     #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
-#if defined(TELEPORT_DYNAMIC_LINK) && !defined(DOXYGEN)
+#if defined(TELEPORT_EXPORT_SERVER_DLL) && !defined(DOXYGEN)
 // In this lib:
 	// If we're building dll libraries but not in this library IMPORT the classes
 	#if !defined(TELEPORT_SERVER_DLL) 

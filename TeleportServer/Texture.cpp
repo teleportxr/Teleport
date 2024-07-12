@@ -280,8 +280,7 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 #endif
 	return true;
 }
-
-void teleport::server::LoadAsBasisFile( ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename)
+std::string PathToName(ExtractedTexture &textureData,const std::string &filename)
 {
 	path pth(filename);
 	string ext=pth.extension().generic_string();
@@ -291,10 +290,21 @@ void teleport::server::LoadAsBasisFile( ExtractedTexture &textureData, const std
 	path relative_path = filename_path.lexically_relative(cachePath);
 	std::string path = relative_path.generic_string();
 	textureData.SetNameFromPath(path);
-		
-	//textureData.fileExtension = relative_path.extension().generic_u8string();
 	std::filesystem::file_time_type rawFileTime = std::filesystem::last_write_time(filename);
 	textureData.lastModified = rawFileTime.time_since_epoch().count();
+	return ext;
+}
+void teleport::server::LoadAsPng(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename)
+{
+	path pth(filename);
+	string ext=PathToName(textureData,filename);
+	textureData.texture.compressedData.resize(data.size());
+	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
+}
+
+void teleport::server::LoadAsBasisFile( ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename)
+{
+	string ext=PathToName(textureData,filename);
 	textureData.texture.compressedData.resize(data.size());
 	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
 	static bool basis_transcoder_initialized=false;

@@ -365,17 +365,21 @@ void Renderer::InitLocalGeometry()
 	auto localInstanceRenderer=GetInstanceRenderer(0);
 	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
 	auto &localGeometryCache = localInstanceRenderer->geometryCache;
-	/*
-	teleport::core::FontAtlas commonFontAtlas;
+	
 	
 	avs::uid common_font_atlas_uid = avs::GenerateUid();
 	avs::uid font_texture_uid = avs::GenerateUid();
 
-	commonFontAtlas.font_texture_path = "assets/localGeometryCache/textures/ARIBLK.TTF.texture";
-	commonFontAtlas.font_texture_uid=font_texture_uid;
-	commonFontAtlas.fontMaps[64];
-	geometryDecoder.decodeFromFile(0, commonFontAtlas.font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
-	localResourceCreator.CreateFontAtlas(0,common_font_atlas_uid,commonFontAtlas);*/
+	std::string font_atlas_path = "assets/localGeometryCache/textures/ARIBLK.fontAtlas";
+
+	core::FontAtlas fontAtlas;
+	fontAtlas.font_texture_path = "assets/localGeometryCache/textures/ARIBLK.texture";
+	fontAtlas.font_texture_uid=font_texture_uid;
+	fontAtlas.fontMaps[64];
+	geometryDecoder.decodeFromFile(0, fontAtlas.font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
+	geometryDecoder.decodeFromFile(0,font_atlas_path,avs::GeometryPayloadType::FontAtlas,&localResourceCreator,common_font_atlas_uid);
+	geometryDecoder.WaitFromDecodeThread();
+	//renderState.commonFontAtlas=localGeometryCache->mFontAtlasManager.Get(common_font_atlas_uid);
 
 	lobbyGeometry.leftController.controller_node_uid	=avs::GenerateUid();
 	lobbyGeometry.rightController.controller_node_uid	=avs::GenerateUid();
@@ -1467,7 +1471,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		crossplatform::Texture *eyeTexture=renderState.openXR->GetRenderTexture(0);
 		renderPlatform->DrawTexture(deviceContext,0,0,w,h,eyeTexture);
 	}
-	else
+	else if(viewport.w*viewport.h>0)
 	{
 		renderState.hdrFramebuffer->Activate(deviceContext);
 
@@ -1518,9 +1522,7 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		DrawGUI(deviceContext, false);
 		renderState.hdrFramebuffer->Deactivate(deviceContext);
 		renderState.hDRRenderer->Render(deviceContext, renderState.hdrFramebuffer->GetTexture(), 1.0f, gamma);
-	//#ifdef ONSCREEN_PROF
-		//gui.GetProfilingText();
-	//#endif
+
 	}
 #if ONSCREEN_PROF
 	SIMUL_COMBINED_PROFILE_END(deviceContext);

@@ -87,7 +87,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	
 	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
 	if(url.length()>0)
-	{
+	{ 
 		try
 		{
 			ws->open(ws_url);

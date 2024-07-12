@@ -1,5 +1,6 @@
 #include "TeleportClient/OpenXRRenderModel.h"
 #include "TeleportClient/OpenXR.h"
+#include "TeleportCore/Logging.h"
 
 using namespace teleport;
 using namespace client;

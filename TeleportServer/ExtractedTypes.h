@@ -145,7 +145,7 @@ namespace teleport
 		// In order of preference:
 			static const char* fileExtension()
 			{
-				return ".ktx2;.basis;.ktx;.texture;.png";
+				return ".ktx2;.basis;.ktx;.texture";// diabled ;.png for now.
 			}
 			std::string getName() const
 			{
@@ -159,6 +159,8 @@ namespace teleport
 					file_name += ".ktx2";
 				else if (texture.compression == avs::TextureCompression::PNG)
 					file_name += ".texture";
+				else if (texture.compression == avs::TextureCompression::UNCOMPRESSED)
+					return "";
 				// if (resource.texture.compression == avs::TextureCompression::KTX)
 				//		file_name += ".ktx";
 				return file_name;
@@ -175,7 +177,7 @@ namespace teleport
 			avs::Texture texture;
 			bool IsValid() const
 			{
-				return texture.images.size()!=0;
+				return texture.images.size()!=0||texture.compressedData.size()!=0;
 			}
 			bool Verify(const ExtractedTexture& t) const
 			{
@@ -201,6 +203,10 @@ namespace teleport
 				}
 				out.writeChunk(textureData.lastModified);
 				out << textureData.texture;
+				if(textureData.texture.compression==avs::TextureCompression::UNCOMPRESSED)
+				{
+					TELEPORT_BREAK_ONCE("Uncompressed texture.");
+				}
 				return out;
 			}
 			template<typename InStream>
@@ -209,6 +215,11 @@ namespace teleport
 				if (in.filename.rfind(".basis") == in.filename.length() - 6||in.filename.rfind(".ktx2") == in.filename.length() - 5||in.filename.rfind(".ktx") == in.filename.length() - 4)
 				{
 					LoadAsBasisFile(textureData, in.readData(), in.filename);
+					return in;
+				}
+				if (in.filename.rfind(".png") == in.filename.length() - 4)
+				{
+					LoadAsPng(textureData, in.readData(), in.filename);
 					return in;
 				}
 				in.readChunk(textureData.lastModified);

@@ -381,10 +381,15 @@ void InstanceRenderer::ApplyMaterialConstants(crossplatform::GraphicsDeviceConte
 {
 	renderPlatform->SetConstantBuffer(deviceContext, &material->pbrMaterialConstants);
 	const clientrender::Material::MaterialCreateInfo &matInfo = material->GetMaterialCreateInfo();
-	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseTexture, matInfo.diffuse.texture ? matInfo.diffuse.texture->GetSimulTexture() : nullptr);
-	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_normalTexture, matInfo.normal.texture ? matInfo.normal.texture->GetSimulTexture() : nullptr);
-	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture, matInfo.combined.texture ? matInfo.combined.texture->GetSimulTexture() : nullptr);
-	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture, matInfo.emissive.texture ? matInfo.emissive.texture->GetSimulTexture() : nullptr);
+	// TODO: this is not ideal. But we must check for null textures.
+	platform::crossplatform::Texture *diffuse=matInfo.diffuse.texture ? matInfo.diffuse.texture->GetSimulTexture(): nullptr;
+	platform::crossplatform::Texture *normal=matInfo.normal.texture ? matInfo.normal.texture->GetSimulTexture(): nullptr;
+	platform::crossplatform::Texture *combined=matInfo.combined.texture ? matInfo.combined.texture->GetSimulTexture(): nullptr;
+	platform::crossplatform::Texture *emissive=matInfo.emissive.texture ? matInfo.emissive.texture->GetSimulTexture(): nullptr;
+ 	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseTexture, diffuse? diffuse: resourceCreator.m_DummyWhite->GetSimulTexture());
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_normalTexture, normal? normal : resourceCreator.m_DummyNormal->GetSimulTexture());
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture,combined ? combined : resourceCreator.m_DummyCombined->GetSimulTexture());
+	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_emissiveTexture, emissive ? emissive : resourceCreator.m_DummyBlack->GetSimulTexture());
 	renderPlatform->ApplyResourceGroup(deviceContext, 2);
 }
 
@@ -1730,7 +1735,7 @@ bool InstanceRenderer::GetHandshake( teleport::core::Handshake& handshake)
 void InstanceRenderer::OnVideoStreamClosed()
 {
 	auto& clientPipeline = sessionClient->GetClientPipeline();
-	TELEPORT_CLIENT_WARN("VIDEO STREAM CLOSED\n");
+	TELEPORT_LOG("VIDEO STREAM CLOSED\n");
 	clientPipeline.pipeline.deconfigure();
 	clientPipeline.videoQueue.deconfigure();
 	clientPipeline.audioQueue.deconfigure();
@@ -1743,7 +1748,7 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 {
 	auto& clientPipeline = sessionClient->GetClientPipeline();
 	const auto& videoConfig = reconfigureVideoCommand.video_config;
-	TELEPORT_CLIENT_WARN("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
+	TELEPORT_LOG("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d", videoConfig.video_width, videoConfig.video_height
 		, videoConfig.depth_width, videoConfig.depth_height);
 
 	clientPipeline.decoderParams.deferDisplay = false;

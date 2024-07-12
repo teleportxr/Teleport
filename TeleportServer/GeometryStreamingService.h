@@ -73,21 +73,23 @@ namespace teleport
 			virtual void tick(float deltaTime);
 
 			virtual void reset();
-
+			
+			const std::set<avs::uid>& getNodesToStream();
 			const std::set<avs::uid>& getStreamedNodeIDs();
 			// The origin node for the client - must have this in order to stream geometry.
 			void setOriginNode(avs::uid nodeID);
 			/// Returns true if the node is in the GeometryStore and thus could be added.
-			bool addNode(avs::uid nodeID);
-			void removeNode(avs::uid nodeID);
+			bool streamNode(avs::uid nodeID);
+			bool unstreamNode(avs::uid nodeID);
 			bool isStreamingNode(avs::uid nodeID);
 			void addGenericTexture(avs::uid id);
+			void removeGenericTexture(avs::uid id);
 			bool startedRenderingNode(avs::uid nodeID);
 			bool stoppedRenderingNode(avs::uid nodeID);
 			//! From the list of uid's given, which do we not think the client has?
 			size_t GetNewUIDs(std::vector<avs::uid>& outUIDs);
 		protected:
-	std::set<avs::uid> streamed_node_uids;
+			std::set<avs::uid> streamed_node_uids;
 			avs::uid originNodeId = 0;
 			int32_t priority = 0;
 			// The lowest priority for which the client has confirmed all the nodes we sent.

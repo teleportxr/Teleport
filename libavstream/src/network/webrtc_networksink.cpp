@@ -19,7 +19,7 @@
 #pragma optimize("",off)
 using namespace std;
 using nlohmann::json;
-
+#pragma optimize("",off)
 #define EVEN_ID(id) (id-(id%2))
 #define ODD_ID(id) (EVEN_ID(id)+1)
 
@@ -50,7 +50,7 @@ namespace avs
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSink, PipelineNode)
 		phmap::flat_hash_map<uint64_t, ServerDataChannel> dataChannels;
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
-			void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
+		void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
 		phmap::flat_hash_map<int, uint8_t> idToStreamIndex;
 		phmap::flat_hash_map<uint8_t, uint8_t> streamIndexToInputIndex;
@@ -102,8 +102,8 @@ namespace avs
 												{"mid", candidate.mid()} ,
 												{"mlineindex", 0}
 									};
-
-					sendConfigMessage(message.dump());
+					string msg=message.dump();
+					sendConfigMessage(msg);
 				});
 
 			pc->onDataChannel([onDataChannelReceived, id](shared_ptr<rtc::DataChannel> dc)

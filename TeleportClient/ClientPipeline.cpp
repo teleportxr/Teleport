@@ -65,7 +65,7 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 				{20,"video"					,""				,"VideoQueue"	,true	,false}
 				,{40,"video_tags"			,""				,"VideoTagQueue",true	,false}
 				,{60,"audio_server_to_client",""			,"AudioQueue"	,true	,true}		// 2-way
-				,{geoStreamID,"geometry"	,""				,"GeometryQueue",true	,false}
+				,{80,"geometry"				,""				,"GeometryQueue",true	,false}
 				,{100,"reliable"			,""				,"Reliable out"	,false	,false}		// 2-way
 				,{120,"unreliable"			,"Unreliable in",""				,false	,true}		// 2-way
 			};

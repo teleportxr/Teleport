@@ -100,10 +100,6 @@ namespace teleport
 			void sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd);
 			void sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids);
 
-			/// Mark this node as being needed by the client.
-			void streamNode(avs::uid nodeID);
-			/// Mark this node as being NOT needed by the client.
-			void unstreamNode(avs::uid nodeID);
 			void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
 			void updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);
 			void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
@@ -299,9 +295,6 @@ namespace teleport
 			CaptureDelegates captureComponentDelegates;
 
 			std::atomic_bool receivedHandshake = false;				//Whether we've received the handshake from the client.
-
-			std::vector<avs::uid> nodesEnteredBounds;	//Stores nodes client needs to know have entered streaming bounds.
-			std::vector<avs::uid> nodesLeftBounds;		//Stores nodes client needs to know have left streaming bounds.
 
 			core::Input latestInputStateAndEvents; //Latest input state received from the client.
 

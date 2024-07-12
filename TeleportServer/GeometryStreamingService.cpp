@@ -71,7 +71,8 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 		}
 		else if (unconfirmed_priority_counts.find(node->priority) == unconfirmed_priority_counts.end())
 		{
-			TELEPORT_INTERNAL_BREAK_ONCE("GeometryStreamingService::confirmResource Trying to decrement Node {0} priority {1} but it's not in the list.", resource_uid,node->priority);
+			TELEPORT_WARN("GeometryStreamingService::confirmResource Trying to decrement Node {0} priority {1} but it's not in the list.", resource_uid,node->priority);
+			// This can happen if the node is in nodesToStream, but was not in streamedNodes. But the client already had it, or received it before it was removed.
 		}
 		else
 		{
@@ -112,6 +113,11 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 	for(auto u:nodesToStream)
 	{
 		avs::Node* node = geometryStore->getNode(u);
+		if(node==nullptr)
+		{
+			TELEPORT_WARN_NOSPAM("Null node {0}",u);
+			continue;
+			}
 		if(streamedNodes.find(u)==streamedNodes.end())
 		{
 			// Not yet added.
@@ -215,7 +221,7 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 			streamedMaterials[u.material_uid]+=diff;
 			for(auto t:u.texture_uids)
 			{
-					streamedTextures[t]+=diff;
+				streamedTextures[t]+=diff;
 			}
 		}
 		if(m.mesh_uid)
@@ -262,6 +268,8 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 		for(auto r:resources)
 		{
 			const TrackedResource &tr=GetTrackedResource(r.first);
+			if(r.second<=0)
+				continue;
 			if(tr.acknowledged)
 				continue;
 			if(!tr.sent||time_now_us-tr.sent_server_time_us>timeout_us)
@@ -395,9 +403,13 @@ void GeometryStreamingService::reset()
 
 	unconfirmed_priority_counts.clear();
 }
+const std::set<avs::uid>& GeometryStreamingService::getNodesToStream()
+{
+	return nodesToStream;
+}
 const std::set<avs::uid>& GeometryStreamingService::getStreamedNodeIDs()
 {
-streamed_node_uids.clear();
+	streamed_node_uids.clear();
 	for(auto r:streamedNodes)
 	{
 		streamed_node_uids.insert(r.first);
@@ -410,7 +422,7 @@ void GeometryStreamingService::setOriginNode(avs::uid nodeID)
 	originNodeId = nodeID;
 }
 
-bool GeometryStreamingService::addNode(avs::uid nodeID)
+bool GeometryStreamingService::streamNode(avs::uid nodeID)
 {
 	if (nodeID != 0)
 	{
@@ -427,12 +439,13 @@ bool GeometryStreamingService::addNode(avs::uid nodeID)
 			#if TELEPORT_DEBUG_NODE_STREAMING
 			TELEPORT_COUT << "AddNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority]<<"\n";
 			#endif
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
-void GeometryStreamingService::removeNode(avs::uid nodeID)
+bool GeometryStreamingService::unstreamNode(avs::uid nodeID)
 {
 	if (nodesToStream.find(nodeID) != nodesToStream.end())
 	{
@@ -440,8 +453,10 @@ void GeometryStreamingService::removeNode(avs::uid nodeID)
 		if(streamedNodes.find(nodeID)!=streamedNodes.end())
 		{
 			RemoveNodeAndItsResourcesFromStreamed(nodeID);
+			return true;
 		}
 	}
+	return false;
 }
 
 bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
@@ -452,6 +467,12 @@ bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 void GeometryStreamingService::addGenericTexture(avs::uid id)
 {
 	streamedGenericTextures.insert(id);
+	streamedTextures[id]++;
+}
+void GeometryStreamingService::removeGenericTexture(avs::uid id)
+{
+	streamedGenericTextures.erase(id);
+	streamedTextures[id]--;
 }
 
 const TrackedResource &GeometryStreamingService::GetTrackedResource(avs::uid u) const

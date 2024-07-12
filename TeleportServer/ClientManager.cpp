@@ -159,19 +159,34 @@ ClientManager::~ClientManager()
 	
 }
 
-avs::uid ClientManager::popFirstUnlinkedClientUid()
+avs::uid ClientManager::firstUnlinkedClientUid()
 {
 	if (unlinkedClientIDs.size() != 0)
 	{
 		avs::uid clientID = *unlinkedClientIDs.begin();
-		unlinkedClientIDs.erase(unlinkedClientIDs.begin());
-
 		return clientID;
 	}
-	else
+	return 0;
+}
+
+avs::uid ClientManager::popFirstUnlinkedClientUid(avs::uid u)
+{
+	if (unlinkedClientIDs.size() != 0)
 	{
-		return 0;
+		auto i=unlinkedClientIDs.begin();
+		avs::uid clientID = *i;
+		while(i!=unlinkedClientIDs.end())
+		{
+			clientID = *i;
+			if(clientID==u)
+			{
+				unlinkedClientIDs.erase(i);
+				return clientID;
+			}
+			i++;
+		}
 	}
+	return 0;
 }
 
 bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_us, std::string client_ip_match, uint32_t maxClients)

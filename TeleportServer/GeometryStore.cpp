@@ -244,6 +244,7 @@ void GeometryStore::loadFromDisk(size_t& numMeshes
 {
 	// Load in order of non-dependent to dependent resources, so that we can apply dependencies.
 	loadResourcesBinary(cachePath + "/" , textures);
+	CheckForErrors();
 	loadResourcesBinary(cachePath + "/" , materials);
 	loadResourcesBinary(cachePath + "/engineering/" , meshes.at(avs::AxesStandard::EngineeringStyle));
 	loadResourcesBinary(cachePath + "/gl/", meshes.at(avs::AxesStandard::GlStyle));
@@ -1532,7 +1533,8 @@ void GeometryStore::compressNextTexture()
 						breakout = true;
 						break;
 					}
-					if(m==0)
+					static bool writeout=false;
+					if(writeout)
 					{
 						std::string filename = fmt::format("{0}/{1}-{2}-{3}.png", cachePath,extractedTexture.getName(),m, i);
 						stbi_write_png(filename.c_str(),w,h,avsTexture.bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * avsTexture.bytesPerPixel);
@@ -1722,8 +1724,10 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 		}
 		catch (...)
 		{
+			resourceMap.erase(newID);
 			return 0;
 		}
+		resourceMap.erase(newID);
 		return 0;
 	}
 	if(!newResource.IsValid())
@@ -1804,19 +1808,46 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 	const std::filesystem::path fspath{ filepath_root.c_str() };
 	std::filesystem::create_directories(fspath);
 	std::string search_str = ExtractedResource::fileExtension();
+	std::vector<string> extensions;
+	string token;
+	std::stringstream sstr(search_str);
+	while (getline(sstr, token, ';'))
+	{ 
+        extensions.push_back(token); 
+    }
 	std::map<avs::uid, std::filesystem::file_time_type> timestamps;
+	// First get a list of all files that match the possible extensions.
+	// Discard the extension for each and merge matching filenames, e.g. name.png = name.texture = name.ktx2
+	// For each, load only one, in order of extension from first to last.
+	std::vector<std::string> resources;
 	for (auto const& dir_entry : std::filesystem::recursive_directory_iterator{ fspath })
 	{
 		std::string extn= dir_entry.path().extension().u8string();
 		if (extn.length()>1&&search_str.find(extn) < search_str.length())
 		{
-			std::string file_name = dir_entry.path().string();
-			if (filesystem::exists(file_name))
-			{
-				loadResourceBinary(file_name, filepath_root, resourceMap);
+			string res=dir_entry.path().generic_string();
+			auto pos=res.find(extn);
+			if(pos==res.length()-extn.length())
+			{	
+				res=res.substr(0,pos);
+				resources.push_back(res);
 			}
 		}
 	}
+	for(auto const &res:resources)
+	{
+		for(int i=0;i<extensions.size();i++)
+		{
+		string file_name=res+extensions[i];
+			std::filesystem::path p(file_name);
+			if (filesystem::exists(p))
+			{
+				if(loadResourceBinary(file_name, filepath_root, resourceMap))
+					break;
+			}
+		}
+	}
+	
 }
 
 
@@ -1826,7 +1857,7 @@ bool GeometryStore::CheckForErrors()
 	{
 		ExtractedTexture& textureData = t.second;
 		
-		if(textureData.texture.images.size()==0)
+		if(textureData.texture.compressedData.size()==0)
 		{
 			TELEPORT_CERR<<"Texture "<<t.second.getName()<<" is empty.\n";
 			return false;

@@ -81,9 +81,6 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 		stream.label = "video";
 		stream.inputName = COLOR_QUEUE;
 		stream.parserType = avs::StreamParserType::AVC_AnnexB;
-		//stream.useParser = false; default
-//			stream.isDataLimitPerFrame = false;
-//			stream.counter = 0;
 		stream.chunkSize = 64 * 1024;
 		stream.id = 20;
 		//stream.dataType = avs::NetworkDataType::HEVC;

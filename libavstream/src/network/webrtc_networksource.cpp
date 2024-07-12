@@ -61,7 +61,7 @@ namespace avs
 		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 		NetworkSourceCounters m_counters;
-		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
+		bool onDataChannel(shared_ptr<rtc::DataChannel> dc);
 		std::unordered_map<uint32_t, uint8_t> idToStreamIndex;
 		//! Map input nodes to streams outgoing. Many to one relation.
 		std::unordered_map<uint8_t, uint8_t> inputToStreamIndex;
@@ -127,13 +127,19 @@ avs::WebRtcNetworkSource *src)
 						{"candidate", std::string(candidate)},
 						{"mid", candidate.mid()} ,
 						{"mlineindex", 0} };
-
 			src->sendConfigMessage(message.dump());
 		});
 
 	pc->onDataChannel([src](shared_ptr<rtc::DataChannel> dc)
 	{
-		src->m_data->onDataChannel(dc);
+		if(!src->m_data->onDataChannel(dc))
+		{
+			json message = { {"id", "1"},
+						{"teleport-signal-type", "error"},
+						{"message", "Bad data channel received."} };
+
+			src->sendConfigMessage(message.dump());
+		}
 	});
 
 	//peerConnectionMap.emplace(id, pc);
@@ -350,6 +356,7 @@ void WebRtcNetworkSource::kill()
 
 Result WebRtcNetworkSource::deconfigure()
 {
+	offer="";
 	if (getNumOutputSlots() <= 0)
 	{
 		return Result::Node_NotConfigured;
@@ -529,7 +536,7 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 	if (it == message.end())
 		return;
 	std::string type= message["teleport-signal-type"];
-	json content=message["content"];
+
 	try
 	{
 		auto type=it->get<std::string>();
@@ -539,16 +546,16 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 			{
 				if(offer!=str)
 				{
-					AVSLOG(Error) << "WebRtcNetworkSource: Received offer that doesn't match previous offer. Ignoring." << std::endl;
-						return;
+					AVSLOG(Error) << "WebRtcNetworkSource: Received remote offer that doesn't match previous offer." << std::endl;
+	
 				}
 				else
 				{
-					AVSLOG(Error) << "WebRtcNetworkSource: Received offer that matches previous offer." << std::endl;
+					AVSLOG(Error) << "WebRtcNetworkSource: Received remote offer that matches previous offer." << std::endl;
 				}
 			}
 			else
-				AVSLOG(Info) << ": info: WebRtcNetworkSource: Received offer." << std::endl;
+				AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote offer." << std::endl;
 			offer=str;
 			auto o = message.find("sdp");
 			string sdp= o->get<std::string>();
@@ -556,13 +563,15 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 		}
 		else if (type == "candidate")
 		{
-			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received candidate." << std::endl;
+			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote candidate." << std::endl;
 			auto c = message.find("candidate");
 			string candidate=c->get<std::string>();
 			auto m= message.find("mid");
 			std::string mid;
 			if (m != message.end())
+			{
 				mid = m->get<std::string>();
+			}
 			auto l = message.find("mlineindex");
 			int mlineindex;
 			if (l != message.end())
@@ -583,10 +592,12 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 	}
 }
 
-void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
+bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 {
-	if (!dc->id().has_value())
-		return;
+ 	if (!dc->id().has_value())
+		return false;
+	string label=dc->label();
+	std::cout<<"onDataChannel: "<<dc->label()<<" id "<<dc->id().value()<<"\n";
 	// make the id even.
 	uint16_t id = EVEN_ID(dc->id().value());
 	// find the dataChannel whose label matches this channel's label.
@@ -602,7 +613,9 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	if (dcIndex < 0)
 	{
 		// TODO: Inform the server that a channel has not been recognized - don't send data on it.
-		return;
+		
+		std::cerr << "Bad dataChannel index "<<dcIndex<<"\n";
+		return false;
 	}
 	idToStreamIndex[id] = dcIndex;
 	ClientDataChannel& dataChannel = dataChannels[dcIndex];
@@ -664,6 +677,7 @@ void WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			//	<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
 		},[this, &dataChannel,id](rtc::string s) {});
 	//dataChannelMap.emplace(id, dc);
+		return true;
 }
 
 Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet, size_t sz)

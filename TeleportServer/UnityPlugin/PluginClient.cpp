@@ -141,7 +141,7 @@ TELEPORT_EXPORT bool Client_SetOrigin(avs::uid clientID,avs::uid originNode)
 	}
 	static uint64_t validCounter = 0;
 	validCounter++;
-	return client->setOrigin(validCounter, originNode);
+	return client->clientMessaging->setOrigin( originNode);
 }
 
 TELEPORT_EXPORT bool Client_IsConnected(avs::uid clientID)
@@ -165,7 +165,7 @@ TELEPORT_EXPORT bool Client_HasOrigin(avs::uid clientID)
 		TELEPORT_CERR << "Failed to check Client " << clientID << " has origin! No client exists with ID " << clientID << "!\n";
 		return false;
 	}
-	return client->hasOrigin();
+	return client->clientMessaging->hasOrigin();
 }
 
 //! Add the specified texture to be sent to the client.
@@ -180,23 +180,22 @@ TELEPORT_EXPORT void Client_AddGenericTexture(avs::uid clientID, avs::uid textur
 	}
 	client->clientMessaging->GetGeometryStreamingService().addGenericTexture(textureID);
 }
-
-//! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
-TELEPORT_EXPORT bool Client_AddNode(avs::uid clientID, avs::uid nodeID)
+	
+//! How many nodes have been marked for streaming to this client? Including lower priority ones not yet sent.
+TELEPORT_EXPORT size_t Client_GetNumNodesToStream(avs::uid clientID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
-		TELEPORT_WARN("Failed to start streaming Node_{0} to Client {1}! No such client exists.",nodeID,clientID);
-		return false;
+		TELEPORT_WARN("No such client {0}!",clientID);
+		return 0;
 	}
-
-	return client->clientMessaging->GetGeometryStreamingService().addNode(nodeID);
+	return client->clientMessaging->GetGeometryStreamingService().getNodesToStream().size();
 }
-	
-//! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
-TELEPORT_EXPORT size_t Client_GetNumStreamedNodes(avs::uid clientID)
+
+//! How many nodes are actually being streamed to this client? Includes only those of sufficient priority, so always <= Client_GetNumNodesToStream().
+TELEPORT_EXPORT size_t Client_GetNumNodesCurrentlyStreaming(avs::uid clientID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);
@@ -206,19 +205,6 @@ TELEPORT_EXPORT size_t Client_GetNumStreamedNodes(avs::uid clientID)
 		return 0;
 	}
 	return client->clientMessaging->GetGeometryStreamingService().getStreamedNodeIDs().size();
-}
-
-TELEPORT_EXPORT void Client_RemoveNodeByID(avs::uid clientID, avs::uid nodeID)
-{
-	TELEPORT_PROFILE_AUTOZONE;
-	auto client = ClientManager::instance().GetClient(clientID);
-	if(!client)
-	{
-		TELEPORT_CERR << "Failed to stop streaming Node_" << nodeID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
-	}
-
-	client->clientMessaging->GetGeometryStreamingService().removeNode(nodeID);
 }
 
 TELEPORT_EXPORT bool Client_IsStreamingNodeID(avs::uid clientID, avs::uid nodeID)
@@ -244,7 +230,7 @@ TELEPORT_EXPORT bool Client_IsClientRenderingNodeID(avs::uid clientID, avs::uid 
 		return false;
 	}
 
-	return client->clientMessaging->GetGeometryStreamingService().isClientRenderingNode(nodeID);
+	return true;//client->clientMessaging->GetGeometryStreamingService().isClientRenderingNode(nodeID);
 }
 
 bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
@@ -261,32 +247,33 @@ bool Client_HasResource(avs::uid clientID, avs::uid resourceID)
 ///GeometryStreamingService END
 
 #ifndef CLIENTMESSAGING 
-/// Mark the node *nodeID* as streamed to client *clientID*. Wraps teleport::server::ClientMessaging::streamNode().
-TELEPORT_EXPORT void Client_NodeEnteredBounds(avs::uid clientID, avs::uid nodeID)
+
+//! Start streaming the node to the client; returns the number of nodes streamed currently after this addition.
+TELEPORT_EXPORT bool Client_StreamNode(avs::uid clientID, avs::uid nodeID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
-		TELEPORT_CERR << "Failed to mark node as entering bounds for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
+		TELEPORT_WARN("Failed to start streaming Node_{0} to Client {1}! No such client exists.",nodeID,clientID);
+		return false;
 	}
 
-	client->clientMessaging->streamNode(nodeID);
+	return client->clientMessaging->GetGeometryStreamingService().streamNode(nodeID);
 }
 
-/// Mark the node *nodeID* as not streamed to client *clientID*.
-TELEPORT_EXPORT void Client_NodeLeftBounds(avs::uid clientID, avs::uid nodeID)
+
+TELEPORT_EXPORT bool Client_UnstreamNode(avs::uid clientID, avs::uid nodeID)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);
 	if(!client)
 	{
-		TELEPORT_CERR << "Failed to mark node as leaving bounds for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
-		return;
+		TELEPORT_CERR << "Failed to stop streaming Node_" << nodeID << " to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return false;
 	}
 
-	client->clientMessaging->unstreamNode(nodeID);
+	return client->clientMessaging->GetGeometryStreamingService().unstreamNode(nodeID);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core::MovementUpdate* updates, int numUpdates)

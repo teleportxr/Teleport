@@ -80,18 +80,16 @@ if(TELEPORT_UNITY)
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_UNITY_EDITOR_DIR}/Data/PluginAPI)
 
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_UNITY_SERVER=1)
+else()
+	add_library(TeleportServer SHARED ${src})
+	target_compile_definitions(TeleportServer PRIVATE TELEPORT_EXPORT_SERVER_DLL=1 TELEPORT_SERVER_DLL=1)
+endif()
+
 	set_target_properties(TeleportServer PROPERTIES
 			LIBRARY_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
 			ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
 			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
 			)
-else()
-	add_library(TeleportServer STATIC ${src})
-	#set_target_properties(TeleportServer PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/TeleportServer/Release"	)
-	#add_library(TeleportServer SHARED ${src})
-	#target_compile_definitions(TeleportServer PRIVATE TELEPORT_SERVER_DLL=1 TELEPORT_DYNAMIC_LINK=1)
-endif()
-
 
 SetTeleportDefaults( TeleportServer )
 

@@ -275,21 +275,23 @@ struct InteropTexture
 			cubemap
 		};
 		
-		uint8_t *target=(uint8_t *)data;
-		uint16_t numImages=*((uint16_t *)target);
-		target += sizeof(uint16_t);
+		uint8_t *src=(uint8_t *)data;
+		uint16_t numImages=*((uint16_t *)src);
+		src += sizeof(uint16_t);
 		std::vector<uint32_t> imageOffsets(numImages);
-		memcpy(target, imageOffsets.data(), numImages * sizeof(uint32_t));
+		memcpy( imageOffsets.data(),src, numImages * sizeof(uint32_t));
 		imageOffsets.push_back(dataSize);
-		target += numImages * sizeof(uint32_t);
+		src += numImages * sizeof(uint32_t);
 		t.images.resize(numImages);
 		for(size_t i=0;i<numImages;i++)
 		{
 			auto &image=t.images[i];
 			size_t imgSize=imageOffsets[i+1]-imageOffsets[i];
 			image.data.resize(imgSize);
-			memcpy(image.data.data(),target,imgSize);
+			memcpy(image.data.data(),src,imgSize);
+			src+=imgSize;
 		}
+		return t;
 	}
 };
 

@@ -300,7 +300,9 @@ void PipeOutMessages()
 			{
 				TELEPORT_PROFILE_AUTOZONE;
 				auto &cm = ClientManager::instance();
-				return cm.popFirstUnlinkedClientUid();
+				auto u=cm.firstUnlinkedClientUid();
+				cm.popFirstUnlinkedClientUid(u);
+				return u;
 			}
 
 			//PLUGIN-SPECIFC END
@@ -606,17 +608,6 @@ void PipeOutMessages()
 					return false;
 				}
 				avs::uid u = GeometryStore::GetInstance().storeTextCanvas((relative_asset_path), interopTextCanvas);
-				if (u)
-				{
-					for (avs::uid u : ClientManager::instance().GetClientUids())
-					{
-						auto client = ClientManager::instance().GetClient(u);
-						if (!client)
-							continue;
-						if (client->clientMessaging->GetGeometryStreamingService().hasResource(u))
-							client->clientMessaging->GetGeometryStreamingService().requestResource(u);
-					}
-				}
 				return u;
 			}
 
@@ -626,14 +617,6 @@ void PipeOutMessages()
 			TELEPORT_EXPORT void Server_ResendNode(avs::uid u)
 			{
 				TELEPORT_PROFILE_AUTOZONE;
-				for (avs::uid u : ClientManager::instance().GetClientUids())
-				{
-					auto client = ClientManager::instance().GetClient(u);
-					if (!client)
-						continue;
-					if (client->clientMessaging->GetGeometryStreamingService().hasResource(u))
-						client->clientMessaging->GetGeometryStreamingService().requestResource(u);
-				}
 			}
 
 			/// Get the font atlas which has the given path.

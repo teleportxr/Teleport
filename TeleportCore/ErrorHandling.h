@@ -52,12 +52,6 @@ namespace teleport
 #define TELEPORT_INTERNAL_CHECKS 0
 #endif
 
-#if TELEPORT_INTERNAL_CHECKS
-#define TELEPORT_LOG(txt, ...)\
-	teleport::InternalInfo( __FILE__,__LINE__,#txt,##__VA_ARGS__)
-#else
-#define TELEPORT_LOG(txt, ...)
-#endif
 
 #define TELEPORT_COUT\
 	std::cout<<__FILE__<<"("<<std::dec<<__LINE__<<"): info: "

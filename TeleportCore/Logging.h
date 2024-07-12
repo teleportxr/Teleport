@@ -10,6 +10,18 @@
 #endif
 namespace teleport
 {
+	enum class LogPriority
+	{
+		UNKNOWN,
+		DEFAULT,
+		VERBOSE,
+		LOG_DEBUG,
+		INFO,
+		WARNING,
+		LOG_ERROR,
+		FATAL,
+		SILENT
+	};
 	template <typename... Args>
 	void Warn(const char *file, int line, const char *function,const char *txt, Args... args)
 	{
@@ -36,6 +48,9 @@ namespace teleport
 			teleport::Warn(__FILE__, __LINE__, __func__,#txt, ##__VA_ARGS__);\
 		}\
 	}
+
+#define TELEPORT_LOG(txt, ...) \
+	teleport::Info(__FILE__, __LINE__,__func__,#txt,##__VA_ARGS__)
 
 #define TELEPORT_INFO(txt, ...) \
 	teleport::Info(__FILE__, __LINE__,__func__,#txt,##__VA_ARGS__)

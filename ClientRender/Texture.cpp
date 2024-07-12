@@ -1,6 +1,7 @@
 #include "Texture.h"
 #include "TeleportClient/Log.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Logging.h"
 #include "Platform/CrossPlatform/PixelFormat.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
@@ -85,8 +86,6 @@ void Texture::Destroy()
 void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 {
 	m_CI = pTextureCreateInfo;
-
-
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
 	//m_Data = data;
 	m_SimulTexture = renderPlatform->CreateTexture();
@@ -95,12 +94,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
-	/*if(pTextureCreateInfo.compression==clientrender::Texture::CompressionFormat::UNCOMPRESSED &&pTextureCreateInfo.images.size()&& pTextureCreateInfo.images[0].size() != static_cast<size_t>(pTextureCreateInfo.width) * pTextureCreateInfo.height * pTextureCreateInfo.bytesPerPixel)
-	{
-		TELEPORT_CLIENT_WARN("Incomplete texture: %d x %d times %d bytes != size %d", pTextureCreateInfo.width , pTextureCreateInfo.height, pTextureCreateInfo.bytesPerPixel
-			, pTextureCreateInfo.images[0].size());
-		return;
-	}*/
+	TELEPORT_LOG("Creating texture {0}",pTextureCreateInfo.name);
 	platform::crossplatform::TextureCreate textureCreate;
 	textureCreate.w					= pTextureCreateInfo.width;
 	textureCreate.l					= pTextureCreateInfo.height;
@@ -135,7 +129,10 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 			TELEPORT_CERR<<"CREATING CUBEMAP\n";
 	}
 	#endif
-	m_SimulTexture->EnsureTexture(renderPlatform, &textureCreate);
+	if(!m_SimulTexture->EnsureTexture(renderPlatform, &textureCreate))
+	{
+		TELEPORT_WARN("\tFailed to create texture: {0}",pTextureCreateInfo.name);
+	}
 }
 
 void Texture::GenerateMips()

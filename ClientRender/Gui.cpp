@@ -1814,10 +1814,6 @@ void Gui::GeometryOSD()
 	ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(), (int)cache_strings.size());
 
 	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
-	if(sessionClient)
-	{
-		LinePrint(fmt::format("Client ID {0}",sessionClient->GetClientID()));
-	}
 
 	if (current_choice >= 0 && current_choice < cache_uids.size())
 		cache_uid = cache_uids[current_choice];
@@ -1826,16 +1822,30 @@ void Gui::GeometryOSD()
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
 		return;
-	LinePrint(fmt::format("Session time {0}", double(geometryCache->GetSessionTimeUs().count()) / 1000000.0).c_str());
-	if (sessionClient)
-	{
-		LinePrint(fmt::format("Session start {0}", double(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us) / 1000000.0).c_str());
-	}
 	if (ImGui::BeginTable("numResources", 3))
 	{
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("Client ID"));
+		ImGui::TableNextColumn();
+		if(sessionClient)
+			LinePrint(fmt::format("{0}",sessionClient->GetClientID()));
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("Session time"));
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("{0}", double(geometryCache->GetSessionTimeUs().count()) / 1000000.0).c_str());
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		LinePrint(fmt::format("Session start"));
+		ImGui::TableNextColumn();
+		if (sessionClient)
+		{
+			LinePrint(fmt::format("{0}", double(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us) / 1000000.0).c_str());
+		}
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		LinePrint(fmt::format("Nodes: {0}", geometryCache->mNodeManager.GetNodeCount()),white);
