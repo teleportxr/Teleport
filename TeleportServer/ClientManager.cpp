@@ -526,8 +526,8 @@ void ClientManager::InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams 
 		return;
 	}
 
-	avs::Queue *cq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.ColorQueue;
-	avs::Queue *tq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.TagDataQueue;
+	auto *cq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.ColorQueue;
+	auto *tq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.TagDataQueue;
 	Result result = client->videoEncodePipeline->configure(serverSettings, videoEncodeParams, cq, tq);
 	if (!result)
 	{

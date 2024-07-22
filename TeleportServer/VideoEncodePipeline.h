@@ -33,9 +33,9 @@ namespace teleport
 			VideoEncodePipeline() = default;
 			virtual ~VideoEncodePipeline();
 
-			Result initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput);
+			Result initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::PipelineNode* tagDataOutput);
 
-			Result configure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue, avs::Queue* tagDataQueue);
+			Result configure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* colorQueue, avs::PipelineNode* tagDataQueue);
 			Result reconfigure1(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams);
 			Result reconfigure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams);
 			Result encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);

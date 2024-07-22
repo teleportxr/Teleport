@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #include "mesh_p.hpp"
 

@@ -442,7 +442,6 @@ void SessionClient::SendInput(const core::Input& input)
 	teleport::core::InputStatesMessage inputStatesMessage;
 	teleport::core::InputEventsMessage inputEventsMessage;
 	auto ts = avs::Platform::getTimestamp();
-	inputStatesMessage.timestamp_unix_ms = (uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
 	inputEventsMessage.timestamp_unix_ms = inputStatesMessage.timestamp_unix_ms;
 	//Set event amount.
 	if(input.analogueEvents.size()>50)
@@ -932,7 +931,6 @@ void SessionClient::ReceivePingForLatencyCommand(const std::vector<uint8_t>& pac
 		return;
 	}
 	memcpy(static_cast<void*>(&cmd), packet.data(), commandSize);
-	//cmd.unix_time_ns;
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	int64_t diff_ns = unix_time_ns - cmd.unix_time_ns;
 	latency_milliseconds=float(double(diff_ns) * 0.000001);

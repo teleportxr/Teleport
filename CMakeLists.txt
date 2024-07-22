@@ -13,7 +13,7 @@ if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
 		set(VS_STARTUP_PROJECT Sphinx)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sphinx)
 	endif()
-else()
+else() 
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
 
@@ -33,6 +33,7 @@ set(TELEPORT_PLATFORM_DIR "${CMAKE_SOURCE_DIR}/firstparty/Platform" )
 set(SIMUL_PLATFORM_FOLDER_PREFIX "Platform" )
 set(SIMUL_PLATFORM_DIR ${TELEPORT_PLATFORM_DIR})
 set(PLATFORM_IMGUI ON)
+option(TELEPORT_TEST "Enable Teleport unit testing?" OFF)
 option(TELEPORT_UNITY "Build for Unity?" ${TELEPORT_UNITY})
 option(TELEPORT_BUILD_DOCS "Build documentation?" OFF)
 option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
@@ -54,13 +55,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(safe)
 
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.4.0 # or a later release
-)
-
-FetchContent_MakeAvailable(Catch2)
+if(TELEPORT_TEST)
+	FetchContent_Declare(
+	  Catch2
+	  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+	  GIT_TAG        v3.4.0 # or a later release
+	  SOURCE_DIR catch2
+	)
+	#Replace variables inside @@ with the current values
+	configure_file(${Catch2_SOURCE_DIR}/CMake/Catch2Config.cmake.in ${Catch2_SOURCE_DIR}/extras/Catch2Config.cmake @ONLY)
+	list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
+	set( Catch2_DIR ${Catch2_SOURCE_DIR}/extras)
+	FetchContent_MakeAvailable(Catch2)
+endif()
 
 if(TELEPORT_TRACY_PROFILING)
 	FetchContent_Declare (
@@ -169,6 +176,7 @@ endif()
 
 #openssl
 if(TELEPORT_WINDOWS)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS")
 	set(OPENSSL_APPLINK_SOURCE "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include/openssl/applink.c" CACHE STRING "" )
 	set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64 CACHE STRING "" )
 	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include CACHE STRING "" )

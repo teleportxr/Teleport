@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #pragma once
 
@@ -11,7 +11,7 @@
 #include "common_p.hpp"
 #include <libraryloader.hpp>
 
-#include <libavstream/encoders/enc_interface.hpp>
+#include "libavstream/encoders/enc_interface.h"
 #if (LIBAV_USE_D3D12)
 #include <api/cuda_dx12.hpp>
 #else

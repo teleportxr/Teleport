@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #pragma once
 
@@ -22,7 +22,7 @@ namespace avs
 		AVSTREAM_PUBLICINTERFACE(Queue)
 		Queue::Private *data;
 		/** Contiguous memory that contains buffers of equal size */
-		char* m_mem = nullptr;
+		std::vector<char> m_mem ;
 		/** Contains sizes of data in each buffer */
 		size_t* m_dataSizes = nullptr;
 		size_t m_originalMaxBufferSize = 0;

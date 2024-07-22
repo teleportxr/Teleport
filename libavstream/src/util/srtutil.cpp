@@ -1,7 +1,13 @@
 #include "util/srtutil.h"
 #include "logger.hpp"
-
 #if LIBAV_USE_SRT
+#include <srt.h>
+namespace avs
+{
+	extern sockaddr_in CreateAddrInet(const std::string& name, unsigned short port);
+	extern void CHECK_SRT_ERROR(int err);
+}
+
 using namespace avs;
 
 sockaddr_in avs::CreateAddrInet(const std::string& name, unsigned short port)

@@ -67,7 +67,7 @@ Result AudioEncodePipeline::process(const uint8_t* data, size_t dataSize)
 	return Result::Code::OK;
 }
 
-Result AudioEncodePipeline::configure(const ServerSettings& serverSettings, const AudioSettings& audioSettings, avs::Queue* audioQueue)
+Result AudioEncodePipeline::configure(const ServerSettings& serverSettings, const AudioSettings& audioSettings, avs::PipelineNode* audioQueue)
 {
 	if (configured)
 	{

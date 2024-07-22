@@ -4,6 +4,7 @@
 #include <libavstream/network/networksource.h>
 #include <libavstream/surface.hpp>
 #include <libavstream/queue.hpp>
+#include <libavstream/lock_free_queue.h>
 #include <libavstream/singlequeue.h>
 #include <libavstream/decoder.hpp>
 #include <libavstream/geometrydecoder.hpp>
@@ -30,7 +31,7 @@ namespace teleport
 			// Pipeline and nodes:
 			avs::Pipeline pipeline;
 
-			avs::Queue unreliableToServerQueue;
+			avs::LockFreeQueue unreliableToServerQueue;
 			avs::SingleQueue nodePosesQueue;
 			avs::SingleQueue inputStateQueue;
 			std::shared_ptr<avs::NetworkSource> source;
@@ -41,7 +42,7 @@ namespace teleport
 			avs::Queue tagDataQueue;
 			avs::TagDataDecoder tagDataDecoder;
 
-			avs::Queue geometryQueue;
+			avs::LockFreeQueue geometryQueue;
 			avs::GeometryDecoder avsGeometryDecoder;
 			avs::GeometryTarget avsGeometryTarget;
 
@@ -49,7 +50,7 @@ namespace teleport
 			avs::AudioDecoder avsAudioDecoder;
 			avs::AudioTarget avsAudioTarget;
 
-			avs::Queue reliableOutQueue;
+			avs::LockFreeQueue reliableOutQueue;
 			avs::GenericDecoder commandDecoder;
 
 			avs::DecoderParams decoderParams = {};

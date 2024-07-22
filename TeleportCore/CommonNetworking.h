@@ -7,6 +7,14 @@
 #include "libavstream/common_maths.h"
 #include "libavstream/common_input.h"
 
+#ifndef TELEPORT_PACKED
+	#if defined(__GNUC__) || defined(__clang__)
+		#define TELEPORT_PACKED __attribute__ ((packed,aligned(1)))
+	#else
+		#define TELEPORT_PACKED
+	#endif
+#endif
+
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 typedef vec2 vec2_packed;
@@ -20,21 +28,21 @@ struct vec2_packed
 	operator const vec2() const {
 		return *((const vec2*)this);
 	}
-} AVS_PACKED;
+} TELEPORT_PACKED;
 struct vec3_packed
 {
 	float x, y, z;
 	operator const vec3() const {
 		return *((const vec3*)this);
 	}
-} AVS_PACKED;
+} TELEPORT_PACKED;
 struct vec4_packed
 {
 	float x, y, z, w;
 	operator const vec4() const {
 		return *((const vec4*)this);
 	}
-} AVS_PACKED;
+} TELEPORT_PACKED;
 #endif
 namespace teleport
 {
@@ -43,7 +51,7 @@ namespace teleport
 		enum class BackgroundMode : uint8_t
 		{
 			NONE = 0, COLOUR, TEXTURE, VIDEO
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 #ifdef _MSC_VER
 		typedef avs::Pose Pose_packed;
 		typedef avs::PoseDynamic PoseDynamic_packed;
@@ -57,7 +65,7 @@ namespace teleport
 			}
 			vec4_packed orientation = { 0, 0, 0, 1 };
 			vec3_packed position = { 0, 0, 0 };
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		struct PoseDynamic_packed
 		{
 			void operator=(const avs::PoseDynamic &p)
@@ -69,7 +77,7 @@ namespace teleport
 			Pose_packed pose;
 			vec3_packed velocity;
 			vec3_packed angularVelocity;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 #endif
 		enum class RemotePlaySessionChannel : unsigned char 
 		{
@@ -77,13 +85,13 @@ namespace teleport
 			RPCH_Control = 1,
 			RPCH_StreamingControl= 7,
 			RPCH_NumChannels
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		enum class ControlModel : uint32_t
 		{
 			NONE=0,
 			SERVER_ORIGIN_CLIENT_LOCAL=2
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		enum class NodeStatus : uint8_t
 		{
@@ -91,7 +99,7 @@ namespace teleport
 			Drawn,
 			WantToRelease,
 			Released
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 	
 		//! The payload type, or how to interpret the server's message.
 		enum class CommandPayloadType : uint8_t
@@ -114,7 +122,7 @@ namespace teleport
 			SetupInputs,					// 0
 			PingForLatency,
 			SetStageSpaceOriginNode=128		// 0
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		inline const char *StringOf(CommandPayloadType type)
 		{
 		switch(type)
@@ -156,7 +164,7 @@ namespace teleport
 			PongForLatency,
 			OrthogonalAcknowledgement,
 			Acknowledgement
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 	
 		//! The response payload sent by a server to a client on discovery.
 		//! The server assigns the client an ID which is unique for that server.
@@ -164,14 +172,14 @@ namespace teleport
 		{
 			uint64_t clientID;		//!< The unique client ID.
 			uint16_t remotePort;	//!< The port the client should use for data.
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 
 		struct InputState
 		{
 			uint16_t numBinaryStates = 0;
 			uint16_t numAnalogueStates= 0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//Contains information to update the transform of a node.
 		struct MovementUpdate
@@ -187,7 +195,7 @@ namespace teleport
 			vec3_packed velocity={0,0,0};
 			vec3_packed angularVelocityAxis={0,0,0};
 			float angularVelocityAngle = 0.0f;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//TODO: Use instead of MovementUpdate for bandwidth.
 		struct NodeUpdatePosition
@@ -198,7 +206,7 @@ namespace teleport
 			avs::uid nodeID = 0;
 			vec3_packed position;
 			vec3_packed velocity;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//TODO: Use instead of MovementUpdate for bandwidth.
 		struct NodeUpdateRotation
@@ -210,7 +218,7 @@ namespace teleport
 			vec4_packed rotation;
 			vec3_packed angularVelocityAxis;
 			float angularVelocityAngle = 0.0f;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		// TODO: Use instead of MovementUpdate for bandwidth.
 		struct NodeUpdateScale
@@ -221,13 +229,13 @@ namespace teleport
 			avs::uid nodeID = 0;
 			vec3_packed scale;
 			vec3_packed scale_rate;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct NodeUpdateEnabledState
 		{
 			avs::uid nodeID = 0;	//< ID of the node we are changing the enabled state of.
 			bool enabled = false;	//< Whether the node is enabled, and thus should be rendered.
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Animation is applied to skeletons (hierarchies of nodes).
 		//! Each skeleton can have one or more animation layers, and each layer is applied in turn.
@@ -246,7 +254,7 @@ namespace teleport
 			float animTimeAtTimestamp=0.0f;				//< At the given timestamp, where in the animation should we be?
 			float speedUnitsPerSecond=1.0f;				//< At the timestamp, how fast is the animation playing? For extrapolation.
 			bool loop=false;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! A message from a server to a client.
 		//! The commandPayloadType specifies the size and interpretation of the packet.
@@ -256,7 +264,7 @@ namespace teleport
 			CommandPayloadType commandPayloadType;
 			Command(CommandPayloadType t) : commandPayloadType(t) {}
 
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 	
 		//! The message sent by a server to a client on receipt of the client's handshake,
 		//! confirming that the session can begin.
@@ -272,7 +280,7 @@ namespace teleport
 			}
 
 			size_t visibleNodeCount = 0; //!<Count of visible node IDs appended to the command payload.
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Mode specifying how to light objects.
 		enum class LightingMode : uint8_t
@@ -280,7 +288,7 @@ namespace teleport
 			NONE = 0,
 			TEXTURE,
 			VIDEO
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		//! Setup for dynamically-lit objects on the client.
 		struct ClientDynamicLighting
 		{
@@ -294,7 +302,7 @@ namespace teleport
 			avs::uid specular_cubemap_texture_uid = 0;
 			avs::uid diffuse_cubemap_texture_uid = 0;	//14*4=56
 			LightingMode lightingMode = LightingMode::TEXTURE;// 57
-		} AVS_PACKED; // 57 bytes
+		} TELEPORT_PACKED; // 57 bytes
 		static_assert (sizeof(ClientDynamicLighting) == 57, "ClientDynamicLighting Size is not correct");
 		//! The setup information sent by the server on connection to a given client.
 		struct SetupCommand : public Command
@@ -321,7 +329,7 @@ namespace teleport
 			vec4_packed			backgroundColour;									//!< 130+16=146 If the background is of the COLOUR type, which colour to use.
 			ClientDynamicLighting clientDynamicLighting;							//!<			Setup for dynamic object lighting. 146+57=203 bytes
 			avs::uid			backgroundTexture=0;								//!< 203+8=211
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		static_assert (sizeof(SetupCommand) == 211, "SetupCommand Size is not correct");
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
@@ -338,7 +346,7 @@ namespace teleport
 			}
 			//! If this is nonzero, implicitly gi should be enabled.
 			uint8_t num_gi_textures=0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! A command that expects an acknowledgement of receipt from the client using an AcknowledgementMessage.
 		struct AckedCommand : public Command
@@ -346,7 +354,7 @@ namespace teleport
 			AckedCommand(CommandPayloadType t) : Command(t) {}
 			//! The id that is used to acknowledge receipt via AcknowledgementMessage. Should increase monotonically per-full-client-session: clients can ignore any id less than or equal to a previously received id.
 			uint64_t		ack_id = 0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		
 		//! Sent from server to client to set the origin of the client's space.
 		struct SetStageSpaceOriginNodeCommand : public AckedCommand
@@ -360,7 +368,7 @@ namespace teleport
 			avs::uid		origin_node=0;		//!< The session uid of the node to use as the origin.
 			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 			uint64_t		valid_counter = 0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! The definition of a single input that the server expects the client to provide when needed.
 		struct InputDefinition
@@ -369,7 +377,7 @@ namespace teleport
 			avs::InputType inputType;
 			//! A regular expression that will be used to match the full component path of a client-side control
 			std::string regexPath;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! The netpacket version of InputDefinition, to be followed by pathLength utf8 characters.
 		struct InputDefinitionNetPacket
@@ -377,7 +385,7 @@ namespace teleport
 			avs::InputId inputId;
 			avs::InputType inputType;
 			uint16_t pathLength;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Sends Input definitions. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
 		struct SetupInputsCommand : public Command
@@ -393,7 +401,7 @@ namespace teleport
 			}
 			//! The number of inputs to follow the command.
 			uint16_t numInputs = 0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		//! Instructs the client to accept a new video configuration, e.g. if bandwidth requires a change of resolution.
 		struct ReconfigureVideoCommand : public Command
 		{
@@ -405,7 +413,7 @@ namespace teleport
 			}
 			//! The configuration to use.
 			avs::VideoConfig video_config;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Instructs the client to close the connection.
 		struct ShutdownCommand : public Command
@@ -416,7 +424,7 @@ namespace teleport
 			{
 				return sizeof(ShutdownCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Instructs the client to show or hide the specified nodes.
 		struct NodeVisibilityCommand : public Command
@@ -436,7 +444,7 @@ namespace teleport
 			{
 				return sizeof(NodeVisibilityCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Instructs the client to modify the motion of the specified nodes.
 		struct UpdateNodeMovementCommand : public Command
@@ -455,7 +463,7 @@ namespace teleport
 			{
 				return sizeof(UpdateNodeMovementCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Instructs the client to modify the enabled state of the specified nodes.
 		struct UpdateNodeEnabledStateCommand : public Command
@@ -474,7 +482,7 @@ namespace teleport
 			{
 				return sizeof(UpdateNodeEnabledStateCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Instructs the client to modify the highlighted state of the specified nodes.
 		struct SetNodeHighlightedCommand : public Command
@@ -494,7 +502,7 @@ namespace teleport
 			{
 				return sizeof(SetNodeHighlightedCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		//! A confirmable state.
 		struct NodeStateCommand : public Command
 		{
@@ -503,7 +511,7 @@ namespace teleport
 			NodeStateCommand(CommandPayloadType type,avs::uid nid)
 				:Command(type),nodeID(nid)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		//! Instructs the client to reparent the specified node.
 		struct UpdateNodeStructureCommand : public NodeStateCommand
 		{
@@ -524,7 +532,7 @@ namespace teleport
 			{
 				return sizeof(UpdateNodeStructureCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! A command to set the locally-tracked pose of a node, for example, a node can here be linked to a regex path for an OpenXR pose control.
 		//! If pathLength>0, followed by a number of chars given in pathLength for the utf8 regex path.
@@ -546,7 +554,7 @@ namespace teleport
 			{
 				return sizeof(AssignNodePosePathCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 	
 		//! Update the animation state of the specified nodes.
 		struct ApplyAnimationCommand : public Command
@@ -565,7 +573,7 @@ namespace teleport
 			{
 				return sizeof(ApplyAnimationCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct SetNodeAnimationSpeedCommand : public Command
 		{
@@ -585,7 +593,7 @@ namespace teleport
 			{
 				return sizeof(SetNodeAnimationSpeedCommand);
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct PingForLatencyCommand : public Command
 		{
@@ -599,17 +607,17 @@ namespace teleport
 			{
 				return sizeof(PingForLatencyCommand);
 			}
-		} AVS_PACKED; 
+		} TELEPORT_PACKED; 
 
 		/// A message from a client to a server.
 		struct ClientMessage
 		{
 			/// Specifies what type of client message this is.
 			ClientMessagePayloadType clientMessagePayloadType;
-			uint64_t timestamp_unix_ms = 0;
+			int64_t timestamp_unix_ms = 0;
 			ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		
 		//! The handshake sent by a connecting client to the server on initialization.
 		//! Acknowledged by returning an avs::AcknowledgeHandshakeCommand to the client.
@@ -630,7 +638,8 @@ namespace teleport
 			uint32_t maxLightsSupported = 0;
 			int32_t minimumPriority = 0;		// The lowest priority object this client will render, meshes with lower priority need not be sent.
 			avs::RenderingFeatures renderingFeatures;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
+		static_assert (sizeof(Handshake) == 58, "Handshake Size is not correct");
 		// TODO: this should be a separate message type, not a client message.
 		struct OrthogonalAcknowledgementMessage: public ClientMessage
 		{
@@ -642,7 +651,7 @@ namespace teleport
 				:ClientMessage(ClientMessagePayloadType::OrthogonalAcknowledgement),
 				confirmationNumber(confirmationNumber)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		//! Message info struct containing how many nodes have changed to what state; sent alongside two lists of node UIDs.
 		struct NodeStatusMessage : public ClientMessage
 		{
@@ -661,7 +670,7 @@ namespace teleport
 				nodesWantToReleaseCount(nodesWantToReleaseCount)
 			{}
 
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Message info struct containing how many resources were received; sent alongside a list of UIDs.
 		struct ReceivedResourcesMessage : public ClientMessage
@@ -676,12 +685,12 @@ namespace teleport
 			ReceivedResourcesMessage(size_t receivedResourcesCount)
 				:ClientMessage(ClientMessagePayloadType::ReceivedResources), receivedResourcesCount(receivedResourcesCount)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		struct NodePose
 		{
 			avs::uid uid;
 			PoseDynamic_packed poseDynamic;// in stage space.
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Message info struct containing head and other node poses. followed by numPoses NodePose structs.
 		struct ControllerPosesMessage : public ClientMessage
@@ -694,7 +703,7 @@ namespace teleport
 			ControllerPosesMessage()
 				:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		
 		//! Acknowledges receipt of an AckedCommand.
 		struct AcknowledgementMessage : public ClientMessage
@@ -703,7 +712,7 @@ namespace teleport
 			AcknowledgementMessage()
 				:ClientMessage(ClientMessagePayloadType::Acknowledgement)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Message info struct containing a request for resources, to be followed by the list of uid's.
 		struct ResourceLostMessage : public ClientMessage
@@ -714,7 +723,7 @@ namespace teleport
 			ResourceLostMessage()
 				:ClientMessage(ClientMessagePayloadType::ResourceLost)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Message info struct containing a request for resources, to be followed by the list of uid's.
 		struct InputStatesMessage : public ClientMessage
@@ -724,7 +733,7 @@ namespace teleport
 			InputStatesMessage()
 				:ClientMessage(ClientMessagePayloadType::InputStates)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct InputEventsMessage : public ClientMessage
 		{
@@ -734,7 +743,7 @@ namespace teleport
 			InputEventsMessage()
 				:ClientMessage(ClientMessagePayloadType::InputEvents)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct DisplayInfoMessage : public ClientMessage
 		{
@@ -742,14 +751,14 @@ namespace teleport
 			DisplayInfoMessage()
 				:ClientMessage(ClientMessagePayloadType::DisplayInfo)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct KeyframeRequestMessage:public ClientMessage
 		{
 			KeyframeRequestMessage()
 				:ClientMessage(ClientMessagePayloadType::KeyframeRequest)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct PongForLatencyMessage :public ClientMessage
 		{
@@ -758,7 +767,7 @@ namespace teleport
 			PongForLatencyMessage()
 				:ClientMessage(ClientMessagePayloadType::PongForLatency)
 			{}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		enum class SignalingState : uint8_t
 		{

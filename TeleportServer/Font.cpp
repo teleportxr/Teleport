@@ -8,6 +8,7 @@
 #include <stb_image_write.h>
 
 #include <TeleportCore/ErrorHandling.h>
+#include <TeleportCore/Logging.h>
 #include <fstream>
 #include <filesystem>
 #include "libavstream/geometry/mesh_interface.hpp"
@@ -149,7 +150,19 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	avsTexture.images[0].data.resize(imageSize);
 	uint8_t *target = avsTexture.images[0].data.data();
 	memcpy(target, bitmap, mip0_bytesize);
-
+	bool black=true;
+	for(size_t i=0;i<mip0_bytesize;i++)
+	{
+		if(target[i]!=0)
+		{
+			black=false;
+			break;
+		}
+	}
+	if(black)
+	{
+		TELEPORT_WARN("Black font texture {0}",avsTexture.name);
+	}
     // create file
     TELEPORT_INTERNAL_COUT("height = {0}, fill rate = {1}\n", height, 100*filled/(double)(width*height)); fflush(stdout);
 	//std::string png_filename=std::string(ttf_path_utf8)+".png";

@@ -12,43 +12,49 @@ namespace avs
 /*!
  * Queue node `[passive, 1/1]`
  *
- * A thread-safe, nonblocking, pseudo-queue of either one, or zero byte buffers. Pushing a buffer replaces the
- * one that's there, if any.
- * Sharing an instance of this node is a way to link two pipelines running on different threads.
+ * A thread-safe, lock-free, producer-consumer queue of byte buffers.
+ *
+ * Sharing an instance of this node is the recommended way to link two pipelines running on different threads.
  */
-	class AVSTREAM_API SingleQueue final : public PipelineNode
+	class AVSTREAM_API LockFreeQueue final : public PipelineNode
 		, public IOInterface
 	{
-		AVSTREAM_PUBLICINTERFACE(SingleQueue)
-		SingleQueue::Private *data;
-		std::vector<uint8_t> buffer;
-		size_t dataSize = 0;
-		std::mutex m_mutex;
-		void flushInternal();
-		void increaseBufferSize(size_t requestedSize);
-		void push(const void* buffer, size_t bufferSize);
-		void pop();
-		void drop() override;
-	public:
-		SingleQueue();
+		AVSTREAM_PUBLICINTERFACE(LockFreeQueue)
+		LockFreeQueue::Private *data;
+		/** Contiguous ring buffer */
+		std::vector<uint8_t> ringBuffer;
+		
+		std::atomic<size_t> loopback_index = {0};
+		std::atomic<size_t> next_write_index = {0};
+		std::atomic<size_t> next_read_index = {0};
+		std::atomic<size_t> blockCount = {0};
+		size_t maxBufferSize=1024*1024*32;
 
-		~SingleQueue();
+		void flushInternal();
+		size_t increaseBufferSize(size_t requestedSize);
+		/*!
+		 * Flush the queue.
+		 */
+		void flush();
+	public:
+		LockFreeQueue();
+		~LockFreeQueue();
 
 		// Prevent copying and moving because this class handles raw memory
-		SingleQueue(const SingleQueue&) = delete;
-
-		SingleQueue(const SingleQueue&&) = delete;
+		LockFreeQueue(const LockFreeQueue&) = delete;
+		LockFreeQueue(const LockFreeQueue&&) = delete;
 
 		/*!
-		 * Configure SingleQueue.
+		 * Configure queue.
 		 * \param maxBufferSize Maximum size of a buffer in the queue.
-		 * \param name Name of this node.
+		 * \param maxBuffers Maximum number of buffers in the queue.
+		 * \param name Name of the node.
 		 * \warning Reconfiguring an already configured Queue performs an implicit flush.
 		 * \return 
 		 *  - Result::OK on success.
 		 *  - Result::Node_InvalidConfiguration if maxBuffers is zero.
 		 */
-		Result configure(size_t maxBufferSize, const char *name);
+		Result configure(size_t ringBufferSizeBytes, const char *name);
 
 		/*!
 		 * Flush & deconfigure queue.
@@ -56,10 +62,6 @@ namespace avs
 		 */
 		Result deconfigure() override;
 
-		/*!
-		 * Flush queue.
-		 */
-		void flush();
 
 		/*!
 		 * Read buffer at the front of the queue.
@@ -72,8 +74,9 @@ namespace avs
 		 */
 		Result read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
+		void drop();
 		/*!
-		 * Write buffer to the queue. Replaces any data that is already there. Only one buffer is ever present.
+		 * Write buffer to the back of the queue.
 		 * \sa IOInterface::write()
 		 * \return
 		 *  - Result::OK on success.
@@ -82,6 +85,7 @@ namespace avs
 		 */
 		Result write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 
+		size_t bytesRemaining() const;
 	
 		/*!
 		 * Get node display name (for reporting & profiling).

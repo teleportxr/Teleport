@@ -8,7 +8,7 @@
 #include "Platform/CrossPlatform/BaseRenderer.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/VideoDecoder.h"
-#include <libavstream/decoders/dec_interface.hpp>
+#include <libavstream/decoders/dec_interface.h>
 #include <memory>
 #include <parallel_hashmap/phmap.h>
 #include <vector>

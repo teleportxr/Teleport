@@ -16,28 +16,29 @@ endif()
 
 # Private source
 set(src_private_root
+	src/audiodecoder.cpp
+	src/audioencoder.cpp
 	src/context.cpp
-	src/pipeline.cpp
-	src/node.cpp
 	src/decoder.cpp
-	src/tagdatadecoder.cpp
+	src/encoder.cpp
+	src/file.cpp
 	src/genericdecoder.cpp
 	src/genericencoder.cpp
 	src/geometrydecoder.cpp
-	src/encoder.cpp
 	src/geometryencoder.cpp
-	src/audioencoder.cpp
-	src/audiodecoder.cpp
+	src/lock_free_queue.cpp
 	src/surface.cpp
 	src/mesh.cpp
 	src/buffer.cpp
+	src/node.cpp
+	src/nullsink.cpp
+	src/pipeline.cpp
 	src/queue.cpp
-	src/file.cpp
 	src/memory.cpp
 	src/forwarder.cpp
 	src/packetizer.cpp
 	src/singlequeue.cpp
-	src/nullsink.cpp
+	src/tagdatadecoder.cpp
 	src/libraryloader.cpp
 	src/timer.cpp
 )
@@ -107,7 +108,7 @@ set(hdr_private_parsers
 	src/parsers/nalu_parser_h265.hpp)
 set(hdr_private_network
 	src/network/packetformat.hpp
-	src/network/serial.hpp)
+	src/network/serial.h)
 
 if(LIBAV_SRT)
 	set(hdr_private_network
@@ -171,6 +172,7 @@ set(hdr_public_root
 	include/libavstream/geometryencoder.hpp
 	include/libavstream/interfaces.hpp
 	include/libavstream/libavstream.hpp
+	include/libavstream/lock_free_queue.h
 	include/libavstream/memory.hpp
 	include/libavstream/mesh.hpp
 	include/libavstream/node.hpp
@@ -191,9 +193,9 @@ set(hdr_public_network
 set(src_public_stream
 	include/libavstream/stream/parser_interface.hpp)
 set(src_public_decoders
-	include/libavstream/decoders/dec_interface.hpp)
+	include/libavstream/decoders/dec_interface.h)
 set(src_public_encoders
-	include/libavstream/encoders/enc_interface.hpp)
+	include/libavstream/encoders/enc_interface.h)
 set(src_public_surfaces
 	include/libavstream/surfaces/surface_interface.hpp
 	include/libavstream/surfaces/surface_dx11.hpp
@@ -280,9 +282,7 @@ elseif(ANDROID)
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Og -DNDEBUG")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -Og -D_DEBUG -DDEBUG")
-	set(src_platform
-		src/platforms/platform_posix.cpp
-	)
+	set(src_platform src/platforms/platform_posix.cpp)
 	set(def_platform PLATFORM_LINUX)
 	find_program(xxd NAMES xxd)
 else()
@@ -352,6 +352,7 @@ if(LIBAV_USE_SRT)
 	set(srt_include_paths "${SRT_SOURCE_DIR}/common" "${SRT_SOURCE_DIR}/srtcore" ${SRT_BINARY_DIR})
 	#message(WARNING srt_include_paths ${srt_include_paths})
 endif()
+
 if(LIBAV_USE_EFP)
 	# ElasticFrameProtocol
 	add_subdirectory(thirdparty/efp)
@@ -362,6 +363,7 @@ if(LIBAV_USE_EFP)
 	set(efp_include_paths ${efp_SOURCE_DIR} ${efp_BINARY_DIR})
 	#message(WARNING efp_include_paths ${efp_include_paths})
 endif()
+
 if(TELEPORT_TRACY_PROFILING)
 	target_include_directories(libavstream PUBLIC ${CMAKE_BINARY_DIR}/_deps/tracy-src/public)
 	target_compile_definitions(libavstream PRIVATE TRACY_ENABLE=1 )
@@ -389,7 +391,7 @@ target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${efp_include_paths}
 														include
 														${PTHREAD_INCLUDE_DIR}
-														PUBLIC include/libavstream
+														PUBLIC include include/libavstream
 														${curl_include_paths})
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
@@ -451,10 +453,18 @@ target_compile_definitions(libavstream PRIVATE TELEPORT_DATACHANNEL_WEBRTC=$<BOO
 if(TELEPORT_DATACHANNEL_WEBRTC)
 	target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/include")
 	target_link_directories(libavstream PUBLIC "${CMAKE_BINARY_DIR}/thirdparty/libdatachannel/${CONFIG_NAME}")
-	target_link_libraries(libavstream datachannel-static )
+	target_link_libraries(libavstream datachannel-static)
 	if(TELEPORT_WINDOWS)
 		target_link_libraries(libavstream legacy_stdio_definitions.lib)
 	endif()
 endif()
 target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 target_compile_definitions( libavstream PUBLIC FMT_HEADER_ONLY )
+
+# Unit testing.
+if(TELEPORT_TEST)
+	find_package(Catch2 REQUIRED)
+	add_executable(libavstream_test src/test/test.cpp)
+	set_target_properties(libavstream_test PROPERTIES FOLDER AVStream)
+	target_link_libraries(libavstream_test Catch2WithMain libavstream efp fmt LibDataChannel::LibDataChannelStatic pthreads4w::pthreadVC3)
+endif()

@@ -1475,8 +1475,6 @@ void InstanceRenderer::OnReceiveVideoTagData(const uint8_t* data, size_t dataSiz
 
 	tagData.lights.resize(tagData.coreData.lightCount);
 
-	//teleport::client::ServerTimestamp::setLastReceivedTimestampUTCUnixMs(tagData.coreData.timestamp_unix_ms);
-
 	// We will check the received light tags agains the current list of lights - rough and temporary.
 	/*
 	Roderick: we will here ignore the cached lights (CPU-streamed node lights) as they are unordered so may be found in a different order
@@ -1584,9 +1582,10 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 
 	CreateTexture(renderPlatform,instanceRenderState.avsTexture, int(stream_width), int(stream_height));
 
+	auto& clientPipeline = sessionClient->GetClientPipeline();
 // Set to a custom backend that uses platform api video decoder if using D3D12 and non NVidia card. 
 #if TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER
-	sessionClient->GetClientPipeline().decoder.setBackend(CreateVideoDecoder());
+	clientPipeline.decoder.setBackend(CreateVideoDecoder());
 #endif
 
 	avs::DeviceHandle dev;
@@ -1602,35 +1601,37 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	dev.type = avs::DeviceType::Vulkan;
 #endif
 	// Video streams are 0+...
-	if (!sessionClient->GetClientPipeline().decoder.configure(dev, (int)stream_width, (int)stream_height, sessionClient->GetClientPipeline().decoderParams, 20))
+	bool got_video=false;
+	if (clientPipeline.decoder.configure(dev, (int)stream_width, (int)stream_height, clientPipeline.decoderParams, 20))
 	{
-		TELEPORT_CERR << "Failed to configure decoder node!\n";
+		got_video=true;
 	}
-	if (!sessionClient->GetClientPipeline().surface.configure(instanceRenderState.avsTexture->createSurface()))
+	if(got_video)
 	{
-		TELEPORT_CERR << "Failed to configure output surface node!\n";
-	}
-	auto& clientPipeline = sessionClient->GetClientPipeline();
-	clientPipeline.videoQueue.configure(300000, 16, "VideoQueue");
-
-	avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.videoQueue);
-	avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
-	clientPipeline.pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
-	
-	// Tag Data
-	{
-		auto f = std::bind(&InstanceRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
-		if (!clientPipeline.tagDataDecoder.configure(40, f))
+		if (!clientPipeline.surface.configure(instanceRenderState.avsTexture->createSurface()))
 		{
-			TELEPORT_CERR << "Failed to configure video tag data decoder node!\n";
+			TELEPORT_WARN( "Failed to configure output surface node!\n");
 		}
+		clientPipeline.videoQueue.configure(300000, 16, "VideoQueue");
 
-		clientPipeline.tagDataQueue.configure(200, 16, "VideoTagQueue");
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.videoQueue);
+		avs::PipelineNode::link(clientPipeline.videoQueue, clientPipeline.decoder);
+		clientPipeline.pipeline.link({ &clientPipeline.decoder, &clientPipeline.surface });
+	
+		// Tag Data
+		{
+			auto f = std::bind(&InstanceRenderer::OnReceiveVideoTagData, this, std::placeholders::_1, std::placeholders::_2);
+			if (!clientPipeline.tagDataDecoder.configure(40, f))
+			{
+				TELEPORT_CERR << "Failed to configure video tag data decoder node!\n";
+			}
 
-		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.tagDataQueue);
-		clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
+			clientPipeline.tagDataQueue.configure(200, 16, "VideoTagQueue");
+
+			avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.tagDataQueue);
+			clientPipeline.pipeline.link({ &clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder });
+		}
 	}
-
 	// Audio
 	{
 		clientPipeline.avsAudioDecoder.configure(60);
@@ -1657,10 +1658,10 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 			int maxBandwidthKpS = udpBufferSize * framerate;
 			audio::NetworkSettings networkSettings =
 			{
-					static_cast<int32_t>(maxBandwidthKpS)
-					, static_cast<int32_t>(udpBufferSize)
-					, setupCommand.requiredLatencyMs
-					, (int32_t)setupCommand.idle_connection_timeout
+				static_cast<int32_t>(maxBandwidthKpS)
+				, static_cast<int32_t>(udpBufferSize)
+				, setupCommand.requiredLatencyMs
+				, (int32_t)setupCommand.idle_connection_timeout
 			};
 
 			audioInputNetworkPipeline.reset(new audio::NetworkPipeline());
@@ -1686,21 +1687,21 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		clientPipeline.avsGeometryDecoder.configure(80, server_uid, & geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
-		clientPipeline.geometryQueue.configure(600000, 200, "GeometryQueue");
+		clientPipeline.geometryQueue.configure(600000* 200, "GeometryQueue");
 
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);
 		clientPipeline.pipeline.link({ &clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget });
 	}
 	{
-		clientPipeline.reliableOutQueue.configure(3000, 64, "Reliable out");
+		clientPipeline.reliableOutQueue.configure(3000* 64, "Reliable out");
 		clientPipeline.commandDecoder.configure(sessionClient,"Reliable Decoder");
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableOutQueue);
 		clientPipeline.pipeline.link({ &clientPipeline.reliableOutQueue, &clientPipeline.commandDecoder });
 	}
 	// And the generic queue for messages TO the server:
 	{
-		clientPipeline.unreliableToServerQueue.configure(3000, 64, "Unreliable in");
+		clientPipeline.unreliableToServerQueue.configure(3000* 64, "Unreliable in");
 		avs::PipelineNode::link(clientPipeline.unreliableToServerQueue, *(clientPipeline.source.get()));
 	}
 	// Tow special-purpose queues for time-sensitive messages TO the server:

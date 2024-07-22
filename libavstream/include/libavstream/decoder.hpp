@@ -1,11 +1,11 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #pragma once
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
-#include <libavstream/decoders/dec_interface.hpp>
+#include <libavstream/decoders/dec_interface.h>
 #include <memory>
 #include <functional>
 

@@ -25,7 +25,7 @@ VideoEncodePipeline::~VideoEncodePipeline()
 	deconfigure();
 }
 
-Result VideoEncodePipeline::initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::IOInterface* tagDataOutput)
+Result VideoEncodePipeline::initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::PipelineNode* tagDataOutput)
 {
 	auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 	{
@@ -73,7 +73,7 @@ Result VideoEncodePipeline::initialize(const ServerSettings& settings, const Vid
 	mPipeline.reset(new avs::Pipeline);
 	mEncoder.reset(new avs::Encoder);
 	mInputSurface.reset(new avs::Surface);
-	mTagDataOutput = tagDataOutput;
+	mTagDataOutput = dynamic_cast<avs::IOInterface*>(tagDataOutput);
 
 	if (!mInputSurface->configure(avsSurfaceBackend))
 	{
@@ -227,7 +227,7 @@ Result VideoEncodePipeline::getEncodeCapabilities(const ServerSettings& settings
 }
 
 
-Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams, avs::Queue* colorQueue, avs::Queue* tagDataQueue)
+Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* colorQueue, avs::PipelineNode* tagDataQueue)
 {
 	if (configured)
 	{

@@ -5,7 +5,7 @@
 #include "ClientRender/NodeManager.h"
 #include "ClientRender/GeometryCache.h"
 #include "ClientRender/Texture.h"
-#include "libavstream/decoders/dec_interface.hpp"
+#include "libavstream/decoders/dec_interface.h"
 #include "TeleportClient/Config.h"
 #include <functional>
 #ifdef __ANDROID__

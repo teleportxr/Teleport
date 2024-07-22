@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #include "queue_p.hpp"
 #include <algorithm>
@@ -36,12 +36,13 @@ namespace avs
 		m_maxBuffers = maxBuffers;
 		m_numElements = 0;
 		m_front = -1;
-		m_mem = new char[m_maxBuffers * m_maxBufferSize];
+		m_mem.resize(m_maxBuffers * m_maxBufferSize);
 		m_dataSizes = new size_t[m_maxBuffers];
 		for (size_t i = 0; i < m_maxBuffers; ++i)
 		{
 			m_dataSizes[i] = 0;
 		}
+		AVSLOG(Info)<<"Queue::Configure "<<name<<", maxBufferSize "<<maxBufferSize<<", maxBuffers="<<maxBuffers<<"\n";
 		return Result::OK;
 	}
 
@@ -134,7 +135,7 @@ namespace avs
 
 	void Queue::flushInternal()
 	{
-		SAFE_DELETE_ARRAY(m_mem)
+		m_mem.clear();
 		SAFE_DELETE_ARRAY(m_dataSizes)
 	}
 
@@ -143,8 +144,8 @@ namespace avs
 		const size_t oldBufferCount = m_maxBuffers;
 		
 		m_maxBuffers += std::max(m_maxBuffers,m_originalMaxBuffers)/2;
-		char* oldMem = m_mem;
-		m_mem = new char[m_maxBuffers * m_maxBufferSize];
+	
+		std::vector<char> new_mem(m_maxBuffers * m_maxBufferSize);
 
 		size_t* oldSizes = m_dataSizes;
 		m_dataSizes = new size_t[m_maxBuffers];
@@ -155,7 +156,7 @@ namespace avs
 			const size_t frontToEnd = std::min<size_t>(oldBufferCount - m_front, m_numElements);
 			const size_t firstCopySize = frontToEnd * m_maxBufferSize;
 
-			memcpy(m_mem, &oldMem[m_front * m_maxBufferSize], firstCopySize);
+			memcpy(new_mem.data(), &(m_mem.data()[m_front * m_maxBufferSize]), firstCopySize);
 			memcpy(m_dataSizes, &oldSizes[m_front], sizeof(size_t) * frontToEnd);
 
 
@@ -163,7 +164,7 @@ namespace avs
 			const int64_t startToFront = m_numElements - frontToEnd;
 			if (startToFront > 0)
 			{
-				memcpy(&m_mem[firstCopySize], &oldMem[(m_front - startToFront) * m_maxBufferSize], startToFront * m_maxBufferSize);
+				memcpy(&(new_mem.data()[firstCopySize]), &(m_mem.data()[(m_front - startToFront) * m_maxBufferSize]), startToFront * m_maxBufferSize);
 				memcpy(&m_dataSizes[frontToEnd], &oldSizes[m_front - startToFront], startToFront * sizeof(size_t));
 			}
 			m_front = 0;
@@ -172,8 +173,8 @@ namespace avs
 		{
 			m_front = -1;
 		}
-
-		delete[] oldMem;
+		m_mem=std::move(new_mem);
+		//delete[] oldMem;
 		delete[] oldSizes;
 	}
 
@@ -181,8 +182,7 @@ namespace avs
 	{
 		const size_t oldBufferSize = m_maxBufferSize;
 		m_maxBufferSize = requestedSize + (requestedSize / 2);
-		char* oldMem = m_mem;
-		m_mem = new char[m_maxBuffers * m_maxBufferSize];
+		std::vector<char> new_mem(m_maxBuffers * m_maxBufferSize);
 
 		if (m_numElements > 0)
 		{
@@ -192,17 +192,17 @@ namespace avs
 			// Start to front if applicable
 			for (int64_t i = m_front - startToFront; i < m_front; ++i)
 			{
-				memcpy(&m_mem[i * m_maxBufferSize], &oldMem[i * oldBufferSize], oldBufferSize);
+				memcpy(&(new_mem[i * m_maxBufferSize]), &(m_mem[i * oldBufferSize]), oldBufferSize);
 			}
 		
 			// Front to end
 			for (int64_t i = m_front; i < m_front + frontToEnd; ++i)
 			{
-				memcpy(&m_mem[i * m_maxBufferSize], &oldMem[i * oldBufferSize], oldBufferSize);
+				memcpy(&(new_mem[i * m_maxBufferSize]), &(m_mem[i * oldBufferSize]), oldBufferSize);
 			}
 		}
 
-		delete[] oldMem;
+		m_mem=std::move(new_mem);
 	}
 
 	const void* Queue::frontp(size_t& bufferSize) const

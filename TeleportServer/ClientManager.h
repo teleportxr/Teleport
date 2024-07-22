@@ -84,7 +84,7 @@ namespace teleport
 		struct SessionState
 		{
 			uint64_t sessionId = 0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 #pragma pack(pop)
 		class ClientMessaging;
 		class ClientData;

@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #include "decoder_p.hpp"
 #include "decoders/dec_nvidia.hpp"
@@ -486,7 +486,9 @@ Result Decoder::onOutputLink(int slot, PipelineNode* node)
 {
 	if (!m_configured)
 	{
-		AVSLOG(Error) << "Decoder: PipelineNode needs to be configured before it can accept output\n";
+		if(node){
+			AVSLOG(Error) << "Decoder: PipelineNode "<<node->name<<" needs to be configured before it can accept output\n";
+		}
 		return Result::Node_NotConfigured;
 	}
 	assert(m_backend);

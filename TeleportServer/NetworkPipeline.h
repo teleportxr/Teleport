@@ -7,6 +7,7 @@
 
 #include <libavstream/libavstream.hpp>
 #include <libavstream/genericdecoder.h>
+#include <libavstream/lock_free_queue.h>
 
 #define WITH_TELEPORT_STATS 1
 
@@ -42,14 +43,14 @@ namespace teleport
 			bool getNextStreamingControlMessage(std::string &str);
 			void receiveStreamingControlMessage(const std::string& str);
 
-			avs::Queue ColorQueue;
-			avs::Queue TagDataQueue;
-			avs::Queue GeometryQueue;
-			avs::Queue AudioQueue;
-			avs::Queue reliableSendQueue;
-			avs::Queue unreliableReceiveQueue;
-			avs::Queue unreliableSendQueue;
-			avs::Queue reliableReceiveQueue;
+			avs::LockFreeQueue ColorQueue;
+			avs::LockFreeQueue TagDataQueue;
+			avs::LockFreeQueue GeometryQueue;
+			avs::LockFreeQueue AudioQueue;
+			avs::LockFreeQueue reliableSendQueue;
+			avs::LockFreeQueue unreliableReceiveQueue;
+			avs::LockFreeQueue unreliableSendQueue;
+			avs::LockFreeQueue reliableReceiveQueue;
 			std::unique_ptr<avs::NetworkSink> mNetworkSink;
 		private:
 			bool initialized = false;

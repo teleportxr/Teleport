@@ -1320,7 +1320,7 @@ bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t las
 	{
 		for (size_t j = 0; j < newTexture.images[i].data.size(); j++)
 		{
-			if (newTexture.images[i].data[i] != 0)
+			if (newTexture.images[i].data[j] != 0)
 			{
 				black = false;
 				break;

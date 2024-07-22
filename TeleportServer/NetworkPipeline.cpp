@@ -31,15 +31,16 @@ static const char *RELIABLE_RECEIVE_QUEUE = "Reliable Receive Queue";
 
 NetworkPipeline::NetworkPipeline()
 {
-	ColorQueue.configure(200000, 16, COLOR_QUEUE);
-	TagDataQueue.configure(200, 16, TAG_DATA_QUEUE);
-	GeometryQueue.configure(200000, 16, GEOMETRY_QUEUE);
-	AudioQueue.configure(8192, 120, AUDIO_QUEUE);
-	reliableSendQueue.configure(8192, 120, RELIABLE_SEND_QUEUE);
-	unreliableReceiveQueue.configure(8192, 120, UNRELIABLE_RECEIVE_QUEUE);
+	ColorQueue.configure(200000* 16, COLOR_QUEUE);
+	TagDataQueue.configure(200* 16, TAG_DATA_QUEUE);
+	GeometryQueue.configure(200000* 16, GEOMETRY_QUEUE);
+	AudioQueue.configure(8192* 120, AUDIO_QUEUE);
+	//reliableSendQueue.configure(8192, 120, RELIABLE_SEND_QUEUE);
+	reliableSendQueue.configure(8192* 120, RELIABLE_SEND_QUEUE);
+	unreliableReceiveQueue.configure(8192* 120, UNRELIABLE_RECEIVE_QUEUE);
 
-	unreliableSendQueue.configure(8192, 120, UNRELIABLE_SEND_QUEUE);
-	reliableReceiveQueue.configure(8192, 120, RELIABLE_RECEIVE_QUEUE);
+	unreliableSendQueue.configure(8192* 120, UNRELIABLE_SEND_QUEUE);
+	reliableReceiveQueue.configure(8192* 120, RELIABLE_RECEIVE_QUEUE);
 }
 
 

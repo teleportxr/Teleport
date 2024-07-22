@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2022 Simul Software Ltd
+// (c) Copyright 2018-2024 Simul Software Ltd
 
 #include <iostream>
 #include "network/webrtc_common.h"
@@ -213,7 +213,7 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 		
 		uint8_t streamIndex = m_data->idToStreamIndex[rPacket->mStreamID];// streamID is 20,40,60, etc
 		uint8_t outputNodeIndex = m_data->streamIndexToOutput[streamIndex];
-		auto outputNode = dynamic_cast<Queue*>(getOutput(outputNodeIndex));
+		IOInterface *outputNode = dynamic_cast<IOInterface*>(getOutput(outputNodeIndex));
 		if (!outputNode)
 		{
 			AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
@@ -320,7 +320,7 @@ void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 	uint8_t streamIndex = m_data->idToStreamIndex[m_params.httpStreamID];
 	uint8_t nodeIndex = m_data->streamIndexToOutput[streamIndex];
 
-	auto outputNode = dynamic_cast<Queue*>(getOutput(nodeIndex));
+	IOInterface * outputNode = dynamic_cast<IOInterface*>(getOutput(nodeIndex));
 	if (!outputNode)
 	{
 		AVSLOG(Warning) << "WebRtcNetworkSource HTTP Callback: Invalid output node. Should be an avs::Queue.";
@@ -652,10 +652,10 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			if (!stream.framed)
 			{
 				size_t numBytesWrittenToOutput=0;
-				auto outputNode = dynamic_cast<Queue*>(q_ptr()->getOutput(outputNodeIndex));
+				avs::IOInterface *outputNode = dynamic_cast<avs::IOInterface*>(q_ptr()->getOutput(outputNodeIndex));
 				if (!outputNode)
 				{
-					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.\n";
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should implement avs::IOInterface.\n";
 					return;
 				}
 				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);

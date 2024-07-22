@@ -34,7 +34,7 @@ namespace teleport
 			Result initialize(const ServerSettings& settings, const AudioSettings& audioSettings, avs::PipelineNode* output);
 			Result process(const uint8_t* data, size_t dataSize);
 
-			Result configure(const ServerSettings& serverSettings, const AudioSettings& audioSettings, avs::Queue* audioQueue);
+			Result configure(const ServerSettings& serverSettings, const AudioSettings& audioSettings, avs::PipelineNode* audioQueue);
 
 			Result sendAudio(const uint8_t* data, size_t dataSize);
 

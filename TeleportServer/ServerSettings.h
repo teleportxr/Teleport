@@ -80,7 +80,7 @@ namespace teleport
 			int32_t defaultDiffuseCubemapSize = 0;
 			int32_t defaultLightCubemapSize = 0;
 			int32_t defaultShadowmapSize = 0;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		struct ClientSettings
 		{
 			int2 videoTextureSize;
@@ -94,12 +94,12 @@ namespace teleport
 			float drawDistance;
 			int32_t minimumNodePriority;
 			avs::uid backgroundTexture;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		struct InputDefinitionInterop
 		{
 			avs::InputId inputId;
 			avs::InputType inputType;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct ServerNetworkSettings
 		{
@@ -107,7 +107,7 @@ namespace teleport
 			int32_t clientBufferSize;
 			int32_t requiredLatencyMs;
 			int32_t connectionTimeout;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		struct CasterEncoderSettings
 		{
@@ -123,7 +123,7 @@ namespace teleport
 			int32_t roughCubemapSize;
 			int32_t diffuseCubemapSize;
 			int32_t lightCubemapSize;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 #pragma pack(pop)
 	}
