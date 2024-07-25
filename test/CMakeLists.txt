@@ -1,5 +1,6 @@
 enable_testing()
 
+if(TELEPORT_TEST)
 
 function(SETUP_TESTS)
     foreach(_testname ${ARGN})
@@ -12,3 +13,4 @@ endfunction()
 SETUP_TESTS(
    anim
 )
+endif()
