@@ -423,7 +423,7 @@ void GeometryStreamingService::setOriginNode(avs::uid nodeID)
 }
 
 bool GeometryStreamingService::streamNode(avs::uid nodeID)
-{
+{ 
 	if (nodeID != 0)
 	{
 		if(nodesToStream.find(nodeID)==nodesToStream.end())

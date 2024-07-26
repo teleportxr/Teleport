@@ -6,6 +6,7 @@
 #include <iostream>
 #include "common_p.hpp"
 #include "node_p.hpp"
+#include <fmt/core.h>
 #include "logger.hpp"
 #include <libavstream/queue.hpp>
 #pragma optimize("",off)

@@ -10,6 +10,7 @@
 #endif
 
 #if defined(_MSC_VER)
+		#pragma message("DEC")
     //  Microsoft
     #define TELEPORT_EXPORT_DEC __declspec(dllexport)
     #define TELEPORT_IMPORT_DEC __declspec(dllimport)
@@ -24,12 +25,17 @@
     #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
+		#pragma message("1")
 #if defined(TELEPORT_EXPORT_SERVER_DLL) && !defined(DOXYGEN)
-// In this lib:
+		#pragma message("2")
+	// In this lib:
 	// If we're building dll libraries but not in this library IMPORT the classes
 	#if !defined(TELEPORT_SERVER_DLL) 
+		#pragma message("3")
 		#define TELEPORT_SERVER_API TELEPORT_IMPORT_DEC
+		#pragma message("Importing TELEPORT_SERVER_API")
 	#else
+		#pragma message("Exporting TELEPORT_SERVER_API")
 	// In ALL OTHER CASES we EXPORT the classes!
 #define TELEPORT_SERVER_API TELEPORT_EXPORT_DEC
 	#endif

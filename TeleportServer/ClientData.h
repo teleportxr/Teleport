@@ -51,6 +51,9 @@ namespace teleport
 			//! Called after reparenting to inform the client of the new parent.
 			void reparentNode(avs::uid nodeID);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
+			// Forwarding to members:
+			bool streamNode(avs::uid nodeID);
+			bool unstreamNode(avs::uid nodeID);
 			teleport::core::ClientDynamicLighting clientDynamicLighting;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 

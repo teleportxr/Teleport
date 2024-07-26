@@ -33,13 +33,13 @@
 	url = ../teleport-unreal.git
 [submodule "thirdparty/libdatachannel"]
 	path = thirdparty/libdatachannel
-	url = git@github.com:paullouisageneau/libdatachannel.git
+	url = https://github.com/paullouisageneau/libdatachannel.git
 [submodule "thirdparty/oboe"]
 	path = thirdparty/oboe
-	url = git@github.com:google/oboe.git
+	url = https://github.com/google/oboe.git
 [submodule "thirdparty/flecs"]
 	path = thirdparty/flecs
-	url = git@github.com:SanderMertens/flecs.git
+	url = https://github.com/SanderMertens/flecs.git
 [submodule "firstparty/teleport-unreal"]
 	path = firstparty/teleport-unreal
-	url = git@github.com:simul/teleport-unreal.git
+	url = https://github.com/simul/teleport-unreal.git

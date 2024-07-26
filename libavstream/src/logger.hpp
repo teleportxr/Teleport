@@ -8,7 +8,6 @@
 #include "context_p.hpp"
 #include <string.h>
 #include <iostream>
-#include <fmt/core.h>
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define AVSLOG(Severity) std::cerr<<__FILENAME__<<"("<<__LINE__<<"): "<<#Severity<<": "
