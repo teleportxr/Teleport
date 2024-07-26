@@ -21,7 +21,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: LFS
     - run: git lfs install
     - uses: snickerbockers/submodules-init@v4
     - name: Configure CMake
