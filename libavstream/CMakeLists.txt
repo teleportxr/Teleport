@@ -6,7 +6,6 @@ set(CMAKE_CUDA_COMPILER "${LIBAV_CUDA_DIR}/bin/nvcc.exe" )
 # Build options
 option(LIBAV_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 option(LIBAV_BUILD_SHARED_LIBS "Build shared library" OFF)
-option(LIBAV_USE_SRT "Use SRT?" OFF)
 option(LIBAV_USE_EFP "Use EFP?" ON)
 option(LIBAV_USE_CUDA "Use CUDA for encoding?" ON)
 set(LIBAVS)
@@ -51,13 +50,6 @@ set(src_private_network
 	src/network/webrtc_common.cpp
 	src/network/webrtc_common.h
 )
-
-if(LIBAV_USE_SRT)
-
-set(src_private_network
-	${src_private_network}
-	)
-endif()
 
 set(src_private_api
 	src/api/cuda.cpp
@@ -110,13 +102,6 @@ set(hdr_private_network
 	src/network/packetformat.hpp
 	src/network/serial.h)
 
-if(LIBAV_SRT)
-	set(hdr_private_network
-		${hdr_private_network}
-		src/network/networksink_p.hpp
-		src/network/networksource_p.hpp
-		)
-endif()
 
 set(hdr_private_decoders
 	src/decoders/dec_nvidia.hpp)
@@ -127,10 +112,7 @@ set(hdr_private_util
 	src/util/bytebuffer.hpp
 	src/util/jitterbuffer.hpp
 	src/util/ringbuffer.hpp
-	src/util/misc.hpp
-	src/util/srtutil.h)
-set(src_private_util
-	src/util/srtutil.cpp)
+	src/util/misc.hpp)
 set(src_private_audio
 	src/audio/audiotarget.cpp)
 
@@ -348,10 +330,6 @@ target_compile_definitions(libavstream PRIVATE ${def_webrtc})
 set(webrtc_include_paths ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include
 	${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include/third_party/libyuv/include
 	${CMAKE_SOURCE_DIR}/thirdparty/webrtc/include/third_party/abseil-cpp)
-if(LIBAV_USE_SRT)
-	set(srt_include_paths "${SRT_SOURCE_DIR}/common" "${SRT_SOURCE_DIR}/srtcore" ${SRT_BINARY_DIR})
-	#message(WARNING srt_include_paths ${srt_include_paths})
-endif()
 
 if(LIBAV_USE_EFP)
 	# ElasticFrameProtocol
@@ -387,7 +365,6 @@ endif()
 target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${CMAKE_CURRENT_BINARY_DIR}
 														${webrtc_include_paths}
-														${srt_include_paths}
 														${efp_include_paths}
 														include
 														${PTHREAD_INCLUDE_DIR}
@@ -400,11 +377,6 @@ if(LIBAAV_BUILD_SHARED_LIBS)
 		PUBLIC LIBAVSTREAM_SHARED
 		PRIVATE LIBAVSTREAM_EXPORTS
 	)
-endif()
-if(LIBAV_USE_SRT)
-	target_compile_definitions(libavstream PUBLIC LIBAV_USE_SRT=1)
-else()
-	target_compile_definitions(libavstream PUBLIC LIBAV_USE_SRT=0)
 endif()
 target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}>)
 
@@ -433,9 +405,6 @@ target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/ )
 
 target_link_libraries(libavstream cuda cudart asio nv efp ${curl_libraries})
 
-if(LIBAV_USE_SRT)
-target_link_libraries(libavstream srt_static)
-endif()
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)
 	add_dependencies(libavstream cuda_kernels)

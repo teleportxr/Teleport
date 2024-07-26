@@ -136,10 +136,11 @@ set_target_properties( Tidy PROPERTIES FOLDER Docs)
 endif() 
 
 # see https://validator.github.io/validator/
-set(TELEPORT_DOCS_VALIDATOR_EXECUTABLE "C:/Program Files/vnu-runtime-image/bin/vnu.bat" CACHE FILEPATH "path to vnu.bat")
+#C:/Program Files/vnu-runtime-image/bin/vnu.bat
+set(TELEPORT_DOCS_VALIDATOR_EXECUTABLE "" CACHE FILEPATH "path to vnu.bat")
 
 file(GLOB_RECURSE ALL_HTML_FILES ${SPHINX_BUILD}/*.html)
-if(TELEPORT_DOCS_VALIDATOR_EXECUTABLE)
+if(NOT "${TELEPORT_DOCS_VALIDATOR_EXECUTABLE}" STREQUAL "")
 	add_custom_target(Validator ALL
 					COMMAND
 					${TELEPORT_DOCS_VALIDATOR_EXECUTABLE} --format gnu --asciiquotes --skip-non-html ${ALL_HTML_FILES}

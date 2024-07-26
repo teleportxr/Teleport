@@ -44,7 +44,7 @@ std::shared_ptr<Node> NodeManager::CreateNode(std::chrono::microseconds session_
 }
 ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
 {
-	ecs_ensure(flecs_world, node_id);
+	//ecs_ensure(flecs_world, node_id);
 	return (ecs_entity_t)node_id;
 #if 0
 	auto f = flecs_entity_map.find(node_id);
@@ -78,20 +78,11 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 	nodeLookup[node->id] = node;
 	avs::uid node_id = node->id;
 
-	ecs_entity_t e=FlecsEntity(node_id);
-	ecs_ensure(flecs_world, node_id);
-	flecs_world.entity(e).set_doc_name(avsNode.name.c_str());
-
-//	flecs_world.entity(e)
-	//				.set<flecs_local_pos>({{0, 0, 0}})
-		//			.set<flecs_local_orientation>({{0, 0, 0,1.0f}});
-
 	nodeLookup_mutex.unlock();
 	if(avsNode.parentID)
 	{
 		parentLookup[node_id]=avsNode.parentID;
 		childLookup[avsNode.parentID].insert(node_id);
-//		flecs_world.entity(e).child_of(FlecsEntity(avsNode.parentID));
 	}
 	//Link new node to parent.
 	LinkToParentNode(node);

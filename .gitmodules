@@ -1,9 +1,6 @@
 [submodule "thirdparty/basis_universal"]
 	path = thirdparty/basis_universal
 	url = ../basis_universal.git
-[submodule "thirdparty/srt"]
-	path = thirdparty/srt
-	url = ../srt.git
 [submodule "libavstream/thirdparty/efp"]
 	path = libavstream/thirdparty/efp
 	url = ../efp.git

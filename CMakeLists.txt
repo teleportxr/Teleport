@@ -150,15 +150,6 @@ endif()
 set(CONFIG_NAME $<$<CONFIG:Debug>:Debug>$<$<CONFIG:Release>:Release>)
 
 
-#defaults for srt:
-if(TELEPORT_WINDOWS)
-	set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
-	SET(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE}")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG")
-	set(PTHREAD_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/srt/submodules/pthread-win32)
-	set(PTHREAD_LIBRARY ${CMAKE_BINARY_DIR}/thirdparty/srt/submodules/pthread-win32/Release/pthreadVC3.lib)
-endif()
-
 option(ENABLE_APPS "" OFF)
 option(ENABLE_SHARED "" OFF) 
 option(ENABLE_STATIC "" ON)
@@ -384,20 +375,6 @@ add_subdirectory(thirdparty/draco)
 		#message(${targ})
 	endforeach()
 
-
-if(LIBAV_USE_SRT)
-	add_subdirectory(thirdparty/srt)
-	if(TELEPORT_UNIX)
-		target_compile_options(srt_virtual PRIVATE -fPIC)
-		target_compile_options(srt_static PRIVATE -fPIC)
-	endif()
-
-	if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
-		set_target_properties( srt_static PROPERTIES FOLDER thirdparty/srt)
-	endif()
-	set_target_properties( srt_virtual PROPERTIES FOLDER thirdparty/srt)
-
-endif()
 
 if(TELEPORT_BUILD_DOCS)
 	add_subdirectory ("docs")

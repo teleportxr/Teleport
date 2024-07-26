@@ -85,12 +85,13 @@ else()
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_EXPORT_SERVER_DLL=1 TELEPORT_SERVER_DLL=1)
 endif()
 
+if(NOT "${TELEPORT_SERVER_DLL_DIR}" STREQUAL "")
 	set_target_properties(TeleportServer PROPERTIES
 			LIBRARY_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
 			ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
 			RUNTIME_OUTPUT_DIRECTORY_RELEASE "${TELEPORT_SERVER_DLL_DIR}/"
 			)
-
+endif()
 SetTeleportDefaults( TeleportServer )
 
 #Include its root directory

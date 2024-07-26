@@ -16,11 +16,7 @@ namespace avs
 		static constexpr size_t HeaderSize = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint16_t);
 		static constexpr size_t HeaderSize_FirstFragment = HeaderSize +  sizeof(uint32_t);
 		static constexpr size_t HeaderSize_LastFragment =  HeaderSize_FirstFragment;
-#if LIBAV_USE_SRT
 		static constexpr size_t MaxPacketSize = 1450;
-#else
-		static constexpr size_t MaxPacketSize = 1450;
-#endif
 		static constexpr size_t MaxPayloadSize = MaxPacketSize - HeaderSize;
 		static constexpr size_t MaxPayloadSize_FirstFragment = MaxPacketSize - HeaderSize_FirstFragment;
 		static constexpr size_t MaxPayloadSize_LastFragment = MaxPacketSize - HeaderSize_LastFragment;
