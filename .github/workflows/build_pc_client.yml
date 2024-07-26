@@ -25,8 +25,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}-DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false
--DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}-DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
