@@ -20,6 +20,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    - name: Initial Checks
+      run: cmake --version
     - name: Checkout
       uses: actions/checkout@v4
       with:
