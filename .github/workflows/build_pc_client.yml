@@ -32,6 +32,8 @@ jobs:
         mkdir build_pc_client
         cd build_pc_client
         cmake -S .. -B . -DVULKAN_SDK_DIR=D:/a/Teleport/Teleport/VULKAN_SDK -DVulkan_LIBRARY=D:/a/Teleport/Teleport/VULKAN_SDK/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=D:/a/Teleport/Teleport/VULKAN_SDK/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+        # once more, now we can get a solution name.
+        cmake -S .. -B . -DVULKAN_SDK_DIR=D:/a/Teleport/Teleport/VULKAN_SDK -DVulkan_LIBRARY=D:/a/Teleport/Teleport/VULKAN_SDK/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=D:/a/Teleport/Teleport/VULKAN_SDK/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
     - name: Show CMake Output
       run: dir ${{github.workspace}}/build_pc_client
     - name: Build
