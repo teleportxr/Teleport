@@ -367,7 +367,7 @@ target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${webrtc_include_paths}
 														${efp_include_paths}
 														include
-														${PTHREAD_INCLUDE_DIR}
+														#${PTHREAD_INCLUDE_DIR}
 														PUBLIC include include/libavstream
 														${curl_include_paths})
 target_compile_features(libavstream PRIVATE cxx_std_17)
@@ -435,5 +435,5 @@ if(TELEPORT_TEST)
 	find_package(Catch2 REQUIRED)
 	add_executable(libavstream_test src/test/test.cpp)
 	set_target_properties(libavstream_test PROPERTIES FOLDER AVStream)
-	target_link_libraries(libavstream_test Catch2WithMain libavstream efp fmt LibDataChannel::LibDataChannelStatic pthreads4w::pthreadVC3)
+	target_link_libraries(libavstream_test Catch2WithMain libavstream efp fmt LibDataChannel::LibDataChannelStatic )
 endif()

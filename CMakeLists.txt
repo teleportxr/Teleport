@@ -181,7 +181,7 @@ if(TELEPORT_WINDOWS)
 	set(LIB_EAY_RELEASE ${OPENSSL_LIBRARIES}/libcrypto.lib CACHE STRING "" )
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
-	add_subdirectory(thirdparty/srt/submodules/pthread-win32)
+	#add_subdirectory(thirdparty/srt/submodules/pthread-win32)
 
 	option(TELEPORT_CLIENT_SUPPORT_IPSME "Should IPSME be included?" OFF)
 	set(TELEPORT_CLIENT_MOSQUITTO_LIB_DIR "E:/Code/Teleport/IPSME/mosquitto-2.0.18/build/lib" CACHE PATH "Mosquitto install path for IPSME support")
