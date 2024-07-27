@@ -11,6 +11,7 @@ on:
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
+  VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
 
 jobs:
   build:
@@ -24,11 +25,11 @@ jobs:
       uses: humbletim/install-vulkan-sdk@v1.1.1
       with:
         version: 1.3.290.0
-        cache: true
     - name: Initial Checks
       run: cmake --version
         echo %VULKAN_SDK_DIR%
         echo %VULKAN_SDK%
+        dir D:/a/Teleport/Teleport/VULKAN_SDK
     - name: Checkout
       uses: actions/checkout@v4
       with:
