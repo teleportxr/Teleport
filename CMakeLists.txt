@@ -16,7 +16,8 @@ if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
 else() 
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
-
+message("TELEPORT_SOLUTION_NAME: ${TELEPORT_SOLUTION_NAME}")
+message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 # FetchContent download timestamp policy:
 cmake_policy(SET CMP0135 NEW)
 cmake_policy(SET CMP0077 NEW)
@@ -227,11 +228,9 @@ endif()
 
 #defaults for basisu
 if(TELEPORT_SERVER)
-	option(STATIC "" OFF)
 	set(TELEPORT_DATACHANNEL_WEBRTC ON)
 	add_compile_definitions(PRIVATE TELEPORT_DATACHANNEL_WEBRTC=1) 
 else()
-	option(STATIC "" ON)
 	set(TELEPORT_DATACHANNEL_WEBRTC ON)
 	add_compile_definitions(PRIVATE TELEPORT_CLIENT=1 TELEPORT_DATACHANNEL_WEBRTC=1) 
 endif()
@@ -347,7 +346,14 @@ else()
 	target_compile_definitions(libavstream PRIVATE LIBAV_USE_D3D12=0)
 endif()
 
+if(TELEPORT_SERVER)
+	option(STATIC "" OFF)
+else()
+	option(STATIC "" ON)
+endif()
 add_subdirectory(thirdparty/basis_universal)
+#dangerous to keep a variable with this kind of name around. It breaks draco, for example.
+unset(STATIC)
 set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
 
 if(TELEPORT_UNIX)
@@ -357,6 +363,7 @@ endif()
 set(DRACO_TRANSCODER_SUPPORTED ON CACHE BOOL "" FORCE)
 set(TINYGLTF_NO_STB_IMAGE ON CACHE BOOL "" FORCE)
 set(TINYGLTF_NO_STB_IMAGE_WRITE ON CACHE BOOL "" FORCE)
+unset(STATIC)
 add_subdirectory(thirdparty/draco)
 
 	# Here we will put all the draco targets into the thirdparty/draco solution folder:
