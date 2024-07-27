@@ -11,6 +11,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    - name: install-cmake
+      uses: Symbitic/install-cmake@v0.1.0
     - name: Vulkan
       uses: humbletim/install-vulkan-sdk@v1.1.1
       with:
