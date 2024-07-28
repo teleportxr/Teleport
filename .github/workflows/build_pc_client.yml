@@ -11,6 +11,7 @@ jobs:
     runs-on: windows-2019
     env:
       WORKFLOW_BUILD_TYPE: Release
+      WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
 
     steps:
     - name: Vulkan
@@ -19,9 +20,9 @@ jobs:
         version: 1.3.290.0
     - name: Initial Checks
       run: cmake --version;
-        echo %VULKAN_SDK_DIR%;
-        echo %VULKAN_SDK%;
-        dir D:/a/Teleport/Teleport/VULKAN_SDK
+        echo $VULKAN_SDK_DIR;
+        echo $VULKAN_SDK;
+        dir ${{env.WORKFLOW_VULKAN_DIR}}
     - name: Checkout
       uses: actions/checkout@v4
       with:
@@ -33,17 +34,17 @@ jobs:
         git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
         cd ${{github.workspace}}/thirdparty/libdatachannel
         #git submodule update --init --recursive --force -- "deps/libsrtp"
-        dir deps
+        #dir deps
         #cd ${{github.workspace}}/thirdparty/libdatachannel
-        gc ${{github.workspace}}/thirdparty/libdatachannel/deps/libsrtp/CMakeLists.txt
+        #gc ${{github.workspace}}/thirdparty/libdatachannel/deps/libsrtp/CMakeLists.txt
     - name: Running cmake (windows)
       run: |
         cd ${{ github.workspace }}
         mkdir build_pc_client
         cd build_pc_client
-        cmake -S .. -B . -WNo-dev -DCMAKE_SYSTEM_NAME=Windows -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK_DIR=D:/a/Teleport/Teleport/VULKAN_SDK -DVulkan_LIBRARY=D:/a/Teleport/Teleport/VULKAN_SDK/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=D:/a/Teleport/Teleport/VULKAN_SDK/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+        cmake -S .. -B . -WNo-dev -DCMAKE_SYSTEM_NAME=Windows -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK_DIR=${{env.WORKFLOW_VULKAN_DIR}} -DVulkan_LIBRARY=${{env.WORKFLOW_VULKAN_DIR}}/Lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=${{env.WORKFLOW_VULKAN_DIR}}/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=${{env.WORKFLOW_VULKAN_DIR}}/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=${{env.WORKFLOW_VULKAN_DIR}}/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
         # once more, now we can get a solution name.
-        cmake -S .. -B . -WNo-dev -DCMAKE_SYSTEM_NAME=Windows -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK_DIR=D:/a/Teleport/Teleport/VULKAN_SDK -DVulkan_LIBRARY=D:/a/Teleport/Teleport/VULKAN_SDK/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=D:/a/Teleport/Teleport/VULKAN_SDK/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+        cmake -S .. -B . -WNo-dev -DCMAKE_SYSTEM_NAME=Windows -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK_DIR=${{env.WORKFLOW_VULKAN_DIR}} -DVulkan_LIBRARY=${{env.WORKFLOW_VULKAN_DIR}}/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=${{env.WORKFLOW_VULKAN_DIR}}/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=${{env.WORKFLOW_VULKAN_DIR}}/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=${{env.WORKFLOW_VULKAN_DIR}}/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
     - name: Show CMake Output
       run: dir ${{github.workspace}}/build_pc_client
     - name: Build
