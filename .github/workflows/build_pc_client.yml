@@ -27,7 +27,11 @@ jobs:
         submodules: 'false'
     - name: Git Submodules
       run: |
+        cd ${{github.workspace}}
         git submodule update --init --recursive --force --remote -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "thirdparty/websocketpp" "thirdparty/flecs"
+        cd ${{github.workspace}}/thirdparty/libdatachannel
+        git submodule update --init --recursive --force --remote -- "deps/libsrtp"
+        dir deps
     - name: Running cmake (windows)
       run: |
         cd ${{ github.workspace }}
