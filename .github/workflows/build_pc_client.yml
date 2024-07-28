@@ -1,6 +1,4 @@
-# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
-# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
-name: CMake on a single platform
+name: Build PC Client
 
 on:
   push:
@@ -8,35 +6,49 @@ on:
   pull_request:
     branches: [ "main" ]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
-    # You can convert this to a matrix build if you need cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: windows-latest
+    runs-on: windows-2019
 
     steps:
+    - name: Vulkan
+      uses: humbletim/install-vulkan-sdk@v1.1.1
+      with:
+        version: 1.3.290.0
     - name: Initial Checks
-      run: cmake --version
+      run: cmake --version;
+        echo %VULKAN_SDK_DIR%;
+        echo %VULKAN_SDK%;
+        dir D:/a/Teleport/Teleport/VULKAN_SDK
     - name: Checkout
       uses: actions/checkout@v4
       with:
         lfs: 'true'
-        submodules: 'recursive'
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build_pc_client -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+        submodules: 'false'
+    - name: Git Submodules
+      run: |
+        cd ${{github.workspace}}
+        git submodule update --init --recursive --force --remote -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
+        cd ${{github.workspace}}/thirdparty/libdatachannel
+        git submodule update --init --recursive --force --remote -- "deps/libsrtp"
+        dir deps
+        cd ${{github.workspace}}/thirdparty/libdatachannel
+    - name: Running cmake (windows)
+      run: |
+        cd ${{ github.workspace }}
+        mkdir build_pc_client
+        cd build_pc_client
+        cmake -S .. -B . -WNo-dev -DCMAKE_SYSTEM_NAME=Windows -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK_DIR=D:/a/Teleport/Teleport/VULKAN_SDK -DVulkan_LIBRARY=D:/a/Teleport/Teleport/VULKAN_SDK/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=D:/a/Teleport/Teleport/VULKAN_SDK/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+        # once more, now we can get a solution name.
+        cmake -S .. -B . -WNo-dev -DCMAKE_SYSTEM_NAME=Windows -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK_DIR=D:/a/Teleport/Teleport/VULKAN_SDK -DVulkan_LIBRARY=D:/a/Teleport/Teleport/VULKAN_SDK/lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=D:/a/Teleport/Teleport/VULKAN_SDK/include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=D:/a/Teleport/Teleport/VULKAN_SDK/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true
+    - name: Show CMake Output
+      run: dir ${{github.workspace}}/build_pc_client
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{github.workspace}}/build_pc_client --config ${{env.BUILD_TYPE}}
 
     - name: Test
-      working-directory: ${{github.workspace}}/build
+      working-directory: ${{github.workspace}}/build_pc_client
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
