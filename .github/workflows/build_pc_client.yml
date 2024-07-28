@@ -30,9 +30,9 @@ jobs:
         cd ${{github.workspace}}
         git submodule update --init --recursive --force --remote -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
         cd ${{github.workspace}}/thirdparty/libdatachannel
-        git submodule update --init --recursive --force --remote -- "deps/libsrtp"
+        #git submodule update --init --recursive --force --remote -- "deps/libsrtp"
         dir deps
-        cd ${{github.workspace}}/thirdparty/libdatachannel
+        #cd ${{github.workspace}}/thirdparty/libdatachannel
         gc ${{github.workspace}}/thirdparty/libdatachannel/deps/libsrtp/CMakeLists.txt
     - name: Running cmake (windows)
       run: |
