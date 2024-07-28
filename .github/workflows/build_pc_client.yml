@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: windows-2019
+    env:
+      WORKFLOW_BUILD_TYPE: Release
 
     steps:
     - name: Vulkan
@@ -46,11 +48,11 @@ jobs:
       run: dir ${{github.workspace}}/build_pc_client
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build_pc_client --config ${{env.BUILD_TYPE}}
+      run: cmake --build ${{github.workspace}}/build_pc_client --config ${{env.WORKFLOW_BUILD_TYPE}}
 
     - name: Test
       working-directory: ${{github.workspace}}/build_pc_client
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
+      run: ctest -C ${{env.WORKFLOW_BUILD_TYPE}}
 
