@@ -28,10 +28,11 @@ jobs:
     - name: Git Submodules
       run: |
         cd ${{github.workspace}}
-        git submodule update --init --recursive --force --remote -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "thirdparty/websocketpp" "thirdparty/flecs"
+        git submodule update --init --recursive --force --remote -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" thirdparty/websocketpp" "thirdparty/flecs"
         cd ${{github.workspace}}/thirdparty/libdatachannel
         git submodule update --init --recursive --force --remote -- "deps/libsrtp"
         dir deps
+        cd ${{github.workspace}}/thirdparty/libdatachannel
     - name: Running cmake (windows)
       run: |
         cd ${{ github.workspace }}
