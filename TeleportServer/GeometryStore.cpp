@@ -53,6 +53,33 @@ namespace filesystem = std::filesystem;
 namespace filesystem = std::filesystem;
 #endif
 
+namespace teleport
+{
+	namespace server
+	{
+		void ConvertTransform(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::Transform &transform)
+		{
+			avs::ConvertTransform(fromStandard,toStandard,transform);
+		}
+		void  ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation)
+		{
+			avs::ConvertRotation(fromStandard,toStandard,rotation);
+		}
+		void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position)
+		{
+			avs::ConvertPosition(fromStandard,toStandard,position);
+		}
+		void  ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale)
+		{
+			avs::ConvertScale(fromStandard,toStandard,scale);
+		}
+		int8_t  ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis)
+		{
+			return avs::ConvertAxis(fromStandard,toStandard,axis);
+		}
+	}
+}
+
 std::string StandardizePath(const std::string &file_name,const std::string &path_root)
 {
 	filesystem::path path(file_name);
@@ -1198,18 +1225,18 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 	return true;
 }
 
-
-bool GeometryStore::storeMesh(avs::uid id, std::string path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify)
+bool GeometryStore::storeMesh(avs::uid id, const std::string & path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify)
 {
 	avs::Mesh avsMesh(*iMesh);
 	return storeMesh(id,path,lastModified,avsMesh,standard,verify);
 }
 
-bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModified,const avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
+bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time_t lastModified,const avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
 {
-	if(!validate_path(path))
+#ifdef FIX_BROKEN
+	if(!validate_path(assetPath))
 	{
-		TELEPORT_WARN("In storeMesh, invalid resource path: {0}",path);
+		TELEPORT_WARN("In storeMesh, invalid resource path: {0}",assetPath);
 		return false;
 	}
 	if(!id)
@@ -1222,13 +1249,12 @@ bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModif
 		filePath += "engineering/";
 	if (standard == avs::AxesStandard::GlStyle)
 		filePath += "gl/";
-	std::string p=path;
-	uid_to_path[id]=p;
-	path_to_uid[p]=id;
+	uid_to_path[id]=assetPath;
+	path_to_uid[assetPath]=id;
 	auto &mesh=meshes[standard][id] = ExtractedMesh{  lastModified, newMesh};
 
 	{
-		string meshFilename=mesh.MakeFilename(path);
+		string meshFilename=mesh.MakeFilename(assetPath);
 		if (!CompressMesh(mesh.compressedMesh, mesh.mesh, filePath, meshFilename))
 			return false;
 		// Let's save the compressed submeshes as individual glb's:
@@ -1270,8 +1296,9 @@ bool GeometryStore::storeMesh(avs::uid id,std::string path,std::time_t lastModif
 			}
 		}
 	}
-	if (!saveResourceBinary(filePath + mesh.MakeFilename(path), mesh))
+	if (!saveResourceBinary(filePath + mesh.MakeFilename(assetPath), mesh))
 		return false;
+		#endif
 	return true;
 }
 

@@ -29,7 +29,9 @@ namespace avs
 		std::atomic<size_t> next_read_index = {0};
 		std::atomic<size_t> blockCount = {0};
 		size_t maxBufferSize=1024*1024*32;
-
+		
+		int write_block_count=0;
+		int read_block_count=0;
 		void flushInternal();
 		size_t increaseBufferSize(size_t requestedSize);
 		/*!
@@ -61,8 +63,7 @@ namespace avs
 		 * \return Always returns Result::OK.
 		 */
 		Result deconfigure() override;
-
-
+		
 		/*!
 		 * Read buffer at the front of the queue.
 		 * \sa IOInterface::read()
@@ -74,7 +75,7 @@ namespace avs
 		 */
 		Result read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
-		void drop();
+		void drop() override;
 		/*!
 		 * Write buffer to the back of the queue.
 		 * \sa IOInterface::write()

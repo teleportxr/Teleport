@@ -59,6 +59,7 @@ public:
 	 */
 	Result writePacket(PipelineNode* writer, const void* buffer, size_t bufferSize, int streamIndex) override;
 	
+	void drop() override {}
 	/*!
 	 * Get node display name (for reporting & profiling).
 	 */

@@ -310,3 +310,15 @@ int PipelineNode::getOutputIndex(const PipelineNode* node) const
 	}
 	return -1;
 }
+
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+void PipelineNode::measureBandwidth(uint64_t deltaTime)
+{
+	if(deltaTime==0)
+		return;
+	static float intro=0.01f;
+	inwardBandwidthKps*=1.0f-intro;
+	inwardBandwidthKps+=intro*(float)bytes_received.load()/float(deltaTime)*(1000.0f/1024.0f);
+	bytes_received= 0;
+}
+#endif

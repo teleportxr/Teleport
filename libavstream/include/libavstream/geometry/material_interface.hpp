@@ -44,7 +44,7 @@ namespace avs
 		return false;\
 	}
 	#define TELEPORT_VERIFY_ASSERT(t) \
-	if(!t)\
+	if(!(t))\
 	{\
 		std::cerr<<"Verify failed for "<<#t<<"\n";\
 		return false;\

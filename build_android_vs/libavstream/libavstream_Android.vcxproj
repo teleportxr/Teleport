@@ -17,6 +17,7 @@
     <ClInclude Include="..\..\libavstream\include\libavstream\common.hpp" />
     <ClInclude Include="..\..\libavstream\include\libavstream\genericdecoder.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\genericencoder.h" />
+    <ClInclude Include="..\..\libavstream\include\libavstream\lock_free_queue.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\networksink.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\networksource.h" />
     <ClInclude Include="..\..\libavstream\include\libavstream\network\serial.hpp" />
@@ -90,6 +91,8 @@
     <ClCompile Include="..\..\libavstream\src\geometryencoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\httputil.cpp" />
     <ClCompile Include="..\..\libavstream\src\libraryloader.cpp" />
+    <ClCompile Include="..\..\libavstream\src\lock_free_queue.cpp" />
+    <ClCompile Include="..\..\libavstream\src\logger.cpp" />
     <ClCompile Include="..\..\libavstream\src\memory.cpp" />
     <ClCompile Include="..\..\libavstream\src\mesh.cpp" />
     <ClCompile Include="..\..\libavstream\src\network\networksink.cpp" />

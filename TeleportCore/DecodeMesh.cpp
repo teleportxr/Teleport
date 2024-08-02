@@ -217,7 +217,7 @@ avs::Result teleport::core::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUid
 		accessor.componentType = FromDracoDataType(dracoAttribute->data_type());
 		accessor.type = FromDracoNumComponents(dracoAttribute->num_components());
 		accessor.byteOffset = dracoAttribute->GetBytePos(draco::AttributeValueIndex(k));
-		accessor.count = dracoAttribute->size();
+		accessor.count = dracoAttribute->is_mapping_identity() ? dracoAttribute->size() : dracoAttribute->indices_map_size();
 		accessor.bufferView = buffer_views[k];
 	}
 	dg.primitiveArrays[primitiveArrayUid].push_back({attributeCount, attributes, indices_accessor_id, 0, primitiveMode});

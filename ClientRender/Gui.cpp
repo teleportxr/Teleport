@@ -29,7 +29,7 @@ using namespace std::string_literals;
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/TabContext.h"
-#include "libavstream/Pipeline.hpp"
+#include "libavstream/pipeline.hpp"
 
 
 #ifdef __ANDROID__
@@ -1635,7 +1635,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
 	ImU32 col = ImColor(colf);
 	const ImU32 join_colour = ImColor(255, 255, 255, 90);
-	const ImU32 fill_colour = ImColor(64, 64, 16, 255);
+	const ImU32 fill_colour = ImColor(16, 64, 16, 255);
 	ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
 	size_t outp = node.getNumOutputSlots();
@@ -1659,7 +1659,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	}
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
-	draw_list->AddText(pos, col, node.name.c_str());
+	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}",node.name,node.inwardBandwidthKps).c_str());
 }
 
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)

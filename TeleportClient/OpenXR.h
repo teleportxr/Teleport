@@ -130,6 +130,7 @@ namespace teleport
 		//! and states (updated in real time).
 		struct OpenXRServer
 		{
+			void Reset();
 			//! Definitions used on startup
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 			//! Mappings initialized on startup.
@@ -283,7 +284,8 @@ namespace teleport
 		public:
 			OpenXR(const char *app_name);
 			virtual ~OpenXR();
-			void ClearServer(avs::uid server_uid);
+			void RemoveServer(avs::uid server_uid);
+			void ResetServer(avs::uid server_uid);
 			bool InitInstance();
 			void SetRenderPlatform(platform::crossplatform::RenderPlatform* renderPlatform);
 			void Shutdown();
@@ -346,7 +348,8 @@ namespace teleport
 			void OnMouseButtonReleased(bool bLeftButtonReleased, bool bRightButtonReleased, bool bMiddleButtonReleased, int nMouseWheelDelta);
 			void OnMouseMove(int xPos, int yPos );
 			void OnKeyboard(unsigned wParam, bool bKeyDown);
-
+			
+			std::shared_ptr<OpenXRServer> GetServer(avs::uid server_uid);
 			// Getting mapped inputs specific to a given server, in-frame.
 			void OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition> &inputDefinitions_);
 			void MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath);
@@ -414,7 +417,7 @@ namespace teleport
 			std::map<avs::uid,FallbackBinding> fallbackBindings;
 			std::map<avs::uid,FallbackState> fallbackStates;
 			void BindUnboundPoses(avs::uid server_uid);
-			std::map<avs::uid,OpenXRServer> openXRServers;
+			std::map<avs::uid,std::shared_ptr<OpenXRServer>> openXRServers;
 			platform::crossplatform::RenderPlatform* renderPlatform = nullptr;
 			bool haveXRDevice = false;
 			void RenderLayerView(platform::crossplatform::GraphicsDeviceContext &deviceContext, XrTime predictedTime, std::vector<XrCompositionLayerProjectionView>& projection_views, swapchain_surfdata_t& surface, platform::crossplatform::RenderDelegate& renderDelegate);
@@ -433,7 +436,8 @@ namespace teleport
 			XrState state;
 			XrState previousState;
 			void openxr_poll_predicted(XrTime predicted_time);
-			void RecordCurrentBindings();
+			void ChangedInteractionProfile();
+			void RecordCurrentBindings(avs::uid server_uid);
 			void UpdateServerState(avs::uid server_uid,unsigned long long framenumber);
 			static bool CheckXrResult(XrInstance xr_instance,XrResult res);
 			XrTime lastTime=0;

@@ -111,7 +111,7 @@ namespace avs
 				increaseBufferCount();
 			else
 			{
-				AVSLOG_NOSPAM(Warning) << name.c_str() << " Queue::write: Max buffers " << m_maxBuffers << ", can't increase any more.\n";
+				AVSLOG_NOSPAM(Warning,"{0} Queue::write: Max buffers {1} , can't increase any more.\n",name, m_maxBuffers);
 				return Result::IO_Full;
 			}
 #if LIBAVSTREAM_DEBUG_MESSAGES
@@ -129,7 +129,10 @@ namespace avs
 		push(buffer, bufferSize);
 
 		bytesWritten = bufferSize;
-
+		
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+		bytes_received+=bufferSize;
+#endif
 		return Result::OK;
 	}
 

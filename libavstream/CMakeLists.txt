@@ -8,6 +8,7 @@ option(LIBAV_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime?" OFF)
 option(LIBAV_BUILD_SHARED_LIBS "Build shared library" OFF)
 option(LIBAV_USE_EFP "Use EFP?" ON)
 option(LIBAV_USE_CUDA "Use CUDA for encoding?" ON)
+option(TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH "Measure bandwidth of pipeline nodes?" OFF)
 set(LIBAVS)
 if(NOT ANDROID)
 	option(LIBAV_BUILD_TESTS "Build tests" OFF)
@@ -26,6 +27,7 @@ set(src_private_root
 	src/geometrydecoder.cpp
 	src/geometryencoder.cpp
 	src/lock_free_queue.cpp
+	src/logger.cpp
 	src/surface.cpp
 	src/mesh.cpp
 	src/buffer.cpp
@@ -379,6 +381,7 @@ if(LIBAAV_BUILD_SHARED_LIBS)
 	)
 endif()
 target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}>)
+target_compile_definitions(libavstream PRIVATE TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH=$<BOOL:${TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH}>)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(libavstream PRIVATE PLATFORM_64BIT)

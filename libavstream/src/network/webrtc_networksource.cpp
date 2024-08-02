@@ -290,7 +290,8 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 			break;
 		config.iceServers.emplace_back(srv);
 	}
-	m_data->rtcPeerConnection = createClientPeerConnection(config, this);
+	if(!m_data->rtcPeerConnection)
+		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
 }
 
@@ -382,6 +383,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
+	PipelineNode::process(timestamp,deltaTime);
 	// receiving data from the network is handled elsewhere.
 	// Here we only handle receiving data from inputs to be sent onward.
 
@@ -661,9 +663,12 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 				if (numBytesWrittenToOutput!=b.size())
 				{
-					AVSLOG_NOSPAM(Warning) << "WebRtcNetworkSource EFP onMessage: " << stream.label << ": failed to write all to output Node.\n";
+					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP onMessage: {0}: failed to write all to output Node.\n",stream.label);
 					return;
 				}
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+		q_ptr()->bytes_received+=numBytesWrittenToOutput;
+#endif
 			}
 			else
 			{
@@ -671,6 +676,11 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 				if (val != ElasticFrameMessages::noError)
 				{
 					std::cerr << "EFP Error: Invalid data fragment received" << "\n";
+				}
+				else{
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+		q_ptr()->bytes_received+=b.size();
+#endif
 				}
 			}
 			//std::cout << "Binary message from " << id

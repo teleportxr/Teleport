@@ -8,11 +8,14 @@
 #include "context_p.hpp"
 #include <string.h>
 #include <iostream>
+#include <thread>
+#include <fmt/core.h>
 
+#define QUEUE_LOGGING 0
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define AVSLOG(Severity) std::cerr<<__FILENAME__<<"("<<__LINE__<<"): "<<#Severity<<": "
-#define AVSLOGONCE(Severity) static bool done=false;bool do_now=!done;avs::Logger(((done=true)&&do_now)?avs::LogSeverity::Severity:avs::LogSeverity::Never)
-#define AVSLOG_NOSPAM(Severity) static uint16_t ctr=1;ctr--;bool do_now=(ctr==0);avs::Logger(do_now?avs::LogSeverity::Severity:avs::LogSeverity::Never)
+#define AVSLOGONCE(Severity,txt,...) 
+#define AVSLOG_NOSPAM(Severity,txt,...) 
 namespace avs
 {
   template<typename T>
@@ -76,28 +79,11 @@ namespace avs
         std::atomic<bool> running_ = {true};
         LFQueue<LogChunk> queue_;
 		std::thread *loggingThread=nullptr;
-		void processLogQueue() noexcept
-        {
-            while (running_)
-            {
-                for (auto next = queue_.getNextToRead(); queue_.size() && next; next = queue_.getNextToRead())
-                {
-                    std::cout << next->str;
-                    queue_.updateReadIndex();
-                }
-            }
-            using namespace std::literals::chrono_literals;
-            std::this_thread::yield();
-        }
+		void processLogQueue() noexcept;
     
 	public:
-		explicit Logger(LogSeverity severity)
-			: m_severity(severity), queue_(1000)
-		{
-			loggingThread = new std::thread([this]() {
-				processLogQueue();
-			  });
-		}
+        static Logger &GetInstance();
+		explicit Logger(LogSeverity severity);
 
         auto log(const std::string &s) noexcept {
             auto *t=(queue_.getNextToWriteTo());
@@ -107,7 +93,7 @@ namespace avs
                     len=199;
                 memcpy(t->str,s.data(),len);
                 t->str[199]=0;
-            queue_.updateWriteIndex();
+                queue_.updateWriteIndex();
           }
         }
 

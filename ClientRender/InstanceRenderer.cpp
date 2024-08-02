@@ -309,6 +309,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	}
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 }
+
 void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
@@ -1510,7 +1511,7 @@ void InstanceRenderer::ClearGeometryResources()
 {
 	geometryCache->ClearAll();
 	resourceCreator.Clear();
-	renderState.openXR->ClearServer(server_uid);
+	renderState.openXR->ResetServer(server_uid);
 }
 
 void InstanceRenderer::OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions_)
@@ -1687,7 +1688,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 		clientPipeline.avsGeometryDecoder.configure(80, server_uid, & geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
 
-		clientPipeline.geometryQueue.configure(600000* 200, "GeometryQueue");
+		clientPipeline.geometryQueue.configure(600000,200, "GeometryQueue");
 
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);

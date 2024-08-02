@@ -42,7 +42,7 @@ namespace teleport
 			avs::Queue tagDataQueue;
 			avs::TagDataDecoder tagDataDecoder;
 
-			avs::LockFreeQueue geometryQueue;
+			avs::Queue geometryQueue;
 			avs::GeometryDecoder avsGeometryDecoder;
 			avs::GeometryTarget avsGeometryTarget;
 

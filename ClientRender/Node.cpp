@@ -322,19 +322,19 @@ void Node::RecursiveUpdateGlobalTransform(const Transform &parentGlobalTransform
 void Node::RequestChildrenUpdateTransforms()
 {
 	std::lock_guard lock(childrenMutex);
-	for (auto it = children.begin(); it != children.end();)
+	for (size_t i =0; i<children.size();i++)
 	{
-		std::shared_ptr<Node> child = it->lock();
+		std::shared_ptr<Node> child = children[i].lock();
 
 		//Erase weak pointer from list, if the child node has been removed.
 		if(child)
 		{
 			child->RequestTransformUpdate();
-			it++;
 		}
 		else
 		{
-			it=children.erase(it);
+			children.erase(children.begin()+i);
+			i--;
 		}
 	}
 }

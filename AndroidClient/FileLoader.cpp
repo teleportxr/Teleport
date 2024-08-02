@@ -67,9 +67,15 @@ static int mkpath(const std::string &filename_utf8)
 	int pos=0;
 	fs::path p(filename_utf8);
 	p=p.remove_filename();
-	if(!fs::exists(p))
+	if(p.generic_string().size()&&!fs::exists(p))
 	{
-		fs::create_directories(p);
+		try
+		{
+			fs::create_directories(p);
+		}
+		catch(...)
+		{
+		}
 	}
 	 return (fs::exists(p));
 	

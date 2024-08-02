@@ -85,6 +85,7 @@ Result GeometryDecoder::deconfigure()
 
 Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 {
+	PipelineNode::process(timestamp,deltaTime);
 	if (!m_configured)
 	{
 		return Result::Node_NotConfigured;
@@ -158,7 +159,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 				std::cerr<<"Invalid Geometry payload\n";
 				continue;
 			};
-			AVSLOG(Info)<<"geometrydecoder got payload: "<<bufferSize<<" for "<< stringOf(payloadType)<<"\n";
+			AVSLOG(Info)<<"geometrydecoder got payload: "<<info.dataSize<<" for "<< stringOf(payloadType)<<"\n";
 
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 			if (dataSize>m_buffer.size())
@@ -218,8 +219,10 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			return Result::Failed;
 		}
 		result = processPayload(server_uid,ptr, dataSize, payloadType, gti,uid);
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+	bytes_received+=dataSize;
+#endif
 	} while (result == Result::OK);
-
 
 	return result;
 }

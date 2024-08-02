@@ -34,7 +34,7 @@ namespace avs
 		PipelineNode(PipelineNode&&) = delete;
 		virtual ~PipelineNode();
 		std::string name;
-
+		float inwardBandwidthKps=0.f;
 		/*!
 		 * Link two nodes. Data will flow from source node to target node.
 		 * \param source Source node.
@@ -146,6 +146,9 @@ namespace avs
 		 */
 		virtual Result process(uint64_t timestamp, uint64_t deltaTime)
 		{
+		#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+			measureBandwidth(deltaTime);
+		#endif
 			return Result::OK;
 		}
 
@@ -186,7 +189,9 @@ namespace avs
 		int getInputIndex(const PipelineNode* node) const;
 		/*! Get index of output slot a given node is linked to; returns -1 if given node is not linked to any input slot. */
 		int getOutputIndex(const PipelineNode* node) const;
-
+		
+		std::atomic<size_t> bytes_received=0;
+		void measureBandwidth(uint64_t deltaTime);
 	private:
 		Result lastResult = avs::Result::OK;
 		/*!

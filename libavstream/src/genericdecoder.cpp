@@ -108,6 +108,9 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		{
 			return Result::Failed;
 		}
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+		bytes_received+=bytesRead;
+#endif
 		uint8_t* ptr = m_buffer.data() ;
 		// Drop the StreamPayloadInfo that the source node prepended.
 		//ptr += sizeof(StreamPayloadInfo);
@@ -116,11 +119,11 @@ Result GenericDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 	} 
 	if(result == Result::OK)
 	{
-		AVSLOGONCE(Warning) << "Processed max messages, must exit loop.\n";
+		AVSLOGONCE(Warning,"Processed max messages, must exit loop.\n");
 		// TODO: Distinguish between unreliable (can drop messages) and reliable (should keep).
 		input->drop();
 	}
-
+	PipelineNode::process(timestamp, deltaTime);
 	return result;
 }
 

@@ -54,7 +54,7 @@ public:
 	 *  - Result::Node_NotConfigured if buffer has not yet been configured with capacity.
 	 */
 	Result write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
-
+	void drop() override{}
 	/*! Get currently configured buffer capacity. */
 	size_t getCapacity() const;
 

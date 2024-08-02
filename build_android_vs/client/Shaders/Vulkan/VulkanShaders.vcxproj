@@ -154,6 +154,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </None>
     <None Include="../../../../client/Shaders/video_types.sl">
     </None>
+    <None Include="..\..\..\..\client\Shaders\link.sfx" />
     <None Include="..\..\..\..\firstparty\Platform\Shaders\SL\CppSl.sl">
     </None>
     <None Include="../../../..\firstparty\Platform\Shaders\SL\brdf.sl">

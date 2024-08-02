@@ -78,7 +78,6 @@ const std::vector<avs::uid> &GeometryCache::GetCacheUids()
 
 clientrender::MissingResource* GeometryCache::GetMissingResourceIfMissing(avs::uid id, avs::GeometryPayloadType resourceType)
 {
-	std::lock_guard g(missingResourcesMutex);
 	auto missingPair = m_MissingResources.find(id);
 	if (missingPair == m_MissingResources.end())
 	{
@@ -90,7 +89,6 @@ clientrender::MissingResource* GeometryCache::GetMissingResourceIfMissing(avs::u
 clientrender::MissingResource& GeometryCache::GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType)
 {
 	std::lock_guard g(resourceRequestsMutex);
-	std::lock_guard g2(missingResourcesMutex);
 	auto missingPair = m_MissingResources.find(id);
 	if (missingPair == m_MissingResources.end())
 	{
@@ -144,7 +142,11 @@ void GeometryCache::ReceivedResource(avs::uid id)
 
 void GeometryCache::RemoveFromMissingResources(avs::uid id)
 {
-	std::lock_guard g(missingResourcesMutex);
+	if(missingResourcesMutex.try_lock())
+	{
+		TELEPORT_WARN("missingResourcesMutex was not locked.");
+		missingResourcesMutex.unlock();
+	}
 	auto m = m_MissingResources.find(id);
 	if (m != m_MissingResources.end())
 		m_MissingResources.erase(m);
@@ -216,6 +218,7 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate& subSceneCreate)
 	std::shared_ptr<SubSceneCreate> s = std::make_shared<SubSceneCreate>(subSceneCreate);
 	mSubsceneManager.Add(subSceneCreate.uid, s);
 	//Add mesh to nodes waiting for mesh.
+	std::lock_guard g(missingResourcesMutex);
 	MissingResource* missingSubScene = GetMissingResourceIfMissing(subSceneCreate.uid, avs::GeometryPayloadType::Mesh);
 	if (missingSubScene)
 	{
@@ -248,7 +251,8 @@ void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCrea
 
 	std::shared_ptr<clientrender::Mesh> mesh = std::make_shared<clientrender::Mesh>(meshInfo);
 	mMeshManager.Add(id, mesh);
-
+	
+	std::lock_guard g(missingResourcesMutex);
 	//Add mesh to nodes waiting for mesh.
 	MissingResource* missingMesh = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Mesh);
 	if (missingMesh)
@@ -308,9 +312,15 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 	scrTexture->Create(textureInfo);
 
 	mTextureManager.Add(id, scrTexture);
-
+	
+	std::lock_guard g(missingResourcesMutex);
 	//Add texture to materials waiting for texture.
 	MissingResource * missingTexture = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Texture);
+	if(missingTexture&&missingTexture->resourceType!=avs::GeometryPayloadType::Texture)
+	{
+		missingTexture = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Texture);
+		missingTexture=nullptr;
+	}
 	if(missingTexture)
 	{
 		for(auto it = missingTexture->waitingResources.begin(); it != missingTexture->waitingResources.end(); it++)
@@ -424,7 +434,7 @@ bool GeometryCache::SaveResource(const IncompleteResource &res)
 	path fullPath = path(f);
 	try
 	{
-	std::filesystem::create_directories(fullPath.parent_path());
+		std::filesystem::create_directories(fullPath.parent_path());
 	}
 	catch(...)
 	{
@@ -443,7 +453,8 @@ void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender:
 	//Update animation length before adding to the animation manager.
 	animation->updateAnimationLength();
 	mAnimationManager.Add(id, animation);
-
+	
+	std::lock_guard g(missingResourcesMutex);
 	//Add animation to waiting nodes.
 	MissingResource *missingAnimation = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Animation);
 	if(missingAnimation)

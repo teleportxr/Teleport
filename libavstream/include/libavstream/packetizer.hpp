@@ -88,6 +88,7 @@ public:
 	 */
 	Result write(PipelineNode* writer, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
 	
+	void drop() override{};
 	/*!
 	 * Get node display name (for reporting & profiling).
 	 */

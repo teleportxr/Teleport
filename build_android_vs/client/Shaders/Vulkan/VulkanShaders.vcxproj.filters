@@ -93,6 +93,9 @@
     <None Include="../../../..\firstparty\Platform\Shaders\SL\text_constants.sl">
       <Filter>Global Shader Includes</Filter>
     </None>
+    <None Include="..\..\..\..\client\Shaders\link.sfx">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">

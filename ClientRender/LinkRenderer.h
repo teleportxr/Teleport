@@ -30,6 +30,7 @@ namespace teleport
 		{
 		protected:
 			platform::crossplatform::Effect *linkEffect = nullptr;
+			platform::crossplatform::EffectTechnique *link_tech=nullptr;
 			platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 			bool reload_shaders=true;
 

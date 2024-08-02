@@ -83,7 +83,7 @@ namespace avs
 		 */
 		Result read(PipelineNode*, void* buffer, size_t& bufferSize, size_t& bytesRead) override;
 
-		void drop();
+		void drop() override;
 		/*!
 		 * Write buffer to the back of the queue.
 		 * \sa IOInterface::write()

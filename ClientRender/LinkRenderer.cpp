@@ -41,9 +41,10 @@ void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &de
 	if (!linkEffect || reload_shaders)
 	{
 		linkEffect=renderPlatform->CreateEffect("link");
+		link_tech=linkEffect->GetTechniqueByName("link");
 		reload_shaders=false;
 	}
-	if(!linkEffect)
+	if(!linkEffect||!link_tech)
 		return;
 	linkConstants.radius=1.0f;
 	vec4 highlight_colour={1.8f, 1.8f,0.8f, 1.f};
@@ -54,7 +55,7 @@ void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &de
 	linkRender.time+=(float) dtS *(highlight ? 5.f : 1.f);
 	linkConstants.distanceToDepthParam = deviceContext.viewStruct.GetDepthToLinearDistanceParameters(1.0f).x;
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &linkConstants);
-	auto *pass=linkEffect->GetTechniqueByName("link")->GetPass("singleview");
+	auto *pass=link_tech->GetPass("singleview");
 	renderPlatform->ApplyPass(deviceContext, pass);
 	renderPlatform->SetTopology(deviceContext, platform::crossplatform::Topology::TRIANGLESTRIP);
 	renderPlatform->DrawQuad(deviceContext);

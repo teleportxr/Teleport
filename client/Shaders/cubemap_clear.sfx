@@ -26,7 +26,7 @@ vec2 OffsetScale(vec2 uv, vec4 offsc)
 vec2 ViewToServerScreenSpace(vec3 pos)
 {
 	vec4 clip_pos = vec4(pos, 1.0);
-	clip_pos = mul(serverProj, clip_pos);
+	clip_pos = mul(cubemapConstants.serverProj, clip_pos);
 
 	pos = clip_pos.xyz;
 
@@ -99,8 +99,8 @@ shader vec4 PS_NormalView(posTexVertexOutput IN) : SV_TARGET
 	float theta	= acos(-view.z) / PI;
 	vec2  uv	= fract(vec2(phi, theta));
 	
-	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
-	vec4 depth_lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, depthOffsetScale), 0).rgba;
+	vec4 lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, cubemapConstants.depthOffsetScale), 0).rgba;
+	vec4 depth_lookup = plainTexture.SampleLevel(wrapSamplerState, OffsetScale(uv, cubemapConstants.depthOffsetScale), 0).rgba;
 	
 	return lookup*depth_lookup;
 }
@@ -114,7 +114,7 @@ shader vec4 PS_UseCubemap(posTexVertexOutput IN) : SV_TARGET
 	//view_orig.z *= -1.0;
 	int id = int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData = TagDataCubeBuffer[id];
-	vec3 offsetFromVideo2 = cameraPosition - tagData.cameraPosition;
+	vec3 offsetFromVideo2 = cubemapConstants.cameraPosition - tagData.cameraPosition;
 	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
 	vec3 view = view_orig;
 	float dist_m=0.0;
@@ -161,7 +161,7 @@ shader vec4 PS_FarPerspective(posTexVertexOutput IN) : SV_TARGET
 {
 	vec3 view_orig = -TexCoordsToView(IN.texCoords).xzy; // TODO: Remove swizzle
 	view_orig.xz *= -1.0;
-	view_orig = normalize(rotate_by_quaternion(cameraRotation, view_orig));
+	view_orig = normalize(rotate_by_quaternion(cubemapConstants.cameraRotation, view_orig));
 	view_orig.xy *= -1.0;
 	vec2 uv = ViewToServerScreenSpace(view_orig);
 	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, uv, 0);
@@ -186,7 +186,7 @@ shader vec4 PS_FarPerspective_MV(posTexVertexOutput IN, uint viewID
 	// Negate because rotations are set up for forward y
 	view_orig.xz *= -1.0;
 	// Transform to world space
-	view_orig = normalize(rotate_by_quaternion(cameraRotation, view_orig));
+	view_orig = normalize(rotate_by_quaternion(cubemapConstants.cameraRotation, view_orig));
 	view_orig.xy *= -1.0;
 	vec2 uv = ViewToServerScreenSpace(view_orig);
 	vec4 lookup = perspectiveTexture.SampleLevel(wrapSamplerState, uv, 0);
@@ -207,7 +207,7 @@ shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET
 	view_orig.xz *= -1.0;
 
 	// Transform to world space
-	view_orig = normalize(rotate_by_quaternion(cameraRotation, view_orig));
+	view_orig = normalize(rotate_by_quaternion(cubemapConstants.cameraRotation, view_orig));
 
 	// Transform to server camera space
 	view_orig = normalize(rotate_by_quaternion(quat_inverse(tagData.cameraRotation), view_orig)).xzy;
@@ -216,7 +216,7 @@ shader vec4 PS_UsePerspective(posTexVertexOutput IN) : SV_TARGET
 
 	vec2 uv = ViewToServerScreenSpace(view_orig);
 	
-	vec3 offsetFromVideo = cameraPosition - tagData.cameraPosition;
+	vec3 offsetFromVideo = cubemapConstants.cameraPosition - tagData.cameraPosition;
 
 	// Transform to server camera space. Saves on a rotation each iteration of the loop
 	offsetFromVideo = rotate_by_quaternion(quat_inverse(tagData.cameraRotation), offsetFromVideo).xzy;
@@ -266,7 +266,7 @@ shader vec4 PS_UseCubemap_MV(posTexVertexOutput IN, uint viewID : SV_ViewID) : S
 	view_orig.z *= -1.0;
 	int id = int(TagDataIDBuffer[0].x);
 	VideoTagDataCube tagData = TagDataCubeBuffer[id];
-	vec3 offsetFromVideo2 = cameraPosition - tagData.cameraPosition;
+	vec3 offsetFromVideo2 = cubemapConstants.cameraPosition - tagData.cameraPosition;
 	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
 	vec3 view = view_orig;
 	float dist_m=0.0;
@@ -309,7 +309,7 @@ shader vec4 PS_UsePerspective_MV(posTexVertexOutput IN, uint viewID : SV_ViewID)
 	view_orig.xz *= -1.0;
 
 	// Transform to world space
-	view_orig = normalize(rotate_by_quaternion(cameraRotation, view_orig));
+	view_orig = normalize(rotate_by_quaternion(cubemapConstants.cameraRotation, view_orig));
 
 	// Transform to server camera space
 	view_orig = normalize(rotate_by_quaternion(quat_inverse(tagData.cameraRotation), view_orig)).xzy;
@@ -318,7 +318,7 @@ shader vec4 PS_UsePerspective_MV(posTexVertexOutput IN, uint viewID : SV_ViewID)
 
 	vec2 uv = ViewToServerScreenSpace(view_orig);
 	
-	vec3 offsetFromVideo = cameraPosition - tagData.cameraPosition;
+	vec3 offsetFromVideo = cubemapConstants.cameraPosition - tagData.cameraPosition;
 
 	// Transform to server camera space. Saves on a rotation each iteration of the loop
 	offsetFromVideo = rotate_by_quaternion(quat_inverse(tagData.cameraRotation), offsetFromVideo).xzy;
@@ -402,7 +402,7 @@ shader vec4 PS_UnconnectedNeon(posTexVertexOutput IN) : SV_TARGET
 		nearGrid		-=hf;
 		int2 ng			=int2(nearGrid);
 		uint2 ngu		=uint2(ng);
-		float phase_time=time_seconds*0.1+PcgRand(ngu.x^ngu.y+ngu.x+3635)+PcgRand(ngu.x-ngu.y/2+1311);//*exp(-.03*distance);
+		float phase_time=cubemapConstants.time_seconds*0.1+PcgRand(ngu.x^ngu.y+ngu.x+3635)+PcgRand(ngu.x-ngu.y/2+1311);//*exp(-.03*distance);
 		float cos_time=cos(phase_time*3.1415926536*2.0);
 		float pulse=saturate(cos_time-0.9);
 
@@ -447,12 +447,12 @@ shader vec4 PS_UnconnectedWhite(posTexVertexOutput IN) : SV_TARGET
 	{
 		res.rgb=lerp(res.rgb,res.rgb*0.7,exp(5.0*view.z));
 	}
-	if(view.z<-0.01f)
+	if(view.z<-0.01f) 
 	{
 		float distance=h/-view.z;
 		vec3 targetPosition=viewPosition+distance*view;
 		float phase_length=length(targetPosition.xy);
-		float phase_time=time_seconds/1.0;
+		float phase_time=cubemapConstants.time_seconds/1.0;
 		float cos_time=cos(phase_time*3.1415926536*2.0);
 		float pulse=saturate(cos_time-0.9);
 		float cosine=cos(phase_length*3.1415926536*2.0);
@@ -492,7 +492,7 @@ shader vec4 PS_UnconnectedNeon_MV(posTexVertexOutput IN, uint viewID : SV_ViewID
 		//vec3(0.4f,0.8f,0.9f)*
 		vec3 clr = view + vec3(.5, .5, .5);
 		float lineWidth=0.01;
-		float phase_time=time_seconds/1.0;
+		float phase_time=cubemapConstants.time_seconds/1.0;
 		float cos_time=cos(phase_time*3.1415926536*2.0);
 		float pulse=saturate(cos_time-0.9);
 		lineWidth*=1.0+pulse;
@@ -511,30 +511,38 @@ shader vec4 PS_UnconnectedNeon_MV(posTexVertexOutput IN, uint viewID : SV_ViewID
 shader vec4 PS_UnconnectedWhite_MV(posTexVertexOutput IN, uint viewID : SV_ViewID) : SV_TARGET
 {
 	vec3 _viewPosition = stereoViewPosition[viewID].xyz;
-	vec3 view = normalize(TexCoordsToView(IN.texCoords, viewID).xyz);
-	vec4 res = vec4(0.9, 0.9, 0.9, 1.0);
+	vec3 view = normalize(TexCoordsToView(IN.texCoords).xyz);
+	// framenumber to phase time.
+	vec4 res=vec4(0.9,0.9,0.9,0.5);
 	// flat surface at 0:
-	float h = viewPosition.z;
-	if (view.z < -0.1f)
+	float h=_viewPosition.z;
+	if (view.z <=0)
 	{
-		float distance = h / -view.z;
-		vec3 targetPosition = viewPosition + distance * view;
-		vec2 fr = frac(targetPosition.xy);
-		fr -= vec2(0.5, 0.5);
-		vec2 ln = abs(fr);
-		float m = min(ln.x, ln.y);
-		vec2 e = exp(-50.0 * ln);
-		float br = saturate(step(m, 0.02) + (e.x + e.y));
-		//vec3(0.4f,0.8f,0.9f)*
-		vec3 clr = view * vec3(.5, .5, .5);
-		res.rgb = lerp(res.rgb, res.rgb * clr, br * exp(-.3 * distance));
-	//res.r=distance;
+		res.rgb=lerp(res.rgb,res.rgb*0.7,exp(5.0*view.z));
 	}
-	if (view.z > 0)
+	if(view.z<-0.01f) 
 	{
-		res.rgb = lerp(res.rgb, res.rgb * 0.2, exp(-10.0 * view.z));
-		res.rgb = lerp(res.rgb, res.rgb * 0.4, exp(-50.0 * view.z));
+		float distance=h/-view.z;
+		vec3 targetPosition=_viewPosition+distance*view;
+		float phase_length=length(targetPosition.xy);
+		float phase_time=cubemapConstants.time_seconds/1.0;
+		float cos_time=cos(phase_time*3.1415926536*2.0);
+		float pulse=saturate(cos_time-0.9);
+		float cosine=cos(phase_length*3.1415926536*2.0);
+		float ring=1.0/(1.0-0.9+pulse)*saturate(cosine-0.9+pulse);
+		float lineWidth=0.01;//*(1.0+5.0*ring);
+		vec3 clr=view*vec3(.5,.5,.5);//+ring*vec3(5.0,5.0,5.0);
+		float grid=PristineGrid(targetPosition.xy,lineWidth);
+		//grid=max(grid,0.2*ring*exp(-.3*distance));
+		res.rgb=lerp(res.rgb,res.rgb*clr,grid*exp(-.03*distance));
+		res.rgb+=0.2*ring*exp(-.3*distance)*vec3(1.0,1.0,1.0);
 	}
+	if(view.z>0)
+	{
+		res.rgb=lerp(res.rgb,res.rgb*0.4,exp(-10.0*view.z));
+		res.rgb=lerp(res.rgb,res.rgb*0.7,exp(-50.0*view.z));
+	}
+	//res.r=frac(cosine);
 	return res;
 }
 
@@ -549,7 +557,7 @@ shader vec4 PS_ShowTexture(posTexVertexOutput IN) : SV_TARGET
 shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 {
 	uint3 ThreadID = uint3(g.xy * 16 + t.xy,g.z);
-	if (ThreadID.x >= targetSize.x || ThreadID.y >= targetSize.y)
+	if (ThreadID.x >= cubemapConstants.targetSize.x || ThreadID.y >= cubemapConstants.targetSize.y)
 		return;
 	uint InputW, InputH;
 	plainTexture.GetDimensions(InputW, InputH);
@@ -557,7 +565,7 @@ shader void CS_Recompose(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 	RWTextureTargetArray.GetDimensions(OutputW, OutputH, OutputD);
 	int3 pos = int3(ThreadID);
 	int2 FaceOffsets[] = { {0,0},{1,0},{2,0},{0,1},{1,1},{2,1} };
-	vec4 SceneColor = plainTexture.Load(int3(pos.xy+sourceOffset+ OutputW*FaceOffsets[ThreadID.z],0));
+	vec4 SceneColor = plainTexture.Load(int3(pos.xy + cubemapConstants.sourceOffset + OutputW * FaceOffsets[ThreadID.z], 0));
 	SceneColor.rgb *= SceneColor.rgb;
 	RWTextureTargetArray[pos] = SceneColor;
 }
@@ -568,7 +576,7 @@ groupshared uint accumulate_position[32];
 shader void CS_ExtractTagDataID(uint3 g : SV_GroupID, uint3 t : SV_GroupThreadID)
 {
 	uint2 ThreadID	= uint2(g.xy * 32 + t.xy);
-	uint2 pos		= sourceOffset+4*ThreadID.xy;
+	uint2 pos		= cubemapConstants.sourceOffset+4*ThreadID.xy;
 	uint2 pos_x		= pos +uint2(2,2);
 	// The offset is to the X component. The thread index gives us the bit mask.
 	vec4 lookupX	= plainTexture.Load(int3(pos_x.xy, 0));

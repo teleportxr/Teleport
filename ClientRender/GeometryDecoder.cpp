@@ -1177,7 +1177,10 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	// compression, or really the wrapper format, e.g. .ktx2, .basis, array-of-png's:
 	texture.compression = static_cast<avs::TextureCompression>(NextUint32);
 	if (texture.compression > avs::TextureCompression::KTX)
+	{
+		TELEPORT_WARN("Invalid Texture: {0}",texture.name);
 		return avs::Result::Failed;
+	}
 
 	texture.cubemap= NextByte!=0;
 	

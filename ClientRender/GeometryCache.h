@@ -288,12 +288,12 @@ namespace teleport
 			}
 			static std::string URLToFilePath(std::string url);
 			bool SaveResource(const IncompleteResource &res);
+			mutable std::mutex missingResourcesMutex;
 		protected:
 			std::chrono::microseconds last_session_time_us = std::chrono::microseconds(0);
 			float lifetimeFactor = 1.0; // The factor lifetimes are adjusted to determine if a resource should be freed. 0.5 = Halve lifetime.
 			mutable std::mutex receivedResourcesMutex;
 			mutable std::mutex resourceRequestsMutex;
-			mutable std::mutex missingResourcesMutex;
 			std::vector<avs::uid> m_ResourceRequests;  // Resources the client will request from the server.
 			std::vector<avs::uid> m_ReceivedResources; // Resources received.
 			std::string cacheFolder;

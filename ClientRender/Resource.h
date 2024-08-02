@@ -77,6 +77,10 @@ namespace teleport
 			{
 			}
 		};
+		struct MissingResourceLock
+		{
+			MissingResource *missingResource=nullptr;
+		};
 		struct IncompleteFontAtlas : IncompleteResource
 		{
 			IncompleteFontAtlas(avs::uid id,const std::string &path)

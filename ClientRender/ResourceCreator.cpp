@@ -203,6 +203,7 @@ void ResourceCreator::CreateLinkNode( avs::uid server_uid, avs::uid id, const av
 	}
 	else
 	{
+		std::lock_guard g(geometryCache->missingResourcesMutex);
 		node = geometryCache->mNodeManager.CreateNode(geometryCache->GetSessionTimeUs(), id, avsNode);
 		geometryCache->CompleteNode(node->id, node);
 	}
@@ -728,6 +729,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 	scrMaterial->id = id;
 	if (incompleteMaterial->missingTextureUids.size() == 0)
 	{
+		std::lock_guard g(geometryCache->missingResourcesMutex);
 		geometryCache->CompleteMaterial( id, incompleteMaterial->materialInfo);
 	}
 	else
@@ -776,6 +778,7 @@ void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,const std:
 	geometryCache->ReceivedResource(id);
 	if(geometryCache->mFontAtlasManager.Get(id))
 		return;
+	std::lock_guard g(geometryCache->missingResourcesMutex);
 	std::shared_ptr<clientrender::FontAtlas> f = std::make_shared<clientrender::FontAtlas>(id,path);
 	clientrender::FontAtlas &F=*f;
 	*(static_cast<teleport::core::FontAtlas*>(&F))=fontAtlas;
@@ -828,6 +831,7 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		return;
 	textCanvas->textCanvasCreateInfo=textCanvasCreateInfo;
 	
+	std::lock_guard g(geometryCache->missingResourcesMutex);
 	const std::shared_ptr<clientrender::FontAtlas> fontAtlas = geometryCache->mFontAtlasManager.Get(textCanvas->textCanvasCreateInfo.font);
 	// The fontAtlas hasn't arrived yet. Mark it as missing.
 	if (!fontAtlas)
@@ -887,6 +891,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 	bone_ids.resize(skeleton.boneIDs.size());
 	// External bones.
 	incompleteSkeleton->skeleton->SetExternalBoneIds(skeleton.boneIDs);
+	std::lock_guard g(geometryCache->missingResourcesMutex);
 	// each bone that hasn't been loaded is a missing resource. The Skeleton can only be completed when all missing bones are here.
 	for (auto b:skeleton.boneIDs)
 	{
@@ -960,6 +965,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 	std::shared_ptr<Node> node;
 //	TELEPORT_CERR << "Creating Node " << id <<  "\n";
 
+	std::lock_guard g(geometryCache->missingResourcesMutex);
 // If the node exists already we have a problem.
 //   If we recreate the node here, we must either reset the missing resource count or add to it.
 	if (geometryCache->mNodeManager.HasNode(id))
@@ -987,6 +993,7 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 	{
 		for(auto waiting = missingResource->waitingResources.begin(); waiting != missingResource->waitingResources.end(); waiting++)
 		{
+			// Is this the bone of a skeleton?
 			if (waiting->get()->type == avs::GeometryPayloadType::Skeleton)
 			{
 				std::shared_ptr<IncompleteSkeleton> waitingSkeleton = std::static_pointer_cast<IncompleteSkeleton>(*waiting);
@@ -1055,10 +1062,13 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 		{
 			auto s=node->AddComponent<SubSceneComponent>();
 			s->sub_scene_uid=avsNode.data_uid;
-			auto subSceneCache=GeometryCache::GetGeometryCache(s->sub_scene_uid);
+			auto subScene=geometryCache->mSubsceneManager.Get(s->sub_scene_uid);
+			std::shared_ptr<GeometryCache> subSceneCache;
+			if(subScene)
+				subSceneCache=GeometryCache::GetGeometryCache(subScene->subscene_uid);
 			if (!subSceneCache.get())
 			{
-			TELEPORT_CERR<< "MeshNode " << id << "(" << avsNode.name << ") missing Mesh " << avsNode.data_uid << std::endl;
+				TELEPORT_CERR<< "MeshNode " << id << "(" << avsNode.name << ") missing Subscene Mesh " << avsNode.data_uid << std::endl;
 				isMissingResources = true;
 				node->IncrementMissingResources();
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(node);

@@ -500,7 +500,7 @@ void GeometryEncoder::putPayloadSize(avs::uid uid)
 
 	avs::GeometryPayloadType type;
 	memcpy(&type,(buffer.data()+prevBufferSize+sizeof(size_t)),sizeof(type));
-	TELEPORT_LOG("GeometryEncoder put payload: {0} for {1} {2}", payloadSize, stringOf(type), uid);
+	//TELEPORT_LOG("GeometryEncoder put payload: {0} for {1} {2}", payloadSize, stringOf(type), uid);
 
 	prevBufferSize = 0;
 }

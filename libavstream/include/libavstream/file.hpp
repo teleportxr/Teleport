@@ -74,7 +74,7 @@ public:
 	 *  - Result::File_WriteFailed if access mode is not FileAccess::Write or write failure occured.
 	 */
 	Result write(PipelineNode*, const void* buffer, size_t bufferSize, size_t& bytesWritten) override;
-
+	void drop() override{}
 	/*!
 	 * File node does not support packet read operations.
 	 * \return Always returns Result::Node_NotSupported.

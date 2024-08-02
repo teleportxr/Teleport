@@ -1043,7 +1043,7 @@ void OpenXR::PollActions(XrTime predictedTime)
 		return;
 	if (!activeInteractionProfilePaths.size())
 	{
-		RecordCurrentBindings();
+		ChangedInteractionProfile();
 	}
 	for(auto i:openXRServers)
 	{
@@ -1280,8 +1280,7 @@ avs::Pose OpenXR::GetTrackedHandRootPose(int i) const
 {
 	return trackedHands[i].rootPose;
 }
-
-void OpenXR::RecordCurrentBindings()
+void OpenXR::ChangedInteractionProfile()
 {
 	activeInteractionProfilePaths.clear();
 	userHandLeftActiveProfile=0;
@@ -1326,30 +1325,37 @@ void OpenXR::RecordCurrentBindings()
 		activeInteractionProfilePaths.push_back(mouseAndKeyboard.profilePath);
 	}
 #endif
-	if(!activeInteractionProfilePaths.size())
-		return;
 	for(auto &srv:openXRServers)
 	{
-		auto &server = openXRServers[srv.first];
+		RecordCurrentBindings(srv.first);
+	}
+}
+
+void OpenXR::RecordCurrentBindings(avs::uid server_uid)
+{
+	if(!activeInteractionProfilePaths.size())
+		return;
+	auto server=GetServer(server_uid);
+	{
 		// TODO: is this the right place to reset the mappings?
 		// Put all th mappings back into unbound, to be recalculated later.
-		auto &unboundPoses = server.unboundPoses;
+		auto &unboundPoses = server->unboundPoses;
 		//unboundPoses.clear();
-		for (const auto &m : server.nodePoseMappings)
+		for (const auto &m : server->nodePoseMappings)
 		{
 			unboundPoses[m.first].regexPath = m.second.regexPath;
 			unboundPoses[m.first].poseOffset = m.second.poseOffset;
 		}
-		server.nodePoseMappings.clear();
-		auto &inputMappings = server.inputMappings;
-		if(srv.first!=0)
+		server->nodePoseMappings.clear();
+		auto &inputMappings = server->inputMappings;
+		if(server_uid!=0)
 			inputMappings.clear();
-		auto &inputStates = server.inputStates;
+		auto &inputStates = server->inputStates;
 		inputStates.clear();
 		std::regex re_left_right[2];
 		re_left_right[0].assign("/left/", std::regex_constants::icase | std::regex::extended);
 		re_left_right[1].assign("/right/", std::regex_constants::icase | std::regex::extended);
-		for (const auto &serverInputDef : server.inputDefinitions)
+		for (const auto &serverInputDef : server->inputDefinitions)
 		{
 			// Split the regex path by semicolons, allowing multiple definitions.
 			std::vector<std::string> strs = platform::core::split(serverInputDef.regexPath, ';');
@@ -1514,28 +1520,52 @@ std::string OpenXR::GetBoundPath(const ActionDefinition &def) const
 	#endif
 	return "";
 }
+void OpenXRServer::Reset()
+{
+	inputDefinitions.clear();
+	//! Mappings initialized on startup.
+	inputMappings.clear();
+	nodePoseMappings.clear();
+	rootNode=0;
+	//! Current states
+	inputStates.clear();
+	nodePoseStates.clear();
+	// temp, filled from nodePoseStates:
+	nodePoses.clear();
+	//! Temporary - these poses will be bound on the next update.
+	unboundPoses.clear();
+	inputs.clearEvents();
+	framenumber=0;
+}
 
-void OpenXR::ClearServer(avs::uid server_uid)
+void OpenXR::RemoveServer(avs::uid server_uid)
 {
 	if(openXRServers.find(server_uid)!=openXRServers.end())
 		openXRServers.erase(server_uid);
 }
 
+void OpenXR::ResetServer(avs::uid server_uid)
+{
+	auto i=openXRServers.find(server_uid);
+	if(i!=openXRServers.end())
+		i->second->Reset();
+}
+
 // An InputMapping is created for each InputDefinition that the server has sent.
-// It defines which xrActions are linked to which inputs needed by the server.
-// The mappings are initialized on connection and can be changed at any time by the server.
-// So we have a set of mappings for each currently connected server.
+// It defines which xrActions are linked to which inputs needed by the server->
+// The mappings are initialized on connection and can be changed at any time by the server->
+// So we have a set of mappings for each currently connected server->
 void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport::core::InputDefinition>& inputDefinitions_)
 {
-	auto &server = openXRServers[server_uid];
-	server.inputDefinitions = inputDefinitions_;
-	RecordCurrentBindings();
+	auto server = GetServer(server_uid);
+	server->inputDefinitions = inputDefinitions_;
+	RecordCurrentBindings(server_uid);
 }
 
 void OpenXR::SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId)
 {
-	auto &inputMappings=openXRServers[server_uid].inputMappings;
-	auto &inputStates=openXRServers[server_uid].inputStates;
+	auto &inputMappings=GetServer(server_uid)->inputMappings;
+	auto &inputStates=GetServer(server_uid)->inputStates;
 	inputMappings.push_back(InputMapping());
 	inputStates.push_back(InputState());
 	InputMapping& mapping = inputMappings.back();
@@ -1547,8 +1577,8 @@ void OpenXR::SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::I
 
 void OpenXR::BindUnboundPoses(avs::uid server_uid)
 {
-	auto &unboundPoses=openXRServers[server_uid].unboundPoses;
-	auto &nodePoseMappings=openXRServers[server_uid].nodePoseMappings;
+	auto &unboundPoses=GetServer(server_uid)->unboundPoses;
+	auto &nodePoseMappings=GetServer(server_uid)->nodePoseMappings;
 	std::map<avs::uid, NodePoseMapping>::iterator u;
 	std::regex re_left_right[2];
 	re_left_right[0].assign("/left/", std::regex_constants::icase | std::regex::extended);
@@ -1645,16 +1675,25 @@ void OpenXR::BindUnboundPoses(avs::uid server_uid)
 	}
 }
 
+std::shared_ptr<OpenXRServer> OpenXR::GetServer(avs::uid server_uid)
+{
+	auto f=openXRServers.find(server_uid);
+	if(f!=openXRServers.end())
+		return f->second;
+	openXRServers.emplace(server_uid,std::make_shared<OpenXRServer>());
+	return openXRServers[server_uid];
+}
+
 void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath)
 {
 	avs::Pose poseOffset;
-	auto &server=openXRServers[server_uid];
+	auto server=GetServer(server_uid);
 	if(regexPath=="root"||regexPath=="")
 	{
-		server.rootNode=uid;
+		server->rootNode=uid;
 		return;
 	}
-	auto &unboundPoses=server.unboundPoses;
+	auto &unboundPoses=server->unboundPoses;
 	unboundPoses[uid].regexPath=regexPath;
 	unboundPoses[uid].poseOffset=poseOffset;
 	BindUnboundPoses(server_uid);
@@ -1662,27 +1701,27 @@ void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &r
 
 void OpenXR::RemoveNodePoseMapping(avs::uid server_uid,avs::uid uid)
 {
-	auto &server=openXRServers[server_uid];
-	auto &unboundPoses=server.unboundPoses;
+	auto server=GetServer(server_uid);
+	auto &unboundPoses=server->unboundPoses;
 	auto u=unboundPoses.find(uid);
 	if(u!=unboundPoses.end())
 		unboundPoses.erase(u);
-	auto m=server.nodePoseMappings.find(uid);
-	if(m!=server.nodePoseMappings.end())
-		server.nodePoseMappings.erase(m);
+	auto m=server->nodePoseMappings.find(uid);
+	if(m!=server->nodePoseMappings.end())
+		server->nodePoseMappings.erase(m);
 
 }
 
 void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumber)
 {
-	auto &server=openXRServers[server_uid];
-	if(server.framenumber!=framenumber)
+	auto server=GetServer(server_uid);
+	if(server->framenumber!=framenumber)
 	{
-		for(auto m:server.nodePoseMappings)
+		for(auto m:server->nodePoseMappings)
 		{
 			auto &mapping = m.second;
 			auto &definition = xr_input_session.actionDefinitions[mapping.actionId];
-			auto &state=server.nodePoseStates[m.first];
+			auto &state=server->nodePoseStates[m.first];
 			auto space = xr_input_session.actionDefinitions[mapping.actionId].spaces[mapping.subActionIndex];
 			auto &subActionState = xr_input_session.actionStates[mapping.actionId].subActionStates[mapping.subActionIndex];
 			if (subActionState.poseActive)
@@ -1697,7 +1736,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 				{
 					vec3 p0=*((vec3*)&state.pose_footSpace.pose.position);
 					vec3 p1 = *((vec3 *)&fallbackStates[mapping.actionId].pose_worldSpace.position);
-					float dt=float(framenumber-server.framenumber)*0.01f;
+					float dt=float(framenumber-server->framenumber)*0.01f;
 					vec3 v=(p1-p0)/dt;
 					state.pose_footSpace.pose = fallbackStates[mapping.actionId].pose_worldSpace;
 					static float r=0.1f;
@@ -1710,13 +1749,13 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 		}
 		const float LOWER_HYSTERESIS=0.1f;
 		const float UPPER_HYSTERESIS=0.9f;
-		server.inputs.clearEvents();
+		server->inputs.clearEvents();
 		uint16_t binaryStateIndex=0;
 		uint16_t analogueStateIndex=0;
-		for(size_t i=0;i<server.inputMappings.size();i++)
+		for(size_t i=0;i<server->inputMappings.size();i++)
 		{
-			auto &mapping=server.inputMappings[i];
-			auto &state=server.inputStates[i];
+			auto &mapping=server->inputMappings[i];
+			auto &state=server->inputStates[i];
 			const auto &actionState		=xr_input_session.actionStates[mapping.clientActionId].subActionStates[mapping.subActionIndex];
 			const auto &actionDefinition=xr_input_session.actionDefinitions[mapping.clientActionId];
 			InputState previousState=state;
@@ -1747,19 +1786,19 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
 					{
 						if(previousState.float32!=state.float32)
-							server.inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
+							server->inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
 					}
 					// float action interpreted as boolean event:
 					else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
 					{
 						if(state.uint32!=0&&state.float32<LOWER_HYSTERESIS)
 						{
-							server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,0);
+							server->inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,0);
 							state.uint32=0;
 						}
 						else if(state.uint32==0&&state.float32>UPPER_HYSTERESIS)
 						{
-							server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,1);
+							server->inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,1);
 							state.uint32=1;
 						}
 					}
@@ -1772,7 +1811,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 						if(previousState.uint32!=state.uint32)
 						{
 							state.float32=state.uint32?1.f:0.f;
-							server.inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
+							server->inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
 						}
 					}
 					// boolean action as boolean event:
@@ -1780,7 +1819,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					{
 						if(previousState.uint32!=state.uint32)
 						{
-							server.inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,state.uint32);
+							server->inputs.addBinaryEvent(mapping.serverInputDefinition.inputId,state.uint32);
 						}
 					}
 				}
@@ -1793,7 +1832,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					{
 						state.float32=state.uint32?1.f:0.f;
 					}
-					server.inputs.setAnalogueState(analogueStateIndex++,state.float32);
+					server->inputs.setAnalogueState(analogueStateIndex++,state.float32);
 				}
 				// float action interpreted as boolean event:
 				else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
@@ -1809,11 +1848,11 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 							state.uint32=1;
 						}
 					}
-					server.inputs.setBinaryState(binaryStateIndex++,state.uint32);
+					server->inputs.setBinaryState(binaryStateIndex++,state.uint32);
 				}
 			}
 		}
-		server.framenumber=framenumber;
+		server->framenumber=framenumber;
 	}
 }
 
@@ -1821,24 +1860,24 @@ const teleport::core::Input &OpenXR::GetServerInputs(avs::uid server_uid,unsigne
 {
 	if(framenumber)
 	UpdateServerState(server_uid, framenumber);
-	auto &server=openXRServers[server_uid];
-	return server.inputs;
+	auto server=GetServer(server_uid);
+	return server->inputs;
 }
 const std::vector<InputMapping>& OpenXR::GetServerInputMappings(avs::uid server_uid)
 {
-	auto& server = openXRServers[server_uid];
-	return server.inputMappings;
+	auto server = GetServer(server_uid);
+	return server->inputMappings;
 }
 
 const std::map<avs::uid, NodePoseMapping >& OpenXR::GetServerNodePoseMappings(avs::uid server_uid)
 {
-	auto& server = openXRServers[server_uid];
-	return server.nodePoseMappings;
+	auto server = GetServer(server_uid);
+	return server->nodePoseMappings;
 }
 
 avs::uid OpenXR::GetRootNode(avs::uid server_uid)
 {
-	return openXRServers[server_uid].rootNode;
+	return GetServer(server_uid)->rootNode;
 }
 
 const std::map<avs::uid,avs::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
@@ -1846,17 +1885,17 @@ const std::map<avs::uid,avs::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_
 	const std::map<avs::uid,NodePoseState> &nodePoseStates=GetNodePoseStates(server_uid,framenumber);
 	for(const auto &i:nodePoseStates)
 	{
-		openXRServers[server_uid].nodePoses[i.first].pose=i.second.pose_footSpace.pose;
-		openXRServers[server_uid].nodePoses[i.first].velocity=i.second.pose_footSpace.velocity;
-		openXRServers[server_uid].nodePoses[i.first].angularVelocity=i.second.pose_footSpace.angularVelocity;
+		GetServer(server_uid)->nodePoses[i.first].pose=i.second.pose_footSpace.pose;
+		GetServer(server_uid)->nodePoses[i.first].velocity=i.second.pose_footSpace.velocity;
+		GetServer(server_uid)->nodePoses[i.first].angularVelocity=i.second.pose_footSpace.angularVelocity;
 	}
-	return openXRServers[server_uid].nodePoses;
+	return GetServer(server_uid)->nodePoses;
 }
 
 const std::map<avs::uid,NodePoseState> &OpenXR::GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber)
 {
 	UpdateServerState(server_uid, framenumber);
-	const std::map<avs::uid,NodePoseState> &nodePoseStates=openXRServers[server_uid].nodePoseStates;
+	const std::map<avs::uid,NodePoseState> &nodePoseStates=GetServer(server_uid)->nodePoseStates;
 	return nodePoseStates;
 }
 
@@ -2012,6 +2051,7 @@ void OpenXR::RenderLayerView(crossplatform::GraphicsDeviceContext &deviceContext
 	float clearAlpha=(IsPassthroughActive()?0.0f:1.0f);
 	float clear[] = { 0.0f, 0.1f, 0.2f, clearAlpha };
 	renderPlatform->ActivateRenderTargets(deviceContext,1, &surface.target_view, surface.depth_view);
+	// OpenXR doesn't create a clearable target for Vulkan!
 	renderPlatform->Clear(deviceContext, clear);
 	if (surface.depth_view)
 	{
@@ -2309,7 +2349,7 @@ void OpenXR::PollEvents()
 				{TELEPORT_CERR<<"xrPollEvent: received XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED event"<<std::endl;
 				const XrEventDataInteractionProfileChanged *data =
 					(XrEventDataInteractionProfileChanged *)(baseEventHeader);
-				RecordCurrentBindings();
+					ChangedInteractionProfile();
 				break;}
 			case XR_TYPE_EVENT_DATA_PERF_SETTINGS_EXT: {
 				const XrEventDataPerfSettingsEXT* perf_settings_event =

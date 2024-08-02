@@ -375,7 +375,7 @@ else()
 	set(STATIC ON)
 endif()
 add_subdirectory(thirdparty/basis_universal)
-#dangerous to keep a variable with this kind of name around. It breaks draco, for example.
+#dangerous to keep a variable with this kind of name around. It breaks draco, for example. Kill it with fire.
 unset(STATIC CACHE)
 if(TELEPORT_UNIX)
 	target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)

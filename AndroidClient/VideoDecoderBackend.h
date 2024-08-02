@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <libavstream/decoders/dec_interface.hpp>
+#include <libavstream/decoders/dec_interface.h>
 #include "Platform/CrossPlatform/Texture.h"
 
 class DecodeEventInterface

@@ -739,7 +739,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 				auto result = ioInterface->write(q_ptr(), (const void *)b.data(), b.size(), numBytesWrittenToOutput);
 				if (numBytesWrittenToOutput != b.size())
 				{
-					AVSLOG_NOSPAM(Warning) << "WebRtcNetworkSource EFP Callback: failed to write received message to output Queue node " << outputNode->getDisplayName() << "\n";
+					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP Callback: failed to write received message to output Queue node {0}\n",outputNode->getDisplayName() );
 					return;
 				}
 			}

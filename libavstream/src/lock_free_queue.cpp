@@ -1,7 +1,7 @@
 // libavstream
 // (c) Copyright 2018-2024 Simul Software Ltd
 
-#include "lock_free_queue.h"
+#include "libavstream/lock_free_queue.h"
 #include <algorithm>
 #include <iostream>
 #include "common_p.hpp"
@@ -10,11 +10,8 @@
 #include "logger.hpp"
 #include <libavstream/queue.hpp>
 #pragma optimize("",off)
-static int write_block_count=0;
-static int read_block_count=0;
-avs::Logger logger(avs::LogSeverity::Info);
-#define QUEUE_LOGGING 0
 #if QUEUE_LOGGING
+avs::Logger &logger=Logger::GetInstance();
 #define SUMMARIZE(event,block,count,rd,wr,ct,rd_blk,wr_blk) AVS_LOG("{0} {1}({2}) - next_read_index: {3}, next_write_index: {4}, blockCount: {5}={6}\n\twill read: {7} from {8}\n",#event,block,count,rd,wr,ct,(wr_blk-rd_blk),*((const size_t*)&ringBuffer[next_read_index.load()]),next_read_index.load());
 #define QUEUE_LOG(txt,...) AVS_LOG(txt, ##__VA_ARGS__)
 #define QUEUE_LOG_SIMPLE(txt,...) AVS_LOG_SIMPLE(txt, ##__VA_ARGS__)
@@ -84,7 +81,6 @@ Result LockFreeQueue::deconfigure()
 	ringBuffer.clear();
 	return Result::OK;
 }
-
 void LockFreeQueue::flush()
 {
 	flushInternal();
@@ -111,7 +107,7 @@ Result LockFreeQueue::read(PipelineNode*, void* buffer, size_t& bufferSize, size
 	if(frontSize>=ringBuffer.size())
 	{
 		bufferSize=0;
-		AVS_WARN("Want to read: {0} from {1}. Failed to read usable bufferSize from Ringbuffer.\n",frontSize,next_read_index.load());
+		QUEUE_WARN("Want to read: {0} from {1}. Failed to read usable bufferSize from Ringbuffer.\n",frontSize,next_read_index.load());
 		return Result::Failed;
 	}
 	if (!buffer || bufferSize < frontSize)
@@ -212,6 +208,9 @@ Result LockFreeQueue::write(PipelineNode*, const void* buffer, size_t bufferSize
 				test|=8;
 			// out of space. Must resize.
 				size_write_index=increaseBufferSize(bufferSpace8);
+				if(ringBuffer.size()<bufferSpace8){
+					QUEUE_WARN("Insufficient resize {0}\n",ringBuffer.size());
+				}
 				data_write_index=size_write_index+INDEX_SIZE;
 				read_block=next_read_index.load();
 			}
@@ -255,6 +254,9 @@ Result LockFreeQueue::write(PipelineNode*, const void* buffer, size_t bufferSize
 	next_write_index.store(nxtwrite);
 	blockCount++;
 	bytesWritten = bufferSize;
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+	bytes_received+=bufferSize;
+#endif
 	return Result::OK;
 }
 
@@ -272,8 +274,8 @@ size_t LockFreeQueue::increaseBufferSize(size_t requestedSize)
 	if(oldBufferSize>=maxBufferSize)
 		return 0;
 	// For the duration of this function, prevent any new reads
-	size_t old_blockCount=std::atomic_exchange(&blockCount,0);
-	size_t old_read_index=std::atomic_exchange(&next_read_index,next_write_index);
+	size_t old_blockCount=std::atomic_exchange(&blockCount,size_t(0));
+	size_t old_read_index=std::atomic_exchange(&next_read_index,next_write_index.load());
 	size_t max_copy_index=next_write_index+INDEX_SIZE;
 	size_t newSize= oldBufferSize+ requestedSize*12;
 	if(newSize>maxBufferSize)
@@ -305,9 +307,8 @@ size_t LockFreeQueue::increaseBufferSize(size_t requestedSize)
 		if(size2>0)
 			memcpy(target,ringBuffer.data(),(size_t)size2);
 		// end of the new buffer.
-		ringBuffer=std::move(new_mem);
 	}
-
+	ringBuffer=std::move(new_mem);
 	
 	//next_read_index should be zero.
 	// next_write_index will be totalSize
