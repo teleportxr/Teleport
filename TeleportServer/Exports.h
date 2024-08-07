@@ -5,7 +5,8 @@
 #include "TeleportServer/Export.h"
 typedef void(TELEPORT_STDCALL *ProcessAudioInputFn)(avs::uid uid, const uint8_t *data, size_t dataSize);
 typedef void(TELEPORT_STDCALL *OutputLogFn)(int severity,const char *txt);
-
+typedef bool(TELEPORT_STDCALL *ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
+typedef bool(TELEPORT_STDCALL *ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid client_uid, const avs::Pose*);
 typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
 typedef void(TELEPORT_STDCALL *ProcessNewInputStateFn)(avs::uid client_uid, const teleport::core::InputState *, const uint8_t **, const float **);
@@ -14,6 +15,18 @@ typedef void(TELEPORT_STDCALL *DisconnectFn)(avs::uid client_uid);
 typedef void(TELEPORT_STDCALL *ReportHandshakeFn)(avs::uid client_uid, const teleport::core::Handshake *h);
 typedef int64_t(* GetUnixTimestampFn)();	// was __stdcall*
 		
+namespace avs
+{
+	/*!
+	 * Message handler function prototype.
+	 *
+	 * \param severity Message severity class.
+	 * \param msg Null-terminated string containing the message.
+	 * \param userData Custom user data pointer.
+	 */
+	typedef void(*MessageHandlerFunc)(LogSeverity severity, const char* msg, void* userData);
+}
+
 namespace teleport
 {
 	namespace server
