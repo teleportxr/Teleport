@@ -31,7 +31,8 @@ jobs:
         echo VULKAN_SDK_DIR ${{env.VULKAN_SDK_DIR}};
         echo VULKAN_SDK ${{env.VULKAN_SDK}};
         echo GITHUB_PATH ${{env.GITHUB_PATH}};
-        dir ${{env.WORKFLOW_VULKAN_DIR}}
+        dir ${{env.WORKFLOW_VULKAN_DIR}};
+        dir D:/a/Teleport/Teleport/VULKAN_SDK//Bin/
     - name: Checkout
       uses: actions/checkout@v4
       with:
