@@ -587,7 +587,7 @@ bool OpenXR::StartSession()
 	MAIN_SWAPCHAIN = xr_swapchains.size();
 	XrSwapchainCreateInfo swapchain_info = { XR_TYPE_SWAPCHAIN_CREATE_INFO };
 	swapchain_info.createFlags = 0;
-	swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+	swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
 	swapchain_info.format = swapchain_format;
 	swapchain_info.sampleCount = config_view.recommendedSwapchainSampleCount;
 	swapchain_info.width = config_view.recommendedImageRectWidth;
@@ -606,7 +606,7 @@ bool OpenXR::StartSession()
 			//Vector
 			MOTION_VECTOR_SWAPCHAIN=xr_swapchains.size();
 			swapchain_info.createFlags = 0;
-			swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+			swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
 			swapchain_info.format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			swapchain_info.sampleCount = 1;
 			swapchain_info.width = spaceWarpProperties.recommendedMotionVectorImageRectWidth;
@@ -618,7 +618,7 @@ bool OpenXR::StartSession()
 			
 			//Depth
 			MOTION_DEPTH_SWAPCHAIN=xr_swapchains.size();
-			swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			swapchain_info.usageFlags =XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
 			swapchain_info.format = VK_FORMAT_D24_UNORM_S8_UINT;
 			AddXrSwapchain(swapchain_info);
 		}
@@ -630,7 +630,7 @@ bool OpenXR::StartSession()
 	{
 		OVERLAY_SWAPCHAIN = xr_swapchains.size();
 		swapchain_info.createFlags = 0;
-		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchain_info.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT;
 		swapchain_info.format = VK_FORMAT_R8G8B8A8_SRGB;
 		swapchain_info.sampleCount = 1;
 		swapchain_info.width = 1024;

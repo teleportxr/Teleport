@@ -529,6 +529,33 @@ void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node
 //	TELEPORT_INTERNAL_CERR( "CompleteNode {0} {1}",id,node->name);
 	///We're using the node ID as the node ID as we are currently generating an node per node/transform anyway; this way the server can tell the client to remove an node.
 	m_CompletedNodes.push_back(id);
+	MissingResource *missingNode = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
+	if(missingNode)
+	{
+		for (auto waiting = missingNode->waitingResources.begin(); waiting != missingNode->waitingResources.end(); waiting++)
+		{
+			if(waiting->get()->type==avs::GeometryPayloadType::Node)
+			{
+				std::shared_ptr<Node> waitingNode = std::static_pointer_cast<Node>(*waiting);
+				if(waitingNode->id==id)
+				{
+					TELEPORT_INTERNAL_CERR("Node {0} is waiting for itself", id, id);
+					break;
+				}
+				TELEPORT_INTERNAL_CERR("Waiting Mesh Node {0} got Skeleton Node {1}", waitingNode->id, id);
+				if (waitingNode)
+				{
+					RESOURCE_RECEIVES(waitingNode, id);
+					waitingNode->SetSkeletonNode(node);
+				// If the waiting resource has no incomplete resources, it is now itself complete.
+					if (waitingNode->GetMissingResourceCount() == 0)
+					{
+						CompleteNode(waitingNode->id, waitingNode);
+					}
+				}
+			}
+		}
+	}
 	RemoveFromMissingResources(id);
 	mNodeManager.CompleteNode(id);
 }

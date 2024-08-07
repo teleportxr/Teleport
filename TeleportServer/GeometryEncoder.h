@@ -59,7 +59,8 @@ namespace teleport
 			avs::Result encodeShadowMaps( std::vector<avs::uid> missingUIDs);
 			avs::Result encodeSkeleton( avs::uid skeletonID);
 			avs::Result encodeTextures( std::vector<avs::uid> missingUIDs);
-
+			
+			avs::Result encodeTexturePointer( avs::uid);
 			//The actual implementation of encode textures that can be used by encodeMaterials to package textures with it.
 			avs::Result encodeTexturesBackend( std::vector<avs::uid> missingUIDs, bool isShadowMap = false);
 

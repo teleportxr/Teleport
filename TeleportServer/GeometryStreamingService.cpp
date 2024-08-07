@@ -52,18 +52,24 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto &r=GetTrackedResource(resource_uid);
-	if(!r.sent)
+	r.acknowledged=true;
+	if(!r.clientNeeds)
 	{
 		// Confirmed a resource we don't want it to have...
 		TELEPORT_WARN("Confirmed an unwanted resource {0}",resource_uid);
 		return;
 	}
-	r.acknowledged=true;
+	if(!r.sent)
+	{
+		// Confirmed a resource we don't want it to have...
+		TELEPORT_WARN("Confirmed an unsent resource {0}",resource_uid);
+		return;
+	}
 	
 	// Is this resource a node?
 	if(auto node=geometryStore->getNode(resource_uid))
 	{
-		if (nodesToStream.find(resource_uid) == nodesToStream.end())
+		if (streamedNodes.find(resource_uid) == streamedNodes.end())
 		{
 			TELEPORT_WARN("Confirmed an unwanted node {0}",resource_uid);
 			// this node wasn't meant to be sent. Ignore this, it CAN happen e.g. if 
@@ -315,8 +321,6 @@ void GeometryStreamingService::startStreaming(server::ClientNetworkContext* cont
 	avsGeometryEncoder->configure(&geometryEncoder);
 
 	avsPipeline->link({ avsGeometrySource.get(), avsGeometryEncoder.get(), &clientNetworkContext->NetworkPipeline.GeometryQueue });
-
-
 }
 
 void GeometryStreamingService::stopStreaming()
@@ -424,6 +428,7 @@ void GeometryStreamingService::setOriginNode(avs::uid nodeID)
 
 bool GeometryStreamingService::streamNode(avs::uid nodeID)
 { 
+	TELEPORT_LOG_INTERNAL("streamNode {0}",nodeID);
 	if (nodeID != 0)
 	{
 		if(nodesToStream.find(nodeID)==nodesToStream.end())
@@ -447,6 +452,7 @@ bool GeometryStreamingService::streamNode(avs::uid nodeID)
 
 bool GeometryStreamingService::unstreamNode(avs::uid nodeID)
 {
+	TELEPORT_LOG_INTERNAL("unstreamNode {0}",nodeID);
 	if (nodesToStream.find(nodeID) != nodesToStream.end())
 	{
 		nodesToStream.erase(nodeID);

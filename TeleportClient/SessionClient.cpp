@@ -165,9 +165,12 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 	{
 		clientID = 0;
 	}
-	clientPipeline.pipeline.deconfigure();
-	clientPipeline.source->deconfigure();
-	DiscoveryService::GetInstance().Disconnect(server_uid);
+	if(server_uid)
+	{
+		clientPipeline.pipeline.deconfigure();
+		clientPipeline.source->deconfigure();
+		DiscoveryService::GetInstance().Disconnect(server_uid);
+	}
 }
 
 

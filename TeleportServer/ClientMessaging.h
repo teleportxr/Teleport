@@ -15,13 +15,7 @@
 #include "TeleportCore/Input.h"
 #include "Export.h"
 #include <libavstream/genericencoder.h>
-
-typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid client_uid, const avs::Pose*);
-typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
-typedef void(TELEPORT_STDCALL *ProcessNewInputStateFn)(avs::uid client_uid, const teleport::core::InputState *, const uint8_t **, const float **);
-typedef void(TELEPORT_STDCALL *ProcessNewInputEventsFn)(avs::uid client_uid, uint16_t, uint16_t, uint16_t, const avs::InputEventBinary **, const avs::InputEventAnalogue **, const avs::InputEventMotion **);
-typedef void(TELEPORT_STDCALL *DisconnectFn)(avs::uid client_uid);
-typedef void(TELEPORT_STDCALL *ReportHandshakeFn)(avs::uid client_uid, const teleport::core::Handshake *h);
+#include "Exports.h"
 
 namespace teleport
 {

@@ -13,9 +13,9 @@
 #include "../src/platform.hpp"
 #include "DefaultHTTPService.h"
 #include "SignalingService.h"
-#include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ClientData.h"
+#include "TeleportServer/Exports.h"
 
 
 #ifdef _MSC_VER
@@ -26,9 +26,6 @@ extern std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
 extern std::shared_ptr<DebugOutput> debug_buffer;
 #endif
 
-
-typedef void(TELEPORT_STDCALL *ProcessAudioInputFn)(avs::uid uid, const uint8_t *data, size_t dataSize);
-typedef void(TELEPORT_STDCALL *OutputLogFn)(int severity,const char *txt);
 
 namespace teleport
 {
@@ -47,31 +44,6 @@ namespace teleport
 		extern GetUnixTimestampFn getUnixTimestampNs;
 		extern ReportHandshakeFn reportHandshake;
 		extern uint32_t connectionTimeout;
-		/// The collected values required to initialize a server session; see Server_Teleport_Initialize().
-		struct InitializationSettings
-		{
-			char *clientIP;			   ///< IP address to match to connecting clients. May be blank.
-			char *httpMountDirectory;  ///< Local (server-side) directory for HTTP requests: usually the Teleport cache directory.
-			char *certDirectory;	   ///< Local directory for HTTP certificates.
-			char *privateKeyDirectory; ///< Local directory for private keys.
-			char *signalingPorts;	   ///< Optional list of ports to listen for signaling connections and queries.
-
-			ClientStoppedRenderingNodeFn clientStoppedRenderingNode; ///< Delegate to be called when client is no longer rendering a specified node.
-			ClientStartedRenderingNodeFn clientStartedRenderingNode;
-			SetHeadPoseFn headPoseSetter;
-			SetControllerPoseFn controllerPoseSetter;
-			ProcessNewInputStateFn newInputStateProcessing;
-			ProcessNewInputEventsFn newInputEventsProcessing;
-			DisconnectFn disconnect;
-			avs::MessageHandlerFunc messageHandler;
-			ReportHandshakeFn reportHandshake;
-			ProcessAudioInputFn processAudioInput;
-			GetUnixTimestampFn getUnixTimestampNs;
-			int64_t start_unix_time_us;
-		};
-		extern bool TELEPORT_SERVER_API ApplyInitializationSettings(const InitializationSettings *initializationSettings);
-		extern void TELEPORT_SERVER_API SetOutputLogCallback(OutputLogFn fn);
-		extern ServerSettings TELEPORT_SERVER_API &GetServerSettings();
 	}
 }
 

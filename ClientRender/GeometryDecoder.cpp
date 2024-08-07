@@ -129,6 +129,7 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,const void* buffer, size
 	case avs::GeometryPayloadType::Skeleton:
 	case avs::GeometryPayloadType::FontAtlas:
 	case avs::GeometryPayloadType::TextCanvas:
+	case avs::GeometryPayloadType::TexturePointer:
 	break;
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
@@ -194,6 +195,10 @@ avs::Result GeometryDecoder::decodeFromBuffer(avs::uid server_uid,const uint8_t 
 	{
 		geometryFileFormat=GeometryFileFormat::GLTF_BINARY;
 	}
+	else if(extens.length()>0)
+	{
+		geometryFileFormat=GeometryFileFormat::FROM_EXTENSION;
+	}
 	decodeData.emplace(server_uid,filename, buffer,bufferSize, type,geometryFileFormat, target, false, resource_uid,sourceAxesStandard);
 	return avs::Result::OK;
 }
@@ -223,6 +228,7 @@ void GeometryDecoder::decodeAsync()
 
 avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData& geometryDecodeData)
 {
+std::cout<<"GeometryDecoder::decodeInternal "<<avs::stringOf(geometryDecodeData.type)<<", size "<<geometryDecodeData.data.size()<<"\n";
 	switch(geometryDecodeData.type)
 	{
 	case avs::GeometryPayloadType::Mesh:
@@ -243,6 +249,8 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData& geometryDecodeDa
 		return decodeFontAtlas(geometryDecodeData);
 	case avs::GeometryPayloadType::TextCanvas:
 		return decodeTextCanvas(geometryDecodeData);
+	case avs::GeometryPayloadType::TexturePointer:
+		return decodeTexturePointer(geometryDecodeData);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
@@ -535,15 +543,14 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 								,0
 								,0
 								,0
-								,4
 								,1
 								,1
+								,false
 								,avs::TextureFormat::RGBA8
+								,4
+								,1.0f
 								,avs::TextureCompression::PNG
 								,true
-								, 0
-								,1.0f
-								,false
 								};
 		avsTexture.compressedData=std::move(data);
 		target->CreateTexture(subSceneCreate.subscene_uid,texture_uid,avsTexture);
@@ -1158,11 +1165,47 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryDecodeData& geometry
 	return avs::Result::GeometryDecoder_Incomplete;
 }
 
+avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData& geometryDecodeData)
+{
+	avs::uid texture_uid = geometryDecodeData.uid;
+	uint16_t urlLength = NextUint16;
+	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
+	string url((size_t)urlLength,' ');
+	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target,texture_uid);		
+}
+
+avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData& geometryDecodeData)
+{
+	path p(geometryDecodeData.filename_or_url);
+	string ext=p.extension().generic_string();
+	avs::Texture texture;
+	if(ext==".texture")
+	{
+		texture.compression = avs::TextureCompression::PNG;
+	}
+	if(ext==".ktx2")
+	{
+		texture.compression = avs::TextureCompression::KTX;
+	}
+	if(ext==".basis")
+	{
+		texture.compression = avs::TextureCompression::BASIS_COMPRESSED;
+	}
+	texture.compressedData=std::move(geometryDecodeData.data);
+	texture.name=p.filename().replace_extension("").generic_string();
+	geometryDecodeData.target->CreateTexture(geometryDecodeData.server_or_cache_uid,geometryDecodeData.uid, texture);
+	return avs::Result::OK;
+}
+
 avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeData)
 {
 	avs::Texture texture;
 	avs::uid texture_uid = geometryDecodeData.uid;
-
+	if(geometryDecodeData.geometryFileFormat==GeometryFileFormat::FROM_EXTENSION)
+	{
+		return decodeTextureFromExtension(geometryDecodeData);
+	}
 	size_t nameLength = NextUint64;
 	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(nameLength);
 	texture.name.resize(nameLength);
@@ -1181,38 +1224,14 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 		TELEPORT_WARN("Invalid Texture: {0}",texture.name);
 		return avs::Result::Failed;
 	}
-
-	texture.cubemap= NextByte!=0;
-	
-	texture.width = NextUint32;
-	texture.height = NextUint32;
-	if (texture.width > MAX_TEXTURE_SIZE || texture.height > MAX_TEXTURE_SIZE || texture.width == 0 || texture.height==0)
+	if(geometryDecodeData.offset>=geometryDecodeData.data.size())
 		return avs::Result::Failed;
-	texture.depth = NextUint32;
-	texture.bytesPerPixel = NextUint32;
-	if (texture.bytesPerPixel == 0 || texture.bytesPerPixel>16)
-		return avs::Result::Failed;
-	texture.arrayCount = NextUint32;
-	if (texture.arrayCount > 64)
-		return avs::Result::Failed;
-	texture.mipCount = NextUint32;
-	if (texture.mipCount > 64)
-		return avs::Result::Failed;
-	texture.format = static_cast<avs::TextureFormat>(NextUint32);
-	if(texture.format == avs::TextureFormat::INVALID)
-		texture.format = avs::TextureFormat::G8;
-	texture.valueScale = NextFloat;
-	if (_isnanf(texture.valueScale))
-		return avs::Result::Failed;
-
-	uint32_t dataSize = NextUint32;
+	size_t dataSize=geometryDecodeData.data.size()-geometryDecodeData.offset;
 	if(dataSize>MAX_TEXTURE_SIZE*MAX_TEXTURE_SIZE*MAX_TEXTURE_BYTES)
 		return avs::Result::Failed;
 	texture.compressedData.resize(dataSize);
 	memcpy(texture.compressedData.data(), geometryDecodeData.data.data() + geometryDecodeData.offset, dataSize);
 	geometryDecodeData.offset += dataSize;
-
-	texture.sampler_uid = NextUint64;
 	geometryDecodeData.target->CreateTexture(geometryDecodeData.server_or_cache_uid,texture_uid, texture);
 	
 	return avs::Result::OK;

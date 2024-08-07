@@ -27,6 +27,7 @@ namespace avs
 		{
 			return Result::Node_InvalidConfiguration;
 		}
+		maxPacketKb=0.f;
 		name=n;
 		std::lock_guard<std::mutex> lock(m_mutex);
 		flushInternal();
@@ -104,6 +105,7 @@ namespace avs
 			return Result::Failed;
 		}
 		std::lock_guard<std::mutex> lock(m_mutex);
+		maxElements=std::max(maxElements,m_numElements);
 		if (m_numElements == m_maxBuffers)
 		{
 			auto oldsize=m_maxBuffers;
@@ -132,6 +134,7 @@ namespace avs
 		
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
 		bytes_received+=bufferSize;
+		maxPacketKb=std::max(maxPacketKb,float(bufferSize)/1024.f);
 #endif
 		return Result::OK;
 	}

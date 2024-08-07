@@ -147,7 +147,9 @@ void ClientMessaging::tick(float deltaTime)
 	//Only tick the geometry streaming service a set amount of times per second.
 	if (timeSinceLastGeometryStream >= TIME_BETWEEN_GEOMETRY_TICKS)
 	{
-		geometryStreamingService.tick(TIME_BETWEEN_GEOMETRY_TICKS);
+	//	 only do geom streaming if the streaming connection is open.
+		if(clientNetworkContext.NetworkPipeline.IsStreamingActive())
+			geometryStreamingService.tick(TIME_BETWEEN_GEOMETRY_TICKS);
 
 		//Tell the client to change the visibility of nodes that have changed whether they are within streamable bounds.
 	
@@ -503,7 +505,12 @@ bool ClientMessaging::setOrigin( avs::uid originNode)
 	currentOriginState.serverTimeSentUs=GetServerTimeUs();
 	if (!hasReceivedHandshake())
 	{
-		TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",clientID);
+		static char t=1;
+		t--;
+		if(!t)
+		{
+			TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",clientID);
+		}
 		return false;
 	}
 	bool result=sendCommand(setp);

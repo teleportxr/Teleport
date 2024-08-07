@@ -269,10 +269,12 @@ bool NetworkPipeline::process()
 		if (result != mPrevProcResult)
 		{
 			TELEPORT_CERR << "Network pipeline processing encountered an error!" << "\n";
+			blocked=true;
 			mPrevProcResult = result;
 		}
 		return false;
 	}
+	blocked=false;
 
 	mPrevProcResult = result;
 

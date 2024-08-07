@@ -20,6 +20,7 @@ set(src
 	SignalingService.cpp
 	SignalingService.h 
 	Export.h
+	Exports.h
 	ExtractedTypes.h
 	Font.h
 	Font.cpp

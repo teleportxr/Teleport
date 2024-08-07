@@ -229,9 +229,9 @@ bool centre=link;
 		renderPlatform->SetTopology(deviceContext, Topology::TRIANGLELIST);
 		if(link)
 		{
-		renderPlatform->ApplyPass(deviceContext, bkg_pass);
-		renderPlatform->Draw(deviceContext, 6, 0);
-		renderPlatform->UnapplyPass(deviceContext);
+			renderPlatform->ApplyPass(deviceContext, bkg_pass);
+			renderPlatform->Draw(deviceContext, 6, 0);
+			renderPlatform->UnapplyPass(deviceContext);
 		}
 		renderPlatform->ApplyPass(deviceContext, pass);
 		fontChars.Apply(deviceContext, effect, _fontChars);

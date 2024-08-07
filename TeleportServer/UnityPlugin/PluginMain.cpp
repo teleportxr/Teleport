@@ -172,6 +172,13 @@ void PipeOutMessages()
 				return GeometryStore::GetInstance().SetCachePath(path);
 			}
 
+			/// Set the local (server-side) path where cached streamable resources are stored.
+			TELEPORT_EXPORT bool Server_SetHttpRoot(const char* path)
+			{
+				return GeometryStore::GetInstance().SetHttpRoot(path);
+			}
+
+
 			/// Tell the dll how long to wait for a timeout.
 			TELEPORT_EXPORT void Server_SetConnectionTimeout(int32_t timeout)
 			{
@@ -789,6 +796,10 @@ TELEPORT_EXPORT int Server_GetStructSize(const char* name)
 	if (strcasecmp(name, "InteropMaterial") == 0)
 	{
 		return sizeof(InteropMaterial);
+	}
+	if (strcasecmp(name, "InteropTexture") == 0)
+	{
+		return sizeof(InteropTexture);
 	}
 	
 	if (strcasecmp(name, "PBRMetallicRoughness") == 0)

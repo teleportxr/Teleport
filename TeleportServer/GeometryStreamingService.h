@@ -29,7 +29,7 @@ namespace teleport
 			//! The value clientNeeds may be false, if a resource was needed but is now not.
 			struct TrackedResource
 			{
-				bool clientNeeds=false;		// whether we THINK the client NEEDS the resource.
+				bool clientNeeds=true;		// whether we THINK the client NEEDS the resource.
 				bool sent=false;			// Whether we have actually sent the resource,
 				int64_t sent_server_time_us=0;// and when we sent it.
 				bool acknowledged=false;	// Whether the client acknowledged receiving the resource.

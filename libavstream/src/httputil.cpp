@@ -12,7 +12,7 @@
 #include <fstream>
 #include <fmt/chrono.h>
 #include "Platform/Core/FileLoader.h"
-
+#pragma optimize("",off)
 using namespace std::chrono;
 using namespace std::filesystem;
 #ifdef __ANDROID__
@@ -150,6 +150,7 @@ namespace avs
 						}
 						else if(response_code==404)
 						{
+							AVSLOG(Warning)<<"404 returned for "<<transfer.mRequest.url.c_str()<<"\n";
 						// nothing at this address right now.
 						}
 						else if (response_code == 302)
@@ -159,7 +160,7 @@ namespace avs
 					}
 					else
 					{
-						AVSLOG(Error)<<"CURL transfer failed. \n";
+						AVSLOG(Error)<<"CURL transfer "<< transfer.mRemoteURL<<" failed. "<<msgs[0].data.result<<"\n";
 					}
 					transfer.stop();
 					// If that was the last active handle, stop doing stuff until we get a new request.
@@ -388,7 +389,7 @@ namespace avs
 		// TODO: because fmt::format with a time_point adds a silly number of decimal places to the "seconds", we can't use it for the whole time.
 		// instead, we must extract the seconds separately.
 		std::string header=fmt::format("If-Modified-Since: {:%a, %d %b %Y %H:%M}:00 GMT", mRequest.cacheUpdated,0);
-		write(header.c_str(),header.length());
+		//write(header.c_str(),header.length());
 		return header;
 	}
 

@@ -134,7 +134,7 @@ namespace avs
 		MIRROR_CLAMP_TO_EDGE,	//GL_MIRROR_CLAMP_TO_EDGE (0x8743)
 	};
 
-	//Just copied the Unreal texture formats, this will likely need changing.
+	// This will likely need changing.
 	enum class TextureFormat : uint32_t
 	{
 		INVALID,
@@ -179,19 +179,19 @@ namespace avs
 		uint32_t width;
 		uint32_t height;
 		uint32_t depth;
-		uint32_t bytesPerPixel;
+
 		uint32_t arrayCount;
 		uint32_t mipCount;
+		bool cubemap=false;
 
 		TextureFormat format;
+		uint32_t bytesPerPixel;
+		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
+
+
 		TextureCompression compression;
 		bool compressed=false;
 
-		uid sampler_uid = 0;
-
-		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
-
-		bool cubemap=false;
 		
 		struct Image
 		{
@@ -215,9 +215,9 @@ namespace avs
 			TELEPORT_VERIFY(t.compression, compression);
 			TELEPORT_VERIFY(t.valueScale, valueScale);
 			const unsigned char* start1 = (const unsigned char*)&width;
-			const unsigned char* end1 = (const unsigned char*)&cubemap+sizeof(cubemap);
+			const unsigned char* end1 = (const unsigned char*)&compressed+sizeof(compressed);
 			const unsigned char* start2 = (const unsigned char*)&t.width;
-			const unsigned char *end2 = (const unsigned char *)&t.cubemap + sizeof(t.cubemap);
+			const unsigned char *end2 = (const unsigned char *)&t.compressed + sizeof(t.compressed);
 			auto c = memcmp(start1, start2, size_t(end1 - start1));
 			if (c != 0)
 			{
@@ -238,8 +238,6 @@ namespace avs
 				if (compression != t.compression)
 					return false;
 				if (compressed != t.compressed)
-					return false;
-				if (sampler_uid != t.sampler_uid)
 					return false;
 				if (valueScale != t.valueScale)
 					return false;
@@ -268,11 +266,7 @@ namespace avs
 		{
 			//Name needs its own line, so spaces can be included.
 			out<< texture.name;
-			const unsigned char*start=(const unsigned char*)&texture.width;
-			const unsigned char* end = (const unsigned char*)&texture.images;
-			out.write((const char *)start, (size_t)(end - start));
 			uint32_t sz=texture.compressedData.size();
-			out.write((char*)&sz,sizeof(sz));
 			out.write((const char*)texture.compressedData.data(), sz);
 			return out;
 		}
@@ -281,18 +275,12 @@ namespace avs
 		friend InStream& operator>> (InStream& in, Texture& texture)
 		{
 			in>>texture.name;
-			unsigned char* start = ( unsigned char*)&texture.width;
-			const unsigned char* end = (const unsigned char*)&texture.images;
-			in.read((char*)start, (size_t)(end - start));
-			uint32_t sz=0;
-			in.read((char*)&sz,sizeof(sz));
-			
-			if(sz==0)
+			while(!in.eof())
 			{
-				throw(std::runtime_error("No data in texture."));
+				uint8_t c=0;
+				in.read((char*)&c,1);
+				texture.compressedData.push_back(c);
 			}
-			texture.compressedData.resize(sz);
-			in.read((char*)texture.compressedData.data(), sz);
 			return in;
 		}
 	};

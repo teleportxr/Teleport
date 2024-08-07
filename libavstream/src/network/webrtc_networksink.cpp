@@ -212,12 +212,16 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		rtc::DataChannelInit dataChannelInit;
 		if (stream.reliable)
 		{
-			dataChannelInit.reliability.type = rtc::Reliability::Type::Reliable;
+	// If both maxPacketLifeTime or maxRetransmits are unset, the channel is reliable.
+	// If either maxPacketLifeTime or maxRetransmits is set, the channel is unreliable.
+	// (The settings are exclusive so both maxPacketLifetime and maxRetransmits must not be set.)
+			//dataChannelInit.reliability.type = rtc::Reliability::Type::Reliable;
 			dataChannelInit.reliability.unordered = false;
 		}
 		else
 		{
-			dataChannelInit.reliability.type = rtc::Reliability::Type::Rexmit;
+			//dataChannelInit.reliability.type = rtc::Reliability::Type::Rexmit;
+			dataChannelInit.reliability.maxRetransmits = 0;
 			dataChannelInit.reliability.unordered = true;
 			dataChannelInit.reliability.rexmit = int(0);
 		}
@@ -505,7 +509,9 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 			}
 			else
 			{
-				AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+				AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
+				// This is a fail condition, we should disconnect or try to reset the WebRTC connection.
+				return Result::Failed;
 			}
 		}
 		catch (std::runtime_error err)

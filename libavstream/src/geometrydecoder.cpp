@@ -7,6 +7,7 @@
 #include "node_p.hpp"
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
+#include <TeleportCore/Logging.h>
 
 namespace avs
 {
@@ -154,12 +155,13 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			case avs::GeometryPayloadType::Skeleton:
 			case avs::GeometryPayloadType::FontAtlas:
 			case avs::GeometryPayloadType::TextCanvas:
+			case avs::GeometryPayloadType::TexturePointer:
 			break;
 			default:
-				std::cerr<<"Invalid Geometry payload\n";
+				TELEPORT_WARN("Invalid Geometry payload\n");
 				continue;
 			};
-			AVSLOG(Info)<<"geometrydecoder got payload: "<<info.dataSize<<" for "<< stringOf(payloadType)<<"\n";
+			//AVSLOG(Info)<<"geometrydecoder got payload: "<<info.dataSize<<" for "<< stringOf(payloadType)<<"\n";
 
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 			if (dataSize>m_buffer.size())

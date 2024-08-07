@@ -1,5 +1,4 @@
 #pragma once
-
 #include <ctime>
 #include <unordered_map>
 #include <vector>
@@ -53,6 +52,16 @@ namespace teleport
 			{
 				return cachePath;
 			}
+			/// Sets the root http address this server will use to serve files via http.
+			bool SetHttpRoot(const char*);
+			std::string GetHttpRoot() const
+			{
+				return httpRoot;
+			}
+			bool IsHttpEnabled() const
+			{
+				return httpRoot.length()>0;
+			}
 			void Verify();
 			bool saveToDisk() const;
 			//Load from disk.
@@ -85,6 +94,7 @@ namespace teleport
 			virtual const avs::Mesh* getMesh(avs::uid meshID, avs::AxesStandard standard) const;
 
 			virtual std::vector<avs::uid> getTextureIDs() const;
+			ExtractedTexture* getWrappedTexture(avs::uid textureID);
 			virtual avs::Texture* getTexture(avs::uid textureID);
 			virtual const avs::Texture* getTexture(avs::uid textureID) const;
 
@@ -137,7 +147,7 @@ namespace teleport
 			void compressNextTexture();
 
 			/// Check for errors - these should be resolved before using this store in a server.
-			bool CheckForErrors() ;
+			bool CheckForErrors(avs::uid uid=0) ;
 			//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.
 			avs::uid GetOrGenerateUid(const std::string& path);
 			//! Get the current session uid corresponding to the given resource/asset path.
@@ -163,6 +173,7 @@ namespace teleport
 
 		private:
 			std::string cachePath;
+			std::string httpRoot;
 
 			uint8_t compressionStrength = 1;
 			uint8_t compressionQuality = 1;

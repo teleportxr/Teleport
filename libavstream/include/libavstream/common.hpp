@@ -243,6 +243,7 @@ namespace avs
 		Skeleton,
 		FontAtlas,
 		TextCanvas,
+		TexturePointer,
 	};
 
 	inline const char *stringOf(GeometryPayloadType t)
@@ -258,6 +259,7 @@ namespace avs
 			case GeometryPayloadType::Skeleton:			return "Skeleton";
 			case GeometryPayloadType::FontAtlas:		return "FontAtlas";
 			case GeometryPayloadType::TextCanvas:		return "TextCanvas";
+			case GeometryPayloadType::TexturePointer:	return "TexturePointer";
 			default:
 				return "Invalid";
 		}

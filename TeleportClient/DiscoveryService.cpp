@@ -45,11 +45,7 @@ DiscoveryService::DiscoveryService()
 DiscoveryService::~DiscoveryService()
 {
 }
-/*
-void DiscoveryService::SetClientID(uint64_t inClientID)
-{
-	clientID = inClientID;
-}*/
+
 void DiscoveryService::ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg)
 {
 	std::lock_guard lock(signalingServersMutex);

@@ -35,6 +35,7 @@ namespace avs
 		virtual ~PipelineNode();
 		std::string name;
 		float inwardBandwidthKps=0.f;
+		float maxPacketKb=0.f;
 		/*!
 		 * Link two nodes. Data will flow from source node to target node.
 		 * \param source Source node.

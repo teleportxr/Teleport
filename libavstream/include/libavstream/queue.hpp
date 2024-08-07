@@ -31,6 +31,7 @@ namespace avs
 		size_t m_maxBuffers = 0;
 		size_t m_absoluteMaxBuffers = 20000;
 		size_t m_numElements = 0;
+		size_t maxElements=0;
 		int64_t m_front = -1;
 		std::mutex m_mutex;
 		void flushInternal();

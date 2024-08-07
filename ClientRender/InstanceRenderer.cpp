@@ -274,7 +274,8 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	// Draw the background. If unconnected, we show a grid and horizon.
 	// If connected, we show the server's chosen background: video, texture or colour.
 	{
-		ApplyCameraMatrices(deviceContext);
+		ApplyCameraMatrices(deviceContext,renderState);
+		ApplySceneMatrices(deviceContext);
 
 		if (sessionClient->IsConnected())
 		{
@@ -310,7 +311,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 }
 
-void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext &deviceContext)
+void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext &deviceContext,RenderState &renderState)
 {
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
 	{
@@ -330,7 +331,7 @@ void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext 
 	
 		renderState.stereoCameraConstants.SetHasChanged();
 	}
-	renderPlatform->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
+	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.stereoCameraConstants);
 	// else
 	{
 		deviceContext.viewStruct.Init();
@@ -339,10 +340,14 @@ void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext 
 		renderState.cameraConstants.proj = deviceContext.viewStruct.proj;
 		renderState.cameraConstants.viewProj = deviceContext.viewStruct.viewProj;
 		renderState.cameraConstants.viewPosition = deviceContext.viewStruct.cam_pos;
-		renderState.cameraConstants.frameNumber=(int)renderPlatform->GetFrameNumber();
+		renderState.cameraConstants.frameNumber=(int)deviceContext.renderPlatform->GetFrameNumber();
 		renderState.cameraConstants.SetHasChanged();
 	}
-	renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
+}
+
+void InstanceRenderer::ApplySceneMatrices(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+{
 	if (instanceRenderState.specularCubemapTexture)
 		renderState.teleportSceneConstants.roughestMip = float(instanceRenderState.specularCubemapTexture->mips - 1);
 	if (sessionClient->GetSetupCommand().clientDynamicLighting.specular_cubemap_texture_uid != 0)
@@ -378,6 +383,7 @@ void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext 
 	renderPlatform->ApplyResourceGroup(deviceContext, 0);
 }
 
+
 void InstanceRenderer::ApplyMaterialConstants(crossplatform::GraphicsDeviceContext &deviceContext, std::shared_ptr<clientrender::Material> material)
 {
 	renderPlatform->SetConstantBuffer(deviceContext, &material->pbrMaterialConstants);
@@ -410,7 +416,8 @@ RenderStateTracker renderStateTracker;
 void InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "initial");
-	ApplyCameraMatrices(deviceContext);
+	ApplyCameraMatrices(deviceContext,renderState);
+	ApplySceneMatrices(deviceContext);
 	double serverTimeS=client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us,deviceContext.predictedDisplayTimeS);
 	geometryCache->mNodeManager.UpdateExtrapolatedPositions(serverTimeS);
 	auto renderPlatform = deviceContext.renderPlatform;
@@ -1687,8 +1694,8 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 	{
 		clientPipeline.avsGeometryDecoder.configure(80, server_uid, & geometryDecoder);
 		clientPipeline.avsGeometryTarget.configure(&resourceCreator);
-
-		clientPipeline.geometryQueue.configure(600000,200, "GeometryQueue");
+		// TODO: should not really be handling chunks of this size through queues.
+		clientPipeline.geometryQueue.configure(16000000,20, "GeometryQueue");
 
 		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.geometryQueue);
 		avs::PipelineNode::link(clientPipeline.geometryQueue, clientPipeline.avsGeometryDecoder);

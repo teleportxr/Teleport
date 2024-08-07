@@ -55,6 +55,17 @@ namespace teleport
 
 #define TELEPORT_INFO(txt, ...) \
 	teleport::Info(__FILE__, __LINE__,__func__,#txt,##__VA_ARGS__)
+
+	
+#if TELEPORT_INTERNAL_CHECKS
+#define TELEPORT_LOG_INTERNAL(txt, ...) \
+	teleport::Info(__FILE__, __LINE__,__func__,#txt,##__VA_ARGS__)
+#define TELEPORT_WARN_INTERNAL(txt, ...)\
+	teleport::Warn(__FILE__, __LINE__, __func__, #txt, ##__VA_ARGS__)
+#else
+#define TELEPORT_LOG_INTERNAL(txt, ...) 
+#define TELEPORT_WARN_INTERNAL(txt, ...)
+#endif
 #ifdef _MSC_VER
     #pragma warning(pop)
 #endif

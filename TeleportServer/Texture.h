@@ -18,6 +18,7 @@ namespace teleport
 											,std::shared_ptr<PrecompressedTexture> compressionData
 											,uint8_t compressionStrength
 											,uint8_t compressionQuality);
+		extern void LoadAsTeleportTexture(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename);
 		extern void LoadAsPng(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename);
 		extern void LoadAsBasisFile(struct ExtractedTexture &textureData, const std::vector<char> &data, const std::string &filename);
 	}
