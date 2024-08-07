@@ -225,7 +225,7 @@ namespace teleport
 				out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
 				if(textureData.texture.compression==avs::TextureCompression::UNCOMPRESSED)
 				{
-					TELEPORT_BREAK_ONCE("Uncompressed texture.");
+					std::cerr<<"Uncompressed texture.\n";
 				}
 				return out;
 			}

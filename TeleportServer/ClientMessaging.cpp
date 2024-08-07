@@ -839,3 +839,8 @@ avs::StreamingConnectionState ClientMessaging::getStreamingState() const
 	else
 		return avs::StreamingConnectionState::UNINITIALIZED;
 }
+
+void ClientMessaging::Warn(const char *w) const
+{
+	TELEPORT_WARN(w);
+}

@@ -28,9 +28,9 @@ jobs:
       run: cmake --version;
         echo $VULKAN_SDK_DIR;
         echo $VULKAN_SDK;
-        echo ${{env.VULKAN_SDK_DIR}};
-        echo ${{env.VULKAN_SDK}};
-        echo ${{env.GITHUB_PATH}}
+        echo VULKAN_SDK_DIR ${{env.VULKAN_SDK_DIR}};
+        echo VULKAN_SDK ${{env.VULKAN_SDK}};
+        echo GITHUB_PATH ${{env.GITHUB_PATH}};
         dir ${{env.WORKFLOW_VULKAN_DIR}}
     - name: Checkout
       uses: actions/checkout@v4

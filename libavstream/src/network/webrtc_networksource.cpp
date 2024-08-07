@@ -6,6 +6,7 @@
 #include "libavstream/network/webrtc_networksource.h"
 #include <ElasticFrameProtocol.h>
 #include <libavstream/queue.hpp>
+#include <logger.hpp>
 #include <libavstream/timer.hpp>
 
 #ifdef __ANDROID__

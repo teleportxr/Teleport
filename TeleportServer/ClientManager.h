@@ -1,20 +1,18 @@
 #pragma once
 
 #include <atomic>
-#include <functional>
 #include <shared_mutex>
 #include <thread>
-#include <vector>
 #include <map>
 #include <set>
-#include <safe/safe.h>
 
 #include "libavstream/common.hpp"
-#include "../src/platform.hpp"
+#include "libavstream/context.hpp"
 #include "DefaultHTTPService.h"
+#include "AudioEncodePipeline.h"
+#ifndef FIX_DEBUG
 #include "SignalingService.h"
-#include "TeleportServer/ClientMessaging.h"
-#include "TeleportServer/ClientData.h"
+#include "VideoEncodePipeline.h"
 #include "TeleportServer/Exports.h"
 
 
@@ -146,3 +144,4 @@ namespace teleport
 		};
 	}
 }
+#endif

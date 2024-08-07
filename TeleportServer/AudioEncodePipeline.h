@@ -2,6 +2,7 @@
 
 #include <memory>
 #include "ClientNetworkContext.h"
+#ifndef FIX_BROKEN
 #include "ServerSettings.h"
 #include "AudioEncoder.h"
 
@@ -50,3 +51,4 @@ namespace teleport
 
 	}
 };
+#endif

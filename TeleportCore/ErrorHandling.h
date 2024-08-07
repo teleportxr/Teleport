@@ -80,6 +80,13 @@ namespace teleport
 #endif
 #define TELEPORT_ASSERT(c)\
 	if(!(c)){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
+	
+#define VERIFY_EQUALITY_CHECK(a, b)          \
+if (b != a.b)                                 \
+{                                             \
+	TELEPORT_WARN("Verify failed for {0}", #b); \
+	return false;                             \
+}
 
 #ifdef _MSC_VER
     #pragma warning(pop)

@@ -34,11 +34,11 @@ namespace teleport
 		/// The collected values required to initialize a server session; see Server_Teleport_Initialize().
 		struct InitializationSettings
 		{
-			char *clientIP;			   ///< IP address to match to connecting clients. May be blank.
-			char *httpMountDirectory;  ///< Local (server-side) directory for HTTP requests: usually the Teleport cache directory.
-			char *certDirectory;	   ///< Local directory for HTTP certificates.
-			char *privateKeyDirectory; ///< Local directory for private keys.
-			char *signalingPorts;	   ///< Optional list of ports to listen for signaling connections and queries.
+			const char *clientIP;			   ///< IP address to match to connecting clients. May be blank.
+			const char *httpMountDirectory;  ///< Local (server-side) directory for HTTP requests: usually the Teleport cache directory.
+			const char *certDirectory;	   ///< Local directory for HTTP certificates.
+			const char *privateKeyDirectory; ///< Local directory for private keys.
+			const char *signalingPorts;	   ///< Optional list of ports to listen for signaling connections and queries.
 
 			ClientStoppedRenderingNodeFn clientStoppedRenderingNode; ///< Delegate to be called when client is no longer rendering a specified node.
 			ClientStartedRenderingNodeFn clientStartedRenderingNode;

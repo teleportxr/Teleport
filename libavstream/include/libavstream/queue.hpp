@@ -5,6 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
+#ifndef FIX_BROKEN
 #include <vector>
 
 namespace avs
@@ -103,3 +104,4 @@ namespace avs
 	};
 
 } // avs
+#endif

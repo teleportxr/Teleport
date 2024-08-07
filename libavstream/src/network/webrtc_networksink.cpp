@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2023 Simul Software Ltd
 
 #include "libavstream/network/webrtc_networksink.h"
+#include <logger.hpp>
 #include "network/webrtc_common.h"
 #include "network/packetformat.hpp"
 #include "profiling.h"

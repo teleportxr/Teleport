@@ -1257,7 +1257,7 @@ bool GeometryStore::storeMesh(avs::uid id, const std::string & path, std::time_t
 
 bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time_t lastModified,const avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
 {
-#ifdef FIX_BROKEN
+#ifndef FIX_BROKEN
 	if(!validate_path(assetPath))
 	{
 		TELEPORT_WARN("In storeMesh, invalid resource path: {0}",assetPath);

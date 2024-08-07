@@ -1,5 +1,7 @@
 #include "TeleportCore/Animation.h"
 #include "TeleportCore/Logging.h"
+#include "TeleportCore/ErrorHandling.h"
+
 using namespace teleport;
 using namespace core;
 
