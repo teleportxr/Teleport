@@ -135,18 +135,20 @@ if(TELEPORT_DOCS_TIDY_EXECUTABLE)
 set_target_properties( Tidy PROPERTIES FOLDER Docs)
 endif() 
 
-# see https://validator.github.io/validator/
-#C:/Program Files/vnu-runtime-image/bin/vnu.bat
-set(TELEPORT_DOCS_VALIDATOR_EXECUTABLE "" CACHE FILEPATH "path to vnu.bat")
+if(TELEPORT_DOCS_VALIDATOR_EXECUTABLE)
+	# see https://validator.github.io/validator/
+	#C:/Program Files/vnu-runtime-image/bin/vnu.bat
+	set(TELEPORT_DOCS_VALIDATOR_EXECUTABLE "" CACHE FILEPATH "path to vnu.bat")
 
-file(GLOB_RECURSE ALL_HTML_FILES ${SPHINX_BUILD}/*.html)
-if(NOT "${TELEPORT_DOCS_VALIDATOR_EXECUTABLE}" STREQUAL "")
-	add_custom_target(Validator ALL
-					COMMAND
-					${TELEPORT_DOCS_VALIDATOR_EXECUTABLE} --format gnu --asciiquotes --skip-non-html ${ALL_HTML_FILES}
-					WORKING_DIRECTORY ${SPHINX_BUILD}
-					COMMENT "Validating documentation nu validator"
-					SOURCES ${ALL_HTML_FILES})
-	add_dependencies(Validator Tidy)
-set_target_properties( Validator PROPERTIES FOLDER Docs)
+	file(GLOB_RECURSE ALL_HTML_FILES ${SPHINX_BUILD}/*.html)
+	if(NOT "${TELEPORT_DOCS_VALIDATOR_EXECUTABLE}" STREQUAL "")
+		add_custom_target(Validator ALL
+						COMMAND
+						${TELEPORT_DOCS_VALIDATOR_EXECUTABLE} --format gnu --asciiquotes --skip-non-html ${ALL_HTML_FILES}
+						WORKING_DIRECTORY ${SPHINX_BUILD}
+						COMMENT "Validating documentation nu validator"
+						SOURCES ${ALL_HTML_FILES})
+		add_dependencies(Validator Tidy)
+	set_target_properties( Validator PROPERTIES FOLDER Docs)
+	endif()
 endif()
