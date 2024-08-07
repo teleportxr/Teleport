@@ -806,12 +806,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			renderPlatform->SetSamplerState(deviceContext, 11, renderState.samplerStateNearest);
 			InstanceRenderer::ApplyCameraMatrices(deviceContext,renderState);
 			renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
+			renderPlatform->ApplyResourceGroup(deviceContext, 0);*/
 			double timeElapsed_s = double( previousTimestampUs.count()) / 1000000.0; // ms to seconds
 			int64_t timeElapsed_u=(int64_t(timeElapsed_s)/1024)*1024;
 			timeElapsed_s-=double(timeElapsed_u);
 			renderState.cubemapConstants.time_seconds = float(timeElapsed_s);
 			deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-			renderPlatform->ApplyResourceGroup(deviceContext, 0);*/
 			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
 			renderPlatform->DrawQuad(deviceContext);
 			renderState.cubemapClearEffect->Unapply(deviceContext);
