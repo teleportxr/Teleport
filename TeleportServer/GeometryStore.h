@@ -126,14 +126,14 @@ namespace teleport
 			void setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose);
 			bool storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard);
-			bool storeAnimation(avs::uid id, std::string path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
+			bool storeAnimation(avs::uid id, const std::string &path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
 			bool storeMesh(avs::uid id, const std::string & path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify=false);
 			bool storeMesh(avs::uid id, const std::string & path, std::time_t lastModified, const avs::Mesh &newMesh, avs::AxesStandard standard, bool verify = false);
-			bool storeMaterial(avs::uid id, std::string guid, std::string path, std::time_t lastModified, avs::Material& newMaterial);
-			bool storeTexture(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips, bool highQualityUASTC, bool forceOverwrite);
-			avs::uid storeFont(std::string ttf_path_utf8, std::string relative_asset_path_utf8, std::time_t lastModified, int size = 32);
-			avs::uid storeTextCanvas(std::string relative_asset_path, const InteropTextCanvas* interopTextCanvas);
-			void storeShadowMap(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture& shadowMap);
+			bool storeMaterial(avs::uid id, const std::string & guid, const std::string & path, std::time_t lastModified, avs::Material& newMaterial);
+			bool storeTexture(avs::uid id,  const std::string & path, std::time_t lastModified, const avs::Texture &newTexture, bool genMips, bool highQualityUASTC, bool forceOverwrite);
+			avs::uid storeFont(const std::string & ttf_path_utf8, const std::string & relative_asset_path_utf8, std::time_t lastModified, int size = 32);
+			avs::uid storeTextCanvas(const std::string & relative_asset_path, const InteropTextCanvas* interopTextCanvas);
+			void storeShadowMap(avs::uid id,  const std::string & path, std::time_t lastModified, avs::Texture& shadowMap);
 
 			void removeNode(avs::uid id);
 

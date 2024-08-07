@@ -1,4 +1,5 @@
 #pragma optimize("",off)
+#define NOMINMAX
 #include "GeometryStore.h"
 
 #include "TeleportCore/ErrorHandling.h"
@@ -629,7 +630,7 @@ void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::
 	skeletons[avs::AxesStandard::GlStyle][id] = avs::Skeleton::convertToStandard(newSkeleton, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
-bool GeometryStore::storeAnimation(avs::uid id, std::string path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
+bool GeometryStore::storeAnimation(avs::uid id, const std::string & path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
 {
 	auto &anim1=animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
 	std::string genericFilePath = path + ".teleport_anim"s;
@@ -1325,7 +1326,7 @@ bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time
 	return true;
 }
 
-bool GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
+bool GeometryStore::storeMaterial(avs::uid id, const std::string & guid,const std::string & path, std::time_t lastModified, avs::Material& newMaterial)
 {
 	if (!validate_path(path))
 	{
@@ -1346,7 +1347,7 @@ bool GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path
 	return true;
 } 
 
-bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips
+bool GeometryStore::storeTexture(avs::uid id,const std::string &path, std::time_t lastModified, const avs::Texture &newt, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	if (!validate_path(path))
@@ -1359,6 +1360,7 @@ bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t las
 		TELEPORT_WARN("In storeTexture, invalid id {0}", id);
 		return false;
 	}
+	avs::Texture newTexture=newt;
 	if(!newTexture.images.size()||!newTexture.images[0].data.size())
 	{
 		TELEPORT_WARN("In storeTexture, data is empty.");
@@ -1424,9 +1426,10 @@ bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t las
 	return true;
 }
 
-avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
+avs::uid GeometryStore::storeFont(const std::string & ttf_path_utf8,const std::string & rel,std::time_t lastModified,int size)
 {
 	avs::Texture avsTexture;
+	string relative_asset_path_utf8=rel;
 	std::replace(relative_asset_path_utf8.begin(),relative_asset_path_utf8.end(),'.','_');
 	std::string cacheFontPath = relative_asset_path_utf8;
 	std::string cacheTexturePath=relative_asset_path_utf8+"_tex";
@@ -1445,7 +1448,7 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 	return font_atlas_uid;
 }
 
-avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const InteropTextCanvas *interopTextCanvas)
+avs::uid GeometryStore::storeTextCanvas( const std::string & relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 {
 	if(!interopTextCanvas||!interopTextCanvas->text)
 		return 0;
@@ -1471,7 +1474,7 @@ avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const 
 	return canvas_uid;
 }
 
-void GeometryStore::storeShadowMap(avs::uid id, std::string path, std::time_t lastModified, avs::Texture& newShadowMap)
+void GeometryStore::storeShadowMap(avs::uid id, const std::string & path, std::time_t lastModified, avs::Texture& newShadowMap)
 {
 	shadowMaps[id] = ExtractedTexture{lastModified, newShadowMap};
 }
