@@ -12,6 +12,7 @@ jobs:
     env:
       WORKFLOW_BUILD_TYPE: Release
       WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+      Path: $Path;$WORKFLOW_VULKAN_DIR/Bin
 
     steps:
     - name: Vulkan
