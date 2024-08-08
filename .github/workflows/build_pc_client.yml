@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: windows-2022
+    timeout-minutes: 90
     env:
       WORKFLOW_BUILD_TYPE: Release
       WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
@@ -78,4 +79,6 @@ jobs:
     - name: Setup tmate session
       if: failure()
       uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
 
