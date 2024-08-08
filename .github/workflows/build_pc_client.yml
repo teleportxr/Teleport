@@ -63,6 +63,8 @@ jobs:
       uses: Dana-Prajea/Setup-MSBuild@v1.1
     - name: MSB
       run: |
+        cd ${{env.VULKAN_SDK_DIR}}/Include
+        dir vulkan/vulkan.hpp
         MSBuild ${{github.workspace}}/build_pc_client/Teleport_Client.sln /m:1 /p:Configuration=Release /p:Platform=x64  /t:Client\TeleportPCClient
     - name: Build
       # Build your program with the given configuration
