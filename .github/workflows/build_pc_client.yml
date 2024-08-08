@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-2022
     env:
       WORKFLOW_BUILD_TYPE: Release
       WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
@@ -16,6 +16,19 @@ jobs:
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
 
     steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        lfs: 'true'
+        submodules: 'false'
+    - name: Git Submodules
+      run: |
+        cd ${{github.workspace}}
+        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
+        cd ${{github.workspace}}/thirdparty/libdatachannel
+        #git submodule update --init --recursive --force -- "deps/libsrtp"
+        #dir deps
+        #cd ${{github.workspace}}/thirdparty/libdatachannel
     - name: Vulkan
       uses: humbletim/install-vulkan-sdk@v1.1.1
       with:
@@ -32,20 +45,7 @@ jobs:
         echo VULKAN_SDK ${{env.VULKAN_SDK}};
         echo GITHUB_PATH ${{env.GITHUB_PATH}};
         dir ${{env.WORKFLOW_VULKAN_DIR}};
-        dir D:/a/Teleport/Teleport/VULKAN_SDK//Bin/
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        lfs: 'true'
-        submodules: 'false'
-    - name: Git Submodules
-      run: |
-        cd ${{github.workspace}}
-        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
-        cd ${{github.workspace}}/thirdparty/libdatachannel
-        #git submodule update --init --recursive --force -- "deps/libsrtp"
-        #dir deps
-        #cd ${{github.workspace}}/thirdparty/libdatachannel
+        dir D:/a/Teleport/Teleport/VULKAN_SDK/Include/
     - name: Running cmake (windows)
       run: |
         cd ${{ github.workspace }}
