@@ -45,7 +45,7 @@ jobs:
         echo VULKAN_SDK ${{env.VULKAN_SDK}};
         echo GITHUB_PATH ${{env.GITHUB_PATH}};
         dir ${{env.WORKFLOW_VULKAN_DIR}};
-        dir D:/a/Teleport/Teleport/VULKAN_SDK/Include/
+        dir D:/a/Teleport/Teleport/client/Shaders/link.sfx
     - name: Running cmake (windows)
       run: |
         cd ${{ github.workspace }}
@@ -58,7 +58,7 @@ jobs:
       run: |
         dir ${{github.workspace}}/build_pc_client
         gc ${{github.workspace}}/build_pc_client/CMakeCache.txt
-        gc ${{github.workspace}}/build_pc_client/firstparty/Platform/Vulkan/SimulVulkan_MT.vcxproj
+        gc ${{github.workspace}}/build_pc_client/ClientRender/ClientRender.vcxproj
     - name: Setup MSBuild.exe with new add-path
       uses: Dana-Prajea/Setup-MSBuild@v1.1
     - name: MSB
