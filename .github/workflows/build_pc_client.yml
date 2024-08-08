@@ -59,9 +59,14 @@ jobs:
         dir ${{github.workspace}}/build_pc_client
         gc ${{github.workspace}}/build_pc_client/CMakeCache.txt
         gc ${{github.workspace}}/build_pc_client/firstparty/Platform/Vulkan/SimulVulkan_MT.vcxproj
+    - name: Setup MSBuild.exe with new add-path
+      uses: Dana-Prajea/Setup-MSBuild@v1.1
+    - name: MSB
+      run: |
+        MSBuild ${{github.workspace}}/build_pc_client/Teleport_Client.sln /m:1 /p:Configuration=Release /p:Platform=x64  /t:Client\TeleportPCClient
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build_pc_client --config ${{env.WORKFLOW_BUILD_TYPE}}
+      run: rem cmake --build ${{github.workspace}}/build_pc_client --config ${{env.WORKFLOW_BUILD_TYPE}}
 
     - name: Test
       working-directory: ${{github.workspace}}/build_pc_client
