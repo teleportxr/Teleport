@@ -52,20 +52,26 @@ set(src_private_network
 	src/network/webrtc_common.cpp
 	src/network/webrtc_common.h
 )
-
-set(src_private_api
-	src/api/cuda.cpp
-	src/api/cuda_dx12.cpp
-)
+if(LIBAV_USE_CUDA)
+	set(src_private_api
+		src/api/cuda.cpp
+		src/api/cuda_dx12.cpp
+	)
+endif()
 set(src_private_stream
 	src/stream/parser_avc.cpp
 	src/stream/parser_geo.cpp
 	src/stream/parser.cpp
-	src/decoders/dec_nvidia.cpp
-	src/encoders/enc_nvidia.cpp
-	src/decoders/dec_nvidia.cu
-	src/encoders/enc_nvidia.cu
 )
+if(LIBAV_USE_CUDA)
+	set(src_private_stream
+		${src_private_stream}
+		src/decoders/dec_nvidia.cpp
+		src/encoders/enc_nvidia.cpp
+		src/decoders/dec_nvidia.cu
+		src/encoders/enc_nvidia.cu
+	)
+endif()
 set(hdr_private_root
 	src/common_p.hpp
 	src/abi_p.hpp
@@ -89,10 +95,11 @@ set(hdr_private_root
 	src/packetizer_p.hpp
 	src/profiling.h
 	src/libraryloader.hpp)
-
-set(hdr_private_api 
-	src/api/cuda.hpp
-    src/api/cuda_dx12.hpp)
+if(LIBAV_USE_CUDA)
+	set(hdr_private_api 
+		src/api/cuda.hpp
+		src/api/cuda_dx12.hpp)
+endif()
 set(hdr_private_stream
 	src/stream/parser_avc.hpp
 	src/stream/parser_geo.hpp)
@@ -103,12 +110,13 @@ set(hdr_private_parsers
 set(hdr_private_network
 	src/network/packetformat.hpp
 	src/network/serial.h)
-
-
-set(hdr_private_decoders
-	src/decoders/dec_nvidia.hpp)
-set(hdr_private_encoders
-	src/encoders/enc_nvidia.hpp)
+	
+if(LIBAV_USE_CUDA)
+	set(hdr_private_decoders
+		src/decoders/dec_nvidia.hpp)
+	set(hdr_private_encoders
+		src/encoders/enc_nvidia.hpp)
+endif()
 set(hdr_private_util
 	src/util/binaryio.hpp
 	src/util/bytebuffer.hpp
@@ -274,26 +282,27 @@ message("Unsupported platform for libavstream!")
 return()
 endif() 
 
-# CUDA kernels
-add_custom_command(
-	OUTPUT enc_nvidia.cubin enc_nvidia.cubin.inl
-	COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/encoders/enc_nvidia.cu -o enc_nvidia.cubin
-	COMMAND ${xxd} -i enc_nvidia.cubin enc_nvidia.cubin.inl
-	DEPENDS src/encoders/enc_nvidia.cu
-)
+if(LIBAV_USE_CUDA)
+	# CUDA kernels
+	add_custom_command(
+		OUTPUT enc_nvidia.cubin enc_nvidia.cubin.inl
+		COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/encoders/enc_nvidia.cu -o enc_nvidia.cubin
+		COMMAND ${xxd} -i enc_nvidia.cubin enc_nvidia.cubin.inl
+		DEPENDS src/encoders/enc_nvidia.cu
+	)
 
-add_custom_command(
-	OUTPUT dec_nvidia.cubin dec_nvidia.cubin.inl
-	COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin
-	COMMAND ${xxd} -i dec_nvidia.cubin dec_nvidia.cubin.inl
-	DEPENDS src/decoders/dec_nvidia.cu
-)
-add_custom_target(
-	cuda_kernels
-	DEPENDS enc_nvidia.cubin enc_nvidia.cubin.inl dec_nvidia.cubin dec_nvidia.cubin.inl SOURCES src/encoders/enc_nvidia.cu src/decoders/dec_nvidia.cu
-)
-set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
-
+	add_custom_command(
+		OUTPUT dec_nvidia.cubin dec_nvidia.cubin.inl
+		COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin
+		COMMAND ${xxd} -i dec_nvidia.cubin dec_nvidia.cubin.inl
+		DEPENDS src/decoders/dec_nvidia.cu
+	)
+	add_custom_target(
+		cuda_kernels
+		DEPENDS enc_nvidia.cubin enc_nvidia.cubin.inl dec_nvidia.cubin dec_nvidia.cubin.inl SOURCES src/encoders/enc_nvidia.cu src/decoders/dec_nvidia.cu
+	)
+	set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
+endif()
 set(CMAKE_CXX_STANDARD 17 )
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(libavstream STATIC ${hdr_private} ${src_private} ${hdr_public} ${src_platform})
@@ -305,27 +314,6 @@ endif()
 set_target_properties(libavstream PROPERTIES PREFIX "")
 set_target_properties(libavstream PROPERTIES FOLDER AVStream)
 
-# WebRTC is VERY SENSITIVE to these settings. Having the wrong settings can cause bizarre runtime memory-trashing.
-##set(def_webrtc   
-##						  _WEBSOCKETPP_CPP11_INTERNAL_
-##                           #USE_AURA=1
-##							_HAS_EXCEPTIONS=0 __STD_C _CRT_RAND_S
-##							_CRT_SECURE_NO_DEPRECATE
-##                           _SCL_SECURE_NO_DEPRECATE
-##							_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-##							_ATL_NO_OPENGL _WINDOWS CERT_CHAIN_PARA_HAS_EXTRA_FIELDS
-##                           PSAPI_VERSION=2 _SECURE_ATL  __WRL_NO_DEFAULT_LIB__
-##                           WINAPI_FAMILY=WINAPI_FAMILY_PC_APP WIN10=_WIN32_WINNT_WIN10 WIN32_LEAN_AND_MEAN
-##                           NOMINMAX NTDDI_VERSION=NTDDI_WIN10_RS2 _WIN32_WINNT=0x0A00 WINVER=0x0A00
-##                           NDEBUG NVALGRIND DYNAMIC_ANNOTATIONS_ENABLED=0
-##							WEBRTC_ENABLE_PROTOBUF=0
-##                           WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE RTC_ENABLE_VP9 HAVE_SCTP
-##                           WEBRTC_LIBRARY_IMPL WEBRTC_NON_STATIC_TRACE_EVENT_HANDLERS=0
-##                           WEBRTC_WIN
-##							ABSL_ALLOCATOR_NOTHROW=1
-##							ABSL_USES_STD_OPTIONAL=0
-##							HAVE_SCTP WEBRTC_VIDEO_CAPTURE_WINRT
-##
 set(def_webrtc			  WEBRTC_WIN _CRT_SECURE_NO_DEPRECATE _SCL_SECURE_NO_DEPRECATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
 target_compile_definitions(libavstream PRIVATE ${def_platform} )
 target_compile_definitions(libavstream PRIVATE ${def_webrtc})
@@ -389,7 +377,9 @@ endif()
 
 # Third party dependencies
 	add_subdirectory(thirdparty/asio)
+if(LIBAV_USE_CUDA)
 	add_subdirectory(thirdparty/nv)
+endif()
 
 	# Tests
 	if(LIBAV_BUILD_TESTS)
@@ -398,21 +388,27 @@ endif()
 	endif()
 
 #Include CUDA library location.
-target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
-target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib64")
+if(LIBAV_USE_CUDA)
+	target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib/x64")
+	target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib64")
+	target_link_libraries(libavstream cuda cudart nv)
+endif()
 
 #fmt
 target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/Platform/External/fmt/include )
 #Platform etc
 target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/ )
 
-target_link_libraries(libavstream cuda cudart asio nv efp ${curl_libraries})
+target_link_libraries(libavstream asio efp ${curl_libraries})
+
 
 # Build CUDA kernels on PC platforms only
 if(NOT ANDROID)
-	add_dependencies(libavstream cuda_kernels)
-	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
-	target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
+	if(LIBAV_USE_CUDA)
+		add_dependencies(libavstream cuda_kernels)
+		target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_SAMPLES_DIR}/common/inc")
+		target_include_directories(libavstream PRIVATE "${LIBAV_CUDA_DIR}/include")
+	endif()
     if (Vulkan_FOUND)
         target_include_directories(libavstream PUBLIC ${Vulkan_INCLUDE_DIRS})
     endif()

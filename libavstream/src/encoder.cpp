@@ -2,8 +2,9 @@
 // (c) Copyright 2018-2024 Simul Software Ltd
 
 #include "encoder_p.hpp"
+#if LIBAV_USE_CUDA
 #include "encoders/enc_nvidia.hpp"
-
+#endif
 #include <libavstream/buffer.hpp>
 #include <libavstream/surface.hpp>
 #include <libavstream/surfaces/surface_interface.hpp>
@@ -41,7 +42,7 @@ Result Encoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 	{
 		switch (backendType)
 		{
-#if !defined(PLATFORM_ANDROID)
+#if !defined(PLATFORM_ANDROID) && LIBAV_USE_CUDA
 		case EncoderBackend::NVIDIA:
 			// BUG: This only checks if NVENC libs are present in the system, may fail if multiple GPUs are present.
 			//      Replace with more robust (device ID?) checks.
@@ -357,7 +358,7 @@ EncoderStats Encoder::getStats() const
 
 Result Encoder::getEncodeCapabilities(const DeviceHandle& device, const EncoderParams& params, avs::EncodeCapabilities& capabilities)
 {
-#if !defined(PLATFORM_ANDROID)
+#if !defined(PLATFORM_ANDROID) && LIBAV_USE_CUDA
 	 return EncoderNV::getEncodeCapabilities(device, params, capabilities);
 #else
 	 return Result::NotSupported;
