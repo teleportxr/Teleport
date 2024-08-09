@@ -171,4 +171,7 @@ elseif(ANDROID)
 			#${log-lib} )
 endif()
 
-add_multiplatform_sfx_shader_project(ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
+add_multiplatform_sfx_shader_project( ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." 
+							SOURCES ${shaders} DEFINES VULKAN_SDK=${VULKAN_SDK_DIR} CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} 
+							OPTIONS -GSIMUL_TRUESKY=$<BOOL:${SIMUL_TRUESKY}>
+					 		OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" )
