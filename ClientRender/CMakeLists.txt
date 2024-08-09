@@ -115,7 +115,7 @@ source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 source_group("AVParser" src FILES ${av_parser} )
 
 set( src_public ${src_root} ${src_node_components} ${hdr_node_components} )
-message ( "src_public ${src_public}" )
+#message ( "src_public ${src_public}" )
 
 if(ANDROID)
 	add_subdirectory(../thirdparty/draco
