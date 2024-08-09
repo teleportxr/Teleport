@@ -57,19 +57,18 @@ jobs:
         cmake -S .. -B . -WNo-dev -DPLATFORM_USE_ASSIMP=false -DPLATFORM_BUILD_ASSIMP=false -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_VERSION=10.0.22621.0 -DTELEPORT_SOLUTION_NAME=TeleportClient -DVULKAN_SDK=${{env.WORKFLOW_VULKAN_DIR}} -DVULKAN_SDK_DIR=${{env.WORKFLOW_VULKAN_DIR}} -DVulkan_LIBRARY=${{env.WORKFLOW_VULKAN_DIR}}/Lib/vulkan-1.lib -DVulkan_INCLUDE_DIR=${{env.WORKFLOW_VULKAN_DIR}}/Include -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE=${{env.WORKFLOW_VULKAN_DIR}}/Bin/glslangvalidator.exe -DVulkan_GLSLC_EXECUTABLE=${{env.WORKFLOW_VULKAN_DIR}}/Bin/glslc.exe -DCMAKE_BUILD_TYPE=Release -DENABLE_ENCRYPTION=false -DPLATFORM_SUPPORT_OPENGL=false -DPLATFORM_SUPPORT_VULKAN=true -DPLATFORM_SUPPORT_D3D11=false -DPLATFORM_SUPPORT_D3D12=false -DSIMUL_BUILD_SAMPLES=false -DPLATFORM_BUILD_SAMPLES=false -DPLATFORM_BUILD_MD_LIBS=false -DTELEPORT_CLIENT_USE_D3D12=false -DTELEPORT_CLIENT_USE_VULKAN=true -DSIMUL_DEBUG_SHADERS=false
     - name: Show CMake Output
       run: |
-        dir ${{github.workspace}}/build_pc_client
-        gc ${{github.workspace}}/build_pc_client/CMakeCache.txt
         gc ${{github.workspace}}/build_pc_client/ClientRender/ClientRender.vcxproj
     - name: Setup MSBuild.exe with new add-path
       uses: Dana-Prajea/Setup-MSBuild@v1.1
+    - name: Build
+      shell: cmd
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build_pc_client --config ${{env.WORKFLOW_BUILD_TYPE}}
+      continue-on-error: true
     - name: MSB
       run: |
-        cd ${{env.VULKAN_SDK_DIR}}/Include
-        dir vulkan/vulkan.hpp
+        shell: cmd
         MSBuild ${{github.workspace}}/build_pc_client/Teleport_Client.sln /m:1 /p:Configuration=Release /p:Platform=x64  /t:Client\TeleportPCClient
-    - name: Build
-      # Build your program with the given configuration
-      run: rem cmake --build ${{github.workspace}}/build_pc_client --config ${{env.WORKFLOW_BUILD_TYPE}}
       continue-on-error: true
     - name: Test
       working-directory: ${{github.workspace}}/build_pc_client
