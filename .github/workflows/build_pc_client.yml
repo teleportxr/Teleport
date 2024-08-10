@@ -34,9 +34,6 @@ jobs:
         git rev-parse --short HEAD>>teleport_commit.properties
         echo GITHUB_ENV $GITHUB_ENV
         echo "TELEPORT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        # gc $GITHUB_ENV
-        # echo|set /p=TELEPORT_COMMIT=>teleport_commit.properties
-        # git rev-parse --short HEAD>>teleport_commit.properties
         git log -10 --date=format:"%%a %%d %%b" --no-merges --pretty=format:"%%cd : %%s" > "teleport_log.md"
     - name: Dotenv Action
       uses: falti/dotenv-action@v1.1.2
