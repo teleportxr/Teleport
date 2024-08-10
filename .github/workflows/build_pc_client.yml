@@ -28,6 +28,7 @@ jobs:
         git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
         cd ${{github.workspace}}/thirdparty/libdatachannel
     - name: Log
+      shell: cmd
       run: |
         echo|set /p=TELEPORT_COMMIT=>teleport_commit.properties
         git rev-parse --short HEAD>>teleport_commit.properties
