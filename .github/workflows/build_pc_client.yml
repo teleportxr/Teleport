@@ -34,7 +34,7 @@ jobs:
         git rev-parse --short HEAD>>teleport_commit.properties
         echo GITHUB_ENV $GITHUB_ENV
         echo "TELEPORT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        gc $GITHUB_ENV
+        # gc $GITHUB_ENV
         # echo|set /p=TELEPORT_COMMIT=>teleport_commit.properties
         # git rev-parse --short HEAD>>teleport_commit.properties
         git log -10 --date=format:"%%a %%d %%b" --no-merges --pretty=format:"%%cd : %%s" > "teleport_log.md"
@@ -57,6 +57,7 @@ jobs:
       run: cmake --version;
         echo $VULKAN_SDK_DIR;
         echo $VULKAN_SDK;
+        echo TELEPORT_COMMIT ${{env.TELEPORT_COMMIT}};
         echo VULKAN_SDK_DIR ${{env.VULKAN_SDK_DIR}};
         echo VULKAN_SDK ${{env.VULKAN_SDK}};
         echo GITHUB_PATH ${{env.GITHUB_PATH}};
