@@ -30,6 +30,20 @@ jobs:
         #git submodule update --init --recursive --force -- "deps/libsrtp"
         #dir deps
         #cd ${{github.workspace}}/thirdparty/libdatachannel
+    - name: Log
+      run: |
+        echo GITHUB_ENV $GITHUB_ENV
+        echo "TELEPORT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        rem echo|set /p=TELEPORT_COMMIT=>teleport_commit.properties
+        rem git rev-parse --short HEAD>>teleport_commit.properties
+        git log -10 --date=format:"%%a %%d %%b" --no-merges --pretty=format:"%%cd : %%s" > "teleport_log.md"
+    - name: Read/Write Properties File
+      uses: kurt-code/gha-properties@v0.0.1
+      id: read-properties
+      with:
+        operation: 'read'
+        file-path: 'teleport_commit.properties'
+        keys: 'TELEPORT_COMMIT'
     - name: Vulkan
       uses: humbletim/install-vulkan-sdk@v1.1.1
       with:
@@ -80,6 +94,10 @@ jobs:
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.WORKFLOW_BUILD_TYPE}}
+    - name: Installer
+      run: |
+        cd build_pc_client
+        CPack -C CPackConfig.cmake
     - name: Setup tmate session
       if: failure()
       uses: mxschmitt/action-tmate@v3
