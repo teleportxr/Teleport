@@ -145,6 +145,7 @@ target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/e
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/tinygltf)
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
 target_link_libraries(ClientRender draco TeleportClient)
+add_dependencies(ClientRender Sfx)
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(ClientRender SimulDirectX12_MT)
 endif()
