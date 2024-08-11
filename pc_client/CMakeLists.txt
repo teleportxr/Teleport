@@ -160,11 +160,7 @@ install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT clie
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client COMPONENT client)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx12 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\shaderbin\\\\Vulkan\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders COMPONENT client)
 
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
   WriteRegStr HKCR 'Teleport' '' 'URL:Teleport Protocol'
