@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  label:
+    types:
+      - created
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    env:
+      WORKFLOW_BUILD_TYPE: Release
+      WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+      VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
+      VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+
+    steps:
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4.1.8
+      with:
+        # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
+        name: installer
+        # Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE
+        path: installer
+          
