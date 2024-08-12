@@ -21,6 +21,7 @@ jobs:
       uses: actions/download-artifact@v4.1.8
       with:
         run_id: ${{ github.event.workflow_run.id }}
+        github-token: ${{secrets.TELEPORT_RELEASE_TOKEN}}
         # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
         name: installer
         # Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE
