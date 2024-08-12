@@ -103,3 +103,21 @@ jobs:
       with:
         limit-access-to-actor: true
 
+  release:
+    runs-on: windows-2022
+    needs: build
+    timeout-minutes: 20
+    env:
+      VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+    steps:
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v4.1.8
+      with:
+        github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
+        # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
+        name: installer
+        # Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE
+        path: installer
+    - name: Check
+      run: |
+        ls -R installer
