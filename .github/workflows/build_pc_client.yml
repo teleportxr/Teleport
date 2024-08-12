@@ -77,16 +77,12 @@ jobs:
       shell: cmd
       # Build your program with the given configuration
       run: rem cmake --build ${{github.workspace}}/build_pc_client --config ${{env.WORKFLOW_BUILD_TYPE}}
-      continue-on-error: true
+      # continue-on-error: true
     - name: MSB
       shell: cmd
-      continue-on-error: true
+      # continue-on-error: true
       run: |
         MSBuild ${{github.workspace}}/build_pc_client/Teleport_Client.sln /m:1 /p:Configuration=Release /p:Platform=x64  /t:Client\TeleportPCClient
-    - uses: actions/upload-artifact@v3
-      with:
-        name: Build
-        path: ${{github.workspace}}/build_pc_client
     - name: Test
       working-directory: ${{github.workspace}}/build_pc_client
       # Execute tests defined by the CMake configuration.
@@ -96,6 +92,10 @@ jobs:
       run: |
         cd build_pc_client
         CPack -C CPackConfig.cmake
+    - uses: actions/upload-artifact@v3
+      with:
+        name: Build
+        path: ${{github.workspace}}/build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe
     - name: Setup tmate session
       if: failure()
       uses: mxschmitt/action-tmate@v3
