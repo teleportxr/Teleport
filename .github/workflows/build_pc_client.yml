@@ -92,7 +92,7 @@ jobs:
       run: |
         cd build_pc_client
         CPack -C CPackConfig.cmake
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.6
       with:
         name: installer
         path: ${{github.workspace}}/build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe
