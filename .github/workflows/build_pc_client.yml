@@ -94,7 +94,7 @@ jobs:
         CPack -C CPackConfig.cmake
     - uses: actions/upload-artifact@v3
       with:
-        name: Build
+        name: installer
         path: ${{github.workspace}}/build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe
     - name: Setup tmate session
       if: failure()
