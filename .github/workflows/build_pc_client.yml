@@ -96,7 +96,7 @@ jobs:
       with:
         name: installer
         path: ${{github.workspace}}/build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe
-        github-token: ${{secrets.TELEPORT_RELEASE_TOKEN}}
+        github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
     - name: Setup tmate session
       if: failure()
       uses: mxschmitt/action-tmate@v3
