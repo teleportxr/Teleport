@@ -5,6 +5,15 @@
     <CustomBuild Include="../../../../firstparty\Platform\ImGui\Shaders\imgui.sfx">
       <Filter>Shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\copy.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\debug.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\font.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\hdr.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\light_probes.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\mip.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\solid.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\sphere.sfx" />
+    <CustomBuild Include="../../../../firstparty/Platform/CrossPlatform/Shaders\spherical_harmonics.sfx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../../../firstparty\Platform\Vulkan\Sfx\VulkanAndroid.json" />
@@ -12,57 +21,71 @@
     <None Include="../../../../firstparty\Platform\Vulkan\Sfx\shader_platform.sl">
       <Filter>Shader Includes</Filter>
     </None>
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\CppSl.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\brdf.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\camera_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\colour_packing.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\common.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\cubemap_matrices.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\debug_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\depth.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\hdr_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\image_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\light_probe_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\noise.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\quaternion.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\raytracing.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\raytracing_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\render_states.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\sampler_states.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\solid_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\sphere_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\spherical_harmonics.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\spherical_harmonics_constants.sl" />
-    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\text_constants.sl" />
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\copy.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\brdf.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\debug.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\camera_constants.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\font.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\colour_packing.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\hdr.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\common.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\light_probes.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\CppSl.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\mip.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\cubemap_matrices.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\solid.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\debug_constants.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\sphere.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\depth.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\spherical_harmonics.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\hdr_constants.sl">
+      <Filter>Shader Includes</Filter>
     </None>
-    <None Include="..\..\..\..\firstparty\Platform\CrossPlatform\Shaders\texture_compression.sfx">
-      <Filter>Shaders</Filter>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\image_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\light_probe_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\noise.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\quaternion.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\raytracing.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\raytracing_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\render_states.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\sampler_states.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\solid_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\sphere_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\spherical_harmonics.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\spherical_harmonics_constants.sl">
+      <Filter>Shader Includes</Filter>
+    </None>
+    <None Include="../../../../firstparty\Platform/CrossPlatform/Shaders\text_constants.sl">
+      <Filter>Shader Includes</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -115,7 +115,7 @@ source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 source_group("AVParser" src FILES ${av_parser} )
 
 set( src_public ${src_root} ${src_node_components} ${hdr_node_components} )
-message ( "src_public ${src_public}" )
+#message ( "src_public ${src_public}" )
 
 if(ANDROID)
 	add_subdirectory(../thirdparty/draco
@@ -145,6 +145,7 @@ target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/e
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/tinygltf)
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
 target_link_libraries(ClientRender draco TeleportClient)
+add_dependencies(ClientRender Sfx)
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(ClientRender SimulDirectX12_MT)
 endif()
@@ -171,4 +172,7 @@ elseif(ANDROID)
 			#${log-lib} )
 endif()
 
-add_multiplatform_sfx_shader_project(ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
+add_multiplatform_sfx_shader_project( ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." 
+							SOURCES ${shaders} DEFINES VULKAN_SDK=${VULKAN_SDK_DIR} CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} 
+							OPTIONS -GSIMUL_TRUESKY=$<BOOL:${SIMUL_TRUESKY}>
+					 		OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" )

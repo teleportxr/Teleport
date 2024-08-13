@@ -75,7 +75,7 @@ namespace avs
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
 		
-		void sendConfigMessage(const std::string& str);
+		void sendConfigMessage(const std::string& str) override;
 
 		StreamingConnectionState GetStreamingConnectionState() const override
 		{
@@ -95,6 +95,13 @@ namespace avs
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
 		std::string offer;
 		std::vector<IOInterface *> inputInterfaces;
+		struct Candidate
+		{
+			std::string candidate;
+			std::string mid;
+			int mlineindex;
+		};
+		std::vector<Candidate> cachedCandidates;
 	};
 
 } // avs

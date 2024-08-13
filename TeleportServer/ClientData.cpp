@@ -1,5 +1,6 @@
 #include "TeleportServer/ClientData.h"
 #include "TeleportCore/Profiling.h" 
+#include "TeleportCore/ErrorHandling.h" 
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/ClientManager.h"
 using namespace teleport;

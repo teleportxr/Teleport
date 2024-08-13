@@ -30,6 +30,7 @@ using namespace std::string_literals;
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/TabContext.h"
 #include "libavstream/pipeline.hpp"
+#include "ThisPlatform/StringFunctions.h"
 
 
 #ifdef __ANDROID__
@@ -116,7 +117,7 @@ void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags, const char *t
 {
 	if (!txt)
 		txt = str_id;
-	bool is_open = ImGui::TreeNodeEx(str_id, flags, txt);
+	bool is_open = ImGui::TreeNodeEx(str_id, flags,"%s", txt);
 	if (is_open && ((flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) == 0))
 		ImGui::TreePop();
 }
@@ -1640,6 +1641,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 
 	size_t outp = node.getNumOutputSlots();
 	ImVec2 pos (x , y );
+	ImVec2 line(0,20);
 	for(int i=0;i<outp;i++)
 	{
 		const auto *n=node.getOutput(i);
@@ -1660,6 +1662,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
 	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}",node.name,node.inwardBandwidthKps).c_str());
+	draw_list->AddText(ImVec2(pos.x,pos.y+line.y), col, fmt::format("{0}",node.maxPacketKb).c_str());
 }
 
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
@@ -2111,9 +2114,23 @@ void Gui::MenuBar2D()
 	{
 		if (!current_tab_context)
 		{
-			current_tab_context = client::TabContext::GetEmptyTabContext();
-			if (!current_tab_context)
+			current_tab_context = 1;
+			auto tc = client::TabContext::GetTabContext(current_tab_context);
+			if (!current_tab_context||!tc)
 				current_tab_context = client::TabContext::AddTabContext();
+			if(tc)
+			{
+				std::string u=tc->GetURL();
+				size_t sz=MAX_URL_SIZE;
+				sz=std::min(sz,u.length()+1);
+				try
+				{
+					strcpy_s(url_buffer,sz,u.c_str());
+				}
+				catch(...)
+				{
+				}
+			}
 		}
 		auto tabContext = client::TabContext::GetTabContext(current_tab_context);
 		avs::uid server_uid = tabContext->GetServerUid();

@@ -25,9 +25,6 @@
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
 	url = ../Platform.git
-[submodule "plugins/UnrealDemo"]
-	path = plugins/UnrealDemo
-	url = ../teleport-unreal.git
 [submodule "thirdparty/libdatachannel"]
 	path = thirdparty/libdatachannel
 	url = https://github.com/paullouisageneau/libdatachannel.git

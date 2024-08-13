@@ -6,6 +6,7 @@
 #include "libavstream/network/webrtc_networksource.h"
 #include <ElasticFrameProtocol.h>
 #include <libavstream/queue.hpp>
+#include <logger.hpp>
 #include <libavstream/timer.hpp>
 
 #ifdef __ANDROID__
@@ -40,6 +41,21 @@ using nlohmann::json;
 
 namespace avs
 {
+	static const char *stringOf(rtc::PeerConnection::IceState state)
+	{
+		switch(state)
+		{
+			case rtc::PeerConnection::IceState::New	:return "New";
+			case rtc::PeerConnection::IceState::Checking		:return "Checking";
+			case rtc::PeerConnection::IceState::Connected		:return "Connected";
+			case rtc::PeerConnection::IceState::Completed		:return "Completed";
+			case rtc::PeerConnection::IceState::Failed			:return "Failed";
+			case rtc::PeerConnection::IceState::Disconnected	:return "Disconnected";
+			case rtc::PeerConnection::IceState::Closed			:return "Closed";
+			default:
+			return "INVALID ";
+		};
+	};
 	struct ClientDataChannel
 	{
 		ClientDataChannel() {}
@@ -102,6 +118,11 @@ avs::WebRtcNetworkSource *src)
 		{
 			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
 			src->SetStreamingConnectionState(ConvertConnectionState(state));
+		});
+
+	pc->onIceStateChange([](rtc::PeerConnection::IceState state)
+		{
+			std::cout << "Ice State: " << avs::stringOf(state)<< std::endl;
 		});
 
 	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
@@ -279,9 +300,9 @@ Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
 	return Result::OK;
 }
 
-void WebRtcNetworkSource::receiveOffer(const std::string& offer)
+void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 {
-	rtc::Description rtcDescription(offer,"offer");
+	rtc::Description rtcDescription(sdp,"offer");
 	rtc::Configuration config;
 	for(size_t i=0;i<1000;i++)
 	{
@@ -291,16 +312,55 @@ void WebRtcNetworkSource::receiveOffer(const std::string& offer)
 		config.iceServers.emplace_back(srv);
 	}
 	if(!m_data->rtcPeerConnection)
+	{
 		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
+	}
+	else if(m_data->rtcPeerConnection->state()==rtc::PeerConnection::State::Closed)
+	{
+		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
+	}
 	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
+	rtc::PeerConnection::IceState iceState=m_data->rtcPeerConnection->iceState();
+	//if(iceState==rtc::PeerConnection::IceState::Closed)
+	{
+		AVSLOG(Info)<<"IceState: "<<stringOf(iceState)<<".\n";
+	}
+	if(offer.length())
+	{
+		if(offer!=sdp)
+		{
+			AVSLOG(Error) << "WebRtcNetworkSource: Received remote offer that doesn't match previous offer." << std::endl;
+	
+		}
+		else
+		{
+			AVSLOG(Error) << "WebRtcNetworkSource: Received remote offer that matches previous offer." << std::endl;
+		}
+	}
+	else
+		AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote offer." << std::endl;
+	offer=sdp;
+	for(int j=0;j<cachedCandidates.size();j++)
+	{
+		const auto &c=cachedCandidates[j];
+		receiveCandidate(c.candidate,c.mid,c.mlineindex);
+	}
+	cachedCandidates.clear();
 }
-
 void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const std::string& mid, int mlineindex)
 {
-	if(!m_data->rtcPeerConnection)
+	if(!m_data->rtcPeerConnection||!m_data->rtcPeerConnection->remoteDescription().has_value())
+	{
+		cachedCandidates.push_back({candidate,mid,mlineindex});
 		return;
+	}
 	try
 	{
+	rtc::PeerConnection::IceState iceState=m_data->rtcPeerConnection->iceState();
+		//if(iceState==rtc::PeerConnection::IceState::Failed)
+		{
+			AVSLOG(Info)<<"IceState: "<<stringOf(iceState)<<".\n";
+		}
 		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate, mid));
 	}
 	catch (std::logic_error err)
@@ -357,11 +417,11 @@ void WebRtcNetworkSource::kill()
 
 Result WebRtcNetworkSource::deconfigure()
 {
-	offer="";
 	if (getNumOutputSlots() <= 0)
 	{
 		return Result::Node_NotConfigured;
 	}
+	offer="";
 	inputInterfaces.clear();
 	webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 	setNumOutputSlots(0);
@@ -472,7 +532,9 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 	}
 	if(disconnected)
+	{
 		return Result::Network_Disconnection;
+	}
 	static float intro = 0.01f;
 	// update the stream stats.
 	if(deltaTime>0)
@@ -513,7 +575,7 @@ void WebRtcNetworkSource::sendConfigMessage(const std::string &str)
 void WebRtcNetworkSource::SetStreamingConnectionState(StreamingConnectionState s)
 {
 	webRtcState=s;
-	if(webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW_UNCONNECTED)
+	if(webRtcState!=StreamingConnectionState::CONNECTED&&webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW_UNCONNECTED)
 	{
 		offer="";
 	}
@@ -544,30 +606,16 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 		auto type=it->get<std::string>();
 		if (type == "offer")
 		{
-			if(offer.length())
-			{
-				if(offer!=str)
-				{
-					AVSLOG(Error) << "WebRtcNetworkSource: Received remote offer that doesn't match previous offer." << std::endl;
-	
-				}
-				else
-				{
-					AVSLOG(Error) << "WebRtcNetworkSource: Received remote offer that matches previous offer." << std::endl;
-				}
-			}
-			else
-				AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote offer." << std::endl;
-			offer=str;
 			auto o = message.find("sdp");
 			string sdp= o->get<std::string>();
 			receiveOffer(sdp);
 		}
 		else if (type == "candidate")
 		{
-			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote candidate." << std::endl;
+			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote candidate " ;
 			auto c = message.find("candidate");
 			string candidate=c->get<std::string>();
+AVSLOG(Info) << "---"<< candidate<<" "<< std::endl;
 			auto m= message.find("mid");
 			std::string mid;
 			if (m != message.end())
@@ -732,7 +780,7 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 			}
 			else
 			{
- 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed.\n";
+ 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
 				return Result::Network_Disconnection;
 			}
 		}

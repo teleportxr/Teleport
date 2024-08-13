@@ -189,9 +189,10 @@ void android_main(struct android_app* app)
 	device_exts.push_back(VK_KHR_MULTIVIEW_EXTENSION_NAME); 
 	
 	RedirectStdCoutCerr();
-	static bool enable_validation=false;
 	#ifdef _DEBUG
-	enable_validation=false;
+	static bool enable_validation=true;
+	#else
+	static bool enable_validation=true;
 	#endif
 	vulkanDeviceManager.Initialize(enable_validation,false,false,device_exts,openXR.GetRequiredVulkanInstanceExtensions());
 	RenderPlatform *renderPlatform = new vulkan::RenderPlatform();

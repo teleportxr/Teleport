@@ -1,6 +1,7 @@
 #pragma once
 #include <libavstream/common.hpp>
 #include "basic_linear_algebra.h"
+#include "TeleportCore/URLParser.h"
 #include <set>
 
 namespace teleport
@@ -14,6 +15,9 @@ namespace teleport
 		{
 			avs::uid server_uid=0;
 			avs::uid next_server_uid=0;
+
+			core::DomainPortPath domainPortPath;
+			std::string url;
 		public:
 			TabContext();
 			static const std::set<int32_t> &GetTabIndices();
@@ -27,6 +31,7 @@ namespace teleport
 			static std::string PopExternalURL();
 
 			void ConnectTo(std::string url);
+			std::string GetURL() const;
 			void CancelConnection();
 			avs::uid GetServerUid() const
 			{

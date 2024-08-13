@@ -1,0 +1,43 @@
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  deploy:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    env:
+      WORKFLOW_BUILD_TYPE: Release
+      WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+      VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
+      VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+
+    steps:
+    - name: Download artifact
+      id: download-artifact
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        workflow: build_pc_client.yml
+    - name: Show
+      run: |
+        ls -R .
+    - name: Dotenv Action
+      uses: falti/dotenv-action@v1.1.2
+      with:
+        path: installer/teleport_commit.properties
+        log-variables: true
+        export-variables: true
+    - name: Create Release
+      uses: ncipollo/release-action@v1.14.0
+      env:
+        GH_TOKEN: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+      with:
+        artifacts: "installer/*.exe,installer/release_notes.md"
+        bodyFile: "installer/release_notes.md"
+        skipIfReleaseExists: true
+        artifactErrorsFailBuild: true

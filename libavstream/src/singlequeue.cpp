@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <libavstream/singlequeue.h>
+#include <logger.hpp>
 
 #define SAFE_DELETE_ARRAY(p)		{ if(p) { delete[] p; (p)=nullptr; } }
 

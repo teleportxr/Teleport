@@ -35,7 +35,7 @@ else()
 	set( src_public ${src_root} ${src_crossplatform})
 endif()
 
-message ( "src_public ${src_public}" )
+#message ( "src_public ${src_public}" )
 #source_group("src" src FILES ${src_root} )
 #source_group("src\\crossplatform" src FILES ${src_crossplatform} )
 

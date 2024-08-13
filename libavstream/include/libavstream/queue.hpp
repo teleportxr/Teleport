@@ -5,6 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
+#ifndef FIX_BROKEN
 #include <vector>
 
 namespace avs
@@ -31,6 +32,7 @@ namespace avs
 		size_t m_maxBuffers = 0;
 		size_t m_absoluteMaxBuffers = 20000;
 		size_t m_numElements = 0;
+		size_t maxElements=0;
 		int64_t m_front = -1;
 		std::mutex m_mutex;
 		void flushInternal();
@@ -102,3 +104,4 @@ namespace avs
 	};
 
 } // avs
+#endif

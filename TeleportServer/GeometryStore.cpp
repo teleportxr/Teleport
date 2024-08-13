@@ -1,5 +1,9 @@
 #pragma optimize("",off)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include "GeometryStore.h"
+
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "TeleportCore/ResourceStreams.h"
@@ -52,7 +56,13 @@ namespace filesystem = std::filesystem;
 #else
 namespace filesystem = std::filesystem;
 #endif
-
+template<typename T> void write_to_buffer(T data,uint8_t * &mem)
+{
+	T *target=(T*)mem;
+	*target=data;
+	target++;
+	mem=(uint8_t*)target;
+}
 namespace teleport
 {
 	namespace server
@@ -257,6 +267,12 @@ bool GeometryStore::SetCachePath(const char* dir)
 
 
 	return exist;
+}
+
+bool GeometryStore::SetHttpRoot(const char* h)
+{
+	httpRoot=h;
+	return true;
 }
 
 void GeometryStore::Verify()
@@ -464,15 +480,25 @@ std::vector<avs::uid> GeometryStore::getTextureIDs() const
 	return getVectorOfIDs(textures);
 }
 
-avs::Texture* GeometryStore::getTexture(avs::uid textureID)
+ExtractedTexture* GeometryStore::getWrappedTexture(avs::uid textureID)
 {
 	ExtractedTexture* textureData = getResource(textures, textureID);
 	if(!textureData||!textureData->texture.compressedData.size())
 	{
 		string path=UidToPath(textureID);
-		loadResourceFromPath( path,cachePath + "/",textures[textureID]);
+		ExtractedTexture t;
+		if(loadResourceFromPath( path,cachePath + "/",t))
+		{
+			textures[textureID]=t;
+		}
 		textureData = getResource(textures, textureID);
 	}
+	return textureData;
+}
+
+avs::Texture* GeometryStore::getTexture(avs::uid textureID)
+{
+	ExtractedTexture* textureData = getWrappedTexture(textureID);
 	return (textureData ? &textureData->texture : nullptr);
 }
 
@@ -606,7 +632,7 @@ void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::
 	skeletons[avs::AxesStandard::GlStyle][id] = avs::Skeleton::convertToStandard(newSkeleton, sourceStandard, avs::AxesStandard::GlStyle);
 }
 
-bool GeometryStore::storeAnimation(avs::uid id, std::string path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
+bool GeometryStore::storeAnimation(avs::uid id, const std::string & path, teleport::core::Animation& animation, avs::AxesStandard sourceStandard)
 {
 	auto &anim1=animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
 	std::string genericFilePath = path + ".teleport_anim"s;
@@ -1233,7 +1259,7 @@ bool GeometryStore::storeMesh(avs::uid id, const std::string & path, std::time_t
 
 bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time_t lastModified,const avs::Mesh& newMesh, avs::AxesStandard standard, bool verify)
 {
-#ifdef FIX_BROKEN
+#ifndef FIX_BROKEN
 	if(!validate_path(assetPath))
 	{
 		TELEPORT_WARN("In storeMesh, invalid resource path: {0}",assetPath);
@@ -1302,7 +1328,7 @@ bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time
 	return true;
 }
 
-bool GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path, std::time_t lastModified, avs::Material& newMaterial)
+bool GeometryStore::storeMaterial(avs::uid id, const std::string & guid,const std::string & path, std::time_t lastModified, avs::Material& newMaterial)
 {
 	if (!validate_path(path))
 	{
@@ -1321,9 +1347,9 @@ bool GeometryStore::storeMaterial(avs::uid id, std::string guid,std::string path
 	if (!saveResourceBinary(cachePath + "/"s + materials[id].MakeFilename(path), materials[id]))
 		return false;
 	return true;
-}
+} 
 
-bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t lastModified, avs::Texture &newTexture, bool genMips
+bool GeometryStore::storeTexture(avs::uid id,const std::string &path, std::time_t lastModified, const avs::Texture &newt, bool genMips
 	, bool highQualityUASTC,bool forceOverwrite)
 {
 	if (!validate_path(path))
@@ -1336,6 +1362,7 @@ bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t las
 		TELEPORT_WARN("In storeTexture, invalid id {0}", id);
 		return false;
 	}
+	avs::Texture newTexture=newt;
 	if(!newTexture.images.size()||!newTexture.images[0].data.size())
 	{
 		TELEPORT_WARN("In storeTexture, data is empty.");
@@ -1358,6 +1385,10 @@ bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t las
 	{
 		TELEPORT_INTERNAL_CERR("Black texture {0}", path.c_str());
 		TELEPORT_INTERNAL_BREAK_ONCE("");
+	}
+	if(p.find('#')<p.size())
+	{
+		TELEPORT_WARN("Bad path {0}",p);
 	}
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
@@ -1393,12 +1424,14 @@ bool GeometryStore::storeTexture(avs::uid id,  std::string path, std::time_t las
 		texturesToCompress.emplace(id, pct);
 	}
 	textures[id] = ExtractedTexture{  lastModified, newTexture};
+	//CheckForErrors(id);
 	return true;
 }
 
-avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative_asset_path_utf8,std::time_t lastModified,int size)
+avs::uid GeometryStore::storeFont(const std::string & ttf_path_utf8,const std::string & rel,std::time_t lastModified,int size)
 {
 	avs::Texture avsTexture;
+	string relative_asset_path_utf8=rel;
 	std::replace(relative_asset_path_utf8.begin(),relative_asset_path_utf8.end(),'.','_');
 	std::string cacheFontPath = relative_asset_path_utf8;
 	std::string cacheTexturePath=relative_asset_path_utf8+"_tex";
@@ -1417,7 +1450,7 @@ avs::uid GeometryStore::storeFont(std::string ttf_path_utf8,std::string relative
 	return font_atlas_uid;
 }
 
-avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const InteropTextCanvas *interopTextCanvas)
+avs::uid GeometryStore::storeTextCanvas( const std::string & relative_asset_path, const InteropTextCanvas *interopTextCanvas)
 {
 	if(!interopTextCanvas||!interopTextCanvas->text)
 		return 0;
@@ -1443,7 +1476,7 @@ avs::uid GeometryStore::storeTextCanvas( std::string relative_asset_path, const 
 	return canvas_uid;
 }
 
-void GeometryStore::storeShadowMap(avs::uid id, std::string path, std::time_t lastModified, avs::Texture& newShadowMap)
+void GeometryStore::storeShadowMap(avs::uid id, const std::string & path, std::time_t lastModified, avs::Texture& newShadowMap)
 {
 	shadowMaps[id] = ExtractedTexture{lastModified, newShadowMap};
 }
@@ -1577,16 +1610,54 @@ void GeometryStore::compressNextTexture()
 			subImages=compressionData->images;
 		}
 		uint16_t imageCount = subImages.size();
-		uint32_t dataSize=(sizeof(uint16_t) + imageCount * sizeof(size_t));
+		uint32_t dataSize=0;
+
+		// dimensions.
+		dataSize+=sizeof(avsTexture.width);
+		dataSize+=sizeof(avsTexture.height);
+		dataSize+=sizeof(avsTexture.depth);
+
+		dataSize+=sizeof(avsTexture.cubemap);
+
+		// additional information.
+		dataSize+=sizeof(avsTexture.arrayCount);
+		dataSize+=sizeof(avsTexture.mipCount);
+
+		//Push format.
+		dataSize+=sizeof(avsTexture.format);
+		dataSize+=sizeof(avsTexture.bytesPerPixel);
+
+		//Value scale - brightness number to scale the final texel by.
+		dataSize+=sizeof(avsTexture.valueScale);
+		dataSize+=sizeof(uint16_t) + imageCount * sizeof(uint32_t);
 		for(const auto &img:subImages)
 		{
 			dataSize+=img.size();
 		}
 		avsTexture.compressedData.resize(dataSize);
 		uint8_t *target = avsTexture.compressedData.data();
-		memcpy(target, &imageCount, sizeof(imageCount));
-		target+=sizeof(imageCount);
-		uint32_t offset=sizeof(imageCount)+imageCount*sizeof(uint32_t);
+
+		// dimensions.
+		write_to_buffer(avsTexture.width,target);
+		write_to_buffer(avsTexture.height,target);
+		write_to_buffer(avsTexture.depth,target);
+
+		// additional information.
+		write_to_buffer(avsTexture.arrayCount,target);
+		write_to_buffer(avsTexture.mipCount,target);
+		write_to_buffer(avsTexture.cubemap,target);
+
+		//Push format.
+		write_to_buffer(avsTexture.format,target);
+		write_to_buffer(avsTexture.bytesPerPixel,target);
+
+		//Value scale - brightness number to scale the final texel by.
+		write_to_buffer(avsTexture.valueScale,target);
+		
+		uint32_t offset=target-avsTexture.compressedData.data();
+		write_to_buffer(imageCount,target);
+		offset+=sizeof(imageCount);
+		offset+=imageCount*sizeof(uint32_t);
 		std::vector<uint32_t> offsets(imageCount);
 		for (size_t i=0;i<imageCount;i++)
 		{
@@ -1601,6 +1672,11 @@ void GeometryStore::compressNextTexture()
 		{
 			memcpy(target, img.data(), img.size());
 			target += img.size();
+		}
+		uint32_t final_offset=target-avsTexture.compressedData.data();
+		if(final_offset!=avsTexture.compressedData.size())
+		{
+			TELEPORT_WARN("Offset mismatched in texture save.");
 		}
 	}
 	if (compressionData->textureCompression == avs::TextureCompression::UNCOMPRESSED)
@@ -1720,7 +1796,7 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 		TELEPORT_CERR << "Failed to load " << file_name.c_str() << " as resource path is not valid.\n";
 		return 0;
 	}
-	size_t ext_pos = p.find(ExtractedResource::fileExtension());
+	size_t ext_pos = p.rfind('.');
 	if (ext_pos < p.length())
 		p = p.substr(0, ext_pos);
 	auto write_time = std::filesystem::last_write_time(file_name);
@@ -1763,6 +1839,10 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 		TELEPORT_CERR << "Resource: " << file_name.c_str() << " is invalid, not loading.\n";
 		return 0;
 	}
+	if(p.find('#')<p.size())
+	{
+		TELEPORT_WARN("Bad path {0}",p);
+	}
 	uid_to_path[newID] = p;
 	path_to_uid[p] = newID;
 	return newID;
@@ -1776,7 +1856,7 @@ bool GeometryStore::loadResourceFromPath(const std::string &resource_path, const
 	string filename=fspath.filename().generic_string();
 	if(!std::filesystem::exists(parent_path))
 		return false;
-	std::string search_str = ExtractedResource::fileExtension();
+	std::string search_str = ExtractedResource::fileExtensions();
     // Use find function to find 1st position of delimiter.
 	int end = search_str.find(';'); 
     while (end != -1)
@@ -1834,7 +1914,7 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 	//Load resources if the file exists.
 	const std::filesystem::path fspath{ filepath_root.c_str() };
 	std::filesystem::create_directories(fspath);
-	std::string search_str = ExtractedResource::fileExtension();
+	std::string search_str = ExtractedResource::fileExtensions();
 	std::vector<string> extensions;
 	string token;
 	std::stringstream sstr(search_str);
@@ -1878,15 +1958,21 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 }
 
 
-bool GeometryStore::CheckForErrors() 
+bool GeometryStore::CheckForErrors(avs::uid res_uid) 
 {
 	for(auto &t:textures)
 	{
+		if(res_uid&&res_uid!=t.first)	
+			continue;
 		ExtractedTexture& textureData = t.second;
 		
 		if(textureData.texture.compressedData.size()==0)
 		{
-			TELEPORT_CERR<<"Texture "<<t.second.getName()<<" is empty.\n";
+			if(!textureData.texture.compressed){
+				TELEPORT_CERR<<"Texture "<<t.first<<", "<<t.second.getName()<<" is not yet compressed.\n";
+				return false;
+			}
+			TELEPORT_CERR<<"Texture "<<t.first<<", "<<t.second.getName()<<" is empty.\n";
 			return false;
 		}
 
@@ -1899,6 +1985,7 @@ avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 	std::string p = path;
 	if (p.size() < 2)
 		return 0;
+	std::replace(p.begin(),p.end(),'#','~');
 	if (!validate_path(path))
 	{
 		TELEPORT_BREAK_ONCE("Failed to generate Uid for invalid path.\n");
@@ -1946,8 +2033,13 @@ avs::uid GeometryStore::PathToUid(std::string p) const
 	auto i = path_to_uid.find(p);
 	if (i == path_to_uid.end())
 	{
-		TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
-		return 0;
+		std::replace(p.begin(),p.end(),'#','~');
+		i = path_to_uid.find(p);
+		if (i == path_to_uid.end())
+		{
+			TELEPORT_INTERNAL_BREAK_ONCE("No uid for this path.");
+			return 0;
+		}
 	}
 	return i->second;
 }
@@ -1960,7 +2052,17 @@ std::string GeometryStore::UidToPath(avs::uid u) const
 		TELEPORT_INTERNAL_BREAK_ONCE("No path for this uid.");
 		return "";
 	}
-	return i->second;
+	string p=i->second;
+	if(p.find('#')<p.size())
+	{
+		auto &m=const_cast<std::map<avs::uid,string>&>(uid_to_path);
+		auto &m2=const_cast<std::map<string,avs::uid>&>(path_to_uid);
+		m2.erase(p);
+		std::replace(p.begin(),p.end(),'#','~');
+		m[u]=p;
+		m2[p]=u;
+	}
+	return p;
 }
 
 bool GeometryStore::EnsureResourceIsLoaded(avs::uid u)

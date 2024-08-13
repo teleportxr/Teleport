@@ -13,7 +13,6 @@ namespace teleport
 	{
 		class VideoEncodePipeline;
 		class AudioEncodePipeline;
-		typedef int64_t(* GetUnixTimestampFn)();	// was __stdcall*
 		enum ConnectionState
 		{
 			UNCONNECTED,

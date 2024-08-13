@@ -723,6 +723,8 @@ void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 	renderPlatform->SetSamplerState(deviceContext, 6, renderState.wrapSamplerState);
 	renderPlatform->SetSamplerState(deviceContext, 9, renderState.clampSamplerState);
 	renderPlatform->SetSamplerState(deviceContext, 11, renderState.samplerStateNearest);
+	InstanceRenderer::ApplyCameraMatrices(deviceContext,renderState);
+	renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
 	renderPlatform->ApplyResourceGroup(deviceContext, 0);
 	RenderView(deviceContext);
 	DrawGUI(deviceContext, true);
@@ -730,6 +732,17 @@ void Renderer::RenderVRView(crossplatform::GraphicsDeviceContext& deviceContext)
 
 void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 {
+#ifndef DEBUG_CONNECTION
+	static int32_t current_tab_context=0;
+	if (!current_tab_context)
+	{
+		current_tab_context = client::TabContext::GetEmptyTabContext();
+		if (!current_tab_context)
+			current_tab_context = client::TabContext::AddTabContext();
+		std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
+		tabContext->ConnectTo("home.teleportvr.io");
+	}
+#endif
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Setup");
 	bool mv = (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr);
@@ -787,14 +800,18 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			passName += "_multiview";
 		if (!renderState.openXR->IsPassthroughActive())
 		{
-			GetInstanceRenderer(0)->ApplyCameraMatrices(deviceContext);
+			/*renderPlatform->SetSamplerState(deviceContext, 4, renderState.cubeSamplerState);
+			renderPlatform->SetSamplerState(deviceContext, 6, renderState.wrapSamplerState);
+			renderPlatform->SetSamplerState(deviceContext, 9, renderState.clampSamplerState);
+			renderPlatform->SetSamplerState(deviceContext, 11, renderState.samplerStateNearest);
+			InstanceRenderer::ApplyCameraMatrices(deviceContext,renderState);
 			renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
+			renderPlatform->ApplyResourceGroup(deviceContext, 0);*/
 			double timeElapsed_s = double( previousTimestampUs.count()) / 1000000.0; // ms to seconds
 			int64_t timeElapsed_u=(int64_t(timeElapsed_s)/1024)*1024;
 			timeElapsed_s-=double(timeElapsed_u);
 			renderState.cubemapConstants.time_seconds = float(timeElapsed_s);
 			deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
-			renderPlatform->ApplyResourceGroup(deviceContext, 0);
 			renderState.cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
 			renderPlatform->DrawQuad(deviceContext);
 			renderState.cubemapClearEffect->Unapply(deviceContext);
@@ -1509,6 +1526,8 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		renderPlatform->SetSamplerState(deviceContext, 6, renderState.wrapSamplerState);
 		renderPlatform->SetSamplerState(deviceContext, 9, renderState.clampSamplerState);
 		renderPlatform->SetSamplerState(deviceContext, 11, renderState.samplerStateNearest);
+		InstanceRenderer::ApplyCameraMatrices(deviceContext,renderState);
+		renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
 		renderPlatform->ApplyResourceGroup(deviceContext, 0);
 
 		renderState.hdrFramebuffer->Clear(deviceContext, 0.5f, 0.25f, 0.5f, 0.f, reverseDepth ? 0.f : 1.f);

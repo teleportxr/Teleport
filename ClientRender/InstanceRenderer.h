@@ -260,7 +260,8 @@ namespace teleport
 			void RecomposeVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture *srcTexture, platform::crossplatform::Texture *targetTexture, const char *technique);
 			void RecomposeCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture *srcTexture, platform::crossplatform::Texture *targetTexture, int mips, int2 sourceOffset);
 			virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-			void ApplyCameraMatrices(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+			static void ApplyCameraMatrices(platform::crossplatform::GraphicsDeviceContext &deviceContext,RenderState &renderState);
+			void ApplySceneMatrices(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void ApplyMaterialConstants(platform::crossplatform::GraphicsDeviceContext &deviceContext, std::shared_ptr<clientrender::Material> material);
 
 			void RenderLocalNodes(platform::crossplatform::GraphicsDeviceContext &deviceContext);

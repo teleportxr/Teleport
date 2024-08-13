@@ -4,6 +4,7 @@
 
 #include "libavstream/common.hpp"
 #include "libavstream/queue.hpp"
+#ifndef FIX_BROKEN
 
 #include "NetworkPipeline.h"
 #include "SourceNetworkPipeline.h"
@@ -36,3 +37,4 @@ namespace teleport
 		};
 	}
 }
+#endif

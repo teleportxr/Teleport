@@ -30,7 +30,8 @@ namespace teleport
 		{
 			TELEPORT_NATIVE,
 			GLTF_TEXT,
-			GLTF_BINARY
+			GLTF_BINARY,
+			FROM_EXTENSION
 		};
 		/*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.
 		 */
@@ -100,12 +101,15 @@ namespace teleport
 			avs::Result decodeMesh(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeMaterial(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeMaterialInstance(GeometryDecodeData &geometryDecodeData);
+			avs::Result decodeTexturePointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeTexture(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeAnimation(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeNode(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeSkeleton(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeFontAtlas(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeTextCanvas(GeometryDecodeData &geometryDecodeData);
+			// Decoding from file format extension:
+			avs::Result decodeTextureFromExtension(GeometryDecodeData& geometryDecodeData);
 
 			avs::Result decodeFloatKeyframes(GeometryDecodeData &geometryDecodeData, std::vector<teleport::core::FloatKeyframe> &keyframes);
 			avs::Result decodeVector3Keyframes(GeometryDecodeData &geometryDecodeData, std::vector<teleport::core::Vector3Keyframe> &keyframes);

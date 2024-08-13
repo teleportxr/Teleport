@@ -19,7 +19,8 @@
 #pragma optimize("", off)
 using namespace teleport;
 using namespace server;
-
+using std::string;
+using std::vector;
 
 GeometryEncoder::GeometryEncoder( GeometryStreamingService *srv, avs::uid clid)
 	: geometryStreamingService(srv), clientID(clid)
@@ -62,6 +63,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp)
 
 	for (avs::uid nodeID : nodeIDsToStream)
 	{
+		TELEPORT_LOG_INTERNAL("Sending node {0}", nodeID);
 		encodeNodes( { nodeID });
 
 		keepQueueing = attemptQueueData();
@@ -112,24 +114,6 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp)
 			break;
 		}
 	}
-	/*	if (geometryStreamingService->GetNewUIDs(material.texture_uids, eometryStreamingService) != 0)
-		{
-			for (avs::uid textureID : material.texture_uids)
-			{
-				if(textureID==0)
-					continue;
-				encodeTextures( { textureID });
-				keepQueueing = attemptQueueData();
-				if (!keepQueueing)
-				{
-					break;
-				}
-			}
-			if (!keepQueueing)
-			{
-				break;
-			}
-		}*/
 	if (!keepQueueing)
 	{
 		return avs::Result::OK;
@@ -482,6 +466,7 @@ void GeometryEncoder::putPayloadType(avs::GeometryPayloadType t,avs::uid uid)
 
 	// Place payload type onto the buffer.
 	put(t);
+	// Put the resource uid onto the buffer.
 	put(uid);
 }
 
@@ -703,6 +688,37 @@ avs::Result GeometryEncoder::encodeShadowMaps( std::vector<avs::uid> missingUIDs
 	encodeTexturesBackend( missingUIDs, true);
 	return avs::Result::OK;
 }
+// don't send more than a Mb inline:
+#define INLINE_DATA_THRESHOLD_KB (1024)
+
+avs::Result GeometryEncoder::encodeTexturePointer( avs::uid uid)
+{
+	//Place payload type onto the buffer.
+	putPayloadType(avs::GeometryPayloadType::TexturePointer,uid);
+	
+	GeometryStore* geometryStore = &(GeometryStore::GetInstance());
+	const ExtractedTexture* wrappedTexture= geometryStore->getWrappedTexture(uid);
+	string path=geometryStore->UidToPath(uid);;
+	if(!path.length())
+		return avs::Result::Failed;
+	string url=geometryStore->GetHttpRoot()+"/";
+	url+=path;
+	// But even the path is incomplete, because it has no file extension. We want to send the
+	// full URL of an actual file, so that even dumb fileservers or CDN's can respond with a download.
+	url+=wrappedTexture->fileExtension();
+	uint16_t urlLength = (uint16_t)url.length();
+	if((size_t)urlLength != url.length())
+		return avs::Result::Failed;
+	//Push url length in 16 bits..
+	put(urlLength);
+	//Push name.
+	put((uint8_t*)url.data(), urlLength);
+	// Actual size is now known so update payload size
+	putPayloadSize(uid);
+	//Flag we have encoded the texture.
+	geometryStreamingService->encodedResource(uid);
+	return avs::Result::OK;
+}
 
 avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missingUIDs, bool)
 {
@@ -719,6 +735,10 @@ avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missin
 				TELEPORT_WARN_NOSPAM("Trying to send a zero-size texture {0}. Never do this!\n",texture->name);
 				continue;
 			}
+			if (texture->compressedData.size()>INLINE_DATA_THRESHOLD_KB*1024&&geometryStore->IsHttpEnabled())
+			{
+				return encodeTexturePointer(uid);
+			}
 			if (texture->compression == avs::TextureCompression::UNCOMPRESSED)
 			{
 				TELEPORT_CERR << "Trying to send uncompressed texture " << texture->name << ". Never do this!\n";
@@ -731,7 +751,6 @@ avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missin
 			}
 			//Place payload type onto the buffer.
 			putPayloadType(avs::GeometryPayloadType::Texture,uid);
-
 			size_t nameLength = texture->name.length();
 
 			//Push name length.
@@ -740,6 +759,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missin
 			put((uint8_t*)texture->name.data(), nameLength);
 			
 			put(texture->compression);
+/*
 			// TODO: make this a more generic texture type.
 			put(texture->cubemap);
 
@@ -760,11 +780,10 @@ avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missin
 			put(texture->valueScale);
 
 			//Push size, and data.
-			put((uint32_t)texture->compressedData.size());
+			put((uint32_t)texture->compressedData.size());*/
+			// The contents of compressedData should be identical to the texture's cache file, regardless of
+			// format.
 			put(texture->compressedData.data(), texture->compressedData.size());
-
-			//Push sampler identifier.
-			put(texture->sampler_uid);
 
 			// Actual size is now known so update payload size
 			putPayloadSize(uid);

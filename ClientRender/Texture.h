@@ -146,8 +146,6 @@ namespace teleport
 
 				CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
 		
-				bool externalResource = false;	// If true, the actual API resource will be created and managed externally on a per-platform basis.
-
 				float valueScale=1.0f;	// multiplier for texel values.
 			
 				void operator=(const TextureCreateInfo & t)
@@ -167,8 +165,6 @@ namespace teleport
 					sampleCount		= t.sampleCount;
 		
 					compression		= t.compression;
-		
-					 externalResource = t.externalResource;
 
 					 valueScale			=t.valueScale;
 				}

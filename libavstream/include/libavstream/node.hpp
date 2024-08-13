@@ -6,8 +6,8 @@
 #include <libavstream/common.hpp>
 #include <libavstream/interfaces.hpp>
 
-#include <../src/common_p.hpp>
-#include <libavstream/node.hpp>
+#ifndef FIX_BROKEN
+#include <../src/abi_p.hpp>
 
 #include <vector>
 
@@ -35,6 +35,7 @@ namespace avs
 		virtual ~PipelineNode();
 		std::string name;
 		float inwardBandwidthKps=0.f;
+		float maxPacketKb=0.f;
 		/*!
 		 * Link two nodes. Data will flow from source node to target node.
 		 * \param source Source node.
@@ -144,13 +145,7 @@ namespace avs
 		 *  - Result::OK on success (or no-op).
 		 *  - PipelineNode specific error result on failure.
 		 */
-		virtual Result process(uint64_t timestamp, uint64_t deltaTime)
-		{
-		#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
-			measureBandwidth(deltaTime);
-		#endif
-			return Result::OK;
-		}
+		virtual Result process(uint64_t timestamp, uint64_t deltaTime);
 
 		/*!
 		 * Get node display name (for reporting & profiling).
@@ -246,3 +241,4 @@ namespace avs
 		std::vector<Link> m_outputs;
 	};
 } // avs
+#endif

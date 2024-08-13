@@ -32,6 +32,14 @@ using namespace teleport;
 using namespace clientrender;
 
 #define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt,##__VA_ARGS__)
+template<typename T> void read_from_buffer(T &result,const uint8_t * &mem)
+{
+	const T *src=(const T*)mem;
+	result=*src;
+	src++;
+	mem=(const uint8_t*)src;
+}
+
 
 ResourceCreator::ResourceCreator()
 	:basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
@@ -649,15 +657,15 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	std::shared_ptr<clientrender::Texture::TextureCreateInfo> texInfo =std::make_shared<clientrender::Texture::TextureCreateInfo>();
 	texInfo->name			=texture.name;
 	texInfo->uid			=id;
-	texInfo->width			=texture.width;
-	texInfo->height			=texture.height;
-	texInfo->depth			=texture.depth;
-	texInfo->bytesPerPixel	=texture.bytesPerPixel;
-	texInfo->arrayCount		=texture.arrayCount;
-	texInfo->mipCount		=texture.mipCount;
-	texInfo->type			=texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
-	texInfo->format			=textureFormatFromAVSTextureFormat(texture.format);
-	texInfo->sampleCount	=clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT; //Assumed
+	//texInfo->width			=texture.width;
+	//texInfo->height			=texture.height;
+	//texInfo->depth			=texture.depth;
+	//texInfo->bytesPerPixel	=texture.bytesPerPixel;
+	//texInfo->arrayCount		=texture.arrayCount;
+	//texInfo->mipCount		=texture.mipCount;
+	//texInfo->type			=texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+	//texInfo->format			=textureFormatFromAVSTextureFormat(texture.format);
+	//texInfo->sampleCount	=clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT; //Assumed
 	texInfo->compression	=(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 
 	TELEPORT_LOG("Received texture {0} ({1}), awaiting decompression.",id, texture.name);
@@ -893,8 +901,10 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 	incompleteSkeleton->skeleton->SetExternalBoneIds(skeleton.boneIDs);
 	std::lock_guard g(geometryCache->missingResourcesMutex);
 	// each bone that hasn't been loaded is a missing resource. The Skeleton can only be completed when all missing bones are here.
-	for (auto b:skeleton.boneIDs)
+	// Don't include the root, as that would be a circular reference.
+	for (int i=1;i<skeleton.boneIDs.size();i++)
 	{
+		avs::uid b=skeleton.boneIDs[i];
 		if(!geometryCache->mNodeManager.GetNode(b))
 		{
 			RESOURCECREATOR_DEBUG_COUT("Skeleton {0}({1}) missing bone Node {2}", id, incompleteSkeleton->skeleton->getName(), b);
@@ -1004,21 +1014,6 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 					if ((*waiting)->GetMissingResourceCount() == 0)
 					{
 						geometryCache->CompleteSkeleton((*waiting)->id, waitingSkeleton);
-					}
-				}
-			}
-			if(waiting->get()->type==avs::GeometryPayloadType::Node)
-			{
-				std::shared_ptr<Node> waitingNode = std::static_pointer_cast<Node>(*waiting);
-				TELEPORT_INTERNAL_CERR("Waiting Mesh Node {0} got Skeleton Node {1}", waitingNode->id, id);
-				if (waitingNode)
-				{
-					RESOURCE_RECEIVES(waitingNode, id);
-					waitingNode->SetSkeletonNode(node);
-				// If the waiting resource has no incomplete resources, it is now itself complete.
-					if (waitingNode->GetMissingResourceCount() == 0)
-					{
-						geometryCache->CompleteNode(waitingNode->id, waitingNode);
 					}
 				}
 			}
@@ -1318,8 +1313,36 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			{
 				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with PNG",transcoding->name.c_str());
 				int mipWidth=0, mipHeight=0;
-				uint8_t *srcPtr = transcoding->data.data();
-				uint8_t *basePtr=srcPtr;
+				const uint8_t *srcPtr = transcoding->data.data();
+				const uint8_t *basePtr=srcPtr;
+				read_from_buffer(transcoding->textureCI->width,srcPtr);
+				read_from_buffer(transcoding->textureCI->height,srcPtr);
+				read_from_buffer(transcoding->textureCI->depth,srcPtr);
+
+				// additional information.
+				read_from_buffer(transcoding->textureCI->arrayCount,srcPtr);
+				read_from_buffer(transcoding->textureCI->mipCount,srcPtr);
+				bool cubemap=false;
+				read_from_buffer(cubemap,srcPtr);
+				transcoding->textureCI->type			=transcoding->textureCI->depth>1?clientrender::Texture::Type::TEXTURE_3D:clientrender::Texture::Type::TEXTURE_2D;
+				if(cubemap)
+				{
+					transcoding->textureCI->type=clientrender::Texture::Type::TEXTURE_CUBE_MAP;
+					if(transcoding->textureCI->arrayCount>6)
+						transcoding->textureCI->type=clientrender::Texture::Type::TEXTURE_CUBE_MAP_ARRAY;
+				}
+				else
+				{
+					if(transcoding->textureCI->arrayCount>1)
+						transcoding->textureCI->type=(clientrender::Texture::Type)(((int)transcoding->textureCI->type)|16);
+				}
+
+				//Push format.
+				read_from_buffer(transcoding->textureCI->format,srcPtr);
+				read_from_buffer(transcoding->textureCI->bytesPerPixel,srcPtr);
+
+				//Value scale - brightness number to scale the final texel by.
+				read_from_buffer(transcoding->textureCI->valueScale,srcPtr);
 				// let's have a uint16 here, N with the number of images, then a list of N uint32 offsets. Each is a subresource image. Then image 0 starts.
 				uint16_t num_images=*((uint16_t*)srcPtr);
 				std::vector<uint32_t> imageOffsets(num_images);
@@ -1333,10 +1356,19 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				imageOffsets.push_back((uint32_t)transcoding->data.size());
 				std::vector<uint32_t> imageSizes(num_images);
+				bool bad=false;
 				for(int i=0;i<num_images;i++)
 				{
 					imageSizes[i]=imageOffsets[i+1]-imageOffsets[i];
+					if(imageOffsets[i+1]>transcoding->data.size())
+					{
+						TELEPORT_WARN("Bad texture data in {0}",transcoding->textureCI->name);
+						bad=true;
+						break;
+					}
 				}
+				if(bad)
+					continue;
 				transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
 				transcoding->textureCI->images->resize(num_images);
 				for(int i=0;i<num_images;i++)
@@ -1398,16 +1430,24 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				BasisValidate(basis_transcoder, fileinfo,transcoding->data);
 				if (basis_transcoder.start_transcoding(transcoding->data.data(), (uint32_t)transcoding->data.size()))
-				{
+				{					
+					size_t imgs=basis_transcoder.get_total_images(transcoding->data.data(), (uint32_t)transcoding->data.size());
+					transcoding->textureCI->arrayCount=transcoding->textureCI->arrayCount?transcoding->textureCI->arrayCount:1;
 					transcoding->textureCI->mipCount = basis_transcoder.get_total_image_levels(transcoding->data.data(), (uint32_t)transcoding->data.size(), 0);
+					transcoding->textureCI->arrayCount = imgs/transcoding->textureCI->mipCount;
 					transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
 					transcoding->textureCI->images->resize(transcoding->textureCI->mipCount*transcoding->textureCI->arrayCount);
-
+					if(imgs!=transcoding->textureCI->images->size())
+					{
+						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding->name << "\" due to image count mismatch." << std::endl;
+						continue;
+					}
 					if (!basis_is_format_supported(basis_transcoder_textureFormat, fileinfo.m_tex_format))
 					{
 						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding->name << "\"." << std::endl;
 						continue;
 					}
+					transcoding->textureCI->bytesPerPixel=basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat);
 					int imageIndex=0;
 					for (uint32_t arrayIndex = 0; arrayIndex < transcoding->textureCI->arrayCount; arrayIndex++)
 					{
@@ -1415,13 +1455,19 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						{
 							uint32_t basisWidth, basisHeight, basisBlocks;
 
-							basis_transcoder.get_image_level_desc(transcoding->data.data(), (uint32_t)transcoding->data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
+							auto desc=basis_transcoder.get_image_level_desc(transcoding->data.data(), (uint32_t)transcoding->data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
 							uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
 							auto &img=(*transcoding->textureCI->images)[imageIndex];
 							img.resize(outDataSize);
 							if (!basis_transcoder.transcode_image_level(transcoding->data.data(), (uint32_t)transcoding->data.size(),arrayIndex, mipIndex, img.data(), basisBlocks, basis_transcoder_textureFormat))
 							{
 								TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
+							}
+							if(arrayIndex==0&&mipIndex==0)
+							{
+								transcoding->textureCI->width = basisWidth;
+								transcoding->textureCI->height = basisHeight;
+								transcoding->textureCI->depth = 1;
 							}
 							imageIndex++;
 						}

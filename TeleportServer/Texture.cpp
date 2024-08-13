@@ -13,6 +13,7 @@ using namespace std::filesystem;
 using std::filesystem::path;
 using std::string;
 #pragma optimize("",off)
+
 bool teleport::server::ApplyBasisCompression(ExtractedTexture &extractedTexture,std::string assetPath, std::shared_ptr<PrecompressedTexture> compressionData,uint8_t compressionStrength,uint8_t compressionQuality)
 {
 	GeometryStore &geometryStore = GeometryStore::GetInstance();
@@ -204,6 +205,7 @@ bool teleport::server::ApplyBasisCompression(ExtractedTexture &extractedTexture,
 	
 	return true;
 }
+
 bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fileinfo, const std::vector< char> &data)
 {
 #ifndef __ANDROID__
@@ -280,31 +282,72 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 #endif
 	return true;
 }
-std::string PathToName(ExtractedTexture &textureData,const std::string &filename)
+
+std::string PathToName(ExtractedTexture &textureData,const std::string &filename,string &ext)
 {
 	path pth(filename);
-	string ext=pth.extension().generic_string();
+	ext=pth.extension().generic_string();
 	GeometryStore &geometryStore=GeometryStore::GetInstance();
 	path cachePath = geometryStore.GetCachePath();
 	path filename_path = path(filename).replace_extension("");
 	path relative_path = filename_path.lexically_relative(cachePath);
-	std::string path = relative_path.generic_string();
-	textureData.SetNameFromPath(path);
+	std::string rel_path_str = relative_path.generic_string();
+	textureData.SetNameFromPath(rel_path_str);
 	std::filesystem::file_time_type rawFileTime = std::filesystem::last_write_time(filename);
 	textureData.lastModified = rawFileTime.time_since_epoch().count();
-	return ext;
+	return textureData.getName();
 }
+
 void teleport::server::LoadAsPng(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename)
 {
 	path pth(filename);
-	string ext=PathToName(textureData,filename);
+	string ext;
+	textureData.texture.name=PathToName(textureData,filename,ext);
 	textureData.texture.compressedData.resize(data.size());
 	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
+}
+template<typename T> void read_from_buffer(T &result,const uint8_t * &mem)
+{
+	const T *src=(const T*)mem;
+	result=*src;
+	src++;
+	mem=(const uint8_t*)src;
+}
+
+void teleport::server::LoadAsTeleportTexture(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename)
+{
+	path pth(filename);
+	string ext;
+	textureData.texture.name=PathToName(textureData,filename,ext);
+	textureData.texture.compressedData.resize(data.size());
+	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
+	const uint8_t *src = textureData.texture.compressedData.data();
+
+	
+		// dimensions.
+	read_from_buffer(textureData.texture.width ,src);
+	read_from_buffer(textureData.texture.height,src);
+	read_from_buffer(textureData.texture.depth ,src);
+
+		// additional information.
+	read_from_buffer(textureData.texture.arrayCount		,src);
+	read_from_buffer(textureData.texture.mipCount		,src);
+	read_from_buffer(textureData.texture.cubemap,src);
+
+		// format.
+	read_from_buffer(textureData.texture.format,src);
+	read_from_buffer(textureData.texture.bytesPerPixel	,src);
+
+		//Value scale - brightness number to scale the final texel by.
+	read_from_buffer(textureData.texture.valueScale,src);
+	textureData.texture.compression=avs::TextureCompression::PNG;
+
 }
 
 void teleport::server::LoadAsBasisFile( ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename)
 {
-	string ext=PathToName(textureData,filename);
+	string ext;
+	textureData.texture.name=PathToName(textureData,filename,ext);
 	textureData.texture.compressedData.resize(data.size());
 	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
 	static bool basis_transcoder_initialized=false;
@@ -313,6 +356,7 @@ void teleport::server::LoadAsBasisFile( ExtractedTexture &textureData, const std
 		basist::basisu_transcoder_init();
 		basis_transcoder_initialized=true;
 	}
+	path pth(filename);
 	if(ext==".ktx2")
 	{
 		basist::ktx2_transcoder ktx_transcoder;

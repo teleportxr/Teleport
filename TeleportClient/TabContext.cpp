@@ -11,7 +11,6 @@
 #include <windows.h>
 #include <Shlwapi.h>
 #endif
-#include "URLHandlers.h"
 using namespace std::string_literals;
 
 using namespace teleport;
@@ -113,9 +112,10 @@ std::string TabContext::PopExternalURL()
 	return url;
 }
 
-void TabContext::ConnectTo(std::string url)
+void TabContext::ConnectTo(std::string u)
 {
-	core::DomainPortPath domainPortPath = core::GetDomainPortPath(url);
+	domainPortPath = core::GetDomainPortPath(u);
+	url=u;
 	// Not Teleport protocol? launch some other app or ignore.
 	if (domainPortPath.protocol != "teleport")
 	{
@@ -173,6 +173,11 @@ void TabContext::ConnectTo(std::string url)
 	}
 	nextSessionClient->RequestConnection(domainPortPath.path, domainPortPath.port);
 	nextSessionClient->connected_url = url;
+}
+
+std::string TabContext::GetURL() const
+{
+return url;
 }
 
 void TabContext::CancelConnection()

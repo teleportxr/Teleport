@@ -21,7 +21,11 @@ namespace teleport
 	{
 		struct ExtractedMesh
 		{
-			static const char* fileExtension()
+			const char* fileExtension() const
+			{
+				return ".mesh";
+			}
+			static const char* fileExtensions()
 			{
 				return ".mesh";
 			}
@@ -89,7 +93,11 @@ namespace teleport
 
 		struct ExtractedMaterial
 		{
-			static const char* fileExtension()
+			const char* fileExtension() const
+			{
+				return ".material";
+			}
+			static const char* fileExtensions()
 			{
 				return ".material";
 			}
@@ -143,9 +151,16 @@ namespace teleport
 		struct ExtractedTexture
 		{
 		// In order of preference:
-			static const char* fileExtension()
+			static const char* fileExtensions()
 			{
 				return ".ktx2;.basis;.ktx;.texture";// diabled ;.png for now.
+			}
+			const char *fileExtension() const
+			{
+				if(extension.size())
+					return extension.c_str();// diabled ;.png for now.
+				else
+					return ".texture";
 			}
 			std::string getName() const
 			{
@@ -155,12 +170,12 @@ namespace teleport
 			{
 				std::string file_name;
 				file_name += path;
+				std::string &s=const_cast<std::string&>(extension);
 				if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
-					file_name += ".ktx2";
+					s= ".ktx2";
 				else if (texture.compression == avs::TextureCompression::PNG)
-					file_name += ".texture";
-				else if (texture.compression == avs::TextureCompression::UNCOMPRESSED)
-					return "";
+					s= ".texture";
+				file_name+=extension;
 				// if (resource.texture.compression == avs::TextureCompression::KTX)
 				//		file_name += ".ktx";
 				return file_name;
@@ -170,11 +185,15 @@ namespace teleport
 			{
 				texture.name = std::filesystem::path(path).filename().generic_u8string();
 				size_t hash_pos = texture.name.rfind('#');
-				if (hash_pos < texture.name.length())
-					texture.name = texture.name.substr(hash_pos + 1, texture.name.length() - hash_pos - 1);
+				size_t tilde_pos=texture.name.rfind('~');
+				if(hash_pos<tilde_pos)
+					tilde_pos=hash_pos;
+				if (tilde_pos < texture.name.length())
+					texture.name = texture.name.substr(tilde_pos + 1, texture.name.length() - tilde_pos - 1);
 			}
 			std::time_t lastModified;
 			avs::Texture texture;
+			std::string extension;
 			bool IsValid() const
 			{
 				return texture.images.size()!=0||texture.compressedData.size()!=0;
@@ -186,44 +205,51 @@ namespace teleport
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedTexture& textureData)
 			{
-				if (out.filename.find(".basis") == out.filename.length() - 6)
+				size_t extPos=out.filename.rfind(".");
+				string ext=textureData.extension;
+				if (ext==".basis")
 				{
 					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
 					return out;
 				}
-				else if (out.filename.find(".ktx") == out.filename.length() - 4)
+				else if (ext==".ktx")
 				{
 					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
 					return out;
 				}
-				else if (out.filename.find(".ktx2") == out.filename.length() - 5)
+				else if (ext==".ktx2")
 				{
 					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
 					return out;
 				}
-				out.writeChunk(textureData.lastModified);
-				out << textureData.texture;
+				out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
 				if(textureData.texture.compression==avs::TextureCompression::UNCOMPRESSED)
 				{
-					TELEPORT_BREAK_ONCE("Uncompressed texture.");
+					std::cerr<<"Uncompressed texture.\n";
 				}
 				return out;
 			}
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedTexture& textureData)
 			{
-				if (in.filename.rfind(".basis") == in.filename.length() - 6||in.filename.rfind(".ktx2") == in.filename.length() - 5||in.filename.rfind(".ktx") == in.filename.length() - 4)
+				size_t extPos=in.filename.rfind(".");
+				string ext=in.filename.substr(extPos,in.filename.length()-extPos);
+				if (ext==".basis"||ext==".ktx2"||ext==".ktx")
 				{
 					LoadAsBasisFile(textureData, in.readData(), in.filename);
+					textureData.extension=ext;
 					return in;
 				}
-				if (in.filename.rfind(".png") == in.filename.length() - 4)
+				if (ext==".png")
 				{
 					LoadAsPng(textureData, in.readData(), in.filename);
+					textureData.extension=ext;
 					return in;
 				}
-				in.readChunk(textureData.lastModified);
-				in >> textureData.texture;
+				LoadAsTeleportTexture(textureData, in.readData(), in.filename);
+					
+				//in >> textureData.texture;
+				textureData.extension = ".texture";
 				return in;
 			}
 		};

@@ -62,7 +62,7 @@ if(TELEPORT_CLIENT_SUPPORT_IPSME)
                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/mosquitto.dll)
 endif()
 
-add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS  OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
+add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE 
 	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ../libavstream/include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
@@ -160,11 +160,7 @@ install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT clie
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client COMPONENT client)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX12\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx12 COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\Vulkan\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\shaderbin\\\\Vulkan\\\\" DESTINATION pc_client/assets/shaders/vulkan COMPONENT client)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\firstparty\\\\Platform\\\\DirectX11\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders/directx11 COMPONENT client)
+install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders COMPONENT client)
 
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
   WriteRegStr HKCR 'Teleport' '' 'URL:Teleport Protocol'

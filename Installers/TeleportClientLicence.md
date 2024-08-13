@@ -1,8 +1,8 @@
 Teleport Client Binary Licence
 
-Version 1.0, January 2023
+Version 1.0, August 2024
 
-Copyright © Simul Software Ltd, all rights reserved.
+Copyright © Teleport XR Ltd, all rights reserved.
 
 Redistribution and use in binary form, without modification, are permitted provided that the following conditions are met:
 

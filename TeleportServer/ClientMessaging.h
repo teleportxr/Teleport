@@ -11,17 +11,10 @@
 #include "ServerSettings.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
-#include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Input.h"
 #include "Export.h"
 #include <libavstream/genericencoder.h>
-
-typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid client_uid, const avs::Pose*);
-typedef void(TELEPORT_STDCALL* SetControllerPoseFn) (avs::uid uid, int index, const avs::PoseDynamic*);
-typedef void(TELEPORT_STDCALL *ProcessNewInputStateFn)(avs::uid client_uid, const teleport::core::InputState *, const uint8_t **, const float **);
-typedef void(TELEPORT_STDCALL *ProcessNewInputEventsFn)(avs::uid client_uid, uint16_t, uint16_t, uint16_t, const avs::InputEventBinary **, const avs::InputEventAnalogue **, const avs::InputEventMotion **);
-typedef void(TELEPORT_STDCALL *DisconnectFn)(avs::uid client_uid);
-typedef void(TELEPORT_STDCALL *ReportHandshakeFn)(avs::uid client_uid, const teleport::core::Handshake *h);
+#include "Exports.h"
 
 namespace teleport
 {
@@ -180,7 +173,7 @@ namespace teleport
 			}
 			size_t SendCommand(const void* c, size_t sz) const;
 			bool SendSignalingCommand(std::vector<uint8_t>&& bin);
-
+			void Warn(const char *w) const;
 			template<typename C, typename T> size_t sendCommand(const C& command, const std::vector<T>& appendedList) const
 			{
 				size_t commandSize = sizeof(C);
@@ -206,7 +199,7 @@ namespace teleport
 			{
 				if (command.commandPayloadType != teleport::core::CommandPayloadType::SetupInputs)
 				{
-					TELEPORT_CERR << "Invalid command!\n";
+					Warn("Invalid command!\n");
 					return false;
 				}
 				size_t commandSize = sizeof(teleport::core::SetupInputsCommand);
@@ -219,7 +212,7 @@ namespace teleport
 					listSize += sizeof(char) * d.regexPath.length();
 					if (d.regexPath.length() >= (1 << 16))
 					{
-						TELEPORT_CERR << "Input path too long!\n";
+						Warn("Input path too long!\n");
 						return false;
 					}
 				}
@@ -239,7 +232,7 @@ namespace teleport
 				}
 				if (bin.data() + commandSize + listSize != data_ptr)
 				{
-					TELEPORT_CERR << "Failed to send command due to packet size discrepancy\n";
+					Warn("Failed to send command due to packet size discrepancy\n");
 					return false;
 				}
 

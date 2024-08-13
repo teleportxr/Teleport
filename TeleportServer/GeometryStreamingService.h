@@ -11,6 +11,7 @@
 #include "GeometryEncoder.h"
 #include "GeometryStore.h"
 #include "Export.h"
+#include "Exports.h"
 
 #if TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_DEBUG_NODE_STREAMING 1
@@ -22,14 +23,12 @@ namespace teleport
 {
 	namespace server
 	{
-		typedef bool(TELEPORT_STDCALL *ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
-		typedef bool(TELEPORT_STDCALL *ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 		class ClientMessaging;
 			//! A tracked resource. This keeps track of whether a resource has been sent to the client, when we sent it, and if we have an acknowledgement of the client receiving it.
 			//! The value clientNeeds may be false, if a resource was needed but is now not.
 			struct TrackedResource
 			{
-				bool clientNeeds=false;		// whether we THINK the client NEEDS the resource.
+				bool clientNeeds=true;		// whether we THINK the client NEEDS the resource.
 				bool sent=false;			// Whether we have actually sent the resource,
 				int64_t sent_server_time_us=0;// and when we sent it.
 				bool acknowledged=false;	// Whether the client acknowledged receiving the resource.

@@ -128,8 +128,7 @@ shader linkVertexOutput VS_Link_SV(idOnly IN)
 	return OUT;
 }
 
-shader linkVertexOutput VS_Link_MV(idOnly IN, uint viewID
-										   : SV_ViewID)
+shader linkVertexOutput VS_Link_MV(idOnly IN, uint viewID: SV_ViewID)
 {
 	mat4 this_view = viewID == 0 ? leftView : rightView;
 	uint vertex_id = IN.vertex_id;

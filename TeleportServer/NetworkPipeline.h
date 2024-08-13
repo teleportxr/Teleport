@@ -52,9 +52,14 @@ namespace teleport
 			avs::LockFreeQueue unreliableSendQueue;
 			avs::LockFreeQueue reliableReceiveQueue;
 			std::unique_ptr<avs::NetworkSink> mNetworkSink;
+
+			bool IsStreamingActive() const
+			{
+				return initialized&&!blocked;
+			}
 		private:
 			bool initialized = false;
-
+			std::atomic_bool blocked=false;
 			std::unique_ptr<avs::Pipeline> mPipeline;
 			avs::Result mPrevProcResult = avs::Result::OK;
 

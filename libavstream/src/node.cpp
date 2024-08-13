@@ -224,6 +224,14 @@ Result PipelineNode::isOutputLinked(int slot) const
 	return d().m_outputs[slot].targetNode ? Result::OK : Result::Node_NotLinked;
 }
 
+Result PipelineNode::process(uint64_t timestamp, uint64_t deltaTime)
+{
+#if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
+	measureBandwidth(deltaTime);
+#endif
+	return Result::OK;
+}
+
 PipelineNode *PipelineNode::getOutput(int slot)
 {
 	if (slot < 0 || size_t(slot) >= d().m_outputs.size())

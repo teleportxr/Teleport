@@ -3,14 +3,6 @@
 #include "libavstream/common.hpp"
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
-#include "TeleportCore/ErrorHandling.h"
-
-#define VERIFY_EQUALITY_CHECK(a, b)          \
-if (b != a.b)                                 \
-{                                             \
-	TELEPORT_WARN("Verify failed for {0}", #b); \
-	return false;                             \
-}
 
 namespace teleport
 {
@@ -77,7 +69,7 @@ namespace teleport
 				size_t smallest_size_remaining = n / sizeof(Vector3Keyframe);
 				if (smallest_size_remaining > in.getBytesRemaining())
 				{
-					TELEPORT_CERR << "Bad file " << in.filename << "\n";
+					std::cerr<< "Bad file " << in.filename << "\n";
 					return in;
 				}
 				k.positionKeyframes.resize(n);
@@ -92,7 +84,7 @@ namespace teleport
 				smallest_size_remaining = n / sizeof(Vector4Keyframe);
 				if (smallest_size_remaining > in.getBytesRemaining())
 				{
-					TELEPORT_CERR << "Bad file " << in.filename << "\n";
+					std::cerr << "Bad file " << in.filename << "\n";
 					return in;
 				}
 				k.rotationKeyframes.resize(n);
@@ -155,7 +147,7 @@ namespace teleport
 			{
 				if (in.filename.rfind(".teleport_anim") != in.filename.length() - strlen(".teleport_anim"))
 				{
-					TELEPORT_CERR << "Unknown animation file format for " << in.filename << "\n";
+					std::cerr<<  "Unknown animation file format for " << in.filename << "\n";
 					return in;
 				}
 				in >> animation.name;
@@ -165,7 +157,7 @@ namespace teleport
 				size_t smallest_size_remaining=n/sizeof(TransformKeyframeList);
 				if(smallest_size_remaining>in.getBytesRemaining())
 				{
-					TELEPORT_CERR << "Bad file " << in.filename << "\n";
+					std::cerr<< "Bad file " << in.filename << "\n";
 					return in;
 				}
 				animation.boneKeyframes.resize(n);

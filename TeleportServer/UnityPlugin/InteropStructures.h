@@ -234,28 +234,26 @@ struct InteropMaterial
 
 struct InteropTexture
 {
-	const char* name=nullptr;
-	const char* path=nullptr;
-
-	uint32_t width=0;
-	uint32_t height=0;
-	uint32_t depth=0;
-	uint32_t bytesPerPixel=0;
-	uint32_t arrayCount=0;
-	uint32_t mipCount=0;
-
-	avs::TextureFormat format;
-	avs::TextureCompression compression;
-	bool compressed=false;
-
-	uint32_t dataSize=0;
-	unsigned char* data=nullptr;
-
-	avs::uid sampler_uid = 0;
-
-	float valueScale=1.0f;
-
-	bool cubemap=false;
+	const char* name=nullptr;					  // 8 = 8
+	const char* path=nullptr;					  // 8 = 16
+	 											  //  
+	uint32_t width=0;							  // 4 = 20
+	uint32_t height=0;							  // 4 = 24
+	uint32_t depth=0;							  // 4 = 28
+	uint32_t bytesPerPixel=0;					  // 4 = 32
+	uint32_t arrayCount=0;						  // 4 = 36
+	uint32_t mipCount=0;						  // 4 = 40
+												  //  
+	avs::TextureFormat format;					  // 4 = 44
+	avs::TextureCompression compression;		  // 4 = 48
+	bool compressed=false;						  // 1 = 49
+												  //   
+	uint32_t dataSize=0;						  // 4 = 53
+	unsigned char* data=nullptr;				  // 8 = 61
+												  //  
+	float valueScale=1.0f;						  // 4 = 65
+												  //  
+	bool cubemap=false;							  // 1 = 66
 	operator avs::Texture() const
 	{
 		avs::Texture t=
@@ -264,15 +262,14 @@ struct InteropTexture
 			width,
 			height,
 			depth,
-			bytesPerPixel,
 			arrayCount,
 			mipCount,
+			cubemap,
 			format,
-			compression,
-			compressed,
-			sampler_uid,
+			bytesPerPixel,
 			valueScale,
-			cubemap
+			compression,
+			compressed
 		};
 		
 		uint8_t *src=(uint8_t *)data;
@@ -294,6 +291,7 @@ struct InteropTexture
 		return t;
 	}
 };
+static_assert (sizeof(InteropTexture) == 66, "InteropTexture Size is not correct");
 
 struct InteropTransformKeyframe
 {
