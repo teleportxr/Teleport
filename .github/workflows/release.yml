@@ -7,7 +7,7 @@ on:
       - created
 
 jobs:
-  build:
+  deploy:
     runs-on: windows-2022
     timeout-minutes: 20
     env:
@@ -21,10 +21,7 @@ jobs:
       uses: Legit-Labs/action-download-artifact@v2.18.0
       with:
         github_token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
-        workflow: Build PC Client
-        branch: main
-        name: installer
-        path: ./installer
+        workflow: build_pc_client
     - name: Download a Build Artifact
       uses: actions/download-artifact@v4.1.8
       with:
