@@ -29,7 +29,7 @@ jobs:
     - name: Dotenv Action
       uses: falti/dotenv-action@v1.1.2
       with:
-        path: teleport_release.properties
+        path: installer/teleport_commit.properties
         log-variables: true
         export-variables: true
     - name: Create Release
