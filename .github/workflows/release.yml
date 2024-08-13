@@ -33,10 +33,11 @@ jobs:
         log-variables: true
         export-variables: true
     - name: Create Release
-      uses: elgohr/Github-Release-Action@v5
+      uses: ncipollo/release-action@v1.14.0
       env:
         GH_TOKEN: ${{secrets.TELEPORT_GENERIC_TOKEN}}
       with:
-        body_path: installer/release_notes.md
-        files: installer/*.exe
-        fail_on_unmatched_files: true
+        artifacts: "installer/*.exe,installer/release_notes.md"
+        bodyFile: "installer/release_notes.md"
+        skipIfReleaseExists: true
+        artifactErrorsFailBuild: true
