@@ -17,11 +17,21 @@ jobs:
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
 
     steps:
+    - name: Download artifact
+      id: download-artifact
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        workflow: build_pc_client.yml
     - name: Safe download workflow artifact
       uses: Legit-Labs/action-download-artifact@v2.18.0
       with:
         github_token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
         workflow: build_pc_client
+        branch: main
+        check_artifacts: true
+        search_artifacts: true
+        if_no_artifact_found: ignore
     - name: Download a Build Artifact
       uses: actions/download-artifact@v4.1.8
       with:
