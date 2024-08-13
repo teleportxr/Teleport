@@ -26,10 +26,6 @@ jobs:
     - name: Show
       run: |
         ls -R .
-    - name: Log
-      shell: cmd
-      run: |
-        git log -1 --pretty=%B>>release_notes.md
     - name: Dotenv Action
       uses: falti/dotenv-action@v1.1.2
       with:
@@ -41,6 +37,6 @@ jobs:
       env:
         GH_TOKEN: ${{secrets.TELEPORT_GENERIC_TOKEN}}
       with:
-        body_path: release_notes.md
+        body_path: installer/release_notes.md
         files: installer/*.exe
         fail_on_unmatched_files: true
