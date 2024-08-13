@@ -37,7 +37,7 @@ jobs:
       env:
         GH_TOKEN: ${{secrets.TELEPORT_GENERIC_TOKEN}}
       with:
-        artifacts: "installer/*.exe,installer/release_notes.md"
+        artifacts: "installer/*.exe"
         bodyFile: "installer/release_notes.md"
         skipIfReleaseExists: true
         artifactErrorsFailBuild: true
