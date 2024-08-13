@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build_pc_client:
+  build:
     runs-on: windows-2022
     timeout-minutes: 90
     env:
