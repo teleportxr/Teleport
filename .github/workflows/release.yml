@@ -28,7 +28,7 @@ jobs:
     - name: Download a Build Artifact
       uses: actions/download-artifact@v4.1.8
       with:
-        github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
+        github-token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
         name: installer
         # Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE
