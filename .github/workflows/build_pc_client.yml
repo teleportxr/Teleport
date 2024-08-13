@@ -31,6 +31,7 @@ jobs:
     - name: Log
       shell: cmd
       run: |
+        git log -1 --pretty=%B>>release_notes.md
         echo|set /p=TELEPORT_COMMIT=>teleport_commit.properties
         git rev-parse --short HEAD>>teleport_commit.properties
         echo GITHUB_ENV $GITHUB_ENV
@@ -91,12 +92,17 @@ jobs:
       run: ctest -C ${{env.WORKFLOW_BUILD_TYPE}}
     - name: Installer
       run: |
+        mkdir artifacts
         cd build_pc_client
         CPack -C CPackConfig.cmake
+        cd ${{github.workspace}}
+        copy build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe artifacts/
+        copy teleport_commit.properties  artifacts/
+        copy release_notes.md  artifacts/
     - uses: actions/upload-artifact@v4.3.6
       with:
         name: installer
-        path: ${{github.workspace}}/build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe
+        path: artifacts/*.*
         github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
     - name: Setup tmate session
       if: failure()
