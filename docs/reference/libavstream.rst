@@ -8,7 +8,7 @@ LibAVStream is a helper library for streaming video and geometry data between a 
 
 A pipeline operates on a single thread, while queues allow threads to exchange data. For example, the server's Network pipeline connects several avs::Queue instances to a single avs::NetworkSink. For example, the video encoding pipeline links an avs::Surface that receives raw video frames, to an avs::Encoder, and finally to a queue. On another thread, the same queue in the network pipeline passes the data to the avs::NetworkSink.
 
-LibAVStream uses Enet for UDP datagram control. It uses SRT and EFP over UDP for data stream reliability and deliverability.
+LibAVStream EFP over WebRTC for data stream reliability and deliverability.
 
 .. figure:: /images/reference/ExamplePipeline.png
 	:width: 800

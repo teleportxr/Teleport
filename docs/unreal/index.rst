@@ -1,60 +1,35 @@
-##################
-Teleport Unity SDK
-##################
+###################
+Teleport Unreal SDK
+###################
 
-The Teleport Unity SDK provides everything necessary to run a Teleport server as a Unity application. In typical usage, only the server need run Unity - the client
-will be a standard Teleport client app such as the Teleport reference client.
+The Teleport Unreal SDK provides everything necessary to run a Teleport server as an Unreal Engine 5 application. In typical usage, only the server need run Unreal Engine - the client will be a standard Teleport client app such as the Teleport reference client.
 
 Getting Started
 ===============
-You can:
-
-	* Get the example project TeleportUnityExample, or
-	* Install the plugin to an existing project.
-
-Get the Example Project
------------------------
-You can download a minimal example Unity project for Teleport at `git@github.com:simul/TeleportUnityExample.git <https://github.com/simul/TeleportUnityExample>`_.
-Be sure to update the submodules: the actual Teleport plugin is a submodule at Assets/Teleport in the example repo.
+These instructions are for Windows platforms, Linux and MacOS support is to follow.
 
 Install the plugin to an existing project
 -----------------------------------------
-Get the Teleport Unity plugin from its Git repo at `git@github.com:simul/teleport-unity.git <https://github.com/simul/teleport-unity>`_.
+Get the Teleport Unreal Engine plugin from its Git repo at `git@github.com:simul/teleport-unreal.git <https://github.com/simul/teleport-unreal>`_.
 
-Or download it as a .unitypackage from `https://teleportvr.io/downloads <https://teleportvr.io/downloads>`_.
+You can install it as a Git submodule or copy the code directly, it should go in a subfolder of your Unreal Engine project called Teleport:
 
-You can install it as a Git submodule or copy the code directly, it should go in a subfolder of your Unity project's Assets folder, e.g. Assets/Teleport.
+[GAME FOLDER]/Plugins/Teleport
 
-From your unity project, launch the Package Manager, and install the Core RP Library.
+Regenerate your game project (e.g by right-clicking on the [GAME].uproject file and selecting "Generate Visual Studio Project Files").
 
-Building the Unity Server from Source
--------------------------------------
-If you've installed the Teleport Unity SDK as a prebuilt package, you're ready to go. But if you're building the Teleport C++ Server SDK from source, you'll need to follow the instructions in the Server section of this documentation.
-Use CMakeGui to set:
 
-* TELEPORT_UNITY to true
-* TELEPORT_UNITY_EDITOR_DIR to the folder where Unity.exe resides.
-* TELEPORT_UNITY_PLUGINS_DIR to the folder Plugins/x86_64 in the Teleport Unity assets folder, so that the C++ SDK will build TeleportServer.dll to that directory.
-* TELEPORT_UNITY_PROJECT_DIR to the root folder of your Unity project.
-
-Then build the Teleport_Server_Unity.sln solution. You can run Unity as normal, or debug the C++ code by setting TeleportServer as the active C++ project in the solution, and launching it for debugging.
+Then build the [GAME].sln solution. You can run Unreal as normal, or debug the C++ code by setting TeleportServer as the active C++ project in the solution, and launching it for debugging.
 
 Configuration
 =============
 First, activate the Teleport render pipeline. This adds functionality for video streaming and lighting generation. In the *Edit* menu, under *Project Settings...*, select *Graphics*. Set the Scriptable Render Pipeline Settings
 object to point to the Default Teleport Render Pipeline, found in Teleport/Resources.
 
-.. image:: RenderPipelineAsset.png
-  :width: 600
-  :alt: Activate the Teleport render pipeline in the Project Settings/Graphics panel.
-
-**Graphics Project Settings panel**
-
-You can also create a Teleport Render Pipeline asset in the Content window with Create/Rendering/Teleport Render Pipeline Asset.
 
 For global settings for the plugin, in the Project Settings panel, select *Teleport VR*.
 
-.. image:: /images/unity/ProjectSettings.png
+.. image:: /images/unreal/ProjectSettings.png
   :width: 600
   :alt: Teleport has a page on the Project Settings panel.
 
@@ -62,21 +37,21 @@ For global settings for the plugin, in the Project Settings panel, select *Telep
 
 Resource Management
 ===================
-Resources in a Unity project can be streamed to clients if they have been *extracted* - i.e. if they have been converted to and stored in, the standard formats that the Teleport protocol uses.
+Resources in a Unreal project can be streamed to clients if they have been *extracted* - i.e. if they have been converted to and stored in, the standard formats that the Teleport protocol uses.
 
-.. image:: /images/unity/TeleportMenu.png
+.. image:: /images/Unreal/TeleportMenu.png
   :width: 600
   :alt: Selecting the Resource Manager option in the Teleport Menu.
 
-Select the "Teleport VR" menu from Unity Editor's menu bar, and click on "Resource Manager". The Resource Manager window will open.
+Select the "Teleport VR" menu from Unreal Editor's menu bar, and click on "Resource Manager". The Resource Manager window will open.
 
-.. image:: /images/unity/ResourceManager.png
+.. image:: /images/Unreal/ResourceManager.png
   :width: 600
-  :alt: Teleport Resource Manager in the Unity Editor.
+  :alt: Teleport Resource Manager in the Unreal Editor.
 
 To extract all streamable resources in a scene, click "Scene Geometry: Extract". This is all you will usually need to do.
 To extract the resources of a specific object, select it and click the "Selected Geometry: Extract" button. 
-Separately, you can also extract the Global Illumination textures (generated by Unity from static lights), or the Dynamic Object Lighting Textures: these are the cubemaps for specular and diffuse lighting
+Separately, you can also extract the Global Illumination textures (generated by Unreal from static lights), or the Dynamic Object Lighting Textures: these are the cubemaps for specular and diffuse lighting
 generated by the Monitor.
  
 There are two main Ways to setup objects for streaming:
@@ -87,11 +62,11 @@ There are two main Ways to setup objects for streaming:
 
 Usage
 =====
-You can create a GameObject in Unity that has the Monitor component. If not, one will be created when you run the project.
+You can create a GameObject in Unreal that has the Monitor component. If not, one will be created when you run the project.
 
 When running, the server awaits connections via the Teleport protocol. When a client connects, the server creates a player instance.
 
-A client, when connected, will maintain a list of Nodes (i.e. GameObjects in Unity) that are relevant to it. The space around the client's
+A client, when connected, will maintain a list of Nodes (i.e. GameObjects in Unreal) that are relevant to it. The space around the client's
 own position is called its Area of Interest (AOI). The server will send it updates for all Nodes within its AOI. 
 
 Inputs
@@ -99,11 +74,11 @@ Inputs
 To show the Inputs Panel, select Inputs from the Teleport VR menu on the main menu bar.
 Here, you can specify the inputs you want to receive from connected clients.
 
-.. image:: /images/unity/InputsPanel.png
+.. image:: /images/Unreal/InputsPanel.png
   :width: 600
   :alt: Teleport has a page on the Project Settings panel.
 
-**Teleport Inputs Panel in Unity Editor**
+**Teleport Inputs Panel in Unreal Editor**
 
 There are three elements to each input. The Name is arbitrary, but should be unique in the application. The Type specifies what kind of input this is. A Float input is floating-point, while a boolean is either on or off, true or false. A state input is updated continuously, whereas an Event input is only updated when it changes. Finally, the input's *Path* is how the client knows what to map it to.
 
@@ -149,26 +124,26 @@ Teleport cannot map OpenXR Pose actions to inputs, these are handled differently
 
 Pose Mapping
 ------------
-XR devices such as headsets, handsets and trackers report their state as a "pose", containing position and orientation in space. These poses can be mapped to spatial nodes using the Teleport Controller component in Unity.
+XR devices such as headsets, handsets and trackers report their state as a "pose", containing position and orientation in space. These poses can be mapped to spatial nodes using the Teleport Controller component in Unreal.
 
-.. image:: /images/unity/TeleportController.png
+.. image:: /images/Unreal/TeleportController.png
   :width: 600
   :alt: Inspector properties of a teleport Controller component.
 
-==Teleport controller component in Unity Inspector==
+==Teleport controller component in Unreal Inspector==
 
 The "Pose Regex Path" for a controller is matched client-side to an OpenXR path representing a pose state. When this mapping occurs, the object will be controlled directly by the tracked controller on the client. The Teleport_Controller component can be added to any child of a Teleport_SessionComponent Game Object.
 
 Player Session Hierarchy
 ========================
 
-Typically, the Unity Game Objects would be arranged as follows in Unity:
+Typically, the Unreal Game Objects would be arranged as follows in Unreal:
 
-.. image:: /images/unity/PlayerHierarchy.png
+.. image:: /images/Unreal/PlayerHierarchy.png
   :alt: Example player prefab hierarchy.
   :width: 400
 
-==Typical session and player hierarchy in Unity==
+==Typical session and player hierarchy in Unreal==
 
 i.e. at the root, an object containing a Teleport_Session Component, which tracks client-specific session data. Below this, a Player object which may move in space. Below that, two controllers and a head tracking object.
 
@@ -187,35 +162,35 @@ Global
 ~~~~~~
 
  doxygenclass:: teleport::TeleportSettings
-	project: TeleportUnity
+	project: TeleportUnreal
 	members:
 
 Singleton Components
 ~~~~~~~~~~~~~~~~~~~~
 
 .. doxygenclass:: teleport::Monitor
-	:project: TeleportUnity
+	:project: TeleportUnreal
 	:members:
 
 .. doxygenclass:: teleport::TagHandler
-	:project: TeleportUnity
+	:project: TeleportUnreal
 	:members:
 	
 .. doxygenclass:: teleport::Teleport_SessionComponent
-	:project: TeleportUnity
+	:project: TeleportUnreal
 	:members:
 
 Components
 ~~~~~~~~~~
 
 .. doxygenclass:: teleport::StreamableRoot
-	:project: TeleportUnity
+	:project: TeleportUnreal
 	:members:
 
 .. doxygenclass:: teleport::StreamableNode
-	:project: TeleportUnity
+	:project: TeleportUnreal
 	:members:
 
 .. doxygenclass:: teleport::StreamableProperties
-	:project: TeleportUnity
+	:project: TeleportUnreal
 	:members:

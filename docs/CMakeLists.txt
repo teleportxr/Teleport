@@ -39,6 +39,34 @@ add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE} ${DOXYFILE_IN} ${DOX
 set_target_properties( Doxygen PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS -Dbreathe_projects.TeleportVR=${DOXYGEN_OUTPUT_DIR}/xml)
 
+# Now a Doxygen project to build the Unreal C# docs.
+set(TELEPORT_DOXYGEN_UNREAL_INPUT_DIR ${TELEPORT_ROOT_DIR}/firstparty/teleport-unreal)
+set(DOXYGEN_UNREAL_INPUT_DIR ${TELEPORT_DOXYGEN_UNREAL_INPUT_DIR})
+set(DOXYGEN_UNREAL_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_unreal)
+set(DOXYGEN_UNREAL_INDEX_FILE ${DOXYGEN_UNREAL_OUTPUT_DIR}/xml/index.xml)
+set(DOXYFILE_UNREAL_IN ${CMAKE_CURRENT_SOURCE_DIR}/DoxyfileUnreal.in)
+set(DOXYFILE_UNREAL_OUT ${CMAKE_CURRENT_BINARY_DIR}/DoxyfileUnreal)
+#Replace variables inside @@ with the current values
+configure_file(${DOXYFILE_UNREAL_IN} ${DOXYFILE_UNREAL_OUT} @ONLY)
+file(MAKE_DIRECTORY ${DOXYGEN_UNREAL_OUTPUT_DIR}) #Doxygen won't create this for us
+
+message("add_custom_target(DoxygenUnreal ALL
+					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNREAL_OUT}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					DEPENDS ${DOXYGEN_UNREAL_INDEX_FILE}
+					MAIN_DEPENDENCY ${DOXYGEN_UNREAL_INDEX_FILE}
+					COMMENT Generating Unreal docs
+					SOURCES ${DOXYFILE_UNREAL_IN})")
+add_custom_target(DoxygenUnreal ALL
+					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNREAL_OUT}
+					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					DEPENDS ${DOXYGEN_UNREAL_INDEX_FILE}
+					MAIN_DEPENDENCY ${DOXYGEN_UNREAL_INDEX_FILE}
+					COMMENT "Generating Unreal docs"
+					SOURCES ${DOXYFILE_UNREAL_IN})
+set_target_properties( DoxygenUnreal PROPERTIES FOLDER Docs)
+set(FIND_DOXYGEN_OUTPUTS ${FIND_DOXYGEN_OUTPUTS} -Dbreathe_projects.TeleportUnreal=${DOXYGEN_UNREAL_OUTPUT_DIR}/xml)
+
 # Now a Doxygen project to build the Unity C# docs.
 set(TELEPORT_DOXYGEN_UNITY_INPUT_DIR ${TELEPORT_ROOT_DIR}/firstparty/teleport-unity)
 set(DOXYGEN_UNITY_INPUT_DIR ${TELEPORT_DOXYGEN_UNITY_INPUT_DIR})
@@ -73,7 +101,7 @@ find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sphinx) #Sphinx won't create this for us
-file(GLOB RST_FILES "*.rst" ) 
+file(GLOB RST_ROOT_FILES "*.rst" )
 file(GLOB PY_FILES "*.py" ) 
 file(GLOB THEME_FILES "teleport_sphinx_theme/*.html" ) 
 file(GLOB THEME_CSS_FILES "teleport_sphinx_theme/static/css/*.css" ) 
@@ -83,17 +111,22 @@ file(GLOB RST_PROTOCOL_FILES "protocol/*.rst" )
 file(GLOB RST_PROTOCOL_SERVICE_FILES "protocol/service/*.rst" )
 file(GLOB RST_UNITY_FILES "unity/*.rst" )
 file(GLOB RST_CLIENT_FILES "client/*.rst" )
+file(GLOB RST_UNREAL_FILES "unreal/*.rst" )
+file(GLOB RST_NODEJS_FILES "nodejs/*.rst" )
 
 #message("teleportrenderer_HEADER_DIRS ${teleportrenderer_HEADER_DIRS}")
 source_group("Theme" FILES ${THEME_FILES} )
 source_group("Theme/Css" FILES ${THEME_CSS_FILES} )
-source_group("Documentation" FILES ${RST_FILES} )
+source_group("Documentation" FILES ${RST_ROOT_FILES} )
 source_group("Documentation/Reference" FILES ${RST_REF_FILES} )
 source_group("Documentation/Protocol" FILES ${RST_PROTOCOL_FILES} )
 source_group("Documentation/Protocol/Service" FILES ${RST_PROTOCOL_SERVICE_FILES} )
 source_group("Documentation/Unity" FILES ${RST_UNITY_FILES} )
 source_group("Documentation/Client" FILES ${RST_CLIENT_FILES} ) 
-set(ALL_RST_FILES ${RST_FILES} ${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES} ${RST_UNITY_FILES} ${RST_CLIENT_FILES} ${THEME_FILES} ${THEME_CSS_FILES} ${PY_FILES})
+source_group("Documentation/Unreal" FILES ${RST_UNREAL_FILES} )
+source_group("Documentation/NodeJS" FILES ${RST_NODEJS_FILES} )
+set(RST_FILES ${RST_ROOT_FILES} ${RST_REF_FILES} ${RST_PROTOCOL_FILES} ${RST_PROTOCOL_SERVICE_FILES} ${RST_UNITY_FILES} ${RST_CLIENT_FILES} ${RST_UNREAL_FILES} ${RST_NODEJS_FILES})
+set(ALL_RST_FILES ${RST_FILES} ${THEME_FILES} ${THEME_CSS_FILES} ${PY_FILES})
 add_custom_target(Sphinx ALL
 					COMMAND
 					${SPHINX_EXECUTABLE} -b html

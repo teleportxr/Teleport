@@ -17,8 +17,8 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Teleport VR'
-copyright = '2018-2024, Simul Software Ltd'
+project = 'Teleport XR'
+copyright = '2018-2024, Teleport XR Ltd'
 author = 'Roderick Kennedy'
 
 
@@ -62,7 +62,7 @@ html_theme_path = ["."]
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-breathe_default_project = "TeleportVR"
+breathe_default_project = "TeleportXR"
 breathe_show_include = True
 # Don't ignore cpp files if that's where the documentation is found.
 breathe_implementation_filename_extensions = []

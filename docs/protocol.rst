@@ -12,7 +12,7 @@ Teleport is a top-level application-layer protocol. It can use various means of 
    :widths: 5 30
    :header-rows: 0
     
-   * - Teleport VR
+   * - Teleport XR
      - Real-time client-server interface of a virtual world. 
    * - WebRTC/libavstream/UDP-based transport
      - Any protocol that supports streams and datagrams
