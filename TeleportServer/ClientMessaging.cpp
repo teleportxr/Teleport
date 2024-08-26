@@ -12,6 +12,7 @@
 #include "ClientManager.h"
 #include "TeleportCore/StringFunctions.h"
 #include "TeleportCore/Logging.h"
+#include "GeometryStore.h"
 
 using namespace teleport;
 using namespace server;
@@ -90,6 +91,45 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 	// messages to be sent as text e.g. WebRTC config.
 }
 
+void ClientMessaging::sendNodeMovementUpdates()
+{
+	auto axesStandard = getClientNetworkContext()->axesStandard;
+	if(axesStandard==avs::AxesStandard::NotInitialized)
+		return;
+	std::set<avs::uid> nodes_to_update_movement;
+	geometryStreamingService.getNodesToUpdateMovement(nodes_to_update_movement,GetServerTimeUs());
+	GeometryStore &geometryStore=GeometryStore::GetInstance();
+
+
+	size_t numUpdates=nodes_to_update_movement.size();
+	std::vector<teleport::core::MovementUpdate> updateList(numUpdates);
+	
+	int64_t server_time_us = GetServerTimeUs();
+	size_t i=0;
+	for (avs::uid nodeID : nodes_to_update_movement)
+	{
+		avs::Node *avsNode=geometryStore.getNode(nodeID);
+		auto &u=updateList[i];
+		u.isGlobal=false;
+		u.nodeID=nodeID;
+		u.server_time_us=server_time_us;
+		u.position=avsNode->localTransform.position;
+		u.rotation=avsNode->localTransform.rotation;
+		u.scale=avsNode->localTransform.scale;
+		u.velocity={0,0,0};
+		u.angularVelocityAxis={0,0,0};
+		u.angularVelocityAngle=0.0f;
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.position);
+		avs::ConvertRotation(serverSettings.serverAxesStandard, axesStandard, u.rotation);
+		avs::ConvertScale	(serverSettings.serverAxesStandard, axesStandard, u.scale);
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.velocity);
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.angularVelocityAxis);
+		i++;
+
+	}
+	updateNodeMovement(updateList);
+}
+
 void ClientMessaging::tick(float deltaTime)
 {
 	TELEPORT_PROFILE_AUTOZONE;
@@ -119,6 +159,7 @@ void ClientMessaging::tick(float deltaTime)
 	else
 	{
 		commandPipeline.SetPipelineBlocked(false);
+		sendNodeMovementUpdates();
 	}
 	avs::Result messageResult = messagePipeline.process();
 	

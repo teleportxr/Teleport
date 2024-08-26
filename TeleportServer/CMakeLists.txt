@@ -84,6 +84,15 @@ if(TELEPORT_UNITY)
 else()
 	add_library(TeleportServer SHARED ${src})
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_EXPORT_SERVER_DLL=1 TELEPORT_SERVER_DLL=1)
+	file(GLOB TELEPORT_PUBLIC_HEADERS "*.h")
+	message( "ROBOCOPY ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include *.h")
+    add_custom_command(
+        TARGET TeleportServer
+        POST_BUILD
+        COMMAND ROBOCOPY "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include" /s *.h;ROBOCOPY "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include" /s *.hpp
+        COMMENT "Copying headers to ${CMAKE_BINARY_DIR}/include"
+    )
+	file(COPY ${TELEPORT_PUBLIC_HEADERS} DESTINATION ${CMAKE_BINARY_DIR}/include)
 endif()
 
 if(NOT "${TELEPORT_SERVER_DLL_DIR}" STREQUAL "")
@@ -129,7 +138,7 @@ if(UNIX)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream basisu efp fmt LibDataChannel::LibDataChannelStatic )
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream basisu efp fmt LibDataChannel::LibDataChannelStatic ktx )
 if(WIN32)
 	target_link_libraries(TeleportServer draco winmm d3d12 Secur32.lib)
 else()

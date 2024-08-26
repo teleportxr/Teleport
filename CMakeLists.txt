@@ -51,6 +51,19 @@ else()
 endif()
 Include(FetchContent)
 
+# Get the Khronos ktx2 repo
+set(KTX_FEATURE_TOOLS OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  ktx
+  GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
+  GIT_TAG        v4.3.2
+  SOURCE_DIR ktx
+)
+FetchContent_MakeAvailable(ktx)
+
+
 # Get the "safe" header library for lockable resources
 FetchContent_Declare(
   safe

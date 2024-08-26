@@ -295,6 +295,7 @@ namespace teleport
 			static constexpr float startSessionTimeout = 3;
 			mutable core::ClientNetworkState clientNetworkState;
 			teleport::core::SetupCommand lastSetupCommand;
+			void sendNodeMovementUpdates();
 		};
 	}
 }

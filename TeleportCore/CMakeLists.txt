@@ -51,3 +51,6 @@ target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/src)
 target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/third_party/eigen)
 target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/third_party/tinygltf)
  
+#ktx
+target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR}/ktx/include)
+target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR}/ktx/lib)

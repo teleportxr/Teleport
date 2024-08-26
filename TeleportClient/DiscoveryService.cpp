@@ -1,6 +1,7 @@
 #include "DiscoveryService.h"
 #include "Log.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Logging.h"
 #include "TeleportCore/CommonNetworking.h"
 #define RTC_ENABLE_WEBSOCKET 1
 #include <rtc/websocket.hpp>
@@ -71,6 +72,16 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	}
 	signalingServer->Reset();
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
+	if(!ws)
+	{
+		InitSocket(server_uid);
+		ws = signalingServer->webSocket;
+		if(!ws)
+		{
+			TELEPORT_WARN("Failed to reset connection, webSocket is null.");
+			return;
+		}
+	}
 	size_t first_slash=url.find('/');
 	std::string base_url = url;
 	std::string path;
@@ -86,7 +97,8 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	{ 
 		try
 		{
-			ws->open(ws_url);
+			if(ws)
+				ws->open(ws_url);
 		}
 		catch(std::exception& e)
 		{

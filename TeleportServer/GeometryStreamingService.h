@@ -61,7 +61,8 @@ namespace teleport
 				,std::set<avs::uid>& animations
 				,std::set<avs::uid>& textCanvases
 				,std::set<avs::uid>& fontAtlases) const;
-
+				
+			void getNodesToUpdateMovement(std::set<avs::uid>& nodes_to_update_movement,int64_t timestamp);
 			virtual avs::AxesStandard getClientAxesStandard() const override;
 			virtual avs::RenderingFeatures getClientRenderingFeatures() const override;
 
@@ -88,6 +89,7 @@ namespace teleport
 			//! From the list of uid's given, which do we not think the client has?
 			size_t GetNewUIDs(std::vector<avs::uid>& outUIDs);
 		protected:
+			int64_t movement_update_timestamp=0;
 			std::set<avs::uid> streamed_node_uids;
 			avs::uid originNodeId = 0;
 			int32_t priority = 0;

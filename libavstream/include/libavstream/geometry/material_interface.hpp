@@ -150,7 +150,8 @@ namespace avs
 		D32F,
 		RGBA32F,
 		RGB8,
-		MAX
+		MAX,
+		UNKNOWN=INVALID
 	};
 	
 	enum class TextureCompression : uint32_t
@@ -211,39 +212,12 @@ namespace avs
 			TELEPORT_VERIFY(t.bytesPerPixel, bytesPerPixel);
 			TELEPORT_VERIFY(t.arrayCount, arrayCount);
 			TELEPORT_VERIFY(t.mipCount, mipCount);
-			TELEPORT_VERIFY(t.format, format);
+			// If we're loading a compressed texture, we may not know or care what the original format was.
+			// So no need to check if it matches.
+			if(t.format!=avs::TextureFormat::UNKNOWN&&format!=avs::TextureFormat::UNKNOWN)
+				TELEPORT_VERIFY(t.format, format);
 			TELEPORT_VERIFY(t.compression, compression);
 			TELEPORT_VERIFY(t.valueScale, valueScale);
-			const unsigned char* start1 = (const unsigned char*)&width;
-			const unsigned char* end1 = (const unsigned char*)&compressed+sizeof(compressed);
-			const unsigned char* start2 = (const unsigned char*)&t.width;
-			const unsigned char *end2 = (const unsigned char *)&t.compressed + sizeof(t.compressed);
-			auto c = memcmp(start1, start2, size_t(end1 - start1));
-			if (c != 0)
-			{
-			// memory check fails but could be junk data in between aligned members, so check individually:
-				TELEPORT_VERIFY(width ,t.width);
-				if (height != t.height)
-					return false;
-				if (depth != t.depth)
-					return false;
-				if (bytesPerPixel != t.bytesPerPixel)
-					return false;
-				if (arrayCount != t.arrayCount)
-					return false;
-				if (mipCount != t.mipCount)
-					return false;
-				if (format != t.format)
-					return false;
-				if (compression != t.compression)
-					return false;
-				if (compressed != t.compressed)
-					return false;
-				if (valueScale != t.valueScale)
-					return false;
-				if (cubemap != t.cubemap)
-					return false;
-			}
 			if(compressedData.size()&&t.compressedData.size()){
 				TELEPORT_VERIFY(compressedData.size(), t.compressedData.size());
 				auto compressedDataCompare = memcmp(compressedData.data(), t.compressedData.data(), t.compressedData.size());

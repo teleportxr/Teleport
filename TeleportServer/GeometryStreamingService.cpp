@@ -123,13 +123,13 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 		{
 			TELEPORT_WARN_NOSPAM("Null node {0}",u);
 			continue;
-			}
+		}
 		if(streamedNodes.find(u)==streamedNodes.end())
 		{
 			// Not yet added.
 			if(node->priority<lowest_confirmed_node_priority)
 				continue;
-			if (node->priority < minimumPriority)
+			if (node->priority < minimumPriority&&u!=originNodeId)
 				continue;
 			AddNodeAndItsResourcesToStreamed(u);
 		}
@@ -294,6 +294,20 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 	stream(streamedFontAtlases,fontAtlases);
 }
 
+void GeometryStreamingService::getNodesToUpdateMovement(std::set<avs::uid>& nodes_to_update_movement,int64_t timestamp)
+{
+	// The nodes we have sent is nodesToStream.
+	nodes_to_update_movement.clear();
+	for(avs::uid u:nodesToStream)
+	{
+		avs::Node *avsNode=geometryStore->getNode(u);
+		if(!avsNode->stationary)
+			nodes_to_update_movement.insert(u);
+	}
+	// of these, which are non-stationary, and have been updated since the last timestamp?
+	
+	movement_update_timestamp=timestamp;
+}
 
 avs::AxesStandard GeometryStreamingService::getClientAxesStandard() const
 {
