@@ -6,9 +6,7 @@
 #include "TeleportServer/ClientManager.h"    
 #include "TeleportCore/TeleportUtility.h" 
 #include "TeleportCore/Logging.h" 
-#include "TeleportCore/Profiling.h" 
-#include "UnityPlugin/PluginMain.h"
-#include "UnityPlugin/PluginClient.h"
+#include "TeleportCore/Profiling.h"
 #include <rtc/websocket.hpp>
 #include <rtc/websocketserver.hpp>
 #include <functional>

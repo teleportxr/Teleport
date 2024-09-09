@@ -171,13 +171,11 @@ namespace teleport
 				std::string file_name;
 				file_name += path;
 				std::string &s=const_cast<std::string&>(extension);
-				if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED)
+				if (texture.compression == avs::TextureCompression::BASIS_COMPRESSED||texture.compression == avs::TextureCompression::KTX)
 					s= ".ktx2";
 				else if (texture.compression == avs::TextureCompression::PNG)
 					s= ".texture";
 				file_name+=extension;
-				// if (resource.texture.compression == avs::TextureCompression::KTX)
-				//		file_name += ".ktx";
 				return file_name;
 			}
 
@@ -234,9 +232,15 @@ namespace teleport
 			{
 				size_t extPos=in.filename.rfind(".");
 				string ext=in.filename.substr(extPos,in.filename.length()-extPos);
-				if (ext==".basis"||ext==".ktx2"||ext==".ktx")
+				if (ext==".basis")
 				{
 					LoadAsBasisFile(textureData, in.readData(), in.filename);
+					textureData.extension=ext;
+					return in;
+				}
+				if (ext==".ktx2"||ext==".ktx")
+				{
+					LoadAsKtxFile(textureData, in.readData(), in.filename);
 					textureData.extension=ext;
 					return in;
 				}

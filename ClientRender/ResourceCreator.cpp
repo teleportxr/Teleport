@@ -13,6 +13,7 @@
 #include "draco/compression/decode.h"
 #include <fmt/core.h>
 #include <fstream>
+#include <ktx.h>
 #include "NodeComponents/SubSceneComponent.h"
 #include "TeleportClient/Config.h"
 #ifdef _MSC_VER
@@ -74,7 +75,7 @@ void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform* r, cli
 		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.x),
 		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.y),
 		static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.z),
-		4, 1, 1,
+		1, 1,
 		//clientrender::Texture::Slot::UNKNOWN,
 		clientrender::Texture::Type::TEXTURE_2D,
 		clientrender::Texture::Format::RGBA8,
@@ -1281,6 +1282,44 @@ bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fil
 #endif
 	return true;
 }
+
+#include <vkformat_enum.h>
+static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
+{
+	switch(f)
+	{
+	    // Compression formats ------------ GPU Mapping DirectX, Vulkan and OpenGL formats and comments --------
+    // Compressed Format 0xSnn1..0xSnnF   (Keys 0x00Bv..0x00Bv) S =1 is signed, 0 = unsigned, B =Block Compressors 1..7 (BC1..BC7) and v > 1 is a variant like signed or swizzle
+    case VK_FORMAT_BC2_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format with explicit alpha for Microsoft DirectX10. Identical to DXT3. Eight bits per pixel.
+    case VK_FORMAT_BC3_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format with interpolated alpha for Microsoft DirectX10. Identical to DXT5. Eight bits per pixel.
+    case VK_FORMAT_BC4_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
+    case VK_FORMAT_BC4_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                  // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
+    case VK_FORMAT_BC5_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
+    case VK_FORMAT_BC5_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
+    case VK_FORMAT_BC6H_UFLOAT_BLOCK: return clientrender::Texture::Format::RGBA16F;  //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK 
+	default:
+		return clientrender::Texture::Format::FORMAT_UNKNOWN;
+	};
+}
+static teleport::clientrender::Texture::CompressionFormat VkFormatToCompressionFormat(VkFormat f)
+{
+	switch(f)
+	{
+	    // Compression formats ------------ GPU Mapping DirectX, Vulkan and OpenGL formats and comments --------
+    // Compressed Format 0xSnn1..0xSnnF   (Keys 0x00Bv..0x00Bv) S =1 is signed, 0 = unsigned, B =Block Comprd v > 1 is a variant like signed or swizzle
+    case VK_FORMAT_BC2_UNORM_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC3;         // compressed texture format with explicit alpha for Microsoft DirectX10. Identical to DXT3. Eight bits per pixel.
+    case VK_FORMAT_BC3_UNORM_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC3;         // compressed texture format with interpolated alpha for Microsoft DirectX10. Identical to DXT5. Eight bits per pixel.
+    case VK_FORMAT_BC4_UNORM_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC4;         // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
+    case VK_FORMAT_BC4_SNORM_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC4;         // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
+    case VK_FORMAT_BC5_UNORM_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC5;         // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
+    case VK_FORMAT_BC5_SNORM_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC5;         // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
+    case VK_FORMAT_BC6H_UFLOAT_BLOCK: return teleport::clientrender::Texture::CompressionFormat::BC6H;		//       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK 
+	default:
+		return teleport::clientrender::Texture::CompressionFormat::UNCOMPRESSED;
+	};
+}
+
+
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
 	SetThisThreadName("BasisThread_TranscodeTextures");
@@ -1339,7 +1378,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 
 				//Push format.
 				read_from_buffer(transcoding->textureCI->format,srcPtr);
-				read_from_buffer(transcoding->textureCI->bytesPerPixel,srcPtr);
 
 				//Value scale - brightness number to scale the final texel by.
 				read_from_buffer(transcoding->textureCI->valueScale,srcPtr);
@@ -1447,7 +1485,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding->name << "\"." << std::endl;
 						continue;
 					}
-					transcoding->textureCI->bytesPerPixel=basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat);
+					uint32_t bytesPerPixel=basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat);
 					int imageIndex=0;
 					for (uint32_t arrayIndex = 0; arrayIndex < transcoding->textureCI->arrayCount; arrayIndex++)
 					{
@@ -1489,71 +1527,44 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			}
 			else if(transcoding->compressionFormat==avs::TextureCompression::KTX)
 			{
-				basist::ktx2_transcoder ktx_transcoder;
-	
-				ktx_transcoder.init(transcoding->data.data(), (uint32_t)transcoding->data.size());
-				if (!ktx_transcoder.start_transcoding())
+				ktxTextureCreateFlags createFlags=KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT;
+				ktxTexture *ktxt=nullptr;
+				KTX_error_code 	result=ktxTexture_CreateFromMemory(transcoding->data.data(), transcoding->data.size(),  createFlags, &ktxt);
+				ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
+		
+
+				transcoding->textureCI->width	=ktx2Texture->baseWidth;
+				transcoding->textureCI->height	=ktx2Texture->baseHeight;
+				transcoding->textureCI->depth	=ktx2Texture->baseDepth;
+				
+				transcoding->textureCI->arrayCount=ktx2Texture->numLayers?ktx2Texture->numLayers:1;
+				transcoding->textureCI->mipCount	=ktx2Texture->numLevels;
+
+				transcoding->textureCI->format	=VkFormatToTeleportFormat((VkFormat)(ktx2Texture->vkFormat));
+				transcoding->textureCI->valueScale=1.0f;
+				transcoding->textureCI->compression=VkFormatToCompressionFormat((VkFormat)(ktx2Texture->vkFormat));
+				
+				bool cubemap=(ktx2Texture->isCubemap);
+				transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+				uint32_t numFaces=cubemap?6:1;
+				uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
+				transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+				transcoding->textureCI->images->resize(1);
+				// For ktx textures, they will be already encoded, so we upload the whole thing as a single chunk of memory.
+				auto &img = (*transcoding->textureCI->images)[0];
+				size_t textureSize = ktxTexture_GetDataSizeUncompressed(ktxt);
+				img.resize(textureSize);
+                result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
+                if (result != KTX_SUCCESS)
 				{
-					TELEPORT_WARN("Texture \"{0}\" failed to start transcoding.", transcoding->name);
+					TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
 				}
 				else
 				{
-					basist::transcoder_texture_format basis_transcoder_textureFormat = basist::transcoder_texture_format::cTFRGBA32;
-					basist::basis_tex_format basis_tex_format = ktx_transcoder.get_format();
-					transcoding->textureCI->mipCount = ktx_transcoder.get_levels();
-					transcoding->textureCI->arrayCount = ktx_transcoder.get_layers();
-					transcoding->textureCI->arrayCount=transcoding->textureCI->arrayCount?transcoding->textureCI->arrayCount:1;
-					bool cubemap=(ktx_transcoder.get_faces()==6);
-					transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
-					uint32_t numFaces=cubemap?6:1;
-					uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
-					transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
-					transcoding->textureCI->images->resize(numImages);
-			
-					uint16_t imageIndex = 0;
-					size_t totalSize=0;
-					for (uint32_t mipIndex = 0; mipIndex < transcoding->textureCI->mipCount; mipIndex++)
-					{
-						for (uint32_t arrayIndex = 0; arrayIndex < transcoding->textureCI->arrayCount; arrayIndex++)
-						{
-							for (uint32_t faceIndex = 0; faceIndex < numFaces; faceIndex++)
-							{
-								//auto &image=(*transcoding->textureCI->images)[imageIndex];
-								basist::ktx2_image_level_info ktx2_image_level_info;
-								ktx_transcoder.get_image_level_info(ktx2_image_level_info,arrayIndex,mipIndex,faceIndex);
-				
-								transcoding->textureCI->bytesPerPixel=basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat);
-								size_t num_pixels=ktx2_image_level_info.m_width * ktx2_image_level_info.m_height;
-								uint32_t outDataSize = transcoding->textureCI->bytesPerPixel * (uint32_t)num_pixels;
-					
-								auto &img = (*transcoding->textureCI->images)[imageIndex];
-								img.resize(outDataSize);
-								if (!ktx_transcoder.transcode_image_level(mipIndex,arrayIndex,faceIndex,img.data(), (uint32_t)num_pixels, basis_transcoder_textureFormat))
-								{
-									TELEPORT_WARN("Texture \"{0}\" failed to transcode mipmap level {1}.", transcoding->name,mipIndex);
-								}
-								imageIndex++;
-								if(arrayIndex==0&&mipIndex==0&&faceIndex==0)
-								{
-									transcoding->textureCI->width = ktx2_image_level_info.m_width;
-									transcoding->textureCI->height = ktx2_image_level_info.m_height;
-									transcoding->textureCI->depth = 1;
-								}
-							}
-						}
-					}
-					transcoding->textureCI->format = clientrender::Texture::Format::RGBA8;
-
-					if (transcoding->textureCI->images->size() != 0)
-					{
-						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
-					}
-					else
-					{
-						TELEPORT_WARN("Texture \"{0}\" failed to transcode, but was a valid ktx2 file.", transcoding->name);
-					
-					}
+					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
+				if(ktxt)
+					ktxTexture_Destroy(ktxt);
 			}
 		}
 	}

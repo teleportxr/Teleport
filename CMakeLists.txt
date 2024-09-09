@@ -18,6 +18,20 @@ if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
 else() 
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
+
+function(set_target_runtime targname rt)
+	# Default to statically-linked runtime.
+	if("${rt}" STREQUAL "")
+		set(rt "static")
+	endif()
+	#message(STATUS "rt ${rt}")
+	if(${rt} STREQUAL "static")
+		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
+	else()	
+		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MD$<$<CONFIG:Debug>:d>")
+	endif()
+endfunction()
+
 message("TELEPORT_SOLUTION_NAME: ${TELEPORT_SOLUTION_NAME}")
 message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 # FetchContent download timestamp policy:
@@ -55,6 +69,11 @@ Include(FetchContent)
 set(KTX_FEATURE_TOOLS OFF CACHE BOOL "" FORCE)
 set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)
 set(KTX_FEATURE_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+set(KTX_FEATURE_GL_UPLOAD Off CACHE BOOL "" FORCE)
+set(KTX_FEATURE_STATIC_LIBRARY On CACHE BOOL "" FORCE)
+set(KTX_FEATURE_TESTS Off CACHE BOOL "" FORCE)
+set(KTX_FEATURE_TOOLS Off CACHE BOOL "" FORCE)
+set(KTX_FEATURE_Vulkan On CACHE BOOL "" FORCE)
 FetchContent_Declare(
   ktx
   GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
@@ -62,7 +81,9 @@ FetchContent_Declare(
   SOURCE_DIR ktx
 )
 FetchContent_MakeAvailable(ktx)
-
+set_target_runtime(ktx ${TELEPORT_RUNTIME})
+set_target_runtime(ktx_read ${TELEPORT_RUNTIME})
+set_target_runtime(astcenc-avx2-static ${TELEPORT_RUNTIME})
 
 # Get the "safe" header library for lockable resources
 FetchContent_Declare(
@@ -72,6 +93,7 @@ FetchContent_Declare(
   SOURCE_DIR safe
 )
 FetchContent_MakeAvailable(safe)
+
 
 if(TELEPORT_TEST)
 	FetchContent_Declare(
@@ -103,6 +125,19 @@ else()
 	option(TELEPORT_SERVER "Build for server? If true, client will not be built." ${TELEPORT_SERVER})
 endif()
 if(TELEPORT_SERVER)
+	set(OPTION_ENABLE_ALL_APPS OFF CACHE BOOL "" FORCE)
+	set(OPTION_BUILD_BROTLIG OFF CACHE BOOL "" FORCE)
+	set(OPTION_BUILD_GUI OFF CACHE BOOL "" FORCE)
+	set(OPTION_CMP_DIRECTX OFF CACHE BOOL "" FORCE)
+	# Get the AMD Compressonator library for texture compression. Unfortunately, this is not well-configured for FetchContent, so
+	# instead we incorporate the raw libraries.
+	#FetchContent_Declare(
+	#  compressonator
+	#  GIT_REPOSITORY https://github.com/GPUOpen-Tools/compressonator.git
+	#  GIT_TAG        V4.4.19
+	#  SOURCE_DIR compressonator
+	#)
+	#FetchContent_MakeAvailable(compressonator)
 	set(TELEPORT_CLIENT OFF)
 else()
 	if(TELEPORT_BUILD_DOCS)
@@ -174,6 +209,7 @@ option(ENABLE_STATIC "" ON)
 
 if(TELEPORT_WINDOWS)
 	if(TELEPORT_USE_DYNAMIC_RUNTIME)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DNOMINMAX")
 	else()
 		set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /Zi /DNDEBUG /DNOMINMAX /MT")
 		set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Ob0 /Od /RTC1 /DNOMINMAX /MTd")
@@ -253,19 +289,6 @@ else()
 endif()
 
 option(BUILD_AS_LIBRARY "" ON) 
-
-function(set_target_runtime targname rt)
-	# Default to statically-linked runtime.
-	if("${rt}" STREQUAL "")
-		set(rt "static")
-	endif()
-	#message(STATUS "rt ${rt}")
-	if(${rt} STREQUAL "static")
-		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
-	else()	
-		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MD$<$<CONFIG:Debug>:d>")
-	endif()
-endfunction()
 
 function(SetTeleportDefaults targname)
 	set_target_properties( ${targname} PROPERTIES PREFIX "" )
@@ -403,9 +426,3 @@ endif()
 if(TELEPORT_TEST)
 add_subdirectory(test)
 endif()
-
-set(KTX_FEATURE_GL_UPLOAD Off)
-set(KTX_FEATURE_STATIC_LIBRARY On)
-set(KTX_FEATURE_TESTS Off)
-set(KTX_FEATURE_TOOLS Off)
-set(KTX_FEATURE_Vulkan On)

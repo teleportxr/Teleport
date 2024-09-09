@@ -48,6 +48,15 @@ set(src
 	Texture.cpp
 	UnixDebugOutput.h 
 )
+set(src_plugin
+	Plugin/PluginClient.cpp
+	Plugin/PluginMain.cpp
+)
+set(headers_plugin
+	Plugin/InteropStructures.h
+	Plugin/PluginClient.h
+	Plugin/PluginMain.h
+)
 
 #Whether to build dynamic runtime libraries.
 if(TELEPORT_WINDOWS)
@@ -62,16 +71,13 @@ endif()
 
 #Create static library with source files from group.
 if(TELEPORT_UNITY)
-	set(src_plugin
-		UnityPlugin/InteropStructures.h
-		UnityPlugin/PluginGraphics.h
-		UnityPlugin/PluginGraphics.cpp
-		UnityPlugin/PluginClient.h
-		UnityPlugin/PluginClient.cpp
-		UnityPlugin/PluginMain.h
-		UnityPlugin/PluginMain.cpp
+	set(src_plugin ${src_plugin}
+		Plugin/PluginGraphics.cpp
 	)
-	add_library(TeleportServer SHARED ${src} ${src_plugin})
+	set(headers_plugin ${headers_plugin}
+		Plugin/PluginGraphics.h
+	)
+	add_library(TeleportServer SHARED ${src} ${src_plugin} ${headers_plugin})
 	set_target_properties( TeleportServer PROPERTIES 
 		VS_DEBUGGER_COMMAND ${TELEPORT_UNITY_EDITOR_EXE}
 		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${TELEPORT_UNITY_PROJECT_DIR}\""
@@ -82,18 +88,20 @@ if(TELEPORT_UNITY)
 
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_UNITY_SERVER=1)
 else()
-	add_library(TeleportServer SHARED ${src})
+	add_library(TeleportServer SHARED ${src} ${src_plugin} ${headers_plugin})
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_EXPORT_SERVER_DLL=1 TELEPORT_SERVER_DLL=1)
 	file(GLOB TELEPORT_PUBLIC_HEADERS "*.h")
 	message( "ROBOCOPY ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include *.h")
-    add_custom_command(
-        TARGET TeleportServer
-        POST_BUILD
-        COMMAND ROBOCOPY "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include" /s *.h;ROBOCOPY "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include" /s *.hpp
-        COMMENT "Copying headers to ${CMAKE_BINARY_DIR}/include"
-    )
-	file(COPY ${TELEPORT_PUBLIC_HEADERS} DESTINATION ${CMAKE_BINARY_DIR}/include)
+	#add_custom_command(
+    #    TARGET TeleportServer
+    #    POST_BUILD
+    #   COMMAND ROBOCOPY "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include" /s *.h;ROBOCOPY "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include" /s *.hpp
+    #   COMMENT "Copying headers to ${CMAKE_BINARY_DIR}/include"
+    #)
+	#file(COPY ${TELEPORT_PUBLIC_HEADERS} DESTINATION ${CMAKE_BINARY_DIR}/include)
 endif()
+source_group("Plugin Headers" src FILES ${headers_plugin} )
+source_group("Plugin Sources" src FILES ${src_plugin} )
 
 if(NOT "${TELEPORT_SERVER_DLL_DIR}" STREQUAL "")
 	set_target_properties(TeleportServer PROPERTIES
@@ -126,6 +134,8 @@ target_include_directories(TeleportServer PUBLIC ../firstparty/Platform/External
 target_include_directories(TeleportServer PUBLIC ../thirdparty/libdatachannel/include)
 # safe
 target_include_directories(TeleportServer PUBLIC ${CMAKE_BINARY_DIR}/safe/include)
+# compressonator
+target_include_directories(TeleportServer PRIVATE ../thirdparty/compressonator/include)
 
 if(${TELEPORT_SERVER_SUPPORT_WEBRTC})
 	target_include_directories(TeleportServer PUBLIC ${TELEPORT_LIBWEBRTC_BUILD_DIR}/include)
@@ -137,8 +147,15 @@ if(UNIX)
 	target_link_directories(TeleportServer PUBLIC ${LIBAV_CUDA_DIR}/lib64 /usr/lib/x86_64-linux-gnu)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
-target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream basisu efp fmt LibDataChannel::LibDataChannelStatic ktx )
+target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib PRIVATE ../thirdparty/compressonator/lib/bin/x64)
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream basisu efp fmt LibDataChannel::LibDataChannelStatic ktx)
+
+if(TELEPORT_USE_DYNAMIC_RUNTIME)
+	target_link_libraries(TeleportServer Compressonator_MD.lib)
+else()
+	target_link_libraries(TeleportServer Compressonator_MT.lib)
+endif()
+
 if(WIN32)
 	target_link_libraries(TeleportServer draco winmm d3d12 Secur32.lib)
 else()

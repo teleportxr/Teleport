@@ -547,7 +547,6 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 								,1
 								,false
 								,avs::TextureFormat::RGBA8
-								,4
 								,1.0f
 								,avs::TextureCompression::PNG
 								,true

@@ -5,6 +5,5 @@ namespace teleport
 {
 	namespace server
 	{
-		extern avs::uid serverID;
 	}
 }

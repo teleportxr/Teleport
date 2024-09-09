@@ -15,11 +15,12 @@ using namespace server;
 DefaultHTTPService::DefaultHTTPService()
 	: mUsingSSL(false)
 {
-
+	TELEPORT_INFO("DefaultHTTPService constructor.");
 }
 
 DefaultHTTPService::~DefaultHTTPService()
 {
+	TELEPORT_INFO("DefaultHTTPService destructor.");
 	shutdown();
 }
 

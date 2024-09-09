@@ -14,9 +14,9 @@
 #include "Exports.h"
 
 #if TELEPORT_INTERNAL_CHECKS
-#define TELEPORT_DEBUG_NODE_STREAMING 1
+#define TELEPORT_DEBUG_RESOURCE_STREAMING 1
 #else
-#define TELEPORT_DEBUG_NODE_STREAMING 0
+#define TELEPORT_DEBUG_RESOURCE_STREAMING 1
 #endif
  
 namespace teleport
@@ -88,7 +88,10 @@ namespace teleport
 			bool stoppedRenderingNode(avs::uid nodeID);
 			//! From the list of uid's given, which do we not think the client has?
 			size_t GetNewUIDs(std::vector<avs::uid>& outUIDs);
+			void updateNodePriority(avs::uid nodeID);
 		protected:
+			void recalculateUnconfirmedPriorityCounts();
+			int32_t getPriorityForNode(avs::uid nodeID) const;
 			int64_t movement_update_timestamp=0;
 			std::set<avs::uid> streamed_node_uids;
 			avs::uid originNodeId = 0;

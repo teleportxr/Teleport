@@ -12,7 +12,7 @@
 #include <libavstream/surfaces/surface_dx12.hpp>
 #endif
 #if TELEPORT_UNITY_SERVER
-#include "UnityPlugin/PluginGraphics.h"
+#include "Plugin/PluginGraphics.h"
 #endif
 
 using namespace teleport;

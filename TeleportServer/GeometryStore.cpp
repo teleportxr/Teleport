@@ -37,7 +37,7 @@
 
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Font.h"
-#include "UnityPlugin/InteropStructures.h"
+#include "Plugin/InteropStructures.h"
 #include "TeleportCore/StringFunctions.h"
 #include "TeleportCore/DecodeMesh.h"
 #include "ClientManager.h"
@@ -1227,7 +1227,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 				TELEPORT_WARN("Failed to verify submesh {0} of {1}", i, compressedMesh.name);
 				return false;
 			}
-			TELEPORT_LOG("dracoEncoder compressed submesh {0} of {1}.", i, compressedMesh.name);
+			//TELEPORT_LOG("dracoEncoder compressed submesh {0} of {1}.", i, compressedMesh.name);
 		}
 		catch(std::runtime_error err)
 		{
@@ -1392,11 +1392,6 @@ bool GeometryStore::storeTexture(avs::uid id,const std::string &path, std::time_
 	}
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
-	//Compress the texture with Basis Universal only if bytes per pixel is equal to 4.
-	if(newTexture.compression==avs::TextureCompression::BASIS_COMPRESSED&&newTexture.bytesPerPixel != 4)
-	{
-		newTexture.compression=avs::TextureCompression::UNCOMPRESSED;
-	}
 	
 	//queue the texture for compression.
 	 // UASTC doesn't work from inside the dll. Unclear why.
@@ -1545,6 +1540,15 @@ void GeometryStore::compressNextTexture()
 			return ;
 		}
 	}
+	else if (compressionData->textureCompression == avs::TextureCompression::KTX)
+	{
+		if (!CompressToKtx2(extractedTexture,path, compressionData))
+		{
+			TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
+			texturesToCompress.erase(texturesToCompress.begin());
+			return ;
+		}
+	}
 	else 
 	{
 		size_t n = 0;
@@ -1585,8 +1589,8 @@ void GeometryStore::compressNextTexture()
 					};
 
 					//STBIWDEF int stbi_write_png_to_func(stbi_write_func * func, void *context, int w, int h, int comp, const void *data, int stride_in_bytes);
-
-					int res = stbi_write_png_to_func(write_func, &subImages[n], w, h, avsTexture.bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * avsTexture.bytesPerPixel);
+					uint32_t bytesPerPixel=4;
+					int res = stbi_write_png_to_func(write_func, &subImages[n], w, h, bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * bytesPerPixel);
 					if (!res)
 					{
 						TELEPORT_CERR << "Texture " << extractedTexture.getName() << " could not be compressed as a PNG.\n ";
@@ -1597,7 +1601,7 @@ void GeometryStore::compressNextTexture()
 					if(writeout)
 					{
 						std::string filename = fmt::format("{0}/{1}-{2}-{3}.png", cachePath,extractedTexture.getName(),m, i);
-						stbi_write_png(filename.c_str(),w,h,avsTexture.bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * avsTexture.bytesPerPixel);
+						stbi_write_png(filename.c_str(),w,h,bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * bytesPerPixel);
 					}
 					n++;
 					w = (w + 1) / 2;
@@ -1625,7 +1629,6 @@ void GeometryStore::compressNextTexture()
 
 		//Push format.
 		dataSize+=sizeof(avsTexture.format);
-		dataSize+=sizeof(avsTexture.bytesPerPixel);
 
 		//Value scale - brightness number to scale the final texel by.
 		dataSize+=sizeof(avsTexture.valueScale);
@@ -1649,7 +1652,6 @@ void GeometryStore::compressNextTexture()
 
 		//Push format.
 		write_to_buffer(avsTexture.format,target);
-		write_to_buffer(avsTexture.bytesPerPixel,target);
 
 		//Value scale - brightness number to scale the final texel by.
 		write_to_buffer(avsTexture.valueScale,target);
@@ -1746,7 +1748,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(cons
 			resourceFile.close();
 			filesystem::remove(file_name);
 			TELEPORT_CERR << "Failed to save \"" << file_name << "\"!\n";
-			filesystem::rename(file_name+ ".bak", file_name );
+			filesystem::rename(file_name+".bak", file_name );
 			return false;
 		}
 		resourceFile.close();

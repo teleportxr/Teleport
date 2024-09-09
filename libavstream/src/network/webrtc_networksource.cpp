@@ -319,7 +319,22 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 	{
 		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	}
-	m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
+	try
+	{
+		m_data->rtcPeerConnection->setRemoteDescription(rtcDescription);
+	}
+	catch(std::runtime_error &r)
+	{
+		AVSLOG(Error)<<"IceState: runtime_error "<<(r.what()?r.what():"")<<" for description: "<<sdp<<".\n";
+	}
+	catch(std::exception &e)
+	{
+		AVSLOG(Error)<<"IceState: exception "<<(e.what()?e.what():"")<<" for description: "<<sdp<<".\n";
+	}
+	catch(...)
+	{
+		AVSLOG(Error)<<"IceState: unknown exception for description: "<<sdp<<".\n";
+	}
 	rtc::PeerConnection::IceState iceState=m_data->rtcPeerConnection->iceState();
 	//if(iceState==rtc::PeerConnection::IceState::Closed)
 	{

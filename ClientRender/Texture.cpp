@@ -114,21 +114,8 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	{
 		textureCreate.mips--;
 	}
-	//size_t initialDataSize=0;
-	#if 0
-	if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
-		TELEPORT_CERR<<"CREATING TEXTURE "<<pTextureCreateInfo.name.c_str()<<" WITH "<<pTextureCreateInfo.images.size()<<" IMAGES "<<
-		magic_enum::enum_name<platform::crossplatform::CompressionFormat>(textureCreate.compressionFormat)<<"\n";
-	#endif
 	textureCreate.initialData		= pTextureCreateInfo.images;
 	textureCreate.name				= m_CI.name.c_str();
-	#if 0
-	if(textureCreate.cubemap)
-	{
-		if(textureCreate.compressionFormat!=platform::crossplatform::CompressionFormat::UNCOMPRESSED)
-			TELEPORT_CERR<<"CREATING CUBEMAP\n";
-	}
-	#endif
 	if(!m_SimulTexture->EnsureTexture(renderPlatform, &textureCreate))
 	{
 		TELEPORT_WARN("\tFailed to create texture: {0}",pTextureCreateInfo.name);

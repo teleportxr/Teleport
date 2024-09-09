@@ -39,6 +39,7 @@ namespace teleport
 				TEXTURE_2D_MULTISAMPLE_ARRAY=TEXTURE_2D|16|32,
 				TEXTURE_CUBE_MAP_ARRAY=TEXTURE_CUBE_MAP|16
 			};
+			// TODO: merge all three texture formats. avs::TextureFormat, clientrender::Texture::Format, platform::crossplatform::PixelFormat.
 			enum class Format : uint32_t
 			{
 				FORMAT_UNKNOWN = 0,
@@ -134,7 +135,6 @@ namespace teleport
 				uint32_t width = 0;
 				uint32_t height = 0;
 				uint32_t depth = 0;
-				uint32_t bytesPerPixel = 0;
 				uint32_t arrayCount = 0;
 				uint32_t mipCount = 0;
 
@@ -156,7 +156,6 @@ namespace teleport
 					width			= t.width			;
 					height			= t.height			;
 					depth			= t.depth			;
-					bytesPerPixel	= t.bytesPerPixel	;
 					arrayCount		= t.arrayCount		;
 					mipCount		= t.mipCount		;
 

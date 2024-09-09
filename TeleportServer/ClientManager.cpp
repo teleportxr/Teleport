@@ -15,7 +15,6 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Threads.h"
 #include "TeleportCore/Time.h"
-#include "UnityPlugin/PluginClient.h"
 #include "TeleportCore/Logging.h"
 #include "TeleportCore/Profiling.h"
 #ifdef _MSC_VER

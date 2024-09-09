@@ -105,7 +105,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader) 
-target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm)
+target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm ktx)
 target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt::fmt-header-only)
 
 target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)

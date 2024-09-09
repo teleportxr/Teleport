@@ -759,28 +759,6 @@ avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missin
 			put((uint8_t*)texture->name.data(), nameLength);
 			
 			put(texture->compression);
-/*
-			// TODO: make this a more generic texture type.
-			put(texture->cubemap);
-
-			//Push dimensions.
-			put(texture->width);
-			put(texture->height);
-
-			//Push additional information.
-			put(texture->depth);
-			put(texture->bytesPerPixel);
-			put(texture->arrayCount);
-			put(texture->mipCount);
-
-			//Push format.
-			put(texture->format);
-
-			//Value scale - brightness number to scale the final texel by.
-			put(texture->valueScale);
-
-			//Push size, and data.
-			put((uint32_t)texture->compressedData.size());*/
 			// The contents of compressedData should be identical to the texture's cache file, regardless of
 			// format.
 			put(texture->compressedData.data(), texture->compressedData.size());

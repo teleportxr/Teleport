@@ -218,15 +218,6 @@ void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefi
 	inputDefinitions = inputDefs;
 }
 
-bool ClientData::streamNode(avs::uid nodeID)
-{
-	return clientMessaging->GetGeometryStreamingService().streamNode(nodeID);
-}
-bool ClientData::unstreamNode(avs::uid nodeID)
-{
-	return clientMessaging->GetGeometryStreamingService().unstreamNode(nodeID);
-}
-
 
 void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 {

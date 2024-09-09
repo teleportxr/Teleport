@@ -186,7 +186,6 @@ namespace avs
 		bool cubemap=false;
 
 		TextureFormat format;
-		uint32_t bytesPerPixel;
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
 
 
@@ -198,8 +197,22 @@ namespace avs
 		{
 			std::vector<uint8_t> data;
 		};
-
+		// Images are stored in the order: mip, layer, face, or if face and layer are combined: mip, arrayIndex
 		std::vector<Image> images;
+		//! Convert mip, layer and face to the corresponding index in the image list.
+		int MipLayerFaceToIndex(int m,int l,int f) const
+		{
+			int arrayIndex=l;
+			if(cubemap)
+				arrayIndex=6*l+f;
+			return MipArrayIndexToIndex(m,arrayIndex);
+		}
+		//! Convert mip and array index to the corresponding index in the image list.
+		int MipArrayIndexToIndex(int m,int arrayIndex) const
+		{
+			return m*arrayCount*(cubemap?6:1)+arrayIndex;
+		}
+
 
 		std::vector<uint8_t> compressedData;
 
@@ -209,7 +222,6 @@ namespace avs
 			TELEPORT_VERIFY(t.width, width);
 			TELEPORT_VERIFY(t.height, height);
 			TELEPORT_VERIFY(t.depth, depth);
-			TELEPORT_VERIFY(t.bytesPerPixel, bytesPerPixel);
 			TELEPORT_VERIFY(t.arrayCount, arrayCount);
 			TELEPORT_VERIFY(t.mipCount, mipCount);
 			// If we're loading a compressed texture, we may not know or care what the original format was.

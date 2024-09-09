@@ -21,9 +21,6 @@
 
 #include "Export.h"
 #include "InteropStructures.h"
-#include "PluginGraphics.h"
-#include "PluginClient.h"
-#include "PluginMain.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportAudio/CustomAudioStreamTarget.h"
 #pragma optimize("", off)

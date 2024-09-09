@@ -124,7 +124,6 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	avsTexture.width=width;
 	avsTexture.height=height;
 	avsTexture.depth=1;
-	avsTexture.bytesPerPixel=1;
 	avsTexture.arrayCount=1;
 	avsTexture.mipCount=1;
 	avsTexture.format=avs::TextureFormat::G8;

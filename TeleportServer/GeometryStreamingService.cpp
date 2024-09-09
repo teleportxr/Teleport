@@ -14,8 +14,21 @@
 
 using namespace teleport;
 using namespace server;
+static const int32_t UNKNOWN_PRIORITY=-100000;
+static const int32_t MAXIMUM_PRIORITY=INT_MAX;
 ClientStoppedRenderingNodeFn GeometryStreamingService::callback_clientStoppedRenderingNode=nullptr;
 ClientStartedRenderingNodeFn GeometryStreamingService::callback_clientStartedRenderingNode=nullptr;
+
+#if TELEPORT_DEBUG_RESOURCE_STREAMING
+#define CHECK_TEXTURE(t)\
+	if(!geometryStore->getTexture(t))\
+	{\
+		TELEPORT_WARN("Missing texture {0}",t);\
+		DEBUG_BREAK_ONCE;\
+	}
+#else
+#define CHECK_TEXTURE(t)
+#endif
 //Remove duplicates, and 0s, from passed vector of UIDs.
 void UniqueUIDsOnly(std::vector<avs::uid>& cleanedUIDs)
 {
@@ -69,27 +82,28 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 	// Is this resource a node?
 	if(auto node=geometryStore->getNode(resource_uid))
 	{
+		int32_t priority=getPriorityForNode(resource_uid);
 		if (streamedNodes.find(resource_uid) == streamedNodes.end())
 		{
 			TELEPORT_WARN("Confirmed an unwanted node {0}",resource_uid);
 			// this node wasn't meant to be sent. Ignore this, it CAN happen e.g. if 
 			// the client is out-of-date with the current state.
 		}
-		else if (unconfirmed_priority_counts.find(node->priority) == unconfirmed_priority_counts.end())
+		else if (unconfirmed_priority_counts.find(priority) == unconfirmed_priority_counts.end())
 		{
 			TELEPORT_WARN("GeometryStreamingService::confirmResource Trying to decrement Node {0} priority {1} but it's not in the list.", resource_uid,node->priority);
 			// This can happen if the node is in nodesToStream, but was not in streamedNodes. But the client already had it, or received it before it was removed.
 		}
 		else
 		{
-			unconfirmed_priority_counts[node->priority]--;
-#if TELEPORT_DEBUG_NODE_STREAMING
+			unconfirmed_priority_counts[priority]--;
+#if TELEPORT_DEBUG_RESOURCE_STREAMING
 			TELEPORT_COUT << "GeometryStreamingService::confirmResource Node " << resource_uid << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority] << "\n";
 #endif
-			if(unconfirmed_priority_counts[node->priority]==0)
+			if(unconfirmed_priority_counts[priority]==0)
 			{
-				unconfirmed_priority_counts.erase(node->priority);
-				TELEPORT_COUT<<"Got all nodes of priority "<<node->priority<<"\n";
+				unconfirmed_priority_counts.erase(priority);
+				TELEPORT_COUT<<"Got all nodes of priority "<<priority<<"\n";
 			}
 		}
 	}
@@ -108,7 +122,7 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 	// If a node from nodesToStream is not yet in streamedNodes, we check priority to see if it should be added.
 	
 	if(originNodeId)
-		nodesToStream.insert(originNodeId);
+		streamNode(originNodeId);
 	int32_t lowest_confirmed_node_priority = -100000;
 	// What is the lowest priority that has no unconfirmed nodes?
 	// This unconfirmed_priority_counts is an ordered list of how many unconfirmed nodes each priority level has.
@@ -119,6 +133,7 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 	for(auto u:nodesToStream)
 	{
 		avs::Node* node = geometryStore->getNode(u);
+		int32_t priority=getPriorityForNode(u);
 		if(node==nullptr)
 		{
 			TELEPORT_WARN_NOSPAM("Null node {0}",u);
@@ -127,9 +142,9 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 		if(streamedNodes.find(u)==streamedNodes.end())
 		{
 			// Not yet added.
-			if(node->priority<lowest_confirmed_node_priority)
+			if(priority<lowest_confirmed_node_priority)
 				continue;
-			if (node->priority < minimumPriority&&u!=originNodeId)
+			if (priority < minimumPriority&&u!=originNodeId)
 				continue;
 			AddNodeAndItsResourcesToStreamed(u);
 		}
@@ -166,7 +181,14 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 				if(node->renderState.globalIlluminationUid>0)
 				{
 					streamedTextures[node->renderState.globalIlluminationUid]+=diff;
+#if TELEPORT_DEBUG_RESOURCE_STREAMING
+					if(!geometryStore->getTexture(node->renderState.globalIlluminationUid))
+					{
+						TELEPORT_WARN("Missing GI texture {0}",node->renderState.globalIlluminationUid);
+					}
+#endif
 				}
+		
 				if(node->skeletonNodeID!=0)
 				{
 					avs::Node* skeletonnode = geometryStore->getNode(node->skeletonNodeID);
@@ -437,7 +459,40 @@ const std::set<avs::uid>& GeometryStreamingService::getStreamedNodeIDs()
 
 void GeometryStreamingService::setOriginNode(avs::uid nodeID)
 {
+	// The old origin node:  was it in nodesToStream? Was it unconfirmed? Then it affected unconfirmedPriorityCounts.
 	originNodeId = nodeID;
+	recalculateUnconfirmedPriorityCounts();
+}
+
+void GeometryStreamingService::updateNodePriority(avs::uid nodeID)
+{
+// For now, just surrender and recalculate all the priorities.
+	recalculateUnconfirmedPriorityCounts();
+}
+
+void GeometryStreamingService::recalculateUnconfirmedPriorityCounts()
+{
+	unconfirmed_priority_counts.clear();
+	for(auto nodeID:nodesToStream)
+	{
+		const auto &tr=trackedResources.find(nodeID);
+		const auto &r=GetTrackedResource(nodeID);
+		if(!r.acknowledged)
+			unconfirmed_priority_counts[getPriorityForNode(nodeID)]++;
+	}
+}
+
+int32_t GeometryStreamingService::getPriorityForNode(avs::uid nodeID) const
+{
+	if(nodeID==originNodeId)
+		return MAXIMUM_PRIORITY;
+	auto node = geometryStore->getNode(nodeID);
+	if(!node)
+	{
+		TELEPORT_WARN("Node {0} not found in GeometryStore.",nodeID);
+		return UNKNOWN_PRIORITY;
+	}
+	return node->priority;
 }
 
 bool GeometryStreamingService::streamNode(avs::uid nodeID)
@@ -448,15 +503,10 @@ bool GeometryStreamingService::streamNode(avs::uid nodeID)
 		if(nodesToStream.find(nodeID)==nodesToStream.end())
 		{
 			nodesToStream.insert(nodeID);
-			auto node = geometryStore->getNode(nodeID);
-			if(!node)
-			{
-				TELEPORT_WARN("Node {0} not found in GeometryStore.",nodeID);
-				return false;
-			}
-			unconfirmed_priority_counts[node->priority]++;
-			#if TELEPORT_DEBUG_NODE_STREAMING
-			TELEPORT_COUT << "AddNode " << nodeID << " priority " << node->priority << ", count " << unconfirmed_priority_counts[node->priority]<<"\n";
+			int priority=getPriorityForNode(nodeID);
+			unconfirmed_priority_counts[getPriorityForNode(nodeID)]++;
+			#if TELEPORT_DEBUG_RESOURCE_STREAMING
+			//TELEPORT_COUT << "AddNode " << nodeID << " priority " << priority << ", count " << unconfirmed_priority_counts[priority]<<"\n";
 			#endif
 			return true;
 		}
@@ -470,6 +520,7 @@ bool GeometryStreamingService::unstreamNode(avs::uid nodeID)
 	if (nodesToStream.find(nodeID) != nodesToStream.end())
 	{
 		nodesToStream.erase(nodeID);
+		unconfirmed_priority_counts[getPriorityForNode(nodeID)]--;
 		if(streamedNodes.find(nodeID)!=streamedNodes.end())
 		{
 			RemoveNodeAndItsResourcesFromStreamed(nodeID);
@@ -486,6 +537,12 @@ bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 
 void GeometryStreamingService::addGenericTexture(avs::uid id)
 {
+#if TELEPORT_DEBUG_RESOURCE_STREAMING
+	if(!geometryStore->getTexture(id))
+	{
+		TELEPORT_WARN("Missing generic texture {0}",id);
+	}
+#endif
 	streamedGenericTextures.insert(id);
 	streamedTextures[id]++;
 }
@@ -560,10 +617,28 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 			thisMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index,
 			thisMaterial->emissiveTexture.index
 		};
-		if(handshake.renderingFeatures.normals)
+		if(thisMaterial->pbrMetallicRoughness.baseColorTexture.index)
+		{
+			CHECK_TEXTURE(thisMaterial->pbrMetallicRoughness.baseColorTexture.index)
+		}
+		if(thisMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)
+		{
+			CHECK_TEXTURE(thisMaterial->pbrMetallicRoughness.metallicRoughnessTexture.index)
+		}
+		if(thisMaterial->emissiveTexture.index)
+		{
+			CHECK_TEXTURE(thisMaterial->emissiveTexture.index)
+		}
+		if(handshake.renderingFeatures.normals&&thisMaterial->normalTexture.index)
+		{
 			material.texture_uids.push_back(thisMaterial->normalTexture.index);
-		if (handshake.renderingFeatures.ambientOcclusion)
+			CHECK_TEXTURE(thisMaterial->normalTexture.index)
+		}
+		if (handshake.renderingFeatures.ambientOcclusion&&thisMaterial->occlusionTexture.index)
+		{
 			material.texture_uids.push_back(thisMaterial->occlusionTexture.index);
+			CHECK_TEXTURE(thisMaterial->occlusionTexture.index)
+		}
 
 		UniqueUIDsOnly(material.texture_uids);
 

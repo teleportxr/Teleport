@@ -14,10 +14,13 @@ namespace teleport
 	{
 		struct ExtractedTexture;
 		struct PrecompressedTexture;
+		extern bool CompressToKtx2(ExtractedTexture &extractedTexture,std::string assetPath, std::shared_ptr<PrecompressedTexture> compressionData);
 		extern bool ApplyBasisCompression(ExtractedTexture &extractedTexture,std::string path
 											,std::shared_ptr<PrecompressedTexture> compressionData
 											,uint8_t compressionStrength
 											,uint8_t compressionQuality);
+											
+		extern void LoadAsKtxFile( ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename);
 		extern void LoadAsTeleportTexture(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename);
 		extern void LoadAsPng(ExtractedTexture &textureData, const std::vector<char> &data,const std::string &filename);
 		extern void LoadAsBasisFile(struct ExtractedTexture &textureData, const std::vector<char> &data, const std::string &filename);
