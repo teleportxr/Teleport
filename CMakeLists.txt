@@ -77,6 +77,7 @@ set(KTX_FEATURE_Vulkan On CACHE BOOL "" FORCE)
 FetchContent_Declare(
   ktx
   GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
+	GIT_SHALLOW 1
   GIT_TAG        v4.3.2
   SOURCE_DIR ktx
 )
@@ -89,6 +90,7 @@ set_target_runtime(astcenc-avx2-static ${TELEPORT_RUNTIME})
 FetchContent_Declare(
   safe
   GIT_REPOSITORY https://github.com/LouisCharlesC/safe.git
+	GIT_SHALLOW 1
   GIT_TAG        v1.1.0
   SOURCE_DIR safe
 )
@@ -99,6 +101,7 @@ if(TELEPORT_TEST)
 	FetchContent_Declare(
 	  Catch2
 	  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+	GIT_SHALLOW 1
 	  GIT_TAG        v3.4.0 # or a later release
 	  SOURCE_DIR catch2
 	)
