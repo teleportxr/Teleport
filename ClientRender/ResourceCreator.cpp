@@ -642,16 +642,16 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	{
 		return;
 	}
-	clientrender::Texture::CompressionFormat scrTextureCompressionFormat= clientrender::Texture::CompressionFormat::UNCOMPRESSED;
+	//clientrender::Texture::CompressionFormat scrTextureCompressionFormat= clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
 	{
 		switch(texture.format)
 		{
 		case avs::TextureFormat::RGBA32F:
-			scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC6H;
+			//scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC6H;
 			break;
 		default:
-			scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC3;
+			//scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC3;
 			break;
 		};
 	}
@@ -1297,6 +1297,7 @@ static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
     case VK_FORMAT_BC5_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
     case VK_FORMAT_BC5_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
     case VK_FORMAT_BC6H_UFLOAT_BLOCK: return clientrender::Texture::Format::RGBA16F;  //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK 
+	case VK_FORMAT_R32G32B32A32_SFLOAT: return clientrender::Texture::Format::RGBA32F;
 	default:
 		return clientrender::Texture::Format::FORMAT_UNKNOWN;
 	};
@@ -1527,7 +1528,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 			}
 			else if(transcoding->compressionFormat==avs::TextureCompression::KTX)
 			{
-				ktxTextureCreateFlags createFlags=KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT;
+				ktxTextureCreateFlags createFlags=KTX_TEXTURE_CREATE_NO_FLAGS;
 				ktxTexture *ktxt=nullptr;
 				KTX_error_code 	result=ktxTexture_CreateFromMemory(transcoding->data.data(), transcoding->data.size(),  createFlags, &ktxt);
 				ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
