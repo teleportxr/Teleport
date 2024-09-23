@@ -356,7 +356,7 @@ void ClientMessaging::pingForLatency()
 	pingForLatencyCommand.unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	if (sendCommand(pingForLatencyCommand) > 1)
 	{
-		TELEPORT_CERR << "Pinging on queue.\n";
+		TELEPORT_WARN_NOSPAM("Pinging on queue.\n");
 	}
 }
 
@@ -531,8 +531,14 @@ bool ClientMessaging::setOrigin( avs::uid originNode)
 {
 	if(originNode==0)
 		return false;
-	if(currentOriginState.originClientHas==originNode)
+	if(currentOriginState.originClientHas==originNode&&currentOriginState.acknowledged)
 		return true;
+	// If we sent it but it wasn't acknowledged in a reasonable time?
+	static int64_t originAckWaitTimeUs=3000000;// three seconds
+	if(currentOriginState.originClientHas==originNode&&(GetServerTimeUs()-currentOriginState.serverTimeSentUs)<originAckWaitTimeUs)
+	{
+		return true;
+	}
 	currentOriginState.valid_counter++;
 	geometryStreamingService.setOriginNode(originNode);
 	teleport::core::SetStageSpaceOriginNodeCommand setp;

@@ -1982,6 +1982,11 @@ bool GeometryStore::CheckForErrors(avs::uid res_uid)
 	return true;
 }
 
+avs::uid GeometryStore::GenerateUid()
+{
+	return avs::GenerateUid();
+}
+
 avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 {
 	std::string p = path;

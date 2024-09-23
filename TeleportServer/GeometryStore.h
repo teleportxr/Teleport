@@ -150,6 +150,8 @@ namespace teleport
 			bool CheckForErrors(avs::uid uid=0) ;
 			//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.
 			avs::uid GetOrGenerateUid(const std::string& path);
+			//! Generate a uid. Used mainly for nodes, which don't have persistent paths.
+			avs::uid GenerateUid();
 			//! Get the current session uid corresponding to the given resource/asset path.
 			avs::uid PathToUid(std::string p) const;
 			//! Get the resource/asset path corresponding to the current session uid.

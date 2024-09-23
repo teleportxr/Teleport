@@ -146,7 +146,7 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 				continue;
 			if (priority < minimumPriority&&u!=originNodeId)
 				continue;
-			AddNodeAndItsResourcesToStreamed(u);
+ 			AddNodeAndItsResourcesToStreamed(u);
 		}
 	}
 }

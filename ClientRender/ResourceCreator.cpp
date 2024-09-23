@@ -1320,6 +1320,25 @@ static teleport::clientrender::Texture::CompressionFormat VkFormatToCompressionF
 	};
 }
 
+struct KtxCallbackData
+{
+	int numFaces=0;
+	int numMips=0;
+	int numLayers=0;
+	std::shared_ptr<std::vector<std::vector<uint8_t>>> images;
+};
+KTX_error_code ktxImageExtractionCallback(int miplevel, int face,
+                      int width, int height, int depth,
+                      ktx_uint64_t faceLodSize,
+                      void* pixels, void* userdata)
+{
+	KtxCallbackData* ud = (KtxCallbackData*)userdata;
+	int idx=miplevel+ud->numMips*face;
+	auto &img =(* ud->images.get())[idx];
+	img.resize(faceLodSize);
+    memcpy(img.data(), pixels, faceLodSize);
+    return KTX_SUCCESS;
+}
 
 void ResourceCreator::BasisThread_TranscodeTextures()
 {
@@ -1469,7 +1488,7 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				}
 				BasisValidate(basis_transcoder, fileinfo,transcoding->data);
 				if (basis_transcoder.start_transcoding(transcoding->data.data(), (uint32_t)transcoding->data.size()))
-				{					
+				{
 					size_t imgs=basis_transcoder.get_total_images(transcoding->data.data(), (uint32_t)transcoding->data.size());
 					transcoding->textureCI->arrayCount=transcoding->textureCI->arrayCount?transcoding->textureCI->arrayCount:1;
 					transcoding->textureCI->mipCount = basis_transcoder.get_total_image_levels(transcoding->data.data(), (uint32_t)transcoding->data.size(), 0);
@@ -1542,30 +1561,46 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				transcoding->textureCI->mipCount	=ktx2Texture->numLevels;
 
 				transcoding->textureCI->format	=VkFormatToTeleportFormat((VkFormat)(ktx2Texture->vkFormat));
-				transcoding->textureCI->valueScale=1.0f;
-				transcoding->textureCI->compression=VkFormatToCompressionFormat((VkFormat)(ktx2Texture->vkFormat));
+				if(transcoding->textureCI->format==clientrender::Texture::Format::FORMAT_UNKNOWN)
+				{
+					ktx_transcode_fmt_e outputFormat=KTX_TTF_RGBA32;
+					ktx_transcode_flags transcodeFlags=KTX_TF_HIGH_QUALITY;
+					result= ktxTexture2_TranscodeBasis 	( 	ktx2Texture,outputFormat,transcodeFlags ) 	;
+					if (result != KTX_SUCCESS)
+					{
+						TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
+						continue;
+					}
+				}
+				{
+					transcoding->textureCI->valueScale=1.0f;
+					transcoding->textureCI->compression=VkFormatToCompressionFormat((VkFormat)(ktx2Texture->vkFormat));
 				
-				bool cubemap=(ktx2Texture->isCubemap);
-				transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
-				uint32_t numFaces=cubemap?6:1;
-				uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
-				transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
-				transcoding->textureCI->images->resize(1);
-				// For ktx textures, they will be already encoded, so we upload the whole thing as a single chunk of memory.
-				auto &img = (*transcoding->textureCI->images)[0];
-				size_t textureSize = ktxTexture_GetDataSizeUncompressed(ktxt);
-				img.resize(textureSize);
-                result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
-                if (result != KTX_SUCCESS)
-				{
-					TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
+					bool cubemap=(ktx2Texture->isCubemap);
+					transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+					uint32_t numFaces=cubemap?6:1;
+					uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
+					transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+					transcoding->textureCI->images->resize(ktx2Texture->numFaces*ktx2Texture->numLayers*ktx2Texture->numLevels);
+					// For ktx textures, they will be already encoded, so we upload the whole thing as a single chunk of memory.
+					size_t textureSize = ktxTexture_GetDataSizeUncompressed(ktxt);
+					KtxCallbackData cbData;
+					cbData.images=transcoding->textureCI->images;
+					result = ktxTexture_IterateLoadLevelFaces(ktxt,
+                                                       ktxImageExtractionCallback,
+                                                       &cbData);
+					//..result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
+					if (result != KTX_SUCCESS)
+					{
+						TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
+					}
+					else
+					{
+						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
+					}
+					if(ktxt)
+						ktxTexture_Destroy(ktxt);
 				}
-				else
-				{
-					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
-				}
-				if(ktxt)
-					ktxTexture_Destroy(ktxt);
 			}
 		}
 	}
