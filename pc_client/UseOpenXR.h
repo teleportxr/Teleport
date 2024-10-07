@@ -4,7 +4,7 @@
 #include "Platform/CrossPlatform/RenderDelegate.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "TeleportClient/OpenXR.h"
-#include "common_maths.h"			// for avs::Pose
+#include "libavstream/common_maths.h"			// for avs::Pose
 #include "TeleportCore/CommonNetworking.h"		// for avs::InputState
 #include "TeleportCore/Input.h"
 

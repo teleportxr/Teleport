@@ -2,7 +2,7 @@
 
 using namespace teleport;
 using namespace clientrender;
-using avs::Pose;
+using teleport::core::Pose;
 
 using InvisibilityReason = VisibilityComponent::InvisibilityReason;
 
@@ -30,7 +30,7 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 
 NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
 {
-	using avs::Pose;
+	using teleport::core::Pose;
 	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
 }
 
@@ -64,7 +64,7 @@ ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
 
 void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_ptr<Node> node, const avs::Node &avsNode)
 {
-	using avs::Pose;
+	using teleport::core::Pose;
 	{
 		rootNodes_mutex.lock();
 		rootNodes.push_back(node);

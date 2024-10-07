@@ -3,7 +3,7 @@
 #include <vector>
 #include "Platform/CrossPlatform/RenderDelegate.h"
 #include "Platform/CrossPlatform/Texture.h"
-#include "libavstream/common_maths.h"		// for avs::Pose
+#include "libavstream/common_maths.h"		// for teleport::core::Pose
 #include "TeleportCore/CommonNetworking.h"		// for avs::InputState
 #include "TeleportCore/Input.h"
 #include "TeleportClient/OpenXRRenderModel.h"
@@ -118,13 +118,13 @@ namespace teleport
 		{
 			std::string regexPath;
 			ActionId actionId;		// Which local action is bound to the node.
-			avs::Pose poseOffset;	// In the XR pose's local space, the offset to the node's pose.
+			teleport::core::Pose poseOffset;	// In the XR pose's local space, the offset to the node's pose.
 			int subActionIndex = 0; // Basically left or right, where applicable
 			int handJointIndex=-1;	// If ActionId is invalid, it's a hand tracking joint, and should be 0-25.
 		};
 		struct NodePoseState
 		{
-			avs::PoseDynamic pose_footSpace;	// In the current XR space, the offset to the node's current pose.
+			teleport::core::PoseDynamic pose_footSpace;	// In the current XR space, the offset to the node's current pose.
 		};
 		//! Each OpenXRServer contains the currently bound inputs and poses for the connection. Both mappings (initialized on connection)
 		//! and states (updated in real time).
@@ -141,7 +141,7 @@ namespace teleport
 			std::vector<InputState> inputStates;
 			std::map<avs::uid,NodePoseState> nodePoseStates;
 			// temp, filled from nodePoseStates:
-			std::map<avs::uid,avs::PoseDynamic> nodePoses;
+			std::map<avs::uid,teleport::core::PoseDynamic> nodePoses;
 			//! Temporary - these poses will be bound on the next update.
 			std::map<avs::uid,NodePoseMapping> unboundPoses;
 			teleport::core::Input inputs;
@@ -242,7 +242,7 @@ namespace teleport
 		};
 		struct FallbackState
 		{
-			avs::Pose pose_worldSpace;
+			teleport::core::Pose pose_worldSpace;
 			bool buttonDown=false;
 		};
 		struct MouseState
@@ -328,7 +328,7 @@ namespace teleport
 			
 			//! Set a "virtual" pose binding - e.g. mouse emulation.
 			void SetFallbackBinding(ActionId actionId,std::string path);
-			void SetFallbackPoseState(ActionId actionId,const avs::Pose &pose);
+			void SetFallbackPoseState(ActionId actionId,const teleport::core::Pose &pose);
 			void SetFallbackButtonState(ActionId actionId,bool btn_down);
 
 			void SetOverlayEnabled(bool o)
@@ -361,22 +361,22 @@ namespace teleport
 			//! Get the currently bound pose mappings for the server.
 			const std::map<avs::uid, NodePoseMapping >& GetServerNodePoseMappings(avs::uid server_uid);
 			// Force input mapping to a particular setting - normally for local controls.
-			void SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId);
+			void SetHardInputMapping(avs::uid server_uid,teleport::core::InputId inputId,teleport::core::InputType inputType,ActionId clientActionId);
 
 			//! Get the head pose in the device's stage space (axes adapted to the Engineering standard, Z=up).
-			const avs::Pose& GetHeadPose_StageSpace() const;
-			avs::Pose GetActionPose(ActionId id,uint8_t subActionIndex=0) const;
+			const teleport::core::Pose& GetHeadPose_StageSpace() const;
+			teleport::core::Pose GetActionPose(ActionId id,uint8_t subActionIndex=0) const;
 			float GetActionFloatState(ActionId actionId, uint8_t subActionIndex=0) const;
 			 avs::uid GetRootNode(avs::uid server_uid);
-			const std::map<avs::uid,avs::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
+			const std::map<avs::uid,teleport::core::PoseDynamic> &GetNodePoses(avs::uid server_uid,unsigned long long framenumber);
 			const std::map<avs::uid,NodePoseState> &GetNodePoseStates(avs::uid server_uid,unsigned long long framenumber);
 			
 			/// Get the poses relative to the hand root.
-			const std::vector<avs::Pose> &GetTrackedHandJointPoses(int i);
+			const std::vector<teleport::core::Pose> &GetTrackedHandJointPoses(int i);
 			/// @brief Get the hand root pose in local space.
 			/// @param i index of the hand. 
 			/// @return 
-			avs::Pose GetTrackedHandRootPose(int i) const;
+			teleport::core::Pose GetTrackedHandRootPose(int i) const;
 
 			const std::string &GetDebugString() const;
 			platform::crossplatform::Texture* GetRenderTexture(int index=0);
@@ -390,11 +390,11 @@ namespace teleport
 			}
 
 			Overlay overlay;
-			static avs::Pose ConvertGLSpaceToEngineeringSpace(const XrPosef &pose);
+			static teleport::core::Pose ConvertGLSpaceToEngineeringSpace(const XrPosef &pose);
 			vec3 ConvertGLSpaceToEngineeringSpace(const XrVector3f &d) const;
 			platform::crossplatform::ViewStruct CreateViewStructFromXrCompositionLayerProjectionView(XrCompositionLayerProjectionView view, int id, platform::crossplatform::DepthTextureStyle depthTextureStyle);
-			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const avs::Pose& pose);
-			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const avs::Pose& pose);
+			static platform::math::Matrix4x4 CreateViewMatrixFromPose(const teleport::core::Pose& pose);
+			static platform::math::Matrix4x4 CreateTransformMatrixFromPose(const teleport::core::Pose& pose);
 
 			// extensions:
 			std::shared_ptr<OpenXRRenderModel> openXRRenderModel;
@@ -428,7 +428,7 @@ namespace teleport
 			bool AddQuadOverlayLayer(XrTime predictedTime,XrCompositionLayerQuad &layer,int i);
 			bool AddCylinderOverlayLayer(XrTime predictedTime, XrCompositionLayerCylinderKHR &layer, int i);
 
-			avs::Pose headPose_stageSpace={};
+			teleport::core::Pose headPose_stageSpace={};
 			struct XrState
 			{
 				XrPosef XrSpacePoseInWorld={0};
@@ -515,8 +515,8 @@ namespace teleport
 			struct TrackedHand
 			{
 				bool active=false;
-				avs::Pose rootPose;						// In local space.
-				std::vector<avs::Pose> jointPoses;		// In space relative to root.
+				teleport::core::Pose rootPose;						// In local space.
+				std::vector<teleport::core::Pose> jointPoses;		// In space relative to root.
 			};
 			TrackedHand trackedHands[2];
 			void CreateHandTrackers();

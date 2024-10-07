@@ -398,7 +398,7 @@ void Renderer::InitLocalGeometry()
 		renderState.openXR->SetFallbackBinding(client::MOUSE_RIGHT_BUTTON	,"mouse/right/click");
 
 		// Hard-code the menu button
-		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::LEFT_TRIGGER);
+		renderState.openXR->SetHardInputMapping(local_server_uid,local_menu_input_id	,teleport::core::InputType::IntegerEvent,teleport::client::ActionId::LEFT_TRIGGER);
 		//renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_osd_id		,avs::InputType::IntegerEvent,teleport::client::ActionId::X);
 		//renderState.openXR->SetHardInputMapping(local_server_uid,local_cycle_shader_id	,avs::InputType::IntegerEvent,teleport::client::ActionId::Y);
 	}
@@ -648,7 +648,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 
 	// For the orientation, we want to point the controller towards controller_dir. The pointing direction is y.
 	// The up direction is x, and the left direction is z.
-	const avs::Pose &headPose=renderState.openXR->GetHeadPose_StageSpace();
+	const teleport::core::Pose &headPose=renderState.openXR->GetHeadPose_StageSpace();
 	crossplatform::Quaternionf q = (const float*)(&headPose.orientation);
 	float azimuth	= angle;
 	static float elev_mult=1.2f;
@@ -661,7 +661,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	static float roll=-0.3f;
 	q.Rotate(roll*offset, point_dir);
 
-	avs::Pose pose;
+	teleport::core::Pose pose;
 	pose.position=*((vec3*)&footspace_pos);
 	pose.orientation=*((const vec4*)&q);
 
@@ -670,7 +670,7 @@ void Renderer::FillInControllerPose(int index, float offset)
 	renderState.openXR->SetFallbackPoseState(index?client::RIGHT_AIM_POSE:client::LEFT_AIM_POSE,pose);
 }
 
-void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose)
+void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext, const teleport::core::Pose& originPose)
 {
 // Here we must transform the viewstructs in the device context by the specified origin pose,
 // so that the new view matrices will be in a global space which has the stage space at the specified origin.
@@ -700,9 +700,9 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext& deviceContext
 	}	
 }
 
-avs::Pose Renderer::GetOriginPose(avs::uid server_uid)
+teleport::core::Pose Renderer::GetOriginPose(avs::uid server_uid)
 {
-	avs::Pose origin_pose;
+	teleport::core::Pose origin_pose;
 	auto sessionClient=client::SessionClient::GetSessionClient(server_uid);
 	auto &clientServerState=sessionClient->GetClientServerState();
 	std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager.GetNode(clientServerState.origin_node_uid);
@@ -827,7 +827,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 		// Init the viewstruct in global space - i.e. with the server offsets.
-		avs::Pose origin_pose;
+		teleport::core::Pose origin_pose;
 		auto &clientServerState = sessionClient->GetClientServerState();
 		std::shared_ptr<Node> origin_node=GetInstanceRenderer(server_uid)->geometryCache->mNodeManager.GetNode(clientServerState.origin_node_uid);
 		if(origin_node)
@@ -846,7 +846,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 	SIMUL_COMBINED_PROFILE_END(deviceContext);
 
 	// Init the viewstruct in local space - i.e. with no server offsets.
-	SetRenderPose(deviceContext, avs::Pose());
+	SetRenderPose(deviceContext, teleport::core::Pose());
 	if(mvgdc)
 	{
 		mvgdc->viewStructs=defaultViewStructs;
@@ -891,7 +891,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 			vec4 white={1.f,1.f,1.f,1.f};
 			if(l!=nodePoseStates.end())
 			{
-				avs::Pose handPose	= l->second.pose_footSpace.pose;
+				teleport::core::Pose handPose	= l->second.pose_footSpace.pose;
 				vec3 pos = LocalToGlobal(handPose, *((vec3 *)&lobbyGeometry.hands[0].index_finger_offset));
 				vec4 pos4;
 				pos4.xyz			= (const float*)&pos;
@@ -1146,7 +1146,7 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 		have_vr_device=renderState.openXR->HaveXRDevice();
 		if (have_vr_device)
 		{
-			const avs::Pose &headPose_stageSpace = renderState.openXR->GetHeadPose_StageSpace();
+			const teleport::core::Pose &headPose_stageSpace = renderState.openXR->GetHeadPose_StageSpace();
 			for(auto server_uid:client::SessionClient::GetSessionClientIds())
 			{
 				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
@@ -1212,7 +1212,7 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 				const teleport::core::Input& inputs = renderState.openXR->GetServerInputs(server_uid,renderPlatform->GetFrameNumber());
 				sessionClient->GetClientServerState().SetInputs(inputs);
 			}
-			sessionClient->Frame(displayInfo, sessionClient->GetClientServerState().headPose.localPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
+			sessionClient->Frame(displayInfo, sessionClient->GetClientServerState().headPose, nodePoses, instanceRenderer->receivedInitialPos, GetOriginPose(server_uid),
 								 sessionClient->GetClientServerState().input, fTime, time_step);
 
 		}
@@ -1511,9 +1511,9 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 			// global pos/orientation:
 				auto &clientServerState = sessionClient->GetClientServerState();
-				globalOrientation.SetPosition((const float*)&clientServerState.headPose.localPose.position);
+				globalOrientation.SetPosition((const float*)&clientServerState.headPose.position);
 				math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(-1.f, 0.0f, 0.0f));
-				math::Quaternion q1 = (const float*)&clientServerState.headPose.localPose.orientation;
+				math::Quaternion q1 = (const float*)&clientServerState.headPose.orientation;
 				auto q_rel = q1/q0;
 				globalOrientation.SetOrientation(q_rel);
 				deviceContext.viewStruct.view = globalOrientation.GetInverseMatrix().RowPointer(0);
@@ -1607,11 +1607,11 @@ void Renderer::RemoveView(int)
 void Renderer::UpdateVRGuiMouse()
 {
 	// In engineering axes:
-	avs::Pose p = renderState.openXR->GetActionPose(client::RIGHT_AIM_POSE);
+	teleport::core::Pose p = renderState.openXR->GetActionPose(client::RIGHT_AIM_POSE);
 	// from hand to overlay is diff:
 	vec3 start = *((vec3 *)&p.position);
 	static vec3 y = {0, 1.0f, 0};
-	avs::Pose overlay_pose = renderState.openXR->ConvertGLSpaceToEngineeringSpace(renderState.openXR->overlay.pose);
+	teleport::core::Pose overlay_pose = renderState.openXR->ConvertGLSpaceToEngineeringSpace(renderState.openXR->overlay.pose);
 	vec3 overlay_centre = *((vec3 *)&overlay_pose.position);
 	crossplatform::Quaternionf ovrl_q = *(crossplatform::Quaternionf *)&overlay_pose.orientation;
 	crossplatform::Quaternionf aim_q = *(crossplatform::Quaternionf *)&p.orientation;
@@ -1708,7 +1708,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 			vec3 offset=camera.GetPosition();
 			auto originPose=GetOriginPose(server_uid);
 			gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z)):"Origin:", white);
-			gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.localPose.position.x, clientServerState.headPose.localPose.position.y, clientServerState.headPose.localPose.position.z),white);
+			gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.position.x, clientServerState.headPose.position.y, clientServerState.headPose.position.z),white);
 		//	gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x, clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
 			if (instanceRenderer->videoPosDecoded)
 			{
@@ -1849,8 +1849,8 @@ void Renderer::HandleLocalInputs(const teleport::core::Input& local_inputs)
 			{
 				if(renderState.openXR->IsHandTrackingActive(0))
 				{
-					avs::Pose leftHandPose = renderState.openXR->GetTrackedHandRootPose(0);
-					avs::Pose headPose = renderState.openXR->GetHeadPose_StageSpace();
+					teleport::core::Pose leftHandPose = renderState.openXR->GetTrackedHandRootPose(0);
+					teleport::core::Pose headPose = renderState.openXR->GetHeadPose_StageSpace();
 					vec3 diff = headPose.position - leftHandPose.position;
 					static vec3 x = {1.0f, 0,0};
 					crossplatform::Quaternionf palm_q = *(crossplatform::Quaternionf *)&leftHandPose.orientation;

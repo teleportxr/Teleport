@@ -111,8 +111,8 @@ void InstanceRenderer::RenderBackgroundTexture(platform::crossplatform::Graphics
 	bool multiview = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
 	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 	auto &clientServerState = sessionClient->GetClientServerState();
-	renderState.cubemapConstants.cameraPosition = *((vec3 *)&clientServerState.headPose.localPose.position);
-	renderState.cubemapConstants.cameraRotation = *((vec4 *)&clientServerState.headPose.localPose.orientation);
+	renderState.cubemapConstants.cameraPosition = *((vec3 *)&clientServerState.headPose.position);
+	renderState.cubemapConstants.cameraRotation = *((vec4 *)&clientServerState.headPose.orientation);
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 	if(t->IsCubemap())
 		renderState.cubemapClearEffect->SetTexture(deviceContext, "cubemapTexture", t);
@@ -131,9 +131,9 @@ void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& 
 	auto &clientServerState=sessionClient->GetClientServerState();
 	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect,renderState.cubemapClearEffect_TagDataCubeBuffer);
 	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.localPose.position) - videoPos;
-	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.localPose.position);
-	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientServerState.headPose.localPose.orientation);
+	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.position) - videoPos;
+	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.position);
+	renderState.cubemapConstants.cameraRotation = *((vec4*)&clientServerState.headPose.orientation);
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 	renderState.cubemapClearEffect->SetTexture(deviceContext, shaderTexture, targetTexture);
 	renderState.cubemapClearEffect->SetTexture(deviceContext, "plainTexture", srcTexture);

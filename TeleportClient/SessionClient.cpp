@@ -5,7 +5,7 @@
 #include <fmt/core.h>
 #include "libavstream/common.hpp"
 #include "TeleportCore/CommonNetworking.h"
-#include "libavstream/common_input.h"
+#include "TeleportCore/InputTypes.h"
 #include <libavstream/geometry/mesh_interface.hpp>
 #include "TeleportClient/Log.h"
 #include "TeleportClient/GeometryCacheBackendInterface.h"
@@ -175,10 +175,10 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 
 
 void SessionClient::Frame(const avs::DisplayInfo &displayInfo
-	,const avs::Pose &headPose
-	,const std::map<avs::uid,avs::PoseDynamic> &nodePoses
+	,const teleport::core::Pose &headPose
+	,const std::map<avs::uid,teleport::core::PoseDynamic> &nodePoses
 	,uint64_t poseValidCounter
-	,const avs::Pose &originPose
+	,const teleport::core::Pose &originPose
 	,const core::Input &input
 	,double t
 	,double deltaTime)
@@ -391,7 +391,7 @@ void SessionClient::TimestampMessage(teleport::core::ClientMessage &msg)
 	msg.timestamp_unix_ms=(uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
 }
 
-void SessionClient::SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses)
+void SessionClient::SendNodePoses(const teleport::core::Pose& headPose,const std::map<avs::uid,teleport::core::PoseDynamic> poses)
 {
 	teleport::core::ControllerPosesMessage message;
 	TimestampMessage(message);
@@ -473,9 +473,9 @@ void SessionClient::SendInput(const core::Input& input)
 		clientPipeline.inputStateQueue.push(buffer.data(), statesPacketSize);
 	}
 	{
-		size_t binaryEventSize = sizeof(avs::InputEventBinary) * inputEventsMessage.numBinaryEvents;
-		size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * inputEventsMessage.numAnalogueEvents;
-		size_t motionEventSize = sizeof(avs::InputEventMotion) * inputEventsMessage.numMotionEvents;
+		size_t binaryEventSize = sizeof(teleport::core::InputEventBinary) * inputEventsMessage.numBinaryEvents;
+		size_t analogueEventSize = sizeof(teleport::core::InputEventAnalogue) * inputEventsMessage.numAnalogueEvents;
+		size_t motionEventSize = sizeof(teleport::core::InputEventMotion) * inputEventsMessage.numMotionEvents;
 
 		size_t inputEventsSize = sizeof(inputEventsMessage);
 		size_t eventsPacketSize = sizeof(inputEventsMessage) + binaryEventSize + analogueEventSize + motionEventSize;

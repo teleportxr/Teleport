@@ -37,8 +37,8 @@ namespace teleport
 	{
 		struct LocalGlobalPose
 		{
-			avs::Pose localPose;
-			avs::Pose globalPose;
+			teleport::core::Pose localPose;
+			teleport::core::Pose globalPose;
 		};
 		struct AVSTexture
 		{

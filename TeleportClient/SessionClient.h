@@ -125,9 +125,9 @@ namespace teleport
 			void SetGeometryCache(GeometryCacheBackendInterface *r);
 			bool Connect(const char *remoteIP,  uint timeout,avs::uid client_id);
 			void Disconnect(uint timeout, bool resetClientID = true);
-			void Frame(const avs::DisplayInfo &displayInfo, const avs::Pose &headPose,
-					const std::map<avs::uid,avs::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
-					const avs::Pose &originPose, const teleport::core::Input& input,
+			void Frame(const avs::DisplayInfo &displayInfo, const teleport::core::Pose &headPose,
+					const std::map<avs::uid,teleport::core::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
+					const teleport::core::Pose &originPose, const teleport::core::Input& input,
 					double time, double deltaTime);
 			float GetLatencyMs() const;
 			//! @brief Returns the current connection status as determined by the signaling
@@ -191,7 +191,7 @@ namespace teleport
 			void ReceiveCommandPacket(const std::vector<uint8_t> &buffer);
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
-			void SendNodePoses(const avs::Pose& headPose,const std::map<avs::uid,avs::PoseDynamic> poses);
+			void SendNodePoses(const teleport::core::Pose& headPose,const std::map<avs::uid,teleport::core::PoseDynamic> poses);
 			void SendInput(const teleport::core::Input& input);
 			void SendReceivedResources();
 			void SendNodeUpdates();

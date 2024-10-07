@@ -4,6 +4,13 @@
 #include <cmath>
 #include <iostream>
 #include "../../firstparty/Platform/CrossPlatform/Shaders/CppSl.sl"
+#ifndef AVS_PACKED
+	#if defined(__GNUC__) || defined(__clang__)
+		#define AVS_PACKED __attribute__ ((packed,aligned(1)))
+	#else
+		#define AVS_PACKED
+	#endif
+#endif
 namespace avs
 {
 /// A model for how 3D space is mapped to X, Y and Z axes. A server may use one standard internally, while clients may use others.
@@ -174,10 +181,4 @@ namespace avs
 		vec3 scale = { 1.f, 1.f, 1.f };
 	} AVS_PACKED;
 
-	struct NodeRenderState
-	{
-		vec4 lightmapScaleOffset={0,0,0,0};
-		uid globalIlluminationUid = 0;
-		uint8_t lightmapTextureCoordinate=0;
-	} AVS_PACKED;
 } //namespace avs

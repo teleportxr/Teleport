@@ -31,7 +31,7 @@ namespace teleport
 		{
 			return GetVerticalFOVFromHorizontal(horizontal * DEG_TO_RAD, aspect) * RAD_TO_DEG;
 		}
-		inline vec3 LocalToGlobal(const avs::Pose &pose, const vec3 &local)
+		inline vec3 LocalToGlobal(const teleport::core::Pose &pose, const vec3 &local)
 		{
 			vec3 ret = pose.position;
 			platform::crossplatform::Quaternionf *q = (platform::crossplatform::Quaternionf *)&pose.orientation;

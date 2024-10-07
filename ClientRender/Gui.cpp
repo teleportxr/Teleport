@@ -1540,22 +1540,22 @@ void Gui::InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient,
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##clientActionId", "%s", teleport::client::stringof(m.clientActionId));
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##inputType", "%s", avs::stringof(m.serverInputDefinition.inputType));
+			ImGui::LabelText("##inputType", "%s", teleport::core::stringof(m.serverInputDefinition.inputType));
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##inputType", "%s", m.serverInputDefinition.regexPath.c_str());
 			ImGui::TableNextColumn();
 			switch (m.serverInputDefinition.inputType)
 			{
-			case avs::InputType::FloatState:
+			case teleport::core::InputType::FloatState:
 				val = fmt::format("{0}", I.analogueStates[m.serverInputDefinition.inputId]);
 				break;
-			case avs::InputType::IntegerState:
+			case teleport::core::InputType::IntegerState:
 				val = fmt::format("{0}", I.binaryStates[m.serverInputDefinition.inputId]);
 				break;
-			case avs::InputType::FloatEvent:
+			case teleport::core::InputType::FloatEvent:
 				val = fmt::format("{0}", fmt::format("{0}", I.getLastAnalogueEvent(m.serverInputDefinition.inputId).strength));
 				break;
-			case avs::InputType::IntegerEvent:
+			case teleport::core::InputType::IntegerEvent:
 				val = fmt::format("{0}", I.getLastBinaryEvent(m.serverInputDefinition.inputId).activated);
 				break;
 			default:

@@ -314,7 +314,13 @@ namespace avs
 	extern void AVSTREAM_API ConvertPosition(AxesStandard fromStandard, AxesStandard toStandard, vec3 &position);
 	extern void AVSTREAM_API ConvertScale(AxesStandard fromStandard, AxesStandard toStandard, vec3 &scale);
 	extern int8_t AVSTREAM_API ConvertAxis(AxesStandard fromStandard, AxesStandard toStandard, int8_t axis);
-
+	
+	struct NodeRenderState
+	{
+		vec4 lightmapScaleOffset={0,0,0,0};
+		uid globalIlluminationUid = 0;
+		uint8_t lightmapTextureCoordinate=0;
+	} AVS_PACKED;
 	struct Node
 	{
 		std::string name;

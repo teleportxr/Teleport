@@ -82,7 +82,7 @@ namespace teleport
 			void InvalidateDeviceObjects();
 			void CreateTexture(clientrender::AVSTextureHandle &th, int width, int height);
 			void FillInControllerPose(int index, float offset);
-			void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const avs::Pose& originPose);
+			void SetRenderPose(platform::crossplatform::GraphicsDeviceContext& deviceContext, const teleport::core::Pose& originPose);
 			struct ControllerSim
 			{
 				vec3 controller_dir;
@@ -148,13 +148,13 @@ namespace teleport
 
 			// TODO: temporary.
 			const avs::uid local_server_uid = 0;
-			const avs::InputId local_menu_input_id = 1;
-			const avs::InputId local_cycle_osd_id = 2;
-			const avs::InputId local_cycle_shader_id = 3;
+			const teleport::core::InputId local_menu_input_id = 1;
+			const teleport::core::InputId local_cycle_osd_id = 2;
+			const teleport::core::InputId local_cycle_shader_id = 3;
 			Gui &gui;
 			client::Config &config;
 			ShaderMode shaderMode = ShaderMode::DEFAULT;
-			avs::Pose GetOriginPose(avs::uid server_uid);
+			teleport::core::Pose GetOriginPose(avs::uid server_uid);
 			std::queue<std::string> console;
 			void ExecConsoleCommands();
 			void ExecConsoleCommand(const std::string &str);

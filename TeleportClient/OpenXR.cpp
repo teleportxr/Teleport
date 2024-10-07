@@ -1025,9 +1025,9 @@ void OpenXR::Tick()
 	}
 }
 
-avs::Pose ConvertJointPose(const XrPosef &xrpose)
+teleport::core::Pose ConvertJointPose(const XrPosef &xrpose)
 {
-	avs::Pose pose;
+	teleport::core::Pose pose;
 	// first convert to the correct scheme.
 	vec3 pos_e = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3 *)&xrpose.position));
 	crossplatform::Quaternionf ori_e = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4 *)&xrpose.orientation));
@@ -1268,15 +1268,15 @@ void OpenXR::PollActions(XrTime predictedTime)
 	}
 }
 
-const std::vector<avs::Pose> &OpenXR::GetTrackedHandJointPoses(int i)
+const std::vector<teleport::core::Pose> &OpenXR::GetTrackedHandJointPoses(int i)
 {
-	static std::vector<avs::Pose> emptyPoses;
+	static std::vector<teleport::core::Pose> emptyPoses;
 	if(!trackedHands[i].active)
 		return emptyPoses;
 	return trackedHands[i].jointPoses;
 }
 
-avs::Pose OpenXR::GetTrackedHandRootPose(int i) const
+teleport::core::Pose OpenXR::GetTrackedHandRootPose(int i) const
 {
 	return trackedHands[i].rootPose;
 }
@@ -1448,7 +1448,7 @@ void OpenXR::SetFallbackBinding(ActionId actionId,std::string path)
 	fallbackBindings[actionId].path=path;
 }
 
-void OpenXR::SetFallbackPoseState(ActionId actionId,const avs::Pose &pose_worldSpace)
+void OpenXR::SetFallbackPoseState(ActionId actionId,const teleport::core::Pose &pose_worldSpace)
 {
 	fallbackStates[actionId].pose_worldSpace=pose_worldSpace;
 }
@@ -1562,7 +1562,7 @@ void OpenXR::OnInputsSetupChanged(avs::uid server_uid,const std::vector<teleport
 	RecordCurrentBindings(server_uid);
 }
 
-void OpenXR::SetHardInputMapping(avs::uid server_uid,avs::InputId inputId,avs::InputType inputType,ActionId clientActionId)
+void OpenXR::SetHardInputMapping(avs::uid server_uid,teleport::core::InputId inputId,teleport::core::InputType inputType,ActionId clientActionId)
 {
 	auto &inputMappings=GetServer(server_uid)->inputMappings;
 	auto &inputStates=GetServer(server_uid)->inputStates;
@@ -1686,7 +1686,7 @@ std::shared_ptr<OpenXRServer> OpenXR::GetServer(avs::uid server_uid)
 
 void OpenXR::MapNodeToPose(avs::uid server_uid,avs::uid uid,const std::string &regexPath)
 {
-	avs::Pose poseOffset;
+	teleport::core::Pose poseOffset;
 	auto server=GetServer(server_uid);
 	if(regexPath=="root"||regexPath=="")
 	{
@@ -1774,7 +1774,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 				break;
 			};
 			// process as state or as event?
-			if((mapping.serverInputDefinition.inputType&avs::InputType::IsEvent)==avs::InputType::IsEvent)
+			if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsEvent)==teleport::core::InputType::IsEvent)
 			{
 				// don't treat as a change of state if it wasn't valid last-frame.
 				if (!previousState.isValid)
@@ -1783,13 +1783,13 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 				// float action interpreted as float event:
 				if(actionDefinition.xrActionType==XR_ACTION_TYPE_FLOAT_INPUT)
 				{
-					if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
+					if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsFloat)==teleport::core::InputType::IsFloat)
 					{
 						if(previousState.float32!=state.float32)
 							server->inputs.addAnalogueEvent(mapping.serverInputDefinition.inputId,state.float32);
 					}
 					// float action interpreted as boolean event:
-					else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
+					else if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsInteger)==teleport::core::InputType::IsInteger)
 					{
 						if(state.uint32!=0&&state.float32<LOWER_HYSTERESIS)
 						{
@@ -1806,7 +1806,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 				else if(actionDefinition.xrActionType==XR_ACTION_TYPE_BOOLEAN_INPUT)
 				{
 					// boolean action as float event:
-					if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
+					if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsFloat)==teleport::core::InputType::IsFloat)
 					{
 						if(previousState.uint32!=state.uint32)
 						{
@@ -1815,7 +1815,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 						}
 					}
 					// boolean action as boolean event:
-					else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
+					else if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsInteger)==teleport::core::InputType::IsInteger)
 					{
 						if(previousState.uint32!=state.uint32)
 						{
@@ -1826,7 +1826,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			}
 			else // If it's a state input, always send.
 			{
-				if((mapping.serverInputDefinition.inputType&avs::InputType::IsFloat)==avs::InputType::IsFloat)
+				if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsFloat)==teleport::core::InputType::IsFloat)
 				{
 					if(actionDefinition.xrActionType==XR_ACTION_TYPE_BOOLEAN_INPUT)
 					{
@@ -1835,7 +1835,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					server->inputs.setAnalogueState(analogueStateIndex++,state.float32);
 				}
 				// float action interpreted as boolean event:
-				else if((mapping.serverInputDefinition.inputType&avs::InputType::IsInteger)==avs::InputType::IsInteger)
+				else if((mapping.serverInputDefinition.inputType&teleport::core::InputType::IsInteger)==teleport::core::InputType::IsInteger)
 				{
 					if(actionDefinition.xrActionType==XR_ACTION_TYPE_FLOAT_INPUT)
 					{
@@ -1880,7 +1880,7 @@ avs::uid OpenXR::GetRootNode(avs::uid server_uid)
 	return GetServer(server_uid)->rootNode;
 }
 
-const std::map<avs::uid,avs::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
+const std::map<avs::uid,teleport::core::PoseDynamic> &OpenXR::GetNodePoses(avs::uid server_uid,unsigned long long framenumber)
 {
 	const std::map<avs::uid,NodePoseState> &nodePoseStates=GetNodePoseStates(server_uid,framenumber);
 	for(const auto &i:nodePoseStates)
@@ -2511,14 +2511,14 @@ const char * OpenXR::GetSystemName() const
 	return xr_system_properties.systemName;
 }
 
-const avs::Pose& OpenXR::GetHeadPose_StageSpace() const
+const teleport::core::Pose& OpenXR::GetHeadPose_StageSpace() const
 {
 	return headPose_stageSpace;
 }
 
-avs::Pose OpenXR::GetActionPose(ActionId actionId,uint8_t subActionIndex) const
+teleport::core::Pose OpenXR::GetActionPose(ActionId actionId,uint8_t subActionIndex) const
 {
-	avs::Pose pose = ConvertGLSpaceToEngineeringSpace(xr_input_session.actionStates[actionId].subActionStates[subActionIndex].pose_stageSpace);
+	teleport::core::Pose pose = ConvertGLSpaceToEngineeringSpace(xr_input_session.actionStates[actionId].subActionStates[subActionIndex].pose_stageSpace);
 	return pose;
 }
 
@@ -2535,9 +2535,9 @@ typedef union {
 } XrCompositionLayer_Union;
 XrCompositionLayer_Union layers[3];
 
-avs::Pose OpenXR::ConvertGLSpaceToEngineeringSpace(const XrPosef &xrpose) 
+teleport::core::Pose OpenXR::ConvertGLSpaceToEngineeringSpace(const XrPosef &xrpose) 
 {
-	avs::Pose pose;
+	teleport::core::Pose pose;
 	// first convert to the correct scheme.
 	vec3 pos_e							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&xrpose.position));
  	crossplatform::Quaternionf ori_e	= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&xrpose.orientation));
@@ -2616,7 +2616,7 @@ mat4 xr_projection(XrFovf fov, float clip_near, float clip_far)
 	return MatrixPerspectiveOffCenterRH(left, right, down, up, clip_near, clip_far);
 }
 
-math::Matrix4x4 OpenXR::CreateViewMatrixFromPose(const avs::Pose& pose)
+math::Matrix4x4 OpenXR::CreateViewMatrixFromPose(const teleport::core::Pose& pose)
 {
 	// global pos/orientation:
 	math::SimulOrientation globalOrientation;
@@ -2629,7 +2629,7 @@ math::Matrix4x4 OpenXR::CreateViewMatrixFromPose(const avs::Pose& pose)
 	return view;
 }
 
-math::Matrix4x4 OpenXR::CreateTransformMatrixFromPose(const avs::Pose& pose)
+math::Matrix4x4 OpenXR::CreateTransformMatrixFromPose(const teleport::core::Pose& pose)
 {
 	// global pos/orientation:
 	math::SimulOrientation globalOrientation;
@@ -2650,7 +2650,7 @@ crossplatform::ViewStruct OpenXR::CreateViewStructFromXrCompositionLayerProjecti
 	mat4 proj = xr_projection(view.fov, 0.1f, 200.0f);
 	viewStruct.proj = *((const math::Matrix4x4*)&proj);
 
-	avs::Pose pose = ConvertGLSpaceToEngineeringSpace(view.pose);
+	teleport::core::Pose pose = ConvertGLSpaceToEngineeringSpace(view.pose);
 	viewStruct.view = CreateViewMatrixFromPose(pose);
 
 	viewStruct.Init();
@@ -3010,7 +3010,7 @@ const std::string &OpenXR::GetDebugString() const
 		{
 			case XR_ACTION_TYPE_POSE_INPUT:
 			{
-				//avs::Pose pose_stagespace=ConvertGLStageSpacePoseToLocalSpacePose(state.pose_stageSpace);
+				//teleport::core::Pose pose_stagespace=ConvertGLStageSpacePoseToLocalSpacePose(state.pose_stageSpace);
 				//str+=fmt::format("{: .3f},{: .3f},{: .3f}    - {: .2f},{: .2f},{: .2f},{: .2f}",pose_stagespace.position.x,pose_stagespace.position.y,pose_stagespace.position.z
 				//						,pose_stagespace.orientation.x,pose_stagespace.orientation.y,pose_stagespace.orientation.z,pose_stagespace.orientation.w);
 			}
