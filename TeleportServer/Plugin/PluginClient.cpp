@@ -9,7 +9,6 @@
 
 #include "TeleportCore/Profiling.h"
 #include "TeleportCore/Logging.h"
-#include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
 #include "TeleportServer/ClientData.h"
 #include "TeleportServer/DefaultHTTPService.h"
@@ -19,8 +18,8 @@
 #include "TeleportServer/VideoEncodePipeline.h"
 #include "TeleportServer/ClientManager.h"
 
-#include "Export.h"
-#include "InteropStructures.h"
+#include "TeleportServer/Export.h"
+#include "TeleportServer/InteropStructures.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportAudio/CustomAudioStreamTarget.h"
 #pragma optimize("", off)
@@ -366,7 +365,7 @@ TELEPORT_EXPORT void Client_SetNodeHighlighted(avs::uid clientID, avs::uid nodeI
 	client->clientMessaging->setNodeHighlighted(nodeID, isHighlighted);
 }
 
-TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID,avs::Pose relPose )
+TELEPORT_EXPORT void Client_ReparentNode(avs::uid clientID, avs::uid nodeID, avs::uid newParentNodeID,teleport::core::Pose relPose )
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);

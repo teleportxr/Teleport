@@ -167,16 +167,17 @@ namespace avs
 			return convertedMatrix;
 		}
 	};
+	struct Transform
+	{
+		vec3 position = { 0.f, 0.f, 0.f };
+		vec4 rotation = { 0.f, 0.f, 0.f, 1.f };
+		vec3 scale = { 1.f, 1.f, 1.f };
+	} AVS_PACKED;
 
-	struct Pose
+	struct NodeRenderState
 	{
-		vec4 orientation = { 0, 0, 0, 1 };
-		vec3 position = { 0, 0, 0 };
-	};
-	struct PoseDynamic
-	{
-		Pose pose;
-		vec3 velocity;
-		vec3 angularVelocity;
-	};
+		vec4 lightmapScaleOffset={0,0,0,0};
+		uid globalIlluminationUid = 0;
+		uint8_t lightmapTextureCoordinate=0;
+	} AVS_PACKED;
 } //namespace avs

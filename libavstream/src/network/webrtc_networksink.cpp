@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2023 Simul Software Ltd
+// (c) Copyright 2018-2023 Teleport XR Ltd
 
 #include "libavstream/network/webrtc_networksink.h"
 #include <logger.hpp>

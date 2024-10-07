@@ -6,7 +6,7 @@
 #include "libavstream/common.hpp"
 #include "TeleportCore/Animation.h"
 
-#include "ServerSettings.h"
+#include "TeleportServer/ServerSettings.h"
 
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"

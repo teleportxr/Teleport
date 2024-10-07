@@ -2,8 +2,8 @@
 
 #include <memory>
 #include "ClientNetworkContext.h"
-#include "ServerSettings.h"
-#include "Export.h"
+#include "TeleportServer/ServerSettings.h"
+#include "TeleportServer/Export.h"
 
 // Forward declare so classes that include don't have to know about them
 namespace avs

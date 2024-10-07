@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "libavstream/common_input.h"
+#include "TeleportCore/InputTypes.h"
 #include "TeleportCore/CommonNetworking.h"
 #include "TeleportCore/Profiling.h" 
 
@@ -227,9 +227,9 @@ void ClientMessaging::handleEvents(float deltaTime)
 	//Send latest input to managed code for this networking tick; we need the variables as we can't take the memory address of an rvalue.
 	const uint8_t* binaryStatesPtr = latestInputStateAndEvents.binaryStates.data();
 	const float* analogueStatesPtr = latestInputStateAndEvents.analogueStates.data();
-	const avs::InputEventBinary* binaryEventsPtr		= latestInputStateAndEvents.binaryEvents.data();
-	const avs::InputEventAnalogue* analogueEventsPtr	= latestInputStateAndEvents.analogueEvents.data();
-	const avs::InputEventMotion* motionEventsPtr		= latestInputStateAndEvents.motionEvents.data();
+	const teleport::core::InputEventBinary* binaryEventsPtr		= latestInputStateAndEvents.binaryEvents.data();
+	const teleport::core::InputEventAnalogue* analogueEventsPtr	= latestInputStateAndEvents.analogueEvents.data();
+	const teleport::core::InputEventMotion* motionEventsPtr		= latestInputStateAndEvents.motionEvents.data();
 	for (auto c : latestInputStateAndEvents.analogueEvents)
 	{
 		TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
@@ -635,9 +635,9 @@ void ClientMessaging::receiveInputEvents(const std::vector<uint8_t> &packet)
 	//Copy newest input state into member variable.
 	memcpy(&msg, packet.data(), InputsMessageSize);
 
-	size_t binaryEventSize = sizeof(avs::InputEventBinary) * msg.numBinaryEvents;
-	size_t analogueEventSize = sizeof(avs::InputEventAnalogue) * msg.numAnalogueEvents;
-	size_t motionEventSize = sizeof(avs::InputEventMotion) * msg.numMotionEvents;
+	size_t binaryEventSize = sizeof(teleport::core::InputEventBinary) * msg.numBinaryEvents;
+	size_t analogueEventSize = sizeof(teleport::core::InputEventAnalogue) * msg.numAnalogueEvents;
+	size_t motionEventSize = sizeof(teleport::core::InputEventMotion) * msg.numMotionEvents;
 	size_t totalSize = InputsMessageSize +  binaryEventSize + analogueEventSize + motionEventSize;
 
 	if (packet.size() != totalSize)
@@ -653,7 +653,7 @@ void ClientMessaging::receiveInputEvents(const std::vector<uint8_t> &packet)
 	const uint8_t* src = packet.data() + InputsMessageSize;
 	if (msg.numBinaryEvents != 0)
 	{
-		const avs::InputEventBinary* binaryData = reinterpret_cast<const avs::InputEventBinary*>(src);
+		const teleport::core::InputEventBinary* binaryData = reinterpret_cast<const teleport::core::InputEventBinary*>(src);
 		latestInputStateAndEvents.binaryEvents.insert(latestInputStateAndEvents.binaryEvents.end(), binaryData, binaryData + msg.numBinaryEvents);
 		src += binaryEventSize;
 	}
@@ -663,7 +663,7 @@ void ClientMessaging::receiveInputEvents(const std::vector<uint8_t> &packet)
 	}
 	if (msg.numAnalogueEvents != 0)
 	{
-		const avs::InputEventAnalogue* analogueData = reinterpret_cast<const avs::InputEventAnalogue*>(src);
+		const teleport::core::InputEventAnalogue* analogueData = reinterpret_cast<const teleport::core::InputEventAnalogue*>(src);
 		latestInputStateAndEvents.analogueEvents.insert(latestInputStateAndEvents.analogueEvents.end(), analogueData, analogueData + msg.numAnalogueEvents);
 		for (auto c : latestInputStateAndEvents.analogueEvents)
 		{
@@ -674,7 +674,7 @@ void ClientMessaging::receiveInputEvents(const std::vector<uint8_t> &packet)
 
 	if (msg.numMotionEvents != 0)
 	{
-		const avs::InputEventMotion* motionData = reinterpret_cast<const avs::InputEventMotion*>(src);
+		const teleport::core::InputEventMotion* motionData = reinterpret_cast<const teleport::core::InputEventMotion*>(src);
 		latestInputStateAndEvents.motionEvents.insert(latestInputStateAndEvents.motionEvents.end(), motionData, motionData + msg.numMotionEvents);
 	}
 	if (src - packet.data() != totalSize)
@@ -780,14 +780,14 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 			}
 			avs::ConvertRotation(clientNetworkContext.axesStandard, serverSettings.serverAxesStandard, message.headPose.orientation);
 			avs::ConvertPosition(clientNetworkContext.axesStandard, serverSettings.serverAxesStandard, message.headPose.position);
-			setHeadPose(clientID, (avs::Pose*)&message.headPose);
+			setHeadPose(clientID, (teleport::core::Pose*)&message.headPose);
 			const uint8_t *src=packet.data()+sizeof(message);
 			for (int i = 0; i < message.numPoses; i++)
 			{
 				teleport::core::NodePose nodePose;
 				memcpy(&nodePose,src,sizeof(nodePose));
 				src+=sizeof(nodePose);
-				avs::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
+				teleport::core::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
 				avs::ConvertRotation(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.orientation);
 				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.position);
 				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.velocity);

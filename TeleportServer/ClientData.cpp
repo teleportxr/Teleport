@@ -3,6 +3,7 @@
 #include "TeleportCore/ErrorHandling.h" 
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/ClientManager.h"
+#include "TeleportServer/InteropStructures.h"
 using namespace teleport;
 using namespace server;
 
@@ -147,7 +148,7 @@ void ClientData::reparentNode(avs::uid nodeID)
 	auto node=GeometryStore::GetInstance().getNode(nodeID);
 	if (!node)
 		return;
-	avs::Pose pose;
+	teleport::core::Pose pose;
 	pose.orientation	= node->localTransform.rotation;
 	pose.position		= node->localTransform.position;
 	const auto &lastSetupCommand=clientMessaging->GetLastSetupCommand();

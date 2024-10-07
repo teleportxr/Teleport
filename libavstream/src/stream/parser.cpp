@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2024 Simul Software Ltd
+// (c) Copyright 2018-2024 Teleport XR Ltd
 
 #include "stream/parser_avc.hpp"
 #include "stream/parser_geo.hpp"

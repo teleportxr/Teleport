@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2020 Simul Software Ltd
+// (c) Copyright 2018-2020 Teleport XR Ltd
 
 #pragma once
 

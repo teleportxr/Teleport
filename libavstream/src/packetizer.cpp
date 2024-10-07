@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2024 Simul Software Ltd
+// (c) Copyright 2018-2024 Teleport XR Ltd
 
 #include "packetizer_p.hpp"
 #include <libavstream/stream/parser_interface.hpp>

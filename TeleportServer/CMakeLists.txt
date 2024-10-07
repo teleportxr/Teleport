@@ -6,11 +6,8 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
-	CasterTypes.h
-	CaptureDelegates.h
 	ClientNetworkContext.h
 	ClientNetworkContext.cpp
-	ServerSettings.h
 	ClientData.cpp
 	ClientData.h
 	ClientMessaging.cpp
@@ -19,8 +16,6 @@ set(src
 	ClientManager.h
 	SignalingService.cpp
 	SignalingService.h 
-	Export.h
-	Exports.h
 	ExtractedTypes.h
 	Font.h
 	Font.cpp
@@ -53,9 +48,16 @@ set(src_plugin
 	Plugin/PluginMain.cpp
 )
 set(headers_plugin
-	Plugin/InteropStructures.h
-	Plugin/PluginClient.h
-	Plugin/PluginMain.h
+	export_include/TeleportServer/PluginClient.h
+	export_include/TeleportServer/PluginMain.h
+)
+set(headers_export
+	export_include/TeleportServer/CasterTypes.h
+	export_include/TeleportServer/InteropStructures.h
+	export_include/TeleportServer/CaptureDelegates.h
+	export_include/TeleportServer/Export.h
+	export_include/TeleportServer/Exports.h
+	export_include/TeleportServer/ServerSettings.h
 )
 
 #Whether to build dynamic runtime libraries.
@@ -77,7 +79,7 @@ if(TELEPORT_UNITY)
 	set(headers_plugin ${headers_plugin}
 		Plugin/PluginGraphics.h
 	)
-	add_library(TeleportServer SHARED ${src} ${src_plugin} ${headers_plugin})
+	add_library(TeleportServer SHARED ${src} ${src_plugin} ${headers_plugin} ${headers_export})
 	set_target_properties( TeleportServer PROPERTIES 
 		VS_DEBUGGER_COMMAND ${TELEPORT_UNITY_EDITOR_EXE}
 		VS_DEBUGGER_COMMAND_ARGUMENTS "-projectPath \"${TELEPORT_UNITY_PROJECT_DIR}\""
@@ -88,7 +90,7 @@ if(TELEPORT_UNITY)
 
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_UNITY_SERVER=1)
 else()
-	add_library(TeleportServer SHARED ${src} ${src_plugin} ${headers_plugin})
+	add_library(TeleportServer SHARED ${src} ${src_plugin} ${headers_plugin} ${headers_export})
 	target_compile_definitions(TeleportServer PRIVATE TELEPORT_EXPORT_SERVER_DLL=1 TELEPORT_SERVER_DLL=1)
 	file(GLOB TELEPORT_PUBLIC_HEADERS "*.h")
 	message( "ROBOCOPY ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include *.h")
@@ -100,6 +102,7 @@ else()
     #)
 	#file(COPY ${TELEPORT_PUBLIC_HEADERS} DESTINATION ${CMAKE_BINARY_DIR}/include)
 endif()
+source_group("Export Headers" src FILES ${headers_export} )
 source_group("Plugin Headers" src FILES ${headers_plugin} )
 source_group("Plugin Sources" src FILES ${src_plugin} )
 
@@ -115,8 +118,10 @@ SetTeleportDefaults( TeleportServer )
 #Include its root directory
 target_include_directories(TeleportServer PUBLIC .)
 target_include_directories(TeleportServer PUBLIC .. )
+target_include_directories(TeleportServer PUBLIC export_include)
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
+target_include_directories(TeleportServer PUBLIC ../libavstream/export_include)
 #Include Basis Universal
 target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include draco
@@ -173,3 +178,4 @@ if(${USE_ASYNC_NETWORK_PROCESSING})
 	target_compile_definitions(TeleportServer PUBLIC ASYNC_NETWORK_PROCESSING)
 endif()	
 set_target_properties( TeleportServer PROPERTIES FOLDER Teleport )
+target_compile_definitions(TeleportServer PRIVATE TELEPORT_INTERNAL_INTEROP)

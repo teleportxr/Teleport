@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <vector>
 
-#include "libavstream/common_input.h"
+#include "TeleportCore/InputTypes.h"
 
 namespace teleport
 {
@@ -16,12 +16,12 @@ namespace teleport
 		class Input
 		{
 			//! These are NOT sent to the server, but record the last event for each InputId.
-			mutable std::vector<avs::InputEventBinary> lastBinaryEvents;
-			mutable std::vector<avs::InputEventAnalogue> lastAnalogueEvents;
+			mutable std::vector<InputEventBinary> lastBinaryEvents;
+			mutable std::vector<InputEventAnalogue> lastAnalogueEvents;
 		public:	
-			std::vector<avs::InputEventBinary> binaryEvents;
-			std::vector<avs::InputEventAnalogue> analogueEvents;
-			std::vector<avs::InputEventMotion> motionEvents;
+			std::vector<InputEventBinary> binaryEvents;
+			std::vector<InputEventAnalogue> analogueEvents;
+			std::vector<InputEventMotion> motionEvents;
 			
 			std::vector<uint8_t> binaryStates;
 			std::vector<float> analogueStates;
@@ -29,20 +29,20 @@ namespace teleport
 			//! Clear the current lists of states and events.
 			void clearEvents();
 			//! Add a binary (on/off) event for the specified inputID.
-			void addBinaryEvent( avs::InputId inputID, bool activated);
+			void addBinaryEvent( InputId inputID, bool activated);
 			//! Add an analogue [0,1.0] or [-1.0,1.0] event for the specified inputID.
-			void addAnalogueEvent( avs::InputId inputID, float strength);
+			void addAnalogueEvent( InputId inputID, float strength);
 			//! Add a notion (xy) event for the specified inputID.
-			void addMotionEvent( avs::InputId inputID, vec2 motion);
+			void addMotionEvent( InputId inputID, vec2 motion);
 			//! Set a binary state for the specified inputID.
 			void setBinaryState(uint16_t inputID, bool activated);
 			//! Set an analogue state for the specified inputID.
 			void setAnalogueState(uint16_t inputID, float strength);
 
 			//! For debugging only: get the last event at this id.
-			const avs::InputEventAnalogue& getLastAnalogueEvent(uint16_t inputID) const;
+			const InputEventAnalogue& getLastAnalogueEvent(uint16_t inputID) const;
 			//! For debugging only: get the last event at this id.
-			const avs::InputEventBinary& getLastBinaryEvent(uint16_t inputID) const;
+			const InputEventBinary& getLastBinaryEvent(uint16_t inputID) const;
 		};
 	}
 }

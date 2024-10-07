@@ -9,7 +9,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/StringFunctions.h"
 #include "TeleportCore/Profiling.h"
-#include "ServerSettings.h"
+#include "TeleportServer/ServerSettings.h"
 
 namespace
 {

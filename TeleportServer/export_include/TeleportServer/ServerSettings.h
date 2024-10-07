@@ -1,8 +1,9 @@
 #pragma once
 
-#include "TeleportCore/CommonNetworking.h"
 
-#include "CasterTypes.h"
+#include "TeleportCore/InputTypes.h"
+#include "TeleportCore/CommonNetworking.h"
+#include "TeleportServer/CasterTypes.h"
 #include "Export.h"
 
 namespace teleport
@@ -97,8 +98,8 @@ namespace teleport
 		} TELEPORT_PACKED;
 		struct InputDefinitionInterop
 		{
-			avs::InputId inputId;
-			avs::InputType inputType;
+			teleport::core::InputId inputId;
+			teleport::core::InputType inputType;
 		} TELEPORT_PACKED;
 
 		struct ServerNetworkSettings
@@ -109,21 +110,6 @@ namespace teleport
 			int32_t connectionTimeout;
 		} TELEPORT_PACKED;
 
-		struct CasterEncoderSettings
-		{
-			int32_t frameWidth;
-			int32_t frameHeight;
-			int32_t depthWidth;
-			int32_t depthHeight;
-			bool wllWriteDepthTexture;
-			bool enableStackDepth;
-			bool enableDecomposeCube;
-			float maxDepth;
-			int32_t specularCubemapSize;
-			int32_t roughCubemapSize;
-			int32_t diffuseCubemapSize;
-			int32_t lightCubemapSize;
-		} TELEPORT_PACKED;
 
 #pragma pack(pop)
 	}

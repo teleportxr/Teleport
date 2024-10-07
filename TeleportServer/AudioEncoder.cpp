@@ -4,8 +4,7 @@
 #include <set>
 
 #include "libavstream/common.hpp"
-
-#include "ServerSettings.h"
+#include "TeleportServer/ServerSettings.h"
 
 #include "TeleportCore/ErrorHandling.h"
 

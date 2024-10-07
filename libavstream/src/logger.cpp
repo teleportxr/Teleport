@@ -9,7 +9,7 @@
 #define AVSLOG(Severity) std::cerr<<__FILENAME__<<"("<<__LINE__<<"): "<<#Severity<<": "
 #define AVSLOGONCE(Severity) 
 #define AVSLOG_NOSPAM(Severity) 
-#pragma optimize("",off);
+
 using namespace avs;
 Logger &Logger::GetInstance()
 {

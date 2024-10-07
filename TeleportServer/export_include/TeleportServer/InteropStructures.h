@@ -4,18 +4,52 @@
  */
 #pragma once
 
-#include <libavstream/common.hpp>
-#include <libavstream/platforms/this_platform.h>
-#include "TeleportCore/Animation.h"
-#include "TeleportCore/TextCanvas.h"
-#include "libavstream/geometry/mesh_interface.hpp"
 #ifdef _MSC_VER
 #include <wtypes.h>
+#endif
+#include <libavstream/common_maths.h>
+#if TELEPORT_INTERNAL_INTEROP
+#include <libavstream/geometry/mesh_interface.hpp>
 #endif
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
+#ifndef TELEPORT_PACKED
+	#if defined(__GNUC__) || defined(__clang__)
+		#define TELEPORT_PACKED __attribute__ ((packed,aligned(1)))
+	#else
+		#define TELEPORT_PACKED
+	#endif
+#endif
+
+namespace teleport
+{
+	namespace core
+	{
+		struct Glyph;
+		struct FloatKeyframe;
+		struct Vector3Keyframe;
+		struct Vector4Keyframe;
+	}
+}
+
+
+struct CasterEncoderSettings
+{
+	int32_t frameWidth;
+	int32_t frameHeight;
+	int32_t depthWidth;
+	int32_t depthHeight;
+	bool wllWriteDepthTexture;
+	bool enableStackDepth;
+	bool enableDecomposeCube;
+	float maxDepth;
+	int32_t specularCubemapSize;
+	int32_t roughCubemapSize;
+	int32_t diffuseCubemapSize;
+	int32_t lightCubemapSize;
+} TELEPORT_PACKED;
 
 //! Interop struct to receive nodes from external code.
 struct InteropNode
@@ -53,7 +87,7 @@ struct InteropNode
 
 	const char *url;					// 204
 	const char *query_url;				// 212
-
+#if TELEPORT_INTERNAL_INTEROP
 	operator avs::Node() const
 	{
 		return
@@ -88,7 +122,10 @@ struct InteropNode
 			url ? url : "",
 			query_url ? query_url : ""
 		};
+
+
 	}
+#endif
 };
 
 struct InteropSkeleton
@@ -100,7 +137,7 @@ struct InteropSkeleton
 	avs::uid* boneIDs;
 
 	avs::Transform rootTransform;
-
+#if TELEPORT_INTERNAL_INTEROP
 	operator avs::Skeleton() const
 	{
 		return
@@ -114,6 +151,7 @@ struct InteropSkeleton
 			{},
 		};
 	}
+#endif
 };
 
 struct InteropMesh
@@ -139,6 +177,7 @@ struct InteropMesh
 	
 	avs::uid inverseBindMatricesAccessorID;
 
+#if TELEPORT_INTERNAL_INTEROP
 	operator avs::Mesh() const
 	{
 		avs::Mesh newMesh;
@@ -177,6 +216,7 @@ struct InteropMesh
 		newMesh.inverseBindMatricesAccessorID=inverseBindMatricesAccessorID;
 		return newMesh;
 	}
+#endif
 };
 
 struct InteropMaterial
@@ -198,6 +238,7 @@ struct InteropMaterial
 	{
 		return *this;
 	}
+#if TELEPORT_INTERNAL_INTEROP
 	operator avs::Material() const
 	{
 		std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> convertedExtensions;
@@ -230,6 +271,7 @@ struct InteropMaterial
 		};
 		return m;
 	}
+#endif
 };
 
 struct InteropTexture
@@ -253,6 +295,7 @@ struct InteropTexture
 	float valueScale=1.0f;						  // 4 = 61
 												  //  
 	bool cubemap=false;							  // 1 = 62
+#if TELEPORT_INTERNAL_INTEROP
 	operator avs::Texture() const
 	{
 		avs::Texture t=
@@ -288,6 +331,7 @@ struct InteropTexture
 		}
 		return t;
 	}
+#endif
 };
 static_assert (sizeof(InteropTexture) == 62, "InteropTexture Size is not correct");
 
@@ -301,15 +345,6 @@ struct InteropTransformKeyframe
 	int numRotations=0;
 	teleport::core::Vector4Keyframe* rotationKeyframes=nullptr;
 
-	operator teleport::core::TransformKeyframeList() const
-	{
-		return
-		{
-			boneIndex,
-			{positionKeyframes, positionKeyframes + numPositions},
-			{rotationKeyframes, rotationKeyframes + numRotations}
-		};
-	}
 };
 
 struct InteropTransformAnimation
@@ -319,16 +354,6 @@ struct InteropTransformAnimation
 	int64_t boneCount;	// 8
 	InteropTransformKeyframe *boneKeyframes = nullptr; // 8
 	float duration;									   // 4
-
-	operator teleport::core::Animation() const
-	{
-		return
-		{
-			name,
-			duration,
-			{boneKeyframes, boneKeyframes + boneCount}
-		};
-	}
 };
 
 struct InteropTextCanvas
@@ -341,14 +366,24 @@ struct InteropTextCanvas
 	float height=0;
 	vec4 colour;
 };
-
-namespace teleport
+namespace avs
 {
-	namespace core
-	{
-		struct Glyph;
-	}
+	//! An input identifier, used between client and server to denote a specific input.
+	typedef uint16_t InputId;
 }
+
+struct InteropInputState
+{
+	uint16_t numBinaryStates = 0;
+	uint16_t numAnalogueStates= 0;
+} TELEPORT_PACKED;
+//! Input events that can only be in two states; e.g. button pressed or not.
+struct InputEventBinary
+{
+	uint32_t eventID = 0;
+	avs::InputId inputID = 0; //ID of the input type used that triggered the event.
+	bool activated = false;
+} AVS_PACKED;
 
 struct InteropFontMap
 {

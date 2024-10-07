@@ -3,7 +3,7 @@
 
 #include <string>
 #include <map>
-#include "Plugin/InteropStructures.h"
+#include "TeleportServer/InteropStructures.h"
 #include "TeleportCore/FontAtlas.h"
 
 namespace avs

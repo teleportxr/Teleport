@@ -7,7 +7,6 @@ set(DEBUG_CONFIGURATIONS Debug)
 set(src_files			Animation.cpp DecodeMesh.cpp TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp 
 						Time.cpp URLParser.cpp)
 file(GLOB header_files	Animation.h
-						CommonNetworking.h
 						DecodeMesh.h
 						ErrorHandling.h
 						FontAtlas.h
@@ -21,6 +20,8 @@ file(GLOB header_files	Animation.h
 						Threads.h
 						Time.h
 						URLParser.h )
+set(export_includes export_include/TeleportCore/InputTypes.h 
+						export_include/TeleportCore/CommonNetworking.h)
 
 if(ANDROID)
 	include_directories(../client/VrApi/Include) 
@@ -28,14 +29,16 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_library(TeleportCore STATIC ${src_files} ${header_files} )
+add_library(TeleportCore STATIC ${src_files} ${header_files} ${export_includes})
 SetTeleportDefaults( TeleportCore )
 set_target_properties(TeleportCore PROPERTIES FOLDER Teleport)
 target_include_directories(TeleportCore PUBLIC ..)
+target_include_directories(TeleportCore PUBLIC export_include)
 #Include its root directory
 target_include_directories(TeleportCore PRIVATE src)
 #Include libavstream
 target_include_directories(TeleportCore PRIVATE ../libavstream/include)
+target_include_directories(TeleportCore PRIVATE ../libavstream/export_include)
 #Include Basis Universal
 target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 #Include fmt

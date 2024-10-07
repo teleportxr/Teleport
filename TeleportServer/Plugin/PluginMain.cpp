@@ -9,6 +9,7 @@
 
 #include "TeleportCore/Profiling.h"
 #include "TeleportCore/Logging.h"
+#include "TeleportCore/Animation.h"
 
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/CaptureDelegates.h"
@@ -19,8 +20,8 @@
 #include "TeleportServer/AudioEncodePipeline.h"
 #include "TeleportServer/VideoEncodePipeline.h"
 #include "TeleportServer/ClientManager.h"
-#include "Export.h"
-#include "InteropStructures.h"
+#include "TeleportServer/Export.h"
+#include "TeleportServer/InteropStructures.h"
 #include "PluginGraphics.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportAudio/CustomAudioStreamTarget.h"
@@ -512,6 +513,27 @@ TELEPORT_EXPORT void Server_StoreSkeleton(avs::uid id, InteropSkeleton skeleton)
 	GeometryStore::GetInstance().storeSkeleton(id, avsSkeleton, avs::AxesStandard::UnityStyle);
 }
 
+teleport::core::Animation InteropToInternalAnimation(const InteropTransformAnimation &i)
+{
+	teleport::core::Animation a=
+	{
+		i.name,
+		i.duration};
+	a.boneKeyframes = {(teleport::core::TransformKeyframeList *)i.boneKeyframes, (teleport::core::TransformKeyframeList*) (i.boneKeyframes + i.boneCount)};
+
+	return a;
+}
+
+teleport::core::TransformKeyframeList TransformKeyframeListFromInterop(const InteropTransformKeyframe &i) 
+{
+	teleport::core::TransformKeyframeList t;
+
+	t.boneIndex=i.boneIndex;
+	t.positionKeyframes={i.positionKeyframes, i.positionKeyframes + i.numPositions};
+	t.rotationKeyframes={i.rotationKeyframes, i.rotationKeyframes + i.numRotations};
+
+	return t;
+}
 /// Store the given animation in memory and on disk.
 TELEPORT_EXPORT bool Server_StoreTransformAnimation(avs::uid animationID, const char *path, InteropTransformAnimation *animation)
 {
@@ -521,7 +543,7 @@ TELEPORT_EXPORT bool Server_StoreTransformAnimation(avs::uid animationID, const 
 		TELEPORT_WARN("Unable to store animation due to null path.");
 		return false;
 	}
-	teleport::core::Animation a(*animation);
+	teleport::core::Animation a=InteropToInternalAnimation(*animation);
 	return GeometryStore::GetInstance().storeAnimation(animationID, path, a, avs::AxesStandard::UnityStyle);
 }
 

@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "ServerSettings.h"
+#include "TeleportServer/ServerSettings.h"
 #include "GeometryStore.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/TextCanvas.h"

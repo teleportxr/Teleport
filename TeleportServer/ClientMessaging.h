@@ -6,15 +6,15 @@
 #include <thread>
 #include <vector>
 
-#include "libavstream/common_input.h"
-#include "CaptureDelegates.h"
-#include "ServerSettings.h"
+#include "TeleportCore/InputTypes.h"
+#include "TeleportServer/CaptureDelegates.h"
+#include "TeleportServer/ServerSettings.h"
 #include "GeometryStreamingService.h"
 #include "VideoEncodePipeline.h"
 #include "TeleportCore/Input.h"
-#include "Export.h"
+#include "TeleportServer/Export.h"
 #include <libavstream/genericencoder.h>
-#include "Exports.h"
+#include "TeleportServer/Exports.h"
 
 namespace teleport
 {
@@ -203,7 +203,7 @@ namespace teleport
 					return false;
 				}
 				size_t commandSize = sizeof(teleport::core::SetupInputsCommand);
-				size_t listSize = appendedInputDefinitions.size() * (sizeof(avs::InputId) + sizeof(avs::InputType));
+				size_t listSize = appendedInputDefinitions.size() * (sizeof(teleport::core::InputId) + sizeof(teleport::core::InputType));
 				for (const auto& d : appendedInputDefinitions)
 				{
 					// a uint16 to store the path length.

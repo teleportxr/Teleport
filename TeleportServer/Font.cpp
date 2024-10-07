@@ -13,7 +13,6 @@
 #include <filesystem>
 #include "libavstream/geometry/mesh_interface.hpp"
 #include <GeometryStore.h>
-
 using namespace teleport;
 using namespace server;
 

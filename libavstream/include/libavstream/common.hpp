@@ -1,11 +1,12 @@
 // libavstream
-// (c) Copyright 2018-2024 Simul Software Ltd
+// (c) Copyright 2018-2024 Teleport XR Ltd
 
 #pragma once
 
 #include <cassert>
 #include <cstdint>
 #include <libavstream/abi.hpp>
+#include <libavstream/common_exports.h>
 #include <vector>
 #include <mutex>
 #include <queue>
@@ -33,12 +34,6 @@ namespace avs
 	extern AVSTREAM_API uid GenerateUid();
 	extern AVSTREAM_API void ClaimUidRange(avs::uid last);
 	
-	//! Features supported by a client.
-	struct RenderingFeatures
-	{
-		bool normals=false;				//!< Whether normal maps are supported.
-		bool ambientOcclusion=false;	//!< Whether ambient occlusion maps are supported.
-	};
 	/*!
 	 * Result type.
 	 */
@@ -180,71 +175,6 @@ namespace avs
 		Vulkan = 4,	/*!<Vulkan device */
 	};
 
-	/*! Video codec. */
-	enum class VideoCodec : uint8_t
-	{
-		Any = 0,
-		Invalid = 0,
-		H264, /*!< H264 */
-		HEVC /*!< HEVC (H265) */
-	};
-
-	/*! Audio codec. */
-	enum class AudioCodec
-	{
-		Any = 0,
-		Invalid = 0,
-		PCM
-	};
-
-	/*! Video encoding preset. */
-	enum class VideoPreset
-	{
-		Default = 0,     /*!< Default encoder preset. */
-		HighPerformance, /*!< High performance preset (potentially faster). */
-		HighQuality,     /*!< High quality preset (potentially slower). */
-	};
-
-	/*! Video payload type. */
-	enum class VideoPayloadType : uint8_t
-	{
-		FirstVCL = 0,    /*!< Video Coding Layer unit (first VCL in an access unit). */
-		VCL,             /*!< Video Coding Layer unit (any subsequent in each access unit). */
-		VPS,             /*!< Video Parameter Set (HEVC only) */
-		SPS,             /*!< Sequence Parameter Set */
-		PPS,             /*!< Picture Parameter Set */
-		ALE,			 /*!< Custom name. NAL unit with alpha layer encoding metadata (HEVC only). */
-		OtherNALUnit,    /*!< Other NAL unit. */
-		AccessUnit      /*!< Entire access unit (possibly multiple NAL units). */
-	};
-
-	enum class VideoExtraDataType : uint8_t
-	{
-		CameraTransform = 0
-	};
-
-	enum class NetworkDataType : uint8_t
-	{
-		H264 = 0,
-		HEVC = 1,
-		Framed = 2,
-		Generic=3
-	};
-
-	enum class GeometryPayloadType : uint8_t
-	{
-		Invalid=0, 
-		Mesh,
-		Material,
-		MaterialInstance,
-		Texture,
-		Animation,
-		Node,
-		Skeleton,
-		FontAtlas,
-		TextCanvas,
-		TexturePointer,
-	};
 
 	inline const char *stringOf(GeometryPayloadType t)
 	{
@@ -280,50 +210,6 @@ namespace avs
 		Skeleton,
 		Link
 	};
-
-	//! Information on the resolution of a client's display.
-	struct DisplayInfo
-	{
-		uint32_t width=0;		//!< Width of the display.
-		uint32_t height=0;		//!< Height of the display.
-		float framerate=0.f;	//!< Measured recent framerate.
-	} AVS_PACKED;
-	
-	//! Information on the configuration of a video stream.
-	struct VideoConfig
-	{
-		uint32_t	video_width = 0;
-		uint32_t	video_height = 0;
-		uint32_t	depth_width = 0;
-		uint32_t	depth_height = 0;
-		uint32_t	perspective_width = 0;
-		uint32_t	perspective_height = 0;
-		float       perspective_fov = 110;
-		float       nearClipPlane = 0.5f;
-		uint32_t	webcam_width = 0;
-		uint32_t	webcam_height = 0;
-		int32_t		webcam_offset_x = 0;
-		int32_t		webcam_offset_y = 0;
-		uint32_t    use_10_bit_decoding = 0;
-		uint32_t    use_yuv_444_decoding = 0;
-		uint32_t    use_alpha_layer_decoding = 1;
-		uint32_t	colour_cubemap_size = 0;
-		int32_t		compose_cube = 0;
-		int32_t     use_cubemap = 1;
-		int32_t     stream_webcam = 0;
-		avs::VideoCodec videoCodec = avs::VideoCodec::Any;
-		
-		int32_t		shadowmap_x=0;
-		int32_t		shadowmap_y=0;
-		int32_t		shadowmap_size=0;
-	} AVS_PACKED;	// 89 bytes
-
-	struct AudioConfig
-	{
-		uint32_t sampleRate = 44100;
-		uint32_t bitsPerSample = 16;
-		uint32_t numChannels = 2;
-	} AVS_PACKED;
 
 	/*! Graphics API device handle. */
 	struct DeviceHandle
@@ -456,30 +342,4 @@ namespace avs
 		std::queue<T> m_data;
 	};
 	
-	enum class StreamingConnectionState :uint8_t
-	{
-		UNINITIALIZED = 0,
-		NEW_UNCONNECTED,
-		CONNECTING,
-		CONNECTED,
-		DISCONNECTED,
-		FAILED,
-		CLOSED,
-		ERROR_STATE
-	};
-	inline const char *stringOf(StreamingConnectionState state)
-	{
-		switch(state)
-		{
-			case StreamingConnectionState::NEW_UNCONNECTED	:return "NEW_UNCONNECTED";
-			case StreamingConnectionState::CONNECTING		:return "CONNECTING";
-			case StreamingConnectionState::CONNECTED		:return "CONNECTED";
-			case StreamingConnectionState::DISCONNECTED		:return "DISCONNECTED";
-			case StreamingConnectionState::FAILED			:return "FAILED";
-			case StreamingConnectionState::CLOSED			:return "CLOSED";
-			case StreamingConnectionState::ERROR_STATE		:return "ERROR_STATE";
-			default:
-			return "INVALID ";
-		};
-	};
 } // avs

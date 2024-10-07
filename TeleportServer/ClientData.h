@@ -5,7 +5,7 @@
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/AudioEncodePipeline.h"
-#include "Export.h"
+#include "TeleportServer/Export.h"
 
 namespace teleport
 {

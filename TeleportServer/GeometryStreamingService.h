@@ -10,8 +10,8 @@
 #include "ClientNetworkContext.h"
 #include "GeometryEncoder.h"
 #include "GeometryStore.h"
-#include "Export.h"
-#include "Exports.h"
+#include "TeleportServer/Export.h"
+#include "TeleportServer/Exports.h"
 
 #if TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_DEBUG_RESOURCE_STREAMING 1

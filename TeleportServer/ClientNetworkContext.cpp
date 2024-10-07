@@ -5,7 +5,7 @@
 #include "ClientNetworkContext.h"
 #include "TeleportAudio/CustomAudioStreamTarget.h"
 #include "ClientManager.h"
-#include "Exports.h"
+#include "TeleportServer/Exports.h"
 using namespace teleport;
 using namespace server;
 

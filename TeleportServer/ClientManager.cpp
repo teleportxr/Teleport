@@ -7,7 +7,7 @@
 #include <iostream>
 #include <random>
 
-#include "libavstream/common_input.h"
+#include "TeleportCore/InputTypes.h"
 #include "TeleportCore/CommonNetworking.h"
 
 

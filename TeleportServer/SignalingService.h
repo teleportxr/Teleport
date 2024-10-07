@@ -8,7 +8,7 @@
 #include <map>
 #include <nlohmann/json.hpp>
 #include <safe/safe.h>
-#include "Export.h"
+#include "TeleportServer/Export.h"
 #include "TeleportCore/CommonNetworking.h"
 
 namespace rtc

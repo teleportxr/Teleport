@@ -150,8 +150,6 @@ set(hdr_public_root
 	include/libavstream/audioencoder.h
 	include/libavstream/buffer.hpp
 	include/libavstream/common.hpp
-	include/libavstream/common_input.h
-	include/libavstream/common_maths.h
 	include/libavstream/context.hpp
 	include/libavstream/decoder.hpp
 	include/libavstream/tagdatadecoder.hpp
@@ -212,12 +210,17 @@ set(hdr_public_audio
 	include/libavstream/audio/audiotarget.h
 )
 	
+
+set(hdr_export
+	export_include/libavstream/common_exports.h
+	export_include/libavstream/common_maths.h
+)
 if(NOT TELEPORT_SERVER)
 	set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)
 	set(src_private_root ${src_private_root} src/httputil.cpp)
 endif()
 
-set(hdr_public ${hdr_public_root} ${hdr_public_network} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio})
+set(hdr_public ${hdr_public_root} ${hdr_public_network} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio} ${hdr_export})
 source_group("Public Headers" src FILES ${hdr_public_root} )
 source_group("Public Headers\\stream" src FILES ${src_public_stream} )
 source_group("Public Headers\\decoders" src FILES ${src_public_decoders} )
@@ -227,6 +230,7 @@ source_group("Public Headers\\platforms" src FILES ${src_public_platforms} )
 source_group("Public Headers\\geometry" src FILES ${hdr_public_geometry} )
 source_group("Public Headers\\audio" src FILES ${hdr_public_audio} )
 source_group("Public Headers\\network" src FILES ${hdr_public_network} )
+source_group("Public Headers\\export" src FILES ${hdr_export} )
 
 set(src_private ${src_private_root} ${src_private_api} ${src_private_network} ${src_private_stream} ${src_private_util} ${src_private_audio})
 
@@ -358,7 +362,7 @@ target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${efp_include_paths}
 														include
 														#${PTHREAD_INCLUDE_DIR}
-														PUBLIC include include/libavstream
+														PUBLIC include include/libavstream export_include
 														${curl_include_paths})
 target_compile_features(libavstream PRIVATE cxx_std_17)
 
@@ -398,6 +402,7 @@ endif()
 target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/Platform/External/fmt/include )
 #Platform etc
 target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/ )
+target_include_directories(libavstream PUBLIC export_include )
 
 target_link_libraries(libavstream asio efp ${curl_libraries})
 

@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <iostream>
 
-#include "libavstream/common.hpp"
+#include "libavstream/common_exports.h"
 #include "libavstream/common_maths.h"
-#include "libavstream/common_input.h"
+#include "InputTypes.h"
 
 #ifndef TELEPORT_PACKED
 	#if defined(__GNUC__) || defined(__clang__)
@@ -44,6 +44,52 @@ struct vec4_packed
 	}
 } TELEPORT_PACKED;
 #endif
+namespace avs
+{
+	//! Information on the configuration of a video stream.
+	struct VideoConfig
+	{
+		uint32_t	video_width = 0;
+		uint32_t	video_height = 0;
+		uint32_t	depth_width = 0;
+		uint32_t	depth_height = 0;
+		uint32_t	perspective_width = 0;
+		uint32_t	perspective_height = 0;
+		float       perspective_fov = 110;
+		float       nearClipPlane = 0.5f;
+		uint32_t	webcam_width = 0;
+		uint32_t	webcam_height = 0;
+		int32_t		webcam_offset_x = 0;
+		int32_t		webcam_offset_y = 0;
+		uint32_t    use_10_bit_decoding = 0;
+		uint32_t    use_yuv_444_decoding = 0;
+		uint32_t    use_alpha_layer_decoding = 1;
+		uint32_t	colour_cubemap_size = 0;
+		int32_t		compose_cube = 0;
+		int32_t     use_cubemap = 1;
+		int32_t     stream_webcam = 0;
+		avs::VideoCodec videoCodec = avs::VideoCodec::Any;
+		
+		int32_t		shadowmap_x=0;
+		int32_t		shadowmap_y=0;
+		int32_t		shadowmap_size=0;
+	} AVS_PACKED;	// 89 bytes
+
+	struct AudioConfig
+	{
+		uint32_t sampleRate = 44100;
+		uint32_t bitsPerSample = 16;
+		uint32_t numChannels = 2;
+	} AVS_PACKED;
+
+	//! Information on the resolution of a client's display.
+	struct DisplayInfo
+	{
+		uint32_t width=0;		//!< Width of the display.
+		uint32_t height=0;		//!< Height of the display.
+		float framerate=0.f;	//!< Measured recent framerate.
+	} AVS_PACKED;
+}
 namespace teleport
 {
 	namespace core
@@ -53,12 +99,12 @@ namespace teleport
 			NONE = 0, COLOUR, TEXTURE, VIDEO
 		} TELEPORT_PACKED;
 #ifdef _MSC_VER
-		typedef avs::Pose Pose_packed;
-		typedef avs::PoseDynamic PoseDynamic_packed;
+		typedef teleport::core::Pose Pose_packed;
+		typedef teleport::core::PoseDynamic PoseDynamic_packed;
 #else
 		struct Pose_packed
 		{
-			void operator=(const avs::Pose &p)
+			void operator=(const teleport::core::Pose &p)
 			{
 				orientation=*((const vec4_packed*)&p.orientation);
 				position=*((const vec3_packed*)&p.position);
@@ -68,7 +114,7 @@ namespace teleport
 		} TELEPORT_PACKED;
 		struct PoseDynamic_packed
 		{
-			void operator=(const avs::PoseDynamic &p)
+			void operator=(const teleport::core::PoseDynamic &p)
 			{
 				pose=p.pose;
 				velocity=*((const vec3_packed*)&p.velocity);
@@ -373,8 +419,8 @@ namespace teleport
 		//! The definition of a single input that the server expects the client to provide when needed.
 		struct InputDefinition
 		{
-			avs::InputId inputId;
-			avs::InputType inputType;
+			InputId inputId;
+			InputType inputType;
 			//! A regular expression that will be used to match the full component path of a client-side control
 			std::string regexPath;
 		} TELEPORT_PACKED;
@@ -382,8 +428,8 @@ namespace teleport
 		//! The netpacket version of InputDefinition, to be followed by pathLength utf8 characters.
 		struct InputDefinitionNetPacket
 		{
-			avs::InputId inputId;
-			avs::InputType inputType;
+			InputId inputId;
+			InputType inputType;
 			uint16_t pathLength;
 		} TELEPORT_PACKED;
 
@@ -518,10 +564,10 @@ namespace teleport
 			avs::uid parentID = 0;		//!< The new parent uid.
 			Pose_packed relativePose;	//!< The new relative pose of the child node.
 			UpdateNodeStructureCommand()
-				:UpdateNodeStructureCommand(0, 0,avs::Pose())
+				:UpdateNodeStructureCommand(0, 0,teleport::core::Pose())
 			{}
 
-			UpdateNodeStructureCommand(avs::uid n, avs::uid p,avs::Pose relPose)
+			UpdateNodeStructureCommand(avs::uid n, avs::uid p,teleport::core::Pose relPose)
 				:NodeStateCommand(CommandPayloadType::UpdateNodeStructure,n), parentID(p)
 			{
 				relativePose.position = *((vec3_packed *)&relPose.position);

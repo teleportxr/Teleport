@@ -220,6 +220,9 @@ if(TELEPORT_WINDOWS)
 		set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Ob0 /Od /RTC1 /DNOMINMAX")
 	endif()
 	#someday we will add /fsanitize=address - when MS have fixed all the address bugs in their core libs.)
+	# linker flags:
+
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4099")
 endif()
 
 #openssl

@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2024 Simul Software Ltd
+// (c) Copyright 2018-2024 Teleport XR Ltd
 
 #pragma once
 #include <vector>
@@ -307,20 +307,6 @@ namespace avs
 			in.readChunk(accessor.byteOffset);
 			return in;
 		}
-	};
-
-	struct Transform
-	{
-		vec3 position = { 0.f, 0.f, 0.f };
-		vec4 rotation = { 0.f, 0.f, 0.f, 1.f };
-		vec3 scale = { 1.f, 1.f, 1.f };
-	};
-
-	struct NodeRenderState
-	{
-		vec4 lightmapScaleOffset={0,0,0,0};
-		uid globalIlluminationUid = 0;
-		uint8_t lightmapTextureCoordinate=0;
 	};
 
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);

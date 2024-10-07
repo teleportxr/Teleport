@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2020 Simul Software Ltd
+// (C) Copyright 2018-2020 Teleport XR Ltd
 #pragma once
 
 #include <libavstream/node.hpp>

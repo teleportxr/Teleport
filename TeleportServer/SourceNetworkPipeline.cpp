@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "TeleportCore/ErrorHandling.h"
-#include "ServerSettings.h"
+#include "TeleportServer/ServerSettings.h"
 
 #include "TeleportAudio/AudioStreamTarget.h"
 #include "libavstream/network/webrtc_networksource.h"

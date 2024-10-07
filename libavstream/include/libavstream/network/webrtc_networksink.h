@@ -1,6 +1,6 @@
 #pragma once
 #define ABSL_USES_STD_OPTIONAL 0
-// (c) Copyright 2018-2023 Simul Software Ltd
+// (c) Copyright 2018-2023 Teleport XR Ltd
 
 #include "networksink.h"
 #include <libavstream/common.hpp>

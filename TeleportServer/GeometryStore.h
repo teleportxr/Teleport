@@ -4,8 +4,10 @@
 #include <vector>
 
 #include "libavstream/geometry/mesh_interface.hpp"
-
-#include "Export.h"
+#include "TeleportCore/Animation.h"
+#include "TeleportCore/TextCanvas.h"
+#include "TeleportCore/InputTypes.h"
+#include "TeleportServer/Export.h"
 #include "ExtractedTypes.h"
 struct InteropTextCanvas;
 
@@ -123,7 +125,7 @@ namespace teleport
 			//Returns whether there is a shadow map stored with the passed id.
 			bool hasShadowMap(avs::uid id) const;
 
-			void setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose);
+			void setNodeParent(avs::uid id, avs::uid parent_id, teleport::core::Pose relPose);
 			bool storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard);
 			bool storeAnimation(avs::uid id, const std::string &path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);

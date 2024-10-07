@@ -1,5 +1,5 @@
 // libavstream
-// (c) Copyright 2018-2024 Simul Software Ltd
+// (c) Copyright 2018-2024 Teleport XR Ltd
 
 #if (LIBAV_USE_D3D12)
 

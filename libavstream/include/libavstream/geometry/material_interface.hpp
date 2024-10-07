@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "libavstream/common_maths.h"
+#include "libavstream/common_exports.h"
 #include "libavstream/memory.hpp"
 
 #include "material_extensions.h"

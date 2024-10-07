@@ -3,7 +3,7 @@
 #include <memory>
 #include "ClientNetworkContext.h"
 #ifndef FIX_BROKEN
-#include "ServerSettings.h"
+#include "TeleportServer/ServerSettings.h"
 #include "AudioEncoder.h"
 
 // Forward declare so classes that include don't have to know about them

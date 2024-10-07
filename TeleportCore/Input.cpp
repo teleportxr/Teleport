@@ -14,23 +14,23 @@ void Input::clearEvents()
 	analogueEvents.clear();
 	motionEvents.clear();
 }
-const avs::InputEventAnalogue& Input::getLastAnalogueEvent(uint16_t inputID) const
+const InputEventAnalogue& Input::getLastAnalogueEvent(uint16_t inputID) const
 {
 	if (inputID >= lastAnalogueEvents.size())
 		lastAnalogueEvents.resize((size_t)inputID + 1);
 	return lastAnalogueEvents[inputID];
 }
 
-const avs::InputEventBinary& Input::getLastBinaryEvent(uint16_t inputID) const
+const InputEventBinary& Input::getLastBinaryEvent(uint16_t inputID) const
 {
 	if (inputID >= lastBinaryEvents.size())
 		lastBinaryEvents.resize((size_t)inputID + 1);
 	return lastBinaryEvents[inputID];
 }
 
-void Input::addBinaryEvent( avs::InputId inputID, bool activated)
+void Input::addBinaryEvent( InputId inputID, bool activated)
 {
-	avs::InputEventBinary binaryEvent;
+	InputEventBinary binaryEvent;
 	binaryEvent.eventID = nextEventID++;
 	binaryEvent.inputID = inputID;
 	binaryEvent.activated = activated;
@@ -42,10 +42,10 @@ void Input::addBinaryEvent( avs::InputId inputID, bool activated)
 	lastBinaryEvents[inputID]=binaryEvent;
 }
 
-void Input::addAnalogueEvent( avs::InputId inputID, float strength)
+void Input::addAnalogueEvent( InputId inputID, float strength)
 {
 //	TELEPORT_COUT << "Analogue: " << eventID << " " << (int)inputID << " " << strength << std::endl;
-	avs::InputEventAnalogue analogueEvent;
+	InputEventAnalogue analogueEvent;
 	analogueEvent.eventID = nextEventID++;
 	analogueEvent.inputID = inputID;
 	analogueEvent.strength = strength;
@@ -56,9 +56,9 @@ void Input::addAnalogueEvent( avs::InputId inputID, float strength)
 	lastAnalogueEvents[inputID]=analogueEvent;
 }
 
-void Input::addMotionEvent( avs::InputId inputID, vec2 motion)
+void Input::addMotionEvent( InputId inputID, vec2 motion)
 {
-	avs::InputEventMotion motionEvent;
+	InputEventMotion motionEvent;
 	motionEvent.eventID = nextEventID++;
 	motionEvent.inputID = inputID;
 	motionEvent.motion = motion;

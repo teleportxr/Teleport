@@ -37,7 +37,7 @@
 
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Font.h"
-#include "Plugin/InteropStructures.h"
+#include "TeleportServer/InteropStructures.h"
 #include "TeleportCore/StringFunctions.h"
 #include "TeleportCore/DecodeMesh.h"
 #include "ClientManager.h"
@@ -588,7 +588,7 @@ bool GeometryStore::hasShadowMap(avs::uid id) const
 	return shadowMaps.find(id) != shadowMaps.end();
 }
 
-void GeometryStore::setNodeParent(avs::uid id, avs::uid parent_id, avs::Pose relPose)
+void GeometryStore::setNodeParent(avs::uid id, avs::uid parent_id, teleport::core::Pose relPose)
 {
 	if (nodes.find(id) == nodes.end())
 		return;
@@ -1344,6 +1344,20 @@ bool GeometryStore::storeMaterial(avs::uid id, const std::string & guid,const st
 	uid_to_path[id]=p;
 	path_to_uid[p]=id;
 	materials[id] = ExtractedMaterial{ lastModified, newMaterial};
+	// ensure that the textures actually exist.
+	auto CheckTexture=[this,&newMaterial](avs::uid texture_id){
+		if(texture_id!=0&&!getTexture(texture_id))
+		{
+			TELEPORT_WARN("Material {0} uses unknown texture {1}",newMaterial.name,texture_id);
+			DEBUG_BREAK_ONCE;
+		}
+	};
+	CheckTexture(newMaterial.pbrMetallicRoughness.baseColorTexture.index);
+	CheckTexture(newMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index);
+	CheckTexture(newMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index);
+	CheckTexture(newMaterial.emissiveTexture.index);
+	CheckTexture(newMaterial.normalTexture.index);
+	CheckTexture(newMaterial.occlusionTexture.index);
 	if (!saveResourceBinary(cachePath + "/"s + materials[id].MakeFilename(path), materials[id]))
 		return false;
 	return true;
