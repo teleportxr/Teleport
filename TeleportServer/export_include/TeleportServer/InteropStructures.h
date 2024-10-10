@@ -7,7 +7,9 @@
 #ifdef _MSC_VER
 #include <wtypes.h>
 #endif
+#include <libavstream/common_exports.h>
 #include <libavstream/common_maths.h>
+#include <libavstream/common_networking.h>
 #if TELEPORT_INTERNAL_INTEROP
 #include <libavstream/geometry/mesh_interface.hpp>
 #endif
@@ -22,7 +24,6 @@
 		#define TELEPORT_PACKED
 	#endif
 #endif
-
 namespace teleport
 {
 	namespace core
