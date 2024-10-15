@@ -31,6 +31,11 @@ namespace teleport
 {
 	namespace server
 	{
+		extern void TELEPORT_SERVER_API ConvertTransform(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::Transform &transform);
+		extern void TELEPORT_SERVER_API ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation);
+		extern void TELEPORT_SERVER_API ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position);
+		extern void TELEPORT_SERVER_API ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale);
+		extern int8_t TELEPORT_SERVER_API ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis);
 		/// The collected values required to initialize a server session; see Server_Teleport_Initialize().
 		struct InitializationSettings
 		{

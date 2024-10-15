@@ -7,6 +7,7 @@
 
 #include "libavstream/common_maths.h"
 #include "libavstream/common_exports.h"
+#include "libavstream/material_exports.h"
 #include "libavstream/memory.hpp"
 
 #include "material_extensions.h"
@@ -116,60 +117,6 @@ namespace avs
 			return in;
 		}
 	};
-	enum class SamplerFilter : uint32_t
-	{
-		NEAREST,					//GL_NEAREST (0x2600)
-		LINEAR,						//GL_LINEAR (0x2601)
-		NEAREST_MIPMAP_NEAREST,		//GL_NEAREST_MIPMAP_NEAREST (0x2700)
-		LINEAR_MIPMAP_NEAREST,		//GL_LINEAR_MIPMAP_NEAREST (0x2701)
-		NEAREST_MIPMAP_LINEAR,		//GL_NEAREST_MIPMAP_LINEAR (0x2702)
-		LINEAR_MIPMAP_LINEAR,		//GL_LINEAR_MIPMAP_LINEAR (0x2703)
-	};
-
-	enum class SamplerWrap : uint32_t
-	{
-		REPEAT,					//GL_REPEAT (0x2901)
-		CLAMP_TO_EDGE,			//GL_CLAMP_TO_EDGE (0x812F)
-		CLAMP_TO_BORDER,		//GL_CLAMP_TO_BORDER (0x812D)
-		MIRRORED_REPEAT,		//GL_MIRRORED_REPEAT (0x8370)
-		MIRROR_CLAMP_TO_EDGE,	//GL_MIRROR_CLAMP_TO_EDGE (0x8743)
-	};
-
-	// This will likely need changing.
-	enum class TextureFormat : uint32_t
-	{
-		INVALID,
-		G8,
-		BGRA8,
-		BGRE8,
-		RGBA16,
-		RGBA16F,
-		RGBA8,
-		RGBE8,
-		D16F,
-		D24F,
-		D32F,
-		RGBA32F,
-		RGB8,
-		MAX,
-		UNKNOWN=INVALID
-	};
-	
-	enum class TextureCompression : uint32_t
-	{
-		UNCOMPRESSED = 0,
-		BASIS_COMPRESSED,
-		PNG,
-		KTX
-	};
-
-	struct Sampler 
-	{
-		SamplerFilter magFilter;
-		SamplerFilter minFilter;
-		SamplerWrap wrapS;
-		SamplerWrap wrapT;
-	};
 
 	struct Texture 
 	{
@@ -193,7 +140,6 @@ namespace avs
 		TextureCompression compression;
 		bool compressed=false;
 
-		
 		struct Image
 		{
 			std::vector<uint8_t> data;
@@ -213,8 +159,6 @@ namespace avs
 		{
 			return m*arrayCount*(cubemap?6:1)+arrayIndex;
 		}
-
-
 		std::vector<uint8_t> compressedData;
 
 		bool operator==(const Texture& t) const
@@ -272,44 +216,25 @@ namespace avs
 		}
 	};
 	#pragma pack(push,1)
-	struct TextureAccessor
-	{
-		uid index = 0;			// Session uid of the texture.
-		uint8_t texCoord = 0;	// A reference to TEXCOORD_<N>
-		
-		vec2 tiling = {1.0f, 1.0f};
-		
-		union
-		{
-			float scale = 1.0f;		//Used in normal textures only.
-			float strength;			//Used in occlusion textures only.
-		};
 
-		template<typename OutStream>
-		friend OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
-		{
-			out<<textureAccessor.index;
-			out.writeChunk(textureAccessor.tiling);
-			out.writeChunk(textureAccessor.scale);
-			return out;
-		}
-
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
-		{
-			in>>textureAccessor.index;
-			in.readChunk(textureAccessor.tiling);
-			in.readChunk(textureAccessor.scale);
-			textureAccessor.texCoord=(uint8_t)0;
-			return in;
-		}
-	};
-	enum class RoughnessMode: uint16_t
+	template<typename OutStream>
+	 OutStream& operator<<(OutStream& out, const TextureAccessor& textureAccessor)
 	{
-		CONSTANT=0,
-		ROUGHNESS,
-		SMOOTHNESS
-	};
+		out<<textureAccessor.index;
+		out.writeChunk(textureAccessor.tiling);
+		out.writeChunk(textureAccessor.scale);
+		return out;
+	}
+
+	template<typename InStream>
+	 InStream& operator>> (InStream& in, TextureAccessor& textureAccessor)
+	{
+		in>>textureAccessor.index;
+		in.readChunk(textureAccessor.tiling);
+		in.readChunk(textureAccessor.scale);
+		textureAccessor.texCoord=(uint8_t)0;
+		return in;
+	}
 
 	template<typename istream> istream& operator>>( istream  &in, RoughnessMode &obj )
 	{
@@ -328,48 +253,32 @@ namespace avs
 		in.readChunk(vec);
 		return in;
 	}
-	enum class MaterialMode: uint8_t
+	
+	template<typename OutStream>
+	 OutStream& operator<< (OutStream& out, const PBRMetallicRoughness& metallicRoughness)
 	{
-		UNKNOWNMODE,
-		OPAQUE_MATERIAL,
-		TRANSPARENT_MATERIAL
-	};
-	struct PBRMetallicRoughness
+		out << metallicRoughness.baseColorTexture;
+		out << metallicRoughness.baseColorFactor;
+		out << metallicRoughness.metallicRoughnessTexture;
+		out.writeChunk(metallicRoughness.metallicFactor);
+		out.writeChunk(metallicRoughness.roughnessMultiplier);
+		out.writeChunk(metallicRoughness.roughnessOffset);
+		// TODO: roughnessMode not implemented here.
+		return out;
+	}
+
+	template<typename InStream>
+	 InStream& operator>> (InStream& in, PBRMetallicRoughness& metallicRoughness)
 	{
-		TextureAccessor baseColorTexture;
-		vec4 baseColorFactor = {1.0f, 1.0f, 1.0f, 1.0f};
-
-		TextureAccessor metallicRoughnessTexture;
-		float metallicFactor = 1.0f;
-		float roughnessMultiplier = 1.0f;
-		float roughnessOffset = 1.0f;
-		template<typename OutStream>
-		friend OutStream& operator<< (OutStream& out, const PBRMetallicRoughness& metallicRoughness)
-		{
-			out << metallicRoughness.baseColorTexture;
-			out << metallicRoughness.baseColorFactor;
-			out << metallicRoughness.metallicRoughnessTexture;
-			out.writeChunk(metallicRoughness.metallicFactor);
-			out.writeChunk(metallicRoughness.roughnessMultiplier);
-			out.writeChunk(metallicRoughness.roughnessOffset);
-			// TODO: roughnessMode not implemented here.
-			return out;
-		}
-
-		template<typename InStream>
-		friend InStream& operator>> (InStream& in, PBRMetallicRoughness& metallicRoughness)
-		{
-			in >> metallicRoughness.baseColorTexture;
-			in >> metallicRoughness.baseColorFactor;
-			in >> metallicRoughness.metallicRoughnessTexture;
-			in.readChunk(metallicRoughness.metallicFactor);
-			in.readChunk(metallicRoughness.roughnessMultiplier);
-			in.readChunk(metallicRoughness.roughnessOffset);
-				
-			return in;
-		}
-	};
-
+		in >> metallicRoughness.baseColorTexture;
+		in >> metallicRoughness.baseColorFactor;
+		in >> metallicRoughness.metallicRoughnessTexture;
+		in.readChunk(metallicRoughness.metallicFactor);
+		in.readChunk(metallicRoughness.roughnessMultiplier);
+		in.readChunk(metallicRoughness.roughnessOffset);
+			
+		return in;
+	}
 	template<> inline bool verify_values(const TextureAccessor& t1,const TextureAccessor& t2)
 	{
 		TELEPORT_VERIFY(t1.index,t2.index);

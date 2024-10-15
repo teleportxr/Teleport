@@ -134,24 +134,6 @@ bool validate_path(const std::string &p)
 	}
 	return true;
 }
-#ifdef _MSC_VER
-static avs::guid bstr_to_guid(std::string b)
-{
-	avs::guid g;
-	strncpy_s(g.txt,(const char*)b.c_str(),48);
-	g.txt[48]=0;
-	return g;
-}
-
-static std::string guid_to_bstr(const avs::guid &g)
-{
-	char txt[49];
-	strncpy_s(txt,g.txt,48);
-	txt[48]=0;
-	std::string b(txt);
-	return b;
-}
-#endif
 template<class T>
 std::vector<avs::uid> getVectorOfIDs(const std::map<avs::uid, T>& resourceMap)
 {
@@ -1328,7 +1310,7 @@ bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time
 	return true;
 }
 
-bool GeometryStore::storeMaterial(avs::uid id, const std::string & guid,const std::string & path, std::time_t lastModified, avs::Material& newMaterial)
+bool GeometryStore::storeMaterial(avs::uid id, const std::string & path, std::time_t lastModified, avs::Material& newMaterial)
 {
 	if (!validate_path(path))
 	{
@@ -1817,7 +1799,6 @@ avs::uid GeometryStore::loadResourceBinary(const std::string file_name, const st
 		p = p.substr(0, ext_pos);
 	auto write_time = std::filesystem::last_write_time(file_name);
 	// If there's a duplicate, use the newer file.
-	// This guid might already exist!
 	avs::uid newID = 0;
 	auto u = path_to_uid.find(p);
 	if (u != path_to_uid.end())

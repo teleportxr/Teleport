@@ -527,7 +527,7 @@ void ClientManager::InitializeVideoEncoder(avs::uid clientID, VideoEncodeParams 
 
 	auto *cq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.ColorQueue;
 	auto *tq = &client->clientMessaging->getClientNetworkContext()->NetworkPipeline.TagDataQueue;
-	Result result = client->videoEncodePipeline->configure(serverSettings, videoEncodeParams, cq, tq);
+	Result result = client->videoEncodePipeline->configure( videoEncodeParams, cq, tq);
 	if (!result)
 	{
 		TELEPORT_CERR << "Failed to initialise video encoder for Client " << clientID << "! Error occurred when trying to configure the video encoder pipeline!\n";
@@ -548,7 +548,7 @@ void ClientManager::ReconfigureVideoEncoder(avs::uid clientID, VideoEncodeParams
 		return;
 	}
 
-	Result result = client->videoEncodePipeline->reconfigure(serverSettings, videoEncodeParams);
+	Result result = client->videoEncodePipeline->reconfigure( videoEncodeParams);
 	if (!result)
 	{
 		TELEPORT_CERR << "Failed to reconfigure video encoder for Client " << clientID << "! Error occurred when trying to reconfigure the video encoder pipeline!\n";

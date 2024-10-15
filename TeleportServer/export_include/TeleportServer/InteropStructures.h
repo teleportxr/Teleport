@@ -10,6 +10,8 @@
 #include <libavstream/common_exports.h>
 #include <libavstream/common_maths.h>
 #include <libavstream/common_networking.h>
+#include <libavstream/material_exports.h>
+#include <TeleportCore/InputTypes.h>
 #if TELEPORT_INTERNAL_INTEROP
 #include <libavstream/geometry/mesh_interface.hpp>
 #endif
@@ -235,11 +237,11 @@ struct InteropMaterial
 	size_t extensionCount;										// 8	// 172
 	avs::MaterialExtensionIdentifier* extensionIDs;				// 8	// 180
 	avs::MaterialExtension** extensions;						// 8	// 188
+#if TELEPORT_INTERNAL_INTEROP
 	const InteropMaterial &operator=(const avs::Material& avsMaterial)
 	{
 		return *this;
 	}
-#if TELEPORT_INTERNAL_INTEROP
 	operator avs::Material() const
 	{
 		std::unordered_map<avs::MaterialExtensionIdentifier, std::shared_ptr<avs::MaterialExtension>> convertedExtensions;
@@ -372,19 +374,6 @@ namespace avs
 	//! An input identifier, used between client and server to denote a specific input.
 	typedef uint16_t InputId;
 }
-
-struct InteropInputState
-{
-	uint16_t numBinaryStates = 0;
-	uint16_t numAnalogueStates= 0;
-} TELEPORT_PACKED;
-//! Input events that can only be in two states; e.g. button pressed or not.
-struct InputEventBinary
-{
-	uint32_t eventID = 0;
-	avs::InputId inputID = 0; //ID of the input type used that triggered the event.
-	bool activated = false;
-} AVS_PACKED;
 
 struct InteropFontMap
 {

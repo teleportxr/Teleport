@@ -546,3 +546,35 @@ TELEPORT_EXPORT bool Client_GetNetworkState(avs::uid clientID,core::ClientNetwor
 	st.streamingConnectionState=client->clientMessaging->getStreamingState();
 	return true;
 }
+
+
+
+TELEPORT_EXPORT bool Client_SetVideoEncodeParams(avs::uid clientID,const teleport::server::VideoEncodeParams &params)
+{
+	auto &cm = teleport::server::ClientManager::instance();
+	std::shared_ptr<teleport::server::ClientData> clientData = cm.GetClient(clientID);
+	auto &np = clientData->clientMessaging->getClientNetworkContext()->NetworkPipeline;
+	auto res=clientData->videoEncodePipeline->initialize( params, &(np.ColorQueue), &np.TagDataQueue);
+
+	return res==teleport::server::Result::Code::OK;
+}
+TELEPORT_EXPORT bool Client_VideoEncodePipelineProcess(avs::uid clientID,bool forceIDR)
+{
+	auto &cm = teleport::server::ClientManager::instance();
+	std::shared_ptr<teleport::server::ClientData> clientData = cm.GetClient(clientID);
+	auto &np = clientData->clientMessaging->getClientNetworkContext()->NetworkPipeline;
+	auto res=clientData->videoEncodePipeline->process(nullptr,0, forceIDR);
+	return true;
+}
+TELEPORT_EXPORT avs::AxesStandard Client_GetAxesStandard(avs::uid clientID)
+{
+	TELEPORT_PROFILE_AUTOZONE;
+	auto client = ClientManager::instance().GetClient(clientID);
+	if(!client)
+	{
+		TELEPORT_CERR << "Failed to update node movement for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
+		return avs::AxesStandard::NotInitialized;
+	}
+	auto axesStandard = client->clientMessaging->getClientNetworkContext()->axesStandard;
+	return axesStandard;
+}

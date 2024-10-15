@@ -4,13 +4,8 @@
 #include <cmath>
 #include <iostream>
 #include "../../firstparty/Platform/CrossPlatform/Shaders/CppSl.sl"
-#ifndef AVS_PACKED
-	#if defined(__GNUC__) || defined(__clang__)
-		#define AVS_PACKED __attribute__ ((packed,aligned(1)))
-	#else
-		#define AVS_PACKED
-	#endif
-#endif
+#include <libavstream/common_packing.h>\
+
 namespace avs
 {
 /// A model for how 3D space is mapped to X, Y and Z axes. A server may use one standard internally, while clients may use others.

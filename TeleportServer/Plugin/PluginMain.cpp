@@ -273,11 +273,11 @@ TELEPORT_EXPORT void Server_Teleport_Shutdown()
 }
 
 /// Perform periodic (e.g. once-per-frame) updates while playing.
-TELEPORT_EXPORT void Server_Tick(float deltaTime)
+TELEPORT_EXPORT void Server_Tick(float deltaTimeSeconds)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 
-	ClientManager::instance().tick(deltaTime);
+	ClientManager::instance().tick(deltaTimeSeconds);
 
 	PipeOutMessages();
 
@@ -483,11 +483,28 @@ TELEPORT_EXPORT void Server_SetCompressionLevels(uint8_t compressionStrength, ui
 }
 
 /// Store the given node in memory.
-TELEPORT_EXPORT bool Server_StoreNode(avs::uid id, InteropNode node)
+TELEPORT_EXPORT bool Server_StoreNode(avs::uid id,const InteropNode &node)
 {
 	//TELEPORT_PROFILE_AUTOZONE;
 	avs::Node avsNode(node);
 	return GeometryStore::GetInstance().storeNode(id, avsNode);
+}
+/// Store the given node in memory.
+TELEPORT_EXPORT bool Server_UpdateNodeTransform(avs::uid id,const avs::Transform &tr)
+{
+	//TELEPORT_PROFILE_AUTOZONE;
+	avs::Node *avsNode=GeometryStore::GetInstance().getNode(id);
+	if(avsNode)
+		avsNode->localTransform=tr;
+	return (avsNode!=nullptr);
+}
+
+TELEPORT_EXPORT avs::Node *Server_GetModifiableNode(avs::uid id)
+{
+	TELEPORT_PROFILE_AUTOZONE;
+	avs::Node *avsNode = GeometryStore::GetInstance().getNode(id);
+
+	return avsNode;
 }
 
 /// Get the given node's data if stored.
@@ -548,7 +565,7 @@ TELEPORT_EXPORT bool Server_StoreTransformAnimation(avs::uid animationID, const 
 }
 
 /// Store the given mesh in memory and on disk.
-TELEPORT_EXPORT bool Server_StoreMesh(avs::uid id, const char *guid, const char *path, std::time_t lastModified, const InteropMesh *mesh, avs::AxesStandard extractToStandard, bool verify)
+TELEPORT_EXPORT bool Server_StoreMesh(avs::uid id, const char *path, std::time_t lastModified, const InteropMesh *mesh, avs::AxesStandard extractToStandard, bool verify)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	if (!path)
@@ -566,7 +583,7 @@ TELEPORT_EXPORT bool Server_StoreMesh(avs::uid id, const char *guid, const char 
 }
 
 /// Store the given material in memory and on disk.
-TELEPORT_EXPORT bool Server_StoreMaterial(avs::uid id, const char *guid, const char *path, std::time_t lastModified, InteropMaterial material)
+TELEPORT_EXPORT bool Server_StoreMaterial(avs::uid id, const char *path, std::time_t lastModified, InteropMaterial material)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	if (!path)
@@ -580,7 +597,7 @@ TELEPORT_EXPORT bool Server_StoreMaterial(avs::uid id, const char *guid, const c
 		return false;
 	}
 	avs::Material avsMaterial(material);
-	return GeometryStore::GetInstance().storeMaterial(id, (guid), (path), lastModified, avsMaterial);
+	return GeometryStore::GetInstance().storeMaterial(id,  (path), lastModified, avsMaterial);
 }
 
 /// Store the given texture in memory and on disk.

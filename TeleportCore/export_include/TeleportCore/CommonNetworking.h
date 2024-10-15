@@ -220,13 +220,6 @@ namespace teleport
 			uint16_t remotePort;	//!< The port the client should use for data.
 		} TELEPORT_PACKED;
 
-
-		struct InputState
-		{
-			uint16_t numBinaryStates = 0;
-			uint16_t numAnalogueStates= 0;
-		} TELEPORT_PACKED;
-
 		//Contains information to update the transform of a node.
 		struct MovementUpdate
 		{

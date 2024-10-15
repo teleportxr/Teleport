@@ -179,3 +179,23 @@ if(${USE_ASYNC_NETWORK_PROCESSING})
 endif()	
 set_target_properties( TeleportServer PROPERTIES FOLDER Teleport )
 target_compile_definitions(TeleportServer PRIVATE TELEPORT_INTERNAL_INTEROP)
+
+# Deploy the headers from libavstream, TeleportCore and TeleportServer, into the target includes folder.
+file(GLOB LIBAV_EXPORT_HEADERS "${CMAKE_SOURCE_DIR}/libavstream/export_include/**/*.h")
+file(GLOB CORE_EXPORT_HEADERS "${CMAKE_SOURCE_DIR}/TeleportCore/export_include/**/*.h")
+file(GLOB SERVER_EXPORT_HEADERS "${CMAKE_SOURCE_DIR}/TeleportServer/export_include/**/*.h")
+file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR} RESULT 1)
+file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR}/libavstream RESULT 1)
+file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR}/TeleportCore RESULT 1)
+file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR}/TeleportServer RESULT 1)
+file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR}/Platform/CrossPlatform/Shaders RESULT 1)
+#file(COPY ${MY_PUBLIC_HEADERS} DESTINATION myDestination)
+add_custom_command(
+        TARGET TeleportServer
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${LIBAV_EXPORT_HEADERS} ${TELEPORT_SERVER_INCLUDE_DIR}/libavstream
+		COMMAND ${CMAKE_COMMAND} -E copy ${CORE_EXPORT_HEADERS} ${TELEPORT_SERVER_INCLUDE_DIR}/TeleportCore
+		COMMAND ${CMAKE_COMMAND} -E copy ${SERVER_EXPORT_HEADERS} ${TELEPORT_SERVER_INCLUDE_DIR}/TeleportServer
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/firstparty/Platform/CrossPlatform/Shaders/CppSl.sl ${TELEPORT_SERVER_INCLUDE_DIR}/Platform/CrossPlatform/Shaders
+        COMMENT "${CMAKE_COMMAND} -E copy ${LIBAV_EXPORT_HEADERS} ${TELEPORT_SERVER_INCLUDE_DIR}/libavstream"
+    )

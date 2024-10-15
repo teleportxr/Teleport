@@ -1,12 +1,11 @@
 #pragma once
-
 #include <cstdint>
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
-#ifndef AVS_PACKED
+#ifndef TELEPORT_PACKED
 	#if defined(__GNUC__) || defined(__clang__)
-		#define AVS_PACKED __attribute__ ((packed,aligned(1)))
+		#define TELEPORT_PACKED __attribute__ ((packed,aligned(1)))
 	#else
-		#define AVS_PACKED
+		#define TELEPORT_PACKED
 	#endif
 #endif
 
@@ -21,13 +20,13 @@ namespace teleport
 		{
 			vec4 orientation = { 0, 0, 0, 1 };
 			vec3 position = { 0, 0, 0 };
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		struct PoseDynamic
 		{
 			Pose pose;
 			vec3 velocity;
 			vec3 angularVelocity;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 		//! An input identifier, used between client and server to denote a specific input.
 		typedef uint16_t InputId;
 		//! What type of input to send, and when. 
@@ -70,13 +69,19 @@ namespace teleport
 			return (InputType)((uint8_t)a & (uint8_t)b);
 		}
 
+		struct InputState
+		{
+			uint16_t numBinaryStates = 0;
+			uint16_t numAnalogueStates= 0;
+		} TELEPORT_PACKED;
+
 		//! Input events that can only be in two states; e.g. button pressed or not.
 		struct InputEventBinary
 		{
 			uint32_t eventID = 0;
 			InputId inputID = 0; //ID of the input type used that triggered the event.
 			bool activated = false;
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Input events that can be normalised between two values; e.g. how pressed a trigger is.
 		struct InputEventAnalogue
@@ -92,7 +97,7 @@ namespace teleport
 			{
 				strength = value / maxValue;
 			}
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 		//! Input events that represent the motion in two directions; e.g. a stick on a controller.
 		struct InputEventMotion
@@ -100,7 +105,7 @@ namespace teleport
 			uint32_t eventID = 0;
 			InputId inputID = 0; // ID of the input type used that triggered the event.
 			vec2 motion = vec2{0.0f, 0.0f};
-		} AVS_PACKED;
+		} TELEPORT_PACKED;
 
 	#ifdef _MSC_VER
 	#pragma pack(pop)

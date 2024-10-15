@@ -199,17 +199,6 @@ namespace avs
 		Capture = 0
 	};
 
-	enum class NodeDataType : uint8_t
-	{
-		Invalid=0,
-		None,
-		Mesh,
-		Light,
-		TextCanvas,
-		SubScene,
-		Skeleton,
-		Link
-	};
 
 	/*! Graphics API device handle. */
 	struct DeviceHandle

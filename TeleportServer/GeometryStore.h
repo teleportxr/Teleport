@@ -19,11 +19,6 @@ namespace teleport
 	}
 	namespace server
 	{
-		extern void TELEPORT_SERVER_API ConvertTransform(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, avs::Transform &transform);
-		extern void TELEPORT_SERVER_API ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation);
-		extern void TELEPORT_SERVER_API ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position);
-		extern void TELEPORT_SERVER_API ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale);
-		extern int8_t TELEPORT_SERVER_API ConvertAxis(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, int8_t axis);
 		//! Resource state replication. Each resource is either not present or present.
 		//! Additionally, we track whether the server is aware of that state.
 		struct ResourceReplication
@@ -131,7 +126,7 @@ namespace teleport
 			bool storeAnimation(avs::uid id, const std::string &path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
 			bool storeMesh(avs::uid id, const std::string & path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify=false);
 			bool storeMesh(avs::uid id, const std::string & path, std::time_t lastModified, const avs::Mesh &newMesh, avs::AxesStandard standard, bool verify = false);
-			bool storeMaterial(avs::uid id, const std::string & guid, const std::string & path, std::time_t lastModified, avs::Material& newMaterial);
+			bool storeMaterial(avs::uid id,  const std::string & path, std::time_t lastModified, avs::Material& newMaterial);
 			bool storeTexture(avs::uid id,  const std::string & path, std::time_t lastModified, const avs::Texture &newTexture, bool genMips, bool highQualityUASTC, bool forceOverwrite);
 			avs::uid storeFont(const std::string & ttf_path_utf8, const std::string & relative_asset_path_utf8, std::time_t lastModified, int size = 32);
 			avs::uid storeTextCanvas(const std::string & relative_asset_path, const InteropTextCanvas* interopTextCanvas);

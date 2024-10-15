@@ -3,16 +3,11 @@
 #include <cstring>	// for memcpy
 #include <cstdint>
 #include <vector>
+#include <libavstream/material_exports.h>
 
 namespace avs
 {
 	typedef uint64_t uid;
-
-	//One identifier per extension class.
-	enum class MaterialExtensionIdentifier: uint32_t
-	{
-		SIMPLE_GRASS_WIND
-	};
 
 	//Abstract material extension class.
 	class MaterialExtension

@@ -109,8 +109,15 @@ namespace teleport
 			int32_t requiredLatencyMs;
 			int32_t connectionTimeout;
 		} TELEPORT_PACKED;
-
-
+		struct VideoEncodeParams
+		{
+			int32_t encodeWidth = 0;
+			int32_t encodeHeight = 0;
+			GraphicsDeviceType deviceType;
+			void* deviceHandle = nullptr;
+			void* inputSurfaceResource = nullptr;
+		} TELEPORT_PACKED;
 #pragma pack(pop)
+		extern ServerSettings TELEPORT_SERVER_API &GetServerSettings();
 	}
 }

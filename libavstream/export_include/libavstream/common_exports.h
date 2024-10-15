@@ -12,13 +12,7 @@
 #define _isnanf isnan
 #endif
 
-#ifndef AVS_PACKED
-	#if defined(__GNUC__) || defined(__clang__)
-		#define AVS_PACKED __attribute__ ((packed,aligned(1)))
-	#else
-		#define AVS_PACKED
-	#endif
-#endif
+#include <libavstream/common_packing.h>
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
@@ -75,6 +69,17 @@ namespace avs
 		HEVC = 1,
 		Framed = 2,
 		Generic=3
+	};
+	enum class NodeDataType : uint8_t
+	{
+		Invalid=0,
+		None,
+		Mesh,
+		Light,
+		TextCanvas,
+		SubScene,
+		Skeleton,
+		Link
 	};
 
 	enum class GeometryPayloadType : uint8_t

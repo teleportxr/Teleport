@@ -214,6 +214,9 @@ set(hdr_public_audio
 set(hdr_export
 	export_include/libavstream/common_exports.h
 	export_include/libavstream/common_maths.h
+	export_include/libavstream/material_exports.h
+	export_include/libavstream/common_networking.h
+	export_include/libavstream/common_packing.h
 )
 if(NOT TELEPORT_SERVER)
 	set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)

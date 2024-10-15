@@ -290,6 +290,8 @@ namespace avs
 			return in;
 		}
 	};
+
+
 } // avs
 #ifdef _MSC_VER
 #pragma pack(pop)

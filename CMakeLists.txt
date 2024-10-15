@@ -196,6 +196,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 endif()
 
 set(TELEPORT_SERVER_DLL_DIR "${TELEPORT_UNITY_PLUGINS_DIR}" CACHE PATH "Location to build TeleportServer.dll for use by engine")
+set(TELEPORT_SERVER_INCLUDE_DIR "${TELEPORT_SERVER_DLL_DIR}/../../Include" CACHE PATH "Location to deploy exported headers for use by engine")
+
 if(TELEPORT_UNITY)
 	get_filename_component(PROJECT_DIR ${CMAKE_BINARY_DIR} DIRECTORY)
 	set(TELEPORT_UNITY_PROJECT_DIR "${PROJECT_DIR}" CACHE PATH "")

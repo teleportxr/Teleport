@@ -18,14 +18,14 @@
 using namespace teleport;
 using namespace server;
 
-static void CrateEncodeParams(const ServerSettings& settings, avs::EncoderParams& encoderParams);
+static void CrateEncodeParams( avs::EncoderParams& encoderParams);
 
 VideoEncodePipeline::~VideoEncodePipeline()
 {
 	deconfigure();
 }
 
-Result VideoEncodePipeline::initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::PipelineNode* tagDataOutput)
+Result VideoEncodePipeline::initialize( const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::PipelineNode* tagDataOutput)
 {
 	auto createSurfaceBackend = [](GraphicsDeviceType deviceType, void* resource)->avs::SurfaceBackendInterface*
 	{
@@ -82,7 +82,7 @@ Result VideoEncodePipeline::initialize(const ServerSettings& settings, const Vid
 	}
 
 	avs::EncoderParams encoderParams = {};
-	CrateEncodeParams(settings, encoderParams);
+	CrateEncodeParams( encoderParams);
 
 	if (!mEncoder->configure(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams))
 	{
@@ -99,7 +99,7 @@ Result VideoEncodePipeline::initialize(const ServerSettings& settings, const Vid
 	return Result::Code::OK;
 }
 
-Result VideoEncodePipeline::reconfigure1(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams)
+Result VideoEncodePipeline::reconfigure1( const VideoEncodeParams& videoEncodeParams)
 {
 	if (!mPipeline)
 	{
@@ -136,14 +136,15 @@ Result VideoEncodePipeline::reconfigure1(const ServerSettings& settings, const V
 	}
 
 	avs::EncoderParams encoderParams = {};
-	CrateEncodeParams(settings, encoderParams);
+	CrateEncodeParams( encoderParams);
 
 	mEncoder->reconfigure(videoEncodeParams.encodeWidth, videoEncodeParams.encodeHeight, encoderParams);
 	return Result::Code::OK;
 }
 
-void CrateEncodeParams(const ServerSettings& settings, avs::EncoderParams& encoderParams)
+void CrateEncodeParams( avs::EncoderParams& encoderParams)
 {
+	const ServerSettings& settings=GetServerSettings();
 	encoderParams.codec = settings.videoCodec;
 	encoderParams.preset = avs::VideoPreset::HighPerformance;
 	encoderParams.targetFrameRate = settings.targetFPS;
@@ -215,10 +216,10 @@ avs::EncoderStats VideoEncodePipeline::getEncoderStats() const
 	return avs::EncoderStats();
 }
 
-Result VideoEncodePipeline::getEncodeCapabilities(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncodeCapabilities& capabilities)
+Result VideoEncodePipeline::getEncodeCapabilities(const VideoEncodeParams& videoEncodeParams, avs::EncodeCapabilities& capabilities)
 {
 	avs::EncoderParams encoderParams = {};
-	CrateEncodeParams(settings, encoderParams);
+	CrateEncodeParams( encoderParams);
 	if (avs::Encoder::getEncodeCapabilities(avs::DeviceHandle{ (avs::DeviceType)videoEncodeParams.deviceType, videoEncodeParams.deviceHandle }, encoderParams, capabilities))
 	{
 		return Result::Code::OK;
@@ -227,7 +228,7 @@ Result VideoEncodePipeline::getEncodeCapabilities(const ServerSettings& settings
 }
 
 
-Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* colorQueue, avs::PipelineNode* tagDataQueue)
+Result VideoEncodePipeline::configure(const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* colorQueue, avs::PipelineNode* tagDataQueue)
 {
 	if (configured)
 	{
@@ -259,7 +260,7 @@ Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, cons
 #endif
 	params.inputSurfaceResource = encoderSurfaceResource;
 
-	Result result = teleport::server::VideoEncodePipeline::initialize(serverSettings, params, colorQueue, tagDataQueue);
+	Result result = teleport::server::VideoEncodePipeline::initialize( params, colorQueue, tagDataQueue);
 	if (result)
 	{
 		configured = true;
@@ -267,7 +268,7 @@ Result VideoEncodePipeline::configure(const ServerSettings& serverSettings, cons
 	return result;
 }
 
-Result VideoEncodePipeline::reconfigure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams)
+Result VideoEncodePipeline::reconfigure( const VideoEncodeParams& videoEncodeParams)
 {
 	if (!configured)
 	{
@@ -306,7 +307,7 @@ Result VideoEncodePipeline::reconfigure(const ServerSettings& serverSettings, co
 		params.inputSurfaceResource = encoderSurfaceResource;
 	}
 
-	return server::VideoEncodePipeline::reconfigure1(serverSettings, params);
+	return server::VideoEncodePipeline::reconfigure1( params);
 }
 
 Result VideoEncodePipeline::encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR)

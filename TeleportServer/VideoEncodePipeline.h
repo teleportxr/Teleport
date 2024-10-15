@@ -17,14 +17,6 @@ namespace teleport
 {
 	namespace server
 	{
-		struct VideoEncodeParams
-		{
-			int32_t encodeWidth = 0;
-			int32_t encodeHeight = 0;
-			GraphicsDeviceType deviceType;
-			void* deviceHandle = nullptr;
-			void* inputSurfaceResource = nullptr;
-		};
 
 		//! Wrapper for the video encoding pipeline objects.
 		class TELEPORT_SERVER_API VideoEncodePipeline
@@ -33,18 +25,18 @@ namespace teleport
 			VideoEncodePipeline() = default;
 			virtual ~VideoEncodePipeline();
 
-			Result initialize(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::PipelineNode* tagDataOutput);
+			Result initialize( const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* videoOutput, avs::PipelineNode* tagDataOutput);
 
-			Result configure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* colorQueue, avs::PipelineNode* tagDataQueue);
-			Result reconfigure1(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams);
-			Result reconfigure(const ServerSettings& serverSettings, const VideoEncodeParams& videoEncodeParams);
+			Result configure( const VideoEncodeParams& videoEncodeParams, avs::PipelineNode* colorQueue, avs::PipelineNode* tagDataQueue);
+			Result reconfigure1( const VideoEncodeParams& videoEncodeParams);
+			Result reconfigure( const VideoEncodeParams& videoEncodeParams);
 			Result encode(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 			Result process(const uint8_t* tagData, size_t tagDataSize, bool forceIDR = false);
 			Result release();
 
 			avs::EncoderStats getEncoderStats() const;
 
-			static Result getEncodeCapabilities(const ServerSettings& settings, const VideoEncodeParams& videoEncodeParams, avs::EncodeCapabilities& capabilities);
+			static Result getEncodeCapabilities( const VideoEncodeParams& videoEncodeParams, avs::EncodeCapabilities& capabilities);
 
 			Result deconfigure();
 		protected:
