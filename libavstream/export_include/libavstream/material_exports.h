@@ -1,4 +1,5 @@
 #pragma once
+#include <libavstream/common_exports.h>
 #include <libavstream/common_maths.h>
 namespace avs
 {
@@ -99,5 +100,26 @@ namespace avs
 		SIMPLE_GRASS_WIND
 	};
 	class MaterialExtension;
+	inline size_t GetComponentSize(Accessor::ComponentType t)
+	{
+		switch (t)
+		{
+		case Accessor::ComponentType::BYTE:
+		case Accessor::ComponentType::UBYTE:
+			return 1;
+		case Accessor::ComponentType::HALF:
+		case Accessor::ComponentType::SHORT:
+		case Accessor::ComponentType::USHORT:
+			return 2;
+		case Accessor::ComponentType::FLOAT:
+		case Accessor::ComponentType::INT:
+		case Accessor::ComponentType::UINT:
+			return 4;
+		case Accessor::ComponentType::DOUBLE:
+			return 8;
+		default:
+			return 1;
+		};
+	}
 	#pragma pack(pop)
 }

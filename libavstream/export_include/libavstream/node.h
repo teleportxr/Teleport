@@ -2,6 +2,8 @@
 
 #include <libavstream/common_networking.h>
 #include <libavstream/common_packing.h>
+#include <libavstream/common_exports.h>
+#include <libavstream/material_exports.h>
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif

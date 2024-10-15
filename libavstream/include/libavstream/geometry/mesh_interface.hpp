@@ -12,7 +12,6 @@
 #include <libavstream/node.h>
 
 #include "material_interface.hpp"
-#include <libavstream/node.h>
 
 // TODO: don't forward-reference any teleport::core things from avs.
 namespace teleport::core
@@ -30,27 +29,6 @@ namespace avs
 	extern void AVSTREAM_API ConvertScale(AxesStandard fromStandard, AxesStandard toStandard, vec3 &scale);
 	extern int8_t AVSTREAM_API ConvertAxis(AxesStandard fromStandard, AxesStandard toStandard, int8_t axis);
 	
-	inline size_t GetComponentSize(Accessor::ComponentType t)
-	{
-		switch (t)
-		{
-		case Accessor::ComponentType::BYTE:
-		case Accessor::ComponentType::UBYTE:
-			return 1;
-		case Accessor::ComponentType::HALF:
-		case Accessor::ComponentType::SHORT:
-		case Accessor::ComponentType::USHORT:
-			return 2;
-		case Accessor::ComponentType::FLOAT:
-		case Accessor::ComponentType::INT:
-		case Accessor::ComponentType::UINT:
-			return 4;
-		case Accessor::ComponentType::DOUBLE:
-			return 8;
-		default:
-			return 1;
-		};
-	}
 
 	inline size_t GetDataTypeSize(Accessor::DataType t)
 	{

@@ -214,9 +214,11 @@ set(hdr_public_audio
 set(hdr_export
 	export_include/libavstream/common_exports.h
 	export_include/libavstream/common_maths.h
-	export_include/libavstream/material_exports.h
 	export_include/libavstream/common_networking.h
 	export_include/libavstream/common_packing.h
+	export_include/libavstream/common_packing.h
+	export_include/libavstream/material_exports.h
+	export_include/libavstream/node.h
 )
 if(NOT TELEPORT_SERVER)
 	set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)
@@ -291,22 +293,24 @@ endif()
 
 if(LIBAV_USE_CUDA)
 	# CUDA kernels
+	# _ALLOW_COMPILER_AND_STL_VERSION_MISMATCH because newer MS compiler expects CUDA 12. 
 	add_custom_command(
 		OUTPUT enc_nvidia.cubin enc_nvidia.cubin.inl
-		COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/encoders/enc_nvidia.cu -o enc_nvidia.cubin
+		COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/encoders/enc_nvidia.cu -o enc_nvidia.cubin -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH=1
 		COMMAND ${xxd} -i enc_nvidia.cubin enc_nvidia.cubin.inl
 		DEPENDS src/encoders/enc_nvidia.cu
 	)
 
 	add_custom_command(
 		OUTPUT dec_nvidia.cubin dec_nvidia.cubin.inl
-		COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin
+		COMMAND ${CMAKE_CUDA_COMPILER} -allow-unsupported-compiler -fatbin ${CMAKE_CURRENT_SOURCE_DIR}/src/decoders/dec_nvidia.cu -o dec_nvidia.cubin -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH=1
 		COMMAND ${xxd} -i dec_nvidia.cubin dec_nvidia.cubin.inl
 		DEPENDS src/decoders/dec_nvidia.cu
 	)
 	add_custom_target(
 		cuda_kernels
 		DEPENDS enc_nvidia.cubin enc_nvidia.cubin.inl dec_nvidia.cubin dec_nvidia.cubin.inl SOURCES src/encoders/enc_nvidia.cu src/decoders/dec_nvidia.cu
+
 	)
 	set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
 endif()
@@ -375,7 +379,7 @@ if(LIBAAV_BUILD_SHARED_LIBS)
 		PRIVATE LIBAVSTREAM_EXPORTS
 	)
 endif()
-target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}>)
+target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}> )
 target_compile_definitions(libavstream PRIVATE TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH=$<BOOL:${TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH}>)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -423,6 +427,7 @@ if(NOT ANDROID)
 endif()
 
 target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/firstparty/Platform/External")
+target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/firstparty")
 
 # linking with libdatachannel for webrtc support
 target_compile_definitions(libavstream PRIVATE TELEPORT_DATACHANNEL_WEBRTC=$<BOOL:${TELEPORT_DATACHANNEL_WEBRTC}>)

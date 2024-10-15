@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <cmath>
 #include <iostream>
-#include "../../firstparty/Platform/CrossPlatform/Shaders/CppSl.sl"
-#include <libavstream/common_packing.h>\
+#include "Platform/CrossPlatform/Shaders/CppSl.sl"
+#include <libavstream/common_packing.h>
 
 namespace avs
 {
