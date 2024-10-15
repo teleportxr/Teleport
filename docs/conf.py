@@ -37,10 +37,12 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+include_patterns=['*.rst','libavstream/*.rst','libavstream/**/*.rst','libavstream/**/*.png','TeleportCore/*.rst','TeleportCore/**','TeleportServer/*.rst','TeleportServer/**'
+                    ,'TeleportClient/**','docs/**','docs/*.rst']
+exclude_patterns = ['build*']
 
 html_static_path = ['_static']
-html_logo = "images/TeleportLogo-64.png"
+html_logo = "docs/images/TeleportLogo-64.png"
 html_theme_options = {
     'logo_only': False,
     'display_version': False,
