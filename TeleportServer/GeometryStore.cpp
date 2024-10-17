@@ -624,27 +624,27 @@ bool GeometryStore::storeAnimation(avs::uid id, const std::string & path, telepo
 	return true;
 }
 
-draco::DataType ToDracoDataType(avs::Accessor::ComponentType componentType)
+draco::DataType ToDracoDataType(avs::ComponentType componentType)
 {
 	switch(componentType)
 	{
-	case avs::Accessor::ComponentType::FLOAT:
+	case avs::ComponentType::FLOAT:
 		return draco::DataType::DT_FLOAT32;
-	case avs::Accessor::ComponentType::DOUBLE:
+	case avs::ComponentType::DOUBLE:
 		return draco::DataType::DT_FLOAT64;
-	case avs::Accessor::ComponentType::HALF:
+	case avs::ComponentType::HALF:
 		return draco::DataType::DT_INVALID;
-	case avs::Accessor::ComponentType::UINT:
+	case avs::ComponentType::UINT:
 		return draco::DataType::DT_INT32;
-	case avs::Accessor::ComponentType::USHORT:
+	case avs::ComponentType::USHORT:
 		return draco::DataType::DT_INT16;
-	case avs::Accessor::ComponentType::UBYTE:
+	case avs::ComponentType::UBYTE:
 		return draco::DataType::DT_INT8;
-	case avs::Accessor::ComponentType::INT:
+	case avs::ComponentType::INT:
 		return draco::DataType::DT_INT32;
-	case avs::Accessor::ComponentType::SHORT:
+	case avs::ComponentType::SHORT:
 		return draco::DataType::DT_INT16;
-	case avs::Accessor::ComponentType::BYTE:
+	case avs::ComponentType::BYTE:
 		return draco::DataType::DT_INT8;
 	default:
 		break;
@@ -688,7 +688,7 @@ static bool CheckMesh(avs::Mesh &sourceMesh)
 {
 	for(auto a:sourceMesh.accessors)
 	{
-		if(a.second.componentType==avs::Accessor::ComponentType::FLOAT)
+		if(a.second.componentType==avs::ComponentType::FLOAT)
 		{
 			auto &bv=sourceMesh.bufferViews[a.second.bufferView];
 			size_t accSize = a.second.count * GetDataTypeSize(a.second.type) * GetComponentSize(a.second.componentType);
@@ -827,7 +827,7 @@ return true;
 			const uint8_t *src_data = attr_buffer.data + attr_bufferView.byteOffset + attr_accessor.byteOffset;
 			for (int i = 0; i < attr->size(); i++)
 			{
-				if (attr_accessor.componentType == avs::Accessor::ComponentType::INT)
+				if (attr_accessor.componentType == avs::ComponentType::INT)
 				{
 					size_t sz = (size_t)attr_accessor.type;
 					const int *compare = nullptr;
@@ -882,7 +882,7 @@ return true;
 					}
 					src_data += sz * sizeof(int);
 				}
-				else if (attr_accessor.componentType == avs::Accessor::ComponentType::FLOAT)
+				else if (attr_accessor.componentType == avs::ComponentType::FLOAT)
 				{
 					switch (attr_accessor.type)
 					{

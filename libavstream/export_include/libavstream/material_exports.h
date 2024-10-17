@@ -100,22 +100,22 @@ namespace avs
 		SIMPLE_GRASS_WIND
 	};
 	class MaterialExtension;
-	inline size_t GetComponentSize(Accessor::ComponentType t)
+	inline size_t GetComponentSize(ComponentType t)
 	{
 		switch (t)
 		{
-		case Accessor::ComponentType::BYTE:
-		case Accessor::ComponentType::UBYTE:
+		case ComponentType::BYTE:
+		case ComponentType::UBYTE:
 			return 1;
-		case Accessor::ComponentType::HALF:
-		case Accessor::ComponentType::SHORT:
-		case Accessor::ComponentType::USHORT:
+		case ComponentType::HALF:
+		case ComponentType::SHORT:
+		case ComponentType::USHORT:
 			return 2;
-		case Accessor::ComponentType::FLOAT:
-		case Accessor::ComponentType::INT:
-		case Accessor::ComponentType::UINT:
+		case ComponentType::FLOAT:
+		case ComponentType::INT:
+		case ComponentType::UINT:
 			return 4;
-		case Accessor::ComponentType::DOUBLE:
+		case ComponentType::DOUBLE:
 			return 8;
 		default:
 			return 1;

@@ -9,24 +9,24 @@ using namespace teleport::core;
 
 namespace teleport::core
 {
-	avs::Accessor::ComponentType FromDracoDataType(draco::DataType dracoDataType)
+	avs::ComponentType FromDracoDataType(draco::DataType dracoDataType)
 	{
 		switch (dracoDataType)
 		{
 		case draco::DataType::DT_FLOAT32:
-			return avs::Accessor::ComponentType::FLOAT;
+			return avs::ComponentType::FLOAT;
 		case draco::DataType::DT_FLOAT64:
-			return avs::Accessor::ComponentType::DOUBLE;
+			return avs::ComponentType::DOUBLE;
 		case draco::DataType::DT_INVALID:
-			return avs::Accessor::ComponentType::HALF;
+			return avs::ComponentType::HALF;
 		case draco::DataType::DT_INT32:
-			return avs::Accessor::ComponentType::UINT;
+			return avs::ComponentType::UINT;
 		case draco::DataType::DT_INT16:
-			return avs::Accessor::ComponentType::USHORT;
+			return avs::ComponentType::USHORT;
 		case draco::DataType::DT_INT8:
-			return avs::Accessor::ComponentType::UBYTE;
+			return avs::ComponentType::UBYTE;
 		default:
-			return avs::Accessor::ComponentType::BYTE;
+			return avs::ComponentType::BYTE;
 		};
 	}
 }
@@ -176,9 +176,9 @@ avs::Result teleport::core::DracoMeshToPrimitiveArray(avs::uid primitiveArrayUid
 	uint64_t indices_accessor_id = dg.next_id++;
 	auto &indices_accessor = dg.accessors[indices_accessor_id];
 	if (sizeof(draco::PointIndex) == sizeof(uint32_t))
-		indices_accessor.componentType = avs::Accessor::ComponentType::UINT;
+		indices_accessor.componentType = avs::ComponentType::UINT;
 	else
-		indices_accessor.componentType = avs::Accessor::ComponentType::USHORT;
+		indices_accessor.componentType = avs::ComponentType::USHORT;
 	indices_accessor.bufferView = dg.next_id++;
 	
 	uint32_t num_indices = subMeshFaces * 3;

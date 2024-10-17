@@ -1043,7 +1043,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 			{
 				avs::uid acc_uid= NextUint64;
 				avs::Accessor::DataType type = (avs::Accessor::DataType)NextUint32;
-				avs::Accessor::ComponentType componentType = (avs::Accessor::ComponentType)NextUint32;
+				avs::ComponentType componentType = (avs::ComponentType)NextUint32;
 				size_t count = NextUint64;
 				avs::uid bufferView = NextUint64;
 				size_t byteOffset = NextUint64;

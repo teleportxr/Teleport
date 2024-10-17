@@ -128,6 +128,18 @@ namespace avs
 			return "INVALID ";
 		};
 	};
+	enum class ComponentType : uint32_t
+	{
+		FLOAT=0,
+		DOUBLE,
+		HALF,
+		UINT,
+		USHORT,
+		UBYTE,
+		INT,
+		SHORT,
+		BYTE,
+	};
 } // avs
 #ifdef _MSC_VER
 #pragma pack(pop)
