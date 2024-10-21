@@ -244,18 +244,6 @@ namespace avs
 			VEC4,
 			MAT4
 		};
-		enum class ComponentType : uint32_t
-		{
-			FLOAT=0,
-			DOUBLE,
-			HALF,
-			UINT,
-			USHORT,
-			UBYTE,
-			INT,
-			SHORT,
-			BYTE,
-		};
 		DataType type;
 		ComponentType componentType;
 		size_t count;

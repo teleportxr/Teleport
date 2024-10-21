@@ -51,5 +51,6 @@ set_target_properties( TeleportAudio PROPERTIES FOLDER Teleport )
 
 target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../libavstream/export_include ../)
 target_include_directories(TeleportAudio PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
+target_include_directories(TeleportAudio PUBLIC ../firstparty )
 
 #target_compile_features(libavstream PRIVATE cxx_std_17)

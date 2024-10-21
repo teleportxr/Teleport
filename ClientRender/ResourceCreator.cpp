@@ -353,24 +353,24 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 					// tangentx tangentz
 					if (meshElementCreate.m_TangentNormalSize == 8)
 					{
-						avs::Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
+						tvector4<signed char>& x8 = *((tvector4<signed char>*)(nt));
 						tangent.x = float(x8.x) / 127.0f;
 						tangent.y = float(x8.y) / 127.0f;
 						tangent.z = float(x8.z) / 127.0f;
 						tangent.w = float(x8.w) / 127.0f;
-						avs::Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
+						tvector4<signed char>& n8 = *((tvector4<signed char>*)(nt + 4));
 						normal.x = float(n8.x) / 127.0f;
 						normal.y = float(n8.y) / 127.0f;
 						normal.z = float(n8.z) / 127.0f;
 					}
 					else // 16
 					{
-						avs::Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
+						tvector4<short>& x8 = *((tvector4<short>*)(nt));
 						tangent.x = float(x8.x) / 32767.0f;
 						tangent.y = float(x8.y) / 32767.0f;
 						tangent.z = float(x8.z) / 32767.0f;
 						tangent.w = float(x8.w) / 32767.0f;
-						avs::Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
+						tvector4<short>& n8 = *((tvector4<short>*)(nt + 8));
 						normal.x = float(n8.x) / 32767.0f;
 						normal.y = float(n8.y) / 32767.0f;
 						normal.z = float(n8.z) / 32767.0f;
@@ -440,24 +440,24 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 					// tangentx tangentz
 					if (meshElementCreate.m_TangentNormalSize == 8)
 					{
-						avs::Vec4<signed char>& x8 = *((avs::Vec4<signed char>*)(nt));
+						tvector4<signed char>& x8 = *((tvector4<signed char>*)(nt));
 						tangent.x = float(x8.x) / 127.0f;
 						tangent.y = float(x8.y) / 127.0f;
 						tangent.z = float(x8.z) / 127.0f;
 						tangent.w = float(x8.w) / 127.0f;
-						avs::Vec4<signed char>& n8 = *((avs::Vec4<signed char>*)(nt + 4));
+						tvector4<signed char>& n8 = *((tvector4<signed char>*)(nt + 4));
 						normal.x = float(n8.x) / 127.0f;
 						normal.y = float(n8.y) / 127.0f;
 						normal.z = float(n8.z) / 127.0f;
 					}
 					else // 16
 					{
-						avs::Vec4<short>& x8 = *((avs::Vec4<short>*)(nt));
+						tvector4<short>& x8 = *((tvector4<short>*)(nt));
 						tangent.x = float(x8.x) / 32767.0f;
 						tangent.y = float(x8.y) / 32767.0f;
 						tangent.z = float(x8.z) / 32767.0f;
 						tangent.w = float(x8.w) / 32767.0f;
-						avs::Vec4<short>& n8 = *((avs::Vec4<short>*)(nt + 8));
+						tvector4<short>& n8 = *((tvector4<short>*)(nt + 8));
 						normal.x = float(n8.x) / 32767.0f;
 						normal.y = float(n8.y) / 32767.0f;
 						normal.z = float(n8.z) / 32767.0f;
