@@ -1183,13 +1183,18 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData& geom
 	{
 		texture.compression = avs::TextureCompression::PNG;
 	}
-	if(ext==".ktx2")
+	else if(ext==".ktx2"||ext==".ktx")
 	{
 		texture.compression = avs::TextureCompression::KTX;
 	}
-	if(ext==".basis")
+	else if(ext==".basis")
 	{
 		texture.compression = avs::TextureCompression::BASIS_COMPRESSED;
+	}
+	else
+	{
+		TELEPORT_WARN("Unknown texture format {0}",ext);
+		return avs::Result::Failed;
 	}
 	texture.compressedData=std::move(geometryDecodeData.data);
 	texture.name=p.filename().replace_extension("").generic_string();

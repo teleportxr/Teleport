@@ -38,7 +38,7 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 include_patterns=['*.rst','libavstream/*.rst','libavstream/**/*.rst','libavstream/**/*.png','TeleportCore/*.rst','TeleportCore/**','TeleportServer/*.rst','TeleportServer/**'
-                    ,'TeleportClient/**','docs/**','docs/*.rst']
+                    ,'TeleportClient/**','docs/**','docs/*.rst','**/*.rst','**/*.png']
 exclude_patterns = ['build*']
 
 html_static_path = ['_static']

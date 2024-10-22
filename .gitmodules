@@ -34,3 +34,6 @@
 [submodule "thirdparty/flecs"]
 	path = thirdparty/flecs
 	url = https://github.com/SanderMertens/flecs.git
+[submodule "firstparty/teleport-unreal"]
+	path = firstparty/teleport-unreal
+	url = https://github.com/simul/teleport-unreal.git

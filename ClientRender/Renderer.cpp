@@ -408,7 +408,7 @@ void Renderer::InitLocalGeometry()
 	
 	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/diffuseRenderTexture.texture"
 		,avs::GeometryPayloadType::Texture,&localResourceCreator, diffuse_cubemap_uid);
-	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/specularRenderTexture.ktx2"
+	geometryDecoder.decodeFromFile(0,"assets/localGeometryCache/textures/uffizi_rgba16f_cube.ktx" //specularRenderTexture.ktx2"
 		,avs::GeometryPayloadType::Texture,&localResourceCreator, specular_cubemap_uid);
 
 	// test gltf loading.

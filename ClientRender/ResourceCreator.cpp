@@ -14,6 +14,7 @@
 #include <fmt/core.h>
 #include <fstream>
 #include <ktx.h>
+#include <ktx/lib/gl_format.h>
 #include "NodeComponents/SubSceneComponent.h"
 #include "TeleportClient/Config.h"
 #ifdef _MSC_VER
@@ -642,31 +643,9 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	{
 		return;
 	}
-	//clientrender::Texture::CompressionFormat scrTextureCompressionFormat= clientrender::Texture::CompressionFormat::UNCOMPRESSED;
-	if(texture.compression!=avs::TextureCompression::UNCOMPRESSED)
-	{
-		switch(texture.format)
-		{
-		case avs::TextureFormat::RGBA32F:
-			//scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC6H;
-			break;
-		default:
-			//scrTextureCompressionFormat = clientrender::Texture::CompressionFormat::BC3;
-			break;
-		};
-	}
 	std::shared_ptr<clientrender::Texture::TextureCreateInfo> texInfo =std::make_shared<clientrender::Texture::TextureCreateInfo>();
 	texInfo->name			=texture.name;
 	texInfo->uid			=id;
-	//texInfo->width			=texture.width;
-	//texInfo->height			=texture.height;
-	//texInfo->depth			=texture.depth;
-	//texInfo->bytesPerPixel	=texture.bytesPerPixel;
-	//texInfo->arrayCount		=texture.arrayCount;
-	//texInfo->mipCount		=texture.mipCount;
-	//texInfo->type			=texture.cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
-	//texInfo->format			=textureFormatFromAVSTextureFormat(texture.format);
-	//texInfo->sampleCount	=clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT; //Assumed
 	texInfo->compression	=(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 
 	TELEPORT_LOG("Received texture {0} ({1}), awaiting decompression.",id, texture.name);
@@ -1320,6 +1299,67 @@ static teleport::clientrender::Texture::CompressionFormat VkFormatToCompressionF
 	};
 }
 
+/*
+* 6406:			//Alpha			
+* 6407:			// Rgb			
+* 6408:			// Rgba			
+* 6409:			// Luminance	
+* 6410:			// LuminanceAlpha
+*/
+
+static clientrender::Texture::Format GlInternalFormatToTeleportFormat(GLuint p)
+{
+	using namespace clientrender;
+	switch(p)
+	{
+		case GL_RGBA16F:
+			return Texture::Format::RGBA16F;
+		case GL_RGBA32F:
+			return Texture::Format::RGBA32F;
+		case GL_RGBA32UI:
+			return Texture::Format::RGBA32UI;
+		case GL_RGB32F:
+			return Texture::Format::RGB32F;
+		case GL_RG32F:
+			return Texture::Format::RG32F;
+		case GL_R32F:
+			return Texture::Format::R32F;
+		case GL_R16F:
+			return Texture::Format::R16F;
+		case GL_LUMINANCE32F_ARB:
+			return Texture::Format::R32F;
+		case GL_INTENSITY32F_ARB:
+			return Texture::Format::R32F;
+		case GL_RGBA8:
+			return Texture::Format::RGBA8;
+		case GL_SRGB8_ALPHA8:
+			return Texture::Format::RGBA8;
+		case GL_RGBA8_SNORM:
+			return Texture::Format::RGBA8_SNORM;
+		case GL_RGB8:
+			return Texture::Format::RGB8;
+		case GL_RGB8_SNORM:
+			return Texture::Format::RGB8;
+		case GL_R8:
+			return Texture::Format::R8;
+		case GL_R32UI:
+			return Texture::Format::R32UI;
+		case GL_RG32UI:
+			return Texture::Format::RG32UI;
+	default:
+		return Texture::Format::FORMAT_UNKNOWN;
+	};
+}
+static teleport::clientrender::Texture::CompressionFormat GlFormatToCompressionFormat(uint32_t f)
+{
+	switch(f)
+	{
+	case 0:
+	default:
+		return teleport::clientrender::Texture::CompressionFormat::UNCOMPRESSED;
+	};
+}
+
 struct KtxCallbackData
 {
 	int numFaces=0;
@@ -1550,57 +1590,94 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				ktxTextureCreateFlags createFlags=KTX_TEXTURE_CREATE_NO_FLAGS;
 				ktxTexture *ktxt=nullptr;
 				KTX_error_code 	result=ktxTexture_CreateFromMemory(transcoding->data.data(), transcoding->data.size(),  createFlags, &ktxt);
-				ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
-		
-
-				transcoding->textureCI->width	=ktx2Texture->baseWidth;
-				transcoding->textureCI->height	=ktx2Texture->baseHeight;
-				transcoding->textureCI->depth	=ktx2Texture->baseDepth;
-				
-				transcoding->textureCI->arrayCount=ktx2Texture->numLayers?ktx2Texture->numLayers:1;
-				transcoding->textureCI->mipCount	=ktx2Texture->numLevels;
-
-				transcoding->textureCI->format	=VkFormatToTeleportFormat((VkFormat)(ktx2Texture->vkFormat));
-				if(transcoding->textureCI->format==clientrender::Texture::Format::FORMAT_UNKNOWN)
+				if(ktxt->classId==ktxTexture1_c)
 				{
-					ktx_transcode_fmt_e outputFormat=KTX_TTF_RGBA32;
-					ktx_transcode_flags transcodeFlags=KTX_TF_HIGH_QUALITY;
-					result= ktxTexture2_TranscodeBasis 	( 	ktx2Texture,outputFormat,transcodeFlags ) 	;
-					if (result != KTX_SUCCESS)
+					ktxTexture1 *ktx1Texture = (ktxTexture1* )ktxt;
+					transcoding->textureCI->width	=ktx1Texture->baseWidth;
+					transcoding->textureCI->height	=ktx1Texture->baseHeight;
+					transcoding->textureCI->depth	=ktx1Texture->baseDepth;
+					transcoding->textureCI->arrayCount=ktx1Texture->numLayers?ktx1Texture->numLayers:1;
+					transcoding->textureCI->mipCount	=ktx1Texture->numLevels; 
+					ktx_uint32_t glInternalFormat=(ktx_uint32_t)(ktx1Texture->glInternalformat);
+					transcoding->textureCI->format	=GlInternalFormatToTeleportFormat(glInternalFormat);
+					if(transcoding->textureCI->format==clientrender::Texture::Format::FORMAT_UNKNOWN)
 					{
 						TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
 						continue;
 					}
-				}
-				{
-					transcoding->textureCI->valueScale=1.0f;
-					transcoding->textureCI->compression=VkFormatToCompressionFormat((VkFormat)(ktx2Texture->vkFormat));
+					{
+						transcoding->textureCI->valueScale=1.0f;
+						transcoding->textureCI->compression=GlFormatToCompressionFormat(glInternalFormat);
 				
-					bool cubemap=(ktx2Texture->isCubemap);
-					transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
-					uint32_t numFaces=cubemap?6:1;
-					uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
-					transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
-					transcoding->textureCI->images->resize(ktx2Texture->numFaces*ktx2Texture->numLayers*ktx2Texture->numLevels);
+						bool cubemap=(ktx1Texture->isCubemap);
+						transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+						uint32_t numFaces=cubemap?6:1;
+						uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
+						transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+						transcoding->textureCI->images->resize(ktx1Texture->numFaces*ktx1Texture->numLayers*ktx1Texture->numLevels);
+						
+						//..result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
+					}
+				}
+				else if(ktxt->classId==ktxTexture2_c)
+				{
+					ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
+					transcoding->textureCI->width	=ktx2Texture->baseWidth;
+					transcoding->textureCI->height	=ktx2Texture->baseHeight;
+					transcoding->textureCI->depth	=ktx2Texture->baseDepth;
+					transcoding->textureCI->arrayCount=ktx2Texture->numLayers?ktx2Texture->numLayers:1;
+					transcoding->textureCI->mipCount	=ktx2Texture->numLevels;
+					VkFormat vkfmt=(VkFormat)(ktx2Texture->vkFormat);
+					transcoding->textureCI->format	=VkFormatToTeleportFormat(vkfmt);
+					if(transcoding->textureCI->format==clientrender::Texture::Format::FORMAT_UNKNOWN)
+					{
+						ktx_transcode_fmt_e outputFormat=KTX_TTF_RGBA32;
+						ktx_transcode_flags transcodeFlags=KTX_TF_HIGH_QUALITY;
+						result= ktxTexture2_TranscodeBasis 	( 	ktx2Texture,outputFormat,transcodeFlags ) 	;
+						if (result != KTX_SUCCESS)
+						{
+							TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
+							continue;
+						}
+					}
+					{
+						transcoding->textureCI->valueScale=1.0f;
+						transcoding->textureCI->compression=VkFormatToCompressionFormat((VkFormat)(ktx2Texture->vkFormat));
+				
+						bool cubemap=(ktx2Texture->isCubemap);
+						transcoding->textureCI->type			=cubemap?clientrender::Texture::Type::TEXTURE_CUBE_MAP:clientrender::Texture::Type::TEXTURE_2D; //Assumed
+						uint32_t numFaces=cubemap?6:1;
+						uint16_t numImages = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount*numFaces;
+						transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+						transcoding->textureCI->images->resize(ktx2Texture->numFaces*ktx2Texture->numLayers*ktx2Texture->numLevels);
+						
+						//..result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
+					}
+				}
+				else
+				{
+					TELEPORT_WARN("Invalid ktx class {0}",ktxt->classId);
+				}
+				if (result != KTX_SUCCESS)
+				{
+					TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
+				}
+				else
+				{
 					// For ktx textures, they will be already encoded, so we upload the whole thing as a single chunk of memory.
 					size_t textureSize = ktxTexture_GetDataSizeUncompressed(ktxt);
 					KtxCallbackData cbData;
 					cbData.images=transcoding->textureCI->images;
+					cbData.numMips=transcoding->textureCI->mipCount;
+					cbData.numFaces=ktxt->numFaces;
+					cbData.numLayers=ktxt->numLayers;
 					result = ktxTexture_IterateLoadLevelFaces(ktxt,
-                                                       ktxImageExtractionCallback,
-                                                       &cbData);
-					//..result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
-					if (result != KTX_SUCCESS)
-					{
-						TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
-					}
-					else
-					{
-						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
-					}
-					if(ktxt)
-						ktxTexture_Destroy(ktxt);
+													   ktxImageExtractionCallback,
+													   &cbData);
+					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
+				if(ktxt)
+					ktxTexture_Destroy(ktxt);
 			}
 		}
 	}
