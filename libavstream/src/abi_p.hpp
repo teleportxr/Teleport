@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <libavstream/abi.hpp>
+#include <libavstream/abi.h>
 
 #define AVSTREAM_PRIVATEINTERFACE_API(Type) \
 	friend Type; \

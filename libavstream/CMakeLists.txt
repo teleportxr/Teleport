@@ -145,7 +145,6 @@ source_group("Private Headers\\util" src FILES ${hdr_private_util} )
 
 # Public source
 set(hdr_public_root
-	include/libavstream/abi.hpp
 	include/libavstream/audiodecoder.h
 	include/libavstream/audioencoder.h
 	include/libavstream/buffer.hpp
@@ -219,6 +218,7 @@ set(hdr_export
 	export_include/libavstream/common_packing.h
 	export_include/libavstream/material_exports.h
 	export_include/libavstream/node.h
+	export_include/libavstream/abi.h
 )
 if(NOT TELEPORT_SERVER)
 	set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)

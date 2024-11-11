@@ -5,7 +5,7 @@
 
 #include <cassert>
 #include <cstdint>
-#include <libavstream/abi.hpp>
+#include <libavstream/abi.h>
 #include <libavstream/common_exports.h>
 #include <vector>
 #include <mutex>

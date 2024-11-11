@@ -234,7 +234,7 @@ bool centre=link;
 			renderPlatform->UnapplyPass(deviceContext);
 		}
 		renderPlatform->ApplyPass(deviceContext, pass);
-		fontChars.Apply(deviceContext, effect, _fontChars);
+		fontChars.Apply(deviceContext, _fontChars);
 #if !defined(__ANDROID__)
 		renderPlatform->Draw(deviceContext, 6 * n, 0);
 #endif

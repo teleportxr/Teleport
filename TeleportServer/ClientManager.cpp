@@ -188,6 +188,12 @@ avs::uid ClientManager::popFirstUnlinkedClientUid(avs::uid u)
 	return 0;
 }
 
+void ClientManager::CompleteDiscovery(avs::uid clientID)
+{
+	if(!hasClient(clientID))
+		ClientManager::instance().unlinkedClientIDs.insert(clientID);
+}
+
 bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_unix_time_us, std::string client_ip_match, uint32_t maxClients)
 {
 	if (mInitialized)
@@ -349,11 +355,6 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP)
 			TELEPORT_CERR << "Failed to start session for Client " << clientID << "!\n";
 			return false;
 		}
-		{
-			std::lock_guard<std::shared_mutex> lock(clientsMutex);
-			clients[clientID] = client;
-			clientIDs.insert(clientID);
-		}
 	}
 	else
 	{
@@ -390,6 +391,12 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP)
 	{
 		auto discoveryClient = signalingService.getSignalingClient(clientID);
 		signalingService.sendResponseToClient(discoveryClient,clientID);
+	}
+	{
+		std::lock_guard<std::shared_mutex> lock(clientsMutex);
+		clients[clientID] = client;
+		client->SetConnectionState(DISCOVERED);
+		clientIDs.insert(clientID);
 	}
 
 	return true;

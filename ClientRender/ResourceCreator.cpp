@@ -14,6 +14,8 @@
 #include <fmt/core.h>
 #include <fstream>
 #include <ktx.h>
+#include <ktxint.h>
+#include <texture2.h>
 #include <ktx/lib/gl_format.h>
 #include "NodeComponents/SubSceneComponent.h"
 #include "TeleportClient/Config.h"
@@ -1267,18 +1269,20 @@ static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 {
 	switch(f)
 	{
+		case VK_FORMAT_R8G8B8A8_UNORM: return clientrender::Texture::Format::RGBA8; 
+		case VK_FORMAT_R8G8B8A8_SNORM: return clientrender::Texture::Format::RGBA8; 
 	    // Compression formats ------------ GPU Mapping DirectX, Vulkan and OpenGL formats and comments --------
     // Compressed Format 0xSnn1..0xSnnF   (Keys 0x00Bv..0x00Bv) S =1 is signed, 0 = unsigned, B =Block Compressors 1..7 (BC1..BC7) and v > 1 is a variant like signed or swizzle
-    case VK_FORMAT_BC2_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format with explicit alpha for Microsoft DirectX10. Identical to DXT3. Eight bits per pixel.
-    case VK_FORMAT_BC3_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format with interpolated alpha for Microsoft DirectX10. Identical to DXT5. Eight bits per pixel.
-    case VK_FORMAT_BC4_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
-    case VK_FORMAT_BC4_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                  // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
-    case VK_FORMAT_BC5_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
-    case VK_FORMAT_BC5_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
-    case VK_FORMAT_BC6H_UFLOAT_BLOCK: return clientrender::Texture::Format::RGBA16F;  //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK 
-	case VK_FORMAT_R32G32B32A32_SFLOAT: return clientrender::Texture::Format::RGBA32F;
-	default:
-		return clientrender::Texture::Format::FORMAT_UNKNOWN;
+		case VK_FORMAT_BC2_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format with explicit alpha for Microsoft DirectX10. Identical to DXT3. Eight bits per pixel.
+		case VK_FORMAT_BC3_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format with interpolated alpha for Microsoft DirectX10. Identical to DXT5. Eight bits per pixel.
+		case VK_FORMAT_BC4_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
+		case VK_FORMAT_BC4_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                  // compressed texture format for Microsoft DirectX10. Identical to ATI1N. Four bits per pixel.
+		case VK_FORMAT_BC5_UNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
+		case VK_FORMAT_BC5_SNORM_BLOCK: return clientrender::Texture::Format::RGBA8;                                   // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
+		case VK_FORMAT_BC6H_UFLOAT_BLOCK: return clientrender::Texture::Format::RGBA16F;  //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK 
+		case VK_FORMAT_R32G32B32A32_SFLOAT: return clientrender::Texture::Format::RGBA32F;
+		default:
+			return clientrender::Texture::Format::FORMAT_UNKNOWN;
 	};
 }
 static teleport::clientrender::Texture::CompressionFormat VkFormatToCompressionFormat(VkFormat f)
@@ -1622,10 +1626,10 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 				else if(ktxt->classId==ktxTexture2_c)
 				{
 					ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
-					transcoding->textureCI->width	=ktx2Texture->baseWidth;
-					transcoding->textureCI->height	=ktx2Texture->baseHeight;
-					transcoding->textureCI->depth	=ktx2Texture->baseDepth;
-					transcoding->textureCI->arrayCount=ktx2Texture->numLayers?ktx2Texture->numLayers:1;
+					transcoding->textureCI->width		=ktx2Texture->baseWidth;
+					transcoding->textureCI->height		=ktx2Texture->baseHeight;
+					transcoding->textureCI->depth		=ktx2Texture->baseDepth;
+					transcoding->textureCI->arrayCount	=ktx2Texture->numLayers?ktx2Texture->numLayers:1;
 					transcoding->textureCI->mipCount	=ktx2Texture->numLevels;
 					VkFormat vkfmt=(VkFormat)(ktx2Texture->vkFormat);
 					transcoding->textureCI->format	=VkFormatToTeleportFormat(vkfmt);
@@ -1639,6 +1643,8 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 							TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n",transcoding->name);
 							continue;
 						}
+						vkfmt=(VkFormat)(ktx2Texture->vkFormat);
+						transcoding->textureCI->format	=VkFormatToTeleportFormat(vkfmt);
 					}
 					{
 						transcoding->textureCI->valueScale=1.0f;
@@ -1651,7 +1657,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
 						transcoding->textureCI->images->resize(ktx2Texture->numFaces*ktx2Texture->numLayers*ktx2Texture->numLevels);
 						
-						//..result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
 					}
 				}
 				else
@@ -1671,10 +1676,29 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					cbData.numMips=transcoding->textureCI->mipCount;
 					cbData.numFaces=ktxt->numFaces;
 					cbData.numLayers=ktxt->numLayers;
-					result = ktxTexture_IterateLoadLevelFaces(ktxt,
+					if (ktxt->pData) {
+						result = ktxTexture_IterateLevelFaces(
+													ktxt,
+													ktxImageExtractionCallback,
+													&cbData);
+					} else {
+						result = ktxTexture_IterateLoadLevelFaces(
+													ktxt,
+													ktxImageExtractionCallback,
+													&cbData);
+					}
+					if (result == KTX_SUCCESS)
+						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
+					else
+					{
+						if(ktxt->classId==ktxTexture2_c)
+						{
+							ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
+							result = ktxTexture2_IterateLoadLevelFaces(ktx2Texture,
 													   ktxImageExtractionCallback,
 													   &cbData);
-					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
+						}
+					}
 				}
 				if(ktxt)
 					ktxTexture_Destroy(ktxt);

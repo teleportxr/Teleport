@@ -1331,7 +1331,7 @@ bool GeometryStore::storeMaterial(avs::uid id, const std::string & path, std::ti
 		if(texture_id!=0&&!getTexture(texture_id))
 		{
 			TELEPORT_WARN("Material {0} uses unknown texture {1}",newMaterial.name,texture_id);
-			DEBUG_BREAK_ONCE;
+			//DEBUG_BREAK_ONCE;
 		}
 	};
 	CheckTexture(newMaterial.pbrMetallicRoughness.baseColorTexture.index);

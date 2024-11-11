@@ -447,6 +447,6 @@ void SignalingService::discoveryCompleteForClient(uint64_t clientID)
 	if (c)
 	{
 		c->SetConnectionState(DISCOVERED);
-		ClientManager::instance().unlinkedClientIDs.insert(clientID);
 	}
+	ClientManager::instance().CompleteDiscovery(clientID);
 }

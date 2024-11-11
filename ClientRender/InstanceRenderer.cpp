@@ -129,7 +129,7 @@ void InstanceRenderer::RenderVideoTexture(crossplatform::GraphicsDeviceContext& 
 	bool multiview = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
 	
 	auto &clientServerState=sessionClient->GetClientServerState();
-	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect,renderState.cubemapClearEffect_TagDataCubeBuffer);
+	renderState.tagDataCubeBuffer.Apply(deviceContext,renderState.cubemapClearEffect_TagDataCubeBuffer);
 	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
 	renderState.cubemapConstants.offsetFromVideo = *((vec3*)&clientServerState.headPose.position) - videoPos;
 	renderState.cubemapConstants.cameraPosition = *((vec3*)&clientServerState.headPose.position);
@@ -184,7 +184,7 @@ void InstanceRenderer::RecomposeVideoTexture(crossplatform::GraphicsDeviceContex
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cameraConstants);
 	renderPlatform->SetUnorderedAccessView(deviceContext, renderState.RWTextureTargetArray, targetTexture);
-	renderState.tagDataIDBuffer.Apply(deviceContext, renderState.cubemapClearEffect, renderState.cubemapClearEffect_TagDataIDBuffer);
+	renderState.tagDataIDBuffer.Apply(deviceContext, renderState.cubemapClearEffect_TagDataIDBuffer);
 	int zGroups = instanceRenderState.videoTexture->IsCubemap() ? 6 : 1;
 	renderState.cubemapClearEffect->Apply(deviceContext, technique, 0);
 	deviceContext.renderPlatform->DispatchCompute(deviceContext, W / 16, H / 16, zGroups);
@@ -232,7 +232,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext& deviceCo
 	{
 		// This will apply to both rendering methods
 		deviceContext.renderPlatform->SetTexture(deviceContext, renderState.plainTexture, ti->texture);
-		renderState.tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, renderState.cubemapClearEffect, renderState._RWTagDataIDBuffer);
+		renderState.tagDataIDBuffer.ApplyAsUnorderedAccessView(deviceContext, renderState._RWTagDataIDBuffer);
 		renderState.cubemapConstants.sourceOffset = int2(ti->texture->width - (32 * 4), ti->texture->length - 4);
 		deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 		renderState.cubemapClearEffect->Apply(deviceContext, "extract_tag_data_id", 0);
@@ -375,10 +375,10 @@ void InstanceRenderer::ApplySceneMatrices(platform::crossplatform::GraphicsDevic
 	renderState.teleportSceneConstants.SetHasChanged();
 // The following are not in group 0, but probably should be:
 	if (renderState._lights.valid)
-		renderState.lightsBuffer.Apply(deviceContext, renderState.pbrEffect, renderState._lights);
-	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.cubemapClearEffect_TagDataCubeBuffer);
+		renderState.lightsBuffer.Apply(deviceContext, renderState._lights);
+	renderState.tagDataCubeBuffer.Apply(deviceContext, renderState.cubemapClearEffect_TagDataCubeBuffer);
 	if (renderState.pbrEffect_TagDataIDBuffer.valid)
-		renderState.tagDataIDBuffer.Apply(deviceContext, renderState.pbrEffect, renderState.pbrEffect_TagDataIDBuffer);
+		renderState.tagDataIDBuffer.Apply(deviceContext, renderState.pbrEffect_TagDataIDBuffer);
 
 	renderPlatform->ApplyResourceGroup(deviceContext, 0);
 }

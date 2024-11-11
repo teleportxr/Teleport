@@ -85,6 +85,8 @@ void Texture::Destroy()
 
 void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 {
+	if(pTextureCreateInfo.format==Format::FORMAT_UNKNOWN)
+		return;
 	m_CI = pTextureCreateInfo;
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;
 	//m_Data = data;
