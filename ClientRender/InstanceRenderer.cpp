@@ -78,8 +78,6 @@ void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatf
 	renderPlatform=r;
 	GeometryCache::CreateGeometryCache(server_uid, -1, server_uid?sessionClient->GetConnectionURL():"Local");
 	geometryCache=GeometryCache::GetGeometryCache(server_uid);
-	resourceCreator.Initialize(renderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
-
 	instanceRenderState.videoTexture = renderPlatform->CreateTexture();
 	instanceRenderState.specularCubemapTexture = renderPlatform->CreateTexture();
 	instanceRenderState.diffuseCubemapTexture = renderPlatform->CreateTexture();
@@ -393,6 +391,7 @@ void InstanceRenderer::ApplyMaterialConstants(crossplatform::GraphicsDeviceConte
 	platform::crossplatform::Texture *normal=matInfo.normal.texture ? matInfo.normal.texture->GetSimulTexture(): nullptr;
 	platform::crossplatform::Texture *combined=matInfo.combined.texture ? matInfo.combined.texture->GetSimulTexture(): nullptr;
 	platform::crossplatform::Texture *emissive=matInfo.emissive.texture ? matInfo.emissive.texture->GetSimulTexture(): nullptr;
+	auto &resourceCreator=ResourceCreator::GetInstance();
  	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_diffuseTexture, diffuse? diffuse: resourceCreator.m_DummyWhite->GetSimulTexture());
 	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_normalTexture, normal? normal : resourceCreator.m_DummyNormal->GetSimulTexture());
 	renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_combinedTexture,combined ? combined : resourceCreator.m_DummyCombined->GetSimulTexture());
@@ -1517,7 +1516,6 @@ std::vector<avs::uid> InstanceRenderer::GetGeometryResources()
 void InstanceRenderer::ClearGeometryResources()
 {
 	geometryCache->ClearAll();
-	resourceCreator.Clear();
 	renderState.openXR->ResetServer(server_uid);
 }
 
@@ -1689,7 +1687,8 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip,const telepo
 			audioPlayer.startRecording(f);
 		}
 	}
-
+	auto &resourceCreator=ResourceCreator::GetInstance();
+ 	
 	// We will add a GEOMETRY PIPE
 	{
 		clientPipeline.avsGeometryDecoder.configure(80, server_uid, & geometryDecoder);

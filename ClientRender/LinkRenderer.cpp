@@ -23,7 +23,7 @@ void LinkRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatform 
 
 void LinkRenderer::InvalidateDeviceObjects()
 {
-	SAFE_DELETE(linkEffect);
+	linkEffect.reset();
 	reload_shaders = true;
 	linkConstants.InvalidateDeviceObjects();
 	renderPlatform=nullptr;
@@ -40,7 +40,7 @@ void LinkRenderer::RenderLink(platform::crossplatform::GraphicsDeviceContext &de
 {
 	if (!linkEffect || reload_shaders)
 	{
-		linkEffect=renderPlatform->CreateEffect("link");
+		linkEffect=renderPlatform->GetOrCreateEffect("link");
 		link_tech=linkEffect->GetTechniqueByName("link");
 		reload_shaders=false;
 	}

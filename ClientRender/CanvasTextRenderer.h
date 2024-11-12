@@ -18,7 +18,7 @@ namespace teleport
 		class CanvasTextRenderer 
 		{
 		protected:
-			platform::crossplatform::Effect *effect = nullptr;
+			std::shared_ptr<platform::crossplatform::Effect> effect = nullptr;
 			platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 			bool reload_shaders = true;
 			platform::crossplatform::EffectTechnique *tech = nullptr;

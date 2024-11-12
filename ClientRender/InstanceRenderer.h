@@ -78,7 +78,7 @@ namespace teleport
 			/// An HDR Renderer to put the contents of hdrFramebuffer to the screen. In practice you will probably have your own method for this.
 			platform::crossplatform::HdrRenderer *hDRRenderer = nullptr;
 			// A simple example mesh to draw as transparent
-			platform::crossplatform::Effect *pbrEffect = nullptr;
+			std::shared_ptr<platform::crossplatform::Effect> pbrEffect = nullptr;
 
 			platform::crossplatform::EffectTechnique *solid = nullptr;
 			platform::crossplatform::EffectTechnique *transparent = nullptr;
@@ -87,7 +87,7 @@ namespace teleport
 			platform::crossplatform::EffectVariantPass *solidVariantPass = nullptr;
 			platform::crossplatform::EffectVariantPass *transparentVariantPass = nullptr;
 
-			platform::crossplatform::Effect *cubemapClearEffect = nullptr;
+			std::shared_ptr<platform::crossplatform::Effect> cubemapClearEffect = nullptr;
 			platform::crossplatform::ShaderResource _RWTagDataIDBuffer;
 			platform::crossplatform::ShaderResource _lights;
 			platform::crossplatform::ShaderResource plainTexture;
@@ -280,7 +280,6 @@ namespace teleport
 			void RenderNodeOverlay(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::shared_ptr<clientrender::GeometryCache> &g, const std::shared_ptr<clientrender::Node> node, bool include_children);
 
 			std::shared_ptr<clientrender::GeometryCache> geometryCache;
-			clientrender::ResourceCreator resourceCreator;
 
 			virtual avs::DecoderStatus GetVideoDecoderStatus() { return avs::DecoderStatus::DecoderUnavailable; }
 

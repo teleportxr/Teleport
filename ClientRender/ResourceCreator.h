@@ -41,6 +41,7 @@ namespace teleport
 			ResourceCreator();
 			~ResourceCreator();
 
+			static ResourceCreator &GetInstance();
 			void Initialize(platform::crossplatform::RenderPlatform *r, clientrender::VertexBufferLayout::PackingStyle packingStyle);
 			/// Full reset, when the server has changed.
 			void Clear();

@@ -152,6 +152,7 @@ void Renderer::Init(crossplatform::RenderPlatform* r, teleport::client::OpenXR* 
 
 	// Initialize the audio (asynchronously)
 	renderPlatform = r;
+	ResourceCreator::GetInstance().Initialize(renderPlatform, clientrender::VertexBufferLayout::PackingStyle::INTERLEAVED);
 	GeometryCache::SetRenderPlatform(r);
 	renderState.openXR = u;
 
@@ -325,7 +326,7 @@ void Renderer::ExecConsoleCommand(const std::string &str)
 void Renderer::InitLocalHandGeometry()
 {
 	auto localInstanceRenderer = GetInstanceRenderer(0);
-	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
+	auto &localResourceCreator = ResourceCreator::GetInstance();
 	avs::Node avsNode;
 	lobbyGeometry.self_node_uid = avs::GenerateUid();
 	localResourceCreator.CreateNode(0, lobbyGeometry.self_node_uid, avsNode);
@@ -363,7 +364,7 @@ void Renderer::InitLocalGeometry()
 {
 	InitLocalHandGeometry();
 	auto localInstanceRenderer=GetInstanceRenderer(0);
-	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
+	auto &localResourceCreator = ResourceCreator::GetInstance();
 	auto &localGeometryCache = localInstanceRenderer->geometryCache;
 	
 	
@@ -471,7 +472,7 @@ void Renderer::XrBindingsChanged(std::string user_path,std::string profile)
 {
 	std::string systemName=renderState.openXR->GetSystemName();
 	auto localInstanceRenderer = GetInstanceRenderer(0);
-	auto &localResourceCreator = localInstanceRenderer->resourceCreator;
+	auto &localResourceCreator = ResourceCreator::GetInstance();
 	std::string source_root="https://simul.co:443/wp-content/uploads/teleport-content/controller-models";
 	auto u = xr_profile_to_controller_model_name.find(profile);
 	if(u!=xr_profile_to_controller_model_name.end())
@@ -540,10 +541,10 @@ void Renderer::LoadShaders()
 {
 	reload_shaders=false;
 	renderState.shaderValidity++;
-	delete renderState.pbrEffect;
-	delete renderState.cubemapClearEffect;
-	renderState.pbrEffect			= renderPlatform->CreateEffect("pbr");
-	renderState.cubemapClearEffect	= renderPlatform->CreateEffect("cubemap_clear");
+	renderState.pbrEffect.reset();
+	renderState.cubemapClearEffect.reset();
+	renderState.pbrEffect			= renderPlatform->GetOrCreateEffect("pbr");
+	renderState.cubemapClearEffect	= renderPlatform->GetOrCreateEffect("cubemap_clear");
 
 	UpdateShaderPasses();
 
@@ -600,7 +601,7 @@ void Renderer::InvalidateDeviceObjects()
 	if(renderState.pbrEffect)
 	{
 		renderState.pbrEffect->InvalidateDeviceObjects();
-		delete renderState.pbrEffect;
+		renderState.pbrEffect.reset();
 		renderState.pbrEffect=nullptr;
 	}
 	if(renderState.hDRRenderer)
@@ -611,8 +612,8 @@ void Renderer::InvalidateDeviceObjects()
 		renderState.hdrFramebuffer->InvalidateDeviceObjects();
 	SAFE_DELETE(renderState.hDRRenderer);
 	SAFE_DELETE(renderState.hdrFramebuffer);
-	SAFE_DELETE(renderState.pbrEffect);
-	SAFE_DELETE(renderState.cubemapClearEffect);
+	renderState.pbrEffect.reset();
+	renderState.cubemapClearEffect.reset();
 	renderState.linkRenderer.InvalidateDeviceObjects();
 	renderState.canvasTextRenderer.InvalidateDeviceObjects();
 }

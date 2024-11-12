@@ -31,7 +31,7 @@ void CanvasTextRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPla
 
 void CanvasTextRenderer::InvalidateDeviceObjects()
 {
-	SAFE_DELETE(effect);
+	effect.reset();
 	reload_shaders = true;
 	textConstants.InvalidateDeviceObjects();
 	renderPlatform=nullptr;
@@ -65,8 +65,8 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 bool centre=link;
 	if (!effect || reload_shaders)
 	{
-		SAFE_DELETE(effect);
-		effect = renderPlatform->CreateEffect("canvas_text");
+		effect.reset();
+		effect = renderPlatform->GetOrCreateEffect("canvas_text");
 		tech = effect->GetTechniqueByName("text");
 		link_tech = effect->GetTechniqueByName("link_text");
 		auto bkgTech = effect->GetTechniqueByName("background");

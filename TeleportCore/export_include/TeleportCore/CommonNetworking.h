@@ -74,6 +74,7 @@ namespace avs
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
 	} AVS_PACKED;	// 89 bytes
+	static_assert (sizeof(VideoConfig) == 89, "ClientDynamicLighting Size is not correct");
 
 	struct AudioConfig
 	{

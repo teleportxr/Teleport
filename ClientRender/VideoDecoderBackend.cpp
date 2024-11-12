@@ -164,7 +164,7 @@ Result VideoDecoderBackend::shutdown()
 
 	SAFE_DELETE(mOutputTexture);
 	clearDecodeArguments();
-	SAFE_DELETE(mTextureConversionEffect);
+	mTextureConversionEffect.reset();
 
 	return Result::OK;
 }
@@ -618,8 +618,6 @@ void VideoDecoderBackend::clearDecodeArguments()
 
 void VideoDecoderBackend::recompileShaders()
 {
-	SAFE_DELETE(mTextureConversionEffect);
-	mTextureConversionEffect = mRenderPlatform->CreateEffect("texture_conversion");
+	mTextureConversionEffect.reset();
+	mTextureConversionEffect = mRenderPlatform->GetOrCreateEffect("texture_conversion");
 }
-
-

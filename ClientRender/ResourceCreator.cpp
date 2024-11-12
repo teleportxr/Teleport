@@ -58,6 +58,12 @@ ResourceCreator::~ResourceCreator()
 	basisThread.join();
 }
 
+ResourceCreator &ResourceCreator::GetInstance()
+{
+	static ResourceCreator resourceCreator;
+	return resourceCreator;
+}
+
 void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform* r, clientrender::VertexBufferLayout::PackingStyle packingStyle)
 {
 	renderPlatform = r;

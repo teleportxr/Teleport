@@ -102,7 +102,7 @@ namespace teleport
 			platform::crossplatform::RenderPlatform *mRenderPlatform;
 			platform::crossplatform::Texture *mSurfaceTexture;
 			platform::crossplatform::Texture *mOutputTexture;
-			platform::crossplatform::Effect *mTextureConversionEffect;
+			std::shared_ptr<platform::crossplatform::Effect> mTextureConversionEffect;
 
 			std::vector<FrameCache> mDPB;
 			phmap::flat_hash_map<uint32_t, uint32_t> mPocFrameIndexMap;
