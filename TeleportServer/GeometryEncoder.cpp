@@ -771,8 +771,10 @@ avs::Result GeometryEncoder::encodeTexturesBackend( std::vector<avs::uid> missin
 		}
 		else
 		{
-			DEBUG_BREAK_ONCE("Missing texture");
 			TELEPORT_WARN_NOSPAM("Trying to encode texture {0} but it is not there.",uid);
+			std::string resource_path=geometryStore->UidToPath(uid);
+			TELEPORT_WARN_NOSPAM("Missing texture path: {0}.",resource_path);
+			DEBUG_BREAK_ONCE("Missing texture");
 		}
 	}
 

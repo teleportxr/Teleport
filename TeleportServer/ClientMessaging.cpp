@@ -523,13 +523,15 @@ avs::uid ClientMessaging::getOrigin() const
 int64_t ClientMessaging::GetServerTimeUs() const 
 {
 	int64_t unix_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	int64_t serverTimeNs = unix_time_us - lastSetupCommand.startTimestamp_utc_unix_us;
-	return serverTimeNs;
+	int64_t serverTimeUs = unix_time_us - lastSetupCommand.startTimestamp_utc_unix_us;
+	return serverTimeUs;
 }
 
 bool ClientMessaging::setOrigin( avs::uid originNode)
 {
 	if(originNode==0)
+		return false;
+	if(lastSetupCommand.startTimestamp_utc_unix_us==0)
 		return false;
 	if(currentOriginState.originClientHas==originNode&&currentOriginState.acknowledged)
 		return true;
