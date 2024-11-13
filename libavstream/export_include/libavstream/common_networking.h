@@ -6,18 +6,17 @@
 #include <libavstream/common_exports.h>
 #include <libavstream/common_maths.h>
 
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
 namespace avs
 {
-	struct NodeRenderState
+	struct AVS_PACKED NodeRenderState
 	{
 		vec4 lightmapScaleOffset={0,0,0,0};
 		uid globalIlluminationUid = 0;
 		uint8_t lightmapTextureCoordinate=0;
 	} AVS_PACKED;
-	
+	static_assert (sizeof(NodeRenderState) == 25, "avs::NodeRenderState size is not correct");
+
 	enum class PrimitiveMode : uint32_t
 	{
 		POINTS, LINES, TRIANGLES, LINE_STRIP, TRIANGLE_STRIP
@@ -281,6 +280,4 @@ namespace avs
 
 
 } // avs
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif

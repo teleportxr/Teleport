@@ -90,13 +90,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include;../../thirdparty/draco/src;../../thirdparty/draco/third_party/eigen;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/ndk-projects</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../TeleportCore/export_include;../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/draco/src;../../thirdparty/draco/third_party/eigen;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/ndk-projects</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include;../../thirdparty/draco/src;../../thirdparty/draco/third_party/eigen;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/ndk-projects</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../TeleportCore/export_include;../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/draco/src;../../thirdparty/draco/third_party/eigen;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/ndk-projects</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

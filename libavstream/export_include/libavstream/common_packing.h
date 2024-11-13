@@ -6,3 +6,6 @@
 		#define AVS_PACKED
 	#endif
 #endif
+
+#define DEBUG_CHECK_STRUCTSIZE(StructName)\
+	char *tmp##StructName=(char[sizeof(StructName)])#StructName;

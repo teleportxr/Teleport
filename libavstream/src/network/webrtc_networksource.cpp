@@ -659,20 +659,42 @@ AVSLOG(Info) << "---"<< candidate<<" "<< std::endl;
 
 bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 {
- 	if (!dc->id().has_value())
-		return false;
 	string label=dc->label();
-	std::cout<<"onDataChannel: "<<dc->label()<<" id "<<dc->id().value()<<"\n";
+	int forced_id=0;
+	bool force_unframed=false;
+	if(label=="video")
+		forced_id=20;
+	else if(label=="video_tags")
+		forced_id=40;
+	else if(label=="audio_server_to_client")
+		forced_id=60;
+	else if(label=="geometry")
+		forced_id=80;
+	else if(label=="geometry_unframed")
+	{
+		forced_id=80;
+		force_unframed=true;
+		label="geometry";
+	}
+	else if(label=="reliable")
+		forced_id=1020;
+	else if(label=="unreliable")
+		forced_id=120;
+	else
+		return false;
+	std::cout<<"onDataChannel: "<<dc->label()<<" id "<<forced_id<<"\n";
 	// make the id even.
-	uint16_t id = EVEN_ID(dc->id().value());
+	uint16_t id = EVEN_ID(forced_id);
 	// find the dataChannel whose label matches this channel's label.
 	int dcIndex = -1;
 	for (int i = 0; i < dataChannels.size(); i++)
 	{
 		auto& stream = q_ptr()->m_streams[i];
-		if (stream.label == dc->label())
+		if (stream.label ==label)
 		{
 			dcIndex = i;
+			if(force_unframed)
+				stream.framed=false;
 		}
 	}
 	if (dcIndex < 0)
@@ -730,7 +752,7 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 					return;
 				}
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
-		q_ptr()->bytes_received+=numBytesWrittenToOutput;
+				q_ptr()->bytes_received+=numBytesWrittenToOutput;
 #endif
 			}
 			else
@@ -740,16 +762,17 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 				{
 					std::cerr << "EFP Error: Invalid data fragment received" << "\n";
 				}
-				else{
+				else
+				{
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
-		q_ptr()->bytes_received+=b.size();
+					q_ptr()->bytes_received+=b.size();
 #endif
 				}
 			}
 			//std::cout << "Binary message from " << id
 			//	<< " received, size=" << std::get<rtc::binary>(data).size() << std::endl;
 		},[this, &dataChannel,id](rtc::string s) {});
-	//dataChannelMap.emplace(id, dc);
+		
 		return true;
 }
 

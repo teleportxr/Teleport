@@ -26,8 +26,6 @@ using namespace teleport;
 using namespace clientrender;
 #pragma optimize("", off)
 
-#define TELEPORT_GEOMETRY_DECODER_ASYNC 1
-
 #define NextUint64 get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextUint32 get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextInt32 get<int32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
@@ -135,10 +133,6 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,const void* buffer, size
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 	};
 
-#if !TELEPORT_GEOMETRY_DECODER_ASYNC
-	decodeInternal(decodeData.front());
-	decodeData.pop();
-#endif
 	return avs::Result::OK;
 }
 #include <filesystem>
@@ -214,13 +208,11 @@ void GeometryDecoder::decodeAsync()
 			std::this_thread::sleep_for(2000ms);
 			continue;
 		}
-#if TELEPORT_GEOMETRY_DECODER_ASYNC
 		if (!decodeData.empty())
 		{
 			decodeInternal(decodeData.front());
 			decodeData.pop();
 		}
-#endif
 		hTTPUtil.process();
 		std::this_thread::yield();
 	}
@@ -1385,7 +1377,7 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData& geometryDecodeD
 	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
 	fontAtlas.name=geometryDecodeData.filename_or_url;
 	if(geometryDecodeData.saveToDisk)
-		saveBuffer(geometryDecodeData, std::string("fonts/"+fontAtlas.name+".fontaAtlas"));
+		saveBuffer(geometryDecodeData, std::string("fonts/"+fontAtlas.name+".fontAtlas"));
 	fontAtlas.font_texture_uid= NextUint64;
 	int numMaps=NextByte;
 	for(int i=0;i<numMaps;i++)

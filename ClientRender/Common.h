@@ -89,18 +89,14 @@ namespace teleport
 
 		struct SceneCaptureCubeCoreTagData
 		{
-	#ifndef __ANDROID__
 	#pragma pack(push, 1)
-	#endif
 			uint64_t timestamp_unix_ms;
 
 			uint32_t id;
 			avs::Transform cameraTransform;
 			uint32_t lightCount;
 			float diffuseAmbientScale;
-	#ifndef __ANDROID__
 	#pragma pack(pop)
-	#endif
 		}
 	#ifdef __ANDROID__
 		__attribute__((packed))
@@ -109,9 +105,7 @@ namespace teleport
 
 		struct LightTagData
 		{
-	#ifndef __ANDROID__
 	#pragma pack(push, 1)
-	#endif
 			avs::Transform worldTransform;
 			vec4 color;
 			float range;
@@ -124,9 +118,7 @@ namespace teleport
 			int texturePosition[2];
 			int textureSize;
 			uint64_t uid;
-	#ifndef __ANDROID__
 	#pragma pack(pop)
-	#endif
 		}
 	#ifdef __ANDROID__
 		__attribute__((packed))

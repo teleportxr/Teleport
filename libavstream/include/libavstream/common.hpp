@@ -27,9 +27,7 @@
 
 namespace avs
 {
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
 	typedef uint64_t uid;
 	extern AVSTREAM_API uid GenerateUid();
 	extern AVSTREAM_API void ClaimUidRange(avs::uid last);
@@ -255,9 +253,7 @@ namespace avs
 		FilePayloadInfo() : PayloadInfo(PayloadInfoType::File) {}
 	} AVS_PACKED;
 
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif
 
 	template<class T>
 	class ThreadSafeQueue

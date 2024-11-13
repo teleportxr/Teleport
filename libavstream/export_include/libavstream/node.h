@@ -5,9 +5,7 @@
 #include <libavstream/common_exports.h>
 #include <libavstream/material_exports.h>
 #include <libavstream/abi.h>
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
 namespace avs
 {
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
@@ -57,6 +55,4 @@ namespace avs
 	} AVS_PACKED;
 	static_assert (sizeof(Node) == 308, "avs::Node size is not correct");
 }
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif
