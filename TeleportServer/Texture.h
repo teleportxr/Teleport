@@ -14,6 +14,7 @@ namespace teleport
 	{
 		struct ExtractedTexture;
 		struct PrecompressedTexture;
+		extern float GetCompressionProgress();
 		extern bool CompressToKtx2(ExtractedTexture &extractedTexture,std::string assetPath, std::shared_ptr<PrecompressedTexture> compressionData);
 		extern bool ApplyBasisCompression(ExtractedTexture &extractedTexture,std::string path
 											,std::shared_ptr<PrecompressedTexture> compressionData

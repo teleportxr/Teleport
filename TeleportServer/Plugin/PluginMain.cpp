@@ -732,17 +732,21 @@ TELEPORT_EXPORT uint64_t Server_GetNumberOfTexturesWaitingForCompression()
 TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t len)
 {
 	TELEPORT_PROFILE_AUTOZONE;
+	if(len<2)
+		return false;
 	auto nextt= GeometryStore::GetInstance().getNextTextureToCompress();
 	if (!nextt.name.length())
 	{
+		str[0]=0;
 		return false;
 	}
-	std::stringstream messageStream;
-	// Write compression message to  string stream.
-	messageStream << "Compressing texture "
-				  << " (" << nextt.name << " [" << nextt.width << " x " << nextt.height << "])";
+	// See https://en.cppreference.com/w/cpp/utility/format/spec
+	float prog=teleport::server::GetCompressionProgress();
+	std::string msg=fmt::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
 
-	memcpy(str, messageStream.str().data(), std::min(len, messageStream.str().length()));
+	size_t sz=std::min(len-1, msg.length());
+	memcpy(str, msg.data(), sz);
+	str[sz]=0;
 	return true;
 }
 

@@ -267,6 +267,9 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 	m_data->dataChannels.resize(m_streams.size());
 	m_data->idToStreamIndex.clear();
 
+	// result lastResult.
+	setResult(avs::Result::OK);
+
 	return Result::OK;
 }
 
@@ -457,6 +460,11 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	if (getNumOutputSlots() == 0 )
 	{
 		return Result::Node_NotConfigured;
+	}
+	// Can't recover from a disconnection, must reset.
+	if(getLastResult()==Result::Network_Disconnection)
+	{
+		return Result::Network_Disconnection;
 	}
 	PipelineNode::process(timestamp,deltaTime);
 	// receiving data from the network is handled elsewhere.

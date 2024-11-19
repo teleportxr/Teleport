@@ -27,4 +27,5 @@ TELEPORT_EXPORT void Server_Teleport_Shutdown();
 TELEPORT_EXPORT avs::uid Server_GetUnlinkedClientID();
 
 TELEPORT_EXPORT uint64_t Server_GetNumberOfTexturesWaitingForCompression();
+TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t len);
 TELEPORT_EXPORT void Server_CompressNextTexture();

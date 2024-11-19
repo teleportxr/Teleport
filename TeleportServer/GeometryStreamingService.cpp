@@ -23,7 +23,7 @@ ClientStartedRenderingNodeFn GeometryStreamingService::callback_clientStartedRen
 #define CHECK_TEXTURE(t)\
 	if(!geometryStore->getTexture(t))\
 	{\
-		TELEPORT_WARN("Missing texture {0}",t);\
+		TELEPORT_WARN("Missing texture {0}, with path {1}",t,geometryStore->UidToPath(t));\
 		DEBUG_BREAK_ONCE;\
 	}
 #else

@@ -4,7 +4,7 @@
 #include "ServerSettings.h"
 #include "Export.h"
 typedef void(TELEPORT_STDCALL *ProcessAudioInputFn)(avs::uid uid, const uint8_t *data, size_t dataSize);
-typedef void(TELEPORT_STDCALL *OutputLogFn)(int severity,const char *txt);
+typedef void(TELEPORT_STDCALL *OutputLogFn)(int severity,const char *txt,size_t max_len);
 typedef bool(TELEPORT_STDCALL *ClientStoppedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef bool(TELEPORT_STDCALL *ClientStartedRenderingNodeFn)(avs::uid clientID, avs::uid nodeID);
 typedef void(TELEPORT_STDCALL* SetHeadPoseFn) (avs::uid client_uid, const teleport::core::Pose*);

@@ -110,7 +110,7 @@ void outp(const char *txt)
 	if (GetThreadId() == logging_thread)
 	{
 		if(outputLogFn)
-			outputLogFn(2, out_str.c_str());
+			outputLogFn(2, out_str.c_str(),out_str.size());
 		out_str.resize(0);
 	}
 }
@@ -121,7 +121,7 @@ void errf(const char *txt)
 	if(GetThreadId()==logging_thread)
 	{
 		if (outputLogFn)
-			outputLogFn(1, err_str.c_str());
+			outputLogFn(1, err_str.c_str(),err_str.size());
 		err_str.resize(0);
 	}
 }

@@ -22,10 +22,15 @@ using std::filesystem::path;
 using std::string;
 #pragma optimize("",off)
 static bool g_bAbortCompression=false;
+static float compressionProgress=0.0f;
 static bool CompressionCallback(float fProgress, CMP_DWORD_PTR pUser1, CMP_DWORD_PTR pUser2)
 {
-    std::cout<<"Compression progress = "<<fProgress<<"\n";
+    compressionProgress=fProgress;
     return g_bAbortCompression;
+}
+float teleport::server::GetCompressionProgress()
+{
+	return compressionProgress;
 }
 static CMP_FORMAT VkFormatToCompressonatorFormat(VkFormat f)
 {

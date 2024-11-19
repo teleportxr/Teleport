@@ -1664,7 +1664,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}",node.name,node.inwardBandwidthKps).c_str());
 	draw_list->AddText(ImVec2(pos.x,pos.y+line.y), col, fmt::format("{0}",node.maxPacketKb).c_str());
 }
-
+#pragma optimize("",off)
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 {
 	const ImVec2 p = ImGui::GetCursorScreenPos();
@@ -1676,7 +1676,7 @@ void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 	if(nodes.size())
 	{
 		if(nodes[0])
-		DrawPipelineNode(*nodes[0],x,y);
+			DrawPipelineNode(*nodes[0],x,y);
 	}
 	//ImGui::Dummy(ImVec2((sz + spacing) * 11.2f, (sz + spacing) * 3.0f));
 	ImGui::PopItemWidth();

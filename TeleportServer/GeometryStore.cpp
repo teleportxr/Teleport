@@ -215,16 +215,23 @@ GeometryStore::GeometryStore()
 	path_to_uid["."] = 0;
 	if (!debug_buffer)
 		debug_buffer = std::make_shared<VisualStudioDebugOutput>(true, "teleport_server.log", 128);
+
+	kill = false;
+	compressTexturesThread = std::thread(&GeometryStore::CompressTexturesAsync, this);
 }
 
 GeometryStore::~GeometryStore()
 {
+	kill=true;
+	if(compressTexturesThread.joinable())
+		compressTexturesThread.join();
 }
- GeometryStore &GeometryStore::GetInstance()
- {
+
+GeometryStore &GeometryStore::GetInstance()
+{
 	static GeometryStore geometryStore;
 	return geometryStore;
- }
+}
 
 bool GeometryStore::saveToDisk() const
 {
@@ -246,7 +253,6 @@ bool GeometryStore::SetCachePath(const char* dir)
 	if (!exist)
 		std::filesystem::create_directories(path);
 	cachePath = dir;
-
 
 	return exist;
 }
@@ -712,6 +718,7 @@ static bool CheckMesh(avs::Mesh &sourceMesh)
 	}
 	return true;
 }
+
 static bool FloatCompare(float a, float b)
 {
 	float diff = (a - b);
@@ -1493,20 +1500,12 @@ size_t GeometryStore::getNumberOfTexturesWaitingForCompression() const
 	return texturesToCompress.size();
 }
 
+TextureToCompress textureToCompress;
+
 TextureToCompress GeometryStore::getNextTextureToCompress() const
 {
 	//No textures to compress.
-	TextureToCompress t;
-	if(texturesToCompress.size() == 0)
-		return t;
-	auto compressionPair = texturesToCompress.begin();
-	auto foundTexture = textures.find(compressionPair->first);
-	if(foundTexture==textures.end())
-		return t;
-	t.name=foundTexture->second.getName();
-	t.width=foundTexture->second.texture.width;
-	t.height=foundTexture->second.texture.height;
-	return t;
+	return textureToCompress;
 }
 //#define STB_IMAGE_WRITE_IMPLEMENTATION 1
 #pragma warning(disable:4996)
@@ -1514,6 +1513,17 @@ namespace teleport
 {
 #include "stb_image_write.h"
 }
+
+void GeometryStore::CompressTexturesAsync()
+{
+	while (!kill)
+	{
+		compressNextTexture();
+		std::this_thread::sleep_for(std::chrono::milliseconds(200));
+		std::this_thread::yield();
+	}
+}
+
 void GeometryStore::compressNextTexture()
 {
 	//No textures to compress.
@@ -1521,6 +1531,9 @@ void GeometryStore::compressNextTexture()
 		return;
 	auto compressionPair = texturesToCompress.begin();
 	auto foundTexture = textures.find(compressionPair->first);
+	textureToCompress.name=foundTexture->second.getName();
+	textureToCompress.width=foundTexture->second.texture.width;
+	textureToCompress.height=foundTexture->second.texture.height;
 	string path=UidToPath(compressionPair->first);
 	assert(foundTexture != textures.end());
 	ExtractedTexture& extractedTexture = foundTexture->second;
@@ -1688,6 +1701,9 @@ void GeometryStore::compressNextTexture()
 	saveResourceBinary(file_name, extractedTexture);
 	
 	texturesToCompress.erase(texturesToCompress.begin());
+	textureToCompress.name="";
+	textureToCompress.width=0;
+	textureToCompress.height=0;
 }
 
 template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(const std::string file_name, const ExtractedResource& resource) const
@@ -2014,7 +2030,7 @@ avs::uid GeometryStore::GetOrGenerateUid(const std::string &path)
 		{
 			if(j->second!=p)
 			{
-				TELEPORT_CERR << "Path mismatch.\n";
+				TELEPORT_WARN("Path mismatch: Uid {0} {1} != {2}\n",uid,j->second,p);
 			}
 		}
 	}

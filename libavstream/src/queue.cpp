@@ -209,6 +209,7 @@ namespace avs
 		}
 
 		m_mem=std::move(new_mem);
+		AVSLOG("Queue::increaseBufferSize ")<<requestedSize<<std::endl;
 	}
 
 	const void* Queue::frontp(size_t& bufferSize) const

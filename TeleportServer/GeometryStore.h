@@ -198,6 +198,10 @@ namespace teleport
 			std::map<std::string, avs::uid> path_to_uid;
 			bool LoadResourceAtPath(std::string p, avs::uid u);
 			avs::uid LoadResourceFromFile(std::string p, avs::uid u);
+			
+			void CompressTexturesAsync();
+			std::thread compressTexturesThread;
+			bool kill=false;
 		};
 	}
 }
