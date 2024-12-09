@@ -408,7 +408,7 @@ TELEPORT_EXPORT bool Server_GetVideoEncodeCapabilities(avs::EncodeCapabilities& 
 		return false;
 	};
 
-	if (VideoEncodePipeline::getEncodeCapabilities(serverSettings, params, capabilities))
+	if (VideoEncodePipeline::getEncodeCapabilities( params, capabilities))
 	{
 		return true;
 	}
