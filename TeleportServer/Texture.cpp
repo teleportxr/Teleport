@@ -200,7 +200,8 @@ void teleport::server::LoadAsKtxFile( ExtractedTexture &extractedTexture, const 
 	KTX_error_code 	result=ktxTexture_CreateFromMemory (extractedTexture.texture.compressedData.data(), extractedTexture.texture.compressedData.size()
 		,  createFlags, &ktxt);
 	ktxTexture2 *ktx2Texture = (ktxTexture2* )ktxt;
-		
+	if(!ktx2Texture)
+		return;
 	avs::Texture &avsTexture = extractedTexture.texture;
 
 	avsTexture.width	=ktx2Texture->baseWidth;

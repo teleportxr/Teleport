@@ -1699,8 +1699,8 @@ void GeometryStore::compressNextTexture()
 		TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
 	}
 	saveResourceBinary(file_name, extractedTexture);
-	
-	texturesToCompress.erase(texturesToCompress.begin());
+	if(texturesToCompress.size())
+		texturesToCompress.erase(texturesToCompress.begin());
 	textureToCompress.name="";
 	textureToCompress.width=0;
 	textureToCompress.height=0;
