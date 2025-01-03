@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(TeleportPCClient)
 
-set(TELEPORT_CLIENT )
 option(TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER "Use Platform video decoder? Currently requires TELEPORT_CLIENT_USE_D3D12" OFF)
 
 if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
