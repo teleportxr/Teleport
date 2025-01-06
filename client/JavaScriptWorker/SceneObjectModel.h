@@ -1,4 +1,4 @@
-#include <windows.h>
+#include <Windows.h>
 #include <string>
 #include <iostream>
 #include <memory>
@@ -91,7 +91,7 @@ public:
 
 class SOMNode : public std::enable_shared_from_this<SOMNode>
 {
-protected:
+private:
     NodeType type;
     std::string nodeName;
     std::string nodeValue;
@@ -108,6 +108,10 @@ protected:
 public:
     SOMNode(NodeType t, const std::string& name) : type(t), nodeName(name) {}
     virtual ~SOMNode() = default;
+    const std::string& getNodeName() const 
+    { 
+        return nodeName; 
+    }
 
     void setPose(const Pose& newPose)
     {
@@ -115,6 +119,10 @@ public:
         markTransformDirty();
         notifyObservers([this](auto& obs) { obs->onNodeMoved(shared_from_this()); });
     }
+	const Pose &getPose() const
+	{
+		return localPose;
+	}
     
     const std::vector<std::shared_ptr<SOMNode>> &getChildNodes() const
     {

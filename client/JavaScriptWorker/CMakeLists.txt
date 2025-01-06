@@ -9,7 +9,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	#################################################################
 	find_program(NUGET nuget)
 	if(NOT NUGET)
-		message("CMake could not find the nuget command line tool. Please install it!")
+		message(FATAL_ERROR "CMake could not find the nuget command line tool. Please install it!")
 	endif()
 	set(TELEPORT_V8_VERSION 9.8.177.4)
 	set(TELEPORT_V8_PACKAGE_DIR ${CMAKE_BINARY_DIR}/packages/v8-v143-x64.${TELEPORT_V8_VERSION})
