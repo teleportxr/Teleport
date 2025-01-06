@@ -60,7 +60,30 @@ All packets on the **Control** channel are of the form:
 |      1+                | command                |
 +------------------------+------------------------+
 
+
+
 The **Setup Command** is
+
+.. mermaid::
+
+    ---
+    config:
+        packet:
+            bitsPerRow: 4
+            rowHeight: 40
+            bitWidth: 128
+            showBits: 1
+            paddingX: 4
+            paddingY: 4
+    ---
+	packet-beta
+	  0-1: "CommandPayloadType"
+	  1-4: "Debug stream index"
+	  5-8: "Debug network packets?"
+	  9-12: "Required Latency Ms"
+	  13-16: "Required Latency Ms"
+	  17-20: "Idle Connection Timeout"
+	  21-28: "Server Session ID"
 
 +-----------------------+--------------------+----------------------------------------------------------+
 |          bytes        |        type        |    description                                           |

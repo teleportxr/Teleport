@@ -65,6 +65,10 @@ else()
 endif()
 Include(FetchContent)
 
+# Get nlohmann json
+
+#FetchContent_Declare(  nlohmann_json  GIT_REPOSITORY https://github.com/nlohmann/json.git	GIT_SHALLOW   GIT_TAG        v3.11.2  SOURCE_DIR nlohmann_json)
+#FetchContent_MakeAvailable(nlohmann_json)
 # Get the Khronos ktx2 repo
 set(KTX_FEATURE_TOOLS OFF CACHE BOOL "" FORCE)
 set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)

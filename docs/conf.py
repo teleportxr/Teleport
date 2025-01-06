@@ -17,8 +17,8 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Teleport XR'
-copyright = '2018-2024, Teleport XR Ltd'
+project = 'TeleportXR'
+copyright = '2018-2025, Teleport XR Ltd'
 author = 'Roderick Kennedy'
 
 
@@ -38,7 +38,7 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 include_patterns=['*.rst','libavstream/*.rst','libavstream/**/*.rst','libavstream/**/*.png','TeleportCore/*.rst','TeleportCore/**','TeleportServer/*.rst','TeleportServer/**'
-                    ,'TeleportClient/**','docs/**','docs/*.rst','**/*.rst','**/*.png']
+                    ,'TeleportClient/**','docs/**','docs/*.rst','**/*.png','**/*.svg','client/*.rst','client/**/*.rst']
 exclude_patterns = ['build*']
 
 html_static_path = ['_static']
@@ -71,5 +71,6 @@ breathe_implementation_filename_extensions = []
 
 cpp_index_common_prefix = ['avs::','teleport::','teleport::core','teleport::server','teleport::client','teleport::clientrender']
 
+# npm install -g @mermaid-js/mermaid-cli
 mermaid_output_format ='png'
 mermaid_cmd='mmdc.cmd'

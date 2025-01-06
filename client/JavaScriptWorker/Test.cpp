@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <vector>
 #include <windows.h>
+#include <fstream>
+#include <iterator>
 #pragma optimize("", off)
 class V8ProcessManager
 {
@@ -40,24 +42,11 @@ private:
 			PIPE_BUFFER_SIZE,
 			PIPE_BUFFER_SIZE,
 			0,
-			&sa);
+            &sa
+        );
 
-		if (pipe == INVALID_HANDLE_VALUE)
-		{
-			return false;
-		}
-        // Create job object for this tab
-        HANDLE jobObject = CreateJobObjectA(NULL, NULL);
-        if (!jobObject) {
-            CloseHandle(pipe);
-            return false;
-        }
+        if (pipe == INVALID_HANDLE_VALUE) return false;
 
-        JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
-        jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-        SetInformationJobObject(jobObject, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
-
-		// Create process
 		STARTUPINFOA si;
 		PROCESS_INFORMATION pi;
 		ZeroMemory(&si, sizeof(si));
@@ -65,7 +54,7 @@ private:
 		si.cb = sizeof(si);
 
 		// Command line includes tab ID and pipe name
-		std::string cmdLine = "JavaScriptRunner.exe " + std::to_string(tabId) + " " + uniquePipeName;
+		std::string cmdLine = "JavaScriptWorker.exe " + std::to_string(tabId) + " " + uniquePipeName;
 
 		if (debugChildProcess)
 			cmdLine += " WAIT_FOR_DEBUGGER";
@@ -87,7 +76,7 @@ private:
 				NULL,
 				NULL,
 				TRUE,
-				dwCreationFlags,
+				CREATE_SUSPENDED,
 				NULL,
 				NULL,
 				&si,
@@ -105,20 +94,25 @@ private:
 			std::string message(messageBuffer, size);
 			std::cerr<<"CreateProcessA failed with: "<<message<<"\n";
 			CloseHandle(pipe);
-            CloseHandle(jobObject);
 			return false;
 		}
+        // Assign process to browser job object
+        if (browserJobObject && !AssignProcessToJobObject(browserJobObject, pi.hProcess)) {
+            TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            CloseHandle(pipe);
+            return false;
+        }
 
-        // Assign process to job object
-        AssignProcessToJobObject(jobObject, pi.hProcess);
+
         ResumeThread(pi.hThread);
 
 		TabProcess tp = {
 			pi.hProcess,
 			pipe,
 			pi.dwProcessId,
-            true,
-            jobObject
+            true
 		};
 
 		tabProcesses[tabId] = tp;
@@ -137,9 +131,6 @@ public:
             JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
             jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
             SetInformationJobObject(browserJobObject, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
-            
-            // Assign current process to job object
-            AssignProcessToJobObject(browserJobObject, GetCurrentProcess());
         }
 	}
 
@@ -150,7 +141,8 @@ public:
 		{
 			TerminateTab(pair.first);
 		}
-        if (browserJobObject) 				CloseHandle(browserJobObject);
+        if (browserJobObject)
+			CloseHandle(browserJobObject);
 	}
 
 	// Initialize a new tab with V8 instance
@@ -170,7 +162,7 @@ public:
 		{
 			return false;
 		}
-		char buffer[PIPE_BUFFER_SIZE];
+		char buffer[PIPE_BUFFER_SIZE+1];
 		DWORD bytesRead;
 		if (!ReadFile(
 				it->second.pipeHandle,
@@ -181,6 +173,7 @@ public:
 		{
 			return false;
 		}
+		buffer[bytesRead]=0;
 		if(std::string(buffer)!="ready\n")
 			return false;
 		return true;
@@ -207,7 +200,7 @@ public:
 		}
 
 		// Read result from pipe
-		char buffer[PIPE_BUFFER_SIZE];
+		char buffer[PIPE_BUFFER_SIZE+1];
 		DWORD bytesRead;
 		if (!ReadFile(
 				it->second.pipeHandle,
@@ -218,6 +211,7 @@ public:
 		{
 			return false;
 		}
+		buffer[bytesRead]=0;
 		std::cout<<buffer;
 		return true;
 	}
@@ -234,7 +228,6 @@ public:
 		TerminateProcess(it->second.processHandle, 0);
 		CloseHandle(it->second.processHandle);
 		CloseHandle(it->second.pipeHandle);
-        CloseHandle(it->second.jobObject);
 		it->second.isRunning = false;
 		tabProcesses.erase(it);
 		return true;
@@ -264,28 +257,56 @@ public:
 	}
 };
 
+auto read_file(std::string_view path) -> std::string {
+    constexpr auto read_size = std::size_t{4096};
+    auto stream = std::ifstream{path.data()};
+    stream.exceptions(std::ios_base::badbit);
+    
+    auto out = std::string{};
+    auto buf = std::string(read_size, '\0');
+    while (stream.read(& buf[0], read_size)) {
+        out.append(buf, 0, stream.gcount());
+    }
+    out.append(buf, 0, stream.gcount());
+    return out;
+}
+
 int main(int argc, char *argv[])
 {
 	try
 	{
 		// Create and run worker
-		V8ProcessManager processManager(true);
-		uint32_t tabId = 1;
-		if (processManager.InitializeTab(tabId))
+		V8ProcessManager processManager;
+		
+		if(uint32_t tabId=1; processManager.InitializeTab(tabId))
 		{
 			while(!processManager.IsReady(tabId))
 			{
 				Sleep(1);
 			}
-			std::string script = "'Hello World'";
+			std::string script = "'Hello World\\n'";
 			processManager.ExecuteScript(tabId, script);
-			Sleep(120000);
-			processManager.TerminateTab(tabId);
 		}
 		else
 		{
 			std::cerr << "Error: Failed to launch tab." << std::endl;
 		}
+		if(uint32_t tabId=2; processManager.InitializeTab(tabId))
+		{
+			while(!processManager.IsReady(tabId))
+			{
+				Sleep(1);
+			}
+			std::ifstream script_ifs("test.js");
+			std::string script(std::istreambuf_iterator<char>{script_ifs}, {});
+			script_ifs.close();
+			processManager.ExecuteScript(tabId, script);
+		}
+		else
+		{
+			std::cerr << "Error: Failed to launch tab." << std::endl;
+		}
+		Sleep(120000);
 		return 0;
 	}
 	catch (const std::exception &e)

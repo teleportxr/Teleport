@@ -5,8 +5,9 @@ Client
 	:maxdepth: 1
 	:numbered:
 	
-	../../pc_client/index
-	../../AndroidClient/index
+	../pc_client/index
+	../AndroidClient/index
+	JavaScriptWorker/index
 
 The "Reference" Teleport Client application is available for Windows PC (with optional XR support),
 and Meta Quest headsets. It's available from https://teleportvr.io/downloads.
