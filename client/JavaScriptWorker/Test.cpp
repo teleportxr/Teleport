@@ -276,9 +276,9 @@ int main(int argc, char *argv[])
 	try
 	{
 		// Create and run worker
-		V8ProcessManager processManager;
+		V8ProcessManager processManager(true);
 		
-		if(uint32_t tabId=1; processManager.InitializeTab(tabId))
+	/*	if(uint32_t tabId=1; processManager.InitializeTab(tabId))
 		{
 			while(!processManager.IsReady(tabId))
 			{
@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 		else
 		{
 			std::cerr << "Error: Failed to launch tab." << std::endl;
-		}
+		}*/
 		if(uint32_t tabId=2; processManager.InitializeTab(tabId))
 		{
 			while(!processManager.IsReady(tabId))
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 		{
 			std::cerr << "Error: Failed to launch tab." << std::endl;
 		}
-		Sleep(120000);
+		Sleep(12000);
 		return 0;
 	}
 	catch (const std::exception &e)

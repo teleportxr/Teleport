@@ -3,23 +3,64 @@
 #include "v8.h"
 #include <iostream>
 #include <string>
-
+//#include "Platform/Windows/VisualStudioDebugOutput.h"
+//VisualStudioDebugOutput dbg(true,0);
 #pragma optimize("", off)
 
 class V8Worker
 {
 private:
+	struct CallbackData 
+	{
+		V8Worker* worker;
+		std::shared_ptr<Scene> scene;
+	};
 	HANDLE pipeHandle;
 	std::unique_ptr<v8::Platform> platform;
 	v8::Isolate *isolate = nullptr;
 	v8::Global<v8::Context> context;
 	std::shared_ptr<Scene> scene;
+    v8::Global<v8::ObjectTemplate> nodeTemplate; 
 	static const size_t PIPE_BUFFER_SIZE = 4096;
+		
+	static void LogCallback(const v8::FunctionCallbackInfo<v8::Value>& info)
+	{
+		if (info.Length() < 1)
+			return;
+		v8::Isolate* isolate = info.GetIsolate();
+		v8::HandleScope scope(isolate);
+		v8::Local<v8::Value> arg = info[0];
+		v8::String::Utf8Value value(isolate, arg);
+		std::string str=value.operator*();
+		std::cout<<str<<"\n";
+		info.GetReturnValue().SetEmptyString();
+	}
 
 	static std::string ToString(v8::Isolate *isolate, v8::Local<v8::Value> value)
 	{
 		v8::String::Utf8Value utf8(isolate, value);
 		return *utf8 ? *utf8 : "";
+	}
+	static uint64_t ToUid( v8::Local<v8::Value> value)
+	{
+		if (value->IsUndefined() || value->IsNull())
+		{
+			return 0;
+		}
+
+		if (value->IsBigInt())
+		{
+			bool lossless;
+			return value.As<v8::BigInt>()->Uint64Value(&lossless);
+		}
+
+		if (value->IsInt32())
+		{
+			bool lossless;
+			return value.As<v8::BigInt>()->Uint64Value(&lossless);
+		}
+
+		return 0;
 	}
 
 	v8::Local<v8::Object> WrapPose(const Pose &pose)
@@ -54,10 +95,11 @@ private:
 
 		return handle_scope.Escape(obj);
 	}
-
-	Pose PoseFromObject(v8::Local<v8::Object> obj)
+	//! Convert a JavaScript to a C++ Pose.
+	static Pose PoseFromObject(v8::Isolate *isolate,v8::Local<v8::Object> obj)
 	{
-		v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate, context);
+		v8::Local<v8::Context> ctx(isolate->GetCurrentContext());
+		//v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate, context);
 		Pose pose;
 
 		auto getNumber = [&](const char *prop) -> double
@@ -84,33 +126,45 @@ private:
 		v8::EscapableHandleScope handle_scope(isolate);
 		v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate, context);
 		v8::Context::Scope context_scope(ctx);
+		
+        // Get the node template
+        v8::Local<v8::ObjectTemplate> templ = v8::Local<v8::ObjectTemplate>::New(isolate, nodeTemplate);
+        
+        // Create new instance from template
+        v8::Local<v8::Object> obj = templ->NewInstance(ctx).ToLocalChecked();
+		
+		auto fld=v8::External::New(isolate, node.get());
 
-		v8::Local<v8::Object> obj = v8::Object::New(isolate);
-		obj->SetInternalField(0, v8::External::New(isolate, node.get()));
+		obj->SetInternalField(0,fld );
+        // Add properties
+        // Add UID as BigInt since it's 64-bit
+        obj->Set(ctx,
+            v8::String::NewFromUtf8(isolate, "uid").ToLocalChecked(),
+            v8::BigInt::NewFromUnsigned(isolate, node->getUid())
+        ).Check();
+        obj->Set(ctx,
+            v8::String::NewFromUtf8(isolate, "nodeName").ToLocalChecked(),
+            v8::String::NewFromUtf8(isolate, node->getNodeName().c_str()).ToLocalChecked()
+        ).Check();
 
-		// Add properties
-		obj->Set(ctx,
-				 v8::String::NewFromUtf8(isolate, "nodeName").ToLocalChecked(),
-				 v8::String::NewFromUtf8(isolate, node->getNodeName().c_str()).ToLocalChecked())
-			.Check();
-
-		obj->Set(ctx,
-				 v8::String::NewFromUtf8(isolate, "pose").ToLocalChecked(),
-				 WrapPose(node->getPose()))
-			.Check();
-
+        obj->Set(ctx,
+            v8::String::NewFromUtf8(isolate, "pose").ToLocalChecked(),
+            WrapPose(node->getLocalPose())
+        ).Check();
+		
 		// Add methods
 		auto setPoseTpl = v8::FunctionTemplate::New(isolate,
 													[](const v8::FunctionCallbackInfo<v8::Value> &args)
 													{
 														if (args.Length() < 1)
 															return;
+														v8::Isolate* isol = args.GetIsolate();
 														auto self = args.Holder();
 														auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 														SOMNode *nodeptr = static_cast<SOMNode *>(wrap->Value());
 
 														auto poseObj = args[0]->ToObject(args.GetIsolate()->GetCurrentContext()).ToLocalChecked();
-														nodeptr->setPose(PoseFromObject(poseObj));
+														nodeptr->setPose(PoseFromObject(isol,poseObj));
 													});
 
 		obj->Set(ctx,
@@ -121,6 +175,138 @@ private:
 		// Add other methods similarly...
 		return handle_scope.Escape(obj);
 	}
+	static void SetPoseCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
+	{
+		v8::Isolate* isolate = args.GetIsolate();
+		
+		// Get the CallbackData from the function's external data
+		auto data = static_cast<CallbackData*>(
+			v8::Local<v8::External>::Cast(args.Data())->Value()
+		);
+		
+		if (args.Length() < 1) return;
+		
+		auto self = args.Holder();
+		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+		auto node = static_cast<SOMNode*>(wrap->Value());
+		
+		auto poseObj = args[0]->ToObject(isolate->GetCurrentContext()).ToLocalChecked();
+		node->setPose(data->worker->PoseFromObject(isolate,poseObj));
+	}
+
+	static void CreateNodeCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
+	{
+		v8::Isolate* isolate = args.GetIsolate();
+		auto data = static_cast<CallbackData*>(
+			v8::Local<v8::External>::Cast(args.Data())->Value()
+		);
+        // Check arguments
+        if (args.Length() < 2) 
+        {
+            isolate->ThrowException(v8::String::NewFromUtf8(
+                isolate, 
+                "createNode requires parent and name parameters"
+            ).ToLocalChecked());
+            return;
+        }
+        
+        // Get parent node
+        if (!args[0]->IsObject()) 
+        {
+            isolate->ThrowException(v8::String::NewFromUtf8(
+                isolate, 
+                "First parameter must be a node object"
+            ).ToLocalChecked());
+            return;
+        }
+        auto context = isolate->GetCurrentContext();
+
+        auto parentObj = args[0]->ToObject(context).ToLocalChecked();
+        
+        // Check if the parent is a valid node object
+        if (!parentObj->InternalFieldCount() || parentObj->InternalFieldCount() < 1) 
+        {
+            isolate->ThrowException(v8::String::NewFromUtf8(
+                isolate, 
+                "Invalid parent node object"
+            ).ToLocalChecked());
+            return;
+        }
+
+        auto parentWrap = v8::Local<v8::External>::Cast(parentObj->GetInternalField(0));
+        auto parentNode = static_cast<SOMNode*>(parentWrap->Value());
+        
+        // Get node name
+        std::string nodeName = ToString(isolate, args[1]);
+        
+		auto newNode = data->scene->createNode(parentNode->shared_from_this(),nodeName);
+		
+		args.GetReturnValue().Set(data->worker->WrapNode(newNode));
+	}
+	static void GetNodeByUidCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
+	{
+		v8::Isolate* isolate = args.GetIsolate();
+		auto data = static_cast<CallbackData*>(
+			v8::Local<v8::External>::Cast(args.Data())->Value()
+		);
+		
+		if (args.Length() < 1)
+			return;
+		
+		uint64_t nodeUid = ToUid( args[0]);
+		auto newNode = data->scene->getElementById(nodeUid);
+		
+		args.GetReturnValue().Set(data->worker->WrapNode(newNode));
+	}
+	
+	static void GetNodesByNameCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
+	{
+		v8::Isolate* isolate = args.GetIsolate();
+		v8::HandleScope handleScope(isolate);
+		auto context = isolate->GetCurrentContext();
+		
+		// Get the CallbackData from the function's external data
+		auto data = static_cast<CallbackData*>(
+			v8::Local<v8::External>::Cast(args.Data())->Value()
+		);
+		
+		// Check arguments
+		if (args.Length() < 1) 
+		{
+			args.GetReturnValue().Set(v8::Array::New(isolate, 0));
+			return;
+		}
+		
+		// Get the name parameter
+		std::string name = ToString(isolate, args[0]);
+		
+		// Search for nodes
+		auto nodes = data->scene->getNodesByName(name);
+		
+		// Create JavaScript array for results
+		auto result = v8::Array::New(isolate, static_cast<int>(nodes.size()));
+		
+		// Fill the array with wrapped nodes
+		for (size_t i = 0; i < nodes.size(); ++i) 
+		{
+			result->Set(
+				context,
+				static_cast<uint32_t>(i),
+				data->worker->WrapNode(nodes[i])
+			).Check();
+		}
+		args.GetReturnValue().Set(result);
+	}
+	static void GetRootNodeCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
+	{
+		auto data = static_cast<CallbackData*>(
+			v8::Local<v8::External>::Cast(args.Data())->Value()
+		);
+		auto newNode = data->scene->getRootNode();
+		
+		args.GetReturnValue().Set(data->worker->WrapNode(newNode));
+	}
+
 	void InitializeV8(const std::string &exec_name)
 	{
 		// Initialize V8
@@ -132,9 +318,9 @@ private:
 
 		// Create isolate and context
 		v8::Isolate::CreateParams create_params;
-		create_params.array_buffer_allocator =
+		create_params.array_buffer_allocator = 
 			v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-
+		
 		isolate = v8::Isolate::New(create_params);
 
 		v8::Isolate::Scope isolate_scope(isolate);
@@ -142,14 +328,89 @@ private:
 
 		// Create global object template
 		v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
+		
+		// Create scene object
+		scene = std::make_shared<Scene>();
 
-		// Add any custom functions to global object here
-		// Example: global->Set(v8::String::NewFromUtf8(isolate, "log").ToLocalChecked(),
-		//                     v8::FunctionTemplate::New(isolate, LogCallback));
+		auto sceneTemplate = v8::ObjectTemplate::New(isolate);
+		sceneTemplate->SetInternalFieldCount(1);
 
-		// Create context and persist it
+		// Add document to global object
+		global->Set(
+			v8::String::NewFromUtf8(isolate, "scene").ToLocalChecked(),
+			sceneTemplate
+		);
+
+		// Make te C++ log function available in JavaScript
+		global->Set(isolate, "log",v8::FunctionTemplate::New(isolate, LogCallback));
+
+		// Create external data for callbacks
+		auto* callbackData = new CallbackData{this, scene};
+		auto externalData = v8::External::New(isolate, callbackData);
+
+
+		// Add scene methods with external data
+		sceneTemplate->Set(
+			isolate,
+			"createNode",
+			v8::FunctionTemplate::New(isolate, CreateNodeCallback, externalData)
+		);
+		sceneTemplate->Set(
+			isolate,
+			"getNodeByUid",
+			v8::FunctionTemplate::New(isolate, GetNodeByUidCallback, externalData)
+		);
+		sceneTemplate->Set(
+			isolate,
+			"getNodesByName",
+			v8::FunctionTemplate::New(isolate, GetNodesByNameCallback, externalData)
+		);
+		sceneTemplate->Set(
+			isolate,
+			"getRootNode",
+			v8::FunctionTemplate::New(isolate, GetRootNodeCallback, externalData)
+		);
+
+		// Create node template for wrapper
+		auto nodeTempl = v8::ObjectTemplate::New(isolate);
+		nodeTempl->SetInternalFieldCount(1);
+
+		// Add node methods with external data
+		nodeTempl->Set(
+			isolate,
+			"setPose",
+			v8::FunctionTemplate::New(isolate, SetPoseCallback, externalData)
+		);
+
+		// Store templates in the global object
+		global->Set(
+			isolate,
+			"scene",
+			sceneTemplate
+		);
+
+		global->Set(
+			isolate,
+			"SOMNode",
+			nodeTempl
+		);
+        nodeTemplate.Reset(isolate, nodeTempl);
+
+		// Create and store context
 		v8::Local<v8::Context> ctx = v8::Context::New(isolate, nullptr, global);
 		context.Reset(isolate, ctx);
+
+		// Set up scene object in context
+		v8::Context::Scope context_scope(ctx);
+		v8::Local<v8::Object> sceneObj = ctx->Global()
+			->Get(ctx, v8::String::NewFromUtf8(isolate, "scene").ToLocalChecked())
+			.ToLocalChecked()
+			->ToObject(ctx)
+			.ToLocalChecked();
+		sceneObj->SetInternalField(0, v8::External::New(isolate, scene.get()));
+
+		// Create the root node.
+		scene->createNode(scene,"root");
 	}
 
 	std::string ExecuteScript(const std::string &script)
@@ -271,6 +532,7 @@ public:
 
 	~V8Worker()
 	{
+        nodeTemplate.Reset(); 
 		// Cleanup V8
 		context.Reset();
 		isolate->Dispose();
