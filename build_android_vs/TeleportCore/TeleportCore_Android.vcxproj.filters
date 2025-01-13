@@ -18,7 +18,6 @@
     </ClCompile>
     <ClCompile Include="..\..\TeleportCore\DecodeMesh.cpp" />
     <ClCompile Include="..\..\TeleportCore\Time.cpp" />
-    <ClCompile Include="..\..\TeleportCore\Test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h">

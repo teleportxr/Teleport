@@ -70,7 +70,7 @@
       <ShowProgress>true</ShowProgress>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;../ClientRender;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../TeleportClient/export_include;../../TeleportCore/export_include;../ClientRender;../../ClientRender/export_include;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_STD_FILESYSTEM=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
     <PreBuildEvent>
@@ -88,12 +88,12 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <Link>
       <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;fmt;mediandk;OpenSLES</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget);$(SolutionDir)../thirdparty/curl/curl-android-arm64-v8a/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)external_libs/libdatachannel-static.a;$(SolutionDir)external_libs/libjuice-static.a;$(SolutionDir)external_libs/libsrtp2.a;$(SolutionDir)external_libs/libusrsctp.a;$(SolutionDir)external_libs/libssl.a;$(SolutionDir)external_libs/libcrypto.a;$(SolutionDir)external_libs/libcurl.a;$(SolutionDir)thirdparty/oboe/lib/liboboe.a;$(LOCALAPPDATA)\Android\Sdk\ndk\$(AndroidNdkVersion)\toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\aarch64-linux-android\libz.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget);$(SolutionDir)../thirdparty/curl/curl-android-arm64-v8a/lib;$(SolutionDir)/lib/$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)external_libs/libdatachannel-static.a;$(SolutionDir)external_libs/libjuice-static.a;$(SolutionDir)external_libs/libsrtp2.a;$(SolutionDir)external_libs/libusrsctp.a;$(SolutionDir)external_libs/libssl.a;$(SolutionDir)external_libs/libcrypto.a;$(SolutionDir)external_libs/libcurl.a;$(SolutionDir)thirdparty/oboe/lib/liboboe.a;$(LOCALAPPDATA)\Android\Sdk\ndk\$(AndroidNdkVersion)\toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\aarch64-linux-android\libz.a;$(SolutionDir)lib/$(Configuration)/libktx.a;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>true</ShowProgress>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../thirdparty/basis_universal;../ClientRender;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../TeleportClient/export_include;../../TeleportCore/export_include;../ClientRender;../../ClientRender/export_include;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;PLATFORM_STD_FILESYSTEM=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
@@ -222,9 +222,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ProjectReference>
     <ProjectReference Include="..\libavstream\thirdparty\efp\efp.vcxproj">
       <Project>{965373d9-b298-463f-a523-b5e046f8d402}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\thirdparty\basis_universal\basis_universal.vcxproj">
-      <Project>{e6abe220-7eef-47a3-8f2a-a63f6ca816a2}</Project>
     </ProjectReference>
     <ProjectReference Include="..\thirdparty\draco\draco.vcxproj">
       <Project>{45561321-f023-4c8a-9edc-7c721c2da8b5}</Project>

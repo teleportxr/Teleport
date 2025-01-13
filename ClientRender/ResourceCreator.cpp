@@ -46,16 +46,15 @@ template<typename T> void read_from_buffer(T &result,const uint8_t * &mem)
 
 
 ResourceCreator::ResourceCreator()
-	:basisThread(&ResourceCreator::BasisThread_TranscodeTextures, this)
+	:textureTranscodeThread(&ResourceCreator::thread_TranscodeTextures, this)
 {
-	basist::basisu_transcoder_init();
 }
 
 ResourceCreator::~ResourceCreator()
 {
-	//Safely close the basis transcoding thread.
+	//Safely close the transcoding thread.
 	shouldBeTranscoding = false;
-	basisThread.join();
+	textureTranscodeThread.join();
 }
 
 ResourceCreator &ResourceCreator::GetInstance()
@@ -612,36 +611,6 @@ clientrender::Texture::Format textureFormatFromAVSTextureFormat(avs::TextureForm
 	}
 }
 
-basist::transcoder_texture_format transcoderFormatFromBasisTextureFormat(basist::basis_tex_format format)
-{
-	switch (format)
-	{
-	case basist::basis_tex_format::cETC1S: return basist::transcoder_texture_format::cTFBC3;
-	case basist::basis_tex_format::cUASTC4x4: return basist::transcoder_texture_format::cTFASTC_4x4;
-	default:
-		exit(1);
-	}
-}
-//Returns a SCR compression format from a basis universal transcoder format.
-clientrender::Texture::CompressionFormat toSCRCompressionFormat(basist::transcoder_texture_format format)
-{
-	switch (format)
-	{
-	case basist::transcoder_texture_format::cTFBC1: return clientrender::Texture::CompressionFormat::BC1;
-	case basist::transcoder_texture_format::cTFBC3: return clientrender::Texture::CompressionFormat::BC3;
-	case basist::transcoder_texture_format::cTFBC4: return clientrender::Texture::CompressionFormat::BC4;
-	case basist::transcoder_texture_format::cTFBC5: return clientrender::Texture::CompressionFormat::BC5;
-	case basist::transcoder_texture_format::cTFETC1: return clientrender::Texture::CompressionFormat::ETC1;
-	case basist::transcoder_texture_format::cTFETC2: return clientrender::Texture::CompressionFormat::ETC2;
-	case basist::transcoder_texture_format::cTFPVRTC1_4_RGBA: return clientrender::Texture::CompressionFormat::PVRTC1_4_OPAQUE_ONLY;
-	case basist::transcoder_texture_format::cTFBC7_M6_OPAQUE_ONLY: return clientrender::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
-	case basist::transcoder_texture_format::cTFASTC_4x4_RGBA:
-		return clientrender::Texture::CompressionFormat::BC6H;
-	case basist::transcoder_texture_format::cTFTotalTextureFormats: return clientrender::Texture::CompressionFormat::UNCOMPRESSED;
-	default:
-		exit(1);
-	}
-}
 
 void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::Texture& texture)
 {
@@ -654,18 +623,13 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	std::shared_ptr<clientrender::Texture::TextureCreateInfo> texInfo =std::make_shared<clientrender::Texture::TextureCreateInfo>();
 	texInfo->name			=texture.name;
 	texInfo->uid			=id;
-	texInfo->compression	=(texture.compression == avs::TextureCompression::BASIS_COMPRESSED) ? toSCRCompressionFormat(basis_transcoder_textureFormat) : clientrender::Texture::CompressionFormat::UNCOMPRESSED;
+	texInfo->compression	=clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 
 	TELEPORT_LOG("Received texture {0} ({1}), awaiting decompression.",id, texture.name);
-	if (texture.compression != avs::TextureCompression::UNCOMPRESSED)
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(std::make_shared<UntranscodedTexture>(server_uid, id, texture.compressedData, texInfo, texture.name, texture.compression, texture.valueScale));
 	}
-	else
-	{
-		TELEPORT_WARN("Received uncompressed texture: this is not supported.");
-	}	
 }
 
 void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs::Material& material)
@@ -1198,78 +1162,6 @@ void ResourceCreator::CreateLight(avs::uid server_uid,avs::uid id,const avs::Nod
 	geometryCache->mLightManager.Add(id, light);
 }
 
-bool BasisValidate(basist::basisu_transcoder &dec, basist::basisu_file_info &fileinfo,const std::vector<unsigned char>& data)
-{
-#ifndef __ANDROID__
-
-	assert(fileinfo.m_total_images == fileinfo.m_image_mipmap_levels.size());
-	assert(fileinfo.m_total_images == dec.get_total_images(data.data(), (uint32_t)data.size()));
-
-	printf("File info:\n");
-	printf("  Version: %X\n", fileinfo.m_version);
-	printf("  Total header size: %u\n", fileinfo.m_total_header_size);
-	printf("  Total selectors: %u\n", fileinfo.m_total_selectors);
-	printf("  Selector codebook size: %u\n", fileinfo.m_selector_codebook_size);
-	printf("  Total endpoints: %u\n", fileinfo.m_total_endpoints);
-	printf("  Endpoint codebook size: %u\n", fileinfo.m_endpoint_codebook_size);
-	printf("  Tables size: %u\n", fileinfo.m_tables_size);
-	printf("  Slices size: %u\n", fileinfo.m_slices_size);
-	printf("  Texture format: %s\n", (fileinfo.m_tex_format == basist::basis_tex_format::cUASTC4x4) ? "UASTC" : "ETC1S");
-	printf("  Texture type: %s\n", basist::basis_get_texture_type_name(fileinfo.m_tex_type));
-	printf("  us per frame: %u (%f fps)\n", fileinfo.m_us_per_frame, fileinfo.m_us_per_frame ? (1.0f / ((float)fileinfo.m_us_per_frame / 1000000.0f)) : 0.0f);
-	printf("  Total slices: %u\n", (uint32_t)fileinfo.m_slice_info.size());
-	printf("  Total images: %i\n", fileinfo.m_total_images);
-	printf("  Y Flipped: %u, Has alpha slices: %u\n", fileinfo.m_y_flipped, fileinfo.m_has_alpha_slices);
-	printf("  userdata0: 0x%X userdata1: 0x%X\n", fileinfo.m_userdata0, fileinfo.m_userdata1);
-	printf("  Per-image mipmap levels: ");
-	for (uint32_t i = 0; i < fileinfo.m_total_images; i++)
-		printf("%u ", fileinfo.m_image_mipmap_levels[i]);
-	printf("\n");
-
-	uint32_t total_texels = 0;
-
-	printf("\nImage info:\n");
-	for (uint32_t i = 0; i < fileinfo.m_total_images; i++)
-	{
-		basist::basisu_image_info ii;
-		if (!dec.get_image_info(data.data(),(uint32_t)data.size(), ii, i))
-		{
-			printf("get_image_info() failed!\n");
-			return false;
-		}
-
-		printf("Image %u: MipLevels: %u OrigDim: %ux%u, BlockDim: %ux%u, FirstSlice: %u, HasAlpha: %u\n", i, ii.m_total_levels, ii.m_orig_width, ii.m_orig_height,
-			ii.m_num_blocks_x, ii.m_num_blocks_y, ii.m_first_slice_index, (uint32_t)ii.m_alpha_flag);
-
-		total_texels += ii.m_width * ii.m_height;
-	}
-
-	printf("\nSlice info:\n");
-
-	for (uint32_t i = 0; i < fileinfo.m_slice_info.size(); i++)
-	{
-		const basist::basisu_slice_info& sliceinfo = fileinfo.m_slice_info[i];
-		printf("%u: OrigWidthHeight: %ux%u, BlockDim: %ux%u, TotalBlocks: %u, Compressed size: %u, Image: %u, Level: %u, UnpackedCRC16: 0x%X, alpha: %u, iframe: %i\n",
-			i,
-			sliceinfo.m_orig_width, sliceinfo.m_orig_height,
-			sliceinfo.m_num_blocks_x, sliceinfo.m_num_blocks_y,
-			sliceinfo.m_total_blocks,
-			sliceinfo.m_compressed_size,
-			sliceinfo.m_image_index, sliceinfo.m_level_index,
-			sliceinfo.m_unpacked_slice_crc16,
-			(uint32_t)sliceinfo.m_alpha_flag,
-			(uint32_t)sliceinfo.m_iframe_flag);
-	}
-	printf("\n");
-
-	const float basis_bits_per_texel = data.size() * 8.0f / total_texels;
-	//const float comp_bits_per_texel = comp_size * 8.0f / total_texels;
-
-	//printf("Original size: %u, bits per texel: %3.3f\nCompressed size (Deflate): %u, bits per texel: %3.3f\n", (uint32_t)basis_file_data.size(), basis_bits_per_texel, (uint32_t)comp_size, comp_bits_per_texel);
-#endif
-	return true;
-}
-
 #include <vkformat_enum.h>
 static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 {
@@ -1390,9 +1282,9 @@ KTX_error_code ktxImageExtractionCallback(int miplevel, int face,
     return KTX_SUCCESS;
 }
 
-void ResourceCreator::BasisThread_TranscodeTextures()
+void ResourceCreator::thread_TranscodeTextures()
 {
-	SetThisThreadName("BasisThread_TranscodeTextures");
+	SetThisThreadName("thread_TranscodeTextures");
 	auto &config=teleport::client::Config::GetInstance();
 	while (shouldBeTranscoding)
 	{
@@ -1525,76 +1417,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode, no images found." << std::endl;
 				}
 			}
-			else if(transcoding->compressionFormat==avs::TextureCompression::BASIS_COMPRESSED)
-			{
-				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with BASIS",transcoding->name.c_str());
-				//We need a new transcoder for every .basis file.
-				basist::basisu_transcoder basis_transcoder;
-				basist::basisu_file_info fileinfo;
-				if (!basis_transcoder.get_file_info(transcoding->data.data(), (uint32_t)transcoding->data.size(), fileinfo))
-				{
-					TELEPORT_CERR << "Failed to transcode texture " << transcoding->textureCI->uid<<" \""<<transcoding->name << "\"." << std::endl;
-					continue;
-				}
-				BasisValidate(basis_transcoder, fileinfo,transcoding->data);
-				if (basis_transcoder.start_transcoding(transcoding->data.data(), (uint32_t)transcoding->data.size()))
-				{
-					size_t imgs=basis_transcoder.get_total_images(transcoding->data.data(), (uint32_t)transcoding->data.size());
-					transcoding->textureCI->arrayCount=transcoding->textureCI->arrayCount?transcoding->textureCI->arrayCount:1;
-					transcoding->textureCI->mipCount = basis_transcoder.get_total_image_levels(transcoding->data.data(), (uint32_t)transcoding->data.size(), 0);
-					transcoding->textureCI->arrayCount = imgs/transcoding->textureCI->mipCount;
-					transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
-					transcoding->textureCI->images->resize(transcoding->textureCI->mipCount*transcoding->textureCI->arrayCount);
-					if(imgs!=transcoding->textureCI->images->size())
-					{
-						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding->name << "\" due to image count mismatch." << std::endl;
-						continue;
-					}
-					if (!basis_is_format_supported(basis_transcoder_textureFormat, fileinfo.m_tex_format))
-					{
-						TELEPORT_CERR << "Failed to transcode texture \"" << transcoding->name << "\"." << std::endl;
-						continue;
-					}
-					uint32_t bytesPerPixel=basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat);
-					int imageIndex=0;
-					for (uint32_t arrayIndex = 0; arrayIndex < transcoding->textureCI->arrayCount; arrayIndex++)
-					{
-						for (uint32_t mipIndex = 0; mipIndex < transcoding->textureCI->mipCount; mipIndex++)
-						{
-							uint32_t basisWidth, basisHeight, basisBlocks;
-
-							auto desc=basis_transcoder.get_image_level_desc(transcoding->data.data(), (uint32_t)transcoding->data.size(), arrayIndex, mipIndex, basisWidth, basisHeight, basisBlocks);
-							uint32_t outDataSize = basist::basis_get_bytes_per_block_or_pixel(basis_transcoder_textureFormat) * basisBlocks;
-							auto &img=(*transcoding->textureCI->images)[imageIndex];
-							img.resize(outDataSize);
-							if (!basis_transcoder.transcode_image_level(transcoding->data.data(), (uint32_t)transcoding->data.size(),arrayIndex, mipIndex, img.data(), basisBlocks, basis_transcoder_textureFormat))
-							{
-								TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode mipmap level " << mipIndex << "." << std::endl;
-							}
-							if(arrayIndex==0&&mipIndex==0)
-							{
-								transcoding->textureCI->width = basisWidth;
-								transcoding->textureCI->height = basisHeight;
-								transcoding->textureCI->depth = 1;
-							}
-							imageIndex++;
-						}
-					}
-
-					if (transcoding->textureCI->images->size() != 0)
-					{
-						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
-					}
-					else
-					{
-						TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode, but was a valid basis file." << std::endl;
-					}
-				}
-				else
-				{
-					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to start transcoding." << std::endl;
-				}
-			}
 			else if(transcoding->compressionFormat==avs::TextureCompression::KTX)
 			{
 				ktxTextureCreateFlags createFlags=KTX_TEXTURE_CREATE_NO_FLAGS;
@@ -1626,7 +1448,6 @@ void ResourceCreator::BasisThread_TranscodeTextures()
 						transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
 						transcoding->textureCI->images->resize(ktx1Texture->numFaces*ktx1Texture->numLayers*ktx1Texture->numLevels);
 						
-						//..result = ktxTexture_LoadImageData(ktxt,img.data(),(ktx_size_t)textureSize);
 					}
 				}
 				else if(ktxt->classId==ktxTexture2_c)

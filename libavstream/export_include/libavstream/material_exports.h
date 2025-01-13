@@ -57,7 +57,7 @@ namespace avs
 	enum class TextureCompression : uint32_t
 	{
 		UNCOMPRESSED = 0,
-		BASIS_COMPRESSED,
+		BASIS_COMPRESSED_DEPRECATED,
 		PNG,
 		KTX
 	};

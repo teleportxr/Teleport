@@ -122,8 +122,6 @@ target_include_directories(TeleportServer PUBLIC export_include)
 #Include libavstream
 target_include_directories(TeleportServer PUBLIC ../libavstream/include)
 target_include_directories(TeleportServer PUBLIC ../libavstream/export_include)
-#Include Basis Universal
-target_include_directories(TeleportServer PUBLIC ../thirdparty/basis_universal/encoder)
 #Include draco
 target_include_directories(TeleportServer PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(TeleportServer PUBLIC ../thirdparty/draco/src)
@@ -153,7 +151,7 @@ if(UNIX)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib PRIVATE ../thirdparty/compressonator/lib/bin/x64)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream basisu efp fmt LibDataChannel::LibDataChannelStatic ktx)
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream efp fmt LibDataChannel::LibDataChannelStatic ktx)
 
 if(TELEPORT_USE_DYNAMIC_RUNTIME)
 	target_link_libraries(TeleportServer Compressonator_MD.lib)

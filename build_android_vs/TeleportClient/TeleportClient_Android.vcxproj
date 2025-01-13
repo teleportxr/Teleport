@@ -189,13 +189,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include;../../TeleportCore/export_include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include;../../TeleportCore/export_include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

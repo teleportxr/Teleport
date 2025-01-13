@@ -171,9 +171,10 @@ namespace avs
 	};
 	struct Transform
 	{
-		vec3 position = { 0.f, 0.f, 0.f };
-		vec4 rotation = { 0.f, 0.f, 0.f, 1.f };
-		vec3 scale = { 1.f, 1.f, 1.f };
+		vec3 position = { 0.f, 0.f, 0.f };		//! 12
+		vec4 rotation = { 0.f, 0.f, 0.f, 1.f };	//! 16
+		vec3 scale = { 1.f, 1.f, 1.f };			//! 12
 	} AVS_PACKED;
+	static_assert(sizeof(Transform)==40,"Incorrect size for Transform");
 
 } //namespace avs

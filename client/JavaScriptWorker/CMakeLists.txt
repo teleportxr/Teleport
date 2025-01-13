@@ -2,8 +2,22 @@ cmake_minimum_required(VERSION 3.8)
 project(JavaScriptWorker)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-
+	# We'll get Boost, so we can have Boost Interprocess.
 	
+	set(BOOST_INCLUDE_LIBRARIES interprocess)
+	set(BOOST_ENABLE_CMAKE ON)
+	include(FetchContent)
+	FetchContent_Declare(
+	  boost
+	  GIT_REPOSITORY https://github.com/boostorg/boost.git
+	  GIT_TAG boost-1.87.0
+	)
+	FetchContent_MakeAvailable(boost)
+
+	#add_executable(boost_test boost_test.cpp)
+	#target_link_libraries(boost_test PRIVATE Boost::filesystem
+	#										 Boost::program_options)
+
 	#################################################################
 	#				V8												#
 	#################################################################

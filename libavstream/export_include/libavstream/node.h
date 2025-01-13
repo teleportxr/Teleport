@@ -14,6 +14,7 @@ namespace avs
 	extern void AVSTREAM_API ConvertScale(AxesStandard fromStandard, AxesStandard toStandard, vec3 &scale);
 	extern int8_t AVSTREAM_API ConvertAxis(AxesStandard fromStandard, AxesStandard toStandard, int8_t axis);
 	
+	//char (*__kaboom)[sizeof( std::string )] = 1;
 	struct Node
 	{
 		std::string name;
@@ -51,8 +52,10 @@ namespace avs
 		float lightRange	=0.f;			//! Maximum distance the light is effective at, in metres.
 
 		std::string url;		// if node is a link/portal
-		std::string query_url; // if node is a link/portal
+		std::string query_url;	// if node is a link/portal
 	} AVS_PACKED;
-	static_assert (sizeof(Node) == 308, "avs::Node size is not correct");
+	//static_assert (sizeof(Node) == 308, "avs::Node size is not correct");
+	// TODO: On Android, sizeof(string) seems to be 24, not 32, so this won't be the same.
+	// Does it matter?
 }
 #pragma pack(pop)

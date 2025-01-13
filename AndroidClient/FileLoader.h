@@ -16,7 +16,8 @@ namespace teleport
 			FileLoader();
 			bool FileExists(const char *filename_utf8) const override;
 			void AcquireFileContents(void*& pointer, unsigned int& bytes, const char* filename_utf8,bool open_as_text) override;
-			double GetFileDate(const char* filename_utf8) const override;
+			//! Get the unix timestamp. Return zero if the file doesn't exist.
+			uint64_t GetFileDateUnixTimeMs(const char* filename_utf8) const override;
 			void ReleaseFileContents(void* pointer) override;
 			bool Save(const void* pointer, unsigned int bytes, const char* filename_utf8,bool save_as_text) override;
 

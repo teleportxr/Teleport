@@ -69,6 +69,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VulkanShaders", "client\Sha
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sfx", "..\build_pc_client\firstparty\Platform\Applications\Sfx\Sfx.vcxproj", "{3D42A6D5-353A-3FCE-A97A-4DA5FC90AC90}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ktx", "thirdparty\ktx\ktx.vcxproj", "{22A6A42B-F2BB-4324-8866-4D7E74D40C66}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Android-arm64-v8a = Debug|Android-arm64-v8a
@@ -236,6 +238,14 @@ Global
 		{3D42A6D5-353A-3FCE-A97A-4DA5FC90AC90}.Release|Android-arm64-v8a.Build.0 = Release|x64
 		{3D42A6D5-353A-3FCE-A97A-4DA5FC90AC90}.Release|x64.ActiveCfg = Release|x64
 		{3D42A6D5-353A-3FCE-A97A-4DA5FC90AC90}.Release|x64.Build.0 = Release|x64
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Debug|x64.ActiveCfg = Debug|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Debug|x64.Build.0 = Debug|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Release|x64.ActiveCfg = Release|Android-arm64-v8a
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66}.Release|x64.Build.0 = Release|Android-arm64-v8a
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -265,6 +275,7 @@ Global
 		{965373D9-B298-463F-A523-B5E046F8D402} = {43263C14-BEEF-428F-BC85-9FEEF0DC485D}
 		{4C406386-CE91-3AC0-8C4E-E119E47334EF} = {BDB73F72-F567-494E-AE89-C0444A57ED56}
 		{3D42A6D5-353A-3FCE-A97A-4DA5FC90AC90} = {93C8F41F-9A3E-4E5B-BCA4-1AC7AB72CDE1}
+		{22A6A42B-F2BB-4324-8866-4D7E74D40C66} = {EAF8894D-7418-41AC-B3BB-8C64AEAB8D08}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AA27821A-B243-4828-B197-11884857C085}

@@ -132,8 +132,6 @@ target_include_directories(ClientRender PRIVATE src)
 target_include_directories(ClientRender PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 #Include libavstream
 target_include_directories(ClientRender PRIVATE ../libavstream/include)
-#Include Basis Universal
-target_include_directories(ClientRender PRIVATE ../thirdparty/basis_universal)
 #Include stb
 target_include_directories(ClientRender PRIVATE ../firstparty/Platform/External/stb)
 #Include imgui

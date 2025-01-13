@@ -5,9 +5,6 @@
 #include <mutex>
 #include <set>
 #include <thread>
-
-#include "transcoder/basisu_transcoder.h"
-
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <libavstream/mesh.hpp>
 
@@ -70,21 +67,15 @@ namespace teleport
 			void CreateLight(avs::uid server_id, avs::uid id, const avs::Node &node);
 			void CreateLinkNode( avs::uid server_uid, avs::uid id, const avs::Node &node);
 
-			void BasisThread_TranscodeTextures();
+			void thread_TranscodeTextures();
 
 			platform::crossplatform::RenderPlatform *renderPlatform = nullptr;
 			clientrender::VertexBufferLayout::PackingStyle m_PackingStyle = clientrender::VertexBufferLayout::PackingStyle::GROUPED;
 
-#ifdef _MSC_VER
-			basist::transcoder_texture_format basis_transcoder_textureFormat = basist::transcoder_texture_format::cTFBC3;
-#else
-			basist::transcoder_texture_format basis_transcoder_textureFormat = basist::transcoder_texture_format::cTFETC2;
-#endif
-
 			std::vector<std::shared_ptr<UntranscodedTexture>> texturesToTranscode;
 			std::mutex mutex_texturesToTranscode;
 			std::atomic_bool shouldBeTranscoding = true; // Whether the basis thread should be running, and transcoding textures. Settings this to false causes the thread to end.
-			std::thread basisThread;					 // Thread where we transcode basis files to mip data.
+			std::thread textureTranscodeThread;					 // Thread where we transcode basis files to mip data.
 
 			const uint32_t whiteBGRA = 0xFFFFFFFF;
 			const uint32_t normalRGBA = 0xFFFF7F7F;

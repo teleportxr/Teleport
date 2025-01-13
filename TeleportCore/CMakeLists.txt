@@ -39,8 +39,6 @@ target_include_directories(TeleportCore PRIVATE src)
 #Include libavstream
 target_include_directories(TeleportCore PRIVATE ../libavstream/include)
 target_include_directories(TeleportCore PRIVATE ../libavstream/export_include)
-#Include Basis Universal
-target_include_directories(TeleportCore PRIVATE ../thirdparty/basis_universal)
 #Include fmt
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 target_include_directories(TeleportCore PUBLIC ${SIMUL_PLATFORM_DIR}/External )

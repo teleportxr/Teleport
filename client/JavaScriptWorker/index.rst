@@ -46,7 +46,8 @@ Finding SOM Nodes
    * - scene.getRootNode()
      - Get the root node.
 
-Each node has a uid that is unique for the scene, i.e. No two nodes in a given client-server context will have the same uid.
+Each node has a uid that is unique for the scene, i.e. No two nodes in a given client-server context will have the same uid. However, uid's do not persist across sessions: to identify the same node across multiple sessions, it should be given a name.
+The root node is the node that the script is attached to. A script has no knowledge of or access to nodes above or outside the hierarchy that starts at its root.
 
 Node Properties
 ~~~~~~~~~~~~~~~

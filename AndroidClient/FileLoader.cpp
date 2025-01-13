@@ -249,10 +249,10 @@ void FileLoader::AcquireFileContents(void*& pointer, unsigned int& bytes, const 
 	AAsset_close(asset);
 }
 
-double FileLoader::GetFileDate(const char* filename_utf8) const
+uint64_t FileLoader::GetFileDateUnixTimeMs(const char* filename_utf8) const
 {
 	if(!FileExists(filename_utf8))
-		return 0.0;
+		return 0;
 
 	std::wstring wstr=platform::core::Utf8ToWString(filename_utf8);
 	FILE *fp = NULL;
@@ -260,11 +260,13 @@ double FileLoader::GetFileDate(const char* filename_utf8) const
 	if(!fp)
 	{
 		//std::cerr<<"Failed to find file "<<filename_utf8<<std::endl;
-		return 0.0;
+		return 0;
 	}
 	fclose(fp);
 #if SIMUL_FILESYSTEM
-    return (double)(fs::last_write_time(filename_utf8).time_since_epoch().count())/(3600.0*24.0*1000000.0);
+	uint64_t unixTimeNs=fs::last_write_time(filename_utf8).time_since_epoch().count();
+	//to milliseconds
+    return (uint64_t)((unixTimeNs+500000)/1000000);///(3600.0*24.0*1000000.0);
 #else
 	return 0;
 #endif

@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <regex>
 #include <fmt/core.h>
-#include "basisu_comp.h"
 
 #if defined ( _WIN32 )
 #include <sys/stat.h>
@@ -1540,16 +1539,7 @@ void GeometryStore::compressNextTexture()
 	avs::Texture& avsTexture = extractedTexture.texture;
 	std::shared_ptr<PrecompressedTexture> compressionData = compressionPair->second;
 	std::string file_name = (cachePath + "/") + extractedTexture.MakeFilename(path);
-	if (compressionData->textureCompression == avs::TextureCompression::BASIS_COMPRESSED)
-	{
-		if (!ApplyBasisCompression(extractedTexture,path, compressionData, compressionStrength,  compressionQuality))
-		{
-			TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
-			texturesToCompress.erase(texturesToCompress.begin());
-			return ;
-		}
-	}
-	else if (compressionData->textureCompression == avs::TextureCompression::KTX)
+	if (compressionData->textureCompression == avs::TextureCompression::KTX)
 	{
 		if (!CompressToKtx2(extractedTexture,path, compressionData))
 		{

@@ -64,7 +64,7 @@ endif()
 add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE 
-	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ../libavstream/include ../libavstream/export_include ../TeleportAudio/src ../ClientRender/src ../thirdparty/basis_universal ${TELEPORT_PLATFORM_DIR}/Windows)
+	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ../libavstream/include ../libavstream/export_include ../TeleportAudio/src ../ClientRender/src ${TELEPORT_PLATFORM_DIR}/Windows)
  
 
 if(TELEPORT_CLIENT_USE_D3D12)
@@ -104,7 +104,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 endif()
 
 target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader) 
-target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore basisu winmm ktx)
+target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore winmm ktx)
 target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT directxtex_MT ImGui_MT fmt::fmt-header-only)
 
 target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)

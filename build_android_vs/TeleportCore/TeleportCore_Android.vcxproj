@@ -19,7 +19,6 @@
     <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp" />
     <ClCompile Include="..\..\TeleportCore\Input.cpp" />
     <ClCompile Include="..\..\TeleportCore\TeleportCore.cpp" />
-    <ClCompile Include="..\..\TeleportCore\Test.cpp" />
     <ClCompile Include="..\..\TeleportCore\Time.cpp" />
     <ClCompile Include="..\..\TeleportCore\URLParser.cpp" />
   </ItemGroup>

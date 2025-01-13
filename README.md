@@ -61,13 +61,14 @@ The Unity server plugin is currently the main testbed for Teleport servers.
 
 ## Building the Android Vulkan OpenXR Client with Visual Studio
 
-1. Build the PC client as above.
+1. Build the PC client as above. The Android client requires the PC client artifacts to build.
 2. Use Android Studio to install the appropriate NDK (see release.properties).
 3. Install the appropriate JDK from [Java Archive](https://www.oracle.com/java/technologies/javase/jdk14-archive-downloads.html) (see release.properties) and set JAVA_HOME
 4. Install the current stable [AGDE](https://developer.android.com/games/agde#downloads)
-5. Open the sln in build_android_vs in Visual Studio.
-6. Go to Tools -> Settings -> Cross Platform -> C++ -> Android
-7. Build and run.
+5. In WSL, build ktx from build_pc_client/ktx, into build_android_vs/ktx with https://github.com/KhronosGroup/KTX-Software/blob/main/BUILDING.md#android
+6. Open the sln in build_android_vs in Visual Studio.
+7. Go to Tools -> Settings -> Cross Platform -> C++ -> Android
+8. Build and run.
 
 ## Building UE4 plugin
 

@@ -136,8 +136,8 @@ namespace teleport
 				SampleCountBit sampleCount = SampleCountBit::SAMPLE_COUNT_1_BIT;
 		
 				std::shared_ptr<std::vector<std::vector<uint8_t>>> images;
-
-				CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture is compressed in.
+		
+				CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture will be compressed in on the GPU.
 		
 				float valueScale=1.0f;	// multiplier for texel values.
 			

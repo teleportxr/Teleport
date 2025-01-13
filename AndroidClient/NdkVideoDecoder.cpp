@@ -154,7 +154,8 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	renderPlatform = (platform::vulkan::RenderPlatform*)p;
 	targetTexture = (platform::vulkan::Texture*)texture;
 	physicalDeviceMemoryProperties = renderPlatform->GetVulkanGPU()->getMemoryProperties(); 
-	textureConversionEffect = p->CreateEffect("texture_conversion");
+	textureConversionEffect = p->CreateEffect();
+	textureConversionEffect->Load(renderPlatform,"texture_conversion");
 
 	//Create Decoder
 	decoder = AMediaCodec_createDecoderByType(GetCodecMimeType());

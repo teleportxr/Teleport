@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Android-arm64-v8a">
+      <Configuration>Debug</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Android-arm64-v8a">
+      <Configuration>Release</Configuration>
+      <Platform>Android-arm64-v8a</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{22A6A42B-F2BB-4324-8866-4D7E74D40C66}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>ktx</ProjectName>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <PlatformToolset>Clang</PlatformToolset>
+    <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <AndroidNdkVersion>25.2.9519653</AndroidNdkVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <OutDir>../../bin/$(Platform)\$(Configuration)\$(PlatformTarget)\</OutDir>
+    <IntDir>../../bin/int\$(Platform)\$(Configuration)\$(PlatformTarget)\$(ProjectName)\</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <OutDir>../../lib/$(Configuration)/</OutDir>
+    <IntDir>$(Configuration)</IntDir>
+    <TargetExt>.a</TargetExt>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../../build_pc_client/ktx/include;../../../build_pc_client/ktx/lib/basisu/transcoder;../../../build_pc_client/ktx/lib/basisu/zstd;../../../build_pc_client/ktx/utils;../../../build_pc_client/ktx/lib/dfdutils;../../../build_pc_client/ktx/lib/basisu;../../../build_pc_client/ktx/lib/astc-encoder/Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LARGEFILE64_SOURCE=1;_FILE_OFFSET_BITS=64;D__ANDROID__;LIBKTX;KHRONOS_STATIC;BASISD_SUPPORT_FXT1=0;BASISU_NO_ITERATOR_DEBUG_LEVEL;KTX_FEATURE_KTX1;KTX_FEATURE_KTX2;KTX_FEATURE_WRITE;BASISD_SUPPORT_KTX2_ZSTD=0;BASISD_SUPPORT_KTX2=1;BASISU_SUPPORT_SSE=0;BASISU_SUPPORT_OPENCL=0</PreprocessorDefinitions>
+      <ISystem>../../../build_pc_client/ktx/other_include</ISystem>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../../build_pc_client/ktx/include;../../../build_pc_client/ktx/lib/basisu/transcoder;../../../build_pc_client/ktx/lib/basisu/zstd;../../../build_pc_client/ktx/utils;../../../build_pc_client/ktx/lib/dfdutils;../../../build_pc_client/ktx/lib/basisu;../../../build_pc_client/ktx/lib/astc-encoder/Source;../../../build_pc_client/ktx/other_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LARGEFILE64_SOURCE=1;_FILE_OFFSET_BITS=64;D__ANDROID__;LIBKTX;KHRONOS_STATIC;BASISD_SUPPORT_FXT1=0;BASISU_NO_ITERATOR_DEBUG_LEVEL;KTX_FEATURE_KTX1;KTX_FEATURE_KTX2;KTX_FEATURE_WRITE;BASISD_SUPPORT_KTX2_ZSTD=0;BASISD_SUPPORT_KTX2=1;BASISU_SUPPORT_SSE=0;BASISU_SUPPORT_OPENCL=0</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="../../../build_pc_client/ktx/include/KHR/khr_df.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/include/ktx.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basis_sgd.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basis_transcode.cpp" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/miniz_wrapper.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_containers.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_containers_impl.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_file_headers.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_transcoder_internal.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_transcoder_uastc.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_transcoder.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu_transcoder.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/transcoder/basisu.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/zstd/zstd.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/checkheader.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/dfdutils/createdfd.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/dfdutils/colourspaces.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/dfdutils/dfd.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/dfdutils/interpretdfd.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/dfdutils/printdfd.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/dfdutils/queries.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/dfdutils/vk2dfd.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/dfdutils/vk2dfd.inl" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/dfdutils/vulkan/vk_platform.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/dfdutils/vulkan/vulkan_core.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/etcdec.cxx" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/etcunpack.cxx" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/filestream.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/filestream.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/formatsize.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/gl_format.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/hashlist.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/info.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/ktxint.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/memstream.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/memstream.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/strings.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/swap.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/texture.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/texture.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/texture2.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/texture2.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/uthash.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vk2gl.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vk_format.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vkFormat2glFormat.inl" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vkFormat2glInternalFormat.inl" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vkFormat2glType.inl" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/vkformat_check.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vkformat_enum.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/vkformat_str.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/vkformat_typesize.c" />
+    <None Include="../../../build_pc_client/ktx/lib/internalexport.def" />
+    <None Include="../../../build_pc_client/ktx/lib/internalexport_write.def" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/texture1.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/texture1.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/include/ktxvulkan.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/vk_funcs.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/vk_funcs.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/vkloader.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basis_encode.cpp" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/astc_encode.cpp" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_backend.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_backend.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_basis_file.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_basis_file.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_bc7enc.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_bc7enc.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_comp.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_comp.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_enc.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_enc.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_etc.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_etc.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_frontend.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_frontend.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_gpu_texture.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_gpu_texture.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_kernels_declares.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_kernels_imp.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_kernels_sse.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_miniz.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_opencl.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_opencl.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_pvrtc1_4.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_pvrtc1_4.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_resample_filters.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_resampler_filters.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_resampler.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_resampler.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_ssim.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_ssim.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_uastc_enc.cpp" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/basisu_uastc_enc.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/cppspmd_flow.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/cppspmd_math.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/cppspmd_math_declares.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/cppspmd_sse.h" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/basisu/encoder/cppspmd_type_aliases.h" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/writer1.c" />
+    <ClCompile Include="../../../build_pc_client/ktx/lib/writer2.c" />
+    <ClInclude Include="../../../build_pc_client/ktx/lib/version.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
