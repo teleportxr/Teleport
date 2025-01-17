@@ -3,8 +3,7 @@
 #include "v8.h"
 #include <iostream>
 #include <string>
-//#include "Platform/Windows/VisualStudioDebugOutput.h"
-//VisualStudioDebugOutput dbg(true,0);
+
 #pragma optimize("", off)
 
 class V8Worker
@@ -35,13 +34,30 @@ private:
 		std::cout<<str<<"\n";
 		info.GetReturnValue().SetEmptyString();
 	}
+    static void GetChildrenCallback(v8::Local<v8::String> property,
+                                  const v8::PropertyCallbackInfo<v8::Value>& info)
+    {
+        v8::Isolate* isolate = info.GetIsolate();
+        v8::HandleScope handleScope(isolate);
+        
+        auto self = info.Holder();
+        auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+        auto node = static_cast<SOMNode*>(wrap->Value());
+
+        auto data = static_cast<CallbackData*>(
+            v8::Local<v8::External>::Cast(info.Data())->Value()
+        );
+
+        const auto& childNodes = node->getChildNodes();
+        info.GetReturnValue().Set(data->worker->WrapNodeArray(childNodes));
+    }
 
 	static std::string ToString(v8::Isolate *isolate, v8::Local<v8::Value> value)
 	{
 		v8::String::Utf8Value utf8(isolate, value);
 		return *utf8 ? *utf8 : "";
 	}
-	static uint64_t ToUid( v8::Local<v8::Value> value)
+	static uint64_t ToUid(v8::Local<v8::Value> value)
 	{
 		if (value->IsUndefined() || value->IsNull())
 		{
@@ -123,6 +139,27 @@ private:
 
 	v8::Local<v8::Object> WrapNode(std::shared_ptr<SOMNode> node)
 	{
+	#if 1
+	
+        v8::EscapableHandleScope handle_scope(isolate);
+        v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate, context);
+        v8::Context::Scope context_scope(ctx);
+
+        // Create new instance from template
+        v8::Local<v8::ObjectTemplate> templ = v8::Local<v8::ObjectTemplate>::New(isolate, nodeTemplate);
+        v8::Local<v8::Object> obj = templ->NewInstance(ctx).ToLocalChecked();
+        
+        // Store the C++ pointer
+        obj->SetInternalField(0, v8::External::New(isolate, node.get()));
+
+        // Set basic non-accessor properties
+        obj->Set(ctx,
+            v8::String::NewFromUtf8(isolate, "nodeName").ToLocalChecked(),
+            v8::String::NewFromUtf8(isolate, node->getNodeName().c_str()).ToLocalChecked()
+        ).Check();
+
+        return handle_scope.Escape(obj);
+	#else
 		v8::EscapableHandleScope handle_scope(isolate);
 		v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate, context);
 		v8::Context::Scope context_scope(ctx);
@@ -136,7 +173,7 @@ private:
 		auto fld=v8::External::New(isolate, node.get());
 
 		obj->SetInternalField(0,fld );
-        // Add properties
+		// Add basic properties (excluding children which is handled by accessor)
         // Add UID as BigInt since it's 64-bit
         obj->Set(ctx,
             v8::String::NewFromUtf8(isolate, "uid").ToLocalChecked(),
@@ -174,7 +211,20 @@ private:
 
 		// Add other methods similarly...
 		return handle_scope.Escape(obj);
+		#endif
 	}
+    v8::Local<v8::Array> WrapNodeArray(const std::vector<std::shared_ptr<SOMNode>>& nodes)
+    {
+        v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(isolate, context);
+        v8::Local<v8::Array> array = v8::Array::New(isolate, static_cast<int>(nodes.size()));
+        
+        for (size_t i = 0; i < nodes.size(); ++i) 
+        {
+            array->Set(ctx, static_cast<uint32_t>(i), WrapNode(nodes[i])).Check();
+        }
+        
+        return array;
+    }
 	static void SetPoseCallback(const v8::FunctionCallbackInfo<v8::Value>& args)
 	{
 		v8::Isolate* isolate = args.GetIsolate();
@@ -306,7 +356,7 @@ private:
 		
 		args.GetReturnValue().Set(data->worker->WrapNode(newNode));
 	}
-
+	V8Worker::CallbackData* callbackData=nullptr;
 	void InitializeV8(const std::string &exec_name)
 	{
 		// Initialize V8
@@ -345,7 +395,7 @@ private:
 		global->Set(isolate, "log",v8::FunctionTemplate::New(isolate, LogCallback));
 
 		// Create external data for callbacks
-		auto* callbackData = new CallbackData{this, scene};
+		callbackData = new CallbackData{this, scene};
 		auto externalData = v8::External::New(isolate, callbackData);
 
 
@@ -380,7 +430,14 @@ private:
 			isolate,
 			"setPose",
 			v8::FunctionTemplate::New(isolate, SetPoseCallback, externalData)
-		);
+		); 
+		
+		nodeTempl->SetAccessor(
+            v8::String::NewFromUtf8(isolate, "children").ToLocalChecked(),
+            GetChildrenCallback,
+            nullptr,  // No setter
+            externalData
+        );
 
 		// Store templates in the global object
 		global->Set(
@@ -457,8 +514,7 @@ private:
 	bool Write(const std::string &output) const
 	{
 		// Send result back through pipe
-		DWORD bytesWritten;
-		if (!WriteFile(pipeHandle, output.c_str(),
+		if (DWORD bytesWritten;!WriteFile(pipeHandle, output.c_str(),
 					   static_cast<DWORD>(output.length()),
 					   &bytesWritten, NULL))
 		{
@@ -551,7 +607,7 @@ public:
 		ProcessMessages();
 	}
 };
-#pragma optimize("", off)
+
 int main(int argc, char *argv[])
 {
 	if (argc < 3)

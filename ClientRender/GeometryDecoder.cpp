@@ -1179,10 +1179,6 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData& geom
 	{
 		texture.compression = avs::TextureCompression::KTX;
 	}
-	else if(ext==".basis")
-	{
-		texture.compression = avs::TextureCompression::BASIS_COMPRESSED;
-	}
 	else
 	{
 		TELEPORT_WARN("Unknown texture format {0}",ext);

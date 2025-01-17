@@ -35,6 +35,8 @@ set(src_files
 	OpenXR.h
 	OpenXRRenderModel.cpp
 	OpenXRRenderModel.h
+	V8ProcessManager.h
+	V8ProcessManager.cpp
 	SessionClient.cpp
 	SessionClient.h
 	SignalingServer.cpp

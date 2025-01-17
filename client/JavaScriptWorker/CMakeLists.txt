@@ -3,17 +3,17 @@ project(JavaScriptWorker)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	# We'll get Boost, so we can have Boost Interprocess.
-	
-	set(BOOST_INCLUDE_LIBRARIES interprocess)
-	set(BOOST_ENABLE_CMAKE ON)
-	include(FetchContent)
-	FetchContent_Declare(
-	  boost
-	  GIT_REPOSITORY https://github.com/boostorg/boost.git
-	  GIT_TAG boost-1.87.0
-	)
-	FetchContent_MakeAvailable(boost)
-
+	if(${TELEPORT_BOOST})
+		set(BOOST_INCLUDE_LIBRARIES interprocess)
+		set(BOOST_ENABLE_CMAKE ON)
+		include(FetchContent)
+		FetchContent_Declare(
+		  boost
+		  GIT_REPOSITORY https://github.com/boostorg/boost.git
+		  GIT_TAG boost-1.87.0
+		)
+		FetchContent_MakeAvailable(boost)
+	endif()
 	#add_executable(boost_test boost_test.cpp)
 	#target_link_libraries(boost_test PRIVATE Boost::filesystem
 	#										 Boost::program_options)
@@ -62,10 +62,10 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	#################################################################
 	# Now we create a test host that will create and run instances of the runner.
 	add_static_executable(JavaScriptTest CONSOLE SOURCES Test.cpp test.js FOLDER ${CMAKE_CURRENT_SOURCE_DIR} )
-	
+	target_link_libraries(JavaScriptTest TeleportClient)
+	target_include_directories(JavaScriptTest PUBLIC ${CMAKE_SOURCE_DIR})
 	set_target_properties(JavaScriptTest PROPERTIES FOLDER Client)
 	add_dependencies(JavaScriptTest JavaScriptWorker)
-
 
 	# Provide the path to the Nuget-installed references, in case this is a fresh project build.
    #set_property(TARGET JavaScriptWorker PROPERTY 
