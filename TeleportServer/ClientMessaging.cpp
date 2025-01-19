@@ -457,7 +457,7 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	size_t handShakeSize = sizeof(teleport::core::Handshake);
 	if (packet.size() < handShakeSize)
 	{
-		TELEPORT_INTERNAL_CERR("Bad handshake size, IP {1}  .\n", clientIP);
+		TELEPORT_INTERNAL_CERR("Bad handshake size, IP {}.", clientIP);
 		return;
 	}
 	memcpy(&handshake, packet.data(), handShakeSize);
@@ -472,7 +472,7 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 
 	if (packet.size() !=handShakeSize+sizeof(avs::uid)* handshake.resourceCount)
 	{
-		TELEPORT_INTERNAL_CERR("Bad handshake size, IP {1}  .\n", clientIP);
+		TELEPORT_INTERNAL_CERR("Bad handshake size, IP {}.", clientIP);
 		return;
 	}
 	//Extract list of resources the client has.

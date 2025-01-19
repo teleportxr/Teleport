@@ -610,11 +610,12 @@ public:
 
 int main(int argc, char *argv[])
 {
+	const char * const *arguments=argv;
 	if (argc < 3)
 	{
-		static char *default_arg[3] = {argv[0], "1", "Test"};
+		static const char *default_arg[3] = {argv[0], "1", "Test"};
 		argc = 3;
-		argv = default_arg;
+		arguments = default_arg;
 		// std::cerr << "Usage: v8worker.exe <tabId> <pipeName>" << std::endl;
 		// return 1;
 	}
@@ -622,14 +623,14 @@ int main(int argc, char *argv[])
 	if (argc >= 4)
 	{
 		bool pause_for_debugger = false;
-		if (std::string(argv[3]) == "WAIT_FOR_DEBUGGER")
+		if (std::string(arguments[3]) == "WAIT_FOR_DEBUGGER")
 			Sleep(20000);
 	}
 #endif
 	try
 	{
-		std::string execName = argv[0];
-		std::string pipeName = argv[2];
+		std::string execName = arguments[0];
+		std::string pipeName = arguments[2];
 		// Create and run worker
 		V8Worker worker(execName, pipeName);
 		worker.Run();

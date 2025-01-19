@@ -94,7 +94,7 @@ std::string StandardizePath(const std::string &file_name,const std::string &path
 	filesystem::path path(file_name);
 	path = path.lexically_relative(path_root);
 	path = path.replace_extension("");
-	std::string p=path.generic_u8string();
+	std::string p= (const char*)path.generic_u8string().c_str();
 	std::replace(p.begin(),p.end(),' ','%');
 	std::replace(p.begin(),p.end(),'\\','/');
 	std::string r=path_root;
@@ -374,7 +374,6 @@ void GeometryStore::clear(bool freeMeshBuffers)
 	shadowMaps.clear();
 
 	texturesToCompress.clear();
-	lightNodes.clear();
 	std::filesystem::path p(cachePath);
 	for (auto const& dir_entry : std::filesystem::directory_iterator(p))
 	{
@@ -398,19 +397,24 @@ std::vector<avs::uid> GeometryStore::getNodeIDs() const
 	return getVectorOfIDs(nodes);
 }
 
+avs::Node* GeometryStore::getOrCreateNode(avs::uid nodeId)
+{
+	if (auto n = nodes.find(nodeId); n != nodes.end())
+		return n->second.get();
+	nodes.emplace(nodeId,std::make_unique<avs::Node>());
+	return nodes[nodeId].get();
+}
+
 avs::Node* GeometryStore::getNode(avs::uid nodeID)
 {
-	return getResource(nodes, nodeID);
+	auto n = nodes.find(nodeID);
+	return (n != nodes.end()) ? n->second.get() : nullptr;
 }
 
 const avs::Node* GeometryStore::getNode(avs::uid nodeID) const
 {
-	return getResource(nodes, nodeID);
-}
-
-const std::map<avs::uid, avs::Node>& GeometryStore::getNodes() const
-{
-	return nodes;
+	auto n = nodes.find(nodeID);
+	return (n != nodes.end()) ? n->second.get() : nullptr;
 }
 
 avs::Skeleton* GeometryStore::getSkeleton(avs::uid skeletonID, avs::AxesStandard standard)
@@ -545,11 +549,6 @@ const teleport::core::FontAtlas* GeometryStore::getFontAtlas(avs::uid u) const
 	return &t->second.fontAtlas;
 }
 
-const std::map<avs::uid,avs::LightNodeResources>& GeometryStore::getLightNodes() const
-{
-	return lightNodes;
-}
-
 bool GeometryStore::hasNode(avs::uid id) const
 {
 	return nodes.find(id) != nodes.end();
@@ -579,38 +578,11 @@ void GeometryStore::setNodeParent(avs::uid id, avs::uid parent_id, teleport::cor
 {
 	if (nodes.find(id) == nodes.end())
 		return;
-	if(parent_id==nodes[id].parentID)
+	if(parent_id==nodes[id]->parentID)
 		return;
-	nodes[id].localTransform.position = relPose.position;
-	nodes[id].localTransform.rotation = relPose.orientation;
-	nodes[id].parentID = parent_id;
-}
-
-bool GeometryStore::storeNode(avs::uid id, avs::Node& newNode)
-{
-	// test:
-	switch(newNode.data_type)
-	{
-		case avs::NodeDataType::Mesh:
-		if(newNode.data_uid==0)
-		{
-			// This is not valid. if type is mesh, it must have a data uid.
-			TELEPORT_WARN("Invalid node {0} {1}: data_uid is zero.",newNode.name,id);
-			return false;
-		}
-		default:
-		break;
-	};
-	nodes[id] = newNode;
-	if (newNode.parentID != 0)
-	{
-		avs::Node* parent = getNode(newNode.parentID);
-	}
-	if(newNode.data_type == avs::NodeDataType::Light)
-	{
-		lightNodes[id]=avs::LightNodeResources{id, newNode.data_uid};
-	}
-	return true;
+	nodes[id]->localTransform.position = relPose.position;
+	nodes[id]->localTransform.rotation = relPose.orientation;
+	nodes[id]->parentID = parent_id;
 }
 
 void GeometryStore::storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard)
@@ -1481,7 +1453,6 @@ void GeometryStore::storeShadowMap(avs::uid id, const std::string & path, std::t
 void GeometryStore::removeNode(avs::uid id)
 {
 	nodes.erase(id);
-	lightNodes.erase(id);
 }
 
 void GeometryStore::updateNodeTransform(avs::uid id, avs::Transform& newLocalTransform)
@@ -1490,7 +1461,7 @@ void GeometryStore::updateNodeTransform(avs::uid id, avs::Transform& newLocalTra
 	if(nodeIt == nodes.end())
 		return;
 
-	nodeIt->second.localTransform = newLocalTransform;
+	nodeIt->second->localTransform = newLocalTransform;
 	//nodeIt->second.//globalTransform= newGlobalTransform;
 }
 
@@ -1548,7 +1519,7 @@ void GeometryStore::compressNextTexture()
 			return ;
 		}
 	}
-	else 
+	else if (compressionData->textureCompression == avs::TextureCompression::PNG)
 	{
 		size_t n = 0;
 		bool breakout = false;
@@ -1679,6 +1650,12 @@ void GeometryStore::compressNextTexture()
 		{
 			TELEPORT_WARN("Offset mismatched in texture save.");
 		}
+	}
+	else
+	{
+		TELEPORT_WARN("Invalid compression {} for texture {}.",(int)compressionData->textureCompression,extractedTexture.getName());
+		texturesToCompress.erase(texturesToCompress.begin());
+		return ;
 	}
 	if (compressionData->textureCompression == avs::TextureCompression::UNCOMPRESSED)
 	{
@@ -1932,7 +1909,7 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 	std::vector<std::string> resources;
 	for (auto const& dir_entry : std::filesystem::recursive_directory_iterator{ fspath })
 	{
-		std::string extn= dir_entry.path().extension().u8string();
+		std::string extn= (const char*)dir_entry.path().extension().u8string().c_str();
 		if (extn.length()>1&&search_str.find(extn) < search_str.length())
 		{
 			string res=dir_entry.path().generic_string();
@@ -2096,7 +2073,7 @@ bool GeometryStore::EnsureResourceIsLoaded(avs::uid u)
 avs::uid GeometryStore::LoadResourceFromFile(std::string filename, avs::uid u)
 {
 	std::filesystem::path path(filename);
-	std::string ext=path.extension().u8string();
+	std::string ext=(const char*)path.extension().u8string().c_str();
 	std::filesystem::path rel=path.lexically_relative(cachePath);
 	avs::AxesStandard axesStandard=avs::AxesStandard::EngineeringStyle;
 	std::string path_root=cachePath;
@@ -2111,7 +2088,7 @@ avs::uid GeometryStore::LoadResourceFromFile(std::string filename, avs::uid u)
 		path_root += "/gl/";
 		axesStandard = avs::AxesStandard::GlStyle;
 	}
-	std::string fn=rel.u8string();
+	std::string fn=(const char*)rel.u8string().c_str();
 	if(ext==".teleport_anim")
 	{
 		if(loadResourceBinary(filename,path_root,animations.at(axesStandard))!=u)

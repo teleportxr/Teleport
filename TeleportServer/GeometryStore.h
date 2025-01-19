@@ -72,9 +72,9 @@ namespace teleport
 			const char* getNodeName(avs::uid nodeID) const;
 
 			std::vector<avs::uid> getNodeIDs() const;
+			avs::Node* getOrCreateNode(avs::uid nodeId);
 			avs::Node* getNode(avs::uid nodeID);
 			const avs::Node* getNode(avs::uid nodeID) const;
-			const std::map<avs::uid, avs::Node>& getNodes() const;
 
 			avs::Skeleton* getSkeleton(avs::uid skeletonID, avs::AxesStandard standard);
 			const avs::Skeleton* getSkeleton(avs::uid skeletonID, avs::AxesStandard standard) const;
@@ -106,9 +106,6 @@ namespace teleport
 			const core::TextCanvas* getTextCanvas(avs::uid u) const;
 			const core::FontAtlas* getFontAtlas(avs::uid u) const;
 
-			//Returns a list of all light nodes that need to be streamed to the client.
-			const std::map<avs::uid, avs::LightNodeResources>& getLightNodes() const;
-
 			//Returns whether there is a node stored with the passed id.
 			bool hasNode(avs::uid id) const;
 			//Returns whether there is a mesh stored with the passed id.
@@ -121,7 +118,6 @@ namespace teleport
 			bool hasShadowMap(avs::uid id) const;
 
 			void setNodeParent(avs::uid id, avs::uid parent_id, teleport::core::Pose relPose);
-			bool storeNode(avs::uid id, avs::Node& newNode);
 			void storeSkeleton(avs::uid id, avs::Skeleton& newSkeleton, avs::AxesStandard sourceStandard);
 			bool storeAnimation(avs::uid id, const std::string &path, teleport::core::Animation &animation, avs::AxesStandard sourceStandard);
 			bool storeMesh(avs::uid id, const std::string & path, std::time_t lastModified, const InteropMesh *iMesh, avs::AxesStandard standard, bool verify=false);
@@ -178,7 +174,7 @@ namespace teleport
 			uint8_t compressionQuality = 1;
 
 			// Mutable, non-resource assets.
-			std::map<avs::uid, avs::Node> nodes;
+			std::map<avs::uid, std::unique_ptr<avs::Node>> nodes;
 			std::map<avs::uid, core::TextCanvas> textCanvases;
 
 			// Static, resource assets.
@@ -192,8 +188,6 @@ namespace teleport
 
 			std::map<avs::uid, std::shared_ptr<PrecompressedTexture>> texturesToCompress; //Map of textures that need compressing. <ID of the texture; file path to store the basis file>
 
-			std::map<avs::uid, avs::LightNodeResources> lightNodes; //List of ALL light nodes; prevents having to search for them every geometry tick.
-		
 			std::map<avs::uid, std::string> uid_to_path;
 			std::map<std::string, avs::uid> path_to_uid;
 			bool LoadResourceAtPath(std::string p, avs::uid u);

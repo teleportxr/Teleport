@@ -119,7 +119,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
         }
     }
 	filesystem::path ttf_path(ttf_path_utf8.c_str());
-	avsTexture.name = ttf_path.filename().u8string();
+	avsTexture.name = (const char*)ttf_path.filename().generic_u8string().c_str();
 	avsTexture.width=width;
 	avsTexture.height=height;
 	avsTexture.depth=1;

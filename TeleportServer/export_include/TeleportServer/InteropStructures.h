@@ -91,42 +91,35 @@ struct InteropNode
 	const char *url;					// 204
 	const char *query_url;				// 212
 #if TELEPORT_INTERNAL_INTEROP
-	operator avs::Node() const
+	void InitNode(avs::Node *n) const
 	{
-		return
-		{
-			name,
+		n->name=name;
+		n->localTransform;
+		n->stationary=(stationary!=0);
 
-			localTransform,
+		n->holder_client_id=holder_client_id;
 
-			stationary!=0,
+		n->priority=priority;
 
-			holder_client_id,
+		n->parentID=parentID;
 
-			priority,
+		n->data_type=dataType;
+		n->data_uid=dataID;
 
-			parentID,
+		n->materials={materialIDs, materialIDs + materialCount};
+		n->skeletonNodeID=skeletonID;
+		n->joint_indices={jointIndices, jointIndices + jointCount};
+		n->animations={animationIDs, animationIDs + animationCount};
 
-			dataType,
-			dataID,
-
-			{materialIDs, materialIDs + materialCount},
-			skeletonID,
-			{jointIndices, jointIndices + jointCount},
-			{animationIDs, animationIDs + animationCount},
-
-			renderState,
-
-			lightColour,
-			lightRadius,
-			lightDirection,
-			lightType,
-			lightRange,
-			url ? url : "",
-			query_url ? query_url : ""
-		};
-
-
+		n->renderState=renderState,
+	
+		n->lightColour		=lightColour;
+		n->lightRadius		=lightRadius;
+		n->lightDirection	=lightDirection;
+		n->lightType		=lightType;
+		n->lightRange		=lightRange;
+		n->url				=url?url : "";
+		n->query_url		=query_url ? query_url : "";
 	}
 #endif
 };

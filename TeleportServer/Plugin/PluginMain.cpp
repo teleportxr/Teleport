@@ -27,6 +27,11 @@
 #include "TeleportAudio/CustomAudioStreamTarget.h"
 
 #include <regex>
+#if __cplusplus>=202002L
+#include <format>
+#else
+#include <fmt/core.h>
+#endif
 
 using namespace teleport;
 using namespace server;
@@ -483,12 +488,16 @@ TELEPORT_EXPORT void Server_SetCompressionLevels(uint8_t compressionStrength, ui
 }
 
 /// Store the given node in memory.
-TELEPORT_EXPORT bool Server_StoreNode(avs::uid id,const InteropNode &node)
+TELEPORT_EXPORT bool Server_StoreNode(avs::uid id,const InteropNode &interopNode)
 {
 	//TELEPORT_PROFILE_AUTOZONE;
-	avs::Node avsNode(node);
-	return GeometryStore::GetInstance().storeNode(id, avsNode);
+	avs::Node *avsNode=GeometryStore::GetInstance().getOrCreateNode(id);
+	if(!avsNode)
+		return false;
+	interopNode.InitNode(avsNode);
+	return true;
 }
+
 /// Store the given node in memory.
 TELEPORT_EXPORT bool Server_UpdateNodeTransform(avs::uid id,const avs::Transform &tr)
 {
@@ -742,8 +751,11 @@ TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t
 	}
 	// See https://en.cppreference.com/w/cpp/utility/format/spec
 	float prog=teleport::server::GetCompressionProgress();
+#if __cplusplus>=202002L
+	std::string msg=std::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
+#else
 	std::string msg=fmt::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
-
+#endif
 	size_t sz=std::min(len-1, msg.length());
 	memcpy(str, msg.data(), sz);
 	str[sz]=0;

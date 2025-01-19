@@ -235,7 +235,7 @@ bool ClientManager::shutdown()
 
 	for (auto &uid : GetClientUids())
 	{
-		auto &client = GetClient(uid);
+		auto client = GetClient(uid);
 		if (!client)
 			continue;
 		if (client->GetConnectionState() != UNCONNECTED)

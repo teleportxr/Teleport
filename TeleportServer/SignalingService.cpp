@@ -69,7 +69,7 @@ void SignalingService::ReceiveWebSocketsMessage(avs::uid clientID, std::string m
 {
 	//TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
 	auto readSignalingClients = signalingClients.readAccess();
-	auto &c = readSignalingClients->find(clientID);
+	auto c = readSignalingClients->find(clientID);
 	if(c!=readSignalingClients->end())
 	{
 		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);
@@ -85,7 +85,7 @@ void SignalingService::ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::ve
 {
 	//TELEPORT_CERR << "SignalingService::ReceiveWebSocketsMessage." << std::endl;
 	auto readSignalingClients = signalingClients.readAccess();
-	auto &c = readSignalingClients->find(clientID);
+	auto c = readSignalingClients->find(clientID);
 	if (c != readSignalingClients->end())
 	{
 		std::vector<uint8_t> b(bin.size());
@@ -102,7 +102,7 @@ void SignalingService::ReceiveBinaryWebSocketsMessage(avs::uid clientID, std::ve
 bool SignalingService::GetNextMessage(avs::uid clientID, std::string& msg)
 {
 	auto readSignalingClients = signalingClients.readAccess();
-	auto &c = readSignalingClients->find(clientID);
+	auto c = readSignalingClients->find(clientID);
 	if (c != readSignalingClients->end()&&!c->second->messagesToPassOn.empty())
 	{
 		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);
@@ -115,7 +115,7 @@ bool SignalingService::GetNextMessage(avs::uid clientID, std::string& msg)
 bool SignalingService::GetNextBinaryMessage(avs::uid clientID, std::vector<uint8_t>& bin)
 {
 	auto readSignalingClients = signalingClients.readAccess();
-	auto &c = readSignalingClients->find(clientID);
+	auto c = readSignalingClients->find(clientID);
 	if (c != readSignalingClients->end() && !c->second->binaryMessagesReceived.empty())
 	{
 		std::lock_guard<std::mutex> lock(c->second->webSocketsMessagesMutex);

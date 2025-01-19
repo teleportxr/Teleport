@@ -16,7 +16,11 @@
 #undef TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_INTERNAL_CHECKS 0
 #else
+#if __cplusplus>=202002L
+#include <format>
+#else
 #include <fmt/core.h>
+#endif
 #endif
 #endif
 #ifdef _MSC_VER
@@ -27,21 +31,38 @@ namespace teleport
 {
 	extern void DebugBreak();
 #if TELEPORT_INTERNAL_CHECKS
-	template<typename... Args> void InternalWarn(const char *file,int line,const char *txt, Args... args)
+#if __cplusplus>=202002L
+	template <typename... Args>
+	void InternalWarn(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args&&... args)
 	{
-		std::string str=fmt::format("{0} ({1}): warning: {2}", file, line, txt);
-		std::cerr<<fmt::format(str,args...).c_str() << "\n";
+		std::string str1 = std::format("{} ({}): warning: {}: ", file, line,function);
+		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
+		std::cerr << str1<<str2 << "\n";
 	}
-	template<typename... Args> void InternalInfo(const char *file,int line,const char *txt, Args...args)
+	template <typename... Args>
+	void InternalInfo(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args... args)
 	{
-		std::string str = fmt::format("{0} ({1}): info: {2}", file, line, txt);
-		std::cout<<fmt::format(str,args...).c_str() << "\n";
+		std::string str1 = std::format("{} ({}): info: {}: ", file, line,function);
+		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
+		std::cerr << str1<<str2 << "\n";
 	}
 #else
-	template<typename... Args> void InternalWarn(const char *,int,const char *, Args... )
+	template<typename... Args> void InternalWarn(const char *file,int line, const char *function,const char *txt, Args... args)
+	{
+		std::string str = fmt::format("{0} ({1}): warning: {2}: {3}", file, line,function, txt);
+		std::cerr<<fmt::format(str,args...).c_str() << "\n";
+	}
+	template<typename... Args> void InternalInfo(const char *file,int line, const char *function,const char *txt, Args...args)
+	{
+		std::string str = fmt::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
+		std::cout<<fmt::format(str,args...).c_str() << "\n";
+	}
+#endif
+#else
+	template<typename... Args> void InternalWarn(const char *,int,const char *,const char *, Args... )
 	{
 	}
-	template<typename... Args> void InternalInfo(const char *,int,const char *, Args... )
+	template<typename... Args> void InternalInfo(const char *,int,const char *,const char *, Args... )
 	{
 	}
 #endif
@@ -65,12 +86,12 @@ namespace teleport
 #define TELEPORT_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
 
 #if TELEPORT_INTERNAL_CHECKS
-	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...) {teleport::InternalWarn( __FILE__,__LINE__,#txt,##__VA_ARGS__);DEBUG_BREAK_ONCE}
+	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...) {teleport::InternalWarn( __FILE__,__LINE__, __func__, txt, ##__VA_ARGS__);DEBUG_BREAK_ONCE}
 		void TeleportLogUnsafe(const char* fmt, ...);
 	#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
 		{ TeleportLogUnsafe(__VA_ARGS__); }
-	#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn(__FILE__,__LINE__,#txt,##__VA_ARGS__)
-	#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo(__FILE__,__LINE__,#txt,##__VA_ARGS__)
+	#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn(__FILE__,__LINE__, __func__, txt, ##__VA_ARGS__)
+	#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo(__FILE__,__LINE__, __func__, txt, ##__VA_ARGS__)
 
 #else
 	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...)
@@ -81,10 +102,13 @@ namespace teleport
 #define TELEPORT_ASSERT(c)\
 	if(!(c)){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}
 	
+
+constexpr inline const char * const verify_failed="Verify failed for {0}";
+
 #define VERIFY_EQUALITY_CHECK(a, b)          \
 if (b != a.b)                                 \
 {                                             \
-	TELEPORT_WARN("Verify failed for {0}", #b); \
+	TELEPORT_WARN(verify_failed, #b); \
 	return false;                             \
 }
 

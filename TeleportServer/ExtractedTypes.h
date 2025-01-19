@@ -14,6 +14,7 @@
 #include "Font.h"
 #include "TeleportCore/StringFunctions.h"
 #include "Texture.h"
+#include "TeleportCore/Logging.h"
 
 namespace teleport
 {
@@ -175,13 +176,18 @@ namespace teleport
 					s= ".ktx2";
 				else if (texture.compression == avs::TextureCompression::PNG)
 					s= ".texture";
+				else
+				{
+					TELEPORT_WARN("Invalid texture compression {}",(int)texture.compression);
+					return "";
+				}
 				file_name+=extension;
 				return file_name;
 			}
 
 			void SetNameFromPath(std::string path)
 			{
-				texture.name = std::filesystem::path(path).filename().generic_u8string();
+				texture.name = std::filesystem::path(path).filename().generic_string();
 				size_t hash_pos = texture.name.rfind('#');
 				size_t tilde_pos=texture.name.rfind('~');
 				if(hash_pos<tilde_pos)
@@ -204,7 +210,7 @@ namespace teleport
 			friend OutStream& operator<< (OutStream& out, const ExtractedTexture& textureData)
 			{
 				size_t extPos=out.filename.rfind(".");
-				string ext=textureData.extension;
+				std::string ext=textureData.extension;
 				if (ext==".basis")
 				{
 					out.write((const char*)textureData.texture.compressedData.data(),textureData.texture.compressedData.size());
@@ -231,7 +237,12 @@ namespace teleport
 			friend InStream& operator>> (InStream& in, ExtractedTexture& textureData)
 			{
 				size_t extPos=in.filename.rfind(".");
-				string ext=in.filename.substr(extPos,in.filename.length()-extPos);
+				if(extPos>=in.filename.length())
+				{
+					TELEPORT_WARN("Filename {} has no extension.",in.filename);
+					return in;
+				}
+				std::string ext=in.filename.substr(extPos,in.filename.length()-extPos);
 				if (ext==".ktx2"||ext==".ktx")
 				{
 					LoadAsKtxFile(textureData, in.readData(), in.filename);

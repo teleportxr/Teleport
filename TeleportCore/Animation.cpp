@@ -5,7 +5,6 @@
 using namespace teleport;
 using namespace core;
 
-
 bool TransformKeyframeList::operator == (const TransformKeyframeList &t) const
 {
 	VERIFY_EQUALITY_CHECK(t, boneIndex);
