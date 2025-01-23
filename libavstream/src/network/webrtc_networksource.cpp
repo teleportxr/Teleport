@@ -702,7 +702,10 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		{
 			dcIndex = i;
 			if(force_unframed)
+			{
 				stream.framed=false;
+				stream.expects_frame_info=true;
+			}
 		}
 	}
 	if (dcIndex < 0)
@@ -753,7 +756,29 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should implement avs::IOInterface.\n";
 					return;
 				}
-				auto result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+				avs::Result result=avs::Result::OK;
+				if(stream.expects_frame_info)
+				{
+					StreamPayloadInfo frameInfo;
+					frameInfo.frameID = 0;
+					frameInfo.dataSize = b.size();
+					frameInfo.connectionTime = TimerUtil::GetElapsedTimeS();
+					frameInfo.broken = false;
+					size_t bufferSize = sizeof(StreamPayloadInfo) + b.size()-sizeof(size_t);
+					if (bufferSize > q_ptr()->m_tempBuffer.size())
+					{
+						q_ptr()->m_tempBuffer.resize(bufferSize);
+					}
+
+					memcpy(q_ptr()->m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
+					//skip over the payload size, go straight to the payload type:
+					memcpy(&q_ptr()->m_tempBuffer[sizeof(StreamPayloadInfo)], b.data()+sizeof(size_t), b.size()-sizeof(size_t));
+					result = outputNode->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
+				}
+				else
+				{
+				result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+				}
 				if (numBytesWrittenToOutput!=b.size())
 				{
 					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP onMessage: {0}: failed to write all to output Node.\n",stream.label);

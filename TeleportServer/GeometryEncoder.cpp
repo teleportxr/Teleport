@@ -307,68 +307,76 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 		put(node->holder_client_id);
 
 		put(node->priority);
-		put(node->data_uid);
-		put(node->data_type);
-
-		put(node->skeletonNodeID);
-		put(node->joint_indices.size());
-		if (node->joint_indices.size())
-		{
-			for (int16_t index : node->joint_indices)
-			{
-				put(index);
-			}
-		}
 		put(node->parentID);
-
-		put(node->animations.size());
-		for (avs::uid id : node->animations)
-		{
-			put(id);
-		}
-		// If the node's priority is less than the *client's* minimum, we don't want
-		// to send its mesh.
-		if (node->data_type == avs::NodeDataType::Mesh)
-		{
-			put(node->materials.size());
-			for (avs::uid id : node->materials)
-			{
-				put(id);
-			}
-			put(node->renderState.lightmapScaleOffset);
-			put(node->renderState.globalIlluminationUid);
-			// put(node->renderState.lightmapTextureCoordinate);
-		}
+		
+		// components.
+		if(node->data_type==avs::DataType::None)
+			put((uint8_t)(0));
 		else
 		{
-			TELEPORT_ASSERT(node->materials.size() == 0);
-		}
+			put((uint8_t)(1));
+			put(node->data_type);
+			// If the node's priority is less than the *client's* minimum, we don't want
+			// to send its mesh.
+			if (node->data_type == avs::NodeDataType::Mesh)
+			{
+				put(node->data_uid);
 
-		if (node->data_type == avs::NodeDataType::Light)
-		{
-			put(node->lightColour);
-			put(node->lightRadius);
-			put(node->lightRange);
-			vec3 lightDirection = node->lightDirection;
-			avs::ConvertPosition(serverSettings.serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
-			put(lightDirection);
-			put(node->lightType);
-		}
-		if (node->data_type == avs::NodeDataType::TextCanvas)
-		{
-			// nothing node-specific to add at present.
-		}
-		if (node->data_type == avs::NodeDataType::Skeleton)
-		{
-		}
-		if (node->data_type == avs::NodeDataType::Link)
-		{
-			size_t urlLength = node->url.length();
-			put(urlLength);
-			put((uint8_t *)node->url.data(), urlLength);
-			size_t queryLength = node->query_url.length();
-			put(queryLength);
-			put((uint8_t *)node->query_url.data(), queryLength);
+				put(node->skeletonNodeID);
+				put(node->joint_indices.size());
+				if (node->joint_indices.size())
+				{
+					for (int16_t index : node->joint_indices)
+					{
+						put(index);
+					}
+				}
+
+				put(node->animations.size());
+				for (avs::uid id : node->animations)
+				{
+					put(id);
+				}
+				put(node->materials.size());
+				for (avs::uid id : node->materials)
+				{
+					put(id);
+				}
+				put(node->renderState.lightmapScaleOffset);
+				put(node->renderState.globalIlluminationUid);
+				// put(node->renderState.lightmapTextureCoordinate);
+			}
+			else
+			{
+				TELEPORT_ASSERT(node->materials.size() == 0);
+			}
+
+			if (node->data_type == avs::NodeDataType::Light)
+			{
+				put(node->lightColour);
+				put(node->lightRadius);
+				put(node->lightRange);
+				vec3 lightDirection = node->lightDirection;
+				avs::ConvertPosition(serverSettings.serverAxesStandard, geometryStreamingService->getClientAxesStandard(), lightDirection);
+				put(lightDirection);
+				put(node->lightType);
+			}
+			if (node->data_type == avs::NodeDataType::TextCanvas)
+			{
+				// nothing node-specific to add at present.
+			}
+			if (node->data_type == avs::NodeDataType::Skeleton)
+			{
+			}
+			if (node->data_type == avs::NodeDataType::Link)
+			{
+				size_t urlLength = node->url.length();
+				put(urlLength);
+				put((uint8_t *)node->url.data(), urlLength);
+				size_t queryLength = node->query_url.length();
+				put(queryLength);
+				put((uint8_t *)node->query_url.data(), queryLength);
+			}
 		}
 		geometryStreamingService->encodedResource(uid);
 	}

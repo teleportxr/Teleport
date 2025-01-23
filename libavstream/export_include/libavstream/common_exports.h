@@ -79,7 +79,8 @@ namespace avs
 		TextCanvas,
 		SubScene,
 		Skeleton,
-		Link
+		Link,
+		Script
 	};
 
 	enum class GeometryPayloadType : uint8_t

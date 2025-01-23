@@ -1277,6 +1277,8 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 	avs::Node node;
 
 	size_t nameLength = NextUint64;
+	if(nameLength>=geometryDecodeData.data.size()-8)
+		return avs::Result::Failed;
 	node.name.resize(nameLength);
 	copy<char>(node.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 
@@ -1286,50 +1288,55 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 	node.stationary =(NextByte)!=0;
 	node.holder_client_id = NextUint64;
 	node.priority = NextUint32;
-	node.data_uid = NextUint64;
-	node.data_type = static_cast<avs::NodeDataType>(NextByte);
-
-	node.skeletonNodeID = NextUint64;
-	NextList(size_t, int16_t, node.joint_indices)
 	node.parentID = NextUint64;
-	NextList(size_t,avs::uid,node.animations)
 
-	switch(node.data_type)
+	size_t numComponents = (size_t)NextByte;
+	for(size_t i=0;i<numComponents;i++)
 	{
-		case avs::NodeDataType::Mesh:
-		{
-			uint64_t materialCount = NextUint64;
-			node.materials.reserve(materialCount);
-			for(uint64_t j = 0; j < materialCount; ++j)
-			{
-				node.materials.push_back(NextUint64);
-			}
-			node.renderState.lightmapScaleOffset	=NextVec4;
-			node.renderState.globalIlluminationUid	=NextUint64;
-			//node.renderState.lightmapTextureCoordinate=NextByte;
-		}
-		break;
-		case avs::NodeDataType::Light:
-			node.lightColour	= NextVec4;
-			node.lightRadius	= NextFloat;
-			node.lightRange		= NextFloat;
-			node.lightDirection = NextVec3;
-			node.lightType		= NextByte;
-			break;
-		case avs::NodeDataType::Link:
-			{
-				size_t url_length=NextUint64;
-				node.url.resize(url_length);
-				copy<char>(node.url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, url_length);
-				size_t query_length = NextUint64;
-				node.query_url.resize(query_length);
-				copy<char>(node.query_url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, query_length);
-			}
-		break;
-		default:
-			break;
-	};
+		node.data_type = static_cast<avs::NodeDataType>(NextByte);
 
+		switch(node.data_type)
+		{
+			case avs::NodeDataType::Mesh:
+			{
+				node.data_uid = NextUint64;
+
+				node.skeletonNodeID = NextUint64;
+				NextList(size_t, int16_t, node.joint_indices)
+	
+				NextList(size_t,avs::uid,node.animations)
+				uint64_t materialCount = NextUint64;
+				node.materials.reserve(materialCount);
+				for(uint64_t j = 0; j < materialCount; ++j)
+				{
+					node.materials.push_back(NextUint64);
+				}
+				node.renderState.lightmapScaleOffset	=NextVec4;
+				node.renderState.globalIlluminationUid	=NextUint64;
+				//node.renderState.lightmapTextureCoordinate=NextByte;
+			}
+			break;
+			case avs::NodeDataType::Light:
+				node.lightColour	= NextVec4;
+				node.lightRadius	= NextFloat;
+				node.lightRange		= NextFloat;
+				node.lightDirection = NextVec3;
+				node.lightType		= NextByte;
+				break;
+			case avs::NodeDataType::Link:
+				{
+					size_t url_length=NextUint64;
+					node.url.resize(url_length);
+					copy<char>(node.url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, url_length);
+					size_t query_length = NextUint64;
+					node.query_url.resize(query_length);
+					copy<char>(node.query_url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, query_length);
+				}
+			break;
+			default:
+				break;
+		};
+	}
 	geometryDecodeData.target->CreateNode(geometryDecodeData.server_or_cache_uid,uid, node);
 	
 	return avs::Result::OK;

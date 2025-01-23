@@ -23,6 +23,7 @@ namespace avs
 		std::string outputName;
 		bool framed = false;
 		bool outgoing = false;
+		bool expects_frame_info=false;
 	};
 
 	/*! Network source parameters. */

@@ -301,7 +301,7 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 
 		assert(node);
 		assert(stream.buffer.size() >= stream.chunkSize);
-		static uint64_t frameID = 0;
+	
 		if (IOInterface* nodeIO = dynamic_cast<IOInterface*>(node))
 		{
 			size_t bufferSize = stream.buffer.size();
@@ -719,7 +719,7 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 		});
 	auto& stream = q_ptr()->m_streams[idToStreamIndex[id]];
 	if(stream.canReceive)
-	dc->onMessage([this,  id, streamIndex](rtc::binary b)
+		dc->onMessage([this,  id, streamIndex](rtc::binary b)
 		{
 			ServerDataChannel& dataChannel = dataChannels[id];
 	//	// data holds either std::string or rtc::binary

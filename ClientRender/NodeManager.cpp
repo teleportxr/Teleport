@@ -30,7 +30,6 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 
 NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
 {
-	using teleport::core::Pose;
 	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
 }
 

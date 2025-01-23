@@ -23,9 +23,7 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	  mIndexBufferManager(c_uid, &clientrender::IndexBuffer::Destroy),
 	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
-	using teleport::core::Pose;
 	flecs_world.set_entity_range(1, 50000000);
-	//ECS_COMPONENT(flecs_world, Pose);
 	auto addFn = std::bind(&Renderer::AddNodeToRender,Renderer::GetRenderer(), c_uid, std::placeholders::_1);
 	mNodeManager.SetFunctionAddNodeForRender(addFn);
 	auto removeFn = std::bind(&Renderer::RemoveNodeFromRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);

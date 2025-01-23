@@ -35,11 +35,6 @@ namespace teleport
 {
 	namespace clientrender
 	{
-		struct LocalGlobalPose
-		{
-			teleport::core::Pose localPose;
-			teleport::core::Pose globalPose;
-		};
 		struct AVSTexture
 		{
 			virtual ~AVSTexture() = default;
