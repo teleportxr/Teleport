@@ -9,7 +9,7 @@
 //#define JSON_NOEXCEPTION 1
 #include <nlohmann/json.hpp>
 using nlohmann::json;
-
+#pragma optimize("",off)
 #include <fmt/core.h>
 
 using namespace teleport;

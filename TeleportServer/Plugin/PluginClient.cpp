@@ -272,7 +272,7 @@ TELEPORT_EXPORT bool Client_UnstreamNode(avs::uid clientID, avs::uid nodeID)
 	return client->clientMessaging->GetGeometryStreamingService().unstreamNode(nodeID);
 }
 
-TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core::MovementUpdate* updates, int numUpdates)
+TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, avs::uid* update_node_uids, int numUpdates)
 {
 	TELEPORT_PROFILE_AUTOZONE;
 	auto client = ClientManager::instance().GetClient(clientID);
@@ -281,23 +281,13 @@ TELEPORT_EXPORT void Client_UpdateNodeMovement(avs::uid clientID, teleport::core
 		TELEPORT_CERR << "Failed to update node movement for Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-
-	std::vector<teleport::core::MovementUpdate> updateList(numUpdates);
-	auto axesStandard = client->clientMessaging->getClientNetworkContext()->axesStandard;
-	if(axesStandard==avs::AxesStandard::NotInitialized)
-		return;
+	std::vector<avs::uid> updateList(numUpdates);
 	for(int i = 0; i < numUpdates; i++)
 	{
-		updateList[i] = updates[i];
-
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].position);
-		avs::ConvertRotation(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].rotation);
-		avs::ConvertScale	(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].scale);
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].velocity);
-		avs::ConvertPosition(avs::AxesStandard::UnityStyle, axesStandard, updateList[i].angularVelocityAxis);
+		updateList[i] = update_node_uids[i];
 	}
 
-	client->clientMessaging->updateNodeMovement(updateList);
+	client->clientMessaging->forceUpdateNodeMovement(updateList);
 }
 
 TELEPORT_EXPORT void Client_UpdateNodeEnabledState(avs::uid clientID, teleport::core::NodeUpdateEnabledState* updates, int numUpdates)

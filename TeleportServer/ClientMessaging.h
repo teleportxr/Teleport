@@ -92,7 +92,8 @@ namespace teleport
 
 			void sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd);
 			void sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids);
-
+			
+			void forceUpdateNodeMovement(const std::vector<avs::uid>& updateList);
 			void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
 			void updateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState>& updateList);
 			void setNodeHighlighted(avs::uid nodeID, bool isHighlighted);
@@ -156,6 +157,9 @@ namespace teleport
 			// A pipeline on the main thread to receive messages.
 			avs::GenericDecoder MessageDecoder;
 			avs::Pipeline messagePipeline;
+
+			// forced movement updates:
+			std::set<avs::uid> nodes_to_force_update_movement;
 
 			friend class ClientManager;
 

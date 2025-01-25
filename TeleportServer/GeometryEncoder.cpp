@@ -278,7 +278,7 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 	GeometryStore *geometryStore = &GeometryStore::GetInstance();
 	// Place payload type onto the buffer.
 	for (int i = 0; i < (int)nodeUids.size(); i++)
-	{
+	{ 
 		avs::uid uid = nodeUids[i];
 		avs::Node *node = geometryStore->getNode(uid);
 		if (!node)
@@ -310,7 +310,7 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 		put(node->parentID);
 		
 		// components.
-		if(node->data_type==avs::DataType::None)
+		if(node->data_type==avs::NodeDataType::None)
 			put((uint8_t)(0));
 		else
 		{

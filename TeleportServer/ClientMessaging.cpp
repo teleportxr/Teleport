@@ -91,6 +91,15 @@ void ClientMessaging::sendStreamingControlMessage(const std::string& msg)
 	// messages to be sent as text e.g. WebRTC config.
 }
 
+
+void ClientMessaging::forceUpdateNodeMovement(const std::vector<avs::uid>& updateList)
+{
+	if(!updateList.size())
+		return;
+	for(auto u:updateList)
+		nodes_to_force_update_movement.insert(u);
+}
+	
 void ClientMessaging::sendNodeMovementUpdates()
 {
 	auto axesStandard = getClientNetworkContext()->axesStandard;
@@ -98,8 +107,16 @@ void ClientMessaging::sendNodeMovementUpdates()
 		return;
 	std::set<avs::uid> nodes_to_update_movement;
 	geometryStreamingService.getNodesToUpdateMovement(nodes_to_update_movement,GetServerTimeUs());
-	GeometryStore &geometryStore=GeometryStore::GetInstance();
 
+	if(nodes_to_force_update_movement.size())
+	{
+		for(auto u:nodes_to_force_update_movement)
+		{
+			nodes_to_update_movement.insert(u);
+		}
+		nodes_to_force_update_movement.clear();
+	}
+	GeometryStore &geometryStore=GeometryStore::GetInstance();
 
 	size_t numUpdates=nodes_to_update_movement.size();
 	std::vector<teleport::core::MovementUpdate> updateList(numUpdates);
@@ -127,6 +144,9 @@ void ClientMessaging::sendNodeMovementUpdates()
 		i++;
 
 	}
+	if(updateList.size()==0)
+		return;
+	//updateList.resize(1);
 	updateNodeMovement(updateList);
 }
 
