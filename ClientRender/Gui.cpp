@@ -14,11 +14,11 @@
 #include "Platform/Core/FileLoader.h"
 #include "Platform/Core/StringToWString.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
-#include <magic_enum/magic_enum.hpp>
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <magic_enum/magic_enum.hpp>
 
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -29,9 +29,8 @@ using namespace std::string_literals;
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/TabContext.h"
-#include "libavstream/pipeline.hpp"
 #include "ThisPlatform/StringFunctions.h"
-
+#include "libavstream/pipeline.hpp"
 
 #ifdef __ANDROID__
 #define VK_BACK 0x01
@@ -117,14 +116,14 @@ void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags, const char *t
 {
 	if (!txt)
 		txt = str_id;
-	bool is_open = ImGui::TreeNodeEx(str_id, flags,"%s", txt);
+	bool is_open = ImGui::TreeNodeEx(str_id, flags, "%s", txt);
 	if (is_open && ((flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) == 0))
 		ImGui::TreePop();
 }
-#define IMGUITREENODEEX(str_id, flags, txt, ...)           \
+#define IMGUITREENODEEX(str_id, flags, txt, ...)         \
 	{                                                    \
 		std::string str = fmt::format(txt, __VA_ARGS__); \
-		ImGuiTreeNodeEx(str_id, flags, str.c_str());             \
+		ImGuiTreeNodeEx(str_id, flags, str.c_str());     \
 	}
 static inline ImVec4 ImLerp(const ImVec4 &a, const ImVec4 &b, float t)
 {
@@ -511,6 +510,8 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 	const clientrender::Node *node = n.get();
 	if (!node)
 		return;
+	avs::uid selected_uid = GetSelectedUid();
+	bool selected = (selected_uid == n->id);
 	bool has_children = node->GetChildren().size() != 0;
 	std::string str = (std::to_string(n->id) + " ") + node->name;
 	bool open = false;
@@ -529,7 +530,7 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 			ImVec4 grey = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
 			ImGui::PushStyleColor(ImGuiCol_Text, grey);
 		}
-		open = ImGui::TreeNodeEx(str.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | (has_children ? 0 : ImGuiTreeNodeFlags_Leaf));
+		open = ImGui::TreeNodeEx(str.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | (has_children ? 0 : ImGuiTreeNodeFlags_Leaf)|(selected?ImGuiTreeNodeFlags_Selected:0));
 		if (!n->IsVisible())
 			ImGui::PopStyleColor();
 	}
@@ -1161,12 +1162,15 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 			avs::uid selected_uid = GetSelectedUid();
 			std::shared_ptr<const clientrender::Node> selected_node = geometryCache->mNodeManager.GetNode(selected_uid);
-			std::shared_ptr<const clientrender::Material> selected_material	   =geometryCache->mMaterialManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Texture> selected_texture			=geometryCache->mTextureManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Animation> selected_animation	   =geometryCache->mAnimationManager.Get(selected_uid);
-		
-			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene; //= geometryCache->mSubsceneManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Mesh> selected_mesh = geometryCache->mMeshManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Material> selected_material = geometryCache->mMaterialManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Texture> selected_texture = geometryCache->mTextureManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Animation> selected_animation = geometryCache->mAnimationManager.Get(selected_uid);
 
+			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene; //= geometryCache->mSubsceneManager.Get(selected_uid);
+			if(selected_mesh.get())
+			{
+			}
 			if (selected_node.get())
 			{
 				vec3 pos = selected_node->GetLocalPosition();
@@ -1246,30 +1250,30 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						auto animC = selected_node->GetComponent<clientrender::AnimationComponent>();
 						if (animC)
 						{
-							DoRow("Animations","");
+							DoRow("Animations", "");
 							const auto &animLayerStates = animC->GetAnimationLayerStates();
 							// list layers.
-							for (int i=0;i<animLayerStates.size();i++)
+							for (int i = 0; i < animLayerStates.size(); i++)
 							{
 								DoRow("Layer", fmt::format("{0}", i).c_str());
 								const auto &layerState = animLayerStates[i];
 								const auto &st = layerState.getState();
-								DoRow("State", fmt::format("{0}, {1}", layerState.interpState,layerState.sequenceNumber).c_str());
-								std::shared_ptr<Animation> prevAnim,anim;
-								if(st.previousAnimationState.animationId!=0)
+								DoRow("State", fmt::format("{0}, {1}", layerState.interpState, layerState.sequenceNumber).c_str());
+								std::shared_ptr<Animation> prevAnim, anim;
+								if (st.previousAnimationState.animationId != 0)
 								{
-									prevAnim=geometryCache->mAnimationManager.Get(st.previousAnimationState.animationId);
+									prevAnim = geometryCache->mAnimationManager.Get(st.previousAnimationState.animationId);
 								}
 								if (st.animationState.animationId != 0)
 								{
 									anim = geometryCache->mAnimationManager.Get(st.animationState.animationId);
 								}
-								float prevAnimDuration=1.f,nextAnimDuration=1.f;
-								if(prevAnim)
+								float prevAnimDuration = 1.f, nextAnimDuration = 1.f;
+								if (prevAnim)
 									prevAnimDuration = prevAnim->duration;
 								if (anim)
 									nextAnimDuration = anim->duration;
-								auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId,st.previousAnimationState.animationTimeS/prevAnimDuration,st.previousAnimationState.speedUnitsPerS);
+								auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId, st.previousAnimationState.animationTimeS / prevAnimDuration, st.previousAnimationState.speedUnitsPerS);
 
 								DoRow(prevAnim ? prevAnim->getName().c_str() : "Previous", txt.c_str());
 								DoRow("Interp", fmt::format("{0}", st.interpolation).c_str());
@@ -1277,9 +1281,9 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
 							}
 						}
-						//ImGui::BeginGroup();
+						// ImGui::BeginGroup();
 						const auto &skeleton = skeletonInstance->GetSkeleton();
-						//ImGui::EndGroup();
+						// ImGui::EndGroup();
 					}
 					ImGui::EndTable();
 				}
@@ -1353,7 +1357,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				if (mci.combined.texture.get())
 				{
 					const char *name = mci.combined.texture->GetTextureCreateInfo().name.c_str();
-					
+
 					if (ImGui::TreeNodeEx(name, flags, "Combined: %s", name))
 					{
 						if (ImGui::IsItemClicked())
@@ -1399,7 +1403,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					ImGui::TableNextColumn();
 					ImGui::Text("Refs:");
 					ImGui::TableNextColumn();
-					ImGui::Text("%s", fmt::format("{0}", selected_animation.use_count()-1).c_str());
+					ImGui::Text("%s", fmt::format("{0}", selected_animation.use_count() - 1).c_str());
 					auto DoRow = [this](const int index, const char *text, auto... rest) -> void
 					{
 						ImGui::TableNextColumn();
@@ -1407,7 +1411,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						ImGui::TableNextColumn();
 						ImGui::Text(text, rest...);
 					};
-					//DoRow((int)a.boneIndex, "%d", (int)selected_animation->boneKeyframeLists.size());
+					// DoRow((int)a.boneIndex, "%d", (int)selected_animation->boneKeyframeLists.size());
 					/*for (const auto &a : selected_animation->boneKeyframeLists)
 					{
 						DoRow((int)a.boneIndex, "%d,%d", (int)a.positionKeyframes.size(), (int)a.rotationKeyframes.size());
@@ -1459,6 +1463,29 @@ void Gui::EndFrame(GraphicsDeviceContext &deviceContext)
 {
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
+}
+
+void Gui::Meshes(const ResourceManager<avs::uid, clientrender::Mesh> &meshManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids = meshManager.GetAllIDs();
+	avs::uid selected_uid = GetSelectedUid();
+	for (auto id : ids)
+	{
+		bool selected = (selected_uid == id);
+		const auto &mesh = meshManager.Get(id);
+		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, mesh->GetMeshCreateInfo().name.c_str()).c_str(), ImGuiTreeNodeFlags_Leaf|(selected?ImGuiTreeNodeFlags_Selected:0)))
+		{
+			if (ImGui::IsItemClicked())
+			{
+				if (!show_inspector)
+					show_inspector = true;
+				Select(cache_uid, id);
+			}
+			ImGui::TreePop();
+		}
+	}
+	ImGui::EndGroup();
 }
 
 void Gui::Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager)
@@ -1630,7 +1657,7 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 {
 	static float xspacing = 150.0f;
-	static float yspacing =20.0f;
+	static float yspacing = 20.0f;
 	static float thickness = 3.0f;
 	static float sz = 36.0f;
 	static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
@@ -1640,31 +1667,31 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
 	size_t outp = node.getNumOutputSlots();
-	ImVec2 pos (x , y );
-	ImVec2 line(0,20);
-	for(int i=0;i<outp;i++)
+	ImVec2 pos(x, y);
+	ImVec2 line(0, 20);
+	for (int i = 0; i < outp; i++)
 	{
-		const auto *n=node.getOutput(i);
-		if(n)
+		const auto *n = node.getOutput(i);
+		if (n)
 		{
 			float nextx = x + float(sz + xspacing);
 			float nexty = y + float(i) * (sz + yspacing);
 			draw_list->AddLine(pos, ImVec2(nextx, nexty), join_colour, thickness);
-			DrawPipelineNode(*n, nextx,nexty); // N-gon
+			DrawPipelineNode(*n, nextx, nexty); // N-gon
 		}
 	}
 	const ImU32 fail_colour = ImColor(255, 0, 0, 90);
 	avs::Result r = node.getLastResult();
 	if (r != avs::Result::OK && r != avs::Result::IO_Empty)
 	{
-		col=fail_colour;
+		col = fail_colour;
 	}
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
-	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}",node.name,node.inwardBandwidthKps).c_str());
-	draw_list->AddText(ImVec2(pos.x,pos.y+line.y), col, fmt::format("{0}",node.maxPacketKb).c_str());
+	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}", node.name, node.inwardBandwidthKps).c_str());
+	draw_list->AddText(ImVec2(pos.x, pos.y + line.y), col, fmt::format("{0}", node.maxPacketKb).c_str());
 }
-#pragma optimize("",off)
+#pragma optimize("", off)
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 {
 	const ImVec2 p = ImGui::GetCursorScreenPos();
@@ -1673,12 +1700,12 @@ void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 	ImGui::PushItemWidth(-ImGui::GetFontSize() * 15);
 	ImDrawList *draw_list = ImGui::GetWindowDrawList();
 	const auto &nodes = pipeline.getNodes();
-	if(nodes.size())
+	if (nodes.size())
 	{
-		if(nodes[0])
-			DrawPipelineNode(*nodes[0],x,y);
+		if (nodes[0])
+			DrawPipelineNode(*nodes[0], x, y);
 	}
-	//ImGui::Dummy(ImVec2((sz + spacing) * 11.2f, (sz + spacing) * 3.0f));
+	// ImGui::Dummy(ImVec2((sz + spacing) * 11.2f, (sz + spacing) * 3.0f));
 	ImGui::PopItemWidth();
 }
 
@@ -1697,14 +1724,10 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
 	ImGui::Checkbox("Texture Transcoding Thread", &debugOptions.enableTextureTranscodingThread);
 	ImGui::Checkbox("Geometry Transcoding Thread", &debugOptions.enableGeometryTranscodingThread);
-	const char *debugShaders[] = {"", "ps_solid_albedo_only"
-	, "ps_debug_normals", "ps_debug_normal_vertexnormals"
-	, "ps_debug_lightmaps", "ps_debug_ambient"
-	, "ps_debug_uvs"
-	, "ps_debug_surface_fresnel","ps_debug_surface_refl"
-	,"ps_debug_surface_ks","ps_debug_surface_kd"
-	
-	, "ps_debug_anim", "ps_digitizing"};
+	const char *debugShaders[] = {"", "ps_solid_albedo_only", "ps_debug_normals", "ps_debug_normal_vertexnormals", "ps_debug_lightmaps", "ps_debug_ambient", "ps_debug_uvs", "ps_debug_surface_fresnel", "ps_debug_surface_refl", "ps_debug_surface_ks", "ps_debug_surface_kd"
+
+								  ,
+								  "ps_debug_anim", "ps_digitizing"};
 	ImGui::LabelText("DebugShaders", "Debug Shader");
 	static int chooseDebugShader = 0;
 	int oldChooseDebugShader = chooseDebugShader;
@@ -1720,7 +1743,6 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::SameLine();
 	ImGui::RadioButton("UVs", &chooseDebugShader, (int)ShaderMode::UVS);
 
-	
 	ImGui::RadioButton("Fresnel", &chooseDebugShader, (int)ShaderMode::DEBUG_FRESNEL);
 	ImGui::SameLine();
 	ImGui::RadioButton("Refl", &chooseDebugShader, (int)ShaderMode::DEBUG_REFL);
@@ -1827,15 +1849,15 @@ void Gui::GeometryOSD()
 		return;
 	if (ImGui::BeginTable("numResources", 3))
 	{
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed,150.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 150.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 150.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 150.0f);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		LinePrint(fmt::format("Client ID"));
 		ImGui::TableNextColumn();
-		if(sessionClient)
-			LinePrint(fmt::format("{0}",sessionClient->GetClientID()));
+		if (sessionClient)
+			LinePrint(fmt::format("{0}", sessionClient->GetClientID()));
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		LinePrint(fmt::format("Session time"));
@@ -1851,11 +1873,11 @@ void Gui::GeometryOSD()
 		}
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Nodes: {0}", geometryCache->mNodeManager.GetNodeCount()),white);
+		LinePrint(fmt::format("Nodes: {0}", geometryCache->mNodeManager.GetNodeCount()), white);
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Meshes: {0}", geometryCache->mMeshManager.GetCache(cacheLock).size()),white);
+		LinePrint(fmt::format("Meshes: {0}", geometryCache->mMeshManager.GetCache(cacheLock).size()), white);
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Lights: {0}",geometryCache->mLightManager.GetCache(cacheLock).size()),white);
+		LinePrint(fmt::format("Lights: {0}", geometryCache->mLightManager.GetCache(cacheLock).size()), white);
 		ImGui::EndTable();
 	}
 
@@ -1919,14 +1941,19 @@ void Gui::Scene()
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
 		return;
-	if(ImGui::Button("Clear Selection"))
+	if (ImGui::Button("Clear Selection"))
 	{
-		Select(0,0);
+		Select(0, 0);
 	}
 	ImGui::BeginTabBar("Scene");
 	if (ImGui::BeginTabItem("Nodes"))
 	{
 		NodeTree(geometryCache->mNodeManager.GetRootNodes());
+		ImGui::EndTabItem();
+	}
+	if (ImGui::BeginTabItem("Meshes"))
+	{
+		Meshes(geometryCache->mMeshManager);
 		ImGui::EndTabItem();
 	}
 	if (ImGui::BeginTabItem("Skeletons"))
@@ -2116,18 +2143,18 @@ void Gui::MenuBar2D()
 		{
 			current_tab_context = 1;
 			auto tc = client::TabContext::GetTabContext(current_tab_context);
-			if (!current_tab_context||!tc)
+			if (!current_tab_context || !tc)
 				current_tab_context = client::TabContext::AddTabContext();
-			if(tc)
+			if (tc)
 			{
-				std::string u=tc->GetURL();
-				size_t sz=MAX_URL_SIZE;
-				sz=std::min(sz,u.length()+1);
+				std::string u = tc->GetURL();
+				size_t sz = MAX_URL_SIZE;
+				sz = std::min(sz, u.length() + 1);
 				try
 				{
-					strcpy_s(url_buffer,sz,u.c_str());
+					strcpy_s(url_buffer, sz, u.c_str());
 				}
-				catch(...)
+				catch (...)
 				{
 				}
 			}

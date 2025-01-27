@@ -740,8 +740,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		current_tab_context = client::TabContext::GetEmptyTabContext();
 		if (!current_tab_context)
 			current_tab_context = client::TabContext::AddTabContext();
-		std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
-		tabContext->ConnectTo("home.teleportvr.io");
+		//std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
+		//tabContext->ConnectTo("home.teleportvr.io");
 	}
 #endif
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");

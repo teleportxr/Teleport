@@ -157,7 +157,8 @@ namespace avs
 		//! Convert mip and array index to the corresponding index in the image list.
 		int MipArrayIndexToIndex(int m,int arrayIndex) const
 		{
-			return m*arrayCount*(cubemap?6:1)+arrayIndex;
+			return m + (arrayIndex * mipCount);
+
 		}
 		std::vector<uint8_t> compressedData;
 

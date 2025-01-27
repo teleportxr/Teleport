@@ -46,6 +46,7 @@ namespace teleport
 			std::queue<std::vector<std::byte>> binaryMessagesToSend;
 			uint64_t clientID = uint64_t(0x0);
 			bool awaiting = false;
+			bool active = false;
 		};
 	}
 }

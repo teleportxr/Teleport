@@ -129,7 +129,14 @@ void GeometryStreamingService::updateResourcesToStream(int32_t minimumPriority)
 	// So the last value in that list gives the lowest priority we should stream.
 	// When any value reaches zero, it's removed from the list.
 	if(unconfirmed_priority_counts.size())
+	{
 		lowest_confirmed_node_priority = unconfirmed_priority_counts.rbegin()->first;
+		if(unconfirmed_priority_counts[lowest_confirmed_node_priority]==0)
+		{
+			unconfirmed_priority_counts.erase(lowest_confirmed_node_priority);
+			return;
+		}
+	}
 	// Considering all the nodes eventually to stream:
 	for(auto u:nodesToStream)
 	{
@@ -521,7 +528,8 @@ bool GeometryStreamingService::unstreamNode(avs::uid nodeID)
 	if (nodesToStream.find(nodeID) != nodesToStream.end())
 	{
 		nodesToStream.erase(nodeID);
-		unconfirmed_priority_counts[getPriorityForNode(nodeID)]--;
+		int32_t priority=getPriorityForNode(nodeID);
+		unconfirmed_priority_counts[priority]--;
 		if(unconfirmed_priority_counts[priority]==0)
 		{
 			unconfirmed_priority_counts.erase(priority);

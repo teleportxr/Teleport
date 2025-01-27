@@ -72,6 +72,7 @@ namespace teleport
 			void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
 			void LinePrint(const std::string& str, const float* clr = nullptr);
 			void LinePrint(const char* txt,const float *clr=nullptr);
+			void Meshes(const ResourceManager<avs::uid, clientrender::Mesh> &meshManager);
 			void Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager);
 			void Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &animManager);
 			void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);

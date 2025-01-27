@@ -94,7 +94,7 @@ struct InteropNode
 	void InitNode(avs::Node *n) const
 	{
 		n->name=name;
-		n->localTransform;
+		n->localTransform=localTransform;
 		n->stationary=(stationary!=0);
 
 		n->holder_client_id=holder_client_id;
@@ -102,9 +102,11 @@ struct InteropNode
 		n->priority=priority;
 
 		n->parentID=parentID;
-
-		n->data_type=dataType;
-		n->data_uid=dataID;
+		if(dataType!=avs::NodeDataType::Invalid)
+		{
+			n->data_type=dataType;
+			n->data_uid=dataID;
+		}
 
 		n->materials={materialIDs, materialIDs + materialCount};
 		n->skeletonNodeID=skeletonID;

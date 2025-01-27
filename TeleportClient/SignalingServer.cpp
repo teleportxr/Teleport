@@ -167,6 +167,7 @@ void SignalingServer::QueueDisconnectionMessage()
 	json message = {{"teleport-signal-type", "disconnect"}};
 	QueueMessage(message.dump());
 	awaiting = false;
+	active=false;
 }
 
 void SignalingServer::QueueBinaryMessage(std::vector<uint8_t> &bin)

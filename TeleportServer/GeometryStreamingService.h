@@ -95,7 +95,7 @@ namespace teleport
 			int64_t movement_update_timestamp=0;
 			std::set<avs::uid> streamed_node_uids;
 			avs::uid originNodeId = 0;
-			int32_t priority = 0;
+
 			// The lowest priority for which the client has confirmed all the nodes we sent.
 			// We only send lower-priority nodes when all higher priorities have been confirmed.
 			int32_t lowest_confirmed_node_priority=-100000;

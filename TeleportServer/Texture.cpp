@@ -127,8 +127,13 @@ std::string PathToName(ExtractedTexture &textureData,const std::string &filename
 // Encode a single uncompressed image into a specified format ready for compression.
 static std::vector<uint8_t> EncodeLayer(VkFormat targetForamt,const avs::Texture &avsTexture,int m,int l,int f)
 {
-	int imageIndex=avsTexture.MipLayerFaceToIndex(m,l,f);
 	std::vector<uint8_t> encodedLayer;
+	int imageIndex=avsTexture.MipLayerFaceToIndex(m,l,f);
+	if(imageIndex>=avsTexture.images.size())
+	{
+		TELEPORT_WARN("Texture {}: Image count does not match texture format.",avsTexture.name);
+		return std::move(encodedLayer);
+	}
 	const std::vector<uint8_t> &sourceLayer=avsTexture.images[imageIndex].data;
 	//CMP_MipSet dstMipSet;
 	//CMP_CreateMipSet(&dstMipSet, avsTexture.width, avsTexture.height, 1, CMP_ChannelFormat::CF_Float16, CMP_TextureType::TT_2D);
@@ -313,6 +318,8 @@ void teleport::server::LoadAsPng(ExtractedTexture &textureData, const std::vecto
 }
 template<typename T> void read_from_buffer(T &result,const uint8_t * &mem)
 {
+	if(!mem)
+		return;
 	const T *src=(const T*)mem;
 	result=*src;
 	src++;
@@ -327,7 +334,8 @@ void teleport::server::LoadAsTeleportTexture(ExtractedTexture &textureData, cons
 	textureData.texture.compressedData.resize(data.size());
 	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
 	const uint8_t *src = textureData.texture.compressedData.data();
-
+	if(!src)
+		return;
 	
 		// dimensions.
 	read_from_buffer(textureData.texture.width ,src);

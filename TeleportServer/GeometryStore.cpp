@@ -1515,7 +1515,8 @@ void GeometryStore::compressNextTexture()
 		if (!CompressToKtx2(extractedTexture,path, compressionData))
 		{
 			TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
-			texturesToCompress.erase(texturesToCompress.begin());
+			if(texturesToCompress.size())
+				texturesToCompress.erase(texturesToCompress.begin());
 			return ;
 		}
 	}

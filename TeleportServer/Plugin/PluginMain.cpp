@@ -293,7 +293,7 @@ TELEPORT_EXPORT void Server_Tick(float deltaTimeSeconds)
 TELEPORT_EXPORT void Server_EditorTick()
 {
 	TELEPORT_PROFILE_AUTOZONE;
-	GeometryStore::GetInstance().compressNextTexture();
+	//GeometryStore::GetInstance().compressNextTexture();
 	PipeOutMessages();
 }
 
@@ -743,19 +743,23 @@ TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t
 	TELEPORT_PROFILE_AUTOZONE;
 	if(len<2)
 		return false;
-	auto nextt= GeometryStore::GetInstance().getNextTextureToCompress();
-	if (!nextt.name.length())
-	{
-		str[0]=0;
-		return false;
-	}
-	// See https://en.cppreference.com/w/cpp/utility/format/spec
-	float prog=teleport::server::GetCompressionProgress();
+	size_t num=GeometryStore::GetInstance().getNumberOfTexturesWaitingForCompression();
 #if __cplusplus>=202002L
-	std::string msg=std::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
+	std::string msg=std::format("Textures Remaining {} ",num);
 #else
-	std::string msg=fmt::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
+	std::string msg=fmt::format("Textures Remaining {} ",num);
 #endif
+	auto nextt= GeometryStore::GetInstance().getNextTextureToCompress();
+	if (nextt.name.length())
+	{
+		// See https://en.cppreference.com/w/cpp/utility/format/spec
+		float prog=teleport::server::GetCompressionProgress();
+	#if __cplusplus>=202002L
+		msg+=std::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
+	#else
+		msg+=fmt::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
+	#endif
+	}
 	size_t sz=std::min(len-1, msg.length());
 	memcpy(str, msg.data(), sz);
 	str[sz]=0;

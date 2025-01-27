@@ -1422,6 +1422,12 @@ void ResourceCreator::thread_TranscodeTextures()
 				ktxTextureCreateFlags createFlags=KTX_TEXTURE_CREATE_NO_FLAGS;
 				ktxTexture *ktxt=nullptr;
 				KTX_error_code 	result=ktxTexture_CreateFromMemory(transcoding->data.data(), transcoding->data.size(),  createFlags, &ktxt);
+				if (result != KTX_SUCCESS)
+				{
+					const char *errstr=ktxErrorString(result);
+					TELEPORT_WARN("Texture {0} failed to create ktx. KTX Error code {1}.\n",transcoding->name,errstr?errstr:"");
+					continue;
+				}
 				if(ktxt->classId==ktxTexture1_c)
 				{
 					ktxTexture1 *ktx1Texture = (ktxTexture1* )ktxt;

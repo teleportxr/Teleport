@@ -191,6 +191,7 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 	}
 	if(!signalingServer->url.length())
 		return 0;
+	signalingServer->active=true;
 	bool serverDiscovered = false;
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
 	if(!ws)
@@ -264,6 +265,8 @@ void DiscoveryService::Tick(uint64_t server_uid)
 		signalingServer = signalingServers[server_uid];
 	}
 	if (!signalingServer)
+		return;
+	if (!signalingServer->active)
 		return;
 	std::shared_ptr<rtc::WebSocket>& ws = signalingServer->webSocket;
 	if(!ws)
