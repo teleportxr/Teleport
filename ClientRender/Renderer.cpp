@@ -643,7 +643,6 @@ void Renderer::FillInControllerPose(int index, float offset)
 	vec3 pos_offset=vec3(hand_dist*(-pos.y*sine+ pos.x*cosine),hand_dist*(pos.y*cosine+pos.x*sine),z_offset+hand_dist*sine_elev*pos.y);
 
 	// Get horizontal azimuth of view.
-	vec3 camera_local_pos	=camera.GetPosition();
 	vec3 footspace_pos		=camera_local_pos;
 	footspace_pos			+=pos_offset;
 
@@ -1158,34 +1157,71 @@ void Renderer::OnFrameMove(double fTime,float time_step)
 	}
 	if (!renderState.openXR)
 		have_vr_device = false;
+	cameraInterface=&camera;
 	if (!have_vr_device)
 	{
 		static float spd = 1.f;
-		crossplatform::UpdateMouseCamera(&camera
-			, time_step
-			, spd
-			, mouseCameraState
-			, mouseCameraInput
-			, 14000.f, false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
-
-
-		// consider this to be the position relative to the local origin. Don't let it get too far from centre.
-		vec3 cam_pos = camera.GetPosition();
-		float r = sqrt(cam_pos.x * cam_pos.x + cam_pos.y * cam_pos.y);
-		static float maxh=2.5f;
-		static float minh=0.5f;
-		if (cam_pos.z > maxh)
-		{
-			cam_pos.z = maxh;
-			camera.SetPosition(cam_pos);
-		}
-		if (cam_pos.z < minh)
-		{
-			cam_pos.z = minh;
-			camera.SetPosition(cam_pos);
-		}
+		vec3 cam_pos;
 		math::Quaternion q0(3.1415926536f / 2.0f, math::Vector3(1.f, 0.0f, 0.0f));
-		auto q = camera.Orientation.GetQuaternion();
+		math::Quaternion q;
+		if(!config.options.mode2D)
+		{
+			cameraInterface=&camera2D;
+			crossplatform::UpdateMouseCamera(&camera
+				, time_step
+				, spd
+				, mouseCameraState
+				, mouseCameraInput
+				, 14000.f, false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
+
+
+			// consider this to be the position relative to the local origin. Don't let it get too far from centre.
+			cam_pos = camera.GetPosition();
+			float r = sqrt(cam_pos.x * cam_pos.x + cam_pos.y * cam_pos.y);
+			static float maxh=2.5f;
+			static float minh=0.5f;
+			if (cam_pos.z > maxh)
+			{
+				cam_pos.z = maxh;
+				camera.SetPosition(cam_pos);
+			}
+			if (cam_pos.z < minh)
+			{
+				cam_pos.z = minh;
+				camera.SetPosition(cam_pos);
+			}
+			camera_local_pos	=camera.GetPosition();
+			q = camera.Orientation.GetQuaternion();
+		}
+		else
+		{
+			cameraInterface=&camera2D;
+			clientrender::UpdateMouseCamera(&camera2D
+				, time_step
+				, spd
+				, mouseCameraState
+				, mouseCameraInput
+				, 14000.f, false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
+
+
+			// consider this to be the position relative to the local origin. Don't let it get too far from centre.
+			cam_pos = camera2D.GetPosition();
+			float r = sqrt(cam_pos.x * cam_pos.x + cam_pos.y * cam_pos.y);
+			static float maxh=12.0f;
+			static float minh=10.0f;
+			if (cam_pos.z > maxh)
+			{
+				cam_pos.z = maxh;
+				camera2D.SetPosition(cam_pos);
+			}
+			if (cam_pos.z < minh)
+			{
+				cam_pos.z = minh;
+				camera2D.SetPosition(cam_pos);
+			}
+			camera_local_pos	=camera2D.GetPosition();
+			q = camera2D.Orientation.GetQuaternion();
+		}
 		auto q_rel = q / q0;
 		for (auto server_uid : client::SessionClient::GetSessionClientIds())
 		{
@@ -1491,15 +1527,15 @@ void Renderer::RenderDesktopView(int view_id, void* context, void* renderTexture
 		crossplatform::Texture *eyeTexture=renderState.openXR->GetRenderTexture(0);
 		renderPlatform->DrawTexture(deviceContext,0,0,w,h,eyeTexture);
 	}
-	else if(viewport.w*viewport.h>0)
+	else if(viewport.w*viewport.h>0&&cameraInterface)
 	{
 		renderState.hdrFramebuffer->Activate(deviceContext);
 
 		float aspect = (float)viewport.w / (float)viewport.h;
 		if (reverseDepth)
-			deviceContext.viewStruct.proj = camera.MakeDepthReversedProjectionMatrix(aspect);
+			deviceContext.viewStruct.proj = cameraInterface->MakeDepthReversedProjectionMatrix(aspect);
 		else
-			deviceContext.viewStruct.proj = camera.MakeProjectionMatrix(aspect);
+			deviceContext.viewStruct.proj = cameraInterface->MakeProjectionMatrix(aspect);
 		
 		//auto &clientServerState=sessionClient->GetClientServerState();
 		// Init the viewstruct in local space - i.e. with no server offsets.
@@ -1706,7 +1742,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext& deviceContext)
 			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
 		
 			auto &clientServerState=sessionClient->GetClientServerState();
-			vec3 offset=camera.GetPosition();
+			vec3 offset=camera_local_pos;
 			auto originPose=GetOriginPose(server_uid);
 			gui.LinePrint(instanceRenderer->receivedInitialPos?(platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z)):"Origin:", white);
 			gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f", clientServerState.headPose.position.x, clientServerState.headPose.position.y, clientServerState.headPose.position.z),white);

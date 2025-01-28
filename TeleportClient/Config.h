@@ -41,6 +41,7 @@ namespace teleport
 			unsigned int connectionTimeout=TELEPORT_TIMEOUT;
 			bool simulateVR = false;
 			bool passThrough=false;
+			bool mode2D=false;
 		};
 		struct DebugOptions
 		{

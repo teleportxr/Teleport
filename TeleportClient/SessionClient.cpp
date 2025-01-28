@@ -667,13 +667,13 @@ void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &p
 
 void SessionClient::ReceiveStageSpaceOriginNodeId(const std::vector<uint8_t> &packet)
 {
-	size_t commandSize = sizeof(teleport::core::SetStageSpaceOriginNodeCommand);
+	size_t commandSize = sizeof(teleport::core::SetOriginNodeCommand);
 	if(packet.size()!=commandSize)
 	{
-		TELEPORT_INTERNAL_CERR("SetStageSpaceOriginNodeCommand size is wrong. Struct is {0}, but packet was {1}.",commandSize,packet.size());
+		TELEPORT_INTERNAL_CERR("SetOriginNodeCommand size is wrong. Struct is {0}, but packet was {1}.",commandSize,packet.size());
 		return;
 	}
-	teleport::core::SetStageSpaceOriginNodeCommand command;
+	teleport::core::SetOriginNodeCommand command;
 	memcpy(static_cast<void*>(&command), packet.data(), commandSize);
 	if(command.valid_counter > receivedInitialPos)
 	{

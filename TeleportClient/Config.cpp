@@ -170,6 +170,7 @@ void Config::LoadOptions()
 		if(C.has_value())
 			options.startupConnectOption = C.value();
 		options.simulateVR = ini.GetBoolValue("", "SimulateVR", options.simulateVR);
+		options.mode2D = ini.GetBoolValue("", "Mode2D", options.mode2D);
 	}
 }
 

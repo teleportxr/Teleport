@@ -9,6 +9,8 @@ configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.h ${CMAKE_CURRENT_BINA
 
 # Source
 set( src_root
+	Camera2D.cpp
+	Camera2D.h
 	CanvasTextRenderer.cpp
 	CanvasTextRenderer.h
 	Common.h

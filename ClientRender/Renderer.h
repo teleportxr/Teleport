@@ -2,6 +2,7 @@
 #pragma once
 
 #include "ClientRender/Gui.h"
+#include "ClientRender/Camera2D.h"
 #include "Common.h"
 #include "InstanceRenderer.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
@@ -94,6 +95,7 @@ namespace teleport
 			};
 			ControllerSim controllerSim;
 			platform::crossplatform::Camera camera;
+			Camera2D camera2D;
 			platform::crossplatform::MouseCameraState mouseCameraState;
 			platform::crossplatform::MouseCameraInput mouseCameraInput;
 
@@ -205,6 +207,8 @@ namespace teleport
 
 			vec3 hit = {0, 0, 0};
 			std::map<std::string, std::string> xr_profile_to_controller_model_name;
+			vec3 camera_local_pos;
+			platform::crossplatform::CameraInterface *cameraInterface=nullptr;
 		};
 	}
 }

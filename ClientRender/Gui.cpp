@@ -2498,7 +2498,9 @@ void Gui::DevModeOptions()
 	ImGui::Checkbox("##cbSimulateVR", &config.options.simulateVR);
 	ImGui::TableNextRow();
 	ImGui::TableNextColumn();
-	ImGui::LabelText("##labelkillstr", "Test: kill streaming");
+	ImGui::LabelText("##labelFlatMode", "2D Mode");
+	ImGui::TableNextColumn();
+	ImGui::Checkbox("##cbFlatMode",  &config.options.mode2D);
 	ImGui::TableNextColumn();
 	if (ImGui::Button("##KillStreaming"))
 	{

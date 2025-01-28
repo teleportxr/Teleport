@@ -389,21 +389,25 @@ namespace teleport
 		} TELEPORT_PACKED;
 
 		//! A command that expects an acknowledgement of receipt from the client using an AcknowledgementMessage.
+		//! Each type of AckedCommand carries full information for that command type, so clients can ignore any ack_id
+		//! less than or equal to one already received.
+		//! Therefore, we do NOT use AckedCommand for commands that carry separate, independent information.
 		struct AckedCommand : public Command
 		{
 			AckedCommand(CommandPayloadType t) : Command(t) {}
-			//! The id that is used to acknowledge receipt via AcknowledgementMessage. Should increase monotonically per-full-client-session: clients can ignore any id less than or equal to a previously received id.
+			//! The id that is used to acknowledge receipt via AcknowledgementMessage.
+			// Should increase monotonically per-full-client-session: clients can ignore any id less than or equal to a previously received id.
 			uint64_t		ack_id = 0;
 		} TELEPORT_PACKED;
 		
 		//! Sent from server to client to set the origin of the client's space.
-		struct SetStageSpaceOriginNodeCommand : public AckedCommand
+		struct SetOriginNodeCommand : public AckedCommand
 		{
-			SetStageSpaceOriginNodeCommand() : AckedCommand(CommandPayloadType::SetStageSpaceOriginNode) {}
+			SetOriginNodeCommand() : AckedCommand(CommandPayloadType::SetStageSpaceOriginNode) {}
 
 			static size_t getCommandSize()
 			{
-				return sizeof(SetStageSpaceOriginNodeCommand);
+				return sizeof(SetOriginNodeCommand);
 			}
 			avs::uid		origin_node=0;		//!< The session uid of the node to use as the origin.
 			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
