@@ -128,6 +128,7 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,const void* buffer, size
 	case avs::GeometryPayloadType::FontAtlas:
 	case avs::GeometryPayloadType::TextCanvas:
 	case avs::GeometryPayloadType::TexturePointer:
+	case avs::GeometryPayloadType::MeshPointer:
 	break;
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
@@ -243,6 +244,8 @@ std::cout<<"GeometryDecoder::decodeInternal "<<avs::stringOf(geometryDecodeData.
 		return decodeTextCanvas(geometryDecodeData);
 	case avs::GeometryPayloadType::TexturePointer:
 		return decodeTexturePointer(geometryDecodeData);
+	case avs::GeometryPayloadType::MeshPointer:
+		return decodeMeshPointer(geometryDecodeData);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
@@ -389,7 +392,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator* tar
 // We will do two things here.
 // 1. We will create a new Geometry Cache containing the whole scene from the draco file.
 // 2. We will create a new asset in the containing cache that refers to that cache.
-		core::DecodedGeometry subSceneDG;
+	core::DecodedGeometry subSceneDG;
 	subSceneDG.axesStandard=sourceAxesStandard;
 	// The subscene uid in the server/cache list:
 	subSceneDG.server_or_cache_uid=avs::GenerateUid();
@@ -1164,6 +1167,16 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData& geometryDe
 	string url((size_t)urlLength,' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target,texture_uid);		
+}
+
+avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData& geometryDecodeData)
+{
+	avs::uid mesh_uid = geometryDecodeData.uid;
+	uint16_t urlLength = NextUint16;
+	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
+	string url((size_t)urlLength,' ');
+	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target,mesh_uid);		
 }
 
 avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData& geometryDecodeData)

@@ -96,6 +96,7 @@ namespace avs
 		FontAtlas,
 		TextCanvas,
 		TexturePointer,
+		MeshPointer
 	};
 	//! Features supported by a client.
 	struct RenderingFeatures
