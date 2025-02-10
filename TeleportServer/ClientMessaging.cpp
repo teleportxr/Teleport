@@ -563,7 +563,7 @@ bool ClientMessaging::setOrigin( avs::uid originNode)
 	}
 	currentOriginState.valid_counter++;
 	geometryStreamingService.setOriginNode(originNode);
-	teleport::core::SetStageSpaceOriginNodeCommand setp;
+	teleport::core::SetOriginNodeCommand setp;
 	setp.ack_id=next_ack_id++;
 	setp.origin_node=originNode;
 	setp.valid_counter = currentOriginState.valid_counter;
