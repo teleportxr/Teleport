@@ -237,12 +237,6 @@ namespace avs
 		return in;
 	}
 
-	template<typename istream> istream& operator>>( istream  &in, RoughnessMode &obj )
-	{
-		in.readChunk(obj);
-		return in;
-	}
-
 	template<typename OutStream> OutStream& operator<< (OutStream& out, const vec4& vec)
 	{
 		out.writeChunk(vec);

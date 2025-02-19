@@ -9,12 +9,6 @@ namespace avs
 		OPAQUE_MATERIAL,
 		TRANSPARENT_MATERIAL
 	};
-	enum class RoughnessMode: uint16_t
-	{
-		CONSTANT=0,
-		ROUGHNESS,
-		SMOOTHNESS
-	};
 	enum class SamplerFilter : uint32_t
 	{
 		NEAREST,					//GL_NEAREST (0x2600)

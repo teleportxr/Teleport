@@ -1091,7 +1091,6 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 	copy<char>(material.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	material.materialMode = (avs::MaterialMode)NextByte;
 	material.pbrMetallicRoughness.baseColorTexture.index = NextUint64;
-//	TELEPORT_INTERNAL_COUT("GeometryDecoder::decodeMaterial - {0}({1}) diffuse {2}",mat_uid,material.name.c_str(),material.pbrMetallicRoughness.baseColorTexture.index);
 	material.pbrMetallicRoughness.baseColorTexture.texCoord = NextByte;
 	material.pbrMetallicRoughness.baseColorTexture.tiling.x = NextFloat;
 	material.pbrMetallicRoughness.baseColorTexture.tiling.y = NextFloat;
@@ -1315,15 +1314,11 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 				node.data_uid = NextUint64;
 
 				node.skeletonNodeID = NextUint64;
-				NextList(size_t, int16_t, node.joint_indices)
-	
-				NextList(size_t,avs::uid,node.animations)
-				uint64_t materialCount = NextUint64;
-				node.materials.reserve(materialCount);
-				for(uint64_t j = 0; j < materialCount; ++j)
-				{
-					node.materials.push_back(NextUint64);
-				}
+				NextList(uint16_t, int16_t, node.joint_indices)
+				NextList(uint16_t,avs::uid,node.animations)
+				NextList(uint16_t,avs::uid,node.materials)
+				uint64_t test = NextUint64;
+				std::cout<<test;
 				node.renderState.lightmapScaleOffset	=NextVec4;
 				node.renderState.globalIlluminationUid	=NextUint64;
 				//node.renderState.lightmapTextureCoordinate=NextByte;
