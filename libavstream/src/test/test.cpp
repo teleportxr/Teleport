@@ -46,7 +46,7 @@ TEST_CASE( "Lock-Free Queue", "[lfq]" ) {
                 if(lfq.write(&lfq,blocks[i].data(),blocks[i].size(),written))
                     break;
                 // try again if failed.
-                AVSLOG(Warning)<<"Retry write: "<<j<<"\n";
+                //AVSLOG(Warning)<<"Retry write: "<<j<<"\n";
                 std::this_thread::sleep_for(std::chrono::milliseconds(500));
             } 
             std::this_thread::sleep_for(wait);

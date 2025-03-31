@@ -35,6 +35,5 @@ void Logger::processLogQueue() noexcept
             queue_.updateReadIndex();
         }
     }
-    using namespace std::literals::chrono_literals;
     std::this_thread::yield();
 }

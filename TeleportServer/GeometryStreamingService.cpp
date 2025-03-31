@@ -550,6 +550,8 @@ bool GeometryStreamingService::isStreamingNode(avs::uid nodeID)
 
 void GeometryStreamingService::addGenericTexture(avs::uid id)
 {
+	if(!id)
+		return;
 #if TELEPORT_DEBUG_RESOURCE_STREAMING
 	if(!geometryStore->getTexture(id))
 	{

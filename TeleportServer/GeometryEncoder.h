@@ -37,6 +37,21 @@ namespace teleport
 				memcpy(buffer.data() + pos, &data, sizeof(T));
 				return pos;
 			}
+			
+			template<typename size_type,typename T> size_t putList(const std::vector<T> &lst)
+			{
+				size_t pos = buffer.size();
+				put<size_type>((size_type)lst.size());
+				if (lst.size())
+				{
+					for (T val : lst)
+					{
+						put(val);
+					}
+				}
+				return buffer.size() - pos;
+			}
+
 			size_t put(const uint8_t* data, size_t count);
 			template<typename T> void replace(size_t pos, const T& data)
 			{

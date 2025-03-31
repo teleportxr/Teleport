@@ -994,7 +994,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 				size_t bufferSize				= NextUint64;
 				if (bufferSize > 1024 * 1024 * 128 || bufferSize > geometryDecodeData.bytesRemaining())
 				{
-					TELEPORT_WARN("Failed to decode mesh {0}: buffer size is too big.");
+					TELEPORT_WARN("Failed to decode mesh {} {}: buffer size is too big.",uid,name);
 					return avs::Result::Failed;
 				}
 				subMesh.buffer.resize(bufferSize);
@@ -1314,11 +1314,11 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 				node.data_uid = NextUint64;
 
 				node.skeletonNodeID = NextUint64;
-				NextList(uint16_t, int16_t, node.joint_indices)
+				NextList(uint16_t,int16_t, node.joint_indices)
 				NextList(uint16_t,avs::uid,node.animations)
 				NextList(uint16_t,avs::uid,node.materials)
-				uint64_t test = NextUint64;
-				std::cout<<test;
+				//uint64_t test = NextUint64;
+				//std::cout<<test;
 				node.renderState.lightmapScaleOffset	=NextVec4;
 				node.renderState.globalIlluminationUid	=NextUint64;
 				//node.renderState.lightmapTextureCoordinate=NextByte;

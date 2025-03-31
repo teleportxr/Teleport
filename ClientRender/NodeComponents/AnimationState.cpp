@@ -1,5 +1,5 @@
 #include "AnimationState.h"
-
+#include <chrono>
 using namespace teleport::clientrender;
 
 static float AnimTimeAtTimestamp(const AnimationState &animationState, int64_t timestampNowUs)

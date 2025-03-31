@@ -364,13 +364,14 @@ namespace teleport
 			uint8_t				audio_input_enabled = 0;							//!< 119+1=120	Server accepts audio stream from client.
 			bool				using_ssl = true;									//!< 120+1=121	Not in use, for later.
 			int64_t				startTimestamp_utc_unix_us = 0;						//!< 121+8=129	UTC Unix Timestamp in microseconds when the server session began.
-			// TODO: replace this with a background Material, which MAY contain video, te			xture and/or plain colours.
+			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode		backgroundMode;										//!< 129+1=130	Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;									//!< 130+16=146 If the background is of the COLOUR type, which colour to use.
 			ClientDynamicLighting clientDynamicLighting;							//!<			Setup for dynamic object lighting. 146+57=203 bytes
 			avs::uid			backgroundTexture=0;								//!< 203+8=211
 		} TELEPORT_PACKED;
 		static_assert (sizeof(SetupCommand) == 211, "SetupCommand Size is not correct");
+// 		TODO: track missing resources for backgroundTexture or ClientDynamicLighting
 
 		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
 		struct SetupLightingCommand : public Command
