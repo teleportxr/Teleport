@@ -128,14 +128,12 @@ void GeometryCache::ClearResourceRequests()
 
 void GeometryCache::ReceivedResource(avs::uid id)
 {
-	{
-		std::lock_guard g(receivedResourcesMutex);
-		std::lock_guard g2(resourceRequestsMutex);
-		m_ReceivedResources.push_back(id);
-		auto r = std::find(m_ResourceRequests.begin(), m_ResourceRequests.end(), id);
-		if (r != m_ResourceRequests.end())
-			m_ResourceRequests.erase(r);
-	}
+	std::lock_guard g(receivedResourcesMutex);
+	std::lock_guard g2(resourceRequestsMutex);
+	m_ReceivedResources.push_back(id);
+	auto r = std::find(m_ResourceRequests.begin(), m_ResourceRequests.end(), id);
+	if (r != m_ResourceRequests.end())
+		m_ResourceRequests.erase(r);
 }
 
 void GeometryCache::RemoveFromMissingResources(avs::uid id)

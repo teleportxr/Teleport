@@ -286,7 +286,7 @@ int TeleportClientReportHook(int reportType, char *message, int *returnValue)
 int TeleportClientReportHookW(int reportType, wchar_t *message, int *returnValue)
 {
 	//_CRT_WARN, _CRT_ERROR, or _CRT_ASSERT
-	TELEPORT_CERR << message << "\n";
+	TELEPORT_WARN("{}\n",platform::core::WStringToUtf8(message));
 	if (reportType == _CRT_ASSERT)
 		SIMUL_BREAK("Assertion Failed!");
 	if (reportType == _CRT_ERROR)

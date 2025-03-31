@@ -164,7 +164,7 @@ namespace avs
 
 		bool operator==(const Texture& t) const
 		{
-			TELEPORT_VERIFY(t.name, name);
+			//TELEPORT_VERIFY(t.name, name); Do not verify name, because this might be inferred from filename and comparing two textures would thus cause a warning.
 			TELEPORT_VERIFY(t.width, width);
 			TELEPORT_VERIFY(t.height, height);
 			TELEPORT_VERIFY(t.depth, depth);

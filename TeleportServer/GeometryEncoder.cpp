@@ -200,6 +200,7 @@ avs::Result GeometryEncoder::unmapOutputBuffer()
 	return avs::Result::OK;
 }
 
+
 avs::Result GeometryEncoder::encodeMeshes(std::vector<avs::uid> missingUIDs)
 {
 	GeometryStore *geometryStore = &GeometryStore::GetInstance();
@@ -272,6 +273,7 @@ avs::Result GeometryEncoder::encodeMeshes(std::vector<avs::uid> missingUIDs)
 	}
 	return avs::Result::OK;
 }
+#define PUT_LIST(size_type,lst) putList<size_type>(lst)
 
 avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 {
@@ -323,25 +325,9 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 				put(node->data_uid);
 
 				put(node->skeletonNodeID);
-				put(node->joint_indices.size());
-				if (node->joint_indices.size())
-				{
-					for (int16_t index : node->joint_indices)
-					{
-						put(index);
-					}
-				}
-
-				put(node->animations.size());
-				for (avs::uid id : node->animations)
-				{
-					put(id);
-				}
-				put(node->materials.size());
-				for (avs::uid id : node->materials)
-				{
-					put(id);
-				}
+				PUT_LIST(uint16_t,node->joint_indices);
+				PUT_LIST(uint16_t,node->animations);
+				PUT_LIST(uint16_t,node->materials);
 				put(node->renderState.lightmapScaleOffset);
 				put(node->renderState.globalIlluminationUid);
 				// put(node->renderState.lightmapTextureCoordinate);
@@ -753,7 +739,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(std::vector<avs::uid> missing
 			}
 			if (texture->width == 0 || texture->height == 0)
 			{
-				TELEPORT_CERR << "Trying to send texture " << texture->name << " of zero size. Never do this!\n";
+				TELEPORT_CERR << "Trying to send texture " << texture->name << " of zero dimensions x * y. Never do this!\n";
 				continue;
 			}
 			// Place payload type onto the buffer.

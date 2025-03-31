@@ -1494,7 +1494,7 @@ void ResourceCreator::thread_TranscodeTextures()
 				}
 				else
 				{
-					TELEPORT_WARN("Invalid ktx class {0}",ktxt->classId);
+					TELEPORT_WARN("Invalid ktx class {0}",(uint64_t)ktxt->classId);
 				}
 				if (result != KTX_SUCCESS)
 				{

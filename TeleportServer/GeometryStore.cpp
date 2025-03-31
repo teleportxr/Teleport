@@ -1346,6 +1346,7 @@ bool GeometryStore::storeTexture(avs::uid id,const std::string &path, std::time_
 	bool black = true;
 	for (size_t i = 0; i < newTexture.images.size(); i++)
 	{
+		if(black)
 		for (size_t j = 0; j < newTexture.images[i].data.size(); j++)
 		{
 			if (newTexture.images[i].data[j] != 0)
@@ -1368,7 +1369,7 @@ bool GeometryStore::storeTexture(avs::uid id,const std::string &path, std::time_
 	path_to_uid[p]=id;
 	
 	//queue the texture for compression.
-	 // UASTC doesn't work from inside the dll. Unclear why.
+	// UASTC doesn't work from inside the dll. Unclear why.
 	{
 		std::shared_ptr<PrecompressedTexture> pct = std::make_shared<PrecompressedTexture>();
 	

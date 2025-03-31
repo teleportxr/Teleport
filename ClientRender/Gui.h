@@ -201,7 +201,7 @@ namespace teleport
 			{
 				avs::uid cache_uid=0;
 				avs::uid selected_uid=0;
-				bool operator==(const Selection&s)
+				bool operator==(const Selection& s) const
 				{
 					return (cache_uid==s.cache_uid&&selected_uid==s.selected_uid);
 				}
