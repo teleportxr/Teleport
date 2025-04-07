@@ -160,7 +160,7 @@ namespace avs
 					}
 					else
 					{
-						AVSLOG(Error)<<"CURL transfer "<< transfer.mRemoteURL<<" failed. "<<msgs[0].data.result<<"\n";
+						AVSLOG(Error)<<"CURL transfer "<< transfer.mRequest.url<<" failed. "<<msgs[0].data.result<<"\n";
 					}
 					transfer.stop();
 					// If that was the last active handle, stop doing stuff until we get a new request.
