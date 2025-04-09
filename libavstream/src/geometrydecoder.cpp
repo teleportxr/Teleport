@@ -144,20 +144,8 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			dataOffset = sizeof(StreamPayloadInfo);
 			// The offset is incremented in the classify function to be after the payload type.
 			payloadType = m_parser->classify(m_buffer.data(), bufferSize, dataOffset);
-			switch(payloadType)
+			if(payloadType==avs::GeometryPayloadType::Invalid||payloadType>=avs::GeometryPayloadType::MaxGeometryPayload)
 			{
-			case avs::GeometryPayloadType::Mesh:
-			case avs::GeometryPayloadType::Material:
-			case avs::GeometryPayloadType::MaterialInstance:
-			case avs::GeometryPayloadType::Texture:
-			case avs::GeometryPayloadType::Animation:
-			case avs::GeometryPayloadType::Node:
-			case avs::GeometryPayloadType::Skeleton:
-			case avs::GeometryPayloadType::FontAtlas:
-			case avs::GeometryPayloadType::TextCanvas:
-			case avs::GeometryPayloadType::TexturePointer:
-			break;
-			default:
 				TELEPORT_WARN("Invalid Geometry payload\n");
 				continue;
 			};

@@ -37,7 +37,7 @@ namespace teleport
 		 */
 		class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
 		{
-		private:
+		public:
 			struct GeometryDecodeData
 			{
 				avs::uid server_or_cache_uid = 0;
@@ -65,7 +65,6 @@ namespace teleport
 				}
 			};
 
-		public:
 			GeometryDecoder();
 			~GeometryDecoder();
 
@@ -91,6 +90,9 @@ namespace teleport
 
 		private:
 			void decodeAsync();
+			
+			bool readString(GeometryDecodeData &geometryDecodeData,std::string &str) const;
+
 			avs::Result decodeInternal(GeometryDecodeData &geometryDecodeData);
 			avs::Result DecodeGltf(const GeometryDecodeData &geometryDecodeData);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, core::DecodedGeometry &dg, draco::Mesh &dracoMesh, platform::crossplatform::AxesStandard axesStandard);

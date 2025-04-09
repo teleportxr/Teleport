@@ -226,7 +226,7 @@ avs::Result GeometryEncoder::encodeMeshes(std::vector<avs::uid> missingUIDs)
 			put(version);
 			static const int32_t DRACO_COMPRESSED_MESH_VERSION_NUMBER = 1;
 			put(DRACO_COMPRESSED_MESH_VERSION_NUMBER);
-			size_t nameLength = compressedMesh->name.length();
+			uint16_t nameLength = compressedMesh->name.length();
 			put(nameLength);
 			put((uint8_t *)compressedMesh->name.data(), nameLength);
 
@@ -295,7 +295,7 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 		avs::Node *node = geometryStore->getNode(uid);
 		putPayloadType(avs::GeometryPayloadType::Node, uid);
 		// Push name length.
-		size_t nameLength = node->name.length();
+		uint16_t nameLength = node->name.length();
 		put(nameLength);
 		// Push name.
 		put((uint8_t *)node->name.data(), nameLength);
@@ -356,10 +356,10 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 			}
 			if (node->data_type == avs::NodeDataType::Link)
 			{
-				size_t urlLength = node->url.length();
+				uint16_t urlLength = node->url.length();
 				put(urlLength);
 				put((uint8_t *)node->url.data(), urlLength);
-				size_t queryLength = node->query_url.length();
+				uint16_t queryLength = node->query_url.length();
 				put(queryLength);
 				put((uint8_t *)node->query_url.data(), queryLength);
 			}
@@ -384,7 +384,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::uid skeletonID)
 	{
 		putPayloadType(avs::GeometryPayloadType::Skeleton, skeletonID);
 		// Push name length.
-		size_t nameLength = skeleton->name.length();
+		uint16_t nameLength = skeleton->name.length();
 		put(nameLength);
 		// Push name.
 		put((uint8_t *)skeleton->name.data(), nameLength);
@@ -407,7 +407,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::uid skeletonID)
 				int16_t parentIndex = findIndex(skeleton->boneIDs, node->parentID);
 				put(parentIndex);
 				put(localTransform);
-				size_t nameLength = node->name.length();
+				uint16_t nameLength = node->name.length();
 				put(nameLength);
 				//Push name.
 				put((uint8_t*)node->name.data(), nameLength);
@@ -430,7 +430,7 @@ avs::Result GeometryEncoder::encodeAnimation(avs::uid animationID)
 		putPayloadType(avs::GeometryPayloadType::Animation, animationID);
 
 		// Push name length.
-		size_t nameLength = animation->name.length();
+		uint16_t nameLength = animation->name.length();
 		put(nameLength);
 		// Push name.
 		put((uint8_t *)animation->name.data(), nameLength);
@@ -537,7 +537,7 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 	put(textCanvas->width);
 	put(textCanvas->height);
 	put(textCanvas->colour);
-	put(textCanvas->text.length());
+	put((uint16_t)textCanvas->text.length());
 	put((const uint8_t *)textCanvas->text.data(), textCanvas->text.length());
 	// Actual size is now known so update payload size
 	putPayloadSize(uid);
@@ -575,7 +575,7 @@ avs::Result GeometryEncoder::encodeMaterials(std::vector<avs::uid> missingUIDs)
 			}
 			putPayloadType(avs::GeometryPayloadType::Material, uid);
 
-			size_t nameLength = material->name.length();
+			uint16_t nameLength = material->name.length();
 
 			// Push name length.
 			put(nameLength);
@@ -744,7 +744,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(std::vector<avs::uid> missing
 			}
 			// Place payload type onto the buffer.
 			putPayloadType(avs::GeometryPayloadType::Texture, uid);
-			size_t nameLength = texture->name.length();
+			uint16_t nameLength = texture->name.length();
 
 			// Push name length.
 			put(nameLength);

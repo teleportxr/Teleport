@@ -188,6 +188,7 @@ namespace avs
 			case GeometryPayloadType::FontAtlas:		return "FontAtlas";
 			case GeometryPayloadType::TextCanvas:		return "TextCanvas";
 			case GeometryPayloadType::TexturePointer:	return "TexturePointer";
+			case GeometryPayloadType::MeshPointer:		return "MeshPointer";
 			default:
 				return "Invalid";
 		}

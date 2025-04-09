@@ -153,8 +153,10 @@ namespace avs
 							AVSLOG(Warning)<<"404 returned for "<<transfer.mRequest.url.c_str()<<"\n";
 						// nothing at this address right now.
 						}
-						else if (response_code == 302)
+						else if (respons e_code == 302)
 						{
+							AVSLOG(Warning)<<"302 (redirect) received for "<<transfer.mRequest.url.c_str()<<"\n";
+
 						// A redirect! Should handle this.
 						}
 					}

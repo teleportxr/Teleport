@@ -949,12 +949,9 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 		{
 			version=NextUint16;
 			int32_t version_number= NextUint32;
-			size_t nameLength = NextUint64;
-			if (nameLength > geometryDecodeData.data.size() - geometryDecodeData.offset)
+
+			if(!readString(geometryDecodeData,compressedMesh.name))
 				return avs::Result::Failed;
-			name.resize(nameLength);
-			copy<char>(name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
-			compressedMesh.name= name;
 
 			//inverse bind matrices, if required:
 			if(version>=1)
@@ -1008,9 +1005,8 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData& geometryDecodeData)
 		else if(compressedMesh.meshCompressionType ==avs::MeshCompressionType::NONE)
 		{
 			int32_t version_number= NextUint32;
-			size_t nameLength = NextUint64;
-			name.resize(nameLength);
-			copy<char>(name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+			if(!readString(geometryDecodeData,name))
+				return avs::Result::Failed;
 			compressedMesh.name= name;
 			size_t primitiveArraysSize = NextUint64;
 			dg.primitiveArrays[uid].reserve(primitiveArraysSize);
@@ -1085,10 +1081,8 @@ avs::Result GeometryDecoder::decodeMaterial(GeometryDecodeData& geometryDecodeDa
 {
 	avs::Material material;
 	avs::uid mat_uid = geometryDecodeData.uid;
-	size_t nameLength = NextUint64;
-	
-	material.name.resize(nameLength);
-	copy<char>(material.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	if(!readString(geometryDecodeData,material.name))
+		return avs::Result::Failed;
 	material.materialMode = (avs::MaterialMode)NextByte;
 	material.pbrMetallicRoughness.baseColorTexture.index = NextUint64;
 	material.pbrMetallicRoughness.baseColorTexture.texCoord = NextByte;
@@ -1210,11 +1204,8 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData& geometryDecodeDat
 	{
 		return decodeTextureFromExtension(geometryDecodeData);
 	}
-	size_t nameLength = NextUint64;
-	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(nameLength);
-	texture.name.resize(nameLength);
-	copy<char>(texture.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
-	
+	if(!readString(geometryDecodeData,texture.name))
+		return avs::Result::Failed;
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("textures/" + texture.name + ".texture"));
 	// what is the largest possible texture size? say 4096*4096*16?
@@ -1250,11 +1241,9 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 	}
 	teleport::core::Animation animation;
 	avs::uid animationID	= geometryDecodeData.uid;
-	size_t nameLength		= NextUint64;
-	if (nameLength>150)
+	
+	if(!readString(geometryDecodeData,animation.name))
 		return avs::Result::Failed;
-	animation.name.resize(nameLength);
-	copy<char>(animation.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("animations/"+animation.name+".anim"));
 
@@ -1282,17 +1271,29 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData& geometryDecodeD
 	return avs::Result::OK;
 }
 
+bool GeometryDecoder::readString(GeometryDecoder::GeometryDecodeData& geometryDecodeData,std::string &str) const
+{
+	uint16_t nameLength = NextUint16;
+	if(nameLength>=geometryDecodeData.data.size()-geometryDecodeData.offset)
+	{
+		TELEPORT_WARN("Tried to read {} bytes for a string, only {} left in buffer.",nameLength,
+			geometryDecodeData.data.size()-geometryDecodeData.offset);
+		return false;
+	}
+	str.resize((size_t)nameLength);
+	copy<char>(str.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	
+	return true;
+}
+
 avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 {
 	avs::uid uid = geometryDecodeData.uid;
 
 	avs::Node node;
 
-	size_t nameLength = NextUint64;
-	if(nameLength>=geometryDecodeData.data.size()-8)
+	if(!readString(geometryDecodeData,node.name))
 		return avs::Result::Failed;
-	node.name.resize(nameLength);
-	copy<char>(node.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
 
 	node.localTransform = NextChunk(avs::Transform);
 	//bool useLocalTransform =(NextByte)!=0;
@@ -1333,12 +1334,10 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData& geometryDecodeData)
 				break;
 			case avs::NodeDataType::Link:
 				{
-					size_t url_length=NextUint64;
-					node.url.resize(url_length);
-					copy<char>(node.url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, url_length);
-					size_t query_length = NextUint64;
-					node.query_url.resize(query_length);
-					copy<char>(node.query_url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, query_length);
+					if(!readString(geometryDecodeData,node.url))
+						return avs::Result::Failed;
+					if(!readString(geometryDecodeData,node.query_url))
+						return avs::Result::Failed;
 				}
 			break;
 			default:
@@ -1361,9 +1360,9 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData& geometryDecodeDa
 
 	avs::Skeleton skeleton;
 
-	size_t nameLength = NextUint64;
-	skeleton.name.resize(nameLength);
-	copy<char>(skeleton.name.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, nameLength);
+	if(!readString(geometryDecodeData,skeleton.name))
+		return avs::Result::Failed;
+
 	if(geometryDecodeData.saveToDisk)
 		saveBuffer(geometryDecodeData, std::string("skeletons/"+skeleton.name+".skeleton"));
 
@@ -1419,13 +1418,9 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData& geometryDecode
 	textCanvasCreateInfo.width=NextFloat;
 	textCanvasCreateInfo.height=NextFloat;
 	copy<char>((char*)&textCanvasCreateInfo.colour, geometryDecodeData.data.data(), geometryDecodeData.offset, sizeof(textCanvasCreateInfo.colour));
-
-	size_t len=NextUint64;
-	// Maximum 1 million chars.
-	if(len>1024*1024)
+	
+	if(!readString(geometryDecodeData,textCanvasCreateInfo.text))
 		return avs::Result::Failed;
-	textCanvasCreateInfo.text.resize(len);
-	copy<char>(textCanvasCreateInfo.text.data(),  geometryDecodeData.data.data(), geometryDecodeData.offset, len);
 	geometryDecodeData.target->CreateTextCanvas(textCanvasCreateInfo);
 	return avs::Result::OK;
 }

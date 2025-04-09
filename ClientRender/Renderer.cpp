@@ -760,7 +760,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext& deviceContext)
 		multiview = true;
 	}
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
-	//renderState.pbrEffect->UnbindTextures(deviceContext);
+
 	static std::vector<crossplatform::ViewStruct> defaultViewStructs;
 	if(mvgdc)
 		defaultViewStructs=mvgdc->viewStructs;
