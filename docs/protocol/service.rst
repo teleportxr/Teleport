@@ -77,7 +77,7 @@ The **Setup Command** is
             paddingY: 4
     ---
 	packet-beta
-	  0-1: "CommandPayloadType"
+	  0-0: "CommandPayloadType"
 	  1-4: "Debug stream index"
 	  5-8: "Debug network packets?"
 	  9-12: "Required Latency Ms"

@@ -22,12 +22,12 @@
 #ifdef _MSC_VER
 #define isinf !_finite
 #else
-#include <cmath>		// for isinf()
+#include <cmath> // for isinf()
 #endif
 using namespace std::chrono_literals;
 #pragma optimize("", off)
 
-//#define STB_IMAGE_IMPLEMENTATION
+// #define STB_IMAGE_IMPLEMENTATION
 namespace teleport
 {
 #include "stb_image.h"
