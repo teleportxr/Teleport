@@ -796,7 +796,8 @@ vec4 Solid(vertexOutput IN,bool lightmap,bool ambient,bool normal_map,bool do_em
 
 vec4 Solid_AlbedoOnly(vertexOutput IN)
 {
-	vec4 diffuseColour	= diffuseTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.xy);
+	vec4 diffuseColour = diffuseTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.xy);
+	diffuseColour = diffuseColour.rgba * diffuseOutputScalar.rgba;
 	return diffuseColour;
 }
 
@@ -971,7 +972,8 @@ shader vec4 PS_DebugAmbient(vertexOutput IN) : SV_TARGET
 	surfaceProperties.metallic = 0.0;
 	surfaceProperties.ao = 1.0;
 	surfaceProperties.normal = IN.normal;
-	surfaceProperties.albedo = vec4(1.0,1.0,1.0,1.0);
+	vec4 diffuseColour = diffuseTexture.Sample(wrapSamplerState, IN.diffuseNormalUV.xy);
+	surfaceProperties.albedo = diffuseColour.rgba * diffuseOutputScalar.rgba;
 	surfaceProperties.roughness2 = 1.0;
 	surfaceProperties.globalIllumination = vec3(0,0,0);
 	SurfaceState surfaceState = PreprocessSurface(view, surfaceProperties);

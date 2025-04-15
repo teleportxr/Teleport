@@ -234,7 +234,6 @@ bool teleport::server::CompressToKtx2(ExtractedTexture &extractedTexture,std::st
 	ktxTexture2* ktx2Texture=nullptr; 
 	ktxTextureCreateInfo createInfo;
 	KTX_error_code result;
-	ktx_uint32_t  layer, faceSlice;
 	ktx_size_t srcSize=0;
  
 	createInfo.vkFormat = VK_FORMAT_BC6H_UFLOAT_BLOCK;
@@ -261,21 +260,25 @@ bool teleport::server::CompressToKtx2(ExtractedTexture &extractedTexture,std::st
 	// Allocate the compressed storage.
 	avsTexture.compressedData.resize(ktx2Texture->dataSize);
 	//ktx2Texture->pData=avsTexture.compressedData.data();
-	layer = 0;
-	faceSlice = 0;
 	ktx_size_t dataSizeUnc=ktxTexture_GetDataSizeUncompressed(ktxTexture(ktx2Texture));
 	VkFormat targetFormat=GetDesiredVkFormat(avsTexture.format);
-	for(uint32_t m=0;m<avsTexture.mipCount;m++)
+	for(uint32_t layer=0;layer<avsTexture.arrayCount;layer++)
 	{
-		std::vector<uint8_t> encodedImage=EncodeLayer( targetFormat,avsTexture, m,0,0);
-		srcSize=encodedImage.size();
-		result = ktxTexture_SetImageFromMemory(ktxTexture(ktx2Texture),
-										   m, layer, faceSlice,
-										   encodedImage.data(), srcSize);
-		if(result!=KTX_SUCCESS)
+		for(uint32_t face=0;face<createInfo.numFaces;face++)
 		{
-			TELEPORT_WARN("Ktx failed to encode mip {0} of texture {1}.",m,extractedTexture.getName());
-			return false;
+			for(uint32_t m=0;m<avsTexture.mipCount;m++)
+			{
+				std::vector<uint8_t> encodedImage=EncodeLayer( targetFormat,avsTexture, m,layer,face);
+				srcSize=encodedImage.size();
+				result = ktxTexture_SetImageFromMemory(ktxTexture(ktx2Texture),
+												   m, layer, face,
+												   encodedImage.data(), srcSize);
+				if(result!=KTX_SUCCESS)
+				{
+					TELEPORT_WARN("Ktx failed to encode mip {0} of texture {1}.",m,extractedTexture.getName());
+					return false;
+				}
+			}
 		}
 	}
 	// We don't know how much space to set aside for the ktx file, and the ktx lib won't tell us...

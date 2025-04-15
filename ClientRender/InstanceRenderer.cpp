@@ -76,7 +76,9 @@ InstanceRenderer::~InstanceRenderer()
 void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r)
 {
 	renderPlatform=r;
-	GeometryCache::CreateGeometryCache(server_uid, -1, server_uid?sessionClient->GetConnectionURL():"Local");
+	std::string url_root=server_uid?sessionClient->GetConnectionURL():"Local";
+	auto domainPortPath = core::GetDomainPortPath(url_root);
+	GeometryCache::CreateGeometryCache(server_uid, -1, domainPortPath.domain);
 	geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	instanceRenderState.videoTexture = renderPlatform->CreateTexture();
 	instanceRenderState.specularCubemapTexture = renderPlatform->CreateTexture();
@@ -1124,13 +1126,13 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 	auto s=node->GetComponent<clientrender::SubSceneComponent>();
 	if(s)
 	{
-		if(s->sub_scene_uid)
+		if(s->mesh_uid)
 		{
-			auto ss = geometrySubCache->mSubsceneManager.Get(s->sub_scene_uid);
+			auto ss = geometrySubCache->mMeshManager.Get(s->mesh_uid);
 			if(ss)
-			if(ss->subscene_uid)
+			if(ss->GetMeshCreateInfo().subscene_cache_uid)
 			{
-				auto g=GeometryCache::GetGeometryCache(ss->subscene_uid);
+				auto g=GeometryCache::GetGeometryCache(ss->GetMeshCreateInfo().subscene_cache_uid);
 				if(g)
 				{
 					auto oldview=deviceContext.viewStruct.view;

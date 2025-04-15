@@ -70,18 +70,6 @@ namespace teleport
 			{
 			}
 		};
-		//! A simple mapping to a subscene.
-		struct SubSceneCreate
-		{
-			//! The uid of the asset in the containing cache.
-			avs::uid uid;
-			//! The uid of the subscene's local cache in the cache/server list.
-			avs::uid subscene_uid;
-			static const char *getTypeName()
-			{
-				return "SubScene";
-			}
-		};
 		//! A container for geometry sent from servers and cached locally.
 		//! There is one instance of GeometryCache for each connected server, and a local GeometryCache for the client's own objects.
 		//! There is also one GeometryCache for each externally-provided sub-scene, for example a GLTF or GLB file.
@@ -235,7 +223,6 @@ namespace teleport
 
 			clientrender::NodeManager mNodeManager;
 			ResourceManager<avs::uid, clientrender::Material> mMaterialManager;
-			ResourceManager<avs::uid, SubSceneCreate> mSubsceneManager;
 			ResourceManager<avs::uid, clientrender::Texture> mTextureManager;
 			ResourceManager<avs::uid, clientrender::Mesh> mMeshManager;
 			ResourceManager<avs::uid, clientrender::Skeleton> mSkeletonManager;
@@ -277,7 +264,8 @@ namespace teleport
 			{
 				lifetimeFactor = f;
 			}
-
+			const std::string &GetDefaultURLRoot() const { return defaultURLRoot; }
+			void SetDefaultURLRoot(const std::string &r) { defaultURLRoot=r; }
 			const std::string &GetURL(avs::uid u) const
 			{
 				auto f=resourceURLs.find(u);
@@ -299,6 +287,7 @@ namespace teleport
 			std::string cacheFolder;
 			phmap::flat_hash_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 			phmap::flat_hash_map<avs::uid, std::string> resourceURLs;
+			std::string defaultURLRoot;
 		};
 	}
 

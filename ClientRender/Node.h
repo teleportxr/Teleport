@@ -60,6 +60,20 @@ namespace teleport
 				return u;
 			}
 			template <typename T>
+			std::shared_ptr<T> GetOrAddComponent()
+			{
+				std::shared_ptr<T> u;
+				for (auto &c= components.begin();c!=components.end();c++)
+				{
+					std::shared_ptr<T> t = std::dynamic_pointer_cast<T>(c);
+					if (t.get() != nullptr)
+						return t;
+					c= std::make_shared<T>();
+					return *c;
+				}
+				return AddComponent<T>();
+			}
+			template <typename T>
 			std::shared_ptr<T> AddComponent()
 			{
 				auto u = std::make_shared<T>();
@@ -145,8 +159,8 @@ namespace teleport
 			void SetVisible(bool visible);
 			float GetTimeSinceLastVisibleS(std::chrono::microseconds timestamp) const { return visibility.getTimeSinceLastVisibleS(timestamp.count()); }
 
-			virtual void SetMesh(std::shared_ptr<Mesh> mesh) { this->mesh = mesh; }
-			std::shared_ptr<Mesh> GetMesh() const { return mesh; }
+			virtual void SetMesh(std::shared_ptr<Mesh> mesh);
+			std::shared_ptr<Mesh> GetMesh() const;
 
 			void SetTextCanvas(std::shared_ptr<TextCanvas> t) { this->textCanvas = t; }
 			std::shared_ptr<TextCanvas> GetTextCanvas() const { return textCanvas; }
@@ -299,7 +313,6 @@ namespace teleport
 		protected:
 			std::string url;
 			avs::uid globalIlluminationTextureUid = 0;
-			std::shared_ptr<Mesh> mesh;
 			std::shared_ptr<TextCanvas> textCanvas;
 			std::shared_ptr<SkeletonInstance> skeletonInstance;
 			std::vector<std::shared_ptr<Material>> materials;

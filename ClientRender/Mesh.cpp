@@ -13,6 +13,11 @@ Mesh::Mesh(const MeshCreateInfo& pMeshCreateInfo)
 	}
 }
 
+Mesh::Mesh(const SubSceneCreate &subSceneCreate)
+{
+	m_CI.subscene_cache_uid = subSceneCreate.subscene_cache_uid;
+}
+
 Mesh::~Mesh()
 {
 	std::cerr << "Destroying mesh " << m_CI.name << "\n";

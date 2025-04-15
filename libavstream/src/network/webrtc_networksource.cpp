@@ -114,10 +114,14 @@ avs::WebRtcNetworkSource *src)
 	
 	src->SetStreamingConnectionState(avs::StreamingConnectionState::NEW_UNCONNECTED);
 	pc->onStateChange(
-		[src](rtc::PeerConnection::State state)
+		[src,pc](rtc::PeerConnection::State state)
 		{
 			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
 			src->SetStreamingConnectionState(ConvertConnectionState(state));
+			if(state==rtc::PeerConnection::State::Closed)
+			{
+				src->resetPeerConnection();
+			}
 		});
 
 	pc->onIceStateChange([](rtc::PeerConnection::IceState state)
@@ -302,11 +306,18 @@ Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
 	}
 	return Result::OK;
 }
+void WebRtcNetworkSource::resetPeerConnection()
+{
+	m_data->rtcPeerConnection.reset();
+}
 
 void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 {
 	rtc::Description rtcDescription(sdp,"offer");
 	rtc::Configuration config;
+	// Enable TCP for e.g. Heroku
+	//config.enableIceTcp=true;
+	config.enableIceUdpMux=true;
 	for(size_t i=0;i<1000;i++)
 	{
 		const char *srv=iceServers[i];
@@ -374,7 +385,7 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 	}
 	try
 	{
-	rtc::PeerConnection::IceState iceState=m_data->rtcPeerConnection->iceState();
+		rtc::PeerConnection::IceState iceState=m_data->rtcPeerConnection->iceState();
 		//if(iceState==rtc::PeerConnection::IceState::Failed)
 		{
 			AVSLOG(Info)<<"IceState: "<<stringOf(iceState)<<".\n";
@@ -601,6 +612,11 @@ void WebRtcNetworkSource::SetStreamingConnectionState(StreamingConnectionState s
 	if(webRtcState!=StreamingConnectionState::CONNECTED&&webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW_UNCONNECTED)
 	{
 		offer="";
+	}
+	if(webRtcState==StreamingConnectionState::CONNECTED)
+	{
+		// Recover from disconnection, allow processing again!
+		setResult(avs::Result::OK);
 	}
 }
 

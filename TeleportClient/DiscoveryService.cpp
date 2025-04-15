@@ -191,6 +191,7 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 	}
 	if(!signalingServer->url.length())
 		return 0;
+	signalingServer->Reset();
 	signalingServer->active=true;
 	bool serverDiscovered = false;
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
@@ -302,6 +303,12 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	catch(...)
 	{
 		TELEPORT_CERR <<  "Unknown exception" << std::endl;
+	}
+	if (signalingServer->closingDown)
+	{
+		signalingServer->active=false;
+		signalingServer->closingDown=false;
+		return;
 	}
 }
 

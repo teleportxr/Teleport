@@ -82,6 +82,7 @@ namespace avs
 			return webRtcState;
 		}
 		void SetStreamingConnectionState(StreamingConnectionState s);
+		void resetPeerConnection();
 	protected:
 		StreamingConnectionState webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 		std::vector<std::string> messagesToSend;

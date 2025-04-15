@@ -584,7 +584,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 avs::Result ResourceCreator::CreateSubScene(avs::uid server_uid,const SubSceneCreate& subSceneCreate)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
-	std::shared_ptr<GeometryCache> subSceneCache=GeometryCache::GetGeometryCache(subSceneCreate.subscene_uid);
+	std::shared_ptr<GeometryCache> subSceneCache=GeometryCache::GetGeometryCache(subSceneCreate.subscene_cache_uid);
 	return geometryCache->CreateSubScene(subSceneCreate);
 }
 
@@ -700,35 +700,6 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 			texlist+=fmt::format("{0},",t_uid);
 		}
 		TELEPORT_INTERNAL_COUT("CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.", id, material.name, texlist, RESOURCES_AWAITED(incompleteMaterial));
-	}
-}
-
-void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::Node &node)
-{
-	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
-	geometryCache->ReceivedResource(id);
-
-	switch (node.data_type)
-	{
-	case avs::NodeDataType::Invalid:
-		TELEPORT_CERR << "CreateNode failure! Received a node with a data type of Invalid(0)!\n";
-		break;
-	case avs::NodeDataType::TextCanvas:
-	case avs::NodeDataType::None:
-	case avs::NodeDataType::Mesh:
-	case avs::NodeDataType::SubScene:
-	case avs::NodeDataType::Skeleton:
-		CreateMeshNode(  server_uid, id, node);
-		break;
-	case avs::NodeDataType::Light:
-		CreateLight(server_uid,id, node);
-		break;
-	case avs::NodeDataType::Link:
-		CreateLinkNode(  server_uid, id, node);
-		break;
-	default:
-		SCR_LOG("Unknown NodeDataType: %c", static_cast<int>(node.data_type));
-		break;
 	}
 }
 
@@ -921,25 +892,37 @@ void ResourceCreator::CreateAnimation(avs::uid server_uid,avs::uid id, teleport:
 }
 
 
-void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs::Node &avsNode)
+void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::Node &avsNode)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
+	geometryCache->ReceivedResource(id);
+	switch (avsNode.data_type)
+	{
+	case avs::NodeDataType::Light:
+		CreateLight(server_uid,id, avsNode);
+		return;
+	case avs::NodeDataType::Link:
+		CreateLinkNode(  server_uid, id, avsNode);
+		return;
+	default:
+		break;
+	}
+
 	std::shared_ptr<Node> node;
-//	TELEPORT_CERR << "Creating Node " << id <<  "\n";
 
 	std::lock_guard g(geometryCache->missingResourcesMutex);
 // If the node exists already we have a problem.
-//   If we recreate the node here, we must either reset the missing resource count or add to it.
+// If we recreate the node here, we must either reset the missing resource count or add to it.
 	if (geometryCache->mNodeManager.HasNode(id))
 	{
-	TELEPORT_CERR << "CreateMeshNode(" << id << ", " << avsNode.name << "). Already created! "<<(avsNode.stationary?"static":"mobile")<<"\n";
-		//leaves nodes with no children. why?
+		TELEPORT_WARN("CreateNode {} {} Already created." , id , avsNode.name);
+		// leaves nodes with no children. why?
 		auto n=geometryCache->mNodeManager.GetNode(id);
 		node = geometryCache->mNodeManager.GetNode(id);
 		MissingResource *missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
 		if(missingResource)
 		{
-			TELEPORT_CERR << "But it's listed as missing.\n";
+			TELEPORT_WARN("But it's listed as missing.");
 		}
 		return;
 	}
@@ -971,53 +954,40 @@ void ResourceCreator::CreateMeshNode(avs::uid server_uid, avs::uid id, const avs
 			}
 		}
 	}
-	//Whether the node is missing any resource before, and must wait for them before it can be completed.
+	// Whether the node is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
-
+	if(avsNode.skeletonNodeID!=0)
+	{
+		auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
+		if(!skeletonNode)
+		{
+			TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
+			isMissingResources = true;
+			auto &missing=geometryCache->GetMissingResource(avsNode.skeletonNodeID, avs::GeometryPayloadType::Node);
+			missing.waitingResources.insert(node);
+			node->IncrementMissingResources();
+		}
+		else
+		{
+			std::weak_ptr<clientrender::Node> skn=skeletonNode;
+			node->SetSkeletonNode(skn);
+		}
+	}
 	if (avsNode.data_uid != 0)
 	{
+		std::shared_ptr<clientrender::SubSceneComponent> subSceneComponent;
 		if(avsNode.data_type==avs::NodeDataType::Mesh)
 		{
-			node->SetMesh(geometryCache->mMeshManager.Get(avsNode.data_uid));
-			if (!node->GetMesh())
+			subSceneComponent=node->GetOrCreateComponent<SubSceneComponent>();
+		
+			subSceneComponent->mesh_uid=avsNode.data_uid;
+			auto mesh=geometryCache->mMeshManager.Get(subSceneComponent->mesh_uid);
+			node->SetMesh(mesh);
+			if (!mesh)
 			{
-
 				isMissingResources = true;
 				node->IncrementMissingResources();
 				TELEPORT_INTERNAL_COUT("Node {0} ({1}) missing Mesh {2}, total missing resources: {3}",id,avsNode.name,avsNode.data_uid,node->GetMissingResourceCount());
-				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(node);
-			}
-			if(avsNode.skeletonNodeID!=0)
-			{
-				auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
-				if(!skeletonNode)
-				{
-					TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
-					isMissingResources = true;
-					auto &missing=geometryCache->GetMissingResource(avsNode.skeletonNodeID, avs::GeometryPayloadType::Node);
-					missing.waitingResources.insert(node);
-					node->IncrementMissingResources();
-				}
-				else
-				{
-					std::weak_ptr<clientrender::Node> skn=skeletonNode;
-					node->SetSkeletonNode(skn);
-				}
-			}
-		}
-		if(avsNode.data_type==avs::NodeDataType::SubScene)
-		{
-			auto s=node->AddComponent<SubSceneComponent>();
-			s->sub_scene_uid=avsNode.data_uid;
-			auto subScene=geometryCache->mSubsceneManager.Get(s->sub_scene_uid);
-			std::shared_ptr<GeometryCache> subSceneCache;
-			if(subScene)
-				subSceneCache=GeometryCache::GetGeometryCache(subScene->subscene_uid);
-			if (!subSceneCache.get())
-			{
-				TELEPORT_CERR<< "MeshNode " << id << "(" << avsNode.name << ") missing Subscene Mesh " << avsNode.data_uid << std::endl;
-				isMissingResources = true;
-				node->IncrementMissingResources();
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(node);
 			}
 		}

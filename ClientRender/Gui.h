@@ -81,7 +81,7 @@ namespace teleport
 			void TagOSD(std::vector<SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
 
 			void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
-			void NetworkPanel(const teleport::client::ClientPipeline &clientPipeline);
+			void NetworkPanel(teleport::client::ClientPipeline &clientPipeline);
 			void DrawPipelineNode(const avs::PipelineNode &node, float x, float y);
 			void DrawPipeline(const avs::Pipeline &pipeline);
 			void ProfilingPanel();
