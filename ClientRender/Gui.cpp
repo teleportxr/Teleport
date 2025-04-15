@@ -1166,8 +1166,6 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			std::shared_ptr<const clientrender::Material> selected_material = geometryCache->mMaterialManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Texture> selected_texture = geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation = geometryCache->mAnimationManager.Get(selected_uid);
-
-			std::shared_ptr<const clientrender::SubSceneCreate> selected_subscene; //= geometryCache->mSubsceneManager.Get(selected_uid);
 			if(selected_mesh.get())
 			{
 			}
@@ -1312,11 +1310,11 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					IMGUITREENODEEX("##subsc", flags, " SubScene resource: {0}", s->sub_scene_uid);
+					IMGUITREENODEEX("##subsc", flags, " SubScene resource: {0}", s->mesh_uid);
 
 					if (ImGui::IsItemClicked())
 					{
-						Select(cache_uid, s->sub_scene_uid);
+						Select(cache_uid, s->mesh_uid);
 					}
 				}
 			}
@@ -1419,17 +1417,17 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					ImGui::EndTable();
 				}
 			}
-			else if (selected_subscene.get())
+			else if (selected_mesh.get())
 			{
-				ImGui::Text("Subscene resource %llu", selected_subscene->uid);
-
-				if (selected_subscene->subscene_uid)
+				avs::uid cache_uid=selected_mesh->GetMeshCreateInfo().subscene_cache_uid;
+				if (cache_uid != 0)
 				{
-					auto g = clientrender::GeometryCache::GetGeometryCache(selected_subscene->subscene_uid);
-					IMGUITREENODEEX("##name111", flags, " Subscene Geometry Cache: {0}", selected_subscene->subscene_uid);
+					ImGui::Text("Subscene resource %llu", cache_uid);
 
+					auto g = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 					if (g)
 					{
+						IMGUITREENODEEX("##name111", flags, " Subscene Geometry Cache: {0}", cache_uid);
 						auto rn = g->mNodeManager.GetRootNodes();
 						if (rn.size())
 						{
@@ -1440,6 +1438,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 							}
 						}
 					}
+				}
+				else
+				{
+					ImGui::Text("Mesh %s", selected_mesh->getName());
 				}
 			}
 			ImGuiEnd();
@@ -1609,13 +1611,17 @@ void Gui::InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient,
 	}
 }
 
-void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
+void Gui::NetworkPanel( teleport::client::ClientPipeline &clientPipeline)
 {
 	const avs::NetworkSourceCounters counters = clientPipeline.source->getCounterValues();
 	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
 	const auto &streams = clientPipeline.source->GetStreams();
 	const auto &streamStatus = clientPipeline.source->GetStreamStatus();
 
+	if(ImGui::Button("Break Connection"))
+	{
+		clientPipeline.Debug_BreakConnection();
+	}
 	if (ImGui::BeginTable("bandwidth", 4))
 	{
 		ImGui::TableSetupColumn("Ch.", ImGuiTableColumnFlags_WidthFixed, 100.0f);
@@ -1641,19 +1647,8 @@ void Gui::NetworkPanel(const teleport::client::ClientPipeline &clientPipeline)
 		ImGui::EndTable();
 	}
 	DrawPipeline(clientPipeline.pipeline);
-	/*	LinePrint(platform::core::QuickFormat("Start timestamp: %d", clientPipeline.pipeline.GetStartTimestamp()));
-		LinePrint(platform::core::QuickFormat("Current timestamp: %d", clientPipeline.pipeline.GetTimestamp()));
-		LinePrint(platform::core::QuickFormat("Bandwidth KBs: %4.2f", counters.bandwidthKPS));
-		LinePrint(platform::core::QuickFormat("Network packets received: %d", counters.networkPacketsReceived));
-		LinePrint(platform::core::QuickFormat("Decoder packets received: %d", counters.decoderPacketsReceived));
-		LinePrint(platform::core::QuickFormat("Network packets dropped: %d", counters.networkPacketsDropped));
-		LinePrint(platform::core::QuickFormat("Decoder packets dropped: %d", counters.decoderPacketsDropped));
-		LinePrint(platform::core::QuickFormat("Decoder packets incomplete: %d", counters.incompleteDecoderPacketsReceived));
-		LinePrint(platform::core::QuickFormat("Decoder packets per sec: %4.2f", counters.decoderPacketsReceivedPerSec));
-		LinePrint(platform::core::QuickFormat("Video frames received per sec: %4.2f", vidStats.framesReceivedPerSec));
-		LinePrint(platform::core::QuickFormat("Video frames parseed per sec: %4.2f", vidStats.framesProcessedPerSec));
-		LinePrint(platform::core::QuickFormat("Video frames displayed per sec: %4.2f", vidStats.framesDisplayedPerSec));*/
 }
+
 void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 {
 	static float xspacing = 150.0f;
@@ -1705,7 +1700,6 @@ void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 		if (nodes[0])
 			DrawPipelineNode(*nodes[0], x, y);
 	}
-	// ImGui::Dummy(ImVec2((sz + spacing) * 11.2f, (sz + spacing) * 3.0f));
 	ImGui::PopItemWidth();
 }
 

@@ -63,7 +63,6 @@ namespace teleport
 			std::shared_ptr<clientrender::Texture> m_DummyGreen;
 
 		private:
-			void CreateMeshNode( avs::uid server_id, avs::uid id, const avs::Node &node);
 			void CreateLight(avs::uid server_id, avs::uid id, const avs::Node &node);
 			void CreateLinkNode( avs::uid server_uid, avs::uid id, const avs::Node &node);
 

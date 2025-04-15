@@ -8,26 +8,6 @@ using namespace client;
 ClientPipeline::ClientPipeline()
 {
 	source.reset(new avs::WebRtcNetworkSource());
-/*
-	avs::PipelineNode::link(*(source.get()), videoQueue);
-	avs::PipelineNode::link(videoQueue, decoder);
-	pipeline.link({&decoder, &surface});
-
-	avs::PipelineNode::link(*(source.get()), tagDataQueue);
-	pipeline.link({&tagDataQueue, &tagDataDecoder});
-	avs::PipelineNode::link(*(source.get()), audioQueue);
-	avs::PipelineNode::link(audioQueue, avsAudioDecoder);
-	pipeline.link({&avsAudioDecoder, &avsAudioTarget});
-
-	avs::PipelineNode::link(*(source.get()), geometryQueue);
-	avs::PipelineNode::link(geometryQueue, avsGeometryDecoder);
-	pipeline.link({&avsGeometryDecoder, &avsGeometryTarget});
-	avs::PipelineNode::link(*(source.get()), reliableOutQueue);
-	pipeline.link({&reliableOutQueue, &commandDecoder});
-	avs::PipelineNode::link(unreliableToServerQueue, *(source.get()));
-	// Both connect to the source as inputs, and both feed directly to the "unreliable in" stream.
-	avs::PipelineNode::link(nodePosesQueue, *(source.get()));
-	avs::PipelineNode::link(inputStateQueue, *(source.get()));*/
 }
 
 ClientPipeline::~ClientPipeline()
@@ -105,4 +85,9 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 void ClientPipeline::Shutdown()
 {
 	pipeline.deconfigure();
+}
+
+void ClientPipeline::Debug_BreakConnection()
+{
+	source->kill();
 }

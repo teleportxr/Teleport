@@ -27,6 +27,9 @@ namespace teleport
 			~ClientPipeline();
 			bool Init(const teleport::core::SetupCommand& setupCommand, const char* server_ip);
 			void Shutdown();
+		
+			//! Break the connection without logging off - the server should initiate reconnection.
+			void Debug_BreakConnection();
 
 			// Pipeline and nodes:
 			avs::Pipeline pipeline;

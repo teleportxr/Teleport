@@ -47,6 +47,7 @@ namespace teleport
 			uint64_t clientID = uint64_t(0x0);
 			bool awaiting = false;
 			bool active = false;
+			bool closingDown = false;
 		};
 	}
 }

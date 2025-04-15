@@ -2,6 +2,7 @@
 
 #include "Common.h"
 #include "NodeComponents/Component.h"
+#include "ClientRender/Mesh.h"
 #include <map>
 #include <memory>
 #include <vector>
@@ -14,7 +15,9 @@ namespace teleport
 		{
 		public:
 			virtual ~SubSceneComponent() {}
-			avs::uid sub_scene_uid = 0;
+			avs::uid mesh_uid=0;
+			//avs::uid sub_scene_cache_uid = 0xFFFFFFFFFFFFFFFF; The Mesh object stores the cache uid.
+			std::shared_ptr<Mesh> mesh;
 		};
 	}
 }

@@ -153,11 +153,23 @@ namespace avs
 							AVSLOG(Warning)<<"404 returned for "<<transfer.mRequest.url.c_str()<<"\n";
 						// nothing at this address right now.
 						}
-						else if (respons e_code == 302)
+						else if (response_code == 302)
 						{
-							AVSLOG(Warning)<<"302 (redirect) received for "<<transfer.mRequest.url.c_str()<<"\n";
-
-						// A redirect! Should handle this.
+							// A redirect! Should handle this.
+							char *location=nullptr;
+							CURLcode res = curl_easy_getinfo(msgs[0].easy_handle, CURLINFO_REDIRECT_URL, &location);
+ 							AVSLOG(Warning)<<"302 (redirect) received for "<<transfer.mRequest.url.c_str()<<", to "<<(location?location:"null")<<"\n";
+ 
+							if((res == CURLE_OK) && location) {
+							  /* This is the new absolute URL that you could redirect to, even if
+							   * the Location: response header may have been a relative URL. */
+							   // Do this in a really basic way... create a whole new transfer...
+								avs::HTTPPayloadRequest req;
+								req.url = location;
+								req.callbackFn=std::move(transfer.mRequest.callbackFn);
+								req.shouldCache=true;
+								GetRequestQueue().push(req);
+							}
 						}
 					}
 					else

@@ -77,7 +77,7 @@ namespace avs
 		Mesh,
 		Light,
 		TextCanvas,
-		SubScene,
+		Unused1,
 		Skeleton,
 		Link,
 		Script

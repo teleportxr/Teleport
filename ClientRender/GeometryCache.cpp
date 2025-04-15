@@ -12,7 +12,6 @@ platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform=nullptr;
 GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::string &n)
 	: cache_uid(c_uid), parent_cache_uid(parent_c_uid),name(n),mNodeManager(flecs_world),
 	  mMaterialManager(c_uid),
-	  mSubsceneManager(c_uid),
 	  mTextureManager(c_uid, &clientrender::Texture::Destroy),
 	  mMeshManager(c_uid),
 	  mSkeletonManager(c_uid),
@@ -35,11 +34,15 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 GeometryCache::~GeometryCache()
 {
 	flecs_world.quit();
-	auto uids=mSubsceneManager.GetAllIDs();
+	auto uids=mMeshManager.GetAllIDs();
 	for(auto u:uids)
 	{
-		auto ss=mSubsceneManager.Get(u);
-		GeometryCache::DestroyGeometryCache(ss->subscene_uid);
+		auto ss=mMeshManager.Get(u);
+		if(!ss)
+			continue;
+		auto cache_uid=ss->GetMeshCreateInfo().subscene_cache_uid;
+		if(cache_uid!=0)
+			GeometryCache::DestroyGeometryCache(cache_uid);
 	}
 }
 
@@ -48,8 +51,16 @@ static std::vector<avs::uid> cache_uids;
 
 void GeometryCache::CreateGeometryCache(avs::uid cache_uid,avs::uid parent_cache_uid,const std::string &name)
 {
-	caches[cache_uid] = std::make_shared<GeometryCache>(cache_uid, parent_cache_uid,name);
+	if(cache_uid==0xFFFFFFFFFFFFFFFF)
+	{
+		TELEPORT_WARN("Trying to create invalid cache -1");
+		return;
+	}
+	auto cache=std::make_shared<GeometryCache>(cache_uid, parent_cache_uid,name);
+	cache->SetDefaultURLRoot(name);
+	caches[cache_uid] = cache;
 	cache_uids.push_back(cache_uid);
+
 }
 
 void GeometryCache::DestroyGeometryCache(avs::uid cache_uid)
@@ -211,8 +222,8 @@ void GeometryCache::SaveNodeTree(const std::shared_ptr<clientrender::Node>& n) c
 
 avs::Result GeometryCache::CreateSubScene(const SubSceneCreate& subSceneCreate)
 {
-	std::shared_ptr<SubSceneCreate> s = std::make_shared<SubSceneCreate>(subSceneCreate);
-	mSubsceneManager.Add(subSceneCreate.uid, s);
+	std::shared_ptr<clientrender::Mesh> s = std::make_shared<clientrender::Mesh>(subSceneCreate);
+	mMeshManager.Add(subSceneCreate.uid, s);
 	//Add mesh to nodes waiting for mesh.
 	std::lock_guard g(missingResourcesMutex);
 	MissingResource* missingSubScene = GetMissingResourceIfMissing(subSceneCreate.uid, avs::GeometryPayloadType::Mesh);
@@ -228,7 +239,7 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate& subSceneCreate)
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 			RESOURCE_RECEIVES(incompleteNode,subSceneCreate.uid);
 			size_t num_remaining = RESOURCES_AWAITED(*it);
-			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got SubScene {2}=cache {3}, missing {4} or {5}", incompleteNode->id, incompleteNode->name, subSceneCreate.uid, subSceneCreate.subscene_uid,num_remaining,incompleteNode->GetMissingResourceCount());
+			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got SubScene {2}=cache {3}, missing {4} or {5}", incompleteNode->id, incompleteNode->name, subSceneCreate.uid, subSceneCreate.subscene_cache_uid,num_remaining,incompleteNode->GetMissingResourceCount());
 			//If only this mesh and this function are pointing to the node, then it is complete.
 			if (RESOURCE_IS_COMPLETE(*it))
 			{
@@ -243,8 +254,6 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate& subSceneCreate)
 
 void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo& meshInfo)
 {
-	//RESOURCECREATOR_DEBUG_COUT( "CompleteMesh(" << id << ", " << meshInfo.name << ")\n";
-
 	std::shared_ptr<clientrender::Mesh> mesh = std::make_shared<clientrender::Mesh>(meshInfo);
 	mMeshManager.Add(id, mesh);
 	

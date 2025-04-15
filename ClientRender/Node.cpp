@@ -1,6 +1,7 @@
 // (C) Copyright 2018-2023 Simul Software Ltd
 #include "Node.h"
 #include "TeleportClient/basic_linear_algebra.h"
+#include "NodeComponents/SubSceneComponent.h"
 
 using namespace teleport;
 using namespace clientrender;
@@ -234,6 +235,20 @@ void Node::SetVisible(bool visible)
 	if (visible == visibility.getVisibility())
 		return;
 	visibility.setVisibility(visible, InvisibilityReason::OUT_OF_BOUNDS);
+}
+
+void Node::SetMesh(std::shared_ptr<Mesh> mesh)
+{
+	auto c=GetOrCreateComponent<SubSceneComponent>();
+	c->mesh= mesh;
+}
+
+std::shared_ptr<Mesh> Node::GetMesh() const
+{
+	auto c=GetComponent<SubSceneComponent>();
+	if(!c)
+		return nullptr;
+	return c->mesh;
 }
 
 void Node::SetLocalTransform(const Transform& transform)
