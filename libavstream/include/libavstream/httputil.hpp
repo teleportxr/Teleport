@@ -39,7 +39,7 @@ namespace avs
 	 */
 	class AVSTREAM_API HTTPUtil
 	{
-
+        std::mutex mMutex;
 	public:
 		class Transfer
 		{

@@ -36,8 +36,8 @@ extern "C" FILE * __cdecl __iob_func(void)
 using namespace std;
 using nlohmann::json;
 
-#define EVEN_ID(id) (id-(id%2))
-#define ODD_ID(id) (EVEN_ID(id)+1)
+constexpr uint16_t EVEN_ID(uint16_t id) { return id - (id % 2); }
+constexpr uint16_t ODD_ID(uint16_t id) { return EVEN_ID(id) + 1; }
 
 namespace avs
 {
