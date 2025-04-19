@@ -355,6 +355,6 @@ void teleport::server::LoadAsTeleportTexture(ExtractedTexture &textureData, cons
 
 		//Value scale - brightness number to scale the final texel by.
 	read_from_buffer(textureData.texture.valueScale,src);
-	textureData.texture.compression=avs::TextureCompression::PNG;
+	textureData.texture.compression=avs::TextureCompression::MULTIPLE_PNG;
 
 }

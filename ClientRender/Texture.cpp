@@ -82,10 +82,12 @@ void Texture::Destroy()
 	delete m_SimulTexture;
 	m_SimulTexture = nullptr;
 }
-
+#pragma optimize("",off)
 void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 {
 	if(pTextureCreateInfo.format==Format::FORMAT_UNKNOWN)
+		return;
+	if(pTextureCreateInfo.width==0||pTextureCreateInfo.height==0)
 		return;
 	m_CI = pTextureCreateInfo;
 	//m_CI.size = pTextureCreateInfo->width * pTextureCreateInfo->height * pTextureCreateInfo->depth *pTextureCreateInfo->bitsPerPixel;

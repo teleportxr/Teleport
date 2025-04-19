@@ -670,7 +670,8 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 			m_DummyCombined,
 			incompleteMaterial,
 			incompleteMaterial->materialInfo.combined);
-	else 
+	
+	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index)
 		geometryCache->AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
 			vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
 			m_DummyCombined,
@@ -1280,7 +1281,7 @@ void ResourceCreator::thread_TranscodeTextures()
 
 		{
 			auto geometryCache=GeometryCache::GetGeometryCache(transcoding->cache_or_server_uid);
-			if (transcoding->compressionFormat == avs::TextureCompression::PNG)
+			if (transcoding->compressionFormat == avs::TextureCompression::MULTIPLE_PNG)
 			{
 				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with PNG",transcoding->name.c_str());
 				int mipWidth=0, mipHeight=0;
@@ -1375,6 +1376,78 @@ void ResourceCreator::thread_TranscodeTextures()
 						transcoding->textureCI->height=mipHeight;
 						transcoding->textureCI->depth=1;
 						transcoding->textureCI->format=((num_channels==4)?clientrender::Texture::Format::RGBA8:clientrender::Texture::Format::RGB8);
+					}
+				}
+				if (transcoding->textureCI->images->size() != 0)
+				{
+					//TELEPORT_CERR << "Texture \"" << transcoding->name << "\" uid "<< transcoding->texture_uid<<", Type "<<int(transcoding->textureCI->type) << std::endl;
+					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
+				}
+				else
+				{
+					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode, no images found." << std::endl;
+				}
+			}
+			else if (transcoding->compressionFormat == avs::TextureCompression::JPEG||transcoding->compressionFormat == avs::TextureCompression::PNG)
+			{
+				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with JPEG/PNG",transcoding->name.c_str());
+
+				transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+				transcoding->textureCI->images->resize(1);
+				for(int i=0;i<1;i++)
+				{
+					int num_channels=0;
+					// request 4 channels because e.g. d3d can't handle 3-channel data for upload.
+					int mipWidth=0, mipHeight=0;
+					unsigned char *target = teleport::stbi_load_from_memory(transcoding->data.data(),transcoding->data.size(), &mipWidth, &mipHeight, &num_channels,(int)4);
+					if( mipWidth > 0 && mipHeight > 0&&target&&transcoding->data.size()>2)
+					{
+					num_channels=4;
+						size_t numTexels = mipWidth * mipHeight;
+						// this is for 8-bits-per-channel textures:
+						if(num_channels==4||num_channels==1)
+						{
+							size_t outDataSize = (size_t)(mipWidth * mipHeight * num_channels);
+							(*transcoding->textureCI->images)[i].resize(outDataSize);
+							memcpy((*transcoding->textureCI->images)[i].data(), target, outDataSize);
+						}
+						else if(num_channels==3)
+						{
+							size_t outDataSize = (size_t)(numTexels * 4);
+							auto &img=(*transcoding->textureCI->images)[i];
+							img.resize(outDataSize);
+							for(size_t j=0;j<numTexels;j++)
+							{
+								img[j*4  ]=target[j*3];
+								img[j*4+1]=target[j*3+1];
+								img[j*4+2]=target[j*3+2];
+								img[j*4+3]=255;
+							}
+						}
+						else
+						{
+							TELEPORT_WARN("Can't translate texture with {} channels.\n",num_channels);
+							transcoding->textureCI->images->resize(0);
+							continue;
+						}
+						transcoding->textureCI->valueScale=transcoding->valueScale;
+
+					}
+					else
+					{
+						TELEPORT_CERR << "Failed to transcode JPEG or PNG format texture \"" << transcoding->name << "\"." << std::endl;
+					}
+					teleport::stbi_image_free(target);
+					// fill in values from file.
+					if(!i)
+					{
+						transcoding->textureCI->width=mipWidth;
+						transcoding->textureCI->height=mipHeight;
+						transcoding->textureCI->depth=1;
+						transcoding->textureCI->arrayCount=1;
+						transcoding->textureCI->mipCount=1;
+						transcoding->textureCI->type=Texture::Type::TEXTURE_2D;
+						transcoding->textureCI->format=clientrender::Texture::Format::RGBA8;
 					}
 				}
 				if (transcoding->textureCI->images->size() != 0)

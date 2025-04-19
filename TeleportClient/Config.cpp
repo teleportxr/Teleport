@@ -161,16 +161,17 @@ void Config::LoadOptions()
 	SI_Error rc = ini.LoadData(str);
 	if(rc == SI_OK)
 	{
-		std::string s=ini.GetValue("", "LobbyView","");
-		auto l=magic_enum::enum_cast<LobbyView>(s);
+		std::string s					=ini.GetValue("", "LobbyView","");
+		auto l	=magic_enum::enum_cast<LobbyView>(s);
 		if(l.has_value())
-			options.lobbyView = l.value(); 
-		std::string c=ini.GetValue("", "StartupConnectOption","");
-		auto C=magic_enum::enum_cast<StartupConnectOption>(c);
+			options.lobbyView			= l.value(); 
+		std::string c					=ini.GetValue("", "StartupConnectOption","");
+		auto C	=magic_enum::enum_cast<StartupConnectOption>(c);
 		if(C.has_value())
 			options.startupConnectOption = C.value();
-		options.simulateVR = ini.GetBoolValue("", "SimulateVR", options.simulateVR);
-		options.mode2D = ini.GetBoolValue("", "Mode2D", options.mode2D);
+		options.simulateVR				= ini.GetBoolValue("", "SimulateVR", options.simulateVR);
+		options.showGeometryOffline		= ini.GetBoolValue("", "ShowGeometryOffline", options.showGeometryOffline);
+		options.mode2D					= ini.GetBoolValue("", "Mode2D", options.mode2D);
 	}
 }
 
@@ -182,6 +183,7 @@ void Config::SaveOptions()
 		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
 		str+=fmt::format("\nStartupConnectOption={0}",magic_enum::enum_name(options.startupConnectOption));
 		str += fmt::format("\nSimulateVR={0}", options.simulateVR);
+		str += fmt::format("\nShowGeometryOffline={0}", options.showGeometryOffline);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
 		LoadOptions();

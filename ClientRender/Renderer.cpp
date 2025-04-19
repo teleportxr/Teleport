@@ -410,23 +410,26 @@ void Renderer::InitLocalGeometry()
 	// geometryDecoder.decodeFromFile(0,config.GetStorageFolder()+"/meshes/Buggy.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid,
 	// platform::crossplatform::AxesStandard::OpenGL);
 
+	geometryDecoder.decodeFromFile(
+		0, "assets/localGeometryCache/meshes/test_preview_sphere.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid);
+	
 	/*geometryDecoder.decodeFromWeb(0,
 								  "https://github.com/KhronosGroup/glTF-Sample-Models/raw/refs/heads/main/2.0/Buggy/glTF-Binary/Buggy.glb",
 								  avs::GeometryPayloadType::Mesh,
 								  &localResourceCreator,
 								  gltf_uid,
-								  platform::crossplatform::AxesStandard::OpenGL);
+								  platform::crossplatform::AxesStandard::OpenGL);*/
 	{
 		avs::Node gltfNode;
 		gltfNode.name = "GLTF Test";
 		gltfNode.data_type = avs::NodeDataType::Mesh;
 		gltfNode.data_uid = gltf_uid;
 
-		static float sc = 0.01f;
+		static float sc = 1.0f;
 		gltfNode.localTransform.position = vec3(1.0f, 1.0f, 1.0f);
 		gltfNode.localTransform.scale = vec3(sc, sc, sc);
 		localResourceCreator.CreateNode(0, avs::GenerateUid(), gltfNode);
-	}*/
+	}
 	auto local_session_client = client::SessionClient::GetSessionClient(0);
 	teleport::core::SetupCommand setupCommand = local_session_client->GetSetupCommand();
 	setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid = diffuse_cubemap_uid;
@@ -781,7 +784,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 			if (sessionClient->IsConnected()) server_uids.insert(server_uid);
 		}
 	}
-	static bool override_show_local_geometry = false;
+	static bool override_show_local_geometry = config.options.showGeometryOffline;
 	// Local geometry is essentially the UI hands.
 	// We show them if: the UI has been activated,
 	//				or: we are not currently connected to a server.
@@ -1014,6 +1017,10 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	case ShaderMode::REZZING:
 		config.debugOptions.useDebugShader = true;
 		config.debugOptions.debugShader = "ps_digitizing";
+		break;
+	case ShaderMode::ROUGH_METAL_OCCL:
+		config.debugOptions.useDebugShader = true;
+		config.debugOptions.debugShader = "ps_debug_rough_metal_occlusion";
 		break;
 	default:
 		config.debugOptions.useDebugShader = false;

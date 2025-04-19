@@ -174,7 +174,7 @@ namespace teleport
 				std::string &s=const_cast<std::string&>(extension);
 				if (texture.compression == avs::TextureCompression::KTX)
 					s= ".ktx2";
-				else if (texture.compression == avs::TextureCompression::PNG)
+				else if (texture.compression == avs::TextureCompression::MULTIPLE_PNG)
 					s= ".texture";
 				else
 				{

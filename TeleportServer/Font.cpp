@@ -126,7 +126,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	avsTexture.arrayCount=1;
 	avsTexture.mipCount=1;
 	avsTexture.format=avs::TextureFormat::G8;
-	avsTexture.compression=avs::TextureCompression::PNG;
+	avsTexture.compression=avs::TextureCompression::MULTIPLE_PNG;
 	avsTexture.compressed=false;
 	/*stbi_write_png((generate_texture_path_utf8+".png").c_str(), width, height, 1, bitmap, 0);
 

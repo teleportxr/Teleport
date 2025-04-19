@@ -70,7 +70,10 @@ avs::AttributeSemantic FromDracoGeometryAttribute(int t, int index)
 		return avs::AttributeSemantic::TEXCOORD_0;
 	case draco::GeometryAttribute::Type::COLOR:
 		return avs::AttributeSemantic::COLOR_0;
+	case draco::GeometryAttribute::Type::TANGENT:
+		return avs::AttributeSemantic::TANGENT;
 	default:
+		TELEPORT_WARN("Draco attribute {} unrecognized",t);
 		return avs::AttributeSemantic::COUNT;
 	};
 }
