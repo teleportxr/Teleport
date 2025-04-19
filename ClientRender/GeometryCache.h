@@ -40,6 +40,7 @@ namespace teleport
 			DEBUG_KD,
 			DEBUG_REFL,
 			REZZING,
+			ROUGH_METAL_OCCL,
 			NUM
 		};
 		typedef unsigned long long geometry_cache_uid;

@@ -1310,11 +1310,16 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					IMGUITREENODEEX("##subsc", flags, " SubScene resource: {0}", s->mesh_uid);
-
-					if (ImGui::IsItemClicked())
+					if(s->mesh)
 					{
-						Select(cache_uid, s->mesh_uid);
+						if(s->mesh->GetMeshCreateInfo().subscene_cache_uid!=0)
+						{
+							IMGUITREENODEEX("##subsc", flags, " SubScene resource: {0}", s->mesh_uid);
+							if (ImGui::IsItemClicked())
+							{
+								Select(cache_uid, s->mesh_uid);
+							}
+						}
 					}
 				}
 			}
@@ -1389,7 +1394,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 
 				const char *mips[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
 				static int mip_current = 0;
-				ImGui::Combo("Mip", &mip_current, mips, IM_ARRAYSIZE(mips));
+				ImGui::Combo("Mip", &mip_current, mips, std::min(tci.mipCount,(uint32_t)IM_ARRAYSIZE(mips)));
 				const clientrender::Texture *pct = static_cast<const clientrender::Texture *>(selected_texture.get());
 				DrawTexture(selected_texture->GetSimulTexture(), (float)mip_current, 0);
 			}
@@ -1736,7 +1741,9 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::RadioButton("Ambient", &chooseDebugShader, (int)ShaderMode::AMBIENT);
 	ImGui::SameLine();
 	ImGui::RadioButton("UVs", &chooseDebugShader, (int)ShaderMode::UVS);
-
+	
+	ImGui::RadioButton("Rough Metal Occl", &chooseDebugShader, (int)ShaderMode::ROUGH_METAL_OCCL);
+	ImGui::SameLine();
 	ImGui::RadioButton("Fresnel", &chooseDebugShader, (int)ShaderMode::DEBUG_FRESNEL);
 	ImGui::SameLine();
 	ImGui::RadioButton("Refl", &chooseDebugShader, (int)ShaderMode::DEBUG_REFL);

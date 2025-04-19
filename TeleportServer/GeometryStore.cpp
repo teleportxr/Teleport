@@ -1521,14 +1521,14 @@ void GeometryStore::compressNextTexture()
 			return ;
 		}
 	}
-	else if (compressionData->textureCompression == avs::TextureCompression::PNG)
+	else if (compressionData->textureCompression == avs::TextureCompression::MULTIPLE_PNG)
 	{
 		size_t n = 0;
 		bool breakout = false;
 		size_t imagesPerMip = compressionData->images.size() / compressionData->numMips;
 		std::vector<std::vector<uint8_t>> subImages;
 		subImages.resize(compressionData->images.size());
-		if (compressionData->textureCompression == avs::TextureCompression::PNG)
+		if (compressionData->textureCompression == avs::TextureCompression::MULTIPLE_PNG)
 		{
 			// encode each sub-image as a separate png.
 			for (size_t i = 0; i < imagesPerMip; i++)

@@ -554,18 +554,25 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 	{
 		const draco::Texture *dracoTexture = dracoTextures.GetTexture(i);
 		avs::uid texture_uid = texture_uids[dracoTexture];
-		if (!texture_uid) continue;
+		if (!texture_uid)
+			continue;
 		auto &img = dracoTexture->source_image();
 		std::string mime = img.mime_type();
 		std::vector<uint8_t> data;
 		// start with a uint16 N with the number of images
 		// then a list of N uint32 offsets. Each is a subresource image. Then image 0 starts.
 		data.resize(img.encoded_data().size() + 2 + 4);
-		unsigned short N = 1;
-		uint32_t offset0 = 6;
-		memcpy(data.data(), &N, sizeof(N));
-		memcpy(data.data() + 2, &offset0, sizeof(uint32_t));
-		memcpy(data.data() + 6, img.encoded_data().data(), img.encoded_data().size());
+		avs::TextureCompression compr=avs::TextureCompression::UNCOMPRESSED;
+		if(dracoTexture->source_image().mime_type()=="image/png")
+		{
+			memcpy(data.data(), img.encoded_data().data(), img.encoded_data().size());
+			compr=avs::TextureCompression::PNG;
+		}
+		if(dracoTexture->source_image().mime_type()=="image/jpeg")
+		{
+			compr=avs::TextureCompression::JPEG;
+			memcpy(data.data(), img.encoded_data().data(), img.encoded_data().size());
+		}
 		std::string name = img.filename();
 		if (!name.length())
 		{
@@ -574,9 +581,12 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 			if (slash < filename_url.size()) name = filename_url.substr(slash + 1, filename_url.size() - slash - 1);
 			name += "_"s + texture_types[texture_uid];
 		}
-		avs::Texture avsTexture = {name, 0, 0, 0, 1, 1, false, avs::TextureFormat::RGBA8, 1.0f, avs::TextureCompression::PNG, true};
-		avsTexture.compressedData = std::move(data);
-		target->CreateTexture(subSceneCreate.subscene_cache_uid, texture_uid, avsTexture);
+		if(compr!=avs::TextureCompression::UNCOMPRESSED)
+		{
+			avs::Texture avsTexture = {name, 0, 0, 0, 1, 1, false, avs::TextureFormat::RGBA8, 1.0f, compr, true};
+			avsTexture.compressedData = std::move(data);
+			target->CreateTexture(subSceneCreate.subscene_cache_uid, texture_uid, avsTexture);
+		}
 	}
 	for (int m = 0; m < dracoScene.NumMeshGroups(); m++)
 	{
@@ -1217,7 +1227,11 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geom
 	avs::Texture texture;
 	if (ext == ".texture")
 	{
-		texture.compression = avs::TextureCompression::PNG;
+		texture.compression = avs::TextureCompression::MULTIPLE_PNG;
+	}
+	else if (ext == ".png")
+	{
+		texture.compression = avs::TextureCompression::MULTIPLE_PNG;
 	}
 	else if (ext == ".ktx2" || ext == ".ktx")
 	{

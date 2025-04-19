@@ -51,9 +51,10 @@ namespace avs
 	enum class TextureCompression : uint32_t
 	{
 		UNCOMPRESSED = 0,
-		BASIS_COMPRESSED_DEPRECATED,
 		PNG,
-		KTX
+		MULTIPLE_PNG,
+		KTX,
+		JPEG
 	};
 
 	struct Sampler 

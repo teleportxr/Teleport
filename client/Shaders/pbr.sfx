@@ -875,7 +875,7 @@ vec4 DebugNormal(vertexOutput IN, int swizzle_mode)
 	normalLookup		=normalOutputScalar.xyz*2.0 * (normalLookup.rgb-vec3(0.5, 0.5, 0.5));
 	vec3 normal			=normalize(mul(TangentMatrix,normalLookup));
 
-	return vec4(normal.xyz, 1.0f); 
+	return vec4(normal.xyz, 1.0f);
 }
 
 shader vec4 PS_DebugNormals(vertexOutput IN) : SV_TARGET
@@ -908,16 +908,17 @@ shader vec4 PS_Debug_SurfaceRefl(vertexOutput IN) : SV_TARGET
 return vec4(0.1,0.1,0.1,0);
 }
 
-
-
-
-
 shader vec4 PS_Debug_UVs(vertexOutput IN) : SV_TARGET
 {
 	vec2 uv=frac(IN.diffuseNormalUV.xy);
 	uv		+=frac(10.0*IN.diffuseNormalUV.xy);
-	return vec4(0.5*uv,0, 1.0f);
+	vec3 n	= IN.normal.xyz;
+	vec3 t	= IN.tangent.xyz;
+	vec4 ret=vec4(0.5*uv,0, 1.0f);
+	ret.rgb=t;
+	return ret;
 }
+
 shader vec4 PS_Local(vertexOutput IN) : SV_TARGET
 {
 	vec4 clr=lerp(vec4(0.25,0.25,0.25,1.0),vec4(1.0,1.0,1.0,1.0),0.5*IN.normal.z+0.5);
@@ -983,6 +984,24 @@ shader vec4 PS_DebugAmbient(vertexOutput IN) : SV_TARGET
 	return clr;
 }
 
+
+shader vec4 PS_DebugRoughMetalOcclusion(vertexOutput IN) : SV_TARGET
+{
+	vec4 combinedLookup = combinedTexture.Sample(wrapSamplerState, IN.combinedEmissiveUV.xy);
+	// GLTF spec for rough-metal textures:  green channel contains roughness values
+	//										blue channel contains metalness values
+	// 
+	// from combinedLookup we will use roughness =offset+multiplier*lookup.g
+	//      so we can either have lookup.b= roughness (with offset=0 and multiplier>0),
+	//							or lookup.b=smoothness (offset = 1.0 and multiplier <0!
+	// this allows us to have either roughness or smoothness textures.
+	// So roughMetalOcclusion is now rough-metal-occl-smooth
+	// And for GLTF compatibility, we will use combinedTexture g=roughness, b=metalness, a=occlusion
+	vec3 roughMetalOcclusion = combinedOutputScalarRoughMetalOcclusion.rgb * combinedLookup.gba;
+	return vec4(roughMetalOcclusion,1.0);
+}
+
+
 VertexShader vs_variants = CompileShader(vs_6_1, VS_Variants());
 VertexShader vs_variants_mv = CompileShader(vs_6_1, VS_Variants_MV());
 
@@ -1012,6 +1031,7 @@ PixelShader ps_debug_surface_fresnel			= CompileShader(ps_6_0, PS_Debug_SurfaceF
 PixelShader ps_debug_surface_ks					= CompileShader(ps_6_0, PS_Debug_SurfaceKS());
 PixelShader ps_debug_surface_kd					= CompileShader(ps_6_0, PS_Debug_SurfaceKD());
 PixelShader ps_debug_surface_refl				= CompileShader(ps_6_0, PS_Debug_SurfaceRefl());
+PixelShader ps_debug_rough_metal_occlusion		= CompileShader(ps_6_0, PS_DebugRoughMetalOcclusion());
 
 PixelShader ps_local							= CompileShader(ps_6_0, PS_Local());
 RasterizerState PbrBackfaceCull
@@ -1039,7 +1059,7 @@ technique solid
 		SetGeometryShader(NULL);
 		SetPixelShaderVariants(ps_local, ps_solid({false, true}, {false, true}, {false, true}, {false, true}, {0}), ps_digitizing, ps_solid_albedo_only, ps_depth, ps_debug_normals
 				,ps_debug_lightmaps,ps_debug_ambient,ps_debug_normal_vertexnormals,ps_debug_uvs,ps_local_hand
-				,ps_debug_surface_fresnel,ps_debug_surface_ks,ps_debug_surface_kd,ps_debug_surface_refl);
+				,ps_debug_surface_fresnel,ps_debug_surface_ks,ps_debug_surface_kd,ps_debug_surface_refl,ps_debug_rough_metal_occlusion);
 	}
 }
 
@@ -1055,7 +1075,7 @@ technique transparent
 		SetPixelShaderVariants(ps_transparent({false, true}, {false, true}, {false, true}, {false, true}, {0}), ps_digitizing
 				,ps_solid_albedo_only, ps_depth, ps_debug_normals, ps_debug_lightmaps, ps_debug_ambient
 				,ps_debug_normal_vertexnormals, ps_debug_uvs, ps_local_hand
-				,ps_debug_surface_fresnel,ps_debug_surface_ks,ps_debug_surface_kd,ps_debug_surface_refl);
+				,ps_debug_surface_fresnel,ps_debug_surface_ks,ps_debug_surface_kd,ps_debug_surface_refl,ps_debug_rough_metal_occlusion);
 	}
 }
 
