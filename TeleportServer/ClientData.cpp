@@ -100,24 +100,20 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	videoConfig.videoCodec = serverSettings.videoCodec;
 	videoConfig.use_cubemap = !serverSettings.usePerspectiveRendering;
 	videoConfig.stream_webcam = serverSettings.enableWebcamStreaming;
-	
-	TELEPORT_ASSERT(sizeof(setupCommand.clientDynamicLighting)==sizeof(clientDynamicLighting));
-	memcpy(&setupCommand.clientDynamicLighting,&clientDynamicLighting,sizeof(clientDynamicLighting));
 
 	// Set any static lighting textures to be required-streamable.
 	clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.backgroundTexture);
-	clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid);
-	clientMessaging->GetGeometryStreamingService().addGenericTexture(setupCommand.clientDynamicLighting.specular_cubemap_texture_uid);
 	
 	videoConfig.shadowmap_x = clientSettings->shadowmapPos[0];
 	videoConfig.shadowmap_y = clientSettings->shadowmapPos[1];
 	videoConfig.shadowmap_size = clientSettings->shadowmapSize;
 
 	auto &global_illumination_texture_uids = getGlobalIlluminationTextures();
-	teleport::core::SetupLightingCommand setupLightingCommand((uint8_t)global_illumination_texture_uids.size());
+	teleport::core::SetLightingCommand setupLightingCommand(clientDynamicLighting);
 
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
-	clientMessaging->sendSetupCommand(setupCommand, setupLightingCommand, global_illumination_texture_uids, setupInputsCommand, inputDefinitions);
+	clientMessaging->sendSetupCommand(setupCommand,global_illumination_texture_uids, setupInputsCommand, inputDefinitions);
+	clientMessaging->sendSetLightingCommand(setupLightingCommand);
 
 	connectionState = CONNECTED;
 
@@ -215,6 +211,23 @@ void ClientData::setInputDefinitions(const std::vector<teleport::core::InputDefi
 	inputDefinitions = inputDefs;
 }
 
+void ClientData::SetClientDynamicLighting(const teleport::core::ClientDynamicLighting &c)
+{
+	if(c.diffuse_cubemap_texture_uid!=clientDynamicLighting.diffuse_cubemap_texture_uid)
+	{
+		clientMessaging->GetGeometryStreamingService().removeGenericTexture(clientDynamicLighting.diffuse_cubemap_texture_uid);
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(c.diffuse_cubemap_texture_uid);
+	}
+	if(c.diffuse_cubemap_texture_uid!=clientDynamicLighting.specular_cubemap_texture_uid)
+	{
+		clientMessaging->GetGeometryStreamingService().removeGenericTexture(clientDynamicLighting.specular_cubemap_texture_uid);
+		clientMessaging->GetGeometryStreamingService().addGenericTexture(c.specular_cubemap_texture_uid);
+	}
+	clientDynamicLighting=c;
+	teleport::core::SetLightingCommand setupLightingCommand;
+	setupLightingCommand.clientDynamicLighting=clientDynamicLighting;
+	clientMessaging->sendSetLightingCommand(setupLightingCommand);
+}
 
 void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 {
@@ -234,14 +247,6 @@ void ClientData::setGlobalIlluminationTextures(size_t num,const avs::uid *uids)
 			global_illumination_texture_uids[i] = uids[i];
 			clientMessaging->GetGeometryStreamingService().addGenericTexture(uids[i]);
 		}
-	}
-	if (connectionState != CONNECTED)
-		return;
-	if(changed)
-	{
-		teleport::core::SetupLightingCommand setupLightingCommand;
-		setupLightingCommand.num_gi_textures=(uint8_t)num;
-		clientMessaging->sendSetupLightingCommand(setupLightingCommand, global_illumination_texture_uids);
 	}
 }
 

@@ -511,7 +511,7 @@ namespace avs
 		uid mesh_uid = 0;
 		std::vector<MeshElementCreate> m_MeshElementCreate;
 		std::vector<mat4> inverseBindMatrices;
-		bool clockwiseFaces=true;
+		bool clockwiseFaces=false;
 	};
 /*!
  * Common mesh decoder backend interface.

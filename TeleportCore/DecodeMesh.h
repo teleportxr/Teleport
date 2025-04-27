@@ -37,7 +37,7 @@ namespace teleport::core
 		phmap::flat_hash_map<uint64_t, avs::GeometryBuffer> buffers;
 		phmap::flat_hash_map<avs::uid, avs::Material> internalMaterials;
 		std::vector<mat4> inverseBindMatrices;
-		bool clockwiseFaces = true;
+		bool clockwiseFaces = false;
 		// For internal numbering of accessors etc.
 		uint64_t next_id = 0;
 		void clear()
@@ -48,7 +48,7 @@ namespace teleport::core
 			buffers.clear();
 			internalMaterials.clear();
 			next_id = 0;
-			clockwiseFaces = true;
+			clockwiseFaces = false;
 		}
 		~DecodedGeometry()
 		{

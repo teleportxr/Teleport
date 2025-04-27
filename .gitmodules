@@ -24,7 +24,7 @@
 	url = https://github.com/zaphoyd/websocketpp.git
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
-	url = ../Platform.git
+	url = https://github.com/simul/Platform.git
 [submodule "thirdparty/libdatachannel"]
 	path = thirdparty/libdatachannel
 	url = https://github.com/paullouisageneau/libdatachannel.git

@@ -146,6 +146,7 @@ namespace teleport
 			int GetPort() const;
 
 			unsigned long long receivedInitialPos = 0;
+			unsigned long long receivedLightingAckId = 0;
 
 			uint64_t GetClientID() const
 			{
@@ -170,9 +171,13 @@ namespace teleport
 			{
 				return setupCommand;
 			}
-			const teleport::core::SetupLightingCommand& GetSetupLightingCommand() const
+			const teleport::core::ClientDynamicLighting& GetDynamicLighting() const
 			{
-				return setupLightingCommand;
+				return clientDynamicLighting;
+			}
+			void SetDynamicLighting(teleport::core::ClientDynamicLighting& c)
+			{
+				clientDynamicLighting=c;
 			}
 			teleport::client::ClientPipeline &GetClientPipeline()
 			{
@@ -223,7 +228,7 @@ namespace teleport
 			void ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &packet);
 			void ReceiveSetupCommand(const std::vector<uint8_t> &packet);
 			void ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &packet);
-			void ReceiveStageSpaceOriginNodeId(const std::vector<uint8_t> &packet);
+			void ReceiveOriginNodeId(const std::vector<uint8_t> &packet);
 			void ReceiveNodeVisibilityUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveNodeMovementUpdate(const std::vector<uint8_t> &packet);
 			void ReceiveNodeEnabledStateUpdate(const std::vector<uint8_t> &packet);
@@ -255,7 +260,8 @@ namespace teleport
 			int time_since_origin_request=0;
 			// State received from server.
 			teleport::core::SetupCommand setupCommand;
-			teleport::core::SetupLightingCommand setupLightingCommand;
+			teleport::core::ClientDynamicLighting clientDynamicLighting;
+			teleport::core::SetLightingCommand setLightingCommand;
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 			std::map<avs::uid, std::string> nodePosePaths;
 			//! Reset the session state when connecting to a new server, or when reconnecting without preserving the session:

@@ -88,7 +88,7 @@ TELEPORT_EXPORT void Client_SetClientDynamicLighting(avs::uid clientID, const te
 		TELEPORT_CERR << "Failed to set clientDynamicLighting to Client " << clientID << "! No client exists with ID " << clientID << "!\n";
 		return;
 	}
-	client->clientDynamicLighting = clientDynamicLighting;
+	client->SetClientDynamicLighting(clientDynamicLighting);
 }
 
 TELEPORT_EXPORT void Client_SetGlobalIlluminationTextures(avs::uid clientID,size_t num,const avs::uid * textureIDs)

@@ -298,24 +298,49 @@ void ClientMessaging::Disconnect()
 }
 
 void ClientMessaging::sendSetupCommand(const teleport::core::SetupCommand &setupCommand
-	, const teleport::core::SetupLightingCommand setupLightingCommand,const std::vector<avs::uid> &global_illumination_texture_uids
+	,const std::vector<avs::uid> &global_illumination_texture_uids
 , const teleport::core::SetupInputsCommand &setupInputsCommand,const std::vector<teleport::core::InputDefinition>& inputDefinitions)
 {
 	ConfirmSessionStarted();
 	sendSignalingCommand(setupCommand);
-	sendSignalingCommand(setupLightingCommand, global_illumination_texture_uids);
-	sendSignalingCommand(setupInputsCommand, inputDefinitions);
 	lastSetupCommand = setupCommand;
+	sendSignalingCommand(setupInputsCommand, inputDefinitions);
 }
 
 void ClientMessaging::sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd)
 {
 	sendCommand(cmd);
 }
-
-void ClientMessaging::sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids)
+// TODO: Automate resending of acked commands.
+bool ClientMessaging::sendSetLightingCommand(teleport::core::SetLightingCommand &setLightingCommand)
 {
-	sendCommand(setupLightingCommand, global_illumination_texture_uids);
+	currentLightingState.clientDynamicLighting=setLightingCommand.clientDynamicLighting;
+	if(lastSetupCommand.startTimestamp_utc_unix_us==0)
+		return false;
+	// If we sent it but it wasn't acknowledged in a reasonable time?
+	static int64_t originAckWaitTimeUs=3000000;// three seconds
+	if((GetServerTimeUs()-currentOriginState.serverTimeSentUs)<originAckWaitTimeUs)
+	{
+		return true;
+	}
+	setLightingCommand.ack_id=++next_ack_id;
+	
+	if (!hasReceivedHandshake())
+	{
+		static char t=1;
+		t--;
+		if(!t)
+		{
+			TELEPORT_INTERNAL_CERR("Client {0} - Can't set lighting - no handshake yet.\n",clientID);
+		}
+		return false;
+	}
+	currentLightingState.sent=true;
+	currentLightingState.ack_id=setLightingCommand.ack_id;
+	currentLightingState.acknowledged=false;
+	currentLightingState.serverTimeSentUs=GetServerTimeUs();
+	bool result=sendCommand(setLightingCommand);
+	return result;
 }
 
 void ClientMessaging::updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList)
@@ -534,7 +559,13 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	reportHandshake(this->clientID, &handshake);
 	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}.\n", clientID, clientIP);
 	setOrigin(currentOriginState.originClientHas);
+
+	
+	teleport::core::SetLightingCommand setupLightingCommand;
+	setupLightingCommand.clientDynamicLighting=currentLightingState.clientDynamicLighting;
+	sendSetLightingCommand(setupLightingCommand);
 }
+
 avs::uid ClientMessaging::getOrigin() const
 {
 	return currentOriginState.originClientHas;
@@ -564,7 +595,7 @@ bool ClientMessaging::setOrigin( avs::uid originNode)
 	currentOriginState.valid_counter++;
 	geometryStreamingService.setOriginNode(originNode);
 	teleport::core::SetOriginNodeCommand setp;
-	setp.ack_id=next_ack_id++;
+	setp.ack_id=++next_ack_id;
 	setp.origin_node=originNode;
 	setp.valid_counter = currentOriginState.valid_counter;
 	

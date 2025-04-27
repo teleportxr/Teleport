@@ -505,7 +505,6 @@ int32_t GeometryStreamingService::getPriorityForNode(avs::uid nodeID) const
 
 bool GeometryStreamingService::streamNode(avs::uid nodeID)
 { 
-	TELEPORT_LOG_INTERNAL("streamNode {0}",nodeID);
 	if (nodeID != 0)
 	{
 		if(nodesToStream.find(nodeID)==nodesToStream.end())
@@ -513,9 +512,7 @@ bool GeometryStreamingService::streamNode(avs::uid nodeID)
 			nodesToStream.insert(nodeID);
 			int priority=getPriorityForNode(nodeID);
 			unconfirmed_priority_counts[getPriorityForNode(nodeID)]++;
-			#if TELEPORT_DEBUG_RESOURCE_STREAMING
-			//TELEPORT_COUT << "AddNode " << nodeID << " priority " << priority << ", count " << unconfirmed_priority_counts[priority]<<"\n";
-			#endif
+			TELEPORT_LOG_INTERNAL("streamNode {0}",nodeID);
 			return true;
 		}
 	}

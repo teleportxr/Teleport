@@ -644,6 +644,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
  	std::set<avs::uid> missingResources;
 
 	incompleteMaterial->ResetMissingResourceCount();
+	incompleteMaterial->materialInfo.uid = id;
 	incompleteMaterial->materialInfo.name = material.name;
 	incompleteMaterial->materialInfo.materialMode=material.materialMode;
 	incompleteMaterial->materialInfo.doubleSided=material.doubleSided;

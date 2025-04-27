@@ -28,7 +28,7 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 	return f;
 }
 
-NodeManager::NodeManager(flecs::world &flecs_w) : flecs_world(flecs_w)
+NodeManager::NodeManager()
 {
 	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
 }
@@ -40,25 +40,6 @@ std::shared_ptr<Node> NodeManager::CreateNode(std::chrono::microseconds session_
 	//Create MeshNode even if it is missing resources
 	AddNode(session_time_us,node, avsNode);
 	return node;
-}
-ecs_entity_t NodeManager::FlecsEntity(avs::uid node_id)
-{
-	//ecs_ensure(flecs_world, node_id);
-	return (ecs_entity_t)node_id;
-#if 0
-	auto f = flecs_entity_map.find(node_id);
-	ecs_entity_t e;
-	if (f == flecs_entity_map.end())
-	{
-		e = flecs_world.entity();
-	}
-	else
-	{
-		e = f->second;
-	}
-	flecs_entity_map[node_id] = e;
-	return e;
-#endif
 }
 
 void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_ptr<Node> node, const avs::Node &avsNode)
@@ -242,13 +223,16 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(avs::uid nodeID)
 {
-	flecs_world.delete_with(flecs_world.entity(FlecsEntity(nodeID)));
-	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
-	auto nodeIt = nodeLookup.find(nodeID);
-	if (nodeIt != nodeLookup.end())
+	std::shared_ptr<Node> node;
 	{
-		RemoveNode(nodeIt->second);
+		std::lock_guard<std::mutex> lock(nodeLookup_mutex);
+		auto nodeIt = nodeLookup.find(nodeID);
+		if (nodeIt != nodeLookup.end())
+		{
+			node=nodeIt->second;
+		}
 	}
+	RemoveNode(node);
 }
 
 bool NodeManager::HasNode(avs::uid nodeID) const

@@ -28,6 +28,7 @@ namespace teleport
 			platform::crossplatform::EffectPass *pass = nullptr;
 			bool anim = false;
 		};
+		//! A renderable node in a hierarchy.
 		class Node : public IncompleteNode
 		{
 			std::vector<std::shared_ptr<Component>> components;
@@ -266,8 +267,8 @@ namespace teleport
 
 				return globalTransform;
 			}
-			//! the model matrix in-use, including all transforms (e.g. subCache transforms, etc).
-			mutable mat4 renderModelMatrix;
+
+		
 			void SetLocalPosition(const vec3 &pos);
 			const vec3 &GetLocalPosition() const { return GetLocalTransform().m_Translation; }
 			const vec3 &GetGlobalPosition() const { return GetGlobalTransform().m_Translation; }

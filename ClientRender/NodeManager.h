@@ -41,17 +41,8 @@ namespace teleport
 		//! Manages nodes for a specific server context.
 		class NodeManager
 		{
-			flecs::world &flecs_world;
-			ecs_entity_t FlecsEntity(avs::uid node_id);
-
-			// ECS_COMPONENT_DECLARE(flecs_pos);
-			/*	phmap::flat_hash_map<avs::uid, ecs_entity_t> flecs_entity_map;
-				inline phmap::flat_hash_map<avs::uid, ecs_entity_t> &GetFlecsEntityMap()
-				{
-					return flecs_entity_map;
-				}*/
 		public:
-			NodeManager(flecs::world &flecs_w);
+			NodeManager();
 			typedef std::vector<std::shared_ptr<Node>> nodeList_t;
 
 			uint32_t nodeLifetime = 30000; // Milliseconds the manager waits before removing invisible nodes.
