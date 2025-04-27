@@ -9,7 +9,7 @@
 	url = https://github.com/google/draco.git
 [submodule "thirdparty/zlib"]
 	path = thirdparty/zlib
-	url = ../zlib.git
+	url = https://github.com/madler/zlib.git
 [submodule "thirdparty/cpp-httplib"]
 	path = thirdparty/cpp-httplib
 	url = ../cpp-httplib.git
