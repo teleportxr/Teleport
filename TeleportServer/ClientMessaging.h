@@ -86,12 +86,11 @@ namespace teleport
 			bool setOrigin(avs::uid uid);
 			avs::uid getOrigin() const;
 
-			void sendSetupCommand(const teleport::core::SetupCommand& setupCommand
-				, const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids
+			void sendSetupCommand(const teleport::core::SetupCommand& setupCommand, const std::vector<avs::uid>& global_illumination_texture_uids
 				, const teleport::core::SetupInputsCommand& setupInputsCommand, const std::vector<teleport::core::InputDefinition>& inputDefinitions);
 
 			void sendReconfigureVideoCommand(const core::ReconfigureVideoCommand& cmd);
-			void sendSetupLightingCommand(const teleport::core::SetupLightingCommand setupLightingCommand, const std::vector<avs::uid>& global_illumination_texture_uids);
+			bool sendSetLightingCommand( teleport::core::SetLightingCommand &setupLightingCommand);
 			
 			void forceUpdateNodeMovement(const std::vector<avs::uid>& updateList);
 			void updateNodeMovement(const std::vector<teleport::core::MovementUpdate>& updateList);
@@ -260,16 +259,26 @@ namespace teleport
 			avs::uid clientID=0;
 			std::string clientIP;
 			avs::DisplayInfo displayInfo;
-			struct OriginState
+			struct AckedState
 			{
 				bool sent=false;
-				avs::uid originClientHas=0;
 				uint64_t ack_id=0;
 				bool acknowledged=false;
 				int64_t serverTimeSentUs=0;
+			};
+			struct OriginState: public AckedState
+			{
+				avs::uid originClientHas=0;
 				uint64_t valid_counter=0;
 			};
+			struct LightingState: public AckedState
+			{
+				avs::uid originClientHas=0;
+				uint64_t valid_counter=0;
+				teleport::core::ClientDynamicLighting clientDynamicLighting;
+			};
 			OriginState currentOriginState;
+			LightingState currentLightingState;
 			bool initialized = false;
 			bool startingSession=false;
 			float timeStartingSession=0.0f;

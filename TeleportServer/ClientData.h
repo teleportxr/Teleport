@@ -50,7 +50,7 @@ namespace teleport
 			//! Called after reparenting to inform the client of the new parent.
 			void reparentNode(avs::uid nodeID);
 			void setInputDefinitions(const std::vector<teleport::core::InputDefinition> &inputDefs);
-			teleport::core::ClientDynamicLighting clientDynamicLighting;
+			void SetClientDynamicLighting(const teleport::core::ClientDynamicLighting &clientDynamicLighting);
 			std::vector<teleport::core::InputDefinition> inputDefinitions;
 
 			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;
@@ -82,6 +82,7 @@ namespace teleport
 				std::string regexPath;
 			};
 			ReflectedStateMap<NodeSubtypeState> nodeSubTypes;
+			teleport::core::ClientDynamicLighting clientDynamicLighting;
 		};
 		struct ClientStatus
 		{

@@ -544,6 +544,10 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 		{
 			geometryCache->SaveNodeTree(n);
 		}
+		if (ImGui::Selectable("Delete"))
+		{
+			geometryCache->mNodeManager.RemoveNode(n->id);
+		}
 		ImGui::EndPopup();
 	}
 	if (ImGui::IsItemClicked())
@@ -1472,6 +1476,29 @@ void Gui::EndFrame(GraphicsDeviceContext &deviceContext)
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
 
+void Gui::Materials(const ResourceManager<avs::uid, clientrender::Material> &materialManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids = materialManager.GetAllIDs();
+	avs::uid selected_uid = GetSelectedUid();
+	for (auto id : ids)
+	{
+		bool selected = (selected_uid == id);
+		const auto &material = materialManager.Get(id);
+		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, material->getName().c_str()).c_str(), ImGuiTreeNodeFlags_Leaf|(selected?ImGuiTreeNodeFlags_Selected:0)))
+		{
+			if (ImGui::IsItemClicked())
+			{
+				if (!show_inspector)
+					show_inspector = true;
+				Select(cache_uid, id);
+			}
+			ImGui::TreePop();
+		}
+	}
+	ImGui::EndGroup();
+}
+
 void Gui::Meshes(const ResourceManager<avs::uid, clientrender::Mesh> &meshManager)
 {
 	ImGui::BeginGroup();
@@ -1950,6 +1977,11 @@ void Gui::Scene()
 	if (ImGui::BeginTabItem("Nodes"))
 	{
 		NodeTree(geometryCache->mNodeManager.GetRootNodes());
+		ImGui::EndTabItem();
+	}
+	if (ImGui::BeginTabItem("Materials"))
+	{
+		Materials(geometryCache->mMaterialManager);
 		ImGui::EndTabItem();
 	}
 	if (ImGui::BeginTabItem("Meshes"))

@@ -68,7 +68,7 @@ namespace teleport
 			//! e.g. for debug shaders or shader recompilation.
 			void UpdateAllNodeRenders();
 			// Called by nodemanager:
-			void AddNodeToRender(avs::uid cache_uid, avs::uid node_uid);
+			//void AddNodeToRender(avs::uid cache_uid, avs::uid node_uid);
 			void RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid);
 			void UpdateNodeInRender(avs::uid cache_uid, avs::uid node_uid);
 

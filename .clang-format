@@ -1,10 +1,11 @@
 Language: Cpp
-BasedOnStyle: LLVM
+BasedOnStyle: Microsoft
 UseTab: Always
 IndentWidth: 4
 TabWidth: 4
 BreakBeforeBraces: Allman
-AllowShortIfStatementsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
 IndentCaseLabels: false
 ColumnLimit: 160
 AccessModifierOffset: -4
@@ -14,3 +15,15 @@ BinPackArguments: false
 BinPackParameters: false
 ExperimentalAutoDetectBinPacking: false
 AllowAllParametersOfDeclarationOnNextLine: false
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: false
+AlignConsecutiveBitFields:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: false

@@ -353,7 +353,7 @@ void Renderer::InitLocalHandGeometry()
 
 void Renderer::InitLocalGeometry()
 {
-	InitLocalHandGeometry();
+	//InitLocalHandGeometry();
 	auto localInstanceRenderer = GetInstanceRenderer(0);
 	auto &localResourceCreator = ResourceCreator::GetInstance();
 	auto &localGeometryCache = localInstanceRenderer->geometryCache;
@@ -402,14 +402,14 @@ void Renderer::InitLocalGeometry()
 		0, "assets/localGeometryCache/textures/diffuseRenderTexture.ktx2", avs::GeometryPayloadType::Texture, &localResourceCreator, diffuse_cubemap_uid);
 	geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/textures/specularRenderTexture.ktx", avs::GeometryPayloadType::Texture, &localResourceCreator, specular_cubemap_uid);
-
+		
+#if 1
 	// test gltf loading.
 	avs::uid gltf_uid = avs::GenerateUid();
 	// gltf_uid will refer to a SubScene asset in cache zero.
 	std::string source_root = "https://simul.co:443/wp-content/uploads/teleport-content/controller-models";
 	// geometryDecoder.decodeFromFile(0,config.GetStorageFolder()+"/meshes/Buggy.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid,
 	// platform::crossplatform::AxesStandard::OpenGL);
-
 	geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/meshes/test_preview_sphere.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid);
 	
@@ -419,21 +419,29 @@ void Renderer::InitLocalGeometry()
 								  &localResourceCreator,
 								  gltf_uid,
 								  platform::crossplatform::AxesStandard::OpenGL);*/
+	const int num=6;
+	static float r=3.0f;
+	for (int i=0;i<num;i++)
 	{
 		avs::Node gltfNode;
 		gltfNode.name = "GLTF Test";
 		gltfNode.data_type = avs::NodeDataType::Mesh;
 		gltfNode.data_uid = gltf_uid;
-
+		gltfNode.stationary=true;
 		static float sc = 1.0f;
-		gltfNode.localTransform.position = vec3(1.0f, 1.0f, 1.0f);
+		float angle=float(i)/float(num)*2.0f*3.14159f;
+
+		gltfNode.localTransform.position = vec3(r*sin(angle),r*cos(angle), 1.0f);
 		gltfNode.localTransform.scale = vec3(sc, sc, sc);
 		localResourceCreator.CreateNode(0, avs::GenerateUid(), gltfNode);
 	}
+	#endif
 	auto local_session_client = client::SessionClient::GetSessionClient(0);
 	teleport::core::SetupCommand setupCommand = local_session_client->GetSetupCommand();
-	setupCommand.clientDynamicLighting.diffuse_cubemap_texture_uid = diffuse_cubemap_uid;
-	setupCommand.clientDynamicLighting.specular_cubemap_texture_uid = specular_cubemap_uid;
+	core::ClientDynamicLighting clientDynamicLighting;
+	clientDynamicLighting.diffuse_cubemap_texture_uid = diffuse_cubemap_uid;
+	clientDynamicLighting.specular_cubemap_texture_uid = specular_cubemap_uid;
+	local_session_client->SetDynamicLighting(clientDynamicLighting);
 	setupCommand.draw_distance = 10.0f;
 	localGeometryCache->SetLifetimeFactor(0.f);
 	local_session_client->ApplySetup(setupCommand);
@@ -1914,25 +1922,7 @@ void Renderer::UpdateAllNodeRenders()
 	}
 }
 
-void Renderer::AddNodeToRender(avs::uid cache_uid, avs::uid node_uid)
-{
-	TELEPORT_COUT << "AddNodeToRender: cache " << cache_uid << ", node " << node_uid << "\n";
-	// add this node's meshes etc to a renderpass.
-	auto geometryCache = GeometryCache::GetGeometryCache(cache_uid);
-	avs::uid parent_cache_uid = geometryCache->GetParentCacheUid();
-	avs::uid renderpass_cache_uid = cache_uid;
-	if (int64_t(parent_cache_uid) != int64_t(-1))
-	{
-		renderpass_cache_uid = parent_cache_uid;
-	}
-	// Add the node's objects to this renderpass.
-	auto r = GetInstanceRenderer(renderpass_cache_uid);
-	if (r)
-	{
-		r->AddNodeToInstanceRender(cache_uid, node_uid);
-	}
-}
-
+//[thread=MainThread]
 void Renderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
 {
 	auto geometryCache = GeometryCache::GetGeometryCache(cache_uid);
@@ -1941,12 +1931,15 @@ void Renderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
 	if (int64_t(parent_cache_uid) != int64_t(-1))
 	{
 		renderpass_cache_uid = parent_cache_uid;
+		// Only in a main cache can nodes be individually removed.
+		return;
 	}
 	// Add the node's objects to this renderpass.
 	auto r = GetInstanceRenderer(renderpass_cache_uid);
 	if (r)
 	{
-		r->RemoveNodeFromInstanceRender(cache_uid, node_uid);
+		InstanceRenderer::SubSceneNodeStates &subSceneNodeStates = r->subSceneStatesMap[0];
+		r->RemoveNodeFromInstanceRender(cache_uid, subSceneNodeStates, node_uid);
 	}
 }
 
@@ -1958,11 +1951,14 @@ void Renderer::UpdateNodeInRender(avs::uid cache_uid, avs::uid node_uid)
 	if (int64_t(parent_cache_uid) != int64_t(-1))
 	{
 		renderpass_cache_uid = parent_cache_uid;
+		// Only in a main cache can nodes be individually updated.
+		return;
 	}
 	// Add the node's objects to this renderpass.
 	auto r = GetInstanceRenderer(renderpass_cache_uid);
 	if (r)
 	{
-		r->UpdateNodeInInstanceRender(cache_uid, node_uid);
+		InstanceRenderer::SubSceneNodeStates &subSceneNodeStates = r->subSceneStatesMap[0];
+		r->RemoveNodeFromInstanceRender(cache_uid, subSceneNodeStates, node_uid);
 	}
 }

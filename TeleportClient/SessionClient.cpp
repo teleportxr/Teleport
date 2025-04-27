@@ -161,6 +161,7 @@ void SessionClient::Disconnect(uint timeout, bool resetClientID)
 
 	connectionStatus = ConnectionStatus::UNCONNECTED;
 	receivedInitialPos = 0;
+	receivedLightingAckId = 0;
 	if (resetClientID)
 	{
 		clientID = 0;
@@ -335,8 +336,8 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 		case teleport::core::CommandPayloadType::ReconfigureVideo:
 			ReceiveVideoReconfigureCommand(packet);
 			break;
-		case teleport::core::CommandPayloadType::SetStageSpaceOriginNode:
-			ReceiveStageSpaceOriginNodeId(packet);
+		case teleport::core::CommandPayloadType::SetOriginNode:
+			ReceiveOriginNodeId(packet);
 			break;
 		case teleport::core::CommandPayloadType::NodeVisibility:
 			ReceiveNodeVisibilityUpdate(packet);
@@ -665,7 +666,7 @@ void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &p
 	mCommandInterface->OnReconfigureVideo(reconfigureCommand);
 }
 
-void SessionClient::ReceiveStageSpaceOriginNodeId(const std::vector<uint8_t> &packet)
+void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 {
 	size_t commandSize = sizeof(teleport::core::SetOriginNodeCommand);
 	if(packet.size()!=commandSize)
@@ -813,23 +814,33 @@ void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packe
 
 void SessionClient::ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet)
 {
-	size_t commandSize = sizeof(teleport::core::SetupLightingCommand);
+	size_t commandSize = sizeof(teleport::core::SetLightingCommand);
 	if (packet.size() < commandSize)
 	{
-		TELEPORT_INTERNAL_CERR("Bad packet size");
+		TELEPORT_WARN_INTERNAL("Bad packet size");
 		return;
 	}
 
 	//Copy command out of packet.
-	memcpy(static_cast<void*>(&setupLightingCommand), packet.data(), commandSize);
-	size_t fullSize= commandSize + sizeof(avs::uid) * setupLightingCommand.num_gi_textures;
+	memcpy(static_cast<void*>(&setLightingCommand), packet.data(), commandSize);
+	size_t fullSize= commandSize;
 	if (packet.size() != fullSize)
 	{
-		TELEPORT_INTERNAL_CERR("Bad packet size");
+		TELEPORT_WARN_INTERNAL("Bad packet size");
 		return;
 	}
-	std::vector<avs::uid> uidList((size_t)setupLightingCommand.num_gi_textures);
-	memcpy(uidList.data(), packet.data() + commandSize, sizeof(avs::uid) * uidList.size());
+	if(setLightingCommand.ack_id > receivedLightingAckId)
+	{
+		TELEPORT_INFO("Received lighting setup {}.", setLightingCommand.ack_id);
+		receivedLightingAckId = setLightingCommand.ack_id;
+		clientDynamicLighting=setLightingCommand.clientDynamicLighting;
+	}
+	else
+	{
+		TELEPORT_WARN_INTERNAL("Received out-of-date lighting setup, counter was {}, but last update was {}.",setLightingCommand.ack_id,receivedLightingAckId);
+	}
+	// And acknowledge it.
+	Ack(setLightingCommand.ack_id);
 }
 
 void SessionClient::ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet)
@@ -976,7 +987,7 @@ void SessionClient::ReceiveTextCommand(const std::vector<uint8_t> &packet)
 void SessionClient::ResetSessionState()
 {
 	memset(&setupCommand,0,sizeof(setupCommand));
-	memset(&setupLightingCommand, 0, sizeof(setupLightingCommand));
+	memset(&clientDynamicLighting, 0, sizeof(clientDynamicLighting));
 	inputDefinitions.clear();
 	nodePosePaths.clear();
 }

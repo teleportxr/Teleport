@@ -627,7 +627,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 		auto meshGroupIndex = dracoNode->GetMeshGroupIndex();
 		avs::Node avsNode;
 		avsNode.name = dracoNode->GetName();
-		avsNode.stationary = false;
+		avsNode.stationary = true;
 		avsNode.holder_client_id = 0;
 		auto p = dracoNode->NumParents() ? dracoNode->Parent(0) : draco::SceneNodeIndex(0);
 		avsNode.parentID = (dracoNode->NumParents() ? node_uids[p.value()] : (avs::uid)(0));

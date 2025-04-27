@@ -143,7 +143,6 @@ namespace teleport
 				mVertexBufferManager.Update(timeElapsed_s, lifetimeFactor);
 				mMeshManager.Update(timeElapsed_s, lifetimeFactor);
 				mSkeletonManager.Update(timeElapsed_s, lifetimeFactor);
-				// mLightManager.Update(timeElapsed_s,lifetimeFactor);
 				mAnimationManager.Update(timeElapsed_s, lifetimeFactor);
 				mTextCanvasManager.Update(timeElapsed_s, lifetimeFactor);
 				mFontAtlasManager.Update(timeElapsed_s, lifetimeFactor);
@@ -174,16 +173,6 @@ namespace teleport
 				const auto &f = mFontAtlasManager.GetAllIDs();
 				resourceIDs.insert(resourceIDs.end(), f.begin(), f.end());
 				return resourceIDs;
-
-				/*
-					//We will resend the nodes/objects to update the transform data, as changes in client position (and thus the new invisible nodes) aren't stored for the reconnect.
-					mNodeManager;
-
-					//These IDs aren't stored on the server currently, and thus are ignored.
-					mIndexBufferManager.GetAllIDs();
-					mShaderManager.GetAllIDs();
-					mVertexBufferManager.GetAllIDs();
-				*/
 			}
 
 			// Clear all resources.

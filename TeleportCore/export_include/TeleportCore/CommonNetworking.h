@@ -168,32 +168,33 @@ namespace teleport
 			AssignNodePosePath,				// id
 			SetupInputs,					// 0
 			PingForLatency,
-			SetStageSpaceOriginNode=128		// 0
+			SetOriginNode=128
+			// 0
 		} TELEPORT_PACKED;
 		inline const char *StringOf(CommandPayloadType type)
 		{
-		switch(type)
-		{
-			case CommandPayloadType::Invalid				   :return "Invalid";
-			case CommandPayloadType::Shutdown				   :return "Shutdown";
-			case CommandPayloadType::Setup					   :return "Setup";
-			case CommandPayloadType::AcknowledgeHandshake	   :return "AcknowledgeHandshake";
-			case CommandPayloadType::ReconfigureVideo		   :return "ReconfigureVideo";
-			case CommandPayloadType::SetStageSpaceOriginNode   :return "SetStageSpaceOriginNode";
-			case CommandPayloadType::NodeVisibility			   :return "NodeVisibility";
-			case CommandPayloadType::UpdateNodeMovement		   :return "UpdateNodeMovement";
-			case CommandPayloadType::UpdateNodeEnabledState	   :return "UpdateNodeEnabledState";
-			case CommandPayloadType::SetNodeHighlighted		   :return "SetNodeHighlighted";
-			case CommandPayloadType::ApplyNodeAnimation			:return "ApplyNodeAnimation";
-			case CommandPayloadType::UpdateNodeAnimationControlX:return "UpdateNodeAnimationControlX";
-			case CommandPayloadType::SetNodeAnimationSpeed	   :return "SetNodeAnimationSpeed";
-			case CommandPayloadType::SetupLighting			   :return "SetupLighting";
-			case CommandPayloadType::UpdateNodeStructure	   :return "UpdateNodeStructure";
-			case CommandPayloadType::AssignNodePosePath		   :return "AssignNodePosePath";
-			case CommandPayloadType::SetupInputs			   :return "SetupInputs";
-		default:
-		return "Invalid";
-		};
+			switch(type)
+			{
+				case CommandPayloadType::Invalid						:return "Invalid";
+				case CommandPayloadType::Shutdown						:return "Shutdown";
+				case CommandPayloadType::Setup							:return "Setup";
+				case CommandPayloadType::AcknowledgeHandshake			:return "AcknowledgeHandshake";
+				case CommandPayloadType::ReconfigureVideo				:return "ReconfigureVideo";
+				case CommandPayloadType::SetOriginNode					:return "SetOriginNode";
+				case CommandPayloadType::NodeVisibility					:return "NodeVisibility";
+				case CommandPayloadType::UpdateNodeMovement				:return "UpdateNodeMovement";
+				case CommandPayloadType::UpdateNodeEnabledState			:return "UpdateNodeEnabledState";
+				case CommandPayloadType::SetNodeHighlighted				:return "SetNodeHighlighted";
+				case CommandPayloadType::ApplyNodeAnimation				:return "ApplyNodeAnimation";
+				case CommandPayloadType::UpdateNodeAnimationControlX	:return "UpdateNodeAnimationControlX";
+				case CommandPayloadType::SetNodeAnimationSpeed			:return "SetNodeAnimationSpeed";
+				case CommandPayloadType::SetupLighting					:return "SetupLighting";
+				case CommandPayloadType::UpdateNodeStructure			:return "UpdateNodeStructure";
+				case CommandPayloadType::AssignNodePosePath				:return "AssignNodePosePath";
+				case CommandPayloadType::SetupInputs					:return "SetupInputs";
+			default:
+			return "Invalid";
+			};
 		}
 		//! The payload type, or how to interpret the client's message.
 		enum class ClientMessagePayloadType : uint8_t
@@ -302,7 +303,7 @@ namespace teleport
 		{
 		//! What type of command this is, how to interpret it.
 			CommandPayloadType commandPayloadType;
-			Command(CommandPayloadType t) : commandPayloadType(t) {}
+			explicit Command(CommandPayloadType t) : commandPayloadType(t) {}
 
 		} TELEPORT_PACKED;
 	
@@ -312,7 +313,7 @@ namespace teleport
 		struct AcknowledgeHandshakeCommand : public Command
 		{
 			AcknowledgeHandshakeCommand() : Command(CommandPayloadType::AcknowledgeHandshake) {}
-			AcknowledgeHandshakeCommand(size_t visibleNodeCount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleNodeCount(visibleNodeCount) {}
+			explicit AcknowledgeHandshakeCommand(size_t visibleNodeCount) : Command(CommandPayloadType::AcknowledgeHandshake), visibleNodeCount(visibleNodeCount) {}
 		
 			static size_t getCommandSize()
 			{
@@ -367,27 +368,10 @@ namespace teleport
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
 			BackgroundMode		backgroundMode;										//!< 129+1=130	Whether the server supplies a background, and of which type.
 			vec4_packed			backgroundColour;									//!< 130+16=146 If the background is of the COLOUR type, which colour to use.
-			ClientDynamicLighting clientDynamicLighting;							//!<			Setup for dynamic object lighting. 146+57=203 bytes
-			avs::uid			backgroundTexture=0;								//!< 203+8=211
+			avs::uid			backgroundTexture=0;								//!< 146+8=154
 		} TELEPORT_PACKED;
-		static_assert (sizeof(SetupCommand) == 211, "SetupCommand Size is not correct");
+		static_assert (sizeof(SetupCommand) == 154, "SetupCommand Size is not correct");
 // 		TODO: track missing resources for backgroundTexture or ClientDynamicLighting
-
-		//! Sends GI textures. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
-		struct SetupLightingCommand : public Command
-		{
-			SetupLightingCommand() : Command(CommandPayloadType::SetupLighting) {}
-			SetupLightingCommand(uint8_t numGI)
-				:Command(CommandPayloadType::SetupLighting), num_gi_textures(numGI)
-			{}
-
-			static size_t getCommandSize()
-			{
-				return sizeof(SetupLightingCommand);
-			}
-			//! If this is nonzero, implicitly gi should be enabled.
-			uint8_t num_gi_textures=0;
-		} TELEPORT_PACKED;
 
 		//! A command that expects an acknowledgement of receipt from the client using an AcknowledgementMessage.
 		//! Each type of AckedCommand carries full information for that command type, so clients can ignore any ack_id
@@ -395,16 +379,32 @@ namespace teleport
 		//! Therefore, we do NOT use AckedCommand for commands that carry separate, independent information.
 		struct AckedCommand : public Command
 		{
-			AckedCommand(CommandPayloadType t) : Command(t) {}
+			explicit AckedCommand(CommandPayloadType t) : Command(t) {}
 			//! The id that is used to acknowledge receipt via AcknowledgementMessage.
 			// Should increase monotonically per-full-client-session: clients can ignore any id less than or equal to a previously received id.
 			uint64_t		ack_id = 0;
+		} TELEPORT_PACKED;
+
+		//! Sends GI textures. The packet will be sizeof(SetLightingCommand) + num_gi_textures uid's, each 64 bits.
+		struct SetLightingCommand : public AckedCommand
+		{
+			SetLightingCommand() : AckedCommand(CommandPayloadType::SetupLighting) {}
+			explicit SetLightingCommand(const ClientDynamicLighting &c)
+				: AckedCommand(CommandPayloadType::SetupLighting), clientDynamicLighting(c)
+			{}
+
+			static size_t getCommandSize()
+			{
+				return sizeof(SetLightingCommand);
+			}
+			//! If this is nonzero, implicitly gi should be enabled.
+			ClientDynamicLighting clientDynamicLighting;
 		} TELEPORT_PACKED;
 		
 		//! Sent from server to client to set the origin of the client's space.
 		struct SetOriginNodeCommand : public AckedCommand
 		{
-			SetOriginNodeCommand() : AckedCommand(CommandPayloadType::SetStageSpaceOriginNode) {}
+			SetOriginNodeCommand() : AckedCommand(CommandPayloadType::SetOriginNode) {}
 
 			static size_t getCommandSize()
 			{
@@ -432,7 +432,7 @@ namespace teleport
 			uint16_t pathLength;
 		} TELEPORT_PACKED;
 
-		//! Sends Input definitions. The packet will be sizeof(SetupLightingCommand) + num_gi_textures uid's, each 64 bits.
+		//! Sends Input definitions. The packet will be sizeof(SetLightingCommand) + num_gi_textures uid's, each 64 bits.
 		struct SetupInputsCommand : public Command
 		{
 			SetupInputsCommand() : Command(CommandPayloadType::SetupInputs) {}

@@ -23,7 +23,7 @@ Commands are sent from the server to the client on a reliable data channel. All 
 .. doxygenstruct:: teleport::core::SetupCommand
 	:members:
 
-.. doxygenstruct:: teleport::core::SetupLightingCommand
+.. doxygenstruct:: teleport::core::SetLightingCommand
 	:members:
 
 .. doxygenstruct:: teleport::core::SetupInputsCommand
