@@ -396,15 +396,7 @@ void SessionClient::SendNodePoses(const teleport::core::Pose& headPose,const std
 {
 	teleport::core::ControllerPosesMessage message;
 	TimestampMessage(message);
-#if 0
-	static uint8_t c = 0;
-	c--;
-	if (!c)
-	{
-		std::cout << "SendNodePoses: " << double(message.timestamp_unix_ms)/ 1000.0 << std::endl;
-		std::cout << "messageToServerStack: " << messageToServerStack.buffers.size() << "\n";
-	}
-#endif
+
 	message.headPose=headPose;
 	message.numPoses=(uint16_t)poses.size();
 	if(isnan(headPose.position.x))
@@ -429,7 +421,6 @@ void SessionClient::SendNodePoses(const teleport::core::Pose& headPose,const std
 	// This is a special type of message, with its own queue.
 	clientPipeline.nodePosesQueue.push(packet.data(), messageSize);
 }
-
 
 static void copy_and_increment(uint8_t *&target,const void *source,size_t size)
 {

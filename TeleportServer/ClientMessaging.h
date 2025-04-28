@@ -73,14 +73,14 @@ namespace teleport
 			
 			bool hasOrigin() const
 			{
-				return(currentOriginState.originClientHas!=0&&currentOriginState.sent);
+				return(ackStates.find(core::CommandPayloadType::SetOriginNode)->second.sent);
 			}
 			void setHasOrigin(bool o)
 			{
-				currentOriginState.sent=o;
+				ackStates.find(core::CommandPayloadType::SetOriginNode)->second.sent=o;
 				if(!o)
-					currentOriginState.acknowledged=false;
-				currentOriginState.originClientHas = 0;
+					ackStates.find(core::CommandPayloadType::SetOriginNode)->second.acknowledged=false;
+				ackSetOriginNodeCommand.origin_node = 0;
 			}
 
 			bool setOrigin(avs::uid uid);
@@ -170,11 +170,20 @@ namespace teleport
 				memcpy(bin.data(), &command, commandSize);
 				return SendSignalingCommand(std::move(bin));
 			}
+			//! Send a Command via the reliable command stream.
 			template<typename C> size_t sendCommand(const C& command) const
 			{
 				return SendCommand(&command, sizeof(command));
 			}
+			//! Send a Command of size sz via the reliable command stream.
 			size_t SendCommand(const void* c, size_t sz) const;
+			//! Send an AckedCommand. In addition to sending, this will store the command and resend if the ack is not received in time.
+			template<typename C> size_t sendAckedCommand(const C& command)
+			{
+				return SendAckedCommand(&command, sizeof(command));
+			}
+			//! Send an AckedCommand. In addition to sending, this will store the command and resend if the ack is not received in time.
+			size_t SendAckedCommand(const core::AckedCommand* ackedCommand, size_t sz);
 			bool SendSignalingCommand(std::vector<uint8_t>&& bin);
 			void Warn(const char *w) const;
 			template<typename C, typename T> size_t sendCommand(const C& command, const std::vector<T>& appendedList) const
@@ -259,26 +268,22 @@ namespace teleport
 			avs::uid clientID=0;
 			std::string clientIP;
 			avs::DisplayInfo displayInfo;
-			struct AckedState
+			struct AckState
 			{
+				AckState(core::AckedCommand &a):ackedCommand(a)
+				{
+				}
+				core::AckedCommand &ackedCommand;
+				uint16_t commandSize=0;
 				bool sent=false;
 				uint64_t ack_id=0;
 				bool acknowledged=false;
 				int64_t serverTimeSentUs=0;
 			};
-			struct OriginState: public AckedState
-			{
-				avs::uid originClientHas=0;
-				uint64_t valid_counter=0;
-			};
-			struct LightingState: public AckedState
-			{
-				avs::uid originClientHas=0;
-				uint64_t valid_counter=0;
-				teleport::core::ClientDynamicLighting clientDynamicLighting;
-			};
-			OriginState currentOriginState;
-			LightingState currentLightingState;
+			core::SetOriginNodeCommand ackSetOriginNodeCommand;
+			core::SetLightingCommand ackSetLightingCommand;
+			std::map<core::CommandPayloadType,AckState> ackStates;
+
 			bool initialized = false;
 			bool startingSession=false;
 			float timeStartingSession=0.0f;

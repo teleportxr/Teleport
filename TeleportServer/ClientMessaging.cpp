@@ -35,7 +35,10 @@ ClientMessaging::ClientMessaging(SignalingService &signalingService,
 	, onDisconnect(onDisconnect)
 	, reportHandshake(reportHandshakeFn)
 	, disconnectTimeout(disconnectTimeout)
-{}
+{
+	ackStates.emplace(core::CommandPayloadType::SetOriginNode,ackSetOriginNodeCommand);
+	ackStates.emplace(core::CommandPayloadType::SetupLighting,ackSetLightingCommand);
+}
 
 ClientMessaging::~ClientMessaging()
 {
@@ -162,10 +165,15 @@ void ClientMessaging::tick(float deltaTime)
 	if (!receivedHandshake)
 		return;
 	int64_t server_time_us = GetServerTimeUs();
-	if(!currentOriginState.acknowledged)
+	for(auto st:ackStates)
 	{
-		if(server_time_us-currentOriginState.serverTimeSentUs>5000000)
-			setOrigin(currentOriginState.originClientHas);
+		auto &ackState=st.second;
+		if(!ackState.acknowledged&&ackState.commandSize>0)
+		{
+			static int64_t ackWaitTimeUs=3000000;// three seconds
+			if(server_time_us-ackState.serverTimeSentUs>ackWaitTimeUs)
+				SendAckedCommand(&ackState.ackedCommand,ackState.commandSize);
+		}
 	}
 	avs::Result commandResult=commandPipeline.process();
 	if(commandResult==avs::Result::IO_Full)
@@ -311,35 +319,13 @@ void ClientMessaging::sendReconfigureVideoCommand(const core::ReconfigureVideoCo
 {
 	sendCommand(cmd);
 }
+
 // TODO: Automate resending of acked commands.
 bool ClientMessaging::sendSetLightingCommand(teleport::core::SetLightingCommand &setLightingCommand)
 {
-	currentLightingState.clientDynamicLighting=setLightingCommand.clientDynamicLighting;
-	if(lastSetupCommand.startTimestamp_utc_unix_us==0)
-		return false;
-	// If we sent it but it wasn't acknowledged in a reasonable time?
-	static int64_t originAckWaitTimeUs=3000000;// three seconds
-	if((GetServerTimeUs()-currentOriginState.serverTimeSentUs)<originAckWaitTimeUs)
-	{
-		return true;
-	}
-	setLightingCommand.ack_id=++next_ack_id;
-	
-	if (!hasReceivedHandshake())
-	{
-		static char t=1;
-		t--;
-		if(!t)
-		{
-			TELEPORT_INTERNAL_CERR("Client {0} - Can't set lighting - no handshake yet.\n",clientID);
-		}
-		return false;
-	}
-	currentLightingState.sent=true;
-	currentLightingState.ack_id=setLightingCommand.ack_id;
-	currentLightingState.acknowledged=false;
-	currentLightingState.serverTimeSentUs=GetServerTimeUs();
-	bool result=sendCommand(setLightingCommand);
+	ackSetLightingCommand=setLightingCommand;
+	ackSetLightingCommand.ack_id=++next_ack_id;
+	bool result=sendAckedCommand(ackSetLightingCommand);
 	return result;
 }
 
@@ -418,6 +404,19 @@ size_t ClientMessaging::SendCommand(const void* c, size_t sz) const
 	memcpy(b->data(), c, sz);
 	commandStack.PushBuffer(b);
 	return commandStack.buffers.size();
+}
+
+size_t ClientMessaging::SendAckedCommand(const core::AckedCommand* ackedCommand, size_t sz)
+{
+	if (ackedCommand->ack_id < next_ack_id)
+		return 0;
+	AckState &ackState		  = ackStates.find(ackedCommand->commandPayloadType)->second;
+	ackState.commandSize	  = (uint16_t)sz;
+	ackState.sent			  = true;
+	ackState.ack_id			  = ackedCommand->ack_id;
+	ackState.acknowledged	  = false;
+	ackState.serverTimeSentUs = GetServerTimeUs();
+	return SendCommand(ackedCommand, sz);
 }
 
 bool ClientMessaging::SendSignalingCommand(std::vector<uint8_t>&& bin)
@@ -558,17 +557,13 @@ void ClientMessaging::receiveHandshake(const std::vector<uint8_t> &packet)
 	}
 	reportHandshake(this->clientID, &handshake);
 	TELEPORT_LOG("Started streaming to clientID {0} at IP {1}.\n", clientID, clientIP);
-	setOrigin(currentOriginState.originClientHas);
-
-	
-	teleport::core::SetLightingCommand setupLightingCommand;
-	setupLightingCommand.clientDynamicLighting=currentLightingState.clientDynamicLighting;
-	sendSetLightingCommand(setupLightingCommand);
+	setOrigin(ackSetOriginNodeCommand.origin_node);
+	sendSetLightingCommand(ackSetLightingCommand);
 }
 
 avs::uid ClientMessaging::getOrigin() const
 {
-	return currentOriginState.originClientHas;
+	return ackSetOriginNodeCommand.origin_node;
 }
 
 int64_t ClientMessaging::GetServerTimeUs() const 
@@ -584,38 +579,22 @@ bool ClientMessaging::setOrigin( avs::uid originNode)
 		return false;
 	if(lastSetupCommand.startTimestamp_utc_unix_us==0)
 		return false;
-	if(currentOriginState.originClientHas==originNode&&currentOriginState.acknowledged)
+	AckState &ackState=ackStates.find(core::CommandPayloadType::SetOriginNode)->second;
+	if(ackSetOriginNodeCommand.origin_node==originNode&&ackState.acknowledged)
 		return true;
 	// If we sent it but it wasn't acknowledged in a reasonable time?
-	static int64_t originAckWaitTimeUs=3000000;// three seconds
-	if(currentOriginState.originClientHas==originNode&&(GetServerTimeUs()-currentOriginState.serverTimeSentUs)<originAckWaitTimeUs)
+	if(ackSetOriginNodeCommand.origin_node==originNode)
 	{
 		return true;
 	}
-	currentOriginState.valid_counter++;
 	geometryStreamingService.setOriginNode(originNode);
-	teleport::core::SetOriginNodeCommand setp;
-	setp.ack_id=++next_ack_id;
-	setp.origin_node=originNode;
-	setp.valid_counter = currentOriginState.valid_counter;
+
+	ackSetOriginNodeCommand.ack_id=++next_ack_id;
+	ackSetOriginNodeCommand.origin_node=originNode;
+	ackSetOriginNodeCommand.valid_counter = ackSetOriginNodeCommand.ack_id;
 	
 	// This is now the valid origin.
-	currentOriginState.originClientHas=originNode;
-	currentOriginState.sent=true;
-	currentOriginState.ack_id=setp.ack_id;
-	currentOriginState.acknowledged=false;
-	currentOriginState.serverTimeSentUs=GetServerTimeUs();
-	if (!hasReceivedHandshake())
-	{
-		static char t=1;
-		t--;
-		if(!t)
-		{
-			TELEPORT_INTERNAL_CERR("Client {0} - Can't set origin - no handshake yet.\n",clientID);
-		}
-		return false;
-	}
-	bool result=sendCommand(setp);
+	bool result=sendAckedCommand(ackSetOriginNodeCommand);
 	return result;
 }
 
@@ -767,9 +746,14 @@ void ClientMessaging::receiveAcknowledgement(const std::vector<uint8_t> &packet)
 		return;
 	}
 	memcpy(&msg, packet.data(), sizeof(msg));
-	if(msg.ack_id==currentOriginState.ack_id)
+	for (auto a : ackStates)
 	{
-		currentOriginState.acknowledged=true;
+		auto &ackState = a.second;
+		if (ackState.ack_id == msg.ack_id)
+		{
+			ackState.acknowledged = true;
+			break;
+		}
 	}
 }
 
