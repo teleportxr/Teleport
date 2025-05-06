@@ -737,6 +737,7 @@ void InstanceRenderer::UpdateNodeRenders()
 	}
 	#endif
 	passRenders.clear();
+	subSceneStatesMap.clear();
 #if 0
 	auto &subSceneNodeStates = subSceneStatesMap[0];
 	for (auto c : cacheNodes)
@@ -863,10 +864,11 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			std::string vertex_shader	  = "vs_variants";
 			if (renderState.multiview)
 				vertex_shader += "_mv";
+			bool uses_lightmap = node->IsStatic() && node->GetGlobalIlluminationTextureUid()!=0;
 			std::string pixel_shader = fmt::format("{base}({lightmap}_{ambient}_{normal_map}_{emissive}_{max_lights})",
 												   fmt::arg("base", base_pixel_shader),
-												   fmt::arg("lightmap", node->IsStatic()),
-												   fmt::arg("ambient", !node->IsStatic()),
+												   fmt::arg("lightmap", uses_lightmap),
+												   fmt::arg("ambient", !uses_lightmap),
 												   fmt::arg("normal_map", normal_map),
 												   fmt::arg("emissive", emissive),
 												   fmt::arg("max_lights", 0));

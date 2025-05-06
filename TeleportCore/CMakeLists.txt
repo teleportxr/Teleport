@@ -51,6 +51,8 @@ target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/src)
 target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/third_party/eigen)
 target_include_directories(TeleportCore PUBLIC ../thirdparty/draco/third_party/tinygltf)
+#json
+target_include_directories(TeleportCore PUBLIC "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
  
 #ktx
 target_include_directories(TeleportCore PUBLIC ${CMAKE_BINARY_DIR}/ktx/include)

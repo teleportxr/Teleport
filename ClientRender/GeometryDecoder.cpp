@@ -1316,7 +1316,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData &geometryDecodeD
 bool GeometryDecoder::readString(GeometryDecoder::GeometryDecodeData &geometryDecodeData, std::string &str) const
 {
 	uint16_t nameLength = NextUint16;
-	if (nameLength >= geometryDecodeData.data.size() - geometryDecodeData.offset)
+	if (nameLength > geometryDecodeData.data.size() - geometryDecodeData.offset)
 	{
 		TELEPORT_WARN("Tried to read {} bytes for a string, only {} left in buffer.", nameLength, geometryDecodeData.data.size() - geometryDecodeData.offset);
 		return false;
@@ -1356,11 +1356,9 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 
 			node.skeletonNodeID = NextUint64;
 			NextList(uint16_t, int16_t, node.joint_indices) NextList(uint16_t, avs::uid, node.animations) NextList(uint16_t, avs::uid, node.materials)
-				// uint64_t test = NextUint64;
-				// std::cout<<test;
+				
 				node.renderState.lightmapScaleOffset = NextVec4;
 			node.renderState.globalIlluminationUid = NextUint64;
-			// node.renderState.lightmapTextureCoordinate=NextByte;
 		}
 		break;
 		case avs::NodeDataType::Light:
@@ -1372,8 +1370,15 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 			break;
 		case avs::NodeDataType::Link:
 		{
-			if (!readString(geometryDecodeData, node.url)) return avs::Result::Failed;
-			if (!readString(geometryDecodeData, node.query_url)) return avs::Result::Failed;
+				if (!readString(geometryDecodeData, node.url))
+					return avs::Result::Failed;
+				if (!readString(geometryDecodeData, node.query_url))
+					return avs::Result::Failed;
+			}
+			case avs::NodeDataType::TextCanvas:
+			{
+				// nothing node-specific to add at present.
+				node.data_uid = NextUint64;
 		}
 		break;
 		default:
@@ -1420,12 +1425,13 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData &geometryDecodeD
 	avs::uid fontAtlasUid = geometryDecodeData.uid;
 	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
 	fontAtlas.name = geometryDecodeData.filename_or_url;
-	if (geometryDecodeData.saveToDisk) saveBuffer(geometryDecodeData, std::string("fonts/" + fontAtlas.name + ".fontAtlas"));
+	if (geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("fonts/" + fontAtlas.name + ".fontAtlas"));
 	fontAtlas.font_texture_uid = NextUint64;
 	int numMaps = NextByte;
 	for (int i = 0; i < numMaps; i++)
 	{
-		int sz = NextUint32;
+		int sz = NextUint16;
 		auto &fontMap = fontAtlas.fontMaps[sz];
 		fontMap.lineHeight = NextFloat;
 		uint16_t numGlyphs = NextUint16;
@@ -1440,7 +1446,7 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData &geometryDecodeD
 	return avs::Result::OK;
 }
 
-avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData &geometryDecodeData)
+avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData &geometryDecodeData) const
 {
 	clientrender::TextCanvasCreateInfo textCanvasCreateInfo;
 	textCanvasCreateInfo.server_uid = geometryDecodeData.server_or_cache_uid;
@@ -1448,11 +1454,10 @@ avs::Result GeometryDecoder::decodeTextCanvas(GeometryDecodeData &geometryDecode
 	textCanvasCreateInfo.font = NextUint64;
 	textCanvasCreateInfo.size = NextUint32;
 	textCanvasCreateInfo.lineHeight = NextFloat;
-	textCanvasCreateInfo.width = NextFloat;
-	textCanvasCreateInfo.height = NextFloat;
 	copy<char>((char *)&textCanvasCreateInfo.colour, geometryDecodeData.data.data(), geometryDecodeData.offset, sizeof(textCanvasCreateInfo.colour));
 
-	if (!readString(geometryDecodeData, textCanvasCreateInfo.text)) return avs::Result::Failed;
+	if (!readString(geometryDecodeData, textCanvasCreateInfo.text))
+		return avs::Result::Failed;
 	geometryDecodeData.target->CreateTextCanvas(textCanvasCreateInfo);
 	return avs::Result::OK;
 }

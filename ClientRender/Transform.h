@@ -20,6 +20,7 @@ namespace teleport
 		private:
 			mat4 m_ModelMatrix;
 
+			void MatrixToComponents();
 		public:
 			Transform();
 			Transform(vec3 translation, quat rotation, vec3 scale);

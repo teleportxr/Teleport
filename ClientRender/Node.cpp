@@ -59,7 +59,6 @@ void Node::UpdateModelMatrix(vec3 translation, quat rotation, vec3 scale)
 
 void Node::UpdateModelMatrix()
 {
-	globalTransform.UpdateModelMatrix();
 	localTransform.UpdateModelMatrix();	
 }
 
@@ -81,6 +80,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 }
 #pragma optimize("",off)
 // Here we will extrapolate the transform based on the last received movement update.
+// TODO: Correctly handle scales here.
 void Node::TickExtrapolatedTransform(double serverTimeS)
 {
 	if (isStatic)

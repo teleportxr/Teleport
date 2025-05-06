@@ -35,8 +35,6 @@ namespace teleport
 			avs::uid font = 0;
 			int size = 0;
 			float lineHeight = 0.0f;
-			float width = 0;
-			float height = 0;
 			vec4 colour = {0, 0, 0, 0};
 			std::string text;
 		};

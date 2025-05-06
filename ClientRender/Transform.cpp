@@ -24,13 +24,13 @@ Transform::Transform(mat4 matrix)
 	m_Translation = matrix.GetTranslation();
 	//m_Rotation = matrix.GetRotation();
 	m_Scale = matrix.GetScale();
-	applyScale = (length(m_Scale) != 1.f);
+	applyScale = (m_Scale.x != 1.f || m_Scale.y != 1.0f || m_Scale.z != 1.0f);
 }
 
 Transform::Transform(const avs::Transform& transform)
 	:m_Translation(transform.position), m_Rotation(transform.rotation), m_Scale(transform.scale)
 {
-	applyScale = (length(m_Scale) != 1.f);
+	applyScale = (m_Scale.x != 1.f || m_Scale.y != 1.0f || m_Scale.z != 1.0f);
 	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4 *)&m_Rotation)) * mat4::scale(m_Scale);
 }
 
@@ -39,7 +39,7 @@ Transform& Transform::operator= (const avs::Transform& transform)
 	m_Translation = transform.position;
 	m_Rotation = transform.rotation;
 	m_Scale = transform.scale;
-	applyScale = (length(m_Scale) != 1.f);
+	applyScale = (m_Scale.x != 1.f || m_Scale.y != 1.0f || m_Scale.z != 1.0f);
 
 	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4 *)&m_Rotation)) * mat4::scale(m_Scale);
 
@@ -58,19 +58,11 @@ Transform& Transform::operator= (const Transform& transform)
 	return *this;
 }
 
+// e.g. A is local, B is parent, R is global of A
 void Transform::Multiply(Transform &R, const Transform &A, const Transform &B)
 {
-	R.m_Scale = A.m_Scale * B.m_Scale;
-	R.applyScale = (length(R.m_Scale) != 1.f);
-	R.m_Rotation = B.m_Rotation * A.m_Rotation;
-	R.m_Translation = B.m_Translation + B.m_Rotation.RotateVector(A.m_Translation * B.m_Scale);
-
-	R.applyScale = A.applyScale||B.applyScale;
-	if (R.applyScale)
-		R.m_ModelMatrix.setRotationTranslationScale(*((vec4 *)&R.m_Rotation), R.m_Translation, R.m_Scale);
-	else
-		R.m_ModelMatrix.setRotationTranslation(*((vec4 *)&R.m_Rotation), R.m_Translation);
-	//R.m_ModelMatrix.applyScale(R.m_Scale);
+	R.m_ModelMatrix = B.m_ModelMatrix * A.m_ModelMatrix;
+	R.MatrixToComponents();
 }
 
 Transform Transform::operator*(const Transform& other) const
@@ -94,21 +86,47 @@ void Transform::UpdateModelMatrix()
 	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4*)&m_Rotation)) * mat4::scale(m_Scale);
 }
 
+void Transform::MatrixToComponents()
+{
+ // Extract translation
+    m_Translation = m_ModelMatrix.GetTranslation();
+  /*  
+    // Extract scale and rotation
+    // This requires a polar decomposition of the upper 3x3 matrix
+    // into a rotation and a symmetric scale matrix
+    
+    // First, extract the 3x3 submatrix
+    mat4 rotScale={0};
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            rotScale.m[i][j] = matrix.m[i][j];
+        }
+    }
+    
+    // Perform polar decomposition
+    Matrix3x3 rotMat;
+    Matrix3x3 scaleMat;
+    PolarDecomposition(rotScale, &rotMat, &scaleMat);
+    
+    // Convert rotation matrix to quaternion
+    *rotation = Quaternion::CreateFromRotationMatrix(rotMat);
+    
+    // Extract scale from the scale matrix
+    // For a symmetric matrix, the eigenvalues are the scales
+    // along the principal axes
+    ExtractScaleFromSymmetricMatrix(scaleMat, scale);*/
+}
+
 bool Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)
 {
-	// zero scale is valid.
-	/*if (abs(scale.x) < 0.0001f)
-	{
-		TELEPORT_CERR << "Failed to update model matrix of transform! Scale.x is zero!\n";
-		return false;
-	}*/
-
 	if (m_Translation != translation || m_Rotation != rotation || m_Scale != scale)
 	{
 		m_Translation = translation;
 		m_Rotation = rotation;
 		m_Scale = scale;
-		applyScale = (length(m_Scale) != 1.f);
+		applyScale = (m_Scale.x != 1.f || m_Scale.y != 1.0f || m_Scale.z != 1.0f);
 		UpdateModelMatrix();
 
 		return true;

@@ -1332,6 +1332,15 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				const auto &mci = selected_material->GetMaterialCreateInfo();
 				const clientrender::Material::MaterialData &md = selected_material->GetMaterialData();
 				ImGui::Text("%llu: %s", selected_material->id, mci.name.c_str());
+				
+				if (ImGui::BeginTable("selectedafs1", 5))
+				{
+					DoRow("Roughness", "%d", mci.combined.textureOutputScalar.x);
+					DoRow("Metallic", "%d", mci.combined.textureOutputScalar.y);
+					ImGui::Separator();
+					ImGui::EndTable();
+				}
+
 				if (mci.diffuse.texture.get())
 				{
 					const char *name = mci.diffuse.texture->GetTextureCreateInfo().name.c_str();

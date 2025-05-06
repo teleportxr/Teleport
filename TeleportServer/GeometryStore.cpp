@@ -595,9 +595,9 @@ bool GeometryStore::storeAnimation(avs::uid id, const std::string & path, telepo
 {
 	auto &anim1=animations[avs::AxesStandard::EngineeringStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::EngineeringStyle);
 	std::string genericFilePath = path + ".teleport_anim"s;
-	saveResourceBinary(cachePath + "/engineering/"s + genericFilePath, anim1);
+	saveResource(cachePath + "/engineering/"s + genericFilePath, anim1);
 	auto &anim2 = animations[avs::AxesStandard::GlStyle][id] = teleport::core::Animation::convertToStandard(animation, sourceStandard, avs::AxesStandard::GlStyle);
-	saveResourceBinary(cachePath + "/gl/"s + genericFilePath, anim2);
+	saveResource(cachePath + "/gl/"s + genericFilePath, anim2);
 	return true;
 }
 
@@ -1282,7 +1282,7 @@ bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time
 			}
 		}
 	}
-	if (!saveResourceBinary(filePath + mesh.MakeFilename(assetPath), mesh))
+	if (!saveResource(filePath + mesh.MakeFilename(assetPath), mesh))
 		return false;
 		#endif
 	return true;
@@ -1318,7 +1318,7 @@ bool GeometryStore::storeMaterial(avs::uid id, const std::string & path, std::ti
 	CheckTexture(newMaterial.emissiveTexture.index);
 	CheckTexture(newMaterial.normalTexture.index);
 	CheckTexture(newMaterial.occlusionTexture.index);
-	if (!saveResourceBinary(cachePath + "/"s + materials[id].MakeFilename(path), materials[id]))
+	if (!saveResource(cachePath + "/"s + materials[id].MakeFilename(path), materials[id]))
 		return false;
 	return true;
 } 
@@ -1414,8 +1414,7 @@ avs::uid GeometryStore::storeFont(const std::string & ttf_path_utf8,const std::s
 	std::vector<int> sizes={size};
 	if(!Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,cacheTexturePath,"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes))
 		return 0;
-	//std::filesystem::path p=std::string(ttf_path_utf8);
-	saveResourceBinary(cachePath+"/"s+cacheFontPath+".font", fa);
+	saveResource(cachePath+"/"s+cacheFontPath+".font_atlas", fa);
 	storeTexture(font_texture_uid, cacheTexturePath, lastModified, avsTexture, true, true, true);
 	return font_atlas_uid;
 }
@@ -1430,7 +1429,7 @@ avs::uid GeometryStore::storeTextCanvas( const std::string & relative_asset_path
 	textCanvas.text=interopTextCanvas->text;
 	std::string cacheFontFilePath = std::string(interopTextCanvas->font);
 	std::replace(cacheFontFilePath.begin(), cacheFontFilePath.end(), '.', '_');
-	cacheFontFilePath+=".font";
+	cacheFontFilePath+=".font_atlas";
 	avs::uid font_uid=PathToUid(cacheFontFilePath);
 	if(!font_uid)
 		return 0;
@@ -1439,9 +1438,7 @@ avs::uid GeometryStore::storeTextCanvas( const std::string & relative_asset_path
 		return 0;
 	textCanvas.font_uid=font_uid;
 	textCanvas.lineHeight=interopTextCanvas->lineHeight;
-	textCanvas.height=interopTextCanvas->height;
-	textCanvas.width=interopTextCanvas->width;
-	textCanvas.size=interopTextCanvas->size;
+	textCanvas.pointSize=interopTextCanvas->pointSize;
 	textCanvas.colour=interopTextCanvas->colour;
 	return canvas_uid;
 }
@@ -1667,7 +1664,7 @@ void GeometryStore::compressNextTexture()
 	{
 		TELEPORT_WARN("Failed to compress texture {0}.",extractedTexture.getName());
 	}
-	saveResourceBinary(file_name, extractedTexture);
+	saveResource(file_name, extractedTexture);
 	if(texturesToCompress.size())
 		texturesToCompress.erase(texturesToCompress.begin());
 	textureToCompress.name="";
@@ -1675,7 +1672,7 @@ void GeometryStore::compressNextTexture()
 	textureToCompress.height=0;
 }
 
-template<typename ExtractedResource> bool GeometryStore::saveResourceBinary(const std::string file_name, const ExtractedResource& resource) const
+template<typename ExtractedResource> bool GeometryStore::saveResource(const std::string file_name, const ExtractedResource& resource) const
 {
 	bool oldFileExists = filesystem::exists(file_name);
 
@@ -1886,7 +1883,7 @@ template<typename ExtractedResource> bool GeometryStore::saveResourcesBinary(con
 	{
 		std::string resource_path=UidToPath(resourceData.first);
 		std::string file_name = (cache_path + "/") + resourceData.second.MakeFilename(resource_path);
-		saveResourceBinary(file_name, resourceData.second);
+		saveResource(file_name, resourceData.second);
 	}
 	return true;
 }

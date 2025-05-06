@@ -271,18 +271,29 @@ namespace teleport
 			{
 				return true;
 			}
-
 			template<typename OutStream>
 			friend OutStream& operator<< (OutStream& out, const ExtractedFontAtlas& extractedFontAtlas)
 			{
-				out << extractedFontAtlas.fontAtlas;
+				std::string str;
+				extractedFontAtlas.fontAtlas.ToJson(str);
+				out.write(str.data(),str.length());
 				return out;
 			}
 
 			template<typename InStream>
 			friend InStream& operator>> (InStream& in, ExtractedFontAtlas& extractedFontAtlas)
 			{
-				in >> extractedFontAtlas.fontAtlas;
+				in.seekg(0, std::ios::end);
+				std::streamsize size = in.tellg();
+				in.seekg(0, std::ios::beg);
+
+				std::string buffer;
+				buffer.resize((size_t)size);
+				if (in.read(buffer.data(), size))
+				{
+					extractedFontAtlas.fontAtlas.FromJson(buffer);
+				}
+				extractedFontAtlas.fontAtlas.font_texture_uid = in.path_to_uid(extractedFontAtlas.fontAtlas.font_texture_path);
 				return in;
 			}
 			bool Verify(const ExtractedFontAtlas& t) const

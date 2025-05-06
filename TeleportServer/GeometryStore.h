@@ -152,7 +152,7 @@ namespace teleport
 			//! Load the resource if possible from the file cache into memory.
 			bool EnsureResourceIsLoaded(avs::uid u);
 			template <typename ExtractedResource>
-			bool saveResourceBinary(const std::string file_name, const ExtractedResource &resource) const;
+			bool saveResource(const std::string file_name, const ExtractedResource &resource) const;
 			template <typename ExtractedResource>
 			bool loadResourceFromPath(const std::string &resource_path, const std::string &filepath_root, ExtractedResource &esource);
 			template <typename ExtractedResource>

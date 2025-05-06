@@ -363,14 +363,14 @@ void Renderer::InitLocalGeometry()
 
 	std::string font_atlas_path = "assets/localGeometryCache/textures/ARIBLK.fontAtlas";
 
-	core::FontAtlas fontAtlas;
-	fontAtlas.font_texture_path = "assets/localGeometryCache/textures/ARIBLK.texture";
-	fontAtlas.font_texture_uid = font_texture_uid;
-	fontAtlas.fontMaps[64];
-	geometryDecoder.decodeFromFile(0, fontAtlas.font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
 	geometryDecoder.decodeFromFile(0, font_atlas_path, avs::GeometryPayloadType::FontAtlas, &localResourceCreator, common_font_atlas_uid);
 	geometryDecoder.WaitFromDecodeThread();
-	// renderState.commonFontAtlas=localGeometryCache->mFontAtlasManager.Get(common_font_atlas_uid);
+	renderState.commonFontAtlas=localGeometryCache->mFontAtlasManager.Get(common_font_atlas_uid);
+	renderState.commonFontAtlas->font_texture_path = "assets/localGeometryCache/textures/ARIBLK.ktx2";
+	renderState.commonFontAtlas->font_texture_uid = font_texture_uid;
+
+	geometryDecoder.decodeFromFile(0, renderState.commonFontAtlas->font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
+	geometryDecoder.WaitFromDecodeThread();
 
 	lobbyGeometry.leftController.controller_node_uid = avs::GenerateUid();
 	lobbyGeometry.rightController.controller_node_uid = avs::GenerateUid();
@@ -403,7 +403,7 @@ void Renderer::InitLocalGeometry()
 	geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/textures/specularRenderTexture.ktx", avs::GeometryPayloadType::Texture, &localResourceCreator, specular_cubemap_uid);
 		
-#if 1
+#if 0
 	// test gltf loading.
 	avs::uid gltf_uid = avs::GenerateUid();
 	// gltf_uid will refer to a SubScene asset in cache zero.
@@ -1165,7 +1165,7 @@ void Renderer::OnFrameMove(double fTime, float time_step)
 		math::Quaternion q;
 		if (!config.options.mode2D)
 		{
-			cameraInterface = &camera2D;
+			cameraInterface = &camera;
 			crossplatform::UpdateMouseCamera(
 				&camera, time_step, spd, mouseCameraState, mouseCameraInput, 14000.f, false, crossplatform::MouseCameraInput::RIGHT_BUTTON);
 
