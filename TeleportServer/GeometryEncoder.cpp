@@ -350,6 +350,7 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 			if (node->data_type == avs::NodeDataType::TextCanvas)
 			{
 				// nothing node-specific to add at present.
+				put(node->data_uid);
 			}
 			if (node->data_type == avs::NodeDataType::Skeleton)
 			{
@@ -491,31 +492,33 @@ avs::Result GeometryEncoder::encodeFontAtlas(avs::uid uid)
 
 	if (!fontAtlas)
 		return avs::Result::Failed;
-	putPayloadType(avs::GeometryPayloadType::FontAtlas, uid);
-	put(fontAtlas->font_texture_uid);
 	if (fontAtlas->fontMaps.size() > 255)
 	{
 		return avs::Result::Failed;
-	}
+	}															
+	putPayloadType(avs::GeometryPayloadType::FontAtlas, uid);	// // 8 = payload_size, 1 = type, 8 = uid = 17
+	put(fontAtlas->font_texture_uid);						// 25
 	uint8_t numMaps = (uint8_t)fontAtlas->fontMaps.size();
-	put(numMaps);
+	put(numMaps);											// 26
 	for (auto m : fontAtlas->fontMaps)
 	{
-		put(m.first);
+		put((uint16_t)m.first);								// 2
 		auto &fontMap = m.second;
-		put(fontMap.lineHeight);
+		put(fontMap.lineHeight);							// 6
 		uint16_t numGlyphs = (uint16_t)fontMap.glyphs.size();
 		if ((size_t)numGlyphs != fontMap.glyphs.size())
 		{
 			return avs::Result::Failed;
 		}
-		put(numGlyphs);
+		put(numGlyphs);										// 8
 		for (size_t j = 0; j < fontMap.glyphs.size(); j++)
 		{
-			auto &glyph = fontMap.glyphs[j];
+			auto &glyph = fontMap.glyphs[j]; // 28
 			put(glyph);
 		}
 	}
+	// Size should be 26 + numMaps * (8 + 28 * numGlyphs)
+	size_t payloadSize = buffer.size() - prevBufferSize - sizeof(size_t);
 	// Actual size is now known so update payload size
 	putPayloadSize(uid);
 	// Flag we have encoded the material.
@@ -532,10 +535,8 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 		return avs::Result::Failed;
 	putPayloadType(avs::GeometryPayloadType::TextCanvas, uid);
 	put(textCanvas->font_uid);
-	put(textCanvas->size);
+	put(textCanvas->pointSize);
 	put(textCanvas->lineHeight);
-	put(textCanvas->width);
-	put(textCanvas->height);
 	put(textCanvas->colour);
 	put((uint16_t)textCanvas->text.length());
 	put((const uint8_t *)textCanvas->text.data(), textCanvas->text.length());

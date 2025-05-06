@@ -126,7 +126,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	avsTexture.arrayCount=1;
 	avsTexture.mipCount=1;
 	avsTexture.format=avs::TextureFormat::G8;
-	avsTexture.compression=avs::TextureCompression::MULTIPLE_PNG;
+	avsTexture.compression=avs::TextureCompression::KTX;
 	avsTexture.compressed=false;
 	/*stbi_write_png((generate_texture_path_utf8+".png").c_str(), width, height, 1, bitmap, 0);
 
@@ -136,22 +136,18 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 		return false;
 	STBIW_FREE(png);*/
 
-
-	//std::ifstream ifs_png(generate_texture_path_utf8, std::ios::in | std::ios::binary);
-	//std::vector<uint8_t> contents((std::istreambuf_iterator<char>(ifs_png)), std::istreambuf_iterator<char>());
-
-
-	uint32_t imageSize = mip0_bytesize; 
-	uint16_t numImages=1;
-	uint32_t offset0=uint32_t(sizeof(numImages)+sizeof(imageSize));
+	// now cropped:
+	uint32_t imageSize	  = height * width;
+	uint16_t numImages	  = 1;
+	uint32_t offset0	  = uint32_t(sizeof(numImages) + sizeof(imageSize));
 	avsTexture.images.resize(numImages);
 	avsTexture.images[0].data.resize(imageSize);
 	uint8_t *target = avsTexture.images[0].data.data();
-	memcpy(target, bitmap, mip0_bytesize);
-	bool black=true;
-	for(size_t i=0;i<mip0_bytesize;i++)
+	memcpy(target, bitmap, imageSize);
+	bool black = true;
+	for (size_t i = 0; i < mip0_bytesize; i++)
 	{
-		if(target[i]!=0)
+		if (target[i] != 0)
 		{
 			black=false;
 			break;

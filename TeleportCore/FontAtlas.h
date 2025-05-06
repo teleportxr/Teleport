@@ -1,5 +1,6 @@
 #pragma once
 #include "libavstream/common.hpp"
+#include "TeleportCore/CommonNetworking.h"
 #include <stdint.h>
 #include <vector>
 #include <map>
@@ -8,6 +9,8 @@ namespace teleport
 {
 	namespace core
 	{
+#pragma pack(push)
+#pragma pack(1)
 		//! A mapping from a single character to its position in a font map texture.
 		struct Glyph
 		{
@@ -36,7 +39,10 @@ namespace teleport
 					return false;
 				return true;
 			}
-		};
+		} TELEPORT_PACKED;
+#pragma pack(pop)
+		static_assert (sizeof(Glyph) == 28, "Glyph Size is not correct");
+
 		//! A mapping from characters to their positions in the font map texture.
 		struct FontMap
 		{
@@ -61,12 +67,14 @@ namespace teleport
 		struct FontAtlas
 		{
 			FontAtlas(avs::uid u = 0);
+			void ToJson(std::string &json) const;
+			void FromJson(const std::string &json);
 			avs::uid uid = 0;
 			std::string name;
 			std::string font_texture_path;
 			// Not saved! path is the ground-truth.
 			avs::uid font_texture_uid = 0;
-			std::map<int, FontMap> fontMaps;
+			std::map<uint16_t, FontMap> fontMaps;
 			bool Verify(const FontAtlas& t) const
 			{
 				if (font_texture_path != t.font_texture_path)

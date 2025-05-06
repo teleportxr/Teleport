@@ -671,8 +671,10 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid,avs::uid id, const avs:
 			m_DummyCombined,
 			incompleteMaterial,
 			incompleteMaterial->materialInfo.combined);
+	else
+		incompleteMaterial->materialInfo.combined.textureOutputScalar={0,0,0,1.0f};
 	
-	if(material.pbrMetallicRoughness.metallicRoughnessTexture.index)
+	//if(material.pbrMetallicRoughness.metallicRoughnessTexture.index)
 		geometryCache->AddTextureToMaterial(material.pbrMetallicRoughness.metallicRoughnessTexture,
 			vec4{ material.pbrMetallicRoughness.roughnessMultiplier, material.pbrMetallicRoughness.metallicFactor, material.occlusionTexture.strength, material.pbrMetallicRoughness.roughnessOffset },
 			m_DummyCombined,
@@ -1139,6 +1141,7 @@ static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 {
 	switch(f)
 	{
+		case VK_FORMAT_R8_UNORM: return clientrender::Texture::Format::R8;
 		case VK_FORMAT_R8G8B8A8_UNORM: return clientrender::Texture::Format::RGBA8; 
 		case VK_FORMAT_R8G8B8A8_SNORM: return clientrender::Texture::Format::RGBA8; 
 	    // Compression formats ------------ GPU Mapping DirectX, Vulkan and OpenGL formats and comments --------

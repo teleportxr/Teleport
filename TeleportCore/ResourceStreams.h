@@ -12,10 +12,9 @@ namespace teleport
 	{
 		class resource_ofstream : public std::ofstream
 		{
-		protected:
+		public:
 			std::function<std::string(avs::uid)> uid_to_path;
 
-		public:
 			std::string filename;
 			resource_ofstream(const char *fn, std::function<std::string(avs::uid)> f)
 				: std::ofstream(fn, std::ofstream::out | std::ofstream::binary), uid_to_path(f), filename(fn)
@@ -53,11 +52,10 @@ namespace teleport
 		};
 		class resource_ifstream : public std::ifstream
 		{
-		protected:
-			std::function<avs::uid(std::string)> path_to_uid;
 			size_t fileSize = 0;
-
 		public:
+			std::function<avs::uid(std::string)> path_to_uid;
+
 			std::string filename;
 			resource_ifstream(const char *fn, std::function<avs::uid(std::string)> f)
 				: std::ifstream(fn, resource_ifstream::in | resource_ifstream::binary), path_to_uid(f), filename(fn)

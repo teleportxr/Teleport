@@ -110,7 +110,7 @@ namespace teleport
 			avs::Result decodeNode(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeSkeleton(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeFontAtlas(GeometryDecodeData &geometryDecodeData);
-			avs::Result decodeTextCanvas(GeometryDecodeData &geometryDecodeData);
+			avs::Result decodeTextCanvas(GeometryDecodeData &geometryDecodeData) const;
 			// Decoding from file format extension:
 			avs::Result decodeTextureFromExtension(GeometryDecodeData& geometryDecodeData);
 

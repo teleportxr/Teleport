@@ -34,6 +34,8 @@ static CMP_FORMAT VkFormatToCompressonatorFormat(VkFormat f)
 {
 	switch(f)
 	{
+	case VK_FORMAT_R8_UNORM:
+		return CMP_FORMAT_R_8;
 	    // Compression formats ------------ GPU Mapping DirectX, Vulkan and OpenGL formats and comments --------
     // Compressed Format 0xSnn1..0xSnnF   (Keys 0x00Bv..0x00Bv) S =1 is signed, 0 = unsigned, B =Block Compressors 1..7 (BC1..BC7) and v > 1 is a variant like signed or swizzle
     case VK_FORMAT_BC2_UNORM_BLOCK: return CMP_FORMAT_BC2;                                   // compressed texture format with explicit alpha for Microsoft DirectX10. Identical to DXT3. Eight bits per pixel.
@@ -93,7 +95,7 @@ static VkFormat GetDesiredVkFormat(avs::TextureFormat f)
 // TODO: Switch 8bpp to BC7?
 	switch(f)
 	{
-    case avs::TextureFormat::G8: return VK_FORMAT_R8_UINT;              
+    case avs::TextureFormat::G8: return VK_FORMAT_R8_UNORM;              
     case avs::TextureFormat::BGRA8: return VK_FORMAT_BC3_UNORM_BLOCK;     
     case avs::TextureFormat::BGRE8: return VK_FORMAT_BC3_UNORM_BLOCK;           
     case avs::TextureFormat::RGBA16: return VK_FORMAT_R16G16B16A16_UNORM;        
@@ -160,7 +162,8 @@ static std::vector<uint8_t> EncodeLayer(VkFormat targetForamt,const avs::Texture
 		return std::move(encodedLayer);
 	}
 
-	CMP_FORMAT destFormat=CMP_FORMAT_BC6H;
+	CMP_FORMAT destFormat=VkFormatToCompressonatorFormat(targetForamt);
+	//CMP_FORMAT_BC6H;
 	destTexture.dwSize     = sizeof(destTexture);
 	destTexture.dwWidth    = srcTexture.dwWidth;
 	destTexture.dwHeight   = srcTexture.dwHeight;
@@ -235,8 +238,9 @@ bool teleport::server::CompressToKtx2(ExtractedTexture &extractedTexture,std::st
 	ktxTextureCreateInfo createInfo;
 	KTX_error_code result;
 	ktx_size_t srcSize=0;
+	VkFormat targetFormat=GetDesiredVkFormat(avsTexture.format);
  
-	createInfo.vkFormat = VK_FORMAT_BC6H_UFLOAT_BLOCK;
+	createInfo.vkFormat = targetFormat;//VK_FORMAT_BC6H_UFLOAT_BLOCK;
 	createInfo.baseWidth = avsTexture.width;
 	createInfo.baseHeight = avsTexture.height;
 	createInfo.baseDepth = avsTexture.depth;
@@ -261,7 +265,6 @@ bool teleport::server::CompressToKtx2(ExtractedTexture &extractedTexture,std::st
 	avsTexture.compressedData.resize(ktx2Texture->dataSize);
 	//ktx2Texture->pData=avsTexture.compressedData.data();
 	ktx_size_t dataSizeUnc=ktxTexture_GetDataSizeUncompressed(ktxTexture(ktx2Texture));
-	VkFormat targetFormat=GetDesiredVkFormat(avsTexture.format);
 	for(uint32_t layer=0;layer<avsTexture.arrayCount;layer++)
 	{
 		for(uint32_t face=0;face<createInfo.numFaces;face++)

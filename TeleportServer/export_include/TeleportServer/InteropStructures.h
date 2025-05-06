@@ -358,10 +358,8 @@ struct InteropTextCanvas
 {
 	char* text=nullptr;
 	char* font=nullptr;
-	int size=0;
+	int pointSize=0;
 	float lineHeight=0.0f;
-	float width=0;
-	float height=0;
 	vec4 colour;
 };
 namespace avs

@@ -46,12 +46,12 @@ void CanvasTextRenderer::RecompileShaders()
 
 void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const CanvasRender *canvasRender)
 {
-	if(!effect)
-		return;
 	const auto &textCanvasCreateInfo = canvasRender->textCanvas->textCanvasCreateInfo;
 	const vec4 no_background={0,0,0,0};
+	const float width=1.0f;
+	const float height=1.0f;
 	Render(deviceContext, canvasRender->textCanvas->fontAtlas.get(), textCanvasCreateInfo.size, textCanvasCreateInfo.text, textCanvasCreateInfo.colour, 
-		{-textCanvasCreateInfo.width / 2.0f, textCanvasCreateInfo.height / 2.0f, textCanvasCreateInfo.width, -textCanvasCreateInfo.height}, no_background, textCanvasCreateInfo.lineHeight, canvasRender->textCanvas->fontChars);
+		{-width / 2.0f, height / 2.0f, width, -height}, no_background, textCanvasCreateInfo.lineHeight, canvasRender->textCanvas->fontChars);
 }
 
 void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas

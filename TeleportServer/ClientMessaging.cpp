@@ -746,7 +746,7 @@ void ClientMessaging::receiveAcknowledgement(const std::vector<uint8_t> &packet)
 		return;
 	}
 	memcpy(&msg, packet.data(), sizeof(msg));
-	for (auto a : ackStates)
+	for (auto &a : ackStates)
 	{
 		auto &ackState = a.second;
 		if (ackState.ack_id == msg.ack_id)
