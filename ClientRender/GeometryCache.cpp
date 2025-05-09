@@ -332,7 +332,6 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 			{
 				std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
 				RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})", incompleteFontAtlas->id, id, textureInfo.name);
-				RemoveFromMissingResources(incompleteFontAtlas->id);
 				std::shared_ptr<FontAtlas> fontAtlas = std::static_pointer_cast<FontAtlas>(*it);
 				CompleteFontAtlas(incompleteFontAtlas->id, fontAtlas);
 			}
@@ -400,6 +399,57 @@ void GeometryCache::CompleteFontAtlas(avs::uid id, std::shared_ptr<clientrender:
 		fontAtlas->url = name + "_atlas";
 	}
 	SaveResource(*fontAtlas);
+	// Was this resource being awaited?
+	MissingResource* missingResource = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::FontAtlas);
+	if(missingResource)
+	for(auto it = missingResource->waitingResources.begin(); it != missingResource->waitingResources.end(); it++)
+	{
+		if(it->get()->type!=avs::GeometryPayloadType::TextCanvas)
+		{
+			TELEPORT_CERR<<"Waiting resource is not a TextCanvas, it's "<<int(it->get()->type)<<std::endl;
+			continue;
+		}
+		std::shared_ptr<IncompleteTextCanvas> incompleteTextCanvas = std::static_pointer_cast<IncompleteTextCanvas>(*it);
+		incompleteTextCanvas->missingFontAtlasUid=0;
+		std::shared_ptr<TextCanvas> textCanvas = std::static_pointer_cast<TextCanvas>(*it);
+		textCanvas->SetFontAtlas(fontAtlas);
+		CompleteTextCanvas(textCanvas->id);
+		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteTextCanvas->id,"",id,"");
+		// The TextCanvas is complete
+	}
+	// Resource has arrived, so we are no longer waiting for it.
+	RemoveFromMissingResources(id);
+}
+
+void GeometryCache::CompleteTextCanvas(avs::uid id)
+{
+	std::shared_ptr<clientrender::TextCanvas> textCanvas=mTextCanvasManager.Get(id);
+	// Was this resource being awaited?
+	MissingResource* missingResource = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::TextCanvas);
+	if(missingResource)
+		for (auto waiting = missingResource->waitingResources.begin(); waiting != missingResource->waitingResources.end(); waiting++)
+	{
+		if (waiting->get()->type != avs::GeometryPayloadType::Node)
+		{
+			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
+			continue;
+		}
+		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
+		incompleteNode->SetTextCanvas(textCanvas);
+		RESOURCE_RECEIVES(incompleteNode, textCanvas->textCanvasCreateInfo.uid);
+		// modified "material" - add to transparent list.
+		mNodeManager.NotifyModifiedMaterials(incompleteNode);
+
+		size_t num_remaining = RESOURCES_AWAITED(incompleteNode);
+		RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Canvas {2}, still awaiting {3}", incompleteNode->id, incompleteNode->name, textCanvas->textCanvasCreateInfo.uid, num_remaining);
+		//If the waiting resource has no incomplete resources, it is now itself complete.
+		if (RESOURCE_IS_COMPLETE((*waiting)))
+		{
+			CompleteNode(incompleteNode->id, incompleteNode);
+		}
+	}
+	//Resource has arrived, so we are no longer waiting for it.
+	RemoveFromMissingResources(textCanvas->textCanvasCreateInfo.uid);
 }
 
 std::string GeometryCache::URLToFilePath(std::string url)

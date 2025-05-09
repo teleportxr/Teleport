@@ -241,6 +241,7 @@ namespace teleport
 			void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 			void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo &materialInfo);
 			void CompleteFontAtlas(avs::uid id, std::shared_ptr<clientrender::FontAtlas> f);
+			void CompleteTextCanvas(avs::uid id);
 			// Add texture to material being created.
 			//	accessor : Data on texture that was received from server.
 			//	colourFactor : Vector factor to multiply texture with to adjust strength.

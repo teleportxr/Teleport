@@ -194,7 +194,6 @@ shader vec4 PS_Background(posTexVertexOutput IN) : SV_TARGET
 	vec2 tc = IN.texCoords;
 	return background;
 }
- 
 
 shader vec4 PS_CanvasText(posTexVertexOutput IN) : SV_TARGET
 {
