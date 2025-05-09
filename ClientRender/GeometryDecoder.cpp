@@ -1425,7 +1425,7 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData &geometryDecodeD
 	avs::uid fontAtlasUid = geometryDecodeData.uid;
 	teleport::core::FontAtlas fontAtlas(fontAtlasUid);
 	fontAtlas.name = geometryDecodeData.filename_or_url;
-	if (geometryDecodeData.saveToDisk)
+	if (geometryDecodeData.saveToDisk&&geometryDecodeData.filename_or_url.length())
 		saveBuffer(geometryDecodeData, std::string("fonts/" + fontAtlas.name + ".fontAtlas"));
 	fontAtlas.font_texture_uid = NextUint64;
 	int numMaps = NextByte;
@@ -1435,6 +1435,13 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData &geometryDecodeD
 		auto &fontMap = fontAtlas.fontMaps[sz];
 		fontMap.lineHeight = NextFloat;
 		uint16_t numGlyphs = NextUint16;
+		// 
+		size_t glyphsBytes = numGlyphs*sizeof(core::Glyph);
+		if (glyphsBytes > geometryDecodeData.bytesRemaining())
+		{
+			TELEPORT_WARN("Tried to read {} glyphs = {} bytes but only {} bytes left in buffer.", numGlyphs, glyphsBytes, geometryDecodeData.bytesRemaining());
+			return avs::Result::Failed;
+		}
 		fontMap.glyphs.resize(numGlyphs);
 		for (uint16_t j = 0; j < numGlyphs; j++)
 		{

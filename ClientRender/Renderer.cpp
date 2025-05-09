@@ -364,12 +364,15 @@ void Renderer::InitLocalGeometry()
 	std::string font_atlas_path = "assets/localGeometryCache/textures/ARIBLK.fontAtlas";
 
 	geometryDecoder.decodeFromFile(0, font_atlas_path, avs::GeometryPayloadType::FontAtlas, &localResourceCreator, common_font_atlas_uid);
-	geometryDecoder.WaitFromDecodeThread();
-	renderState.commonFontAtlas=localGeometryCache->mFontAtlasManager.Get(common_font_atlas_uid);
-	renderState.commonFontAtlas->font_texture_path = "assets/localGeometryCache/textures/ARIBLK.ktx2";
-	renderState.commonFontAtlas->font_texture_uid = font_texture_uid;
-
-	geometryDecoder.decodeFromFile(0, renderState.commonFontAtlas->font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
+	
+	if(renderState.commonFontAtlas)
+	{
+		geometryDecoder.WaitFromDecodeThread();
+		renderState.commonFontAtlas=localGeometryCache->mFontAtlasManager.Get(common_font_atlas_uid);
+		renderState.commonFontAtlas->font_texture_path = "assets/localGeometryCache/textures/ARIBLK.ktx2";
+		renderState.commonFontAtlas->font_texture_uid = font_texture_uid;
+		geometryDecoder.decodeFromFile(0, renderState.commonFontAtlas->font_texture_path, avs::GeometryPayloadType::Texture, &localResourceCreator, font_texture_uid);
+	}
 	geometryDecoder.WaitFromDecodeThread();
 
 	lobbyGeometry.leftController.controller_node_uid = avs::GenerateUid();

@@ -733,23 +733,6 @@ void ResourceCreator::CreateFontAtlas(avs::uid server_uid,avs::uid id,const std:
 	}
 	else
 		geometryCache->CompleteFontAtlas(id,f);
-	// Was this resource being awaited?
-	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::FontAtlas);
-	if(missingResource)
-	for(auto it = missingResource->waitingResources.begin(); it != missingResource->waitingResources.end(); it++)
-	{
-		if(it->get()->type!=avs::GeometryPayloadType::TextCanvas)
-		{
-			TELEPORT_CERR<<"Waiting resource is not a TextCanvas, it's "<<int(it->get()->type)<<std::endl;
-			continue;
-		}
-		std::shared_ptr<IncompleteTextCanvas> incompleteTextCanvas = std::static_pointer_cast<IncompleteTextCanvas>(*it);
-		incompleteTextCanvas->missingFontAtlasUid=0;
-		std::shared_ptr<TextCanvas> textCanvas = std::static_pointer_cast<TextCanvas>(*it);
-		textCanvas->SetFontAtlas(f);
-		RESOURCECREATOR_DEBUG_COUT( "Waiting TextCanvas {0}({1}) got FontAtlas {2}({3})" , incompleteTextCanvas->id,"",id,"");
-		// The TextCanvas is complete
-	}
 }
 
 void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo)
@@ -778,34 +761,10 @@ void ResourceCreator::CreateTextCanvas(clientrender::TextCanvasCreateInfo &textC
 		textCanvas->missingFontAtlasUid=textCanvas->textCanvasCreateInfo.font;
 	}
 	else
-		textCanvas->SetFontAtlas(fontAtlas);
-
-	// Was this resource being awaited?
-	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(textCanvas->textCanvasCreateInfo.uid, avs::GeometryPayloadType::TextCanvas);
-	if(missingResource)
-		for (auto waiting = missingResource->waitingResources.begin(); waiting != missingResource->waitingResources.end(); waiting++)
 	{
-		if (waiting->get()->type != avs::GeometryPayloadType::Node)
-		{
-			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
-			continue;
-		}
-		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
-		incompleteNode->SetTextCanvas(textCanvas);
-		RESOURCE_RECEIVES(incompleteNode, textCanvas->textCanvasCreateInfo.uid);
-		// modified "material" - add to transparent list.
-		geometryCache->mNodeManager.NotifyModifiedMaterials(incompleteNode);
-
-		size_t num_remaining = RESOURCES_AWAITED(incompleteNode);
-		RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Canvas {2}, still awaiting {3}", incompleteNode->id, incompleteNode->name, textCanvas->textCanvasCreateInfo.uid, num_remaining);
-		//If the waiting resource has no incomplete resources, it is now itself complete.
-		if (RESOURCE_IS_COMPLETE((*waiting)))
-		{
-			geometryCache->CompleteNode(incompleteNode->id, incompleteNode);
-		}
+		textCanvas->SetFontAtlas(fontAtlas);
+		geometryCache->CompleteTextCanvas(textCanvasCreateInfo.uid);
 	}
-	//Resource has arrived, so we are no longer waiting for it.
-	geometryCache->RemoveFromMissingResources(textCanvas->textCanvasCreateInfo.uid);
 }
 
 void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs::Skeleton& skeleton)
