@@ -136,6 +136,25 @@ else()
 	option(TELEPORT_SERVER "Build for server? If true, client will not be built." ${TELEPORT_SERVER})
 endif()
 if(TELEPORT_SERVER)
+	set(MSDFGEN_USE_VCPKG OFF CACHE BOOL "" FORCE)
+	FetchContent_Declare(
+	  freetype
+	  GIT_REPOSITORY https://gitlab.freedesktop.org/freetype/freetype.git
+		GIT_SHALLOW 1
+	  GIT_TAG        VER-2-13-3
+	  SOURCE_DIR freetype
+	)
+	FetchContent_MakeAvailable(freetype)
+	# Only need to generate MSDF fonts server-side.
+	FetchContent_Declare(
+	  msdfgen
+	  GIT_REPOSITORY https://github.com/Chlumsky/msdfgen.git
+		GIT_SHALLOW 1
+	  GIT_TAG        v1.12
+	  SOURCE_DIR msdfgen
+	)
+	FetchContent_MakeAvailable(msdfgen)
+
 	set(OPTION_ENABLE_ALL_APPS OFF CACHE BOOL "" FORCE)
 	set(OPTION_BUILD_BROTLIG OFF CACHE BOOL "" FORCE)
 	set(OPTION_BUILD_GUI OFF CACHE BOOL "" FORCE)

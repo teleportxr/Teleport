@@ -12,24 +12,20 @@
 #include "InstanceRenderer.h"
 #include "Light.h"
 #include "Platform/Core/FileLoader.h"
-#include "Platform/Core/StringToWString.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
 #include <fmt/core.h>
-#include <fmt/format.h>
 #include <magic_enum/magic_enum.hpp>
 
 #ifdef _MSC_VER
 #include <Windows.h>
-#include <direct.h>
 #endif
 using namespace std::string_literals;
 #include "Platform/Core/StringFunctions.h"
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/TabContext.h"
-#include "ThisPlatform/StringFunctions.h"
 #include "libavstream/pipeline.hpp"
 
 #ifdef __ANDROID__
@@ -1310,7 +1306,21 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					}
 					element++;
 				}
-
+				const auto &comps=selected_node->GetComponents();
+				for(const auto c:comps)
+				{
+				}
+				const std::shared_ptr<TextCanvas>		  textCanvas = selected_node->GetTextCanvas();
+				if (textCanvas)
+				{
+					IMGUITREENODEEX("##canvas", flags, " Canvas: {}", textCanvas->textCanvasCreateInfo.uid);
+					
+					ImGui::Text("%s",textCanvas->textCanvasCreateInfo.text);
+					if (ImGui::IsItemClicked())
+					{
+						Select(cache_uid, textCanvas->textCanvasCreateInfo.uid);
+					}
+				}
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{

@@ -1463,7 +1463,6 @@ void Renderer::ResizeView(int view_id, int W, int H)
 }
 #define ONSCREEN_PROF 1
 #if ONSCREEN_PROF
-
 platform::core::DefaultProfiler cpuProfiler;
 #endif
 void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture, int w, int h, long long frame, void *context_allocator)
@@ -1493,6 +1492,7 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
+
 #endif
 	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
@@ -1568,6 +1568,16 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	{
 		std::string &profiling_text = gui.GetProfilingText();
 		profiling_text = cpuProfiler.GetDebugText();
+		
+		auto *mem=renderPlatform->GetMemoryInterface();
+		if(mem)
+		{
+			size_t mem_alloc=mem->GetTotalVideoBytesAllocated();
+			size_t cur_alloc=mem->GetCurrentVideoBytesAllocated();
+			size_t mem_freed=mem->GetTotalVideoBytesFreed();
+	
+			profiling_text+=fmt::format("\n\nAllocated {}k\nFreed {}k\nCurrent {}k",mem_alloc/1024,mem_freed/1024,cur_alloc/1024);
+		}
 	}
 
 	SIMUL_COMBINED_PROFILE_END(deviceContext);

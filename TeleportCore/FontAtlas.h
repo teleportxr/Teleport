@@ -14,11 +14,20 @@ namespace teleport
 		//! A mapping from a single character to its position in a font map texture.
 		struct Glyph
 		{
-			uint16_t x0 = 0, y0 = 0, x1 = 0, y1 = 0; // coordinates of bounding box in bitmap
-			float xOffset = 0.0f, yOffset = 0.0f, xAdvance = 0.0f;
-			float xOffset2 = 0.0f, yOffset2 = 0.0f;
+			uint16_t index = 0;
+			uint16_t x0 = 0;
+			uint16_t y0 = 0;
+			uint16_t x1 = 0;
+			uint16_t y1 = 0; // coordinates of bounding box in bitmap
+			float xOffset = 0.0f;
+			float yOffset = 0.0f;
+			float xAdvance = 0.0f;
+			float xOffset2 = 0.0f;
+			float yOffset2 = 0.0f;
 			bool Verify(const Glyph& g)
 			{
+				if (index != g.index)
+					return false;
 				if (x0 != g.x0)
 					return false;
 				if (y0 != g.y0)
@@ -41,7 +50,7 @@ namespace teleport
 			}
 		} TELEPORT_PACKED;
 #pragma pack(pop)
-		static_assert (sizeof(Glyph) == 28, "Glyph Size is not correct");
+		static_assert (sizeof(Glyph) == 30, "Glyph Size is not correct");
 
 		//! A mapping from characters to their positions in the font map texture.
 		struct FontMap
