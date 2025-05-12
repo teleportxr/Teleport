@@ -1231,7 +1231,7 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geom
 	}
 	else if (ext == ".png")
 	{
-		texture.compression = avs::TextureCompression::MULTIPLE_PNG;
+		texture.compression = avs::TextureCompression::PNG;
 	}
 	else if (ext == ".ktx2" || ext == ".ktx")
 	{

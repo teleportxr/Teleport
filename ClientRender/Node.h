@@ -44,7 +44,7 @@ namespace teleport
 				countdown = 1.2f;
 			}
 			VisibilityComponent visibility;
-			const std::vector<std::shared_ptr<Component>> &GetComponents()
+			const std::vector<std::shared_ptr<Component>> &GetComponents() const
 			{
 				return components;
 			}
