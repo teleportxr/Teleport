@@ -1245,7 +1245,6 @@ void Renderer::OnFrameMove(double fTime, float time_step)
 								 sessionClient->GetClientServerState().headPose,
 								 nodePoses,
 								 instanceRenderer->receivedInitialPos,
-								 GetOriginPose(server_uid),
 								 sessionClient->GetClientServerState().input,
 								 fTime,
 								 time_step);

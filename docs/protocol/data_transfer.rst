@@ -19,7 +19,7 @@ Secure Reliable Transfer Protocol
 The Secure Reliable Transfer (SRT) protocol is used for sending network packets. 
 This is an open source protocol that provides a wrapper around UDP and allows for the retransmission of lost packets.
 It has low overhead compared with TCP and deals with point 1 above. 
-For the Simul fork of SRT, see here: https://github.com/simul/srt.
+For the Simul fork of SRT, see here: https://github.com/teleportxr/srt.
 For more information on SRT, see here: https://www.haivision.com/resources/streaming-video-definitions/srt/.
 Note: Teleport is currently using the master branch of the SRT fork.
 
@@ -34,7 +34,7 @@ The header contains information such as the **SuperFrame** ID and the transmissi
 This information allows the **EFP Receiver** to reassemble the **SuperFrame** on the client and deal with points 2 and 3. 
 When a payload is deemed to be corrupted, it is discarded and the client may request it to be sent again. 
 How the client does this is dependant on the type of stream. See the documentation on each stream type for more information on this.
-For EFP documentation, code examples and the source, see the Simul fork here: https://github.com/simul/efp.
+For EFP documentation, code examples and the source, see the Simul fork here: https://github.com/teleportxr/efp.
 Note: Teleport is currently using the master branch of the EFP fork.
 
 

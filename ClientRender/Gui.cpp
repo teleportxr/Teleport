@@ -984,7 +984,7 @@ void Gui::BeginDebugGui(GraphicsDeviceContext &deviceContext)
 		return;
 	}
 	ImGui::PushFont(fontInter[18]);
-	if (ImGuiBegin("Teleport VR", nullptr, window_flags))
+	if (ImGuiBegin("Teleport XR", nullptr, window_flags))
 		in_debug_gui++;
 }
 
@@ -2292,6 +2292,8 @@ void Gui::MenuBar2D()
 				config.SaveOptions();
 			}
 		}
+		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			TIMED_TOOLTIP("Settings");
 #if TELEPORT_INTERNAL_CHECKS
 		if (config.dev_mode)
 		{
@@ -2303,7 +2305,7 @@ void Gui::MenuBar2D()
 		}
 #endif
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
-			TIMED_TOOLTIP("Settings");
+			TIMED_TOOLTIP("Dev");
 	}
 	ImGui::PopStyleColor();
 }
@@ -2419,6 +2421,8 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				}
 			}
 			ImGui::EndTabBar();
+			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+				TIMED_TOOLTIP("Connections");
 		}
 
 		ImGuiEnd();
@@ -2631,7 +2635,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		ImGui::LogToTTY();
 
 		const auto &[dateStr, timeStr] = GetCurrentDateTimeStrings();
-		std::string title = "Teleport VR"; // + dateStr + " " + timeStr;
+		std::string title = "Teleport XR"; // + dateStr + " " + timeStr;
 		ImGuiBegin(title.c_str(), &show_hide, windowFlags);
 #if 0
 		std::vector<vec3> client_press;

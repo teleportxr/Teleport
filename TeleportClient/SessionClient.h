@@ -127,7 +127,7 @@ namespace teleport
 			void Disconnect(uint timeout, bool resetClientID = true);
 			void Frame(const avs::DisplayInfo &displayInfo, const teleport::core::Pose &headPose,
 					const std::map<avs::uid,teleport::core::PoseDynamic> &controllerPoses, uint64_t originValidCounter,
-					const teleport::core::Pose &originPose, const teleport::core::Input& input,
+					const teleport::core::Input& input,
 					double time, double deltaTime);
 			float GetLatencyMs() const;
 			//! @brief Returns the current connection status as determined by the signaling

@@ -107,18 +107,39 @@ void SignalingServer::ProcessReceivedMessages()
 			std::string type = message["teleport-signal-type"];
 			if (type == "request-response")
 			{
+				clearResources = true;
+				awaiting = false;
 				if (message.contains("content"))
 				{
 					json content = message["content"];
+					uint64_t cl_id = 0;
+					uint64_t srv_id = 0;
 					if (content.contains("clientID"))
 					{
-						uint64_t clid = content["clientID"];
-						if (clientID != clid)
-							clientID = clid;
-						if (clientID != 0)
+						cl_id = content["clientID"];
+					}
+					if (content.contains("serverID"))
+					{
+						srv_id = content["serverID"];
+					}
+					if (srv_id !=0 && cl_id !=0 && serverID == srv_id && clientID == cl_id)
+					{
+						clearResources = false;
+					}
+					else
+					{
+						if (clientID != cl_id)
 						{
-							awaiting = true;
+							clientID = cl_id;
 						}
+						if (serverID != srv_id)
+						{
+							serverID = srv_id;
+						}
+					}
+					if (clientID != 0)
+					{
+						awaiting = true;
 					}
 				}
 			}

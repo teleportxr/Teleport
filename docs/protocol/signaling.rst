@@ -29,11 +29,12 @@ Having received a ``request``, the server can respond with a **Request Response*
 		"teleport-signal-type":"request-response",
 		"content":
 		{
-			"clientID": 397357935703467
+			"clientID": 397357935703467,
+			"serverID": 13503465235793
 		}
 	}
 
-The ``clientID`` must be a positive unique 64-bit number.
+The ``clientID`` and ``serverID`` must be unsigned 64-bit numbers. They are unique on the server: no two clients can have the same ID. The server ID represents the session. If this number is the same as for a previous connection, resource and node id's persist. If not, the client must clear all resource and node id's for this server.
 
 The server will also initiate the process of creating a streaming connection. If the streaming protocol is WebRTC, this can be done using the `Interactive Connectivity Establishment <https://en.wikipedia.org/wiki/Interactive_Connectivity_Establishment>`_ protocol, which attempts to establish address/port combinations for client and server to communicate with minimal latency.
 

@@ -49,7 +49,7 @@ html_theme_options = {
     'navigation_depth':2
 }
 numfig = True
-html_favicon = 'favicon.ico'
+html_favicon = 'client/assets/textures/favicon.ico'
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -117,4 +117,4 @@ Deploy the application
 
 
 
-`git@github.com:simul/teleport-nodejs.git <https://github.com/simul/teleport-nodejs>`_.
+https://github.com/teleportxr/teleport-nodejs <https://github.com/teleportxr/teleport-nodejs>`_.

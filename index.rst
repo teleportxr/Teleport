@@ -1,8 +1,8 @@
 
-Teleport VR
+Teleport
 ===========
 
-These pages document Teleport VR: the Spatial Internet Protocol, its reference implementation,
+These pages document Teleport: the Spatial Internet Protocol, its reference implementation,
 tools and SDK's. The documentation is given in the likely order that
 most users will approach Teleport: firstly, an :doc:`introduction </docs/introduction>` to the ideas and 
 concepts behind the system. Secondly, a guide to the default Teleport :doc:`Client</client/index>` client app.
