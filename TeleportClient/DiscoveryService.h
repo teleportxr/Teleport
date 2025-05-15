@@ -25,9 +25,8 @@ namespace teleport
 			static void ShutdownInstance();
 			/// Returns Client ID.
 			uint64_t Discover(uint64_t server_uid, std::string serverIP, uint16_t serverDiscoveryPort);
+			bool ShouldClear(uint64_t server_uid) const;
 			void Tick();
-
-		//	void SetClientID(uint64_t inClientID);
 			bool GetNextMessage(uint64_t server_uid,std::string& msg);
 			bool GetNextBinaryMessage(uint64_t server_uid,std::vector<uint8_t>& msg);
 			void Send(uint64_t server_uid,std::string msg);
@@ -38,7 +37,7 @@ namespace teleport
 			void InitSocket(uint64_t server_uid);
 		//! When e.g. ip address changes, reset the connection.
 			void ResetConnection(uint64_t server_uid, std::string ip,uint16_t serverDiscoveryPort);
-			std::mutex signalingServersMutex;
+			mutable std::mutex signalingServersMutex;
 			void ReceiveWebSocketsMessage(uint64_t server_uid,std::string msg);
 			void ReceiveBinaryWebSocketsMessage(uint64_t server_uid, std::vector<std::byte> bin);
 			std::unordered_map<uint64_t, std::shared_ptr<SignalingServer>> signalingServers;

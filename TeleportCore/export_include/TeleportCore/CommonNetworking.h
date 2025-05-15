@@ -663,6 +663,7 @@ namespace teleport
 			ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
 		} TELEPORT_PACKED;
+		static_assert (sizeof(ClientMessage) == 9, "ClientMessage Size is not correct");
 		
 		//! The handshake sent by a connecting client to the server on initialization.
 		//! Acknowledged by returning an avs::AcknowledgeHandshakeCommand to the client.
@@ -738,17 +739,18 @@ namespace teleport
 		} TELEPORT_PACKED;
 
 		//! Message info struct containing head and other node poses. followed by numPoses NodePose structs.
-		struct ControllerPosesMessage : public ClientMessage
-		{
+		struct NodePosesMessage : public ClientMessage
+		{		// size of ClientMessage is 9
 		//! The headset's pose.
-			Pose_packed headPose;
-		//! Poses of the  controllers.
-			uint16_t numPoses=0;
+			Pose_packed headPose;			// 9 + 28 = 37
+		//! Poses of the  controllers.	
+			uint16_t numPoses=0;			// + 2 = 39
 
-			ControllerPosesMessage()
+			NodePosesMessage()
 				:ClientMessage(ClientMessagePayloadType::ControllerPoses)
 			{}
 		} TELEPORT_PACKED;
+		static_assert (sizeof(NodePosesMessage) == 39, "NodePosesMessage Size is not correct");
 		
 		//! Acknowledges receipt of an AckedCommand.
 		struct AcknowledgementMessage : public ClientMessage

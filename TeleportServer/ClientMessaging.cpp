@@ -802,7 +802,7 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 		}
 		case teleport::core::ClientMessagePayloadType::ControllerPoses:
 		{
-			teleport::core::ControllerPosesMessage message;
+			teleport::core::NodePosesMessage message;
 			if(packet.size()<sizeof(message))
 			{
 				TELEPORT_CERR << "Bad packet size.\n";

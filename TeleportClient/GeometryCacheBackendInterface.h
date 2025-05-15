@@ -15,6 +15,7 @@ namespace teleport
 			virtual void ClearCompletedNodes() = 0;
 			virtual void ClearReceivedResources() = 0;
 			virtual void ClearResourceRequests() = 0;
+			virtual void ClearAll() = 0;
 		};
 	}
 }

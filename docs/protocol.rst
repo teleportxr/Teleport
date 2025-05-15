@@ -1,8 +1,8 @@
-########################
-The Teleport VR Protocol
-########################
+#####################
+The Teleport Protocol
+#####################
 
-The Teleport VR Protocol is a network protocol for client-server immersive applications.
+The Teleport Protocol is a network protocol for client-server immersive applications.
 Essentially this means that applications can be used remotely without downloading or installing them.
 The protocol is open, meaning that anyone can use it, either by writing a client program or by developing a server that uses the protocol.
 

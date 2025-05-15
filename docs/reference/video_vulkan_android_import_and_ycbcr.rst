@@ -58,7 +58,7 @@ Flow chart:
 Vulkan Sampler YCbCr Conversion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Simul's Rendering library *Platform* (https://github.com/simul/Platform/tree/dev) supports the use of YCbCr samplers for Vulkan. 
+Simul's Rendering library *Platform* (https://github.com/teleportxr/Platform/tree/dev) supports the use of YCbCr samplers for Vulkan. 
 
 YCbCr Colour Space
 ------------------

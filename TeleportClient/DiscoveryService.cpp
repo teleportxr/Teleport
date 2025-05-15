@@ -231,10 +231,11 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		}
 		catch (std::exception& e)
 		{
-			TELEPORT_CERR<<(e.what()?e.what():"Unknown exception")<< std::endl;
+			TELEPORT_WARN("Exception: {}\n",(e.what()?e.what():"Unknown exception"));
 		}
 		catch(...)
 		{
+			TELEPORT_WARN("Unknown error\n");
 		}
 	}
 	if (signalingServer->awaiting)
@@ -248,6 +249,19 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		return signalingServer->clientID;
 	}
 	return 0;
+}
+
+bool DiscoveryService::ShouldClear(uint64_t server_uid) const
+{
+	std::shared_ptr<const SignalingServer> signalingServer;
+	{
+		std::lock_guard lock(signalingServersMutex);
+		auto s=signalingServers.find(server_uid);
+		signalingServer=s.operator*().second;
+	}
+	if(!signalingServer)
+		return false;
+	return signalingServer->clearResources;
 }
 
 void DiscoveryService::Tick()

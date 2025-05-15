@@ -122,8 +122,7 @@ bool EnsureSingleProcess(const std::string &cmdLine)
 	MyCDS.cbData = sizeof(MyRec); // size of data
 	MyCDS.lpData = &MyRec;		  // data structure
 //
-	HWND hwDispatch = FindWindowA("TeleportPCClientWindowClass", "Teleport VR Client");
-	if (hwDispatch != NULL)
+	HWND hwDispatch = FindWindowA("TeleportPCClientWindowClass", "Teleport Spatial Client");	if (hwDispatch != NULL)
 	{
 		SendMessageA(hwDispatch,
 					WM_COPYDATA,

@@ -46,13 +46,14 @@ set(src_files
 	URLHandlers.h
 	URLHandlers.cpp
 )
+file(GLOB rst_files *.rst )
 if(TELEPORT_CLIENT_SUPPORT_IPSME)
 	set(ipsme_files
 		IPSME_MsgEnv.cpp
 		IPSME_MsgEnv.h)
 endif()
 #For MT runtime
-add_static_library( TeleportClient SOURCES ${src_files} ${ipsme_files} DEPENDENCIES TeleportCore libavstream ) 
+add_static_library( TeleportClient SOURCES ${src_files} ${ipsme_files} ${rst_files} DEPENDENCIES TeleportCore libavstream ) 
 SetTeleportDefaults(TeleportClient)
 set_target_properties( TeleportClient PROPERTIES FOLDER Client)
 

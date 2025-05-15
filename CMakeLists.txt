@@ -69,6 +69,16 @@ else()
 endif()
 Include(FetchContent)
 
+macro(get_all_targets_recursive targets dir)
+	message("get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)")
+	get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
+	foreach(subdir ${subdirectories})
+		get_all_targets_recursive(${targets} ${subdir})
+	endforeach()
+	get_property(current_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
+	list(APPEND ${targets} ${current_targets})
+endmacro()
+
 # Get nlohmann json
 
 #FetchContent_Declare(  nlohmann_json  GIT_REPOSITORY https://github.com/nlohmann/json.git	GIT_SHALLOW   GIT_TAG        v3.11.2  SOURCE_DIR nlohmann_json)
@@ -93,6 +103,16 @@ FetchContent_MakeAvailable(ktx)
 set_target_runtime(ktx ${TELEPORT_RUNTIME})
 set_target_runtime(ktx_read ${TELEPORT_RUNTIME})
 set_target_runtime(astcenc-avx2-static ${TELEPORT_RUNTIME})
+
+function(RecurseApplyFolder dir dest)
+	set(targets)
+	get_all_targets_recursive(targets ${dir})
+	foreach(targ ${targets})
+		set_target_properties( ${targ} PROPERTIES FOLDER ${dest})
+	endforeach()
+endfunction()
+
+RecurseApplyFolder(${CMAKE_BINARY_DIR}/ktx thirdparty/ktx)
 
 # Get the "safe" header library for lockable resources
 FetchContent_Declare(
@@ -434,19 +454,10 @@ set(TINYGLTF_NO_STB_IMAGE_WRITE ON CACHE BOOL "" FORCE)
 add_subdirectory(thirdparty/draco)
 
 # Here we will put all the draco targets into the thirdparty/draco solution folder:
-macro(get_all_targets_recursive targets dir)
-	get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
-	foreach(subdir ${subdirectories})
-		get_all_targets_recursive(${targets} ${subdir})
-	endforeach()
-	get_property(current_targets DIRECTORY ${dir} PROPERTY BUILDSYSTEM_TARGETS)
-	list(APPEND ${targets} ${current_targets})
-endmacro()
 set(targets)
 get_all_targets_recursive(targets ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/draco)
 foreach(targ ${targets})
 	set_target_properties( ${targ} PROPERTIES FOLDER thirdparty/draco)
-	#message(${targ})
 endforeach()
 
 if(TELEPORT_SERVER)

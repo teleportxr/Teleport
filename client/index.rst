@@ -1,3 +1,4 @@
+######
 Client
 ######
 
@@ -7,10 +8,13 @@ Client
 	
 	../pc_client/index
 	../AndroidClient/index
-	JavaScriptWorker/index
+
+	.. only:: NEW_VERSION
+
+		JavaScriptWorker/index
 
 The "Reference" Teleport Client application is available for Windows PC (with optional XR support),
-and Meta Quest headsets. It's available from https://teleportvr.io/downloads.
+and Meta Quest headsets. It's available from https://teleportxr.io/downloads.
 
 On launching the client, you will be presented with an address bar. In desktop mode, this will appear
 at the top of the window, just as in a web browser.
@@ -56,7 +60,7 @@ Specifically, a Teleport URL would look like this:
 
 For example:
 
-`teleport://home.teleportvr.io <teleport://home.teleportvr.io>`_
+`teleport://home.teleportxr.io <teleport://home.teleportxr.io>`_
 
 `mmv://L_CyberpunkCity/10,10,10 <mmv://L_CyberpunkCity/10,10,10>`_
 

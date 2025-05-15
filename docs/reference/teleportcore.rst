@@ -63,7 +63,7 @@ Client Messages
    :members:
 .. doxygenstruct:: teleport::core::ReceivedResourcesMessage
    :members:
-.. doxygenstruct:: teleport::core::ControllerPosesMessage
+.. doxygenstruct:: teleport::core::NodePosesMessage
    :members:
 
 Animation

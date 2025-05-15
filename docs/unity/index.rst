@@ -14,14 +14,14 @@ You can:
 
 Get the Example Project
 -----------------------
-You can download a minimal example Unity project for Teleport at `git@github.com:simul/TeleportUnityExample.git <https://github.com/simul/TeleportUnityExample>`_.
+You can download a minimal example Unity project for Teleport at `git@github.com:teleportxr/TeleportUnityExample.git <https://github.com/teleportxr/TeleportUnityExample>`_.
 Be sure to update the submodules: the actual Teleport plugin is a submodule at Assets/Teleport in the example repo.
 
 Install the plugin to an existing project
 -----------------------------------------
-Get the Teleport Unity plugin from its Git repo at `git@github.com:simul/teleport-unity.git <https://github.com/simul/teleport-unity>`_.
+Get the Teleport Unity plugin from its Git repo at `git@github.com:teleportxr/teleport-unity.git <https://github.com/teleportxr/teleport-unity>`_.
 
-Or download it as a .unitypackage from `https://teleportvr.io/downloads <https://teleportvr.io/downloads>`_.
+Or download it as a .unitypackage from `https://teleportxr.io/downloads <https://teleportxr.io/downloads>`_.
 
 You can install it as a Git submodule or copy the code directly, it should go in a subfolder of your Unity project's Assets folder, e.g. Assets/Teleport.
 
@@ -52,7 +52,7 @@ object to point to the Default Teleport Render Pipeline, found in Teleport/Resou
 
 You can also create a Teleport Render Pipeline asset in the Content window with Create/Rendering/Teleport Render Pipeline Asset.
 
-For global settings for the plugin, in the Project Settings panel, select *Teleport VR*.
+For global settings for the plugin, in the Project Settings panel, select *Teleport*.
 
 .. image:: /images/unity/ProjectSettings.png
   :width: 600
@@ -68,7 +68,7 @@ Resources in a Unity project can be streamed to clients if they have been *extra
   :width: 600
   :alt: Selecting the Resource Manager option in the Teleport Menu.
 
-Select the "Teleport VR" menu from Unity Editor's menu bar, and click on "Resource Manager". The Resource Manager window will open.
+Select the "Teleport" menu from Unity Editor's menu bar, and click on "Resource Manager". The Resource Manager window will open.
 
 .. image:: /images/unity/ResourceManager.png
   :width: 600
@@ -96,7 +96,7 @@ own position is called its Area of Interest (AOI). The server will send it updat
 
 Inputs
 ======
-To show the Inputs Panel, select Inputs from the Teleport VR menu on the main menu bar.
+To show the Inputs Panel, select Inputs from the Teleport menu on the main menu bar.
 Here, you can specify the inputs you want to receive from connected clients.
 
 .. image:: /images/unity/InputsPanel.png
@@ -107,7 +107,7 @@ Here, you can specify the inputs you want to receive from connected clients.
 
 There are three elements to each input. The Name is arbitrary, but should be unique in the application. The Type specifies what kind of input this is. A Float input is floating-point, while a boolean is either on or off, true or false. A state input is updated continuously, whereas an Event input is only updated when it changes. Finally, the input's *Path* is how the client knows what to map it to.
 
-Teleport VR clients use `OpenXR interaction profiles <https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles>`_ to know what inputs the XR hardware provides. Each input (buttons, triggers, poses etc) has a *path* that is mapped by the OpenXR runtime on the client device.
+Teleport clients use `OpenXR interaction profiles <https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles>`_ to know what inputs the XR hardware provides. Each input (buttons, triggers, poses etc) has a *path* that is mapped by the OpenXR runtime on the client device.
 When a Teleport client connects, it tries to match the path of each server-specified Teleport input to the OpenXR paths of its hardware. If any part of the OpenXR path matches the Teleport path, the mapping is made.
 One or more Teleport inputs can be mapped to a single OpenXR input if the paths match.
 Teleport input paths use `Regular Expression <https://en.wikipedia.org/wiki/Regular_expression>`_ syntax to match OpenXR paths.

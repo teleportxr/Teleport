@@ -35,7 +35,7 @@ Reference implementation: :cpp:struct:`avs::DisplayInfo`
      
 ControllerPoses
 ---------------
-Reference implementation: :cpp:struct:`avs::ControllerPosesMessage`
+Reference implementation: :cpp:struct:`avs::NodePosesMessage`
 
 .. list-table:: ControllerPoses
    :widths: 5 10 30

@@ -293,7 +293,7 @@ HWND InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	hInst = hInstance; // Store instance handle in our global variable
 
-	HWND hWnd = CreateWindowW(szWindowClass, L"Teleport VR Client", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 800, 500, nullptr, nullptr, hInstance, nullptr);
+	HWND hWnd = CreateWindowW(szWindowClass, L"Teleport Spatial Client", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, 800, 500, nullptr, nullptr, hInstance, nullptr);
 
 	if (!hWnd)
 	{
