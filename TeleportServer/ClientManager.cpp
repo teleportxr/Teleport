@@ -212,7 +212,7 @@ bool ClientManager::initialize(std::set<uint16_t> signalPorts, int64_t start_uni
 	std::uniform_int_distribution<uint64_t> distro;
 	m_mt.seed( std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 	sessionState.sessionId = distro.operator()(m_mt);
-	if(!signalingService.initialize(signalPorts, client_ip_match))
+	if(!signalingService.initialize(sessionState.sessionId, signalPorts, client_ip_match))
 	{
 		TELEPORT_CERR << "An error occurred while attempting to initalise signalingService!\n";
 		return false;

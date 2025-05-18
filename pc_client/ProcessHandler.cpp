@@ -58,6 +58,8 @@ typedef struct tagMYREC
 bool EnsureSingleProcess(const std::string &cmdLine)
 {
 #ifdef _MSC_VER
+	if (cmdLine.find("--multiprocess") != std::string::npos)
+		return false;
     // A Mutex to prevent multiple instances:
 
 	// Make sure at most one instance of the tool is running

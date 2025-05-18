@@ -7,6 +7,26 @@ In the reference implementation, WebSockets messages are used for signaling, but
 
 The server listens for connection requests, typically on the standard HTTP ports (any port is acceptable, as long as the client knows to try it).
 
+
+
+.. mermaid::
+
+	sequenceDiagram
+		participant C as Client
+		participant S as Server
+		C->>S: Request
+		S->>C: Request Response
+		S-->>C: Offer
+		par 1
+			S-->>C: Candidate
+		and 2
+			C-->>S: Answer
+			C-->>S: Candidate
+		end
+
+
+
+
 A **Client** that wants to join (the **Connecting Client**) periodically sends to the server a **Connection Request** text packet. Unless the port is specified in the URL, a client will usually try a sequence of ports. The message is of the form:
 
   .. code-block:: JSON

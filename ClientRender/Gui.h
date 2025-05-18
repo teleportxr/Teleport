@@ -220,7 +220,7 @@ namespace teleport
 			platform::crossplatform::Texture *viveControllerTexture = nullptr;
 			bool connect_please = false;
 			bool cancel_please = false;
-		
+			int mip_current = 0;
 		};
 	}
 }

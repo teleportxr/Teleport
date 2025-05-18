@@ -143,6 +143,7 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,
 	case avs::GeometryPayloadType::TextCanvas:
 	case avs::GeometryPayloadType::TexturePointer:
 	case avs::GeometryPayloadType::MeshPointer:
+	case avs::GeometryPayloadType::RemoveNodes:
 		break;
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
@@ -279,6 +280,8 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData &geometryDecodeDa
 		return decodeAnimation(geometryDecodeData);
 	case avs::GeometryPayloadType::Node:
 		return decodeNode(geometryDecodeData);
+	case avs::GeometryPayloadType::RemoveNodes:
+		return decodeRemoveNodes(geometryDecodeData);
 	case avs::GeometryPayloadType::Skeleton:
 		return decodeSkeleton(geometryDecodeData);
 	case avs::GeometryPayloadType::FontAtlas:
@@ -1327,16 +1330,32 @@ bool GeometryDecoder::readString(GeometryDecoder::GeometryDecodeData &geometryDe
 	return true;
 }
 
+avs::Result GeometryDecoder::decodeRemoveNodes(GeometryDecodeData &geometryDecodeData)
+{
+	uint16_t num=NextUint16;
+	if (num*sizeof(avs::uid) > geometryDecodeData.data.size() - geometryDecodeData.offset)
+	{
+		TELEPORT_WARN("Tried to read {} bytes for decodeRemoveNodes, only {} left in buffer.", num, geometryDecodeData.data.size() - geometryDecodeData.offset);
+		return avs::Result::Failed;
+	}
+	for(uint16_t i=0;i<num;i++)
+	{
+		avs::uid u=NextUint64;
+		geometryDecodeData.target->DeleteNode(geometryDecodeData.server_or_cache_uid,u);
+	}
+	return avs::Result::OK;
+}
+
 avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 {
 	avs::uid uid = geometryDecodeData.uid;
 
 	avs::Node node;
 
-	if (!readString(geometryDecodeData, node.name)) return avs::Result::Failed;
-
+	if (!readString(geometryDecodeData, node.name))
+		return avs::Result::Failed;
+	// TODO: Check bytes remaining vs min node size.
 	node.localTransform = NextChunk(avs::Transform);
-	// bool useLocalTransform =(NextByte)!=0;
 
 	node.stationary = (NextByte) != 0;
 	node.holder_client_id = NextUint64;
@@ -1370,15 +1389,15 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 			break;
 		case avs::NodeDataType::Link:
 		{
-				if (!readString(geometryDecodeData, node.url))
-					return avs::Result::Failed;
-				if (!readString(geometryDecodeData, node.query_url))
-					return avs::Result::Failed;
-			}
-			case avs::NodeDataType::TextCanvas:
-			{
-				// nothing node-specific to add at present.
-				node.data_uid = NextUint64;
+			if (!readString(geometryDecodeData, node.url))
+				return avs::Result::Failed;
+			if (!readString(geometryDecodeData, node.query_url))
+				return avs::Result::Failed;
+		}
+		case avs::NodeDataType::TextCanvas:
+		{
+			// nothing node-specific to add at present.
+			node.data_uid = NextUint64;
 		}
 		break;
 		default:

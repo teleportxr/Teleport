@@ -529,6 +529,8 @@ namespace avs
 		virtual void CreateNode(avs::uid server_uid,uid id,const Node& node) = 0;
 		virtual void CreateSkeleton(avs::uid server_uid,avs::uid id, const avs::Skeleton& skeleton) = 0;
 		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
+
+		virtual void DeleteNode(avs::uid server_uid, avs::uid id) = 0;
 	};
 
 

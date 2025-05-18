@@ -97,6 +97,8 @@ namespace avs
 		TextCanvas,
 		TexturePointer,
 		MeshPointer,
+		MaterialPointer,
+		RemoveNodes,
 		MaxGeometryPayload
 	};
 	//! Features supported by a client.

@@ -46,6 +46,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp)
 	if (!keepQueueing)
 		return avs::Result::OK;
 	std::set<avs::uid> nodeIDsToStream;
+	std::set<avs::uid> nodeIDsToRemove;
 	std::set<avs::uid> genericTexturesToStream;
 	std::set<avs::uid> meshes;
 	std::set<avs::uid> materials;
@@ -60,7 +61,7 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp)
 	auto *clientSettings = ClientManager::instance().GetClientSettings(clientID);
 	minimumPriority = clientSettings->minimumNodePriority;
 	geometryStreamingService->updateResourcesToStream(minimumPriority);
-	geometryStreamingService->getResourcesToStream(nodeIDsToStream, genericTexturesToStream, meshes, materials, textures, skeletons, bones, animations, textCanvases, fontAtlases);
+	geometryStreamingService->getResourcesToStream(nodeIDsToStream, nodeIDsToRemove, genericTexturesToStream, meshes, materials, textures, skeletons, bones, animations, textCanvases, fontAtlases);
 
 	for (avs::uid nodeID : nodeIDsToStream)
 	{
@@ -73,6 +74,9 @@ avs::Result GeometryEncoder::encode(uint64_t timestamp)
 			break;
 		}
 	}
+	removeNodes(nodeIDsToRemove);
+
+	keepQueueing = attemptQueueData();
 
 	// Encode mesh nodes first, as they should be sent before lighting data.
 	for (avs::uid u : meshes)
@@ -267,13 +271,34 @@ avs::Result GeometryEncoder::encodeMeshes(std::vector<avs::uid> missingUIDs)
 			}
 		}
 		// Actual size is now known so update payload size
-		putPayloadSize(uid);
+		putPayloadSize();
 
 		geometryStreamingService->encodedResource(uid);
 	}
 	return avs::Result::OK;
 }
 #define PUT_LIST(size_type,lst) putList<size_type>(lst)
+
+avs::Result GeometryEncoder::removeNodes(std::set<avs::uid> node_uids)
+{
+	uint16_t num=(uint16_t)node_uids.size();
+	if(!num)
+		return avs::Result::OK;
+	if((size_t)num!=node_uids.size())
+		return avs::Result::Failed;
+	putPayloadType(avs::GeometryPayloadType::RemoveNodes);
+	put(num);
+	for (auto u:node_uids)
+	{
+		put(u);
+		geometryStreamingService->encodedResource(u);
+	}
+	// Actual size is now known so update payload size
+	putPayloadSize();
+	
+	
+	return avs::Result::OK;
+}
 
 avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 {
@@ -369,10 +394,7 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 	}
 
 	// Actual size is now known so update payload size
-	if (nodeUids.size() == 1)
-		putPayloadSize(nodeUids[0]);
-	else
-		putPayloadSize(0);
+	putPayloadSize();
 
 	return avs::Result::OK;
 }
@@ -415,7 +437,7 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::uid skeletonID)
 			}*/
 		put(skeleton->skeletonTransform);
 
-		putPayloadSize(skeletonID);
+		putPayloadSize();
 		geometryStreamingService->encodedResource(skeletonID);
 	}
 
@@ -445,27 +467,31 @@ avs::Result GeometryEncoder::encodeAnimation(avs::uid animationID)
 			encodeVector4Keyframes(transformKeyframe.rotationKeyframes);
 		}
 
-		putPayloadSize(animationID);
+		putPayloadSize();
 		geometryStreamingService->encodedResource(animationID);
 	}
 
 	return avs::Result::OK;
 }
 
+void GeometryEncoder::putPayloadType(avs::GeometryPayloadType t)
+{
+	prevBufferSize = buffer.size();
+	// Add placeholder for the payload size
+	put(size_t(sizeof(avs::GeometryPayloadType)));
+	// Place payload type onto the buffer.
+	put(t);
+}
+
 void GeometryEncoder::putPayloadType(avs::GeometryPayloadType t, avs::uid uid)
 {
 	prevBufferSize = buffer.size();
-
-	// Add placeholder for the payload size
-	put(size_t(sizeof(avs::GeometryPayloadType)));
-
-	// Place payload type onto the buffer.
-	put(t);
+	putPayloadType(t);
 	// Put the resource uid onto the buffer.
 	put(uid);
 }
 
-void GeometryEncoder::putPayloadSize(avs::uid uid)
+void GeometryEncoder::putPayloadSize()
 {
 	if (!buffer.size())
 	{
@@ -480,7 +506,6 @@ void GeometryEncoder::putPayloadSize(avs::uid uid)
 
 	avs::GeometryPayloadType type;
 	memcpy(&type, (buffer.data() + prevBufferSize + sizeof(size_t)), sizeof(type));
-	// TELEPORT_LOG("GeometryEncoder put payload: {0} for {1} {2}", payloadSize, stringOf(type), uid);
 
 	prevBufferSize = 0;
 }
@@ -518,9 +543,8 @@ avs::Result GeometryEncoder::encodeFontAtlas(avs::uid uid)
 		}
 	}
 	// Size should be 26 + numMaps * (8 + 28 * numGlyphs)
-	size_t payloadSize = buffer.size() - prevBufferSize - sizeof(size_t);
 	// Actual size is now known so update payload size
-	putPayloadSize(uid);
+	putPayloadSize();
 	// Flag we have encoded the material.
 	geometryStreamingService->encodedResource(uid);
 	return avs::Result::OK;
@@ -541,7 +565,7 @@ avs::Result GeometryEncoder::encodeTextCanvas(avs::uid uid)
 	put((uint16_t)textCanvas->text.length());
 	put((const uint8_t *)textCanvas->text.data(), textCanvas->text.length());
 	// Actual size is now known so update payload size
-	putPayloadSize(uid);
+	putPayloadSize();
 	// Flag we have encoded the material.
 	geometryStreamingService->encodedResource(uid);
 	return avs::Result::OK;
@@ -660,7 +684,7 @@ avs::Result GeometryEncoder::encodeMaterials(std::vector<avs::uid> missingUIDs)
 			put(materialTexture_uids.size());
 
 			// Actual size is now known so update payload size
-			putPayloadSize(uid);
+			putPayloadSize();
 
 			if (materialTexture_uids.size() != 0)
 			{
@@ -708,7 +732,7 @@ avs::Result GeometryEncoder::encodeTexturePointer(avs::uid uid)
 	// Push name.
 	put((uint8_t *)url.data(), urlLength);
 	// Actual size is now known so update payload size
-	putPayloadSize(uid);
+	putPayloadSize();
 	// Flag we have encoded the texture.
 	geometryStreamingService->encodedResource(uid);
 	return avs::Result::OK;
@@ -758,7 +782,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(std::vector<avs::uid> missing
 			put(texture->compressedData.data(), texture->compressedData.size());
 
 			// Actual size is now known so update payload size
-			putPayloadSize(uid);
+			putPayloadSize();
 
 			// Flag we have encoded the texture.
 			geometryStreamingService->encodedResource(uid);

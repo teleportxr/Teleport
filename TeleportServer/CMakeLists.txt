@@ -151,7 +151,7 @@ if(UNIX)
 	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
 endif()
 target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib PRIVATE ../thirdparty/compressonator/lib/bin/x64)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream efp fmt LibDataChannel::LibDataChannelStatic ktx)
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream efp fmt LibDataChannel::LibDataChannelStatic ktx msdf-atlas-gen msdfgen-core msdfgen-ext )
 
 if(TELEPORT_USE_DYNAMIC_RUNTIME)
 	target_link_libraries(TeleportServer Compressonator_MD.lib)

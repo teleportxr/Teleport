@@ -1101,7 +1101,7 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubScene
 
 void InstanceRenderer::UpdateNodeInInstanceRender(avs::uid cache_uid, avs::uid root_id, avs::uid node_uid)
 {
-	TELEPORT_COUT << "RemoveNodeFromInstanceRender: " << cache_uid << ", " << node_uid << "\n";
+	TELEPORT_COUT << "UpdateNodeInInstanceRender: " << cache_uid << ", " << node_uid << "\n";
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 	if (!g)
 		return;

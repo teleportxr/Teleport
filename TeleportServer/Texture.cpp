@@ -9,7 +9,8 @@
 #include <fmt/core.h>
 #include <ktx.h>
 #include <vkformat_enum.h>
-#include <fstream>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include <compressonator.h>
 #include <algorithm>
 
@@ -320,7 +321,26 @@ void teleport::server::LoadAsPng(ExtractedTexture &textureData, const std::vecto
 	string ext;
 	textureData.texture.name=PathToName(textureData,filename,ext);
 	textureData.texture.compressedData.resize(data.size());
+
+	int w=0;
+	int h=0;
+	int channels=0;
+
 	memcpy(textureData.texture.compressedData.data(),data.data(),data.size());
+	unsigned char *target=stbi_load_from_memory(textureData.texture.compressedData.data(), (int)textureData.texture.compressedData.size(), &w, &h, &channels, 4);
+	if(target)
+		free(target);
+	textureData.texture.width=w;
+	textureData.texture.height=h;
+	textureData.texture.depth=1;
+	textureData.texture.arrayCount=1;
+	textureData.texture.mipCount=1;
+	textureData.texture.format=avs::TextureFormat::RGBA8;
+	textureData.texture.compression=avs::TextureCompression::PNG;
+	
+	textureData.texture.valueScale=1.0f;
+	
+	textureData.texture.compressed=true;
 }
 template<typename T> void read_from_buffer(T &result,const uint8_t * &mem)
 {

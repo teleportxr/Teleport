@@ -201,9 +201,18 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			return Result::Failed;
 		}
 		uint8_t* ptr = m_buffer.data() + dataOffset;
-		avs::uid uid = *((avs::uid*)ptr);
-		dataSize -= sizeof(uid);
-		ptr += sizeof(uid);
+		avs::uid uid=0;
+		switch(payloadType)
+		{
+		case GeometryPayloadType::RemoveNodes:
+		break;
+		default:
+			{
+				uid			= *((avs::uid*)ptr);
+				dataSize	-= sizeof(uid);
+				ptr			+= sizeof(uid);
+			}
+		};
 		if (dataSize==0)
 		{
 			return Result::Failed;
@@ -213,7 +222,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			AVSLOG(Error) << "Bad dataSize.\n";
 			return Result::Failed;
 		}*/
-		result = processPayload(server_uid,ptr, dataSize, payloadType, gti,uid);
+		result = processPayload(server_uid,ptr, dataSize, payloadType, gti, uid);
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
 	bytes_received+=dataSize;
 #endif

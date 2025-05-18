@@ -156,7 +156,15 @@ else()
 	option(TELEPORT_SERVER "Build for server? If true, client will not be built." ${TELEPORT_SERVER})
 endif()
 if(TELEPORT_SERVER)
+#E:\Code\Teleport\TeleportUnity\teleport_build\_deps\freetype-build\Release
+	set(FREETYPE_LIBRARY "${CMAKE_BINARY_DIR}/_deps/freetype-build/Release/freetype.lib" CACHE STRING "" FORCE)
+	set(FREETYPE_INCLUDE_DIRS "${CMAKE_BINARY_DIR}/freetype/include" CACHE STRING "" FORCE)
+	set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+	set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+	set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+
 	set(MSDFGEN_USE_VCPKG OFF CACHE BOOL "" FORCE)
+
 	FetchContent_Declare(
 	  freetype
 	  GIT_REPOSITORY https://gitlab.freedesktop.org/freetype/freetype.git
@@ -165,6 +173,12 @@ if(TELEPORT_SERVER)
 	  SOURCE_DIR freetype
 	)
 	FetchContent_MakeAvailable(freetype)
+	
+	# Don't look for TinyXML library:
+	set(MSDFGEN_DISABLE_SVG ON CACHE BOOL "" FORCE)
+	set(MSDFGEN_DISABLE_PNG ON CACHE BOOL "" FORCE)
+	set(MSDFGEN_USE_SKIA OFF CACHE BOOL "" FORCE)
+	 
 	# Only need to generate MSDF fonts server-side.
 	FetchContent_Declare(
 	  msdfgen
@@ -175,6 +189,26 @@ if(TELEPORT_SERVER)
 	)
 	FetchContent_MakeAvailable(msdfgen)
 
+	
+	set(MSDF_ATLAS_BUILD_STANDALONE OFF CACHE BOOL "" FORCE)
+	set(MSDF_ATLAS_USE_VCPKG OFF CACHE BOOL "" FORCE)
+	set(MSDF_ATLAS_USE_SKIA OFF CACHE BOOL "" FORCE)
+	set(MSDF_ATLAS_NO_ARTERY_FONT ON CACHE BOOL "" FORCE)
+	set(MSDF_ATLAS_MSDFGEN_EXTERNAL ON CACHE BOOL "" FORCE)
+
+	# Only need to generate MSDF fonts server-side.
+	FetchContent_Declare(
+	  msdf-atlas-gen
+	  GIT_REPOSITORY https://github.com/Chlumsky/msdf-atlas-gen.git
+		GIT_SHALLOW 1
+	  GIT_TAG        v1.3
+	  SOURCE_DIR msdf-atlas-gen
+	)
+	FetchContent_MakeAvailable(msdf-atlas-gen)
+	RecurseApplyFolder(${CMAKE_BINARY_DIR}/freetype thirdparty/freetype)
+	RecurseApplyFolder(${CMAKE_BINARY_DIR}/msdf-atlas-gen thirdparty/msdf)
+	RecurseApplyFolder(${CMAKE_BINARY_DIR}/msdfgen thirdparty/msdf)
+	
 	set(OPTION_ENABLE_ALL_APPS OFF CACHE BOOL "" FORCE)
 	set(OPTION_BUILD_BROTLIG OFF CACHE BOOL "" FORCE)
 	set(OPTION_BUILD_GUI OFF CACHE BOOL "" FORCE)

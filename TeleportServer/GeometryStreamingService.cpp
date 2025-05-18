@@ -61,6 +61,16 @@ void GeometryStreamingService::encodedResource(avs::uid resource_uid)
 	r.sent_server_time_us=clientMessaging.GetServerTimeUs();
 }
 
+void GeometryStreamingService::confirmResourceRemoved(avs::uid resource_uid)
+{
+	auto &r=GetTrackedResource(resource_uid);
+	r.confirmedRemoved=true;
+	if(auto node=geometryStore->getNode(resource_uid))
+	{
+		streamedNodes.erase(resource_uid);
+	}
+}
+
 void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 {
 	TELEPORT_PROFILE_AUTOZONE;
@@ -172,6 +182,29 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 	TELEPORT_PROFILE_AUTOZONE;
 	streamedNodes[node_uid]+=diff;
 	
+	TrackedResource &tr=GetTrackedResource(node_uid);
+	// If this node should be removed from the client, we can't just erase it from streamedNodes.
+	// We have to ensure that the client knows to remove it, and get a confirmation.
+	if(streamedNodes[node_uid]<=0)
+	{
+		streamedNodes.erase(node_uid);
+		if(!nodesToRemove.contains(node_uid))
+		{
+			tr.clientNeeds=false;
+			// We remove the acknowledgement, because if we add it again later, we can't be sure the client
+			// has not deleted it.
+			tr.acknowledged=false;
+			tr.confirmedRemoved=false;
+			tr.sent=false;
+			tr.sent_server_time_us=0;
+			nodesToRemove.insert(node_uid);
+		}
+	}
+	else
+	{
+		tr.clientNeeds=true;
+		nodesToRemove.erase(node_uid);
+	}
 	std::vector<avs::MeshNodeResources> meshResources;
 	switch (node->data_type)
 	{
@@ -273,6 +306,7 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 
 // Get resources that have not yet been sent, or which need to be re-sent.
 void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeIDs
+				,std::set<avs::uid>& removeNodeIDs
 				,std::set<avs::uid>& genericTextureUids
 				,std::set<avs::uid>& meshes
 				,std::set<avs::uid>& materials
@@ -293,11 +327,21 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 	for(auto r:streamedNodes)
 	{
 		const TrackedResource &tr=GetTrackedResource(r.first);
-		if(tr.acknowledged)
+		if(tr.acknowledged||!tr.clientNeeds)
 			continue;
 		if(!tr.sent||time_now_us-tr.sent_server_time_us>timeout_us)
 		{
 			outNodeIDs.insert(r.first);
+		}
+	}
+	for(auto uid:nodesToRemove)
+	{
+		const TrackedResource &tr=GetTrackedResource(uid);
+		if(tr.confirmedRemoved)
+			continue;
+		if(!tr.sent||time_now_us-tr.sent_server_time_us>timeout_us)
+		{
+			removeNodeIDs.insert(uid);
 		}
 	}
 	auto stream=[&](const std::map<avs::uid,int> &resources,std::set<avs::uid>&targ){
@@ -306,7 +350,7 @@ void GeometryStreamingService::getResourcesToStream(std::set<avs::uid>& outNodeI
 			const TrackedResource &tr=GetTrackedResource(r.first);
 			if(r.second<=0)
 				continue;
-			if(tr.acknowledged)
+			if(tr.acknowledged||!tr.clientNeeds)
 				continue;
 			if(!tr.sent||time_now_us-tr.sent_server_time_us>timeout_us)
 			{
@@ -390,35 +434,12 @@ void GeometryStreamingService::stopStreaming()
 
 bool GeometryStreamingService::startedRenderingNode( avs::uid nodeID)
 {
-	auto n = streamedNodes.find(nodeID);
-	if (n != streamedNodes.end())
-	{
-		bool result = clientStartedRenderingNode_Internal(clientId, nodeID);
-		//if (result)
-		//	clientRenderingNodes.insert(nodeID);
-		return result;
-	}
-	else
-	{
-		TELEPORT_COUT << "Client started rendering non-streamed node with ID of " << nodeID << "!\n";
-		return false;
-	}
+	return true;
 }
 
 bool GeometryStreamingService::stoppedRenderingNode(avs::uid nodeID)
 {
-	//auto nodePair = clientRenderingNodes.find(nodeID);
-	//if (nodePair != clientRenderingNodes.end())
-	{
-		bool res=clientStoppedRenderingNode_Internal(clientId, nodeID);
-		//clientRenderingNodes.erase(nodeID);
-		return res;
-	}
-	//else
-	//{
-	//	TELEPORT_COUT << "Client stopped rendering node with ID of " << nodeID << " - didn't know it was rendering this!\n";
-	//	return false;
-	//}
+return true;
 }
 
 void GeometryStreamingService::tick(float deltaTime)
@@ -451,10 +472,12 @@ void GeometryStreamingService::reset()
 
 	unconfirmed_priority_counts.clear();
 }
+
 const std::set<avs::uid>& GeometryStreamingService::getNodesToStream()
 {
 	return nodesToStream;
 }
+
 const std::set<avs::uid>& GeometryStreamingService::getStreamedNodeIDs()
 {
 	streamed_node_uids.clear();
