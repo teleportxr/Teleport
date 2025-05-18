@@ -1416,7 +1416,6 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				ImGui::Text("%llu: %s", tci.uid, tci.name.c_str());
 
 				const char *mips[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
-				static int mip_current = 0;
 				ImGui::Combo("Mip", &mip_current, mips, std::min(tci.mipCount,(uint32_t)IM_ARRAYSIZE(mips)));
 				const clientrender::Texture *pct = static_cast<const clientrender::Texture *>(selected_texture.get());
 				DrawTexture(selected_texture->GetSimulTexture(), (float)mip_current, 0);
@@ -2907,6 +2906,7 @@ void Gui::Select(avs::uid c, avs::uid u)
 	}
 	selection_history.push_back({c, u});
 	selection_cursor = selection_history.size() - 1;
+	mip_current=0;
 	if (selectionHandler)
 		selectionHandler();
 }
@@ -2915,12 +2915,14 @@ void Gui::SelectPrevious()
 {
 	if (selection_cursor > 0)
 		selection_cursor--;
+	mip_current=0;
 }
 
 void Gui::SelectNext()
 {
 	if (selection_cursor + 1 < selection_history.size())
 		selection_cursor++;
+	mip_current=0;
 }
 
 avs::uid Gui::GetSelectedUid() const

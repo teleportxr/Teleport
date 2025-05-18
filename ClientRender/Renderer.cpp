@@ -1946,7 +1946,7 @@ void Renderer::RemoveNodeFromRender(avs::uid cache_uid, avs::uid node_uid)
 		// Only in a main cache can nodes be individually removed.
 		return;
 	}
-	// Add the node's objects to this renderpass.
+	// Remove the node's objects from this renderpass.
 	auto r = GetInstanceRenderer(renderpass_cache_uid);
 	if (r)
 	{

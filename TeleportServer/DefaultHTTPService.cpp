@@ -27,7 +27,7 @@ DefaultHTTPService::~DefaultHTTPService()
 void httpLog(const httplib::Request &req, const httplib::Response &res)
 {
 	TELEPORT_INFO("Request:  {0}",req.path);
-	TELEPORT_INFO("Response: {0} {1}",res.body,res.status);
+	TELEPORT_INFO("Response: {0} {1}",res.body.size(),res.status);
 }
 
 bool DefaultHTTPService::initialize(std::string mountDirectory, std::string certPath, std::string privateKeyPath, int32_t port)

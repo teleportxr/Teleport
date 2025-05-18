@@ -176,6 +176,8 @@ namespace teleport
 					s= ".ktx2";
 				else if (texture.compression == avs::TextureCompression::MULTIPLE_PNG)
 					s= ".texture";
+				else if (texture.compression == avs::TextureCompression::PNG)
+					s= ".png";
 				else
 				{
 					TELEPORT_WARN("Invalid texture compression {}",(int)texture.compression);
@@ -254,6 +256,7 @@ namespace teleport
 					LoadAsPng(textureData, in.readData(), in.filename);
 					textureData.extension=ext;
 					return in;
+
 				}
 				LoadAsTeleportTexture(textureData, in.readData(), in.filename);
 					

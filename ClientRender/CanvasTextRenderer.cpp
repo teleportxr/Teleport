@@ -125,7 +125,7 @@ bool centre=link;
 			continue;
 		}
 		int idx = (int)text[i] - 32;
-		if (idx < 0 || idx > 100)
+		if (idx < 0 || idx > fontMap.glyphs.size())
 			continue;
 		const teleport::core::Glyph &glyph = fontMap.glyphs[idx];
 		W += glyph.xAdvance + 1.0f;
@@ -202,7 +202,7 @@ bool centre=link;
 					fontChar.text_rect.z = (float)(g.xOffset2 - g.xOffset) * pixelWidth;
 					fontChar.text_rect.y = _y + g.yOffset * pixelHeight;
 					fontChar.text_rect.w = (g.yOffset2 - g.yOffset) * pixelHeight;
-					// xoff/yoff are the offset it pixel space from the glyph origin to the top-left of the bitmap
+					// xoff/yoff are the offset in pixel space from the glyph origin to the top-left of the bitmap
 
 					fontChar.texc = vec4(g.x0 / w, g.y0 / h, (g.x1 - g.x0) / w, (g.y1 - g.y0) / h);
 				}

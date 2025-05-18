@@ -60,8 +60,9 @@ namespace teleport
 		private:
 			avs::uid clientID=0;
 			size_t prevBufferSize=0;
+			void putPayloadType(avs::GeometryPayloadType t);
 			void putPayloadType(avs::GeometryPayloadType t,avs::uid u);
-			void putPayloadSize(avs::uid u);
+			void putPayloadSize();
 
 			//Following functions push the data from the source onto the buffer, depending on what the requester needs.
 			//	src : Source we are taking the data from.
@@ -70,6 +71,7 @@ namespace teleport
 			avs::Result encodeAnimation( avs::uid animationID);
 			avs::Result encodeMaterials( std::vector<avs::uid> missingUIDs);
 			avs::Result encodeMeshes( std::vector<avs::uid> missingUIDs);
+			avs::Result removeNodes(std::set<avs::uid> node_uids);
 			avs::Result encodeNodes( std::vector<avs::uid> missingUIDs);
 			avs::Result encodeShadowMaps( std::vector<avs::uid> missingUIDs);
 			avs::Result encodeSkeleton( avs::uid skeletonID);

@@ -42,7 +42,7 @@ namespace teleport
 			{
 				shutdown();
 			}
-			bool initialize(std::set<uint16_t> discoveryPorts, std::string desiredIP = "");
+			bool initialize(uint64_t serverID, std::set<uint16_t> discoveryPorts, std::string desiredIP = "");
 			void shutdown();
 			void tick();
 			void sendResponseToClient(std::shared_ptr<SignalingClient> &signalingClient, uint64_t clientID);
@@ -62,6 +62,7 @@ namespace teleport
 			std::map<avs::uid, avs::uid> clientRemapping;
 			std::set<avs::uid> clientUids;
 			std::map<uint16_t,std::shared_ptr<rtc::WebSocketServer>> webSocketServers;
+			uint64_t serverID = 0;
 		public:
 			void OnWebSocket(std::shared_ptr<rtc::WebSocket>);
 			void ReceiveWebSocketsMessage(avs::uid clientID, std::string msg);

@@ -854,6 +854,11 @@ void ResourceCreator::CreateAnimation(avs::uid server_uid,avs::uid id, teleport:
 	geometryCache->CompleteAnimation(id, completeAnimation);
 }
 
+void ResourceCreator::DeleteNode(avs::uid server_uid, avs::uid id)
+{
+	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
+	geometryCache->mNodeManager.RemoveNode(id);
+}
 
 void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::Node &avsNode)
 {

@@ -171,6 +171,8 @@ void NodeManager::NotifyModifiedRendering(std::shared_ptr<Node> node)
 
 void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 {
+	if(!node)
+		return;
 	removeNodeFromRender(node->id);
 	nodeLookup_mutex.lock();
 	//Remove node from parent's child list.
@@ -232,7 +234,8 @@ void NodeManager::RemoveNode(avs::uid nodeID)
 			node=nodeIt->second;
 		}
 	}
-	RemoveNode(node);
+	if(node)
+		RemoveNode(node);
 }
 
 bool NodeManager::HasNode(avs::uid nodeID) const

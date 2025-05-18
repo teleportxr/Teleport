@@ -21,6 +21,7 @@ void FontAtlas::ToJson(std::string &json) const
 		for (const auto &g : f.second.glyphs)
 		{
 			nlohmann::json glyphJson;
+			glyphJson["index"]		  = g.index;
 			glyphJson["x0"]		  = g.x0;
 			glyphJson["y0"]		  = g.y0;
 			glyphJson["x1"]		  = g.x1;
@@ -54,6 +55,7 @@ void FontAtlas::FromJson(const std::string &json)
 			for (const auto &g : f2["glyphs"])
 			{
 				Glyph glyph;
+				glyph.index	   = g["index"];
 				glyph.x0	   = g["x0"];
 				glyph.y0	   = g["y0"];
 				glyph.x1	   = g["x1"];

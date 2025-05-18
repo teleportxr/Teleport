@@ -108,6 +108,7 @@ namespace teleport
 			avs::Result decodeTexture(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeAnimation(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeNode(GeometryDecodeData &geometryDecodeData);
+			avs::Result decodeRemoveNodes(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeSkeleton(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeFontAtlas(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeTextCanvas(GeometryDecodeData &geometryDecodeData) const;

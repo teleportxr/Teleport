@@ -35,8 +35,9 @@ SignalingClient::~SignalingClient()
 	TELEPORT_COUT << ": info: ~SignalingClient " << clientID << " destroyed.\n";
 }
 
-bool SignalingService::initialize(std::set<uint16_t> discoPorts,  std::string desIP)
+bool SignalingService::initialize(uint64_t server_id, std::set<uint16_t> discoPorts,  std::string desIP)
 {
+	serverID = server_id;
 	discoveryPorts = discoPorts;
 	if (discoveryPorts.empty())
 	{
@@ -386,7 +387,8 @@ void SignalingService::sendResponseToClient(std::shared_ptr<SignalingClient> &si
 						{"teleport-signal-type","request-response"},
 						{"content",
 							{
-								{"clientID", clientID}
+								{"clientID", clientID},
+								{"serverID", serverID}
 							}
 						}
 	};

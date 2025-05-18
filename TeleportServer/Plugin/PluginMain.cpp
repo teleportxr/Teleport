@@ -444,13 +444,6 @@ TELEPORT_EXPORT void Server_EncodeVideoFrame(avs::uid clientID, const uint8_t* t
 }
 
 // GeometryStore START
-/// Save all the resources from memory to disk.
-TELEPORT_EXPORT void Server_SaveGeometryStore()
-{
-	TELEPORT_PROFILE_AUTOZONE;
-	GeometryStore::GetInstance().saveToDisk();
-	GeometryStore::GetInstance().Verify();
-}
 
 /// Check all resources in memory for errors.
 TELEPORT_EXPORT bool Server_CheckGeometryStoreForErrors()

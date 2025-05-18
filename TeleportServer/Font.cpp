@@ -6,6 +6,7 @@
 #include <stb_truetype.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+#include <fmt/core.h>
 
 #include <TeleportCore/ErrorHandling.h>
 #include <TeleportCore/Logging.h>
@@ -13,10 +14,158 @@
 #include <filesystem>
 #include "libavstream/geometry/mesh_interface.hpp"
 #include <GeometryStore.h>
+
+#include <msdf-atlas-gen/msdf-atlas-gen.h>
+
+using namespace msdf_atlas;
+
 using namespace teleport;
 using namespace server;
 
 #pragma optimize("",off)
+bool server::Font::ExtractMsdfFont(core::FontAtlas &fontAtlas,std::string ttf_path_utf8, std::string generate_texture_path_utf8, std::string atlas_chars,avs::Texture &avsTexture
+	,std::vector<int> sizes)
+{
+	bool success = false;
+	// Initialize instance of FreeType library
+	msdfgen::FreetypeHandle *ft = msdfgen::initializeFreetype();
+	if(!ft)
+		return false;
+	
+	// Load font file
+	msdfgen::FontHandle *font = msdfgen::loadFont(ft, ttf_path_utf8.c_str());
+	if(!font)
+		return false;
+	
+	// Storage for glyph geometry and their coordinates in the atlas
+	std::vector<GlyphGeometry> glyphs;
+	// FontGeometry is a helper class that loads a set of glyphs from a single font.
+	// It can also be used to get additional font metrics, kerning information, etc.
+	FontGeometry fontGeometry(&glyphs);
+	// Load a set of character glyphs:
+	// The second argument can be ignored unless you mix different font sizes in one atlas.
+	// In the last argument, you can specify a charset other than ASCII.
+	// To load specific glyph indices, use loadGlyphs instead.
+	//fontGeometry.loadCharset(font, 1.0, Charset::ASCII);
+	Charset charset;
+	
+	std::string chars=" !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	std::string charset_input="";
+	for(size_t i=0;i<chars.size();i++)
+		charset_input+=fmt::format("{} ",(int)chars[i]);
+	charset.parse(charset_input.c_str(),charset_input.size());
+	//fontGeometry.loadGlyphset(font,1.0,charset);
+	fontGeometry.loadCharset(font,1.0,Charset::ASCII);
+	// Apply MSDF edge coloring. See edge-coloring.h for other coloring strategies.
+	const double maxCornerAngle = 3.0;
+	for (GlyphGeometry &glyph : glyphs)
+		glyph.edgeColoring(&msdfgen::edgeColoringInkTrap, maxCornerAngle, 0);
+	// TightAtlasPacker class computes the layout of the atlas.
+	TightAtlasPacker packer;
+	// Set atlas parameters:
+	// setDimensions or setDimensionsConstraint to find the best value
+	packer.setDimensionsConstraint(DimensionsConstraint::POWER_OF_TWO_RECTANGLE);
+	// setScale for a fixed size or setMinimumScale to use the largest that fits
+	packer.setMinimumScale(24.0);
+	// setPixelRange or setUnitRange
+	packer.setPixelRange(4.0);
+	packer.setMiterLimit(1.0);
+	// Compute atlas layout - pack glyphs
+	packer.pack(glyphs.data(), (int)glyphs.size());
+	// Get final atlas dimensions
+	int width = 0, height = 0;
+	packer.getDimensions(width, height);
+	// The ImmediateAtlasGenerator class facilitates the generation of the atlas bitmap.
+	ImmediateAtlasGenerator<float,						// pixel type of buffer for individual glyphs depends on generator function
+							3,							// number of atlas color channels
+							msdfGenerator,				// function to generate bitmaps for individual glyphs
+							BitmapAtlasStorage<byte, 3> // class that stores the atlas bitmap
+							// For example, a custom atlas storage class that stores it in VRAM can be used.
+							>
+		generator(width, height);
+	// GeneratorAttributes can be modified to change the generator's default settings.
+	GeneratorAttributes attributes;
+	generator.setAttributes(attributes);
+	generator.setThreadCount(4);
+	// Generate atlas bitmap
+	generator.generate(glyphs.data(), (int)glyphs.size());
+	// The atlas bitmap can now be retrieved via atlasStorage as a BitmapConstRef.
+	const BitmapAtlasStorage<byte,3> &atlas=generator.atlasStorage();
+	msdfgen::Bitmap<byte,3> bitmap=atlas.operator msdfgen::BitmapConstRef<unsigned char, 3>();
+	
+	using namespace std;
+	filesystem::path ttf_path(ttf_path_utf8.c_str());
+	avsTexture.name = (const char*)ttf_path.filename().generic_u8string().c_str();
+	avsTexture.width=bitmap.width();
+	avsTexture.height=bitmap.height();
+	avsTexture.depth=1;
+	avsTexture.arrayCount=1;
+	avsTexture.mipCount=1;
+	avsTexture.format=avs::TextureFormat::RGBA8;
+	avsTexture.compression=avs::TextureCompression::PNG;
+	avsTexture.compressed=false;
+	// now cropped:
+	uint32_t imageSize	  = height * width * 4;
+	avsTexture.images.resize(1);
+	avsTexture.images[0].data.resize(imageSize);
+	auto &img=avsTexture.images[0];
+	uint8_t *target = avsTexture.images[0].data.data();
+	//bool black = true;
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			size_t n		= (i * width + j) * 4;
+			uint8_t  *b		= bitmap(j,height-1-i);
+			img.data[n + 0] = b[0];
+			img.data[n + 1] = b[1];
+			img.data[n + 2] = b[2];
+			img.data[n + 3] = 255;
+		}
+	}
+
+
+	// The glyphs array (or fontGeometry) contains positioning data for typesetting text.
+    // calculate fill rate and crop the bitmap
+    int filled = 0;
+	auto &fontMap = fontAtlas.fontMaps[128];
+	fontMap.lineHeight=100;
+	float sc=fontMap.lineHeight;
+	fontMap.glyphs.resize(glyphs.size());
+	for (int i = 0; i < glyphs.size(); i++)
+	{
+		GlyphGeometry &g = glyphs[i];
+		auto &G=fontMap.glyphs[i];
+		//const auto &rect = g.getBoxRect();
+		double x0=0, y0=0, x1=0, y1=0;
+		g.getQuadPlaneBounds(x0,y0,x1,y1);
+		double texc_x0=0, texc_y0=0, texc_x1=0, texc_y1=0;
+		g.getQuadAtlasBounds(texc_x0,texc_y0,texc_x1,texc_y1);
+		double xAdvance = g.getAdvance();
+		unicode_t char_id=g.getCodepoint();
+		size_t pos=chars.find(char_id);
+		if(pos>=charset_input.length())
+			pos = 0xFFFF;
+		G.index			= (uint16_t)pos;
+
+		G.x0	   = uint16_t(texc_x0);				//rect.x;
+		G.y1	   = uint16_t(height - texc_y0);	//height - rect.y;
+		G.x1	   = uint16_t(texc_x1);				//rect.x + rect.w;
+		G.y0	   = uint16_t(height - texc_y1);	//height - (rect.y + rect.h);
+
+		G.xOffset  = (float)x0*sc;
+		G.yOffset  = (float)(1.0-y1)*sc;
+		G.xAdvance = (float)xAdvance*sc;
+		G.xOffset2 = (float)x1*sc;
+		G.yOffset2 = (float)(1.0-y0)*sc;
+	}
+	// Cleanup
+	msdfgen::destroyFont(font);
+	
+	msdfgen::deinitializeFreetype(ft);
+	
+	return true;
+}
 
 bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_utf8, std::string generate_texture_path_utf8, std::string atlas_chars,avs::Texture &avsTexture
 	,std::vector<int> sizes)
@@ -128,13 +277,6 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	avsTexture.format=avs::TextureFormat::G8;
 	avsTexture.compression=avs::TextureCompression::KTX;
 	avsTexture.compressed=false;
-	/*stbi_write_png((generate_texture_path_utf8+".png").c_str(), width, height, 1, bitmap, 0);
-
-	int len=0;
-	unsigned char *png = stbi_write_png_to_mem(bitmap, 0, width, height, 1, &len);
-	if (!png)
-		return false;
-	STBIW_FREE(png);*/
 
 	// now cropped:
 	uint32_t imageSize	  = height * width;

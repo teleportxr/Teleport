@@ -56,6 +56,8 @@ namespace teleport
 			void CreateSkeleton(avs::uid server_uid, avs::uid id, const avs::Skeleton &skeleton) override;
 			void CreateAnimation(avs::uid server_uid, avs::uid id, teleport::core::Animation &animation) override;
 
+			void DeleteNode(avs::uid server_uid, avs::uid id) override;
+
 			std::shared_ptr<clientrender::Texture> m_DummyWhite;
 			std::shared_ptr<clientrender::Texture> m_DummyNormal;
 			std::shared_ptr<clientrender::Texture> m_DummyCombined;

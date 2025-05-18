@@ -59,8 +59,6 @@ namespace teleport
 			{
 				return httpRoot.length()>0;
 			}
-			void Verify();
-			bool saveToDisk() const;
 			//Load from disk.
 			//Parameters are used to return the meta data of the resources that were loaded back-in, so they can be confirmed.
 			void loadFromDisk(size_t& meshCount, LoadedResource*& loadedMeshes, size_t& textureCount, LoadedResource*& loadedTextures, size_t& materialCount, LoadedResource*& loadedMaterials);

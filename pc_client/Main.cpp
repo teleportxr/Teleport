@@ -148,11 +148,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		}
 	}
 	current_path = current_path.append("pc_client").lexically_normal();
-	if (!std::filesystem::exists(current_path)) return -1;
+	if (!std::filesystem::exists(current_path))
+		return -1;
 	std::filesystem::current_path(current_path);
 	auto &config = client::Config::GetInstance();
 	// Get a folder we can write to:
-
 	char szPath[MAX_PATH];
 
 	HRESULT hResult = SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath);

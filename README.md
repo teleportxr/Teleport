@@ -1,7 +1,7 @@
-# Teleport VR
+# Teleport
 
-Teleport VR is an open, native network protocol for virtual and augmented reality.
-This repository contains the reference Client/Server software and SDK for Teleport VR.
+Teleport XR is an open, native network protocol for virtual and augmented reality.
+This repository contains the reference Client/Server software and SDK for Teleport XR.
 Comments, bug reports and pull requests are welcome.
 
 ## Getting the source
@@ -134,7 +134,7 @@ Repeat 2-3 for the the Service Port.
 1. Connect your Android device to your local WiFi network (for a local server) or the internet (for a remote server).
 2. On the server machine, make sure Unity or UE4 editor is not blocked by the Windows firewall.
 3. Find the IP address of your server, either a local IP or a global IP or domain name.
-4. Run the game in UE or Unity editor and then launch the client application on your Android or PCVR device.
+4. Run the game in UE or Unity editor and then launch the client application on your Android or PCXR device.
 
 ### Default network ports
 

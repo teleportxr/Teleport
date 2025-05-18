@@ -232,19 +232,6 @@ GeometryStore &GeometryStore::GetInstance()
 	return geometryStore;
 }
 
-bool GeometryStore::saveToDisk() const
-{
-	if(!saveResourcesBinary(cachePath + "/" , textures))
-		return false;
-	if(!saveResourcesBinary(cachePath + "/" , materials))
-		return false;
-	if(!saveResourcesBinary(cachePath + "/engineering/" , meshes.at(avs::AxesStandard::EngineeringStyle)))
-		return false;
-	if(!saveResourcesBinary(cachePath + "/gl/" , meshes.at(avs::AxesStandard::GlStyle)))
-		return false;
-	return true;
-}
-
 bool GeometryStore::SetCachePath(const char* dir)
 {
 	std::filesystem::path path(dir);
@@ -260,11 +247,6 @@ bool GeometryStore::SetHttpRoot(const char* h)
 {
 	httpRoot=h;
 	return true;
-}
-
-void GeometryStore::Verify()
-{
-	loadResourcesBinary(cachePath , materials);
 }
 
 void GeometryStore::loadFromDisk(size_t& numMeshes
@@ -1412,7 +1394,7 @@ avs::uid GeometryStore::storeFont(const std::string & ttf_path_utf8,const std::s
 	fa.fontAtlas.font_texture_path=cacheTexturePath;
 	fa.fontAtlas.font_texture_uid=font_texture_uid;
 	std::vector<int> sizes={size};
-	if(!Font::ExtractFont(fa.fontAtlas,ttf_path_utf8,cacheTexturePath,"ABCDEFGHIJKLMNOPQRSTUVWXYZ",avsTexture,sizes))
+	if(!Font::ExtractMsdfFont(fa.fontAtlas,ttf_path_utf8,cacheTexturePath," !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",avsTexture,sizes))
 		return 0;
 	saveResource(cachePath+"/"s+cacheFontPath+".font_atlas", fa);
 	storeTexture(font_texture_uid, cacheTexturePath, lastModified, avsTexture, true, true, true);
@@ -1639,6 +1621,79 @@ void GeometryStore::compressNextTexture()
 		}
 		memcpy(target, offsets.data(), imageCount * sizeof(uint32_t));
 		target += imageCount * sizeof(uint32_t);
+		for (const auto &img : subImages)
+		{
+			memcpy(target, img.data(), img.size());
+			target += img.size();
+		}
+		uint32_t final_offset=target-avsTexture.compressedData.data();
+		if(final_offset!=avsTexture.compressedData.size())
+		{
+			TELEPORT_WARN("Offset mismatched in texture save.");
+		}
+	}
+	else if (compressionData->textureCompression == avs::TextureCompression::PNG)
+	{
+		size_t n = 0;
+		bool breakout = false;
+		size_t imagesPerMip = 1;
+		std::vector<std::vector<uint8_t>> subImages;
+		subImages.resize(1);
+		{
+			// encode each sub-image as a separate png.
+			for (size_t i = 0; i < imagesPerMip; i++)
+			{
+				if (breakout)
+					break;
+				int w = avsTexture.width;
+				int h = avsTexture.height;
+				for (size_t m = 0; m < compressionData->numMips; m++)
+				{
+					std::vector<uint8_t> &img = compressionData->images[n];
+					if (img.size() > 4)
+					{
+						std::string pngString = "XXX";
+						memcpy(pngString.data(), img.data() + 1, 3);
+						if (pngString == "PNG")
+						{
+							TELEPORT_CERR << "Texture " << extractedTexture.getName() << " was already a PNG, can't further compress this.\n ";
+							breakout = true;
+							break;
+						}
+					}
+
+					auto write_func=[](void *context, void *data, int size)
+					{
+						std::vector<uint8_t> &subImage = *((std::vector<uint8_t>*)context);
+						subImage.resize(size);
+						unsigned char *target = subImage.data();
+						memcpy(target, data, size);
+					};
+
+					//STBIWDEF int stbi_write_png_to_func(stbi_write_func * func, void *context, int w, int h, int comp, const void *data, int stride_in_bytes);
+					uint32_t bytesPerPixel=4;
+					int res = stbi_write_png_to_func(write_func, &subImages[n], w, h, bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * bytesPerPixel);
+					if (!res)
+					{
+						TELEPORT_CERR << "Texture " << extractedTexture.getName() << " could not be compressed as a PNG.\n ";
+						breakout = true;
+						break;
+					}
+					n++;
+					w = (w + 1) / 2;
+					h = (h + 1) / 2;
+				}
+			}
+		}
+		uint16_t imageCount = subImages.size();
+		uint32_t dataSize=0;
+
+		for(const auto &img:subImages)
+		{
+			dataSize+=img.size();
+		}
+		avsTexture.compressedData.resize(dataSize);
+		uint8_t *target = avsTexture.compressedData.data();
 		for (const auto &img : subImages)
 		{
 			memcpy(target, img.data(), img.size());
@@ -1939,6 +1994,7 @@ template<typename ExtractedResource> void GeometryStore::loadResourcesBinary(con
 
 bool GeometryStore::CheckForErrors(avs::uid res_uid) 
 {
+	bool ok=true;
 	for(auto &t:textures)
 	{
 		if(res_uid&&res_uid!=t.first)	
@@ -1947,16 +2003,34 @@ bool GeometryStore::CheckForErrors(avs::uid res_uid)
 		
 		if(textureData.texture.compressedData.size()==0)
 		{
-			if(!textureData.texture.compressed){
-				TELEPORT_CERR<<"Texture "<<t.first<<", "<<t.second.getName()<<" is not yet compressed.\n";
-				return false;
+			if (!textureData.texture.compressed)
+			{
+				TELEPORT_CERR << "Texture " << t.first << ", " << t.second.getName() << " is not yet compressed.\n";
+				if(texturesToCompress.find(t.first) == texturesToCompress.end())
+				{
+					std::shared_ptr<PrecompressedTexture> pct = std::make_shared<PrecompressedTexture>();
+
+					pct->numMips							  = t.second.texture.mipCount;
+					pct->genMips							  = false;
+					pct->highQualityUASTC					  = false;
+					pct->textureCompression					  = t.second.texture.compression;
+					pct->format								  = t.second.texture.format;
+					size_t totalSize						  = 0;
+					for (size_t i = 0; i < t.second.texture.images.size(); i++)
+					{
+						pct->images.push_back(t.second.texture.images[i].data);
+						totalSize += t.second.texture.images[i].data.size();
+					}
+					texturesToCompress.emplace(t.first, pct);
+				}
+				ok=false;
 			}
 			TELEPORT_CERR<<"Texture "<<t.first<<", "<<t.second.getName()<<" is empty.\n";
-			return false;
+			ok=false;
 		}
 
 	}
-	return true;
+	return ok;
 }
 
 avs::uid GeometryStore::GenerateUid()
