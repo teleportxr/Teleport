@@ -41,7 +41,7 @@ namespace teleport
 			clientrender::Transform convertedTransformSCR(convertedTransformAVS);
 
 			mat4 matrix = transformSCR.GetTransformMatrix();
-			avs::Mat4x4 convertedMatrix = avs::Mat4x4::convertToStandard(*((avs::Mat4x4 *)&matrix), fromStandard, toStandard);
+			mat4 convertedMatrix = avs::convertToStandard(matrix, fromStandard, toStandard);
 
 			if (*((mat4 *)&convertedMatrix) != convertedTransformSCR.GetTransformMatrix())
 			{

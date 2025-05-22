@@ -14,9 +14,16 @@ namespace teleport
 		class SubSceneComponent : public Component
 		{
 		public:
+			SubSceneComponent(Node &n) : Component(n)
+			{
+			}
 			virtual ~SubSceneComponent() {}
+
+			//! Shortcut function: find a matching animationcomponent 
+			void PlayAnimation(avs::uid cache_uid, avs::uid anim_uid);
 			avs::uid mesh_uid=0;
 			std::shared_ptr<Mesh> mesh;
+
 		};
 	}
 }

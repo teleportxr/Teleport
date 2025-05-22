@@ -349,13 +349,13 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 			{
 				put(node->data_uid);
 
-				put(node->skeletonNodeID);
+				put(node->skeletonID);
 				PUT_LIST(uint16_t,node->joint_indices);
 				PUT_LIST(uint16_t,node->animations);
 				PUT_LIST(uint16_t,node->materials);
 				put(node->renderState.lightmapScaleOffset);
 				put(node->renderState.globalIlluminationUid);
-				// put(node->renderState.lightmapTextureCoordinate);
+		
 			}
 			else
 			{
@@ -376,9 +376,6 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 			{
 				// nothing node-specific to add at present.
 				put(node->data_uid);
-			}
-			if (node->data_type == avs::NodeDataType::Skeleton)
-			{
 			}
 			if (node->data_type == avs::NodeDataType::Link)
 			{

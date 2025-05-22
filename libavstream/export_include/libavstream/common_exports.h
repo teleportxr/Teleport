@@ -78,7 +78,7 @@ namespace avs
 		Light,
 		TextCanvas,
 		Unused1,
-		Skeleton,
+		SkeletonUnused,
 		Link,
 		Script
 	};
@@ -145,6 +145,33 @@ namespace avs
 		SHORT,
 		BYTE,
 	};
+	inline uint8_t GetSizeOfComponentType(avs::ComponentType componentType)
+	{
+		switch(componentType)
+		{
+		case avs::ComponentType::FLOAT:
+			return 4;
+		case avs::ComponentType::DOUBLE:
+			return 8;
+		case avs::ComponentType::HALF:
+			return 2;
+		case avs::ComponentType::UINT:
+			return 4;
+		case avs::ComponentType::USHORT:
+			return 2;
+		case avs::ComponentType::UBYTE:
+			return 1;
+		case avs::ComponentType::INT:
+			return 4;
+		case avs::ComponentType::SHORT:
+			return 2;
+		case avs::ComponentType::BYTE:
+			return 1;
+		default:
+			break;
+		};
+		return 1;
+	}
 } // avs
 #ifdef _MSC_VER
 #pragma pack(pop)

@@ -9,6 +9,7 @@
 namespace avs
 {
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
+	extern void AVSTREAM_API ConvertTransformMatrix(AxesStandard fromStandard, AxesStandard toStandard, mat4 &transform);
 	extern void AVSTREAM_API ConvertRotation(AxesStandard fromStandard, AxesStandard toStandard, vec4 &rotation);
 	extern void AVSTREAM_API ConvertPosition(AxesStandard fromStandard, AxesStandard toStandard, vec3 &position);
 	extern void AVSTREAM_API ConvertScale(AxesStandard fromStandard, AxesStandard toStandard, vec3 &scale);
@@ -37,7 +38,7 @@ namespace avs
 		std::vector<uid> materials;
 
 		//SKINNED MESH
-		uid skeletonNodeID=0;
+		uid skeletonID=0;
 		std::vector<int16_t> joint_indices;
 		std::vector<uid> animations;
 

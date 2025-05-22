@@ -105,7 +105,7 @@ void SignalingServer::ProcessReceivedMessages()
 		if (message.contains("teleport-signal-type"))
 		{
 			std::string type = message["teleport-signal-type"];
-			if (type == "request-response")
+			if (type == "connect-response")
 			{
 				clearResources = true;
 				awaiting = false;

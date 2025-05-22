@@ -105,6 +105,8 @@ namespace teleport
 		struct Animation
 		{
 			std::string name;
+			//! Animation sheould contain either compressedData, or content in boneKeyframes. Not both.
+			std::vector<uint8_t> compressedData;
 			float duration;
 			std::vector<TransformKeyframeList> boneKeyframes;
 			static const char *fileExtension()

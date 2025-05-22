@@ -13,6 +13,14 @@ AnimationLayerStateSequence::AnimationLayerStateSequence()
 {
 }
 
+void AnimationLayerStateSequence::Init(int num_soa_joints, int num_joints)
+{
+    // Allocates runtime buffers.
+    sampler.locals.resize(num_soa_joints);
+    // Allocates a context that matches animation requirements.
+    //sampler.context.Resize(num_joints);
+}
+
 void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs, const AnimationState &st)
 {
 	auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -20,7 +28,6 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 	std::map<int64_t, AnimationState>::iterator s = animationStates.upper_bound(time_now_us);
 	// If the state added results in the current time being in between a previous state and the new state, the interpolation may "jump".
 	// To avoid this, we add a copy of the previous state at the present timestamp.
-
 	// Is time now past the last state?
 	if(s==animationStates.end())
 	{
@@ -46,7 +53,6 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 	sequenceNumber++;
 }
 
-
 InstantaneousAnimationState AnimationLayerStateSequence::getState() const
 {
 	return instantaneousAnimationState;
@@ -63,13 +69,14 @@ InstantaneousAnimationState AnimationLayerStateSequence::getState(int64_t timest
 	// not yet reached the first timestamp in the sequence. But we have no previous state.
 	if (s1 == animationStates.begin() && s1 != animationStates.end())
 	{
-		st.interpolation=1.0f;
-		st.animationState.animationId=s1->second.animationId;
-		st.animationState.animationTimeS = AnimTimeAtTimestamp(s1->second,timestampUs);
-		st.animationState.speedUnitsPerS=s1->second.speedUnitsPerS;
-		st.animationState.timestampUs = s1->second.timestampUs;
-		st.animationState.loop = s1->second.loop;
-		interpState = 1;
+		st.interpolation				 = 1.0f;
+		st.animationState.animationId	 = s1->second.animationId;
+		st.animationState.animationTimeS = AnimTimeAtTimestamp(s1->second, timestampUs);
+		st.animationState.speedUnitsPerS = s1->second.speedUnitsPerS;
+		st.animationState.timestampUs	 = s1->second.timestampUs;
+		st.animationState.loop			 = s1->second.loop;
+		st.animationState.animation		= s1->second.animation;
+		interpState						 = 1;
 		return st;
 	}
 	// If all values are before this timestamp, use the endmost value.
@@ -79,14 +86,15 @@ InstantaneousAnimationState AnimationLayerStateSequence::getState(int64_t timest
 		if (s_last != animationStates.rend())
 		{
 			const AnimationState &animationState = s_last->second;
-			st.interpolation = 1.0f;
-			st.animationState.animationId		= animationState.animationId;
-			st.animationState.animationTimeS	= AnimTimeAtTimestamp(animationState, timestampUs);
-			st.animationState.speedUnitsPerS	= animationState.speedUnitsPerS;
-			st.animationState.timestampUs = animationState.timestampUs;
-			st.animationState.loop = animationState.loop;
-			st.previousAnimationState=animationState;
-			if (animationStates.size()>1)
+			st.interpolation					 = 1.0f;
+			st.animationState.animationId		 = animationState.animationId;
+			st.animationState.animationTimeS	 = AnimTimeAtTimestamp(animationState, timestampUs);
+			st.animationState.speedUnitsPerS	 = animationState.speedUnitsPerS;
+			st.animationState.timestampUs		 = animationState.timestampUs;
+			st.animationState.loop				 = animationState.loop;
+			st.animationState.animation			= animationState.animation;
+			st.previousAnimationState			 = animationState;
+			if (animationStates.size() > 1)
 				animationStates.erase(animationStates.begin());
 			interpState = 2;
 			return st;
@@ -101,13 +109,14 @@ InstantaneousAnimationState AnimationLayerStateSequence::getState(int64_t timest
 	// If we haven't started yet.
 	if (animationStates.size() == 0 || s0 == animationStates.end())
 	{
-		st.interpolation = 1.0f;
-		st.animationState.animationId		= s1->second.animationId;
-		st.animationState.animationTimeS	= AnimTimeAtTimestamp(s1->second, timestampUs);
-		st.animationState.speedUnitsPerS	= s1->second.speedUnitsPerS;
-		st.animationState.timestampUs = s1->second.timestampUs;
-		st.animationState.loop = s1->second.loop;
-		interpState = 4;
+		st.interpolation				 = 1.0f;
+		st.animationState.animationId	 = s1->second.animationId;
+		st.animationState.animationTimeS = AnimTimeAtTimestamp(s1->second, timestampUs);
+		st.animationState.speedUnitsPerS = s1->second.speedUnitsPerS;
+		st.animationState.timestampUs	 = s1->second.timestampUs;
+		st.animationState.loop			 = s1->second.loop;
+		st.animationState.animation		= s1->second.animation;
+		interpState						 = 4;
 		return st;
 	}
 	st.interpolation= float(double(timestampUs - s0->first) / double(s1->first - s0->first));
@@ -121,12 +130,13 @@ InstantaneousAnimationState AnimationLayerStateSequence::getState(int64_t timest
 	st.animationState.animationTimeS			= AnimTimeAtTimestamp(animationState1, timestampUs);
 	st.animationState.speedUnitsPerS			= animationState1.speedUnitsPerS;
 	st.animationState.timestampUs				= animationState1.timestampUs;
-	st.animationState.loop = animationState1.loop;
+	st.animationState.loop						= animationState1.loop;
+		st.animationState.animation		= animationState0.animation;
 	// In the case that we have two usable keyframes, and they represent the same animation, we must interpolate the animationTime, rather than extrapolating it.
 	if (st.previousAnimationState.animationId == st.animationState.animationId)
 	{
-		st.previousAnimationState.animationTimeS = lerp(st.previousAnimationState.animationTimeS, st.animationState.animationTimeS, st.interpolation);
-		st.animationState.animationTimeS = lerp(st.previousAnimationState.animationTimeS, st.animationState.animationTimeS, st.interpolation);
+		st.previousAnimationState.animationTimeS	= lerp(st.previousAnimationState.animationTimeS, st.animationState.animationTimeS, st.interpolation);
+		st.animationState.animationTimeS			= lerp(st.previousAnimationState.animationTimeS, st.animationState.animationTimeS, st.interpolation);
 	}
 	if (s0 != animationStates.begin())
 		animationStates.erase(animationStates.begin());

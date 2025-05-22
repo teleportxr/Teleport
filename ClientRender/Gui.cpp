@@ -499,7 +499,7 @@ void Gui::ShowFont()
 		TreePop();
 	}
 }
-
+#pragma optimize("",off)
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *search_text)
 {
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
@@ -558,7 +558,8 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 		{
 			TreeNode(r.lock(), search_text);
 		}
-		ImGui::TreePop();
+		if(show)
+			ImGui::TreePop();
 	}
 }
 
@@ -1159,13 +1160,14 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				}*/
 				ImGui::EndMenuBar();
 			}
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth;
 			avs::uid selected_uid = GetSelectedUid();
-			std::shared_ptr<const clientrender::Node> selected_node = geometryCache->mNodeManager.GetNode(selected_uid);
+			std::shared_ptr<clientrender::Node> selected_node = geometryCache->mNodeManager.GetNode(selected_uid);
 			std::shared_ptr<const clientrender::Mesh> selected_mesh = geometryCache->mMeshManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Material> selected_material = geometryCache->mMaterialManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Texture> selected_texture = geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation = geometryCache->mAnimationManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Skeleton> selected_skeleton = geometryCache->mSkeletonManager.Get(selected_uid);
 			if(selected_mesh.get())
 			{
 			}
@@ -1233,23 +1235,23 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 							Select(cache_uid, n->id);
 						}
 					}
-					if (selected_node->GetSkeletonInstance())
+					if (selected_node->GetSkeleton())
 					{
-						auto s = selected_node->GetSkeletonInstance();
-						DoRow("Skeleton", "%d : %s", s->GetSkeleton()->GetExternalBoneIds().size(), s->GetSkeleton()->name.c_str());
+						auto s = selected_node->GetSkeleton();
+						DoRow("Skeleton", "%d : %s", s->id, s->name.c_str());
 						if (ImGui::IsItemClicked())
 						{
-							// Select(cache_uid,s->GetSkeleton()->id);
+							Select(cache_uid,s->id);
 						}
 					}
-					std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = selected_node->GetSkeletonInstance();
+					std::shared_ptr<clientrender::Skeleton> skeletonInstance = selected_node->GetSkeleton();
 					if (skeletonInstance)
 					{
 						auto animC = selected_node->GetComponent<clientrender::AnimationComponent>();
 						if (animC)
 						{
 							DoRow("Animations", "");
-							const auto &animLayerStates = animC->GetAnimationLayerStates();
+							/*const auto &animLayerStates = animC->GetAnimationLayerStates();
 							// list layers.
 							for (int i = 0; i < animLayerStates.size(); i++)
 							{
@@ -1278,15 +1280,53 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.animationTimeS / nextAnimDuration, st.animationState.speedUnitsPerS);
 								DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
 							}
+							if(ImGui::Button("+"))
+							{
+								std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
+								teleport::core::ApplyAnimation applyAnimation;
+								applyAnimation.animLayer=(uint32_t)animLayerStates.size();
+								applyAnimation.animationID = 0;
+								applyAnimation.nodeID=0;
+								applyAnimation.timestampUs=timestampNowUs.count();
+								animC->setAnimationState(timestampNowUs, applyAnimation);
+							}*/
+							{
+								ImGui::Separator();
+							// what animations can be played on this component?
+							// Either the animations stored in this scene, or if a subscene, the animations in its parent.
+								const auto &anim_uids=geometryCache->mAnimationManager.GetAllIDs();
+								for(auto anim_uid:anim_uids)
+								{
+									auto anim=geometryCache->mAnimationManager.Get(anim_uid);
+									ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str() );
+									if (ImGui::IsItemClicked())
+									{
+										//play(cache_uid, m->id);
+									}
+							// ImGui::TreePop(); ImGuiTreeNodeFlags_NoTreePushOnOpen
+								}
+								auto parentCache=GeometryCache::GetGeometryCache(geometryCache->GetParentCacheUid());
+								if(parentCache)
+								{
+									ImGui::Separator();
+									const auto &p_anim_uids=parentCache->mAnimationManager.GetAllIDs();
+									for(auto anim_uid:p_anim_uids)
+									{
+										auto anim=parentCache->mAnimationManager.Get(anim_uid);
+										ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str() );
+										if (ImGui::IsItemClicked())
+										{
+											animC->PlayAnimation(geometryCache->GetParentCacheUid(),anim_uid);
+										}
+									}
+								}
+							}
 						}
-						// ImGui::BeginGroup();
-						const auto &skeleton = skeletonInstance->GetSkeleton();
-						// ImGui::EndGroup();
 					}
 					ImGui::EndTable();
 				}
 				ImGui::Separator();
-				ImGui::LabelText("Materials", "Materials");
+				ImGui::LabelText("##Materials", "Materials");
 				int element = 0;
 				for (const auto &m : selected_node->GetMaterials())
 				{
@@ -1442,6 +1482,35 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						DoRow((int)a.boneIndex, "%d,%d", (int)a.positionKeyframes.size(), (int)a.rotationKeyframes.size());
 					}*/
 					ImGui::EndTable();
+				}
+			}
+			else if (selected_skeleton)
+			{
+				ImGui::Text("%llu: %s", selected_uid, selected_skeleton->name.c_str());
+				avs::uid root_id=selected_skeleton->GetRootId();
+				auto root=geometryCache->mNodeManager.GetNode(root_id);
+				if (ImGui::TreeNodeEx(fmt::format("{0} ",  root_id).c_str(), flags|ImGuiTreeNodeFlags_Leaf, fmt::format("{0}: {1} ",root_id, root?root->name:"").c_str()))
+				{
+					if (ImGui::IsItemClicked())
+					{
+						Select(cache_uid, root_id);
+					}
+					// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
+				}
+
+				auto &bones=selected_skeleton->GetExternalBoneIds();
+				for(int i=0;i<bones.size();i++)
+				{
+					auto bone_uid=bones[i];
+					auto n=geometryCache->mNodeManager.GetNode(bone_uid);
+					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(), flags|ImGuiTreeNodeFlags_Leaf, fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
+					{
+						if (ImGui::IsItemClicked())
+						{
+							Select(cache_uid, bone_uid);
+						}
+						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
+					}
 				}
 			}
 			else if (selected_mesh.get())

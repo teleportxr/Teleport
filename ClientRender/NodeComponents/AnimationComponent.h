@@ -7,7 +7,7 @@
 
 #include "libavstream/common.hpp"
 
-#include "AnimationState.h"
+#include "ClientRender/Animation.h"
 #include "Component.h"
 
 namespace teleport
@@ -21,31 +21,35 @@ namespace teleport
 		class Animation;
 		class Node;
 		class GeometryCache;
+		struct AnimationInstance;
 
 		class AnimationComponent : public Component
 		{
 		public:
-			AnimationComponent();
-			AnimationComponent(const std::map<avs::uid, std::shared_ptr<Animation>> &anims);
-			virtual ~AnimationComponent() {}
+			AnimationComponent(Node &node);
+			virtual ~AnimationComponent();
+			
+			//! Shortcut, play this animation on the given layer.
+			void PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer = 0);
+	
+			void GetJointMatrices(std::vector<mat4> &m) const;
+			//! Fill in the vector of matrices with the current animation state.
+			void GetBoneMatrices(std::vector<mat4> &m,const std::vector<mat4> &inverseBindMatrices) const;
 
-			//! This informs the component that an animation is ready for use.
-			void addAnimation(avs::uid id, std::shared_ptr<Animation>);
-			//! This informs the component that an animation is no longer available.
-			void removeAnimation(avs::uid id);
 			// Update the animation state.
 			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate);
 
 			//! @brief Update all animations, given the current timestamp, which is the time in microseconds since the server's datum timestamp.
 			//! @param boneList 
 			//! @param timestampUs 
+			void update( int64_t timestampUs);
 			void update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs);
 
-			const std::vector<AnimationLayerStateSequence> &GetAnimationLayerStates() const;
-
 		private:
-			std::vector<AnimationLayerStateSequence> animationLayerStates;
-			std::map<avs::uid,std::shared_ptr<Animation>> animations;
+
+			// TODO: The following may need to be extracted into a per-instance structure, as the same
+			// component could be used in multiple instances of the same SubScene.
+			AnimationInstance *instance=nullptr;
 		};
 	}
 

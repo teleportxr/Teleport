@@ -2,6 +2,7 @@
 #include "InstanceRenderer.h"
 #include "Renderer.h"
 #include "TeleportCore/ResourceStreams.h"
+#include "ClientRender/NodeComponents/AnimationComponent.h"
 #include <filesystem>
 using namespace teleport;
 using namespace clientrender;
@@ -514,8 +515,8 @@ void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender:
 			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got Animation {2}({3})", incompleteNode->id, incompleteNode->name, id, animation->name);
 
 			auto animC = incompleteNode->GetOrCreateComponent<AnimationComponent>();
-			animC->addAnimation(id, animation);
-			// If only this bone, and the loop, are pointing at the skeleton, then it is complete.
+			//animC->addAnimation(id, animation);
+			// If it is complete...
 			if (RESOURCE_IS_COMPLETE(incompleteNode))
 			{
 				CompleteNode(incompleteNode->id, incompleteNode);
@@ -585,7 +586,7 @@ void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node
 	/// remove an node.
 	m_CompletedNodes.push_back(id);
 	MissingResource *missingNode = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
-	if (missingNode)
+/*	if (missingNode)
 	{
 		for (auto waiting = missingNode->waitingResources.begin(); waiting != missingNode->waitingResources.end(); waiting++)
 		{
@@ -610,7 +611,7 @@ void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node
 				}
 			}
 		}
-	}
+	}*/
 	RemoveFromMissingResources(id);
 	mNodeManager.CompleteNode(id);
 }

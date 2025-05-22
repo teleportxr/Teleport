@@ -45,7 +45,7 @@ namespace teleport
 
 			// Inherited via GeometryTargetBackendInterface
 			avs::Result CreateMesh(avs::MeshCreate &meshCreate) override;
-			avs::Result CreateSubScene(avs::uid server_uid, const SubSceneCreate &meshCreate);
+			avs::Result CreateSubScene(avs::uid parent_server_uid, const SubSceneCreate &meshCreate);
 
 			void CreateTexture(avs::uid server_uid, avs::uid id, const avs::Texture &texture) override;
 			void CreateMaterial(avs::uid server_uid, avs::uid id, const avs::Material &material) override;
@@ -54,7 +54,7 @@ namespace teleport
 			void CreateTextCanvas(clientrender::TextCanvasCreateInfo &textCanvasCreateInfo);
 
 			void CreateSkeleton(avs::uid server_uid, avs::uid id, const avs::Skeleton &skeleton) override;
-			void CreateAnimation(avs::uid server_uid, avs::uid id, teleport::core::Animation &animation) override;
+			avs::Result CreateAnimation(avs::uid server_uid, avs::uid id, teleport::core::Animation &animation) override;
 
 			void DeleteNode(avs::uid server_uid, avs::uid id) override;
 
