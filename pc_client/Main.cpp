@@ -610,7 +610,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			static long long frame = 1;
 			renderPlatform->BeginFrame(frame++);
 			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
+			if(w)
+			{
 			clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
+			}
 			// Call StartFrame here so the command list will be in a recording state for D3D12
 			// because vertex and index buffers can be created in OnFrameMove.
 			// StartFrame does nothing for D3D11.

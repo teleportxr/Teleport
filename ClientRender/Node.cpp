@@ -138,10 +138,10 @@ void Node::Update( std::chrono::microseconds timestamp_us)
 	visibility.update(timestamp_us.count());
 
 	// Attempt to animate, if we have a skeleton.
-	if(skeletonInstance&&skeletonInstance->GetSkeleton())
+	if(skeleton)
 	{
 		auto animC=GetOrCreateComponent<AnimationComponent>();
-		animC->update(skeletonInstance->GetSkeleton()->GetExternalBones(), timestamp_us.count());
+		animC->update(skeleton->GetExternalBones(), timestamp_us.count());
 	}
 
 	for(std::weak_ptr<Node> child : children)
@@ -228,6 +228,19 @@ void Node::RemoveChild(avs::uid childID)
 void Node::ClearChildren()
 {
 	children.clear();
+}
+
+std::weak_ptr<Node> Node::GetSkeletonNode()
+{
+	std::weak_ptr<Node> n;
+	if(skeleton)
+	{
+		if(skeleton->GetExternalBones().size()>0)
+		{
+			return skeleton->GetExternalBones()[0];
+		}
+	}
+	return n;
 }
 
 void Node::SetVisible(bool visible)

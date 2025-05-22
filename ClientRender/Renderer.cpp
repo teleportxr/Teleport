@@ -18,7 +18,6 @@
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "TeleportClient/Config.h"
-#include "TeleportClient/DiscoveryService.h"
 #include "TeleportClient/Log.h"
 #include "TeleportClient/OpenXR.h"
 #include "Tests.h"
@@ -32,6 +31,8 @@
 #include "TeleportClient/ClientTime.h"
 #include "TeleportClient/OpenXRRenderModel.h"
 #include "TeleportClient/TabContext.h"
+#include "TeleportClient/Identity.h"
+#include "NodeComponents/SubSceneComponent.h"
 #include <functional>
 #include <magic_enum/magic_enum.hpp>
 
@@ -126,7 +127,7 @@ Renderer::~Renderer()
 }
 
 Renderer *Renderer::GetRenderer() { return rendererInstance; }
-
+#include "TeleportClient/GoogleOAuth.h"
 void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *u, PlatformWindow *active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
@@ -220,6 +221,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *
 	localGeometryCache->setCacheFolder("assets/localGeometryCache");
 
 	InitLocalGeometry();
+	client::identity.Init();
 }
 
 void Renderer::ConsoleCommand(const std::string &str) { console.push(str); }
@@ -406,23 +408,25 @@ void Renderer::InitLocalGeometry()
 	geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/textures/specularRenderTexture.ktx", avs::GeometryPayloadType::Texture, &localResourceCreator, specular_cubemap_uid);
 		
-#if 0
+#if 1
 	// test gltf loading.
-	avs::uid gltf_uid = avs::GenerateUid();
-	// gltf_uid will refer to a SubScene asset in cache zero.
-	std::string source_root = "https://simul.co:443/wp-content/uploads/teleport-content/controller-models";
-	// geometryDecoder.decodeFromFile(0,config.GetStorageFolder()+"/meshes/Buggy.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid,
-	// platform::crossplatform::AxesStandard::OpenGL);
-	geometryDecoder.decodeFromFile(
-		0, "assets/localGeometryCache/meshes/test_preview_sphere.glb", avs::GeometryPayloadType::Mesh, &localResourceCreator, gltf_uid);
+	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
+														, avs::GeometryPayloadType::Mesh, &localResourceCreator
+														, 0, platform::crossplatform::AxesStandard::OpenGL);
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/Waving.vrma"
+														, avs::GeometryPayloadType::Animation, &localResourceCreator
+														, 0, platform::crossplatform::AxesStandard::OpenGL);
 	
+	geometryDecoder.WaitFromDecodeThread();
+
+
 	/*geometryDecoder.decodeFromWeb(0,
 								  "https://github.com/KhronosGroup/glTF-Sample-Models/raw/refs/heads/main/2.0/Buggy/glTF-Binary/Buggy.glb",
 								  avs::GeometryPayloadType::Mesh,
 								  &localResourceCreator,
 								  gltf_uid,
 								  platform::crossplatform::AxesStandard::OpenGL);*/
-	const int num=6;
+	const int num=1;
 	static float r=3.0f;
 	for (int i=0;i<num;i++)
 	{
@@ -435,8 +439,17 @@ void Renderer::InitLocalGeometry()
 		float angle=float(i)/float(num)*2.0f*3.14159f;
 
 		gltfNode.localTransform.position = vec3(r*sin(angle),r*cos(angle), 1.0f);
+		gltfNode.localTransform.rotation={0.707f,0,0,0.707f};
 		gltfNode.localTransform.scale = vec3(sc, sc, sc);
-		localResourceCreator.CreateNode(0, avs::GenerateUid(), gltfNode);
+		avs::uid node_uid = avs::GenerateUid();
+		localResourceCreator.CreateNode(0, node_uid, gltfNode);
+
+		auto node = localGeometryCache->mNodeManager.GetNode(node_uid);
+		auto subSceneC = node->GetComponent<clientrender::SubSceneComponent>();
+		if(subSceneC)
+		{
+			subSceneC->PlayAnimation(0, anim_uid);
+		}
 	}
 	#endif
 	auto local_session_client = client::SessionClient::GetSessionClient(0);
@@ -1042,8 +1055,10 @@ void Renderer::ChangePass(ShaderMode newShaderMode)
 	UpdateShaderPasses();
 	UpdateAllNodeRenders();
 }
+
 void Renderer::Update(std::chrono::microseconds unix_time_us)
 {
+	renderState.timestampUs = unix_time_us;
 	double timeElapsed_s = double(unix_time_us.count() - previousTimestampUs.count()) / 1000000.0; // ms to seconds
 	if (timeElapsed_s > 0.0) framerate = 1.0f / (float)timeElapsed_s;
 	for (auto i : instanceRenderers)

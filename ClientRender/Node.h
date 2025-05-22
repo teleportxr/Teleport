@@ -14,7 +14,6 @@
 #include "NodeComponents/VisibilityComponent.h"
 #include "ResourceManager.h"
 #include "Skeleton.h"
-#include "SkeletonInstance.h"
 #include "TextCanvas.h"
 #include "Transform.h"
 
@@ -29,7 +28,7 @@ namespace teleport
 			bool anim = false;
 		};
 		//! A renderable node in a hierarchy.
-		class Node : public IncompleteNode
+		class Node : public std::enable_shared_from_this<Node>, public IncompleteNode
 		{
 			std::vector<std::shared_ptr<Component>> components;
 
@@ -97,7 +96,7 @@ namespace teleport
 					if (t.get() != nullptr)
 						return t;
 				}
-				std::shared_ptr<T> u = std::make_shared<T>();
+				std::shared_ptr<T> u = std::make_shared<T>(*this);
 				components.push_back(std::static_pointer_cast<Component>(u));
 				return u;
 			}
@@ -148,10 +147,7 @@ namespace teleport
 			{
 				return skeletonNode;
 			}
-			std::weak_ptr<Node> GetSkeletonNode()
-			{
-				return skeletonNode;
-			}
+			std::weak_ptr<Node> GetSkeletonNode();
 			void SetSkeletonNode(std::weak_ptr<Node> n)
 			{
 				skeletonNode = n;
@@ -166,9 +162,9 @@ namespace teleport
 			void SetTextCanvas(std::shared_ptr<TextCanvas> t) { this->textCanvas = t; }
 			std::shared_ptr<TextCanvas> GetTextCanvas() const { return textCanvas; }
 
-			virtual void SetSkeleton(std::shared_ptr<Skeleton> skeleton) { skeletonInstance.reset(new SkeletonInstance(skeleton)); }
-			const std::shared_ptr<SkeletonInstance> GetSkeletonInstance() const { return skeletonInstance; }
-			std::shared_ptr<SkeletonInstance> GetSkeletonInstance() { return skeletonInstance; }
+			virtual void SetSkeleton(std::shared_ptr<Skeleton> s) { skeleton=s; }
+			const std::shared_ptr<Skeleton> GetSkeleton() const { return skeleton; }
+			std::shared_ptr<Skeleton> GetSkeleton() { return skeleton; }
 
 			void SetJointIndices(const std::vector<int16_t> j)
 			{
@@ -315,7 +311,7 @@ namespace teleport
 			std::string url;
 			avs::uid globalIlluminationTextureUid = 0;
 			std::shared_ptr<TextCanvas> textCanvas;
-			std::shared_ptr<SkeletonInstance> skeletonInstance;
+			std::shared_ptr<Skeleton> skeleton;
 			std::vector<std::shared_ptr<Material>> materials;
 			vec4 lightmapScaleOffset;
 			Transform localTransform;

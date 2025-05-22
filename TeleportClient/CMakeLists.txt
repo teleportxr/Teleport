@@ -29,6 +29,10 @@ set(src_files
 	DiscoveryService.h
 	DiscoveryService.cpp
 	GeometryCacheBackendInterface.h
+	GoogleOAuth.cpp
+	GoogleOAuth.h
+	Identity.h
+	Identity.cpp
 	Log.cpp
 	Log.h
 	OpenXR.cpp
@@ -43,6 +47,8 @@ set(src_files
 	SignalingServer.h
 	TabContext.cpp
 	TabContext.h
+	TokenStorage.cpp
+	TokenStorage.h
 	URLHandlers.h
 	URLHandlers.cpp
 )
@@ -89,4 +95,26 @@ if(TELEPORT_CLIENT_SUPPORT_IPSME)
 	target_include_directories(TeleportClient PUBLIC "${TELEPORT_CLIENT_MOSQUITTO_INCLUDE_DIR}")
 endif()
 
-target_compile_definitions(TeleportClient PUBLIC TELEPORT_CLIENT_SUPPORT_IPSME=$<BOOL:${TELEPORT_CLIENT_SUPPORT_IPSME}>)
+target_compile_definitions(TeleportClient PUBLIC TELEPORT_CLIENT_SUPPORT_IPSME=$<BOOL:${TELEPORT_CLIENT_SUPPORT_IPSME}> WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
+
+#Include cpp-httplib
+target_include_directories(TeleportClient PUBLIC ../thirdparty/cpp-httplib)
+
+if(APPLE)
+	# This is a bug in CMake that causes it to prefer the system version over
+	# the one in the specified ROOT folder
+	if(EXISTS ${OPENSSL_ROOT_DIR})
+        # Use static files when OPENSSL_USE_STATIC_LIBS is set.
+        # OPENSSL_USE_STATIC_LIBS is what CMake's FindOpenSSL looks at
+        # to decide whether to use static libraries.
+        if(OPENSSL_USE_STATIC_LIBS)
+            set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libcrypto.a" CACHE FILEPATH "" FORCE)
+            set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libssl.a" CACHE FILEPATH "" FORCE)
+        else()
+            set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libcrypto.dylib" CACHE FILEPATH "" FORCE)
+            set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/lib/libssl.dylib" CACHE FILEPATH "" FORCE)
+        endif()
+	endif()
+endif()
+find_package(OpenSSL REQUIRED)
+target_link_libraries(TeleportClient OpenSSL::SSL)

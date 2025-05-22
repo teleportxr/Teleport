@@ -9,6 +9,8 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 
 #include <libavstream/buffer.hpp>
+#include "Platform/CrossPlatform/Quaterniond.h"
+
 namespace avs
 {
 	void ConvertTransform(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, Transform &transform)
@@ -16,6 +18,11 @@ namespace avs
 		ConvertPosition(fromStandard, toStandard, transform.position);
 		ConvertRotation(fromStandard, toStandard, transform.rotation);
 		ConvertScale(fromStandard, toStandard, transform.scale);
+	}
+	//! Assumes that the matrix is a premultiplying transform, i.e. translation in the right-hand column.
+	void ConvertTransformMatrix(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, mat4 &m)
+	{
+		m=avs::convertToStandard(m,fromStandard,toStandard);
 	}
 
 	void ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation)

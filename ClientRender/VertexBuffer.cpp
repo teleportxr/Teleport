@@ -125,6 +125,20 @@ platform::crossplatform::PixelFormat GetAttributeFormat(const clientrender::Vert
 		case clientrender::VertexBufferLayout::ComponentCount::VEC4:
 			return platform::crossplatform::PixelFormat::RGBA_32_INT;
 		}
+	case clientrender::VertexBufferLayout::Type::SHORT:
+	case clientrender::VertexBufferLayout::Type::USHORT:
+		switch(attr.componentCount)
+		{
+		case clientrender::VertexBufferLayout::ComponentCount::SCALAR:
+			return platform::crossplatform::PixelFormat::R_16_FLOAT;
+		case clientrender::VertexBufferLayout::ComponentCount::VEC2:
+			return platform::crossplatform::PixelFormat::RG_16_UINT;
+		case clientrender::VertexBufferLayout::ComponentCount::VEC3:
+			return platform::crossplatform::PixelFormat::RGBA_16_UINT;
+		case clientrender::VertexBufferLayout::ComponentCount::VEC4:
+			return platform::crossplatform::PixelFormat::RGBA_16_UINT;
+		}
+
 
 		break;
 	default:
@@ -139,6 +153,9 @@ int GetByteSize(const clientrender::VertexBufferLayout::VertexAttribute &attr)
 	int unit_size = 0;
 	switch (attr.type)
 	{
+	case clientrender::VertexBufferLayout::Type::USHORT:
+		unit_size = 2;
+		break;
 	case clientrender::VertexBufferLayout::Type::DOUBLE:
 		unit_size = 8;
 		break;
