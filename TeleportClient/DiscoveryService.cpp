@@ -3,6 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "TeleportCore/CommonNetworking.h"
+#include "TeleportClient/Identity.h"
 #define RTC_ENABLE_WEBSOCKET 1
 #include <rtc/websocket.hpp>
 // This causes abort to be called, don't use it. Have to use exceptions.
@@ -215,7 +216,14 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		{
 			if (ws->isOpen())
 			{
-				json message = {{"teleport-signal-type", "request"}, {"content", {{"teleport", "0.9"}, {"clientID", signalingServer->clientID}}}};
+				json message = {{"teleport-signal-type", "connect"}
+									,{"content",	{
+														{"teleport", "0.9"}
+														,{"clientID", signalingServer->clientID}
+														,{"identity", identity.identity}
+													}
+									}
+								};
 				ws->send(message.dump());
 				frame = 100;
 			}

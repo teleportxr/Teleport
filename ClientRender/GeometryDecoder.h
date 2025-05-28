@@ -33,11 +33,6 @@ namespace teleport
 			GLTF_BINARY,
 			FROM_EXTENSION
 		};
-		/*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.
-		 */
-		class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
-		{
-		public:
 			struct GeometryDecodeData
 			{
 				avs::uid server_or_cache_uid = 0;
@@ -64,6 +59,11 @@ namespace teleport
 					memcpy(data.data(), ptr, size);
 				}
 			};
+		/*! A class to receive geometry stream instructions and create meshes. It will then manage them for rendering and destroy them when done.
+		 */
+		class GeometryDecoder final : public avs::GeometryDecoderBackendInterface
+		{
+		public:
 
 			GeometryDecoder();
 			~GeometryDecoder();
@@ -72,8 +72,8 @@ namespace teleport
 
 			//! Inherited via GeometryDecoderBackendInterface.
 			virtual avs::Result decode(avs::uid server_uid, const void *buffer, size_t bufferSizeInBytes, avs::GeometryPayloadType type, avs::GeometryTargetBackendInterface *target, avs::uid resource_uid) override;
-			//! Treat the file as buffer input and decode. Note: uid must be supplied, as against in decode, where it is read from the first 8 bytes.
-			avs::Result decodeFromFile(avs::uid server_uid, const std::string &filename, avs::GeometryPayloadType type, clientrender::ResourceCreator *intf, avs::uid uid, platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::Engineering);
+			//! Treat the file as buffer input and decode. Note: uid is generated if not supplied, as against in decode, where it is read from the first 8 bytes.
+			avs::uid decodeFromFile(avs::uid server_uid, const std::string &filename, avs::GeometryPayloadType type, clientrender::ResourceCreator *intf, avs::uid uid=0, platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::Engineering);
 			//! Put out an HTTPS request for the specified data.
 			avs::Result decodeFromWeb(avs::uid server_uid, const std::string &uri, avs::GeometryPayloadType type, clientrender::ResourceCreator *intf, avs::uid uid, platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::Engineering);
 			//! Callback that receives HTTPS data.
@@ -97,7 +97,11 @@ namespace teleport
 			avs::Result DecodeGltf(const GeometryDecodeData &geometryDecodeData);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, core::DecodedGeometry &dg, draco::Mesh &dracoMesh, platform::crossplatform::AxesStandard axesStandard);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,core::DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh, platform::crossplatform::AxesStandard axesStandard);
-			avs::Result DecodeDracoScene(clientrender::ResourceCreator *target, std::string filename_url, avs::uid server_or_cache_uid, avs::uid primitiveArrayUid, draco::Scene &dracoScene, platform::crossplatform::AxesStandard axesStandard);
+			avs::Result DecodeDracoScene( core::DecodedGeometry &subSceneDG,clientrender::ResourceCreator *target, std::string filename_url, avs::uid server_or_cache_uid, avs::uid primitiveArrayUid, draco::Scene &dracoScene, platform::crossplatform::AxesStandard axesStandard);
+
+			bool		DecodeScene(const GeometryDecodeData	  &geometryDecodeData,
+									core::DecodedGeometry		  &dg,
+									bool						   stationary);
 			avs::Result CreateFromDecodedGeometry(clientrender::ResourceCreator *target, core::DecodedGeometry &dg, const std::string &name);
 
 			avs::Result decodeMesh(GeometryDecodeData &geometryDecodeData);

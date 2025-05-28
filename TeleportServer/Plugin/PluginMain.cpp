@@ -536,7 +536,7 @@ teleport::core::Animation InteropToInternalAnimation(const InteropTransformAnima
 {
 	teleport::core::Animation a=
 	{
-		i.name,
+		i.name,{},
 		i.duration};
 	a.boneKeyframes = {(teleport::core::TransformKeyframeList *)i.boneKeyframes, (teleport::core::TransformKeyframeList*) (i.boneKeyframes + i.boneCount)};
 

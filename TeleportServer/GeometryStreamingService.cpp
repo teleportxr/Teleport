@@ -211,11 +211,11 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 		case avs::NodeDataType::None:
 		case avs::NodeDataType::Light:
 			break;
-		case avs::NodeDataType::Skeleton:
+	/*	case avs::NodeDataType::Skeleton:
 		{
 			GetSkeletonNodeResources(node_uid, *node, meshResources);
 		}
-		break;
+		break;*/
 		case avs::NodeDataType::Mesh:
 			{
 				GetMeshNodeResources(node_uid, *node, meshResources);
@@ -230,23 +230,27 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 #endif
 				}
 		
-				if(node->skeletonNodeID!=0)
+				if(node->skeletonID!=0)
 				{
-					avs::Node* skeletonnode = geometryStore->getNode(node->skeletonNodeID);
-					if(!skeletonnode)
+					const auto &sk=geometryStore->getSkeleton(node->skeletonID,getClientAxesStandard());
+					if(sk->boneIDs.size())
 					{
-						TELEPORT_CERR<<"Missing skeleton node "<<node->skeletonNodeID<<std::endl;
-					}
-					else
-					{
-						streamedNodes[node->skeletonNodeID]+=diff;
-						GetSkeletonNodeResources(node->skeletonNodeID, *skeletonnode, meshResources);
-						for(auto r:meshResources)
+						avs::Node* skeletonnode = geometryStore->getNode(sk->boneIDs[0]);
+						if(!skeletonnode)
 						{
-							for(auto b:r.boneIDs)
+							TELEPORT_CERR<<"Missing skeleton node "<<sk->boneIDs[0]<<std::endl;
+						}
+						else
+						{
+							streamedNodes[sk->boneIDs[0]]+=diff;
+							GetSkeletonNodeResources(sk->boneIDs[0], *skeletonnode, meshResources);
+							for(auto r:meshResources)
 							{
-								if(b)
-									streamedNodes[b]+=diff;
+								for(auto b:r.boneIDs)
+								{
+									if(b)
+										streamedNodes[b]+=diff;
+								}
 							}
 						}
 					}
@@ -626,9 +630,9 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 	//meshNode.skeletonID = node.skeletonNodeID;
 
 	//Get joint/bone IDs, if the skeletonID is not zero.
-	if (node.data_uid != 0&&node.data_type==avs::NodeDataType::Skeleton)
+	if (node.data_uid != 0&&node.skeletonID)
 	{
-		avs::Skeleton* skeleton = geometryStore->getSkeleton(node.data_uid, getClientAxesStandard());
+		avs::Skeleton* skeleton = geometryStore->getSkeleton(node.skeletonID, getClientAxesStandard());
 		meshNode.boneIDs = skeleton->boneIDs;
 	}
 
@@ -686,10 +690,6 @@ void GeometryStreamingService::GetMeshNodeResources(avs::uid nodeID, const avs::
 void GeometryStreamingService::GetSkeletonNodeResources(avs::uid nodeID, const avs::Node& node, std::vector<avs::MeshNodeResources> &outMeshNodeResources) const
 {
 	TELEPORT_PROFILE_AUTOZONE;
-	if (node.data_type != avs::NodeDataType::Skeleton)
-	{
-		return;
-	}
 	avs::MeshNodeResources sk;
 	
 	sk.node_uid = nodeID;

@@ -333,7 +333,7 @@ void SignalingService::tick()
 				if (!message.contains("teleport-signal-type"))
 					continue;
 				std::string teleport_signal_type = message["teleport-signal-type"]; 
-				if (teleport_signal_type == "request")
+				if (teleport_signal_type == "connect")
 				{
 					processInitialRequest(c.first, writeSignalingClients, signalingClient, message["content"]);
 					stop=true;
@@ -384,7 +384,7 @@ std::shared_ptr<SignalingClient> SignalingService::getSignalingClient(avs::uid u
 void SignalingService::sendResponseToClient(std::shared_ptr<SignalingClient> &signalingClient,uint64_t clientID)
 {
 	json message = {
-						{"teleport-signal-type","request-response"},
+						{"teleport-signal-type","connect-response"},
 						{"content",
 							{
 								{"clientID", clientID},

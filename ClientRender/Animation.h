@@ -5,6 +5,9 @@
 
 #include "TeleportCore/Animation.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
+#include "ozz/base/memory/unique_ptr.h"
+#include "ozz/animation/runtime/animation.h"
+
 
 namespace teleport
 {
@@ -17,26 +20,11 @@ namespace teleport
 		class BoneKeyframeList
 		{
 		public:
-			BoneKeyframeList(float duration);
-
 			size_t boneIndex = -1; // Index of the bone used in the bones list.
 
 			std::vector<teleport::core::Vector3Keyframe> positionKeyframes;
 			std::vector<teleport::core::Vector4Keyframe> rotationKeyframes;
 
-			void seekTime(std::shared_ptr<Node> bone, float time,float strength,bool loop) const;
-
-		private:
-			void blendPositionToTime(float time, vec3 &bonePosition, const std::vector<teleport::core::Vector3Keyframe> &keyframes,float blend,bool loop) const;
-			void blendRotationToTime(float time, platform::crossplatform::Quaternionf &boneRotation, const std::vector<teleport::core::Vector4Keyframe> &keyframes, float blend, bool loop) const;
-			struct KeyframePair
-			{
-				uint16_t prev;
-				uint16_t next;
-				float interp;
-			};
-			template<typename U>
-			KeyframePair getNextKeyframeIndex(float time, const std::vector<U> &keyframes, bool loop) const;
 			float duration;
 		};
 
@@ -65,12 +53,15 @@ namespace teleport
 			// Returns how many seconds long the animation is.
 			float getAnimationLengthSeconds();
 
-			// Sets bone transforms to positions and rotations specified by the animation at the passed time.
-			//	boneList : List of bones for the animation.
-			//	time : Time the animation will use when moving the bone transforms in seconds.
-			void seekTime(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, float time_s, float strength,bool loop) const;
-
+			//! Load from glb (gltf binary) format.
+			bool LoadFromGlb(const uint8_t *data, size_t size);
+			ozz::animation::Animation &GetOzzAnimation()
+			{
+				return *animation;
+			}
 		private:
+			ozz::unique_ptr<ozz::animation::Animation> animation;
+			void ToOzz();
 			float endTime_s = 0.0f; // Seconds the animation lasts for.
 		};
 	}

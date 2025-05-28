@@ -413,18 +413,34 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 				}
 				if (meshElementCreate.m_Colors)
 				{
-					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_Colors + j, sizeof(vec4));
-					intraStrideOffset += sizeof(vec4);
+					size_t typeSize	=	4*avs::GetSizeOfComponentType(meshElementCreate.colourType);
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, (uint8_t*)meshElementCreate.m_Colors + j*typeSize, typeSize);
+					intraStrideOffset += typeSize;
 				}
 				if (meshElementCreate.m_Joints)
 				{
-					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_Joints + j, sizeof(vec4));
-					intraStrideOffset += sizeof(vec4);
+					// TODO: Fully handle all possible component types: don't just expect floats or shorts, and implement this for all attributes.
+					size_t typeSize	=	sizeof(vec4);
+					float *target=(float *)(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset);
+					if(meshElementCreate.jointType==avs::ComponentType::FLOAT)
+					{
+						memcpy(target, (uint8_t*)meshElementCreate.m_Joints + j*sizeof(vec4), sizeof(vec4));
+					}
+					if(meshElementCreate.jointType==avs::ComponentType::USHORT)
+					{
+						unsigned short *source = (unsigned short *)meshElementCreate.m_Joints + j*4;
+						for(int e=0;e<4;e++)
+						{
+							target[e]=(double)source[e];
+						}
+					}
+					intraStrideOffset += typeSize;
 				}
 				if (meshElementCreate.m_Weights)
 				{
-					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, meshElementCreate.m_Weights + j, sizeof(vec4));
-					intraStrideOffset += sizeof(vec4);
+					size_t typeSize	=4*avs::GetSizeOfComponentType(meshElementCreate.weightType);
+					memcpy(constructedVB->data() + (layout->m_Stride  * j) + intraStrideOffset, (uint8_t*)meshElementCreate.m_Weights + j*typeSize, typeSize);
+					intraStrideOffset += typeSize;
 				}
 			}
 		}
@@ -515,21 +531,24 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate& meshCreate)
 			}
 			if (meshElementCreate.m_Colors)
 			{
-				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
+				size_t typeSize	=	avs::GetSizeOfComponentType(meshElementCreate.colourType);
+				size_t size = 4*typeSize * meshElementCreate.m_VertexCount;
 				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Colors, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Joints)
 			{
-				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
+				size_t typeSize	=	avs::GetSizeOfComponentType(meshElementCreate.jointType);
+				size_t size = 4*typeSize * meshElementCreate.m_VertexCount;
 				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Joints, size);
 				vertexBufferOffset += size;
 			}
 			if (meshElementCreate.m_Weights)
 			{
-				size_t size = sizeof(vec4) * meshElementCreate.m_VertexCount;
+				size_t typeSize	=	avs::GetSizeOfComponentType(meshElementCreate.weightType);
+				size_t size = 4*typeSize * meshElementCreate.m_VertexCount;
 				assert(constructedVBByteSize >= vertexBufferOffset + size);
 				memcpy(constructedVB->data() + vertexBufferOffset, meshElementCreate.m_Weights, size);
 				vertexBufferOffset += size;
@@ -624,6 +643,8 @@ void ResourceCreator::CreateTexture(avs::uid server_uid,avs::uid id, const avs::
 	texInfo->name			=texture.name;
 	texInfo->uid			=id;
 	texInfo->compression	=clientrender::Texture::CompressionFormat::UNCOMPRESSED;
+	texInfo->width=texture.width;
+	texInfo->height=texture.height;
 
 	TELEPORT_LOG("Received texture {0} ({1}), awaiting decompression.",id, texture.name);
 	{
@@ -783,7 +804,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 
 	std::vector<avs::uid> bone_ids;
 	bone_ids.resize(skeleton.boneIDs.size());
-	// External bones.
+	incompleteSkeleton->skeleton->SetRootId(skeleton.rootBoneId);
 	incompleteSkeleton->skeleton->SetExternalBoneIds(skeleton.boneIDs);
 	std::lock_guard g(geometryCache->missingResourcesMutex);
 	// each bone that hasn't been loaded is a missing resource. The Skeleton can only be completed when all missing bones are here.
@@ -800,6 +821,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 			incompleteSkeleton->missingBones.insert(b);
 		}
 	}
+	incompleteSkeleton->skeleton->SetInverseBindMatrices(skeleton.inverseBindMatrices);
 	// Add it to the manager, even if incomplete.
 	geometryCache->mSkeletonManager.Add(id, incompleteSkeleton->skeleton);
 	if(incompleteSkeleton->missingBones.size() == 0)
@@ -827,31 +849,41 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 		}
 }
 
-void ResourceCreator::CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation)
+avs::Result ResourceCreator::CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation)
 {
 	std::shared_ptr<GeometryCache> geometryCache=GeometryCache::GetGeometryCache(server_uid);
 	geometryCache->ReceivedResource(id);
 	if(geometryCache->mAnimationManager.Get(id))
-		return;
-	RESOURCECREATOR_DEBUG_COUT("CreateAnimation({0}, {1})", id ,animation.name);
-
-	std::vector<clientrender::BoneKeyframeList> boneKeyframeLists;
-	boneKeyframeLists.reserve(animation.boneKeyframes.size());
-
-	for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
+		return avs::Result::OK;
+	if(animation.compressedData.size()>0)
 	{
-		const teleport::core::TransformKeyframeList& avsKeyframes = animation.boneKeyframes[i];
-
-		clientrender::BoneKeyframeList boneKeyframeList(animation.duration);
-		boneKeyframeList.boneIndex = avsKeyframes.boneIndex;
-		boneKeyframeList.positionKeyframes = avsKeyframes.positionKeyframes;
-		boneKeyframeList.rotationKeyframes = avsKeyframes.rotationKeyframes;
-
-		boneKeyframeLists.push_back(boneKeyframeList);
+		std::shared_ptr<clientrender::Animation> completeAnimation = std::make_shared<clientrender::Animation>(animation.name);
+		completeAnimation->LoadFromGlb(animation.compressedData.data(),animation.compressedData.size());
+		geometryCache->CompleteAnimation(id, completeAnimation);
 	}
+	else
+	{
+		RESOURCECREATOR_DEBUG_COUT("CreateAnimation({0}, {1})", id ,animation.name);
 
-	std::shared_ptr<clientrender::Animation> completeAnimation = std::make_shared<clientrender::Animation>(animation.name,animation.duration,boneKeyframeLists);
-	geometryCache->CompleteAnimation(id, completeAnimation);
+		std::vector<clientrender::BoneKeyframeList> boneKeyframeLists;
+		boneKeyframeLists.reserve(animation.boneKeyframes.size());
+
+		for(size_t i = 0; i < animation.boneKeyframes.size(); i++)
+		{
+			const teleport::core::TransformKeyframeList& avsKeyframes = animation.boneKeyframes[i];
+
+			clientrender::BoneKeyframeList boneKeyframeList(animation.duration);
+			boneKeyframeList.boneIndex = avsKeyframes.boneIndex;
+			boneKeyframeList.positionKeyframes = avsKeyframes.positionKeyframes;
+			boneKeyframeList.rotationKeyframes = avsKeyframes.rotationKeyframes;
+
+			boneKeyframeLists.push_back(boneKeyframeList);
+		}
+
+		std::shared_ptr<clientrender::Animation> completeAnimation = std::make_shared<clientrender::Animation>(animation.name,animation.duration,boneKeyframeLists);
+		geometryCache->CompleteAnimation(id, completeAnimation);
+	}
+	return avs::Result::OK;
 }
 
 void ResourceCreator::DeleteNode(avs::uid server_uid, avs::uid id)
@@ -900,7 +932,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 		node = geometryCache->mNodeManager.CreateNode( session_time_us, id, avsNode);
 	}
 	node->ResetMissingResourceCount();
-	// Was this resource being awaited?
+	// Was this node being awaited?
 	MissingResource* missingResource = geometryCache->GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
 	if(missingResource)
 	{
@@ -924,9 +956,18 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 	}
 	// Whether the node is missing any resource before, and must wait for them before it can be completed.
 	bool isMissingResources = false;
-	if(avsNode.skeletonNodeID!=0)
+	if(avsNode.skeletonID!=0)
 	{
-		auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
+		auto skeleton=geometryCache->mSkeletonManager.Get(avsNode.skeletonID);
+		if(!skeleton)
+		{
+			TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton " << avsNode.skeletonID << std::endl;
+			isMissingResources = true;
+			auto &missing=geometryCache->GetMissingResource(avsNode.skeletonID, avs::GeometryPayloadType::Skeleton);
+			missing.waitingResources.insert(node);
+			node->IncrementMissingResources();
+		}
+	/*	auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
 		if(!skeletonNode)
 		{
 			TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
@@ -939,7 +980,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 		{
 			std::weak_ptr<clientrender::Node> skn=skeletonNode;
 			node->SetSkeletonNode(skn);
-		}
+		}*/
 	}
 	if (avsNode.data_uid != 0)
 	{
@@ -973,11 +1014,13 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 			else
 				geometryCache->mNodeManager.NotifyModifiedMaterials(node);
 		}
-		if (avsNode.data_type==avs::NodeDataType::Skeleton)
+		if (avsNode.skeletonID)
 		{
-			auto skeleton=geometryCache->mSkeletonManager.Get(avsNode.data_uid);
+			auto skeleton=geometryCache->mSkeletonManager.Get(avsNode.skeletonID);
 			if(skeleton)
+			{
 				node->SetSkeleton(skeleton);
+			}
 			else
 			{
 				node->IncrementMissingResources();
@@ -997,7 +1040,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 		if (animation)
 		{
 			auto animC=node->GetOrCreateComponent<AnimationComponent>();
-			animC->addAnimation(animationID,animation);
+			//animC->addAnimation(animationID,animation);
 		}
 		else
 		{
@@ -1356,7 +1399,8 @@ void ResourceCreator::thread_TranscodeTextures()
 					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode, no images found." << std::endl;
 				}
 			}
-			else if (transcoding->compressionFormat == avs::TextureCompression::JPEG||transcoding->compressionFormat == avs::TextureCompression::PNG)
+			else if (transcoding->compressionFormat == avs::TextureCompression::JPEG||transcoding->compressionFormat == avs::TextureCompression::PNG
+						||transcoding->compressionFormat == avs::TextureCompression::UNCOMPRESSED)
 			{
 				RESOURCECREATOR_DEBUG_COUT("Transcoding {0} with JPEG/PNG",transcoding->name.c_str());
 
@@ -1367,7 +1411,19 @@ void ResourceCreator::thread_TranscodeTextures()
 					int num_channels=0;
 					// request 4 channels because e.g. d3d can't handle 3-channel data for upload.
 					int mipWidth=0, mipHeight=0;
-					unsigned char *target = teleport::stbi_load_from_memory(transcoding->data.data(),transcoding->data.size(), &mipWidth, &mipHeight, &num_channels,(int)4);
+					unsigned char *stb = teleport::stbi_load_from_memory(transcoding->data.data(),transcoding->data.size(), &mipWidth, &mipHeight, &num_channels,(int)4);
+					unsigned char *target=stb;
+					if(!stb)
+					{
+						// as a fallback, maybe it's just plain uncompressed data.
+						size_t fullSize = transcoding->textureCI->height*transcoding->textureCI->width*4;
+						if(transcoding->data.size()==fullSize)
+						{
+							target=transcoding->data.data();
+							mipWidth=transcoding->textureCI->width;
+							mipHeight=transcoding->textureCI->height;
+						}
+					}
 					if( mipWidth > 0 && mipHeight > 0&&target&&transcoding->data.size()>2)
 					{
 					num_channels=4;
@@ -1405,7 +1461,7 @@ void ResourceCreator::thread_TranscodeTextures()
 					{
 						TELEPORT_CERR << "Failed to transcode JPEG or PNG format texture \"" << transcoding->name << "\"." << std::endl;
 					}
-					teleport::stbi_image_free(target);
+					teleport::stbi_image_free(stb);
 					// fill in values from file.
 					if(!i)
 					{

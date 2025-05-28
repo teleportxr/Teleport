@@ -109,7 +109,7 @@ struct InteropNode
 		}
 
 		n->materials={materialIDs, materialIDs + materialCount};
-		n->skeletonNodeID=skeletonID;
+		n->skeletonID=skeletonID;
 		n->joint_indices={jointIndices, jointIndices + jointCount};
 		n->animations={animationIDs, animationIDs + animationCount};
 
@@ -141,7 +141,7 @@ struct InteropSkeleton
 		return
 		{
 			name,
-		//	{inverseBindMatrices, inverseBindMatrices + numInverseBindMatrices},
+			boneIDs[0],
 			{boneIDs, boneIDs + numBones},
 			rootTransform,
 			{},

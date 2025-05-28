@@ -979,18 +979,16 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			std::shared_ptr<MeshRender> meshRender = materialRender->meshRenders[node_element_hash];
 			if (!meshRender)
 				materialRender->meshRenders[node_element_hash] = meshRender = std::make_shared<MeshRender>();
-			meshRender->skeletonInstance.reset();
+			meshRender->skeleton.reset();
 			if (passCache->anim && skeletonNode.get())
 			{
-				std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
-				anim															 = skeletonInstance != nullptr;
-				if (skeletonInstance)
+				anim															 = true;
 				{
 					// The bone matrices transform from the original local position of a vertex
 					//								to its current animated local position.
 					// For each bone matrix,
 					//				pos_local= (bone_matrix_j) * pos_original_local
-					meshRender->skeletonInstance = skeletonInstance;
+					meshRender->skeleton = node->GetSkeleton();
 				}
 			}
 			// std::cout << "AddNodeMeshToInstanceRender: cache " << cache_uid << ", node " << node->id<<", element "<<element<< "\n";
@@ -1195,21 +1193,56 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 		AddNodeToInstanceRender(geometrySubCache->GetCacheUid(), subSceneNodeStates, node->id);
 	}
 
-	if (node->GetSkeletonNode().use_count())
+	if (std::shared_ptr<clientrender::Skeleton> skeleton = node->GetSkeleton())
 	{
 		auto										   &nodeState		 = subSceneNodeStates.nodeStates[node->id];
 		std::shared_ptr<Node>							skeletonNode	 = node->GetSkeletonNode().lock();
-		std::shared_ptr<clientrender::SkeletonInstance> skeletonInstance = skeletonNode->GetSkeletonInstance();
-		if (mesh && skeletonInstance)
+		
+		if (mesh && skeletonNode)
 		{
+			std::vector<mat4> boneMatrices;
 			// The bone matrices transform from the original local position of a vertex
 			//								to its current animated local position.
 			// For each bone matrix,
 			//				pos_local= (bone_matrix_j) * pos_original_local
-			std::vector<mat4> boneMatrices(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
-			skeletonInstance->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
+			auto animationComponent = node->GetComponent<AnimationComponent>();
+			if(animationComponent&&skeleton->GetExternalBoneIds().size()==22)
+			{
+				animationComponent->update(renderState.timestampUs.count());
+				animationComponent->GetBoneMatrices(boneMatrices, skeleton->GetInverseBindMatrices());
+				
+				std::vector<mat4> jMatrices;
+				animationComponent->GetJointMatrices(jMatrices);
+				for(int i=0;i<jMatrices.size();i++)
+				{
+					avs::uid b_id	= skeleton->GetExternalBoneIds()[i];
+					auto node=geometrySubCache->mNodeManager.GetNode(b_id);
+					vec3	 start	= jMatrices[i].GetTranslation();
+					vec4	 purple = {1.0f, 0, 1.0f, 0.9f};
+					vec4	 black	= {0, 0, 0, 0};
+					renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&start), node->name.c_str(), purple, black);
+				}
+			}
+			else
+			{
+				if(skeleton->GetInverseBindMatrices().size()==node->GetJointIndices().size())
+				{
+					boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
+					skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
+				}
+				else if(skeleton->GetInverseBindMatrices().size()==node->GetJointIndices().size())
+				{
+					boneMatrices.resize(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
+					skeleton->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
+				}
+				else
+				{
+					TELEPORT_WARN("No matching bind matrices, {}.",node->name);
+					return;
+				}
+			}
 
-			avs::uid sk_id = skeletonInstance->GetSkeleton()->id;
+			avs::uid sk_id = skeleton->id;
 			if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 			{
 				skeletonRenders[sk_id] = std::make_shared<SkeletonRender>();
@@ -1300,10 +1333,10 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 	const auto &meshInfo = meshRender.mesh->GetMeshCreateInfo();
 	if (meshRender.setBoneConstantBuffer)
 	{
-		auto sk = meshRender.skeletonInstance.lock();
+		auto sk = meshRender.skeleton.lock();
 		if (!sk)
 			return;
-		avs::uid sk_id = sk->GetSkeleton()->id;
+		avs::uid sk_id = sk->id;
 		if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 			return;
 		renderPlatform->SetConstantBuffer(deviceContext, &(skeletonRenders[sk_id]->boneMatrices));
@@ -1451,13 +1484,13 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext			
 		static std::string str;
 		vec4			   white(1.0f, 1.0f, 1.0f, 1.0f);
 		vec4			   bkg				= {0, 0, 0, 0.5f};
-		auto			   skeletonInstance = node->GetSkeletonInstance();
-		if (skeletonInstance.get())
+		auto			   skeleton = node->GetSkeleton();
+		if (skeleton.get())
 		{
 			str								 = "";
-			auto		animC				 = node->GetOrCreateComponent<AnimationComponent>();
+			/*auto		animC				 = node->GetOrCreateComponent<AnimationComponent>();
 			const auto &animationLayerStates = animC->GetAnimationLayerStates();
-			if (animationLayerStates.size())
+			/if (animationLayerStates.size())
 			{
 				// const clientrender::AnimationStateMap &animationStates= node->animationComponent.GetAnimationStates();
 				static char txt[250];
@@ -1467,7 +1500,7 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext			
 					str += fmt::format("{0} anim {1}\n", node->id, a.animationState.animationId);
 				}
 				renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&pos), str.c_str(), (const float *)(&white), bkg);
-			}
+			}*/
 		}
 		else if (mesh)
 		{

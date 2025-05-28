@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "Platform/Core/FileLoader.h"
 #include "ResourceCreator.h"
+#include "TeleportCore/FontAtlas.h"
 #include "TeleportClient/Config.h"
 #include "TeleportCore/Animation.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -16,7 +17,7 @@
 #endif
 #include "draco/compression/decode.h"
 #include "draco/io/gltf_decoder.h"
-#include <TeleportCore/FontAtlas.h>
+#include "MeshDecoder.h"
 #include <libavstream/httputil.hpp>
 avs::HTTPUtil hTTPUtil;
 #include <filesystem>
@@ -90,6 +91,32 @@ static void copy_chunk(uint8_t *target, const uint8_t *data, size_t *offset, siz
 	(*offset) += num_bytes;
 }
 
+static avs::uid GenerateLocalUid()
+{
+	static avs::uid u = 0;
+	auto r = u;
+	u++;
+	if (!r) r = 10000;
+	return r;
+};
+
+void CreateSubScene(core::DecodedGeometry &subSceneDG, clientrender::ResourceCreator *target,std::string filename_url, avs::uid parent_cache_uid, avs::uid asset_uid,platform::crossplatform::AxesStandard sourceAxesStandard)
+{
+	// We will do two things here.
+	// 1. We will create a new Geometry Cache containing the whole scene from the draco file.
+	// 2. We will create a new asset in the containing cache that refers to that cache.
+	subSceneDG.axesStandard = sourceAxesStandard;
+	// The subscene uid in the server/cache list:
+	subSceneDG.server_or_cache_uid = avs::GenerateUid();
+	// The SubScene's own uid is the asset id.
+	clientrender::SubSceneCreate subSceneCreate;
+	subSceneCreate.uid = asset_uid;
+	subSceneCreate.subscene_cache_uid = subSceneDG.server_or_cache_uid;
+	avs::Result result = target->CreateSubScene(parent_cache_uid, subSceneCreate);
+	// this is a new cache, so create it:
+	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid, parent_cache_uid, filename_url);
+}
+
 GeometryDecoder::GeometryDecoder()
 {
 	decodeThread = std::thread(&GeometryDecoder::decodeAsync, this);
@@ -152,7 +179,7 @@ avs::Result GeometryDecoder::decode(avs::uid server_uid,
 	return avs::Result::OK;
 }
 #include <filesystem>
-avs::Result GeometryDecoder::decodeFromFile(avs::uid server_uid,
+avs::uid GeometryDecoder::decodeFromFile(avs::uid server_uid,
 											const std::string &filename,
 											avs::GeometryPayloadType type,
 											clientrender::ResourceCreator *target,
@@ -163,14 +190,16 @@ avs::Result GeometryDecoder::decodeFromFile(avs::uid server_uid,
 	if (!fileLoader->FileExists(filename.c_str()))
 	{
 		TELEPORT_CERR << "Failed to load file: " << filename << std::endl;
-		return avs::Result::Failed;
+		return 0;
 	}
 	void *ptr = nullptr;
 	unsigned int sz = 0;
 	fileLoader->AcquireFileContents(ptr, sz, filename.c_str(), false);
+	if(resource_uid==0)
+		resource_uid=avs::GenerateUid();
 	auto res = decodeFromBuffer(server_uid, (const uint8_t *)ptr, (size_t)sz, filename, type, target, resource_uid, sourceAxesStandard);
 	fileLoader->ReleaseFileContents(ptr);
-	return res;
+	return resource_uid;
 }
 
 avs::Result GeometryDecoder::decodeFromWeb(avs::uid server_uid,
@@ -230,7 +259,11 @@ avs::Result GeometryDecoder::decodeFromBuffer(avs::uid server_uid,
 	{
 		geometryFileFormat = GeometryFileFormat::GLTF_TEXT;
 	}
-	else if (extens == ".glb")
+	else if (extens == ".glb" || extens == ".vrm")
+	{
+		geometryFileFormat = GeometryFileFormat::GLTF_BINARY;
+	}
+	else if (extens == ".vrma")
 	{
 		geometryFileFormat = GeometryFileFormat::GLTF_BINARY;
 	}
@@ -310,7 +343,17 @@ avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData &geometryDecode
 	if (geometryDecodeData.geometryFileFormat == GeometryFileFormat::GLTF_BINARY)
 	{
 		draco::StatusOr<std::unique_ptr<draco::Scene>> s = gltfDecoder.DecodeFromBufferToScene(&dracoDecoderBuffer);
-		if (s.status().code() != draco::Status::OK)
+		if(s.status().code() == draco::Status::UNSUPPORTED_FEATURE)
+		{
+			core::DecodedGeometry subSceneDG;
+			CreateSubScene(subSceneDG,geometryDecodeData.target,geometryDecodeData.filename_or_url, geometryDecodeData.server_or_cache_uid,geometryDecodeData.uid,geometryDecodeData.sourceAxesStandard);
+			// Todo: Sometimes stationary should be true.
+			if(!DecodeScene(geometryDecodeData, subSceneDG, false))
+				return avs::Result::Failed;
+			return CreateFromDecodedGeometry(geometryDecodeData.target, subSceneDG, geometryDecodeData.filename_or_url);
+			// try
+		}
+		else if (s.status().code() != draco::Status::OK)
 		{
 			TELEPORT_CERR << "Failed to decode " << geometryDecodeData.filename_or_url << ": " << s.status().error_msg_string() << "\n";
 			return avs::Result::Failed;
@@ -336,12 +379,16 @@ avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData &geometryDecode
 	}
 	avs::Result res = avs::Result::Failed;
 	if (scene.get())
-		return DecodeDracoScene(geometryDecodeData.target,
+	{
+		core::DecodedGeometry subSceneDG;	
+		CreateSubScene(subSceneDG,geometryDecodeData.target,geometryDecodeData.filename_or_url, geometryDecodeData.server_or_cache_uid,geometryDecodeData.uid,geometryDecodeData.sourceAxesStandard);
+		return DecodeDracoScene(subSceneDG, geometryDecodeData.target,
 								geometryDecodeData.filename_or_url,
 								geometryDecodeData.server_or_cache_uid,
 								geometryDecodeData.uid,
 								*(scene.get()),
 								geometryDecodeData.sourceAxesStandard);
+								}
 	else if (mesh.get())
 	{
 		core::DecodedGeometry dg;
@@ -426,41 +473,19 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayU
 	return avs::Result::OK;
 }
 
-static avs::uid GenerateUid()
-{
-	static avs::uid u = 0;
-	auto r = u;
-	u++;
-	if (!r) r = 10000;
-	return r;
-};
-avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *target,
+avs::Result GeometryDecoder::DecodeDracoScene( core::DecodedGeometry &subSceneDG,clientrender::ResourceCreator *target,
 											  std::string filename_url,
-											  avs::uid server_or_cache_uid,
+											  avs::uid subscene_cache_uid,
 											  avs::uid asset_uid,
 											  draco::Scene &dracoScene,
 											  platform::crossplatform::AxesStandard sourceAxesStandard)
 {
-	// We will do two things here.
-	// 1. We will create a new Geometry Cache containing the whole scene from the draco file.
-	// 2. We will create a new asset in the containing cache that refers to that cache.
-	core::DecodedGeometry subSceneDG;
-	subSceneDG.axesStandard = sourceAxesStandard;
-	// The subscene uid in the server/cache list:
-	subSceneDG.server_or_cache_uid = avs::GenerateUid();
 	std::vector<avs::uid> node_uids(dracoScene.NumNodes());
 	for (int n = 0; n < dracoScene.NumNodes(); n++)
 	{
 		const auto &dracoNode = dracoScene.GetNode(draco::SceneNodeIndex(n));
-		node_uids[n] = GenerateUid();
+		node_uids[n] = GenerateLocalUid();
 	}
-	// The SubScene's own uid is the asset id.
-	clientrender::SubSceneCreate subSceneCreate;
-	subSceneCreate.uid = asset_uid;
-	subSceneCreate.subscene_cache_uid = subSceneDG.server_or_cache_uid;
-	avs::Result result = target->CreateSubScene(server_or_cache_uid, subSceneCreate);
-	// this is a new cache, so create it:
-	clientrender::GeometryCache::CreateGeometryCache(subSceneDG.server_or_cache_uid, server_or_cache_uid, filename_url);
 	auto &dracoMaterials = dracoScene.GetMaterialLibrary();
 	auto &dracoTextures = dracoMaterials.GetTextureLibrary();
 	std::map<const draco::Texture *, avs::uid> texture_uids;
@@ -474,7 +499,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 		const draco::Material *dracoMaterial = dracoMaterials.GetMaterial(i);
 		if (dracoMaterial)
 		{
-			avs::uid material_uid = GenerateUid();
+			avs::uid material_uid = GenerateLocalUid();
 			avs::Material &material = subSceneDG.internalMaterials[material_uid];
 			material.name = dracoMaterial->GetName();
 			material.materialMode = avs::MaterialMode::OPAQUE_MATERIAL;
@@ -494,7 +519,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 			{
 				auto f = texture_uids.find(t);
 				if (f != texture_uids.end()) return f->second;
-				avs::uid u = GenerateUid();
+				avs::uid u = GenerateLocalUid();
 				texture_uids[t] = u;
 				return u;
 			};
@@ -588,12 +613,12 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 		{
 			avs::Texture avsTexture = {name, 0, 0, 0, 1, 1, false, avs::TextureFormat::RGBA8, 1.0f, compr, true};
 			avsTexture.compressedData = std::move(data);
-			target->CreateTexture(subSceneCreate.subscene_cache_uid, texture_uid, avsTexture);
+			target->CreateTexture(subscene_cache_uid, texture_uid, avsTexture);
 		}
 	}
 	for (int m = 0; m < dracoScene.NumMeshGroups(); m++)
 	{
-		mesh_uids[m] = GenerateUid();
+		mesh_uids[m] = GenerateLocalUid();
 		auto *dracoMeshGroup = dracoScene.GetMeshGroup(draco::MeshGroupIndex(m));
 		avs::uid mesh_uid = mesh_uids[m];
 		for (int j = 0; j < dracoMeshGroup->NumMeshInstances(); j++)
@@ -611,7 +636,6 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 				auto *attr = dracoMesh.attribute(i);
 				compressedSubMesh.attributeSemantics[i] = DracoToAvsAttributeSemantic(attr->attribute_type(), 0);
 			}
-			subSceneDG.clockwiseFaces = false;
 			DracoMeshToPrimitiveArray(mesh_uid,
 									  subSceneDG,
 									  dracoMesh,
@@ -701,17 +725,14 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 	{
 		draco::SkinIndex skinIndex(i);
 		const auto &dracoSkin = dracoScene.GetSkin(skinIndex);
-		avs::uid skeleton_uid = GenerateUid();
+		avs::uid skeleton_uid = GenerateLocalUid();
 		skeleton_uids.push_back(skeleton_uid);
 		avs::Skeleton &avsSkeleton = subSceneDG.skeletons[skeleton_uid];
 
 		avsSkeleton.name = fmt::format("{0} skeleton {1}", filename_url, i);
 		int numBones = dracoSkin->NumJoints();
 		avsSkeleton.boneIDs.resize(numBones);
-		// avsSkeleton.boneTransforms.resize(numBones);
 		//  We'll only use boneIDs in this case because the joints are actual nodes.
-		// avsSkeleton.parentIndices.resize(numBones);
-		// avsSkeleton.boneNames.reserve(numBones);
 		for (int j = 0; j < numBones; j++)
 		{
 			int draco_joint_index = dracoSkin->GetJoint(j).value();
@@ -725,14 +746,14 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 		}
 		int numInverseBinds = dracoNodeAnimData.count();
 		// TODO: Not where this should go.
-		subSceneDG.inverseBindMatrices.resize(numInverseBinds);
+		avsSkeleton.inverseBindMatrices.resize(numInverseBinds);
 		const float *invBindPtr = dracoNodeAnimData.GetData()->data();
 		for (int j = 0; j < numInverseBinds; j++)
 		{
 			const mat4 &b = *((const mat4 *)invBindPtr);
-			subSceneDG.inverseBindMatrices[j] =
+			avsSkeleton.inverseBindMatrices[j] =
 				platform::crossplatform::ConvertMatrix(subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, b);
-			subSceneDG.inverseBindMatrices[j].transpose();
+			avsSkeleton.inverseBindMatrices[j].transpose();
 			invBindPtr += 16;
 		}
 	}
@@ -747,16 +768,16 @@ avs::Result GeometryDecoder::DecodeDracoScene(clientrender::ResourceCreator *tar
 			int i = skinIndex.value();
 			avs::uid skeleton_uid = skeleton_uids[i];
 			avs::Skeleton &avsSkeleton = subSceneDG.skeletons[skeleton_uid];
-			avsNode.skeletonNodeID = avsSkeleton.boneIDs[0];
+			avsNode.skeletonID = skeleton_uid;
 			// Just directly map the bones to joints:
 			avsNode.joint_indices.resize(avsSkeleton.boneIDs.size());
 			for (int j = 0; j < avsNode.joint_indices.size(); j++)
 			{
 				avsNode.joint_indices[j] = j;
 			}
-			auto &avsSkeletonRootNode = subSceneDG.nodes[avsNode.skeletonNodeID];
-			avsSkeletonRootNode.data_type = avs::NodeDataType::Skeleton;
-			avsSkeletonRootNode.data_uid = skeleton_uid;
+			//auto &avsSkeletonRootNode = subSceneDG.nodes[avsNode.skeletonNodeID];
+			//avsSkeletonRootNode.data_type = avs::NodeDataType::Skeleton;
+			//avsSkeletonRootNode.data_uid = skeleton_uid;
 		}
 	}
 	for (int n = 0; n < dracoScene.NumNodes(); n++)
@@ -809,7 +830,6 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid primitiveArrayU
 	}
 	return avs::Result::OK;
 }
-
 #pragma endregion DracoDecoding
 
 avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCreator *target, core::DecodedGeometry &dg, const std::string &name)
@@ -907,14 +927,17 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 					continue;
 				case avs::AttributeSemantic::COLOR_0:
 					meshElementCreate.m_Colors = reinterpret_cast<const vec4 *>(data);
+					meshElementCreate.colourType = accessor.componentType;
 					assert(accessor.count == vertexCount);
 					continue;
 				case avs::AttributeSemantic::JOINTS_0:
 					meshElementCreate.m_Joints = reinterpret_cast<const vec4 *>(data);
+					meshElementCreate.jointType = accessor.componentType;
 					assert(accessor.count == vertexCount);
 					continue;
 				case avs::AttributeSemantic::WEIGHTS_0:
 					meshElementCreate.m_Weights = reinterpret_cast<const vec4 *>(data);
+					meshElementCreate.weightType = accessor.componentType;
 					assert(accessor.count == vertexCount);
 					continue;
 				default:
@@ -953,14 +976,19 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 			size_t componentSize = avs::GetComponentSize(indicesAccessor.componentType);
 			meshElementCreate.ib_id = primitiveArray.indices_accessor;
 			meshElementCreate.m_Indices = (indicesBuffer.data + indicesBufferView.byteOffset + indicesAccessor.byteOffset);
+			if (indicesBuffer.byteLength < indicesBufferView.byteOffset + indicesAccessor.byteOffset + indicesAccessor.count * componentSize)
+			{
+				TELEPORT_CERR << "Index buffer too small in " << name.c_str() << "\n";
+				meshElementCreate.m_IndexCount=(indicesBuffer.byteLength-indicesBufferView.byteOffset-indicesAccessor.byteOffset)/componentSize;
+			}
+			else
+				meshElementCreate.m_IndexCount = indicesAccessor.count;
 			meshElementCreate.m_IndexSize = componentSize;
-			meshElementCreate.m_IndexCount = indicesAccessor.count;
 			meshElementCreate.m_ElementIndex = index;
 			index++;
 		}
 		meshCreate.name = name;
 		meshCreate.clockwiseFaces = dg.clockwiseFaces;
-		meshCreate.inverseBindMatrices = dg.inverseBindMatrices;
 		avs::Result result = target->CreateMesh(meshCreate);
 		if (result != avs::Result::OK)
 		{
@@ -1006,39 +1034,37 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData &geometryDecodeData)
 
 			if (!readString(geometryDecodeData, compressedMesh.name)) return avs::Result::Failed;
 
-			// inverse bind matrices, if required:
+			// inverse bind matrices, if required. These are not considered to be part of the mesh
+			// by GLTF, but Unity exports them as part of the mesh.
 			if (version >= 1)
 			{
 				size_t inv_bind_datasize = NextUint64;
 				if (inv_bind_datasize > 0)
 				{
 					std::vector<uint8_t> inv_bind_data(inv_bind_datasize);
-					dg.inverseBindMatrices.resize(inv_bind_datasize / sizeof(mat4));
+					dg.meshInverseBindMatrices.resize(inv_bind_datasize / sizeof(mat4));
 					CopyChunk((uint8_t *)inv_bind_data.data(), inv_bind_datasize);
-					for (int i = 0; i < dg.inverseBindMatrices.size(); i++)
+					for (int i = 0; i < dg.meshInverseBindMatrices.size(); i++)
 					{
-						dg.inverseBindMatrices[i] = mat4::identity();
+						dg.meshInverseBindMatrices[i] = mat4::identity();
 					}
-					memcpy(dg.inverseBindMatrices.data(), inv_bind_data.data(), sizeof(mat4) * dg.inverseBindMatrices.size());
+					memcpy(dg.meshInverseBindMatrices.data(), inv_bind_data.data(), sizeof(mat4) * dg.meshInverseBindMatrices.size());
 				}
 			}
-			if (geometryDecodeData.saveToDisk) saveBuffer(geometryDecodeData, std::string("meshes/" + name + ".draco"));
+			if (geometryDecodeData.saveToDisk)
+				saveBuffer(geometryDecodeData, std::string("meshes/" + name + ".draco"));
 			size_t num_elements = (size_t)NextUint32;
-			if (num_elements > 1000) return avs::Result::Failed;
+			if (num_elements > 1000)
+				return avs::Result::Failed;
 			compressedMesh.subMeshes.resize(num_elements);
 			for (size_t i = 0; i < num_elements; i++)
 			{
-				auto &subMesh = compressedMesh.subMeshes[i];
-				subMesh.indices_accessor = 0;
-				subMesh.material = 0;
-				subMesh.first_index = 0;
-				subMesh.num_indices = 0;
+				auto &subMesh				 = compressedMesh.subMeshes[i];
+				subMesh.indices_accessor	 = 0;
+				subMesh.material			 = 0;
+				subMesh.first_index			 = 0;
+				subMesh.num_indices			 = 0;
 				size_t numAttributeSemantics = 0;
-				/*for (size_t i = 0; i < numAttributeSemantics; i++)
-				{
-					int32_t attr				= NextUint32;
-					subMesh.attributeSemantics[attr] = (avs::AttributeSemantic)NextByte;
-				}*/
 				size_t bufferSize = NextUint64;
 				if (bufferSize > 1024 * 1024 * 128 || bufferSize > geometryDecodeData.bytesRemaining())
 				{
@@ -1285,30 +1311,38 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData &geometryDecodeDat
 
 avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData &geometryDecodeData)
 {
-	static size_t skip = 0;
-	if (skip)
-	{
-		geometryDecodeData.data.erase(geometryDecodeData.data.begin(), geometryDecodeData.data.begin() + skip);
-	}
 	teleport::core::Animation animation;
 	avs::uid animationID = geometryDecodeData.uid;
+	if(geometryDecodeData.geometryFileFormat==GeometryFileFormat::GLTF_BINARY)
+	{
+		animation.name=geometryDecodeData.filename_or_url;
+		animation.compressedData.resize(geometryDecodeData.bytesRemaining());
+		memcpy(animation.compressedData.data(),geometryDecodeData.data.data()+geometryDecodeData.offset,animation.compressedData.size());
+		return geometryDecodeData.target->CreateAnimation(geometryDecodeData.server_or_cache_uid, animationID, animation);
+	}
 
-	if (!readString(geometryDecodeData, animation.name)) return avs::Result::Failed;
-	if (geometryDecodeData.saveToDisk) saveBuffer(geometryDecodeData, std::string("animations/" + animation.name + ".anim"));
+	if (!readString(geometryDecodeData, animation.name))
+		return avs::Result::Failed;
+	if (geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("animations/" + animation.name + ".anim"));
 
 	animation.duration = NextFloat;
-	if (animation.duration < 0) return avs::Result::Failed;
-	size_t numk = NextUint64;
+	if (animation.duration < 0)
+		return avs::Result::Failed;
+	size_t numk	   = NextUint64;
 	size_t kf_size = sizeof(int16_t) + sizeof(teleport::core::Vector3Keyframe) + sizeof(teleport::core::Vector4Keyframe);
-	if (geometryDecodeData.bytesRemaining() / numk < kf_size) return avs::Result::Failed;
+	if (geometryDecodeData.bytesRemaining() / numk < kf_size)
+		return avs::Result::Failed;
 	animation.boneKeyframes.resize(numk);
 	for (size_t i = 0; i < animation.boneKeyframes.size(); i++)
 	{
 		teleport::core::TransformKeyframeList &transformKeyframe = animation.boneKeyframes[i];
-		transformKeyframe.boneIndex = NextInt16;
+		transformKeyframe.boneIndex								 = NextInt16;
 
-		if (decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes) != avs::Result::OK) return avs::Result::Failed;
-		if (decodeVector4Keyframes(geometryDecodeData, transformKeyframe.rotationKeyframes) != avs::Result::OK) return avs::Result::Failed;
+		if (decodeVector3Keyframes(geometryDecodeData, transformKeyframe.positionKeyframes) != avs::Result::OK)
+			return avs::Result::Failed;
+		if (decodeVector4Keyframes(geometryDecodeData, transformKeyframe.rotationKeyframes) != avs::Result::OK)
+			return avs::Result::Failed;
 	}
 
 	geometryDecodeData.target->CreateAnimation(geometryDecodeData.server_or_cache_uid, animationID, animation);
@@ -1316,7 +1350,7 @@ avs::Result GeometryDecoder::decodeAnimation(GeometryDecodeData &geometryDecodeD
 	return avs::Result::OK;
 }
 
-bool GeometryDecoder::readString(GeometryDecoder::GeometryDecodeData &geometryDecodeData, std::string &str) const
+bool GeometryDecoder::readString(GeometryDecodeData &geometryDecodeData, std::string &str) const
 {
 	uint16_t nameLength = NextUint16;
 	if (nameLength > geometryDecodeData.data.size() - geometryDecodeData.offset)
@@ -1373,7 +1407,7 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		{
 			node.data_uid = NextUint64;
 
-			node.skeletonNodeID = NextUint64;
+			node.skeletonID = NextUint64;
 			NextList(uint16_t, int16_t, node.joint_indices) NextList(uint16_t, avs::uid, node.animations) NextList(uint16_t, avs::uid, node.materials)
 				
 				node.renderState.lightmapScaleOffset = NextVec4;
@@ -1424,11 +1458,10 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData &geometryDecodeDa
 
 	if (geometryDecodeData.saveToDisk) saveBuffer(geometryDecodeData, std::string("skeletons/" + skeleton.name + ".skeleton"));
 
-	skeleton.boneTransforms.resize(NextUint64);
-	skeleton.parentIndices.resize(skeleton.boneTransforms.size());
-	skeleton.boneNames.resize(skeleton.boneTransforms.size());
-	skeleton.boneIDs.resize(skeleton.boneTransforms.size());
-	for (size_t i = 0; i < skeleton.boneTransforms.size(); i++)
+	size_t numBones=NextUint64;
+	skeleton.parentIndices.resize(numBones);
+	skeleton.boneIDs.resize(numBones);
+	for (size_t i = 0; i < numBones; i++)
 	{
 		skeleton.boneIDs[i] = NextUint64;
 		// skeleton.parentIndices[i]=NextUint16;

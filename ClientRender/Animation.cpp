@@ -2,182 +2,103 @@
 
 #include "Node.h"
 #include "Transform.h"
-using qt=platform::crossplatform::Quaternionf;
-namespace teleport
+
+#define tinygltf teleport_tinygltf
+#include "tiny_gltf.h"
+#include <json.hpp>
+#include <ozz/base/containers/set.h>
+#include <ozz/animation/offline/raw_animation.h>
+#include <ozz/animation/offline/animation_builder.h>
+
+using nlohmann::json;
+using namespace ozz;
+
+using qt = platform::crossplatform::Quaternionf;
+using namespace teleport;
+
+using namespace clientrender;
+
+
+Animation::Animation(const std::string &name) : name(name)
 {
-	namespace clientrender
+}
+
+Animation::Animation(const std::string &name, float dur, std::vector<BoneKeyframeList> bk) : name(name), duration(dur), boneKeyframeLists(bk)
+{
+	ToOzz();
+}
+
+Animation::~Animation()
+{
+}
+
+// Retrieve end time from latest time in any bone animations.
+// ASSUMPTION: This works for Unity, but does it work for Unreal?
+void Animation::updateAnimationLength()
+{
+}
+
+float Animation::getAnimationLengthSeconds()
+{
+	return endTime_s;
+}
+
+void Animation::ToOzz()
+{
+	ozz::animation::offline::RawAnimation raw_animation;
+
+	// Sets animation duration (to 1.4s).
+	// All the animation keyframes times must be within range [0, duration].
+	raw_animation.duration = duration;
+
+	// Creates 3 animation tracks.
+	// There should be as many tracks as there are joints in the skeleton that
+	// this animation targets.
+	raw_animation.tracks.resize(boneKeyframeLists.size());
+
+	// Fills each track with keyframes, in joint local-space.
+	// Tracks should be ordered in the same order as joints in the
+	// ozz::animation::Skeleton. Joint's names can be used to find joint's
+	// index in the skeleton.
+
+	// Fills 1st track with 2 translation keyframes.
+	for (int i = 0; i < boneKeyframeLists.size(); i++)
 	{
-		BoneKeyframeList::BoneKeyframeList(float dur) : duration(dur)
-		{}
-
-		void BoneKeyframeList::seekTime(std::shared_ptr<Node> bone, float time, float strength,bool loop) const
+		BoneKeyframeList &b		= boneKeyframeLists[i];
+		auto			 &track = raw_animation.tracks[i];
+		for (const auto & c : b.positionKeyframes)
 		{
-			if(!bone)
-			{
-				return;
-			}
-			Transform transform = bone->GetLocalTransform();
-			blendPositionToTime(time, transform.m_Translation, positionKeyframes, strength, loop);
-			blendRotationToTime(time, *((qt*)&transform.m_Rotation), rotationKeyframes, strength, loop);
-			transform.UpdateModelMatrix();
-			bone->SetLocalTransform(transform);
+			// Create a keyframe, at c.time, with a translation value.
+			const ozz::animation::offline::RawAnimation::TranslationKey key = {c.time, ozz::math::Float3(c.value.x, c.value.y, c.value.z)};
+			track.translations.push_back(key);
 		}
-
-		void BoneKeyframeList::blendPositionToTime(float time, vec3 &bonePosition, const std::vector<teleport::core::Vector3Keyframe> &keyframes, float strength,bool loop) const
+		for (const auto &c : b.rotationKeyframes)
 		{
-			if(keyframes.size() == 0)
-			{
-				return;
-			}
-
-			if(keyframes.size() == 1)
-			{
-				bonePosition = keyframes[0].value;
-				return;
-			}
-			KeyframePair kf = getNextKeyframeIndex(time, keyframes, loop);
-			const teleport::core::Vector3Keyframe &previousKeyframe = keyframes[kf.prev];
-			const teleport::core::Vector3Keyframe &nextKeyframe = keyframes[kf.next];
-
-			//Linear interpolation between previous keyframe and next keyframe.
-			vec3 newpos = (1.0f - kf.interp) * previousKeyframe.value + kf.interp * nextKeyframe.value;
-			if(strength>=1.f)
-			{
-				bonePosition = newpos;
-			}
-			else if(strength>0.f)
-			{
-				bonePosition =lerp(bonePosition,newpos,strength);
-			}
-		}
-
-		void BoneKeyframeList::blendRotationToTime(float time, platform::crossplatform::Quaternionf &boneRotation, const std::vector<teleport::core::Vector4Keyframe> &keyframes, float strength, bool loop) const
-		{
-			if(keyframes.size() == 0)
-			{
-				return;
-			}
-
-			if(keyframes.size() == 1)
-			{
-				boneRotation = keyframes[0].value;
-				return;
-			}
-
-			KeyframePair kf= getNextKeyframeIndex(time, keyframes,loop);
-			const teleport::core::Vector4Keyframe& previousKeyframe = keyframes[kf.prev];
-			const teleport::core::Vector4Keyframe& nextKeyframe = keyframes[kf.next];
-
-			//Linear interpolation between previous keyframe and next keyframe.
-			platform::crossplatform::Quaternionf &previousValue = *((platform::crossplatform::Quaternionf *)&previousKeyframe.value);
-			platform::crossplatform::Quaternionf &nextValue = *((platform::crossplatform::Quaternionf *)&nextKeyframe.value);
-			//boneRotation = quat::Slerp(previousKeyframe.value, nextKeyframe.value, timeBlend);
-			platform::crossplatform::Quaternionf newrot = previousKeyframe.value * (1.f - kf.interp) + nextKeyframe.value * kf.interp; // quat::Slerp(previousValue, nextValue, kf.interp);
-			newrot = platform::crossplatform::slerp(previousValue, nextValue, kf.interp);
-			newrot.MakeUnit();
-			if (strength >= 1.f)
-			{
-				boneRotation = newrot;
-			}
-			else if (strength > 0.f)
-			{
-				boneRotation = platform::crossplatform::slerp(boneRotation, newrot, strength);
-			}
-		}
-		template<typename U>
-		BoneKeyframeList::KeyframePair BoneKeyframeList::getNextKeyframeIndex(float time, const std::vector<U> &keyframes, bool loop) const
-		{
-			KeyframePair p;
-			uint32_t N = (uint32_t)keyframes.size();
-			// If the last keyframe is right on the loop-time, discard it and interpolate to keyframe 0 instead.
-			if (loop && keyframes[N - 1].time >= duration)
-			{
-				N--;
-			}
-			if(loop)
-			{
-				time = fmodf(time, duration);
-			}
-			p.next = N-1;
-			for (uint32_t i = 1; i < keyframes.size(); i++)
-			{
-				if(keyframes[i].time >= time)
-				{
-					p.next = i;
-					break;
-				}
-			}
-			if (loop)
-			{
-				p.prev = (p.next + N - 1) % N;
-			}
-			else
-			{
-				if(p.next>0)
-					p.prev = p.next-1;
-				else
-					p.prev=0;
-			}
-			float previousTime=keyframes[p.prev].time;
-			float nextTime=keyframes[p.next].time;
-			if(nextTime<previousTime)
-				nextTime+=duration;
-			if(nextTime==previousTime)
-				p.interp=0.0f;
-			else
-				p.interp=std::max(std::min(1.0f, (time - previousTime) / (nextTime - previousTime)), 0.0f);
-			return p;
-		}
-
-
-		Animation::Animation(const std::string& name)
-			:name(name)
-		{}
-
-		Animation::Animation(const std::string& name, float dur,std::vector<BoneKeyframeList> bk)
-			: name(name), duration(dur), boneKeyframeLists(bk)
-		{
-			updateAnimationLength();
-		}
-		Animation::~Animation()
-		{
-		}
-
-		//Retrieve end time from latest time in any bone animations.
-		//ASSUMPTION: This works for Unity, but does it work for Unreal?
-		void Animation::updateAnimationLength()
-		{
-			if(boneKeyframeLists.empty())
-			{
-				return;
-			}
-
-			BoneKeyframeList& boneAnimation = boneKeyframeLists[0];
-			if(!boneAnimation.positionKeyframes.empty())
-			{
-				endTime_s = std::max(endTime_s, boneAnimation.positionKeyframes[boneAnimation.positionKeyframes.size() - 1].time);
-				return;
-			}
-
-			if(!boneAnimation.rotationKeyframes.empty())
-			{
-				endTime_s = std::max(endTime_s, boneAnimation.rotationKeyframes[boneAnimation.rotationKeyframes.size() - 1].time);
-				return;
-			}
-		}
-
-		float Animation::getAnimationLengthSeconds()
-		{
-			return endTime_s;
-		}
-
-		void Animation::seekTime(const std::vector<std::shared_ptr<clientrender::Node>>& boneList, float time,float strength,bool loop) const
-		{
-			for(BoneKeyframeList boneKeyframeList : boneKeyframeLists)
-			{
-				if(boneKeyframeList.boneIndex<boneList.size())
-					boneKeyframeList.seekTime(boneList[boneKeyframeList.boneIndex], time,  strength,loop);
-			}
+			// Create a keyframe, at c.time, with a quaternion value.
+			const ozz::animation::offline::RawAnimation::RotationKey key = {c.time, ozz::math::Quaternion(c.value.x, c.value.y, c.value.z, c.value.w)};
+			track.rotations.push_back(key);
 		}
 	}
+	//  2. Keyframes' are not sorted in a strict ascending order.
+	//  3. Keyframes' are not within [0, duration] range.
+	if (!raw_animation.Validate())
+	// Test for animation validity. These are the errors that could invalidate
+	// an animation:
+	//  1. Animation duration is less than 0.
+	{
+		return;
+	}
+
+	//////////////////////////////////////////////////////////////////////////////
+	// This final section converts the RawAnimation to a runtime Animation.
+	//////////////////////////////////////////////////////////////////////////////
+
+	// Creates a AnimationBuilder instance.
+	ozz::animation::offline::AnimationBuilder builder;
+
+	// Executes the builder on the previously prepared RawAnimation, which returns
+	// a new runtime animation instance.
+	// This operation will fail and return an empty unique_ptr if the RawAnimation
+	// isn't valid.
+	animation = builder(raw_animation);
 }

@@ -230,7 +230,9 @@ else()
 		option(TELEPORT_CLIENT "Build for client?" ON)
 	endif()
 endif()
+
 if(TELEPORT_CLIENT)
+
 	option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
 	option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	if( ${TELEPORT_CLIENT_USE_D3D12})
@@ -447,6 +449,25 @@ endif()
  
 if(TELEPORT_SERVER)
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT TeleportServer)
+endif()
+if(TELEPORT_CLIENT)
+	set(ozz_build_tools ON CACHE BOOL "" FORCE)
+	set(ozz_build_gltf ON CACHE BOOL "" FORCE)
+	set(ozz_build_samples OFF CACHE BOOL "" FORCE)
+	set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
+	set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
+	set(ozz_build_tests OFF CACHE BOOL "" FORCE)
+	set(ozz_build_msvc_rt_dll OFF CACHE BOOL "" FORCE)
+	# For animation playback.
+	FetchContent_Declare(
+	  ozz-animation
+	  GIT_REPOSITORY https://github.com/guillaumeblanc/ozz-animation.git
+		GIT_SHALLOW 1
+	  GIT_TAG        0.16.0
+	  SOURCE_DIR ozz-animation
+	)
+	FetchContent_MakeAvailable(ozz-animation)
+	RecurseApplyFolder(${CMAKE_BINARY_DIR}/ozz-animation thirdparty/ozz-animation)
 endif()
 
 if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
