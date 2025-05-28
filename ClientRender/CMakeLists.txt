@@ -26,6 +26,8 @@ set( src_root
 	VertexBufferLayout.h
 	Animation.cpp
 	Animation.h
+	AnimationDecoder.cpp
+	AnimationDecoder.h
 	API.cpp
 	API.h
 	Camera.cpp
@@ -36,6 +38,8 @@ set( src_root
 	GeometryCache.h
 	GeometryDecoder.cpp
 	GeometryDecoder.h
+	MeshDecoder.cpp
+	MeshDecoder.h
 	Gui.cpp
 	Gui.h
 	InstanceRenderer.cpp
@@ -143,8 +147,9 @@ target_include_directories(ClientRender PUBLIC ${CMAKE_BINARY_DIR})
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/src)
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/eigen)
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/tinygltf)
+target_include_directories(ClientRender PUBLIC "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
-target_link_libraries(ClientRender draco TeleportClient ktx)
+target_link_libraries(ClientRender draco TeleportClient ktx ozz_animation_offline ozz_animation)
 add_dependencies(ClientRender Sfx)
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(ClientRender SimulDirectX12_MT)

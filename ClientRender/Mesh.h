@@ -33,6 +33,8 @@ namespace teleport
 				std::vector<std::shared_ptr<VertexBuffer>> vertexBuffers;
 				std::vector<std::shared_ptr<IndexBuffer>> indexBuffers;
 				std::vector<std::shared_ptr<Material::MaterialCreateInfo>> internalMaterials;
+
+				//! The bind matrices can either be in the mesh, or externally, in a skeleton.
 				std::vector<mat4> inverseBindMatrices;
 
 				bool clockwiseFaces = true;

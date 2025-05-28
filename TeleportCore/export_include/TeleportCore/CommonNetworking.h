@@ -289,11 +289,12 @@ namespace teleport
 		struct ApplyAnimation
 		{
 			int32_t animLayer=0;			
-			int64_t timestampUs = 0;					//< When the animation state should apply, in server-session time, microseconds.
-			avs::uid nodeID = 0;						//< ID of the node the animation is playing on.
-			avs::uid animationID = 0;					//< ID of the animation that is now playing.
-			float animTimeAtTimestamp=0.0f;				//< At the given timestamp, where in the animation should we be?
-			float speedUnitsPerSecond=1.0f;				//< At the timestamp, how fast is the animation playing? For extrapolation.
+			int64_t timestampUs = 0;					//!< When the animation state should apply, in server-session time, microseconds.
+			avs::uid nodeID = 0;						//!< ID of the node the animation is playing on.
+			avs::uid cacheID = 0;						//!< Which cache contains the animation. Only the same cache as the applied object or its parent.
+			avs::uid animationID = 0;					//!< ID of the animation that is now playing.
+			float animTimeAtTimestamp=0.0f;				//!< At the given timestamp, where in the animation should we be?
+			float speedUnitsPerSecond=1.0f;				//!< At the timestamp, how fast is the animation playing? For extrapolation.
 			bool loop=false;
 		} TELEPORT_PACKED;
 

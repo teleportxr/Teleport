@@ -51,12 +51,14 @@ namespace avs
 	struct Skeleton
 	{
 		std::string name;
+		// This will also be present in boneID's, but we must single it out.
+		avs::uid rootBoneId;
 		std::vector<uid> boneIDs;
 		Transform skeletonTransform;
 		// New method, bones are built into the skeleton:
 		std::vector<Transform> boneTransforms;
 		std::vector<int16_t> parentIndices;
-		std::vector<std::string> boneNames;
+		std::vector<mat4> inverseBindMatrices;
 
 		static Skeleton convertToStandard(const Skeleton& skeleton, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
@@ -66,7 +68,19 @@ namespace avs
 
 			convertedSkeleton.skeletonTransform = skeleton.skeletonTransform;
 			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkeleton.skeletonTransform);
-
+			for (size_t i = 0; i < skeleton.boneTransforms.size(); ++i)
+			{
+				convertedSkeleton.boneTransforms.push_back(skeleton.boneTransforms[i]);
+				avs::ConvertTransform(sourceStandard, targetStandard, convertedSkeleton.boneTransforms[i]);
+			}
+			for (size_t i = 0; i < skeleton.inverseBindMatrices.size(); ++i)
+			{
+				convertedSkeleton.inverseBindMatrices.push_back(skeleton.inverseBindMatrices[i]);
+				mat4 &m = convertedSkeleton.inverseBindMatrices[i];
+				Transform tr;
+				m=mat4::inverse(m);
+				avs::ConvertTransformMatrix(sourceStandard, targetStandard, m);
+			}
 			return convertedSkeleton;
 		}
 	};
@@ -493,8 +507,11 @@ namespace avs
 		const vec2* m_UV0s = nullptr;
 		const vec2* m_UV1s = nullptr;
 		const vec4* m_Colors = nullptr;
+		avs::ComponentType colourType=avs::ComponentType::FLOAT;
 		const vec4* m_Joints = nullptr;
+		avs::ComponentType jointType=avs::ComponentType::FLOAT;
 		const vec4* m_Weights = nullptr;
+		avs::ComponentType weightType=avs::ComponentType::FLOAT;
 		const uint8_t* m_TangentNormals = nullptr;
 
 		uint64_t ib_id = 0;
@@ -520,6 +537,7 @@ namespace avs
  */
 	class AVSTREAM_API GeometryTargetBackendInterface : public UseInternalAllocator
 	{
+
 	public:
 		virtual ~GeometryTargetBackendInterface() = default;
 		virtual Result CreateMesh(MeshCreate& meshCreate) = 0;
@@ -528,7 +546,7 @@ namespace avs
 		virtual void CreateMaterial(avs::uid server_uid,uid id, const Material& material) = 0;
 		virtual void CreateNode(avs::uid server_uid,uid id,const Node& node) = 0;
 		virtual void CreateSkeleton(avs::uid server_uid,avs::uid id, const avs::Skeleton& skeleton) = 0;
-		virtual void CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
+		virtual avs::Result CreateAnimation(avs::uid server_uid,avs::uid id, teleport::core::Animation& animation) = 0;
 
 		virtual void DeleteNode(avs::uid server_uid, avs::uid id) = 0;
 	};

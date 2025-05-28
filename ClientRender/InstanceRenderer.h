@@ -121,6 +121,8 @@ namespace teleport
 			platform::crossplatform::SamplerState *wrapSamplerState	   = nullptr;
 			platform::crossplatform::SamplerState *clampSamplerState   = nullptr;
 			platform::crossplatform::SamplerState *samplerStateNearest = nullptr;
+
+			std::chrono::microseconds timestampUs;
 		};
 		//! API objects that are per-server.
 		//! There exists one of these for each server, plus one for the null server (local state).
@@ -175,6 +177,7 @@ namespace teleport
 			{
 				return instanceRenderState;
 			}
+			// For each Skeleton in this instance, we store a constant buffer containing its current bone matrices.
 			struct SkeletonRender
 			{
 				platform::crossplatform::ConstantBuffer<BoneMatrices> boneMatrices;
@@ -195,7 +198,7 @@ namespace teleport
 				bool setBoneConstantBuffer;
 				bool clockwise;
 				uint16_t element;
-				std::weak_ptr<clientrender::SkeletonInstance> skeletonInstance;
+				std::weak_ptr<clientrender::Skeleton> skeleton;
 			};
 			struct MeshInstanceRender
 			{

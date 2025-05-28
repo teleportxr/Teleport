@@ -7,7 +7,8 @@ namespace avs
 	{
 		UNKNOWNMODE,
 		OPAQUE_MATERIAL,
-		TRANSPARENT_MATERIAL
+		TRANSPARENT_MATERIAL,
+		MASKED_MATERIAL
 	};
 	enum class SamplerFilter : uint32_t
 	{

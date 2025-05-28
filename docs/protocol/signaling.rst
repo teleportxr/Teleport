@@ -32,7 +32,7 @@ A **Client** that wants to join (the **Connecting Client**) periodically sends t
   .. code-block:: JSON
 
 	{
-		"teleport-signal-type":"request",
+		"teleport-signal-type":"connect",
 		"content":
 		{
 			"clientID":0,
@@ -40,13 +40,13 @@ A **Client** that wants to join (the **Connecting Client**) periodically sends t
 		},
 	}
 
-All signals have a member ``teleport-signal-type`` indicating their type. In the ``request`` message, ``clientID`` is zero if the client has not yet connected to this server session, and may be a unique nonzero id if it is attempting to reconnect.
-Having received a ``request``, the server can respond with a **Request Response**, of the form:
+All signals have a member ``teleport-signal-type`` indicating their type. In the ``connect`` message, ``clientID`` is zero if the client has not yet connected to this server session, and may be a unique nonzero id if it is attempting to reconnect.
+Having received a ``connect``, the server can respond with a **Request Response**, of the form:
 
   .. code-block:: JSON
 	
 	{
-		"teleport-signal-type":"request-response",
+		"teleport-signal-type":"connect-response",
 		"content":
 		{
 			"clientID": 397357935703467,
