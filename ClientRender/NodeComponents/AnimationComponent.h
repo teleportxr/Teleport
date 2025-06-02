@@ -28,6 +28,8 @@ namespace teleport
 		public:
 			AnimationComponent(Node &node);
 			virtual ~AnimationComponent();
+
+			void InitBindMatrices(const Animation &anim);
 			
 			//! Shortcut, play this animation on the given layer.
 			void PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer = 0);
@@ -46,10 +48,10 @@ namespace teleport
 			void update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs);
 
 		private:
-
 			// TODO: The following may need to be extracted into a per-instance structure, as the same
 			// component could be used in multiple instances of the same SubScene.
 			AnimationInstance *instance=nullptr;
+			std::vector<mat4> inverseBindMatrices;
 		};
 	}
 

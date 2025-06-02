@@ -122,7 +122,7 @@ static std::vector<std::string> name_order={
     "rightToes"};
 
 // Recursively import a node's children
-bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::animation::offline::RawSkeleton::Joint *_joint)
+bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::animation::offline::RawSkeleton::Joint *_joint, std::map<std::string, teleport::core::PoseScale> &restPoses)
 {
 	// Names joint.
 	_joint->name = _node.name.c_str();
@@ -132,9 +132,11 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 	{
 		return false;
 	}
-
-	// Allocates all children at once.
 	_joint->children.resize(_node.children.size());
+	auto &restPose		 = restPoses[_node.name];
+	restPose.position	 = {_joint->transform.translation.x, _joint->transform.translation.y, _joint->transform.translation.z};
+	restPose.orientation = {_joint->transform.rotation.x, _joint->transform.rotation.y, _joint->transform.rotation.z, _joint->transform.rotation.w};
+	restPose.scale		 = {_joint->transform.scale.x, _joint->transform.scale.y, _joint->transform.scale.z};
 
 	// Fills each child information.
 	auto sorted_children = _node.children;
@@ -151,7 +153,7 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 		const tinygltf::Node						&child_node	 = model.nodes[sorted_children[i]];
 		ozz::animation::offline::RawSkeleton::Joint &child_joint = _joint->children[i];
 
-		if (!ImportNode(child_node, model, &child_joint))
+		if (!ImportNode(child_node, model, &child_joint, restPoses))
 		{
 			return false;
 		}
@@ -160,7 +162,7 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 	return true;
 }
 
-bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const tinygltf::Model &model)
+bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const tinygltf::Model &model,std::map<std::string, teleport::core::PoseScale> &restPoses)
 {
 	if (model.scenes.empty())
 	{
@@ -222,7 +224,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 	{
 		const tinygltf::Node						&root_node	= model.nodes[roots[i]];
 		ozz::animation::offline::RawSkeleton::Joint &root_joint = raw_skeleton.roots[i];
-		if (!ImportNode(root_node, model, &root_joint))
+		if (!ImportNode(root_node, model, &root_joint, restPoses))
 		{
 			return false;
 		}
@@ -377,14 +379,18 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		// map where we record the associated channels for each joint
 		ozz::cstring_map<std::vector<const tinygltf::AnimationChannel *>> channels_per_joint;
 
+		std::cout << "Animation: " << gltf_animation.name << std::endl;
 		for (const tinygltf::AnimationChannel &channel : gltf_animation.channels)
 		{
 			// Reject if no node is targeted.
-			if (channel.target_node == -1)
+			if (channel.target_node < 0 || channel.target_node >= model.nodes.size())
 			{
 				continue;
 			}
 
+			// What node?
+			const auto &node=model.nodes[channel.target_node];
+			std::cout << "    " << node.name << std::endl;
 			// Reject if path isn't about skeleton animation.
 			bool valid_target = false;
 			for (const char *path : {"translation", "rotation", "scale"})
@@ -410,7 +416,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 			auto &track	   = _animation->tracks[i];
 			std::string j=joint_names[i];
 			joints+=j+" ";
-			if(j=="leftLowerArm")
+			//if(j=="leftLowerArm")
 			for (auto &channel : channels)
 			{
 				auto &sampler = gltf_animation.samplers[channel->sampler];
@@ -465,7 +471,7 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size)
 	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
 	json			config;
 	ozz::animation::offline::RawSkeleton raw_skeleton;
-	if (!ImportSkeleton(raw_skeleton, model))
+	if (!ImportSkeleton(raw_skeleton, model, restPoses))
 		return false;
 	ozz::animation::offline::SkeletonBuilder skeletonBuilder;
 	unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(raw_skeleton);

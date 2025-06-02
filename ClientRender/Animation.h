@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "TeleportCore/InputTypes.h"
 #include "TeleportCore/Animation.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "ozz/base/memory/unique_ptr.h"
@@ -14,7 +15,7 @@ namespace teleport
 	namespace clientrender
 	{
 		class Node;
-
+		//! A minimal struct for storing rest poses in joints.
 		//! A list of keyframes, i.e. a single track for an animation. Defines the positions and rotations for one bone in a skeleton,
 		//! across the length of a single animation.
 		class BoneKeyframeList
@@ -59,8 +60,14 @@ namespace teleport
 			{
 				return *animation;
 			}
+			const std::map<std::string, teleport::core::PoseScale> &GetRestPoses() const
+			{
+				return restPoses;
+			}
 		private:
 			ozz::unique_ptr<ozz::animation::Animation> animation;
+			//! Mapping from node names to the initial poses.
+			std::map<std::string, teleport::core::PoseScale> restPoses;
 			void ToOzz();
 			float endTime_s = 0.0f; // Seconds the animation lasts for.
 		};

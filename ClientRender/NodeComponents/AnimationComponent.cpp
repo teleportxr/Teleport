@@ -201,6 +201,56 @@ void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uin
 	applyAnimation.timestampUs				 = timestampNowUs.count();
 	setAnimationState(timestampNowUs, applyAnimation);
 }
+std::map<std::string,teleport::core::PoseScale>::const_iterator FindMatch(const std::map<std::string,teleport::core::PoseScale>& poses,std::string name)
+{
+	std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+	for(std::map<std::string,teleport::core::PoseScale>::const_iterator p=poses.begin();p!=poses.end();p++)
+	{
+		std::string f=p->first;
+		std::transform(f.begin(), f.end(), f.begin(), ::tolower);
+		if (name.find(f) < name.length())
+		{
+			return p;
+		}
+	}
+	return poses.end();
+}
+
+void AnimationComponent::InitBindMatrices( const Animation &anim) 
+{
+	const std::vector<mat4> &meshInverseBindMatrices=owner.GetSkeleton()->GetInverseBindMatrices();
+	const auto &skeletonsBones=owner.GetSkeleton()->GetExternalBones();
+	const auto &animsRestPoses=anim.GetRestPoses();
+	// We modify the inverse bind to match the animation itself.
+	int idx=0;
+	inverseBindMatrices.resize(meshInverseBindMatrices.size());
+	if(skeletonsBones.size()!=meshInverseBindMatrices.size())
+		return;
+	for(int i=0;i<meshInverseBindMatrices.size();i++)
+	{
+		// original joint matrix from the skeleton's bone:
+		auto b = skeletonsBones[i];
+		mat4 joint_matrix_original = b->GetLocalTransform().GetTransformMatrix();
+		// Animation's version of the matrix for this joint:
+		std::map<std::string,teleport::core::PoseScale>::const_iterator anim_joint_pose = animsRestPoses.find(b->name);
+
+		if(anim_joint_pose==animsRestPoses.end())
+		{
+			anim_joint_pose=FindMatch(animsRestPoses, b->name);
+			if(anim_joint_pose==animsRestPoses.end())
+				continue;
+		}
+		Transform anim_transform;
+		anim_transform.m_Translation=anim_joint_pose->second.position;
+		anim_transform.m_Rotation=anim_joint_pose->second.orientation;
+		anim_transform.m_Scale=anim_joint_pose->second.scale;
+		anim_transform.UpdateModelMatrix();
+		mat4 joint_matrix = anim_transform.GetTransformMatrix();
+		mat4 inv_j = mat4::inverse(joint_matrix);
+		mat4 &inverse_bind_matrix=inverseBindMatrices[i];
+		inverse_bind_matrix=(inv_j * joint_matrix_original) * meshInverseBindMatrices[i];
+	}
+}
 
 // CRITICAL FIX: Update GetBoneMatrices to use Ozz results properly
 void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
@@ -249,11 +299,12 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector
         const ozz::math::Float4x4& ozzMatrix = instance->models[i];
         
         // CRITICAL: Ozz matrices are column-major, ensure correct conversion
-        mat4 jointMatrix= *((mat4*)&ozzMatrix);
-        jointMatrix.transpose();
+        mat4 joint_matrix= *((mat4*)&ozzMatrix);
+        joint_matrix.transpose();
         // Apply inverse bind matrix to get final bone matrix
         const mat4& inverseBindMatrix = inverseBindMatrices[i];
-        m[i] = jointMatrix * inverseBindMatrix;
+        m[i] = joint_matrix * inverseBindMatrix;
+
     }
 }
 
@@ -269,6 +320,10 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 	if (!instance)
 		instance = new AnimationInstance(owner.GetSkeleton());
 	instance->SetAnimationState(timestampUs, applyAnimation);
+	auto cache	= GeometryCache::GetGeometryCache(applyAnimation.cacheID);
+	auto anim		= cache->mAnimationManager.Get(applyAnimation.animationID);
+	if(anim)
+		InitBindMatrices( *anim) ;
 }
 
 void AnimationComponent::update(int64_t timestampUs)

@@ -186,7 +186,7 @@ void Skeleton::GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCache,cons
 		{
 			TELEPORT_ASSERT(i<jointIndices.size());
 			TELEPORT_ASSERT(jointIndices[i] < bones.size());
-			auto node=bones[jointIndices[i]];
+			const auto &node = bones[jointIndices[i]];
 			if(!node)
 				return;
 			const mat4 &joint_matrix = node->GetGlobalTransform().GetTransformMatrix();
