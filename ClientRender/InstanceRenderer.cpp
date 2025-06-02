@@ -1206,9 +1206,12 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			// For each bone matrix,
 			//				pos_local= (bone_matrix_j) * pos_original_local
 			auto animationComponent = node->GetComponent<AnimationComponent>();
-			if(animationComponent&&skeleton->GetExternalBoneIds().size()==22)
+			static size_t match_joint_count=22;
+			if(animationComponent&&skeleton->GetExternalBoneIds().size()==match_joint_count)
 			{
 				animationComponent->update(renderState.timestampUs.count());
+				boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
+				skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
 				animationComponent->GetBoneMatrices(boneMatrices, skeleton->GetInverseBindMatrices());
 				
 				std::vector<mat4> jMatrices;

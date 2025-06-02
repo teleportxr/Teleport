@@ -21,6 +21,12 @@ namespace teleport
 			vec4 orientation = { 0, 0, 0, 1 };
 			vec3 position = { 0, 0, 0 };
 		} TELEPORT_PACKED;
+		struct PoseScale
+		{
+			vec4 orientation = { 0, 0, 0, 1 };
+			vec3 position = { 0, 0, 0 };
+			vec3 scale = { 1, 1, 1 };
+		} TELEPORT_PACKED;
 		struct PoseDynamic
 		{
 			Pose pose;

@@ -79,12 +79,11 @@ void Animation::ToOzz()
 			track.rotations.push_back(key);
 		}
 	}
-	//  2. Keyframes' are not sorted in a strict ascending order.
-	//  3. Keyframes' are not within [0, duration] range.
-	if (!raw_animation.Validate())
-	// Test for animation validity. These are the errors that could invalidate
-	// an animation:
+	// Test for animation validity. These are the errors that could invalidate an animation:
 	//  1. Animation duration is less than 0.
+	//  2. Keyframes are not sorted in a strict ascending order.
+	//  3. Keyframes are not within [0, duration] range.
+	if (!raw_animation.Validate())
 	{
 		return;
 	}
