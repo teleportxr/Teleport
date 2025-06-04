@@ -221,7 +221,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *
 	localGeometryCache->setCacheFolder("assets/localGeometryCache");
 
 	InitLocalGeometry();
-	client::identity.Init();
+//	client::identity.Init();
 }
 
 void Renderer::ConsoleCommand(const std::string &str) { console.push(str); }
@@ -413,7 +413,7 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::OpenGL);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/T-Pose.vrma"
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/T-Pose.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::OpenGL);
 	
