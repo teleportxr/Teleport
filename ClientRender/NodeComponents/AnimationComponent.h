@@ -36,7 +36,7 @@ namespace teleport
 	
 			void GetJointMatrices(std::vector<mat4> &m) const;
 			//! Fill in the vector of matrices with the current animation state.
-			void GetBoneMatrices(std::vector<mat4> &m,const std::vector<mat4> &inverseBindMatrices) const;
+			void GetBoneMatrices(std::vector<mat4> &m) const;
 
 			// Update the animation state.
 			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate);

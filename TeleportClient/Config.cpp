@@ -180,12 +180,12 @@ void Config::SaveOptions()
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	{
 		string str;
-		str+=fmt::format("LobbyView={0}",magic_enum::enum_name(options.lobbyView));
-		str+=fmt::format("\nStartupConnectOption={0}",magic_enum::enum_name(options.startupConnectOption));
+		str += fmt::format("LobbyView={0}", magic_enum::enum_name(options.lobbyView));
+		str += fmt::format("\nStartupConnectOption={0}", magic_enum::enum_name(options.startupConnectOption));
 		str += fmt::format("\nSimulateVR={0}", options.simulateVR);
 		str += fmt::format("\nShowGeometryOffline={0}", options.showGeometryOffline);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
-		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);
+		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);
 		LoadOptions();
 	}
 }

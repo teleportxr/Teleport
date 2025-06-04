@@ -318,6 +318,7 @@ vertexOutput VSAnimMV(vertexInputAnim IN, uint viewID)
 	mat4 world = IN.model;
 	vec4 opos = vec4(IN.position.xyz, 1.0);
 	// boneTransform transforms between two positions in object-local space.
+	// In the rest pose, boneTransform is identity.
 	vec4 bpos = mul(opos, boneTransform);
 	//bpos=opos;
 	vec4 wpos = mul(bpos, world);

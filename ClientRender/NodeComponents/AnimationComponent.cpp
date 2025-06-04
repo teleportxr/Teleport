@@ -17,7 +17,97 @@
 #include "ozz/animation/runtime/skeleton.h"
 #include <ozz/animation/runtime/track.h>
 #include <ozz/base/maths/soa_transform.h>
+#include <regex>
+#pragma optimize("",off)
+std::string GetMappedBoneName(const std::string &bName)
+{
+	static std::map<std::string,std::string> mapping;
+	if(!mapping.size())
+	{
+		// Core bones - with numbered prefix
+		mapping["hips"]			 = "hips";
+		mapping["spine"]		 = "spine";
+		mapping["spine1"]		 = "chest";
+		mapping["spine2"]		 = "upperchest";
+		mapping["neck"]			 = "neck";
+		mapping["head"]			 = "head";
 
+		// arms - with numbered prefix
+		mapping["leftshoulder"]	 = "leftshoulder";
+		mapping["leftarm"]		 = "leftupperarm";
+		mapping["leftforearm"]	 = "leftlowerarm";
+		mapping["lefthand"]		 = "lefthand";
+		mapping["rightshoulder"] = "rightshoulder";
+		mapping["rightarm"]		 = "rightupperarm";
+		mapping["rightforearm"]	 = "rightlowerarm";
+		mapping["righthand"]	 = "righthand";
+
+		// legs - with numbered prefix
+		mapping["leftupleg"]	 = "leftupperleg";
+		mapping["leftleg"]		 = "leftlowerleg";
+		mapping["leftfoot"]		 = "leftfoot";
+		mapping["lefttoebase"]	 = "lefttoes";
+		mapping["rightupleg"]	 = "rightupperleg";
+		mapping["rightleg"]		 = "rightlowerleg";
+		mapping["rightfoot"]	 = "rightfoot";
+		mapping["righttoebase"]	 = "righttoes";
+
+		// legacy mappings (without number)
+		mapping["hips"]			 = "hips";
+		mapping["spine"]		 = "spine";
+		mapping["spine1"]		 = "chest";
+		mapping["spine2"]		 = "upperchest";
+		mapping["neck"]			 = "neck";
+		mapping["head"]			 = "head";
+		mapping["leftshoulder"]	 = "leftshoulder";
+		mapping["leftarm"]		 = "leftupperarm";
+		mapping["leftforearm"]	 = "leftlowerarm";
+		mapping["lefthand"]		 = "lefthand";
+		mapping["rightshoulder"] = "rightshoulder";
+		mapping["rightarm"]		 = "rightupperarm";
+		mapping["rightforearm"]	 = "rightlowerarm";
+		mapping["righthand"]	 = "righthand";
+		mapping["leftupleg"]	 = "leftupperleg";
+		mapping["leftleg"]		 = "leftlowerleg";
+		mapping["leftfoot"]		 = "leftfoot";
+		mapping["lefttoebase"]	 = "lefttoes";
+		mapping["rightupleg"]	 = "rightupperleg";
+		mapping["rightleg"]		 = "rightlowerleg";
+		mapping["rightfoot"]	 = "rightfoot";
+		mapping["righttoebase"]	 = "righttoes";
+
+		// generic mappings (no prefix)
+		mapping["hips"]			 = "hips";
+		mapping["spine"]		 = "spine";
+		mapping["spine1"]		 = "chest";
+		mapping["spine2"]		 = "upperchest";
+		mapping["neck"]			 = "neck";
+		mapping["head"]			 = "head";
+		mapping["leftshoulder"]	 = "leftshoulder";
+		mapping["leftarm"]		 = "leftupperarm";
+		mapping["leftforearm"]	 = "leftlowerarm";
+		mapping["lefthand"]		 = "lefthand";
+		mapping["rightshoulder"] = "rightshoulder";
+		mapping["rightarm"]		 = "rightupperarm";
+		mapping["rightforearm"]	 = "rightlowerarm";
+		mapping["righthand"]	 = "righthand";
+		mapping["leftupleg"]	 = "leftupperleg";
+		mapping["leftleg"]		 = "leftlowerleg";
+		mapping["leftfoot"]		 = "leftfoot";
+		mapping["lefttoebase"]	 = "lefttoes";
+		mapping["rightupleg"]	 = "rightupperleg";
+		mapping["rightleg"]		 = "rightlowerleg";
+		mapping["rightfoot"]	 = "rightfoot";
+		mapping["righttoebase"]	 = "righttoes";	
+	}
+	std::string n=bName;
+	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+	n=std::regex_replace(n,std::regex::basic_regex("avatar_"),"");
+	auto m=mapping.find(n);
+	if(m==mapping.end())
+		return n;
+	return m->second;
+};
 using namespace teleport::clientrender;
 
 using namespace ozz;
@@ -97,7 +187,49 @@ namespace teleport::clientrender
 			}
 			animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);
 		}
+		
+		bool ApplyRestPose()
+		{
+			if (!skeleton || !numAnimationLayerStates)
+				return false;
 
+			const int num_soa_joints = skeleton->num_soa_joints();
+			const int num_joints	 = skeleton->num_joints();
+
+			// Ensure buffers are properly sized
+			locals.resize(num_soa_joints);
+			models.resize(num_joints);
+
+			// Ensure sampler buffers are sized correctly
+			auto &layerState  = animationLayerStates[0];
+			auto &sampler	  = layerState.sampler;
+			sampler.locals.resize(num_soa_joints);
+			sampler.joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
+
+			auto ident=ozz::math::Transform::identity();
+			for(size_t i=0;i<sampler.locals.size();i++)
+			{
+				sampler.locals[i].rotation=ozz::math::SoaQuaternion::Load({0,0,0,0}
+					,{0,0,0,0},{0,0,0,0},{1.0f,1.0f,1.0f,1.0f});
+				sampler.locals[i].translation=ozz::math::SoaFloat3::Load({0,0,0,0}
+					,{0,0,0,0},{0,0,0,0});
+				sampler.locals[i].scale=ozz::math::SoaFloat3::Load({1.f,1.f,1.f,1.f}
+					,{1.f,1.f,1.f,1.f},{1.f,1.f,1.f,1.f});
+			}
+			const mat4 *m=(const mat4*)models.data();
+			//  Convert from local-space to model-space transforms
+			ozz::animation::LocalToModelJob ltmJob;
+			ltmJob.skeleton = skeleton;
+			ltmJob.input	= make_span(sampler.locals); // Use sampled local transforms
+			ltmJob.output	= make_span(models);
+
+			if (!ltmJob.Run())
+			{
+				return false;
+			}
+
+			return true;
+		}
 	
 // In AnimationComponent.cpp - Fixed AnimationInstance::Update method
 
@@ -216,6 +348,39 @@ std::map<std::string,teleport::core::PoseScale>::const_iterator FindMatch(const 
 	return poses.end();
 }
 
+float det(const mat4 &M)
+{
+mat4 inv;
+			inv.m[0] = M.m[5]  * M.m[10] * M.m[15] - 
+					 M.m[5]  * M.m[11] * M.m[14] - 
+					 M.m[9]  * M.m[6]  * M.m[15] + 
+					 M.m[9]  * M.m[7]  * M.m[14] +
+					 M.m[13] * M.m[6]  * M.m[11] - 
+					 M.m[13] * M.m[7]  * M.m[10];
+
+			inv.m[4] = -M.m[4]  * M.m[10] * M.m[15] + 
+					  M.m[4]  * M.m[11] * M.m[14] + 
+					  M.m[8]  * M.m[6]  * M.m[15] - 
+					  M.m[8]  * M.m[7]  * M.m[14] - 
+					  M.m[12] * M.m[6]  * M.m[11] + 
+					  M.m[12] * M.m[7]  * M.m[10];
+
+			inv.m[8] = M.m[4]  * M.m[9] * M.m[15] - 
+					 M.m[4]  * M.m[11] * M.m[13] - 
+					 M.m[8]  * M.m[5] * M.m[15] + 
+					 M.m[8]  * M.m[7] * M.m[13] + 
+					 M.m[12] * M.m[5] * M.m[11] - 
+					 M.m[12] * M.m[7] * M.m[9];
+
+			inv.m[12] = -M.m[4]  * M.m[9] * M.m[14] + 
+					   M.m[4]  * M.m[10] * M.m[13] +
+					   M.m[8]  * M.m[5] * M.m[14] - 
+					   M.m[8]  * M.m[6] * M.m[13] - 
+					   M.m[12] * M.m[5] * M.m[10] + 
+					   M.m[12] * M.m[6] * M.m[9];
+	return M.m[0] * inv.m[0] + M.m[1] * inv.m[4] + M.m[2] * inv.m[8] + M.m[3] * inv.m[12];
+}
+
 void AnimationComponent::InitBindMatrices( const Animation &anim) 
 {
 	const std::vector<mat4> &meshInverseBindMatrices=owner.GetSkeleton()->GetInverseBindMatrices();
@@ -226,17 +391,19 @@ void AnimationComponent::InitBindMatrices( const Animation &anim)
 	inverseBindMatrices.resize(meshInverseBindMatrices.size());
 	if(skeletonsBones.size()!=meshInverseBindMatrices.size())
 		return;
+	instance->ApplyRestPose();
 	for(int i=0;i<meshInverseBindMatrices.size();i++)
 	{
 		// original joint matrix from the skeleton's bone:
 		auto b = skeletonsBones[i];
+		std::string boneName=GetMappedBoneName(b->name);
 		mat4 joint_matrix_original = b->GetLocalTransform().GetTransformMatrix();
 		// Animation's version of the matrix for this joint:
 		std::map<std::string,teleport::core::PoseScale>::const_iterator anim_joint_pose = animsRestPoses.find(b->name);
 
 		if(anim_joint_pose==animsRestPoses.end())
 		{
-			anim_joint_pose=FindMatch(animsRestPoses, b->name);
+			anim_joint_pose=FindMatch(animsRestPoses, boneName);
 			if(anim_joint_pose==animsRestPoses.end())
 				continue;
 		}
@@ -246,9 +413,24 @@ void AnimationComponent::InitBindMatrices( const Animation &anim)
 		anim_transform.m_Scale=anim_joint_pose->second.scale;
 		anim_transform.UpdateModelMatrix();
 		mat4 joint_matrix = anim_transform.GetTransformMatrix();
-		mat4 inv_j = mat4::inverse(joint_matrix);
+		
+        // CRITICAL: Ozz matrices are column-major, ensure correct conversion
+        const ozz::math::Float4x4& ozzMatrix = instance->models[i];
+        mat4 joint_matrix2= *((mat4*)&ozzMatrix);
+        joint_matrix2.transpose();
+
+		mat4 inv_j = mat4::inverse(joint_matrix2);
 		mat4 &inverse_bind_matrix=inverseBindMatrices[i];
-		inverse_bind_matrix=(inv_j * joint_matrix_original) * meshInverseBindMatrices[i];
+		inverse_bind_matrix=inv_j ;//* joint_matrix_original) * meshInverseBindMatrices[i];
+		if(det(inverse_bind_matrix)<0.001f)
+		{
+			TELEPORT_WARN("Bad matrix");
+		}
+        mat4 finalMatrix = joint_matrix2 * inverse_bind_matrix;
+		if(det(finalMatrix)>0)
+		{
+			TELEPORT_WARN(" matrix");
+		}
 	}
 }
 
@@ -271,7 +453,7 @@ void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
     }
 }
 
-void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector<mat4> &inverseBindMatrices) const
+void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m) const
 {
     if (!instance || instance->models.empty())
     {
@@ -292,7 +474,7 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector
     });
     
     m.resize(numBones);
-    
+	static int force_ident=7;    
     for (size_t i = 0; i < numBones; i++)
     {
         // Convert Ozz matrix to your matrix format
@@ -304,7 +486,8 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector
         // Apply inverse bind matrix to get final bone matrix
         const mat4& inverseBindMatrix = inverseBindMatrices[i];
         m[i] = joint_matrix * inverseBindMatrix;
-
+		if(force_ident==i)
+			m[i]=mat4::identity();
     }
 }
 
@@ -337,6 +520,7 @@ void AnimationComponent::update(int64_t timestampUs)
 	static float dt = 0.00001f;
 	instance->Update(dt, timestampUs);
 }
+
 void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs)
 {
 #if 0
