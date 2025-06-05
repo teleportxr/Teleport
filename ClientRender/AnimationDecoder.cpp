@@ -161,7 +161,7 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 	return true;
 }
 
-bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const tinygltf::Model &model,std::map<std::string, teleport::core::PoseScale> &restPoses)
+bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, ozz::unique_ptr<ozz::animation::Skeleton> &sk, const tinygltf::Model &model,std::map<std::string, teleport::core::PoseScale> &restPoses)
 {
 	if (model.scenes.empty())
 	{
@@ -246,8 +246,8 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 	// Builds runtime skeleton.
 	TELEPORT_LOG("Builds runtime skeleton.");
 	ozz::animation::offline::SkeletonBuilder builder;
-	ozz_skeleton = builder(raw_skeleton);
-	if (!skeleton)
+	sk = builder(raw_skeleton);
+	if (!sk)
 	{
 		TELEPORT_LOG("Failed to build runtime skeleton.");
 		return false;
@@ -470,13 +470,13 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size)
 	std::string	warn;
 	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
 	json config;
-	if (!ImportSkeleton(*raw_skeleton, model, restPoses))
+	if (!ImportSkeleton(*raw_skeleton, ozz_skeleton, model, restPoses))
 		return false;
 	ozz::animation::offline::SkeletonBuilder skeletonBuilder;
 	ozz::unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(*raw_skeleton);
 	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation)))
 		return false;
-	ozz::animation::offline::AnimationBuilder animationBuilder;
-	animation = animationBuilder(*raw_animation);
+	//ozz::animation::offline::AnimationBuilder animationBuilder;
+	//ozz::animation::Animation ozz_animation = animationBuilder(*(raw_animation.get()));
 	return true;
 }

@@ -128,9 +128,10 @@ namespace teleport::clientrender
 		// Buffer of model space matrices. These are computed by the local-to-model
 		// job after the blending stage.
 		ozz::vector<ozz::math::Float4x4> models;
-
+		avs::uid id=0;
 		AnimationInstance(std::shared_ptr<Skeleton> sk) : skeleton(sk->GetOzzSkeleton())
 		{
+			id=sk->id;
 			if(sk)
 				Init();
 		}
@@ -180,7 +181,7 @@ namespace teleport::clientrender
 			if (cache)
 			{
 				auto anim	 = cache->mAnimationManager.Get(applyAnimation.animationID);
-				if(anim->GetOzzAnimation().num_tracks()!=skeleton->num_joints())
+				if(anim->GetOzzAnimation(id).num_tracks()!=skeleton->num_joints())
 					return;
 				st.animation = anim;
 			}
@@ -253,7 +254,7 @@ namespace teleport::clientrender
 			if (!state.animationState.animation)
 				return false;
 
-			auto &animation		 = state.animationState.animation->GetOzzAnimation();
+			auto &animation		 = state.animationState.animation->GetOzzAnimation(id);
 
 			// CRITICAL FIX: Calculate proper animation time
 			float animationTimeS = state.animationState.animationTimeS;
@@ -380,7 +381,7 @@ mat4 inv;
 	return M.m[0] * inv.m[0] + M.m[1] * inv.m[4] + M.m[2] * inv.m[8] + M.m[3] * inv.m[12];
 }
 
-void AnimationComponent::Retarget( const Animation &anim) 
+void AnimationComponent::Retarget(  Animation &anim) 
 {
 	const std::vector<mat4> &meshInverseBindMatrices=owner.GetSkeleton()->GetInverseBindMatrices();
 	const auto &skeletonsBones=owner.GetSkeleton()->GetExternalBones();
@@ -421,7 +422,7 @@ void AnimationComponent::Retarget( const Animation &anim)
 
 		mat4 inv_j = mat4::inverse(joint_matrix2);
 		mat4 &inverse_bind_matrix=inverseBindMatrices[i];
-		inverse_bind_matrix=inv_j ;//* joint_matrix_original) * meshInverseBindMatrices[i];
+		inverse_bind_matrix=meshInverseBindMatrices[i];//* joint_matrix_original) * meshInverseBindMatrices[i];
 		if(det(inverse_bind_matrix)<0.001f)
 		{
 			TELEPORT_WARN("Bad matrix");
@@ -429,7 +430,7 @@ void AnimationComponent::Retarget( const Animation &anim)
         mat4 finalMatrix = joint_matrix2 * inverse_bind_matrix;
 		if(det(finalMatrix)>0)
 		{
-			TELEPORT_WARN(" matrix");
+			TELEPORT_WARN("Matrix");
 		}
 	}
 }
@@ -502,11 +503,11 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 		return;
 	if (!instance)
 		instance = new AnimationInstance(owner.GetSkeleton());
-	instance->SetAnimationState(timestampUs, applyAnimation);
 	auto cache	= GeometryCache::GetGeometryCache(applyAnimation.cacheID);
 	auto anim		= cache->mAnimationManager.Get(applyAnimation.animationID);
 	if(anim)
 		Retarget(*anim) ;
+	instance->SetAnimationState(timestampUs, applyAnimation);
 }
 
 void AnimationComponent::update(int64_t timestampUs)

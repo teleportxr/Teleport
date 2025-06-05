@@ -6,6 +6,7 @@
 #include "Resource.h"
 #include "ozz/base/memory/unique_ptr.h"
 #include "ozz/animation/runtime/skeleton.h"
+#include "ozz/animation/offline/raw_skeleton.h"
 
 namespace teleport
 {
@@ -75,13 +76,18 @@ namespace teleport
 			{
 				return skeleton.get();
 			}
+			ozz::animation::offline::RawSkeleton *GetRawSkeleton()
+			{
+				return raw_skeleton.get();
+			}
 		protected:
 			avs::uid rootId=0;
 			std::vector<avs::uid> boneIds;
 			std::weak_ptr<clientrender::Node> root;
 			std::vector<std::shared_ptr<clientrender::Node>> bones;
 			std::vector<mat4> inverseBindMatrices;
-			ozz::unique_ptr<ozz::animation::Skeleton> skeleton;
+			ozz::unique_ptr<ozz::animation::Skeleton> skeleton;;
+			ozz::unique_ptr<ozz::animation::offline::RawSkeleton> raw_skeleton;
 			// TODO: do we need this?
 			Transform skeletonTransform; // Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.
 		};

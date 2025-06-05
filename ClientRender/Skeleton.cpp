@@ -121,17 +121,16 @@ void Skeleton::InitBones(GeometryCache &g)
 	//////////////////////////////////////////////////////////////////////////////
 
 	// Creates a RawSkeleton.
-	ozz::animation::offline::RawSkeleton raw_skeleton;
-
+	raw_skeleton=ozz::make_unique<ozz::animation::offline::RawSkeleton>();
 	// Creates the root joint.
-	raw_skeleton.roots.resize(1);
-	ozz::animation::offline::RawSkeleton::Joint &ozz_root = raw_skeleton.roots[0];
+	raw_skeleton->roots.resize(1);
+	ozz::animation::offline::RawSkeleton::Joint &ozz_root = raw_skeleton->roots[0];
 	std::cout<<"================ SKELETON "<<name<<"\n";
 	RecurseChildrenIntoOzz(g, ozz_root, *r, boneIds);
 
-	if(raw_skeleton.num_joints()!=bones.size())
+	if(raw_skeleton->num_joints()!=bones.size())
 	{
-		TELEPORT_WARN("Skeleton mismatch in {} {}: {} != {}",this->id,this->name,raw_skeleton.num_joints(),boneIds.size());
+		TELEPORT_WARN("Skeleton mismatch in {} {}: {} != {}",this->id,this->name,raw_skeleton->num_joints(),boneIds.size());
 	}
 	// Setup root joints name.
 
@@ -143,7 +142,7 @@ void Skeleton::InitBones(GeometryCache &g)
 	// Test for skeleton validity.
 	// The main invalidity reason is the number of joints, which must be lower
 	// than ozz::animation::Skeleton::kMaxJoints.
-	if (!raw_skeleton.Validate())
+	if (!raw_skeleton->Validate())
 	{
 		return ;
 	}
@@ -159,7 +158,7 @@ void Skeleton::InitBones(GeometryCache &g)
 	// a new runtime skeleton instance.
 	// This operation will fail and return an empty unique_ptr if the RawSkeleton
 	// isn't valid.
-	skeleton = builder(raw_skeleton);
+	skeleton = builder(*raw_skeleton);
 
 	// ...use the skeleton as you want...
 }
