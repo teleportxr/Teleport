@@ -150,7 +150,6 @@ namespace teleport::clientrender
 			// Storage for blending stage output.
 			locals.resize(num_soa_joints);
 
-			// samplers.resize(1);
 		}
 
 		void SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation)
@@ -381,16 +380,17 @@ mat4 inv;
 	return M.m[0] * inv.m[0] + M.m[1] * inv.m[4] + M.m[2] * inv.m[8] + M.m[3] * inv.m[12];
 }
 
-void AnimationComponent::InitBindMatrices( const Animation &anim) 
+void AnimationComponent::Retarget( const Animation &anim) 
 {
 	const std::vector<mat4> &meshInverseBindMatrices=owner.GetSkeleton()->GetInverseBindMatrices();
 	const auto &skeletonsBones=owner.GetSkeleton()->GetExternalBones();
 	const auto &animsRestPoses=anim.GetRestPoses();
-	// We modify the inverse bind to match the animation itself.
+	// We modify the animation to match the skeleton.
 	int idx=0;
 	inverseBindMatrices.resize(meshInverseBindMatrices.size());
 	if(skeletonsBones.size()!=meshInverseBindMatrices.size())
 		return;
+	anim.Retarget(owner.GetSkeleton());
 	instance->ApplyRestPose();
 	for(int i=0;i<meshInverseBindMatrices.size();i++)
 	{
@@ -506,7 +506,7 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 	auto cache	= GeometryCache::GetGeometryCache(applyAnimation.cacheID);
 	auto anim		= cache->mAnimationManager.Get(applyAnimation.animationID);
 	if(anim)
-		InitBindMatrices( *anim) ;
+		Retarget(*anim) ;
 }
 
 void AnimationComponent::update(int64_t timestampUs)

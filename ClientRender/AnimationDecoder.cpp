@@ -15,7 +15,6 @@
 #include <ozz/base/containers/set.h>
 
 using nlohmann::json;
-using namespace ozz;
 
 using qt = platform::crossplatform::Quaternionf;
 using namespace teleport;
@@ -244,11 +243,10 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 
 	// Needs to be done before opening the output file, so that if it fails then
 	// there's no invalid file outputted.
-	unique_ptr<ozz::animation::Skeleton> skeleton;
 	// Builds runtime skeleton.
 	TELEPORT_LOG("Builds runtime skeleton.");
 	ozz::animation::offline::SkeletonBuilder builder;
-	skeleton = builder(raw_skeleton);
+	ozz_skeleton = builder(raw_skeleton);
 	if (!skeleton)
 	{
 		TELEPORT_LOG("Failed to build runtime skeleton.");
@@ -462,23 +460,23 @@ bool ImportAnimations(const tinygltf::Model					&model,
 
 bool Animation::LoadFromGlb(const uint8_t *data, size_t size)
 {
+	raw_skeleton=ozz::make_unique<ozz::animation::offline::RawSkeleton>();
+	raw_animation=ozz::make_unique<ozz::animation::offline::RawAnimation>( );
 	tinygltf::TinyGLTF loader;
 	auto image_loader = [](tinygltf::Image *, const int, std::string *, std::string *, int, int, const unsigned char *, int, void *) { return true; };
 	loader.SetImageLoader(image_loader, NULL);
 	tinygltf::Model model;
-	std::string		err;
-	std::string		warn;
+	std::string	err;
+	std::string	warn;
 	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
-	json			config;
-	ozz::animation::offline::RawSkeleton raw_skeleton;
-	if (!ImportSkeleton(raw_skeleton, model, restPoses))
+	json config;
+	if (!ImportSkeleton(*raw_skeleton, model, restPoses))
 		return false;
 	ozz::animation::offline::SkeletonBuilder skeletonBuilder;
-	unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(raw_skeleton);
-	ozz::animation::offline::RawAnimation	 raw_animation;
-	if (!ImportAnimations(model, *skeleton, 0.0f, &raw_animation))
+	ozz::unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(*raw_skeleton);
+	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation)))
 		return false;
 	ozz::animation::offline::AnimationBuilder animationBuilder;
-	animation = animationBuilder(raw_animation);
+	animation = animationBuilder(*raw_animation);
 	return true;
 }
