@@ -29,7 +29,7 @@ namespace teleport
 			AnimationComponent(Node &node);
 			virtual ~AnimationComponent();
 
-			void Retarget(const Animation &anim);
+			void Retarget( Animation &anim);
 			
 			//! Shortcut, play this animation on the given layer.
 			void PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer = 0);

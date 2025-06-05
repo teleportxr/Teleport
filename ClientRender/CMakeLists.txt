@@ -28,6 +28,8 @@ set( src_root
 	Animation.h
 	AnimationDecoder.cpp
 	AnimationDecoder.h
+	AnimationRetargeter.cpp
+	AnimationRetargeter.h
 	API.cpp
 	API.h
 	Camera.cpp

@@ -4,11 +4,12 @@
 #include "Transform.h"
 
 #define tinygltf teleport_tinygltf
+#include "AnimationRetargeter.h"
 #include "tiny_gltf.h"
 #include <json.hpp>
-#include <ozz/base/containers/set.h>
 #include <ozz/animation/offline/animation_builder.h>
 #include <ozz/animation/runtime/local_to_model_job.h>
+#include <ozz/base/containers/set.h>
 #include <ozz/base/maths/soa_transform.h>
 
 using nlohmann::json;
@@ -18,7 +19,6 @@ using qt = platform::crossplatform::Quaternionf;
 using namespace teleport;
 
 using namespace clientrender;
-
 
 Animation::Animation(const std::string &name) : name(name)
 {
@@ -46,7 +46,7 @@ float Animation::getAnimationLengthSeconds()
 
 void Animation::ToOzz()
 {
-	raw_animation=ozz::make_unique<ozz::animation::offline::RawAnimation>();
+	raw_animation			= ozz::make_unique<ozz::animation::offline::RawAnimation>();
 
 	// Sets animation duration (to 1.4s).
 	// All the animation keyframes times must be within range [0, duration].
@@ -67,7 +67,7 @@ void Animation::ToOzz()
 	{
 		BoneKeyframeList &b		= boneKeyframeLists[i];
 		auto			 &track = raw_animation->tracks[i];
-		for (const auto & c : b.positionKeyframes)
+		for (const auto &c : b.positionKeyframes)
 		{
 			// Create a keyframe, at c.time, with a translation value.
 			const ozz::animation::offline::RawAnimation::TranslationKey key = {c.time, ozz::math::Float3(c.value.x, c.value.y, c.value.z)};
@@ -90,8 +90,8 @@ void Animation::ToOzz()
 	}
 }
 
-	ozz::vector<ozz::math::Float4x4> rest_models;
-bool Animation::CalcRestPose()
+ozz::vector<ozz::math::Float4x4> rest_models;
+bool							 Animation::CalcRestPose()
 {
 	// Buffer of model space matrices. These are computed by the local-to-model
 	// job after the blending stage.
@@ -107,17 +107,14 @@ bool Animation::CalcRestPose()
 	rest_models.resize(num_joints);
 	joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
 
-	auto ident=ozz::math::Transform::identity();
-	for(size_t i=0;i<locals.size();i++)
+	auto ident = ozz::math::Transform::identity();
+	for (size_t i = 0; i < locals.size(); i++)
 	{
-		locals[i].rotation=ozz::math::SoaQuaternion::Load({0,0,0,0}
-			,{0,0,0,0},{0,0,0,0},{1.0f,1.0f,1.0f,1.0f});
-		locals[i].translation=ozz::math::SoaFloat3::Load({0,0,0,0}
-			,{0,0,0,0},{0,0,0,0});
-		locals[i].scale=ozz::math::SoaFloat3::Load({1.f,1.f,1.f,1.f}
-			,{1.f,1.f,1.f,1.f},{1.f,1.f,1.f,1.f});
+		locals[i].rotation	  = ozz::math::SoaQuaternion::Load({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {1.0f, 1.0f, 1.0f, 1.0f});
+		locals[i].translation = ozz::math::SoaFloat3::Load({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0});
+		locals[i].scale		  = ozz::math::SoaFloat3::Load({1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 1.f});
 	}
-	const mat4 *m=(const mat4*)rest_models.data();
+	const mat4 *m = (const mat4 *)rest_models.data();
 	//  Convert from local-space to model-space transforms
 	ozz::animation::LocalToModelJob ltmJob;
 	ltmJob.skeleton = &*ozz_skeleton;
@@ -131,164 +128,110 @@ bool Animation::CalcRestPose()
 
 	return true;
 }
-void MatrixDecompose(const mat4& matrix, vec3& scale, vec4& rotation, vec3& translation)
+void MatrixDecompose(const mat4 &matrix, vec3 &scale, vec4 &rotation, vec3 &translation)
 {
-    // Extract translation (last column)
-    translation.x = matrix._m30;
-    translation.y = matrix._m31;
-    translation.z = matrix._m32;
-    
-    // Extract scale (length of first three columns)
-    scale.x = sqrt(matrix._m00 * matrix._m00 + matrix._m01 * matrix._m01 + matrix._m02 * matrix._m02);
-    scale.y = sqrt(matrix._m10 * matrix._m10 + matrix._m11 * matrix._m11 + matrix._m12 * matrix._m12);
-    scale.z = sqrt(matrix._m20 * matrix._m20 + matrix._m21 * matrix._m21 + matrix._m22 * matrix._m22);
-    
-    // Check for negative determinant (indicates reflection)
-    float determinant = matrix._m00 * (matrix._m11 * matrix._m22 - matrix._m21 * matrix._m12) -
-                       matrix._m01 * (matrix._m10 * matrix._m22 - matrix._m12 * matrix._m20) +
-                       matrix._m02 * (matrix._m10 * matrix._m21 - matrix._m11 * matrix._m20);
-    
-    if (determinant < 0)
-    {
-        scale.x = -scale.x;
-    }
-    
-    // Create rotation matrix by removing scale
-    mat4 rotationMatrix = matrix;
-    rotationMatrix._m00 /= scale.x;
-    rotationMatrix._m01 /= scale.x;
-    rotationMatrix._m02 /= scale.x;
-    rotationMatrix._m10 /= scale.y;
-    rotationMatrix._m11 /= scale.y;
-    rotationMatrix._m12 /= scale.y;
-    rotationMatrix._m20 /= scale.z;
-    rotationMatrix._m21 /= scale.z;
-    rotationMatrix._m22 /= scale.z;
-    
-    // Convert rotation matrix to quaternion (x, y, z, w)
-    float trace = rotationMatrix._m00 + rotationMatrix._m11 + rotationMatrix._m22;
-    
-    if (trace > 0)
-    {
-        float s = sqrt(trace + 1.0f) * 2; // s = 4 * qw
-        rotation.w = 0.25f * s;
-        rotation.x = (rotationMatrix._m21 - rotationMatrix._m12) / s;
-        rotation.y = (rotationMatrix._m02 - rotationMatrix._m20) / s;
-        rotation.z = (rotationMatrix._m10 - rotationMatrix._m01) / s;
-    }
-    else if (rotationMatrix._m00 > rotationMatrix._m11 && rotationMatrix._m00 > rotationMatrix._m22)
-    {
-        float s = sqrt(1.0f + rotationMatrix._m00 - rotationMatrix._m11 - rotationMatrix._m22) * 2; // s = 4 * qx
-        rotation.w = (rotationMatrix._m21 - rotationMatrix._m12) / s;
-        rotation.x = 0.25f * s;
-        rotation.y = (rotationMatrix._m01 + rotationMatrix._m10) / s;
-        rotation.z = (rotationMatrix._m02 + rotationMatrix._m20) / s;
-    }
-    else if (rotationMatrix._m11 > rotationMatrix._m22)
-    {
-        float s = sqrt(1.0f + rotationMatrix._m11 - rotationMatrix._m00 - rotationMatrix._m22) * 2; // s = 4 * qy
-        rotation.w = (rotationMatrix._m02 - rotationMatrix._m20) / s;
-        rotation.x = (rotationMatrix._m01 + rotationMatrix._m10) / s;
-        rotation.y = 0.25f * s;
-        rotation.z = (rotationMatrix._m12 + rotationMatrix._m21) / s;
-    }
-    else
-    {
-        float s = sqrt(1.0f + rotationMatrix._m22 - rotationMatrix._m00 - rotationMatrix._m11) * 2; // s = 4 * qz
-        rotation.w = (rotationMatrix._m10 - rotationMatrix._m01) / s;
-        rotation.x = (rotationMatrix._m02 + rotationMatrix._m20) / s;
-        rotation.y = (rotationMatrix._m12 + rotationMatrix._m21) / s;
-        rotation.z = 0.25f * s;
-    }
+	// Extract translation (last column)
+	translation.x	  = matrix._m30;
+	translation.y	  = matrix._m31;
+	translation.z	  = matrix._m32;
+
+	// Extract scale (length of first three columns)
+	scale.x			  = sqrt(matrix._m00 * matrix._m00 + matrix._m01 * matrix._m01 + matrix._m02 * matrix._m02);
+	scale.y			  = sqrt(matrix._m10 * matrix._m10 + matrix._m11 * matrix._m11 + matrix._m12 * matrix._m12);
+	scale.z			  = sqrt(matrix._m20 * matrix._m20 + matrix._m21 * matrix._m21 + matrix._m22 * matrix._m22);
+
+	// Check for negative determinant (indicates reflection)
+	float determinant = matrix._m00 * (matrix._m11 * matrix._m22 - matrix._m21 * matrix._m12) -
+						matrix._m01 * (matrix._m10 * matrix._m22 - matrix._m12 * matrix._m20) +
+						matrix._m02 * (matrix._m10 * matrix._m21 - matrix._m11 * matrix._m20);
+
+	if (determinant < 0)
+	{
+		scale.x = -scale.x;
+	}
+
+	// Create rotation matrix by removing scale
+	mat4 rotationMatrix = matrix;
+	rotationMatrix._m00 /= scale.x;
+	rotationMatrix._m01 /= scale.x;
+	rotationMatrix._m02 /= scale.x;
+	rotationMatrix._m10 /= scale.y;
+	rotationMatrix._m11 /= scale.y;
+	rotationMatrix._m12 /= scale.y;
+	rotationMatrix._m20 /= scale.z;
+	rotationMatrix._m21 /= scale.z;
+	rotationMatrix._m22 /= scale.z;
+
+	// Convert rotation matrix to quaternion (x, y, z, w)
+	float trace = rotationMatrix._m00 + rotationMatrix._m11 + rotationMatrix._m22;
+
+	if (trace > 0)
+	{
+		float s	   = sqrt(trace + 1.0f) * 2; // s = 4 * qw
+		rotation.w = 0.25f * s;
+		rotation.x = (rotationMatrix._m21 - rotationMatrix._m12) / s;
+		rotation.y = (rotationMatrix._m02 - rotationMatrix._m20) / s;
+		rotation.z = (rotationMatrix._m10 - rotationMatrix._m01) / s;
+	}
+	else if (rotationMatrix._m00 > rotationMatrix._m11 && rotationMatrix._m00 > rotationMatrix._m22)
+	{
+		float s	   = sqrt(1.0f + rotationMatrix._m00 - rotationMatrix._m11 - rotationMatrix._m22) * 2; // s = 4 * qx
+		rotation.w = (rotationMatrix._m21 - rotationMatrix._m12) / s;
+		rotation.x = 0.25f * s;
+		rotation.y = (rotationMatrix._m01 + rotationMatrix._m10) / s;
+		rotation.z = (rotationMatrix._m02 + rotationMatrix._m20) / s;
+	}
+	else if (rotationMatrix._m11 > rotationMatrix._m22)
+	{
+		float s	   = sqrt(1.0f + rotationMatrix._m11 - rotationMatrix._m00 - rotationMatrix._m22) * 2; // s = 4 * qy
+		rotation.w = (rotationMatrix._m02 - rotationMatrix._m20) / s;
+		rotation.x = (rotationMatrix._m01 + rotationMatrix._m10) / s;
+		rotation.y = 0.25f * s;
+		rotation.z = (rotationMatrix._m12 + rotationMatrix._m21) / s;
+	}
+	else
+	{
+		float s	   = sqrt(1.0f + rotationMatrix._m22 - rotationMatrix._m00 - rotationMatrix._m11) * 2; // s = 4 * qz
+		rotation.w = (rotationMatrix._m10 - rotationMatrix._m01) / s;
+		rotation.x = (rotationMatrix._m02 + rotationMatrix._m20) / s;
+		rotation.y = (rotationMatrix._m12 + rotationMatrix._m21) / s;
+		rotation.z = 0.25f * s;
+	}
+}
+ozz::animation::Animation &Animation::GetOzzAnimation(uint64_t skeleton_hash)
+{
+	return *retargeted_animations[skeleton_hash];
 }
 
 void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
 {
-	if(!CalcRestPose())
-		return;
-	ozz::animation::offline::RawAnimation retargeted_raw_animation=*raw_animation;
-
-	// the two skeletons look similar in world space, but their local space is very different. Thus we will just work in world space and map animation differences from source to target.
-	// Then finally, we down-convert from target’s world space to local space to let the animation system work without any changes.
-
-	// We will need to go through each keyframe in the target animation (after it was copied from source animation already) and do the following pseudo-code:
-	const auto &target_bones = target_skeleton->GetExternalBones();
-	for(int i=0;i<retargeted_raw_animation.num_tracks();i++)
+	if (!CalcRestPose())
 	{
-		auto b = target_bones[i];
-		mat4 transform_dest		= b->GetGlobalTransform().GetTransformMatrix();
-		mat4 transform_source	= *((mat4*)&(rest_models[i]));
-
-		mat4  bindMatrix		  = transform_source;
-		mat4  inverseBindMatrix	  = mat4::inverse(bindMatrix);
-		mat4  targetMatrix		  = transform_dest;
-		mat4  inverseParentMatrix = b->GetParent().lock()->GetGlobalTransform().GetTransformMatrix();
-
-		auto &track=retargeted_raw_animation.tracks[i];
-
-		for(auto& data : track.scales)
-		{
-		  mat4 transform = transform_source;
-		  transform.scale_local = data;  // temporary update transform with animation data (T-pose to animated, local space)
-  
-		  mat4 localMatrix = inverseBindMatrix * ComputeWorldMatrixRecursive(bone_source, transform.GetLocalMatrix();
-		  localMatrix = targetMatrix * localMatrix * inverseParentMatrix;
-  
-		  vec3 S,T;
-		  vec4 R;
-		  MatrixDecompose(localMatrix,S,R,T);
-		  data = S; // update scale animation data with retargeted value
-		}
-		
-		switch(target_path)
-		{
-		case PATH_ROTATION:
-		for(Quaternion& data : target_animation.keyframe_datas)
-		{
-		  Transform transform = transform_source;
-		  transform.rotation_local = data;  // temporary update transform with animation data (T-pose to animated, local space)
-  
-		  Matrix localMatrix = inverseBindMatrix * ComputeWorldMatrixRecursive(bone_source, transform.GetLocalMatrix();
-		  localMatrix = targetMatrix * localMatrix * inverseParentMatrix;
-  
-		  Vector S,R,T;
-		  MatrixDecompose(S,R,T, localMatrix);
-		  data = R; // update rotation animation data with retargeted value
-		}
-		break;
-
-		case PATH_TRANSLATION:
-		for(Vector3& data : target_animation.keyframe_datas)
-		{
-		  Transform transform = transform_source;
-		  transform.translation_local = data;  // temporary update transform with animation data (T-pose to animated, local space)
-  
-		  Matrix localMatrix = inverseBindMatrix * ComputeWorldMatrixRecursive(bone_source, transform.GetLocalMatrix();
-		  localMatrix = targetMatrix * localMatrix * inverseParentMatrix;
-  
-		  Vector S,R,T;
-		  MatrixDecompose(S,R,T, localMatrix);
-		  data = T; // update translation animation data with retargeted value
-		}
-		break;
-		}
+		return;
 	}
-	//////////////////////////////////////////////////////////////////////////////
-	// This final section converts the RawAnimation to a runtime Animation.
-	//////////////////////////////////////////////////////////////////////////////
+	ozz::animation::offline::RawAnimation retargeted_raw_animation = *raw_animation;
 
-	// Creates a AnimationBuilder instance.
-	ozz::animation::offline::AnimationBuilder builder;
+	// Load your skeletons and animation
+	ozz::animation::offline::RawSkeleton  source_skeleton;
+	ozz::animation::offline::RawAnimation source_animation;
 
-	// Executes the builder on the previously prepared RawAnimation, which returns
-	// a new runtime animation instance.
-	// This operation will fail and return an empty unique_ptr if the RawAnimation
-	// isn't valid.
-	animation = builder(raw_animation);
-}
+	// Retarget the animation
+	auto retargeted_animation = clientrender::RetargetAnimation(*raw_animation, *raw_skeleton, *(target_skeleton->GetRawSkeleton()));
 
-ozz::animation::Animation &Animation::GetOzzAnimation(uint64_t skeleton_hash)
-{
-	auto a=retargeted_animations.find(skeleton_hash);
-	return *a->second;
+	// Validate and convert to runtime format
+	if (retargeted_animation.Validate())
+	{
+		//////////////////////////////////////////////////////////////////////////////
+		// This final section converts the RawAnimation to a runtime Animation.
+		//////////////////////////////////////////////////////////////////////////////
+
+		// Creates a AnimationBuilder instance.
+		ozz::animation::offline::AnimationBuilder builder;
+
+		// Executes the builder on the previously prepared RawAnimation, which returns
+		// a new runtime animation instance.
+		// This operation will fail and return an empty unique_ptr if the RawAnimation
+		// isn't valid.
+		retargeted_animations[target_skeleton->id] = builder(retargeted_animation);
+	}
 }
