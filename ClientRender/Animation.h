@@ -12,12 +12,104 @@
 #include <ozz/animation/offline/raw_animation.h>
 #include <ozz/base/containers/map.h>
 #include "ClientRender/Skeleton.h"
+#include <regex>
 
 
 namespace teleport
 {
 	namespace clientrender
 	{
+/*
+* The VRM Bone Names are:
+hips 
+spine 
+chest 	
+upperChest 	
+neck 		
+head 
+leftEye 		
+rightEye 		
+jaw
+ 	
+leftUpperLeg 	
+leftLowerLeg 	
+leftFoot 	
+leftToes 		
+rightUpperLeg 
+rightLowerLeg 
+rightFoot 	
+rightToes 
+ 	
+leftShoulder 	
+leftUpperArm 	
+leftLowerArm 	
+leftHand 	
+rightShoulder 
+rightUpperArm 
+rightLowerArm 
+rightHand 	
+ 	
+leftThumbMetacarpal 	
+leftThumbProximal 		
+leftThumbDistal 		
+leftIndexProximal 		
+leftIndexIntermediate 	
+leftIndexDistal 		
+leftMiddleProximal 		
+leftMiddleIntermediate 	
+leftMiddleDistal 		
+leftRingProximal 		
+leftRingIntermediate 	
+leftRingDistal 		
+leftLittleProximal 		
+leftLittleIntermediate 	
+leftLittleDistal 		
+rightThumbMetacarpal 	
+rightThumbProximal 		
+rightThumbDistal 		
+rightIndexProximal 		
+rightIndexIntermediate 	
+rightIndexDistal 		
+rightMiddleProximal 	
+rightMiddleIntermediate 
+rightMiddleDistal 		
+rightRingProximal 		
+rightRingIntermediate 	
+rightRingDistal 		
+rightLittleProximal 	
+rightLittleIntermediate 
+rightLittleDistal
+*/
+		template<typename stringType>
+		stringType GetMappedBoneName(const stringType &bName)
+		{
+			static std::unordered_map<stringType,stringType> mapping;
+			if(!mapping.size())
+			{
+				mapping["spine1"]		 = "chest";
+				mapping["spine2"]		 = "upperchest";
+
+				// arms - with numbered prefix
+				mapping["leftarm"]		 = "leftupperarm";
+				mapping["leftforearm"]	 = "leftlowerarm";
+				mapping["rightarm"]		 = "rightupperarm";
+				mapping["rightforearm"]	 = "rightlowerarm";
+
+				mapping["leftupleg"]	 = "leftupperleg";
+				mapping["leftleg"]		 = "leftlowerleg";
+				mapping["lefttoebase"]	 = "lefttoes";
+				mapping["rightupleg"]	 = "rightupperleg";
+				mapping["rightleg"]		 = "rightlowerleg";
+				mapping["righttoebase"]	 = "righttoes";
+			}
+			stringType n=bName;
+			std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+			n=std::regex_replace(n,std::regex::basic_regex(".*_"),"",std::regex_constants::match_any);
+			auto m=mapping.find(n);
+			if(m==mapping.end())
+				return n;
+			return m->second;
+		};
 		class Node;
 		//! A minimal struct for storing rest poses in joints.
 		//! A list of keyframes, i.e. a single track for an animation. Defines the positions and rotations for one bone in a skeleton,
@@ -64,7 +156,7 @@ namespace teleport
 			//! Create a version of the animation retargeted to the given skeleton.
 			void Retarget(std::shared_ptr<clientrender::Skeleton> skeleton);
 
-			ozz::animation::Animation &GetOzzAnimation(uint64_t skeleton_hash);
+			ozz::animation::Animation *GetOzzAnimation(uint64_t skeleton_hash);
 			const std::map<std::string, teleport::core::PoseScale> &GetRestPoses() const
 			{
 				return restPoses;

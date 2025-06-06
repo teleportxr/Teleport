@@ -181,7 +181,8 @@ namespace teleport::clientrender
 			if (cache)
 			{
 				auto anim	 = cache->mAnimationManager.Get(applyAnimation.animationID);
-				if(anim->GetOzzAnimation(id).num_tracks()!=skeleton->num_joints())
+				auto *ozz_animation = anim->GetOzzAnimation(id);
+				if(!ozz_animation||ozz_animation->num_tracks()!=skeleton->num_joints())
 					return;
 				st.animation = anim;
 			}
@@ -254,7 +255,9 @@ namespace teleport::clientrender
 			if (!state.animationState.animation)
 				return false;
 
-			auto &animation		 = state.animationState.animation->GetOzzAnimation(id);
+			auto *animation		 = state.animationState.animation->GetOzzAnimation(id);
+			if(!animation)
+				return false;
 
 			// CRITICAL FIX: Calculate proper animation time
 			float animationTimeS = state.animationState.animationTimeS;
@@ -267,16 +270,16 @@ namespace teleport::clientrender
 			}
 
 			// Handle looping
-			if (state.animationState.loop && animation.duration() > 0.0f)
+			if (state.animationState.loop && animation->duration() > 0.0f)
 			{
-				animationTimeS = fmodf(animationTimeS, animation.duration());
+				animationTimeS = fmodf(animationTimeS, animation->duration());
 			}
 
 			//  Set time ratio correctly (0.0 to 1.0)
 			float timeRatio = 0.0f;
-			if (animation.duration() > 0.0f)
+			if (animation->duration() > 0.0f)
 			{
-				timeRatio = animationTimeS / animation.duration();
+				timeRatio = animationTimeS / animation->duration();
 				timeRatio = std::max(0.0f, std::min(1.0f, timeRatio));
 			}
 
@@ -286,7 +289,7 @@ namespace teleport::clientrender
 
 			//
 			ozz::animation::SamplingJob samplingJob;
-			samplingJob.animation = &animation;
+			samplingJob.animation =  animation;
 			samplingJob.context	  = &context;
 			samplingJob.ratio	  = timeRatio; // Use calculated time ratio
 			samplingJob.output	  = make_span(sampler.locals);
@@ -391,6 +394,8 @@ void AnimationComponent::Retarget(  Animation &anim)
 	inverseBindMatrices.resize(meshInverseBindMatrices.size());
 	if(skeletonsBones.size()!=meshInverseBindMatrices.size())
 		return;
+	if(skeletonsBones.size()!=22)
+		return;
 	anim.Retarget(owner.GetSkeleton());
 	instance->ApplyRestPose();
 	for(int i=0;i<meshInverseBindMatrices.size();i++)
@@ -423,7 +428,7 @@ void AnimationComponent::Retarget(  Animation &anim)
 		mat4 inv_j = mat4::inverse(joint_matrix2);
 		mat4 &inverse_bind_matrix=inverseBindMatrices[i];
 		inverse_bind_matrix=meshInverseBindMatrices[i];//* joint_matrix_original) * meshInverseBindMatrices[i];
-		if(det(inverse_bind_matrix)<0.001f)
+		if(det(inverse_bind_matrix) < 0.001f)
 		{
 			TELEPORT_WARN("Bad matrix");
 		}
@@ -475,19 +480,20 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m) const
     });
     
     m.resize(numBones);
-	static int force_ident=7;    
+	static uint64_t force_ident=0xFFFFFFFFFFFF0000;    
     for (size_t i = 0; i < numBones; i++)
     {
         // Convert Ozz matrix to your matrix format
         const ozz::math::Float4x4& ozzMatrix = instance->models[i];
-        
         // CRITICAL: Ozz matrices are column-major, ensure correct conversion
         mat4 joint_matrix= *((mat4*)&ozzMatrix);
-        joint_matrix.transpose();
+		// transpose so that in row-major format, translation is in the right-hand column
+		joint_matrix.transpose();
         // Apply inverse bind matrix to get final bone matrix
         const mat4& inverseBindMatrix = inverseBindMatrices[i];
         m[i] = joint_matrix * inverseBindMatrix;
-		if(force_ident==i)
+		//m[i].transpose();
+		if(force_ident&(1ULL<<i))
 			m[i]=mat4::identity();
     }
 }

@@ -1,5 +1,6 @@
 #include "MeshDecoder.h"
 #include "GeometryDecoder.h"
+#include <regex>
 #include "ResourceCreator.h"
 #include "TeleportCore/DecodeMesh.h"
 #include "libavstream/common_networking.h"
@@ -268,8 +269,8 @@ namespace teleport::core
 		auto sorted_children=root.children;
 		std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
 		{
-			std::string nameA=model.nodes[a].name;
-			std::string nameB=model.nodes[b].name;
+			std::string nameA=GetMappedBoneName(model.nodes[a].name);
+			std::string nameB=GetMappedBoneName(model.nodes[b].name);
 			std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
 			std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
 			int A=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameA](const std::string &str){return nameA.find(str) != std::string::npos;})-name_order.begin());
@@ -293,6 +294,32 @@ namespace teleport::core
 										   bool stationary,
 										   avs::AxesStandard	  targetAxesStandard = avs::AxesStandard::EngineeringStyle)
 	{
+		json j = json::parse(model.extensions_json_string);
+		// Do we have VRM extension? And is it the old v0.0 which points in the -Z direction?
+		double vrmSpecVersion = 1.0;
+		json version;
+		if(j.contains("VRM"))
+		{
+			json vrm = j["VRM"];
+			if(vrm.contains("specVersion"))
+			{
+				version = vrm["specVersion"];
+			}
+		}
+		else if(j.contains("VRMC_vrm"))
+		{
+			json vrm = j["VRMC_vrm"];
+			if(vrm.contains("specVersion"))
+			{
+				version = vrm["specVersion"];
+			}
+		}
+		{
+			if(version.is_number())
+				vrmSpecVersion=version;
+			else if(version.is_string())
+				vrmSpecVersion=std::atof(version.get<std::string>().c_str());
+		}
 		dg.axesStandard						 = (platform::crossplatform::AxesStandard)targetAxesStandard;
 		dg.next_id							 = 1; // Start with ID 1
 
@@ -508,7 +535,7 @@ namespace teleport::core
 				avsMaterial.normalTexture.index	   = texture_uid;
 				avsMaterial.normalTexture.texCoord = material.normalTexture.texCoord;
 				avsMaterial.normalTexture.scale	   = (float)material.normalTexture.scale;
-			avsMaterial.normalTexture.tiling.y*=-1.0f;
+				avsMaterial.normalTexture.tiling.y*=-1.0f;
 				texture_types[texture_uid] += avsMaterial.name + "_normal";
 			}
 
@@ -520,7 +547,7 @@ namespace teleport::core
 				avsMaterial.occlusionTexture.index	  = texture_uid;
 				avsMaterial.occlusionTexture.texCoord = material.occlusionTexture.texCoord;
 				avsMaterial.occlusionTexture.strength = (float)material.occlusionTexture.strength;
-			avsMaterial.occlusionTexture.tiling.y*=-1.0f;
+				avsMaterial.occlusionTexture.tiling.y*=-1.0f;
 				texture_types[texture_uid] += avsMaterial.name + "_occlusion";
 			}
 
@@ -531,7 +558,7 @@ namespace teleport::core
 				avs::uid texture_uid				 = texture_uids[texIndex];
 				avsMaterial.emissiveTexture.index	 = texture_uid;
 				avsMaterial.emissiveTexture.texCoord = material.emissiveTexture.texCoord;
-			avsMaterial.emissiveTexture.tiling.y*=-1.0f;
+				avsMaterial.emissiveTexture.tiling.y*=-1.0f;
 				texture_types[texture_uid] += avsMaterial.name + "_emissive";
 			}
 		}
@@ -909,6 +936,19 @@ namespace teleport::core
 				}
 			}
 		}
+		if(vrmSpecVersion<1.0)
+		{
+		//	dg.vrmFixRotation=true;
+			for(int i=0;i<dg.nodes.size();i++)
+			{
+				if(dg.nodes[i].parentID==0)
+				{
+					//platform::crossplatform::Quaternionf q=dg.nodes[i].localTransform.rotation;
+					//q.Rotate(PI,{0,1.0f,0});
+					//dg.nodes[i].localTransform.rotation={q.x,q.y,q.z,q.s};
+				}
+			}
+		}
 		// Process skins and create skeletons
 		std::vector<avs::uid> skeleton_uids(model.skins.size());
 		avs::uid first_skeleton=dg.next_id;
@@ -925,22 +965,21 @@ namespace teleport::core
 
 			// Set up joints
 			std::string str;
-			if(skin.skeleton)
+			if (skin.skeleton || skin.joints.size() > 0)
 			{
-			// we want this to be in the same order that the nodes are in.
-				avsSkeleton.rootBoneId=node_uids[skin.skeleton];
-				//avsSkeleton.boneIDs.push_back(avsSkeleton.rootBoneId);
-				TELEPORT_LOG("\nSkin root: {} {}\n",skin.name, avsSkeleton.rootBoneId);
+				// we want this to be in the same order that the nodes are in.
+				avsSkeleton.rootBoneId = node_uids[skin.skeleton ? skin.skeleton : skin.joints[0]];
+				TELEPORT_LOG("\nSkin root: {} {}\n", skin.name, avsSkeleton.rootBoneId);
 				for (int jointIdx : skin.joints)
 				{
-					if ( jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
+					if (jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
 					{
 						avsSkeleton.boneIDs.push_back(node_uids[jointIdx]);
 						str += std::to_string(node_uids[jointIdx]) + " ";
 					}
 				}
-				std::sort(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end());
-				TELEPORT_LOG("\nSkin: {} {}\n",skin.name, str);
+				std::sort(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end());
+				TELEPORT_LOG("\nSkin: {} {}\n", skin.name, str);
 			}
 
 			// Process inverse bind matrices
@@ -1029,10 +1068,11 @@ namespace teleport::core
 		return true;
 	}
 
-} // namespace teleport::core
+}
+
+// namespace teleport::core
 bool GeometryDecoder::DecodeScene(const teleport::clientrender::GeometryDecodeData &geometryDecodeData, core::DecodedGeometry &dg, bool stationary)
 {
-
 	teleport_tinygltf::Model	model;
 	teleport_tinygltf::TinyGLTF loader;
 	std::string					err;
@@ -1044,6 +1084,8 @@ bool GeometryDecoder::DecodeScene(const teleport::clientrender::GeometryDecodeDa
 	uint32_t	   sz	  = (uint32_t)geometryDecodeData.bytesRemaining();
 	try
 	{
+		// Get extensions, we might want to look at VRM properties.
+		loader.SetStoreOriginalJSONForExtrasAndExtensions(true);
 		bool ret = loader.LoadBinaryFromMemory(&model, &err, &warn, source, sz); // for binary glTF(.glb)
 
 		if (!warn.empty())
