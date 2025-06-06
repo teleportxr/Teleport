@@ -410,12 +410,12 @@ void Renderer::InitLocalGeometry()
 		
 #if 1
 	// test gltf loading.
-	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
+	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/RoderickAnime.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
-														, 0, platform::crossplatform::AxesStandard::OpenGL);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Unrotated.vrma"
+														, 0, platform::crossplatform::AxesStandard::Engineering);
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/T-Pose.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
-														, 0, platform::crossplatform::AxesStandard::OpenGL);
+														, 0, platform::crossplatform::AxesStandard::Engineering);
 	
 	geometryDecoder.WaitFromDecodeThread();
 

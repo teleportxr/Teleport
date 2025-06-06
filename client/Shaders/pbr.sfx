@@ -271,7 +271,7 @@ vertexOutput VSAnim(vertexInputAnim IN)
 	// normalize: should we REALLY have to do this?
 	float W	=w.x+w.y+w.z+w.w;
 	w/=W;
-	mat4 boneTransform	= boneMatrices[int(IN.joints[0])] * w.x
+	mat4 boneTransform = boneMatrices[int(IN.joints[0])] * w.x
 						+ boneMatrices[int(IN.joints[1])] * w.y
 						+ boneMatrices[int(IN.joints[2])] * w.z
 						+ boneMatrices[int(IN.joints[3])] * w.w;

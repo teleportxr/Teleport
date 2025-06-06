@@ -123,7 +123,7 @@ static std::vector<std::string> name_order={
 // Recursively import a node's children
 bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::animation::offline::RawSkeleton::Joint *_joint, std::map<std::string, teleport::core::PoseScale> &restPoses)
 {
-	// Names joint.
+	// Names joint.1
 	_joint->name = _node.name.c_str();
 
 	// Fills transform.

@@ -12,105 +12,12 @@
 #include <ozz/base/maths/internal/simd_math_config.h>
 #include <ozz/base/maths/simd_math.h>
 #include <TeleportCore/Logging.h>
-
+#include "ClientRender/Animation.h"
 #pragma optimize("",off)
 
 namespace teleport {
 namespace clientrender {
 
-
-/*
-* The VRM Bone Names are:
-hips 
-spine 
-chest 	
-upperChest 	
-neck 		
-head 
-leftEye 		
-rightEye 		
-jaw 		
-Leg
- 	
-leftUpperLeg 	
-leftLowerLeg 	
-leftFoot 	
-leftToes 		
-rightUpperLeg 
-rightLowerLeg 
-rightFoot 	
-rightToes 
- 	
-leftShoulder 	
-leftUpperArm 	
-leftLowerArm 	
-leftHand 	
-rightShoulder 
-rightUpperArm 
-rightLowerArm 
-rightHand 	
- 	
-leftThumbMetacarpal 	
-leftThumbProximal 		
-leftThumbDistal 		
-leftIndexProximal 		
-leftIndexIntermediate 	
-leftIndexDistal 		
-leftMiddleProximal 		
-leftMiddleIntermediate 	
-leftMiddleDistal 		
-leftRingProximal 		
-leftRingIntermediate 	
-leftRingDistal 		
-leftLittleProximal 		
-leftLittleIntermediate 	
-leftLittleDistal 		
-rightThumbMetacarpal 	
-rightThumbProximal 		
-rightThumbDistal 		
-rightIndexProximal 		
-rightIndexIntermediate 	
-rightIndexDistal 		
-rightMiddleProximal 	
-rightMiddleIntermediate 
-rightMiddleDistal 		
-rightRingProximal 		
-rightRingIntermediate 	
-rightRingDistal 		
-rightLittleProximal 	
-rightLittleIntermediate 
-rightLittleDistal
-*/
-
-ozz::string GetMappedBoneName(const ozz::string &bName)
-{
-	static std::unordered_map<ozz::string,ozz::string> mapping;
-	if(!mapping.size())
-	{
-		mapping["spine1"]		 = "chest";
-		mapping["spine2"]		 = "upperchest";
-
-		// arms - with numbered prefix
-		mapping["leftarm"]		 = "leftupperarm";
-		mapping["leftforearm"]	 = "leftlowerarm";
-		mapping["rightarm"]		 = "rightupperarm";
-		mapping["rightforearm"]	 = "rightlowerarm";
-
-		mapping["leftupleg"]	 = "leftupperleg";
-		mapping["leftleg"]		 = "leftlowerleg";
-		mapping["lefttoebase"]	 = "lefttoes";
-		mapping["rightupleg"]	 = "rightupperleg";
-		mapping["rightleg"]		 = "rightlowerleg";
-		mapping["righttoebase"]	 = "righttoes";
-	}
-	ozz::string n=bName;
-	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
-	n=std::regex_replace(n,std::regex::basic_regex("avatar_"),"");
-	auto m=mapping.find(n);
-	if(m==mapping.end())
-		return n;
-	return m->second;
-};
 
 const ozz::animation::offline::RawSkeleton::Joint* FindJointByName(
     const ozz::animation::offline::RawSkeleton& skeleton, 
@@ -118,12 +25,20 @@ const ozz::animation::offline::RawSkeleton::Joint* FindJointByName(
 
 // Structure to hold retargeting information for a joint
 struct JointRetargetInfo {
-    ozz::math::Transform sourceBindPose;     // Source joint bind pose
-    ozz::math::Transform targetBindPose;     // Target joint bind pose
-    float scaleToParentFactor;               // Scale difference for parent bone length
-    bool isValid;                            // Whether this joint exists in both skeletons
+    ozz::string parentName;                      // Parent joint name (empty for roots)
+    ozz::math::Transform sourceParentModel;      // Source parent's model space transform
+    ozz::math::Transform targetParentModel;      // Target parent's model space transform
+    bool isValid;                                // Whether this joint exists in both skeletons
     
-    JointRetargetInfo() : scaleToParentFactor(1.0f), isValid(false) {}
+    JointRetargetInfo() : isValid(false) {
+        sourceParentModel.translation = ozz::math::Float3(0.0f, 0.0f, 0.0f);
+        sourceParentModel.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        sourceParentModel.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
+        
+        targetParentModel.translation = ozz::math::Float3(0.0f, 0.0f, 0.0f);
+        targetParentModel.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        targetParentModel.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
+    }
 };
 
 // Helper function to traverse joints and build joint map
@@ -296,12 +211,101 @@ void CountJoints(const ozz::vector<ozz::animation::offline::RawSkeleton::Joint>&
         CountJoints(joint.children, total_joints);
     }
 }
+    
+bool find_parent(const ozz::vector<ozz::animation::offline::RawSkeleton::Joint>& joints, 
+                      const ozz::string& target, const ozz::string& current_parent, ozz::string& parent_name)
+       {
+        for (const auto& joint : joints) {
+            ozz::string joint_name = GetMappedBoneName(joint.name);
+            if (joint_name == target) {
+                parent_name = current_parent;
+                return true;
+            }
+            if (find_parent(joint.children, target, joint_name, parent_name)) {
+                return true;
+            }
+        }
+        return false;
+    };
+// Helper function to get parent joint name
+ozz::string GetParentJointName(const ozz::animation::offline::RawSkeleton& skeleton, 
+                              const ozz::string& joint_name) {
+    ozz::string parent_name = "";
+    find_parent(skeleton.roots, GetMappedBoneName(joint_name), "", parent_name);
+    return parent_name;
+}
+// Helper function to recursively find joint chain
+bool FindJointChainRecursive(const ozz::vector<ozz::animation::offline::RawSkeleton::Joint>& joints, 
+                            const ozz::string& target,
+                            ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*>& chain) {
+    for (const auto& joint : joints) {
+        chain.push_back(&joint);
+        if (GetMappedBoneName(joint.name) == GetMappedBoneName(target)) {
+            return true; // Found target
+        }
+        if (FindJointChainRecursive(joint.children, target, chain)) {
+            return true; // Found in children
+        }
+        chain.pop_back(); // Backtrack
+    }
+    return false;
+}
 
+// Helper function to compute model space transform from root to a specific joint
+ozz::math::Transform ComputeModelSpaceTransform(const ozz::animation::offline::RawSkeleton& skeleton, 
+                                                const ozz::string& joint_name) {
+    ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> chain;
+    
+    if (!FindJointChainRecursive(skeleton.roots, joint_name, chain)) {
+        // Joint not found, return identity
+        ozz::math::Transform identity;
+        identity.translation = ozz::math::Float3(0.0f, 0.0f, 0.0f);
+        identity.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+        identity.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
+        return identity;
+    }
+    
+    // Accumulate transforms from root to target
+    ozz::math::Transform result;
+    result.translation = ozz::math::Float3(0.0f, 0.0f, 0.0f);
+    result.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+    result.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
+    
+    for (const auto* joint : chain) {
+        // Combine transforms: result = result * joint->transform
+        
+        // Scale the translation by current scale
+        ozz::math::Float3 scaled_translation = ozz::math::Float3(
+            joint->transform.translation.x * result.scale.x,
+            joint->transform.translation.y * result.scale.y,
+            joint->transform.translation.z * result.scale.z
+        );
+        
+        // Rotate the scaled translation by current rotation
+        ozz::math::Float3 rotated_translation = ozz::math::TransformVector(result.rotation, scaled_translation);
+        
+        // Add to result translation
+        result.translation = result.translation + rotated_translation;
+        
+        // Combine rotations
+        result.rotation = result.rotation * joint->transform.rotation;
+        
+        // Combine scales
+        result.scale = ozz::math::Float3(
+            result.scale.x * joint->transform.scale.x,
+            result.scale.y * joint->transform.scale.y,
+            result.scale.z * joint->transform.scale.z
+        );
+    }
+    
+    return result;
+}
 // Helper function to build retargeting info recursively
 void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSkeleton::Joint>& joints,
                                const std::unordered_map<ozz::string, int>& target_joint_map,
+                               const ozz::animation::offline::RawSkeleton& source_skeleton,
                                const ozz::animation::offline::RawSkeleton& target_skeleton,
-                               std::vector<JointRetargetInfo>& retarget_info,
+                               ozz::vector<JointRetargetInfo>& retarget_info,
                                int& joint_index) {
     for (const auto& source_joint : joints) {
 	    ozz::string source_name=GetMappedBoneName(source_joint.name);
@@ -310,36 +314,42 @@ void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSk
         // not found?
             TELEPORT_WARN("Bone {} not found in target.",source_joint.name);
         }
+        
         if (target_it != target_joint_map.end()) {
             // Find corresponding joint in target skeleton
             const auto* target_joint = FindJointByName(target_skeleton, source_name);
             
             if (target_joint) {
-                // Store bind poses directly
-                retarget_info[joint_index].sourceBindPose = source_joint.transform;
-                retarget_info[joint_index].targetBindPose = target_joint->transform;
+                // Get parent joint name
+                auto &ret = retarget_info[joint_index];
+                ret.parentName = GetParentJointName(source_skeleton, source_name);
                 
-                // Calculate scale factor for bone length differences
-                float source_bone_length = CalculateBoneLength(source_joint.transform.translation);
-                float target_bone_length = CalculateBoneLength(target_joint->transform.translation);
-                
-                if (source_bone_length > 0.0f) {
-                    retarget_info[joint_index].scaleToParentFactor = target_bone_length / source_bone_length;
+                // Compute parent model space transforms
+                if (!ret.parentName.empty()) {
+                    ret.sourceParentModel = ComputeModelSpaceTransform(source_skeleton, ret.parentName);
+                    ret.targetParentModel = ComputeModelSpaceTransform(target_skeleton, ret.parentName);
                 } else {
-                    retarget_info[joint_index].scaleToParentFactor = 1.0f;
+                    // Root joint - parent is identity
+                    ret.sourceParentModel.translation = ozz::math::Float3(0.0f, 0.0f, 0.0f);
+                    ret.sourceParentModel.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+                    ret.sourceParentModel.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
+                    
+                    ret.targetParentModel.translation = ozz::math::Float3(0.0f, 0.0f, 0.0f);
+                    ret.targetParentModel.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+                    ret.targetParentModel.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
                 }
                 
-                retarget_info[joint_index].isValid = true;
+                ret.isValid = true;
             }
         }
         
         joint_index++;
-        BuildRetargetInfoRecursive(source_joint.children, target_joint_map, target_skeleton, retarget_info, joint_index);
+        BuildRetargetInfoRecursive(source_joint.children, target_joint_map, source_skeleton, target_skeleton, retarget_info, joint_index);
     }
 }
 
 // Build retargeting information for all joints
-std::vector<JointRetargetInfo> BuildRetargetMap(
+ozz::vector<JointRetargetInfo> BuildRetargetMap(
     const ozz::animation::offline::RawSkeleton& source_skeleton,
     const ozz::animation::offline::RawSkeleton& target_skeleton) {
     
@@ -350,11 +360,11 @@ std::vector<JointRetargetInfo> BuildRetargetMap(
     int total_joints = 0;
     CountJoints(source_skeleton.roots, total_joints);
     
-    std::vector<JointRetargetInfo> retarget_info(total_joints);
+    ozz::vector<JointRetargetInfo> retarget_info(total_joints);
     
     // Build retargeting info
     int joint_index = 0;
-    BuildRetargetInfoRecursive(source_skeleton.roots, target_joint_map, target_skeleton, retarget_info, joint_index);
+    BuildRetargetInfoRecursive(source_skeleton.roots, target_joint_map, source_skeleton, target_skeleton, retarget_info, joint_index);
     
     return retarget_info;
 }
@@ -368,34 +378,113 @@ const ozz::animation::offline::RawSkeleton::Joint* FindJointRecursive(
             return &joint;
         }
         auto result = FindJointRecursive(joint.children, name);
-        if (result)
-            return result;
+        if (result) return result;
     }
     return nullptr;
 }
-// Helper function to apply a retargeting transformation to a keyframe transform
-ozz::math::Transform ApplyRetargeting(const ozz::math::Transform& source_transform,
-                                     const ozz::math::Transform& source_bind,
-                                     const ozz::math::Transform& target_bind) {
+
+// Helper function to compute local transform from model space transform and parent model space
+ozz::math::Transform ComputeLocalFromModel(const ozz::math::Transform& model_transform,
+                                          const ozz::math::Transform& parent_model_transform) {
     ozz::math::Transform result;
     
-    // For translation: apply the difference in bind pose translations plus scale
-    ozz::math::Float3 translation_diff = target_bind.translation - source_bind.translation;
-    result.translation = source_transform.translation + translation_diff;
+    // Compute inverse parent transform
+    ozz::math::Quaternion parent_inv_rotation = ozz::math::Conjugate(parent_model_transform.rotation);
+    ozz::math::Float3 parent_inv_scale = ozz::math::Float3(
+        parent_model_transform.scale.x != 0.0f ? 1.0f / parent_model_transform.scale.x : 1.0f,
+        parent_model_transform.scale.y != 0.0f ? 1.0f / parent_model_transform.scale.y : 1.0f,
+        parent_model_transform.scale.z != 0.0f ? 1.0f / parent_model_transform.scale.z : 1.0f
+    );
     
-    // For rotation: apply the difference in bind pose rotations
-    ozz::math::Quaternion rotation_diff = target_bind.rotation * ozz::math::Conjugate(source_bind.rotation);
-    result.rotation = rotation_diff * source_transform.rotation;
+    // Local translation = inv_parent_rotation * inv_parent_scale * (model_translation - parent_translation)
+    ozz::math::Float3 translation_diff = model_transform.translation - parent_model_transform.translation;
+    ozz::math::Float3 scaled_diff = ozz::math::Float3(
+        translation_diff.x * parent_inv_scale.x,
+        translation_diff.y * parent_inv_scale.y,
+        translation_diff.z * parent_inv_scale.z
+    );
+    result.translation = ozz::math::TransformVector(parent_inv_rotation, scaled_diff);
     
-    // For scale: apply relative scaling with safety checks
+    // Local rotation = inv_parent_rotation * model_rotation
+    result.rotation = parent_inv_rotation * model_transform.rotation;
+    
+    // Local scale = model_scale / parent_scale
     result.scale = ozz::math::Float3(
-        source_bind.scale.x != 0.0f ? source_transform.scale.x * (target_bind.scale.x / source_bind.scale.x) : source_transform.scale.x,
-        source_bind.scale.y != 0.0f ? source_transform.scale.y * (target_bind.scale.y / source_bind.scale.y) : source_transform.scale.y,
-        source_bind.scale.z != 0.0f ? source_transform.scale.z * (target_bind.scale.z / source_bind.scale.z) : source_transform.scale.z
+        parent_model_transform.scale.x != 0.0f ? model_transform.scale.x / parent_model_transform.scale.x : model_transform.scale.x,
+        parent_model_transform.scale.y != 0.0f ? model_transform.scale.y / parent_model_transform.scale.y : model_transform.scale.y,
+        parent_model_transform.scale.z != 0.0f ? model_transform.scale.z / parent_model_transform.scale.z : model_transform.scale.z
     );
     
     return result;
 }
+// Helper function to apply a retargeting transformation to a keyframe transform in model space
+ozz::math::Transform ApplyRetargetingModelSpace(const ozz::math::Transform& source_local_transform,
+                                               const ozz::string& joint_name,
+                                               const ozz::animation::offline::RawSkeleton& source_skeleton,
+                                               const ozz::animation::offline::RawSkeleton& target_skeleton,
+                                               const ozz::math::Transform& source_parent_model,
+                                               const ozz::math::Transform& target_parent_model) {
+    // Get bind poses in model space xyz = left up forward
+    ozz::math::Transform source_bind_model = ComputeModelSpaceTransform(source_skeleton, joint_name);
+    ozz::math::Transform target_bind_model = ComputeModelSpaceTransform(target_skeleton, joint_name);
+    
+    // Convert local keyframe to model space relative to source bind pose
+    ozz::math::Transform source_local_bind = ComputeLocalFromModel(source_bind_model, source_parent_model);
+    
+    // Combine parent model transform with local keyframe transform
+    ozz::math::Transform source_model_keyframe;
+    
+    // Scale the translation by parent scale
+    ozz::math::Float3 scaled_translation = ozz::math::Float3(
+        source_local_transform.translation.x * source_parent_model.scale.x,
+        source_local_transform.translation.y * source_parent_model.scale.y,
+        source_local_transform.translation.z * source_parent_model.scale.z
+    );
+    
+    // Rotate the scaled translation by parent rotation
+    ozz::math::Float3 rotated_translation = ozz::math::TransformVector(source_parent_model.rotation, scaled_translation);
+    
+    // Final model space transform
+    source_model_keyframe.translation = source_parent_model.translation + rotated_translation;
+    source_model_keyframe.rotation = source_parent_model.rotation * source_local_transform.rotation;
+    source_model_keyframe.scale = ozz::math::Float3(
+        source_parent_model.scale.x * source_local_transform.scale.x,
+        source_parent_model.scale.y * source_local_transform.scale.y,
+        source_parent_model.scale.z * source_local_transform.scale.z
+    );
+    
+    // Apply retargeting in model space
+    // Compute the difference from source bind pose
+    ozz::math::Transform model_space_delta;
+    
+    // Translation delta
+    model_space_delta.translation = source_model_keyframe.translation - source_bind_model.translation;
+    
+    // Rotation delta
+    ozz::math::Quaternion source_bind_inv = ozz::math::Conjugate(source_bind_model.rotation);
+    model_space_delta.rotation = source_bind_inv * source_model_keyframe.rotation;
+    
+    // Scale delta
+    model_space_delta.scale = ozz::math::Float3(
+        source_bind_model.scale.x != 0.0f ? source_model_keyframe.scale.x / source_bind_model.scale.x : 1.0f,
+        source_bind_model.scale.y != 0.0f ? source_model_keyframe.scale.y / source_bind_model.scale.y : 1.0f,
+        source_bind_model.scale.z != 0.0f ? source_model_keyframe.scale.z / source_bind_model.scale.z : 1.0f
+    );
+    
+    // Apply delta to target bind pose
+    ozz::math::Transform target_model_result;
+    target_model_result.translation = target_bind_model.translation + model_space_delta.translation;
+    target_model_result.rotation = target_bind_model.rotation * model_space_delta.rotation;
+    target_model_result.scale = ozz::math::Float3(
+        target_bind_model.scale.x * model_space_delta.scale.x,
+        target_bind_model.scale.y * model_space_delta.scale.y,
+        target_bind_model.scale.z * model_space_delta.scale.z
+    );
+    
+    // Convert back to local space
+    return ComputeLocalFromModel(target_model_result, target_parent_model);
+}
+
 // Helper function to find joint by name in skeleton
 const ozz::animation::offline::RawSkeleton::Joint* FindJointByName(
     const ozz::animation::offline::RawSkeleton& skeleton, 
@@ -434,6 +523,25 @@ ozz::animation::offline::RawAnimation RetargetAnimation(
         
         const auto& retarget = retarget_info[track_idx];
         
+        // Get joint name for this track (assuming track index matches skeleton joint order)
+        ozz::string joint_name = "";
+        int current_index = 0;
+        std::function<bool(const ozz::vector<ozz::animation::offline::RawSkeleton::Joint>&)> find_joint_name = 
+            [&](const ozz::vector<ozz::animation::offline::RawSkeleton::Joint>& joints) -> bool {
+            for (const auto& joint : joints) {
+                if (current_index == track_idx) {
+                    joint_name = joint.name;
+                    return true;
+                }
+                current_index++;
+                if (find_joint_name(joint.children)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        find_joint_name(source_skeleton.roots);
+        
         // Retarget translation keyframes
         for (const auto& source_key : source_track.translations) {
             ozz::animation::offline::RawAnimation::TranslationKey target_key;
@@ -445,15 +553,19 @@ ozz::animation::offline::RawAnimation RetargetAnimation(
             source_transform.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);  // identity
             source_transform.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
             
-            // Apply retargeting
-            ozz::math::Transform retargeted_transform = ApplyRetargeting(
+            // Apply model space retargeting
+            ozz::math::Transform retargeted_transform = ApplyRetargetingModelSpace(
                 source_transform, 
-                retarget.sourceBindPose, 
-                retarget.targetBindPose
+                joint_name,
+                source_skeleton,
+                target_skeleton,
+                retarget.sourceParentModel,
+                retarget.targetParentModel
             );
             
-            target_key.value = retargeted_transform.translation * retarget.scaleToParentFactor;
+            target_key.value = retargeted_transform.translation;
             target_track.translations.push_back(target_key);
+            break;
         }
         
         // Retarget rotation keyframes
@@ -467,15 +579,19 @@ ozz::animation::offline::RawAnimation RetargetAnimation(
             source_transform.rotation = source_key.value;
             source_transform.scale = ozz::math::Float3(1.0f, 1.0f, 1.0f);
             
-            // Apply retargeting
-            ozz::math::Transform retargeted_transform = ApplyRetargeting(
+            // Apply model space retargeting
+            ozz::math::Transform retargeted_transform = ApplyRetargetingModelSpace(
                 source_transform, 
-                retarget.sourceBindPose, 
-                retarget.targetBindPose
+                joint_name,
+                source_skeleton,
+                target_skeleton,
+                retarget.sourceParentModel,
+                retarget.targetParentModel
             );
             
             target_key.value = retargeted_transform.rotation;
             target_track.rotations.push_back(target_key);
+            break;
         }
         
         // Retarget scale keyframes
@@ -489,20 +605,24 @@ ozz::animation::offline::RawAnimation RetargetAnimation(
             source_transform.rotation = ozz::math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);  // identity
             source_transform.scale = source_key.value;
             
-            // Apply retargeting
-            ozz::math::Transform retargeted_transform = ApplyRetargeting(
+            // Apply model space retargeting
+            ozz::math::Transform retargeted_transform = ApplyRetargetingModelSpace(
                 source_transform, 
-                retarget.sourceBindPose, 
-                retarget.targetBindPose
+                joint_name,
+                source_skeleton,
+                target_skeleton,
+                retarget.sourceParentModel,
+                retarget.targetParentModel
             );
             
             target_key.value = retargeted_transform.scale;
             target_track.scales.push_back(target_key);
+            break;
         }
     }
     
     return target_animation;
 }
 
-} // namespace animation
-} // namespace clientrender
+} 
+} 

@@ -198,9 +198,12 @@ void MatrixDecompose(const mat4 &matrix, vec3 &scale, vec4 &rotation, vec3 &tran
 		rotation.z = 0.25f * s;
 	}
 }
-ozz::animation::Animation &Animation::GetOzzAnimation(uint64_t skeleton_hash)
+ozz::animation::Animation *Animation::GetOzzAnimation(uint64_t skeleton_hash)
 {
-	return *retargeted_animations[skeleton_hash];
+	auto a=retargeted_animations.find(skeleton_hash);
+	if(a==retargeted_animations.end())
+		return nullptr;
+	return a->second.get();
 }
 
 void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
