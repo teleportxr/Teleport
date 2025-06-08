@@ -24,7 +24,7 @@ namespace teleport
 			const std::string name;
 
 			Skeleton(avs::uid u,const std::string &name);
-			Skeleton(avs::uid u, const std::string &name, size_t numBones, const Transform &skeletonTransform);
+			Skeleton(avs::uid u, const std::string &name, size_t numBones);
 			std::string getName() const
 			{
 				return name;
@@ -36,7 +36,6 @@ namespace teleport
 
 			virtual ~Skeleton() = default;
 
-			const Transform &GetSkeletonTransform() { return skeletonTransform; }
 			void SetRootId(avs::uid r)
 			{
 				rootId=r;
@@ -93,8 +92,6 @@ namespace teleport
 			std::vector<int> jointMapping;
 			ozz::unique_ptr<ozz::animation::Skeleton> skeleton;;
 			ozz::unique_ptr<ozz::animation::offline::RawSkeleton> raw_skeleton;
-			// TODO: do we need this?
-			Transform skeletonTransform; // Transform of the parent node of the bone hierarchy; i.e there may be multiple top-level bones, but their parent is not the root.
 		};
 	}
 

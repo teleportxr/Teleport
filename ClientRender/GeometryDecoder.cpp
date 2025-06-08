@@ -1464,9 +1464,7 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData &geometryDecodeDa
 	for (size_t i = 0; i < numBones; i++)
 	{
 		skeleton.boneIDs[i] = NextUint64;
-		// skeleton.parentIndices[i]=NextUint16;
 	}
-	skeleton.skeletonTransform = NextChunk(avs::Transform);
 
 	geometryDecodeData.target->CreateSkeleton(geometryDecodeData.server_or_cache_uid, skeletonID, skeleton);
 	return avs::Result::OK;

@@ -7,6 +7,7 @@ int lightCount;
 int reverseDepth;
 float drawDistance;
 float roughestMip;
+int debugHighlightBone;
 PLATFORM_GROUPED_CONSTANT_BUFFER_END
 
 
@@ -38,7 +39,7 @@ float rezzing;
 PLATFORM_NAMED_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(BoneMatrices, 12)
-	mat4 boneMatrices[64];
+	mat4 boneMatrices[128];
 SIMUL_CONSTANT_BUFFER_END
 
 SIMUL_CONSTANT_BUFFER(LinkConstants, 13)

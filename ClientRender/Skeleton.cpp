@@ -49,7 +49,7 @@ Skeleton::Skeleton(avs::uid u, const std::string &name) : name(name)
 	id = u;
 }
 
-Skeleton::Skeleton(avs::uid u, const std::string &name, size_t numBones, const Transform &skeletonTransform) : name(name), skeletonTransform(skeletonTransform)
+Skeleton::Skeleton(avs::uid u, const std::string &name, size_t numBones) : name(name)
 {
 	id = u;
 }

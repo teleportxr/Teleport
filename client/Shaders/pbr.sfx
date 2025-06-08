@@ -256,7 +256,7 @@ vertexOutput VSSolidMV(vertexInput_full IN, uint viewID)
 	return OUT;
 }
 
-vec4 AnimColour(float J)
+vec4 AnimColour(bool J)
 {
 	int j = int(J);
 	vec4 clr = vec4(((j + 15) % 6) / 5.0, ((j + 33) % 17) / 16.0, ((j + 93) % 35) / 34.0, 1.0);
@@ -286,23 +286,24 @@ vertexOutput VSAnim(vertexInputAnim IN)
 	OUT.clip_pos		=mul(proj,vec4(viewspace_pos.xyz,1.0));
 	OUT.wpos			=wpos.xyz; 
 	 
-	vec2 texCoords[2]={IN.texCoords0,IN.texCoords1};  
-	vec4 diffnorm=vec4(texCoords[diffuseTexCoordIndex]*diffuseTexCoordsScale,texCoords[normalTexCoordIndex]*normalTexCoordsScale);
-	OUT.diffuseNormalUV			=BottomUpTextureCoordinates4(diffnorm);
-	vec4 combem=vec4(texCoords[combinedTexCoordIndex],texCoords[emissiveTexCoordIndex]);
-	OUT.combinedEmissiveUV		=BottomUpTextureCoordinates4(combem);
+	vec2 texCoords[2]			= {IN.texCoords0,IN.texCoords1};  
+	vec4 diffnorm				= vec4(texCoords[diffuseTexCoordIndex]*diffuseTexCoordsScale,texCoords[normalTexCoordIndex]*normalTexCoordsScale);
+	OUT.diffuseNormalUV			= BottomUpTextureCoordinates4(diffnorm);
+	vec4 combem					= vec4(texCoords[combinedTexCoordIndex],texCoords[emissiveTexCoordIndex]);
+	OUT.combinedEmissiveUV		= BottomUpTextureCoordinates4(combem);
 	vec2 lm						= texCoords[lightmapTexCoordIndex] * IN.lightmapScaleOffset.xy + IN.lightmapScaleOffset.zw;
-	OUT.lightmapUV.xy			=BottomUpTextureCoordinates(lm);
-	OUT.normal.xyz = mul(mul(vec4(IN.normal, 0.0), boneTransform), IN.model).xyz;
+	OUT.lightmapUV.xy			= BottomUpTextureCoordinates(lm);
+	OUT.normal.xyz				= mul(mul(vec4(IN.normal, 0.0), boneTransform), IN.model).xyz;
 	// OUT.normal.xyz = mul(vec4(IN.normal, 0.0), IN.model).xyz;
 	//OUT.tangent.xyz = mul(mul(IN.tangent, boneTransform), world).xyz;
-	OUT.tangent.xyz = mul(IN.tangent, IN.model).xyz;
+	OUT.tangent.xyz				= mul(IN.tangent, IN.model).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
 	
-	OUT.debug_colour = AnimColour(IN.joints[0]) * w.x + AnimColour(IN.joints[1]) * w.y
-	+ AnimColour(IN.joints[2]) * w.z
-	+ AnimColour(IN.joints[3]) * w.w;
+	OUT.debug_colour= AnimColour(int(IN.joints[0]) == debugHighlightBone) * w.x
+					+ AnimColour(int(IN.joints[1]) == debugHighlightBone) * w.y
+					+ AnimColour(int(IN.joints[2]) == debugHighlightBone) * w.z
+					+ AnimColour(int(IN.joints[3]) == debugHighlightBone) * w.w;
 	return OUT;
 }
 
@@ -344,10 +345,11 @@ vertexOutput VSAnimMV(vertexInputAnim IN, uint viewID)
 	//OUT.tangent.xyz = mul(IN.tangent, world).xyz;
 
 	OUT.hPosition = OUT.clip_pos;
-	//OUT.debug_colour = IN.joints;
-	OUT.debug_colour = AnimColour(IN.joints[0]) * w.x + AnimColour(IN.joints[1]) * w.y
-	+ AnimColour(IN.joints[2]) * w.z
-	+ AnimColour(IN.joints[3]) * w.w;
+	
+	OUT.debug_colour = AnimColour(int(IN.joints[0]) == debugHighlightBone) * w.x
+					+ AnimColour(int(IN.joints[1]) == debugHighlightBone) * w.y
+					+ AnimColour(int(IN.joints[2]) == debugHighlightBone) * w.z
+					+ AnimColour(int(IN.joints[3]) == debugHighlightBone) * w.w;
 	return OUT;
 }
 
@@ -942,7 +944,8 @@ shader vec4 PS_Local(vertexOutput IN) : SV_TARGET
 
 shader vec4 PS_DebugAnim(vertexOutput IN):SV_TARGET
 {
-	return IN.debug_colour;
+	vec4 clr = Solid_AlbedoOnly(IN);
+	return lerp(IN.debug_colour, clr, 0.5);
 }
 
 shader vec4 PS_DebugLightmaps(vertexOutput IN) : SV_TARGET

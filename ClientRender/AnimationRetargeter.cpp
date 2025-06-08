@@ -1,10 +1,9 @@
-#include "ClientRender/Animation.h"
+#include "AnimationRetargeter.h"
 #include "ozz/animation/offline/raw_animation.h"
 #include "ozz/animation/offline/raw_skeleton.h"
 #include "ozz/base/maths/math_ex.h"
 #include "ozz/base/maths/quaternion.h"
 #include "ozz/base/maths/vec_float.h"
-#include <TeleportCore/Logging.h>
 #include <cmath>
 #include <functional>
 #include <ozz/base/maths/internal/simd_math_config.h>
@@ -13,7 +12,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#pragma optimize("", off)
 
 namespace teleport
 {
@@ -344,7 +342,7 @@ namespace teleport
 				if (target_it == target_joint_map.end())
 				{
 					// not found?
-					TELEPORT_WARN("Bone {} not found in target.", source_joint.name);
+					//WARN("Bone {} not found in target.", source_joint.name);
 				}
 
 				if (target_it != target_joint_map.end())
@@ -453,7 +451,7 @@ namespace teleport
 
 			return result;
 		}
-		// Helper function to apply a retargeting transformation to a keyframe transform in model space
+		// Helper function to apply a retargeting transformation to a keyframe transform
 		ozz::math::Transform ApplyRetargetingModelSpace(const ozz::math::Transform				   &source_local_transform,
 														const ozz::string						   &joint_name,
 														const ozz::animation::offline::RawSkeleton &source_skeleton,
@@ -461,57 +459,80 @@ namespace teleport
 														const ozz::math::Transform				   &source_parent_model,
 														const ozz::math::Transform				   &target_parent_model)
 		{
-			// Get bind poses in model space xyz = left up forward
+			// Get bind poses
+			const auto *sourceJoint = FindJointByName(source_skeleton, joint_name);
+			const auto *targetJoint = FindJointByName(target_skeleton, joint_name);
+
+			if (!sourceJoint || !targetJoint)
+			{
+				// Joint not found, return identity
+				return source_local_transform;
+			}
+
+			// Get bind poses in model space
 			ozz::math::Transform source_bind_model = ComputeModelSpaceTransform(source_skeleton, joint_name);
 			ozz::math::Transform target_bind_model = ComputeModelSpaceTransform(target_skeleton, joint_name);
 
-			// Convert local keyframe to model space relative to source bind pose
-			ozz::math::Transform source_local_bind = ComputeLocalFromModel(source_bind_model, source_parent_model);
+			ozz::math::Transform result;
 
-			// Combine parent model transform with local keyframe transform
-			ozz::math::Transform source_model_keyframe;
+			// Translation retargeting in model space
+			{
+				// Compute source model space position for this keyframe
+				ozz::math::Float3 scaled_translation	   = ozz::math::Float3(source_local_transform.translation.x * source_parent_model.scale.x,
+																		   source_local_transform.translation.y * source_parent_model.scale.y,
+																		   source_local_transform.translation.z * source_parent_model.scale.z);
+				ozz::math::Float3 rotated_translation	   = ozz::math::TransformVector(source_parent_model.rotation, scaled_translation);
+				ozz::math::Float3 source_model_translation = source_parent_model.translation + rotated_translation;
 
-			// Scale the translation by parent scale
-			ozz::math::Float3 scaled_translation  = ozz::math::Float3(source_local_transform.translation.x * source_parent_model.scale.x,
-																	  source_local_transform.translation.y * source_parent_model.scale.y,
-																	  source_local_transform.translation.z * source_parent_model.scale.z);
+				// Compute translation delta from bind pose
+				ozz::math::Float3 translation_delta		   = source_model_translation - source_bind_model.translation;
 
-			// Rotate the scaled translation by parent rotation
-			ozz::math::Float3 rotated_translation = ozz::math::TransformVector(source_parent_model.rotation, scaled_translation);
+				// Apply delta to target bind pose
+				ozz::math::Float3 target_model_translation = target_bind_model.translation + translation_delta;
 
-			// Final model space transform
-			source_model_keyframe.translation	  = source_parent_model.translation + rotated_translation;
-			source_model_keyframe.rotation		  = source_parent_model.rotation * source_local_transform.rotation;
-			source_model_keyframe.scale			  = ozz::math::Float3(source_parent_model.scale.x * source_local_transform.scale.x,
-															  source_parent_model.scale.y * source_local_transform.scale.y,
-															  source_parent_model.scale.z * source_local_transform.scale.z);
+				// Convert back to local space
+				ozz::math::Float3	  target_to_parent	   = target_model_translation - target_parent_model.translation;
+				ozz::math::Quaternion parent_inv_rotation  = ozz::math::Conjugate(target_parent_model.rotation);
+				ozz::math::Float3	  local_offset		   = ozz::math::TransformVector(parent_inv_rotation, target_to_parent);
 
-			// Apply retargeting in model space
-			// Compute the difference from source bind pose
-			ozz::math::Transform model_space_delta;
+				result.translation = ozz::math::Float3(target_parent_model.scale.x != 0.0f ? local_offset.x / target_parent_model.scale.x : local_offset.x,
+													   target_parent_model.scale.y != 0.0f ? local_offset.y / target_parent_model.scale.y : local_offset.y,
+													   target_parent_model.scale.z != 0.0f ? local_offset.z / target_parent_model.scale.z : local_offset.z);
+			}
 
-			// Translation delta
-			model_space_delta.translation		  = source_model_keyframe.translation - source_bind_model.translation;
+			// Rotation retargeting using model space orientations
+			{
+				// Compute source model space rotation for this keyframe
+				ozz::math::Quaternion source_model_rotation = source_parent_model.rotation * source_local_transform.rotation;
 
-			// Rotation delta
-			ozz::math::Quaternion source_bind_inv = ozz::math::Conjugate(source_bind_model.rotation);
-			model_space_delta.rotation			  = source_bind_inv * source_model_keyframe.rotation;
+				// Compute the rotation change from bind pose in model space
+				// This represents how the bone's orientation changed in world space
+				ozz::math::Quaternion source_bind_inv		= ozz::math::Conjugate(source_bind_model.rotation);
+				ozz::math::Quaternion model_rotation_delta	= source_model_rotation * source_bind_inv;
 
-			// Scale delta
-			model_space_delta.scale = ozz::math::Float3(source_bind_model.scale.x != 0.0f ? source_model_keyframe.scale.x / source_bind_model.scale.x : 1.0f,
-														source_bind_model.scale.y != 0.0f ? source_model_keyframe.scale.y / source_bind_model.scale.y : 1.0f,
-														source_bind_model.scale.z != 0.0f ? source_model_keyframe.scale.z / source_bind_model.scale.z : 1.0f);
+				// Apply this world space change to the target bind pose
+				ozz::math::Quaternion target_model_rotation = model_rotation_delta * target_bind_model.rotation;
 
-			// Apply delta to target bind pose
-			ozz::math::Transform target_model_result;
-			target_model_result.translation = target_bind_model.translation + model_space_delta.translation;
-			target_model_result.rotation	= target_bind_model.rotation * model_space_delta.rotation;
-			target_model_result.scale		= ozz::math::Float3(target_bind_model.scale.x * model_space_delta.scale.x,
-															target_bind_model.scale.y * model_space_delta.scale.y,
-															target_bind_model.scale.z * model_space_delta.scale.z);
+				// Convert back to local space
+				ozz::math::Quaternion target_parent_inv		= ozz::math::Conjugate(target_parent_model.rotation);
+				result.rotation								= target_parent_inv * target_model_rotation;
+			}
 
-			// Convert back to local space
-			return ComputeLocalFromModel(target_model_result, target_parent_model);
+			// Scale retargeting
+			{
+				// Compute scale ratio from bind pose
+				ozz::math::Float3 scaleRatio =
+					ozz::math::Float3(sourceJoint->transform.scale.x != 0.0f ? source_local_transform.scale.x / sourceJoint->transform.scale.x : 1.0f,
+									  sourceJoint->transform.scale.y != 0.0f ? source_local_transform.scale.y / sourceJoint->transform.scale.y : 1.0f,
+									  sourceJoint->transform.scale.z != 0.0f ? source_local_transform.scale.z / sourceJoint->transform.scale.z : 1.0f);
+
+				// Apply ratio to target bind scale
+				result.scale = ozz::math::Float3(targetJoint->transform.scale.x * scaleRatio.x,
+												 targetJoint->transform.scale.y * scaleRatio.y,
+												 targetJoint->transform.scale.z * scaleRatio.z);
+			}
+
+			return result;
 		}
 
 		// Helper function to find joint by name in skeleton
