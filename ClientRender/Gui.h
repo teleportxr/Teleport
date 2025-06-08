@@ -108,7 +108,7 @@ namespace teleport
 			void EndDebugGui(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void EndFrame(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 
-			void SetChangeRender(std::function<void(ShaderMode newShaderMode)> fn)
+			void SetChangeRender(std::function<void(ShaderMode newShaderMode, int debugHighlightBone)> fn)
 			{
 				changeRender = fn;
 			}
@@ -157,7 +157,7 @@ namespace teleport
 			std::string profilingText;
 			GuiType guiType=GuiType::None;
 			std::function<void(const std::string &)> console;
-			std::function<void(ShaderMode newShaderMode)> changeRender;
+			std::function<void(ShaderMode newShaderMode, int debugHighlightBone)> changeRender;
 			client::OpenXR &openXR;
 			avs::uid cache_uid=0;
 			void LightStyle();

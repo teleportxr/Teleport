@@ -394,10 +394,11 @@ void AnimationComponent::Retarget(  Animation &anim)
 	inverseBindMatrices.resize(meshInverseBindMatrices.size());
 	if(skeletonsBones.size()!=meshInverseBindMatrices.size())
 		return;
-	if(skeletonsBones.size()!=22)
-		return;
+	//if(skeletonsBones.size()!=22)
+	//	return;
 	anim.Retarget(owner.GetSkeleton());
 	instance->ApplyRestPose();
+	const auto &jointMapping = owner.GetSkeleton()->GetJointMapping();
 	for(int i=0;i<meshInverseBindMatrices.size();i++)
 	{
 		// original joint matrix from the skeleton's bone:
@@ -411,7 +412,10 @@ void AnimationComponent::Retarget(  Animation &anim)
 		{
 			anim_joint_pose=FindMatch(animsRestPoses, boneName);
 			if(anim_joint_pose==animsRestPoses.end())
+			{
+				inverseBindMatrices[i]=meshInverseBindMatrices[i];
 				continue;
+			}
 		}
 		Transform anim_transform;
 		anim_transform.m_Translation=anim_joint_pose->second.position;
@@ -461,17 +465,16 @@ void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
 
 void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m) const
 {
-    if (!instance || instance->models.empty())
+    if (!instance || instance->models.empty()||!inverseBindMatrices.size())
     {
         // Fallback to identity matrices
-        m.resize(std::min(inverseBindMatrices.size(), static_cast<size_t>(Skeleton::MAX_BONES)));
+        //m.resize(std::min(inverseBindMatrices.size(), static_cast<size_t>(Skeleton::MAX_BONES)));
         for (size_t i = 0; i < m.size(); i++)
         {
             m[i] = mat4::identity();
         }
         return;
     }
-
     // Use the computed model-space matrices from Ozz
     size_t numBones = std::min({
         instance->models.size(),
@@ -480,11 +483,12 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m) const
     });
     
     m.resize(numBones);
-	static uint64_t force_ident=0xFFFFFFFFFFFF0000;    
+	const auto &jointMapping = owner.GetSkeleton()->GetJointMapping();
+	static uint64_t force_ident=0;//0xFFFFFFFFFFFF0000;    
     for (size_t i = 0; i < numBones; i++)
     {
         // Convert Ozz matrix to your matrix format
-        const ozz::math::Float4x4& ozzMatrix = instance->models[i];
+        const ozz::math::Float4x4& ozzMatrix = instance->models[jointMapping[i]];
         // CRITICAL: Ozz matrices are column-major, ensure correct conversion
         mat4 joint_matrix= *((mat4*)&ozzMatrix);
 		// transpose so that in row-major format, translation is in the right-hand column

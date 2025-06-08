@@ -19,7 +19,7 @@ namespace teleport
 		class Skeleton:public Resource
 		{
 		public:
-			static constexpr size_t MAX_BONES = 64;
+			static constexpr size_t MAX_BONES = 128;
 
 			const std::string name;
 
@@ -80,12 +80,17 @@ namespace teleport
 			{
 				return raw_skeleton.get();
 			}
+			const std::vector<int> &GetJointMapping() const
+			{
+				return jointMapping;
+			}
 		protected:
 			avs::uid rootId=0;
 			std::vector<avs::uid> boneIds;
 			std::weak_ptr<clientrender::Node> root;
 			std::vector<std::shared_ptr<clientrender::Node>> bones;
 			std::vector<mat4> inverseBindMatrices;
+			std::vector<int> jointMapping;
 			ozz::unique_ptr<ozz::animation::Skeleton> skeleton;;
 			ozz::unique_ptr<ozz::animation::offline::RawSkeleton> raw_skeleton;
 			// TODO: do we need this?

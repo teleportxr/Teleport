@@ -410,6 +410,28 @@ void InstanceRenderer::ApplySceneMatrices(platform::crossplatform::GraphicsDevic
 		}
 		renderState.teleportSceneConstants.lightCount = static_cast<int>(cachedLights.size());
 	}
+	if(renderState.shaderMode==ShaderMode::DEBUG_ANIM)
+	{
+		// TODO: find skeleton. We want to do this, but while skeleton is stored in the mesh node, and not the root of the hierarchy, it won't work/
+		#if 0
+		auto cache=GeometryCache::GetGeometryCache(renderState.selected_cache);
+		if(cache)
+		{
+			auto node = cache->mNodeManager.GetNode(renderState.selected_uid);
+			while(node&&!node->GetSkeleton())
+			{
+				node=node->GetParent().lock();
+			}
+			if(node)
+			{
+				const auto &boneids=node->GetSkeleton()->GetExternalBoneIds();
+				renderState.teleportSceneConstants.debugHighlightBone= (int)(std::find(boneids.begin(),boneids.end(),renderState.selected_uid)-boneids.begin());
+			}
+		}
+		#else
+		
+		#endif
+	}
 	renderState.teleportSceneConstants.drawDistance = sessionClient->GetSetupCommand().draw_distance;
 	renderPlatform->SetConstantBuffer(deviceContext, &renderState.teleportSceneConstants);
 	if (deviceContext.deviceContextType == crossplatform::DeviceContextType::MULTIVIEW_GRAPHICS)
@@ -1206,8 +1228,8 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			// For each bone matrix,
 			//				pos_local= (bone_matrix_j) * pos_original_local
 			auto animationComponent = node->GetComponent<AnimationComponent>();
-			static size_t match_joint_count=22;
-			if(animationComponent&&skeleton->GetExternalBoneIds().size()==match_joint_count)
+			//static size_t match_joint_count=22;
+			if(animationComponent)//&&skeleton->GetExternalBoneIds().size()==match_joint_count)
 			{
 				animationComponent->update(renderState.timestampUs.count());
 				boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
@@ -1242,6 +1264,10 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 				{
 					TELEPORT_WARN("No matching bind matrices, {}.",node->name);
 					return;
+				}
+				for(int i=0;i<boneMatrices.size();i++)
+				{
+				boneMatrices[i]=mat4::identity();
 				}
 			}
 

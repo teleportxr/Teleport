@@ -104,6 +104,8 @@ rightLittleDistal
 			}
 			stringType n=bName;
 			std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+			n=std::regex_replace(n,std::regex::basic_regex("_l_"),"_left",std::regex_constants::match_any);
+			n=std::regex_replace(n,std::regex::basic_regex("_r_"),"_right",std::regex_constants::match_any);
 			n=std::regex_replace(n,std::regex::basic_regex(".*_"),"",std::regex_constants::match_any);
 			auto m=mapping.find(n);
 			if(m==mapping.end())

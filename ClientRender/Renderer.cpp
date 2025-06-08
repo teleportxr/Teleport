@@ -176,7 +176,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *
 	gui.RestoreDeviceObjects(renderPlatform, active_window);
 	auto connectButtonHandler = std::bind(&client::TabContext::ConnectButtonHandler, std::placeholders::_1, std::placeholders::_2);
 	gui.SetConnectHandler(connectButtonHandler);
-	auto changeRender = std::bind(&Renderer::ChangePass, this, std::placeholders::_1);
+	auto changeRender = std::bind(&Renderer::ChangePass, this, std::placeholders::_1, std::placeholders::_2);
 	gui.SetChangeRender(changeRender);
 	auto selectionHandler = std::bind(&Renderer::SelectionChanged, this);
 	gui.SetSelectionHandler(selectionHandler);
@@ -410,10 +410,10 @@ void Renderer::InitLocalGeometry()
 		
 #if 1
 	// test gltf loading.
-	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/RoderickAnime.vrm"
+	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/BasicMale.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/T-Pose.vrma"
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	
@@ -448,7 +448,7 @@ void Renderer::InitLocalGeometry()
 		auto subSceneC = node->GetComponent<clientrender::SubSceneComponent>();
 		if(subSceneC)
 		{
-			subSceneC->PlayAnimation(0, anim_uid);
+		//	subSceneC->PlayAnimation(0, anim_uid);
 		}
 	}
 	#endif
@@ -989,9 +989,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	//	renderState.pbrEffect->UnbindTextures(deviceContext);
 }
 
-void Renderer::ChangePass(ShaderMode newShaderMode)
+void Renderer::ChangePass(ShaderMode newShaderMode,int debugBone)
 {
-	shaderMode = newShaderMode;
+	renderState.teleportSceneConstants.debugHighlightBone = debugBone;
+	if(renderState.shaderMode == newShaderMode)
+		return;
+	renderState.shaderMode = newShaderMode;
 	switch (newShaderMode)
 	{
 	case ShaderMode::ALBEDO:
@@ -1927,15 +1930,6 @@ void Renderer::HandleLocalInputs(const teleport::core::Input &local_inputs)
 					break;
 				};
 				if (renderState.openXR) renderState.openXR->SetOverlayEnabled(gui.GetGuiType() == GuiType::Debug);
-			}
-		}
-		else if (i.inputID == local_cycle_shader_id)
-		{
-			// do this on *releasing* the button:
-			if (i.activated == false)
-			{
-				shaderMode = ShaderMode((int(shaderMode) + 1) % int(ShaderMode::NUM));
-				ChangePass(shaderMode);
 			}
 		}
 	}
