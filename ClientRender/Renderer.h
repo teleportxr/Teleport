@@ -59,7 +59,7 @@ namespace teleport
 			{
 				return minimumPriority;
 			}
-			void ChangePass(ShaderMode newShaderMode);
+			void ChangePass(ShaderMode newShaderMode, int debugBone);
 			virtual void RenderView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void RenderVRView(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			float framerate = 0.0f;
@@ -154,7 +154,6 @@ namespace teleport
 			const teleport::core::InputId local_cycle_shader_id = 3;
 			Gui &gui;
 			client::Config &config;
-			ShaderMode shaderMode = ShaderMode::DEFAULT;
 			teleport::core::Pose GetOriginPose(avs::uid server_uid);
 			std::queue<std::string> console;
 			void ExecConsoleCommands();

@@ -139,14 +139,14 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 
 	// Fills each child information.
 	auto sorted_children = _node.children;
-	std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
+/*	std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
 	{
 		std::string nameA=model.nodes[a].name;
 		std::string nameB=model.nodes[b].name;
 		int A=(int)(std::find(name_order.begin(),name_order.end(),nameA)-name_order.begin());
 		int B=(int)(std::find(name_order.begin(),name_order.end(),nameB)-name_order.begin());
 		return A<B;
-	});
+	});*/
 	for (size_t i = 0; i < sorted_children.size(); ++i)
 	{
 		const tinygltf::Node						&child_node	 = model.nodes[sorted_children[i]];

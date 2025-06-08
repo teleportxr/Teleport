@@ -77,6 +77,7 @@ namespace teleport
 			platform::crossplatform::EffectTechnique *transparent = nullptr;
 
 			uint64_t shaderValidity											   = 1;
+			ShaderMode shaderMode = ShaderMode::DEFAULT;
 			platform::crossplatform::EffectVariantPass *solidVariantPass	   = nullptr;
 			platform::crossplatform::EffectVariantPass *transparentVariantPass = nullptr;
 

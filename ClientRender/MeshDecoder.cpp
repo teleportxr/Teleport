@@ -267,7 +267,7 @@ namespace teleport::core
 			return false;
 		// sort children in reproduceable order.
 		auto sorted_children=root.children;
-		std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
+		/*std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
 		{
 			std::string nameA=GetMappedBoneName(model.nodes[a].name);
 			std::string nameB=GetMappedBoneName(model.nodes[b].name);
@@ -276,7 +276,7 @@ namespace teleport::core
 			int A=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameA](const std::string &str){return nameA.find(str) != std::string::npos;})-name_order.begin());
 			int B=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameB](const std::string &str){return nameB.find(str) != std::string::npos;})-name_order.begin());
 			return A<B;
-		});
+		});*/
 		// Set parent ID for each child
 		for (int childIdx : sorted_children)
 		{
@@ -978,7 +978,7 @@ namespace teleport::core
 						str += std::to_string(node_uids[jointIdx]) + " ";
 					}
 				}
-				std::sort(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end());
+				//std::sort(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end());
 				TELEPORT_LOG("\nSkin: {} {}\n", skin.name, str);
 			}
 

@@ -54,15 +54,22 @@ Skeleton::Skeleton(avs::uid u, const std::string &name, size_t numBones, const T
 	id = u;
 }
 
-void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkeleton::Joint &root, Node &n, const std::vector<avs::uid> &boneIds,int level=0)
+void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkeleton::Joint &root, Node &n, const std::vector<avs::uid> &boneIds,std::vector<int> &jointMapping, int &count, int level=0)
 {
 	if(std::find(boneIds.begin(),boneIds.end(),n.id)!=boneIds.end())
 	{
 		root.name					=n.name;
 		root.transform.translation	= *((ozz::math::Float3*)&n.GetLocalPosition());
-		root.transform.rotation		= *((ozz::math::Quaternion*)&n.GetGlobalRotation());
+		root.transform.rotation		= *((ozz::math::Quaternion*)&n.GetLocalRotation());
 		root.transform.scale		= *((ozz::math::Float3*)&n.GetLocalScale());
 		std::cout<<std::string(level, '\t')<<n.id<<" "<<n.name<<"\n";
+		int idx=(int)(std::find(boneIds.begin(),boneIds.end(),n.id)-boneIds.begin());
+		if(idx<0||idx>=jointMapping.size())
+		{
+			TELEPORT_WARN("Failed to create joint mapping for skeleton.");
+		}
+		else
+			jointMapping[idx]=count++;
 	}
 	std::vector<avs::uid> sorted_children;
 	
@@ -93,11 +100,11 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 				childJoint.transform.translation = ozz::math::Float3(0.f, 0.f, 0.f);
 				childJoint.transform.rotation	 = ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f);
 				childJoint.transform.scale		 = ozz::math::Float3(1.f, 1.f, 1.f);
-				RecurseChildrenIntoOzz(g,childJoint, *c, boneIds, level+1);
+				RecurseChildrenIntoOzz(g,childJoint, *c, boneIds, jointMapping, count, level+1);
 			}
 			else
 			{
-				RecurseChildrenIntoOzz(g,root, *c, boneIds, level);
+				RecurseChildrenIntoOzz(g,root, *c, boneIds, jointMapping, count, level);
 			}
 		}
 	}
@@ -126,7 +133,10 @@ void Skeleton::InitBones(GeometryCache &g)
 	raw_skeleton->roots.resize(1);
 	ozz::animation::offline::RawSkeleton::Joint &ozz_root = raw_skeleton->roots[0];
 	std::cout<<"================ SKELETON "<<name<<"\n";
-	RecurseChildrenIntoOzz(g, ozz_root, *r, boneIds);
+	int count=0;
+	jointMapping.clear();
+	jointMapping.resize(boneIds.size());
+	RecurseChildrenIntoOzz(g, ozz_root, *r, boneIds, jointMapping, count);
 
 	if(raw_skeleton->num_joints()!=bones.size())
 	{

@@ -1868,10 +1868,13 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 
 	ImGui::RadioButton("Anim", &chooseDebugShader, (int)ShaderMode::DEBUG_ANIM);
 	ImGui::SameLine();
+	static int debugHighlightBone=0;
+	bool changed=ImGui::InputInt("Bone Index",&debugHighlightBone);
 	ImGui::RadioButton("Digitizing", &chooseDebugShader, (int)ShaderMode::REZZING);
-	if (oldChooseDebugShader != chooseDebugShader)
+	changed|=(oldChooseDebugShader != chooseDebugShader);
+	if(changed)
 	{
-		changeRender((ShaderMode)chooseDebugShader);
+		changeRender((ShaderMode)chooseDebugShader, debugHighlightBone);
 		return true;
 	}
 	return false;
