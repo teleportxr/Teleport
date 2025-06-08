@@ -413,7 +413,7 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/BasicMale.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	
@@ -448,7 +448,7 @@ void Renderer::InitLocalGeometry()
 		auto subSceneC = node->GetComponent<clientrender::SubSceneComponent>();
 		if(subSceneC)
 		{
-		//	subSceneC->PlayAnimation(0, anim_uid);
+			subSceneC->PlayAnimation(0, anim_uid);
 		}
 	}
 	#endif

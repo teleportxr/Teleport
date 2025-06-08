@@ -800,7 +800,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 
 	incompleteSkeleton->ResetMissingResourceCount();
 	//Create skeleton.
-	incompleteSkeleton->skeleton = std::make_shared<clientrender::Skeleton>(id,skeleton.name, skeleton.boneIDs.size(), skeleton.skeletonTransform);
+	incompleteSkeleton->skeleton = std::make_shared<clientrender::Skeleton>(id,skeleton.name, skeleton.boneIDs.size());
 
 	std::vector<avs::uid> bone_ids;
 	bone_ids.resize(skeleton.boneIDs.size());

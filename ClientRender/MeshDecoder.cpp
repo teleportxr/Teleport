@@ -768,7 +768,7 @@ namespace teleport::core
 		std::vector<avs::uid> node_uids(model.nodes.size());
 		avs::uid first_node=dg.next_id;
 		// First pass: Create all node uids.
-		// consider skeletonds, parent-child relationships.
+		// consider skeletons, parent-child relationships.
 		// We would ideally like to order the nodes in ascending
 		// order within each hierarchy.
 		
@@ -953,22 +953,37 @@ namespace teleport::core
 		std::vector<avs::uid> skeleton_uids(model.skins.size());
 		avs::uid first_skeleton=dg.next_id;
 		// Possible to have multiple skeletons with different sets of nodes.
+		// But equally, we want any skins that share the same set of joints to use the same skeleton.
 		for (size_t i = 0; i < model.skins.size(); i++)
 		{
 			const tinygltf::Skin &skin		   = model.skins[i];
 
-			avs::uid			  skeleton_uid = dg.next_id++;
-			skeleton_uids[i]				   = skeleton_uid;
+			// Does this skin use an existing skeleton?
+			// Either: same root, or
+			//			This root is a child of an existing one, or
+			//			An existing root is a child of this one.
+			int root_index				= skin.skeleton ? skin.skeleton : skin.joints[0];
+			avs::uid skeleton_uid		= dg.next_id++;
 
-			avs::Skeleton &avsSkeleton		   = dg.skeletons[skeleton_uid];
-			avsSkeleton.name = !skin.name.empty() ? skin.name : (filename_url.empty() ? "Skeleton" : filename_url + " skeleton " + std::to_string(i));
+			// TODO: For now, just check for exact match:
+			for(auto sk:dg.skeletons)
+			{
+				if(sk.second.rootBoneId == node_uids[root_index])
+				{
+					skeleton_uid	= sk.first;
+				}
+			}
+			skeleton_uids[i]			= skeleton_uid;
+
+			avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
+			avsSkeleton.name			= !skin.name.empty() ? skin.name : (filename_url.empty() ? "Skeleton" : filename_url + " skeleton " + std::to_string(i));
 
 			// Set up joints
 			std::string str;
 			if (skin.skeleton || skin.joints.size() > 0)
 			{
 				// we want this to be in the same order that the nodes are in.
-				avsSkeleton.rootBoneId = node_uids[skin.skeleton ? skin.skeleton : skin.joints[0]];
+				avsSkeleton.rootBoneId = node_uids[root_index];
 				TELEPORT_LOG("\nSkin root: {} {}\n", skin.name, avsSkeleton.rootBoneId);
 				for (int jointIdx : skin.joints)
 				{
