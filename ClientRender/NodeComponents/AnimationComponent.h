@@ -52,6 +52,7 @@ namespace teleport
 			// component could be used in multiple instances of the same SubScene.
 			AnimationInstance *instance=nullptr;
 			std::vector<mat4> inverseBindMatrices;
+			int64_t lastTimestampUs=0;
 		};
 	}
 

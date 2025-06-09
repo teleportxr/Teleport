@@ -90,44 +90,6 @@ void Animation::ToOzz()
 	}
 }
 
-ozz::vector<ozz::math::Float4x4> rest_models;
-bool							 Animation::CalcRestPose()
-{
-	// Buffer of model space matrices. These are computed by the local-to-model
-	// job after the blending stage.
-	const int num_soa_joints = ozz_skeleton->num_soa_joints();
-	const int num_joints	 = ozz_skeleton->num_joints();
-
-	// Ensure sampler buffers are sized correctly
-	std::vector<ozz::math::SoaTransform> locals;
-	std::vector<ozz::math::SimdFloat4>	 joint_weights;
-
-	// Ensure buffers are properly sized
-	locals.resize(num_soa_joints);
-	rest_models.resize(num_joints);
-	joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
-
-	auto ident = ozz::math::Transform::identity();
-	for (size_t i = 0; i < locals.size(); i++)
-	{
-		locals[i].rotation	  = ozz::math::SoaQuaternion::Load({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {1.0f, 1.0f, 1.0f, 1.0f});
-		locals[i].translation = ozz::math::SoaFloat3::Load({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0});
-		locals[i].scale		  = ozz::math::SoaFloat3::Load({1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 1.f});
-	}
-	const mat4 *m = (const mat4 *)rest_models.data();
-	//  Convert from local-space to model-space transforms
-	ozz::animation::LocalToModelJob ltmJob;
-	ltmJob.skeleton = &*ozz_skeleton;
-	ltmJob.input	= make_span(locals); // Use sampled local transforms
-	ltmJob.output	= make_span(rest_models);
-
-	if (!ltmJob.Run())
-	{
-		return false;
-	}
-
-	return true;
-}
 void MatrixDecompose(const mat4 &matrix, vec3 &scale, vec4 &rotation, vec3 &translation)
 {
 	// Extract translation (last column)
@@ -208,9 +170,9 @@ ozz::animation::Animation *Animation::GetOzzAnimation(uint64_t skeleton_hash)
 
 void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
 {
-	if (!CalcRestPose())
+	//if (!CalcRestPose())
 	{
-		return;
+	//	return;
 	}
 	ozz::animation::offline::RawAnimation retargeted_raw_animation = *raw_animation;
 

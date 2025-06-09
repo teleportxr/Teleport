@@ -989,8 +989,12 @@ namespace teleport::core
 				{
 					if (jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
 					{
-						avsSkeleton.boneIDs.push_back(node_uids[jointIdx]);
-						str += std::to_string(node_uids[jointIdx]) + " ";
+						avs::uid id = node_uids[jointIdx];
+						if(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),id) == avsSkeleton.boneIDs.end())
+						{
+							avsSkeleton.boneIDs.push_back(id);
+							str += std::to_string(id) + " ";
+						}
 					}
 				}
 				//std::sort(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end());
@@ -1030,16 +1034,14 @@ namespace teleport::core
 						}
 						mat4		&matrix	   = skeleton.inverseBindMatrices[index_in_bones];
 						const float *floatData = reinterpret_cast<const float *>(data + j * stride);
-
 						for (int k = 0; k < 16; k++)
 						{
 							matrix.m[k] = floatData[k];
 						}
-
 						// Convert matrices from source to target coordinate system
 						// matrix = platform::crossplatform::ConvertMatrix(
 						//     sourceAxesStandard, targetAxesStandard, matrix);
-						matrix.transpose(); // Match the convention in DecodeDracoScene
+						matrix.transpose();
 					}
 				}
 			}
