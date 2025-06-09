@@ -418,21 +418,6 @@ avs::Result GeometryEncoder::encodeSkeleton(avs::uid skeletonID)
 		};
 		put(skeleton->boneIDs.size());
 		put((const uint8_t *)skeleton->boneIDs.data(), sizeof(avs::uid) * skeleton->boneIDs.size());
-		/*	for (int i = 0; i <(int) skeleton->boneIDs.size(); i++)
-			{
-				avs::Node* node = geometryStore->getNode(skeleton->boneIDs[i]);
-				avs::Transform localTransform = node->localTransform;
-				avs::ConvertTransform(settings->serverAxesStandard, geometryStreamingService->getClientAxesStandard(), localTransform);
-				put(skeleton->boneIDs[i]);
-				int16_t parentIndex = findIndex(skeleton->boneIDs, node->parentID);
-				put(parentIndex);
-				put(localTransform);
-				uint16_t nameLength = node->name.length();
-				put(nameLength);
-				//Push name.
-				put((uint8_t*)node->name.data(), nameLength);
-			}*/
-		put(skeleton->skeletonTransform);
 
 		putPayloadSize();
 		geometryStreamingService->encodedResource(skeletonID);

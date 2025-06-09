@@ -4,6 +4,7 @@
 #include <libavstream/src/platform.hpp>
 
 #include "ClientRender/Animation.h"
+#include "ClientRender/AnimationRetargeter.h"
 #include "GeometryCache.h"
 #include "TeleportCore/CommonNetworking.h"
 #include "TeleportCore/Logging.h"
@@ -19,95 +20,6 @@
 #include <ozz/base/maths/soa_transform.h>
 #include <regex>
 #pragma optimize("",off)
-std::string GetMappedBoneName(const std::string &bName)
-{
-	static std::map<std::string,std::string> mapping;
-	if(!mapping.size())
-	{
-		// Core bones - with numbered prefix
-		mapping["hips"]			 = "hips";
-		mapping["spine"]		 = "spine";
-		mapping["spine1"]		 = "chest";
-		mapping["spine2"]		 = "upperchest";
-		mapping["neck"]			 = "neck";
-		mapping["head"]			 = "head";
-
-		// arms - with numbered prefix
-		mapping["leftshoulder"]	 = "leftshoulder";
-		mapping["leftarm"]		 = "leftupperarm";
-		mapping["leftforearm"]	 = "leftlowerarm";
-		mapping["lefthand"]		 = "lefthand";
-		mapping["rightshoulder"] = "rightshoulder";
-		mapping["rightarm"]		 = "rightupperarm";
-		mapping["rightforearm"]	 = "rightlowerarm";
-		mapping["righthand"]	 = "righthand";
-
-		// legs - with numbered prefix
-		mapping["leftupleg"]	 = "leftupperleg";
-		mapping["leftleg"]		 = "leftlowerleg";
-		mapping["leftfoot"]		 = "leftfoot";
-		mapping["lefttoebase"]	 = "lefttoes";
-		mapping["rightupleg"]	 = "rightupperleg";
-		mapping["rightleg"]		 = "rightlowerleg";
-		mapping["rightfoot"]	 = "rightfoot";
-		mapping["righttoebase"]	 = "righttoes";
-
-		// legacy mappings (without number)
-		mapping["hips"]			 = "hips";
-		mapping["spine"]		 = "spine";
-		mapping["spine1"]		 = "chest";
-		mapping["spine2"]		 = "upperchest";
-		mapping["neck"]			 = "neck";
-		mapping["head"]			 = "head";
-		mapping["leftshoulder"]	 = "leftshoulder";
-		mapping["leftarm"]		 = "leftupperarm";
-		mapping["leftforearm"]	 = "leftlowerarm";
-		mapping["lefthand"]		 = "lefthand";
-		mapping["rightshoulder"] = "rightshoulder";
-		mapping["rightarm"]		 = "rightupperarm";
-		mapping["rightforearm"]	 = "rightlowerarm";
-		mapping["righthand"]	 = "righthand";
-		mapping["leftupleg"]	 = "leftupperleg";
-		mapping["leftleg"]		 = "leftlowerleg";
-		mapping["leftfoot"]		 = "leftfoot";
-		mapping["lefttoebase"]	 = "lefttoes";
-		mapping["rightupleg"]	 = "rightupperleg";
-		mapping["rightleg"]		 = "rightlowerleg";
-		mapping["rightfoot"]	 = "rightfoot";
-		mapping["righttoebase"]	 = "righttoes";
-
-		// generic mappings (no prefix)
-		mapping["hips"]			 = "hips";
-		mapping["spine"]		 = "spine";
-		mapping["spine1"]		 = "chest";
-		mapping["spine2"]		 = "upperchest";
-		mapping["neck"]			 = "neck";
-		mapping["head"]			 = "head";
-		mapping["leftshoulder"]	 = "leftshoulder";
-		mapping["leftarm"]		 = "leftupperarm";
-		mapping["leftforearm"]	 = "leftlowerarm";
-		mapping["lefthand"]		 = "lefthand";
-		mapping["rightshoulder"] = "rightshoulder";
-		mapping["rightarm"]		 = "rightupperarm";
-		mapping["rightforearm"]	 = "rightlowerarm";
-		mapping["righthand"]	 = "righthand";
-		mapping["leftupleg"]	 = "leftupperleg";
-		mapping["leftleg"]		 = "leftlowerleg";
-		mapping["leftfoot"]		 = "leftfoot";
-		mapping["lefttoebase"]	 = "lefttoes";
-		mapping["rightupleg"]	 = "rightupperleg";
-		mapping["rightleg"]		 = "rightlowerleg";
-		mapping["rightfoot"]	 = "rightfoot";
-		mapping["righttoebase"]	 = "righttoes";	
-	}
-	std::string n=bName;
-	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
-	n=std::regex_replace(n,std::regex::basic_regex("avatar_"),"");
-	auto m=mapping.find(n);
-	if(m==mapping.end())
-		return n;
-	return m->second;
-};
 using namespace teleport::clientrender;
 
 using namespace ozz;
@@ -265,22 +177,24 @@ namespace teleport::clientrender
 			// If we have speed, update time based on elapsed time
 			if (state.animationState.speedUnitsPerS != 0.0f)
 			{
-				float elapsedS = 0.01f*(time_us - state.animationState.timestampUs) / 1000000.0f;
-				animationTimeS += elapsedS * state.animationState.speedUnitsPerS;
+				//float elapsedS = 0.01f*(time_us - state.animationState.timestampUs) / 1000000.0f;
+				//animationTimeS += dt_s * state.animationState.speedUnitsPerS;
 			}
 
 			// Handle looping
-			if (state.animationState.loop && animation->duration() > 0.0f)
+			/*if (state.animationState.loop && animation->duration() > 0.0f)
 			{
 				animationTimeS = fmodf(animationTimeS, animation->duration());
-			}
+			}*/
 
 			//  Set time ratio correctly (0.0 to 1.0)
 			float timeRatio = 0.0f;
 			if (animation->duration() > 0.0f)
 			{
-				timeRatio = animationTimeS / animation->duration();
-				timeRatio = std::max(0.0f, std::min(1.0f, timeRatio));
+				timeRatio = 4.0f*animationTimeS / animation->duration();
+				// Wraps in the unit interval [0:1]
+				const float loops = floorf(timeRatio);
+				timeRatio = timeRatio - loops;
 			}
 
 			// Ensure sampler buffers are sized correctly
@@ -327,6 +241,7 @@ AnimationComponent::~AnimationComponent()
 void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer)
 {
 	teleport::core::ApplyAnimation applyAnimation;
+	applyAnimation.speedUnitsPerSecond	= 0.05f;
 	applyAnimation.animLayer				 = (uint32_t)layer;
 	applyAnimation.animationID				 = anim_uid;
 	applyAnimation.cacheID					 = cache_id;
@@ -403,7 +318,7 @@ void AnimationComponent::Retarget(  Animation &anim)
 	{
 		// original joint matrix from the skeleton's bone:
 		auto b = skeletonsBones[i];
-		std::string boneName=GetMappedBoneName(b->name);
+		std::string boneName=getMappedBoneName(b->name);
 		mat4 joint_matrix_original = b->GetLocalTransform().GetTransformMatrix();
 		// Animation's version of the matrix for this joint:
 		std::map<std::string,teleport::core::PoseScale>::const_iterator anim_joint_pose = animsRestPoses.find(b->name);
@@ -528,8 +443,9 @@ void AnimationComponent::update(int64_t timestampUs)
 	{
 		instance = new AnimationInstance(owner.GetSkeleton());
 	}
-	static float dt = 0.00001f;
+	static float dt = 0.0001f;//lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
 	instance->Update(dt, timestampUs);
+	lastTimestampUs=timestampUs;
 }
 
 void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs)

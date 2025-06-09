@@ -79,7 +79,6 @@ namespace teleport
 			std::map<std::string, teleport::core::PoseScale> restPoses;
 			void ToOzz();
 			float endTime_s = 0.0f; // Seconds the animation lasts for.
-			bool CalcRestPose();
 		};
 	}
 }

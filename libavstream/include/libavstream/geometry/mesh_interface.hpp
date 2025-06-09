@@ -51,10 +51,9 @@ namespace avs
 	struct Skeleton
 	{
 		std::string name;
-		// This will also be present in boneID's, but we must single it out.
+		// This will also be present in boneID's, but we must single it out, in case it's not the first in the list.
 		avs::uid rootBoneId;
 		std::vector<uid> boneIDs;
-		Transform skeletonTransform;
 		// New method, bones are built into the skeleton:
 		std::vector<Transform> boneTransforms;
 		std::vector<int16_t> parentIndices;
@@ -66,8 +65,6 @@ namespace avs
 			convertedSkeleton.name = skeleton.name;
 			convertedSkeleton.boneIDs = skeleton.boneIDs;
 
-			convertedSkeleton.skeletonTransform = skeleton.skeletonTransform;
-			avs::ConvertTransform(sourceStandard, targetStandard, convertedSkeleton.skeletonTransform);
 			for (size_t i = 0; i < skeleton.boneTransforms.size(); ++i)
 			{
 				convertedSkeleton.boneTransforms.push_back(skeleton.boneTransforms[i]);

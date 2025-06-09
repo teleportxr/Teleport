@@ -410,10 +410,10 @@ void Renderer::InitLocalGeometry()
 		
 #if 1
 	// test gltf loading.
-	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/BasicMale.vrm"
+	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking.vrma"
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking2.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	
