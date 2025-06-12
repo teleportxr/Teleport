@@ -287,7 +287,49 @@ namespace teleport::core
 		}
 		return true;
 	}
+	
+	void GetBindMatrices(std::vector<mat4> &inverseBindMatrices,const tinygltf::Model &model,const tinygltf::Skin &skin)
+	{
+		const tinygltf::Accessor &accessor = model.accessors[skin.inverseBindMatrices];
 
+		if (accessor.type == TINYGLTF_TYPE_MAT4 && accessor.count == skin.joints.size())
+		{
+			const tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
+			const tinygltf::Buffer	   &buffer	   = model.buffers[bufferView.buffer];
+
+			// Calculate stride
+			size_t stride						   = accessor.ByteStride(bufferView);
+			if (stride == 0)
+			{
+				stride = sizeof(float) * 16; // Default for mat4
+			}
+
+			// Get data pointer
+			const unsigned char *data		= buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+			// Copy matrices
+			inverseBindMatrices.resize(accessor.count);
+			for (size_t j = 0; j < accessor.count; j++)
+			{
+				/*avs::uid node_uid = node_uids[skin.joints[j]];
+				int index_in_bones = (int)(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),node_uid)-avsSkeleton.boneIDs.begin());
+				if(index_in_bones<0||index_in_bones>=inverseBindMatrices.size())
+				{
+					TELEPORT_WARN("Unable to insert bind matrix {}",j);
+					continue;
+				}*/
+				mat4		&matrix	   = inverseBindMatrices[j];
+				const float *floatData = reinterpret_cast<const float *>(data + j * stride);
+				for (int k = 0; k < 16; k++)
+				{
+					matrix.m[k] = floatData[k];
+				}
+				// Convert matrices from source to target coordinate system
+				// matrix = platform::crossplatform::ConvertMatrix(
+				//     sourceAxesStandard, targetAxesStandard, matrix);
+				matrix.transpose();
+			}
+		}
+	}
 	bool ConvertGltfModelToDecodedGeometry(GeometryDecoder *dec, const tinygltf::Model &model,
 										   clientrender::ResourceCreator *target, DecodedGeometry		 &dg,
 										   const std::string &filename_url,
@@ -983,7 +1025,6 @@ namespace teleport::core
 			if (skin.skeleton || skin.joints.size() > 0)
 			{
 				// we want this to be in the same order that the nodes are in.
-				avsSkeleton.rootBoneId = node_uids[root_index];
 				TELEPORT_LOG("\nSkin root: {} {}\n", skin.name, avsSkeleton.rootBoneId);
 				for (int jointIdx : skin.joints)
 				{
@@ -997,6 +1038,10 @@ namespace teleport::core
 						}
 					}
 				}
+				avsSkeleton.rootBoneId = node_uids[root_index];
+				while(dg.nodes[avsSkeleton.rootBoneId].parentID!=0 &&
+					std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),dg.nodes[avsSkeleton.rootBoneId].parentID)!=avsSkeleton.boneIDs.end())
+					avsSkeleton.rootBoneId = dg.nodes[avsSkeleton.rootBoneId].parentID;
 				//std::sort(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end());
 				TELEPORT_LOG("\nSkin: {} {}\n", skin.name, str);
 			}
@@ -1004,46 +1049,8 @@ namespace teleport::core
 			// Process inverse bind matrices
 			if (skin.inverseBindMatrices >= 0 && skin.inverseBindMatrices < static_cast<int>(model.accessors.size()))
 			{
-				const tinygltf::Accessor &accessor = model.accessors[skin.inverseBindMatrices];
-
-				if (accessor.type == TINYGLTF_TYPE_MAT4 && accessor.count == skin.joints.size())
-				{
-					const tinygltf::BufferView &bufferView = model.bufferViews[accessor.bufferView];
-					const tinygltf::Buffer	   &buffer	   = model.buffers[bufferView.buffer];
-
-					// Calculate stride
-					size_t stride						   = accessor.ByteStride(bufferView);
-					if (stride == 0)
-					{
-						stride = sizeof(float) * 16; // Default for mat4
-					}
-
-					// Get data pointer
-					const unsigned char *data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
-					auto				 &skeleton = dg.skeletons[skeleton_uid];
-					skeleton.inverseBindMatrices.resize(accessor.count);
-					// Copy matrices
-					for (size_t j = 0; j < accessor.count; j++)
-					{
-						avs::uid node_uid = node_uids[skin.joints[j]];
-						int index_in_bones = (int)(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),node_uid)-avsSkeleton.boneIDs.begin());
-						if(index_in_bones<0||index_in_bones>=skeleton.inverseBindMatrices.size())
-						{
-							TELEPORT_WARN("Unable to insert bind matrix {}",j);
-							continue;
-						}
-						mat4		&matrix	   = skeleton.inverseBindMatrices[index_in_bones];
-						const float *floatData = reinterpret_cast<const float *>(data + j * stride);
-						for (int k = 0; k < 16; k++)
-						{
-							matrix.m[k] = floatData[k];
-						}
-						// Convert matrices from source to target coordinate system
-						// matrix = platform::crossplatform::ConvertMatrix(
-						//     sourceAxesStandard, targetAxesStandard, matrix);
-						matrix.transpose();
-					}
-				}
+				auto				 &skeleton	= dg.skeletons[skeleton_uid];
+				GetBindMatrices(skeleton.inverseBindMatrices,model,skin);
 			}
 			else
 			{
@@ -1059,16 +1066,16 @@ namespace teleport::core
 			auto				 &avsNode  = dg.nodes[nodeUid];
 
 			// Set up skin/skeleton
-			if (gltfNode.skin >= 0 && gltfNode.skin < static_cast<int>(skeleton_uids.size()))
+			if (gltfNode.skin >= 0 && gltfNode.skin < static_cast<int>(skeleton_uids.size()) && gltfNode.skin < model.skins.size())
 			{
-				avs::uid	   skeleton_uid = skeleton_uids[gltfNode.skin];
+				const tinygltf::Skin &skin	= model.skins[gltfNode.skin];
+				avs::uid skeleton_uid		= skeleton_uids[gltfNode.skin];
 				avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
-
 				// Set root node
 				if (!avsSkeleton.boneIDs.empty())
 				{
 					avsNode.skeletonID = skeleton_uid;
-
+					GetBindMatrices(avsNode.inverseBindMatrices, model, skin);
 					// Set up joint indices mapping directly
 					avsNode.joint_indices.resize(avsSkeleton.boneIDs.size());
 					for (size_t j = 0; j < avsSkeleton.boneIDs.size(); j++)

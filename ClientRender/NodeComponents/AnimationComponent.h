@@ -45,7 +45,6 @@ namespace teleport
 			//! @param boneList 
 			//! @param timestampUs 
 			void update( int64_t timestampUs);
-			void update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs);
 
 		private:
 			// TODO: The following may need to be extracted into a per-instance structure, as the same

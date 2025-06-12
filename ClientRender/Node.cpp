@@ -133,16 +133,9 @@ void Node::UpdateExtrapolatedPositions(double serverTimeS)
 	TickExtrapolatedTransform(serverTimeS);
 }
 
-void Node::Update( std::chrono::microseconds timestamp_us)
+void Node::Update(std::chrono::microseconds timestamp_us)
 {
 	visibility.update(timestamp_us.count());
-
-	// Attempt to animate, if we have a skeleton.
-	if(skeleton)
-	{
-		auto animC=GetOrCreateComponent<AnimationComponent>();
-		animC->update(skeleton->GetExternalBones(), timestamp_us.count());
-	}
 
 	for(std::weak_ptr<Node> child : children)
 	{

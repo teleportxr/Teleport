@@ -1020,6 +1020,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 			if(skeleton)
 			{
 				node->SetSkeleton(skeleton);
+				node->SetInverseBindMatrices(avsNode.inverseBindMatrices);
 			}
 			else
 			{

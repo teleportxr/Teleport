@@ -39,6 +39,7 @@ namespace avs
 
 		//SKINNED MESH
 		uid skeletonID=0;
+		std::vector<mat4> inverseBindMatrices;
 		std::vector<int16_t> joint_indices;
 		std::vector<uid> animations;
 

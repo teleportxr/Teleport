@@ -166,6 +166,15 @@ namespace teleport
 			const std::shared_ptr<Skeleton> GetSkeleton() const { return skeleton; }
 			std::shared_ptr<Skeleton> GetSkeleton() { return skeleton; }
 
+			void SetInverseBindMatrices(const std::vector<mat4> &ib)
+			{
+				inverseBindMatrices=ib;
+			}
+			const std::vector<mat4> &GetInverseBindMatrices() const
+			{
+				return inverseBindMatrices;
+			}
+
 			void SetJointIndices(const std::vector<int16_t> j)
 			{
 				jointIndices = j;
@@ -318,7 +327,7 @@ namespace teleport
 			Transform smoothedTransform;
 			bool smoothingInitialized = false;
 			bool smoothingEnabled = false;
-
+			std::vector<mat4> inverseBindMatrices;
 			bool isStatic;
 			int priority = 0;
 			// Cached global transform, and dirty flag; updated when necessary on a request.
