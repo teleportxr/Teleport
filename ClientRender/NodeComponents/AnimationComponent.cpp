@@ -93,10 +93,13 @@ namespace teleport::clientrender
 			if (cache)
 			{
 				auto anim	 = cache->mAnimationManager.Get(applyAnimation.animationID);
-				auto *ozz_animation = anim->GetOzzAnimation(id);
-				if(!ozz_animation||ozz_animation->num_tracks()!=skeleton->num_joints())
-					return;
-				st.animation = anim;
+				if(anim)
+				{
+					auto *ozz_animation = anim->GetOzzAnimation(id);
+					if(!ozz_animation||ozz_animation->num_tracks()!=skeleton->num_joints())
+						return;
+					st.animation = anim;
+				}
 			}
 			animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);
 		}
@@ -238,6 +241,7 @@ AnimationComponent::~AnimationComponent()
 {
 	delete instance;
 }
+
 void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer)
 {
 	teleport::core::ApplyAnimation applyAnimation;
@@ -251,6 +255,7 @@ void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uin
 	applyAnimation.timestampUs				 = timestampNowUs.count();
 	setAnimationState(timestampNowUs, applyAnimation);
 }
+
 std::map<std::string,teleport::core::PoseScale>::const_iterator FindMatch(const std::map<std::string,teleport::core::PoseScale>& poses,std::string name)
 {
 	std::transform(name.begin(), name.end(), name.begin(), ::tolower);
@@ -446,35 +451,4 @@ void AnimationComponent::update(int64_t timestampUs)
 	static float dt = 0.0001f;//lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
 	instance->Update(dt, timestampUs);
 	lastTimestampUs=timestampUs;
-}
-
-void AnimationComponent::update(const std::vector<std::shared_ptr<clientrender::Node>> &boneList, int64_t timestampUs)
-{
-#if 0
-	// Early-out if we have no layers.
-	if (!animationLayerStates.size())
-	{
-		return;
-	}
-	// each animation layer is applied on top of the previous one.
-	for (const auto &s : animationLayerStates)
-	{
-		InstantaneousAnimationState state = s.getState(timestampUs);
-		// This state provides:
-		//	two animationStates, previous and next.
-		//	an interpolation value between 0 and 1.0
-		const AnimationState &s1		  = state.previousAnimationState;
-		const AnimationState &s2		  = state.animationState;
-		auto				  a1		  = animations.find(s1.animationId);
-		if (state.interpolation < 1.f && a1 != animations.end() && a1->second)
-		{
-			a1->second->seekTime(boneList, s1.animationTimeS, 1.0f, s1.loop);
-		}
-		auto a2 = animations.find(s2.animationId);
-		if (state.interpolation > 0.f && a2 != animations.end() && a2->second)
-		{
-			a2->second->seekTime(boneList, s2.animationTimeS, state.interpolation, s2.loop);
-		}
-	}
-#endif
 }

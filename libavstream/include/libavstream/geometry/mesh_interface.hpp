@@ -54,9 +54,6 @@ namespace avs
 		// This will also be present in boneID's, but we must single it out, in case it's not the first in the list.
 		avs::uid rootBoneId;
 		std::vector<uid> boneIDs;
-		// New method, bones are built into the skeleton:
-		std::vector<Transform> boneTransforms;
-		std::vector<int16_t> parentIndices;
 		std::vector<mat4> inverseBindMatrices;
 
 		static Skeleton convertToStandard(const Skeleton& skeleton, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
@@ -65,11 +62,6 @@ namespace avs
 			convertedSkeleton.name = skeleton.name;
 			convertedSkeleton.boneIDs = skeleton.boneIDs;
 
-			for (size_t i = 0; i < skeleton.boneTransforms.size(); ++i)
-			{
-				convertedSkeleton.boneTransforms.push_back(skeleton.boneTransforms[i]);
-				avs::ConvertTransform(sourceStandard, targetStandard, convertedSkeleton.boneTransforms[i]);
-			}
 			for (size_t i = 0; i < skeleton.inverseBindMatrices.size(); ++i)
 			{
 				convertedSkeleton.inverseBindMatrices.push_back(skeleton.inverseBindMatrices[i]);

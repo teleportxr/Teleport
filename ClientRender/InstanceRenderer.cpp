@@ -947,7 +947,6 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			continue;
 		}
 		bool						setBoneConstantBuffer = (passCache->anim);
-		auto						skeletonNode		  = node->GetSkeletonNode().lock();
 		std::shared_ptr<PassRender> passRender;
 		passRender = passRenders[pass];
 		if (!passRender)
@@ -1002,7 +1001,7 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			if (!meshRender)
 				materialRender->meshRenders[node_element_hash] = meshRender = std::make_shared<MeshRender>();
 			meshRender->skeleton.reset();
-			if (passCache->anim && skeletonNode.get())
+			if (passCache->anim )
 			{
 				anim															 = true;
 				{
@@ -1218,9 +1217,8 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 	if (std::shared_ptr<clientrender::Skeleton> skeleton = node->GetSkeleton())
 	{
 		auto										   &nodeState		 = subSceneNodeStates.nodeStates[node->id];
-		std::shared_ptr<Node>							skeletonNode	 = node->GetSkeletonNode().lock();
-		
-		if (mesh && skeletonNode)
+
+		if (mesh )
 		{
 			std::vector<mat4> boneMatrices;
 			// The bone matrices transform from the original local position of a vertex

@@ -1390,7 +1390,6 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		return avs::Result::Failed;
 	// TODO: Check bytes remaining vs min node size.
 	node.localTransform = NextChunk(avs::Transform);
-
 	node.stationary = (NextByte) != 0;
 	node.holder_client_id = NextUint64;
 	node.priority = NextUint32;
@@ -1409,8 +1408,7 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 
 			node.skeletonID = NextUint64;
 			NextList(uint16_t, int16_t, node.joint_indices) NextList(uint16_t, avs::uid, node.animations) NextList(uint16_t, avs::uid, node.materials)
-				
-				node.renderState.lightmapScaleOffset = NextVec4;
+			node.renderState.lightmapScaleOffset = NextVec4;
 			node.renderState.globalIlluminationUid = NextUint64;
 		}
 		break;
@@ -1439,7 +1437,6 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		};
 	}
 	geometryDecodeData.target->CreateNode(geometryDecodeData.server_or_cache_uid, uid, node);
-
 	return avs::Result::OK;
 }
 
@@ -1451,21 +1448,17 @@ avs::Result GeometryDecoder::decodeSkeleton(GeometryDecodeData &geometryDecodeDa
 		geometryDecodeData.data.erase(geometryDecodeData.data.begin(), geometryDecodeData.data.begin() + skip);
 	}
 	avs::uid skeletonID = geometryDecodeData.uid;
-
 	avs::Skeleton skeleton;
-
-	if (!readString(geometryDecodeData, skeleton.name)) return avs::Result::Failed;
-
-	if (geometryDecodeData.saveToDisk) saveBuffer(geometryDecodeData, std::string("skeletons/" + skeleton.name + ".skeleton"));
-
+	if (!readString(geometryDecodeData, skeleton.name))
+		return avs::Result::Failed;
+	if (geometryDecodeData.saveToDisk)
+		saveBuffer(geometryDecodeData, std::string("skeletons/" + skeleton.name + ".skeleton"));
 	size_t numBones=NextUint64;
-	skeleton.parentIndices.resize(numBones);
 	skeleton.boneIDs.resize(numBones);
 	for (size_t i = 0; i < numBones; i++)
 	{
 		skeleton.boneIDs[i] = NextUint64;
 	}
-
 	geometryDecodeData.target->CreateSkeleton(geometryDecodeData.server_or_cache_uid, skeletonID, skeleton);
 	return avs::Result::OK;
 }
@@ -1485,7 +1478,6 @@ avs::Result GeometryDecoder::decodeFontAtlas(GeometryDecodeData &geometryDecodeD
 		auto &fontMap = fontAtlas.fontMaps[sz];
 		fontMap.lineHeight = NextFloat;
 		uint16_t numGlyphs = NextUint16;
-		// 
 		size_t glyphsBytes = numGlyphs*sizeof(core::Glyph);
 		if (glyphsBytes > geometryDecodeData.bytesRemaining())
 		{
@@ -1528,7 +1520,6 @@ avs::Result GeometryDecoder::decodeFloatKeyframes(GeometryDecodeData &geometryDe
 		keyframes[i].time = NextFloat;
 		keyframes[i].value = NextFloat;
 	}
-
 	return avs::Result::OK;
 }
 
@@ -1543,7 +1534,6 @@ avs::Result GeometryDecoder::decodeVector3Keyframes(GeometryDecodeData &geometry
 		keyframes[i].time = NextFloat;
 		keyframes[i].value = NextChunk(vec3);
 	}
-
 	return avs::Result::OK;
 }
 
@@ -1558,7 +1548,6 @@ avs::Result GeometryDecoder::decodeVector4Keyframes(GeometryDecodeData &geometry
 		keyframes[i].time = NextFloat;
 		keyframes[i].value = NextChunk(vec4);
 	}
-
 	return avs::Result::OK;
 }
 

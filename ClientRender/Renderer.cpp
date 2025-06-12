@@ -413,7 +413,7 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking2.vrma"
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	
@@ -438,10 +438,10 @@ void Renderer::InitLocalGeometry()
 		static float sc = 1.0f;
 		float angle=float(i)/float(num)*2.0f*3.14159f;
 
-		gltfNode.localTransform.position = vec3(r*sin(angle),r*cos(angle), 1.0f);
-		gltfNode.localTransform.rotation={0.707f,0,0,0.707f};
-		gltfNode.localTransform.scale = vec3(sc, sc, sc);
-		avs::uid node_uid = avs::GenerateUid();
+		gltfNode.localTransform.position = vec3(r * sin(angle), r * cos(angle), 1.0f);
+		gltfNode.localTransform.rotation = {0.707f, 0, 0, 0.707f};
+		gltfNode.localTransform.scale	 = vec3(sc, sc, sc);
+		avs::uid node_uid				 = avs::GenerateUid();
 		localResourceCreator.CreateNode(0, node_uid, gltfNode);
 
 		auto node = localGeometryCache->mNodeManager.GetNode(node_uid);
