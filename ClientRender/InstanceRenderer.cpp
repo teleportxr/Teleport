@@ -1232,7 +1232,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 				animationComponent->update(renderState.timestampUs.count());
 				boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
 				skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
-				animationComponent->GetBoneMatrices(boneMatrices);
+				animationComponent->GetBoneMatrices(boneMatrices, node->GetJointIndices());
 				
 				std::vector<mat4> jMatrices;
 				animationComponent->GetJointMatrices(jMatrices);

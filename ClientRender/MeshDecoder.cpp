@@ -1076,11 +1076,15 @@ namespace teleport::core
 				{
 					avsNode.skeletonID = skeleton_uid;
 					GetBindMatrices(avsNode.inverseBindMatrices, model, skin);
-					// Set up joint indices mapping directly
-					avsNode.joint_indices.resize(avsSkeleton.boneIDs.size());
-					for (size_t j = 0; j < avsSkeleton.boneIDs.size(); j++)
+					// Set up joint indices mapping
+					//   For each inv bind matrix, what is its index in the skeleton?
+					avsNode.joint_indices.resize(skin.joints.size());
+
+					for (size_t j = 0; j < skin.joints.size(); j++)
 					{
-						avsNode.joint_indices[j] = static_cast<int16_t>(j);
+						avs::uid joint_uid		= node_uids[skin.joints[j]];
+						uint16_t j_index = (uint16_t)(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),joint_uid)-avsSkeleton.boneIDs.begin());
+						avsNode.joint_indices[j] = j_index;
 					}
 				}
 			}

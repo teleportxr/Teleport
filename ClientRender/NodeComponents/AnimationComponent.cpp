@@ -312,8 +312,6 @@ void AnimationComponent::Retarget(  Animation &anim)
 	// We modify the animation to match the skeleton.
 	int idx=0;
 	inverseBindMatrices.resize(meshInverseBindMatrices.size());
-	if(skeletonsBones.size()!=meshInverseBindMatrices.size())
-		return;
 	//if(skeletonsBones.size()!=22)
 	//	return;
 	anim.Retarget(owner.GetSkeleton());
@@ -321,46 +319,7 @@ void AnimationComponent::Retarget(  Animation &anim)
 	const auto &jointMapping = owner.GetSkeleton()->GetJointMapping();
 	for(int i=0;i<meshInverseBindMatrices.size();i++)
 	{
-		// original joint matrix from the skeleton's bone:
-		auto b = skeletonsBones[i];
-		std::string boneName=getMappedBoneName(b->name);
-		mat4 joint_matrix_original = b->GetLocalTransform().GetTransformMatrix();
-		// Animation's version of the matrix for this joint:
-		std::map<std::string,teleport::core::PoseScale>::const_iterator anim_joint_pose = animsRestPoses.find(b->name);
-
-		if(anim_joint_pose==animsRestPoses.end())
-		{
-			anim_joint_pose=FindMatch(animsRestPoses, boneName);
-			if(anim_joint_pose==animsRestPoses.end())
-			{
-				inverseBindMatrices[i]=meshInverseBindMatrices[i];
-				continue;
-			}
-		}
-		Transform anim_transform;
-		anim_transform.m_Translation=anim_joint_pose->second.position;
-		anim_transform.m_Rotation=anim_joint_pose->second.orientation;
-		anim_transform.m_Scale=anim_joint_pose->second.scale;
-		anim_transform.UpdateModelMatrix();
-		mat4 joint_matrix = anim_transform.GetTransformMatrix();
-		
-        // CRITICAL: Ozz matrices are column-major, ensure correct conversion
-        const ozz::math::Float4x4& ozzMatrix = instance->models[i];
-        mat4 joint_matrix2= *((mat4*)&ozzMatrix);
-        joint_matrix2.transpose();
-
-		mat4 inv_j = mat4::inverse(joint_matrix2);
-		mat4 &inverse_bind_matrix=inverseBindMatrices[i];
-		inverse_bind_matrix=meshInverseBindMatrices[i];//* joint_matrix_original) * meshInverseBindMatrices[i];
-		if(det(inverse_bind_matrix) < 0.001f)
-		{
-			TELEPORT_WARN("Bad matrix");
-		}
-        mat4 finalMatrix = joint_matrix2 * inverse_bind_matrix;
-		if(det(finalMatrix)>0)
-		{
-			TELEPORT_WARN("Matrix");
-		}
+		inverseBindMatrices[i]=meshInverseBindMatrices[i];
 	}
 }
 
@@ -383,7 +342,7 @@ void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
     }
 }
 
-void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m) const
+void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &j) const
 {
     if (!instance || instance->models.empty()||!inverseBindMatrices.size())
     {
@@ -397,7 +356,6 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m) const
     }
     // Use the computed model-space matrices from Ozz
     size_t numBones = std::min({
-        instance->models.size(),
         inverseBindMatrices.size(),
         static_cast<size_t>(Skeleton::MAX_BONES)
     });
