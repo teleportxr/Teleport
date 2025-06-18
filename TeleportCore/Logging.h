@@ -41,6 +41,12 @@ namespace teleport
 		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
 		std::cerr << str1<<str2 << "\n";
 	}
+	template <typename... Args>
+	void Print(const std::format_string<Args...> txt, Args... args)
+	{
+		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
+		std::cerr << str2 << "\n";
+	}
 #else
 	template <typename... Args>
 	void Warn(const char *file, int line, const char *function,const char *txt, Args... args)
@@ -76,6 +82,9 @@ namespace teleport
 #define TELEPORT_INFO(txt, ...) \
 	teleport::Info(__FILE__, __LINE__,__func__,#txt,##__VA_ARGS__)
 
+//! Print text to output log, without file, line number etc.
+#define TELEPORT_PRINT(txt, ...) \
+	teleport::Print(#txt,##__VA_ARGS__)
 	
 #if TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_LOG_INTERNAL(txt, ...) \
