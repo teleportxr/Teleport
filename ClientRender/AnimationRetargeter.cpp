@@ -12,6 +12,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "TeleportCore/Logging.h"
 
 namespace teleport
 {
@@ -146,6 +147,7 @@ namespace teleport
 			for (const auto &joint : joints)
 			{
 				joint_map[GetMappedBoneName(joint.name)] = joint_index++;
+				std::cout<<joint_index<< joint.name<<"\n";
 				TraverseJoints(joint.children, joint_map, joint_index);
 			}
 		}
@@ -443,15 +445,21 @@ namespace teleport
 					//WARN("Bone {} not found in target.", source_joint.name);
 				}
 
-				if (target_it != target_joint_map.end())
+				if (target_it == target_joint_map.end())
+				{
+					TELEPORT_WARN("Joint {} not found in target",source_joint.name);
+				}
+				else
 				{
 					// Find corresponding joint in target skeleton
 					const auto *target_joint = FindJointByName(target_skeleton, source_name);
-
+					if(!target_joint)
+						TELEPORT_WARN("No target joint.\n");
 					if (target_joint)
 					{
 						// Get parent joint name
 						auto &ret	   = retarget_info[joint_index];
+						std::cout << "Joint index "<<joint_index<<" for " << source_joint.name<<std::endl;
 						ret.parentName = GetParentJointName(source_skeleton, source_name);
 
 						// Compute parent model space transforms
@@ -485,8 +493,10 @@ namespace teleport
 		ozz::vector<JointRetargetInfo> BuildRetargetMap(const ozz::animation::offline::RawSkeleton &source_skeleton,
 														const ozz::animation::offline::RawSkeleton &target_skeleton)
 		{
+		std::cout<<"Joint map for source\n";
 
 			auto source_joint_map = BuildJointMap(source_skeleton);
+		std::cout<<"Joint map for target\n";
 			auto target_joint_map = BuildJointMap(target_skeleton);
 
 			// Count total joints in source skeleton
@@ -659,7 +669,7 @@ namespace teleport
 			ozz::vector<ozz::string> targetJointNames;
 			CollectJointNames(source_skeleton.roots, sourceJointNames);
 			CollectJointNames(target_skeleton.roots, targetJointNames);
-
+			TELEPORT_PRINT("Retargeting animation from {} to {}",sourceJointNames.size(),targetJointNames.size());
 			// Build joint name to track index mapping for source animation
 			std::unordered_map<ozz::string, int> sourceNameToTrack;
 			for (int i = 0; i < sourceJointNames.size(); ++i)
@@ -670,6 +680,7 @@ namespace teleport
 			// Build retargeting mapping
 			auto retargetInfo = BuildRetargetMap(source_skeleton, target_skeleton);
 
+			TELEPORT_PRINT("Retarget info has {} entries",retargetInfo.size());
 			// Create output animation
 			ozz::animation::offline::RawAnimation targetAnimation;
 			targetAnimation.duration = source_animation.duration;

@@ -306,7 +306,7 @@ mat4 inv;
 
 void AnimationComponent::Retarget(  Animation &anim) 
 {
-	const std::vector<mat4> &meshInverseBindMatrices=owner.GetSkeleton()->GetInverseBindMatrices();
+	const std::vector<mat4> &meshInverseBindMatrices=owner.GetInverseBindMatrices();
 	const auto &skeletonsBones=owner.GetSkeleton()->GetExternalBones();
 	const auto &animsRestPoses=anim.GetRestPoses();
 	// We modify the animation to match the skeleton.
@@ -359,14 +359,19 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector
         inverseBindMatrices.size(),
         static_cast<size_t>(Skeleton::MAX_BONES)
     });
-    
     m.resize(numBones);
-	const auto &jointMapping = owner.GetSkeleton()->GetJointMapping();
-	static uint64_t force_ident=0;//0xFFFFFFFFFFFF0000;    
+	const auto &mapSkeletonToAnim = owner.GetSkeleton()->GetJointMapping();
+	const auto &mapMeshToSkeleton = owner.GetJointIndices();
+    if(inverseBindMatrices.size()!=mapMeshToSkeleton.size())
+	{
+		TELEPORT_WARN("Bad skin mapping");
+	}
+	static uint64_t force_ident=0x14;//0xFFFFFFFFFFFF0000;
     for (size_t i = 0; i < numBones; i++)
     {
         // Convert Ozz matrix to your matrix format
-        const ozz::math::Float4x4& ozzMatrix = instance->models[jointMapping[i]];
+		int anim_joint_index = mapSkeletonToAnim[mapMeshToSkeleton[i]];
+        const ozz::math::Float4x4& ozzMatrix = instance->models[anim_joint_index];
         // CRITICAL: Ozz matrices are column-major, ensure correct conversion
         mat4 joint_matrix= *((mat4*)&ozzMatrix);
 		// transpose so that in row-major format, translation is in the right-hand column
@@ -374,7 +379,7 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector
         // Apply inverse bind matrix to get final bone matrix
         const mat4& inverseBindMatrix = inverseBindMatrices[i];
         m[i] = joint_matrix * inverseBindMatrix;
-		//m[i].transpose();
+		//m[i].transpose(); 206, 219 hand and ring
 		if(force_ident&(1ULL<<i))
 			m[i]=mat4::identity();
     }

@@ -69,7 +69,10 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 			TELEPORT_WARN("Failed to create joint mapping for skeleton.");
 		}
 		else
+		{
 			jointMapping[idx]=count++;
+			std::cout<<"MAPPED: " << n.name <<" "<< n.id <<", index "<<idx<< " to anim's " <<count-1<<", "<<root.name << std::endl;
+		}
 	}
 	std::vector<avs::uid> sorted_children;
 	

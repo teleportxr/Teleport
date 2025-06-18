@@ -1031,6 +1031,7 @@ namespace teleport::core
 					if (jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
 					{
 						avs::uid id = node_uids[jointIdx];
+						
 						if(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),id) == avsSkeleton.boneIDs.end())
 						{
 							avsSkeleton.boneIDs.push_back(id);
