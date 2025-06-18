@@ -177,7 +177,6 @@ void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
 	ozz::animation::offline::RawAnimation retargeted_raw_animation = *raw_animation;
 
 	// Load your skeletons and animation
-	ozz::animation::offline::RawSkeleton  source_skeleton;
 	ozz::animation::offline::RawAnimation source_animation;
 
 	// Retarget the animation

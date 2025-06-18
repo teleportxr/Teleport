@@ -807,7 +807,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 	incompleteSkeleton->skeleton->SetRootId(skeleton.rootBoneId);
 	incompleteSkeleton->skeleton->SetExternalBoneIds(skeleton.boneIDs);
 	std::lock_guard g(geometryCache->missingResourcesMutex);
-	// each bone that hasn't been loaded is a missing resource. The Skeleton can only be completed when all missing bones are here.
+	// each bone that hasn't been loaded is a missing resource. The Skelsseton can only be completed when all missing bones are here.
 	// Don't include the root, as that would be a circular reference.
 	for (int i=1;i<skeleton.boneIDs.size();i++)
 	{
@@ -821,7 +821,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 			incompleteSkeleton->missingBones.insert(b);
 		}
 	}
-	incompleteSkeleton->skeleton->SetInverseBindMatrices(skeleton.inverseBindMatrices);
+//	incompleteSkeleton->skeleton->SetInverseBindMatrices(skeleton.inverseBindMatrices);
 	// Add it to the manager, even if incomplete.
 	geometryCache->mSkeletonManager.Add(id, incompleteSkeleton->skeleton);
 	if(incompleteSkeleton->missingBones.size() == 0)
@@ -1021,6 +1021,10 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 			{
 				node->SetSkeleton(skeleton);
 				node->SetInverseBindMatrices(avsNode.inverseBindMatrices);
+				if(node->GetJointIndices().size()!=node->GetInverseBindMatrices().size())
+				{
+					TELEPORT_WARN("Inverse bind matrices don't match joint list.");
+				}
 			}
 			else
 			{

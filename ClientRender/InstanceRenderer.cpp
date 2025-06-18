@@ -1230,8 +1230,8 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			if(animationComponent)//&&skeleton->GetExternalBoneIds().size()==match_joint_count)
 			{
 				animationComponent->update(renderState.timestampUs.count());
-				boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
-				skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
+				//b//oneMatrices.resize(skeleton->GetInverseBindMatrices().size());
+				//skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
 				animationComponent->GetBoneMatrices(boneMatrices, node->GetJointIndices());
 				
 				std::vector<mat4> jMatrices;
@@ -1248,7 +1248,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			}
 			else
 			{
-				if(skeleton->GetInverseBindMatrices().size()==node->GetJointIndices().size())
+				/*if(skeleton->GetInverseBindMatrices().size()==node->GetJointIndices().size())
 				{
 					boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
 					skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
@@ -1262,7 +1262,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 				{
 					TELEPORT_WARN("No matching bind matrices, {}.",node->name);
 					return;
-				}
+				}*/
 				for(int i=0;i<boneMatrices.size();i++)
 				{
 				boneMatrices[i]=mat4::identity();
