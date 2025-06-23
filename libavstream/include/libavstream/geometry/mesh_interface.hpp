@@ -54,7 +54,7 @@ namespace avs
 		// This will also be present in boneID's, but we must single it out, in case it's not the first in the list.
 		avs::uid rootBoneId;
 		std::vector<uid> boneIDs;
-		std::vector<mat4> inverseBindMatrices;
+		//std::vector<mat4> inverseBindMatrices;
 
 		static Skeleton convertToStandard(const Skeleton& skeleton, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
@@ -62,14 +62,14 @@ namespace avs
 			convertedSkeleton.name = skeleton.name;
 			convertedSkeleton.boneIDs = skeleton.boneIDs;
 
-			for (size_t i = 0; i < skeleton.inverseBindMatrices.size(); ++i)
+		/*	for (size_t i = 0; i < skeleton.inverseBindMatrices.size(); ++i)
 			{
 				convertedSkeleton.inverseBindMatrices.push_back(skeleton.inverseBindMatrices[i]);
 				mat4 &m = convertedSkeleton.inverseBindMatrices[i];
 				Transform tr;
 				m=mat4::inverse(m);
 				avs::ConvertTransformMatrix(sourceStandard, targetStandard, m);
-			}
+			}*/
 			return convertedSkeleton;
 		}
 	};

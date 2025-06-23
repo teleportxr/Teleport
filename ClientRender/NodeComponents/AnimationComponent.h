@@ -36,7 +36,7 @@ namespace teleport
 	
 			void GetJointMatrices(std::vector<mat4> &m) const;
 			//! Fill in the vector of matrices with the current animation state.
-			void GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &j) const;
+			void GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &j, const std::vector<mat4> &meshInverseBindMatrices) const;
 
 			// Update the animation state.
 			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate);
@@ -50,7 +50,6 @@ namespace teleport
 			// TODO: The following may need to be extracted into a per-instance structure, as the same
 			// component could be used in multiple instances of the same SubScene.
 			AnimationInstance *instance=nullptr;
-			std::vector<mat4> inverseBindMatrices;
 			int64_t lastTimestampUs=0;
 		};
 	}

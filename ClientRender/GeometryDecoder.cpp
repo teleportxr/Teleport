@@ -744,18 +744,6 @@ avs::Result GeometryDecoder::DecodeDracoScene( core::DecodedGeometry &subSceneDG
 			// problem...
 			TELEPORT_CERR << "Wrong data type for inverse bind matrices\n";
 		}
-		int numInverseBinds = dracoNodeAnimData.count();
-		// TODO: Not where this should go.
-		avsSkeleton.inverseBindMatrices.resize(numInverseBinds);
-		const float *invBindPtr = dracoNodeAnimData.GetData()->data();
-		for (int j = 0; j < numInverseBinds; j++)
-		{
-			const mat4 &b = *((const mat4 *)invBindPtr);
-			avsSkeleton.inverseBindMatrices[j] =
-				platform::crossplatform::ConvertMatrix(subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, b);
-			avsSkeleton.inverseBindMatrices[j].transpose();
-			invBindPtr += 16;
-		}
 	}
 	// find skeleton nodes and skinned mesh nodes.
 	for (int n = 0; n < dracoScene.NumNodes(); n++)
@@ -775,9 +763,20 @@ avs::Result GeometryDecoder::DecodeDracoScene( core::DecodedGeometry &subSceneDG
 			{
 				avsNode.joint_indices[j] = j;
 			}
-			//auto &avsSkeletonRootNode = subSceneDG.nodes[avsNode.skeletonNodeID];
-			//avsSkeletonRootNode.data_type = avs::NodeDataType::Skeleton;
-			//avsSkeletonRootNode.data_uid = skeleton_uid;
+			// TODO: Not where this should go.
+			const auto &dracoSkin = dracoScene.GetSkin(skinIndex);
+			draco::NodeAnimationData dracoNodeAnimData = dracoSkin->GetInverseBindMatrices();
+			int numInverseBinds = dracoNodeAnimData.count();
+			avsNode.inverseBindMatrices.resize(numInverseBinds);
+			const float *invBindPtr = dracoNodeAnimData.GetData()->data();
+			for (int j = 0; j < numInverseBinds; j++)
+			{
+				const mat4 &b = *((const mat4 *)invBindPtr);
+				avsNode.inverseBindMatrices[j] =
+					platform::crossplatform::ConvertMatrix(subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, b);
+				avsNode.inverseBindMatrices[j].transpose();
+				invBindPtr += 16;
+			}
 		}
 	}
 	for (int n = 0; n < dracoScene.NumNodes(); n++)

@@ -107,11 +107,11 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 			earlyNodeHighlights.erase(highlightIt);
 		}
 		
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
 		//Set playing animation, if an animation update was received early.
 		auto animationIt = earlyAnimationUpdates.find(node_id);
 		if (animationIt != earlyAnimationUpdates.end())
 		{
+			auto animC=node->GetOrCreateComponent<AnimationComponent>();
 			animC->setAnimationState(session_time_us, animationIt->second);
 			earlyAnimationUpdates.erase(animationIt);
 		}
@@ -140,6 +140,8 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 	}
 
 	node->SetJointIndices(avsNode.joint_indices);
+
+	node->SetInverseBindMatrices(avsNode.inverseBindMatrices);
 
 	node->SetLocalTransform(static_cast<Transform>(avsNode.localTransform));
 	

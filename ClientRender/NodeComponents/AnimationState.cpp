@@ -53,12 +53,12 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 	sequenceNumber++;
 }
 
-InstantaneousAnimationState AnimationLayerStateSequence::getState() const
+const InstantaneousAnimationState &AnimationLayerStateSequence::getState() const
 {
 	return instantaneousAnimationState;
 }
 
-InstantaneousAnimationState AnimationLayerStateSequence::getState(int64_t timestampUs) const
+const InstantaneousAnimationState &AnimationLayerStateSequence::getState(int64_t timestampUs) const
 {
 	InstantaneousAnimationState &st = instantaneousAnimationState;
 	interpState=0;

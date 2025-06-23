@@ -225,15 +225,7 @@ void Node::ClearChildren()
 
 std::weak_ptr<Node> Node::GetSkeletonNode()
 {
-	std::weak_ptr<Node> n;
-	if(skeleton)
-	{
-		if(skeleton->GetExternalBones().size()>0)
-		{
-			return skeleton->GetExternalBones()[0];
-		}
-	}
-	return n;
+	return skeletonNode;
 }
 
 void Node::SetVisible(bool visible)

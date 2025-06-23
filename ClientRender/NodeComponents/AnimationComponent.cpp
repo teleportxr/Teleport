@@ -245,7 +245,7 @@ AnimationComponent::~AnimationComponent()
 void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer)
 {
 	teleport::core::ApplyAnimation applyAnimation;
-	applyAnimation.speedUnitsPerSecond	= 0.05f;
+	applyAnimation.speedUnitsPerSecond			= 0.1f;
 	applyAnimation.animLayer				 = (uint32_t)layer;
 	applyAnimation.animationID				 = anim_uid;
 	applyAnimation.cacheID					 = cache_id;
@@ -306,21 +306,12 @@ mat4 inv;
 
 void AnimationComponent::Retarget(  Animation &anim) 
 {
-	const std::vector<mat4> &meshInverseBindMatrices=owner.GetInverseBindMatrices();
-	const auto &skeletonsBones=owner.GetSkeleton()->GetExternalBones();
-	const auto &animsRestPoses=anim.GetRestPoses();
 	// We modify the animation to match the skeleton.
 	int idx=0;
-	inverseBindMatrices.resize(meshInverseBindMatrices.size());
 	//if(skeletonsBones.size()!=22)
 	//	return;
 	anim.Retarget(owner.GetSkeleton());
 	instance->ApplyRestPose();
-	const auto &jointMapping = owner.GetSkeleton()->GetJointMapping();
-	for(int i=0;i<meshInverseBindMatrices.size();i++)
-	{
-		inverseBindMatrices[i]=meshInverseBindMatrices[i];
-	}
 }
 
 // CRITICAL FIX: Update GetBoneMatrices to use Ozz results properly
@@ -342,7 +333,7 @@ void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
     }
 }
 
-void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &j) const
+void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &mapMeshToSkeleton, const std::vector<mat4> &inverseBindMatrices) const
 {
     if (!instance || instance->models.empty()||!inverseBindMatrices.size())
     {
@@ -360,17 +351,20 @@ void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector
         static_cast<size_t>(Skeleton::MAX_BONES)
     });
     m.resize(numBones);
-	const auto &mapSkeletonToAnim = owner.GetSkeleton()->GetJointMapping();
-	const auto &mapMeshToSkeleton = owner.GetJointIndices();
+	const auto &mapSkeletonToAnim = owner.GetSkeleton()->GetSkeletonToAnimMapping();
+	//const auto &mapMeshToSkeleton = owner.GetJointIndices();
     if(inverseBindMatrices.size()!=mapMeshToSkeleton.size())
 	{
 		TELEPORT_WARN("Bad skin mapping");
 	}
-	static uint64_t force_ident=0x14;//0xFFFFFFFFFFFF0000;
+	static uint64_t force_ident=0;//0x14;//0xFFFFFFFFFFFF0000;
     for (size_t i = 0; i < numBones; i++)
     {
         // Convert Ozz matrix to your matrix format
-		int anim_joint_index = mapSkeletonToAnim[mapMeshToSkeleton[i]];
+		int sk_index = mapMeshToSkeleton[i];
+		if(sk_index<0||sk_index>=mapSkeletonToAnim.size())
+			continue;
+		int anim_joint_index = mapSkeletonToAnim[sk_index];
         const ozz::math::Float4x4& ozzMatrix = instance->models[anim_joint_index];
         // CRITICAL: Ozz matrices are column-major, ensure correct conversion
         mat4 joint_matrix= *((mat4*)&ozzMatrix);
@@ -411,7 +405,7 @@ void AnimationComponent::update(int64_t timestampUs)
 	{
 		instance = new AnimationInstance(owner.GetSkeleton());
 	}
-	static float dt = 0.0001f;//lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
+	static float dt = lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
 	instance->Update(dt, timestampUs);
 	lastTimestampUs=timestampUs;
 }

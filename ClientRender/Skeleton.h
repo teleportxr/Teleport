@@ -79,7 +79,7 @@ namespace teleport
 			{
 				return raw_skeleton.get();
 			}
-			const std::vector<int> &GetJointMapping() const
+			const std::vector<int> &GetSkeletonToAnimMapping() const
 			{
 				return jointMapping;
 			}

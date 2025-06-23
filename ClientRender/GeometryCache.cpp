@@ -292,6 +292,7 @@ void GeometryCache::CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkel
 		{
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
 			incompleteNode->SetSkeleton(completeSkeleton->skeleton);
+			incompleteNode->GetOrCreateComponent<AnimationComponent>();
 			RESOURCE_RECEIVES(incompleteNode, id);
 			RESOURCECREATOR_DEBUG_COUT(
 				"Waiting MeshNode {0}({1}) got Skeleton {0}({1})", incompleteNode->id, incompleteNode->name, id, completeSkeleton->skeleton->name);
@@ -586,7 +587,7 @@ void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node
 	/// remove an node.
 	m_CompletedNodes.push_back(id);
 	MissingResource *missingNode = GetMissingResourceIfMissing(id, avs::GeometryPayloadType::Node);
-/*	if (missingNode)
+	if (missingNode)
 	{
 		for (auto waiting = missingNode->waitingResources.begin(); waiting != missingNode->waitingResources.end(); waiting++)
 		{
@@ -611,7 +612,7 @@ void GeometryCache::CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node
 				}
 			}
 		}
-	}*/
+	}
 	RemoveFromMissingResources(id);
 	mNodeManager.CompleteNode(id);
 }

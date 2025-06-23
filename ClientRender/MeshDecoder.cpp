@@ -978,25 +978,12 @@ namespace teleport::core
 				}
 			}
 		}
-		if(vrmSpecVersion<1.0)
-		{
-		//	dg.vrmFixRotation=true;
-			for(int i=0;i<dg.nodes.size();i++)
-			{
-				if(dg.nodes[i].parentID==0)
-				{
-					//platform::crossplatform::Quaternionf q=dg.nodes[i].localTransform.rotation;
-					//q.Rotate(PI,{0,1.0f,0});
-					//dg.nodes[i].localTransform.rotation={q.x,q.y,q.z,q.s};
-				}
-			}
-		}
 		// Process skins and create skeletons
-		std::vector<avs::uid> skeleton_uids(model.skins.size());
+		std::map<int,avs::uid> skeleton_uids;
 		avs::uid first_skeleton=dg.next_id;
 		// Possible to have multiple skeletons with different sets of nodes.
 		// But equally, we want any skins that share the same set of joints to use the same skeleton.
-		for (size_t i = 0; i < model.skins.size(); i++)
+		for (int i = 0; i < (int)model.skins.size(); i++)
 		{
 			const tinygltf::Skin &skin		   = model.skins[i];
 
@@ -1004,19 +991,86 @@ namespace teleport::core
 			// Either: same root, or
 			//			This root is a child of an existing one, or
 			//			An existing root is a child of this one.
-			int root_index				= skin.skeleton ? skin.skeleton : skin.joints[0];
+			int root_index				= skin.skeleton>=0 ? skin.skeleton : skin.joints[0];
 			avs::uid skeleton_uid		= dg.next_id++;
+			skeleton_uids[i]			=skeleton_uid;
 
-			// TODO: For now, just check for exact match:
-			for(auto sk:dg.skeletons)
+			avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
+
+			// Does any joint of this skeleton coincide with any joint of any other?
+			// If so we must merge them.
+			avs::uid rootBoneId		= node_uids[root_index];
+			avsSkeleton.rootBoneId		= rootBoneId;
+			if (skin.skeleton || skin.joints.size() > 0)
 			{
-				if(sk.second.rootBoneId == node_uids[root_index])
+				for (int jointIdx : skin.joints)
 				{
-					skeleton_uid	= sk.first;
+					if (jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
+					{
+						avs::uid id = node_uids[jointIdx];
+						if(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),id) == avsSkeleton.boneIDs.end())
+						{
+							avsSkeleton.boneIDs.push_back(id);
+						}
+					}
 				}
 			}
-			skeleton_uids[i]			= skeleton_uid;
-
+		}
+		for(auto &sk1:dg.skeletons)
+		{
+			avs::Skeleton &avsSkeleton1	= sk1.second;
+			if(!avsSkeleton1.boneIDs.size())
+				continue;
+			auto &rootNode1	= dg.nodes[sk1.second.rootBoneId];
+			// Should this skeleton be merged with another on the same hierarchy?
+			for(auto &sk2:dg.skeletons)
+			{
+				if(sk2.first==sk1.first)
+					continue;
+				avs::Skeleton &avsSkeleton2	= sk2.second;
+				auto &rootNode2	= dg.nodes[sk2.second.rootBoneId];
+				bool merge=false;
+				for (auto bone_uid: sk1.second.boneIDs)
+				{
+				// They share a common bone.
+					if(std::find(sk2.second.boneIDs.begin(),sk2.second.boneIDs.end(),bone_uid)!=sk2.second.boneIDs.end())
+					{
+						merge=true;
+						break;
+					}
+				}
+				if(!merge)
+					continue;
+				avs::uid id=avsSkeleton1.rootBoneId;
+				while(dg.nodes[id].parentID!=0)
+				{
+					id=dg.nodes[id].parentID;
+					if(id==avsSkeleton2.rootBoneId)
+					{
+						avsSkeleton1.rootBoneId=id;
+						break;
+					}
+				}
+				for (auto bone_uid: avsSkeleton2.boneIDs)
+				{
+					if(std::find(avsSkeleton1.boneIDs.begin(),avsSkeleton1.boneIDs.end(),bone_uid)!=avsSkeleton1.boneIDs.end())
+						continue;
+					avsSkeleton1.boneIDs.push_back(bone_uid);
+				}
+				avsSkeleton2.boneIDs.clear();
+				avsSkeleton2.rootBoneId=avsSkeleton1.rootBoneId;
+				for(int i=0;i<(int)skeleton_uids.size();i++)
+				{
+					if(skeleton_uids[i]==sk2.first)
+						skeleton_uids[i]=sk1.first;
+				}
+				break;
+			}
+		}
+		/*for (int i = 0; i < (int)model.skins.size(); i++)
+		{
+			const tinygltf::Skin &skin	 = model.skins[i];
+			avs::uid skeleton_uid		= skeleton_uids[i];
 			avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
 			avsSkeleton.name			= !skin.name.empty() ? skin.name : (filename_url.empty() ? "Skeleton" : filename_url + " skeleton " + std::to_string(i));
 
@@ -1039,11 +1093,14 @@ namespace teleport::core
 						}
 					}
 				}
-				avsSkeleton.rootBoneId = node_uids[root_index];
+				avsSkeleton.rootBoneId		= avsSkeleton.rootBoneId;
+				// Put the skeleton on the root node, not the mesh node.
+				auto &rootNode	= dg.nodes[avsSkeleton.rootBoneId];
+				rootNode.skeletonID			= skeleton_uid;
 				while(dg.nodes[avsSkeleton.rootBoneId].parentID!=0 &&
 					std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),dg.nodes[avsSkeleton.rootBoneId].parentID)!=avsSkeleton.boneIDs.end())
 					avsSkeleton.rootBoneId = dg.nodes[avsSkeleton.rootBoneId].parentID;
-				//std::sort(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end());
+			
 				TELEPORT_LOG("\nSkin: {} {}\n", skin.name, str);
 			}
 
@@ -1057,10 +1114,10 @@ namespace teleport::core
 			{
 				TELEPORT_WARN("Bad mesh or scene data in {}", skin.name);
 			}
-		}
-
+		}*/
+		std::set<avs::uid> skeleton_roots;
 		// Set up skinned meshes and skeleton references
-		for (size_t i = 0; i < model.nodes.size(); i++)
+		for (int i = 0; i < (int)model.nodes.size(); i++)
 		{
 			const tinygltf::Node &gltfNode = model.nodes[i];
 			avs::uid			  nodeUid  = node_uids[i];
@@ -1071,11 +1128,25 @@ namespace teleport::core
 			{
 				const tinygltf::Skin &skin	= model.skins[gltfNode.skin];
 				avs::uid skeleton_uid		= skeleton_uids[gltfNode.skin];
+				if(!dg.skeletons[skeleton_uid].boneIDs.size())
+				{
+					for(int j=0;j<skeleton_uids.size();j++)
+					{
+						avs::Skeleton &sk = dg.skeletons[skeleton_uids[i]];
+						if(sk.boneIDs.size()>0&&sk.rootBoneId==dg.skeletons[skeleton_uid].rootBoneId)
+						{
+							skeleton_uid=skeleton_uids[i];
+							break;
+						}
+					}
+				}
 				avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
+				int root_index				= skin.skeleton>=0 ? skin.skeleton : skin.joints[0];
+				avsNode.skeletonNodeID		= avsSkeleton.rootBoneId;
+				skeleton_roots.insert(avsNode.skeletonNodeID);
 				// Set root node
 				if (!avsSkeleton.boneIDs.empty())
 				{
-					avsNode.skeletonID = skeleton_uid;
 					GetBindMatrices(avsNode.inverseBindMatrices, model, skin);
 					// Set up joint indices mapping
 					//   For each inv bind matrix, what is its index in the skeleton?
@@ -1087,6 +1158,28 @@ namespace teleport::core
 						uint16_t j_index = (uint16_t)(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),joint_uid)-avsSkeleton.boneIDs.begin());
 						avsNode.joint_indices[j] = j_index;
 					}
+				}
+			}
+		}
+		// Place skeletons in their appropriate root nodes:
+		for(auto &s:skeleton_uids)
+		{
+			avs::Skeleton &avsSkeleton	= dg.skeletons[s.second];
+			if(avsSkeleton.boneIDs.size()==0)
+				continue;
+			auto &rootNode	= dg.nodes[avsSkeleton.rootBoneId];
+			rootNode.skeletonID			= s.second;
+		}
+		if(vrmSpecVersion<1.0)
+		{
+		//	dg.vrmFixRotation=true;
+			for(auto r:skeleton_roots)
+			{
+				auto &rootNode	= dg.nodes[r];
+				{
+					platform::crossplatform::Quaternionf q=rootNode.localTransform.rotation;
+					q.Rotate(PI,{0,1.0f,0});
+					rootNode.localTransform.rotation={q.x,q.y,q.z,q.s};
 				}
 			}
 		}

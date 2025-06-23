@@ -38,6 +38,8 @@ namespace avs
 		std::vector<uid> materials;
 
 		//SKINNED MESH
+		// A skinned mesh has a reference to the root node of its skeleton hierarchy.
+		uid skeletonNodeID=0;
 		uid skeletonID=0;
 		std::vector<mat4> inverseBindMatrices;
 		std::vector<int16_t> joint_indices;
