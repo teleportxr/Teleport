@@ -1009,7 +1009,9 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 					//								to its current animated local position.
 					// For each bone matrix,
 					//				pos_local= (bone_matrix_j) * pos_original_local
-					meshRender->skeleton = node->GetSkeleton();
+					auto skelNode = node->GetSkeletonNode().lock();
+					if(skelNode)
+						meshRender->skeleton = skelNode->GetSkeleton();
 				}
 			}
 			// std::cout << "AddNodeMeshToInstanceRender: cache " << cache_uid << ", node " << node->id<<", element "<<element<< "\n";
@@ -1028,6 +1030,10 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			if (!meshRender->material)
 			{
 				TELEPORT_BREAK_ONCE("No material found.");
+			}
+			if (meshRender->setBoneConstantBuffer && !meshRender->skeleton.use_count())
+			{
+				TELEPORT_BREAK_ONCE("No skeleton found.");
 			}
 		}
 	}
@@ -1053,6 +1059,8 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubScene
 	if (!g)
 		return;
 	auto node = g->mNodeManager.GetNode(node_uid);
+	if (!node)
+		return;
 	
 	node->ResetCachedPasses();
 	auto n=subSceneNodeStates.nodeStates.find(node_uid);
@@ -1218,9 +1226,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 	{
 		auto										   &nodeState		 = subSceneNodeStates.nodeStates[node->id];
 
-		if (mesh )
 		{
-			std::vector<mat4> boneMatrices;
 			// The bone matrices transform from the original local position of a vertex
 			//								to its current animated local position.
 			// For each bone matrix,
@@ -1230,11 +1236,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			if(animationComponent)//&&skeleton->GetExternalBoneIds().size()==match_joint_count)
 			{
 				animationComponent->update(renderState.timestampUs.count());
-				//b//oneMatrices.resize(skeleton->GetInverseBindMatrices().size());
-				//skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
-				animationComponent->GetBoneMatrices(boneMatrices, node->GetJointIndices());
-				
-				std::vector<mat4> jMatrices;
+			/*	std::vector<mat4> jMatrices;
 				animationComponent->GetJointMatrices(jMatrices);
 				for(int i=0;i<jMatrices.size();i++)
 				{
@@ -1244,7 +1246,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 					vec4	 purple = {1.0f, 0, 1.0f, 0.9f};
 					vec4	 black	= {0, 0, 0, 0};
 					renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&start), node->name.c_str(), purple, black);
-				}
+				}*/
 			}
 			else
 			{
@@ -1263,20 +1265,7 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 					TELEPORT_WARN("No matching bind matrices, {}.",node->name);
 					return;
 				}*/
-				for(int i=0;i<boneMatrices.size();i++)
-				{
-				boneMatrices[i]=mat4::identity();
-				}
 			}
-
-			avs::uid sk_id = skeleton->id;
-			if (skeletonRenders.find(sk_id) == skeletonRenders.end())
-			{
-				skeletonRenders[sk_id] = std::make_shared<SkeletonRender>();
-				skeletonRenders[sk_id]->boneMatrices.RestoreDeviceObjects(renderPlatform);
-			}
-			BoneMatrices *b = &skeletonRenders[sk_id]->boneMatrices;
-			memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
 		}
 		// Here we must update the matrix that corresponds to the parent cache's instance of this node.
 		// i.e. if the parent cache owns the node direct, it's the node's own renderableState.
@@ -1288,6 +1277,32 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 		auto	   &nodeState			  = subSceneNodeStates.nodeStates[node->id];
 		const mat4 &globalTransformMatrix = node->GetGlobalTransform().GetTransformMatrix();
 		nodeState.renderModelMatrix		  = mul(*((const mat4 *)(&deviceContext.viewStruct.model)), globalTransformMatrix);
+		if(mesh)
+		{
+			const auto &jointIndices=node->GetJointIndices();
+			if(jointIndices.size())
+			{
+				auto skelNode = node->GetSkeletonNode().lock();
+				if(skelNode)
+				{
+					auto animationComponent = skelNode->GetComponent<AnimationComponent>();
+					std::vector<mat4> boneMatrices;
+					for(int i=0;i<boneMatrices.size();i++)
+					{
+						boneMatrices[i] = mat4::identity();
+					}
+					animationComponent->GetBoneMatrices(boneMatrices, node->GetJointIndices(), node->GetInverseBindMatrices());
+					avs::uid sk_id = node->id;
+					if (skeletonRenders.find(sk_id) == skeletonRenders.end())
+					{
+						skeletonRenders[sk_id] = std::make_shared<SkeletonRender>();
+						skeletonRenders[sk_id]->boneMatrices.RestoreDeviceObjects(renderPlatform);
+					}
+					BoneMatrices *b = &skeletonRenders[sk_id]->boneMatrices;
+					memcpy(b, boneMatrices.data(), sizeof(mat4) * boneMatrices.size());
+				}
+			}
+		}
 	}
 
 	if (!include_children)
@@ -1363,7 +1378,7 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 		auto sk = meshRender.skeleton.lock();
 		if (!sk)
 			return;
-		avs::uid sk_id = sk->id;
+		avs::uid sk_id = meshRender.node->id;
 		if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 			return;
 		renderPlatform->SetConstantBuffer(deviceContext, &(skeletonRenders[sk_id]->boneMatrices));

@@ -170,9 +170,9 @@ ozz::animation::Animation *Animation::GetOzzAnimation(uint64_t skeleton_hash)
 
 void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
 {
-	//if (!CalcRestPose())
+	if (!target_skeleton->GetRawSkeleton())
 	{
-	//	return;
+		return;
 	}
 	ozz::animation::offline::RawAnimation retargeted_raw_animation = *raw_animation;
 

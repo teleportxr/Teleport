@@ -8,15 +8,22 @@ void SubSceneComponent::PlayAnimation(avs::uid cache_uid, avs::uid anim_uid)
 	if (!mesh || !mesh->GetMeshCreateInfo().subscene_cache_uid || !anim_uid)
 		return;
 	auto		cache = GeometryCache::GetGeometryCache(mesh->GetMeshCreateInfo().subscene_cache_uid);
-	const auto &nodes = cache->mNodeManager.GetRootNodes();
-	for (auto n : nodes)
+	const auto &sk_ids = cache->mSkeletonManager.GetAllIDs();
+	for (auto sk_id : sk_ids)
 	{
-		auto node  = n.lock();
-		auto animC = node->GetComponent<AnimationComponent>();
-		if(animC)
-		{
-			animC->PlayAnimation(cache_uid,anim_uid);
-		}
+		auto sk=cache->mSkeletonManager.Get(sk_id);
+		if(!sk)
+			continue;
+		avs::uid root_uid = sk->GetRootId();
+		auto node = cache->mNodeManager.GetNode(root_uid);
 
+		if(node)
+		{
+			auto animC = node->GetOrCreateComponent<AnimationComponent>();
+			if(animC)
+			{
+				animC->PlayAnimation(cache_uid,anim_uid);
+			}
+		}
 	}
 }

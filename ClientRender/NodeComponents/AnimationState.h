@@ -228,8 +228,8 @@ namespace teleport
 			void						Init(int num_soa_joints, int num_joints);
 			//! Add a state to the sequence.
 			void						AddState(std::chrono::microseconds timestampUs, const AnimationState &st);
-			InstantaneousAnimationState getState(int64_t timestampUs) const;
-			InstantaneousAnimationState getState() const;
+			const InstantaneousAnimationState &getState(int64_t timestampUs) const;
+			const InstantaneousAnimationState &getState() const;
 
 			uint32_t					sequenceNumber = 0;
 			mutable int					interpState	   = 0;

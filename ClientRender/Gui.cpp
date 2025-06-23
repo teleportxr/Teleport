@@ -1489,6 +1489,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				ImGui::Text("%llu: %s", selected_uid, selected_skeleton->name.c_str());
 				avs::uid root_id=selected_skeleton->GetRootId();
 				auto root=geometryCache->mNodeManager.GetNode(root_id);
+				ImGui::Text("Root:");
 				if (ImGui::TreeNodeEx(fmt::format("{0} ",  root_id).c_str(), flags|ImGuiTreeNodeFlags_Leaf, fmt::format("{0}: {1} ",root_id, root?root->name:"").c_str()))
 				{
 					if (ImGui::IsItemClicked())
@@ -1497,11 +1498,13 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					}
 					// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 				}
-
+				ImGui::Text("Joints:");
 				auto &bones=selected_skeleton->GetExternalBoneIds();
 				for(int i=0;i<bones.size();i++)
 				{
 					auto bone_uid=bones[i];
+					if(bone_uid==root_id)
+						continue;
 					auto n=geometryCache->mNodeManager.GetNode(bone_uid);
 					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(), flags|ImGuiTreeNodeFlags_Leaf, fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
 					{

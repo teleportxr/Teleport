@@ -839,6 +839,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid,avs::uid id, const avs:
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
 			incompleteNode->SetSkeleton(incompleteSkeleton->skeleton);
+			incompleteNode->GetOrCreateComponent<AnimationComponent>();
 			RESOURCECREATOR_DEBUG_COUT("Waiting Node {0}({1}) got Skeleton {2}({3})", incompleteNode->id, incompleteNode->name, id, "");
 
 			// If the waiting resource has no incomplete resources, it is now itself complete.
@@ -958,6 +959,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 	bool isMissingResources = false;
 	if(avsNode.skeletonID!=0)
 	{
+
 		auto skeleton=geometryCache->mSkeletonManager.Get(avsNode.skeletonID);
 		if(!skeleton)
 		{
@@ -967,7 +969,16 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 			missing.waitingResources.insert(node);
 			node->IncrementMissingResources();
 		}
-	/*	auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
+		else
+		{
+			node->SetSkeleton(skeleton);
+			node->GetOrCreateComponent<AnimationComponent>();
+		}
+	}
+		
+	if(avsNode.skeletonNodeID!=0)
+	{
+		auto skeletonNode=geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
 		if(!skeletonNode)
 		{
 			TELEPORT_COUT<<"MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
@@ -980,7 +991,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 		{
 			std::weak_ptr<clientrender::Node> skn=skeletonNode;
 			node->SetSkeletonNode(skn);
-		}*/
+		}
 	}
 	if (avsNode.data_uid != 0)
 	{
@@ -1020,6 +1031,7 @@ void ResourceCreator::CreateNode( avs::uid server_uid, avs::uid id, const avs::N
 			if(skeleton)
 			{
 				node->SetSkeleton(skeleton);
+				node->GetOrCreateComponent<AnimationComponent>();
 				node->SetInverseBindMatrices(avsNode.inverseBindMatrices);
 				if(node->GetJointIndices().size()!=node->GetInverseBindMatrices().size())
 				{

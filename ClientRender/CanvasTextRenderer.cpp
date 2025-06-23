@@ -93,7 +93,11 @@ bool centre=link;
 		return;
 	auto f = fontAtlas->fontMaps.find(size);
 	if(f==fontAtlas->fontMaps.end())
-		return;
+	{
+		f=fontAtlas->fontMaps.begin();
+		if(f==fontAtlas->fontMaps.end())
+			return;
+	}
 	const auto &fontMap = f->second;
 	int max_chars = (int)text.length();
 
