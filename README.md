@@ -4,6 +4,102 @@ Teleport XR is an open, native network protocol for virtual and augmented realit
 This repository contains the reference Client/Server software and SDK for Teleport XR.
 Comments, bug reports and pull requests are welcome.
 
+## What is Teleport XR?
+
+Teleport XR is an open-source network protocol and SDK for virtual and augmented reality streaming. It enables real-time streaming of 3D content, video, audio, and interactive data between servers (running game engines) and VR/AR clients over networks.
+
+## Architecture Overview
+
+### Client-Server Model
+- Servers: Run on Unity or Unreal Engine, generating 3D content
+- Clients: Run on PC (with optional XR), Android devices, and Meta Quest headsets
+- Protocol: Custom network protocol optimized for low-latency VR/AR streaming
+
+### Key Components
+
+1. TeleportServer - Server-side library that integrates with game engines
+2. TeleportClient - Client-side library for receiving and rendering streams
+3. ClientRender - Rendering engine for clients (supports D3D12, Vulkan)
+4. TeleportAudio - Bidirectional audio streaming
+5. TeleportCore - Shared utilities and protocol definitions
+6. libavstream - A/V and data encoding/decoding pipelines
+
+## Core Technologies
+
+### Video Streaming
+- Codecs: H.264, HEVC (H.265) with hardware acceleration
+- Encoding: NVIDIA CUDA-accelerated encoding pipeline
+- Platforms: DirectX 12, Vulkan rendering backends
+
+### Networking
+- WebRTC: For peer-to-peer connections and NAT traversal
+- UDP: For low-latency video/audio/geometry streaming
+- Multiple Channels: Video, audio, geometry, messages, commands
+- Default Ports: 10500 (control), 10501 (video), 10600 (discovery)
+
+### 3D Content Streaming
+- Geometry Streaming: Real-time 3D mesh and animation data
+- Texture Compression: KTX2, Basis Universal, AMD Compressonator
+- Animation: Ozz-animation library for skeletal animation
+- Lighting: IBL (Image-Based Lighting) with cubemap streaming
+
+## Supported Platforms
+
+### Servers
+- Unity: Primary testbed with full plugin support
+- Unreal Engine: UE4/UE5 plugin (currently being updated)
+- Windows: Primary development platform
+
+### Clients
+- PC: Windows desktop with optional OpenXR support
+- Android: Native Android client with OpenXR
+- Meta Quest: Dedicated VR client
+- Cross-platform: Vulkan and DirectX 12 rendering
+
+## Protocol & Communication
+
+### Connection Flow
+1. Discovery: Clients discover servers on local network
+2. Signaling: WebRTC signaling for connection establishment
+3. Handshake: Client capabilities exchange
+4. Streaming: Multi-channel data streaming begins
+
+### Data Channels
+- Video: Compressed video stream (unreliable)
+- Audio: Bidirectional audio (unreliable)
+- Geometry: 3D mesh/animation data (unreliable)
+- Messages: Time-sensitive updates (unreliable)
+- Commands: Reliable control messages
+
+## VR/AR Features
+
+### Input Handling
+- Head Tracking: 6DOF head pose tracking
+- Controllers: Hand controller tracking and input
+- OpenXR: Industry-standard XR API support
+
+### Rendering
+- Stereoscopic: Dual-eye rendering for VR
+- Foveated Rendering: Optimization for VR displays
+- Low Latency: Optimized for real-time interaction
+
+## Build System
+
+- CMake: Cross-platform build system
+- Visual Studio: Primary Windows development environment
+- Android Studio: For Android client builds
+- Multiple Configurations: Client-only, Server-only, or combined builds
+
+## Key Dependencies
+
+- OpenXR SDK: VR/AR runtime support
+- WebRTC: Network connectivity
+- CUDA: GPU-accelerated video encoding
+- Vulkan/DirectX: Graphics APIs
+- Third-party: Draco compression, FreeType fonts, OpenSSL
+
+This is a sophisticated, production-ready VR/AR streaming platform that enables remote rendering scenarios where heavy 3D content runs on powerful servers and streams to lightweight VR/AR clients. It's particularly useful for enterprise VR applications, cloud gaming, and collaborative virtual environments.
+
 ## Getting the source
 
 Clone the repository with submodules:

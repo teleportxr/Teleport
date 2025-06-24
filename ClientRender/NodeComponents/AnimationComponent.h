@@ -32,7 +32,7 @@ namespace teleport
 			void Retarget( Animation &anim);
 			
 			//! Shortcut, play this animation on the given layer.
-			void PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer = 0);
+			void PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer = 0, float speed = 1.0f);
 	
 			void GetJointMatrices(std::vector<mat4> &m) const;
 			//! Fill in the vector of matrices with the current animation state.
@@ -46,6 +46,10 @@ namespace teleport
 			//! @param timestampUs 
 			void update( int64_t timestampUs);
 
+			const AnimationInstance *GetInstance() const
+			{
+				return instance;
+			}
 		private:
 			// TODO: The following may need to be extracted into a per-instance structure, as the same
 			// component could be used in multiple instances of the same SubScene.

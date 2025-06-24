@@ -9,6 +9,14 @@ configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.h ${CMAKE_CURRENT_BINA
 
 # Source
 set( src_root
+	Animation.cpp
+	Animation.h
+	AnimationInstance.cpp
+	AnimationInstance.h
+	AnimationDecoder.cpp
+	AnimationDecoder.h
+	AnimationRetargeter.cpp
+	AnimationRetargeter.h
 	Camera2D.cpp
 	Camera2D.h
 	CanvasTextRenderer.cpp
@@ -24,12 +32,6 @@ set( src_root
 	VertexBuffer.h
 	VertexBuffer.cpp
 	VertexBufferLayout.h
-	Animation.cpp
-	Animation.h
-	AnimationDecoder.cpp
-	AnimationDecoder.h
-	AnimationRetargeter.cpp
-	AnimationRetargeter.h
 	API.cpp
 	API.h
 	Camera.cpp

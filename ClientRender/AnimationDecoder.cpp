@@ -13,7 +13,7 @@
 #include "ozz/gltf2ozz.h"
 #include <json.hpp>
 #include <ozz/base/containers/set.h>
-
+#pragma optimize("",off)
 using nlohmann::json;
 
 using qt = platform::crossplatform::Quaternionf;
@@ -300,7 +300,7 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 	if (_target_path == "translation")
 	{
 		// TODO: Restore translation
-		//valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
+		valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
 	}
 	else if (_target_path == "rotation")
 	{
@@ -476,7 +476,7 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size)
 	ozz::unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(*raw_skeleton);
 	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation)))
 		return false;
-	//ozz::animation::offline::AnimationBuilder animationBuilder;
-	//ozz::animation::Animation ozz_animation = animationBuilder(*(raw_animation.get()));
+	
+
 	return true;
 }
