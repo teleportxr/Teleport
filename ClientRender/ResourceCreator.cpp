@@ -35,7 +35,7 @@ namespace teleport
 using namespace teleport;
 using namespace clientrender;
 
-#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt,##__VA_ARGS__)
+#define RESOURCECREATOR_DEBUG_COUT(txt, ...) //TELEPORT_INTERNAL_COUT(txt,##__VA_ARGS__)
 template<typename T> void read_from_buffer(T &result,const uint8_t * &mem)
 {
 	const T *src=(const T*)mem;

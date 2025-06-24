@@ -28,6 +28,8 @@ using namespace std::string_literals;
 #include "TeleportClient/TabContext.h"
 #include "libavstream/pipeline.hpp"
 
+#include "ClientRender/AnimationInstance.h"
+
 #ifdef __ANDROID__
 #define VK_BACK 0x01
 #define VK_ESCAPE 0x02
@@ -1251,9 +1253,11 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						if (animC)
 						{
 							DoRow("Animations", "");
-							/*const auto &animLayerStates = animC->GetAnimationLayerStates();
+							const auto *instance=animC->GetInstance();
+							
+							const auto &animLayerStates = instance->animationLayerStates;
 							// list layers.
-							for (int i = 0; i < animLayerStates.size(); i++)
+							for (int i = 0; i <1; i++)
 							{
 								DoRow("Layer", fmt::format("{0}", i).c_str());
 								const auto &layerState = animLayerStates[i];
@@ -1280,7 +1284,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.animationTimeS / nextAnimDuration, st.animationState.speedUnitsPerS);
 								DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
 							}
-							if(ImGui::Button("+"))
+							/*if(ImGui::Button("+"))
 							{
 								std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 								teleport::core::ApplyAnimation applyAnimation;

@@ -669,7 +669,7 @@ namespace teleport
 			ozz::vector<ozz::string> targetJointNames;
 			CollectJointNames(source_skeleton.roots, sourceJointNames);
 			CollectJointNames(target_skeleton.roots, targetJointNames);
-			TELEPORT_PRINT("Retargeting animation from {} to {}",sourceJointNames.size(),targetJointNames.size());
+			TELEPORT_INFO("Retargeting animation from {} to {}",sourceJointNames.size(),targetJointNames.size());
 			// Build joint name to track index mapping for source animation
 			std::unordered_map<ozz::string, int> sourceNameToTrack;
 			for (int i = 0; i < sourceJointNames.size(); ++i)
@@ -694,7 +694,7 @@ namespace teleport
 			{
 				const ozz::string &targetJointName = targetJointNames[targetTrackIdx];
 				auto			  &targetTrack	   = targetAnimation.tracks[targetTrackIdx];
-
+				
 				// Find corresponding source track
 				auto sourceTrackIt				   = sourceNameToTrack.find(targetJointName);
 				if (sourceTrackIt == sourceNameToTrack.end())
@@ -786,7 +786,6 @@ namespace teleport
 					key.value = ozz::math::Float3(0.0f, 0.0f, 0.0f);
 					targetTrack.translations.push_back(key);
 				}
-
 				// Retarget rotation keyframes
 				for (const auto &sourceKey : sourceTrack.rotations)
 				{
@@ -805,6 +804,10 @@ namespace teleport
 
 					targetKey.value = retargetedTransform.rotation;
 					targetTrack.rotations.push_back(targetKey);
+				}
+				if(!targetTrack.rotations.empty())
+				{
+					TELEPORT_PRINT("Track {} has {} rotation keyframes.",targetJointName,targetTrack.rotations.size());
 				}
 
 				if (targetTrack.rotations.empty())

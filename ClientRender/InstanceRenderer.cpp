@@ -670,7 +670,7 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, SubSceneNodeS
 		TELEPORT_CERR << "AddNodeToInstanceRender: no node found.\n";
 		return;
 	}
-	TELEPORT_COUT << "AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << node->name.c_str() << "\n";
+//	TELEPORT_COUT << "AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << node->name.c_str() << "\n";
 	if (!node->IsVisible())
 	{
 		TELEPORT_CERR << "AddNodeToInstanceRender:  node not visible.\n";
