@@ -210,8 +210,6 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	return true;
 }
 
-
-
 void AnimationInstance::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &mapMeshToSkeleton, const std::vector<mat4> &inverseBindMatrices
 	, const std::vector<int> &mapSkeletonToAnim) const
 {
@@ -236,7 +234,7 @@ void AnimationInstance::GetBoneMatrices(std::vector<mat4> &m, const std::vector<
 	{
 		TELEPORT_WARN("Bad skin mapping");
 	}
-	static uint64_t force_ident=0;//0x14;//0xFFFFFFFFFFFF0000;
+	static uint64_t force_ident=0;
     for (size_t i = 0; i < numBones; i++)
     {
         // Convert Ozz matrix to your matrix format
