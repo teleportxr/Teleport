@@ -29,10 +29,9 @@ AnimationComponent::AnimationComponent(Node &n) : Component(n)
 
 AnimationComponent::~AnimationComponent()
 {
-	delete instance;
 }
 
-void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uint32_t layer, float speed)
+void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, avs::uid root_uid, uint32_t layer, float speed)
 {
 	teleport::core::ApplyAnimation applyAnimation;
 	applyAnimation.speedUnitsPerSecond			= speed;
@@ -43,7 +42,7 @@ void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, uin
 	applyAnimation.loop=true;
 	std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 	applyAnimation.timestampUs				 = timestampNowUs.count();
-	setAnimationState(timestampNowUs, applyAnimation);
+	setAnimationState(timestampNowUs, applyAnimation, root_uid);
 }
 
 std::map<std::string,teleport::core::PoseScale>::const_iterator FindMatch(const std::map<std::string,teleport::core::PoseScale>& poses,std::string name)
@@ -103,7 +102,7 @@ void AnimationComponent::Retarget(  Animation &anim)
 }
 
 // CRITICAL FIX: Update GetBoneMatrices to use Ozz results properly
-void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
+/*void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
 {
     // Use the computed model-space matrices from Ozz
     size_t numBones = std::min({
@@ -119,55 +118,18 @@ void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
 		jointMatrix.transpose();
         m[i] = jointMatrix;
     }
-}
+}*/
 
-void AnimationComponent::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &mapMeshToSkeleton, const std::vector<mat4> &inverseBindMatrices) const
+std::shared_ptr<AnimationInstance> AnimationComponent::GetOrCreateAnimationInstance(avs::uid root_uid) 
 {
-    if (!instance || instance->models.empty()||!inverseBindMatrices.size())
-    {
-        // Fallback to identity matrices
-        //m.resize(std::min(inverseBindMatrices.size(), static_cast<size_t>(Skeleton::MAX_BONES)));
-        for (size_t i = 0; i < m.size(); i++)
-        {
-            m[i] = mat4::identity();
-        }
-        return;
-    }
-    // Use the computed model-space matrices from Ozz
-    size_t numBones = std::min({
-        inverseBindMatrices.size(),
-        static_cast<size_t>(Skeleton::MAX_BONES)
-    });
-    m.resize(numBones);
-	const auto &mapSkeletonToAnim = owner.GetSkeleton()->GetSkeletonToAnimMapping();
-	//const auto &mapMeshToSkeleton = owner.GetJointIndices();
-    if(inverseBindMatrices.size()!=mapMeshToSkeleton.size())
-	{
-		TELEPORT_WARN("Bad skin mapping");
-	}
-	static uint64_t force_ident=0;//0x14;//0xFFFFFFFFFFFF0000;
-    for (size_t i = 0; i < numBones; i++)
-    {
-        // Convert Ozz matrix to your matrix format
-		int sk_index = mapMeshToSkeleton[i];
-		if(sk_index<0||sk_index>=mapSkeletonToAnim.size())
-			continue;
-		int anim_joint_index = mapSkeletonToAnim[sk_index];
-        const ozz::math::Float4x4& ozzMatrix = instance->models[anim_joint_index];
-        // CRITICAL: Ozz matrices are column-major, ensure correct conversion
-        mat4 joint_matrix= *((mat4*)&ozzMatrix);
-		// transpose so that in row-major format, translation is in the right-hand column
-		joint_matrix.transpose();
-        // Apply inverse bind matrix to get final bone matrix
-        const mat4& inverseBindMatrix = inverseBindMatrices[i];
-        m[i] = joint_matrix * inverseBindMatrix;
-		//m[i].transpose(); 206, 219 hand and ring
-		if(force_ident&(1ULL<<i))
-			m[i]=mat4::identity();
-    }
+	auto f=animationInstances.find(root_uid);
+	if(f!=animationInstances.end())
+		return f->second;
+	animationInstances.emplace(root_uid, std::make_shared<AnimationInstance>(owner.GetSkeleton()));
+	return animationInstances[root_uid];
 }
 
-void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation)
+void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation, avs::uid root_uid)
 {
 	if (applyAnimation.animLayer >= 32)
 	{
@@ -176,22 +138,22 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 	}
 	if (!owner.GetSkeleton())
 		return;
-	if (!instance)
-		instance = new AnimationInstance(owner.GetSkeleton());
-	auto cache	= GeometryCache::GetGeometryCache(applyAnimation.cacheID);
-	auto anim		= cache->mAnimationManager.Get(applyAnimation.animationID);
+	auto instance		= GetOrCreateAnimationInstance(root_uid);
+	auto cache		= GeometryCache::GetGeometryCache(applyAnimation.cacheID);
+	auto anim			= cache->mAnimationManager.Get(applyAnimation.animationID);
 	if(anim)
 		Retarget(*anim) ;
 	instance->SetAnimationState(timestampUs, applyAnimation);
 }
 
-void AnimationComponent::update(int64_t timestampUs)
+void AnimationComponent::update(int64_t timestampUs, avs::uid root_uid)
 {
 	if (!owner.GetSkeleton())
 		return;
+	auto instance = GetOrCreateAnimationInstance(root_uid);
 	if (!instance)
 	{
-		instance = new AnimationInstance(owner.GetSkeleton());
+		instance.reset(new AnimationInstance(owner.GetSkeleton()));
 	}
 	static float dt = lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
 	instance->Update(dt, timestampUs);

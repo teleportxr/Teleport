@@ -1253,8 +1253,8 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						if (animC)
 						{
 							DoRow("Animations", "");
+							#if 0
 							const auto *instance=animC->GetInstance();
-							
 							const auto &animLayerStates = instance->animationLayerStates;
 							// list layers.
 							for (int i = 0; i <1; i++)
@@ -1284,6 +1284,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.animationTimeS / nextAnimDuration, st.animationState.speedUnitsPerS);
 								DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
 							}
+							#endif
 							/*if(ImGui::Button("+"))
 							{
 								std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -1305,9 +1306,8 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 									ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str() );
 									if (ImGui::IsItemClicked())
 									{
-										//play(cache_uid, m->id);
+										animC->PlayAnimation(cache_uid,anim_uid, 0);
 									}
-							// ImGui::TreePop(); ImGuiTreeNodeFlags_NoTreePushOnOpen
 								}
 								auto parentCache=GeometryCache::GetGeometryCache(geometryCache->GetParentCacheUid());
 								if(parentCache)
@@ -1320,7 +1320,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 										ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str() );
 										if (ImGui::IsItemClicked())
 										{
-											animC->PlayAnimation(geometryCache->GetParentCacheUid(),anim_uid);
+											animC->PlayAnimation(geometryCache->GetParentCacheUid(),anim_uid, 0);
 										}
 									}
 								}
@@ -1378,6 +1378,27 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								Select(cache_uid, s->mesh_uid);
 							}
 						}
+						auto subSceneC = selected_node->GetComponent<clientrender::SubSceneComponent>();
+						// Play animations on the subscene:
+						
+						ImGui::BeginGroup();
+						const auto &ids = geometryCache->mAnimationManager.GetAllIDs();
+						for (auto anim_uid : ids)
+						{
+							const auto &anim = geometryCache->mAnimationManager.Get(anim_uid);
+							if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", anim_uid, anim->name.c_str()).c_str()))
+							{
+								if (ImGui::IsItemClicked())
+								{
+									if (!show_inspector)
+										show_inspector = true;
+									subSceneC->PlayAnimation(0, anim_uid);
+								}
+								ImGui::TreePop();
+							}
+						}
+
+						ImGui::EndGroup();
 					}
 				}
 			}

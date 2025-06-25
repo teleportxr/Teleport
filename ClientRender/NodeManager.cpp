@@ -112,7 +112,7 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 		if (animationIt != earlyAnimationUpdates.end())
 		{
 			auto animC=node->GetOrCreateComponent<AnimationComponent>();
-			animC->setAnimationState(session_time_us, animationIt->second);
+			//animC->setAnimationState(session_time_us, animationIt->second);
 			earlyAnimationUpdates.erase(animationIt);
 		}
 
@@ -485,7 +485,7 @@ void NodeManager::UpdateNodeAnimation(std::chrono::microseconds timestampUs,cons
 	if(node)
 	{
 		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationState(timestampUs,animationUpdate);
+		animC->setAnimationState(timestampUs,animationUpdate, 0);
 	}
 	else
 	{
