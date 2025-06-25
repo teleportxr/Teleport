@@ -209,3 +209,51 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 
 	return true;
 }
+
+
+
+void AnimationInstance::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &mapMeshToSkeleton, const std::vector<mat4> &inverseBindMatrices
+	, const std::vector<int> &mapSkeletonToAnim) const
+{
+    if (models.empty()||!inverseBindMatrices.size())
+    {
+        // Fallback to identity matrices
+        //m.resize(std::min(inverseBindMatrices.size(), static_cast<size_t>(Skeleton::MAX_BONES)));
+        for (size_t i = 0; i < m.size(); i++)
+        {
+            m[i] = mat4::identity();
+        }
+        return;
+    }
+    // Use the computed model-space matrices from Ozz
+    size_t numBones = std::min({
+        inverseBindMatrices.size(),
+        static_cast<size_t>(Skeleton::MAX_BONES)
+    });
+    m.resize(numBones);
+	//const auto &mapMeshToSkeleton = owner.GetJointIndices();
+    if(inverseBindMatrices.size()!=mapMeshToSkeleton.size())
+	{
+		TELEPORT_WARN("Bad skin mapping");
+	}
+	static uint64_t force_ident=0;//0x14;//0xFFFFFFFFFFFF0000;
+    for (size_t i = 0; i < numBones; i++)
+    {
+        // Convert Ozz matrix to your matrix format
+		int sk_index = mapMeshToSkeleton[i];
+		if(sk_index<0||sk_index>=mapSkeletonToAnim.size())
+			continue;
+		int anim_joint_index = mapSkeletonToAnim[sk_index];
+        const ozz::math::Float4x4& ozzMatrix = models[anim_joint_index];
+        // CRITICAL: Ozz matrices are column-major, ensure correct conversion
+        mat4 joint_matrix= *((mat4*)&ozzMatrix);
+		// transpose so that in row-major format, translation is in the right-hand column
+		joint_matrix.transpose();
+        // Apply inverse bind matrix to get final bone matrix
+        const mat4& inverseBindMatrix = inverseBindMatrices[i];
+        m[i] = joint_matrix * inverseBindMatrix;
+		//m[i].transpose(); 206, 219 hand and ring
+		if(force_ident&(1ULL<<i))
+			m[i]=mat4::identity();
+    }
+}

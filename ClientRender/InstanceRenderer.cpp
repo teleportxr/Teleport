@@ -10,6 +10,7 @@
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
 #include "ClientRender/NodeComponents/SubSceneComponent.h"
+#include "ClientRender/AnimationInstance.h"
 #include "TeleportClient/ClientTime.h"
 #include <Platform/CrossPlatform/GpuProfiler.h>
 
@@ -1233,38 +1234,10 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 			//				pos_local= (bone_matrix_j) * pos_original_local
 			auto animationComponent = node->GetComponent<AnimationComponent>();
 			//static size_t match_joint_count=22;
-			if(animationComponent)//&&skeleton->GetExternalBoneIds().size()==match_joint_count)
+			if(animationComponent)
 			{
-				animationComponent->update(renderState.timestampUs.count());
-			/*	std::vector<mat4> jMatrices;
-				animationComponent->GetJointMatrices(jMatrices);
-				for(int i=0;i<jMatrices.size();i++)
-				{
-					avs::uid b_id	= skeleton->GetExternalBoneIds()[i];
-					auto node=geometrySubCache->mNodeManager.GetNode(b_id);
-					vec3	 start	= jMatrices[i].GetTranslation();
-					vec4	 purple = {1.0f, 0, 1.0f, 0.9f};
-					vec4	 black	= {0, 0, 0, 0};
-					renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&start), node->name.c_str(), purple, black);
-				}*/
-			}
-			else
-			{
-				/*if(skeleton->GetInverseBindMatrices().size()==node->GetJointIndices().size())
-				{
-					boneMatrices.resize(skeleton->GetInverseBindMatrices().size());
-					skeleton->GetBoneMatrices(geometrySubCache, skeleton->GetInverseBindMatrices(), node->GetJointIndices(), boneMatrices);
-				}
-				else if(skeleton->GetInverseBindMatrices().size()==node->GetJointIndices().size())
-				{
-					boneMatrices.resize(mesh->GetMeshCreateInfo().inverseBindMatrices.size());
-					skeleton->GetBoneMatrices(geometrySubCache, mesh->GetMeshCreateInfo().inverseBindMatrices, node->GetJointIndices(), boneMatrices);
-				}
-				else
-				{
-					TELEPORT_WARN("No matching bind matrices, {}.",node->name);
-					return;
-				}*/
+				// We want to update the instance of this animation component associated with this instance of the submesh.
+				animationComponent->update(renderState.timestampUs.count(), subSceneNodeStates.root_id);
 			}
 		}
 		// Here we must update the matrix that corresponds to the parent cache's instance of this node.
@@ -1291,7 +1264,9 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 					{
 						boneMatrices[i] = mat4::identity();
 					}
-					animationComponent->GetBoneMatrices(boneMatrices, node->GetJointIndices(), node->GetInverseBindMatrices());
+					 skeleton = skelNode->GetSkeleton();
+					auto animationInstance = animationComponent->GetOrCreateAnimationInstance(subSceneNodeStates.root_id);
+					animationInstance->GetBoneMatrices(boneMatrices, node->GetJointIndices(), node->GetInverseBindMatrices(), skeleton->GetSkeletonToAnimMapping());
 					avs::uid sk_id = node->id;
 					if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 					{

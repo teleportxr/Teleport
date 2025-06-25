@@ -416,6 +416,12 @@ void Renderer::InitLocalGeometry()
 	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/RumbaDancing.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
+	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking2.vrma"
+														, avs::GeometryPayloadType::Animation, &localResourceCreator
+														, 0, platform::crossplatform::AxesStandard::Engineering);
+	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
+														, avs::GeometryPayloadType::Animation, &localResourceCreator
+														, 0, platform::crossplatform::AxesStandard::Engineering);
 	
 	geometryDecoder.WaitFromDecodeThread();
 
@@ -1499,7 +1505,6 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	deviceContext.renderPlatform = renderPlatform;
 	deviceContext.viewStruct.view_id = view_id;
 	deviceContext.viewStruct.depthTextureStyle = crossplatform::PROJECTION;
-
 	// For desktop, we will use ClientTime for the predicted display time.
 	deviceContext.predictedDisplayTimeS = client::ClientTime::GetInstance().GetTimeS();
 #if ONSCREEN_PROF
@@ -1509,13 +1514,11 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
 	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
-
 #endif
 	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
 	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
 #endif
-
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
 	if (renderState.openXR && renderState.openXR->IsSessionActive())

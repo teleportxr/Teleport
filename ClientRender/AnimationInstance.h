@@ -36,6 +36,8 @@ namespace teleport
 			void SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation);
 			bool ApplyRestPose();
 			bool Update(float dt_s, int64_t time_us);
+			void GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &mapMeshToSkeleton, const std::vector<mat4> &inverseBindMatrices
+				, const std::vector<int> &mapSkeletonToAnim) const;
 		};
     }
 }

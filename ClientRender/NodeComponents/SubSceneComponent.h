@@ -23,7 +23,6 @@ namespace teleport
 			void PlayAnimation(avs::uid cache_uid, avs::uid anim_uid);
 			avs::uid mesh_uid=0;
 			std::shared_ptr<Mesh> mesh;
-
 		};
 	}
 }

@@ -21,13 +21,12 @@ void SubSceneComponent::PlayAnimation(avs::uid cache_uid, avs::uid anim_uid)
 	for(auto root_uid:root_uids)
 	{
 		auto node = cache->mNodeManager.GetNode(root_uid);
-
 		if(node)
 		{
 			auto animC = node->GetOrCreateComponent<AnimationComponent>();
 			if(animC)
 			{
-				animC->PlayAnimation(cache_uid,anim_uid,0,1.0f);
+				animC->PlayAnimation(cache_uid,anim_uid,root_uid,0, 1.0f);
 			}
 		}
 	}
