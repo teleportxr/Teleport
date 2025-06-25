@@ -1253,48 +1253,51 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						if (animC)
 						{
 							DoRow("Animations", "");
-							#if 0
-							const auto *instance=animC->GetInstance();
-							const auto &animLayerStates = instance->animationLayerStates;
-							// list layers.
-							for (int i = 0; i <1; i++)
+							#if 1
+							const auto instance=animC->GetOrCreateAnimationInstance(0);
+							if(instance)
 							{
-								DoRow("Layer", fmt::format("{0}", i).c_str());
-								const auto &layerState = animLayerStates[i];
-								const auto &st = layerState.getState();
-								DoRow("State", fmt::format("{0}, {1}", layerState.interpState, layerState.sequenceNumber).c_str());
-								std::shared_ptr<Animation> prevAnim, anim;
-								if (st.previousAnimationState.animationId != 0)
+								const auto &animLayerStates = instance->animationLayerStates;
+								// list layers.
+								for (int i = 0; i <1; i++)
 								{
-									prevAnim = geometryCache->mAnimationManager.Get(st.previousAnimationState.animationId);
-								}
-								if (st.animationState.animationId != 0)
-								{
-									anim = geometryCache->mAnimationManager.Get(st.animationState.animationId);
-								}
-								float prevAnimDuration = 1.f, nextAnimDuration = 1.f;
-								if (prevAnim)
-									prevAnimDuration = prevAnim->duration;
-								if (anim)
-									nextAnimDuration = anim->duration;
-								auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId, st.previousAnimationState.animationTimeS / prevAnimDuration, st.previousAnimationState.speedUnitsPerS);
+									DoRow("Layer", fmt::format("{0}", i).c_str());
+									const auto &layerState = animLayerStates[i];
+									const auto &st = layerState.getState();
+									DoRow("State", fmt::format("{0}, {1}", layerState.interpState, layerState.sequenceNumber).c_str());
+									std::shared_ptr<Animation> prevAnim, anim;
+									if (st.previousAnimationState.animationId != 0)
+									{
+										prevAnim = geometryCache->mAnimationManager.Get(st.previousAnimationState.animationId);
+									}
+									if (st.animationState.animationId != 0)
+									{
+										anim = geometryCache->mAnimationManager.Get(st.animationState.animationId);
+									}
+									float prevAnimDuration = 1.f, nextAnimDuration = 1.f;
+									if (prevAnim)
+										prevAnimDuration = prevAnim->duration;
+									if (anim)
+										nextAnimDuration = anim->duration;
+									auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId, st.previousAnimationState.animationTimeS / prevAnimDuration, st.previousAnimationState.speedUnitsPerS);
 
-								DoRow(prevAnim ? prevAnim->getName().c_str() : "Previous", txt.c_str());
-								DoRow("Interp", fmt::format("{0}", st.interpolation).c_str());
-								txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.animationTimeS / nextAnimDuration, st.animationState.speedUnitsPerS);
-								DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
+									DoRow(prevAnim ? prevAnim->getName().c_str() : "Previous", txt.c_str());
+									DoRow("Interp", fmt::format("{0}", st.interpolation).c_str());
+									txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.animationTimeS / nextAnimDuration, st.animationState.speedUnitsPerS);
+									DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
+								}
+								#endif
+								/*if(ImGui::Button("+"))
+								{
+									std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
+									teleport::core::ApplyAnimation applyAnimation;
+									applyAnimation.animLayer=(uint32_t)animLayerStates.size();
+									applyAnimation.animationID = 0;
+									applyAnimation.nodeID=0;
+									applyAnimation.timestampUs=timestampNowUs.count();
+									animC->setAnimationState(timestampNowUs, applyAnimation);
+								}*/
 							}
-							#endif
-							/*if(ImGui::Button("+"))
-							{
-								std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
-								teleport::core::ApplyAnimation applyAnimation;
-								applyAnimation.animLayer=(uint32_t)animLayerStates.size();
-								applyAnimation.animationID = 0;
-								applyAnimation.nodeID=0;
-								applyAnimation.timestampUs=timestampNowUs.count();
-								animC->setAnimationState(timestampNowUs, applyAnimation);
-							}*/
 							{
 								ImGui::Separator();
 							// what animations can be played on this component?

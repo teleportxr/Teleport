@@ -413,13 +413,10 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/RumbaDancing.vrma"
+	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/WalkWithBriefcase.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking2.vrma"
-														, avs::GeometryPayloadType::Animation, &localResourceCreator
-														, 0, platform::crossplatform::AxesStandard::Engineering);
-	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
+	avs::uid anim_uid =geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	

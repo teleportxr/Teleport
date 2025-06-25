@@ -26,7 +26,7 @@ void SubSceneComponent::PlayAnimation(avs::uid cache_uid, avs::uid anim_uid)
 			auto animC = node->GetOrCreateComponent<AnimationComponent>();
 			if(animC)
 			{
-				animC->PlayAnimation(cache_uid,anim_uid,root_uid,0, 1.0f);
+				animC->PlayAnimation(cache_uid,anim_uid,owner.id,0, 1.0f);
 			}
 		}
 	}

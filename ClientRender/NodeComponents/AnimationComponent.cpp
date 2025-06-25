@@ -122,6 +122,14 @@ void AnimationComponent::Retarget(  Animation &anim)
 
 std::shared_ptr<AnimationInstance> AnimationComponent::GetOrCreateAnimationInstance(avs::uid root_uid) 
 {
+	if(root_uid==0)
+	{
+		if (animationInstances.size())
+		{
+			return animationInstances.begin()->second;
+		}
+		return std::shared_ptr<AnimationInstance>();
+	}
 	auto f=animationInstances.find(root_uid);
 	if(f!=animationInstances.end())
 		return f->second;
@@ -155,7 +163,7 @@ void AnimationComponent::update(int64_t timestampUs, avs::uid root_uid)
 	{
 		instance.reset(new AnimationInstance(owner.GetSkeleton()));
 	}
-	static float dt = lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
+	float dt = lastTimestampUs?float(double(timestampUs-lastTimestampUs)/1000000.0):0.0f;
 	instance->Update(dt, timestampUs);
 	lastTimestampUs=timestampUs;
 }
