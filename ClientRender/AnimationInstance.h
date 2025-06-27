@@ -22,7 +22,6 @@ namespace teleport
 			AnimationLayerStateSequence	   animationLayerStates[4];
 			std::map<avs::uid, std::shared_ptr<Animation>> animations;
 			ozz::animation::Skeleton					  *skeleton=nullptr;
-			ozz::animation::SamplingJob::Context		   context;
 			// Buffer of local transforms as sampled from main animation_.
 			ozz::vector<ozz::math::SoaTransform> main_locals;
 			// Buffer of local transforms which stores the blending result.

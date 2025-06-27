@@ -62,7 +62,7 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 		root.transform.translation	= *((ozz::math::Float3*)&n.GetLocalPosition());
 		root.transform.rotation		= *((ozz::math::Quaternion*)&n.GetLocalRotation());
 		root.transform.scale		= *((ozz::math::Float3*)&n.GetLocalScale());
-		std::cout<<std::string(level, '\t')<<n.id<<" "<<n.name<<"\n";
+		//std::cout<<std::string(level, '\t')<<n.id<<" "<<n.name<<"\n";
 		int idx=(int)(std::find(boneIds.begin(),boneIds.end(),n.id)-boneIds.begin());
 		if(idx<0||idx>=jointMapping.size())
 		{
@@ -71,7 +71,7 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 		else
 		{
 			jointMapping[idx]=count++;
-			std::cout<<"MAPPED: " << n.name <<" "<< n.id <<", index "<<idx<< " to anim's " <<count-1<<", "<<root.name << std::endl;
+			//std::cout<<"MAPPED: " << n.name <<" "<< n.id <<", index "<<idx<< " to anim's " <<count-1<<", "<<root.name << std::endl;
 		}
 	}
 	std::vector<avs::uid> sorted_children;
@@ -135,7 +135,7 @@ void Skeleton::InitBones(GeometryCache &g)
 	// Creates the root joint.
 	raw_skeleton->roots.resize(1);
 	ozz::animation::offline::RawSkeleton::Joint &ozz_root = raw_skeleton->roots[0];
-	std::cout<<"================ SKELETON "<<name<<"\n";
+	//std::cout<<"================ SKELETON "<<name<<"\n";
 	int count=0;
 	jointMapping.clear();
 	jointMapping.resize(boneIds.size());

@@ -72,7 +72,7 @@ namespace teleport
 			}
 		private:
 			ozz::unique_ptr<ozz::animation::offline::RawSkeleton>	raw_skeleton;
-			ozz::unique_ptr<ozz::animation::Skeleton>				ozz_skeleton;
+			//ozz::unique_ptr<ozz::animation::Skeleton>				ozz_skeleton;
 			ozz::unique_ptr<ozz::animation::offline::RawAnimation> raw_animation;
 			ozz::map<uint64_t,ozz::unique_ptr<ozz::animation::Animation>> retargeted_animations;
 			//! Mapping from node names to the initial poses.

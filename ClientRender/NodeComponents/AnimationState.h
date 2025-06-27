@@ -210,6 +210,7 @@ namespace teleport
 			float					   animationTimeS = 0.0f;
 			float					   speedUnitsPerS = 1.0f;
 			bool					   loop			  = true;
+			std::shared_ptr<Animation> prevAnimation;
 			std::shared_ptr<Animation> animation;
 		};
 		struct InstantaneousAnimationState
@@ -233,7 +234,10 @@ namespace teleport
 
 			uint32_t					sequenceNumber = 0;
 			mutable int					interpState	   = 0;
+			AnimationSampler			previousSampler;
 			AnimationSampler			sampler;
+			ozz::animation::SamplingJob::Context		   previousContext;
+			ozz::animation::SamplingJob::Context		   context;
 
 		private:
 			int64_t									  lastUpdateTimestamp = 0;

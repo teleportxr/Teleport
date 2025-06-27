@@ -161,7 +161,7 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 	return true;
 }
 
-bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, ozz::unique_ptr<ozz::animation::Skeleton> &sk, const tinygltf::Model &model,std::map<std::string, teleport::core::PoseScale> &restPoses)
+bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const tinygltf::Model &model,std::map<std::string, teleport::core::PoseScale> &restPoses)
 {
 	if (model.scenes.empty())
 	{
@@ -232,24 +232,6 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, ozz::uni
 	if (!raw_skeleton.Validate())
 	{
 		TELEPORT_LOG("Output skeleton failed validation. This is likely an implementation issue.");
-		return false;
-	}
-
-	// Non unique joint names are not supported.
-	// if (!(ozz::animation::offline::ValidateJointNamesUniqueness(raw_skeleton))) {
-	// Log Err is done by the validation function.
-	//  return false;
-	//}
-
-	// Needs to be done before opening the output file, so that if it fails then
-	// there's no invalid file outputted.
-	// Builds runtime skeleton.
-	TELEPORT_LOG("Builds runtime skeleton.");
-	ozz::animation::offline::SkeletonBuilder builder;
-	sk = builder(raw_skeleton);
-	if (!sk)
-	{
-		TELEPORT_LOG("Failed to build runtime skeleton.");
 		return false;
 	}
 	return true;
@@ -377,7 +359,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		// map where we record the associated channels for each joint
 		ozz::cstring_map<std::vector<const tinygltf::AnimationChannel *>> channels_per_joint;
 
-		std::cout << "Animation: " << gltf_animation.name << std::endl;
+		//std::cout << "Animation: " << gltf_animation.name << std::endl;
 		for (const tinygltf::AnimationChannel &channel : gltf_animation.channels)
 		{
 			// Reject if no node is targeted.
@@ -388,7 +370,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 
 			// What node?
 			const auto &node=model.nodes[channel.target_node];
-			std::cout << "    " << node.name << std::endl;
+			//std::cout << "    " << node.name << std::endl;
 			// Reject if path isn't about skeleton animation.
 			bool valid_target = false;
 			for (const char *path : {"translation", "rotation", "scale"})
@@ -445,7 +427,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 				track.scales.push_back(CreateScaleRestPoseKey(*node));
 			}
 		}
-		std::cout<<joints<<"\n";
+		//std::cout<<joints<<"\n";
 
 		TELEPORT_LOG( "Processed animation '{}' (tracks: {}, duration: {} s).", _animation->name, _animation->tracks.size(), _animation->duration);
 
@@ -470,7 +452,7 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size)
 	std::string	warn;
 	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
 	json config;
-	if (!ImportSkeleton(*raw_skeleton, ozz_skeleton, model, restPoses))
+	if (!ImportSkeleton(*raw_skeleton,  model, restPoses))
 		return false;
 	ozz::animation::offline::SkeletonBuilder skeletonBuilder;
 	ozz::unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(*raw_skeleton);

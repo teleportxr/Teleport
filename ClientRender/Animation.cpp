@@ -183,7 +183,8 @@ void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
 
 	// Retarget the animation
 	auto retargeted_animation = clientrender::RetargetAnimation(*raw_animation, *raw_skeleton, *(target_skeleton->GetRawSkeleton()));
-
+	for(size_t i=0;i<100;i++)
+		clientrender::RetargetAnimation(*raw_animation, *raw_skeleton, *(target_skeleton->GetRawSkeleton()));
 	// Validate and convert to runtime format
 	if (retargeted_animation.Validate())
 	{
