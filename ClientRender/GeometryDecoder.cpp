@@ -298,7 +298,7 @@ void GeometryDecoder::decodeAsync()
 
 avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData &geometryDecodeData)
 {
-	std::cout << "GeometryDecoder::decodeInternal " << avs::stringOf(geometryDecodeData.type) << ", size " << geometryDecodeData.data.size() << "\n";
+	//std::cout << "GeometryDecoder::decodeInternal " << avs::stringOf(geometryDecodeData.type) << ", size " << geometryDecodeData.data.size() << "\n";
 	switch (geometryDecodeData.type)
 	{
 	case avs::GeometryPayloadType::Mesh:

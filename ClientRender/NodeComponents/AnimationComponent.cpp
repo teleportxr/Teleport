@@ -98,27 +98,8 @@ void AnimationComponent::Retarget(  Animation &anim)
 	// We modify the animation to match the skeleton.
 	int idx=0;
 	anim.Retarget(owner.GetSkeleton());
-	//instance->ApplyRestPose();
 }
 
-// CRITICAL FIX: Update GetBoneMatrices to use Ozz results properly
-/*void AnimationComponent::GetJointMatrices(std::vector<mat4> &m) const
-{
-    // Use the computed model-space matrices from Ozz
-    size_t numBones = std::min({
-        instance->models.size(),
-        static_cast<size_t>(Skeleton::MAX_BONES)
-    });
-    
-    m.resize(numBones);
-    for (size_t i = 0; i < numBones; i++)
-    {
-        const ozz::math::Float4x4& ozzMatrix = instance->models[i];
-        mat4 jointMatrix= *((mat4*)&ozzMatrix);
-		jointMatrix.transpose();
-        m[i] = jointMatrix;
-    }
-}*/
 
 std::shared_ptr<AnimationInstance> AnimationComponent::GetOrCreateAnimationInstance(avs::uid root_uid) 
 {

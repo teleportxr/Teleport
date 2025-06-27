@@ -23,7 +23,6 @@ void AnimationLayerStateSequence::Init(int num_soa_joints, int num_joints)
 
 void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs, const AnimationState &st)
 {
-	auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 	int64_t time_now_us = timestampUs.count();
 	std::map<int64_t, AnimationState>::iterator s = animationStates.upper_bound(time_now_us);
 	// If the state added results in the current time being in between a previous state and the new state, the interpolation may "jump".
@@ -35,6 +34,8 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 		if(prev!=animationStates.rend())
 		{
 			auto last=animationStates.find(prev->first);
+			//if the new state starts later then the laset, and later than now,
+			//create an intermediate state, a snapshot of the current state, from which to interpolate.
 			if (st.timestampUs > last->first && st.timestampUs > time_now_us)
 			{
 				AnimationState &intermediate	= animationStates[time_now_us];
@@ -44,6 +45,7 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 				intermediate.loop				= previous.loop;
 				intermediate.speedUnitsPerS		= previous.speedUnitsPerS;
 				intermediate.timestampUs		= time_now_us;
+				intermediate.animation			= previous.animation;
 				sequenceNumber					+=1000;
 			}
 		}
@@ -75,7 +77,7 @@ const InstantaneousAnimationState &AnimationLayerStateSequence::getState(int64_t
 		st.animationState.speedUnitsPerS = s1->second.speedUnitsPerS;
 		st.animationState.timestampUs	 = s1->second.timestampUs;
 		st.animationState.loop			 = s1->second.loop;
-		st.animationState.animation		= s1->second.animation;
+		st.animationState.animation		 = s1->second.animation;
 		interpState						 = 1;
 		return st;
 	}
@@ -92,10 +94,12 @@ const InstantaneousAnimationState &AnimationLayerStateSequence::getState(int64_t
 			st.animationState.speedUnitsPerS	 = animationState.speedUnitsPerS;
 			st.animationState.timestampUs		 = animationState.timestampUs;
 			st.animationState.loop				 = animationState.loop;
-			st.animationState.animation			= animationState.animation;
+			st.animationState.animation			 = animationState.animation;
 			st.previousAnimationState			 = animationState;
 			if (animationStates.size() > 1)
+			{
 				animationStates.erase(animationStates.begin());
+			}
 			interpState = 2;
 			return st;
 		}
@@ -109,14 +113,14 @@ const InstantaneousAnimationState &AnimationLayerStateSequence::getState(int64_t
 	// If we haven't started yet.
 	if (animationStates.size() == 0 || s0 == animationStates.end())
 	{
-		st.interpolation				 = 1.0f;
-		st.animationState.animationId	 = s1->second.animationId;
-		st.animationState.animationTimeS = AnimTimeAtTimestamp(s1->second, timestampUs);
-		st.animationState.speedUnitsPerS = s1->second.speedUnitsPerS;
-		st.animationState.timestampUs	 = s1->second.timestampUs;
-		st.animationState.loop			 = s1->second.loop;
-		st.animationState.animation		= s1->second.animation;
-		interpState						 = 4;
+		st.interpolation					= 1.0f;
+		st.animationState.animationId		= s1->second.animationId;
+		st.animationState.animationTimeS	= AnimTimeAtTimestamp(s1->second, timestampUs);
+		st.animationState.speedUnitsPerS	= s1->second.speedUnitsPerS;
+		st.animationState.timestampUs		= s1->second.timestampUs;
+		st.animationState.loop				= s1->second.loop;
+		st.animationState.animation			= s1->second.animation;
+		interpState							= 4;
 		return st;
 	}
 	st.interpolation= float(double(timestampUs - s0->first) / double(s1->first - s0->first));
@@ -131,7 +135,8 @@ const InstantaneousAnimationState &AnimationLayerStateSequence::getState(int64_t
 	st.animationState.speedUnitsPerS			= animationState1.speedUnitsPerS;
 	st.animationState.timestampUs				= animationState1.timestampUs;
 	st.animationState.loop						= animationState1.loop;
-		st.animationState.animation		= animationState0.animation;
+	st.animationState.prevAnimation				= animationState0.animation;
+	st.animationState.animation					= animationState1.animation;
 	// In the case that we have two usable keyframes, and they represent the same animation, we must interpolate the animationTime, rather than extrapolating it.
 	if (st.previousAnimationState.animationId == st.animationState.animationId)
 	{
