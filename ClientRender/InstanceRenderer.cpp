@@ -883,17 +883,19 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			bool normal_map		   = meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::NORMAL) &&
 							  meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && (matInfo.normal.texture_uid != 0);
 			bool		emissive		  = (matInfo.emissive.texture_uid != 0 || length(matInfo.emissive.textureOutputScalar.xyz) > 0);
+			bool combined_map			= matInfo.combined.texture_uid != 0;
 			std::string base_pixel_shader = transparent ? "ps_transparent" : "ps_solid";
 			std::string vertex_shader	  = "vs_variants";
 			if (renderState.multiview)
 				vertex_shader += "_mv";
 			bool uses_lightmap = node->IsStatic() && node->GetGlobalIlluminationTextureUid()!=0;
-			std::string pixel_shader = fmt::format("{base}({lightmap}_{ambient}_{normal_map}_{emissive}_{max_lights})",
+			std::string pixel_shader = fmt::format("{base}({lightmap}_{ambient}_{normal_map}_{emissive}_{combined_map}_{max_lights})",
 												   fmt::arg("base", base_pixel_shader),
 												   fmt::arg("lightmap", uses_lightmap),
 												   fmt::arg("ambient", !uses_lightmap),
 												   fmt::arg("normal_map", normal_map),
 												   fmt::arg("emissive", emissive),
+												   fmt::arg("combined_map", combined_map),
 												   fmt::arg("max_lights", 0));
 			if (rezzing)
 				pixel_shader = "ps_digitizing";
