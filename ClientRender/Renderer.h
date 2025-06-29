@@ -3,6 +3,7 @@
 
 #include "ClientRender/Gui.h"
 #include "ClientRender/Camera2D.h"
+#include "ClientRender/CubemapGenerator.h"
 #include "Common.h"
 #include "InstanceRenderer.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
@@ -147,6 +148,9 @@ namespace teleport
 			bool have_vr_device = false;
 			platform::crossplatform::Texture *externalTexture = nullptr;
 
+			// Cubemap generation for debug purposes
+			std::unique_ptr<CubemapGenerator> cubemapGenerator;
+
 			// TODO: temporary.
 			const avs::uid local_server_uid = 0;
 			const teleport::core::InputId local_menu_input_id = 1;
@@ -202,6 +206,9 @@ namespace teleport
 
 			void HandleLocalInputs(const teleport::core::Input &local_inputs);
 			void ShowHideGui();
+
+			// Debug functionality
+			void SaveCurrentCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 
 			vec3 hit = {0, 0, 0};
 			std::map<std::string, std::string> xr_profile_to_controller_model_name;

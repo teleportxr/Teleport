@@ -142,8 +142,7 @@ struct InteropSkeleton
 		{
 			name,
 			boneIDs[0],
-			{boneIDs, boneIDs + numBones},
-			{},
+			{boneIDs, boneIDs + numBones}
 		};
 	}
 #endif
