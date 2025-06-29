@@ -13,8 +13,40 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+// For operator ""s
+using namespace std::literals;
+using namespace std::string_literals;
+using namespace std::literals::string_literals;
 
 using namespace teleport::clientrender;
+
+template<typename str, typename u>
+void replace_all(
+    str& s,
+    const u& toReplace,
+    const u& replaceWith
+) {
+    str buf;
+    std::size_t pos = 0;
+    std::size_t prevPos;
+
+    // Reserves rough estimate of final size of string.
+    buf.reserve(s.size());
+
+    while (true) {
+        prevPos = pos;
+        pos = s.find(toReplace, pos);
+        if (pos == str::npos)
+            break;
+        buf.append(s, prevPos, pos - prevPos);
+        buf += replaceWith;
+        pos += toReplace.size();
+    }
+
+    buf.append(s, prevPos, s.size() - prevPos);
+    s.swap(buf);
+}
+
 #pragma optimize("",off)
 /*
 * The VRM Bone Names are:
@@ -100,9 +132,12 @@ template <typename stringType> stringType GetMappedBoneName(const stringType &bN
 	}
 	stringType n = bName;
 	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
-	n	   = std::regex_replace(n, std::regex::basic_regex("_l_"), "_left", std::regex_constants::match_any);
-	n	   = std::regex_replace(n, std::regex::basic_regex("_r_"), "_right", std::regex_constants::match_any);
-	n	   = std::regex_replace(n, std::regex::basic_regex(".*_"), "", std::regex_constants::match_any);
+	replace_all(n,"_l_"s, "_left"s);
+	replace_all(n,"_r_"s, "_right"s);
+	size_t underscore_pos=n.find('_');
+	if(underscore_pos<n.length())
+		n=n.substr(underscore_pos+1,n.length()-underscore_pos-1);
+	//n = std::regex_replace(n, std::regex::basic_regex(".*_"), "", std::regex_constants::match_any);
 	auto m = mapping.find(n);
 	if (m == mapping.end())
 	{
@@ -205,27 +240,31 @@ ozz::math::Transform ComputeModelSpaceTransform(const ozz::animation::offline::R
 }
 
 // Helper function to traverse joints and build joint map
-void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton, const ozz::vector<ozz::animation::offline::RawSkeleton::Joint> &joints, std::unordered_map<ozz::string, int> &joint_map, ozz::vector<ozz::math::Transform> &modelspace_transforms, int &joint_index)
+void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton, const ozz::vector<ozz::animation::offline::RawSkeleton::Joint> &joints, std::unordered_map<ozz::string, int> &joint_map
+	, ozz::vector<ozz::math::Transform> &modelspace_transforms
+	, ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list
+	, int &joint_index)
 {
 	for (const auto &joint : joints)
 	{
 		ozz::string mapped_bone_name=GetMappedBoneName(joint.name);
 		joint_map[mapped_bone_name] = joint_index;
-		// std::cout<<joint_index<< joint.name<<"\n";
 		if(joint_index>=modelspace_transforms.size())
 			modelspace_transforms.resize(joint_index+1);
 		modelspace_transforms[joint_index]=ComputeModelSpaceTransform(skeleton, mapped_bone_name);
+		joint_list.push_back(&joint);
 		joint_index++;
-		TraverseJoints(skeleton, joint.children, joint_map, modelspace_transforms, joint_index);
+		TraverseJoints(skeleton, joint.children, joint_map, modelspace_transforms, joint_list, joint_index);
 	}
 }
 
 // Helper function to build a joint name to index mapping
-std::unordered_map<ozz::string, int> BuildJointMap(const ozz::animation::offline::RawSkeleton &skeleton, ozz::vector<ozz::math::Transform> &modelspace_transforms)
+std::unordered_map<ozz::string, int> BuildJointMap(const ozz::animation::offline::RawSkeleton &skeleton, ozz::vector<ozz::math::Transform> &modelspace_transforms
+	, ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list)
 {
 	std::unordered_map<ozz::string, int> joint_map;
 	int									 joint_index = 0;
-	TraverseJoints(skeleton, skeleton.roots, joint_map, modelspace_transforms,  joint_index);
+	TraverseJoints(skeleton, skeleton.roots, joint_map, modelspace_transforms, joint_list, joint_index);
 	return joint_map;
 }
 
@@ -427,6 +466,7 @@ ozz::string GetParentJointName(const ozz::animation::offline::RawSkeleton &skele
 struct RetargetingSkeleton
 {
 	const std::unordered_map<ozz::string, int>		&joint_map;
+	const ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list;
 	const ozz::animation::offline::RawSkeleton		&skeleton;
 	const ozz::vector<ozz::math::Transform>			&modelspace_transforms;
 };
@@ -455,7 +495,13 @@ void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSk
 		else
 		{
 			// Find corresponding joint in target skeleton
-			const auto *target_joint = FindJointByName(retargeter.target.skeleton, source_name);
+			int target_joint_index = retargeter.target.joint_map.at(source_name);
+			const auto *target_joint = retargeter.target.joint_list[target_joint_index];//FindJointByName(retargeter.target.skeleton, source_name);
+			
+			/*if(retargeter.target.joint_list[target_joint_index]!=target_joint)
+			{
+				TELEPORT_WARN("target joint lookup mismatch.\n");
+			}*/
 			if (!target_joint)
 			{
 				TELEPORT_WARN("No target joint.\n");
@@ -556,8 +602,10 @@ ozz::math::Transform ApplyRetargetingModelSpace(Retargeter &retargeter,
 												const ozz::math::Transform				   &target_parent_model)
 {
 	// Get bind poses
-	const auto *sourceJoint = FindJointByName(source_skeleton, joint_name);
-	const auto *targetJoint = FindJointByName(target_skeleton, joint_name);
+	int sourceJoint_index = retargeter.source.joint_map.at(joint_name);
+	int targetJoint_index = retargeter.target.joint_map.at(joint_name);
+	const auto *sourceJoint = retargeter.source.joint_list[sourceJoint_index];//FindJointByName(source_skeleton, joint_name);
+	const auto *targetJoint = retargeter.target.joint_list[sourceJoint_index];//FindJointByName(target_skeleton, joint_name);
 
 	if (!sourceJoint || !targetJoint)
 	{
@@ -668,8 +716,10 @@ ozz::animation::offline::RawAnimation teleport::clientrender::RetargetAnimation(
 	
 	ozz::vector<ozz::math::Transform> source_modelspace_transforms;
 	ozz::vector<ozz::math::Transform> target_modelspace_transforms;
-	auto source_joint_map = BuildJointMap(source_skeleton, source_modelspace_transforms);
-	auto target_joint_map = BuildJointMap(target_skeleton, target_modelspace_transforms);
+	ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> source_joint_list;
+	ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> target_joint_list;
+	auto source_joint_map = BuildJointMap(source_skeleton, source_modelspace_transforms, source_joint_list);
+	auto target_joint_map = BuildJointMap(target_skeleton, target_modelspace_transforms, target_joint_list);
 	
 
 	// Count total joints in source skeleton
@@ -677,8 +727,8 @@ ozz::animation::offline::RawAnimation teleport::clientrender::RetargetAnimation(
 	CountJoints(source_skeleton.roots, total_joints);
 	int joint_index = 0;
 	ozz::vector<JointRetargetInfo> retarget_info(total_joints);
-	RetargetingSkeleton source_sk={source_joint_map, source_skeleton, source_modelspace_transforms};
-	RetargetingSkeleton target_sk={target_joint_map, target_skeleton, target_modelspace_transforms};
+	RetargetingSkeleton source_sk={source_joint_map, source_joint_list, source_skeleton, source_modelspace_transforms};
+	RetargetingSkeleton target_sk={target_joint_map, target_joint_list, target_skeleton, target_modelspace_transforms};
 	Retargeter retargeter={ source_sk, target_sk, retarget_info, joint_index };
 	
 	BuildRetargetInfoRecursive(retargeter.source.skeleton.roots, retargeter);
@@ -710,11 +760,13 @@ ozz::animation::offline::RawAnimation teleport::clientrender::RetargetAnimation(
 			ozz::animation::offline::RawAnimation::RotationKey				 rotKey;
 			ozz::animation::offline::RawAnimation::ScaleKey					 scaleKey;
 
-			if (FindJointChainRecursive(target_skeleton.roots, targetJointName, chain))
+			// In the target skeleton, what is the joint with targetJointName?
+			const auto *targetJoint = retargeter.target.joint_list[targetTrackIdx];
+			if (targetJoint)//FindJointChainRecursive(target_skeleton.roots, targetJointName, chain))
 			{
-				transKey.value = chain.back()->transform.translation;
-				rotKey.value   = chain.back()->transform.rotation;
-				scaleKey.value = chain.back()->transform.scale;
+				transKey.value = targetJoint->transform.translation;
+				rotKey.value   = targetJoint->transform.rotation;
+				scaleKey.value = targetJoint->transform.scale;
 			}
 			else
 			{

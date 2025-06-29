@@ -1,20 +1,10 @@
 #include "CubemapGenerator.h"
-#include "Platform/CrossPlatform/GraphicsDeviceContext.h"
+#include "Platform/CrossPlatform/DeviceContext.h"
+#include "Platform/CrossPlatform/Camera.h"
 #include "Platform/Math/Vector3.h"
 #include "Platform/Math/Matrix4x4.h"
+#include "Platform/Math/Pi.h"
 #include "TeleportCore/ErrorHandling.h"
-#include <ktx.h>
-#include <fstream>
-
-// OpenGL constants for KTX2
-#ifndef GL_RGBA8
-#define GL_RGBA8 0x8058
-#endif
-
-// Vulkan constants for KTX2
-#ifndef VK_FORMAT_R8G8B8A8_UNORM
-#define VK_FORMAT_R8G8B8A8_UNORM 37
-#endif
 
 using namespace teleport::clientrender;
 using namespace platform::crossplatform;
@@ -22,7 +12,7 @@ using namespace platform::math;
 
 CubemapGenerator::CubemapGenerator(RenderPlatform* renderPlatform)
 	: m_renderPlatform(renderPlatform)
-	, m_cubemapSize(0)
+	, m_faceSize(0)
 	, m_initialized(false)
 {
 }
@@ -49,10 +39,8 @@ bool CubemapGenerator::Initialize()
 		TELEPORT_CERR << "CubemapGenerator: Failed to load shaders" << std::endl;
 		return false;
 	}
-
-	// Create constant buffer
-	m_cubemapConstants = std::make_unique<ConstantBuffer<CubemapConstants>>(m_renderPlatform, "CubemapConstants");
-
+	m_cubemapConstants.RestoreDeviceObjects(m_renderPlatform);
+	m_cameraConstants.RestoreDeviceObjects(m_renderPlatform);
 	m_initialized = true;
 	return true;
 }
@@ -60,55 +48,51 @@ bool CubemapGenerator::Initialize()
 bool CubemapGenerator::LoadShaders()
 {
 	// Load the cubemap_clear.sfx effect
-	m_cubemapClearEffect = std::unique_ptr<Effect>(m_renderPlatform->CreateEffect("cubemap_clear"));
+	m_cubemapClearEffect=m_renderPlatform->GetOrCreateEffect("cubemap_clear");
 	if (!m_cubemapClearEffect)
 	{
 		TELEPORT_CERR << "CubemapGenerator: Failed to create cubemap_clear effect" << std::endl;
 		return false;
 	}
 
-	// Load the effect from file
-	if (!m_cubemapClearEffect->Load(m_renderPlatform, "client/Shaders/cubemap_clear.sfx"))
-	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to load cubemap_clear.sfx" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
-bool CubemapGenerator::CreateCubemapTexture(int size)
+bool CubemapGenerator::CreateHDRCrossTexture(int faceSize)
 {
-	if (m_cubemapTexture && m_cubemapSize == size)
+	if (m_hdrCrossTexture && m_faceSize == faceSize)
 		return true; // Already created with correct size
 
-	m_cubemapTexture.reset();
-	m_cubemapSize = size;
+	m_hdrCrossTexture.reset();
+	m_faceSize = faceSize;
 
-	// Create cubemap texture
-	m_cubemapTexture = std::unique_ptr<Texture>(m_renderPlatform->CreateTexture());
-	if (!m_cubemapTexture)
+	// Create HDR cross texture (4 faces wide x 3 faces tall)
+	int crossWidth = faceSize * 4;
+	int crossHeight = faceSize * 3;
+
+	m_hdrCrossTexture = std::unique_ptr<Texture>(m_renderPlatform->CreateTexture());
+	if (!m_hdrCrossTexture)
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create texture" << std::endl;
+		TELEPORT_CERR << "CubemapGenerator: Failed to create HDR cross texture" << std::endl;
 		return false;
 	}
 
-	// Configure as cubemap render target
+	// Configure as HDR render target
 	TextureCreate textureCreate;
-	textureCreate.w = size;
-	textureCreate.l = size;
+	textureCreate.w = crossWidth;
+	textureCreate.l = crossHeight;
 	textureCreate.d = 1;
-	textureCreate.arraysize = 6; // 6 faces for cubemap
+	textureCreate.arraysize = 1;
 	textureCreate.mips = 1;
-	textureCreate.cubemap = true;
-	textureCreate.f = PixelFormat::RGBA_8_UNORM;
+	textureCreate.cubemap = false;
+	textureCreate.f = PixelFormat::RGBA_16_FLOAT; // HDR format
 	textureCreate.make_rt = true;
 	textureCreate.computable = true;
-	textureCreate.name = "GeneratedCubemap";
+	textureCreate.name = "HDRCubemapCross";
 
-	if (!m_cubemapTexture->EnsureTexture(m_renderPlatform, &textureCreate))
+	if (!m_hdrCrossTexture->EnsureTexture(m_renderPlatform, &textureCreate))
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create cubemap texture" << std::endl;
+		TELEPORT_CERR << "CubemapGenerator: Failed to create HDR cross texture" << std::endl;
 		return false;
 	}
 
@@ -117,29 +101,54 @@ bool CubemapGenerator::CreateCubemapTexture(int size)
 
 void CubemapGenerator::SetupConstants(float timeSeconds)
 {
-	if (!m_cubemapConstants)
-		return;
-
-	CubemapConstants& constants = m_cubemapConstants->GetData();
-	
-	// Clear the constants
-	memset(&constants, 0, sizeof(CubemapConstants));
-	
 	// Set time for animated effects
-	constants.time_seconds = timeSeconds;
-	
-	// Set up identity matrices and default values
-	constants.serverProj = mat4::identity();
-	constants.cameraPosition = vec3(0.0f, 0.0f, 1.0f); // Slightly above ground
-	constants.cameraRotation = vec4(0.0f, 0.0f, 0.0f, 1.0f); // Identity quaternion
-	constants.depthOffsetScale = vec4(0.0f, 0.0f, 1.0f, 1.0f);
-	constants.targetSize = int2(m_cubemapSize, m_cubemapSize);
-	constants.sourceOffset = int2(0, 0);
+	m_cubemapConstants.time_seconds = timeSeconds;
 
-	m_cubemapConstants->UpdateData();
+	// Set up identity matrices and default values
+	m_cubemapConstants.serverProj = mat4::identity();
+	m_cubemapConstants.cameraPosition = vec3(0.0f, 0.0f, 0.0f); // Origin for cubemap generation
+	m_cubemapConstants.cameraRotation = vec4(0.0f, 0.0f, 0.0f, 1.0f); // Identity quaternion
+	m_cubemapConstants.depthOffsetScale = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+	m_cubemapConstants.targetSize = int2(m_faceSize, m_faceSize);
+	m_cubemapConstants.sourceOffset = int2(0, 0);
+	m_cubemapConstants.offsetFromVideo = vec3(0.0f, 0.0f, 0.0f);
 }
 
-bool CubemapGenerator::GenerateCubemap(const std::string& passName, int cubemapSize, float timeSeconds)
+void CubemapGenerator::SetupCameraConstants(int face)
+{
+	// Get the inverse view-projection matrix for this cubemap face
+	platform::math::Matrix4x4 invViewProj;
+	platform::crossplatform::GetCubeInvViewProjMatrix((float*)&invViewProj, face, true, false);
+
+	// Set up camera constants
+	m_cameraConstants.invViewProj = invViewProj;
+
+	// Get the view matrix for this face
+	platform::math::Matrix4x4 viewMatrix;
+	platform::crossplatform::GetCubeMatrix((float*)&viewMatrix, face, true, false);
+	m_cameraConstants.view = viewMatrix;
+
+	// Create a 90-degree projection matrix for cubemap faces
+	float fov = SIMUL_PI_F / 2.0f; // 90 degrees
+	platform::math::Matrix4x4 projMatrix = platform::crossplatform::Camera::MakeDepthReversedProjectionMatrix(fov, fov, 0.1f, 1000.0f);
+	m_cameraConstants.proj = projMatrix;
+
+	// Calculate view-projection matrix
+	platform::math::Matrix4x4 viewProj;
+	platform::math::Multiply4x4(viewProj, viewMatrix, projMatrix);
+	m_cameraConstants.viewProj = viewProj;
+
+	// Set camera position at origin for cubemap generation
+	m_cameraConstants.viewPosition = vec3(0.0f, 0.0f, 0.0f);
+
+	// Set frame number (can be used for temporal effects)
+	m_cameraConstants.frameNumber = 0;
+
+	// Set depth parameters (these may need adjustment based on your needs)
+	m_cameraConstants.depthToLinFadeDistParams = vec4(0.1f, 1000.0f, 0.0f, 0.0f);
+}
+
+bool CubemapGenerator::GenerateCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext,const std::string& passName, int cubemapSize, float timeSeconds)
 {
 	if (!m_initialized)
 	{
@@ -153,247 +162,120 @@ bool CubemapGenerator::GenerateCubemap(const std::string& passName, int cubemapS
 		return false;
 	}
 
-	// Create cubemap texture
-	if (!CreateCubemapTexture(cubemapSize))
+	// Create HDR cross texture
+	if (!CreateHDRCrossTexture(cubemapSize))
 		return false;
-
-	// Setup constants
-	SetupConstants(timeSeconds);
-
-	// Create graphics device context
-	GraphicsDeviceContext deviceContext;
-	deviceContext.renderPlatform = m_renderPlatform;
-	deviceContext.platform_context = m_renderPlatform->GetImmediateContext().platform_context;
-
-	// Set constant buffer
-	m_renderPlatform->SetConstantBuffer(deviceContext, m_cubemapConstants.get());
-
-	// For cubemap generation, we need to set up the view matrix for each face
-	// The unconnected shaders use TexCoordsToView to generate the view direction
-	// So we need to render a fullscreen quad for each face with appropriate view setup
-
-	// Set viewport for the entire cubemap
-	Viewport viewport;
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.w = cubemapSize;
-	viewport.h = cubemapSize;
-	m_renderPlatform->SetViewports(deviceContext, 1, &viewport);
-
-	// Set the cubemap as render target (all faces at once)
-	auto cubemapRenderTarget = m_cubemapTexture->AsRenderTarget();
-	if (!cubemapRenderTarget)
-	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create cubemap render target" << std::endl;
-		return false;
-	}
 
 	// Activate render target
-	m_renderPlatform->ActivateRenderTargets(deviceContext, 1, &cubemapRenderTarget, nullptr);
+	m_hdrCrossTexture->activateRenderTarget(deviceContext);
 
-	// Clear the cubemap
+	// Clear the HDR cross texture
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	m_renderPlatform->Clear(deviceContext, clearColor);
 
-	// Render each face of the cubemap
+	// Render each face to its position in the cross layout
 	for (int face = 0; face < 6; ++face)
 	{
-		// Update constants for this face
-		CubemapConstants& constants = m_cubemapConstants->GetData();
-
-		// Set up view matrix for each cubemap face
-		// This follows the standard cubemap face orientations
-		vec3 forward, up, right;
-		switch (face)
-		{
-		case 0: // +X
-			forward = vec3(1.0f, 0.0f, 0.0f);
-			up = vec3(0.0f, 1.0f, 0.0f);
-			break;
-		case 1: // -X
-			forward = vec3(-1.0f, 0.0f, 0.0f);
-			up = vec3(0.0f, 1.0f, 0.0f);
-			break;
-		case 2: // +Y
-			forward = vec3(0.0f, 1.0f, 0.0f);
-			up = vec3(0.0f, 0.0f, -1.0f);
-			break;
-		case 3: // -Y
-			forward = vec3(0.0f, -1.0f, 0.0f);
-			up = vec3(0.0f, 0.0f, 1.0f);
-			break;
-		case 4: // +Z
-			forward = vec3(0.0f, 0.0f, 1.0f);
-			up = vec3(0.0f, 1.0f, 0.0f);
-			break;
-		case 5: // -Z
-			forward = vec3(0.0f, 0.0f, -1.0f);
-			up = vec3(0.0f, 1.0f, 0.0f);
-			break;
-		}
-
-		// Convert to quaternion rotation
-		right = normalize(cross(forward, up));
-		up = normalize(cross(right, forward));
-
-		// Create rotation matrix and convert to quaternion
-		mat4 rotMatrix = mat4::identity();
-		rotMatrix.m[0][0] = right.x; rotMatrix.m[0][1] = right.y; rotMatrix.m[0][2] = right.z;
-		rotMatrix.m[1][0] = up.x; rotMatrix.m[1][1] = up.y; rotMatrix.m[1][2] = up.z;
-		rotMatrix.m[2][0] = -forward.x; rotMatrix.m[2][1] = -forward.y; rotMatrix.m[2][2] = -forward.z;
-
-		// For simplicity, we'll use identity rotation and let the shader handle the cubemap face directions
-		constants.cameraRotation = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
-		m_cubemapConstants->UpdateData();
-		m_renderPlatform->SetConstantBuffer(deviceContext, m_cubemapConstants.get());
-
-		// Set render target to specific face
-		TextureView faceView;
-		faceView.elements.type = TextureView::TEXTURE_2D;
-		faceView.elements.subresourceRange.aspectMask = TextureAspectFlags::COLOUR;
-		faceView.elements.subresourceRange.baseArrayLayer = face;
-		faceView.elements.subresourceRange.layerCount = 1;
-		faceView.elements.subresourceRange.baseMipLevel = 0;
-		faceView.elements.subresourceRange.levelCount = 1;
-
-		auto faceRenderTarget = m_cubemapTexture->AsRenderTarget(faceView);
-		if (faceRenderTarget)
-		{
-			// Deactivate previous target
-			m_renderPlatform->DeactivateRenderTargets(deviceContext);
-
-			// Activate this face as render target
-			m_renderPlatform->ActivateRenderTargets(deviceContext, 1, &faceRenderTarget, nullptr);
-
-			// Apply the unconnected shader technique and pass
-			m_cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-
-			// Draw fullscreen quad
-			m_renderPlatform->DrawQuad(deviceContext);
-
-			// Unapply effect
-			m_cubemapClearEffect->Unapply(deviceContext);
-		}
+		RenderFaceToViewport(deviceContext, face, cubemapSize, passName, timeSeconds);
 	}
 
 	// Deactivate render target
-	m_renderPlatform->DeactivateRenderTargets(deviceContext);
+	m_hdrCrossTexture->deactivateRenderTarget(deviceContext);
 
 	return true;
 }
 
-bool CubemapGenerator::SaveToKTX2(const std::string& filename)
+void CubemapGenerator::RenderFaceToViewport(GraphicsDeviceContext& deviceContext,
+											int face, int faceSize, const std::string& passName, float timeSeconds)
 {
-	if (!m_cubemapTexture)
+	// Setup constants for this face
+	SetupConstants(timeSeconds);
+	SetupCameraConstants(face);
+
+	// Set both constant buffers
+	m_renderPlatform->SetConstantBuffer(deviceContext, &m_cubemapConstants);
+	m_renderPlatform->SetConstantBuffer(deviceContext, &m_cameraConstants);
+
+	// Calculate viewport position for this face in the cross layout
+	// Cross layout:
+	//     +Y
+	// -X  +Z  +X  -Z
+	//     -Y
+	int viewportX = 0, viewportY = 0;
+
+	switch (face)
 	{
-		TELEPORT_CERR << "CubemapGenerator: No cubemap texture to save" << std::endl;
+	case 0: // +X (right)
+		viewportX = faceSize * 2;
+		viewportY = faceSize * 1;
+		break;
+	case 1: // -X (left)
+		viewportX = faceSize * 0;
+		viewportY = faceSize * 1;
+		break;
+	case 2: // +Y (top)
+		viewportX = faceSize * 1;
+		viewportY = faceSize * 0;
+		break;
+	case 3: // -Y (bottom)
+		viewportX = faceSize * 1;
+		viewportY = faceSize * 2;
+		break;
+	case 4: // +Z (front)
+		viewportX = faceSize * 1;
+		viewportY = faceSize * 1;
+		break;
+	case 5: // -Z (back)
+		viewportX = faceSize * 3;
+		viewportY = faceSize * 1;
+		break;
+	}
+
+	// Set viewport for this face
+	Viewport viewport;
+	viewport.x = viewportX;
+	viewport.y = viewportY;
+	viewport.w = faceSize;
+	viewport.h = faceSize;
+	m_renderPlatform->SetViewports(deviceContext, 1, &viewport);
+
+	// Apply the unconnected shader technique and pass
+	m_cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+
+	// Draw fullscreen quad (will be clipped to viewport)
+	m_renderPlatform->DrawQuad(deviceContext);
+
+	// Unapply effect
+	m_cubemapClearEffect->Unapply(deviceContext);
+}
+
+
+
+bool CubemapGenerator::SaveToHDR(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::string& filename)
+{
+	if (!m_hdrCrossTexture)
+	{
+		TELEPORT_CERR << "CubemapGenerator: No HDR cross texture to save" << std::endl;
 		return false;
 	}
-
-	// Create a staging texture to read back the cubemap data
-	std::unique_ptr<Texture> stagingTexture(m_renderPlatform->CreateTexture());
-	if (!stagingTexture)
+	try
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create staging texture" << std::endl;
+		m_renderPlatform->SaveTexture(deviceContext, m_hdrCrossTexture.get(), filename.c_str());
+		TELEPORT_COUT << "CubemapGenerator: Successfully saved HDR cubemap cross to " << filename << std::endl;
+		return true;
+	}
+	catch (...)
+	{
+		TELEPORT_CERR << "CubemapGenerator: Failed to save HDR texture to " << filename << std::endl;
 		return false;
 	}
-
-	// Configure staging texture for CPU readback
-	TextureCreate stagingCreate;
-	stagingCreate.w = m_cubemapSize;
-	stagingCreate.l = m_cubemapSize;
-	stagingCreate.d = 1;
-	stagingCreate.arraysize = 6; // 6 faces
-	stagingCreate.mips = 1;
-	stagingCreate.cubemap = true;
-	stagingCreate.f = PixelFormat::RGBA_8_UNORM;
-	stagingCreate.make_rt = false;
-	stagingCreate.computable = false;
-	stagingCreate.cpuWritable = true;
-	stagingCreate.name = "StagingCubemap";
-
-	if (!stagingTexture->EnsureTexture(m_renderPlatform, &stagingCreate))
-	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create staging texture" << std::endl;
-		return false;
-	}
-
-	// Copy cubemap to staging texture
-	GraphicsDeviceContext deviceContext;
-	deviceContext.renderPlatform = m_renderPlatform;
-	deviceContext.platform_context = m_renderPlatform->GetImmediateContext().platform_context;
-
-	m_renderPlatform->CopyTexture(deviceContext, stagingTexture.get(), m_cubemapTexture.get());
-
-	// Create KTX2 texture
-	ktxTexture2* ktx2Texture = nullptr;
-	ktxTextureCreateInfo createInfo;
-	memset(&createInfo, 0, sizeof(createInfo));
-
-	createInfo.glInternalformat = GL_RGBA8; // Assuming RGBA8 format
-	createInfo.vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
-	createInfo.baseWidth = m_cubemapSize;
-	createInfo.baseHeight = m_cubemapSize;
-	createInfo.baseDepth = 1;
-	createInfo.numDimensions = 2;
-	createInfo.numLevels = 1;
-	createInfo.numLayers = 1;
-	createInfo.numFaces = 6; // Cubemap has 6 faces
-	createInfo.isArray = KTX_FALSE;
-	createInfo.generateMipmaps = KTX_FALSE;
-
-	KTX_error_code result = ktxTexture2_Create(&createInfo, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &ktx2Texture);
-	if (result != KTX_SUCCESS)
-	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create KTX2 texture: " << ktxErrorString(result) << std::endl;
-		return false;
-	}
-
-	// Extract pixel data from staging texture and populate KTX2 texture
-	size_t faceSize = m_cubemapSize * m_cubemapSize * 4; // 4 bytes per pixel (RGBA8)
-	std::vector<uint8_t> faceData(faceSize);
-
-	for (int face = 0; face < 6; ++face)
-	{
-		// Read face data from staging texture
-		if (!stagingTexture->GetTexels(deviceContext, faceData.data(), 0, face))
-		{
-			TELEPORT_CERR << "CubemapGenerator: Failed to read face " << face << " data" << std::endl;
-			ktxTexture_Destroy(ktxTexture(ktx2Texture));
-			return false;
-		}
-
-		// Set image data in KTX2 texture
-		result = ktxTexture_SetImageFromMemory(ktxTexture(ktx2Texture), 0, 0, face, faceData.data(), faceSize);
-		if (result != KTX_SUCCESS)
-		{
-			TELEPORT_CERR << "CubemapGenerator: Failed to set face " << face << " data: " << ktxErrorString(result) << std::endl;
-			ktxTexture_Destroy(ktxTexture(ktx2Texture));
-			return false;
-		}
-	}
-
-	// Write KTX2 file
-	result = ktxTexture_WriteToNamedFile(ktxTexture(ktx2Texture), filename.c_str());
-	if (result != KTX_SUCCESS)
-	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to write KTX2 file: " << ktxErrorString(result) << std::endl;
-		ktxTexture_Destroy(ktxTexture(ktx2Texture));
-		return false;
-	}
-
-	// Cleanup
-	ktxTexture_Destroy(ktxTexture(ktx2Texture));
-
-	TELEPORT_COUT << "CubemapGenerator: Successfully saved cubemap to " << filename << std::endl;
-	return true;
 }
 
 void CubemapGenerator::Cleanup()
 {
-	m_cubemapTexture.reset();
+	m_hdrCrossTexture.reset();
 	m_cubemapClearEffect.reset();
-	m_cubemapConstants.reset();
+	m_cubemapConstants.InvalidateDeviceObjects();
+	m_cameraConstants.InvalidateDeviceObjects();
 	m_initialized = false;
 }

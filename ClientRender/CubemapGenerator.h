@@ -3,8 +3,8 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/Effect.h"
 #include "Platform/CrossPlatform/Texture.h"
-#include "Platform/CrossPlatform/ConstantBuffer.h"
 #include "client/Shaders/cubemap_constants.sl"
+#include "Platform/CrossPlatform/Shaders/camera_constants.sl"
 #include <string>
 #include <memory>
 
@@ -27,28 +27,32 @@ namespace teleport
 			/// @param cubemapSize Size of each face of the cubemap (e.g., 512, 1024)
 			/// @param timeSeconds Time value for animated effects
 			/// @return True if generation was successful
-			bool GenerateCubemap(const std::string& passName, int cubemapSize, float timeSeconds = 0.0f);
+			bool GenerateCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext,const std::string& passName, int cubemapSize, float timeSeconds = 0.0f);
 
-			/// Save the generated cubemap to a KTX2 file
-			/// @param filename Path where to save the KTX2 file
+			/// Save the generated cubemap to an HDR file as a cubemap cross
+			/// @param filename Path where to save the HDR file
 			/// @return True if save was successful
-			bool SaveToKTX2(const std::string& filename);
+			bool SaveToHDR(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::string& filename);
 
 			/// Get the generated cubemap texture (for preview or further use)
-			platform::crossplatform::Texture* GetCubemapTexture() const { return m_cubemapTexture.get(); }
+			platform::crossplatform::Texture* GetCubemapTexture() const { return m_hdrCrossTexture.get(); }
 
 		private:
 			void Cleanup();
-			bool CreateCubemapTexture(int size);
+			bool CreateHDRCrossTexture(int faceSize);
 			bool LoadShaders();
 			void SetupConstants(float timeSeconds);
+			void SetupCameraConstants(int face);
+			void RenderFaceToViewport(platform::crossplatform::GraphicsDeviceContext& deviceContext,
+									  int face, int faceSize, const std::string& passName, float timeSeconds);
 
 			platform::crossplatform::RenderPlatform* m_renderPlatform;
-			std::unique_ptr<platform::crossplatform::Effect> m_cubemapClearEffect;
-			std::unique_ptr<platform::crossplatform::Texture> m_cubemapTexture;
-			std::unique_ptr<platform::crossplatform::ConstantBuffer<CubemapConstants>> m_cubemapConstants;
-			
-			int m_cubemapSize;
+			std::shared_ptr<platform::crossplatform::Effect> m_cubemapClearEffect;
+			std::shared_ptr<platform::crossplatform::Texture> m_hdrCrossTexture;
+			platform::crossplatform::ConstantBuffer<CubemapConstants> m_cubemapConstants;
+			platform::crossplatform::ConstantBuffer<CameraConstants> m_cameraConstants;
+
+			int m_faceSize;
 			bool m_initialized;
 		};
 	}

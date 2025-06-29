@@ -23,6 +23,8 @@ set( src_root
 	CanvasTextRenderer.h
 	Common.h
 	Common.cpp
+	CubemapGenerator.h
+	CubemapGenerator.cpp
 	IndexBuffer.h
 	IndexBuffer.cpp
 	Texture.cpp

@@ -23,6 +23,9 @@
 #include "Tests.h"
 #include <fmt/core.h>
 #include <regex>
+#include <chrono>
+#include <ctime>
+#include <imgui.h>
 #if TELEPORT_CLIENT_USE_VULKAN
 #include "Platform/Vulkan/RenderPlatform.h"
 #include "Platform/Vulkan/Texture.h"
@@ -222,6 +225,15 @@ void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *
 
 	InitLocalGeometry();
 //	client::identity.Init();
+#ifdef _MSC_VER
+	// Initialize cubemap generator for debug functionality
+	cubemapGenerator = std::make_unique<CubemapGenerator>(renderPlatform);
+	if (!cubemapGenerator->Initialize())
+	{
+		TELEPORT_CERR << "Failed to initialize CubemapGenerator" << std::endl;
+		cubemapGenerator.reset();
+	}
+#endif
 }
 
 void Renderer::ConsoleCommand(const std::string &str) { console.push(str); }
@@ -413,7 +425,10 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/WalkWithBriefcase.vrma"
+	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking.vrma"
+														, avs::GeometryPayloadType::Animation, &localResourceCreator
+														, 0, platform::crossplatform::AxesStandard::Engineering);
+	 geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/RumbaDancing.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	avs::uid anim_uid =geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
@@ -1712,6 +1727,14 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 	if (gui.Tab("Debug"))
 	{
 		if (gui.DebugPanel(config.debugOptions)) renderState.shaderValidity++;
+
+
+		if (gui.saveCurrentCubemap)
+		{
+			SaveCurrentCubemap(deviceContext);
+			gui.saveCurrentCubemap=false;
+		}
+
 		gui.EndTab();
 	}
 	if (gui.Tab("Profiling"))
@@ -1981,5 +2004,52 @@ void Renderer::UpdateNodeInRender(avs::uid cache_uid, avs::uid node_uid)
 	{
 		InstanceRenderer::SubSceneNodeStates &subSceneNodeStates = r->subSceneStatesMap[0];
 		r->RemoveNodeFromInstanceRender(cache_uid, subSceneNodeStates, node_uid);
+	}
+}
+
+void Renderer::SaveCurrentCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext)
+{
+	if (!cubemapGenerator)
+	{
+		TELEPORT_CERR << "CubemapGenerator not initialized" << std::endl;
+		return;
+	}
+
+	// Determine the current pass based on lobby view setting
+	std::string passName = (int)config.options.lobbyView ? "neon" : "white";
+
+	// Get current time for animation (same as used in rendering)
+	double timeElapsed_s = double(previousTimestampUs.count()) / 1000000.0; // microseconds to seconds
+	int64_t timeElapsed_u = (int64_t(timeElapsed_s) / 1024) * 1024;
+	timeElapsed_s -= double(timeElapsed_u);
+	float currentTime = float(timeElapsed_s);
+
+	// Generate the cubemap with current settings
+	int cubemapSize = 1024; // High quality for debug purposes
+	if (!cubemapGenerator->GenerateCubemap(deviceContext, passName, cubemapSize, currentTime))
+	{
+		TELEPORT_CERR << "Failed to generate cubemap with pass: " << passName << std::endl;
+		return;
+	}
+
+	// Create filename with timestamp using modern C++ (no C-style time functions)
+	auto now = std::chrono::system_clock::now();
+	auto duration_since_epoch = now.time_since_epoch();
+	auto seconds_since_epoch = std::chrono::duration_cast<std::chrono::seconds>(duration_since_epoch).count();
+
+	// Use a simple timestamp approach with milliseconds for uniqueness
+	auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration_since_epoch).count();
+
+	// Modern string formatting with fmt (already available in the project)
+	std::string filename = fmt::format("debug_cubemap_{}_{}.hdr", passName, millis);
+
+	// Save the cubemap
+	if (cubemapGenerator->SaveToHDR(deviceContext, filename))
+	{
+		TELEPORT_COUT << "Successfully saved cubemap: " << filename << std::endl;
+	}
+	else
+	{
+		TELEPORT_CERR << "Failed to save cubemap: " << filename << std::endl;
 	}
 }

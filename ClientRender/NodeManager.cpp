@@ -699,6 +699,6 @@ void NodeManager::LinkToParentNode(std::shared_ptr<Node> child)
 
 void NodeManager::CompleteNode(avs::uid id)
 {
-	TELEPORT_COUT<<"CompleteNode "<<id<<"\n";
+//.	TELEPORT_COUT<<"CompleteNode "<<id<<"\n";
 	addNodeForRender(id);
 }

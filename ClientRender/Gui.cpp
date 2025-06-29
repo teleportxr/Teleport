@@ -1908,6 +1908,19 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 		changeRender((ShaderMode)chooseDebugShader, debugHighlightBone);
 		return true;
 	}
+	// Cubemap generation section
+	LinePrint("Cubemap Generation:");
+	auto &config = client::Config::GetInstance();
+	std::string currentPass = (config.options.lobbyView==client::LobbyView::NEON) ? "neon" : "white";
+	LinePrint(fmt::format("Current pass: {0}", currentPass));
+	if (ImGui::Button("Save Current Cubemap"))
+	{
+		saveCurrentCubemap = true;
+	}
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("Save the currently active background as a 1024x1024 cubemap KTX2 file");
+	}
 	return false;
 }
 

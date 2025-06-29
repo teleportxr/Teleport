@@ -153,6 +153,7 @@ namespace teleport
 			{
 				return profilingText;	
 			}
+			bool saveCurrentCubemap=false;
 		protected:
 			std::string profilingText;
 			GuiType guiType=GuiType::None;
