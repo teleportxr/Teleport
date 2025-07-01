@@ -31,37 +31,53 @@ if (!generator.Initialize())
     return false;
 }
 
-// Generate a white-themed cubemap (512x512 per face)
-if (!generator.GenerateCubemap("white", 512, 0.0f))
+// Generate a white-themed cubemap (512x512 per face) using Engineering standard
+if (!generator.GenerateCubemap(deviceContext, "white", 512, platform::crossplatform::AxesStandard::Engineering, 0.0f))
 {
     // Handle generation error
     return false;
 }
 
 // Save to HDR file
-if (!generator.SaveToHDR("white_cubemap.hdr"))
+if (!generator.SaveToHDR(deviceContext, "white_cubemap.hdr"))
 {
     // Handle save error
     return false;
 }
 ```
 
+### Different Coordinate Systems
+
+```cpp
+// Generate for OpenGL (Y vertical, right-handed)
+generator.GenerateCubemap(deviceContext, "white", 512, platform::crossplatform::AxesStandard::OpenGL);
+
+// Generate for Unreal (Z vertical, left-handed)
+generator.GenerateCubemap(deviceContext, "white", 512, platform::crossplatform::AxesStandard::Unreal);
+
+// Generate for Unity (Y vertical, left-handed)
+generator.GenerateCubemap(deviceContext, "white", 512, platform::crossplatform::AxesStandard::Unity);
+
+// Generate for Engineering (Z vertical, right-handed) - default
+generator.GenerateCubemap(deviceContext, "white", 512, platform::crossplatform::AxesStandard::Engineering);
+```
+
 ### Animated Cubemaps
 
 ```cpp
 // Generate neon cubemap with animation at 5.0 seconds
-generator.GenerateCubemap("neon", 512, 5.0f);
-generator.SaveToHDR("neon_animated.hdr");
+generator.GenerateCubemap(deviceContext, "neon", 512, platform::crossplatform::AxesStandard::Engineering, 5.0f);
+generator.SaveToHDR(deviceContext, "neon_animated.hdr");
 
 // Generate sequence for animation
 for (int frame = 0; frame < 60; ++frame)
 {
     float timeSeconds = frame * 0.1f; // 0.1 second per frame
-    generator.GenerateCubemap("neon", 512, timeSeconds);
-    
+    generator.GenerateCubemap(deviceContext, "neon", 512, platform::crossplatform::AxesStandard::Engineering, timeSeconds);
+
     char filename[256];
     sprintf(filename, "neon_frame_%04d.hdr", frame);
-    generator.SaveToHDR(filename);
+    generator.SaveToHDR(deviceContext, filename);
 }
 ```
 
@@ -121,6 +137,21 @@ The generator properly sets up both CameraConstants and CubemapConstants for eac
 - **CubemapConstants**: Contains timing, camera position, and rendering parameters
 - Uses `crossplatform::GetCubeInvViewProjMatrix()` to get proper face matrices
 - Each face gets a 90-degree FOV projection matrix appropriate for cubemap rendering
+
+### Coordinate System Support
+
+The generator supports multiple coordinate systems through the AxesStandard parameter:
+
+- **Engineering** (Z vertical, right-handed): Default API standard
+- **OpenGL** (Y vertical, right-handed): Standard OpenGL coordinate system
+- **Unreal** (Z vertical, left-handed): Unreal Engine coordinate system
+- **Unity** (Y vertical, left-handed): Unity Engine coordinate system
+
+The coordinate system transformation is handled through the matrices:
+- The HDR cross layout always uses the standard Engineering face arrangement
+- Inverse view-projection matrices are generated specifically for each coordinate system
+- Coordinate system differences are handled entirely through the `invViewProj` matrices
+- The physical layout in the HDR file remains consistent regardless of coordinate system
 
 ### HDR Cubemap Cross Layout
 

@@ -416,9 +416,9 @@ void Renderer::InitLocalGeometry()
 	avs::uid specular_cubemap_uid = avs::GenerateUid();
 
 	geometryDecoder.decodeFromFile(
-		0, "assets/localGeometryCache/textures/diffuseRenderTexture.ktx2", avs::GeometryPayloadType::Texture, &localResourceCreator, diffuse_cubemap_uid);
+		0, "assets/localGeometryCache/textures/diffuseRenderTexture_neon.ktx2", avs::GeometryPayloadType::Texture, &localResourceCreator, diffuse_cubemap_uid);
 	geometryDecoder.decodeFromFile(
-		0, "assets/localGeometryCache/textures/specularRenderTexture.ktx", avs::GeometryPayloadType::Texture, &localResourceCreator, specular_cubemap_uid);
+		0, "assets/localGeometryCache/textures/specularRenderTexture_neon.ktx2", avs::GeometryPayloadType::Texture, &localResourceCreator, specular_cubemap_uid);
 		
 #if 1
 	// test gltf loading.
@@ -2026,7 +2026,7 @@ void Renderer::SaveCurrentCubemap(platform::crossplatform::GraphicsDeviceContext
 
 	// Generate the cubemap with current settings
 	int cubemapSize = 1024; // High quality for debug purposes
-	if (!cubemapGenerator->GenerateCubemap(deviceContext, passName, cubemapSize, currentTime))
+	if (!cubemapGenerator->GenerateCubemap(deviceContext, passName, cubemapSize, platform::crossplatform::AxesStandard::OpenGL,currentTime))
 	{
 		TELEPORT_CERR << "Failed to generate cubemap with pass: " << passName << std::endl;
 		return;

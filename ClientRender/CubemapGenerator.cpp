@@ -1,6 +1,7 @@
 #include "CubemapGenerator.h"
 #include "Platform/CrossPlatform/DeviceContext.h"
 #include "Platform/CrossPlatform/Camera.h"
+#include "Platform/CrossPlatform/AxesStandard.h"
 #include "Platform/Math/Vector3.h"
 #include "Platform/Math/Matrix4x4.h"
 #include "Platform/Math/Pi.h"
@@ -114,11 +115,11 @@ void CubemapGenerator::SetupConstants(float timeSeconds)
 	m_cubemapConstants.offsetFromVideo = vec3(0.0f, 0.0f, 0.0f);
 }
 
-void CubemapGenerator::SetupCameraConstants(int face)
+void CubemapGenerator::SetupCameraConstants(int face, vec3 viewPosition, platform::crossplatform::AxesStandard axesStandard)
 {
-	// Get the inverse view-projection matrix for this cubemap face
+	// Get the inverse view-projection matrix for this cubemap face with the specified axes standard
 	platform::math::Matrix4x4 invViewProj;
-	platform::crossplatform::GetCubeInvViewProjMatrix((float*)&invViewProj, face, true, false);
+	platform::crossplatform::GetCubeInvViewProjMatrix((float*)&invViewProj, face, true, false, axesStandard);
 
 	// Set up camera constants
 	m_cameraConstants.invViewProj = invViewProj;
@@ -139,7 +140,7 @@ void CubemapGenerator::SetupCameraConstants(int face)
 	m_cameraConstants.viewProj = viewProj;
 
 	// Set camera position at origin for cubemap generation
-	m_cameraConstants.viewPosition = vec3(0.0f, 0.0f, 0.0f);
+	m_cameraConstants.viewPosition = viewPosition;
 
 	// Set frame number (can be used for temporal effects)
 	m_cameraConstants.frameNumber = 0;
@@ -148,7 +149,11 @@ void CubemapGenerator::SetupCameraConstants(int face)
 	m_cameraConstants.depthToLinFadeDistParams = vec4(0.1f, 1000.0f, 0.0f, 0.0f);
 }
 
-bool CubemapGenerator::GenerateCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext,const std::string& passName, int cubemapSize, float timeSeconds)
+bool CubemapGenerator::GenerateCubemap(platform::crossplatform::GraphicsDeviceContext &deviceContext,
+									   const std::string& passName,
+									   int cubemapSize,
+									   platform::crossplatform::AxesStandard axesStandard,
+									   float timeSeconds)
 {
 	if (!m_initialized)
 	{
@@ -176,7 +181,7 @@ bool CubemapGenerator::GenerateCubemap(platform::crossplatform::GraphicsDeviceCo
 	// Render each face to its position in the cross layout
 	for (int face = 0; face < 6; ++face)
 	{
-		RenderFaceToViewport(deviceContext, face, cubemapSize, passName, timeSeconds);
+		RenderFaceToViewport(deviceContext, face, cubemapSize, passName, axesStandard, timeSeconds);
 	}
 
 	// Deactivate render target
@@ -186,22 +191,53 @@ bool CubemapGenerator::GenerateCubemap(platform::crossplatform::GraphicsDeviceCo
 }
 
 void CubemapGenerator::RenderFaceToViewport(GraphicsDeviceContext& deviceContext,
-											int face, int faceSize, const std::string& passName, float timeSeconds)
+											int face, int faceSize, const std::string& passName,
+											platform::crossplatform::AxesStandard axesStandard, float timeSeconds)
 {
 	// Setup constants for this face
 	SetupConstants(timeSeconds);
-	SetupCameraConstants(face);
+	SetupCameraConstants(face, deviceContext.viewStruct.cam_pos, axesStandard);
+	m_renderPlatform->ApplyResourceGroup(deviceContext, 0);
+
+	// IMPORTANT: Set the cube face in cubemap constants so shaders know which face they're rendering
+	// This is crucial for the unconnected shaders to generate different content per face
+	// Note: This might require adding a cubeFace field to CubemapConstants if not present
 
 	// Set both constant buffers
 	m_renderPlatform->SetConstantBuffer(deviceContext, &m_cubemapConstants);
 	m_renderPlatform->SetConstantBuffer(deviceContext, &m_cameraConstants);
 
-	// Calculate viewport position for this face in the cross layout
+	// Calculate viewport position for this face based on axes standard
+	int viewportX = 0, viewportY = 0;
+	GetFaceViewportPosition(face, faceSize, axesStandard, viewportX, viewportY);
+
+	// Set viewport for this face
+	Viewport viewport;
+	viewport.x = viewportX;
+	viewport.y = viewportY;
+	viewport.w = faceSize;
+	viewport.h = faceSize;
+	m_renderPlatform->SetViewports(deviceContext, 1, &viewport);
+
+	// Apply the unconnected shader technique and pass
+	m_cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
+
+	// Draw fullscreen quad (will be clipped to viewport)
+	m_renderPlatform->DrawQuad(deviceContext);
+
+	// Unapply effect
+	m_cubemapClearEffect->Unapply(deviceContext);
+}
+
+void CubemapGenerator::GetFaceViewportPosition(int face, int faceSize, platform::crossplatform::AxesStandard axesStandard,
+											   int& viewportX, int& viewportY)
+{
+	// Always use the standard Engineering layout for viewport positioning
+	// The coordinate system transformation is handled by the invViewProj matrices
 	// Cross layout:
 	//     +Y
 	// -X  +Z  +X  -Z
 	//     -Y
-	int viewportX = 0, viewportY = 0;
 
 	switch (face)
 	{
@@ -229,27 +265,12 @@ void CubemapGenerator::RenderFaceToViewport(GraphicsDeviceContext& deviceContext
 		viewportX = faceSize * 3;
 		viewportY = faceSize * 1;
 		break;
+	default:
+		viewportX = 0;
+		viewportY = 0;
+		break;
 	}
-
-	// Set viewport for this face
-	Viewport viewport;
-	viewport.x = viewportX;
-	viewport.y = viewportY;
-	viewport.w = faceSize;
-	viewport.h = faceSize;
-	m_renderPlatform->SetViewports(deviceContext, 1, &viewport);
-
-	// Apply the unconnected shader technique and pass
-	m_cubemapClearEffect->Apply(deviceContext, "unconnected", passName.c_str());
-
-	// Draw fullscreen quad (will be clipped to viewport)
-	m_renderPlatform->DrawQuad(deviceContext);
-
-	// Unapply effect
-	m_cubemapClearEffect->Unapply(deviceContext);
 }
-
-
 
 bool CubemapGenerator::SaveToHDR(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::string& filename)
 {
