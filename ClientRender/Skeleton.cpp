@@ -80,24 +80,24 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 	{
 		sorted_children.push_back(child.lock()->id);
 	}
-	std::sort(sorted_children.begin(),sorted_children.end(),[&g](avs::uid a,avs::uid b)
-	{
-		std::string nameA=g.mNodeManager.GetNode(a)->name;
-		std::string nameB=g.mNodeManager.GetNode(a)->name;
-		std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
-		std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
-		int A=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameA](const std::string &str){return nameA.find(str) != std::string::npos;})-name_order.begin());
-		int B=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameB](const std::string &str){return nameB.find(str) != std::string::npos;})-name_order.begin());
-		return A<B;
-	});
+	std::ranges::sort(sorted_children,[&g](avs::uid a,avs::uid b)
+		{
+			std::string nameA=g.mNodeManager.GetNode(a)->name;
+			std::string nameB=g.mNodeManager.GetNode(a)->name;
+			std::ranges::transform(nameA, nameA.begin(), ::tolower);
+			std::ranges::transform(nameB, nameB.begin(), ::tolower);
+			int A=(int)(std::ranges::find_if(name_order,[&nameA](const std::string &str){return nameA.find(str) != std::string::npos;})-name_order.begin());
+			int B=(int)(std::ranges::find_if(name_order,[&nameB](const std::string &str){return nameB.find(str) != std::string::npos;})-name_order.begin());
+			return A<B;
+		});
 	for (avs::uid u:sorted_children)
 	{
 		if (auto c=g.mNodeManager.GetNode(u))
 		{
-			if(std::find(boneIds.begin(),boneIds.end(),c->id)!=boneIds.end())
+			//if(std::find(boneIds.begin(),boneIds.end(),c->id)!=boneIds.end())
 			{
 				// only bones in the list...
-				root.children.push_back(ozz::animation::offline::RawSkeleton::Joint());
+				root.children.emplace_back();
 				ozz::animation::offline::RawSkeleton::Joint &childJoint=root.children.back();
 				childJoint.name					 = c->name;
 				childJoint.transform.translation = ozz::math::Float3(0.f, 0.f, 0.f);
@@ -105,9 +105,9 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 				childJoint.transform.scale		 = ozz::math::Float3(1.f, 1.f, 1.f);
 				RecurseChildrenIntoOzz(g,childJoint, *c, boneIds, jointMapping, count, level+1);
 			}
-			else
+			//else
 			{
-				RecurseChildrenIntoOzz(g,root, *c, boneIds, jointMapping, count, level);
+				//RecurseChildrenIntoOzz(g,root, *c, boneIds, jointMapping, count, level);
 			}
 		}
 	}

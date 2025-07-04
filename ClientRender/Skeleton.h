@@ -62,14 +62,6 @@ namespace teleport
 			{
 				return bones;
 			};
-/*			const std::vector<mat4> &GetInverseBindMatrices() const
-			{
-				return inverseBindMatrices;
-			}
-			void SetInverseBindMatrices(const std::vector<mat4>& i)
-			{
-				inverseBindMatrices=i;
-			}*/
 			void GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCache, const std::vector<mat4> &inverseBindMatrices, const std::vector<int16_t> &jointIndices, std::vector<mat4> &boneMatrices) const;
 			ozz::animation::Skeleton *GetOzzSkeleton()
 			{
