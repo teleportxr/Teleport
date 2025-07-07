@@ -210,6 +210,7 @@ namespace teleport
 			float					   animationTimeS = 0.0f;
 			float					   speedUnitsPerS = 1.0f;
 			bool					   loop			  = true;
+			bool					   matchTransition= true;		//!< If true, the transition from the previous anim to this one will be synchronized, e.g. walking/running.
 			std::shared_ptr<Animation> prevAnimation;
 			std::shared_ptr<Animation> animation;
 		};

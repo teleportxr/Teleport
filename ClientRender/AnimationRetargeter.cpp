@@ -259,7 +259,7 @@ void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton, const 
 }
 
 // Helper function to build a joint name to index mapping
-std::unordered_map<ozz::string, int> BuildJointMap(const ozz::animation::offline::RawSkeleton &skeleton, ozz::vector<ozz::math::Transform> &modelspace_transforms
+std::unordered_map<ozz::string, int> teleport::clientrender::BuildJointMap(const ozz::animation::offline::RawSkeleton &skeleton, ozz::vector<ozz::math::Transform> &modelspace_transforms
 	, ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list)
 {
 	std::unordered_map<ozz::string, int> joint_map;
@@ -604,8 +604,8 @@ ozz::math::Transform ApplyRetargetingModelSpace(Retargeter &retargeter,
 	// Get bind poses
 	int sourceJoint_index = retargeter.source.joint_map.at(joint_name);
 	int targetJoint_index = retargeter.target.joint_map.at(joint_name);
-	const auto *sourceJoint = retargeter.source.joint_list[sourceJoint_index];//FindJointByName(source_skeleton, joint_name);
-	const auto *targetJoint = retargeter.target.joint_list[sourceJoint_index];//FindJointByName(target_skeleton, joint_name);
+	const auto *sourceJoint = retargeter.source.joint_list[sourceJoint_index];
+	const auto *targetJoint = retargeter.target.joint_list[sourceJoint_index];
 
 	if (!sourceJoint || !targetJoint)
 	{
@@ -616,8 +616,8 @@ ozz::math::Transform ApplyRetargetingModelSpace(Retargeter &retargeter,
 	int target_joint_index = retargeter.target.joint_map.at(joint_name);
 
 	// Get bind poses in model space
-	ozz::math::Transform source_bind_model = retargeter.source.modelspace_transforms[source_joint_index];//ComputeModelSpaceTransform(source_skeleton, joint_name);
-	ozz::math::Transform target_bind_model = retargeter.target.modelspace_transforms[target_joint_index];//ComputeModelSpaceTransform(target_skeleton, joint_name);
+	ozz::math::Transform source_bind_model = retargeter.source.modelspace_transforms[source_joint_index];
+	ozz::math::Transform target_bind_model = retargeter.target.modelspace_transforms[target_joint_index];
 
 	ozz::math::Transform result;
 

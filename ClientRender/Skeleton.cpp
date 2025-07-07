@@ -6,6 +6,7 @@
 #include "ozz/animation/offline/raw_skeleton.h"
 #include "ozz/animation/offline/skeleton_builder.h"
 #include "ozz/animation/runtime/skeleton.h"
+#include "AnimationRetargeter.h"
 
 using namespace teleport;
 using namespace clientrender;
@@ -54,7 +55,8 @@ Skeleton::Skeleton(avs::uid u, const std::string &name, size_t numBones) : name(
 	id = u;
 }
 
-void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkeleton::Joint &root, Node &n, const std::vector<avs::uid> &boneIds,std::vector<int> &jointMapping, int &count, int level=0)
+void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkeleton::Joint &root, Node &n
+, const std::vector<avs::uid> &boneIds,std::vector<int> &jointMapping, int &count, ozz::vector<ozz::math::Transform> &modelspace_transforms, int level=0)
 {
 	if(std::find(boneIds.begin(),boneIds.end(),n.id)!=boneIds.end())
 	{
@@ -94,7 +96,7 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 	{
 		if (auto c=g.mNodeManager.GetNode(u))
 		{
-			//if(std::find(boneIds.begin(),boneIds.end(),c->id)!=boneIds.end())
+			if(std::find(boneIds.begin(),boneIds.end(),c->id)!=boneIds.end())
 			{
 				// only bones in the list...
 				root.children.emplace_back();
@@ -103,11 +105,13 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 				childJoint.transform.translation = ozz::math::Float3(0.f, 0.f, 0.f);
 				childJoint.transform.rotation	 = ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f);
 				childJoint.transform.scale		 = ozz::math::Float3(1.f, 1.f, 1.f);
-				RecurseChildrenIntoOzz(g,childJoint, *c, boneIds, jointMapping, count, level+1);
+				RecurseChildrenIntoOzz(g,childJoint, *c, boneIds, jointMapping, count, modelspace_transforms, level+1);
 			}
-			//else
+			else
 			{
-				//RecurseChildrenIntoOzz(g,root, *c, boneIds, jointMapping, count, level);
+				// If the child isn't in the skeleton, use the same parent as before, and recurse, in case it has children in the skeleton.
+				// But don't add
+				RecurseChildrenIntoOzz(g,root, *c, boneIds, jointMapping, count, modelspace_transforms, level);
 			}
 		}
 	}
@@ -135,11 +139,14 @@ void Skeleton::InitBones(GeometryCache &g)
 	// Creates the root joint.
 	raw_skeleton->roots.resize(1);
 	ozz::animation::offline::RawSkeleton::Joint &ozz_root = raw_skeleton->roots[0];
-	//std::cout<<"================ SKELETON "<<name<<"\n";
+	
+	ozz::vector<ozz::math::Transform> modelspace_transforms;
+	ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> joint_list;
+	auto source_joint_map = BuildJointMap(*raw_skeleton.get(), modelspace_transforms, joint_list);
 	int count=0;
 	jointMapping.clear();
 	jointMapping.resize(boneIds.size());
-	RecurseChildrenIntoOzz(g, ozz_root, *r, boneIds, jointMapping, count);
+	RecurseChildrenIntoOzz(g, ozz_root, *r, boneIds, jointMapping, count, modelspace_transforms);
 
 	if(raw_skeleton->num_joints()!=bones.size())
 	{

@@ -35,7 +35,7 @@ void AnimationInstance::Init()
 }
 
 void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation)
-{// ten seconds.
+{
 	if (!skeleton)
 	{
 		return;
@@ -153,16 +153,38 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		TELEPORT_WARN("animation is null");
 		return false;
 	}
-	float animationTimeS = state.animationState.animationTimeS;
 	//  Set time ratio correctly (0.0 to 1.0)
 	float timeRatio = 0.0f;
+	float previousTimeRatio = 0.0f;
 	float d = animation->duration();
 	if (d > 0.0f)
 	{
-		timeRatio		  = animationTimeS / d;
+		timeRatio		  = state.animationState.animationTimeS / d;
 		// Wraps in the unit interval [0:1]
 		const float loops = floorf(timeRatio);
 		timeRatio		  = timeRatio - loops;
+	}
+	else
+		timeRatio = 0.0f;
+	// Should timeRatio be modified for transition matching?
+	if(state.interpolation<1.0f)
+	{
+		if (!state.animationState.prevAnimation)
+		{
+			TELEPORT_WARN("state.animationState.prevAnimation is null");
+			return false;
+		}
+		float previousDuration = state.animationState.prevAnimation->GetOzzAnimation(id)->duration();
+		if (previousDuration > 0.0f)
+		{
+			previousTimeRatio	= state.previousAnimationState.animationTimeS / d;
+			// Wraps in the unit interval [0:1]
+			const float loops	= floorf(previousTimeRatio);
+			previousTimeRatio	= previousTimeRatio - loops;
+		}
+		else
+			previousTimeRatio = 0.0f;
+		previousTimeRatio = timeRatio = lerp(previousTimeRatio,timeRatio,state.interpolation);
 	}
 
 	// Ensure sampler buffers are sized correctly
@@ -185,18 +207,13 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	// blend up to two animations to implement transitions.
 	if(state.interpolation<1.0f)
 	{
-		if (!state.animationState.prevAnimation)
-		{
-			TELEPORT_WARN("state.animationState.prevAnimation is null");
-			return false;
-		}
 		layerState.previousSampler.locals.resize(num_soa_joints);
 		layerState.previousSampler.joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
 		ozz::animation::SamplingJob previousSamplingJob;
 		previousSamplingJob.animation = state.animationState.prevAnimation->GetOzzAnimation(id);
 		layerState.previousContext.Resize(num_joints);
 		previousSamplingJob.context	  = &layerState.previousContext;
-		previousSamplingJob.ratio	  = timeRatio; // Use calculated time ratio
+		previousSamplingJob.ratio	  = previousTimeRatio;
 		previousSamplingJob.output	  = ozz::make_span(layerState.previousSampler.locals);
 		if (!previousSamplingJob.Run())
 		{

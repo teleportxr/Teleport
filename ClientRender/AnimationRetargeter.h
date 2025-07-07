@@ -12,6 +12,8 @@ namespace teleport
 {
 	namespace clientrender
 	{
+		extern std::unordered_map<ozz::string, int> BuildJointMap(const ozz::animation::offline::RawSkeleton &skeleton, ozz::vector<ozz::math::Transform> &modelspace_transforms
+			, ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list);
 		extern std::string getMappedBoneName(const std::string &bName);
 		// Main retargeting function
 		ozz::animation::offline::RawAnimation RetargetAnimation(const ozz::animation::offline::RawAnimation &source_animation,
