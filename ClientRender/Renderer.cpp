@@ -428,6 +428,9 @@ void Renderer::InitLocalGeometry()
 	avs::uid anim_uid =geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
+	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Running.vrma"
+														, avs::GeometryPayloadType::Animation, &localResourceCreator
+														, 0, platform::crossplatform::AxesStandard::Engineering);
 	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/RumbaDancing.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
