@@ -116,6 +116,7 @@ template <typename stringType> stringType GetMappedBoneName(const stringType &bN
 	{
 		mapping["spine1"]		= "chest";
 		mapping["spine2"]		= "upperchest";
+		mapping["back"]			= "upperchest";
 
 		// arms - with numbered prefix
 		mapping["leftarm"]		= "leftupperarm";
@@ -145,7 +146,11 @@ template <typename stringType> stringType GetMappedBoneName(const stringType &bN
 	}
 	return m->second;
 };
-std::string getMappedBoneName(const std::string &bName)
+std::string teleport::clientrender::getMappedBoneName(const std::string &bName)
+{
+	return GetMappedBoneName(bName);
+}
+ozz::string teleport::clientrender::getMappedBoneName(const ozz::string &bName)
 {
 	return GetMappedBoneName(bName);
 }
@@ -194,7 +199,7 @@ bool FindJointChainRecursive(const ozz::vector<ozz::animation::offline::RawSkele
 }
 
 // Helper function to compute model space transform from root to a specific joint
-ozz::math::Transform ComputeModelSpaceTransform(const ozz::animation::offline::RawSkeleton &skeleton, const ozz::string &joint_name)
+ozz::math::Transform teleport::clientrender::ComputeModelSpaceTransform(const ozz::animation::offline::RawSkeleton &skeleton, const ozz::string &joint_name)
 {
 	ozz::vector<const ozz::animation::offline::RawSkeleton::Joint *> chain;
 
@@ -219,9 +224,9 @@ ozz::math::Transform ComputeModelSpaceTransform(const ozz::animation::offline::R
 		// Combine transforms: result = result * joint->transform
 
 		// Scale the translation by current scale
-		ozz::math::Float3 scaled_translation = ozz::math::Float3(
-			joint->transform.translation.x * result.scale.x, joint->transform.translation.y * result.scale.y, joint->transform.translation.z * result.scale.z);
-
+		ozz::math::Float3 scaled_translation	= ozz::math::Float3(	joint->transform.translation.x * result.scale.x,
+																		joint->transform.translation.y * result.scale.y,
+																		joint->transform.translation.z * result.scale.z);
 		// Rotate the scaled translation by current rotation
 		ozz::math::Float3 rotated_translation = ozz::math::TransformVector(result.rotation, scaled_translation);
 
@@ -232,15 +237,18 @@ ozz::math::Transform ComputeModelSpaceTransform(const ozz::animation::offline::R
 		result.rotation						  = result.rotation * joint->transform.rotation;
 
 		// Combine scales
-		result.scale =
-			ozz::math::Float3(result.scale.x * joint->transform.scale.x, result.scale.y * joint->transform.scale.y, result.scale.z * joint->transform.scale.z);
+		result.scale							= ozz::math::Float3(	result.scale.x * joint->transform.scale.x,
+																		result.scale.y * joint->transform.scale.y,
+																		result.scale.z * joint->transform.scale.z);
 	}
 
 	return result;
 }
 
 // Helper function to traverse joints and build joint map
-void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton, const ozz::vector<ozz::animation::offline::RawSkeleton::Joint> &joints, std::unordered_map<ozz::string, int> &joint_map
+void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton
+	, const ozz::vector<ozz::animation::offline::RawSkeleton::Joint> &joints
+	, std::unordered_map<ozz::string, int> &joint_map
 	, ozz::vector<ozz::math::Transform> &modelspace_transforms
 	, ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list
 	, int &joint_index)
@@ -248,7 +256,14 @@ void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton, const 
 	for (const auto &joint : joints)
 	{
 		ozz::string mapped_bone_name=GetMappedBoneName(joint.name);
+		if(joint_map.find(mapped_bone_name)!=joint_map.end())
+		{
+			TELEPORT_WARN("Two mappings found for {}.", mapped_bone_name);
+		}
+		else
+		{
 		joint_map[mapped_bone_name] = joint_index;
+		}
 		if(joint_index>=modelspace_transforms.size())
 			modelspace_transforms.resize(joint_index+1);
 		modelspace_transforms[joint_index]=ComputeModelSpaceTransform(skeleton, mapped_bone_name);
@@ -259,7 +274,9 @@ void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton, const 
 }
 
 // Helper function to build a joint name to index mapping
-std::unordered_map<ozz::string, int> teleport::clientrender::BuildJointMap(const ozz::animation::offline::RawSkeleton &skeleton, ozz::vector<ozz::math::Transform> &modelspace_transforms
+std::unordered_map<ozz::string, int> teleport::clientrender::BuildJointMap(
+	const ozz::animation::offline::RawSkeleton &skeleton
+	, ozz::vector<ozz::math::Transform> &modelspace_transforms
 	, ozz::vector<const ozz::animation::offline::RawSkeleton::Joint*> &joint_list)
 {
 	std::unordered_map<ozz::string, int> joint_map;
@@ -481,9 +498,8 @@ struct Retargeter
 // Helper function to build retargeting info recursively
 // This iterates  through the joints of the source skeleton from root to leaf nodes.
 void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSkeleton::Joint> &joints,
-								Retargeter &retargeter)
+								Retargeter &retargeter, int source_parent_joint_index = 0)
 {
-	int source_parent_joint_index=retargeter.joint_index-1;
 	for (const auto &source_joint : joints)
 	{
 		ozz::string source_name = GetMappedBoneName(source_joint.name);
@@ -521,8 +537,8 @@ void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSk
 					if (target_parent_joint_index >= 0)
 					{
 						ret.sourceParentModel = retargeter.source.modelspace_transforms[source_parent_joint_index];
-						ret.targetParentModel = retargeter.target.modelspace_transforms[target_parent_joint_index]; // ComputeModelSpaceTransform(retargeter.target.skeleton,
-																													// ret.parentName);
+						ret.targetParentModel = retargeter.target.modelspace_transforms[target_parent_joint_index];
+						// ComputeModelSpaceTransform(retargeter.target.skeleton,// ret.parentName);
 					}
 				}
 				else
@@ -539,8 +555,9 @@ void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSk
 
 			}
 		}
+		int source_parent_joint_index=retargeter.joint_index;
 		retargeter.joint_index++;
-		BuildRetargetInfoRecursive(source_joint.children, retargeter);
+		BuildRetargetInfoRecursive(source_joint.children, retargeter, source_parent_joint_index);
 	}
 }
 
