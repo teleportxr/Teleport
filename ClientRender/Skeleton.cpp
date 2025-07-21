@@ -55,8 +55,18 @@ Skeleton::Skeleton(avs::uid u, const std::string &name, size_t numBones) : name(
 	id = u;
 }
 
-void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkeleton::Joint &root, Node &n
-, const std::vector<avs::uid> &boneIds,std::vector<int> &jointMapping, int &count, ozz::vector<ozz::math::Transform> &modelspace_transforms, int level=0)
+
+void RecurseChildrenIntoOzz(ozz::animation::offline::RawSkeleton		&raw_skeleton,
+							GeometryCache								&g,
+							ozz::animation::offline::RawSkeleton::Joint &root,
+							const Node									&n,
+							const std::vector<avs::uid>					&boneIds,
+							std::vector<int>							&jointMapping,
+							int											&count,
+							ozz::vector<ozz::math::Transform>			&modelspace_transforms,
+							int											 level		  = 0,
+							bool										 gap		  = false,
+							int											 parent_index = 0)
 {
 	if(std::find(boneIds.begin(),boneIds.end(),n.id)!=boneIds.end())
 	{
@@ -94,6 +104,7 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 		});
 	for (avs::uid u:sorted_children)
 	{
+		int new_parent_index = count;
 		if (auto c=g.mNodeManager.GetNode(u))
 		{
 			if(std::find(boneIds.begin(),boneIds.end(),c->id)!=boneIds.end())
@@ -105,13 +116,15 @@ void RecurseChildrenIntoOzz(GeometryCache &g, ozz::animation::offline::RawSkelet
 				childJoint.transform.translation = ozz::math::Float3(0.f, 0.f, 0.f);
 				childJoint.transform.rotation	 = ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f);
 				childJoint.transform.scale		 = ozz::math::Float3(1.f, 1.f, 1.f);
-				RecurseChildrenIntoOzz(g,childJoint, *c, boneIds, jointMapping, count, modelspace_transforms, level+1);
+				//count++;
+				RecurseChildrenIntoOzz(raw_skeleton, g, childJoint, *c, boneIds, jointMapping, count, modelspace_transforms, level + 1, false, new_parent_index);
 			}
 			else
 			{
 				// If the child isn't in the skeleton, use the same parent as before, and recurse, in case it has children in the skeleton.
 				// But don't add
-				RecurseChildrenIntoOzz(g,root, *c, boneIds, jointMapping, count, modelspace_transforms, level);
+				//count++;
+				RecurseChildrenIntoOzz(raw_skeleton, g, root, *c, boneIds, jointMapping, count, modelspace_transforms, level, true, new_parent_index);
 			}
 		}
 	}
@@ -122,14 +135,18 @@ void Skeleton::InitBones(GeometryCache &g)
 	root=g.mNodeManager.GetNode(rootId);
 	auto r=root.lock();
 	if(!r)
+	{
 		return;
+	}
 	bones.clear();
 	for (auto id : boneIds)
 	{
 		bones.push_back(g.mNodeManager.GetNode(id));
 	}
 	if(!bones.size())
+	{
 		return;
+	}
 	//////////////////////////////////////////////////////////////////////////////
 	// The first section builds a RawSkeleton from custom data.
 	//////////////////////////////////////////////////////////////////////////////
@@ -146,7 +163,7 @@ void Skeleton::InitBones(GeometryCache &g)
 	int count=0;
 	jointMapping.clear();
 	jointMapping.resize(boneIds.size());
-	RecurseChildrenIntoOzz(g, ozz_root, *r, boneIds, jointMapping, count, modelspace_transforms);
+	RecurseChildrenIntoOzz(*raw_skeleton.get(), g, ozz_root, *r, boneIds, jointMapping, count, modelspace_transforms);
 
 	if(raw_skeleton->num_joints()!=bones.size())
 	{
