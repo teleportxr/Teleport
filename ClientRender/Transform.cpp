@@ -83,40 +83,19 @@ vec3 Transform::LocalToGlobal(const vec3& local)
 
 void Transform::UpdateModelMatrix()
 {
-	m_ModelMatrix = mat4::translation(m_Translation) * mat4::rotation(*((vec4*)&m_Rotation)) * mat4::scale(m_Scale);
+	mat4 rot = mat4::rotation(*((vec4*)&m_Rotation));
+	m_ModelMatrix = mat4::translation(m_Translation) * rot * mat4::scale(m_Scale);
 }
 
 void Transform::MatrixToComponents()
 {
  // Extract translation
     m_Translation = m_ModelMatrix.GetTranslation();
-  /*  
+  
     // Extract scale and rotation
-    // This requires a polar decomposition of the upper 3x3 matrix
-    // into a rotation and a symmetric scale matrix
-    
-    // First, extract the 3x3 submatrix
-    mat4 rotScale={0};
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            rotScale.m[i][j] = matrix.m[i][j];
-        }
-    }
-    
-    // Perform polar decomposition
-    Matrix3x3 rotMat;
-    Matrix3x3 scaleMat;
-    PolarDecomposition(rotScale, &rotMat, &scaleMat);
-    
-    // Convert rotation matrix to quaternion
-    *rotation = Quaternion::CreateFromRotationMatrix(rotMat);
-    
-    // Extract scale from the scale matrix
-    // For a symmetric matrix, the eigenvalues are the scales
-    // along the principal axes
-    ExtractScaleFromSymmetricMatrix(scaleMat, scale);*/
+    platform::crossplatform::MatrixToQuaternion(m_Rotation,m_ModelMatrix);
+	// ignore scale
+	m_Scale=vec3(1.f,1.f,1.f);
 }
 
 bool Transform::UpdateModelMatrix(const vec3& translation, const quat& rotation, const vec3& scale)

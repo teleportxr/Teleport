@@ -308,7 +308,7 @@ void Node::UpdateGlobalTransform() const
 			TELEPORT_BREAK_ONCE("Nodes in loop.");
 			return;
 		}
-		Transform::Multiply(globalTransform,localTransform,parentPtr->GetGlobalTransform());
+		Transform::Multiply(globalTransform, localTransform, parentPtr->GetGlobalTransform());
 	}
 	else
 		globalTransform =  localTransform;
