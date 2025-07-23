@@ -425,7 +425,7 @@ void Renderer::InitLocalGeometry()
 	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm"
 														, avs::GeometryPayloadType::Mesh, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	avs::uid anim_uid =geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking.vrma"
+	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Walking.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
 	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Running.vrma"
@@ -434,9 +434,9 @@ void Renderer::InitLocalGeometry()
 	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/RumbaDancing.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
-	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
-														, avs::GeometryPayloadType::Animation, &localResourceCreator
-														, 0, platform::crossplatform::AxesStandard::Engineering);
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/Waving.vrma"
+																, avs::GeometryPayloadType::Animation, &localResourceCreator
+																, 0, platform::crossplatform::AxesStandard::Engineering);
 	geometryDecoder.decodeFromFile(0, "assets/localGeometryCache/animations/T-Pose.vrma"
 														, avs::GeometryPayloadType::Animation, &localResourceCreator
 														, 0, platform::crossplatform::AxesStandard::Engineering);
