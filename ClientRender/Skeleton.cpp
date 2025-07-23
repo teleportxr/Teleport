@@ -95,24 +95,33 @@ void RecurseChildrenIntoOzz(ozz::animation::offline::RawSkeleton		&raw_skeleton,
 							std::vector<int>							&jointMapping,
 							int											&count,
 							ozz::vector<ozz::math::Transform>			&modelspace_transforms,
-							int											 level		  = 0,
-							bool										 gap		  = false,
-							int											 parent_index = 0)
+							int											 level ,
+							bool										 gap,
+							ozz::math::Transform						parentTransform)
 {
+	ozz::math::Transform childTransform;
+	childTransform.translation	= *((const ozz::math::Float3*)&n.GetGlobalPosition());
+	childTransform.rotation		= *((const ozz::math::Quaternion*)&n.GetGlobalRotation());
+	childTransform.scale		= *((const ozz::math::Float3*)&n.GetGlobalScale());
 	ozz::animation::offline::RawSkeleton::Joint* ozz_joint=nullptr;
-	size_t idx_in_bones = (size_t)(std::find(boneIds.begin(), boneIds.end(), n.id) - boneIds.begin());
-	if(idx_in_bones<boneIds.size())
+	
+	if(size_t idx_in_bones = (size_t)(std::find(boneIds.begin(), boneIds.end(), n.id) - boneIds.begin());
+		idx_in_bones<boneIds.size())
 	{
 		roots.emplace_back();
 		ozz_joint = &roots.back();
 		ozz_joint->name						=n.name;
+		
 		ozz_joint->transform.translation	= *((const ozz::math::Float3*)&n.GetLocalPosition());
 		ozz_joint->transform.rotation		= *((const ozz::math::Quaternion*)&n.GetLocalRotation());
 		ozz_joint->transform.scale			= *((const ozz::math::Float3*)&n.GetLocalScale());
-		
-		jointMapping[idx_in_bones]=count++;
-			//std::cout<<"MAPPED: " << n.name <<" "<< n.id <<", index "<<idx<< " to anim's " <<count-1<<", "<<root.name << std::endl;
 	
+		if(gap)
+		{
+			GetRelativeTransform(ozz_joint->transform, parentTransform, childTransform);
+		}
+		jointMapping[idx_in_bones]=count++;
+		//std::cout<<"MAPPED: " << n.name <<" "<< n.id <<", index "<<idx<< " to anim's " <<count-1<<", "<<root.name << std::endl;
 	}
 	else
 	{
@@ -139,28 +148,21 @@ void RecurseChildrenIntoOzz(ozz::animation::offline::RawSkeleton		&raw_skeleton,
 		});
 	for (avs::uid u:sorted_children)
 	{
-		int new_parent_index = count;
 		if (auto c=g.mNodeManager.GetNode(u))
 		{
 		// Was a joint created?
 			if(ozz_joint)
 			{
 				// only bones in the list...
-			/*	ozz_joint->children.emplace_back();
-				ozz::animation::offline::RawSkeleton::Joint &childJoint=ozz_joint->children.back();
-				childJoint.name					 = c->name;
-				childJoint.transform.translation = ozz::math::Float3(0.f, 0.f, 0.f);
-				childJoint.transform.rotation	 = ozz::math::Quaternion(0.f, 0.f, 0.f, 1.f);
-				childJoint.transform.scale		 = ozz::math::Float3(1.f, 1.f, 1.f);*/
 				//count++;
-				RecurseChildrenIntoOzz(raw_skeleton, g, ozz_joint->children, *c, boneIds, jointMapping, count, modelspace_transforms, level + 1, false, new_parent_index);
+				RecurseChildrenIntoOzz(raw_skeleton, g, ozz_joint->children, *c, boneIds, jointMapping, count, modelspace_transforms, level + 1, false, childTransform);
 			}
 			else
 			{
 				// If the child isn't in the skeleton, use the same parent as before, and recurse, in case it has children in the skeleton.
 				// But don't add
 				//count++;
-				RecurseChildrenIntoOzz(raw_skeleton, g, roots, *c, boneIds, jointMapping, count, modelspace_transforms, level, true, new_parent_index);
+				RecurseChildrenIntoOzz(raw_skeleton, g, roots, *c, boneIds, jointMapping, count, modelspace_transforms, level, true, parentTransform);
 			}
 		}
 	}
@@ -199,7 +201,12 @@ void Skeleton::InitBones(GeometryCache &g)
 	int count=0;
 	jointMapping.clear();
 	jointMapping.resize(boneIds.size());
-	RecurseChildrenIntoOzz(*raw_skeleton.get(), g, raw_skeleton->roots, *r, boneIds, jointMapping, count, modelspace_transforms);
+	ozz::math::Transform rootTransform;
+	rootTransform.translation=ozz::math::Float3(0,0,0);
+	rootTransform.scale=ozz::math::Float3(1.f,1.f,1.f);
+	rootTransform.rotation=ozz::math::Quaternion::identity();
+	RecurseChildrenIntoOzz(*raw_skeleton.get(), g, raw_skeleton->roots, *r, boneIds, jointMapping, count
+		, modelspace_transforms,0,false,rootTransform);
 
 	if(raw_skeleton->num_joints()!=bones.size())
 	{
