@@ -153,15 +153,11 @@ void RecurseChildrenIntoOzz(ozz::animation::offline::RawSkeleton		&raw_skeleton,
 		// Was a joint created?
 			if(ozz_joint)
 			{
-				// only bones in the list...
-				//count++;
 				RecurseChildrenIntoOzz(raw_skeleton, g, ozz_joint->children, *c, boneIds, jointMapping, count, modelspace_transforms, level + 1, false, childTransform);
 			}
 			else
 			{
 				// If the child isn't in the skeleton, use the same parent as before, and recurse, in case it has children in the skeleton.
-				// But don't add
-				//count++;
 				RecurseChildrenIntoOzz(raw_skeleton, g, roots, *c, boneIds, jointMapping, count, modelspace_transforms, level, true, parentTransform);
 			}
 		}
