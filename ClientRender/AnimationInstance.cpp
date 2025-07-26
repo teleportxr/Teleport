@@ -57,7 +57,7 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	st.animationTimeS = applyAnimation.animTimeAtTimestamp;
 	st.speedUnitsPerS = applyAnimation.speedUnitsPerSecond;
 	// The timestamp where the state applies.
-	st.timestampUs	  = applyAnimation.timestampUs+10000000;	
+	st.timestampUs	  = applyAnimation.timestampUs + 10000000;
 	st.loop			  = applyAnimation.loop;
 	auto cache		  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
 	if (cache)
@@ -76,55 +76,11 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);
 }
 
-bool AnimationInstance::ApplyRestPose()
-{
-	if (!skeleton || !numAnimationLayerStates)
-	{
-		return false;
-	}
-
-	const int num_soa_joints = skeleton->num_soa_joints();
-	const int num_joints	 = skeleton->num_joints();
-
-	// Ensure buffers are properly sized
-	locals.resize(num_soa_joints);
-	models.resize(num_joints);
-
-	// Ensure sampler buffers are sized correctly
-	auto &layerState = animationLayerStates[0];
-	auto &sampler	 = layerState.sampler;
-	sampler.locals.resize(num_soa_joints);
-	sampler.joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
-
-	auto ident = ozz::math::Transform::identity();
-	for (size_t i = 0; i < sampler.locals.size(); i++)
-	{
-		sampler.locals[i].rotation	  = ozz::math::SoaQuaternion::Load({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {1.0f, 1.0f, 1.0f, 1.0f});
-		sampler.locals[i].translation = ozz::math::SoaFloat3::Load({0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0});
-		sampler.locals[i].scale		  = ozz::math::SoaFloat3::Load({1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 1.f}, {1.f, 1.f, 1.f, 1.f});
-	}
-	const mat4 *m = (const mat4 *)models.data();
-	//  Convert from local-space to model-space transforms
-	ozz::animation::LocalToModelJob ltmJob;
-	ltmJob.skeleton = skeleton;
-	ltmJob.input	= ozz::make_span(sampler.locals); // Use sampled local transforms
-	ltmJob.output	= ozz::make_span(models);
-
-	if (!ltmJob.Run())
-	{
-		return false;
-	}
-
-	return true;
-}
-
-// In AnimationComponent.cpp - Fixed AnimationInstance::Update method
-
 bool AnimationInstance::Update(float dt_s, int64_t time_us)
 {
+	animating = false;
 	if (!skeleton || !numAnimationLayerStates)
 	{
-		TELEPORT_WARN("Cannot update");
 		return false;
 	}
 
@@ -154,9 +110,9 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		return false;
 	}
 	//  Set time ratio correctly (0.0 to 1.0)
-	float timeRatio = 0.0f;
+	float timeRatio			= 0.0f;
 	float previousTimeRatio = 0.0f;
-	float d = animation->duration();
+	float d					= animation->duration();
 	if (d > 0.0f)
 	{
 		timeRatio		  = state.animationState.animationTimeS / d;
@@ -165,9 +121,11 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		timeRatio		  = timeRatio - loops;
 	}
 	else
+	{
 		timeRatio = 0.0f;
+	}
 	// Should timeRatio be modified for transition matching?
-	if(state.interpolation<1.0f)
+	if (state.interpolation < 1.0f)
 	{
 		if (!state.animationState.prevAnimation)
 		{
@@ -177,14 +135,16 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		float previousDuration = state.animationState.prevAnimation->GetOzzAnimation(id)->duration();
 		if (previousDuration > 0.0f)
 		{
-			previousTimeRatio	= state.previousAnimationState.animationTimeS / d;
+			previousTimeRatio = state.previousAnimationState.animationTimeS / d;
 			// Wraps in the unit interval [0:1]
-			const float loops	= floorf(previousTimeRatio);
-			previousTimeRatio	= previousTimeRatio - loops;
+			const float loops = floorf(previousTimeRatio);
+			previousTimeRatio = previousTimeRatio - loops;
 		}
 		else
+		{
 			previousTimeRatio = 0.0f;
-		previousTimeRatio = timeRatio = lerp(previousTimeRatio,timeRatio,state.interpolation);
+		}
+		previousTimeRatio = timeRatio = lerp(previousTimeRatio, timeRatio, state.interpolation);
 	}
 
 	// Ensure sampler buffers are sized correctly
@@ -193,9 +153,9 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	ozz::animation::SamplingJob samplingJob;
 	samplingJob.animation = animation;
 	layerState.context.Resize(num_joints);
-	samplingJob.context	  = &layerState.context;
-	samplingJob.ratio	  = timeRatio; // Use calculated time ratio
-	samplingJob.output	  = ozz::make_span(layerState.sampler.locals);
+	samplingJob.context = &layerState.context;
+	samplingJob.ratio	= timeRatio; // Use calculated time ratio
+	samplingJob.output	= ozz::make_span(layerState.sampler.locals);
 
 	// Sample the animation
 	if (!samplingJob.Run())
@@ -205,16 +165,16 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	}
 	ozz::animation::LocalToModelJob ltmJob;
 	// blend up to two animations to implement transitions.
-	if(state.interpolation<1.0f)
+	if (state.interpolation < 1.0f)
 	{
 		layerState.previousSampler.locals.resize(num_soa_joints);
 		layerState.previousSampler.joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
 		ozz::animation::SamplingJob previousSamplingJob;
 		previousSamplingJob.animation = state.animationState.prevAnimation->GetOzzAnimation(id);
 		layerState.previousContext.Resize(num_joints);
-		previousSamplingJob.context	  = &layerState.previousContext;
-		previousSamplingJob.ratio	  = previousTimeRatio;
-		previousSamplingJob.output	  = ozz::make_span(layerState.previousSampler.locals);
+		previousSamplingJob.context = &layerState.previousContext;
+		previousSamplingJob.ratio	= previousTimeRatio;
+		previousSamplingJob.output	= ozz::make_span(layerState.previousSampler.locals);
 		if (!previousSamplingJob.Run())
 		{
 			TELEPORT_WARN("previousSamplingJob failed");
@@ -241,15 +201,16 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		blend_job.output = ozz::make_span(locals);
 
 		// Blends.
-		if (!blend_job.Run()) {
+		if (!blend_job.Run())
+		{
 			TELEPORT_WARN("blend_job failed");
 			return false;
 		}
-		ltmJob.input	= ozz::make_span(locals); // Use sampled local transforms
+		ltmJob.input = ozz::make_span(locals); // Use sampled local transforms
 	}
 	else
 	{
-		ltmJob.input	= ozz::make_span(layerState.sampler.locals); // Use sampled local transforms
+		ltmJob.input = ozz::make_span(layerState.sampler.locals); // Use sampled local transforms
 	}
 	//  Convert from local-space to model-space transforms
 	ltmJob.skeleton = skeleton;
@@ -259,51 +220,54 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		TELEPORT_WARN("ltmJob failed");
 		return false;
 	}
+	animating = true;
 	return true;
 }
 
-void AnimationInstance::GetBoneMatrices(std::vector<mat4> &m, const std::vector<int16_t> &mapMeshToSkeleton, const std::vector<mat4> &inverseBindMatrices
-	, const std::vector<int> &mapSkeletonToAnim) const
+void AnimationInstance::GetBoneMatrices(std::vector<mat4>		   &m,
+										const std::vector<int16_t> &mapMeshToSkeleton,
+										const std::vector<mat4>	   &inverseBindMatrices,
+										const std::vector<int>	   &mapSkeletonToAnim) const
 {
-    if (models.empty()||!inverseBindMatrices.size())
-    {
-        // Fallback to identity matrices
-        //m.resize(std::min(inverseBindMatrices.size(), static_cast<size_t>(Skeleton::MAX_BONES)));
-        for (size_t i = 0; i < m.size(); i++)
-        {
-            m[i] = mat4::identity();
-        }
-        return;
-    }
-    // Use the computed model-space matrices from Ozz
-    size_t numBones = std::min({
-        inverseBindMatrices.size(),
-        static_cast<size_t>(Skeleton::MAX_BONES)
-    });
-    m.resize(numBones);
+	size_t numBones = std::min({inverseBindMatrices.size(), static_cast<size_t>(Skeleton::MAX_BONES)});
+	m.resize(numBones);
+	if (!animating || models.empty() || !inverseBindMatrices.size())
+	{
+		// Fallback to identity matrices
+		for (size_t i = 0; i < m.size(); i++)
+		{
+			m[i] = mat4::identity();
+		}
+		return;
+	}
 
-    if(inverseBindMatrices.size()!=mapMeshToSkeleton.size())
+	if (inverseBindMatrices.size() != mapMeshToSkeleton.size())
 	{
 		TELEPORT_WARN("Bad skin mapping");
 	}
-	static uint64_t force_ident=0;
-    for (size_t i = 0; i < numBones; i++)
-    {
-        // Convert Ozz matrix to your matrix format
+	static uint64_t force_ident = 0;
+	// Use the computed model-space matrices from Ozz
+	for (size_t i = 0; i < numBones; i++)
+	{
+		// Convert Ozz matrix to your matrix format
 		int sk_index = mapMeshToSkeleton[i];
-		if(sk_index<0||sk_index>=mapSkeletonToAnim.size())
+		if (sk_index < 0 || sk_index >= mapSkeletonToAnim.size())
+		{
 			continue;
-		int anim_joint_index = mapSkeletonToAnim[sk_index];
-        const ozz::math::Float4x4& ozzMatrix = models[anim_joint_index];
-        // CRITICAL: Ozz matrices are column-major, ensure correct conversion
-        mat4 joint_matrix= *((mat4*)&ozzMatrix);
+		}
+		int						   anim_joint_index = mapSkeletonToAnim[sk_index];
+		const ozz::math::Float4x4 &ozzMatrix		= models[anim_joint_index];
+		// CRITICAL: Ozz matrices are column-major, ensure correct conversion
+		mat4 joint_matrix							= *((mat4 *)&ozzMatrix);
 		// transpose so that in row-major format, translation is in the right-hand column
 		joint_matrix.transpose();
-        // Apply inverse bind matrix to get final bone matrix
-        const mat4& inverseBindMatrix = inverseBindMatrices[i];
-        m[i] = joint_matrix * inverseBindMatrix;
-		//m[i].transpose(); 206, 219 hand and ring
-		if(force_ident&(1ULL<<i))
-			m[i]=mat4::identity();
-    }
+		// Apply inverse bind matrix to get final bone matrix
+		const mat4 &inverseBindMatrix = inverseBindMatrices[i];
+		m[i]						  = joint_matrix * inverseBindMatrix;
+		// m[i].transpose(); 206, 219 hand and ring
+		if (force_ident & (1ULL << i))
+		{
+			m[i] = mat4::identity();
+		}
+	}
 }

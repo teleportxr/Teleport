@@ -40,7 +40,7 @@ namespace teleport
 			//! @brief Update all animations, given the current timestamp, which is the time in microseconds since the server's datum timestamp.
 			//! @param boneList 
 			//! @param timestampUs 
-			void update( int64_t timestampUs, avs::uid root_uid);
+			bool update( int64_t timestampUs, avs::uid root_uid);
 
 			std::shared_ptr<AnimationInstance> GetOrCreateAnimationInstance(avs::uid root_uid);
 		private:
