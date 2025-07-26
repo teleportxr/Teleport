@@ -472,7 +472,7 @@ void Renderer::InitLocalGeometry()
 		auto subSceneC = node->GetComponent<clientrender::SubSceneComponent>();
 		if(subSceneC)
 		{
-			subSceneC->PlayAnimation(0, anim_uid);
+		//	subSceneC->PlayAnimation(0, anim_uid);
 		}
 	}
 	#endif
