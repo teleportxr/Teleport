@@ -205,13 +205,12 @@ namespace teleport
 		//!  *interp*
 		struct AnimationState
 		{
-			avs::uid				   animationId	  = 0;
-			int64_t					   timestampUs	  = 0;
-			float					   animationTimeS = 0.0f;
-			float					   speedUnitsPerS = 1.0f;
-			bool					   loop			  = true;
-			bool					   matchTransition= true;		//!< If true, the transition from the previous anim to this one will be synchronized, e.g. walking/running.
-			std::shared_ptr<Animation> prevAnimation;
+			avs::uid				   animationId		= 0;
+			int64_t					   timestampUs		= 0;
+			float					   speedUnitsPerS	= 1.0f;
+			float					   timeRatio		= 0.0f;
+			bool					   loop				= true;
+			bool					   matchTransition	= true;		//!< If true, the transition from the previous anim to this one will be synchronized, e.g. walking/running.
 			std::shared_ptr<Animation> animation;
 		};
 		struct InstantaneousAnimationState
@@ -241,6 +240,7 @@ namespace teleport
 			ozz::animation::SamplingJob::Context		   context;
 
 		private:
+			InstantaneousAnimationState &getStateInternal(int64_t timestampUs) const;
 			int64_t									  lastUpdateTimestamp = 0;
 			mutable std::map<int64_t, AnimationState> animationStates;
 			// Interpolated data:

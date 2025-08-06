@@ -1,9 +1,9 @@
 #include "MeshDecoder.h"
 #include "GeometryDecoder.h"
-#include <regex>
 #include "ResourceCreator.h"
 #include "TeleportCore/DecodeMesh.h"
 #include "libavstream/common_networking.h"
+#include <regex>
 #define TINYGLTF_IMPLEMENTATION
 #undef TINYGLTF_NO_STB_IMAGE
 #define tinygltf teleport_tinygltf
@@ -44,40 +44,70 @@ namespace teleport::core
 	bool IsDataURI(const std::string &uri)
 	{
 		if (uri.size() < 1)
+		{
 			return false;
+		}
 		return true;
 	}
 	// Helper function to convert attribute semantic from glTF string to avs enum
 	avs::AttributeSemantic ConvertAttributeSemantic(const std::string &semantic)
 	{
 		if (semantic == "POSITION")
+		{
 			return avs::AttributeSemantic::POSITION;
+		}
 		else if (semantic == "NORMAL")
+		{
 			return avs::AttributeSemantic::NORMAL;
+		}
 		else if (semantic == "TANGENT")
+		{
 			return avs::AttributeSemantic::TANGENT;
+		}
 		else if (semantic == "TEXCOORD_0")
+		{
 			return avs::AttributeSemantic::TEXCOORD_0;
+		}
 		else if (semantic == "TEXCOORD_1")
+		{
 			return avs::AttributeSemantic::TEXCOORD_1;
+		}
 		else if (semantic == "TEXCOORD_2")
+		{
 			return avs::AttributeSemantic::TEXCOORD_2;
+		}
 		else if (semantic == "TEXCOORD_3")
+		{
 			return avs::AttributeSemantic::TEXCOORD_3;
+		}
 		else if (semantic == "TEXCOORD_4")
+		{
 			return avs::AttributeSemantic::TEXCOORD_4;
+		}
 		else if (semantic == "TEXCOORD_5")
+		{
 			return avs::AttributeSemantic::TEXCOORD_5;
+		}
 		else if (semantic == "TEXCOORD_6")
+		{
 			return avs::AttributeSemantic::TEXCOORD_6;
+		}
 		else if (semantic == "COLOR_0")
+		{
 			return avs::AttributeSemantic::COLOR_0;
+		}
 		else if (semantic == "JOINTS_0")
+		{
 			return avs::AttributeSemantic::JOINTS_0;
+		}
 		else if (semantic == "WEIGHTS_0")
+		{
 			return avs::AttributeSemantic::WEIGHTS_0;
+		}
 		else if (semantic == "_UV2")
+		{
 			return avs::AttributeSemantic::TEXCOORD_2;
+		}
 		return avs::AttributeSemantic::COUNT; // Used as invalid/unknown
 	}
 	// Helper function to convert vec4 color
@@ -227,68 +257,44 @@ namespace teleport::core
 
 		return transform;
 	}
-	
-	static std::vector<std::string> name_order={
-		"hips",
-		"spine",
-		"chest",
-		"spine1",
-		"upperchest",
-		"spine2",
-		"neck",
-		"head",
-		"leftshoulder",
-		"leftupperarm",
-		"leftuparm",
-		"leftlowerarm",
-		"leftforearm",
-		"lefthand",
-		"rightshoulder",
-		"rightupperarm",
-		"rightuparm",
-		"rightlowerarm",
-		"rightforearm",
-		"righthand",
-		"leftupperleg",
-		"leftupleg",
-		"leftlowerleg",
-		"leftleg",
-		"leftfoot",
-		"lefttoes",
-		"rightupperleg",
-		"rightupleg",
-		"rightlowerleg",
-		"rightleg",
-		"rightfoot",
-		"righttoes"};
+
+	static std::vector<std::string> name_order = {
+		"hips",			"spine",		 "chest",		  "spine1",		  "upperchest",	   "spine2",	"neck",			 "head",
+		"leftshoulder", "leftupperarm",	 "leftuparm",	  "leftlowerarm", "leftforearm",   "lefthand",	"rightshoulder", "rightupperarm",
+		"rightuparm",	"rightlowerarm", "rightforearm",  "righthand",	  "leftupperleg",  "leftupleg", "leftlowerleg",	 "leftleg",
+		"leftfoot",		"lefttoes",		 "rightupperleg", "rightupleg",	  "rightlowerleg", "rightleg",	"rightfoot",	 "righttoes"};
 	bool RecurseNodeUids(const tinygltf::Node &root, uint64_t &next_id, const tinygltf::Model &model, std::vector<avs::uid> &node_uids, int max_recursion)
 	{
-		if(max_recursion<=0)
+		if (max_recursion <= 0)
+		{
 			return false;
+		}
 		// sort children in reproduceable order.
-		auto sorted_children=root.children;
+		auto sorted_children = root.children;
 		/*std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
 		{
 			std::string nameA=GetMappedBoneName(model.nodes[a].name);
 			std::string nameB=GetMappedBoneName(model.nodes[b].name);
 			std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
 			std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
-			int A=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameA](const std::string &str){return nameA.find(str) != std::string::npos;})-name_order.begin());
-			int B=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameB](const std::string &str){return nameB.find(str) != std::string::npos;})-name_order.begin());
-			return A<B;
+			int A=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameA](const std::string &str){return nameA.find(str) !=
+		std::string::npos;})-name_order.begin()); int B=(int)(std::ranges::find_if(name_order.begin(),name_order.end(),[&nameB](const std::string &str){return
+		nameB.find(str) != std::string::npos;})-name_order.begin()); return A<B;
 		});*/
 		// Set parent ID for each child
 		for (int childIdx : sorted_children)
 		{
-			node_uids[childIdx]=next_id++;
-			const tinygltf::Node &ch=model.nodes[childIdx];
-			if(!RecurseNodeUids(ch, next_id, model, node_uids, max_recursion-1))
+			node_uids[childIdx]		 = next_id++;
+			const tinygltf::Node &ch = model.nodes[childIdx];
+			if (!RecurseNodeUids(ch, next_id, model, node_uids, max_recursion - 1))
+			{
 				return false;
+			}
 		}
 		return true;
 	}
-	
-	void GetBindMatrices(std::vector<mat4> &inverseBindMatrices,const tinygltf::Model &model,const tinygltf::Skin &skin)
+
+	void GetBindMatrices(std::vector<mat4> &inverseBindMatrices, const tinygltf::Model &model, const tinygltf::Skin &skin)
 	{
 		const tinygltf::Accessor &accessor = model.accessors[skin.inverseBindMatrices];
 
@@ -305,68 +311,61 @@ namespace teleport::core
 			}
 
 			// Get data pointer
-			const unsigned char *data		= buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+			const unsigned char *data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
 			// Copy matrices
 			inverseBindMatrices.resize(accessor.count);
 			for (size_t j = 0; j < accessor.count; j++)
 			{
-				/*avs::uid node_uid = node_uids[skin.joints[j]];
-				int index_in_bones = (int)(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),node_uid)-avsSkeleton.boneIDs.begin());
-				if(index_in_bones<0||index_in_bones>=inverseBindMatrices.size())
-				{
-					TELEPORT_WARN("Unable to insert bind matrix {}",j);
-					continue;
-				}*/
 				mat4		&matrix	   = inverseBindMatrices[j];
 				const float *floatData = reinterpret_cast<const float *>(data + j * stride);
 				for (int k = 0; k < 16; k++)
 				{
 					matrix.m[k] = floatData[k];
 				}
-				// Convert matrices from source to target coordinate system
-				// matrix = platform::crossplatform::ConvertMatrix(
-				//     sourceAxesStandard, targetAxesStandard, matrix);
 				matrix.transpose();
 			}
 		}
 	}
-	bool ConvertGltfModelToDecodedGeometry(GeometryDecoder *dec, const tinygltf::Model &model,
-										   clientrender::ResourceCreator *target, DecodedGeometry		 &dg,
-										   const std::string &filename_url,
-										   bool stationary,
-										   avs::AxesStandard	  targetAxesStandard = avs::AxesStandard::EngineeringStyle)
+
+	bool ConvertGltfModelToDecodedGeometry(GeometryDecoder				 *dec,
+										   const tinygltf::Model		 &model,
+										   clientrender::ResourceCreator *target,
+										   DecodedGeometry				 &dg,
+										   const std::string			 &filename_url,
+										   bool							  stationary)
 	{
-		json j = json::parse(model.extensions_json_string);
+		json j				  = json::parse(model.extensions_json_string);
 		// Do we have VRM extension? And is it the old v0.0 which points in the -Z direction?
 		double vrmSpecVersion = 1.0;
-		json version;
-		if(j.contains("VRM"))
+		json   version;
+		if (j.contains("VRM"))
 		{
 			json vrm = j["VRM"];
-			if(vrm.contains("specVersion"))
+			if (vrm.contains("specVersion"))
 			{
 				version = vrm["specVersion"];
 			}
 		}
-		else if(j.contains("VRMC_vrm"))
+		else if (j.contains("VRMC_vrm"))
 		{
 			json vrm = j["VRMC_vrm"];
-			if(vrm.contains("specVersion"))
+			if (vrm.contains("specVersion"))
 			{
 				version = vrm["specVersion"];
 			}
 		}
-		{
-			if(version.is_number())
-				vrmSpecVersion=version;
-			else if(version.is_string())
-				vrmSpecVersion=std::atof(version.get<std::string>().c_str());
-		}
-		dg.axesStandard						 = (platform::crossplatform::AxesStandard)targetAxesStandard;
-		dg.next_id							 = 1; // Start with ID 1
 
+		if (version.is_number())
+		{
+			vrmSpecVersion = version;
+		}
+		else if (version.is_string())
+		{
+			vrmSpecVersion = std::atof(version.get<std::string>().c_str());
+		}
 		// Determine source axes standard - glTF uses right-handed Y-up system
-		avs::AxesStandard sourceAxesStandard = avs::AxesStandard::GlStyle;
+
+		dg.next_id = 1; // Start with ID 1
 
 		// Convert buffers
 		for (size_t i = 0; i < model.buffers.size(); i++)
@@ -383,8 +382,8 @@ namespace teleport::core
 			uint64_t bufferId	 = dg.next_id++;
 			dg.buffers[bufferId] = std::move(geometryBuffer);
 		}
-		
-		avs::uid first_bufferView=dg.next_id;
+
+		avs::uid first_bufferView = dg.next_id;
 		// Convert buffer views
 		for (size_t i = 0; i < model.bufferViews.size(); i++)
 		{
@@ -413,16 +412,16 @@ namespace teleport::core
 
 			dg.bufferViews[bufferViewId] = std::move(avsBufView);
 		}
-		avs::uid first_accessor=dg.next_id;
+		avs::uid first_accessor = dg.next_id;
 		// Convert accessors
 		for (size_t i = 0; i < model.accessors.size(); i++)
 		{
-			uint64_t accessorId		  = dg.next_id++;
-			const tinygltf::Accessor &accessor = model.accessors[i];
+			uint64_t				  accessorId = dg.next_id++;
+			const tinygltf::Accessor &accessor	 = model.accessors[i];
 
 			avs::Accessor			  avsAccessor;
-			avsAccessor.bufferView			= accessor.bufferView + model.buffers.size() + 1; // Adjust index
-			auto bv  = dg.bufferViews.find(avsAccessor.bufferView);
+			avsAccessor.bufferView = accessor.bufferView + model.buffers.size() + 1; // Adjust index
+			auto bv				   = dg.bufferViews.find(avsAccessor.bufferView);
 			if (bv == dg.bufferViews.end())
 			{
 				TELEPORT_WARN("Bad mesh or scene data in {}", "");
@@ -434,7 +433,7 @@ namespace teleport::core
 			avsAccessor.componentType = ConvertComponentType(accessor.componentType);
 			avsAccessor.type		  = ConvertDataType(accessor.type);
 
-			size_t byteLength = ToNumComponents(avsAccessor.type)*avs::GetSizeOfComponentType(avsAccessor.componentType);
+			size_t byteLength		  = ToNumComponents(avsAccessor.type) * avs::GetSizeOfComponentType(avsAccessor.componentType);
 			if (avsAccessor.byteOffset >= bv->second.byteLength || byteLength > bv->second.byteLength ||
 				avsAccessor.byteOffset + byteLength > bv->second.byteLength)
 			{
@@ -442,7 +441,7 @@ namespace teleport::core
 				continue;
 			}
 
-			dg.accessors[accessorId]  = std::move(avsAccessor);
+			dg.accessors[accessorId] = std::move(avsAccessor);
 		}
 
 		// Process materials
@@ -546,7 +545,7 @@ namespace teleport::core
 			const tinygltf::Material &material	   = model.materials[i];
 			avs::uid				  material_uid = material_uids[i];
 			auto					 &avsMaterial  = dg.internalMaterials[material_uid];
-			avsMaterial.pbrMetallicRoughness.baseColorTexture.tiling.y*=-1.0f;
+			avsMaterial.pbrMetallicRoughness.baseColorTexture.tiling.y *= -1.0f;
 			// Base color texture
 			if (material.pbrMetallicRoughness.baseColorTexture.index >= 0)
 			{
@@ -554,12 +553,12 @@ namespace teleport::core
 				avs::uid texture_uid									   = texture_uids[texIndex];
 				avsMaterial.pbrMetallicRoughness.baseColorTexture.index	   = texture_uid;
 				avsMaterial.pbrMetallicRoughness.baseColorTexture.texCoord = material.pbrMetallicRoughness.baseColorTexture.texCoord;
-				
+
 				texture_types[texture_uid] += avsMaterial.name + "_diffuse";
 			}
 
 			// Metallic-roughness texture
-			avsMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y*=-1.0f;
+			avsMaterial.pbrMetallicRoughness.metallicRoughnessTexture.tiling.y *= -1.0f;
 			if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
 			{
 				int		 texIndex												   = material.pbrMetallicRoughness.metallicRoughnessTexture.index;
@@ -577,7 +576,7 @@ namespace teleport::core
 				avsMaterial.normalTexture.index	   = texture_uid;
 				avsMaterial.normalTexture.texCoord = material.normalTexture.texCoord;
 				avsMaterial.normalTexture.scale	   = (float)material.normalTexture.scale;
-				avsMaterial.normalTexture.tiling.y*=-1.0f;
+				avsMaterial.normalTexture.tiling.y *= -1.0f;
 				texture_types[texture_uid] += avsMaterial.name + "_normal";
 			}
 
@@ -589,7 +588,7 @@ namespace teleport::core
 				avsMaterial.occlusionTexture.index	  = texture_uid;
 				avsMaterial.occlusionTexture.texCoord = material.occlusionTexture.texCoord;
 				avsMaterial.occlusionTexture.strength = (float)material.occlusionTexture.strength;
-				avsMaterial.occlusionTexture.tiling.y*=-1.0f;
+				avsMaterial.occlusionTexture.tiling.y *= -1.0f;
 				texture_types[texture_uid] += avsMaterial.name + "_occlusion";
 			}
 
@@ -600,7 +599,7 @@ namespace teleport::core
 				avs::uid texture_uid				 = texture_uids[texIndex];
 				avsMaterial.emissiveTexture.index	 = texture_uid;
 				avsMaterial.emissiveTexture.texCoord = material.emissiveTexture.texCoord;
-				avsMaterial.emissiveTexture.tiling.y*=-1.0f;
+				avsMaterial.emissiveTexture.tiling.y *= -1.0f;
 				texture_types[texture_uid] += avsMaterial.name + "_emissive";
 			}
 		}
@@ -808,12 +807,12 @@ namespace teleport::core
 
 		// Create a map to track node UIDs
 		std::vector<avs::uid> node_uids(model.nodes.size());
-		avs::uid first_node=dg.next_id;
+		avs::uid			  first_node = dg.next_id;
 		// First pass: Create all node uids.
 		// consider skeletons, parent-child relationships.
 		// We would ideally like to order the nodes in ascending
 		// order within each hierarchy.
-		
+
 		std::set<int> root_indices;
 		for (int i = 0; i < model.nodes.size(); i++)
 		{
@@ -822,26 +821,28 @@ namespace teleport::core
 		for (size_t i = 0; i < model.nodes.size(); i++)
 		{
 			const tinygltf::Node &gltfNode = model.nodes[i];
-			for(size_t j=0;j<gltfNode.children.size();j++)
+			for (size_t j = 0; j < gltfNode.children.size(); j++)
 			{
 				root_indices.erase(gltfNode.children[j]);
 			}
 		}
-		for (int index:root_indices)
+		for (int index : root_indices)
 		{
 			const tinygltf::Node &gltfNode = model.nodes[index];
-			node_uids[index]=dg.next_id++;
-			if(!RecurseNodeUids(gltfNode, dg.next_id, model, node_uids, 100))
+			node_uids[index]			   = dg.next_id++;
+			if (!RecurseNodeUids(gltfNode, dg.next_id, model, node_uids, 100))
 			{
-				TELEPORT_WARN("Failed max-recursion test in imported hierarchy for {}",filename_url);
+				TELEPORT_WARN("Failed max-recursion test in imported hierarchy for {}", filename_url);
 				return false;
 			}
 		}
-//		Now fill in any left over.
+		//		Now fill in any left over.
 		for (size_t i = 0; i < model.nodes.size(); i++)
 		{
-			if(!node_uids[i])
+			if (!node_uids[i])
+			{
 				node_uids[i] = dg.next_id++;
+			}
 		}
 
 		// Second pass: Set up nodes with proper properties and relationships
@@ -914,17 +915,21 @@ namespace teleport::core
 			}
 
 			// Convert transform from source axes to target axes
-			/*    if (sourceAxesStandard != targetAxesStandard) {
-					avsNode.localTransform.position = platform::crossplatform::ConvertPosition(
-						(platform::crossplatform::AxesStandard)sourceAxesStandard, (platform::crossplatform::AxesStandard)targetAxesStandard, avsNode.localTransform.position);
+			/*	if (sourceAxesStandard != targetAxesStandard)
+			{
+				avsNode.localTransform.position		   = platform::crossplatform::ConvertPosition((platform::crossplatform::AxesStandard)sourceAxesStandard,
+																							  (platform::crossplatform::AxesStandard)targetAxesStandard,
+																							  avsNode.localTransform.position);
 
-					platform::crossplatform::Quaternionf q = platform::crossplatform::ConvertRotation(
-						(platform::crossplatform::AxesStandard)sourceAxesStandard, (platform::crossplatform::AxesStandard)targetAxesStandard, avsNode.localTransform.rotation);
-					avsNode.localTransform.rotation = (const float*)&q;
+				platform::crossplatform::Quaternionf q = platform::crossplatform::ConvertRotation((platform::crossplatform::AxesStandard)sourceAxesStandard,
+																								  (platform::crossplatform::AxesStandard)targetAxesStandard,
+																								  avsNode.localTransform.rotation);
+				avsNode.localTransform.rotation		   = (const float *)&q;
 
-					avsNode.localTransform.scale = platform::crossplatform::ConvertScale(
-						(platform::crossplatform::AxesStandard)sourceAxesStandard, (platform::crossplatform::AxesStandard)targetAxesStandard, avsNode.localTransform.scale);
-				}*/
+				avsNode.localTransform.scale		   = platform::crossplatform::ConvertScale((platform::crossplatform::AxesStandard)sourceAxesStandard,
+																					   (platform::crossplatform::AxesStandard)targetAxesStandard,
+																					   avsNode.localTransform.scale);
+			}*/
 
 			// Set parent (will be filled in a separate pass)
 			avsNode.parentID  = 0;
@@ -970,7 +975,7 @@ namespace teleport::core
 			// Set parent ID for each child
 			for (int childIdx : gltfNode.children)
 			{
-			// TODO: Prevent circular relationships
+				// TODO: Prevent circular relationships
 				if (childIdx >= 0 && childIdx < static_cast<int>(node_uids.size()))
 				{
 					auto &childNode	   = dg.nodes[node_uids[childIdx]];
@@ -979,28 +984,28 @@ namespace teleport::core
 			}
 		}
 		// Process skins and create skeletons
-		std::map<int,avs::uid> skeleton_uids;
-		avs::uid first_skeleton=dg.next_id;
+		std::map<int, avs::uid> skeleton_uids;
+		avs::uid				first_skeleton = dg.next_id;
 		// Possible to have multiple skeletons with different sets of nodes.
 		// But equally, we want any skins that share the same set of joints to use the same skeleton.
 		for (int i = 0; i < (int)model.skins.size(); i++)
 		{
-			const tinygltf::Skin &skin		   = model.skins[i];
+			const tinygltf::Skin &skin = model.skins[i];
 
 			// Does this skin use an existing skeleton?
 			// Either: same root, or
 			//			This root is a child of an existing one, or
 			//			An existing root is a child of this one.
-			int root_index				= skin.skeleton>=0 ? skin.skeleton : skin.joints[0];
-			avs::uid skeleton_uid		= dg.next_id++;
-			skeleton_uids[i]			=skeleton_uid;
+			int		 root_index		   = skin.skeleton >= 0 ? skin.skeleton : skin.joints[0];
+			avs::uid skeleton_uid	   = dg.next_id++;
+			skeleton_uids[i]		   = skeleton_uid;
 
-			avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
+			avs::Skeleton &avsSkeleton = dg.skeletons[skeleton_uid];
 
 			// Does any joint of this skeleton coincide with any joint of any other?
 			// If so we must merge them.
-			avs::uid rootBoneId		= node_uids[root_index];
-			avsSkeleton.rootBoneId		= rootBoneId;
+			avs::uid rootBoneId		   = node_uids[root_index];
+			avsSkeleton.rootBoneId	   = rootBoneId;
 			if (skin.skeleton || skin.joints.size() > 0)
 			{
 				for (int jointIdx : skin.joints)
@@ -1008,7 +1013,7 @@ namespace teleport::core
 					if (jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
 					{
 						avs::uid id = node_uids[jointIdx];
-						if(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),id) == avsSkeleton.boneIDs.end())
+						if (std::find(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end(), id) == avsSkeleton.boneIDs.end())
 						{
 							avsSkeleton.boneIDs.push_back(id);
 						}
@@ -1016,105 +1021,67 @@ namespace teleport::core
 				}
 			}
 		}
-		for(auto &sk1:dg.skeletons)
+		for (auto &sk1 : dg.skeletons)
 		{
-			avs::Skeleton &avsSkeleton1	= sk1.second;
-			if(!avsSkeleton1.boneIDs.size())
-				continue;
-			auto &rootNode1	= dg.nodes[sk1.second.rootBoneId];
-			// Should this skeleton be merged with another on the same hierarchy?
-			for(auto &sk2:dg.skeletons)
+			avs::Skeleton &avsSkeleton1 = sk1.second;
+			if (!avsSkeleton1.boneIDs.size())
 			{
-				if(sk2.first==sk1.first)
-					continue;
-				avs::Skeleton &avsSkeleton2	= sk2.second;
-				auto &rootNode2	= dg.nodes[sk2.second.rootBoneId];
-				bool merge=false;
-				for (auto bone_uid: sk1.second.boneIDs)
+				continue;
+			}
+			auto &rootNode1 = dg.nodes[sk1.second.rootBoneId];
+			// Should this skeleton be merged with another on the same hierarchy?
+			for (auto &sk2 : dg.skeletons)
+			{
+				if (sk2.first == sk1.first)
 				{
-				// They share a common bone.
-					if(std::find(sk2.second.boneIDs.begin(),sk2.second.boneIDs.end(),bone_uid)!=sk2.second.boneIDs.end())
+					continue;
+				}
+				avs::Skeleton &avsSkeleton2 = sk2.second;
+				auto		  &rootNode2	= dg.nodes[sk2.second.rootBoneId];
+				bool		   merge		= false;
+				for (auto bone_uid : sk1.second.boneIDs)
+				{
+					// They share a common bone.
+					if (std::find(sk2.second.boneIDs.begin(), sk2.second.boneIDs.end(), bone_uid) != sk2.second.boneIDs.end())
 					{
-						merge=true;
+						merge = true;
 						break;
 					}
 				}
-				if(!merge)
-					continue;
-				avs::uid id=avsSkeleton1.rootBoneId;
-				while(dg.nodes[id].parentID!=0)
+				if (!merge)
 				{
-					id=dg.nodes[id].parentID;
-					if(id==avsSkeleton2.rootBoneId)
+					continue;
+				}
+				avs::uid id = avsSkeleton1.rootBoneId;
+				while (dg.nodes[id].parentID != 0)
+				{
+					id = dg.nodes[id].parentID;
+					if (id == avsSkeleton2.rootBoneId)
 					{
-						avsSkeleton1.rootBoneId=id;
+						avsSkeleton1.rootBoneId = id;
 						break;
 					}
 				}
-				for (auto bone_uid: avsSkeleton2.boneIDs)
+				for (auto bone_uid : avsSkeleton2.boneIDs)
 				{
-					if(std::find(avsSkeleton1.boneIDs.begin(),avsSkeleton1.boneIDs.end(),bone_uid)!=avsSkeleton1.boneIDs.end())
+					if (std::find(avsSkeleton1.boneIDs.begin(), avsSkeleton1.boneIDs.end(), bone_uid) != avsSkeleton1.boneIDs.end())
+					{
 						continue;
+					}
 					avsSkeleton1.boneIDs.push_back(bone_uid);
 				}
 				avsSkeleton2.boneIDs.clear();
-				avsSkeleton2.rootBoneId=avsSkeleton1.rootBoneId;
-				for(int i=0;i<(int)skeleton_uids.size();i++)
+				avsSkeleton2.rootBoneId = avsSkeleton1.rootBoneId;
+				for (int i = 0; i < (int)skeleton_uids.size(); i++)
 				{
-					if(skeleton_uids[i]==sk2.first)
-						skeleton_uids[i]=sk1.first;
+					if (skeleton_uids[i] == sk2.first)
+					{
+						skeleton_uids[i] = sk1.first;
+					}
 				}
 				break;
 			}
 		}
-		/*for (int i = 0; i < (int)model.skins.size(); i++)
-		{
-			const tinygltf::Skin &skin	 = model.skins[i];
-			avs::uid skeleton_uid		= skeleton_uids[i];
-			avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
-			avsSkeleton.name			= !skin.name.empty() ? skin.name : (filename_url.empty() ? "Skeleton" : filename_url + " skeleton " + std::to_string(i));
-
-			// Set up joints
-			std::string str;
-			if (skin.skeleton || skin.joints.size() > 0)
-			{
-				// we want this to be in the same order that the nodes are in.
-				TELEPORT_LOG("\nSkin root: {} {}\n", skin.name, avsSkeleton.rootBoneId);
-				for (int jointIdx : skin.joints)
-				{
-					if (jointIdx >= 0 && jointIdx < static_cast<int>(node_uids.size()))
-					{
-						avs::uid id = node_uids[jointIdx];
-						
-						if(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),id) == avsSkeleton.boneIDs.end())
-						{
-							avsSkeleton.boneIDs.push_back(id);
-							str += std::to_string(id) + " ";
-						}
-					}
-				}
-				avsSkeleton.rootBoneId		= avsSkeleton.rootBoneId;
-				// Put the skeleton on the root node, not the mesh node.
-				auto &rootNode	= dg.nodes[avsSkeleton.rootBoneId];
-				rootNode.skeletonID			= skeleton_uid;
-				while(dg.nodes[avsSkeleton.rootBoneId].parentID!=0 &&
-					std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),dg.nodes[avsSkeleton.rootBoneId].parentID)!=avsSkeleton.boneIDs.end())
-					avsSkeleton.rootBoneId = dg.nodes[avsSkeleton.rootBoneId].parentID;
-			
-				TELEPORT_LOG("\nSkin: {} {}\n", skin.name, str);
-			}
-
-			// Process inverse bind matrices
-			if (skin.inverseBindMatrices >= 0 && skin.inverseBindMatrices < static_cast<int>(model.accessors.size()))
-			{
-				auto				 &skeleton	= dg.skeletons[skeleton_uid];
-				GetBindMatrices(skeleton.inverseBindMatrices,model,skin);
-			}
-			else
-			{
-				TELEPORT_WARN("Bad mesh or scene data in {}", skin.name);
-			}
-		}*/
 		std::set<avs::uid> skeleton_roots;
 		// Set up skinned meshes and skeleton references
 		for (int i = 0; i < (int)model.nodes.size(); i++)
@@ -1126,23 +1093,23 @@ namespace teleport::core
 			// Set up skin/skeleton
 			if (gltfNode.skin >= 0 && gltfNode.skin < static_cast<int>(skeleton_uids.size()) && gltfNode.skin < model.skins.size())
 			{
-				const tinygltf::Skin &skin	= model.skins[gltfNode.skin];
-				avs::uid skeleton_uid		= skeleton_uids[gltfNode.skin];
-				if(!dg.skeletons[skeleton_uid].boneIDs.size())
+				const tinygltf::Skin &skin		   = model.skins[gltfNode.skin];
+				avs::uid			  skeleton_uid = skeleton_uids[gltfNode.skin];
+				if (!dg.skeletons[skeleton_uid].boneIDs.size())
 				{
-					for(int j=0;j<skeleton_uids.size();j++)
+					for (int j = 0; j < skeleton_uids.size(); j++)
 					{
 						avs::Skeleton &sk = dg.skeletons[skeleton_uids[i]];
-						if(sk.boneIDs.size()>0&&sk.rootBoneId==dg.skeletons[skeleton_uid].rootBoneId)
+						if (sk.boneIDs.size() > 0 && sk.rootBoneId == dg.skeletons[skeleton_uid].rootBoneId)
 						{
-							skeleton_uid=skeleton_uids[i];
+							skeleton_uid = skeleton_uids[i];
 							break;
 						}
 					}
 				}
-				avs::Skeleton &avsSkeleton	= dg.skeletons[skeleton_uid];
-				int root_index				= skin.skeleton>=0 ? skin.skeleton : skin.joints[0];
-				avsNode.skeletonNodeID		= avsSkeleton.rootBoneId;
+				avs::Skeleton &avsSkeleton = dg.skeletons[skeleton_uid];
+				int			   root_index  = skin.skeleton >= 0 ? skin.skeleton : skin.joints[0];
+				avsNode.skeletonNodeID	   = avsSkeleton.rootBoneId;
 				skeleton_roots.insert(avsNode.skeletonNodeID);
 				// Set root node
 				if (!avsSkeleton.boneIDs.empty())
@@ -1154,35 +1121,39 @@ namespace teleport::core
 
 					for (size_t j = 0; j < skin.joints.size(); j++)
 					{
-						avs::uid joint_uid		= node_uids[skin.joints[j]];
-						uint16_t j_index = (uint16_t)(std::find(avsSkeleton.boneIDs.begin(),avsSkeleton.boneIDs.end(),joint_uid)-avsSkeleton.boneIDs.begin());
+						avs::uid joint_uid = node_uids[skin.joints[j]];
+						uint16_t j_index =
+							(uint16_t)(std::find(avsSkeleton.boneIDs.begin(), avsSkeleton.boneIDs.end(), joint_uid) - avsSkeleton.boneIDs.begin());
 						avsNode.joint_indices[j] = j_index;
 					}
 				}
 			}
 		}
 		// Place skeletons in their appropriate root nodes:
-		for(auto &s:skeleton_uids)
+		for (auto &s : skeleton_uids)
 		{
-			avs::Skeleton &avsSkeleton	= dg.skeletons[s.second];
-			if(avsSkeleton.boneIDs.size()==0)
-				continue;
-			auto &rootNode	= dg.nodes[avsSkeleton.rootBoneId];
-			rootNode.skeletonID			= s.second;
-		}
-		if(vrmSpecVersion<1.0)
-		{
-		//	dg.vrmFixRotation=true;
-			for(auto r:skeleton_roots)
+			avs::Skeleton &avsSkeleton = dg.skeletons[s.second];
+			if (avsSkeleton.boneIDs.size() == 0)
 			{
-				auto &rootNode	= dg.nodes[r];
+				continue;
+			}
+			auto &rootNode		= dg.nodes[avsSkeleton.rootBoneId];
+			rootNode.skeletonID = s.second;
+		}
+		if (vrmSpecVersion < 1.0)
+		{
+			//	dg.vrmFixRotation=true;
+			for (auto r : skeleton_roots)
+			{
+				auto &rootNode = dg.nodes[r];
 				{
-					platform::crossplatform::Quaternionf q=rootNode.localTransform.rotation;
-					q.Rotate(PI,{0,1.0f,0});
-					rootNode.localTransform.rotation={q.x,q.y,q.z,q.s};
+					platform::crossplatform::Quaternionf q = rootNode.localTransform.rotation;
+					q.Rotate(PI, {0, 1.0f, 0});
+					rootNode.localTransform.rotation = {q.x, q.y, q.z, q.s};
 				}
 			}
 		}
+
 
 		// Set clockwise faces flag
 		// glTF uses counter-clockwise winding by default
