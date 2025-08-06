@@ -54,11 +54,15 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	}
 	AnimationState st;
 	st.animationId	  = applyAnimation.animationID;
-	st.animationTimeS = applyAnimation.animTimeAtTimestamp;
+	st.timeRatio	 = 0;
 	st.speedUnitsPerS = applyAnimation.speedUnitsPerSecond;
 	// The timestamp where the state applies.
 	st.timestampUs	  = applyAnimation.timestampUs + 10000000;
 	st.loop			  = applyAnimation.loop;
+	st.matchTransition&=st.loop;
+	if(st.matchTransition)
+	{
+	}
 	auto cache		  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
 	if (cache)
 	{
@@ -95,7 +99,7 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	auto &layerState  = animationLayerStates[0];
 
 	// Get current animation state
-	const auto &state = layerState.getState(time_us);
+	InstantaneousAnimationState &state = const_cast<InstantaneousAnimationState &>(layerState.getState(time_us));
 	if (!state.animationState.animation)
 	{
 		TELEPORT_WARN("state.animationState.animation is null");
@@ -110,42 +114,35 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		return false;
 	}
 	//  Set time ratio correctly (0.0 to 1.0)
-	float timeRatio			= 0.0f;
-	float previousTimeRatio = 0.0f;
-	float d					= animation->duration();
+/*	float d					= animation->duration();
 	if (d > 0.0f)
 	{
-		timeRatio		  = state.animationState.animationTimeS / d;
+		state.animationState.timeRatio		  = state.animationState.animationTimeS / d;
 		// Wraps in the unit interval [0:1]
-		const float loops = floorf(timeRatio);
-		timeRatio		  = timeRatio - loops;
+		const float loops = floorf(state.animationState.timeRatio);
+		state.animationState.timeRatio		  = state.animationState.timeRatio - loops;
 	}
 	else
 	{
-		timeRatio = 0.0f;
-	}
+		state.animationState.timeRatio = 0.0f;
+	}*
 	// Should timeRatio be modified for transition matching?
 	if (state.interpolation < 1.0f)
 	{
-		if (!state.animationState.prevAnimation)
-		{
-			TELEPORT_WARN("state.animationState.prevAnimation is null");
-			return false;
-		}
-		float previousDuration = state.animationState.prevAnimation->GetOzzAnimation(id)->duration();
+		float previousDuration = state.previousAnimationState.animation->GetOzzAnimation(id)->duration();
 		if (previousDuration > 0.0f)
 		{
-			previousTimeRatio = state.previousAnimationState.animationTimeS / d;
+			state.previousAnimationState.timeRatio = state.previousAnimationState.animationTimeS / d;
 			// Wraps in the unit interval [0:1]
-			const float loops = floorf(previousTimeRatio);
-			previousTimeRatio = previousTimeRatio - loops;
+			const float loops = floorf(state.previousAnimationState.timeRatio);
+			state.previousAnimationState.timeRatio = state.previousAnimationState.timeRatio - loops;
 		}
 		else
 		{
-			previousTimeRatio = 0.0f;
+			state.previousAnimationState.timeRatio = 0.0f;
 		}
-		previousTimeRatio = timeRatio = lerp(previousTimeRatio, timeRatio, state.interpolation);
-	}
+		state.previousAnimationState.timeRatio = state.animationState.timeRatio = lerp(state.previousAnimationState.timeRatio, state.animationState.timeRatio, state.interpolation);
+	}*/
 
 	// Ensure sampler buffers are sized correctly
 	layerState.sampler.locals.resize(num_soa_joints);
@@ -154,7 +151,7 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	samplingJob.animation = animation;
 	layerState.context.Resize(num_joints);
 	samplingJob.context = &layerState.context;
-	samplingJob.ratio	= timeRatio; // Use calculated time ratio
+	samplingJob.ratio	= state.animationState.timeRatio; // Use calculated time ratio
 	samplingJob.output	= ozz::make_span(layerState.sampler.locals);
 
 	// Sample the animation
@@ -170,10 +167,10 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		layerState.previousSampler.locals.resize(num_soa_joints);
 		layerState.previousSampler.joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
 		ozz::animation::SamplingJob previousSamplingJob;
-		previousSamplingJob.animation = state.animationState.prevAnimation->GetOzzAnimation(id);
+		previousSamplingJob.animation = state.previousAnimationState.animation->GetOzzAnimation(id);
 		layerState.previousContext.Resize(num_joints);
 		previousSamplingJob.context = &layerState.previousContext;
-		previousSamplingJob.ratio	= previousTimeRatio;
+		previousSamplingJob.ratio	= state.previousAnimationState.timeRatio;
 		previousSamplingJob.output	= ozz::make_span(layerState.previousSampler.locals);
 		if (!previousSamplingJob.Run())
 		{
@@ -259,15 +256,19 @@ void AnimationInstance::GetBoneMatrices(std::vector<mat4>		   &m,
 		const ozz::math::Float4x4 &ozzMatrix		= models[anim_joint_index];
 		// CRITICAL: Ozz matrices are column-major, ensure correct conversion
 		mat4 joint_matrix							= *((mat4 *)&ozzMatrix);
-		// transpose so that in row-major format, translation is in the right-hand column
-		joint_matrix.transpose();
 		// Apply inverse bind matrix to get final bone matrix
 		const mat4 &inverseBindMatrix = inverseBindMatrices[i];
-		m[i]						  = joint_matrix * inverseBindMatrix;
-		// m[i].transpose(); 206, 219 hand and ring
+		// transpose so that in row-major format, translation is in the right-hand column
+		joint_matrix.transpose();
+		
 		if (force_ident & (1ULL << i))
 		{
 			m[i] = mat4::identity();
 		}
+		else
+		{
+			m[i] = joint_matrix * inverseBindMatrix;
+		}
+
 	}
 }

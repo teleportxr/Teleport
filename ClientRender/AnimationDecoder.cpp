@@ -7,13 +7,14 @@
 #include "ozz/animation/offline/raw_skeleton.h"
 #include "ozz/animation/offline/skeleton_builder.h"
 #include "ozz/base/endianness.h"
+#include "Platform/CrossPlatform/AxesStandard.h"
 
 #define tinygltf teleport_tinygltf
 #include "tiny_gltf.h"
 #include "ozz/gltf2ozz.h"
 #include <json.hpp>
 #include <ozz/base/containers/set.h>
-#pragma optimize("",off)
+#pragma optimize("", off)
 using nlohmann::json;
 
 using qt = platform::crossplatform::Quaternionf;
@@ -96,63 +97,74 @@ void FindSkinRootJointIndices(const ozz::vector<tinygltf::Skin> &skins, const ti
 		}
 	}
 }
-static std::vector<std::string> name_order={
-    "hips",
-    "spine",
-    "chest",
-    "upperChest",
-    "neck",
-    "head",
-    "leftShoulder",
-    "leftUpperArm",
-    "leftLowerArm",
-    "leftHand",
-    "rightShoulder",
-    "rightUpperArm",
-    "rightLowerArm",
-    "rightHand",
-    "leftUpperLeg",
-    "leftLowerLeg",
-    "leftFoot",
-    "leftToes",
-    "rightUpperLeg",
-    "rightLowerLeg",
-    "rightFoot",
-    "rightToes"};
+static std::vector<std::string> name_order = {"hips",		   "spine",			"chest",		"upperChest",	"neck",			 "head",
+											  "leftShoulder",  "leftUpperArm",	"leftLowerArm", "leftHand",		"rightShoulder", "rightUpperArm",
+											  "rightLowerArm", "rightHand",		"leftUpperLeg", "leftLowerLeg", "leftFoot",		 "leftToes",
+											  "rightUpperLeg", "rightLowerLeg", "rightFoot",	"rightToes"};
+
+
+static ozz::math::Float3 ConvertPosition(platform::crossplatform::AxesStandard sourceAxesStandard,
+											platform::crossplatform::AxesStandard targetAxesStandard,
+											ozz::math::Float3 v)
+{
+	vec3 p=platform::crossplatform::ConvertPosition(sourceAxesStandard,targetAxesStandard,*((vec3*)&v));
+	return *((ozz::math::Float3*)&p);
+}
+
+static ozz::math::Float4 ConvertRotation(platform::crossplatform::AxesStandard sourceAxesStandard,
+											platform::crossplatform::AxesStandard targetAxesStandard,
+											ozz::math::Float4 v)
+{
+	platform::crossplatform::Quaternionf q=platform::crossplatform::ConvertRotation(sourceAxesStandard,targetAxesStandard,*((platform::crossplatform::Quaternionf*)&v));
+	return *((ozz::math::Float4*)&q);
+}
+
+static ozz::math::Quaternion ConvertRotation(platform::crossplatform::AxesStandard sourceAxesStandard,
+											platform::crossplatform::AxesStandard targetAxesStandard,
+											ozz::math::Quaternion v)
+{
+	platform::crossplatform::Quaternionf q=platform::crossplatform::ConvertRotation(sourceAxesStandard,targetAxesStandard,*((platform::crossplatform::Quaternionf*)&v));
+	return *((ozz::math::Quaternion*)&q);
+}
+
+static ozz::math::Float3 ConvertScale(platform::crossplatform::AxesStandard sourceAxesStandard,
+										platform::crossplatform::AxesStandard targetAxesStandard,
+										ozz::math::Float3 v)
+{
+	vec3 p=platform::crossplatform::ConvertScale(sourceAxesStandard,targetAxesStandard,*((vec3*)&v));
+	return *((ozz::math::Float3*)&p);
+}
 
 // Recursively import a node's children
-bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::animation::offline::RawSkeleton::Joint *_joint, std::map<std::string, teleport::core::PoseScale> &restPoses)
+bool ImportNode(const tinygltf::Node							 &gltfNode,
+				const tinygltf::Model							 &model,
+				ozz::animation::offline::RawSkeleton::Joint		 *_joint,
+				platform::crossplatform::AxesStandard			sourceAxesStandard,
+				platform::crossplatform::AxesStandard			targetAxesStandard)
 {
 	// Names joint.1
-	_joint->name = _node.name.c_str();
+	_joint->name = gltfNode.name.c_str();
 
 	// Fills transform.
-	if (!CreateNodeTransform(_node, &_joint->transform))
+	if (!CreateNodeTransform(gltfNode, &_joint->transform))
 	{
 		return false;
 	}
-	_joint->children.resize(_node.children.size());
-	auto &restPose		 = restPoses[_node.name];
-	restPose.position	 = {_joint->transform.translation.x, _joint->transform.translation.y, _joint->transform.translation.z};
-	restPose.orientation = {_joint->transform.rotation.x, _joint->transform.rotation.y, _joint->transform.rotation.z, _joint->transform.rotation.w};
-	restPose.scale		 = {_joint->transform.scale.x, _joint->transform.scale.y, _joint->transform.scale.z};
+	_joint->transform.translation	= ConvertPosition(sourceAxesStandard,targetAxesStandard,_joint->transform.translation);
+	_joint->transform.rotation		= ConvertRotation(sourceAxesStandard,targetAxesStandard,_joint->transform.rotation);
+	_joint->transform.scale			= ConvertScale(sourceAxesStandard,targetAxesStandard,_joint->transform.scale);
 
+
+	_joint->children.resize(gltfNode.children.size());
 	// Fills each child information.
-	auto sorted_children = _node.children;
-/*	std::sort(sorted_children.begin(),sorted_children.end(),[&model](int a,int b)
-	{
-		std::string nameA=model.nodes[a].name;
-		std::string nameB=model.nodes[b].name;
-		int A=(int)(std::find(name_order.begin(),name_order.end(),nameA)-name_order.begin());
-		int B=(int)(std::find(name_order.begin(),name_order.end(),nameB)-name_order.begin());
-		return A<B;
-	});*/
+	auto sorted_children = gltfNode.children;
+	
 	for (size_t i = 0; i < sorted_children.size(); ++i)
 	{
 		const tinygltf::Node						&child_node	 = model.nodes[sorted_children[i]];
 		ozz::animation::offline::RawSkeleton::Joint &child_joint = _joint->children[i];
 
-		if (!ImportNode(child_node, model, &child_joint, restPoses))
+		if (!ImportNode(child_node, model, &child_joint, sourceAxesStandard, targetAxesStandard))
 		{
 			return false;
 		}
@@ -161,7 +173,10 @@ bool ImportNode(const tinygltf::Node &_node, const tinygltf::Model &model, ozz::
 	return true;
 }
 
-bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const tinygltf::Model &model,std::map<std::string, teleport::core::PoseScale> &restPoses)
+bool ImportSkeleton(ozz::animation::offline::RawSkeleton			 &raw_skeleton,
+					const tinygltf::Model							 &model,
+					platform::crossplatform::AxesStandard			sourceAxesStandard,
+					platform::crossplatform::AxesStandard			targetAxesStandard)
 {
 	if (model.scenes.empty())
 	{
@@ -179,7 +194,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 	}
 
 	const tinygltf::Scene &scene = model.scenes[defaultScene];
-	TELEPORT_LOG("Importing from default scene #{} with name {}" ,defaultScene, scene.name);
+	TELEPORT_LOG("Importing from default scene #{} with name {}", defaultScene, scene.name);
 
 	if (scene.nodes.empty())
 	{
@@ -193,8 +208,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 	if (skins.empty())
 	{
 		TELEPORT_LOG("No skin exists in the scene, the whole scene graph "
-						   "will be considered as a skeleton."
-						);
+					 "will be considered as a skeleton.");
 		// Uses all scene nodes.
 		for (auto &node : scene.nodes)
 		{
@@ -206,7 +220,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 		if (skins.size() > 1)
 		{
 			TELEPORT_LOG("Multiple skins exist in the scene, they will all "
-							   "be exported to a single skeleton.");
+						 "be exported to a single skeleton.");
 		}
 
 		// Uses all skins roots.
@@ -223,7 +237,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton &raw_skeleton, const ti
 	{
 		const tinygltf::Node						&root_node	= model.nodes[roots[i]];
 		ozz::animation::offline::RawSkeleton::Joint &root_joint = raw_skeleton.roots[i];
-		if (!ImportNode(root_node, model, &root_joint, restPoses))
+		if (!ImportNode(root_node, model, &root_joint, sourceAxesStandard, targetAxesStandard))
 		{
 			return false;
 		}
@@ -242,7 +256,9 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 							const std::string								  &_target_path,
 							float											   _sampling_rate,
 							float											  *_duration,
-							ozz::animation::offline::RawAnimation::JointTrack *_track)
+							ozz::animation::offline::RawAnimation::JointTrack *_track,
+							platform::crossplatform::AxesStandard sourceAxesStandard,
+							platform::crossplatform::AxesStandard targetAxesStandard)
 {
 	// Validate interpolation type.
 	if (_sampler.interpolation.empty())
@@ -282,7 +298,11 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 	if (_target_path == "translation")
 	{
 		// TODO: Restore translation
-		valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
+		//valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
+		//for(auto &t:_track->translations)
+		//{
+		//	t.value=ConvertPosition(sourceAxesStandard,targetAxesStandard,t.value);
+		//}
 	}
 	else if (_target_path == "rotation")
 	{
@@ -293,12 +313,15 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 			for (auto &key : _track->rotations)
 			{
 				key.value = ozz::math::Normalize(key.value);
+				key.value = ConvertRotation(sourceAxesStandard,targetAxesStandard,key.value);
 			}
 		}
 	}
 	else if (_target_path == "scale")
 	{
 		valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->scales);
+		for (auto &s : _track->scales)
+			s.value=ConvertScale(sourceAxesStandard,targetAxesStandard,s.value);
 	}
 	else
 	{
@@ -324,7 +347,9 @@ const tinygltf::Node *FindNodeByName(const tinygltf::Model &model, const std::st
 bool ImportAnimations(const tinygltf::Model					&model,
 					  const ozz::animation::Skeleton		&skeleton,
 					  float									 _sampling_rate,
-					  ozz::animation::offline::RawAnimation *_animation)
+					  ozz::animation::offline::RawAnimation *_animation,
+					  platform::crossplatform::AxesStandard sourceAxesStandard,
+					  platform::crossplatform::AxesStandard targetAxesStandard)
 {
 	if (_sampling_rate == 0.0f)
 	{
@@ -333,9 +358,10 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		static bool samplingRateWarn = false;
 		if (!samplingRateWarn)
 		{
-			TELEPORT_LOG( "The animation sampling rate is set to 0 "
-								"(automatic) but glTF does not carry scene frame "
-								"rate information. Assuming a sampling rate of {} Hz", _sampling_rate);
+			TELEPORT_LOG("The animation sampling rate is set to 0 "
+						 "(automatic) but glTF does not carry scene frame "
+						 "rate information. Assuming a sampling rate of {} Hz",
+						 _sampling_rate);
 
 			samplingRateWarn = true;
 		}
@@ -359,7 +385,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		// map where we record the associated channels for each joint
 		ozz::cstring_map<std::vector<const tinygltf::AnimationChannel *>> channels_per_joint;
 
-		//std::cout << "Animation: " << gltf_animation.name << std::endl;
+		// std::cout << "Animation: " << gltf_animation.name << std::endl;
 		for (const tinygltf::AnimationChannel &channel : gltf_animation.channels)
 		{
 			// Reject if no node is targeted.
@@ -369,9 +395,9 @@ bool ImportAnimations(const tinygltf::Model					&model,
 			}
 
 			// What node?
-			const auto &node=model.nodes[channel.target_node];
-			//std::cout << "    " << node.name << std::endl;
-			// Reject if path isn't about skeleton animation.
+			const auto &node  = model.nodes[channel.target_node];
+			// std::cout << "    " << node.name << std::endl;
+			//  Reject if path isn't about skeleton animation.
 			bool valid_target = false;
 			for (const char *path : {"translation", "rotation", "scale"})
 			{
@@ -392,22 +418,22 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		std::string joints;
 		for (int i = 0; i < num_joints; i++)
 		{
-			auto &channels = channels_per_joint[joint_names[i]];
-			auto &track	   = _animation->tracks[i];
-			std::string j=joint_names[i];
-			joints+=j+" ";
-			//if(j=="leftLowerArm")
+			auto	   &channels = channels_per_joint[joint_names[i]];
+			auto	   &track	 = _animation->tracks[i];
+			std::string j		 = joint_names[i];
+			joints += j + " ";
+			// if(j=="leftLowerArm")
 			for (auto &channel : channels)
 			{
 				auto &sampler = gltf_animation.samplers[channel->sampler];
-				if (!SampleAnimationChannel(model, sampler, channel->target_path, _sampling_rate, &_animation->duration, &track))
+				if (!SampleAnimationChannel(model, sampler, channel->target_path, _sampling_rate, &_animation->duration, &track, sourceAxesStandard, targetAxesStandard))
 				{
 					continue;
 				}
 			}
 
 			const tinygltf::Node *node = FindNodeByName(model, joint_names[i]);
-			if(node == nullptr)
+			if (node == nullptr)
 			{
 				continue;
 			}
@@ -416,20 +442,26 @@ bool ImportAnimations(const tinygltf::Model					&model,
 			// associated channel for this animation
 			if (track.translations.empty())
 			{
-				track.translations.push_back(CreateTranslationRestPoseKey(*node));
+				auto trans = CreateTranslationRestPoseKey(*node);
+				trans.value = ConvertPosition(sourceAxesStandard,targetAxesStandard,trans.value);
+				track.translations.push_back(trans);
 			}
 			if (track.rotations.empty())
 			{
-				track.rotations.push_back(CreateRotationRestPoseKey(*node));
+				auto rot = CreateRotationRestPoseKey(*node);
+				rot.value = ConvertRotation(sourceAxesStandard,targetAxesStandard,rot.value);
+				track.rotations.push_back(rot);
 			}
 			if (track.scales.empty())
 			{
-				track.scales.push_back(CreateScaleRestPoseKey(*node));
+				auto sca = CreateScaleRestPoseKey(*node);
+				sca.value = ConvertScale(sourceAxesStandard,targetAxesStandard,sca.value);
+				track.scales.push_back(sca);
 			}
 		}
-		//std::cout<<joints<<"\n";
+		// std::cout<<joints<<"\n";
 
-		TELEPORT_LOG( "Processed animation '{}' (tracks: {}, duration: {} s).", _animation->name, _animation->tracks.size(), _animation->duration);
+		TELEPORT_LOG("Processed animation '{}' (tracks: {}, duration: {} s).", _animation->name, _animation->tracks.size(), _animation->duration);
 
 		if (!_animation->Validate())
 		{
@@ -440,25 +472,30 @@ bool ImportAnimations(const tinygltf::Model					&model,
 	return true;
 }
 
-bool Animation::LoadFromGlb(const uint8_t *data, size_t size)
+bool Animation::LoadFromGlb(const uint8_t *data, size_t size, avs::AxesStandard sourceAxesStandard,
+					avs::AxesStandard			targetAxesStandard)
 {
-	raw_skeleton=ozz::make_unique<ozz::animation::offline::RawSkeleton>();
-	raw_animation=ozz::make_unique<ozz::animation::offline::RawAnimation>( );
+	raw_skeleton  = ozz::make_unique<ozz::animation::offline::RawSkeleton>();
+	raw_animation = ozz::make_unique<ozz::animation::offline::RawAnimation>();
 	tinygltf::TinyGLTF loader;
 	auto image_loader = [](tinygltf::Image *, const int, std::string *, std::string *, int, int, const unsigned char *, int, void *) { return true; };
 	loader.SetImageLoader(image_loader, NULL);
 	tinygltf::Model model;
-	std::string	err;
-	std::string	warn;
+	std::string		err;
+	std::string		warn;
 	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
 	json config;
-	if (!ImportSkeleton(*raw_skeleton,  model, restPoses))
+	//! Mapping from node names to the initial poses.
+	if (!ImportSkeleton(*raw_skeleton, model, (platform::crossplatform::AxesStandard)sourceAxesStandard,  (platform::crossplatform::AxesStandard)targetAxesStandard))
+	{
 		return false;
-	ozz::animation::offline::SkeletonBuilder skeletonBuilder;
-	ozz::unique_ptr<ozz::animation::Skeleton>	 skeleton = skeletonBuilder(*raw_skeleton);
-	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation)))
+	}
+	ozz::animation::offline::SkeletonBuilder  skeletonBuilder;
+	ozz::unique_ptr<ozz::animation::Skeleton> skeleton = skeletonBuilder(*raw_skeleton);
+	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation),  (platform::crossplatform::AxesStandard)sourceAxesStandard,  (platform::crossplatform::AxesStandard)targetAxesStandard))
+	{
 		return false;
-	
-
+	}
+	duration=raw_animation->duration;
 	return true;
 }

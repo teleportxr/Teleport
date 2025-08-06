@@ -1279,11 +1279,11 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 										prevAnimDuration = prevAnim->duration;
 									if (anim)
 										nextAnimDuration = anim->duration;
-									auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId, st.previousAnimationState.animationTimeS / prevAnimDuration, st.previousAnimationState.speedUnitsPerS);
+									auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId, st.previousAnimationState.timeRatio, st.previousAnimationState.speedUnitsPerS);
 
 									DoRow(prevAnim ? prevAnim->getName().c_str() : "Previous", txt.c_str());
 									DoRow("Interp", fmt::format("{0}", st.interpolation).c_str());
-									txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.animationTimeS / nextAnimDuration, st.animationState.speedUnitsPerS);
+									txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.timeRatio, st.animationState.speedUnitsPerS);
 									DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
 								}
 								#endif

@@ -13,6 +13,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#pragma optimize("",off)
 // For operator ""s
 using namespace std::literals;
 using namespace std::string_literals;
@@ -262,7 +263,7 @@ void TraverseJoints(const ozz::animation::offline::RawSkeleton &skeleton
 		}
 		else
 		{
-		joint_map[mapped_bone_name] = joint_index;
+			joint_map[mapped_bone_name] = joint_index;
 		}
 		if(joint_index>=modelspace_transforms.size())
 			modelspace_transforms.resize(joint_index+1);
@@ -538,7 +539,7 @@ void BuildRetargetInfoRecursive(const ozz::vector<ozz::animation::offline::RawSk
 					{
 						ret.sourceParentModel = retargeter.source.modelspace_transforms[source_parent_joint_index];
 						ret.targetParentModel = retargeter.target.modelspace_transforms[target_parent_joint_index];
-						// ComputeModelSpaceTransform(retargeter.target.skeleton,// ret.parentName);
+					
 					}
 				}
 				else
