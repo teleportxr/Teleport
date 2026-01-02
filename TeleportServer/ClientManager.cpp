@@ -24,7 +24,7 @@ std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
 #include "UnixDebugOutput.h"
 std::shared_ptr<DebugOutput> debug_buffer(true, "teleport_server.log", 128);
 #endif
-#pragma optimize("",off)
+
 namespace teleport
 {
 	namespace server

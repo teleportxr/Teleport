@@ -53,7 +53,7 @@ void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &
 	Render(deviceContext, canvasRender->textCanvas->fontAtlas.get(), textCanvasCreateInfo.size, textCanvasCreateInfo.text, textCanvasCreateInfo.colour, 
 		{-width / 2.0f, height / 2.0f, width, -height}, no_background, textCanvasCreateInfo.lineHeight, canvasRender->textCanvas->fontChars);
 }
-#pragma optimize("",off)
+
 void CanvasTextRenderer::Render(platform::crossplatform::GraphicsDeviceContext &deviceContext, const clientrender::FontAtlas *fontAtlas
 									,int size
 									,const std::string &text

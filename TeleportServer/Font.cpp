@@ -22,7 +22,7 @@ using namespace msdf_atlas;
 using namespace teleport;
 using namespace server;
 
-#pragma optimize("",off)
+
 bool server::Font::ExtractMsdfFont(core::FontAtlas &fontAtlas,std::string ttf_path_utf8, std::string generate_texture_path_utf8, std::string atlas_chars,avs::Texture &avsTexture
 	,std::vector<int> sizes)
 {

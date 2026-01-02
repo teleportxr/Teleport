@@ -1,4 +1,4 @@
-#pragma optimize("",off)
+
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif

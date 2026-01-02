@@ -31,20 +31,22 @@ set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/canvas_text.sfx"
 			"${CMAKE_SOURCE_DIR}/client/Shaders/texture_conversion.sfx")
 file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
 
+source_group("Shaders" src FILES ${shaders} )
+source_group("Shader Includes" src FILES ${shader_includes} )
+
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /DPLATFORM_DIR=${TELEPORT_PLATFORM_DIR}")
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
+	add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles} Icon.rc)
+elseif(PLATFORM_LINUX)
+	add_static_executable( TeleportPCClient CONSOLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles})
+
 else()
 	message("Unsupported platform for TeleportPCClient!")
 	return()
 endif()
-
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /wd4711")
-source_group("Shaders" src FILES ${shaders} )
-source_group("Shader Includes" src FILES ${shader_includes} )
-
-add_static_executable( TeleportPCClient WIN32 SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles} Icon.rc)
 
 if(LIBAV_USE_CUDA)
 	add_custom_command(
@@ -86,9 +88,6 @@ endif()
 #target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/webrtc/lib/Release)
 target_link_libraries(TeleportPCClient )
 target_compile_definitions(TeleportPCClient PUBLIC TELEPORT_CLIENT_USE_VULKAN=$<BOOL:${TELEPORT_CLIENT_USE_VULKAN}> TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}>  )	
-
-#file(GET_RUNTIME_DEPENDENCIES RESOLVED_DEPENDENCIES_VAR dependencies)
-#message("dependencies: ${dependencies}")
 
 SetTeleportDefaults(TeleportPCClient)
 set_target_properties( TeleportPCClient PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows")

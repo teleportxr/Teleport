@@ -10,7 +10,7 @@
 
 using namespace teleport;
 using namespace clientrender;
-#pragma optimize("",off)
+
 static std::vector<std::string> name_order={
 		"hips",
 		"spine",

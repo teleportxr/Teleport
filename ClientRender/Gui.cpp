@@ -501,7 +501,7 @@ void Gui::ShowFont()
 		TreePop();
 	}
 }
-#pragma optimize("",off)
+
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *search_text)
 {
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);

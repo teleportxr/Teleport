@@ -9,6 +9,7 @@
 #include <string.h>
 #include <iostream>
 #include <thread>
+#include <atomic>
 #include <fmt/core.h>
 
 #define QUEUE_LOGGING 0

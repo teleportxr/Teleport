@@ -16,7 +16,7 @@
 
 using namespace teleport;
 using namespace server;
-#pragma optimize("",off)
+
 
 ClientMessaging::ClientMessaging(SignalingService &signalingService,
 								 SetHeadPoseFn setHeadPose,

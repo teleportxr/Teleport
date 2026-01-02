@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2024 Teleport XR Ltd
 
 #pragma once
+#include <cstring>
 #include <libavstream/common_packing.h>
 #include <libavstream/common_exports.h>
 #include <libavstream/common_maths.h>

@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#pragma optimize("",off)
+
 // For operator ""s
 using namespace std::literals;
 using namespace std::string_literals;
@@ -48,7 +48,7 @@ void replace_all(
     s.swap(buf);
 }
 
-#pragma optimize("",off)
+
 /*
 * The VRM Bone Names are:
 hips

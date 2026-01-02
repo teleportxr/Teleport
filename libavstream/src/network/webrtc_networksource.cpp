@@ -32,7 +32,7 @@ extern "C" FILE * __cdecl __iob_func(void)
 	return _iob;
 }
 #endif
-#pragma optimize("",off)
+
 using namespace std;
 using nlohmann::json;
 

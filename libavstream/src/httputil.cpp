@@ -16,12 +16,13 @@
 #pragma optimize("", off)
 using namespace std::chrono;
 using namespace std::filesystem;
-#ifdef __ANDROID__
+#ifdef _MSC_VER
 #include <experimental/filesystem>
-using namespace std::experimental::filesystem;
-#define FILE_TIME_TYPE _FilesystemClock
-#else
 #define FILE_TIME_TYPE _File_time_clock
+#else
+#include <filesystem>
+using namespace std::filesystem;
+#define FILE_TIME_TYPE std::filesystem::file_time_type::clock
 #endif
 using namespace std::string_literals;
 inline void CheckCurlError(CURLcode code, const char *context)
