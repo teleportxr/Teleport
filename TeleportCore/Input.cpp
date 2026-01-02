@@ -61,7 +61,7 @@ void Input::addMotionEvent( InputId inputID, vec2 motion)
 	InputEventMotion motionEvent;
 	motionEvent.eventID = nextEventID++;
 	motionEvent.inputID = inputID;
-	motionEvent.motion = motion;
+	motionEvent.motion = {motion.x,motion.y};
 
 	motionEvents.push_back(motionEvent);
 }

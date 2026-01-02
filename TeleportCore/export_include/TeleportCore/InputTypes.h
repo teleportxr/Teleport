@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
+
 #ifndef TELEPORT_PACKED
 	#if defined(__GNUC__) || defined(__clang__)
 		#define TELEPORT_PACKED __attribute__ ((packed,aligned(1)))
@@ -18,20 +19,20 @@ namespace teleport
 	#endif
 		struct Pose
 		{
-			vec4 orientation = { 0, 0, 0, 1 };
-			vec3 position = { 0, 0, 0 };
+			vec4_packed orientation = { 0, 0, 0, 1 };
+			vec3_packed position = { 0, 0, 0 };
 		} TELEPORT_PACKED;
 		struct PoseScale
 		{
-			vec4 orientation = { 0, 0, 0, 1 };
-			vec3 position = { 0, 0, 0 };
-			vec3 scale = { 1, 1, 1 };
+			vec4_packed orientation = { 0, 0, 0, 1 };
+			vec3_packed position = { 0, 0, 0 };
+			vec3_packed scale = { 1, 1, 1 };
 		} TELEPORT_PACKED;
 		struct PoseDynamic
 		{
 			Pose pose;
-			vec3 velocity;
-			vec3 angularVelocity;
+			vec3_packed velocity;
+			vec3_packed angularVelocity;
 		} TELEPORT_PACKED;
 		//! An input identifier, used between client and server to denote a specific input.
 		typedef uint16_t InputId;
@@ -110,8 +111,9 @@ namespace teleport
 		{
 			uint32_t eventID = 0;
 			InputId inputID = 0; // ID of the input type used that triggered the event.
-			vec2 motion = vec2{0.0f, 0.0f};
+			vec2_packed motion = {0.0f, 0.0f};
 		} TELEPORT_PACKED;
+		static_assert(sizeof(InputEventMotion) == sizeof(uint32_t)+sizeof(InputId)+sizeof(vec2), "Incorrect size for InputEventMotion");
 
 	#ifdef _MSC_VER
 	#pragma pack(pop)

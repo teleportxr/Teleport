@@ -96,7 +96,8 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 - WebRTC: Network connectivity
 - CUDA: GPU-accelerated video encoding
 - Vulkan/DirectX: Graphics APIs
-- Third-party: Draco compression, FreeType fonts, OpenSSL
+- Third-party: Draco compression, FreeType fonts, OpenSSL, FLEX/Bison
+- Linux: GLFW dependencies: https://www.glfw.org/docs/latest/compile_guide.html#compile_deps_wayland
 
 This is a sophisticated, production-ready VR/AR streaming platform that enables remote rendering scenarios where heavy 3D content runs on powerful servers and streams to lightweight VR/AR clients. It's particularly useful for enterprise VR applications, cloud gaming, and collaborative virtual environments.
 
@@ -122,6 +123,7 @@ or if you have already cloned the main repo,
 8. Ubuntu on Windows
 9. Nasm, to build OpenSSL. Get it from https://www.nasm.us/.
 10. OpenXR, for the client. Get it from https://github.com/KhronosGroup/OpenXR-SDK.
+11. Flex/Bison Linux: sudo apt-get install flex bison
 
 ## Building the PC Client
 

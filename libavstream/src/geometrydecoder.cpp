@@ -8,7 +8,7 @@
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <TeleportCore/Logging.h>
-#pragma optimize("",off)
+
 namespace avs
 {
 	class GeometryParser final : public GeometryParserInterface

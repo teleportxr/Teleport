@@ -6,6 +6,7 @@
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
 #include <vector>
+#include <atomic>
 
 namespace avs
 {

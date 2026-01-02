@@ -7,7 +7,7 @@ using std::regex;
 
 using namespace teleport;
 using namespace core;
-#pragma optimize("",off)
+
 DomainPortPath teleport::core::GetDomainPortPath(const std::string &url)
 {
 	using std::string, std::regex;

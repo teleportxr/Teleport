@@ -78,7 +78,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
 	//TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs()));
 }
-#pragma optimize("",off)
+
 // Here we will extrapolate the transform based on the last received movement update.
 // TODO: Correctly handle scales here.
 void Node::TickExtrapolatedTransform(double serverTimeS)

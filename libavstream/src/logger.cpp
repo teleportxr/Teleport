@@ -7,8 +7,6 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define AVSLOG(Severity) std::cerr<<__FILENAME__<<"("<<__LINE__<<"): "<<#Severity<<": "
-#define AVSLOGONCE(Severity) 
-#define AVSLOG_NOSPAM(Severity) 
 
 using namespace avs;
 Logger &Logger::GetInstance()

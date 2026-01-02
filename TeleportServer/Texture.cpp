@@ -19,7 +19,7 @@ using namespace server;
 using namespace std::filesystem;
 using std::filesystem::path;
 using std::string;
-#pragma optimize("",off)
+
 static bool g_bAbortCompression=false;
 static float compressionProgress=0.0f;
 static bool CompressionCallback(float fProgress, CMP_DWORD_PTR pUser1, CMP_DWORD_PTR pUser2)

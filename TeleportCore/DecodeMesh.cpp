@@ -5,7 +5,7 @@
 
 using namespace teleport::core;
 
-#pragma optimize("",off)
+
 
 namespace teleport::core
 {

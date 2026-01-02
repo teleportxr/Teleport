@@ -15,35 +15,6 @@
 	#endif
 #endif
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-typedef vec2 vec2_packed;
-typedef vec3 vec3_packed;
-typedef vec4 vec4_packed;
-#else
-#pragma pack(1)
-struct vec2_packed
-{
-	float x, y;
-	operator const vec2() const {
-		return *((const vec2*)this);
-	}
-} TELEPORT_PACKED;
-struct vec3_packed
-{
-	float x, y, z;
-	operator const vec3() const {
-		return *((const vec3*)this);
-	}
-} TELEPORT_PACKED;
-struct vec4_packed
-{
-	float x, y, z, w;
-	operator const vec4() const {
-		return *((const vec4*)this);
-	}
-} TELEPORT_PACKED;
-#endif
 namespace avs
 {
 	//! Information on the configuration of a video stream.
@@ -334,12 +305,12 @@ namespace teleport
 		//! Setup for dynamically-lit objects on the client.
 		struct ClientDynamicLighting
 		{
-			int2 specularPos = {0, 0};
+			int2_packed specularPos = {0, 0};
 			int32_t specularCubemapSize = 0;
 			int32_t specularMips = 0;
-			int2 diffusePos = {0, 0};
+			int2_packed diffusePos = {0, 0};
 			int32_t diffuseCubemapSize = 0;
-			int2 lightPos = {0, 0};
+			int2_packed lightPos = {0, 0};
 			int32_t lightCubemapSize = 0;
 			avs::uid specular_cubemap_texture_uid = 0;
 			avs::uid diffuse_cubemap_texture_uid = 0;	//14*4=56

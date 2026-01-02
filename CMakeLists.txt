@@ -23,27 +23,42 @@ else()
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
 
-function(set_target_runtime targname rt)
-	# Default to statically-linked runtime.
-	if("${rt}" STREQUAL "")
-		set(rt "static")
-	endif()
-	#message(STATUS "rt ${rt}")
-	if(${rt} STREQUAL "static")
-		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
-	else()	
-		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MD$<$<CONFIG:Debug>:d>")
-	endif()
-endfunction()
-
 message("TELEPORT_SOLUTION_NAME: ${TELEPORT_SOLUTION_NAME}")
 message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+
+
+set(TELEPORT_UNIX OFF)
+set(TELEPORT_WINDOWS OFF)
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+	set(TELEPORT_WINDOWS ON)
+endif()
+
+set(CMAKE_CXX_STANDARD 20 )
+set(PLATFORM_CPP_VERSION 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON )
+set(CMAKE_CXX_EXTENSIONS ON )
+
+# assume built-in pthreads on Linux/MacOS
+message("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+	set(CMAKE_HAVE_THREADS_LIBRARY 1)
+	set(CMAKE_USE_WIN32_THREADS_INIT 0)
+	set(CMAKE_USE_PTHREADS_INIT 1)
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	set(TELEPORT_UNIX ON)
+	# fix linkage for lots of libraries:
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
+	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Linux)
+endif()
+
 # FetchContent download timestamp policy:
 cmake_policy(SET CMP0135 NEW)
 cmake_policy(SET CMP0077 NEW)
 
 set(PLATFORM_USE_FMT ON)
-set(PLATFORM_SUPPORT_D3D12 ON)
+set(PLATFORM_SUPPORT_D3D12 ${TELEPORT_WINDOWS})
 set(PLATFORM_USE_ASSIMP OFF CACHE BOOL "" FORCE)
 set(PLATFORM_BUILD_ASSIMP OFF CACHE BOOL "" FORCE)
 set(PLATFORM_SUPPORT_D3D11 OFF)
@@ -70,7 +85,6 @@ endif()
 Include(FetchContent)
 
 macro(get_all_targets_recursive targets dir)
-	message("get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)")
 	get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
 	foreach(subdir ${subdirectories})
 		get_all_targets_recursive(${targets} ${subdir})
@@ -100,6 +114,19 @@ FetchContent_Declare(
   SOURCE_DIR ktx
 )
 FetchContent_MakeAvailable(ktx)
+
+function(set_target_runtime targname rt)
+	# Default to statically-linked runtime.
+	if("${rt}" STREQUAL "")
+		set(rt "static")
+	endif()
+	if(${rt} STREQUAL "static")
+		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
+	else()	
+		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MD$<$<CONFIG:Debug>:d>")
+	endif()
+endfunction()
+
 set_target_runtime(ktx ${TELEPORT_RUNTIME})
 set_target_runtime(ktx_read ${TELEPORT_RUNTIME})
 set_target_runtime(astcenc-avx2-static ${TELEPORT_RUNTIME})
@@ -232,9 +259,8 @@ else()
 endif()
 
 if(TELEPORT_CLIENT)
-
 	option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
-	option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
+	option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ${PLATFORM_LINUX})
 	if( ${TELEPORT_CLIENT_USE_D3D12})
 		set(TELEPORT_CLIENT_USE_D3D11 OFF)
 	endif()
@@ -244,39 +270,12 @@ if(TELEPORT_CLIENT)
 		find_package(Vulkan)
 	endif()
 	option(TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER "Use Platform video decoder? Currently requires TELEPORT_CLIENT_USE_D3D12" OFF)
-
 	if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 		if(NOT ${TELEPORT_CLIENT_USE_D3D12})
 			message("Warning: Setting TELEPORT_CLIENT_USE_D3D12 true because TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER is true.")
 			set(TELEPORT_CLIENT_USE_D3D12 ON)
 		endif()
 	endif()
-endif()
-
-set(TELEPORT_UNIX OFF)
-set(TELEPORT_WINDOWS OFF)
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-	set(TELEPORT_WINDOWS ON)
-endif()
-
-set(CMAKE_CXX_STANDARD 20 )
-set(PLATFORM_CPP_VERSION 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON )
-set(CMAKE_CXX_EXTENSIONS ON )
-
-# assume built-in pthreads on Linux/MacOS
-message("CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-	set(CMAKE_HAVE_THREADS_LIBRARY 1)
-	set(CMAKE_USE_WIN32_THREADS_INIT 0)
-	set(CMAKE_USE_PTHREADS_INIT 1)
-	set(THREADS_PREFER_PTHREAD_FLAG ON)
-	set(TELEPORT_UNIX ON)
-	# fix linkage for lots of libraries:
-	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
-	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Linux)
 endif()
 
 set(TELEPORT_SERVER_DLL_DIR "${TELEPORT_UNITY_PLUGINS_DIR}" CACHE PATH "Location to build TeleportServer.dll for use by engine")
@@ -372,16 +371,16 @@ else()
 endif()
 
 if(TELEPORT_UNIX)
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-ignored-qualifiers -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-ignored-qualifiers -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
 	# Either use everywhere or not at all: add_compile_definitions(PRIVATE _GLIBCXX_DEBUG)
 endif()
 
 if(TELEPORT_SERVER)
-	set(TELEPORT_DATACHANNEL_WEBRTC ON)
+	set(TELEPORT_DATACHANNEL_WEBRTC ON) 
 	add_compile_definitions(PRIVATE TELEPORT_DATACHANNEL_WEBRTC=1) 
 else()
-	set(TELEPORT_DATACHANNEL_WEBRTC ON)
+	set(TELEPORT_DATACHANNEL_WEBRTC ON) 
 	add_compile_definitions(PRIVATE TELEPORT_CLIENT=1 TELEPORT_DATACHANNEL_WEBRTC=1) 
 endif()
 
@@ -402,7 +401,7 @@ function(SetTeleportDefaults targname)
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL=__stdcall)
 	else()
 	#TODO: -Wno-deprecated-copy should be removed when possible.
-		target_compile_options(${targname} PRIVATE -Wall -Wextra -pedantic -Werror -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
+		target_compile_options(${targname} PRIVATE -Werror -Wno-ignored-qualifiers -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
 		# these options are intended to minimize the necessary changes to build on Linux, and should be removed when possible:
 		target_compile_options(${targname} PRIVATE -Wno-missing-field-initializers -Wno-unused-variable -Wno-deprecated-copy)
 

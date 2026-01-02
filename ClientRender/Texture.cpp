@@ -82,7 +82,7 @@ void Texture::Destroy()
 	delete m_SimulTexture;
 	m_SimulTexture = nullptr;
 }
-#pragma optimize("",off)
+
 void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 {
 	if(pTextureCreateInfo.format==Format::FORMAT_UNKNOWN)

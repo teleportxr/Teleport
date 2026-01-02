@@ -10,6 +10,7 @@
 #include <vector>
 #include <mutex>
 #include <queue>
+#include <string>
 
 #define LIBAVSTREAM_VERSION 1
 

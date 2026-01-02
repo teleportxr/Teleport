@@ -11,7 +11,7 @@
 #include <openssl/sha.h>
 
 #include <httplib.h>
-#pragma optimize("",off)
+
 
 GoogleOAuthPKCE auth;
 

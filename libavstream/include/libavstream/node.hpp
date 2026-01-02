@@ -10,6 +10,8 @@
 #include <../src/abi_p.hpp>
 
 #include <vector>
+#include <string>
+#include <atomic>
 
 namespace avs
 {

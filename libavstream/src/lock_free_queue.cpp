@@ -9,7 +9,7 @@
 #include <fmt/core.h>
 #include "logger.hpp"
 #include <libavstream/queue.hpp>
-#pragma optimize("",off)
+
 #if QUEUE_LOGGING
 avs::Logger &logger=Logger::GetInstance();
 #define SUMMARIZE(event,block,count,rd,wr,ct,rd_blk,wr_blk) AVS_LOG("{0} {1}({2}) - next_read_index: {3}, next_write_index: {4}, blockCount: {5}={6}\n\twill read: {7} from {8}\n",#event,block,count,rd,wr,ct,(wr_blk-rd_blk),*((const size_t*)&ringBuffer[next_read_index.load()]),next_read_index.load());

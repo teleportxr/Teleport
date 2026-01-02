@@ -17,10 +17,10 @@
 
 #include <ElasticFrameProtocol.h>
 
-#pragma optimize("",off)
+
 using namespace std;
 using nlohmann::json;
-#pragma optimize("",off)
+
 #define EVEN_ID(id) (id-(id%2))
 #define ODD_ID(id) (EVEN_ID(id)+1)
 
