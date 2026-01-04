@@ -13,6 +13,7 @@ namespace avs
 	{
 	public:
 		virtual Result decode(const void* buffer, size_t bufferSizeInBytes) = 0;
+		virtual ~GenericTargetInterface(){};
 	};
 	/// Generic decoder node `[input-active, output-active, 1/1]`
 	/// 

@@ -100,9 +100,7 @@ endmacro()
 # Get the Khronos ktx2 repo
 set(KTX_FEATURE_TOOLS OFF CACHE BOOL "" FORCE)
 set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)
-set(KTX_FEATURE_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
 set(KTX_FEATURE_GL_UPLOAD Off CACHE BOOL "" FORCE)
-set(KTX_FEATURE_STATIC_LIBRARY On CACHE BOOL "" FORCE)
 set(KTX_FEATURE_TESTS Off CACHE BOOL "" FORCE)
 set(KTX_FEATURE_TOOLS Off CACHE BOOL "" FORCE)
 set(KTX_FEATURE_Vulkan On CACHE BOOL "" FORCE)
@@ -110,20 +108,22 @@ FetchContent_Declare(
   ktx
   GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
 	GIT_SHALLOW 1
-  GIT_TAG        v4.3.2
+  GIT_TAG        v4.4.2
   SOURCE_DIR ktx
 )
 FetchContent_MakeAvailable(ktx)
 
 function(set_target_runtime targname rt)
-	# Default to statically-linked runtime.
-	if("${rt}" STREQUAL "")
-		set(rt "static")
-	endif()
-	if(${rt} STREQUAL "static")
-		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
-	else()	
-		SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MD$<$<CONFIG:Debug>:d>")
+	if(TELEPORT_WINDOWS)
+		# Default to statically-linked runtime.
+		if("${rt}" STREQUAL "")
+			set(rt "static")
+		endif()
+		if(${rt} STREQUAL "static")
+			SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MT$<$<CONFIG:Debug>:d>")
+		else()	
+			SET_TARGET_PROPERTIES(${targname} PROPERTIES COMPILE_OPTIONS "/MD$<$<CONFIG:Debug>:d>")
+		endif()
 	endif()
 endfunction()
 
@@ -371,8 +371,8 @@ else()
 endif()
 
 if(TELEPORT_UNIX)
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-ignored-qualifiers -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-ignored-qualifiers -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wno-nullability-extension -Wno-ignored-qualifiers -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wno-nullability-extension -Wno-ignored-qualifiers -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value")
 	# Either use everywhere or not at all: add_compile_definitions(PRIVATE _GLIBCXX_DEBUG)
 endif()
 

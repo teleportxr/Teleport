@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
+#include <stddef.h>
 
 class BitReader
 {

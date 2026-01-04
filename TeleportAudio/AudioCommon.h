@@ -1,4 +1,4 @@
-// (C) Copyright 2018-2020 Simul Software Ltd
+// (C) Copyright 2018-2024 Simul Software Ltd
 #pragma once
 
 //C Libraries
@@ -17,17 +17,39 @@
 #include <functional>
 #include "TeleportCore/ErrorHandling.h"
 
+#if __cplusplus >= 202002L
+#include <format>
+#else
+#include <fmt/core.h>
+#endif
+
 #define SCA_CERR TELEPORT_CERR
 #define SCA_COUT TELEPORT_COUT
-
-extern void log_print(const char* source,const char *format, ...);
 
 #if defined(__ANDROID__)
 #include <android/log.h>
 #define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()
 #define SCA_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCA", __VA_ARGS__);
 #else
-#define SCA_LOG(fmt,...) log_print( "SCA", fmt, __VA_ARGS__);
+extern void log_print_impl(const char* source, const std::string& message);
+
+#if __cplusplus >= 202002L
+template <typename... Args>
+void log_print(const char* source, const std::format_string<Args...> format, Args&&... args)
+{
+	std::string message = std::vformat(format.get(), std::make_format_args(args...));
+	log_print_impl(source, message);
+}
+#else
+template <typename... Args>
+void log_print(const char* source, const char* format, Args&&... args)
+{
+	std::string message = fmt::format(format, std::forward<Args>(args)...);
+	log_print_impl(source, message);
+}
+#endif
+
+#define SCA_LOG(fmt, ...) log_print("AUDIO", fmt, ##__VA_ARGS__)
 #endif
 
 namespace teleport

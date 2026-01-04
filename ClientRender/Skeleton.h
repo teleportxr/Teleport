@@ -82,7 +82,7 @@ namespace teleport
 			std::vector<std::shared_ptr<clientrender::Node>> bones;
 			//std::vector<mat4> inverseBindMatrices;
 			std::vector<int> jointMapping;
-			ozz::unique_ptr<ozz::animation::Skeleton> skeleton;;
+			ozz::unique_ptr<ozz::animation::Skeleton> skeleton;
 			ozz::unique_ptr<ozz::animation::offline::RawSkeleton> raw_skeleton;
 		};
 	}

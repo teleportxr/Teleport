@@ -3,6 +3,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 constexpr unsigned int TELEPORT_TIMEOUT = 1000;
 

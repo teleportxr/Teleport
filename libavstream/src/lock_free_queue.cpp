@@ -325,7 +325,7 @@ size_t LockFreeQueue::increaseBufferSize(size_t requestedSize)
 	while(i<nxtwrite)
 	{
 		uint64_t *ptr=(uint64_t *)&(ringBuffer[i]);
-		size_t sz=*ptr;z
+		size_t sz=*ptr;
 		size_t step=sz+INDEX_SIZE+(INDEX_SIZE-1);
 		step-=step%INDEX_SIZE;
 		if(step>next_write_index-i&&next_write_index-i>INDEX_SIZE){

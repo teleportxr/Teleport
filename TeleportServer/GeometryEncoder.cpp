@@ -16,7 +16,7 @@
 #include "TeleportCore/Profiling.h"
 #include "TeleportCore/TextCanvas.h"
 
-#pragma optimize("", off)
+
 using namespace teleport;
 using namespace server;
 using std::string;

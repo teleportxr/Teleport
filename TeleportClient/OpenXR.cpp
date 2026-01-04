@@ -413,7 +413,7 @@ void InteractionProfile::Add(XrInstance &xr_instance, std::initializer_list<Inte
 {
 	xrActionSuggestedBindings.reserve(xrActionSuggestedBindings.size()+bindings.size());
 	bindingPaths.reserve(bindingPaths.size()+bindings.size());
-	size_t i = 0;
+
 	for (auto elem : bindings)
 	{
 		XrPath p=0;
@@ -424,7 +424,6 @@ void InteractionProfile::Add(XrInstance &xr_instance, std::initializer_list<Inte
 			if (p)
 				xrActionSuggestedBindings.push_back({elem.action, p});
 			bindingPaths.push_back(elem.complete_path);
-			i++;
 		}
 		else
 		{
@@ -1032,8 +1031,8 @@ teleport::core::Pose ConvertJointPose(const XrPosef &xrpose)
 	vec3 pos_e = crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3 *)&xrpose.position));
 	crossplatform::Quaternionf ori_e = crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4 *)&xrpose.orientation));
 	
-	pose.position = *((vec3 *)&pos_e);
-	pose.orientation = *((vec4 *)&ori_e);
+	pose.position = *((vec3_packed *)&pos_e);
+	pose.orientation = *((vec4_packed *)&ori_e);
 	return pose;
 }
 
@@ -1727,8 +1726,8 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 			if (subActionState.poseActive)
 			{
 				state.pose_footSpace.pose = ConvertGLSpaceToEngineeringSpace(subActionState.pose_stageSpace);
-				state.pose_footSpace.velocity = ConvertGLSpaceToEngineeringSpace(subActionState.velocity_stageSpace);
-				state.pose_footSpace.angularVelocity = ConvertGLSpaceToEngineeringSpace(subActionState.angularVelocity_stageSpace);
+				state.pose_footSpace.velocity = packed(ConvertGLSpaceToEngineeringSpace(subActionState.velocity_stageSpace));
+				state.pose_footSpace.angularVelocity = packed(ConvertGLSpaceToEngineeringSpace(subActionState.angularVelocity_stageSpace));
 			}
 			else
 			{
@@ -1742,7 +1741,7 @@ void OpenXR::UpdateServerState(avs::uid server_uid,unsigned long long framenumbe
 					static float r=0.1f;
 					vec3 v0=*((vec3*)&state.pose_footSpace.velocity);
 					v=v0*(1.f-r)+r*v;
-					state.pose_footSpace.velocity			=v;
+					state.pose_footSpace.velocity			=packed(v);
 					state.pose_footSpace.angularVelocity	={0,0,0};
 				}
 			}
@@ -2542,8 +2541,8 @@ teleport::core::Pose OpenXR::ConvertGLSpaceToEngineeringSpace(const XrPosef &xrp
 	vec3 pos_e							= crossplatform::ConvertPosition(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec3*)&xrpose.position));
  	crossplatform::Quaternionf ori_e	= crossplatform::ConvertRotation(crossplatform::AxesStandard::OpenGL, crossplatform::AxesStandard::Engineering, *((const vec4*)&xrpose.orientation));
 
-	pose.position=*((vec3*)&pos_e);
-	pose.orientation=*((vec4*)&ori_e);
+	pose.position=packed(pos_e);
+	pose.orientation=*((vec4_packed*)&ori_e);
 	return pose;
 }
 
@@ -2707,7 +2706,7 @@ void OpenXR::RenderFrame(crossplatform::RenderDelegate &renderDelegate,crossplat
 		{
 			state.XrSpacePoseInWorld = headspace_location.pose;
 			headPose_stageSpace = ConvertGLSpaceToEngineeringSpace(headspace_location.pose);
-			crossplatform::Quaternionf q=headPose_stageSpace.orientation;
+			crossplatform::Quaternionf q=&headPose_stageSpace.orientation.x;
 			vec3 dir=q.RotateVector({0,1.f,0});
 			viewAzimuth = AngleRange(atan2f(-dir.x, dir.y));
 		}

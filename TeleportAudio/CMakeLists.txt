@@ -28,9 +28,15 @@ set( src_pc
 	PC_AudioCapture.h
 	)
 
+set( src_linux
+	LinuxAudioPlayer.cpp
+	LinuxAudioPlayer.h
+	)
 
 if(WIN32)
 	set( src_public ${src_root} ${src_crossplatform} ${src_pc})
+elseif(PLATFORM_LINUX)
+	set( src_public ${src_root} ${src_crossplatform} ${src_linux})
 else()
 	set( src_public ${src_root} ${src_crossplatform})
 endif()
@@ -52,5 +58,12 @@ set_target_properties( TeleportAudio PROPERTIES FOLDER Teleport )
 target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../libavstream/export_include ../)
 target_include_directories(TeleportAudio PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 target_include_directories(TeleportAudio PUBLIC ../firstparty )
+
+if(PLATFORM_LINUX)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
+	target_include_directories(TeleportAudio PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
+	target_link_libraries(TeleportAudio ${PULSEAUDIO_LIBRARIES})
+endif()
 
 #target_compile_features(libavstream PRIVATE cxx_std_17)

@@ -445,15 +445,15 @@ void teleport::clientrender::UpdateMouseCamera(	Camera2D *cam
 		mouseDeltaY =dy/rr;
 	}
 	input.LastMouseX=input.MouseX;
-	input.LastMouseY=input.MouseY;
-
-	static float x_rotate=0.f;
-	static float y_rotate=0.f;
-	x_rotate		*=retain;
-	x_rotate		+=mouseDeltaX*introduce;
+	//input.LastMouseY=input.MouseY;
+//
+	//static float x_rotate=0.f;
+	//static float y_rotate=0.f;
+	//x_rotate		*=retain;
+	//x_rotate		+=mouseDeltaX*introduce;
 	mouseDeltaX		=0.f;
-	y_rotate		*=retain;
-	y_rotate		+=mouseDeltaY*introduce;
+	//y_rotate		*=retain;
+	//y_rotate		+=mouseDeltaY*introduce;
 	mouseDeltaY		=0.f;
 
 	vec3 down(0,0,-1.0f);

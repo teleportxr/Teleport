@@ -3,6 +3,7 @@
 #include "basic_linear_algebra.h"
 #include "TeleportCore/URLParser.h"
 #include <set>
+#include <memory>
 
 namespace teleport
 {

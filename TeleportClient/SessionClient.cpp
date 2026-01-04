@@ -506,7 +506,7 @@ void SessionClient::SendReceivedResources()
 		SendMessageToServer(packet.data(), messageSize + receivedResourcesSize);
 	}
 }
-#pragma optimize("", off)
+
 void SessionClient::SendNodeUpdates()
 {
 	// Insert completed nodes.

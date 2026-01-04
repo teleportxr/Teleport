@@ -73,7 +73,7 @@ ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
 ImGui_ImplPlatform_TextureView imgui_ViveControllerTexture;
 void Gui::SetPlatformWindow(PlatformWindow *w)
 {
-#ifndef _MSC_VER
+#ifdef __ANDROID__
 	if (renderPlatform != nullptr && w != platformWindow)
 		ImGui_ImplAndroid_Init(w);
 #endif
@@ -1836,7 +1836,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}", node.name, node.inwardBandwidthKps).c_str());
 	draw_list->AddText(ImVec2(pos.x, pos.y + line.y), col, fmt::format("{0}", node.maxPacketKb).c_str());
 }
-#pragma optimize("", off)
+
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 {
 	const ImVec2 p = ImGui::GetCursorScreenPos();

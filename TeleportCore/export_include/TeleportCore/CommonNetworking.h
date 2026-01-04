@@ -394,7 +394,7 @@ namespace teleport
 			InputType inputType;
 			//! A regular expression that will be used to match the full component path of a client-side control
 			std::string regexPath;
-		} TELEPORT_PACKED;
+		} ;
 
 		//! The netpacket version of InputDefinition, to be followed by pathLength utf8 characters.
 		struct InputDefinitionNetPacket

@@ -25,7 +25,7 @@
 #include <cmath> // for isinf()
 #endif
 using namespace std::chrono_literals;
-#pragma optimize("", off)
+
 
 // #define STB_IMAGE_IMPLEMENTATION
 namespace teleport

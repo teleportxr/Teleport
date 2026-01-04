@@ -10,7 +10,7 @@
 #include "TeleportServer/ClientManager.h"
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ServerSettings.h"
-#pragma optimize("", off)
+
 
 using namespace teleport;
 using namespace server;

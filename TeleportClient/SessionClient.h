@@ -112,7 +112,7 @@ namespace teleport
 			avs::Result decode(const void* buffer, size_t bufferSizeInBytes) override;
 		public:
 			SessionClient(avs::uid server_uid, TabContext *tabContext, const std::string &domain);
-			~SessionClient();
+			virtual ~SessionClient();
 			
 			ClientServerState &GetClientServerState()
 			{

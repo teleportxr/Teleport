@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-#pragma optimize("", off)
+
 
 class V8Worker
 {
