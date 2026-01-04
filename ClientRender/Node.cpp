@@ -75,7 +75,7 @@ void Node::SetLastMovement(const teleport::core::MovementUpdate& update)
 	lastReceivedMovement = update;
 
 	//Set transform, then tick based on difference in time since the update was sent and now.
-	UpdateModelMatrix(update.position, *((quat*)&update.rotation), update.scale);
+	UpdateModelMatrix(unpacked(update.position), *((quat*)&update.rotation), unpacked(update.scale));
 	//TickExtrapolatedTransform(static_cast<float>(teleport::client::ServerTimestamp::getCurrentTimestampUTCUnixMs()));
 }
 
@@ -97,9 +97,9 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 	if (time_offset > 5.0)
 		time_offset = 5.0;
 	const Transform& transform = (ShouldUseGlobalTransform() ? GetGlobalTransform() : GetLocalTransform());
-	vec3 p0 = lastReceivedMovement.position;
+	vec3 p0 = unpacked(lastReceivedMovement.position);
 	vec3 newTranslation = p0;
-	vec3 v = lastReceivedMovement.velocity;
+	vec3 v = unpacked(lastReceivedMovement.velocity);
 	if (length(v) > 0)
 	{
 		newTranslation +=v * (float)time_offset;
@@ -108,7 +108,7 @@ void Node::TickExtrapolatedTransform(double serverTimeS)
 	clientrender::quat newRotation = *((clientrender::quat*)&lastReceivedMovement.rotation);
 	if(lastReceivedMovement.angularVelocityAngle != 0)
 	{
-		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, lastReceivedMovement.angularVelocityAxis);
+		quat deltaRotation(lastReceivedMovement.angularVelocityAngle * (float)time_offset, unpacked(lastReceivedMovement.angularVelocityAxis));
 		newRotation = newRotation* deltaRotation;
 		smoothingEnabled = true;
 	}

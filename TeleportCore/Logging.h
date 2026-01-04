@@ -8,6 +8,11 @@
 #else
 #include <fmt/core.h>
 #endif
+
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 #ifdef _MSC_VER
     #pragma warning(push)
 	#pragma warning(disable:4996)
@@ -26,6 +31,34 @@ namespace teleport
 		FATAL,
 		SILENT
 	};
+
+	/// Implementation function for log_print - outputs source and message to stdout.
+	extern void log_print_impl(const char* source, const std::string& message);
+
+#if defined(__ANDROID__)
+	// On Android, use __android_log_print directly
+	template <typename... Args>
+	void log_print(const char* source, const char* format, Args&&... args)
+	{
+		std::string message = fmt::format(format, std::forward<Args>(args)...);
+		__android_log_print(ANDROID_LOG_INFO, source, "%s", message.c_str());
+	}
+#elif __cplusplus >= 202002L
+	template <typename... Args>
+	void log_print(const char* source, const std::format_string<Args...> format, Args&&... args)
+	{
+		std::string message = std::vformat(format.get(), std::make_format_args(args...));
+		log_print_impl(source, message);
+	}
+#else
+	template <typename... Args>
+	void log_print(const char* source, const char* format, Args&&... args)
+	{
+		std::string message = fmt::format(format, std::forward<Args>(args)...);
+		log_print_impl(source, message);
+	}
+#endif
+
 #if __cplusplus>=202002L
 	template <typename... Args>
 	void Warn(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args&&... args)

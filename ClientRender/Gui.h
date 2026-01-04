@@ -45,11 +45,10 @@ namespace teleport
 			,Connection
 			,Debug
 		};
-		#ifdef _MSC_VER
-		typedef void* PlatformWindow;
-		#endif
 		#ifdef __ANDROID__
 		typedef ANativeWindow PlatformWindow;
+		#else
+		typedef void* PlatformWindow;
 		#endif
 		class Gui
 		{

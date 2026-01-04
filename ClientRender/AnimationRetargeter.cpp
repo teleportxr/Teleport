@@ -295,18 +295,25 @@ float CalculateBoneLength(const ozz::math::Float3 &translation)
 // Helper function to safely extract float from SimdFloat4
 float GetSimdComponent(const ozz::math::SimdFloat4 &simd, int index)
 {
-	return simd.m128_f32[index];
+	switch (index)
+	{
+	case 0:
+		return ozz::math::GetX(simd);
+	case 1:
+		return ozz::math::GetY(simd);
+	case 2:
+		return ozz::math::GetZ(simd);
+	case 3:
+		return ozz::math::GetW(simd);
+	default:
+		return 0.0f;
+	}
 }
 
 // Helper function to safely set float in SimdFloat4
 ozz::math::SimdFloat4 SetSimdComponent(float x, float y, float z, float w)
 {
-	ozz::math::SimdFloat4 result;
-	result.m128_f32[0] = x;
-	result.m128_f32[1] = y;
-	result.m128_f32[2] = z;
-	result.m128_f32[3] = w;
-	return result;
+	return ozz::math::simd_float4::Load(x, y, z, w);
 }
 
 // Helper function to convert 3x3 rotation matrix to quaternion

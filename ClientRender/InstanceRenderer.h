@@ -24,8 +24,10 @@
 #include <libavstream/surfaces/surface_interface.hpp>
 #if _MSC_VER
 #include "TeleportAudio/PC_AudioPlayer.h"
-#else
+#elif __ANDROID__
 #include "TeleportAudio/AndroidAudioPlayer.h"
+#else
+#include "TeleportAudio/LinuxAudioPlayer.h"
 #endif
 #include "TeleportAudio/NetworkPipeline.h"
 #include <chrono>
@@ -153,8 +155,10 @@ namespace teleport
 			vec4 depthOffsetScale;
 #ifdef _MSC_VER
 			teleport::audio::PC_AudioPlayer audioPlayer;
-#else
+#elif __ANDROID__
 			teleport::audio::AndroidAudioPlayer audioPlayer;
+#else
+			teleport::audio::LinuxAudioPlayer audioPlayer;
 #endif
 			std::unique_ptr<teleport::audio::AudioStreamTarget> audioStreamTarget;
 			std::unique_ptr<teleport::audio::NetworkPipeline> audioInputNetworkPipeline;

@@ -63,7 +63,7 @@ namespace teleport
 			std::shared_ptr<T> GetOrAddComponent()
 			{
 				std::shared_ptr<T> u;
-				for (auto &c= components.begin();c!=components.end();c++)
+				for (auto c= components.begin();c!=components.end();c++)
 				{
 					std::shared_ptr<T> t = std::dynamic_pointer_cast<T>(c);
 					if (t.get() != nullptr)

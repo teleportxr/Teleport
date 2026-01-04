@@ -13,7 +13,7 @@
 #include <sstream> // For std::ostringstream
 #include <string>
 #include <vector>
-#pragma optimize("", off)
+
 using namespace std::chrono;
 using namespace std::filesystem;
 #ifdef _MSC_VER

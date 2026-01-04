@@ -1,4 +1,4 @@
-#pragma optimize("", off)
+
 #include "GeometryDecoder.h"
 
 #include "Common.h"
@@ -25,7 +25,7 @@ using std::filesystem::path;
 using namespace std::chrono_literals;
 using namespace teleport;
 using namespace clientrender;
-#pragma optimize("", off)
+
 
 #define NextUint64 get<uint64_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)
 #define NextUint32 get<uint32_t>(geometryDecodeData.data.data(), &geometryDecodeData.offset)

@@ -1,6 +1,8 @@
 #include <string>
 #include <ctime>
 #include <mutex>
+#include <atomic>
+#include <condition_variable> 
 
 class GoogleOAuthPKCE
 {

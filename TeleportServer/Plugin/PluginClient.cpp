@@ -22,7 +22,7 @@
 #include "TeleportServer/InteropStructures.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportAudio/CustomAudioStreamTarget.h"
-#pragma optimize("", off)
+
 
 using namespace teleport;
 using namespace server;

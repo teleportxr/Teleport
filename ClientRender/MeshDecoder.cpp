@@ -12,7 +12,7 @@
 #include "Eigen/Geometry"
 #include <TeleportCore/Logging.h>
 #include <ranges>
-#pragma optimize("", off)
+
 using namespace teleport;
 using namespace clientrender;
 

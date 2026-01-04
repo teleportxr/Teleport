@@ -151,9 +151,9 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 		}
 	});
 	ws->onMessage(receiveWebSocketMessage);
-	ws->onOpen([this,server_uid]()
+	ws->onOpen([server_uid]()
 	{
-		TELEPORT_CERR << "Websocket onOpen " << std::endl;
+		TELEPORT_CERR << "Websocket onOpen " << server_uid << std::endl;
 	});
 	uint16_t remotePort = signalingServer->GetPort();
 	ResetConnection(server_uid, signalingServer->url, remotePort);

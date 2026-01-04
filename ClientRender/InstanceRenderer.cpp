@@ -17,7 +17,7 @@
 using namespace teleport;
 using namespace clientrender;
 using namespace platform;
-#pragma optimize("", off)
+
 // TODO: Implement Vector, Matrix and Quaternion conversions between avs:: <-> math:: <-> CppSl.h - AJR
 template <typename T1, typename T2> T1 ConvertVec2(const T2 &value)
 {
@@ -1945,7 +1945,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 #elif TELEPORT_CLIENT_USE_D3D11
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type   = avs::DeviceType::Direct3D11;
-#else
+#elif TELEPORT_CLIENT_USE_VULKAN
 	dev.handle = ((vulkan::RenderPlatform *)renderPlatform)->AsVulkanDevice();
 	dev.type   = avs::DeviceType::Vulkan;
 #endif
@@ -2112,12 +2112,11 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 	avs::DeviceHandle dev;
 #if TELEPORT_CLIENT_USE_D3D12
 	dev.handle = renderPlatform->AsD3D12Device();
-	;
 	dev.type = avs::DeviceType::Direct3D12;
 #elif TELEPORT_CLIENT_USE_D3D11
 	dev.handle = renderPlatform->AsD3D11Device();
 	dev.type   = avs::DeviceType::Direct3D11;
-#else
+#elif TELEPORT_CLIENT_USE_VULKAN
 	dev.handle = ((vulkan::RenderPlatform *)renderPlatform)->AsVulkanDevice();
 	dev.type   = avs::DeviceType::Vulkan;
 #endif

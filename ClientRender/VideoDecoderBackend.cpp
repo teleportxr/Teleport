@@ -13,7 +13,8 @@
 #include <dxva.h>
 #include "Platform/DirectX12/VideoDecoder.h"
 #elif TELEPORT_CLIENT_USE_D3D11
-#else
+// D3D11 video decoder - not currently implemented
+#elif TELEPORT_CLIENT_USE_VULKAN
 #include "Platform/Vulkan/VideoDecoder.h"
 #endif
 #include "TeleportClient/Log.h"
@@ -108,9 +109,10 @@ Result VideoDecoderBackend::initialize(const DeviceHandle& device, int frameWidt
 	// Change to common state for use with D3D12 video decode command list.
 	((platform::dx12::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #elif TELEPORT_CLIENT_USE_D3D11
-#else
+	// D3D11 video decoder - not currently implemented
+#elif TELEPORT_CLIENT_USE_VULKAN
 	mDecoder.reset(new platform::vulkan::VideoDecoder());
-	// Change to common state for use with D3D12 video decode command list.
+	// Change to common state for use with Vulkan video decode command list.
 //	((platform::vulkan::Texture*)mOutputTexture)->SetLayout(mRenderPlatform->GetImmediateContext(), D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON);
 #endif
 

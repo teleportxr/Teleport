@@ -189,12 +189,7 @@ set(CPACK_GENERATOR "NSIS")
 set (CPACK_PROJECT_CONFIG_FILE "${CMAKE_SOURCE_DIR}/pc_client/CPackOptions.cmake")
 set(CPACK_COMPONENTS_ALL client )
 
-#set(CPACK_COMPONENT_CTDATA_GROUP "data")
-#set(CPACK_COMPONENT_INSTRUCTIONDATA_GROUP "data")
-#
-#set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "applications (hello & world)")
-#set(CPACK_COMPONENT_GROUP_DATA_DESCRIPTION "data (CT and instructions)")
-#
+if(TELEPORT_WINDOWS)
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportClientLicence.md")
 ##Create an icon which will be displayed inside the installation wizard, and an icon for the installer and uninstaller. Tell CPack about these icons.
 set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
@@ -202,5 +197,5 @@ set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 ##Set the programs, directories and files, displayed under the Start menu shortcut.
 set(CPACK_NSIS_MENU_LINKS "build_pc_client\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
-
+endif()
 include(CPack)

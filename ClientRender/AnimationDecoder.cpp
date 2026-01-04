@@ -14,7 +14,7 @@
 #include "ozz/gltf2ozz.h"
 #include <json.hpp>
 #include <ozz/base/containers/set.h>
-#pragma optimize("", off)
+
 using nlohmann::json;
 
 using qt = platform::crossplatform::Quaternionf;

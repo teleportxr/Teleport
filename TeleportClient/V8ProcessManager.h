@@ -1,28 +1,49 @@
+#pragma once
+
 #include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <windows.h>
 #include <fstream>
 #include <iterator>
 
-#pragma optimize("", off)
+#ifdef _WIN32
+#include <windows.h>
+using ProcessHandle = HANDLE;
+using PipeHandle = HANDLE;
+using ProcessId = DWORD;
+#else
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <signal.h>
+using ProcessHandle = pid_t;
+using PipeHandle = int;
+using ProcessId = pid_t;
+#endif
+
+
 class V8ProcessManager
 {
 private:
 	struct TabProcess
 	{
-		HANDLE processHandle;
-		HANDLE pipeHandle;
-		DWORD processId;
+		ProcessHandle processHandle;
+		PipeHandle pipeReadHandle;
+		PipeHandle pipeWriteHandle;
+		ProcessId processId;
 		bool isRunning;
-        HANDLE jobObject;
+#ifdef _WIN32
+		HANDLE jobObject;
+#endif
 	};
 
 	std::unordered_map<uint32_t, TabProcess> tabProcesses;
 	std::string pipeName;
-    HANDLE browserJobObject;
+#ifdef _WIN32
+	HANDLE browserJobObject;
+#endif
 	static const size_t PIPE_BUFFER_SIZE = 4096;
 
 	// Create a new process for a tab

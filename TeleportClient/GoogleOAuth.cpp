@@ -183,7 +183,7 @@ void GoogleOAuthPKCE::startLocalServer()
     std::atomic<bool> serverReady{false};
     
     // Start the server in a separate thread
-    std::thread serverThread([this, &serverReady]() {
+    std::thread serverThread([ &serverReady]() {
         // Signal that we're ready to accept connections
         serverReady = true;
         

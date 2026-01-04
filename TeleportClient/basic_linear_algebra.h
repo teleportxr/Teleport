@@ -24,7 +24,7 @@ namespace teleport
 		/** Returns vertical FOV. FOV values in radians. */
 		inline float GetVerticalFOVFromHorizontal(float horizontal, float aspect)
 		{
-			return 2 * std::atanf(tanf(horizontal * 0.5f) * aspect);
+			return 2.0f * std::atan(std::tan(horizontal * 0.5f) * aspect);
 		}
 
 		inline float GetVerticalFOVFromHorizontalInDegrees(float horizontal, float aspect)
@@ -33,7 +33,7 @@ namespace teleport
 		}
 		inline vec3 LocalToGlobal(const teleport::core::Pose &pose, const vec3 &local)
 		{
-			vec3 ret = pose.position;
+			vec3 ret(&pose.position.x);
 			platform::crossplatform::Quaternionf *q = (platform::crossplatform::Quaternionf *)&pose.orientation;
 			ret += q->RotateVector(local);
 			return ret;

@@ -8,7 +8,7 @@
 #include <iterator>
 #include "TeleportClient/V8ProcessManager.h"
 
-#pragma optimize("", off)
+
 
 auto read_file(std::string_view path) -> std::string {
     constexpr auto read_size = std::size_t{4096};

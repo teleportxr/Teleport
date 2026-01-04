@@ -5,7 +5,7 @@
 #include "ozz/animation/runtime/blending_job.h"
 #include "ozz/animation/runtime/local_to_model_job.h"
 
-#pragma optimize("", off)
+
 
 using namespace teleport::clientrender;
 

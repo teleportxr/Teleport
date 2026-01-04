@@ -47,7 +47,7 @@ static bool	   timestamp_initialized = false;
 using namespace clientrender;
 using namespace platform;
 static Renderer *rendererInstance = nullptr;
-#pragma optimize("", off)
+
 void msgHandler(avs::LogSeverity severity, const char *msg, void *userData)
 {
 	if (severity > avs::LogSeverity::Warning)
@@ -775,8 +775,8 @@ void Renderer::FillInControllerPose(int index, float offset)
 	q.Rotate(roll * offset, point_dir);
 
 	teleport::core::Pose pose;
-	pose.position	 = *((vec3 *)&footspace_pos);
-	pose.orientation = *((const vec4 *)&q);
+	pose.position	 = packed(footspace_pos);
+	pose.orientation = *((const vec4_packed *)&q);
 
 	renderState.openXR->SetFallbackPoseState(index ? client::RIGHT_GRIP_POSE : client::LEFT_GRIP_POSE, pose);
 	// pose.position.z-=0.1f;
@@ -795,8 +795,8 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext &deviceContext
 	// MUST call init each frame, or whenever the matrices change.
 	deviceContext.viewStruct.Init();
 	// transform current mouse/pointer direction:
-	//
-	platform::crossplatform::Quaternionf q				 = originPose.orientation;
+	
+	platform::crossplatform::Quaternionf q				 = *((platform::crossplatform::Quaternionf*)&originPose.orientation);
 	renderState.current_controller_dir					 = (!q).RotateVector(renderState.controller_dir);
 
 	crossplatform::MultiviewGraphicsDeviceContext *mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -821,8 +821,8 @@ teleport::core::Pose Renderer::GetOriginPose(avs::uid server_uid)
 	std::shared_ptr<Node> origin_node		= GetInstanceRenderer(server_uid)->geometryCache->mNodeManager.GetNode(clientServerState.origin_node_uid);
 	if (origin_node)
 	{
-		origin_pose.position	= origin_node->GetGlobalPosition();
-		origin_pose.orientation = *((vec4 *)&origin_node->GetGlobalRotation());
+		origin_pose.position	= packed(origin_node->GetGlobalPosition());
+		origin_pose.orientation = packed(origin_node->GetGlobalRotation());
 	}
 
 	return origin_pose;
@@ -951,8 +951,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 		std::shared_ptr<Node> origin_node		= GetInstanceRenderer(server_uid)->geometryCache->mNodeManager.GetNode(clientServerState.origin_node_uid);
 		if (origin_node)
 		{
-			origin_pose.position	= origin_node->GetGlobalPosition();
-			origin_pose.orientation = *((vec4 *)&origin_node->GetGlobalRotation());
+			origin_pose.position	= packed(origin_node->GetGlobalPosition());
+			origin_pose.orientation = *((vec4_packed *)&origin_node->GetGlobalRotation());
 			SetRenderPose(deviceContext, GetOriginPose(server_uid));
 			GetInstanceRenderer(server_uid)->RenderView(deviceContext);
 			if (config.debugOptions.showAxes)
@@ -999,7 +999,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 			{
 				for (int i = 0; i < 5; i++)
 				{
-					vec3 pos = handNode->GetGlobalTransform().LocalToGlobal(poses[fingertips[i]].position);
+					vec3 pos = handNode->GetGlobalTransform().LocalToGlobal(unpacked(poses[fingertips[i]].position));
 					vec4 pos4;
 					pos4.xyz = (const float *)&pos;
 					pos4.w	 = 0.0f;
@@ -1071,7 +1071,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 										if (pose_index >= 0)
 										{
 											auto				   &pose = poses[pose_index];
-											clientrender::Transform tr(pose.position, pose.orientation, {1.f, 1.f, 1.f});
+											clientrender::Transform tr(unpacked(pose.position), unpacked(pose.orientation), {1.f, 1.f, 1.f});
 											node->SetGlobalTransform(tr);
 										}
 									}

@@ -9,7 +9,7 @@
 #include "json.hpp"
 #include "SceneObjectModel.h"
 
-#pragma optimize("", off)
+
 
 using nlohmann::json;
 
