@@ -469,6 +469,12 @@ if(TELEPORT_CLIENT)
 	RecurseApplyFolder(${CMAKE_BINARY_DIR}/ozz-animation thirdparty/ozz-animation)
 endif()
 
+# Build draco before client components that depend on it
+set(DRACO_TRANSCODER_SUPPORTED ON CACHE BOOL "" FORCE)
+set(TINYGLTF_NO_STB_IMAGE ON CACHE BOOL "" FORCE)
+set(TINYGLTF_NO_STB_IMAGE_WRITE ON CACHE BOOL "" FORCE)
+add_subdirectory(thirdparty/draco)
+
 if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 	set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openssl/x64)
 	set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
@@ -501,11 +507,6 @@ if(TELEPORT_CLIENT_USE_D3D12)
 else()
 	target_compile_definitions(libavstream PRIVATE LIBAV_USE_D3D12=0)
 endif()
-
-set(DRACO_TRANSCODER_SUPPORTED ON CACHE BOOL "" FORCE)
-set(TINYGLTF_NO_STB_IMAGE ON CACHE BOOL "" FORCE)
-set(TINYGLTF_NO_STB_IMAGE_WRITE ON CACHE BOOL "" FORCE)
-add_subdirectory(thirdparty/draco)
 
 # Here we will put all the draco targets into the thirdparty/draco solution folder:
 set(targets)

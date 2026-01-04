@@ -20,6 +20,68 @@
 
 #ifdef _MSC_VER
 #include <Windows.h>
+#else
+// Windows-compatible virtual key codes for non-Windows platforms
+#ifndef VK_BACK
+#define VK_BACK 0x08
+#define VK_TAB 0x09
+#define VK_RETURN 0x0D
+#define VK_SHIFT 0x10
+#define VK_CONTROL 0x11
+#define VK_MENU 0x12
+#define VK_PAUSE 0x13
+#define VK_CAPITAL 0x14
+#define VK_ESCAPE 0x1B
+#define VK_SPACE 0x20
+#define VK_PRIOR 0x21
+#define VK_NEXT 0x22
+#define VK_END 0x23
+#define VK_HOME 0x24
+#define VK_LEFT 0x25
+#define VK_UP 0x26
+#define VK_RIGHT 0x27
+#define VK_DOWN 0x28
+#define VK_INSERT 0x2D
+#define VK_DELETE 0x2E
+#define VK_LWIN 0x5B
+#define VK_RWIN 0x5C
+#define VK_APPS 0x5D
+#define VK_NUMPAD0 0x60
+#define VK_NUMPAD1 0x61
+#define VK_NUMPAD2 0x62
+#define VK_NUMPAD3 0x63
+#define VK_NUMPAD4 0x64
+#define VK_NUMPAD5 0x65
+#define VK_NUMPAD6 0x66
+#define VK_NUMPAD7 0x67
+#define VK_NUMPAD8 0x68
+#define VK_NUMPAD9 0x69
+#define VK_MULTIPLY 0x6A
+#define VK_ADD 0x6B
+#define VK_SUBTRACT 0x6D
+#define VK_DECIMAL 0x6E
+#define VK_DIVIDE 0x6F
+#define VK_NUMLOCK 0x90
+#define VK_SCROLL 0x91
+#define VK_LSHIFT 0xA0
+#define VK_RSHIFT 0xA1
+#define VK_LCONTROL 0xA2
+#define VK_RCONTROL 0xA3
+#define VK_LMENU 0xA4
+#define VK_RMENU 0xA5
+#define VK_OEM_1 0xBA
+#define VK_OEM_PLUS 0xBB
+#define VK_OEM_COMMA 0xBC
+#define VK_OEM_MINUS 0xBD
+#define VK_OEM_PERIOD 0xBE
+#define VK_OEM_2 0xBF
+#define VK_OEM_3 0xC0
+#define VK_OEM_4 0xDB
+#define VK_OEM_5 0xDC
+#define VK_OEM_6 0xDD
+#define VK_OEM_7 0xDE
+#define VK_SNAPSHOT 0x2C
+#endif
 #endif
 using namespace std::string_literals;
 #include "Platform/Core/StringFunctions.h"
@@ -29,11 +91,6 @@ using namespace std::string_literals;
 #include "libavstream/pipeline.hpp"
 
 #include "ClientRender/AnimationInstance.h"
-
-#ifdef __ANDROID__
-#define VK_BACK 0x01
-#define VK_ESCAPE 0x02
-#endif
 
 #define VK_MAX 0x10
 
@@ -1184,7 +1241,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				vec3 v = selected_node->GetGlobalVelocity();
 
 				vec3 gs = selected_node->GetGlobalScale();
-				ImGui::Text("%llu: %s %s", selected_node->id, selected_node->name.c_str(), selected_node->IsHighlighted() ? "HIGHLIGHTED" : "");
+				ImGui::Text("%lu: %s %s", selected_node->id, selected_node->name.c_str(), selected_node->IsHighlighted() ? "HIGHLIGHTED" : "");
 				ImGui::Text("owners %lu", selected_node.use_count());
 				avs::uid gi_uid = selected_node->GetGlobalIlluminationTextureUid();
 				if (ImGui::BeginTable("selected", 2))
@@ -1342,7 +1399,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						std::string passName;
 						auto *passCache = selected_node->GetCachedEffectPass(element);
 						const char *name = m->GetMaterialCreateInfo().name.c_str();
-						if (ImGui::TreeNodeEx(name, flags, "%llu: %s (pass %s)", m->id, name, passCache ? (passCache->pass ? passCache->pass->name.c_str() : "") : ""))
+						if (ImGui::TreeNodeEx(name, flags, "%lu: %s (pass %s)", m->id, name, passCache ? (passCache->pass ? passCache->pass->name.c_str() : "") : ""))
 						{
 							if (ImGui::IsItemClicked())
 							{
@@ -1362,7 +1419,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				{
 					IMGUITREENODEEX("##canvas", flags, " Canvas: {}", textCanvas->textCanvasCreateInfo.uid);
 					
-					ImGui::Text("%s",textCanvas->textCanvasCreateInfo.text);
+					ImGui::Text("%s",textCanvas->textCanvasCreateInfo.text.c_str());
 					if (ImGui::IsItemClicked())
 					{
 						Select(cache_uid, textCanvas->textCanvasCreateInfo.uid);
@@ -1409,7 +1466,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			{
 				const auto &mci = selected_material->GetMaterialCreateInfo();
 				const clientrender::Material::MaterialData &md = selected_material->GetMaterialData();
-				ImGui::Text("%llu: %s", selected_material->id, mci.name.c_str());
+				ImGui::Text("%lu: %s", selected_material->id, mci.name.c_str());
 				
 				if (ImGui::BeginTable("selectedafs1", 5))
 				{
@@ -1481,7 +1538,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			if (selected_texture.get())
 			{
 				const auto &tci = selected_texture->GetTextureCreateInfo();
-				ImGui::Text("%llu: %s", tci.uid, tci.name.c_str());
+				ImGui::Text("%lu: %s", tci.uid, tci.name.c_str());
 
 				const char *mips[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
 				ImGui::Combo("Mip", &mip_current, mips, std::min(tci.mipCount,(uint32_t)IM_ARRAYSIZE(mips)));
@@ -1490,7 +1547,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			}
 			if (selected_animation.get())
 			{
-				ImGui::Text("%llu: %s", selected_uid, selected_animation->name.c_str());
+				ImGui::Text("%lu: %s", selected_uid, selected_animation->name.c_str());
 				if (ImGui::BeginTable("selected", 2))
 				{
 					ImGui::TableNextColumn();
@@ -1514,11 +1571,11 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			}
 			else if (selected_skeleton)
 			{
-				ImGui::Text("%llu: %s", selected_uid, selected_skeleton->name.c_str());
+				ImGui::Text("%lu: %s", selected_uid, selected_skeleton->name.c_str());
 				avs::uid root_id=selected_skeleton->GetRootId();
 				auto root=geometryCache->mNodeManager.GetNode(root_id);
 				ImGui::Text("Root:");
-				if (ImGui::TreeNodeEx(fmt::format("{0} ",  root_id).c_str(), flags|ImGuiTreeNodeFlags_Leaf, fmt::format("{0}: {1} ",root_id, root?root->name:"").c_str()))
+				if (ImGui::TreeNodeEx(fmt::format("{0} ",  root_id).c_str(), flags|ImGuiTreeNodeFlags_Leaf, "%s",fmt::format("{0}: {1} ",root_id, root?root->name:"").c_str()))
 				{
 					if (ImGui::IsItemClicked())
 					{
@@ -1534,7 +1591,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					if(bone_uid==root_id)
 						continue;
 					auto n=geometryCache->mNodeManager.GetNode(bone_uid);
-					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(), flags|ImGuiTreeNodeFlags_Leaf, fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
+					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(), flags|ImGuiTreeNodeFlags_Leaf, "%s",fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
 					{
 						if (ImGui::IsItemClicked())
 						{
@@ -1549,7 +1606,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				avs::uid cache_uid=selected_mesh->GetMeshCreateInfo().subscene_cache_uid;
 				if (cache_uid != 0)
 				{
-					ImGui::Text("Subscene resource %llu", cache_uid);
+					ImGui::Text("Subscene resource %lu", cache_uid);
 
 					auto g = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 					if (g)
@@ -1568,7 +1625,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				}
 				else
 				{
-					ImGui::Text("Mesh %s", selected_mesh->getName());
+					ImGui::Text("Mesh %s", selected_mesh->getName().c_str());
 				}
 			}
 			ImGuiEnd();
@@ -1857,7 +1914,7 @@ void Gui::ProfilingPanel()
 {
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 	ImGui::BeginChild("Prof", ImVec2(-1, -1), true, window_flags);
-	ImGui::Text(profilingText.c_str());
+	ImGui::Text("%s",profilingText.c_str());
 	ImGui::EndChild();
 }
 
@@ -1971,9 +2028,9 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 					name = lcr.name.c_str();
 				}
 				if (l.lightType == clientrender::LightType::Directional)
-					LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f", l.uid, name, ToString((clientrender::Light::Type)l.lightType), lightTag.direction.x, lightTag.direction.y, lightTag.direction.z, l.color.x, l.color.y, l.color.z), clr);
+					LinePrint(platform::core::QuickFormat("%lu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f", l.uid, name, ToString((clientrender::Light::Type)l.lightType), lightTag.direction.x, lightTag.direction.y, lightTag.direction.z, l.color.x, l.color.y, l.color.z), clr);
 				else
-					LinePrint(platform::core::QuickFormat("%llu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f", l.uid, name, ToString((clientrender::Light::Type)l.lightType), lightTag.position.x, lightTag.position.y, lightTag.position.z, l.color.x, l.color.y, l.color.z), clr);
+					LinePrint(platform::core::QuickFormat("%lu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f", l.uid, name, ToString((clientrender::Light::Type)l.lightType), lightTag.position.x, lightTag.position.y, lightTag.position.z, l.color.x, l.color.y, l.color.z), clr);
 			}
 	}
 }
@@ -2319,7 +2376,7 @@ void Gui::MenuBar2D()
 				sz = std::min(sz, u.length() + 1);
 				try
 				{
-					strcpy_s(url_buffer, sz, u.c_str());
+					snprintf(url_buffer, sz, "%s", u.c_str());
 				}
 				catch (...)
 				{
@@ -2502,7 +2559,7 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 						ImGui::TableNextColumn();
 						ImGui::Text("Server Id");
 						ImGui::TableNextColumn();
-						ImGui::Text("%llu", id);
+						ImGui::Text("%lu", id);
 
 						ImGui::TableNextRow();
 						ImGui::TableNextColumn();

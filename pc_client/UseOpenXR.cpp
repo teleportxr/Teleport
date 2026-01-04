@@ -13,12 +13,20 @@
 #define XR_USE_GRAPHICS_API_VULKAN
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
+
+#ifdef _WIN32
 #define XR_USE_PLATFORM_WIN32
+#elif defined(__linux__)
+#define XR_USE_PLATFORM_XLIB
+#endif
+
 #include "UseOpenXR.h"
 
 #include <openxr/openxr.h>
+#ifdef _MSC_VER
 #include <WTypesbase.h>	// for LARGE_INTEGER  etc
 #include <Unknwn.h>	// for  IUnknown etc
+#endif
 #include <openxr/openxr_platform.h>
 
 #include "fmt/core.h"

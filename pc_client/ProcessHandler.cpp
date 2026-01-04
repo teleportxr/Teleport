@@ -138,8 +138,9 @@ bool EnsureSingleProcess(const std::string &cmdLine)
 	return false;
 }
 
-std::string GetExternalCommandLine(__int64 lParam)
+std::string GetExternalCommandLine(int64_t lParam)
 {
+	#ifdef _MSC_VER
 	const COPYDATASTRUCT *pMyCDS = (const COPYDATASTRUCT *)lParam;
 	if(!pMyCDS)
 		return "";
@@ -152,5 +153,8 @@ std::string GetExternalCommandLine(__int64 lParam)
 		return "";
 	myRec->s1[499]=0;
 	std::string ret = myRec->s1;
+	#else
+	std::string ret = "";
+	#endif
 	return ret;
 }

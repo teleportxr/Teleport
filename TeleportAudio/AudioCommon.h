@@ -16,41 +16,16 @@
 #include <algorithm>
 #include <functional>
 #include "TeleportCore/ErrorHandling.h"
-
-#if __cplusplus >= 202002L
-#include <format>
-#else
-#include <fmt/core.h>
-#endif
+#include "TeleportCore/Logging.h"
 
 #define SCA_CERR TELEPORT_CERR
 #define SCA_COUT TELEPORT_COUT
 
 #if defined(__ANDROID__)
-#include <android/log.h>
 #define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()
-#define SCA_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCA", __VA_ARGS__);
-#else
-extern void log_print_impl(const char* source, const std::string& message);
-
-#if __cplusplus >= 202002L
-template <typename... Args>
-void log_print(const char* source, const std::format_string<Args...> format, Args&&... args)
-{
-	std::string message = std::vformat(format.get(), std::make_format_args(args...));
-	log_print_impl(source, message);
-}
-#else
-template <typename... Args>
-void log_print(const char* source, const char* format, Args&&... args)
-{
-	std::string message = fmt::format(format, std::forward<Args>(args)...);
-	log_print_impl(source, message);
-}
 #endif
 
-#define SCA_LOG(fmt, ...) log_print("AUDIO", fmt, ##__VA_ARGS__)
-#endif
+#define SCA_LOG(fmt, ...) teleport::log_print("AUDIO", fmt, ##__VA_ARGS__)
 
 namespace teleport
 {

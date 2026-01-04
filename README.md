@@ -98,7 +98,11 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 - Vulkan/DirectX: Graphics APIs
 - Third-party: Draco compression, FreeType fonts, OpenSSL, FLEX/Bison
 - Linux: GLFW dependencies: https://www.glfw.org/docs/latest/compile_guide.html#compile_deps_wayland
-- Linux: PulseAudio for audio sudo apt install libpulse-dev
+- Linux: PulseAudio for audio
+
+### Linux Dependencies - Debian
+
+    sudo apt install libpulse-dev libopenxr-dev
 
 This is a sophisticated, production-ready VR/AR streaming platform that enables remote rendering scenarios where heavy 3D content runs on powerful servers and streams to lightweight VR/AR clients. It's particularly useful for enterprise VR applications, cloud gaming, and collaborative virtual environments.
 

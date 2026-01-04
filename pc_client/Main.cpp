@@ -6,7 +6,11 @@
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 #endif
 // Windows Header Files:
+#ifdef _WIN32
 #include <windows.h>
+#include <Shlobj_core.h>
+#include <shellapi.h>
+#endif
 // C RunTime Header Files
 #include "ClientRender/Renderer.h"
 #include "Config.h"
@@ -18,19 +22,20 @@
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "ProcessHandler.h"
-#include "Resource.h"
 #include "TeleportClient/TabContext.h"
 #include "TeleportClient/URLHandlers.h"
 #include "TeleportCore/ErrorHandling.h"
-#include <Shlobj_core.h>
 #include <filesystem>
 #include <regex>
 #include <stdlib.h>
-#ifdef _MSC_VER
+#ifdef _WIN32
+#include "Resource.h"
+#endif
 #include "ClientApp/ClientApp.h"
-#include "Platform/Windows/VisualStudioDebugOutput.h"
 #include "TeleportClient/ClientDeviceState.h"
 #include "TeleportClient/DiscoveryService.h"
+#ifdef _MSC_VER
+#include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
@@ -42,7 +47,7 @@ platform::dx12::DeviceManager deviceManager;
 #include "Platform/Vulkan/DeviceManager.h"
 #include "Platform/Vulkan/RenderPlatform.h"
 platform::vulkan::DeviceManager deviceManager;
-#else
+#elif defined(_WIN32)
 #include "Platform/DirectX11/DeviceManager.h"
 #include "Platform/DirectX11/RenderPlatform.h"
 platform::dx11::DeviceManager deviceManager;
@@ -71,6 +76,9 @@ avs::Context context;
 bool receive_link = false;
 std::string cmdLine;
 
+#include "Platform/Core/FileLoader.h"
+
+#ifdef _WIN32
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -84,8 +92,7 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 void InitRenderer(HWND, bool, bool);
 void ShutdownRenderer(HWND);
-#include "Platform/Core/FileLoader.h"
-#include <shellapi.h>
+#endif
 
 void ReceiveCmdLine()
 {
@@ -107,6 +114,7 @@ void ReceiveCmdLine()
 	if (cmdLine.length() > 0) receive_link = true;
 }
 
+#ifdef _WIN32
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
@@ -671,3 +679,240 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return (INT_PTR)FALSE;
 }
+
+#else // Linux implementation
+
+#include <unistd.h>
+#include <pwd.h>
+
+namespace fs = std::filesystem;
+
+void ShutdownRendererLinux()
+{
+	useOpenXR.Shutdown();
+	displaySurfaceManager.Shutdown();
+	delete clientRenderer;
+	clientRenderer = nullptr;
+	delete sessionClient;
+	sessionClient = nullptr;
+	delete renderPlatform;
+	renderPlatform = nullptr;
+}
+
+void InitRendererLinux(bool try_init_vr, bool dev_mode)
+{
+	clientRenderer = new clientrender::Renderer(gui);
+	gdi = &deviceManager;
+	dsmi = &displaySurfaceManager;
+#if TELEPORT_CLIENT_USE_VULKAN
+	renderPlatform = new vulkan::RenderPlatform();
+#else
+	TELEPORT_CERR << "Linux build requires Vulkan support" << std::endl;
+	return;
+#endif
+	displaySurfaceManager.Initialize(renderPlatform);
+
+#if TELEPORT_INTERNAL_CHECKS
+	static bool use_debug = true;
+#else
+	static bool use_debug = false;
+#endif
+	gdi->Initialize(use_debug, false, false);
+
+	teleport_path = fs::current_path().parent_path().string();
+	std::string src_dir = teleport_path;
+	std::string build_dir = teleport_path + "/build_pc_client";
+
+	{
+		char cwd[256];
+		if (getcwd(cwd, sizeof(cwd)) != nullptr)
+		{
+			// Working directory obtained
+		}
+		renderPlatform->PushTexturePath("");
+		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
+		renderPlatform->PushTexturePath("../../pc_client/Textures");
+		renderPlatform->PushTexturePath("assets/Textures");
+		renderPlatform->PushTexturePath("pc_client/Textures");
+		renderPlatform->PushShaderPath("pc_client/Shaders");
+		renderPlatform->PushShaderPath("../client/Shaders");
+		renderPlatform->PushShaderPath("../../client/Shaders");
+		renderPlatform->PushShaderPath("../../../../client/Shaders");
+		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushShaderPath("Shaders");
+
+		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Shaders/SFX").c_str());
+		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/CrossPlatform/Shaders").c_str());
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/Shaders/SFX");
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/CrossPlatform/Shaders");
+		renderPlatform->PushShaderPath("../../../../firstparty/Platform/ImGui/Shaders");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/Shaders/SFX");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/CrossPlatform/Shaders");
+		renderPlatform->PushShaderPath("../../firstparty/Platform/ImGui/Shaders");
+#if TELEPORT_CLIENT_USE_VULKAN
+		renderPlatform->PushShaderPath("../../../../Platform/Vulkan/Sfx");
+		renderPlatform->PushShaderPath("../../Platform/Vulkan/Sfx");
+		renderPlatform->PushShaderPath("Platform/Vulkan/Sfx/");
+		renderPlatform->PushShaderBinaryPath((build_dir + "/shaderbin/Vulkan").c_str());
+		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
+#endif
+		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
+	}
+	platform::crossplatform::ResourceGroupLayout perFrameLayout;
+	perFrameLayout.UseConstantBufferSlot(0);
+	perFrameLayout.UseConstantBufferSlot(1);
+	perFrameLayout.UseConstantBufferSlot(10);
+	perFrameLayout.UseSamplerSlot(4);
+	perFrameLayout.UseSamplerSlot(6);
+	perFrameLayout.UseSamplerSlot(9);
+	perFrameLayout.UseSamplerSlot(11);
+	renderPlatform->SetResourceGroupLayout(0, perFrameLayout);
+	platform::crossplatform::ResourceGroupLayout fewPerFrameLayout;
+	fewPerFrameLayout.UseReadOnlyResourceSlot(19);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(20);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(21);
+	fewPerFrameLayout.UseReadOnlyResourceSlot(22);
+	renderPlatform->SetResourceGroupLayout(1, fewPerFrameLayout);
+	platform::crossplatform::ResourceGroupLayout perMaterialLayout;
+	perMaterialLayout.UseConstantBufferSlot(5);
+	perMaterialLayout.UseReadOnlyResourceSlot(15);
+	perMaterialLayout.UseReadOnlyResourceSlot(16);
+	perMaterialLayout.UseReadOnlyResourceSlot(17);
+	perMaterialLayout.UseReadOnlyResourceSlot(18);
+	renderPlatform->SetResourceGroupLayout(2, perMaterialLayout);
+	renderPlatform->RestoreDeviceObjects(gdi->GetDevice());
+
+	useOpenXR.SetRenderPlatform(renderPlatform);
+	auto &config = client::Config::GetInstance();
+	clientRenderer->Init(renderPlatform, &useOpenXR, nullptr);
+	dsmi->SetRenderer(clientRenderer);
+}
+
+int main(int argc, char *argv[])
+{
+	// Parse command line
+	for (int i = 1; i < argc; i++)
+	{
+		if (cmdLine.length() > 0)
+			cmdLine += " ";
+		cmdLine += argv[i];
+	}
+
+	if (EnsureSingleProcess(cmdLine))
+		return 0;
+
+	auto *fileLoader = platform::core::FileLoader::GetFileLoader();
+	fileLoader->SetRecordFilesLoaded(true);
+
+	// Find the pc_client directory
+	std::filesystem::path current_path = std::filesystem::current_path();
+	if (!std::filesystem::exists("pc_client/client_default.ini"))
+	{
+		// Try to find it relative to executable
+		char exe_path[1024];
+		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+		if (len != -1)
+		{
+			exe_path[len] = '\0';
+			current_path = std::filesystem::path(exe_path).parent_path();
+		}
+		while (!current_path.empty() && !std::filesystem::exists("pc_client/client_default.ini"))
+		{
+			std::filesystem::path prev_path = current_path;
+			current_path = current_path.append("../").lexically_normal();
+			if (prev_path == current_path)
+				break;
+			if (std::filesystem::exists(current_path))
+				std::filesystem::current_path(current_path);
+			else
+				break;
+		}
+	}
+	current_path = current_path.append("pc_client").lexically_normal();
+	if (!std::filesystem::exists(current_path))
+	{
+		TELEPORT_CERR << "Cannot find pc_client directory" << std::endl;
+		return -1;
+	}
+	std::filesystem::current_path(current_path);
+
+	auto &config = client::Config::GetInstance();
+
+	// Get storage folder (Linux equivalent of CSIDL_LOCAL_APPDATA)
+	const char *home = getenv("HOME");
+	if (!home)
+	{
+		struct passwd *pw = getpwuid(getuid());
+		if (pw)
+			home = pw->pw_dir;
+	}
+	if (home)
+	{
+		storage_folder = std::string(home) + "/.local/share/TeleportXR";
+		std::filesystem::create_directories(storage_folder);
+	}
+	else
+	{
+		storage_folder = std::filesystem::current_path().string();
+	}
+	config.SetStorageFolder(storage_folder.c_str());
+	clientApp.Initialize();
+	gui.SetServerIPs(config.recent_server_urls);
+
+	InitRendererLinux(config.enable_vr, config.dev_mode);
+	ReceiveCmdLine();
+
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+	mosquitto_lib_init();
+#endif
+
+	// Simple main loop - for now just initialize and wait
+	// A full implementation would use X11/Wayland or GLFW for window management
+	bool running = true;
+	while (running)
+	{
+		if (client::TabContext::ShouldFollowExternalURL())
+		{
+			std::string url = client::TabContext::PopExternalURL();
+			teleport::client::LaunchProtocolHandler(url);
+		}
+
+		auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(
+			std::chrono::system_clock::now().time_since_epoch());
+		if (clientRenderer)
+		{
+			clientRenderer->Update(microsecondsUTC);
+		}
+		useOpenXR.Tick();
+
+		// For headless/XR-only mode, we just run the XR loop
+		// Break if XR session ends or user requests quit
+		if (!useOpenXR.IsSessionActive() && !config.enable_vr)
+		{
+			// No VR and no window - exit
+			running = false;
+		}
+
+		usleep(1000); // 1ms sleep to prevent busy-waiting
+	}
+
+#if TELEPORT_CLIENT_SUPPORT_IPSME
+	mosquitto_lib_cleanup();
+#endif
+
+	if (fileLoader->GetRecordFilesLoaded())
+	{
+		auto l = fileLoader->GetFilesLoaded();
+		std::cout << "Files loaded:" << std::endl;
+		for (const auto &s : l)
+			std::cout << s << std::endl;
+	}
+
+	ShutdownRendererLinux();
+	teleport::client::DiscoveryService::ShutdownInstance();
+
+	return 0;
+}
+
+#endif // _WIN32
