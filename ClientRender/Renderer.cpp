@@ -10,6 +10,16 @@
 #endif
 #ifdef _MSC_VER
 #include "libavstream/platforms/platform_windows.hpp"
+#else
+// Windows-compatible virtual key codes for non-Windows platforms
+#ifndef VK_SHIFT
+#define VK_SHIFT 0x10
+#define VK_SPACE 0x20
+#define VK_LEFT 0x25
+#define VK_UP 0x26
+#define VK_RIGHT 0x27
+#define VK_DOWN 0x28
+#endif
 #endif
 #include "Platform/Core/StringFunctions.h"
 #include "Platform/CrossPlatform/Framebuffer.h"
@@ -822,7 +832,8 @@ teleport::core::Pose Renderer::GetOriginPose(avs::uid server_uid)
 	if (origin_node)
 	{
 		origin_pose.position	= packed(origin_node->GetGlobalPosition());
-		origin_pose.orientation = packed(origin_node->GetGlobalRotation());
+		vec4 r=origin_node->GetGlobalRotation();
+		origin_pose.orientation = packed(r);
 	}
 
 	return origin_pose;
@@ -1071,7 +1082,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 										if (pose_index >= 0)
 										{
 											auto				   &pose = poses[pose_index];
-											clientrender::Transform tr(unpacked(pose.position), unpacked(pose.orientation), {1.f, 1.f, 1.f});
+											clientrender::Transform tr(pose.position, *((quat*)(&pose.orientation)), {1.f, 1.f, 1.f});
 											node->SetGlobalTransform(tr);
 										}
 									}
@@ -1256,7 +1267,6 @@ void Renderer::OnFrameMove(double fTime, float time_step)
 	}
 	vec2		clientspace_input;
 	static vec2 stored_clientspace_input(0, 0);
-#ifdef _MSC_VER
 	clientspace_input.y			   = ((float)keydown['w'] - (float)keydown['s']) * (float)(keydown[VK_SHIFT]);
 	clientspace_input.x			   = ((float)keydown['d'] - (float)keydown['a']) * (float)(keydown[VK_SHIFT]);
 	static int clientspace_timeout = 0;
@@ -1276,8 +1286,6 @@ void Renderer::OnFrameMove(double fTime, float time_step)
 	mouseCameraInput.forward_back_input = ((float)keydown['w'] - (float)keydown['s']) * (float)(!keydown[VK_SHIFT]);
 	mouseCameraInput.right_left_input	= ((float)keydown['d'] - (float)keydown['a']) * (float)(!keydown[VK_SHIFT]);
 	mouseCameraInput.up_down_input		= ((float)keydown['q'] - (float)keydown['z']) * (float)(!keydown[VK_SHIFT]);
-
-#endif
 	if (renderState.openXR)
 	{
 		const teleport::core::Input &local_inputs = renderState.openXR->GetServerInputs(local_server_uid, renderPlatform->GetFrameNumber());
@@ -1471,13 +1479,11 @@ void Renderer::OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown)
 	{
 		switch (wParam)
 		{
-#ifdef _MSC_VER
 		case VK_LEFT:
 		case VK_RIGHT:
 		case VK_UP:
 		case VK_DOWN:
 			return;
-#endif
 		default:
 			int k = tolower(wParam);
 			if (k > 255)
@@ -1559,11 +1565,9 @@ void Renderer::OnKeyboard(unsigned wParam, bool bKeyDown, bool gui_shown)
 			}
 		}
 		break;
-#ifdef _MSC_VER
 		case VK_SPACE:
 			ShowHideGui();
 			break;
-#endif
 		default:
 			break;
 		}
@@ -2074,7 +2078,7 @@ void Renderer::HandleLocalInputs(const teleport::core::Input &local_inputs)
 				{
 					teleport::core::Pose	   leftHandPose = renderState.openXR->GetTrackedHandRootPose(0);
 					teleport::core::Pose	   headPose		= renderState.openXR->GetHeadPose_StageSpace();
-					vec3					   diff			= headPose.position - leftHandPose.position;
+					vec3					   diff			= vec3(headPose.position) - vec3(leftHandPose.position);
 					static vec3				   x			= {1.0f, 0, 0};
 					crossplatform::Quaternionf palm_q		= *(crossplatform::Quaternionf *)&leftHandPose.orientation;
 					vec3					   palm_dir		= palm_q.RotateVector(x);

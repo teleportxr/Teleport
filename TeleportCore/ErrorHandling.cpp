@@ -1,9 +1,16 @@
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Logging.h"
 #ifdef _MSC_VER
-	#include <Windows.h> // for DebugBreak 
+	#include <Windows.h> // for DebugBreak
 #elif defined __ANDROID__
 	#include <signal.h>
 #endif
+
+void teleport::log_print_impl(const char* source, const std::string& message)
+{
+	std::cout << source << " " << message << std::endl;
+}
+
 #if TELEPORT_INTERNAL_CHECKS
 void TeleportLogUnsafe(const char* fmt, ...)
 {

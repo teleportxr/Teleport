@@ -16,40 +16,15 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <random>
 
-#if __cplusplus >= 202002L
-#include <format>
-#else
-#include <fmt/core.h>
-#endif
-
 // Platform
 #include "Platform/CrossPlatform/RenderPlatform.h"
+#include "TeleportCore/Logging.h"
 
 #if defined(__ANDROID__)
-#include <android/log.h>
 #define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()
-#define SCR_LOG(...) __android_log_print(ANDROID_LOG_INFO, "SCR", __VA_ARGS__);
-#else
-extern void log_print_impl(const char* source, const std::string& message);
-
-#if __cplusplus >= 202002L
-template <typename... Args>
-void log_print(const char* source, const std::format_string<Args...> format, Args&&... args)
-{
-	std::string message = std::vformat(format.get(), std::make_format_args(args...));
-	log_print_impl(source, message);
-}
-#else
-template <typename... Args>
-void log_print(const char* source, const char* format, Args&&... args)
-{
-	std::string message = fmt::format(format, std::forward<Args>(args)...);
-	log_print_impl(source, message);
-}
 #endif
 
-#define SCR_LOG(fmt, ...) log_print("SCR", fmt, ##__VA_ARGS__)
-#endif
+#define SCR_LOG(fmt, ...) teleport::log_print("SCR", fmt, ##__VA_ARGS__)
 
 namespace teleport
 {

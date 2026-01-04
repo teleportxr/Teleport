@@ -320,12 +320,12 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext &deviceCo
 						 ti->texture,
 						 instanceRenderState.diffuseCubemapTexture,
 						 instanceRenderState.diffuseCubemapTexture->mips,
-						 int2(sessionClient->GetDynamicLighting().diffusePos[0], sessionClient->GetDynamicLighting().diffusePos[1]));
+						 int2(sessionClient->GetDynamicLighting().diffusePos.x, sessionClient->GetDynamicLighting().diffusePos.y));
 		RecomposeCubemap(deviceContext,
 						 ti->texture,
 						 instanceRenderState.specularCubemapTexture,
 						 instanceRenderState.specularCubemapTexture->mips,
-						 int2(sessionClient->GetDynamicLighting().specularPos[0], sessionClient->GetDynamicLighting().specularPos[1]));
+						 int2(sessionClient->GetDynamicLighting().specularPos.x, sessionClient->GetDynamicLighting().specularPos.y));
 	}
 
 	// Draw the background. If unconnected, we show a grid and horizon.
@@ -526,7 +526,7 @@ void			   InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContex
 			if (node)
 			{
 				// TODO: Should be done as local child of an origin node, not setting local pos = globalPose.pos
-				node->SetLocalPosition(n.second.pose_footSpace.pose.position);
+				node->SetLocalPosition(unpacked(n.second.pose_footSpace.pose.position));
 				node->SetLocalRotation(*((quat *)&n.second.pose_footSpace.pose.orientation));
 				node->SetLocalVelocity(*((vec3 *)&n.second.pose_footSpace.velocity));
 				// force update of model matrices - should not be necessary, but is.
