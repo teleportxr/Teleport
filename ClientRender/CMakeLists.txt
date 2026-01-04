@@ -155,7 +155,7 @@ target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/e
 target_include_directories(ClientRender PUBLIC ../thirdparty/draco/third_party/tinygltf)
 target_include_directories(ClientRender PUBLIC "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 set_target_properties(ClientRender PROPERTIES FOLDER Client)
-target_link_libraries(ClientRender draco::draco TeleportClient ktx ozz_animation_offline ozz_animation)
+target_link_libraries(ClientRender draco::draco TeleportClient TeleportAudio ktx ozz_animation_offline ozz_animation)
 add_dependencies(ClientRender Sfx)
 if(TELEPORT_CLIENT_USE_D3D12)
 	target_link_libraries(ClientRender SimulDirectX12_MT)
