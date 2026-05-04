@@ -363,12 +363,19 @@ if(TELEPORT_CLIENT )
    		set(CURL_STATIC_CRT OFF CACHE BOOL "")
 		set(CURL_USE_SCHANNEL OFF CACHE BOOL "")
 	endif()
-    add_subdirectory(thirdparty/curl)
-	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1) 
+	include(FetchContent)
+	FetchContent_Declare(
+	  curl
+	  GIT_REPOSITORY https://github.com/teleportxr/curl.git
+	  GIT_TAG        9eb8e07e026735f3d92a825fc0e5f46f83b80f3f
+	  SOURCE_DIR curl
+	)
+	FetchContent_MakeAvailable(curl)
+	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1)
 	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
 	set(curl_libraries libcurl)
-	RecurseApplyFolder(${CMAKE_SOURCE_DIR}/libavstream/thirdparty/curl thirdparty/curl)
-	target_compile_definitions(libavstream PUBLIC TELEPORT_CLIENT=1) 
+	RecurseApplyFolder(${curl_SOURCE_DIR} thirdparty/curl)
+	target_compile_definitions(libavstream PUBLIC TELEPORT_CLIENT=1)
 endif()
 target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														${CMAKE_CURRENT_BINARY_DIR}

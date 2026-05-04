@@ -128,11 +128,11 @@ add_custom_target(Sphinx ALL
 					${FIND_DOXYGEN_OUTPUTS}
 					${SPHINX_SOURCE} ${SPHINX_BUILD}
 					WORKING_DIRECTORY ${SPHINX_SOURCE}
-					DEPENDS ${ALL_RST_FILES} 
+					DEPENDS ${ALL_RST_FILES}
 					# Other docs files you want to track should go here (or in some variable)
-					${CMAKE_SOURCE_DIR}/index.rst 
+					${CMAKE_SOURCE_DIR}/index.rst
 					${DOXYGEN_INDEX_FILE}
-					MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/conf.py
+					${CMAKE_CURRENT_SOURCE_DIR}/conf.py
 					COMMENT "Generating documentation at ${CMAKE_CURRENT_BINARY_DIR}/sphinx/index.html
 					${SPHINX_EXECUTABLE} -b html ${FIND_DOXYGEN_OUTPUTS} ${SPHINX_SOURCE} ${SPHINX_BUILD}"
 					SOURCES ${ALL_RST_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/conf.py)

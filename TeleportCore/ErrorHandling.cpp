@@ -1,5 +1,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
+#include <cstdarg>  // for va_list, va_start, va_end
+#include <cstdio>   // for vsnprintf
 #ifdef _MSC_VER
 	#include <Windows.h> // for DebugBreak
 #elif defined __ANDROID__

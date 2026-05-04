@@ -91,7 +91,10 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 		base_url=url.substr(0,first_slash);
 		path=url.substr(first_slash+1,url.length()-first_slash-1);
 	}
-	std::string ws_url = fmt::format("ws://{0}:{1}/{2}", base_url, serverDiscoveryPort,path);
+	// Use wss:// for port 443 (e.g. cloud-hosted servers behind a TLS-terminating router such as Heroku),
+	// otherwise plain ws:// (e.g. local testing on 8080/8081).
+	const char *scheme = (serverDiscoveryPort == 443) ? "wss" : "ws";
+	std::string ws_url = fmt::format("{0}://{1}:{2}/{3}", scheme, base_url, serverDiscoveryPort, path);
 	
 	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
 	if(url.length()>0)

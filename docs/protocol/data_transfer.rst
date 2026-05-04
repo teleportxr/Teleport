@@ -4,42 +4,139 @@
 Data Transfer
 #############
 
+The Teleport Data Service is the real-time transport that carries the six logical streams listed in :doc:`service`. Two transports are supported by the reference code:
 
-Reliability
-^^^^^^^^^^^
-To ensure the reliable streaming of content, the protocol requires four important features:
+* **WebRTC** (default): used by the reference server (``avs::WebRtcNetworkSink``) and the reference client (``avs::WebRtcNetworkSource``). Recommended for all new implementations.
+* **SRT + EFP** (optional/legacy): compiled in only when ``TELEPORT_SUPPORT_SRT`` is defined; described at the end of this page for backward compatibility.
 
-1. Lost network packets are resent within a certain time window.
-2. The client can handle network packets received out of order.
-3. The client can determine when a payload is corrupted.
-4. The client/server can recover from a corrupted payload.
+Reliability requirements
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-Secure Reliable Transfer Protocol
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The Secure Reliable Transfer (SRT) protocol is used for sending network packets. 
-This is an open source protocol that provides a wrapper around UDP and allows for the retransmission of lost packets.
-It has low overhead compared with TCP and deals with point 1 above. 
-For the Simul fork of SRT, see here: https://github.com/teleportxr/srt.
-For more information on SRT, see here: https://www.haivision.com/resources/streaming-video-definitions/srt/.
-Note: Teleport is currently using the master branch of the SRT fork.
+Whichever transport is used, the protocol assumes:
 
-Elastic Frame Protocol
-^^^^^^^^^^^^^^^^^^^^^^
-The Teleport Protocol uses the Elastic Frame Protocol (EFP) to maximize streaming reliability. 
-This is an open source protocol that is independent of the underlying transport protocol. 
-It groups network packets together into large chunks of data called **SuperFrames**. 
-The EFP library provides functionality for sending and receiving **SuperFrames**.  
-EFP adds its own header to each network packet. 
-The header contains information such as the **SuperFrame** ID and the transmission timestamp. 
-This information allows the **EFP Receiver** to reassemble the **SuperFrame** on the client and deal with points 2 and 3. 
-When a payload is deemed to be corrupted, it is discarded and the client may request it to be sent again. 
-How the client does this is dependant on the type of stream. See the documentation on each stream type for more information on this.
-For EFP documentation, code examples and the source, see the Simul fork here: https://github.com/teleportxr/efp.
-Note: Teleport is currently using the master branch of the EFP fork.
+1. Lost packets on reliable streams are resent within a bounded time window.
+2. The receiver can cope with out-of-order packets.
+3. The receiver can detect corrupted or incomplete payloads.
+4. The receiver can recover -- e.g. by requesting a video keyframe or marking a resource lost.
 
+WebRTC transport (default)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-EFP Frame Types and SuperFrames
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Negotiation
+~~~~~~~~~~~
+
+A WebRTC PeerConnection is established between client and server using the
+SDP/ICE exchange described in :doc:`signaling`. Once the PeerConnection
+has reached the ``connected`` state, six SCTP data channels are opened.
+
+Each channel has a fixed *label* and a recommended numeric *id*. The
+client's :cpp:class:`avs::WebRtcNetworkSource` and the server's
+:cpp:class:`avs::WebRtcNetworkSink` match channels by **label**, so any
+implementation must use these exact strings:
+
+.. list-table:: WebRTC data channels
+   :widths: 6 14 7 7 7 25
+   :header-rows: 1
+
+   * - Id
+     - Label
+     - Reliable
+     - Ordered
+     - Two-way
+     - Notes
+   * - 20
+     - ``video``
+     - No
+     - No
+     - No
+     - Maximum chunk size 64 KiB; payloads parsed as AVC/HEVC Annex-B.
+   * - 40
+     - ``video_tags``
+     - No
+     - No
+     - No
+     - One framed payload per video frame.
+   * - 60
+     - ``audio_server_to_client``
+     - No
+     - No
+     - Yes
+     - Bidirectional. Server-to-client carries the server's audio output; client-to-server carries microphone capture if ``SetupCommand.audio_input_enabled`` is non-zero.
+   * - 80
+     - ``geometry``
+     - Yes
+     - Yes
+     - No
+     - Reliable, ordered. Payloads use the parser described in :ref:`geometry_payload`.
+   * - 100
+     - ``reliable``
+     - Yes
+     - Yes
+     - Yes
+     - Carries all server-to-client commands and all reliable client-to-server messages (e.g. ``Acknowledgement``, ``ReceivedResources``).
+   * - 120
+     - ``unreliable``
+     - No
+     - No
+     - Yes
+     - Per-frame poses, input states, latency pong.
+
+Framing
+~~~~~~~
+
+WebRTC SCTP data channels deliver complete messages, so no
+fragmentation header is needed at the protocol level. The server splits
+a payload that exceeds ``chunkSize`` (64 KiB for most channels) into
+multiple SCTP messages internally; the receiver re-assembles them
+before passing the payload to the decoder for that channel. From the
+application's point of view, each ``send`` corresponds to one logical
+payload (a command, a message, a video frame fragment, a geometry
+chunk, etc.).
+
+Recovery
+~~~~~~~~
+
+* **Video**: on any frame loss, the client sends a
+  ``KeyframeRequest`` :ref:`message <client_to_server>` over the
+  unreliable channel; the server forces the encoder to emit an IDR
+  frame. See :ref:`video`.
+* **Geometry**: the server only retires a resource from the pending
+  set when the client sends a ``ReceivedResources`` message. If the
+  client cannot decode a payload it can send ``ResourceLost`` to force
+  resending.
+* **Reliable channels**: SCTP itself guarantees delivery; no
+  protocol-level recovery is required.
+
+.. _legacy_srt_efp:
+
+Legacy transport: SRT + EFP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+   This transport is only built when ``TELEPORT_SUPPORT_SRT`` is set
+   at compile time. New implementations should use WebRTC.
+
+The Teleport Protocol can also be carried over the Secure Reliable
+Transport (SRT) wrapped in the Elastic Frame Protocol (EFP). SRT
+provides retransmission of lost UDP packets; EFP provides framing,
+fragmentation and per-stream sub-addressing inside SRT.
+
+For the Simul fork of SRT, see https://github.com/teleportxr/srt.
+For more on SRT, see https://www.haivision.com/resources/streaming-video-definitions/srt/.
+For EFP, see https://github.com/teleportxr/efp.
+
+EFP groups packets into **SuperFrames**. The EFP library provides
+sending and receiving of these via its own header on each packet, which
+contains the SuperFrame id, fragment index, and a presentation
+timestamp; Teleport reuses the timestamp field as a per-stream
+**stream-payload-id**. A corrupted SuperFrame is still delivered (with
+``mBroken`` set) so the application can request retransmission --
+the same recovery mechanisms described above for the WebRTC transport
+apply.
+
+EFP frame types and SuperFrames
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 EFP adds four different types of headers of varying size to each network packet. The types used depend on the total size of the payload and the **Maximum Transmission Unit** (**MTU**) size.
 Each payload will either have one packet with a **ElasticFrameType1** header or multiple packets with **ElasticFrameType2** headers.
 Both of these headers contain a uint64 member called hPTS (Presentation Timestamp). This is unused by EFP but used by Teleport to store the **stream-payload-id**, a unique identifier for a payload.
@@ -173,7 +270,7 @@ The network packet structure is of the form:
 
 
 Initialization of EFP on the Server
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 On the start of a **client-server session**, the server initializes SRT and starts listening for messages on a user specified socket.
 An instance of an **ElasticFrameProtocolSender** class is created and the **MTU** size is passed to the constructor
 This is 1450 for UDP which is the protocol SRT is built on.
@@ -187,7 +284,7 @@ This is a uint64 value that is initialized to 0 on the start of the **client-ser
 The **stream-payload-id** value is written to **PTS** of each EFP packet header.
 
 Sending Data from the Server
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 On each frame or application update, the server will poll SRT to check the status of the connection for each client.
 If the server and client are connected, the server will do the following to transfer data to the client for each stream:
 
@@ -201,7 +298,7 @@ If the server and client are connected, the server will do the following to tran
 
 
 Initialization of EFP on the Client
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 On receiving the **SetupCommand**, the client will initialize SRT and create and configure an SRT socket for receiving network packets from the server.
 Subsequently, the client will create an instance of an **ElasticFrameProtocolReceiver** or **EFP Receiver** and this will remain in use until the end of the 
 **server-client-session**. A **SuperFrame** timeout and **EFPReceiverMode** are passed to the **EFP Receiver** constructor.
@@ -217,7 +314,7 @@ This function will receive a completed **SuperFrame** containing the server's pa
 
 
 Receiving Data on the Client
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 On each frame or application update, the client will use **srt_connect** to try make a connection to the server using the server ip and **server streaming port**
 provided in the **Setup Command**. If a connection has been attempted, the client will poll SRT to check the status of the connection.
 If the server and client are connected, the client will do the following to process incoming packets from the server:

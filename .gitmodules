@@ -16,9 +16,6 @@
 [submodule "firstparty/teleport-unity"]
 	path = firstparty/teleport-unity
 	url = ../teleport-unity.git
-[submodule "libavstream/thirdparty/curl"]
-	path = libavstream/thirdparty/curl
-	url = ../curl.git
 [submodule "thirdparty/websocketpp"]
 	path = thirdparty/websocketpp
 	url = https://github.com/zaphoyd/websocketpp.git

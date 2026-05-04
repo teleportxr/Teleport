@@ -146,6 +146,8 @@ elseif(PLATFORM_LINUX)
 	endif()
 	target_link_libraries(TeleportPCClient ssl crypto)
 	target_link_libraries(TeleportPCClient pthread dl)
+	target_include_directories(TeleportPCClient PRIVATE ${SIMUL_PLATFORM_DIR}/External/glfw/include)
+	target_link_libraries(TeleportPCClient glfw)
 endif()
 
 if(TELEPORT_CLIENT_SUPPORT_IPSME)
@@ -169,7 +171,7 @@ endif()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "cpack_install")
 
-set(TELEPORT_INSTALLED_CLIENT_EXE "$INSTDIR\\\\build_pc_client\\\\bin\\\\Release\\\\TeleportPCClient.exe")
+set(TELEPORT_INSTALLED_CLIENT_EXE "$INSTDIR\\\\build\\\\bin\\\\Release\\\\TeleportPCClient.exe")
 LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
     "CreateShortCut '$INSTDIR\\\\TeleportClient.lnk' '${TELEPORT_INSTALLED_CLIENT_EXE}' '-log'"
 )
@@ -178,14 +180,14 @@ LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
 )
 install(TARGETS TeleportPCClient
 		RUNTIME
-		DESTINATION build_pc_client/bin/Release
+		DESTINATION build/bin/Release
 		COMPONENT client)
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build_pc_client/bin/Release COMPONENT client )
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build/bin/Release COMPONENT client )
+install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build/bin/Release COMPONENT client )
 if(LIBAV_USE_CUDA)
-	install(FILES "${LIBAV_CUDA_DIR}\\\\bin\\\\cudart64_110.dll" DESTINATION build_pc_client/bin/Release COMPONENT client )
+	install(FILES "${LIBAV_CUDA_DIR}\\\\bin\\\\cudart64_110.dll" DESTINATION build/bin/Release COMPONENT client )
 endif()
 install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
 install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
@@ -230,6 +232,6 @@ set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
 ##Set the programs, directories and files, displayed under the Start menu shortcut.
-set(CPACK_NSIS_MENU_LINKS "build_pc_client\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
+set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
 endif()
 include(CPack)

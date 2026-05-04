@@ -1633,6 +1633,7 @@ void Renderer::ResizeView(int view_id, int W, int H)
 		renderState.hdrFramebuffer->SetAntialiasing(1);
 	}
 }
+static platform::core::Timer timer;
 #define ONSCREEN_PROF 1
 #if ONSCREEN_PROF
 platform::core::DefaultProfiler cpuProfiler;
@@ -1643,8 +1644,6 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	{
 		LoadShaders();
 	}
-	static platform::core::Timer timer;
-	static float				 last_t = 0.0f;
 	timer.UpdateTime();
 	if (last_t != 0.0f && timer.TimeSum != last_t)
 	{
@@ -1957,12 +1956,15 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 			if (r)
 			{
 				clientrender::AVSTextureHandle th = r->GetInstanceRenderState().avsTexture;
-				clientrender::AVSTexture	  &tx = *th;
-				AVSTextureImpl				  *ti = static_cast<AVSTextureImpl *>(&tx);
-				if (ti)
+				if (th)
 				{
-					gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
-					gui.DrawTexture(ti->texture);
+					clientrender::AVSTexture	  &tx = *th;
+					AVSTextureImpl				  *ti = static_cast<AVSTextureImpl *>(&tx);
+					if (ti)
+					{
+						gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+						gui.DrawTexture(ti->texture);
+					}
 				}
 				gui.LinePrint(platform::core::QuickFormat("Specular"), white);
 				gui.DrawTexture(r->GetInstanceRenderState().specularCubemapTexture);

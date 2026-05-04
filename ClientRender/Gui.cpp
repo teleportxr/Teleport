@@ -17,6 +17,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include <fmt/core.h>
 #include <magic_enum/magic_enum.hpp>
+#include <filesystem>
 
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -101,44 +102,46 @@ using namespace clientrender;
 using namespace platform;
 using namespace crossplatform;
 
-ImFont *defaultFont = nullptr;
+ImFont				   *defaultFont = nullptr;
 std::map<int, ImFont *> fontInter;
 #define STR_VECTOR3 "%3.3f %3.3f %3.3f"
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 PlatformWindow *platformWindow = nullptr;
 
-bool Gui::url_input = false;
+bool			Gui::url_input = false;
 
-#define TIMED_TOOLTIP(...)                                       \
-	{                                                            \
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) \
-			ImGui::SetTooltip(__VA_ARGS__);                      \
+#define TIMED_TOOLTIP(...)                                                                                                                                     \
+	{                                                                                                                                                          \
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))                                                                                               \
+			ImGui::SetTooltip(__VA_ARGS__);                                                                                                                    \
 	}
 
-#define TIMED_TOOLTIP2(...)                                      \
-	{                                                            \
-		static int timer = 1200;                                 \
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) \
-			timer--;                                             \
-		else                                                     \
-			timer = 1200;                                        \
-		if (timer <= 0)                                          \
-			ImGui::SetTooltip(__VA_ARGS__);                      \
+#define TIMED_TOOLTIP2(...)                                                                                                                                    \
+	{                                                                                                                                                          \
+		static int timer = 1200;                                                                                                                               \
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))                                                                                               \
+			timer--;                                                                                                                                           \
+		else                                                                                                                                                   \
+			timer = 1200;                                                                                                                                      \
+		if (timer <= 0)                                                                                                                                        \
+			ImGui::SetTooltip(__VA_ARGS__);                                                                                                                    \
 	}
 
 ImGui_ImplPlatform_TextureView imgui_vrHeadsetIconTexture;
 ImGui_ImplPlatform_TextureView imgui_ViveControllerTexture;
-void Gui::SetPlatformWindow(PlatformWindow *w)
+void						   Gui::SetPlatformWindow(PlatformWindow *w)
 {
 #ifdef __ANDROID__
 	if (renderPlatform != nullptr && w != platformWindow)
+	{
 		ImGui_ImplAndroid_Init(w);
+	}
 #endif
 	platformWindow = w;
 }
-bool debug_begin_end = false;
+bool					 debug_begin_end = false;
 std::vector<std::string> begin_end_stack;
-bool ImGuiBegin(const char *txt, bool *on_off, ImGuiWindowFlags flags)
+bool					 ImGuiBegin(const char *txt, bool *on_off, ImGuiWindowFlags flags)
 {
 	begin_end_stack.push_back(txt);
 	if (debug_begin_end)
@@ -170,15 +173,19 @@ void ImGuiEnd()
 void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags, const char *txt)
 {
 	if (!txt)
+	{
 		txt = str_id;
+	}
 	bool is_open = ImGui::TreeNodeEx(str_id, flags, "%s", txt);
 	if (is_open && ((flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) == 0))
+	{
 		ImGui::TreePop();
+	}
 }
-#define IMGUITREENODEEX(str_id, flags, txt, ...)         \
-	{                                                    \
-		std::string str = fmt::format(txt, __VA_ARGS__); \
-		ImGuiTreeNodeEx(str_id, flags, str.c_str());     \
+#define IMGUITREENODEEX(str_id, flags, txt, ...)                                                                                                               \
+	{                                                                                                                                                          \
+		std::string str = fmt::format(txt, __VA_ARGS__);                                                                                                       \
+		ImGuiTreeNodeEx(str_id, flags, str.c_str());                                                                                                           \
 	}
 static inline ImVec4 ImLerp(const ImVec4 &a, const ImVec4 &b, float t)
 {
@@ -188,141 +195,149 @@ static inline ImVec4 ImLerp(const ImVec4 &a, const ImVec4 &b, float t)
 void Gui::LightStyle()
 {
 	if (style == ColourStyle::LIGHT_STYLE)
+	{
 		return;
+	}
 	style = ColourStyle::LIGHT_STYLE;
 	ImGui::StyleColorsLight();
-	auto &style = ImGui::GetStyle();
-	ImVec4 *colors = style.Colors;
-	colors[ImGuiCol_Button] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+	auto   &style				   = ImGui::GetStyle();
+	ImVec4 *colors				   = style.Colors;
+	colors[ImGuiCol_Button]		   = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 	colors[ImGuiCol_ButtonHovered] = ImVec4(0.7f, 0.7f, 0.7f, 1.00f);
-	colors[ImGuiCol_ButtonActive] = ImVec4(0.8f, 0.8f, 0.8f, 1.00f);
-	colors[ImGuiCol_Border] = ImVec4(0.00f, 0.00f, 0.00f, 0.3f);
-	colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_FrameBg] = ImVec4(0.8f, 0.8f, 0.8f, 1.00f);
-	style.GrabRounding = 1.f;
-	style.WindowRounding = 12.f;
-	style.ScrollbarRounding = 3.f;
-	style.FrameRounding = 12.f;
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.FramePadding = ImVec2(8.f, 4.f);
-	style.FrameBorderSize = 1.f;
-	style.WindowPadding = ImVec2(20.f, 14.f);
+	colors[ImGuiCol_ButtonActive]  = ImVec4(0.8f, 0.8f, 0.8f, 1.00f);
+	colors[ImGuiCol_Border]		   = ImVec4(0.00f, 0.00f, 0.00f, 0.3f);
+	colors[ImGuiCol_BorderShadow]  = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_FrameBg]	   = ImVec4(0.8f, 0.8f, 0.8f, 1.00f);
+	style.GrabRounding			   = 1.f;
+	style.WindowRounding		   = 12.f;
+	style.ScrollbarRounding		   = 3.f;
+	style.FrameRounding			   = 12.f;
+	style.WindowTitleAlign		   = ImVec2(0.5f, 0.5f);
+	style.FramePadding			   = ImVec2(8.f, 4.f);
+	style.FrameBorderSize		   = 1.f;
+	style.WindowPadding			   = ImVec2(20.f, 14.f);
 }
 
 void Gui::RebindStyle()
 {
 	if (style == ColourStyle::REBIND_STYLE)
+	{
 		return;
+	}
 	style = ColourStyle::REBIND_STYLE;
 	ImGui::StyleColorsDark();
 
-	auto &style = ImGui::GetStyle();
-	style.GrabRounding = 12.f;
-	style.WindowRounding = 12.f;
+	auto &style				= ImGui::GetStyle();
+	style.GrabRounding		= 12.f;
+	style.WindowRounding	= 12.f;
 	style.ScrollbarRounding = 12.f;
-	style.FrameRounding = 2.f;
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.FramePadding = ImVec2(4.f, 2.f);
-	style.FramePadding.x = 4.f;
-	style.FrameBorderSize = 2.f;
-	style.WindowPadding = ImVec2(20.f, 14.f);
+	style.FrameRounding		= 2.f;
+	style.WindowTitleAlign	= ImVec2(0.5f, 0.5f);
+	style.FramePadding		= ImVec2(4.f, 2.f);
+	style.FramePadding.x	= 4.f;
+	style.FrameBorderSize	= 2.f;
+	style.WindowPadding		= ImVec2(20.f, 14.f);
 }
 
 void Gui::DarkStyle()
 {
 	if (style == ColourStyle::DARK_STYLE)
+	{
 		return;
+	}
 	style = ColourStyle::DARK_STYLE;
 	ImGui::StyleColorsDark();
 
-	auto &style = ImGui::GetStyle();
+	auto &style				= ImGui::GetStyle();
 
-	style.GrabRounding = 1.f;
-	style.WindowRounding = 12.f;
+	style.GrabRounding		= 1.f;
+	style.WindowRounding	= 12.f;
 	style.ScrollbarRounding = 3.f;
-	style.FrameRounding = 12.f;
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.FramePadding = ImVec2(4.f, 2.f);
-	style.FramePadding.x = 4.f;
-	style.FrameBorderSize = 2.f;
-	style.WindowPadding = ImVec2(20.f, 14.f);
-	ImVec4 *colors = style.Colors;
-	ImVec4 imWhite(1.00f, 1.00f, 1.00f, 1.00f);
-	colors[ImGuiCol_Text] = imWhite;
-	colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
-	colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
-	colors[ImGuiCol_Border] = ImVec4(0.43f, 0.43f, 0.43f, 0.50f);
-	colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_FrameBg] = ImVec4(0.29f, 0.29f, 0.29f, 0.54f);
-	colors[ImGuiCol_FrameBgHovered] = ImVec4(0.45f, 0.45f, 0.45f, 0.40f);
-	colors[ImGuiCol_FrameBgActive] = ImVec4(0.65f, 0.65f, 0.65f, 0.67f);
-	colors[ImGuiCol_TitleBg] = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
-	colors[ImGuiCol_TitleBgActive] = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
-	colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
-	colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
-	colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
-	colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
-	colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
-	colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_SliderGrab] = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
-	colors[ImGuiCol_SliderGrabActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_Button] = ImVec4(0.30f, 0.30f, 0.30f, 0.40f);
-	colors[ImGuiCol_ButtonHovered] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-	colors[ImGuiCol_ButtonActive] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-	colors[ImGuiCol_Header] = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
-	colors[ImGuiCol_HeaderHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
-	colors[ImGuiCol_HeaderActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-	colors[ImGuiCol_Separator] = colors[ImGuiCol_Border];
-	colors[ImGuiCol_SeparatorHovered] = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
-	colors[ImGuiCol_SeparatorActive] = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
-	colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
-	colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
-	colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-	colors[ImGuiCol_Tab] = ImLerp(colors[ImGuiCol_Header], colors[ImGuiCol_TitleBgActive], 0.80f);
-	colors[ImGuiCol_TabHovered] = colors[ImGuiCol_HeaderHovered];
-	colors[ImGuiCol_TabActive] = ImLerp(colors[ImGuiCol_HeaderActive], colors[ImGuiCol_TitleBgActive], 0.60f);
-	colors[ImGuiCol_TabUnfocused] = ImLerp(colors[ImGuiCol_Tab], colors[ImGuiCol_TitleBg], 0.80f);
-	colors[ImGuiCol_TabUnfocusedActive] = ImLerp(colors[ImGuiCol_TabActive], colors[ImGuiCol_TitleBg], 0.40f);
-	colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-	colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
-	colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-	colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-	colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
-	colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f); // Prefer using Alpha=1.0 here
-	colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);	 // Prefer using Alpha=1.0 here
-	colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-	colors[ImGuiCol_TextSelectedBg] = ImVec4(0.65f, 0.65f, 0.65f, 0.35f);
-	colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
-	colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	style.FrameRounding		= 12.f;
+	style.WindowTitleAlign	= ImVec2(0.5f, 0.5f);
+	style.FramePadding		= ImVec2(4.f, 2.f);
+	style.FramePadding.x	= 4.f;
+	style.FrameBorderSize	= 2.f;
+	style.WindowPadding		= ImVec2(20.f, 14.f);
+	ImVec4 *colors			= style.Colors;
+	ImVec4	imWhite(1.00f, 1.00f, 1.00f, 1.00f);
+	colors[ImGuiCol_Text]				   = imWhite;
+	colors[ImGuiCol_TextDisabled]		   = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_WindowBg]			   = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
+	colors[ImGuiCol_ChildBg]			   = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_PopupBg]			   = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+	colors[ImGuiCol_Border]				   = ImVec4(0.43f, 0.43f, 0.43f, 0.50f);
+	colors[ImGuiCol_BorderShadow]		   = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_FrameBg]			   = ImVec4(0.29f, 0.29f, 0.29f, 0.54f);
+	colors[ImGuiCol_FrameBgHovered]		   = ImVec4(0.45f, 0.45f, 0.45f, 0.40f);
+	colors[ImGuiCol_FrameBgActive]		   = ImVec4(0.65f, 0.65f, 0.65f, 0.67f);
+	colors[ImGuiCol_TitleBg]			   = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+	colors[ImGuiCol_TitleBgActive]		   = ImVec4(0.16f, 0.16f, 0.16f, 1.00f);
+	colors[ImGuiCol_TitleBgCollapsed]	   = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+	colors[ImGuiCol_MenuBarBg]			   = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+	colors[ImGuiCol_ScrollbarBg]		   = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
+	colors[ImGuiCol_ScrollbarGrab]		   = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabHovered]  = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabActive]   = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
+	colors[ImGuiCol_CheckMark]			   = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_SliderGrab]			   = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
+	colors[ImGuiCol_SliderGrabActive]	   = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_Button]				   = ImVec4(0.30f, 0.30f, 0.30f, 0.40f);
+	colors[ImGuiCol_ButtonHovered]		   = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_ButtonActive]		   = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+	colors[ImGuiCol_Header]				   = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
+	colors[ImGuiCol_HeaderHovered]		   = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
+	colors[ImGuiCol_HeaderActive]		   = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	colors[ImGuiCol_Separator]			   = colors[ImGuiCol_Border];
+	colors[ImGuiCol_SeparatorHovered]	   = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
+	colors[ImGuiCol_SeparatorActive]	   = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
+	colors[ImGuiCol_ResizeGrip]			   = ImVec4(0.26f, 0.59f, 0.98f, 0.20f);
+	colors[ImGuiCol_ResizeGripHovered]	   = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+	colors[ImGuiCol_ResizeGripActive]	   = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+	colors[ImGuiCol_Tab]				   = ImLerp(colors[ImGuiCol_Header], colors[ImGuiCol_TitleBgActive], 0.80f);
+	colors[ImGuiCol_TabHovered]			   = colors[ImGuiCol_HeaderHovered];
+	colors[ImGuiCol_TabActive]			   = ImLerp(colors[ImGuiCol_HeaderActive], colors[ImGuiCol_TitleBgActive], 0.60f);
+	colors[ImGuiCol_TabUnfocused]		   = ImLerp(colors[ImGuiCol_Tab], colors[ImGuiCol_TitleBg], 0.80f);
+	colors[ImGuiCol_TabUnfocusedActive]	   = ImLerp(colors[ImGuiCol_TabActive], colors[ImGuiCol_TitleBg], 0.40f);
+	colors[ImGuiCol_PlotLines]			   = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+	colors[ImGuiCol_PlotLinesHovered]	   = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+	colors[ImGuiCol_PlotHistogram]		   = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	colors[ImGuiCol_PlotHistogramHovered]  = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	colors[ImGuiCol_TableHeaderBg]		   = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+	colors[ImGuiCol_TableBorderStrong]	   = ImVec4(0.31f, 0.31f, 0.35f, 1.00f); // Prefer using Alpha=1.0 here
+	colors[ImGuiCol_TableBorderLight]	   = ImVec4(0.23f, 0.23f, 0.25f, 1.00f); // Prefer using Alpha=1.0 here
+	colors[ImGuiCol_TableRowBg]			   = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_TableRowBgAlt]		   = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+	colors[ImGuiCol_TextSelectedBg]		   = ImVec4(0.65f, 0.65f, 0.65f, 0.35f);
+	colors[ImGuiCol_DragDropTarget]		   = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+	colors[ImGuiCol_NavHighlight]		   = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 	colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+	colors[ImGuiCol_NavWindowingDimBg]	   = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+	colors[ImGuiCol_ModalWindowDimBg]	   = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
 
 void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow *w)
 {
 	renderPlatform = r;
 	if (!r)
+	{
 		return;
+	}
 	SAFE_DELETE(vrHeadsetIconTexture);
-	vrHeadsetIconTexture = renderPlatform->CreateTexture("headsetIconLine.png");
-	imgui_vrHeadsetIconTexture.height = 20;
-	imgui_vrHeadsetIconTexture.width = 20;
-	imgui_vrHeadsetIconTexture.mip = -1;
-	imgui_vrHeadsetIconTexture.slice = 0;
+	vrHeadsetIconTexture			   = renderPlatform->CreateTexture("headsetIconLine.png");
+	imgui_vrHeadsetIconTexture.height  = 20;
+	imgui_vrHeadsetIconTexture.width   = 20;
+	imgui_vrHeadsetIconTexture.mip	   = -1;
+	imgui_vrHeadsetIconTexture.slice   = 0;
 	imgui_vrHeadsetIconTexture.texture = vrHeadsetIconTexture;
 
 	{
 		SAFE_DELETE(viveControllerTexture);
-		viveControllerTexture = renderPlatform->CreateTexture("viveController.png");
-		imgui_ViveControllerTexture.height = 347;
-		imgui_ViveControllerTexture.width = 265;
-		imgui_ViveControllerTexture.mip = -1;
-		imgui_ViveControllerTexture.slice = 0;
+		viveControllerTexture				= renderPlatform->CreateTexture("viveController.png");
+		imgui_ViveControllerTexture.height	= 347;
+		imgui_ViveControllerTexture.width	= 265;
+		imgui_ViveControllerTexture.mip		= -1;
+		imgui_ViveControllerTexture.slice	= 0;
 		imgui_ViveControllerTexture.texture = viveControllerTexture;
 	}
 	for (uint16_t i = 0; i < VK_MAX; i++)
@@ -343,25 +358,33 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 	ImGui_ImplAndroid_Init(platformWindow);
 #endif
 	ImGui_ImplPlatform_Init(r);
-	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
+	// NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after
+	// Build().
 	platform::core::FileLoader *fileLoader = platform::core::FileLoader::GetFileLoader();
-	std::vector<std::string> texture_paths;
+	std::vector<std::string>	texture_paths;
 	texture_paths.push_back("textures");
 	texture_paths.push_back("fonts");
 	texture_paths.push_back("assets/textures");
 	texture_paths.push_back("assets/fonts");
-	ImGuiIO &io = ImGui::GetIO();
-	auto AddFont = [texture_paths, fileLoader, &io](const char *font_filename, float size_pixels = 32.f, ImFontConfig *config = nullptr, const ImWchar *ranges = nullptr) -> ImFont *
+	ImGuiIO &io		 = ImGui::GetIO();
+	auto	 AddFont = [texture_paths, fileLoader, &io](
+					   const char *font_filename, float size_pixels = 32.f, ImFontConfig *config = nullptr, const ImWchar *ranges = nullptr) -> ImFont *
 	{
 		int idx = fileLoader->FindIndexInPathStack(font_filename, texture_paths);
 		if (idx <= -2)
 		{
-			TELEPORT_CERR << font_filename << " not found.\n";
+			TELEPORT_CERR << font_filename << " not found.\nSearched in: \n";
+			std::cerr << "\tWorking directory: " << std::filesystem::current_path().string() << "\n";
+			for (auto &p : texture_paths)
+			{
+				std::cerr << "\t" << p.c_str() << "\n";
+			}
+			std::cerr << std::endl;
 			return nullptr;
 		}
-		void *ttf_data;
+		void		*ttf_data;
 		unsigned int ttf_size;
-		std::string full_path = ((texture_paths[idx] + "/") + font_filename);
+		std::string	 full_path = ((texture_paths[idx] + "/") + font_filename);
 		// return io.Fonts->AddFontFromFileTTF(full_path.c_str(),size_pixels,config,ranges);
 		fileLoader->AcquireFileContents(ttf_data, ttf_size, full_path.c_str(), false);
 		return io.Fonts->AddFontFromMemoryTTF(ttf_data, ttf_size, size_pixels, config, ranges);
@@ -372,7 +395,7 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 	static ImVector<ImWchar> glyph_ranges1;
 	{
 		ImFontConfig config;
-		config.MergeMode = true;
+		config.MergeMode		= true;
 		config.GlyphMinAdvanceX = 32.0f;
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
@@ -399,15 +422,15 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		AddFont("forkawesome-webfont.ttf", 32.f, &config, glyph_ranges1.Data);
 		io.Fonts->Build(); // Build the atlas while 'ranges' is still in scope and not deleted.
 	}
-	std::vector<int> fontSizes = {12, 18};
+	std::vector<int>					  fontSizes = {12, 18};
 	static std::vector<ImVector<ImWchar>> glyph_ranges2;
 	glyph_ranges2.resize(fontSizes.size());
 	for (int i = 0; i < fontSizes.size(); i++)
 	{
-		int sz = fontSizes[i];
+		int sz		  = fontSizes[i];
 		fontInter[sz] = AddFont("Inter-Regular.ttf", float(sz));
 		ImFontConfig config;
-		config.MergeMode = true;
+		config.MergeMode		= true;
 		config.GlyphMinAdvanceX = 20.0f;
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
@@ -467,7 +490,9 @@ void Gui::RecompileShaders()
 void Gui::SetGuiType(GuiType t)
 {
 	if (guiType == t)
+	{
 		return;
+	}
 	guiType = t;
 	if (guiType == GuiType::None)
 	{
@@ -494,7 +519,7 @@ void Gui::SetScaleMetres()
 
 void Gui::ShowFont()
 {
-	ImGuiIO &io = ImGui::GetIO();
+	ImGuiIO		&io	   = ImGui::GetIO();
 	ImFontAtlas *atlas = io.Fonts;
 	for (int i = 0; i < atlas->Fonts.Size; i++)
 	{
@@ -502,9 +527,9 @@ void Gui::ShowFont()
 		using namespace ImGui;
 		if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
 		{
-			ImDrawList *draw_list = GetWindowDrawList();
-			const ImU32 glyph_col = GetColorU32(ImGuiCol_Text);
-			const float cell_size = font->FontSize * 1;
+			ImDrawList *draw_list	 = GetWindowDrawList();
+			const ImU32 glyph_col	 = GetColorU32(ImGuiCol_Text);
+			const float cell_size	 = font->FontSize * 1;
 			const float cell_spacing = GetStyle().ItemSpacing.y;
 			for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
 			{
@@ -519,12 +544,20 @@ void Gui::ShowFont()
 
 				int count = 0;
 				for (unsigned int n = 0; n < 256; n++)
+				{
 					if (font->FindGlyphNoFallback((ImWchar)(base + n)))
+					{
 						count++;
+					}
+				}
 				if (count <= 0)
+				{
 					continue;
+				}
 				if (!ImGui::TreeNode((void *)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
+				{
 					continue;
+				}
 
 				// Draw a 16x16 grid of glyphs
 				ImVec2 base_pos = GetCursorScreenPos();
@@ -532,12 +565,14 @@ void Gui::ShowFont()
 				{
 					// We use ImFont::RenderChar as a shortcut because we don't have UTF-8 conversion functions
 					// available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
-					ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
-					ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
+					ImVec2			   cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
+					ImVec2			   cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
 					const ImFontGlyph *glyph = font->FindGlyphNoFallback((ImWchar)(base + n));
 					draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
 					if (glyph)
+					{
 						font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
+					}
 					if (glyph && IsMouseHoveringRect(cell_p1, cell_p2))
 					{
 						BeginTooltip();
@@ -561,16 +596,18 @@ void Gui::ShowFont()
 
 void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *search_text)
 {
-	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
-	const clientrender::Node *node = n.get();
+	auto					  geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
+	const clientrender::Node *node			= n.get();
 	if (!node)
+	{
 		return;
-	avs::uid selected_uid = GetSelectedUid();
-	bool selected = (selected_uid == n->id);
-	bool has_children = node->GetChildren().size() != 0;
-	std::string str = (std::to_string(n->id) + " ") + node->name;
-	bool open = false;
-	bool show = true;
+	}
+	avs::uid	selected_uid = GetSelectedUid();
+	bool		selected	 = (selected_uid == n->id);
+	bool		has_children = node->GetChildren().size() != 0;
+	std::string str			 = (std::to_string(n->id) + " ") + node->name;
+	bool		open		 = false;
+	bool		show		 = true;
 	if (search_text)
 	{
 		if (platform::core::find_case_insensitive(str, search_text) >= str.length())
@@ -585,9 +622,12 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 			ImVec4 grey = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
 			ImGui::PushStyleColor(ImGuiCol_Text, grey);
 		}
-		open = ImGui::TreeNodeEx(str.c_str(), ImGuiTreeNodeFlags_OpenOnArrow | (has_children ? 0 : ImGuiTreeNodeFlags_Leaf)|(selected?ImGuiTreeNodeFlags_Selected:0));
+		open = ImGui::TreeNodeEx(str.c_str(),
+								 ImGuiTreeNodeFlags_OpenOnArrow | (has_children ? 0 : ImGuiTreeNodeFlags_Leaf) | (selected ? ImGuiTreeNodeFlags_Selected : 0));
 		if (!n->IsVisible())
+		{
 			ImGui::PopStyleColor();
+		}
 	}
 	else
 	{
@@ -608,7 +648,9 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 	if (ImGui::IsItemClicked())
 	{
 		if (!show_inspector)
+		{
 			show_inspector = true;
+		}
 		Select(cache_uid, n->id);
 	}
 	if (open)
@@ -617,23 +659,25 @@ void Gui::TreeNode(const std::shared_ptr<clientrender::Node> n, const char *sear
 		{
 			TreeNode(r.lock(), search_text);
 		}
-		if(show)
+		if (show)
+		{
 			ImGui::TreePop();
+		}
 	}
 }
 
 int Gui::GetCursorPos(long p[2])
 {
 	ImGuiIO &io = ImGui::GetIO();
-	p[0] = (long)io.MousePos.x;
-	p[1] = (long)io.MousePos.y;
+	p[0]		= (long)io.MousePos.x;
+	p[1]		= (long)io.MousePos.y;
 	return 1;
 }
 
 static int in_debug_gui = 0;
-vec2 mouse;
-bool mouseButtons[5] = {false, false, false, false};
-void Gui::SetDebugGuiMouse(vec2 m, bool leftButton)
+vec2	   mouse;
+bool	   mouseButtons[5] = {false, false, false, false};
+void	   Gui::SetDebugGuiMouse(vec2 m, bool leftButton)
 {
 	mouse = m;
 	if (mouseButtons[0] != leftButton)
@@ -764,7 +808,8 @@ static bool IsVkDown(int vk)
 	return (::GetKeyState(vk) & 0x8000) != 0;
 }
 #endif
-// There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go up to 255)
+// There is no distinct VK_xxx for keypad enter, instead it is VK_RETURN + KF_EXTENDED, we assign it an arbitrary value to make code more readable (VK_ codes go
+// up to 255)
 #define IM_VK_KEYPAD_ENTER (VK_RETURN + 256)
 void Gui::OnKeyboard(unsigned wParam, bool is_key_down)
 {
@@ -821,16 +866,16 @@ using json = nlohmann::json;
 json j;
 void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 {
-	static bool loaded = false;
+	static bool		   loaded			= false;
 	static std::string binding_filename = "example_binding.json";
 	if (!loaded)
 	{
 		auto *fileLoader = platform::core::FileLoader::GetFileLoader();
 		if (fileLoader)
 		{
-			void *ptr = nullptr;
-			unsigned bytelen = 0;
-			auto &config = client::Config::GetInstance();
+			void	   *ptr		 = nullptr;
+			unsigned	bytelen	 = 0;
+			auto	   &config	 = client::Config::GetInstance();
 			std::string filename = config.GetStorageFolder() + "/config/"s + binding_filename;
 			fileLoader->AcquireFileContents(ptr, bytelen, filename.c_str(), true);
 			if (ptr)
@@ -855,8 +900,8 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
-	ImGuiIO &io = ImGui::GetIO();
+	auto	 vp	   = renderPlatform->GetViewport(deviceContext, 0);
+	ImGuiIO &io	   = ImGui::GetIO();
 	// MUST do this, or ImGui won't know the "screen" size.
 	io.DisplaySize = ImVec2((float)(vp.w), (float)(vp.h));
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
@@ -869,12 +914,9 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 	ImGui_ImplPlatform_SetMouseDown(1, mouseButtons[1]);
 	ImGui_ImplPlatform_SetMouseDown(2, mouseButtons[2]);
 
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize |
-									ImGuiWindowFlags_NoMove |
-									ImGuiWindowFlags_NoCollapse |
-									ImGuiWindowFlags_NoScrollbar;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
 
-	ImVec2 size((float)vp.w, (float)vp.h);
+	ImVec2			 size((float)vp.w, (float)vp.h);
 	ImGui::SetNextWindowPos(ImVec2(0, 0)); // always at the window origin
 	ImGui::SetNextWindowSizeConstraints(size, size);
 	ImGui::SetNextWindowSize(size);
@@ -886,9 +928,9 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 		if (ImGuiBegin("Rebind Inputs", nullptr, window_flags))
 		{
 			ImGui::Text("%s", binding_filename.c_str());
-			json &actionSets = j["actionSets"];
-			static int chosenSet = -1;
-			static ImGuiTableFlags flags = 0;
+			json				  &actionSets = j["actionSets"];
+			static int			   chosenSet  = -1;
+			static ImGuiTableFlags flags	  = 0;
 			ImGui::BeginTable("actionSets", 3, flags, ImVec2(float(vp.w), float(vp.h)), float(vp.w));
 			ImGui::TableSetupColumn("Action Set", ImGuiTableColumnFlags_WidthFixed, float(vp.w) * 0.12f);
 			ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, float(vp.w) * 0.28f);
@@ -898,47 +940,57 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 			ImGui::TableNextColumn();
 			for (int i = 0; i < actionSets.size(); i++)
 			{
-				json &actionSet = actionSets[i];
-				std::string actionSetName = actionSet["name"];
+				json	   &actionSet			   = actionSets[i];
+				std::string actionSetName		   = actionSet["name"];
 				std::string actionSetLocalizedName = actionSet["localizedName"];
 				if (ImGui::Button(actionSetLocalizedName.c_str()))
 				{
 					if (chosenSet != i)
+					{
 						chosenSet = i;
+					}
 					else
+					{
 						chosenSet = -1;
+					}
 				}
 			}
 			ImGui::TableNextColumn();
 			if (chosenSet >= 0 && chosenSet < actionSets.size())
 			{
 				json &actionSet = actionSets[chosenSet];
-				int priority = actionSet["priority"];
+				int	  priority	= actionSet["priority"];
 				ImGui::Text("Priority: ");
 				ImGui::SameLine();
 				if (ImGui::SliderInt("##priority", &priority, 0, 10))
+				{
 					actionSet["priority"] = priority;
-				json &actions = actionSet["actions"];
+				}
+				json	  &actions	   = actionSet["actions"];
 				static int choseAction = -1;
-				int i = 0;
+				int		   i		   = 0;
 				for (json::iterator actionPair = actions.begin(); actionPair != actions.end(); ++actionPair, i++)
 				{
-					json &action = actionPair.value();
-					std::string actionName = action["name"];
+					json	   &action		  = actionPair.value();
+					std::string actionName	  = action["name"];
 					std::string localizedName = action["localizedName"];
 					if (ImGui::Button(i == choseAction ? ICON_FK_CHEVRON_DOWN : ICON_FK_CHEVRON_RIGHT))
 					{
 						if (choseAction != i)
+						{
 							choseAction = i;
+						}
 						else
+						{
 							choseAction = -1;
+						}
 					}
 					ImGui::SameLine();
 					ImGui::Text("%s", localizedName.c_str());
 					if (i == choseAction)
 					{
-						json &bindingsList = action["bindings"];
-						ImVec4 brd = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
+						json  &bindingsList = action["bindings"];
+						ImVec4 brd			= ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
 						ImGui::PushStyleColor(ImGuiCol_Border, brd);
 						ImGui::BeginGroup();
 						for (json &binding : bindingsList)
@@ -965,10 +1017,10 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 				}
 			}
 			ImGui::TableNextColumn();
-			float imgWidth = ImGui::GetColumnWidth(2);
+			float  imgWidth = ImGui::GetColumnWidth(2);
 			ImVec2 imgSize(347.f, 265.f);
 			imgSize.y *= imgWidth / imgSize.x;
-			imgSize.x = imgWidth;
+			imgSize.x			 = imgWidth;
 			ImVec2 availableSize = ImGui::GetContentRegionAvail();
 			if (imgSize.y > availableSize.y)
 			{
@@ -984,15 +1036,19 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 	{
 	}
 	ImGui::PopFont();
-	ImVec2 window_pos = ImGui::GetWindowPos();
-	ImVec2 window_size = ImGui::GetWindowSize();
+	ImVec2 window_pos	 = ImGui::GetWindowPos();
+	ImVec2 window_size	 = ImGui::GetWindowSize();
 	ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
 
-	ImVec2 mouse_pos = io.MousePos;
+	ImVec2 mouse_pos	 = io.MousePos;
 	if (mouseButtons[0])
+	{
 		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 3.f, IM_COL32(255, 90, 90, 200), 16);
+	}
 	else
+	{
 		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+	}
 	ImGui::Render();
 	ImGui_ImplPlatform_RenderDrawData(deviceContext, ImGui::GetDrawData());
 }
@@ -1006,8 +1062,8 @@ void Gui::BeginFrame(GraphicsDeviceContext &deviceContext)
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
-	ImGuiIO &io = ImGui::GetIO();
+	auto	 vp	   = renderPlatform->GetViewport(deviceContext, 0);
+	ImGuiIO &io	   = ImGui::GetIO();
 	// MUST do this, or ImGui won't know the "screen" size.
 	io.DisplaySize = ImVec2((float)(vp.w), (float)(vp.h));
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
@@ -1028,9 +1084,9 @@ void Gui::BeginDebugGui(GraphicsDeviceContext &deviceContext)
 {
 	DarkStyle();
 	ImGuiWindowFlags window_flags = 0;
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
-	ImVec2 size((float)vp.w, (float)vp.h);
-	bool in3D = openXR.IsSessionActive();
+	auto			 vp			  = renderPlatform->GetViewport(deviceContext, 0);
+	ImVec2			 size((float)vp.w, (float)vp.h);
+	bool			 in3D = openXR.IsSessionActive();
 	if (in3D)
 	{
 		// size.x*=0.6f;
@@ -1045,7 +1101,9 @@ void Gui::BeginDebugGui(GraphicsDeviceContext &deviceContext)
 	}
 	ImGui::PushFont(fontInter[18]);
 	if (ImGuiBegin("Teleport XR", nullptr, window_flags))
+	{
 		in_debug_gui++;
+	}
 }
 
 void Gui::LinePrint(const std::string &str, const float *clr)
@@ -1056,16 +1114,20 @@ void Gui::LinePrint(const std::string &str, const float *clr)
 void Gui::LinePrint(const char *txt, const float *clr)
 {
 	if (clr == nullptr)
+	{
 		ImGui::Text("%s", txt);
+	}
 	else
+	{
 		ImGui::TextColored(*(reinterpret_cast<const ImVec4 *>(clr)), "%s", txt);
+	}
 }
 
 std::map<uint64_t, ImGui_ImplPlatform_TextureView> drawTextures;
 void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture *texture, float mip, int slice)
 {
-	platform::crossplatform::Texture *t = texture;
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	platform::crossplatform::Texture *t	 = texture;
+	auto							  vp = renderPlatform->GetViewport(deviceContext, 0);
 	if (texture->IsCubemap())
 	{
 		renderPlatform->DrawCubemap(deviceContext, texture, 0.f, 0.f, 1.0f, 1.0f, 1.0f, mip);
@@ -1079,9 +1141,13 @@ void Gui::DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &d
 void Gui::DrawTexture(const crossplatform::Texture *texture, float m, int slice)
 {
 	if (!texture)
+	{
 		return;
+	}
 	if (!texture->IsValid())
+	{
 		return;
+	}
 	static float mip = 0;
 	if (m < 0)
 	{
@@ -1089,21 +1155,22 @@ void Gui::DrawTexture(const crossplatform::Texture *texture, float m, int slice)
 		m = mip;
 	}
 
-	int width = texture->width;
+	int width  = texture->width;
 	int height = texture->length;
-	width = std::max(width, 256);
+	width	   = std::max(width, 256);
 	if (width != texture->width)
 	{
 		height = (width * texture->length) / texture->width;
 	}
-	const char *name = texture->GetName();
-	const float aspect = static_cast<float>(width) / static_cast<float>(height);
-	const ImVec2 regionSize = ImGui::GetContentRegionAvail();
-	const ImVec2 textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
-	float showWidth = std::min(regionSize.x, textureSize.x);
-	const ImVec2 size = ImVec2(showWidth, float(showWidth) / aspect);
+	const char							   *name		= texture->GetName();
+	const float								aspect		= static_cast<float>(width) / static_cast<float>(height);
+	const ImVec2							regionSize	= ImGui::GetContentRegionAvail();
+	const ImVec2							textureSize = ImVec2(static_cast<float>(width), static_cast<float>(height));
+	float									showWidth	= std::min(regionSize.x, textureSize.x);
+	const ImVec2							size		= ImVec2(showWidth, float(showWidth) / aspect);
 
-	platform::crossplatform::RenderDelegate drawTexture = std::bind(&Gui::DelegatedDrawTexture, this, std::placeholders::_1, const_cast<crossplatform::Texture *>(texture), m, slice);
+	platform::crossplatform::RenderDelegate drawTexture =
+		std::bind(&Gui::DelegatedDrawTexture, this, std::placeholders::_1, const_cast<crossplatform::Texture *>(texture), m, slice);
 	ImGui_ImplPlatform_DrawTexture(drawTexture, texture->GetName(), m, slice, (int)showWidth, (int)size.y);
 }
 
@@ -1158,15 +1225,16 @@ static void DoRow(const char *title, vec4 q)
 
 static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
 {
-	auto now = std::chrono::system_clock::now();
-	time_t now_t = std::chrono::system_clock::to_time_t(now);
-	tm *t = localtime(&now_t);
+	auto		now			 = std::chrono::system_clock::now();
+	time_t		now_t		 = std::chrono::system_clock::to_time_t(now);
+	tm		   *t			 = localtime(&now_t);
 	const char *leadingZero0 = (t->tm_mon < 10) ? "0" : "";
 	const char *leadingZero1 = (t->tm_mday < 10) ? "0" : "";
-	std::string dateStr = std::to_string(1900 + t->tm_year) + "/" + leadingZero0 + std::to_string(1 + t->tm_mon) + "/" + leadingZero1 + std::to_string(t->tm_mday);
+	std::string dateStr =
+		std::to_string(1900 + t->tm_year) + "/" + leadingZero0 + std::to_string(1 + t->tm_mon) + "/" + leadingZero1 + std::to_string(t->tm_mday);
 	const char *leadingZero2 = (t->tm_hour < 10) ? "0" : "";
 	const char *leadingZero3 = (t->tm_min < 10) ? "0" : "";
-	std::string timeStr = leadingZero2 + std::to_string(t->tm_hour) + ":" + leadingZero3 + std::to_string(t->tm_min);
+	std::string timeStr		 = leadingZero2 + std::to_string(t->tm_hour) + ":" + leadingZero3 + std::to_string(t->tm_min);
 	return {dateStr, timeStr};
 }
 
@@ -1177,15 +1245,16 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 		return;
 	}
 	ImGuiEnd();
-	// ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	// ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+	// ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	{
-		const float PAD = 10.0f;
-		const ImGuiViewport *viewport = ImGui::GetMainViewport();
-		ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
-		ImVec2 work_size = viewport->WorkSize;
-		ImVec2 window_pos, window_pos_pivot;
-		window_pos.x = (work_pos.x + work_size.x - PAD);
-		window_pos.y = (work_pos.y + PAD);
+		const float			 PAD	   = 10.0f;
+		const ImGuiViewport *viewport  = ImGui::GetMainViewport();
+		ImVec2				 work_pos  = viewport->WorkPos; // Use work area to avoid menu-bar/task-bar, if any!
+		ImVec2				 work_size = viewport->WorkSize;
+		ImVec2				 window_pos, window_pos_pivot;
+		window_pos.x	   = (work_pos.x + work_size.x - PAD);
+		window_pos.y	   = (work_pos.y + PAD);
 		window_pos_pivot.x = 1.0f;
 		window_pos_pivot.y = 0.0f;
 		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
@@ -1219,28 +1288,28 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				}*/
 				ImGui::EndMenuBar();
 			}
-			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth;
-			avs::uid selected_uid = GetSelectedUid();
-			std::shared_ptr<clientrender::Node> selected_node = geometryCache->mNodeManager.GetNode(selected_uid);
-			std::shared_ptr<const clientrender::Mesh> selected_mesh = geometryCache->mMeshManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Material> selected_material = geometryCache->mMaterialManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Texture> selected_texture = geometryCache->mTextureManager.Get(selected_uid);
+			ImGuiTreeNodeFlags						  flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth;
+			avs::uid								  selected_uid			  = GetSelectedUid();
+			std::shared_ptr<clientrender::Node>		  selected_node			  = geometryCache->mNodeManager.GetNode(selected_uid);
+			std::shared_ptr<const clientrender::Mesh> selected_mesh			  = geometryCache->mMeshManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Material>  selected_material  = geometryCache->mMaterialManager.Get(selected_uid);
+			std::shared_ptr<const clientrender::Texture>   selected_texture	  = geometryCache->mTextureManager.Get(selected_uid);
 			std::shared_ptr<const clientrender::Animation> selected_animation = geometryCache->mAnimationManager.Get(selected_uid);
-			std::shared_ptr<const clientrender::Skeleton> selected_skeleton = geometryCache->mSkeletonManager.Get(selected_uid);
-			if(selected_mesh.get())
+			std::shared_ptr<const clientrender::Skeleton>  selected_skeleton  = geometryCache->mSkeletonManager.Get(selected_uid);
+			if (selected_mesh.get())
 			{
 			}
 			if (selected_node.get())
 			{
-				vec3 pos = selected_node->GetLocalPosition();
+				vec3 pos  = selected_node->GetLocalPosition();
 				vec3 gpos = selected_node->GetGlobalPosition();
-				vec3 sc = selected_node->GetLocalScale();
-				vec4 q = selected_node->GetLocalRotation();
-				vec4 gq = selected_node->GetGlobalRotation();
+				vec3 sc	  = selected_node->GetLocalScale();
+				vec4 q	  = selected_node->GetLocalRotation();
+				vec4 gq	  = selected_node->GetGlobalRotation();
 
-				vec3 v = selected_node->GetGlobalVelocity();
+				vec3 v	  = selected_node->GetGlobalVelocity();
 
-				vec3 gs = selected_node->GetGlobalScale();
+				vec3 gs	  = selected_node->GetGlobalScale();
 				ImGui::Text("%lu: %s %s", selected_node->id, selected_node->name.c_str(), selected_node->IsHighlighted() ? "HIGHLIGHTED" : "");
 				ImGui::Text("owners %lu", selected_node.use_count());
 				avs::uid gi_uid = selected_node->GetGlobalIlluminationTextureUid();
@@ -1300,7 +1369,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						DoRow("Skeleton", "%d : %s", s->id, s->name.c_str());
 						if (ImGui::IsItemClicked())
 						{
-							Select(cache_uid,s->id);
+							Select(cache_uid, s->id);
 						}
 					}
 					std::shared_ptr<clientrender::Skeleton> skeletonInstance = selected_node->GetSkeleton();
@@ -1310,17 +1379,17 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						if (animC)
 						{
 							DoRow("Animations", "");
-							#if 1
-							const auto instance=animC->GetOrCreateAnimationInstance(0);
-							if(instance)
+#if 1
+							const auto instance = animC->GetOrCreateAnimationInstance(0);
+							if (instance)
 							{
 								const auto &animLayerStates = instance->animationLayerStates;
 								// list layers.
-								for (int i = 0; i <1; i++)
+								for (int i = 0; i < 1; i++)
 								{
 									DoRow("Layer", fmt::format("{0}", i).c_str());
 									const auto &layerState = animLayerStates[i];
-									const auto &st = layerState.getState();
+									const auto &st		   = layerState.getState();
 									DoRow("State", fmt::format("{0}, {1}", layerState.interpState, layerState.sequenceNumber).c_str());
 									std::shared_ptr<Animation> prevAnim, anim;
 									if (st.previousAnimationState.animationId != 0)
@@ -1333,20 +1402,31 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 									}
 									float prevAnimDuration = 1.f, nextAnimDuration = 1.f;
 									if (prevAnim)
+									{
 										prevAnimDuration = prevAnim->duration;
+									}
 									if (anim)
+									{
 										nextAnimDuration = anim->duration;
-									auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.previousAnimationState.animationId, st.previousAnimationState.timeRatio, st.previousAnimationState.speedUnitsPerS);
+									}
+									auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}",
+														   st.previousAnimationState.animationId,
+														   st.previousAnimationState.timeRatio,
+														   st.previousAnimationState.speedUnitsPerS);
 
 									DoRow(prevAnim ? prevAnim->getName().c_str() : "Previous", txt.c_str());
 									DoRow("Interp", fmt::format("{0}", st.interpolation).c_str());
-									txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}", st.animationState.animationId, st.animationState.timeRatio, st.animationState.speedUnitsPerS);
+									txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}",
+													  st.animationState.animationId,
+													  st.animationState.timeRatio,
+													  st.animationState.speedUnitsPerS);
 									DoRow(anim ? anim->getName().c_str() : "Now", txt.c_str());
 								}
-								#endif
+#endif
 								/*if(ImGui::Button("+"))
 								{
-									std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
+									std::chrono::microseconds timestampNowUs =
+								std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
 									teleport::core::ApplyAnimation applyAnimation;
 									applyAnimation.animLayer=(uint32_t)animLayerStates.size();
 									applyAnimation.animationID = 0;
@@ -1357,30 +1437,30 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 							}
 							{
 								ImGui::Separator();
-							// what animations can be played on this component?
-							// Either the animations stored in this scene, or if a subscene, the animations in its parent.
-								const auto &anim_uids=geometryCache->mAnimationManager.GetAllIDs();
-								for(auto anim_uid:anim_uids)
+								// what animations can be played on this component?
+								// Either the animations stored in this scene, or if a subscene, the animations in its parent.
+								const auto &anim_uids = geometryCache->mAnimationManager.GetAllIDs();
+								for (auto anim_uid : anim_uids)
 								{
-									auto anim=geometryCache->mAnimationManager.Get(anim_uid);
-									ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str() );
+									auto anim = geometryCache->mAnimationManager.Get(anim_uid);
+									ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str());
 									if (ImGui::IsItemClicked())
 									{
-										animC->PlayAnimation(cache_uid,anim_uid, 0);
+										animC->PlayAnimation(cache_uid, anim_uid, 0);
 									}
 								}
-								auto parentCache=GeometryCache::GetGeometryCache(geometryCache->GetParentCacheUid());
-								if(parentCache)
+								auto parentCache = GeometryCache::GetGeometryCache(geometryCache->GetParentCacheUid());
+								if (parentCache)
 								{
 									ImGui::Separator();
-									const auto &p_anim_uids=parentCache->mAnimationManager.GetAllIDs();
-									for(auto anim_uid:p_anim_uids)
+									const auto &p_anim_uids = parentCache->mAnimationManager.GetAllIDs();
+									for (auto anim_uid : p_anim_uids)
 									{
-										auto anim=parentCache->mAnimationManager.Get(anim_uid);
-										ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str() );
+										auto anim = parentCache->mAnimationManager.Get(anim_uid);
+										ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str());
 										if (ImGui::IsItemClicked())
 										{
-											animC->PlayAnimation(geometryCache->GetParentCacheUid(),anim_uid, 0);
+											animC->PlayAnimation(geometryCache->GetParentCacheUid(), anim_uid, 0);
 										}
 									}
 								}
@@ -1397,9 +1477,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					if (m)
 					{
 						std::string passName;
-						auto *passCache = selected_node->GetCachedEffectPass(element);
-						const char *name = m->GetMaterialCreateInfo().name.c_str();
-						if (ImGui::TreeNodeEx(name, flags, "%lu: %s (pass %s)", m->id, name, passCache ? (passCache->pass ? passCache->pass->name.c_str() : "") : ""))
+						auto	   *passCache = selected_node->GetCachedEffectPass(element);
+						const char *name	  = m->GetMaterialCreateInfo().name.c_str();
+						if (ImGui::TreeNodeEx(
+								name, flags, "%lu: %s (pass %s)", m->id, name, passCache ? (passCache->pass ? passCache->pass->name.c_str() : "") : ""))
 						{
 							if (ImGui::IsItemClicked())
 							{
@@ -1410,16 +1491,16 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					}
 					element++;
 				}
-				const auto &comps=selected_node->GetComponents();
-				for(const auto c:comps)
+				const auto &comps = selected_node->GetComponents();
+				for (const auto c : comps)
 				{
 				}
-				const std::shared_ptr<TextCanvas>		  textCanvas = selected_node->GetTextCanvas();
+				const std::shared_ptr<TextCanvas> textCanvas = selected_node->GetTextCanvas();
 				if (textCanvas)
 				{
 					IMGUITREENODEEX("##canvas", flags, " Canvas: {}", textCanvas->textCanvasCreateInfo.uid);
-					
-					ImGui::Text("%s",textCanvas->textCanvasCreateInfo.text.c_str());
+
+					ImGui::Text("%s", textCanvas->textCanvasCreateInfo.text.c_str());
 					if (ImGui::IsItemClicked())
 					{
 						Select(cache_uid, textCanvas->textCanvasCreateInfo.uid);
@@ -1428,9 +1509,9 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				auto s = selected_node->GetComponent<clientrender::SubSceneComponent>();
 				if (s)
 				{
-					if(s->mesh)
+					if (s->mesh)
 					{
-						if(s->mesh->GetMeshCreateInfo().subscene_cache_uid!=0)
+						if (s->mesh->GetMeshCreateInfo().subscene_cache_uid != 0)
 						{
 							IMGUITREENODEEX("##subsc", flags, " SubScene resource: {0}", s->mesh_uid);
 							if (ImGui::IsItemClicked())
@@ -1440,7 +1521,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						}
 						auto subSceneC = selected_node->GetComponent<clientrender::SubSceneComponent>();
 						// Play animations on the subscene:
-						
+
 						ImGui::BeginGroup();
 						const auto &ids = geometryCache->mAnimationManager.GetAllIDs();
 						for (auto anim_uid : ids)
@@ -1451,7 +1532,9 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								if (ImGui::IsItemClicked())
 								{
 									if (!show_inspector)
+									{
 										show_inspector = true;
+									}
 									subSceneC->PlayAnimation(0, anim_uid);
 								}
 								ImGui::TreePop();
@@ -1464,10 +1547,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			}
 			if (selected_material.get())
 			{
-				const auto &mci = selected_material->GetMaterialCreateInfo();
-				const clientrender::Material::MaterialData &md = selected_material->GetMaterialData();
+				const auto								   &mci = selected_material->GetMaterialCreateInfo();
+				const clientrender::Material::MaterialData &md	= selected_material->GetMaterialData();
 				ImGui::Text("%lu: %s", selected_material->id, mci.name.c_str());
-				
+
 				if (ImGui::BeginTable("selectedafs1", 5))
 				{
 					DoRow("Roughness", "%d", mci.combined.textureOutputScalar.x);
@@ -1487,7 +1570,12 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						}
 						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
-					if (ImGui::TreeNodeEx("diffuseColour", flags, "%3.3f %3.3f %3.3f", mci.diffuse.textureOutputScalar.x, mci.diffuse.textureOutputScalar.y, mci.diffuse.textureOutputScalar.z))
+					if (ImGui::TreeNodeEx("diffuseColour",
+										  flags,
+										  "%3.3f %3.3f %3.3f",
+										  mci.diffuse.textureOutputScalar.x,
+										  mci.diffuse.textureOutputScalar.y,
+										  mci.diffuse.textureOutputScalar.z))
 					{
 					}
 				}
@@ -1518,7 +1606,8 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
 					IMGUITREENODEEX(name, flags, "Metal: {0}", md.combinedOutputScalarRoughMetalOcclusion.y);
-					IMGUITREENODEEX(name, flags, "Roughness: R = {0} a + {1}", md.combinedOutputScalarRoughMetalOcclusion.x, md.combinedOutputScalarRoughMetalOcclusion.w);
+					IMGUITREENODEEX(
+						name, flags, "Roughness: R = {0} a + {1}", md.combinedOutputScalarRoughMetalOcclusion.x, md.combinedOutputScalarRoughMetalOcclusion.w);
 
 					if (ImGui::IsItemClicked())
 					{
@@ -1541,7 +1630,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				ImGui::Text("%lu: %s", tci.uid, tci.name.c_str());
 
 				const char *mips[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
-				ImGui::Combo("Mip", &mip_current, mips, std::min(tci.mipCount,(uint32_t)IM_ARRAYSIZE(mips)));
+				ImGui::Combo("Mip", &mip_current, mips, std::min(tci.mipCount, (uint32_t)IM_ARRAYSIZE(mips)));
 				const clientrender::Texture *pct = static_cast<const clientrender::Texture *>(selected_texture.get());
 				DrawTexture(selected_texture->GetSimulTexture(), (float)mip_current, 0);
 			}
@@ -1572,10 +1661,13 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			else if (selected_skeleton)
 			{
 				ImGui::Text("%lu: %s", selected_uid, selected_skeleton->name.c_str());
-				avs::uid root_id=selected_skeleton->GetRootId();
-				auto root=geometryCache->mNodeManager.GetNode(root_id);
+				avs::uid root_id = selected_skeleton->GetRootId();
+				auto	 root	 = geometryCache->mNodeManager.GetNode(root_id);
 				ImGui::Text("Root:");
-				if (ImGui::TreeNodeEx(fmt::format("{0} ",  root_id).c_str(), flags|ImGuiTreeNodeFlags_Leaf, "%s",fmt::format("{0}: {1} ",root_id, root?root->name:"").c_str()))
+				if (ImGui::TreeNodeEx(fmt::format("{0} ", root_id).c_str(),
+									  flags | ImGuiTreeNodeFlags_Leaf,
+									  "%s",
+									  fmt::format("{0}: {1} ", root_id, root ? root->name : "").c_str()))
 				{
 					if (ImGui::IsItemClicked())
 					{
@@ -1584,14 +1676,19 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 				}
 				ImGui::Text("Joints:");
-				auto &bones=selected_skeleton->GetExternalBoneIds();
-				for(int i=0;i<bones.size();i++)
+				auto &bones = selected_skeleton->GetExternalBoneIds();
+				for (int i = 0; i < bones.size(); i++)
 				{
-					auto bone_uid=bones[i];
-					if(bone_uid==root_id)
+					auto bone_uid = bones[i];
+					if (bone_uid == root_id)
+					{
 						continue;
-					auto n=geometryCache->mNodeManager.GetNode(bone_uid);
-					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(), flags|ImGuiTreeNodeFlags_Leaf, "%s",fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
+					}
+					auto n = geometryCache->mNodeManager.GetNode(bone_uid);
+					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(),
+										  flags | ImGuiTreeNodeFlags_Leaf,
+										  "%s",
+										  fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
 					{
 						if (ImGui::IsItemClicked())
 						{
@@ -1603,7 +1700,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			}
 			else if (selected_mesh.get())
 			{
-				avs::uid cache_uid=selected_mesh->GetMeshCreateInfo().subscene_cache_uid;
+				avs::uid cache_uid = selected_mesh->GetMeshCreateInfo().subscene_cache_uid;
 				if (cache_uid != 0)
 				{
 					ImGui::Text("Subscene resource %lu", cache_uid);
@@ -1633,16 +1730,20 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 	}
 	in_debug_gui--;
 	ImGui::PopFont();
-	ImVec2 window_pos = ImGui::GetWindowPos();
-	ImVec2 window_size = ImGui::GetWindowSize();
-	ImVec2 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
+	ImVec2	 window_pos	   = ImGui::GetWindowPos();
+	ImVec2	 window_size   = ImGui::GetWindowSize();
+	ImVec2	 window_center = ImVec2(window_pos.x + window_size.x * 0.5f, window_pos.y + window_size.y * 0.5f);
 
-	ImGuiIO &io = ImGui::GetIO();
-	ImVec2 mouse_pos = io.MousePos;
+	ImGuiIO &io			   = ImGui::GetIO();
+	ImVec2	 mouse_pos	   = io.MousePos;
 	if (io.MouseClicked[0])
+	{
 		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 3.f, IM_COL32(255, 90, 90, 200), 16);
+	}
 	else
+	{
 		ImGui::GetForegroundDrawList()->AddCircleFilled(mouse_pos, 2.f, IM_COL32(90, 255, 90, 200), 16);
+	}
 }
 
 void Gui::EndFrame(GraphicsDeviceContext &deviceContext)
@@ -1654,18 +1755,21 @@ void Gui::EndFrame(GraphicsDeviceContext &deviceContext)
 void Gui::Materials(const ResourceManager<avs::uid, clientrender::Material> &materialManager)
 {
 	ImGui::BeginGroup();
-	const auto &ids = materialManager.GetAllIDs();
-	avs::uid selected_uid = GetSelectedUid();
+	const auto &ids			 = materialManager.GetAllIDs();
+	avs::uid	selected_uid = GetSelectedUid();
 	for (auto id : ids)
 	{
-		bool selected = (selected_uid == id);
+		bool		selected = (selected_uid == id);
 		const auto &material = materialManager.Get(id);
-		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, material->getName().c_str()).c_str(), ImGuiTreeNodeFlags_Leaf|(selected?ImGuiTreeNodeFlags_Selected:0)))
+		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, material->getName().c_str()).c_str(),
+							  ImGuiTreeNodeFlags_Leaf | (selected ? ImGuiTreeNodeFlags_Selected : 0)))
 		{
 			if (ImGui::IsItemClicked())
 			{
 				if (!show_inspector)
+				{
 					show_inspector = true;
+				}
 				Select(cache_uid, id);
 			}
 			ImGui::TreePop();
@@ -1677,18 +1781,21 @@ void Gui::Materials(const ResourceManager<avs::uid, clientrender::Material> &mat
 void Gui::Meshes(const ResourceManager<avs::uid, clientrender::Mesh> &meshManager)
 {
 	ImGui::BeginGroup();
-	const auto &ids = meshManager.GetAllIDs();
-	avs::uid selected_uid = GetSelectedUid();
+	const auto &ids			 = meshManager.GetAllIDs();
+	avs::uid	selected_uid = GetSelectedUid();
 	for (auto id : ids)
 	{
-		bool selected = (selected_uid == id);
-		const auto &mesh = meshManager.Get(id);
-		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, mesh->GetMeshCreateInfo().name.c_str()).c_str(), ImGuiTreeNodeFlags_Leaf|(selected?ImGuiTreeNodeFlags_Selected:0)))
+		bool		selected = (selected_uid == id);
+		const auto &mesh	 = meshManager.Get(id);
+		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, mesh->GetMeshCreateInfo().name.c_str()).c_str(),
+							  ImGuiTreeNodeFlags_Leaf | (selected ? ImGuiTreeNodeFlags_Selected : 0)))
 		{
 			if (ImGui::IsItemClicked())
 			{
 				if (!show_inspector)
+				{
 					show_inspector = true;
+				}
 				Select(cache_uid, id);
 			}
 			ImGui::TreePop();
@@ -1709,7 +1816,9 @@ void Gui::Textures(const ResourceManager<avs::uid, clientrender::Texture> &textu
 			if (ImGui::IsItemClicked())
 			{
 				if (!show_inspector)
+				{
 					show_inspector = true;
+				}
 				Select(cache_uid, id);
 			}
 			ImGui::TreePop();
@@ -1722,7 +1831,7 @@ void Gui::Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &ske
 {
 	ImGui::BeginGroup();
 	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-	const auto &ids = skeletonManager.GetAllIDs();
+	const auto		  &ids	 = skeletonManager.GetAllIDs();
 	for (auto id : ids)
 	{
 		const auto &skeleton = skeletonManager.Get(id);
@@ -1730,7 +1839,9 @@ void Gui::Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &ske
 		if (ImGui::IsItemClicked())
 		{
 			if (!show_inspector)
+			{
 				show_inspector = true;
+			}
 			Select(cache_uid, id);
 		}
 	}
@@ -1749,7 +1860,9 @@ void Gui::Anims(const ResourceManager<avs::uid, clientrender::Animation> &animMa
 			if (ImGui::IsItemClicked())
 			{
 				if (!show_inspector)
+				{
 					show_inspector = true;
+				}
 				Select(cache_uid, id);
 			}
 			ImGui::TreePop();
@@ -1818,14 +1931,14 @@ void Gui::InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient,
 	}
 }
 
-void Gui::NetworkPanel( teleport::client::ClientPipeline &clientPipeline)
+void Gui::NetworkPanel(teleport::client::ClientPipeline &clientPipeline)
 {
-	const avs::NetworkSourceCounters counters = clientPipeline.source->getCounterValues();
-	const avs::DecoderStats vidStats = clientPipeline.decoder.GetStats();
-	const auto &streams = clientPipeline.source->GetStreams();
-	const auto &streamStatus = clientPipeline.source->GetStreamStatus();
+	const avs::NetworkSourceCounters counters	  = clientPipeline.source->getCounterValues();
+	const avs::DecoderStats			 vidStats	  = clientPipeline.decoder.GetStats();
+	const auto						&streams	  = clientPipeline.source->GetStreams();
+	const auto						&streamStatus = clientPipeline.source->GetStreamStatus();
 
-	if(ImGui::Button("Break Connection"))
+	if (ImGui::Button("Break Connection"))
 	{
 		clientPipeline.Debug_BreakConnection();
 	}
@@ -1837,9 +1950,9 @@ void Gui::NetworkPanel( teleport::client::ClientPipeline &clientPipeline)
 		ImGui::TableSetupColumn("Out", ImGuiTableColumnFlags_WidthFixed, 100.0f);
 		for (size_t i = 0; i < streamStatus.size(); i++)
 		{
-			float kps_in = streamStatus[i].inwardBandwidthKps;
-			float kps_out = streamStatus[i].outwardBandwidthKps;
-			const auto &s = streams[i];
+			float		kps_in	= streamStatus[i].inwardBandwidthKps;
+			float		kps_out = streamStatus[i].outwardBandwidthKps;
+			const auto &s		= streams[i];
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
 			ImGui::LabelText("##chnl", "%zu", i);
@@ -1849,7 +1962,9 @@ void Gui::NetworkPanel( teleport::client::ClientPipeline &clientPipeline)
 			ImGui::LabelText("##kps_in", "%3.1f", kps_in);
 			ImGui::TableNextColumn();
 			if (kps_out > 0)
+			{
 				ImGui::LabelText("##kps_out", "%3.1f", kps_out);
+			}
 		}
 		ImGui::EndTable();
 	}
@@ -1858,19 +1973,19 @@ void Gui::NetworkPanel( teleport::client::ClientPipeline &clientPipeline)
 
 void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 {
-	static float xspacing = 150.0f;
-	static float yspacing = 20.0f;
-	static float thickness = 3.0f;
-	static float sz = 36.0f;
-	static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
-	ImU32 col = ImColor(colf);
-	const ImU32 join_colour = ImColor(255, 255, 255, 90);
-	const ImU32 fill_colour = ImColor(16, 64, 16, 255);
-	ImDrawList *draw_list = ImGui::GetWindowDrawList();
+	static float  xspacing	  = 150.0f;
+	static float  yspacing	  = 20.0f;
+	static float  thickness	  = 3.0f;
+	static float  sz		  = 36.0f;
+	static ImVec4 colf		  = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
+	ImU32		  col		  = ImColor(colf);
+	const ImU32	  join_colour = ImColor(255, 255, 255, 90);
+	const ImU32	  fill_colour = ImColor(16, 64, 16, 255);
+	ImDrawList	 *draw_list	  = ImGui::GetWindowDrawList();
 
-	size_t outp = node.getNumOutputSlots();
-	ImVec2 pos(x, y);
-	ImVec2 line(0, 20);
+	size_t		  outp		  = node.getNumOutputSlots();
+	ImVec2		  pos(x, y);
+	ImVec2		  line(0, 20);
 	for (int i = 0; i < outp; i++)
 	{
 		const auto *n = node.getOutput(i);
@@ -1883,7 +1998,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 		}
 	}
 	const ImU32 fail_colour = ImColor(255, 0, 0, 90);
-	avs::Result r = node.getLastResult();
+	avs::Result r			= node.getLastResult();
 	if (r != avs::Result::OK && r != avs::Result::IO_Empty)
 	{
 		col = fail_colour;
@@ -1897,15 +2012,17 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
 {
 	const ImVec2 p = ImGui::GetCursorScreenPos();
-	float x = p.x + 40.0f;
-	float y = p.y + 40.0f;
+	float		 x = p.x + 40.0f;
+	float		 y = p.y + 40.0f;
 	ImGui::PushItemWidth(-ImGui::GetFontSize() * 15);
 	ImDrawList *draw_list = ImGui::GetWindowDrawList();
-	const auto &nodes = pipeline.getNodes();
+	const auto &nodes	  = pipeline.getNodes();
 	if (nodes.size())
 	{
 		if (nodes[0])
+		{
 			DrawPipelineNode(*nodes[0], x, y);
+		}
 	}
 	ImGui::PopItemWidth();
 }
@@ -1914,7 +2031,7 @@ void Gui::ProfilingPanel()
 {
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 	ImGui::BeginChild("Prof", ImVec2(-1, -1), true, window_flags);
-	ImGui::Text("%s",profilingText.c_str());
+	ImGui::Text("%s", profilingText.c_str());
 	ImGui::EndChild();
 }
 
@@ -1925,13 +2042,24 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::Checkbox("Show Stage Space", &debugOptions.showStageSpace);
 	ImGui::Checkbox("Texture Transcoding Thread", &debugOptions.enableTextureTranscodingThread);
 	ImGui::Checkbox("Geometry Transcoding Thread", &debugOptions.enableGeometryTranscodingThread);
-	const char *debugShaders[] = {"", "ps_solid_albedo_only", "ps_debug_normals", "ps_debug_normal_vertexnormals", "ps_debug_lightmaps", "ps_debug_ambient", "ps_debug_uvs", "ps_debug_surface_fresnel", "ps_debug_surface_refl", "ps_debug_surface_ks", "ps_debug_surface_kd"
+	const char *debugShaders[] = {"",
+								  "ps_solid_albedo_only",
+								  "ps_debug_normals",
+								  "ps_debug_normal_vertexnormals",
+								  "ps_debug_lightmaps",
+								  "ps_debug_ambient",
+								  "ps_debug_uvs",
+								  "ps_debug_surface_fresnel",
+								  "ps_debug_surface_refl",
+								  "ps_debug_surface_ks",
+								  "ps_debug_surface_kd"
 
 								  ,
-								  "ps_debug_anim", "ps_digitizing"};
+								  "ps_debug_anim",
+								  "ps_digitizing"};
 	ImGui::LabelText("DebugShaders", "Debug Shader");
-	static int chooseDebugShader = 0;
-	int oldChooseDebugShader = chooseDebugShader;
+	static int chooseDebugShader	= 0;
+	int		   oldChooseDebugShader = chooseDebugShader;
 	ImGui::RadioButton("Default", &chooseDebugShader, (int)ShaderMode::DEFAULT);
 	ImGui::RadioButton("Albedo", &chooseDebugShader, (int)ShaderMode::ALBEDO);
 	ImGui::SameLine();
@@ -1943,7 +2071,7 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	ImGui::RadioButton("Ambient", &chooseDebugShader, (int)ShaderMode::AMBIENT);
 	ImGui::SameLine();
 	ImGui::RadioButton("UVs", &chooseDebugShader, (int)ShaderMode::UVS);
-	
+
 	ImGui::RadioButton("Rough Metal Occl", &chooseDebugShader, (int)ShaderMode::ROUGH_METAL_OCCL);
 	ImGui::SameLine();
 	ImGui::RadioButton("Fresnel", &chooseDebugShader, (int)ShaderMode::DEBUG_FRESNEL);
@@ -1956,19 +2084,19 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 
 	ImGui::RadioButton("Anim", &chooseDebugShader, (int)ShaderMode::DEBUG_ANIM);
 	ImGui::SameLine();
-	static int debugHighlightBone=0;
-	bool changed=ImGui::InputInt("Bone Index",&debugHighlightBone);
+	static int debugHighlightBone = 0;
+	bool	   changed			  = ImGui::InputInt("Bone Index", &debugHighlightBone);
 	ImGui::RadioButton("Digitizing", &chooseDebugShader, (int)ShaderMode::REZZING);
-	changed|=(oldChooseDebugShader != chooseDebugShader);
-	if(changed)
+	changed |= (oldChooseDebugShader != chooseDebugShader);
+	if (changed)
 	{
 		changeRender((ShaderMode)chooseDebugShader, debugHighlightBone);
 		return true;
 	}
 	// Cubemap generation section
 	LinePrint("Cubemap Generation:");
-	auto &config = client::Config::GetInstance();
-	std::string currentPass = (config.options.lobbyView==client::LobbyView::NEON) ? "neon" : "white";
+	auto	   &config		= client::Config::GetInstance();
+	std::string currentPass = (config.options.lobbyView == client::LobbyView::NEON) ? "neon" : "white";
 	LinePrint(fmt::format("Current pass: {0}", currentPass));
 	if (ImGui::Button("Save Current Cubemap"))
 	{
@@ -2000,10 +2128,10 @@ void Gui::CubemapOSD(crossplatform::Texture *videoTexture)
 
 void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDataCubeArray, VideoTagDataCube videoTagDataCube[])
 {
-	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
+	auto										 geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto &cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
-	const char *name = "";
+	auto										&cachedLights = geometryCache->mLightManager.GetCache(cacheLock);
+	const char									*name		  = "";
 	LinePrint("Tags\n");
 	for (int i = 0; i < videoTagDataCubeArray.size(); i++)
 	{
@@ -2013,32 +2141,58 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 		LinePrint(fmt::format("\t{0},{1},{2}", pos.x, pos.y, pos.z));
 		auto *gpu_tag_buffer = videoTagDataCube;
 		if (gpu_tag_buffer)
+		{
 			for (int j = 0; j < tag.lights.size(); j++)
 			{
-				auto &l = tag.lights[j];
-				auto &t = gpu_tag_buffer[j];
+				auto		   &l		 = tag.lights[j];
+				auto		   &t		 = gpu_tag_buffer[j];
 				const LightTag &lightTag = t.lightTags[j];
-				vec4 clr = {l.color.x, l.color.y, l.color.z, 1.0f};
+				vec4			clr		 = {l.color.x, l.color.y, l.color.z, 1.0f};
 
-				auto C = cachedLights.find(l.uid);
-				auto &c = C->second;
+				auto			C		 = cachedLights.find(l.uid);
+				auto		   &c		 = C->second;
 				if (c.resource)
 				{
 					auto &lcr = c.resource->GetLightCreateInfo();
-					name = lcr.name.c_str();
+					name	  = lcr.name.c_str();
 				}
 				if (l.lightType == clientrender::LightType::Directional)
-					LinePrint(platform::core::QuickFormat("%lu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f", l.uid, name, ToString((clientrender::Light::Type)l.lightType), lightTag.direction.x, lightTag.direction.y, lightTag.direction.z, l.color.x, l.color.y, l.color.z), clr);
+				{
+					LinePrint(platform::core::QuickFormat("%lu: %s, Type: %s, dir: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",
+														  l.uid,
+														  name,
+														  ToString((clientrender::Light::Type)l.lightType),
+														  lightTag.direction.x,
+														  lightTag.direction.y,
+														  lightTag.direction.z,
+														  l.color.x,
+														  l.color.y,
+														  l.color.z),
+							  clr);
+				}
 				else
-					LinePrint(platform::core::QuickFormat("%lu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f", l.uid, name, ToString((clientrender::Light::Type)l.lightType), lightTag.position.x, lightTag.position.y, lightTag.position.z, l.color.x, l.color.y, l.color.z), clr);
+				{
+					LinePrint(platform::core::QuickFormat("%lu: %s, Type: %s, pos: %3.3f %3.3f %3.3f clr: %3.3f %3.3f %3.3f",
+														  l.uid,
+														  name,
+														  ToString((clientrender::Light::Type)l.lightType),
+														  lightTag.position.x,
+														  lightTag.position.y,
+														  lightTag.position.z,
+														  l.color.x,
+														  l.color.y,
+														  l.color.z),
+							  clr);
+				}
 			}
+		}
 	}
 }
 
 void Gui::GeometryOSD()
 {
-	const std::vector<avs::uid> &cache_uids = clientrender::GeometryCache::GetCacheUids();
-	static std::vector<std::string> cache_names;
+	const std::vector<avs::uid>		&cache_uids = clientrender::GeometryCache::GetCacheUids();
+	static std::vector<std::string>	 cache_names;
 	static std::vector<const char *> cache_strings;
 	if (cache_uids.size() != cache_names.size())
 	{
@@ -2060,12 +2214,16 @@ void Gui::GeometryOSD()
 	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
 
 	if (current_choice >= 0 && current_choice < cache_uids.size())
+	{
 		cache_uid = cache_uids[current_choice];
-	vec4 white(1.f, 1.f, 1.f, 1.f);
+	}
+	vec4										 white(1.f, 1.f, 1.f, 1.f);
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
-	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
+	auto										 geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
+	{
 		return;
+	}
 	if (ImGui::BeginTable("numResources", 3))
 	{
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 150.0f);
@@ -2076,7 +2234,9 @@ void Gui::GeometryOSD()
 		LinePrint(fmt::format("Client ID"));
 		ImGui::TableNextColumn();
 		if (sessionClient)
+		{
 			LinePrint(fmt::format("{0}", sessionClient->GetClientID()));
+		}
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		LinePrint(fmt::format("Session time"));
@@ -2101,7 +2261,7 @@ void Gui::GeometryOSD()
 	}
 
 	static int nodeLimit = 5;
-	auto &rootNodes = geometryCache->mNodeManager.GetRootNodes();
+	auto	  &rootNodes = geometryCache->mNodeManager.GetRootNodes();
 	static int lineLimit = 50;
 
 	LinePrint(platform::core::QuickFormat("Transparent Nodes: %d", geometryCache->mNodeManager.GetSortedTransparentNodes().size()), white);
@@ -2115,17 +2275,19 @@ void Gui::GeometryOSD()
 		for (const auto &missingPair : missing)
 		{
 			const clientrender::MissingResource &missingResource = missingPair.second;
-			std::string txt = fmt::format("\t{0} {1} from ", stringOf(missingResource.resourceType), missingResource.id);
+			std::string							 txt			 = fmt::format("\t{0} {1} from ", stringOf(missingResource.resourceType), missingResource.id);
 			for (auto &u : missingResource.waitingResources)
 			{
-				auto type = u.get()->type;
-				avs::uid id = u.get()->id;
+				auto		type = u.get()->type;
+				avs::uid	id	 = u.get()->id;
 				std::string name;
 				if (type == avs::GeometryPayloadType::Node)
 				{
 					auto n = geometryCache->mNodeManager.GetNode(id);
 					if (n)
+					{
 						name = fmt::format(" ({0})", n->name);
+					}
 				}
 				txt += fmt::format("{0}{1} {2}, ", stringOf(type), name, (uint64_t)id);
 			}
@@ -2159,7 +2321,9 @@ void Gui::Scene()
 {
 	auto geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
+	{
 		return;
+	}
 	if (ImGui::Button("Clear Selection"))
 	{
 		Select(0, 0);
@@ -2202,8 +2366,8 @@ void Gui::Scene()
 void Gui::NodeTree(const std::vector<std::weak_ptr<clientrender::Node>> &root_nodes)
 {
 	static const size_t bufferSize = 40;
-	static char buffer[bufferSize];
-	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
+	static char			buffer[bufferSize];
+	auto				sessionClient = client::SessionClient::GetSessionClient(cache_uid);
 
 	if (ImGui::BeginTable("NodeOpts", 2))
 	{
@@ -2219,7 +2383,9 @@ void Gui::NodeTree(const std::vector<std::weak_ptr<clientrender::Node>> &root_no
 			if (ImGui::Button(fmt::format("{0}", clientServerState.origin_node_uid).c_str()))
 			{
 				if (clientServerState.origin_node_uid)
+				{
 					Select(cache_uid, clientServerState.origin_node_uid);
+				}
 			}
 		}
 		ImGui::TableNextRow();
@@ -2231,7 +2397,9 @@ void Gui::NodeTree(const std::vector<std::weak_ptr<clientrender::Node>> &root_no
 	}
 	const char *search_text = nullptr;
 	if (strlen(buffer) > 0)
+	{
 		search_text = buffer;
+	}
 	for (auto &r : root_nodes)
 	{
 		TreeNode(r.lock(), search_text);
@@ -2246,16 +2414,17 @@ void Gui::Update(const std::vector<vec4> &h, bool have_vr)
 
 bool Gui::BeginMainMenuBar()
 {
-	ImGuiContext &g = *(ImGui::GetCurrentContext());
+	ImGuiContext &g				  = *(ImGui::GetCurrentContext());
 
 	// For the main menu bar, which cannot be moved, we honor g.Style.DisplaySafeAreaPadding to ensure text can be visible on a TV set.
 	// FIXME: This could be generalized as an opt-in way to clamp window->DC.CursorStartPos to avoid SafeArea?
 	// FIXME: Consider removing support for safe area down the line... it's messy. Nowadays consoles have support for TV calibration in OS settings.
 	// g.NextWindowData.MenuBarOffsetMinVal = ImVec2(g.Style.DisplaySafeAreaPadding.x, 4.f);
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-	float height = ImGui::GetFrameHeight();
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize |
+									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	float  height	  = ImGui::GetFrameHeight();
 	ImVec2 window_pos = ImVec2(0, 0), window_pos_pivot = ImVec2(0, 0);
-	float w = ImGui::GetMainViewport()->Size.x;
+	float  w = ImGui::GetMainViewport()->Size.x;
 	ImGui::SetNextWindowSize(ImVec2(w, 48.f));
 	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always, window_pos_pivot);
 	// g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
@@ -2282,7 +2451,8 @@ void Gui::ShowSettings2D()
 	float w = ImGui::GetMainViewport()->Size.x - 80.0f;
 	ImGui::SetNextWindowSize(ImVec2(w, ImGui::GetWindowHeight() - 80));
 	ImGui::SetNextItemWidth(w);
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize |
+									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	ImGui::SameLine(ImGui::GetWindowWidth() - 80);
 	ImGuiBegin("Settings", 0, window_flags);
 	ImGui::PushFont(defaultFont);
@@ -2295,7 +2465,9 @@ void Gui::ShowSettings2D()
 		MainOptions();
 #if TELEPORT_INTERNAL_CHECKS
 		if (config.dev_mode)
+		{
 			DevModeOptions();
+		}
 #endif
 		ImGui::EndTable();
 	}
@@ -2304,9 +2476,9 @@ void Gui::ShowSettings2D()
 
 void Gui::ListBookmarks()
 {
-	auto &config = client::Config::GetInstance();
-	const std::vector<client::Bookmark> &bookmarks = config.GetBookmarks();
-	auto BookmarkEntry = [this](const std::string &url, const std::string &title)
+	auto								&config		   = client::Config::GetInstance();
+	const std::vector<client::Bookmark> &bookmarks	   = config.GetBookmarks();
+	auto								 BookmarkEntry = [this](const std::string &url, const std::string &title)
 	{
 		if (ImGui::TreeNodeEx(url.c_str(), ImGuiTreeNodeFlags_Leaf, "%s", title.c_str()))
 		{
@@ -2339,12 +2511,12 @@ void Gui::ListBookmarks()
 	}
 }
 static bool overwrite_url_edit = false;
-void Gui::Navigate(const std::string &url)
+void		Gui::Navigate(const std::string &url)
 {
 	connect_please = true;
 	strncpy(url_buffer, url.c_str(), std::min((size_t)MAX_URL_SIZE, url.size() + 1));
 	url_buffer[MAX_URL_SIZE - 1] = 0;
-	overwrite_url_edit = true;
+	overwrite_url_edit			 = true;
 }
 
 void Gui::MenuBar2D()
@@ -2355,7 +2527,9 @@ void Gui::MenuBar2D()
 		cancelConnectHandler(current_tab_context);
 	}
 	if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+	{
 		TIMED_TOOLTIP("Return to lobby");
+	}
 	if (overwrite_url_edit)
 	{
 		ImGui::SetKeyboardFocusHere();
@@ -2366,14 +2540,16 @@ void Gui::MenuBar2D()
 		if (!current_tab_context)
 		{
 			current_tab_context = 1;
-			auto tc = client::TabContext::GetTabContext(current_tab_context);
+			auto tc				= client::TabContext::GetTabContext(current_tab_context);
 			if (!current_tab_context || !tc)
+			{
 				current_tab_context = client::TabContext::AddTabContext();
+			}
 			if (tc)
 			{
-				std::string u = tc->GetURL();
-				size_t sz = MAX_URL_SIZE;
-				sz = std::min(sz, u.length() + 1);
+				std::string u  = tc->GetURL();
+				size_t		sz = MAX_URL_SIZE;
+				sz			   = std::min(sz, u.length() + 1);
 				try
 				{
 					snprintf(url_buffer, sz, "%s", u.c_str());
@@ -2383,11 +2559,11 @@ void Gui::MenuBar2D()
 				}
 			}
 		}
-		auto tabContext = client::TabContext::GetTabContext(current_tab_context);
-		avs::uid server_uid = tabContext->GetServerUid();
-		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-		bool connecting = sessionClient ? sessionClient->IsConnecting() : false;
-		bool connected = sessionClient ? sessionClient->IsConnected() : false;
+		auto	 tabContext	   = client::TabContext::GetTabContext(current_tab_context);
+		avs::uid server_uid	   = tabContext->GetServerUid();
+		auto	 sessionClient = client::SessionClient::GetSessionClient(server_uid);
+		bool	 connecting	   = sessionClient ? sessionClient->IsConnecting() : false;
+		bool	 connected	   = sessionClient ? sessionClient->IsConnected() : false;
 		ImGui::SameLine();
 		int num_buttons = 5;
 
@@ -2400,10 +2576,12 @@ void Gui::MenuBar2D()
 		ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * 40 - 8);
 		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 		{
-			current_url = url_buffer;
+			current_url	   = url_buffer;
 			connect_please = true;
 			if (connecting)
+			{
 				cancel_please = true;
+			}
 		}
 		url_input = ImGui::IsItemActive();
 		ImGui::PopItemWidth();
@@ -2415,7 +2593,9 @@ void Gui::MenuBar2D()
 				connect_please = true;
 			}
 			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			{
 				TIMED_TOOLTIP("Connect");
+			}
 		}
 		else
 		{
@@ -2424,7 +2604,9 @@ void Gui::MenuBar2D()
 				cancel_please = true;
 			}
 			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			{
 				TIMED_TOOLTIP("Cancel connection");
+			}
 		}
 		if (cancel_please)
 		{
@@ -2434,8 +2616,8 @@ void Gui::MenuBar2D()
 		if (connect_please)
 		{
 			show_bookmarks = false;
-			show_options = false;
-			current_url = url_buffer;
+			show_options   = false;
+			current_url	   = url_buffer;
 			connectHandler(current_tab_context, current_url);
 			connect_please = false;
 		}
@@ -2444,16 +2626,18 @@ void Gui::MenuBar2D()
 		if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(36, 24)))
 		{
 			show_bookmarks = !show_bookmarks;
-			selected_url = "";
+			selected_url   = "";
 			if (show_bookmarks)
 			{
-				show_options = false;
-				ImVec2 pos = ImGui::GetCursorScreenPos();
+				show_options  = false;
+				ImVec2 pos	  = ImGui::GetCursorScreenPos();
 				bookmarks_pos = {ImGui::GetWindowWidth(), pos.y};
 			}
 		}
 		if (!show_bookmarks && (ImGui::IsItemActive() || ImGui::IsItemHovered()))
+		{
 			TIMED_TOOLTIP("Bookmarks");
+		}
 		ImGui::SameLine();
 		if (ImGui::Button(ICON_FK_COG, ImVec2(36, 24)))
 		{
@@ -2465,7 +2649,9 @@ void Gui::MenuBar2D()
 			}
 		}
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		{
 			TIMED_TOOLTIP("Settings");
+		}
 #if TELEPORT_INTERNAL_CHECKS
 		if (config.dev_mode)
 		{
@@ -2477,7 +2663,9 @@ void Gui::MenuBar2D()
 		}
 #endif
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+		{
 			TIMED_TOOLTIP("Dev");
+		}
 	}
 	ImGui::PopStyleColor();
 }
@@ -2486,6 +2674,8 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 {
 	LightStyle();
 	auto vp = renderPlatform->GetViewport(deviceContext, 0);
+	ImGuiIO &io = ImGui::GetIO();
+	io.DisplaySize = ImVec2((float)(vp.w), (float)(vp.h));
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 #ifdef _MSC_VER
 	ImGui_ImplWin32_NewFrame();
@@ -2494,25 +2684,27 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	ImGui_ImplAndroid_NewFrame();
 #endif
 	ImGui::NewFrame();
-	ImGuiIO &io = ImGui::GetIO();
 #ifdef __ANDROID__
 	// The mouse pos is the position where the controller's pointing direction intersects the OpenXR overlay surface.
 	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
 #endif
 	ImGui::PushFont(fontInter[18]);
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+									ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
 	// ImGuiBegin("Teleport VR", nullptr, window_flags);
 	static bool show_demo_window = false;
 	if (show_demo_window)
+	{
 		ImGui::ShowDemoWindow(&show_demo_window);
+	}
 	BeginMainMenuBar();
 	{
 		MenuBar2D();
 	}
 	EndMainMenuBar();
-	auto &style = ImGui::GetStyle();
+	auto &style	 = ImGui::GetStyle();
 	auto &config = client::Config::GetInstance();
 	if (config.dev_mode)
 	{
@@ -2531,13 +2723,15 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 			{
 				const auto tabContext = client::TabContext::GetTabContext(t);
 				if (!tabContext)
+				{
 					continue;
+				}
 				std::string str = fmt::format("{0}", t);
 				if (ImGui::BeginTabItem(str.c_str()))
 				{
-					client::ConnectionStatus status = client::ConnectionStatus::UNCONNECTED;
+					client::ConnectionStatus	  status		  = client::ConnectionStatus::UNCONNECTED;
 					avs::StreamingConnectionState streamingStatus = avs::StreamingConnectionState::UNINITIALIZED;
-					static std::vector<avs::uid> ids;
+					static std::vector<avs::uid>  ids;
 					ids.resize(0);
 					ids.push_back(tabContext->GetServerUid());
 					ids.push_back(tabContext->GetNextServerUid());
@@ -2550,10 +2744,12 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					for (auto id : ids)
 					{
 						if (!id)
+						{
 							continue;
+						}
 						auto sessionClient = client::SessionClient::GetSessionClient(id);
-						status = sessionClient->GetConnectionStatus();
-						streamingStatus = sessionClient->GetStreamingConnectionState();
+						status			   = sessionClient->GetConnectionStatus();
+						streamingStatus	   = sessionClient->GetStreamingConnectionState();
 
 						ImGui::TableNextRow();
 						ImGui::TableNextColumn();
@@ -2594,7 +2790,9 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 			}
 			ImGui::EndTabBar();
 			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			{
 				TIMED_TOOLTIP("Connections");
+			}
 		}
 
 		ImGuiEnd();
@@ -2615,7 +2813,8 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		// ImGui::SameLine();
 		ImGui::BeginDisabled(!openXR.CanStartSession());
 		const char *systname = openXR.GetSystemName();
-		if (ImGui::ImageButton("##start_vr", &imgui_vrHeadsetIconTexture, ImVec2(40, 40), ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), ImVec4(0, 0, 0, 1.0f)))
+		if (ImGui::ImageButton(
+				"##start_vr", &imgui_vrHeadsetIconTexture, ImVec2(40, 40), ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), ImVec4(0, 0, 0, 1.0f)))
 		{
 			startXRSessionHandler();
 		}
@@ -2626,7 +2825,9 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				TIMED_TOOLTIP("%s", ("Activate VR: "s + systname).c_str());
 			}
 			else
+			{
 				TIMED_TOOLTIP("Activate VR");
+			}
 		}
 		else
 		{
@@ -2645,10 +2846,11 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	}
 	else if (show_bookmarks)
 	{
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+										ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 
 		static float bookmarks_width = 0.0f;
-		ImVec2 pos = {bookmarks_pos.x - bookmarks_width, bookmarks_pos.y};
+		ImVec2		 pos			 = {bookmarks_pos.x - bookmarks_width, bookmarks_pos.y};
 		ImGui::SetNextWindowPos(pos);
 
 		ImGuiBegin("Bookmarks", 0, window_flags);
@@ -2697,8 +2899,8 @@ void Gui::MainOptions()
 	ImGui::LabelText("##StartupConnection", "Startup Connection");
 	ImGui::TableNextColumn();
 	auto conn = magic_enum::enum_entries<teleport::client::StartupConnectOption>();
-	int c = (int)config.options.startupConnectOption;
-	int i = 0;
+	int	 c	  = (int)config.options.startupConnectOption;
+	int	 i	  = 0;
 	for (const auto &e : conn)
 	{
 		std::string ename = fmt::format("{0}", e.second);
@@ -2728,21 +2930,25 @@ void Gui::DevModeOptions()
 	ImGui::TableNextColumn();
 	ImGui::LabelText("##labelFlatMode", "2D Mode");
 	ImGui::TableNextColumn();
-	ImGui::Checkbox("##cbFlatMode",  &config.options.mode2D);
+	ImGui::Checkbox("##cbFlatMode", &config.options.mode2D);
 	ImGui::TableNextColumn();
 	if (ImGui::Button("##KillStreaming"))
 	{
 		if (console)
+		{
 			console("killstreaming");
+		}
 	}
 }
 void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 {
-	view_pos = deviceContext.viewStruct.cam_pos;
-	view_dir = deviceContext.viewStruct.view_dir;
+	view_pos	 = deviceContext.viewStruct.cam_pos;
+	view_dir	 = deviceContext.viewStruct.view_dir;
 	auto &config = client::Config::GetInstance();
 	if (guiType != GuiType::Connection)
+	{
 		return;
+	}
 	vec3 pos_diff = view_pos - menu_pos;
 	if (length(pos_diff) > 1.4f)
 	{
@@ -2750,12 +2956,12 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	}
 	if (reset_menu_pos)
 	{
-		menu_pos = view_pos;
+		menu_pos			  = view_pos;
 		static float z_offset = -.3f;
 		static float distance = 0.4f;
-		azimuth = atan2f(-view_dir.x, view_dir.y);
-		tilt = 3.1415926536f / 4.0f;
-		vec3 menu_offset = {distance * -sin(azimuth), distance * cos(azimuth), z_offset};
+		azimuth				  = atan2f(-view_dir.x, view_dir.y);
+		tilt				  = 3.1415926536f / 4.0f;
+		vec3 menu_offset	  = {distance * -sin(azimuth), distance * cos(azimuth), z_offset};
 		menu_pos += menu_offset;
 		reset_menu_pos = false;
 	}
@@ -2767,47 +2973,54 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 #ifdef __ANDROID__
 	ImGui_ImplAndroid_NewFrame();
 #endif
-	ImGuiIO &io = ImGui::GetIO();
-	static bool in3d = true;
-	static float window_width = 720.0f;
+	ImGuiIO		&io			   = ImGui::GetIO();
+	static bool	 in3d		   = true;
+	static float window_width  = 720.0f;
 	static float window_height = 260.0f;
 #if TELEPORT_INTERNAL_CHECKS
 	if (config.dev_mode)
+	{
 		window_height = 400.0f;
+	}
 #endif
 	ImVec2 size_min(window_width, window_height);
 	ImVec2 size_max(window_width, window_height);
 	ImGui_ImplPlatform_NewFrame(in3d, (int)size_max.x, (int)size_max.y, menu_pos, azimuth, tilt, width_m);
-	static int refocus = 0;
-	bool show_hide = true;
+	static int refocus	 = 0;
+	bool	   show_hide = true;
 	if (have_vr_device)
+	{
 		ImGui_ImplPlatform_Update3DTouchPos(hand_pos_press);
+	}
 	else
+	{
 		ImGui_ImplPlatform_Update3DMousePos();
+	}
 	ImVec2 mousePos = io.MousePos;
 	ImGui::NewFrame();
 	// restore mouse pos here to override ImGui's internal shenanigans.
 	io.MousePos = mousePos;
 	{
-		bool show_keyboard = true;
-		ImGuiWindowFlags windowFlags = 0;
+		bool			 show_keyboard = true;
+		ImGuiWindowFlags windowFlags   = 0;
 		if (in3d)
 		{
 			ImGui::SetNextWindowPos(ImVec2(0, 0)); // always at the window origin
 			ImGui::SetNextWindowSizeConstraints(size_min, size_max);
 			if (!show_keyboard)
+			{
 				ImGui::SetNextWindowSize(size_min);
+			}
 			else
+			{
 				ImGui::SetNextWindowSize(size_max);
-			windowFlags = ImGuiWindowFlags_NoResize |
-						  ImGuiWindowFlags_NoMove |
-						  ImGuiWindowFlags_NoCollapse |
-						  ImGuiWindowFlags_NoScrollbar;
+			}
+			windowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
 		}
 		ImGui::LogToTTY();
 
 		const auto &[dateStr, timeStr] = GetCurrentDateTimeStrings();
-		std::string title = "Teleport XR"; // + dateStr + " " + timeStr;
+		std::string title			   = "Teleport XR"; // + dateStr + " " + timeStr;
 		ImGuiBegin(title.c_str(), &show_hide, windowFlags);
 #if 0
 		std::vector<vec3> client_press;
@@ -2867,7 +3080,9 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 
 #if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)
+				{
 					DevModeOptions();
+				}
 #endif
 				ImGui::EndTable();
 			}
@@ -2882,7 +3097,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 			if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(64, 32)))
 			{
 				show_bookmarks = !show_bookmarks;
-				selected_url = "";
+				selected_url   = "";
 			}
 			if (show_bookmarks)
 			{
@@ -2901,17 +3116,19 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				{
 					current_tab_context = client::TabContext::GetEmptyTabContext();
 					if (!current_tab_context)
+					{
 						current_tab_context = client::TabContext::AddTabContext();
+					}
 				}
-				std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
-				avs::uid server_uid = tabContext->GetServerUid();
-				auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-				bool connecting = false;
-				bool connected = false;
+				std::shared_ptr<client::TabContext> tabContext	  = client::TabContext::GetTabContext(current_tab_context);
+				avs::uid							server_uid	  = tabContext->GetServerUid();
+				auto								sessionClient = client::SessionClient::GetSessionClient(server_uid);
+				bool								connecting	  = false;
+				bool								connected	  = false;
 				if (sessionClient)
 				{
 					connecting = sessionClient->IsConnecting();
-					connected = sessionClient->IsConnected();
+					connected  = sessionClient->IsConnected();
 				}
 				ImGui::SameLine();
 				if (refocus == 0)
@@ -2942,7 +3159,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 						current_url = url_buffer;
 						connectHandler(current_tab_context, current_url);
 						connect_please = false;
-						cancel_please = false;
+						cancel_please  = false;
 					}
 				}
 				else
@@ -2980,7 +3197,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 						for (size_t i = 0; i < num; i++)
 						{
 							char key_label[] = "X";
-							key_label[0] = *key;
+							key_label[0]	 = *key;
 							ImGui::Button(key_label, ImVec2(46, 32));
 							if (ImGui::IsItemClicked())
 							{
@@ -2993,7 +3210,9 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 							}
 							key++;
 							if (i < num - 1)
+							{
 								ImGui::SameLine();
+							}
 						}
 					};
 					KeyboardLine("1234567890-");
@@ -3030,14 +3249,14 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	}
 
 	ImGui::GetForegroundDrawList()->AddCircleFilled(mousePos, 2.f, IM_COL32(90, 255, 90, 200), 16);
-	static float handleWidth = 12.f;
-	ImVec2 handle1_min = {0.f, 120.f};
-	ImVec2 handle1_max = {handleWidth, 480.f};
-	ImVec2 handle2_min = {window_width - handleWidth, 120.f};
-	ImVec2 handle2_max = {window_width, 480.f};
-	auto &style = ImGui::GetStyle();
-	ImU32 handle1Colour = ImGui::GetColorU32(style.Colors[ImGuiCol_Button]);
-	ImU32 handle2Colour = ImGui::GetColorU32(style.Colors[ImGuiCol_Button]);
+	static float handleWidth   = 12.f;
+	ImVec2		 handle1_min   = {0.f, 120.f};
+	ImVec2		 handle1_max   = {handleWidth, 480.f};
+	ImVec2		 handle2_min   = {window_width - handleWidth, 120.f};
+	ImVec2		 handle2_max   = {window_width, 480.f};
+	auto		&style		   = ImGui::GetStyle();
+	ImU32		 handle1Colour = ImGui::GetColorU32(style.Colors[ImGuiCol_Button]);
+	ImU32		 handle2Colour = ImGui::GetColorU32(style.Colors[ImGuiCol_Button]);
 	ImGui::GetForegroundDrawList()->AddRectFilled(handle1_min, handle1_max, handle1Colour, 0.5f);
 	ImGui::GetForegroundDrawList()->AddRectFilled(handle2_min, handle2_max, handle2Colour, 0.5f);
 	ImGui::Render();
@@ -3075,35 +3294,47 @@ void Gui::Select(avs::uid c, avs::uid u)
 	{
 		Selection s = {c, u};
 		if (selection_cursor == selection_history.size() - 1 && s == selection_history.back())
+		{
 			return;
+		}
 	}
 	selection_history.push_back({c, u});
 	selection_cursor = selection_history.size() - 1;
-	mip_current=0;
+	mip_current		 = 0;
 	if (selectionHandler)
+	{
 		selectionHandler();
+	}
 }
 
 void Gui::SelectPrevious()
 {
 	if (selection_cursor > 0)
+	{
 		selection_cursor--;
-	mip_current=0;
+	}
+	mip_current = 0;
 }
 
 void Gui::SelectNext()
 {
 	if (selection_cursor + 1 < selection_history.size())
+	{
 		selection_cursor++;
-	mip_current=0;
+	}
+	mip_current = 0;
 }
 
 avs::uid Gui::GetSelectedUid() const
 {
 	if (selection_cursor < selection_history.size())
+	{
 		return selection_history[selection_cursor].selected_uid;
+	}
 	else
+	{
 		return 0;
+	}
 }
 
 avs::uid Gui::GetSelectedCache() const

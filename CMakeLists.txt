@@ -259,8 +259,11 @@ else()
 endif()
 
 if(TELEPORT_CLIENT)
-	option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
-	option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ${PLATFORM_LINUX})
+	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
+		option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
+	else()
+		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ON)
+	endif()
 	if( ${TELEPORT_CLIENT_USE_D3D12})
 		set(TELEPORT_CLIENT_USE_D3D11 OFF)
 	endif()
@@ -279,7 +282,7 @@ if(TELEPORT_CLIENT)
 endif()
 
 set(TELEPORT_SERVER_DLL_DIR "${TELEPORT_UNITY_PLUGINS_DIR}" CACHE PATH "Location to build TeleportServer.dll for use by engine")
-set(TELEPORT_SERVER_INCLUDE_DIR "${TELEPORT_SERVER_DLL_DIR}/../../Include" CACHE PATH "Location to deploy exported headers for use by engine")
+set(TELEPORT_SERVER_INCLUDE_DIR "${TELEPORT_SERVER_DLL_DIR}/../../include" CACHE PATH "Location to deploy exported headers for use by engine")
 
 if(TELEPORT_UNITY)
 	get_filename_component(PROJECT_DIR ${CMAKE_BINARY_DIR} DIRECTORY)
@@ -388,7 +391,12 @@ option(BUILD_AS_LIBRARY "" ON)
 
 function(SetTeleportDefaults targname)
 	set_target_properties( ${targname} PROPERTIES PREFIX "" )
-	set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR ON)
+	if(MSVC)
+		set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR ON)
+	else()
+		# TODO: re-enable once pre-existing libavstream/TeleportCore header warnings are fixed.
+		set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR OFF)
+	endif()
 	add_definitions(-DUNICODE -D_UNICODE)
 	if(TELEPORT_TRACY_PROFILING)
 		target_include_directories(${targname} PUBLIC ${CMAKE_BINARY_DIR}/_deps/tracy-src/public)
@@ -404,6 +412,8 @@ function(SetTeleportDefaults targname)
 		target_compile_options(${targname} PRIVATE -Werror -Wno-ignored-qualifiers -Wno-gnu-zero-variadic-macro-arguments -Wno-address-of-packed-member -Wno-sign-compare -Wno-parentheses -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-parameter -Wno-unused-private-field -Wno-unused-parameter -Wno-unused-value)
 		# these options are intended to minimize the necessary changes to build on Linux, and should be removed when possible:
 		target_compile_options(${targname} PRIVATE -Wno-missing-field-initializers -Wno-unused-variable -Wno-deprecated-copy)
+		# TODO: fix the underlying header issues in libavstream (packed non-POD fields, backslash-newline at EOF) and TeleportCore InputTypes.h, then remove these:
+		target_compile_options(${targname} PRIVATE -Wno-attributes -Wno-packed-non-pod -Wno-error)
 
 		# TODO: fix basisu compile on Linux, remove when possible.
 		target_compile_options(${targname} PRIVATE -Wno-array-bounds -Wno-reorder-ctor)

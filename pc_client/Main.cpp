@@ -26,6 +26,7 @@
 #include "TeleportClient/URLHandlers.h"
 #include "TeleportCore/ErrorHandling.h"
 #include <filesystem>
+#include <locale>
 #include <regex>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -77,6 +78,19 @@ bool receive_link = false;
 std::string cmdLine;
 
 #include "Platform/Core/FileLoader.h"
+
+// Cross-platform keyboard handler. Mirrors the keyboard logic that previously
+// lived inline in the Win32 WndProc, so the same keys behave identically on
+// Windows and Linux. 'vk' is a Win32-style virtual key code; 'pressed' is
+// true on key-down or key-repeat, false on key-up.
+static void HandleKeyboard(unsigned vk, bool pressed)
+{
+	if (!clientRenderer) return;
+	bool gui_shown = (gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
+	clientRenderer->OnKeyboard(vk, pressed, gui_shown);
+	if (gui.GetGuiType() == teleport::clientrender::GuiType::None) useOpenXR.OnKeyboard(vk, pressed);
+	if (!pressed && vk == 0x1B /*VK_ESCAPE*/) clientRenderer->ShowHideGui();
+}
 
 #ifdef _WIN32
 #define MAX_LOADSTRING 100
@@ -133,7 +147,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	}
 	// run from pc_client directory.
 	std::filesystem::path current_path = std::filesystem::current_path();
-	if (!std::filesystem::exists("pc_client/client_default.ini"))
+	if (!std::filesystem::exists("client/client_default.ini"))
 	{
 		wchar_t filename[700];
 		DWORD res = GetModuleFileNameW(nullptr, filename, 700);
@@ -143,7 +157,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 			current_path = current_path.remove_filename();
 		}
 		// Get into the pc_client directory.
-		while (!current_path.empty() && !std::filesystem::exists("pc_client/client_default.ini"))
+		while (!current_path.empty() && !std::filesystem::exists("client/client_default.ini"))
 		{
 			std::filesystem::path prev_path = current_path;
 			// std::string rel_pc_client="../../pc_client";
@@ -155,7 +169,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 				break;
 		}
 	}
-	current_path = current_path.append("pc_client").lexically_normal();
+	current_path = current_path.append("client").lexically_normal();
 	if (!std::filesystem::exists(current_path))
 		return -1;
 	std::filesystem::current_path(current_path);
@@ -479,15 +493,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		switch (message)
 		{
-		case WM_KEYUP:
-			switch (wParam)
-			{
-			case VK_ESCAPE:
-				clientRenderer->ShowHideGui();
-			default:
-				break;
-			}
-			break;
 		case WM_IME_NOTIFY:
 		case WM_ENABLE:
 			// case WM_NCACTIVATE:
@@ -540,12 +545,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (message)
 		{
 		case WM_KEYDOWN:
-			clientRenderer->OnKeyboard((unsigned)wParam, true, gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
-			if (gui.GetGuiType() == teleport::clientrender::GuiType::None) useOpenXR.OnKeyboard((unsigned)wParam, true);
+			HandleKeyboard((unsigned)wParam, true);
 			break;
 		case WM_KEYUP:
-			clientRenderer->OnKeyboard((unsigned)wParam, false, gui.GetGuiType() == teleport::clientrender::GuiType::Connection);
-			if (gui.GetGuiType() == teleport::clientrender::GuiType::None) useOpenXR.OnKeyboard((unsigned)wParam, false);
+			HandleKeyboard((unsigned)wParam, false);
 			break;
 		default:
 			break;
@@ -684,8 +687,201 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 #include <unistd.h>
 #include <pwd.h>
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#include "Platform/ImGui/imgui_impl_platform.h"
 
 namespace fs = std::filesystem;
+
+static platform::core::DefaultProfiler cpuProfiler;
+
+// The GLFW window and the Vulkan surface created from it. A pointer to
+// g_surface is what we pass to the DisplaySurfaceManager as cp_hwnd, because
+// the Vulkan DisplaySurface dereferences the handle as VkSurfaceKHR* on Linux.
+static GLFWwindow *g_window = nullptr;
+static VkSurfaceKHR g_surface = VK_NULL_HANDLE;
+
+// Map a GLFW key code to a Win32-style virtual key code that the Renderer/Gui
+// understand. Only the keys actually used by the renderer are mapped.
+static unsigned GlfwKeyToVk(int key)
+{
+	if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) return (unsigned)('A' + (key - GLFW_KEY_A));
+	if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) return (unsigned)('0' + (key - GLFW_KEY_0));
+	switch (key)
+	{
+	case GLFW_KEY_SPACE: return 0x20;
+	case GLFW_KEY_ESCAPE: return 0x1B;
+	case GLFW_KEY_LEFT_SHIFT:
+	case GLFW_KEY_RIGHT_SHIFT: return 0x10;
+	case GLFW_KEY_LEFT_CONTROL:
+	case GLFW_KEY_RIGHT_CONTROL: return 0x11;
+	case GLFW_KEY_LEFT_ALT:
+	case GLFW_KEY_RIGHT_ALT: return 0x12;
+	case GLFW_KEY_LEFT: return 0x25;
+	case GLFW_KEY_UP: return 0x26;
+	case GLFW_KEY_RIGHT: return 0x27;
+	case GLFW_KEY_DOWN: return 0x28;
+	case GLFW_KEY_ENTER: return 0x0D;
+	case GLFW_KEY_BACKSPACE: return 0x08;
+	case GLFW_KEY_TAB: return 0x09;
+	default: return 0;
+	}
+}
+
+// Map a GLFW key code to the corresponding ImGuiKey.
+static ImGuiKey GlfwKeyToImGuiKey(int key)
+{
+	if (key >= GLFW_KEY_A && key <= GLFW_KEY_Z) return (ImGuiKey)(ImGuiKey_A + (key - GLFW_KEY_A));
+	if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) return (ImGuiKey)(ImGuiKey_0 + (key - GLFW_KEY_0));
+	if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) return (ImGuiKey)(ImGuiKey_F1 + (key - GLFW_KEY_F1));
+	if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9) return (ImGuiKey)(ImGuiKey_Keypad0 + (key - GLFW_KEY_KP_0));
+	switch (key)
+	{
+	case GLFW_KEY_TAB: return ImGuiKey_Tab;
+	case GLFW_KEY_LEFT: return ImGuiKey_LeftArrow;
+	case GLFW_KEY_RIGHT: return ImGuiKey_RightArrow;
+	case GLFW_KEY_UP: return ImGuiKey_UpArrow;
+	case GLFW_KEY_DOWN: return ImGuiKey_DownArrow;
+	case GLFW_KEY_PAGE_UP: return ImGuiKey_PageUp;
+	case GLFW_KEY_PAGE_DOWN: return ImGuiKey_PageDown;
+	case GLFW_KEY_HOME: return ImGuiKey_Home;
+	case GLFW_KEY_END: return ImGuiKey_End;
+	case GLFW_KEY_INSERT: return ImGuiKey_Insert;
+	case GLFW_KEY_DELETE: return ImGuiKey_Delete;
+	case GLFW_KEY_BACKSPACE: return ImGuiKey_Backspace;
+	case GLFW_KEY_SPACE: return ImGuiKey_Space;
+	case GLFW_KEY_ENTER: return ImGuiKey_Enter;
+	case GLFW_KEY_ESCAPE: return ImGuiKey_Escape;
+	case GLFW_KEY_KP_ENTER: return ImGuiKey_KeypadEnter;
+	case GLFW_KEY_KP_DECIMAL: return ImGuiKey_KeypadDecimal;
+	case GLFW_KEY_KP_DIVIDE: return ImGuiKey_KeypadDivide;
+	case GLFW_KEY_KP_MULTIPLY: return ImGuiKey_KeypadMultiply;
+	case GLFW_KEY_KP_SUBTRACT: return ImGuiKey_KeypadSubtract;
+	case GLFW_KEY_KP_ADD: return ImGuiKey_KeypadAdd;
+	case GLFW_KEY_APOSTROPHE: return ImGuiKey_Apostrophe;
+	case GLFW_KEY_COMMA: return ImGuiKey_Comma;
+	case GLFW_KEY_MINUS: return ImGuiKey_Minus;
+	case GLFW_KEY_PERIOD: return ImGuiKey_Period;
+	case GLFW_KEY_SLASH: return ImGuiKey_Slash;
+	case GLFW_KEY_SEMICOLON: return ImGuiKey_Semicolon;
+	case GLFW_KEY_EQUAL: return ImGuiKey_Equal;
+	case GLFW_KEY_LEFT_BRACKET: return ImGuiKey_LeftBracket;
+	case GLFW_KEY_BACKSLASH: return ImGuiKey_Backslash;
+	case GLFW_KEY_RIGHT_BRACKET: return ImGuiKey_RightBracket;
+	case GLFW_KEY_GRAVE_ACCENT: return ImGuiKey_GraveAccent;
+	case GLFW_KEY_CAPS_LOCK: return ImGuiKey_CapsLock;
+	case GLFW_KEY_SCROLL_LOCK: return ImGuiKey_ScrollLock;
+	case GLFW_KEY_NUM_LOCK: return ImGuiKey_NumLock;
+	case GLFW_KEY_PRINT_SCREEN: return ImGuiKey_PrintScreen;
+	case GLFW_KEY_PAUSE: return ImGuiKey_Pause;
+	case GLFW_KEY_LEFT_SHIFT: return ImGuiKey_LeftShift;
+	case GLFW_KEY_RIGHT_SHIFT: return ImGuiKey_RightShift;
+	case GLFW_KEY_LEFT_CONTROL: return ImGuiKey_LeftCtrl;
+	case GLFW_KEY_RIGHT_CONTROL: return ImGuiKey_RightCtrl;
+	case GLFW_KEY_LEFT_ALT: return ImGuiKey_LeftAlt;
+	case GLFW_KEY_RIGHT_ALT: return ImGuiKey_RightAlt;
+	case GLFW_KEY_LEFT_SUPER: return ImGuiKey_LeftSuper;
+	case GLFW_KEY_RIGHT_SUPER: return ImGuiKey_RightSuper;
+	case GLFW_KEY_MENU: return ImGuiKey_Menu;
+	default: return ImGuiKey_None;
+	}
+}
+
+static void GlfwKeyCallback(GLFWwindow *win, int key, int /*scancode*/, int action, int /*mods*/)
+{
+	if (!clientRenderer) return;
+	{
+		ImGuiIO &io = ImGui::GetIO();
+		io.AddKeyEvent(ImGuiMod_Ctrl, (glfwGetKey(win, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) || (glfwGetKey(win, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS));
+		io.AddKeyEvent(ImGuiMod_Shift, (glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS));
+		io.AddKeyEvent(ImGuiMod_Alt, (glfwGetKey(win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) || (glfwGetKey(win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS));
+		io.AddKeyEvent(ImGuiMod_Super, (glfwGetKey(win, GLFW_KEY_LEFT_SUPER) == GLFW_PRESS) || (glfwGetKey(win, GLFW_KEY_RIGHT_SUPER) == GLFW_PRESS));
+		ImGuiKey imkey = GlfwKeyToImGuiKey(key);
+		if (imkey != ImGuiKey_None)
+		{
+			// Defensive: some X11 setups deliver auto-repeat as RELEASE+PRESS pairs instead of GLFW_REPEAT.
+			// Only forward real state transitions to ImGui by consulting glfwGetKey which reflects the
+			// physical key state regardless of the artificial events.
+			static bool s_keyDown[GLFW_KEY_LAST + 1] = {};
+			bool		actually_down				 = (glfwGetKey(win, key) == GLFW_PRESS);
+			if (action == GLFW_REPEAT) actually_down = true;
+			if (actually_down != s_keyDown[key])
+			{
+				s_keyDown[key] = actually_down;
+				io.AddKeyEvent(imkey, actually_down);
+			}
+		}
+	}
+	unsigned vk = GlfwKeyToVk(key);
+	if (vk == 0) return;
+	// Mirror the Win32 'ui_handled' gate: when ImGui is capturing the keyboard
+	// (e.g. a text input field has focus), do not forward keys to the renderer.
+	if (ImGui::GetIO().WantCaptureKeyboard) return;
+	if (action == GLFW_PRESS || action == GLFW_REPEAT)
+		HandleKeyboard(vk, true);
+	else if (action == GLFW_RELEASE)
+		HandleKeyboard(vk, false);
+}
+
+static void GlfwCharCallback(GLFWwindow *, unsigned int codepoint)
+{
+	ImGuiIO &io = ImGui::GetIO();
+	io.AddInputCharacter(codepoint);
+}
+
+static const char *ImGuiGetClipboardTextGlfw(void *user_data)
+{
+	const char *t =glfwGetClipboardString((GLFWwindow *)user_data);
+	fprintf(stderr, "[clip] GET len=%zu first=\"%.40s\"\n", t ? strlen(t) : 0, t ? t : "(null)");
+	return t;
+}
+
+static void ImGuiSetClipboardTextGlfw(void *user_data, const char *text)
+{
+	fprintf(stderr, "[clip] SET len=%zu first=\"%.40s\"\n", text ? strlen(text) : 0, text ? text : "(null)");
+	glfwSetClipboardString((GLFWwindow *)user_data, text);
+}
+
+static void GlfwMouseButtonCallback(GLFWwindow *win, int button, int action, int /*mods*/)
+{
+	if (!clientRenderer) return;
+	bool left = (button == GLFW_MOUSE_BUTTON_LEFT);
+	bool right = (button == GLFW_MOUSE_BUTTON_RIGHT);
+	bool middle = (button == GLFW_MOUSE_BUTTON_MIDDLE);
+	bool gui_none = (gui.GetGuiType() == teleport::clientrender::GuiType::None);
+	if (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT || button == GLFW_MOUSE_BUTTON_MIDDLE)
+	{
+		ImGui_ImplPlatform_SetMouseDown(button, action == GLFW_PRESS);
+	}
+	if (action == GLFW_PRESS)
+	{
+		if (right || gui_none)
+		{
+			clientRenderer->OnMouseButtonPressed(left && gui_none, right, middle && gui_none, 0);
+			if (gui_none) useOpenXR.OnMouseButtonPressed(left, right, middle, 0);
+		}
+	}
+	else if (action == GLFW_RELEASE)
+	{
+		if (right || gui_none)
+		{
+			clientRenderer->OnMouseButtonReleased(left && gui_none, right, middle && gui_none, 0);
+			if (gui_none) useOpenXR.OnMouseButtonReleased(left, right, middle, 0);
+		}
+	}
+}
+
+static void GlfwCursorPosCallback(GLFWwindow *win, double xpos, double ypos)
+{
+	if (!clientRenderer) return;
+	int leftDown = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+	int rightDown = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+	int middleDown = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
+	clientRenderer->OnMouseMove((int)xpos, (int)ypos, leftDown != 0, rightDown != 0, middleDown != 0, 0);
+	int w = 0, h = 0;
+	glfwGetWindowSize(win, &w, &h);
+	if (!useOpenXR.IsSessionActive()) ImGui_ImplPlatform_SetMousePos((int)xpos, (int)ypos, w, h);
+}
 
 void ShutdownRendererLinux()
 {
@@ -695,11 +891,24 @@ void ShutdownRendererLinux()
 	clientRenderer = nullptr;
 	delete sessionClient;
 	sessionClient = nullptr;
+	if (g_surface != VK_NULL_HANDLE && renderPlatform)
+	{
+		auto *vulkanRP = (vulkan::RenderPlatform *)renderPlatform;
+		vk::Instance *inst = vulkanRP->AsVulkanInstance();
+		if (inst) inst->destroySurfaceKHR(g_surface, nullptr);
+		g_surface = VK_NULL_HANDLE;
+	}
 	delete renderPlatform;
 	renderPlatform = nullptr;
+	if (g_window)
+	{
+		glfwDestroyWindow(g_window);
+		g_window = nullptr;
+	}
+	glfwTerminate();
 }
 
-void InitRendererLinux(bool try_init_vr, bool dev_mode)
+void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, const std::vector<std::string> &required_instance_extensions)
 {
 	clientRenderer = new clientrender::Renderer(gui);
 	gdi = &deviceManager;
@@ -717,7 +926,26 @@ void InitRendererLinux(bool try_init_vr, bool dev_mode)
 #else
 	static bool use_debug = false;
 #endif
-	gdi->Initialize(use_debug, false, false);
+	deviceManager.Initialize(use_debug, false, false, std::vector<std::string>(), required_instance_extensions);
+
+	// Create the Vulkan surface from the GLFW window now that the Vulkan instance exists.
+	// The instance lives on deviceManager at this point; renderPlatform doesn't get it
+	// until RestoreDeviceObjects is called below.
+	{
+		vk::Instance *inst = deviceManager.GetVulkanInstance();
+		if (inst && window)
+		{
+			VkResult r = glfwCreateWindowSurface(static_cast<VkInstance>(*inst), window, nullptr, &g_surface);
+			if (r != VK_SUCCESS)
+			{
+				TELEPORT_CERR << "glfwCreateWindowSurface failed: " << r << std::endl;
+			}
+		}
+		else
+		{
+			TELEPORT_CERR << "Cannot create Vulkan surface: instance=" << inst << " window=" << window << std::endl;
+		}
+	}
 
 	teleport_path = fs::current_path().parent_path().string();
 	std::string src_dir = teleport_path;
@@ -785,12 +1013,22 @@ void InitRendererLinux(bool try_init_vr, bool dev_mode)
 
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	auto &config = client::Config::GetInstance();
-	clientRenderer->Init(renderPlatform, &useOpenXR, nullptr);
+	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)window);
+	if (g_surface != VK_NULL_HANDLE)
+	{
+		dsmi->AddWindow(&g_surface);
+	}
 	dsmi->SetRenderer(clientRenderer);
 }
 
 int main(int argc, char *argv[])
 {
+	// Force the C++ global locale to "C" so that std::regex compilation does not
+	// route through glibc UTF-8 collation (strxfrm), which is pathologically slow
+	// inside libstdc++'s _BracketMatcher::_M_make_cache and effectively hangs
+	// shader effect parsing.
+	std::locale::global(std::locale::classic());
+
 	// Parse command line
 	for (int i = 1; i < argc; i++)
 	{
@@ -807,7 +1045,7 @@ int main(int argc, char *argv[])
 
 	// Find the pc_client directory
 	std::filesystem::path current_path = std::filesystem::current_path();
-	if (!std::filesystem::exists("pc_client/client_default.ini"))
+	if (!std::filesystem::exists("client/client_default.ini"))
 	{
 		// Try to find it relative to executable
 		char exe_path[1024];
@@ -817,7 +1055,7 @@ int main(int argc, char *argv[])
 			exe_path[len] = '\0';
 			current_path = std::filesystem::path(exe_path).parent_path();
 		}
-		while (!current_path.empty() && !std::filesystem::exists("pc_client/client_default.ini"))
+		while (!current_path.empty() && !std::filesystem::exists("client/client_default.ini"))
 		{
 			std::filesystem::path prev_path = current_path;
 			current_path = current_path.append("../").lexically_normal();
@@ -829,7 +1067,7 @@ int main(int argc, char *argv[])
 				break;
 		}
 	}
-	current_path = current_path.append("pc_client").lexically_normal();
+	current_path = current_path.append("client").lexically_normal();
 	if (!std::filesystem::exists(current_path))
 	{
 		TELEPORT_CERR << "Cannot find pc_client directory" << std::endl;
@@ -860,41 +1098,103 @@ int main(int argc, char *argv[])
 	clientApp.Initialize();
 	gui.SetServerIPs(config.recent_server_urls);
 
-	InitRendererLinux(config.enable_vr, config.dev_mode);
+	// Bring up GLFW and create a window before the Vulkan instance, so that we can
+	// query the platform-specific surface extensions GLFW needs.
+	if (!glfwInit())
+	{
+		TELEPORT_CERR << "glfwInit failed" << std::endl;
+		return -1;
+	}
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	g_window = glfwCreateWindow(800, 500, "Teleport Spatial Client", nullptr, nullptr);
+	if (!g_window)
+	{
+		TELEPORT_CERR << "glfwCreateWindow failed" << std::endl;
+		glfwTerminate();
+		return -1;
+	}
+	glfwSetKeyCallback(g_window, GlfwKeyCallback);
+	glfwSetCharCallback(g_window, GlfwCharCallback);
+	glfwSetMouseButtonCallback(g_window, GlfwMouseButtonCallback);
+	glfwSetCursorPosCallback(g_window, GlfwCursorPosCallback);
+
+	std::vector<std::string> required_instance_extensions;
+	{
+		uint32_t count = 0;
+		const char **exts = glfwGetRequiredInstanceExtensions(&count);
+		for (uint32_t i = 0; i < count; i++)
+			required_instance_extensions.emplace_back(exts[i]);
+	}
+
+	InitRendererLinux(g_window, config.enable_vr, config.dev_mode, required_instance_extensions);
+	{
+		ImGuiIO &io = ImGui::GetIO();
+		io.SetClipboardTextFn = ImGuiSetClipboardTextGlfw;
+		io.GetClipboardTextFn = ImGuiGetClipboardTextGlfw;
+		io.ClipboardUserData = g_window;
+	}
+	receive_link = false;
 	ReceiveCmdLine();
 
 #if TELEPORT_CLIENT_SUPPORT_IPSME
 	mosquitto_lib_init();
 #endif
 
-	// Simple main loop - for now just initialize and wait
-	// A full implementation would use X11/Wayland or GLFW for window management
-	bool running = true;
-	while (running)
+	platform::core::Timer frameTimer;
+	double fTime = 0.0;
+	long long frame = 1;
+
+	while (!glfwWindowShouldClose(g_window))
 	{
+		glfwPollEvents();
+
 		if (client::TabContext::ShouldFollowExternalURL())
 		{
 			std::string url = client::TabContext::PopExternalURL();
 			teleport::client::LaunchProtocolHandler(url);
 		}
 
-		auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(
-			std::chrono::system_clock::now().time_since_epoch());
-		if (clientRenderer)
+		if (gdi && clientRenderer && renderPlatform)
 		{
+			auto microsecondsUTC = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch());
 			clientRenderer->Update(microsecondsUTC);
-		}
-		useOpenXR.Tick();
+			useOpenXR.Tick();
 
-		// For headless/XR-only mode, we just run the XR loop
-		// Break if XR session ends or user requests quit
-		if (!useOpenXR.IsSessionActive() && !config.enable_vr)
-		{
-			// No VR and no window - exit
-			running = false;
-		}
+			float time_step = frameTimer.UpdateTime() / 1000.0f;
+			renderPlatform->BeginFrame(frame++);
+			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(&g_surface);
+			if (w)
+			{
+				int fbw = 0, fbh = 0;
+				glfwGetFramebufferSize(g_window, &fbw, &fbh);
+				if (fbw > 0 && fbh > 0) clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
+			}
+			clientRenderer->OnFrameMove(fTime, time_step);
+			fTime += time_step;
+			errno = 0;
+			{
+				platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
+				renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
+				cpuProfiler.SetMaxLevel(5);
+				cpuProfiler.StartFrame();
 
-		usleep(1000); // 1ms sleep to prevent busy-waiting
+				{
+					ImGuiIO &io = ImGui::GetIO();
+					io.DeltaTime = time_step > 0.0f ? time_step : (1.0f / 60.0f);
+				}
+				dsmi->Render(&g_surface);
+			}
+			if (receive_link)
+			{
+				gui.SetGuiType(teleport::clientrender::GuiType::Connection);
+				gui.Navigate(cmdLine);
+				receive_link = false;
+			}
+			displaySurfaceManager.EndFrame();
+			cpuProfiler.EndFrame();
+		}
 	}
 
 #if TELEPORT_CLIENT_SUPPORT_IPSME
@@ -909,6 +1209,7 @@ int main(int argc, char *argv[])
 			std::cout << s << std::endl;
 	}
 
+	client::SessionClient::DestroySessionClients();
 	ShutdownRendererLinux();
 	teleport::client::DiscoveryService::ShutdownInstance();
 

@@ -214,6 +214,7 @@ namespace teleport
 			std::map<std::string, std::string> xr_profile_to_controller_model_name;
 			vec3 camera_local_pos;
 			platform::crossplatform::CameraInterface *cameraInterface=nullptr;
+			float				 last_t = 0.0f;
 		};
 	}
 }
