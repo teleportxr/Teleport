@@ -49,7 +49,10 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 		rootNodes_mutex.lock();
 		rootNodes.push_back(node);
 		rootNodes_mutex.unlock();
-		distanceSortedRootNodes.push_back(node);
+		{
+			std::scoped_lock lock(distanceSortedRootNodes_mutex);
+			distanceSortedRootNodes.push_back(node);
+		}
 	}
 	// Should not do this on the main thread, or any perf-critical thread.
 	while(!nodeLookup_mutex.try_lock())
@@ -213,7 +216,10 @@ void NodeManager::RemoveNode(std::shared_ptr<Node> node)
 			rootNodes_mutex.lock();
 			rootNodes.push_back(child);
 			rootNodes_mutex.unlock();
-			distanceSortedRootNodes.push_back(child);
+			{
+				std::scoped_lock lock(distanceSortedRootNodes_mutex);
+				distanceSortedRootNodes.push_back(child);
+			}
 			//Remove parent
 			child->SetParent(nullptr);
 			parentLookup.erase(child->id);
@@ -271,16 +277,18 @@ const std::vector<std::weak_ptr<Node>>& NodeManager::GetRootNodes() const
 const std::vector<std::weak_ptr<Node>>& NodeManager::GetSortedRootNodes()
 {
 	std::scoped_lock lock(distanceSortedRootNodes_mutex);
-	for(size_t i=0;i<distanceSortedRootNodes.size();i++)
+	for(size_t i=0;i<distanceSortedRootNodes.size();)
 	{
 		if(distanceSortedRootNodes[i].expired())
 			distanceSortedRootNodes.erase(distanceSortedRootNodes.begin()+i);
+		else
+			i++;
 	}
 	std::sort
 	(
 		distanceSortedRootNodes.begin(),
 		distanceSortedRootNodes.end(),
-		[](std::weak_ptr<Node> a, std::weak_ptr<Node> b)
+		[](const std::weak_ptr<Node> &a, const std::weak_ptr<Node> &b)
 		{
 			auto A = a.lock();
 			auto B = b.lock();

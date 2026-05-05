@@ -1094,9 +1094,18 @@ void InstanceRenderer::RemoveGeometryCacheFromInstanceRender(avs::uid cache_uid,
 		return;
 	}
 	const auto rootNodes = g->mNodeManager.GetRootNodes();
-	for (auto st : subSceneNodeStates.nodeStates)
+	// RemoveNodeFromInstanceRender erases entries from subSceneNodeStates.nodeStates,
+	// which would invalidate iterators for a range-for over the same map. Snapshot the
+	// uids first, then remove.
+	std::vector<avs::uid> nodeUids;
+	nodeUids.reserve(subSceneNodeStates.nodeStates.size());
+	for (const auto &st : subSceneNodeStates.nodeStates)
 	{
-		RemoveNodeFromInstanceRender(cache_uid, subSceneNodeStates, st.first);
+		nodeUids.push_back(st.first);
+	}
+	for (avs::uid node_uid : nodeUids)
+	{
+		RemoveNodeFromInstanceRender(cache_uid, subSceneNodeStates, node_uid);
 	}
 }
 

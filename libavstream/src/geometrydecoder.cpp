@@ -154,12 +154,12 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			dataSize = info.dataSize - sizeof(GeometryPayloadType);
 			if (dataSize>m_buffer.size())
 			{
-				AVSLOG(Error) << "Bad dataSize.\n";
+				AVSLOG(Error) << "PayloadType " << (int)payloadType << ": Bad dataSize, size is " << dataSize << ", but buffer size is " << m_buffer.size() << "\n";
 				return Result::Failed;
 			}
 			if (dataSize+dataOffset>m_buffer.size())
 			{
-				AVSLOG(Error) << "Bad dataSize.\n";
+				AVSLOG(Error) << "PayloadType " << (int)payloadType << ": Bad dataSize: offset is "<< dataOffset<<", size is " << dataSize << ", but buffer size is " << m_buffer.size() << "\n";
 				//return Result::Failed;
 			}
 		}

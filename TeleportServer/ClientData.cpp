@@ -1,6 +1,7 @@
 #include "TeleportServer/ClientData.h"
-#include "TeleportCore/Profiling.h" 
-#include "TeleportCore/ErrorHandling.h" 
+#include "TeleportCore/Profiling.h"
+#include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/CommandLogging.h"
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/ClientManager.h"
 #include "TeleportServer/InteropStructures.h"
@@ -114,6 +115,11 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	teleport::core::SetupInputsCommand setupInputsCommand((uint8_t)inputDefinitions.size());
 	clientMessaging->sendSetupCommand(setupCommand,global_illumination_texture_uids, setupInputsCommand, inputDefinitions);
 	clientMessaging->sendSetLightingCommand(setupLightingCommand);
+
+	// Log the setup command for debugging
+	TELEPORT_COUT << "\n===== SERVER SENDING SETUPCOMMAND =====\n"
+		<< teleport::core::SetupCommandToString(setupCommand) << "\n"
+		<< "===== END SETUPCOMMAND =====\n";
 
 	connectionState = CONNECTED;
 

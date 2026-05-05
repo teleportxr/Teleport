@@ -7,6 +7,7 @@
 #include "TeleportClient/GeometryCacheBackendInterface.h"
 #include "TeleportClient/Log.h"
 #include "TeleportCore/CommonNetworking.h"
+#include "TeleportCore/CommandLogging.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/InputTypes.h"
 #include "TeleportCore/Logging.h"
@@ -614,6 +615,11 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		}
 		const teleport::core::SetupCommand *s = reinterpret_cast<const teleport::core::SetupCommand *>(packet.data());
 		ApplySetup(*s);
+
+		// Log the received setup command for debugging
+		TELEPORT_COUT << "\n===== CLIENT RECEIVED SETUPCOMMAND =====\n"
+			<< teleport::core::SetupCommandToString(setupCommand) << "\n"
+			<< "===== END SETUPCOMMAND =====\n";
 		if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
 			return;
 		unreliableToServerEncoder.configure(&messageToServerStack, "Unreliable Message Encoder");
@@ -671,7 +677,7 @@ void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 	memcpy(static_cast<void *>(&command), packet.data(), commandSize);
 	if (command.valid_counter > receivedInitialPos)
 	{
-		TELEPORT_INTERNAL_COUT("Received origin node {0} with counter {1}.", command.origin_node, command.valid_counter);
+		//TELEPORT_INTERNAL_COUT("Received origin node {0} with counter {1}.", command.origin_node, command.valid_counter);
 		receivedInitialPos = command.valid_counter;
 		mCommandInterface->SetOrigin(command.valid_counter, command.origin_node);
 	}

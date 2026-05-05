@@ -113,8 +113,11 @@ avs::WebRtcNetworkSource *src)
 	auto pc = std::make_shared<rtc::PeerConnection>(config);
 	
 	src->SetStreamingConnectionState(avs::StreamingConnectionState::NEW_UNCONNECTED);
+	// NB: do not capture pc here. The callback is owned by pc, so capturing pc by value
+	// would create a shared_ptr self-cycle and the PeerConnection (and its juice ICE agent
+	// + UDP socket) would never be destroyed, causing stale STUN traffic on reconnect.
 	pc->onStateChange(
-		[src,pc](rtc::PeerConnection::State state)
+		[src](rtc::PeerConnection::State state)
 		{
 			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
 			src->SetStreamingConnectionState(ConvertConnectionState(state));
@@ -323,14 +326,37 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 		const char *srv=iceServers[i];
 		if(!srv)
 			break;
-		config.iceServers.emplace_back(srv);
+		try
+		{
+			config.iceServers.emplace_back(srv);
+		}
+		catch(const std::exception &e)
+		{
+			AVSLOG(Warning)<<"Skipping ICE server '"<<srv<<"': "<<(e.what()?e.what():"")<<"\n";
+		}
 	}
-	if(!m_data->rtcPeerConnection)
+	auto needsRecreate = [](const std::shared_ptr<rtc::PeerConnection>& pc) -> bool
 	{
-		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
-	}
-	else if(m_data->rtcPeerConnection->state()==rtc::PeerConnection::State::Closed)
+		if(!pc)
+			return true;
+		switch(pc->state())
+		{
+			case rtc::PeerConnection::State::Closed:
+			case rtc::PeerConnection::State::Failed:
+			case rtc::PeerConnection::State::Disconnected:
+				return true;
+			default:
+				return false;
+		}
+	};
+	if(needsRecreate(m_data->rtcPeerConnection))
 	{
+		if(m_data->rtcPeerConnection)
+		{
+			try { m_data->rtcPeerConnection->close(); } catch(...) {}
+			m_data->rtcPeerConnection.reset();
+		}
+		cachedCandidates.clear();
 		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	}
 	try
@@ -777,7 +803,7 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 				{
 					StreamPayloadInfo frameInfo;
 					frameInfo.frameID = 0;
-					frameInfo.dataSize = b.size();
+					frameInfo.dataSize = b.size() - sizeof(size_t);
 					frameInfo.connectionTime = TimerUtil::GetElapsedTimeS();
 					frameInfo.broken = false;
 					size_t bufferSize = sizeof(StreamPayloadInfo) + b.size()-sizeof(size_t);

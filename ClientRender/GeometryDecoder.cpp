@@ -8,6 +8,7 @@
 #include "TeleportCore/Animation.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/FontAtlas.h"
+#include "TeleportCore/Logging.h"
 #include "ThisPlatform/Threads.h"
 #include <fstream>
 #include <iostream>
@@ -1344,6 +1345,10 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	geometryCache->ReceivedResource(texture_uid);
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+
+	// Log TexturePointer for debugging
+	TELEPORT_LOG("Received TexturePointer: resourceId={0}, url={1}", texture_uid, url);
+
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid);
 }
 
@@ -1358,6 +1363,10 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 	geometryCache->ReceivedResource(mesh_uid);
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+
+	// Log MeshPointer for debugging
+	TELEPORT_LOG("Received MeshPointer: resourceId={0}, url={1}", mesh_uid, url);
+
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid);
 }
 

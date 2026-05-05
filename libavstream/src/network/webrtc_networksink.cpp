@@ -180,10 +180,15 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		const char *srv=iceServers[i];
 		if(!srv)
 			break;
-		config.iceServers.emplace_back(srv);
+		try
+		{
+			config.iceServers.emplace_back(srv);
+		}
+		catch(const std::exception &e)
+		{
+			AVSLOG(Warning)<<"Skipping ICE server '"<<srv<<"': "<<(e.what()?e.what():"")<<"\n";
+		}
 	}
-	//config.iceServers.emplace_back("stun:stun.stunprotocol.org:3478");
-	//config.iceServers.emplace_back("stun:stun.l.google.com:19302");
 	m_data->rtcPeerConnection = m_data->createServerPeerConnection(config
 		, std::bind(&WebRtcNetworkSink::SendConfigMessage, this, std::placeholders::_1)
 		, std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1)
