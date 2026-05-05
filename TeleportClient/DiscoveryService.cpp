@@ -91,26 +91,33 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 		base_url=url.substr(0,first_slash);
 		path=url.substr(first_slash+1,url.length()-first_slash-1);
 	}
+	// Validate URL components before attempting to connect.
+	// An empty host or zero port produces an invalid WebSocket URL; deactivate the server to stop retrying.
+	if (base_url.empty() || serverDiscoveryPort == 0)
+	{
+		TELEPORT_WARN("Signaling server {} has invalid address (host='{}', port={}): deactivating.", server_uid, base_url, serverDiscoveryPort);
+		std::lock_guard lock(signalingServersMutex);
+		if (signalingServers.count(server_uid))
+			signalingServers[server_uid]->active = false;
+		return;
+	}
 	// Use wss:// for port 443 (e.g. cloud-hosted servers behind a TLS-terminating router such as Heroku),
 	// otherwise plain ws:// (e.g. local testing on 8080/8081).
 	const char *scheme = (serverDiscoveryPort == 443) ? "wss" : "ws";
 	std::string ws_url = fmt::format("{0}://{1}:{2}/{3}", scheme, base_url, serverDiscoveryPort, path);
-	
+
 	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
-	if(url.length()>0)
-	{ 
-		try
-		{
-			if(ws)
-				ws->open(ws_url);
-		}
-		catch(std::exception& e)
-		{
-			TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
-		}
-		catch(...)
-		{
-		}
+	try
+	{
+		if(ws)
+			ws->open(ws_url);
+	}
+	catch(std::exception& e)
+	{
+		TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+	}
+	catch(...)
+	{
 	}
 }
 
@@ -232,7 +239,7 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 			}
 			else if (ws->readyState() == rtc::WebSocket::State::Closed)
 			{
-				ResetConnection(server_uid, signalingServer->url, signalingServer->remotePort);
+				ResetConnection(server_uid, signalingServer->url, signalingServer->GetPort());
 				frame = 2;
 			}
 			else
