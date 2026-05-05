@@ -133,11 +133,13 @@ Result HTTPUtil::process()
 					if (response_code == 200)
 					{
 						size_t dataSize = transfer.getReceivedDataSize();
+						AVSLOG(Info) << "HTTP 200 " << transfer.mRequest.url << " (" << dataSize << " bytes)\n";
 						transfer.mRequest.callbackFn(transfer.getReceivedData(), dataSize);
 						if (transfer.mRequest.shouldCache) CacheReceivedFile(transfer);
 					}
 					else if (response_code == 304)
 					{
+						AVSLOG(Info) << "HTTP 304 " << transfer.mRequest.url << " (using cached " << transfer.mRequest.cachedFilePath << ")\n";
 						// This means the file has not been updated since the cached version was saved. So we will send the cached version to the callback.
 						auto *fileLoader = platform::core::FileLoader::GetFileLoader();
 						if (fileLoader)
@@ -339,10 +341,9 @@ HTTPUtil::Transfer::Transfer(CURLM *multi, std::string remoteURL, size_t bufferS
 	CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYHOST, 0L));
 	CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_WRITEFUNCTION, &HTTPUtil::writeCallback));
 	CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_WRITEDATA, this));
-	// HTTP/2 please
-	CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0));
-	// Wait for pipe connection to confirm
-	CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_PIPEWAIT, 1L));
+	// HTTP/2 over TLS only; plain HTTP falls back to HTTP/1.1 (avoids h2c Upgrade
+	// requests that get hijacked by the WebSocket upgrade handler on the example server).
+	CURL_CHECK(curl_easy_setopt(mHandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS));
 	// Use CURLOPT_SSLCERT later.
 	// see https://github.com/gcesarmza/curl-android-ios/issues/5
 	// The solution is to download cacert.pem from the cURL site and distribute it with your app,
@@ -357,10 +358,9 @@ HTTPUtil::Transfer::Transfer(CURLM *multi, std::string remoteURL, size_t bufferS
 	curl_easy_setopt(mHandle, CURLOPT_SSL_VERIFYHOST, 0L);
 	curl_easy_setopt(mHandle, CURLOPT_WRITEFUNCTION, &HTTPUtil::writeCallback);
 	curl_easy_setopt(mHandle, CURLOPT_WRITEDATA, this);
-	// HTTP/2 please
-	curl_easy_setopt(mHandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-	// Wait for pipe connection to confirm
-	curl_easy_setopt(mHandle, CURLOPT_PIPEWAIT, 1L);
+	// HTTP/2 over TLS only; plain HTTP falls back to HTTP/1.1 (avoids h2c Upgrade
+	// requests that get hijacked by the WebSocket upgrade handler on the example server).
+	curl_easy_setopt(mHandle, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
 	// Use CURLOPT_SSLCERT later.
 #endif
 	curl_easy_setopt(mHandle, CURLOPT_HEADERFUNCTION, &HTTPUtil::headerCallback);
@@ -383,9 +383,11 @@ void HTTPUtil::Transfer::start(const HTTPPayloadRequest &request)
 	if (!mActive)
 	{
 		std::string url = request.url;
+		AVSLOG(Info) << "HTTP GET " << url << "\n";
 		CURLcode re = curl_easy_setopt(mHandle, CURLOPT_URL, url.c_str());
 		if (re != CURLE_OK)
 		{
+			AVSLOG(Error) << "curl_easy_setopt(CURLOPT_URL) failed for " << url << ": " << curl_easy_strerror(re) << "\n";
 			return;
 		}
 		mCurrentSize = 0;
