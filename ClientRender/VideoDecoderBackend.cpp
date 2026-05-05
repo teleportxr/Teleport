@@ -46,17 +46,17 @@ Result VideoDecoderBackend::initialize(const DeviceHandle& device, int frameWidt
 {
 	if (device.type == DeviceType::Invalid)
 	{
-		TELEPORT_CERR << "VideoDecoder: Invalid device handle" << std::endl;
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Invalid device handle");
 		return Result::DecoderBackend_InvalidDevice;
 	}
 	if (device.type != DeviceType::Direct3D12&&device.type!=DeviceType::Vulkan)
 	{
-		TELEPORT_CERR << "VideoDecoder: Platform only supports D3D12 and Vulkan video decoder currently." << std::endl;
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Platform only supports D3D12 and Vulkan video decoder currently.");
 		return Result::DecoderBackend_InvalidDevice;
 	}
 	if (params.codec == VideoCodec::Invalid)
 	{
-		TELEPORT_CERR << "VideoDecoder: Invalid video codec type" << std::endl;
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Invalid video codec type");
 		return Result::DecoderBackend_InvalidParam;
 	}
 
@@ -83,7 +83,7 @@ Result VideoDecoderBackend::initialize(const DeviceHandle& device, int frameWidt
 		mParser.reset(new hevc::HevcParser());
 		break;
 	default:
-		TELEPORT_CERR << "VideoDecoder: Unsupported video codec type selected" << std::endl;
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Unsupported video codec type selected");
 		return Result::DecoderBackend_CodecNotSupported;
 	}
 

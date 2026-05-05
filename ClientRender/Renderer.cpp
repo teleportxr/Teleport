@@ -247,7 +247,7 @@ void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *
 	cubemapGenerator = std::make_unique<CubemapGenerator>(renderPlatform);
 	if (!cubemapGenerator->Initialize())
 	{
-		TELEPORT_CERR << "Failed to initialize CubemapGenerator" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to initialize CubemapGenerator");
 		cubemapGenerator.reset();
 	}
 #endif
@@ -2175,7 +2175,7 @@ void Renderer::SaveCurrentCubemap(platform::crossplatform::GraphicsDeviceContext
 {
 	if (!cubemapGenerator)
 	{
-		TELEPORT_CERR << "CubemapGenerator not initialized" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator not initialized");
 		return;
 	}
 
@@ -2210,7 +2210,7 @@ void Renderer::SaveCurrentCubemap(platform::crossplatform::GraphicsDeviceContext
 	// Save the cubemap
 	if (cubemapGenerator->SaveToHDR(deviceContext, filename))
 	{
-		TELEPORT_COUT << "Successfully saved cubemap: " << filename << std::endl;
+		TELEPORT_INTERNAL_COUT("Successfully saved cubemap: {}", filename);
 	}
 	else
 	{

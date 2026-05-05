@@ -128,7 +128,7 @@ target_include_directories(TeleportServer PUBLIC ../thirdparty/draco/src)
 #include OpenSSL
 target_include_directories(TeleportServer PUBLIC ../thirdparty/openssl/include)
 #Include cpp-httplib
-target_include_directories(TeleportServer PUBLIC ../thirdparty/cpp-httplib)
+target_include_directories(TeleportServer PUBLIC ${cpp-httplib_SOURCE_DIR})
 #Include Platform - for pure header functions only.sr
 target_include_directories(TeleportServer PUBLIC ../firstparty)
 # stb truetype

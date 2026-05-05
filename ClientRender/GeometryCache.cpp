@@ -2,8 +2,10 @@
 #include "InstanceRenderer.h"
 #include "Renderer.h"
 #include "TeleportCore/ResourceStreams.h"
+#include "Platform/Core/FileLoader.h"
 #include "ClientRender/NodeComponents/AnimationComponent.h"
 #include <filesystem>
+
 using namespace teleport;
 using namespace clientrender;
 #define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt, ##__VA_ARGS__)
@@ -97,7 +99,7 @@ clientrender::MissingResource &GeometryCache::GetMissingResource(avs::uid id, av
 	}
 	if (resourceType != missingPair->second.resourceType)
 	{
-		TELEPORT_CERR << "Resource type mismatch" << std::endl;
+		TELEPORT_INTERNAL_CERR("Resource type mismatch for resource {0}: expected {1} but got {2}.", id, stringOf(missingPair->second.resourceType), stringOf(resourceType));
 	}
 	return missingPair->second;
 }
@@ -165,7 +167,6 @@ void GeometryCache::ClearCompletedNodes()
 {
 	m_CompletedNodes.clear();
 }
-#include "Platform/Core/FileLoader.h"
 
 void GeometryCache::setCacheFolder(const std::string &f)
 {
@@ -217,7 +218,7 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate &subSceneCreate)
 		{
 			if (it->get()->type != avs::GeometryPayloadType::Node)
 			{
-				TELEPORT_CERR << "Waiting resource is not a node, it's " << int(it->get()->type) << std::endl;
+				TELEPORT_INTERNAL_CERR("Waiting resource is not a node, it's {}" , int(it->get()->type));
 				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
@@ -256,7 +257,7 @@ void GeometryCache::CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCrea
 		{
 			if (it->get()->type != avs::GeometryPayloadType::Node)
 			{
-				TELEPORT_CERR << "Waiting resource is not a node, it's " << int(it->get()->type) << std::endl;
+				TELEPORT_INTERNAL_CERR("Waiting resource is not a node, it's {}" , int(it->get()->type));
 				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
@@ -433,7 +434,7 @@ void GeometryCache::CompleteTextCanvas(avs::uid id)
 	{
 		if (waiting->get()->type != avs::GeometryPayloadType::Node)
 		{
-			TELEPORT_CERR << "Waiting resource is not a node, it's " << int(waiting->get()->type) << std::endl;
+			TELEPORT_INTERNAL_CERR("Waiting resource is not a node, it's {}" , int(waiting->get()->type));
 			continue;
 		}
 		std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*waiting);
@@ -530,7 +531,7 @@ void GeometryCache::CompleteAnimation(avs::uid id, std::shared_ptr<clientrender:
 
 void GeometryCache::CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo &materialInfo)
 {
-	TELEPORT_INTERNAL_COUT("CompleteMaterial {0} ({1})", id, materialInfo.name);
+	//TELEPORT_INTERNAL_COUT("CompleteMaterial {0} ({1})", id, materialInfo.name);
 	// RESOURCECREATOR_DEBUG_COUT( "CompleteMaterial {0}({1})",id,materialInfo.name);
 	std::shared_ptr<clientrender::Material> material = mMaterialManager.Get(id);
 	if (!material)
@@ -551,7 +552,7 @@ void GeometryCache::CompleteMaterial(avs::uid id, const clientrender::Material::
 			const auto &indexesPair = incompleteNode->materialSlots.find(id);
 			if (indexesPair == incompleteNode->materialSlots.end())
 			{
-				TELEPORT_CERR << "Material " << id << " not found in incomplete node " << incompleteNode->id << std::endl;
+				TELEPORT_INTERNAL_CERR("Material {} not found in incomplete node {}", id, incompleteNode->id);
 				continue;
 			}
 			for (size_t materialIndex : indexesPair->second)

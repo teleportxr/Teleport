@@ -719,13 +719,13 @@ namespace avparser
 
 				if (rps.num_negative_pics > sps.sps_max_dec_pic_buffering_minus1[sps.sps_max_sub_layers_minus1])
 				{
-					TELEPORT_CERR << "Error in parseShortTermRefPicSet: num_negative_pics > sps_max_dec_pic_buffering_minus1" << std::endl;
+					TELEPORT_INTERNAL_CERR("Error in parseShortTermRefPicSet: num_negative_pics > sps_max_dec_pic_buffering_minus1");
 					return rps;
 				}
 
 				if (rps.num_positive_pics > sps.sps_max_dec_pic_buffering_minus1[sps.sps_max_sub_layers_minus1])
 				{
-					TELEPORT_CERR << " Error in parseShortTermRefPicSet: num_positive_pics > sps_max_dec_pic_buffering_minus1" << std::endl;
+					TELEPORT_INTERNAL_CERR(" Error in parseShortTermRefPicSet: num_positive_pics > sps_max_dec_pic_buffering_minus1");
 					return rps;
 				}
 
@@ -1006,7 +1006,7 @@ namespace avparser
 				{
 					if (mSPS.log2_max_pic_order_cnt_lsb_minus4 + 4 >= 32)
 					{
-						TELEPORT_CERR << "Error in parseSliceHeader: slice_pic_order_cnt_lsb size is greater then 32 bits!" << std::endl;
+						TELEPORT_INTERNAL_CERR("Error in parseSliceHeader: slice_pic_order_cnt_lsb size is greater then 32 bits!");
 						return;
 					}
 

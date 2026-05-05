@@ -72,10 +72,11 @@ platform::crossplatform::DisplaySurfaceManager displaySurfaceManager;
 client::ClientApp clientApp;
 std::string teleport_path;
 std::string storage_folder;
-// Need ONE global instance of this:
-avs::Context context;
 bool receive_link = false;
 std::string cmdLine;
+// Need ONE global instance of this:
+// Must be declared last so it's destroyed last during program shutdown
+avs::Context context;
 
 #include "Platform/Core/FileLoader.h"
 
@@ -142,7 +143,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	if (FAILED(hr))
 	{
-		TELEPORT_CERR << "CoInitialize failed. Exiting." << std::endl;
+		TELEPORT_INTERNAL_CERR("CoInitialize failed. Exiting.");
 		return 0;
 	}
 	// run from pc_client directory.
@@ -296,7 +297,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 int TeleportClientReportHook(int reportType, char *message, int *returnValue)
 {
 	//_CRT_WARN, _CRT_ERROR, or _CRT_ASSERT
-	TELEPORT_CERR << message << "\n";
+	TELEPORT_INTERNAL_CERR("{}", message);
 	if (reportType == _CRT_ASSERT) SIMUL_BREAK("Assertion Failed!");
 	if (reportType == _CRT_ERROR) SIMUL_BREAK("Error!");
 	return 0;
@@ -388,8 +389,6 @@ void InitRenderer(HWND hWnd, bool try_init_vr, bool dev_mode)
 	{
 		// Whether run from the project directory or from the executable location, we want to be
 		// able to find the shaders and textures:
-		char cwd[90];
-		_getcwd(cwd, 90);
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
@@ -916,7 +915,7 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 #if TELEPORT_CLIENT_USE_VULKAN
 	renderPlatform = new vulkan::RenderPlatform();
 #else
-	TELEPORT_CERR << "Linux build requires Vulkan support" << std::endl;
+	TELEPORT_INTERNAL_CERR("Linux build requires Vulkan support");
 	return;
 #endif
 	displaySurfaceManager.Initialize(renderPlatform);
@@ -938,12 +937,12 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 			VkResult r = glfwCreateWindowSurface(static_cast<VkInstance>(*inst), window, nullptr, &g_surface);
 			if (r != VK_SUCCESS)
 			{
-				TELEPORT_CERR << "glfwCreateWindowSurface failed: " << r << std::endl;
+				TELEPORT_INTERNAL_CERR("glfwCreateWindowSurface failed: {}", (int)r);
 			}
 		}
 		else
 		{
-			TELEPORT_CERR << "Cannot create Vulkan surface: instance=" << inst << " window=" << window << std::endl;
+			TELEPORT_INTERNAL_CERR("Cannot create Vulkan surface: instance={} window={}", reinterpret_cast<void*>(inst), reinterpret_cast<void*>(window));
 		}
 	}
 
@@ -952,11 +951,6 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	std::string build_dir = teleport_path + "/build_pc_client";
 
 	{
-		char cwd[256];
-		if (getcwd(cwd, sizeof(cwd)) != nullptr)
-		{
-			// Working directory obtained
-		}
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("Textures");
 		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
@@ -1070,7 +1064,7 @@ int main(int argc, char *argv[])
 	current_path = current_path.append("client").lexically_normal();
 	if (!std::filesystem::exists(current_path))
 	{
-		TELEPORT_CERR << "Cannot find pc_client directory" << std::endl;
+		TELEPORT_INTERNAL_CERR("Cannot find pc_client directory");
 		return -1;
 	}
 	std::filesystem::current_path(current_path);
@@ -1102,7 +1096,7 @@ int main(int argc, char *argv[])
 	// query the platform-specific surface extensions GLFW needs.
 	if (!glfwInit())
 	{
-		TELEPORT_CERR << "glfwInit failed" << std::endl;
+		TELEPORT_INTERNAL_CERR("glfwInit failed");
 		return -1;
 	}
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -1110,7 +1104,7 @@ int main(int argc, char *argv[])
 	g_window = glfwCreateWindow(800, 500, "Teleport Spatial Client", nullptr, nullptr);
 	if (!g_window)
 	{
-		TELEPORT_CERR << "glfwCreateWindow failed" << std::endl;
+		TELEPORT_INTERNAL_CERR("glfwCreateWindow failed");
 		glfwTerminate();
 		return -1;
 	}

@@ -98,7 +98,7 @@ endif()
 target_compile_definitions(TeleportClient PUBLIC TELEPORT_CLIENT_SUPPORT_IPSME=$<BOOL:${TELEPORT_CLIENT_SUPPORT_IPSME}> WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
 
 #Include cpp-httplib
-target_include_directories(TeleportClient PUBLIC ../thirdparty/cpp-httplib)
+target_include_directories(TeleportClient PUBLIC ${cpp-httplib_SOURCE_DIR})
 
 if(APPLE)
 	# This is a bug in CMake that causes it to prefer the system version over

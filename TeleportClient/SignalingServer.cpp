@@ -81,13 +81,13 @@ void SignalingServer::QueueMessage(const std::string &msg)
 }
 void SignalingServer::ReceiveMessage(const std::string &msg)
 {
-	//TELEPORT_COUT << ": info: ReceiveWebSocketsMessage " << msg << std::endl;
+	//TELEPORT_INTERNAL_COUT(": info: ReceiveWebSocketsMessage " << msg);
 	std::lock_guard lock(messagesReceivedMutex);
 	messagesReceived.push(msg);
 }
 void SignalingServer::ReceiveBinaryMessage(const std::vector<std::byte> &bin)
 {
-	//TELEPORT_COUT << ": info: ReceiveBinaryWebSocketsMessage." << std::endl;
+	//TELEPORT_INTERNAL_COUT(": info: ReceiveBinaryWebSocketsMessage.");
 	std::lock_guard lock(binaryMessagesReceivedMutex);
 	binaryMessagesReceived.push(bin);
 }

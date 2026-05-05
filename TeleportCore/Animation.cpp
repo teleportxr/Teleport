@@ -44,7 +44,7 @@ TransformKeyframeList TransformKeyframeList::convertToStandard(const TransformKe
 #if TELEPORT_INTERNAL_CHECKS
 		if (_isnanf(vectorKeyframe.value.x) || _isnanf(vectorKeyframe.value.y) || _isnanf(vectorKeyframe.value.z) || _isnanf(vectorKeyframe.time))
 		{
-			TELEPORT_CERR << "Invalid keyframe" << std::endl;
+			TELEPORT_INTERNAL_CERR("Invalid keyframe");
 			return convertedKeyframeList;
 		}
 #endif
@@ -56,7 +56,7 @@ TransformKeyframeList TransformKeyframeList::convertToStandard(const TransformKe
 #if TELEPORT_INTERNAL_CHECKS
 		if (_isnanf(vectorKeyframe.value.x) || _isnanf(vectorKeyframe.value.y) || _isnanf(vectorKeyframe.value.z) || _isnanf(vectorKeyframe.value.w) || _isnanf(vectorKeyframe.time))
 		{
-			TELEPORT_CERR << "Invalid keyframe" << std::endl;
+			TELEPORT_INTERNAL_CERR("Invalid keyframe");
 			return convertedKeyframeList;
 		}
 #endif

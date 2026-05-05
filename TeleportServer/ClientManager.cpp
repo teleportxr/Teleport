@@ -337,7 +337,7 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP)
 		if (clients.size() >= mMaxClients)
 			return false;
 	}
-	TELEPORT_COUT << "Started session for clientID " << clientID << " at IP " << clientIP.c_str() << std::endl;
+	TELEPORT_INTERNAL_COUT("Started session for clientID " << clientID << " at IP " << clientIP.c_str());
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 

@@ -30,14 +30,14 @@ bool CubemapGenerator::Initialize()
 
 	if (!m_renderPlatform)
 	{
-		TELEPORT_CERR << "CubemapGenerator: No render platform provided" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: No render platform provided");
 		return false;
 	}
 
 	// Load the cubemap_clear effect
 	if (!LoadShaders())
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to load shaders" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Failed to load shaders");
 		return false;
 	}
 	m_cubemapConstants.RestoreDeviceObjects(m_renderPlatform);
@@ -52,7 +52,7 @@ bool CubemapGenerator::LoadShaders()
 	m_cubemapClearEffect=m_renderPlatform->GetOrCreateEffect("cubemap_clear");
 	if (!m_cubemapClearEffect)
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create cubemap_clear effect" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Failed to create cubemap_clear effect");
 		return false;
 	}
 
@@ -74,7 +74,7 @@ bool CubemapGenerator::CreateHDRCrossTexture(int faceSize)
 	m_hdrCrossTexture = std::unique_ptr<Texture>(m_renderPlatform->CreateTexture());
 	if (!m_hdrCrossTexture)
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create HDR cross texture" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Failed to create HDR cross texture");
 		return false;
 	}
 
@@ -93,7 +93,7 @@ bool CubemapGenerator::CreateHDRCrossTexture(int faceSize)
 
 	if (!m_hdrCrossTexture->EnsureTexture(m_renderPlatform, &textureCreate))
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to create HDR cross texture" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Failed to create HDR cross texture");
 		return false;
 	}
 
@@ -157,13 +157,13 @@ bool CubemapGenerator::GenerateCubemap(platform::crossplatform::GraphicsDeviceCo
 {
 	if (!m_initialized)
 	{
-		TELEPORT_CERR << "CubemapGenerator: Not initialized" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Not initialized");
 		return false;
 	}
 
 	if (passName != "white" && passName != "neon")
 	{
-		TELEPORT_CERR << "CubemapGenerator: Invalid pass name. Use 'white' or 'neon'" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Invalid pass name. Use 'white' or 'neon'");
 		return false;
 	}
 
@@ -276,18 +276,18 @@ bool CubemapGenerator::SaveToHDR(platform::crossplatform::GraphicsDeviceContext 
 {
 	if (!m_hdrCrossTexture)
 	{
-		TELEPORT_CERR << "CubemapGenerator: No HDR cross texture to save" << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: No HDR cross texture to save");
 		return false;
 	}
 	try
 	{
 		m_renderPlatform->SaveTexture(deviceContext, m_hdrCrossTexture.get(), filename.c_str());
-		TELEPORT_COUT << "CubemapGenerator: Successfully saved HDR cubemap cross to " << filename << std::endl;
+		TELEPORT_INTERNAL_COUT("CubemapGenerator: Successfully saved HDR cubemap cross to {}", filename);
 		return true;
 	}
 	catch (...)
 	{
-		TELEPORT_CERR << "CubemapGenerator: Failed to save HDR texture to " << filename << std::endl;
+		TELEPORT_INTERNAL_CERR("CubemapGenerator: Failed to save HDR texture to {}", filename);
 		return false;
 	}
 }

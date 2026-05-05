@@ -699,7 +699,7 @@ void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, SubSceneNodeS
 		TELEPORT_CERR << "AddNodeToInstanceRender: no node found.\n";
 		return;
 	}
-	//	TELEPORT_COUT << "AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << node->name.c_str() << "\n";
+	//	TELEPORT_INTERNAL_COUT("AddNodeToInstanceRender: cache " << cache_uid << ", node " << node_uid << node->name.c_str() << "");
 	if (!node->IsVisible())
 	{
 		TELEPORT_CERR << "AddNodeToInstanceRender:  node not visible.\n";
@@ -1111,7 +1111,7 @@ void InstanceRenderer::RemoveGeometryCacheFromInstanceRender(avs::uid cache_uid,
 
 void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubSceneNodeStates &subSceneNodeStates, avs::uid node_uid)
 {
-	TELEPORT_COUT << "RemoveNodeFromInstanceRender: " << cache_uid << ", " << node_uid << "\n";
+	TELEPORT_INTERNAL_COUT("RemoveNodeFromInstanceRender: {}, {}", cache_uid, node_uid);
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 
 	if (!g)
@@ -1194,7 +1194,7 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubScene
 
 void InstanceRenderer::UpdateNodeInInstanceRender(avs::uid cache_uid, avs::uid root_id, avs::uid node_uid)
 {
-	TELEPORT_COUT << "UpdateNodeInInstanceRender: " << cache_uid << ", " << node_uid << "\n";
+	TELEPORT_INTERNAL_COUT("UpdateNodeInInstanceRender: {}, {}", cache_uid, node_uid);
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 	if (!g)
 	{

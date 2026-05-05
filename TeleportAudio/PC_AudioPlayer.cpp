@@ -74,7 +74,7 @@ Result PC_AudioPlayer::asyncInitializeAudioDevice()
 	hr = XAudio2Create(mDevice.GetAddressOf());
 	if (FAILED(hr))
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Error occurred trying to create the XAudio2 device." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Error occurred trying to create the XAudio2 device.");
 		return Result::AudioDeviceInitializationError;
 	}
 
@@ -82,7 +82,7 @@ Result PC_AudioPlayer::asyncInitializeAudioDevice()
 	hr = mDevice->CreateMasteringVoice(&mMasteringVoice);
 	if (FAILED(hr))
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Error occurred trying to create the mastering voice." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Error occurred trying to create the mastering voice.");
 		return Result::AudioMasteringVoiceCreationError;
 	}
 
@@ -99,7 +99,7 @@ Result PC_AudioPlayer::configure(const AudioSettings& audioSettings)
 {
 	if (mConfigured)
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Audio player has already been configured." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Audio player has already been configured.");
 		return Result::AudioPlayerAlreadyConfigured;
 	}
 
@@ -173,7 +173,7 @@ Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
 	{
-		TELEPORT_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
+		TELEPORT_INTERNAL_CERR("PC_AudioPlayer: Can't play audio stream because the audio player has not been initialized.");
 		return Result::AudioPlayerNotInitialized;
 	}
 	if (!mConfigured)
@@ -181,7 +181,7 @@ Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 		static bool done=false;
 		if(!done)
 		{
-			TELEPORT_CERR << "PC_AudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+			TELEPORT_INTERNAL_CERR("PC_AudioPlayer: Can't play audio stream because the audio player has not been configured.");
 			done=true;
 		}
 		return Result::AudioPlayerNotConfigured;
@@ -213,25 +213,25 @@ Result PC_AudioPlayer::startRecording(std::function<void(const uint8_t * data, s
 {
 	if (!mInitialized)
 	{
-		TELEPORT_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+		TELEPORT_INTERNAL_CERR("PC_AudioPlayer: Can't record audio because the audio player has not been initialized.");
 		return Result::AudioPlayerNotInitialized;
 	}
 
 	if (!mConfigured)
 	{
-		TELEPORT_CERR << "PC_AudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+		TELEPORT_INTERNAL_CERR("PC_AudioPlayer: Can't record audio because the audio player has not been configured.");
 		return Result::AudioPlayerNotConfigured;
 	}
 
 	if (!mRecordingAllowed)
 	{
-		TELEPORT_CERR << "PC_AudioPlayer: The user has not granted permission to record audio." << std::endl;
+		TELEPORT_INTERNAL_CERR("PC_AudioPlayer: The user has not granted permission to record audio.");
 		return Result::AudioRecordingNotPermitted;
 	}
 
 	if (mRecording)
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Already recording." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Already recording.");
 		return Result::OK;
 	}
 
@@ -250,7 +250,7 @@ Result PC_AudioPlayer::processRecordedAudio()
 {
 	if (!mRecording)
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Not recording." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Not recording.");
 		return Result::AudioProcessingError;
 	}
 
@@ -261,7 +261,7 @@ Result PC_AudioPlayer::stopRecording()
 {
 	if (!mRecording)
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Not recording." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Not recording.");
 		return Result::OK;
 	}
 
@@ -280,7 +280,7 @@ Result PC_AudioPlayer::deconfigure()
 {
 	if (!mConfigured)
 	{
-		TELEPORT_COUT << "PC_AudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
+		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Can't deconfigure audio player because it is not configured.");
 		return Result::AudioPlayerNotConfigured;
 	}
 

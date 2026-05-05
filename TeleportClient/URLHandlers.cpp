@@ -41,8 +41,8 @@ std::string teleport::client::GetLauncherForProtocol(std::string protocol)
 	{
 		exe = GetAssocString(pqa, ASSOCSTR_EXECUTABLE);
 		cmd = GetAssocString(pqa, ASSOCSTR_COMMAND);
-		TELEPORT_COUT << exe << "\n";
-		TELEPORT_COUT << cmd << "\n";
+		TELEPORT_INTERNAL_COUT("{}", exe);
+		TELEPORT_INTERNAL_COUT("{}", cmd);
 	}
 	pqa->Release();
 	
@@ -79,11 +79,11 @@ void teleport::client::LaunchProtocolHandler(std::string protocol, std::string u
 	}
 	catch (std::regex_error err)
 	{
-		TELEPORT_CERR << "Regex error for url " << url << ": " << err.what() << "\n";
+		TELEPORT_INTERNAL_CERR("Regex error for url {}: {}", url, err.what());
 	}
 	catch (...)
 	{
-		TELEPORT_CERR << "Regex error for url " << url << "\n";
+		TELEPORT_INTERNAL_CERR("Regex error for url {}", url);
 	}
 
 #ifdef _MSC_VER

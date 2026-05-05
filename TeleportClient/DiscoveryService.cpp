@@ -41,7 +41,7 @@ void teleport::client::DiscoveryService::ShutdownInstance()
 
 DiscoveryService::DiscoveryService()
 {
-	cyclePorts={ 8080};//,80,443,10600,10700,10800};
+	cyclePorts={ 443, 80, 8080 };//,80,443,10600,10700,10800};
 }
 
 DiscoveryService::~DiscoveryService()
@@ -106,7 +106,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	const char *scheme = (serverDiscoveryPort == 443) ? "wss" : "ws";
 	std::string ws_url = fmt::format("{0}://{1}:{2}/{3}", scheme, base_url, serverDiscoveryPort, path);
 
-	TELEPORT_COUT << "Websocket open() " << ws_url << std::endl;
+	TELEPORT_INTERNAL_COUT("Websocket open() {}", ws_url);
 	try
 	{
 		if(ws)
@@ -114,7 +114,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	}
 	catch(std::exception& e)
 	{
-		TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+		TELEPORT_INTERNAL_CERR("{}", (e.what() ? e.what() : "Unknown exception"));
 	}
 	catch(...)
 	{
@@ -136,7 +136,7 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 	{
 		signalingServer->cyclePortIndex++;
 		signalingServer->cyclePortIndex %= cyclePorts.size();
-		TELEPORT_COUT << "Cycling ports: connecting to " << signalingServer->url << " on port " << cyclePorts[signalingServer->cyclePortIndex] << std::endl;
+		TELEPORT_INTERNAL_COUT("Cycling ports: connecting to {} on port {}", signalingServer->url, cyclePorts[signalingServer->cyclePortIndex]);
 	}
 	auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
 	{
@@ -156,14 +156,14 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 		auto& s = signalingServers[server_uid];
 		if (s)
 		{
-			TELEPORT_CERR << "Websocket error " << error << " for url " <<s->url<<" on port "<<s->GetPort()<< std::endl;
+			TELEPORT_INTERNAL_CERR("Websocket error {} for url {} on port {}", error, s->url, s->GetPort());
 			s->webSocket.reset();
 		}
 	});
 	ws->onMessage(receiveWebSocketMessage);
 	ws->onOpen([server_uid]()
 	{
-		TELEPORT_CERR << "Websocket onOpen " << server_uid << std::endl;
+		TELEPORT_INTERNAL_CERR("Websocket onOpen {}", server_uid);
 	});
 	uint16_t remotePort = signalingServer->GetPort();
 	ResetConnection(server_uid, signalingServer->url, remotePort);
@@ -319,7 +319,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	}
 	catch(std::exception& e)
 	{
-		TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+		TELEPORT_INTERNAL_CERR("{}", (e.what() ? e.what() : "Unknown exception"));
 	}
 	catch(...)
 	{
@@ -330,11 +330,11 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	}
 	catch(std::exception& e)
 	{
-		TELEPORT_CERR << (e.what() ? e.what() : "Unknown exception") << std::endl;
+		TELEPORT_INTERNAL_CERR("{}", (e.what() ? e.what() : "Unknown exception"));
 	}
 	catch(...)
 	{
-		TELEPORT_CERR <<  "Unknown exception" << std::endl;
+		TELEPORT_INTERNAL_CERR("Unknown exception");
 	}
 	if (signalingServer->closingDown)
 	{

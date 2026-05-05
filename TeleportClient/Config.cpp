@@ -36,7 +36,7 @@ void Config::LoadConfigFromIniFile()
 	}
 	else
 	{
-		TELEPORT_CERR<<"Create client.ini in pc_client directory to specify settings."<<std::endl;
+		TELEPORT_INTERNAL_CERR("Create client.ini in pc_client directory to specify settings.");
 	}
 	#ifdef _MSC_VER
 	if(pause_for_debugger)

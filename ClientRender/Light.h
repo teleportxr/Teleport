@@ -76,7 +76,7 @@ namespace teleport
 			void UpdatePosition(const vec3 &position);
 			void UpdateOrientation(const quat &orientation);
 
-			const LightCreateInfo &GetLightCreateInfo()
+			const LightCreateInfo &GetLightCreateInfo() const
 			{
 				return m_CI;
 			}

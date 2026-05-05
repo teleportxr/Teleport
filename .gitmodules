@@ -10,9 +10,6 @@
 [submodule "thirdparty/zlib"]
 	path = thirdparty/zlib
 	url = https://github.com/madler/zlib.git
-[submodule "thirdparty/cpp-httplib"]
-	path = thirdparty/cpp-httplib
-	url = ../cpp-httplib.git
 [submodule "firstparty/teleport-unity"]
 	path = firstparty/teleport-unity
 	url = ../teleport-unity.git

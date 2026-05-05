@@ -151,6 +151,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(safe)
 
+# Get cpp-httplib (header-only HTTP library, teleportxr fork)
+FetchContent_Declare(
+  cpp-httplib
+  GIT_REPOSITORY https://github.com/teleportxr/cpp-httplib.git
+  GIT_TAG        d4d4c9599c0df978b9ad4d1c2425ed26a9c12058
+  SOURCE_DIR cpp-httplib
+)
+FetchContent_MakeAvailable(cpp-httplib)
+
 
 if(TELEPORT_TEST)
 	FetchContent_Declare(
@@ -449,7 +458,6 @@ if(TELEPORT_SERVER)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ${TELEPORT_USE_DYNAMIC_RUNTIME} CACHE BOOL "" FORCE)
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "" FORCE)
-	add_subdirectory(thirdparty/cpp-httplib)
 endif()
 
 if(TELEPORT_SERVER OR TELEPORT_BUILD_DOCS)

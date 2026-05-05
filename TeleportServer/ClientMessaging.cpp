@@ -205,7 +205,7 @@ void ClientMessaging::tick(float deltaTime)
 	}
 	if (!clientNetworkContext.NetworkPipeline.isProcessingEnabled())
 	{
-		TELEPORT_COUT << "Network error occurred with client " << getClientIP() <<", disconnecting." << "\n";
+		TELEPORT_INTERNAL_COUT("Network error occurred with client " << getClientIP() <<", disconnecting." << "");
 		Disconnect();
 		return;
 	}
@@ -260,7 +260,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 	const teleport::core::InputEventMotion* motionEventsPtr		= latestInputStateAndEvents.motionEvents.data();
 	for (auto c : latestInputStateAndEvents.analogueEvents)
 	{
-		TELEPORT_COUT << "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "\n";
+		TELEPORT_INTERNAL_COUT("processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "");
 	}
 	for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
 	{
@@ -480,7 +480,7 @@ void ClientMessaging::ensureStreamingPipeline()
 			MessageDecoder.configure(this,"MessageDecoder");
 			messagePipeline.link({&clientNetworkContext.NetworkPipeline.unreliableReceiveQueue, &MessageDecoder});
 		}
-		TELEPORT_COUT << "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .\n";
+		TELEPORT_INTERNAL_COUT("Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .");
 
 		if (serverSettings.isReceivingAudio)
 		{
@@ -699,7 +699,7 @@ void ClientMessaging::receiveInputEvents(const std::vector<uint8_t> &packet)
 		latestInputStateAndEvents.analogueEvents.insert(latestInputStateAndEvents.analogueEvents.end(), analogueData, analogueData + msg.numAnalogueEvents);
 		for (auto c : latestInputStateAndEvents.analogueEvents)
 		{
-			TELEPORT_COUT << "Analogue: " << c.eventID << " " << (int)c.inputID << " " << c.strength << "\n";
+			TELEPORT_INTERNAL_COUT("Analogue: " << c.eventID << " " << (int)c.inputID << " " << c.strength << "");
 		}
 		src += analogueEventSize;
 	}
@@ -719,7 +719,7 @@ void ClientMessaging::receiveDisplayInfo(const std::vector<uint8_t> &packet)
 {
 	if (packet.size() != sizeof(core::DisplayInfoMessage))
 	{
-		TELEPORT_COUT << "Session: Received malformed display info packet of length: " << packet.size() << "\n";
+		TELEPORT_INTERNAL_COUT("Session: Received malformed display info packet of length: " << packet.size() << "");
 		return;
 	}
 
@@ -742,7 +742,7 @@ void ClientMessaging::receiveAcknowledgement(const std::vector<uint8_t> &packet)
 	core::AcknowledgementMessage msg;
 	if (packet.size()!=sizeof(core::AcknowledgementMessage))
 	{
-		TELEPORT_COUT << "Session: Received malformed OriginRequest packet of length: " << packet.size() << "\n";
+		TELEPORT_INTERNAL_COUT("Session: Received malformed OriginRequest packet of length: " << packet.size() << "");
 		return;
 	}
 	memcpy(&msg, packet.data(), sizeof(msg));
@@ -761,7 +761,7 @@ void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t>& packet)
 {
 	if (packet.size() < sizeof(core::KeyframeRequestMessage))
 	{
-		TELEPORT_COUT << "Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "\n";
+		TELEPORT_INTERNAL_COUT("Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "");
 		return;
 	}
 	if (captureComponentDelegates.requestKeyframe)
@@ -770,7 +770,7 @@ void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t>& packet)
 	}
 	else
 	{
-		TELEPORT_COUT << "Received keyframe request, but capture component isn't set.\n";
+		TELEPORT_INTERNAL_COUT("Received keyframe request, but capture component isn't set.");
 	}
 }
 
@@ -778,7 +778,7 @@ void ClientMessaging::receivePongForLatency(const std::vector<uint8_t>& packet)
 {
 	if (packet.size() != sizeof(core::PongForLatencyMessage))
 	{
-		TELEPORT_COUT << "Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "\n";
+		TELEPORT_INTERNAL_COUT("Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "");
 		return;
 	}
 	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

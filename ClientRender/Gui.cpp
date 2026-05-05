@@ -1872,6 +1872,57 @@ void Gui::Anims(const ResourceManager<avs::uid, clientrender::Animation> &animMa
 	ImGui::EndGroup();
 }
 
+void Gui::Lights(const ResourceManager<avs::uid, clientrender::Light> &lightManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids = lightManager.GetAllIDs();
+	if (ids.empty())
+	{
+		ImGui::TextDisabled("No lights");
+	}
+	else
+	{
+		if (ImGui::BeginTable("lights", 6, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY))
+		{
+			ImGui::TableSetupColumn("UID",       ImGuiTableColumnFlags_WidthFixed,   60.0f);
+			ImGui::TableSetupColumn("Name",      ImGuiTableColumnFlags_WidthStretch, 120.0f);
+			ImGui::TableSetupColumn("Type",      ImGuiTableColumnFlags_WidthFixed,   60.0f);
+			ImGui::TableSetupColumn("Colour",    ImGuiTableColumnFlags_WidthFixed,  100.0f);
+			ImGui::TableSetupColumn("Range",     ImGuiTableColumnFlags_WidthFixed,   55.0f);
+			ImGui::TableSetupColumn("Direction", ImGuiTableColumnFlags_WidthFixed,  120.0f);
+			ImGui::TableHeadersRow();
+			for (auto id : ids)
+			{
+				const auto light = lightManager.Get(id);
+				if (!light)
+				{
+					continue;
+				}
+				const auto &lci = light->GetLightCreateInfo();
+				ImGui::TableNextRow();
+				ImGui::TableNextColumn();
+				ImGui::Text("%lu", id);
+				ImGui::TableNextColumn();
+				ImGui::TextUnformatted(lci.name.c_str());
+				ImGui::TableNextColumn();
+				ImGui::TextUnformatted(clientrender::ToString(lci.type));
+				ImGui::TableNextColumn();
+				ImGui::ColorButton(fmt::format("##lclr{0}", id).c_str(),
+					ImVec4(lci.lightColour.x, lci.lightColour.y, lci.lightColour.z, lci.lightColour.w),
+					ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(16, 16));
+				ImGui::SameLine();
+				ImGui::Text("%.2f %.2f %.2f", lci.lightColour.x, lci.lightColour.y, lci.lightColour.z);
+				ImGui::TableNextColumn();
+				ImGui::Text("%.1f", lci.lightRange);
+				ImGui::TableNextColumn();
+				ImGui::Text("%.2f %.2f %.2f", lci.direction.x, lci.direction.y, lci.direction.z);
+			}
+			ImGui::EndTable();
+		}
+	}
+	ImGui::EndGroup();
+}
+
 void Gui::InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient, teleport::client::OpenXR *openXR)
 {
 	if (ImGui::BeginTable("controls", 4))
@@ -2357,6 +2408,11 @@ void Gui::Scene()
 	if (ImGui::BeginTabItem("Textures"))
 	{
 		Textures(geometryCache->mTextureManager);
+		ImGui::EndTabItem();
+	}
+	if (ImGui::BeginTabItem("Lighting"))
+	{
+		Lights(geometryCache->mLightManager);
 		ImGui::EndTabItem();
 	}
 

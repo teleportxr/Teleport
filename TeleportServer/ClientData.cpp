@@ -198,7 +198,7 @@ void ClientData::resendUnconfirmedOrthogonalStates()
 				continue;
 			if (serverTimeUs - unconfirmedState.second.serverTimeSentUs > resendOrthogonalStateTimeout)
 			{
-				TELEPORT_COUT << "Resending unconfirmed state for node " << nodeState.first << std::endl;
+				TELEPORT_INTERNAL_COUT("Resending unconfirmed state for node " << nodeState.first);
 				unconfirmedState.second.serverTimeSentUs = serverTimeUs;
 				switch (unconfirmedState.first)
 				{

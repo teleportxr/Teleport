@@ -375,7 +375,7 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 		ReceivePingForLatencyCommand(packet);
 		break;
 	default:
-		TELEPORT_CERR << "Invalid CommandPayloadType.\n";
+		TELEPORT_INTERNAL_CERR("Invalid CommandPayloadType.");
 		TELEPORT_INTERNAL_BREAK_ONCE("Invalid payload");
 		break;
 	};
@@ -561,7 +561,7 @@ bool SessionClient::SendMessageToServer(const void *c, size_t sz) const
 
 void SessionClient::SendHandshake(const teleport::core::Handshake &handshake, const std::vector<avs::uid> &clientResourceIDs)
 {
-	TELEPORT_CERR << "Sending handshake via Websockets" << std::endl;
+	TELEPORT_INTERNAL_CERR("Sending handshake via Websockets");
 	size_t handshakeSize	= sizeof(teleport::core::Handshake);
 	size_t resourceListSize = sizeof(avs::uid) * clientResourceIDs.size();
 
@@ -604,7 +604,7 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &
 
 void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 {
-	TELEPORT_CERR << "ReceiveSetupCommand " << std::endl;
+	TELEPORT_INTERNAL_CERR("ReceiveSetupCommand");
 	if (connectionStatus == client::ConnectionStatus::AWAITING_SETUP || setupCommand.session_id != lastSessionId)
 	{
 		size_t commandSize = sizeof(teleport::core::SetupCommand);
@@ -617,9 +617,8 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		ApplySetup(*s);
 
 		// Log the received setup command for debugging
-		TELEPORT_COUT << "\n===== CLIENT RECEIVED SETUPCOMMAND =====\n"
-			<< teleport::core::SetupCommandToString(setupCommand) << "\n"
-			<< "===== END SETUPCOMMAND =====\n";
+		TELEPORT_INTERNAL_COUT("\n===== CLIENT RECEIVED SETUPCOMMAND =====\n{}\n===== END SETUPCOMMAND =====",
+			teleport::core::SetupCommandToString(setupCommand));
 		if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
 			return;
 		unreliableToServerEncoder.configure(&messageToServerStack, "Unreliable Message Encoder");
@@ -832,7 +831,8 @@ void SessionClient::ReceiveSetupLightingCommand(const std::vector<uint8_t> &pack
 	}
 	if (setLightingCommand.ack_id > receivedLightingAckId)
 	{
-		TELEPORT_INFO("Received lighting setup {}.", setLightingCommand.ack_id);
+		TELEPORT_INFO("Received lighting setup {}.\n{}", setLightingCommand.ack_id,
+			teleport::core::SetLightingCommandToString(setLightingCommand));
 		receivedLightingAckId = setLightingCommand.ack_id;
 		clientDynamicLighting = setLightingCommand.clientDynamicLighting;
 	}
@@ -869,7 +869,7 @@ void SessionClient::ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet
 	{
 		if (size_t(ptr - packet.data()) >= packet.size())
 		{
-			TELEPORT_CERR << "Bad packet" << std::endl;
+			TELEPORT_INTERNAL_CERR("Bad packet");
 			return;
 		}
 		auto									 &def		= inputDefinitions[i];
@@ -877,7 +877,7 @@ void SessionClient::ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet
 		ptr += sizeof(teleport::core::InputDefinitionNetPacket);
 		if (size_t(ptr + packetDef.pathLength - packet.data()) > packet.size())
 		{
-			TELEPORT_CERR << "Bad packet" << std::endl;
+			TELEPORT_INTERNAL_CERR("Bad packet");
 			return;
 		}
 		def.inputId	  = packetDef.inputId;
@@ -888,7 +888,7 @@ void SessionClient::ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet
 	}
 	if (size_t(ptr - packet.data()) != packet.size())
 	{
-		TELEPORT_CERR << "Bad packet" << std::endl;
+		TELEPORT_INTERNAL_CERR("Bad packet");
 		return;
 	}
 	// Now process the input definitions according to the available hardware:
@@ -918,7 +918,7 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> 
 	size_t commandSize = sizeof(teleport::core::AssignNodePosePathCommand);
 	if (packet.size() < commandSize)
 	{
-		TELEPORT_CERR << "Bad packet." << std::endl;
+		TELEPORT_INTERNAL_CERR("Bad packet.");
 		return;
 	}
 	// Copy command out of packet.
@@ -926,7 +926,7 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> 
 	memcpy(static_cast<void *>(&assignNodePosePathCommand), packet.data(), commandSize);
 	if (packet.size() != commandSize + assignNodePosePathCommand.pathLength)
 	{
-		TELEPORT_CERR << "Bad packet." << std::endl;
+		TELEPORT_INTERNAL_CERR("Bad packet.");
 		return;
 	}
 	std::string str;
@@ -943,7 +943,7 @@ void SessionClient::ReceivePingForLatencyCommand(const std::vector<uint8_t> &pac
 	size_t								  commandSize = sizeof(cmd);
 	if (packet.size() != commandSize)
 	{
-		TELEPORT_CERR << "Bad packet." << std::endl;
+		TELEPORT_INTERNAL_CERR("Bad packet.");
 		return;
 	}
 	memcpy(static_cast<void *>(&cmd), packet.data(), commandSize);
@@ -967,7 +967,7 @@ void SessionClient::ReceiveTextCommand(const std::vector<uint8_t> &packet)
 	size_t commandSize = sizeof(uint16_t);
 	if (packet.size() < commandSize)
 	{
-		TELEPORT_CERR << "Bad packet." << std::endl;
+		TELEPORT_INTERNAL_CERR("Bad packet.");
 		return;
 	}
 	// Copy command out of packet.
@@ -975,7 +975,7 @@ void SessionClient::ReceiveTextCommand(const std::vector<uint8_t> &packet)
 	memcpy(static_cast<void *>(&count), packet.data(), commandSize);
 	if (packet.size() != commandSize + count)
 	{
-		TELEPORT_CERR << "Bad packet." << std::endl;
+		TELEPORT_INTERNAL_CERR("Bad packet.");
 		return;
 	}
 	std::string str;

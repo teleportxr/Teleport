@@ -17,7 +17,7 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 {
 	if (!renderPlatform)
 	{
-		TELEPORT_CERR << "No render platform provided" << std::endl;
+		TELEPORT_INTERNAL_CERR("No render platform provided");
 		return false;
 	}
 
@@ -27,15 +27,15 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	// Initialize the generator
 	if (!generator.Initialize())
 	{
-		TELEPORT_CERR << "Failed to initialize CubemapGenerator" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to initialize CubemapGenerator");
 		return false;
 	}
 
 	// Generate a white-themed cubemap
-	TELEPORT_COUT << "Generating white cubemap..." << std::endl;
+	TELEPORT_INTERNAL_COUT("Generating white cubemap...");
 	if (!generator.GenerateCubemap("white", 512, 0.0f))
 	{
-		TELEPORT_CERR << "Failed to generate white cubemap" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to generate white cubemap");
 		return false;
 	}
 
@@ -43,15 +43,15 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	std::string whiteFilename = outputPath + "/unconnected_white_cubemap.hdr";
 	if (!generator.SaveToHDR(whiteFilename))
 	{
-		TELEPORT_CERR << "Failed to save white cubemap" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to save white cubemap");
 		return false;
 	}
 
 	// Generate a neon-themed cubemap with animation
-	TELEPORT_COUT << "Generating neon cubemap..." << std::endl;
+	TELEPORT_INTERNAL_COUT("Generating neon cubemap...");
 	if (!generator.GenerateCubemap("neon", 512, 5.0f)) // 5 seconds for animation
 	{
-		TELEPORT_CERR << "Failed to generate neon cubemap" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to generate neon cubemap");
 		return false;
 	}
 
@@ -59,15 +59,15 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	std::string neonFilename = outputPath + "/unconnected_neon_cubemap.hdr";
 	if (!generator.SaveToHDR(neonFilename))
 	{
-		TELEPORT_CERR << "Failed to save neon cubemap" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to save neon cubemap");
 		return false;
 	}
 
 	// Generate a higher resolution neon cubemap
-	TELEPORT_COUT << "Generating high-res neon cubemap..." << std::endl;
+	TELEPORT_INTERNAL_COUT("Generating high-res neon cubemap...");
 	if (!generator.GenerateCubemap("neon", 1024, 10.0f)) // 10 seconds for different animation phase
 	{
-		TELEPORT_CERR << "Failed to generate high-res neon cubemap" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to generate high-res neon cubemap");
 		return false;
 	}
 
@@ -75,11 +75,11 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	std::string neonHiResFilename = outputPath + "/unconnected_neon_cubemap_1024.hdr";
 	if (!generator.SaveToHDR(neonHiResFilename))
 	{
-		TELEPORT_CERR << "Failed to save high-res neon cubemap" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to save high-res neon cubemap");
 		return false;
 	}
 
-	TELEPORT_COUT << "Successfully generated all cubemaps!" << std::endl;
+	TELEPORT_INTERNAL_COUT("Successfully generated all cubemaps!");
 	return true;
 }
 
@@ -94,7 +94,7 @@ bool GenerateAnimatedCubemapSequence(RenderPlatform* renderPlatform, const std::
 {
 	if (!renderPlatform)
 	{
-		TELEPORT_CERR << "No render platform provided" << std::endl;
+		TELEPORT_INTERNAL_CERR("No render platform provided");
 		return false;
 	}
 
@@ -104,11 +104,11 @@ bool GenerateAnimatedCubemapSequence(RenderPlatform* renderPlatform, const std::
 	// Initialize the generator
 	if (!generator.Initialize())
 	{
-		TELEPORT_CERR << "Failed to initialize CubemapGenerator" << std::endl;
+		TELEPORT_INTERNAL_CERR("Failed to initialize CubemapGenerator");
 		return false;
 	}
 
-	TELEPORT_COUT << "Generating animated cubemap sequence..." << std::endl;
+	TELEPORT_INTERNAL_COUT("Generating animated cubemap sequence...");
 
 	for (int frame = 0; frame < frameCount; ++frame)
 	{
@@ -136,11 +136,11 @@ bool GenerateAnimatedCubemapSequence(RenderPlatform* renderPlatform, const std::
 		// Progress indicator
 		if (frame % 10 == 0)
 		{
-			TELEPORT_COUT << "Generated frame " << frame << "/" << frameCount << std::endl;
+			TELEPORT_INTERNAL_COUT("Generated frame " << frame << "/" << frameCount);
 		}
 	}
 
-	TELEPORT_COUT << "Successfully generated animated cubemap sequence!" << std::endl;
+	TELEPORT_INTERNAL_COUT("Successfully generated animated cubemap sequence!");
 	return true;
 }
 
@@ -158,13 +158,13 @@ void ExampleUsageInRenderLoop(RenderPlatform* renderPlatform)
 		if (generator->Initialize())
 		{
 			initialized = true;
-			TELEPORT_COUT << "CubemapGenerator initialized for runtime use" << std::endl;
+			TELEPORT_INTERNAL_COUT("CubemapGenerator initialized for runtime use");
 		}
 		else
 		{
 			delete generator;
 			generator = nullptr;
-			TELEPORT_CERR << "Failed to initialize CubemapGenerator" << std::endl;
+			TELEPORT_INTERNAL_CERR("Failed to initialize CubemapGenerator");
 			return;
 		}
 	}

@@ -254,31 +254,27 @@ bool OpenXR::InitSystem()
 
     XR_CHECK(xrGetSystemProperties(xr_instance, xr_system_id, &xr_system_properties));
 
-    TELEPORT_COUT<<fmt::format(
+    TELEPORT_INTERNAL_COUT(
         "System Properties: Name={} VendorId={}",
 		xr_system_properties.systemName,
-		xr_system_properties.vendorId)<<"\n";
-	TELEPORT_COUT << fmt::format(
+		xr_system_properties.vendorId);
+	TELEPORT_INTERNAL_COUT(
 		"handTracking Properties: Supported {}",
-						 handTrackingSystemProperties.supportsHandTracking != 0)
-				  << "\n";
-	TELEPORT_COUT << fmt::format(
+						 handTrackingSystemProperties.supportsHandTracking != 0);
+	TELEPORT_INTERNAL_COUT(
         "System Graphics Properties: MaxWidth={} MaxHeight={} MaxLayers={}",
 		xr_system_properties.graphicsProperties.maxSwapchainImageWidth,
 		xr_system_properties.graphicsProperties.maxSwapchainImageHeight,
-						 xr_system_properties.graphicsProperties.maxLayerCount)
-				  << "\n";
-	TELEPORT_COUT << fmt::format(
+						 xr_system_properties.graphicsProperties.maxLayerCount);
+	TELEPORT_INTERNAL_COUT(
         "System Tracking Properties: OrientationTracking={} PositionTracking={}",
 		xr_system_properties.trackingProperties.orientationTracking ? "True" : "False",
-						 xr_system_properties.trackingProperties.positionTracking ? "True" : "False")
-				  << "\n";
+						 xr_system_properties.trackingProperties.positionTracking ? "True" : "False");
 
-    TELEPORT_COUT << fmt::format(
+    TELEPORT_INTERNAL_COUT(
         "SpaceWarp Properties: recommendedMotionVectorImageRectWidth={} recommendedMotionVectorImageRectHeight={}",
         spaceWarpProperties.recommendedMotionVectorImageRectWidth,
-						 spaceWarpProperties.recommendedMotionVectorImageRectHeight)
-				  << "\n";
+						 spaceWarpProperties.recommendedMotionVectorImageRectHeight);
 	return true;
 }
 

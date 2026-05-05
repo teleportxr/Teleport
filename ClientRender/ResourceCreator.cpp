@@ -228,7 +228,7 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate &meshCreate)
 	geometryCache->ReceivedResource(meshCreate.mesh_uid);
 	if (!renderPlatform)
 	{
-		TELEPORT_CERR << "No valid render platform was found." << std::endl;
+		TELEPORT_INTERNAL_CERR("No valid render platform was found.");
 		return avs::Result::GeometryDecoder_ClientRendererError;
 	}
 	clientrender::Mesh::MeshCreateInfo mesh_ci;
@@ -552,13 +552,13 @@ avs::Result ResourceCreator::CreateMesh(avs::MeshCreate &meshCreate)
 		}
 		else
 		{
-			TELEPORT_CERR << "Unknown vertex buffer layout." << std::endl;
+			TELEPORT_INTERNAL_CERR("Unknown vertex buffer layout.");
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
 		if (constructedVBByteSize == 0 || constructedVB == nullptr || meshElementCreate.m_IndexCount == 0 || meshElementCreate.m_Indices == nullptr)
 		{
-			TELEPORT_CERR << "Unable to construct vertex and index buffers." << std::endl;
+			TELEPORT_INTERNAL_CERR("Unable to construct vertex and index buffers.");
 			return avs::Result::GeometryDecoder_ClientRendererError;
 		}
 
@@ -1000,7 +1000,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 		auto skeleton = geometryCache->mSkeletonManager.Get(avsNode.skeletonID);
 		if (!skeleton)
 		{
-			TELEPORT_COUT << "MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton " << avsNode.skeletonID << std::endl;
+			TELEPORT_INTERNAL_COUT("MeshNode_{} ({}) missing Skeleton {}", id, avsNode.name, avsNode.skeletonID);
 			isMissingResources = true;
 			auto &missing	   = geometryCache->GetMissingResource(avsNode.skeletonID, avs::GeometryPayloadType::Skeleton);
 			missing.waitingResources.insert(node);
@@ -1018,7 +1018,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 		auto skeletonNode = geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
 		if (!skeletonNode)
 		{
-			TELEPORT_COUT << "MeshNode_" << id << "(" << avsNode.name << ") missing Skeleton Node " << avsNode.skeletonNodeID << std::endl;
+			TELEPORT_INTERNAL_COUT("MeshNode_{} ({}) missing Skeleton Node {}", id, avsNode.name, avsNode.skeletonNodeID);
 			isMissingResources = true;
 			auto &missing	   = geometryCache->GetMissingResource(avsNode.skeletonNodeID, avs::GeometryPayloadType::Node);
 			missing.waitingResources.insert(node);
@@ -1082,7 +1082,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 			{
 				node->IncrementMissingResources();
 				isMissingResources = true;
-				TELEPORT_CERR << "MeshNode " << id << "(" << avsNode.name << ") missing skeleton." << std::endl;
+				TELEPORT_INTERNAL_CERR("MeshNode_{} ({}) missing skeleton.", id, avsNode.name);
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Skeleton).waitingResources.insert(node);
 			}
 		}
@@ -1124,7 +1124,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 		{
 			isMissingResources = true;
 			node->IncrementMissingResources();
-			TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing giTexture." << std::endl;
+			TELEPORT_INTERNAL_CERR("MeshNode_{} ({}) missing giTexture.", id, avsNode.name);
 			geometryCache->GetMissingResource(avsNode.renderState.globalIlluminationUid, avs::GeometryPayloadType::Texture).waitingResources.insert(node);
 		}
 	}
@@ -1468,7 +1468,7 @@ void ResourceCreator::thread_TranscodeTextures()
 					}
 					else
 					{
-						TELEPORT_CERR << "Failed to transcode PNG-format texture \"" << transcoding->name << "\"." << std::endl;
+						TELEPORT_INTERNAL_CERR("Failed to transcode PNG-format texture \"{}\".", transcoding->name);
 					}
 					teleport::stbi_image_free(target);
 					// fill in values from file.
@@ -1488,7 +1488,7 @@ void ResourceCreator::thread_TranscodeTextures()
 				}
 				else
 				{
-					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode, no images found." << std::endl;
+					TELEPORT_INTERNAL_CERR("Texture \"{}\" failed to transcode, no images found.", transcoding->name);
 				}
 			}
 			else if (transcoding->compressionFormat == avs::TextureCompression::JPEG || transcoding->compressionFormat == avs::TextureCompression::PNG ||
@@ -1551,7 +1551,7 @@ void ResourceCreator::thread_TranscodeTextures()
 					}
 					else
 					{
-						TELEPORT_CERR << "Failed to transcode JPEG or PNG format texture \"" << transcoding->name << "\"." << std::endl;
+						TELEPORT_INTERNAL_CERR("Failed to transcode JPEG or PNG format texture \"{}\".", transcoding->name);
 					}
 					teleport::stbi_image_free(stb);
 					// fill in values from file.
@@ -1574,7 +1574,7 @@ void ResourceCreator::thread_TranscodeTextures()
 				}
 				else
 				{
-					TELEPORT_CERR << "Texture \"" << transcoding->name << "\" failed to transcode, no images found." << std::endl;
+					TELEPORT_INTERNAL_CERR("Texture \"{}\" failed to transcode, no images found.", transcoding->name);
 				}
 			}
 			else if (transcoding->compressionFormat == avs::TextureCompression::KTX)

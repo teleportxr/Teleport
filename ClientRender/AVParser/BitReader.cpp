@@ -23,7 +23,7 @@ bool BitReader::getBit()
 {
 	if (mByteIndex >= mSize)
 	{
-		TELEPORT_CERR << "Not enough data" << std::endl;
+		TELEPORT_INTERNAL_CERR("Not enough data");
 		return false;
 	}
 

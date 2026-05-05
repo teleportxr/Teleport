@@ -18,8 +18,8 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 
-#define SCA_CERR TELEPORT_CERR
-#define SCA_COUT TELEPORT_COUT
+#define SCA_CERR TELEPORT_INTERNAL_CERR
+#define SCA_COUT TELEPORT_INTERNAL_COUT
 
 #if defined(__ANDROID__)
 #define FILE_LINE (std::string(__FILE__) + std::string("(") +  std::to_string(__LINE__) + std::string("):")).c_str()

@@ -50,8 +50,6 @@ int kOverrideHeight = 900;
 extern "C" { void android_main(struct android_app* app); }
 DisplaySurfaceManager* displaySurfaceManager = nullptr;
 teleport::client::ClientApp clientApp;
-// Need ONE global instance of this:
-avs::Context context;
 bool g_WindowQuit=false;
 struct AppState
 {
@@ -60,6 +58,9 @@ struct AppState
 	clientrender::Gui *gui = nullptr;
 };
 AppState appState;
+// Need ONE global instance of this:
+// Must be declared last so it's destroyed last during program shutdown
+avs::Context context;
 
 void handle_cmd(android_app* app, int32_t cmd)
 {

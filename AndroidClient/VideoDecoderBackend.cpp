@@ -86,17 +86,17 @@ avs::Result VideoDecoderBackend::registerSurface(const avs::SurfaceBackendInterf
 {
 	if (!mColorDecoder)
 	{
-		TELEPORT_CERR << "VideoDecoder: Decoder not initialized";
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Decoder not initialized");
 		return avs::Result::DecoderBackend_NotInitialized;
 	}
 	if (!colorSurface || !colorSurface->getResource())
 	{
-		TELEPORT_CERR << "VideoDecoder: Invalid surface handle";
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Invalid surface handle");
 		return avs::Result::DecoderBackend_InvalidSurface;
 	}
 	if (colorSurface->getWidth() != mFrameWidth || colorSurface->getHeight() != mFrameHeight)
 	{
-		TELEPORT_CERR << "VideoDecoder: Output surface dimensions do not match video frame dimensions";
+		TELEPORT_INTERNAL_CERR("VideoDecoder: Output surface dimensions do not match video frame dimensions");
 		return avs::Result::DecoderBackend_InvalidSurface;
 	}
  

@@ -42,7 +42,7 @@ Result LinuxAudioPlayer::configure(const AudioSettings& audioSettings)
 {
 	if (mConfigured)
 	{
-		TELEPORT_COUT << "LinuxAudioPlayer: Audio player has already been configured." << std::endl;
+		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Audio player has already been configured.");
 		return Result::AudioPlayerAlreadyConfigured;
 	}
 
@@ -82,7 +82,7 @@ Result LinuxAudioPlayer::configure(const AudioSettings& audioSettings)
 	}
 	else
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Unsupported bits per sample: " << audioSettings.bitsPerSample << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Unsupported bits per sample: {}", audioSettings.bitsPerSample);
 		return Result::AudioStreamConfigurationError;
 	}
 
@@ -101,7 +101,7 @@ Result LinuxAudioPlayer::configure(const AudioSettings& audioSettings)
 
 	if (!mPlaybackStream)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Failed to create playback stream: " << pa_strerror(error) << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Failed to create playback stream: {}", pa_strerror(error));
 		return Result::AudioStreamCreationError;
 	}
 
@@ -115,7 +115,7 @@ Result LinuxAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Can't play audio stream because the audio player has not been initialized.");
 		return Result::AudioPlayerNotInitialized;
 	}
 	if (!mConfigured)
@@ -123,7 +123,7 @@ Result LinuxAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 		static bool done = false;
 		if (!done)
 		{
-			TELEPORT_CERR << "LinuxAudioPlayer: Can't play audio stream because the audio player has not been configured." << std::endl;
+			TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Can't play audio stream because the audio player has not been configured.");
 			done = true;
 		}
 		return Result::AudioPlayerNotConfigured;
@@ -137,7 +137,7 @@ Result LinuxAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	int error;
 	if (pa_simple_write(mPlaybackStream, data, dataSize, &error) < 0)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Failed to write audio data: " << pa_strerror(error) << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Failed to write audio data: {}", pa_strerror(error));
 		return Result::AudioWriteError;
 	}
 
@@ -148,25 +148,25 @@ Result LinuxAudioPlayer::startRecording(std::function<void(const uint8_t* data, 
 {
 	if (!mInitialized)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Can't record audio because the audio player has not been initialized.");
 		return Result::AudioPlayerNotInitialized;
 	}
 
 	if (!mConfigured)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Can't record audio because the audio player has not been configured.");
 		return Result::AudioPlayerNotConfigured;
 	}
 
 	if (!mRecordingAllowed)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: The user has not granted permission to record audio." << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: The user has not granted permission to record audio.");
 		return Result::AudioRecordingNotPermitted;
 	}
 
 	if (mRecording)
 	{
-		TELEPORT_COUT << "LinuxAudioPlayer: Already recording." << std::endl;
+		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Already recording.");
 		return Result::OK;
 	}
 
@@ -208,7 +208,7 @@ void LinuxAudioPlayer::captureThreadFunc()
 
 	if (!captureStream)
 	{
-		TELEPORT_CERR << "LinuxAudioPlayer: Failed to create capture stream: " << pa_strerror(error) << std::endl;
+		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Failed to create capture stream: {}", pa_strerror(error));
 		mCaptureRunning = false;
 		return;
 	}
@@ -220,7 +220,7 @@ void LinuxAudioPlayer::captureThreadFunc()
 	{
 		if (pa_simple_read(captureStream, buffer.data(), buffer.size(), &error) < 0)
 		{
-			TELEPORT_CERR << "LinuxAudioPlayer: Failed to read audio data: " << pa_strerror(error) << std::endl;
+			TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Failed to read audio data: {}", pa_strerror(error));
 			break;
 		}
 
@@ -237,7 +237,7 @@ Result LinuxAudioPlayer::processRecordedAudio()
 {
 	if (!mRecording)
 	{
-		TELEPORT_COUT << "LinuxAudioPlayer: Not recording." << std::endl;
+		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Not recording.");
 		return Result::AudioProcessingError;
 	}
 	// Audio is processed asynchronously in the capture thread
@@ -248,7 +248,7 @@ Result LinuxAudioPlayer::stopRecording()
 {
 	if (!mRecording)
 	{
-		TELEPORT_COUT << "LinuxAudioPlayer: Not recording." << std::endl;
+		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Not recording.");
 		return Result::OK;
 	}
 
@@ -266,7 +266,7 @@ Result LinuxAudioPlayer::deconfigure()
 {
 	if (!mConfigured)
 	{
-		TELEPORT_COUT << "LinuxAudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
+		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Can't deconfigure audio player because it is not configured.");
 		return Result::AudioPlayerNotConfigured;
 	}
 

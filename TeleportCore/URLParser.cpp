@@ -25,10 +25,10 @@ DomainPortPath teleport::core::GetDomainPortPath(const std::string &url)
 		std::smatch match;
 		if (std::regex_search(url, match, re))
 		{
-			TELEPORT_COUT << "Domain regex:\n";
+			TELEPORT_INTERNAL_COUT("Domain regex:");
 			for (size_t m=0;m<match.size();m++)
 			{
-				TELEPORT_COUT << "\t"<<m<<": "<<match[m].str() << "\n";
+				TELEPORT_INTERNAL_COUT("\t{}: {}", m, match[m].str());
 			}
 		}
 		domainPortPath.domain = (match.size() > 2 && match[2].matched) ? match[2].str() : "";
@@ -51,11 +51,11 @@ DomainPortPath teleport::core::GetDomainPortPath(const std::string &url)
 	}
 	catch (std::regex_error err)
 	{
-		TELEPORT_CERR << "Regex error for url " << url << ": " << err.what() << "\n";
+		TELEPORT_INTERNAL_CERR("Regex error for url {}: {}", url, err.what());
 	}
 	catch (...)
 	{
-		TELEPORT_CERR << "Regex error for url " << url << "\n";
+		TELEPORT_INTERNAL_CERR("Regex error for url {}", url);
 	}
 	return domainPortPath;
 }
