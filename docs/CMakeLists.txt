@@ -49,13 +49,14 @@ set(DOXYFILE_UNREAL_OUT ${CMAKE_CURRENT_BINARY_DIR}/DoxyfileUnreal)
 #Replace variables inside @@ with the current values
 configure_file(${DOXYFILE_UNREAL_IN} ${DOXYFILE_UNREAL_OUT} @ONLY)
 file(MAKE_DIRECTORY ${DOXYGEN_UNREAL_OUTPUT_DIR}) #Doxygen won't create this for us
-
-add_custom_target(DoxygenUnreal ALL
+add_custom_command(OUTPUT ${DOXYGEN_UNREAL_INDEX_FILE}
 					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNREAL_OUT}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					MAIN_DEPENDENCY ${DOXYFILE_UNREAL_OUT} ${DOXYFILE_UNREAL_IN}
+					COMMENT "Generating Unreal docs with ${DOXYGEN_EXECUTABLE}")
+
+add_custom_target(DoxygenUnreal ALL
 					DEPENDS ${DOXYGEN_UNREAL_INDEX_FILE}
-					MAIN_DEPENDENCY ${DOXYGEN_UNREAL_INDEX_FILE}
-					COMMENT "Generating Unreal docs"
 					SOURCES ${DOXYFILE_UNREAL_IN})
 set_target_properties( DoxygenUnreal PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS ${FIND_DOXYGEN_OUTPUTS} -Dbreathe_projects.TeleportUnreal=${DOXYGEN_UNREAL_OUTPUT_DIR}/xml)
@@ -70,20 +71,14 @@ set(DOXYFILE_UNITY_OUT ${CMAKE_CURRENT_BINARY_DIR}/DoxyfileUnity)
 #Replace variables inside @@ with the current values
 configure_file(${DOXYFILE_UNITY_IN} ${DOXYFILE_UNITY_OUT} @ONLY)
 file(MAKE_DIRECTORY ${DOXYGEN_UNITY_OUTPUT_DIR}) #Doxygen won't create this for us
-
-#message("add_custom_target(DoxygenUnity ALL
-#					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
-#					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#					DEPENDS ${DOXYGEN_UNITY_INDEX_FILE}
-#					MAIN_DEPENDENCY ${DOXYGEN_UNITY_INDEX_FILE}
-#					COMMENT Generating Unity docs
-#					SOURCES ${DOXYFILE_UNITY_IN})")
-add_custom_target(DoxygenUnity ALL
+add_custom_command(OUTPUT ${DOXYGEN_UNITY_INDEX_FILE}
 					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_UNITY_OUT}
 					WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+					MAIN_DEPENDENCY ${DOXYFILE_UNITY_OUT} ${DOXYFILE_UNITY_IN}
+					COMMENT "Generating Unity docs with ${DOXYGEN_EXECUTABLE}")
+
+add_custom_target(DoxygenUnity ALL
 					DEPENDS ${DOXYGEN_UNITY_INDEX_FILE}
-					MAIN_DEPENDENCY ${DOXYGEN_UNITY_INDEX_FILE}
-					COMMENT "Generating Unity docs"
 					SOURCES ${DOXYFILE_UNITY_IN})
 set_target_properties( DoxygenUnity PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS ${FIND_DOXYGEN_OUTPUTS} -Dbreathe_projects.TeleportUnity=${DOXYGEN_UNITY_OUTPUT_DIR}/xml)
