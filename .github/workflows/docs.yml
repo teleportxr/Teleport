@@ -18,7 +18,10 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: sudo apt-get update -y && sudo apt-get install -y libvulkan-dev libpulse-dev libssl-dev doxygen python3-sphinx
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y libvulkan-dev libpulse-dev libssl-dev doxygen graphviz python3-sphinx python3-breathe python3-myst-parser python3-pip
+        pip3 install sphinxcontrib-mermaid sphinxcontrib-jquery
 
     - name: Cmake
       run: cmake -B build_docs -S . -DTELEPORT_BUILD_DOCS=1 -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_X11=OFF -DTELEPORT_DOXYGEN_UNITY_INPUT_DIR=$GITHUB_WORKSPACE/firstparty/teleport-unity
