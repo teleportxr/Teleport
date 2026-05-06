@@ -18,11 +18,21 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: sudo apt-get update -y && sudo apt-get install -y libvulkan-dev
+      run: sudo apt-get update -y && sudo apt-get install -y libvulkan-dev libpulse-dev libssl-dev doxygen python3-sphinx
 
     - name: Cmake
       run: cmake -B build_docs -S . -DTELEPORT_BUILD_DOCS=1 -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_X11=OFF -DTELEPORT_DOXYGEN_UNITY_INPUT_DIR=$GITHUB_WORKSPACE/firstparty/teleport-unity
 
     - name: Make
       run: cd build_docs; make
+
+    - name: Deploy to teleport-docs
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      uses: peaceiris/actions-gh-pages@v4
+      with:
+        deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
+        external_repository: teleportxr/teleport-docs
+        publish_branch: main
+        publish_dir: ./build_docs/docs/sphinx
+        force_orphan: true
 
