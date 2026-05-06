@@ -17,6 +17,9 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Install dependencies
+      run: sudo apt-get update -y && sudo apt-get install -y libvulkan-dev
+
     - name: Cmake
       run: cmake -B build_docs -S . -DTELEPORT_BUILD_DOCS=1 -DTELEPORT_DOXYGEN_UNITY_INPUT_DIR=$GITHUB_WORKSPACE/firstparty/teleport-unity
 
