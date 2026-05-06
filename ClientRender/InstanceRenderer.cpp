@@ -2101,6 +2101,17 @@ void InstanceRenderer::OnVideoStreamClosed()
 	receivedInitialPos = 0;
 }
 
+void InstanceRenderer::OnReconnectGaveUp()
+{
+	TELEPORT_LOG("RECONNECT GAVE UP - tearing down local reflection of server {0}", server_uid);
+	OnVideoStreamClosed();
+	if (geometryCache)
+	{
+		geometryCache->ClearAll();
+	}
+	receivedInitialPos = 0;
+}
+
 void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand)
 {
 	auto	   &clientPipeline = sessionClient->GetClientPipeline();

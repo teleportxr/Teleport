@@ -77,3 +77,4 @@ attach to the Data Service and the HTTP service.
 	protocol/geometry_payload
 	protocol/audio
 	protocol/input
+	protocol/reconnection

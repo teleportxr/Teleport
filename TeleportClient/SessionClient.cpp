@@ -128,18 +128,48 @@ bool SessionClient::HandleConnections()
 	if (!IsConnected())
 	{
 		auto &config = Config::GetInstance();
-		if (connectionStatus == client::ConnectionStatus::OFFERING)
+		if (connectionStatus == client::ConnectionStatus::OFFERING || connectionStatus == client::ConnectionStatus::RECONNECTING)
 		{
-			auto &disc=teleport::client::DiscoveryService::GetInstance();
+			// In RECONNECTING we hold off discovery until the back-off has elapsed, and
+			// we apply a per-attempt deadline so that a stalled discovery counts as a
+			// failed attempt rather than blocking forever. The steady_clock is used so
+			// that timing advances even though Frame() is not called in this state.
+			if (connectionStatus == client::ConnectionStatus::RECONNECTING)
+			{
+				const auto now = std::chrono::steady_clock::now();
+				if (now < nextReconnectTime)
+				{
+					teleport::client::DiscoveryService::GetInstance().Tick();
+					return false;
+				}
+				if (now > reconnectAttemptDeadline)
+				{
+					reconnectAttempts++;
+					if (reconnectAttempts >= config.options.maxReconnectAttempts)
+					{
+						TELEPORT_WARN("Reconnect to {0} failed after {1} attempts; giving up.", GetServerURL(), reconnectAttempts);
+						GiveUpAndShutDown();
+						return false;
+					}
+					currentReconnectBackoffMs	= std::min(currentReconnectBackoffMs * 2u, config.options.reconnectMaxBackoffMs);
+					nextReconnectTime			= now + std::chrono::milliseconds(currentReconnectBackoffMs);
+					reconnectAttemptDeadline	= nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);
+					TELEPORT_INTERNAL_COUT("Reconnect attempt {0} timed out; next attempt in {1} ms.", reconnectAttempts, currentReconnectBackoffMs);
+					return false;
+				}
+			}
+			auto	&disc  = teleport::client::DiscoveryService::GetInstance();
 			uint64_t cl_id = disc.Discover(server_uid, GetServerURL().c_str(), server_discovery_port);
 			if (cl_id != 0 && Connect(GetServerURL().c_str(), config.options.connectionTimeout, cl_id))
 			{
 				bool shouldClearGeometry = disc.ShouldClear(server_uid);
-				if(geometryCache&&shouldClearGeometry)
+				if (geometryCache && shouldClearGeometry)
 				{
 					geometryCache->ClearAll();
 					shouldClearGeometry = false;
 				}
+				reconnectAttempts		  = 0;
+				currentReconnectBackoffMs = 0;
 				return true;
 			}
 		}
@@ -208,6 +238,29 @@ void SessionClient::Frame(const avs::DisplayInfo								&displayInfo,
 		while (teleport::client::DiscoveryService::GetInstance().GetNextBinaryMessage(server_uid, bin))
 		{
 			ReceiveCommand(bin);
+		}
+	}
+	// Detect transitions of the underlying streaming connection. A move from CONNECTED
+	// (or a previously-good state) to DISCONNECTED/FAILED/CLOSED is treated as a drop
+	// of an established session, which triggers reconnection. We only do this if we had
+	// successfully completed a setup at least once (lastSessionId != 0); otherwise it
+	// is an initial-connect failure which is left to the caller to retry.
+	if (clientPipeline.source && lastSessionId != 0)
+	{
+		auto streamingState = clientPipeline.source->GetStreamingConnectionState();
+		if (streamingState != lastStreamingState)
+		{
+			const bool wasUp   = (lastStreamingState == avs::StreamingConnectionState::CONNECTED);
+			const bool isDown  = (streamingState == avs::StreamingConnectionState::DISCONNECTED ||
+								  streamingState == avs::StreamingConnectionState::FAILED ||
+								  streamingState == avs::StreamingConnectionState::CLOSED);
+			if (wasUp && isDown && connectionStatus != ConnectionStatus::RECONNECTING)
+			{
+				TELEPORT_WARN("Streaming connection to {0} dropped ({1}); beginning reconnect.",
+							  GetServerURL(), avs::stringOf(streamingState));
+				BeginReconnect();
+			}
+			lastStreamingState = streamingState;
 		}
 	}
 	bool requestKeyframe = clientPipeline.decoder.idrRequired();
@@ -993,4 +1046,57 @@ void SessionClient::ResetSessionState()
 	memset(&clientDynamicLighting, 0, sizeof(clientDynamicLighting));
 	inputDefinitions.clear();
 	nodePosePaths.clear();
+}
+
+void SessionClient::TearDownStreamingPipeline()
+{
+	if (clientPipeline.source)
+	{
+		clientPipeline.pipeline.deconfigure();
+		clientPipeline.source->deconfigure();
+	}
+	lastStreamingState = avs::StreamingConnectionState::UNINITIALIZED;
+}
+
+void SessionClient::BeginReconnect()
+{
+	auto &config = Config::GetInstance();
+	// If reconnection is disabled, just give up immediately.
+	if (config.options.maxReconnectAttempts == 0)
+	{
+		GiveUpAndShutDown();
+		return;
+	}
+	TearDownStreamingPipeline();
+	// Note: we deliberately do NOT call DiscoveryService::Disconnect or
+	// SignalingServer::QueueDisconnectionMessage here. The server must keep our
+	// previous clientID/serverID associated with this session so that the next
+	// connect-response can be matched as a continuation (see SignalingServer
+	// connect-response handling).
+	connectionStatus		  = ConnectionStatus::RECONNECTING;
+	reconnectAttempts		  = 0;
+	currentReconnectBackoffMs = config.options.reconnectInitialBackoffMs;
+	const auto now			  = std::chrono::steady_clock::now();
+	nextReconnectTime		  = now + std::chrono::milliseconds(currentReconnectBackoffMs);
+	reconnectAttemptDeadline  = nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);
+	TELEPORT_INTERNAL_COUT("Reconnecting to {0}; first attempt in {1} ms.", GetServerURL(), currentReconnectBackoffMs);
+}
+
+void SessionClient::GiveUpAndShutDown()
+{
+	TELEPORT_WARN("Giving up on connection to {0}.", GetServerURL());
+	TearDownStreamingPipeline();
+	if (mCommandInterface)
+	{
+		mCommandInterface->OnReconnectGaveUp();
+	}
+	if (geometryCache)
+	{
+		geometryCache->ClearAll();
+	}
+	// Now perform a clean disconnect: this resets clientID and notifies the server.
+	Disconnect(0, true);
+	reconnectAttempts		  = 0;
+	currentReconnectBackoffMs = 0;
+	lastSessionId			  = 0;
 }

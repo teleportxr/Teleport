@@ -4,8 +4,8 @@ project( ClientRender )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 
-configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.c @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/thirdparty/flecs/flecs.h ${CMAKE_CURRENT_BINARY_DIR}/flecs.h @ONLY)
+configure_file(${flecs_SOURCE_DIR}/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.c @ONLY)
+configure_file(${flecs_SOURCE_DIR}/flecs.h ${CMAKE_CURRENT_BINARY_DIR}/flecs.h @ONLY)
 
 # Source
 set( src_root

@@ -36,6 +36,15 @@ namespace teleport
 			bool simulateVR = false;
 			bool passThrough=false;
 			bool mode2D=false;
+			//! Maximum number of times the client will try to re-establish the streaming connection
+			//! after an established session drops, before giving up and shutting down the local
+			//! server reflection.
+			unsigned int maxReconnectAttempts = 4;
+			//! Initial back-off (in milliseconds) before the first reconnection attempt.
+			unsigned int reconnectInitialBackoffMs = 500;
+			//! Maximum back-off (in milliseconds) between reconnection attempts. The back-off
+			//! doubles after each failed attempt and is clamped to this value.
+			unsigned int reconnectMaxBackoffMs = 4000;
 		};
 		struct DebugOptions
 		{

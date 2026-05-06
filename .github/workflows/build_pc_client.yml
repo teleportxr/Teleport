@@ -26,7 +26,7 @@ jobs:
     - name: Git Submodules
       run: |
         cd ${{github.workspace}}
-        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp" "thirdparty/websocketpp" "thirdparty/flecs"
+        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp"
         cd ${{github.workspace}}/thirdparty/libdatachannel
     - name: Log
       shell: cmd

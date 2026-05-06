@@ -1202,6 +1202,7 @@ void ResourceCreator::CreateLight(avs::uid server_uid, avs::uid id, const avs::N
 }
 
 #include <vkformat_enum.h>
+#include <thread>
 static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 {
 	switch (f)
@@ -1367,6 +1368,7 @@ void ResourceCreator::thread_TranscodeTextures()
 			std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 			if (!texturesToTranscode.size())
 			{
+				std::this_thread::sleep_for(10ms);
 				std::this_thread::yield();
 				continue;
 			}

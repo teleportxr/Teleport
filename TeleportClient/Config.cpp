@@ -172,6 +172,9 @@ void Config::LoadOptions()
 		options.simulateVR				= ini.GetBoolValue("", "SimulateVR", options.simulateVR);
 		options.showGeometryOffline		= ini.GetBoolValue("", "ShowGeometryOffline", options.showGeometryOffline);
 		options.mode2D					= ini.GetBoolValue("", "Mode2D", options.mode2D);
+		options.maxReconnectAttempts	= (unsigned int)ini.GetLongValue("", "MaxReconnectAttempts", options.maxReconnectAttempts);
+		options.reconnectInitialBackoffMs = (unsigned int)ini.GetLongValue("", "ReconnectInitialBackoffMs", options.reconnectInitialBackoffMs);
+		options.reconnectMaxBackoffMs	= (unsigned int)ini.GetLongValue("", "ReconnectMaxBackoffMs", options.reconnectMaxBackoffMs);
 	}
 }
 
@@ -184,6 +187,9 @@ void Config::SaveOptions()
 		str += fmt::format("\nStartupConnectOption={0}", magic_enum::enum_name(options.startupConnectOption));
 		str += fmt::format("\nSimulateVR={0}", options.simulateVR);
 		str += fmt::format("\nShowGeometryOffline={0}", options.showGeometryOffline);
+		str += fmt::format("\nMaxReconnectAttempts={0}", options.maxReconnectAttempts);
+		str += fmt::format("\nReconnectInitialBackoffMs={0}", options.reconnectInitialBackoffMs);
+		str += fmt::format("\nReconnectMaxBackoffMs={0}", options.reconnectMaxBackoffMs);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);
 		LoadOptions();

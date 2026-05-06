@@ -894,6 +894,12 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 			else
 			{
  				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
+				// Surface the drop on the public state so SessionClient can react and
+				// initiate a reconnect on its next Frame.
+				if (q_ptr()->GetStreamingConnectionState() == StreamingConnectionState::CONNECTED)
+				{
+					q_ptr()->SetStreamingConnectionState(StreamingConnectionState::DISCONNECTED);
+				}
 				return Result::Network_Disconnection;
 			}
 		}

@@ -160,6 +160,42 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cpp-httplib)
 
+# Get websocketpp (source-only fetch; not built by Teleport)
+FetchContent_Declare(
+  websocketpp
+  GIT_REPOSITORY https://github.com/zaphoyd/websocketpp.git
+  GIT_TAG        1b11fd301531e6df35a6107c1e8665b1e77a2d8e
+  SOURCE_DIR websocketpp
+)
+FetchContent_GetProperties(websocketpp)
+if(NOT websocketpp_POPULATED)
+  FetchContent_Populate(websocketpp)
+endif()
+
+# Get zlib (source-only fetch; not built by Teleport)
+FetchContent_Declare(
+  zlib
+  GIT_REPOSITORY https://github.com/madler/zlib.git
+  GIT_TAG        cacf7f1d4e3d44d871b605da3b647f07d718623f
+  SOURCE_DIR zlib
+)
+FetchContent_GetProperties(zlib)
+if(NOT zlib_POPULATED)
+  FetchContent_Populate(zlib)
+endif()
+
+# Get flecs (source files compiled into ClientRender via configure_file)
+FetchContent_Declare(
+  flecs
+  GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
+  GIT_TAG        57ad5d39e1018074a640c1ba6df94bac015f5a58
+  SOURCE_DIR flecs
+)
+FetchContent_GetProperties(flecs)
+if(NOT flecs_POPULATED)
+  FetchContent_Populate(flecs)
+endif()
+
 
 if(TELEPORT_TEST)
 	FetchContent_Declare(

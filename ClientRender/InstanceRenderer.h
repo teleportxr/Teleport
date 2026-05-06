@@ -363,6 +363,7 @@ namespace teleport
 			bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand) override;
 			bool GetHandshake(teleport::core::Handshake &handshake) override;
 			void OnVideoStreamClosed() override;
+			void OnReconnectGaveUp() override;
 			void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand) override;
 			void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions) override;
 			void SetOrigin(unsigned long long ctr, avs::uid origin_uid) override;

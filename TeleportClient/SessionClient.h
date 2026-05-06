@@ -39,6 +39,11 @@ namespace teleport
 			virtual bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand& setupCommand) = 0;
 			virtual bool GetHandshake( teleport::core::Handshake& handshake) = 0;
 			virtual void OnVideoStreamClosed() = 0;
+			//! Called when the client has exhausted its reconnection attempts after losing
+			//! the streaming connection. The implementation should tear down the local
+			//! reflection of the remote scene (geometry cache, video texture, etc.) and
+			//! stop drawing it.
+			virtual void OnReconnectGaveUp() {}
 
 			virtual void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand& reconfigureVideoCommand) = 0;
 
@@ -65,7 +70,10 @@ namespace teleport
 			OFFERING,
 			AWAITING_SETUP,
 			HANDSHAKING,
-			CONNECTED
+			CONNECTED,
+			//! The previously-CONNECTED session has dropped and the client is waiting
+			//! out a back-off period before attempting another offer to the same server.
+			RECONNECTING
 		};
 		inline const char *StringOf(ConnectionStatus s)
 		{
@@ -76,6 +84,7 @@ namespace teleport
 				case ConnectionStatus::AWAITING_SETUP	: return "AWAITING_SETUP";
 				case ConnectionStatus::HANDSHAKING		: return "HANDSHAKING";
 				case ConnectionStatus::CONNECTED		: return "CONNECTED";
+				case ConnectionStatus::RECONNECTING		: return "RECONNECTING";
 				default:
 				return "INVALID";
 			};
@@ -267,12 +276,34 @@ namespace teleport
 			//! Reset the session state when connecting to a new server, or when reconnecting without preserving the session:
 			void ResetSessionState();
 
+			//! Begin a reconnection attempt: tear down the streaming pipeline but keep
+			//! clientID/serverID/geometry cache so the server can recognise this client
+			//! as a continuation of the previous session.
+			void BeginReconnect();
+			//! Called once the maximum number of reconnection attempts has been exhausted.
+			//! Performs a full disconnect and notifies the renderer so the local reflection
+			//! of the remote scene can be torn down.
+			void GiveUpAndShutDown();
+			//! Tear down the streaming pipeline without clearing identity state. Called by
+			//! BeginReconnect; also called as part of GiveUpAndShutDown.
+			void TearDownStreamingPipeline();
+
 			std::string remoteIP;
 			std::string connected_url;
 			double mTimeSinceLastServerComm = 0;
 
 			ConnectionStatus connectionStatus = ConnectionStatus::UNCONNECTED;
 			std::chrono::microseconds session_time_us = std::chrono::microseconds(0);
+
+			//! Reconnection bookkeeping. Times use the steady clock so they advance even
+			//! while ``Frame`` is not being called (which is the case while RECONNECTING).
+			unsigned int						  reconnectAttempts = 0;
+			std::chrono::steady_clock::time_point nextReconnectTime{};
+			std::chrono::steady_clock::time_point reconnectAttemptDeadline{};
+			unsigned int						  currentReconnectBackoffMs = 0;
+			//! The previous frame's StreamingConnectionState; used to detect transitions
+			//! from CONNECTED to DISCONNECTED/FAILED/CLOSED.
+			avs::StreamingConnectionState lastStreamingState = avs::StreamingConnectionState::UNINITIALIZED;
 		};
 	}
 }
