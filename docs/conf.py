@@ -72,5 +72,8 @@ breathe_implementation_filename_extensions = []
 cpp_index_common_prefix = ['avs::','teleport::','teleport::core','teleport::server','teleport::client','teleport::clientrender']
 
 # npm install -g @mermaid-js/mermaid-cli
+import os, sys
 mermaid_output_format ='png'
-mermaid_cmd='mmdc.cmd'
+mermaid_cmd = 'mmdc.cmd' if sys.platform == 'win32' else 'mmdc'
+if os.environ.get('MERMAID_PUPPETEER_CONFIG'):
+	mermaid_params = ['-p', os.environ['MERMAID_PUPPETEER_CONFIG']]

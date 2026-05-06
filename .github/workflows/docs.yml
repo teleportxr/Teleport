@@ -18,7 +18,21 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies
-      run: sudo apt-get update -y && sudo apt-get install -y libvulkan-dev libpulse-dev libssl-dev doxygen python3-sphinx
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y \
+          libvulkan-dev libpulse-dev libssl-dev \
+          doxygen graphviz \
+          python3-sphinx python3-breathe python3-myst-parser python3-sphinxcontrib.jquery python3-pip \
+          libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libxkbcommon0 libxcomposite1 \
+          libxdamage1 libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2t64
+        python3 -m pip install --break-system-packages sphinxcontrib-mermaid
+
+    - name: Install mermaid-cli
+      run: |
+        npm install -g @mermaid-js/mermaid-cli
+        echo '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > /tmp/puppeteer-config.json
+        echo "MERMAID_PUPPETEER_CONFIG=/tmp/puppeteer-config.json" >> $GITHUB_ENV
 
     - name: Cmake
       run: cmake -B build_docs -S . -DTELEPORT_BUILD_DOCS=1 -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_X11=OFF -DTELEPORT_DOXYGEN_UNITY_INPUT_DIR=$GITHUB_WORKSPACE/firstparty/teleport-unity
