@@ -8,7 +8,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build_docs:
 
     runs-on: ubuntu-latest
 
@@ -24,7 +24,7 @@ jobs:
       run: cmake -B build_docs -S . -DTELEPORT_BUILD_DOCS=1 -DGLFW_BUILD_WAYLAND=OFF -DGLFW_BUILD_X11=OFF -DTELEPORT_DOXYGEN_UNITY_INPUT_DIR=$GITHUB_WORKSPACE/firstparty/teleport-unity
 
     - name: Make
-      run: cd build_docs; make
+      run: cmake --build build_docs --target Sphinx DoxygenUnity DoxygenUnreal -j$(nproc)
 
     - name: Deploy to teleport-docs
       if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
