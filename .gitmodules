@@ -6,7 +6,7 @@
 	url = ../efp.git
 [submodule "thirdparty/draco"]
 	path = thirdparty/draco
-	url = https://github.com/google/draco.git
+	url = https://github.com/rvkennedy/draco.git
 [submodule "firstparty/teleport-unity"]
 	path = firstparty/teleport-unity
 	url = ../teleport-unity.git
