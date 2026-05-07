@@ -25,9 +25,6 @@ Teleport is a top-level application-layer protocol. It uses three transport laye
 Simul provides reference implementations of both client and server.
 The protocol and software should be considered pre-alpha, suitable for testing, evaluation and experimentation.
 
-Connections
------------
-
 The protocol uses three concurrent connections between a client and server:
 
 +------------------------+------------------------------------------------------------+
