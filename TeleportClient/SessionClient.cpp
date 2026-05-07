@@ -447,7 +447,7 @@ void SessionClient::SendDisplayInfo(const avs::DisplayInfo &displayInfo)
 void SessionClient::TimestampMessage(teleport::core::ClientMessage &msg)
 {
 	auto ts				  = avs::Platform::getTimestamp();
-	msg.timestamp_unix_ms = (uint64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts));
+	msg.timestamp_session_us = (int64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts) * 1000.0);
 }
 
 void SessionClient::SendNodePoses(const teleport::core::Pose &headPose, const std::map<avs::uid, teleport::core::PoseDynamic> poses)
@@ -495,7 +495,7 @@ void SessionClient::SendInput(const core::Input &input)
 	teleport::core::InputStatesMessage inputStatesMessage;
 	teleport::core::InputEventsMessage inputEventsMessage;
 	auto							   ts = avs::Platform::getTimestamp();
-	inputEventsMessage.timestamp_unix_ms  = inputStatesMessage.timestamp_unix_ms;
+	inputEventsMessage.timestamp_session_us  = inputStatesMessage.timestamp_session_us;
 	// Set event amount.
 	if (input.analogueEvents.size() > 50)
 	{
@@ -1000,13 +1000,13 @@ void SessionClient::ReceivePingForLatencyCommand(const std::vector<uint8_t> &pac
 		return;
 	}
 	memcpy(static_cast<void *>(&cmd), packet.data(), commandSize);
-	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	int64_t diff_ns		 = unix_time_ns - cmd.unix_time_ns;
-	latency_milliseconds = float(double(diff_ns) * 0.000001);
+	int64_t unix_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	int64_t diff_us		 = unix_time_us - cmd.unix_time_us;
+	latency_milliseconds = float(double(diff_us) * 0.001);
 
 	core::PongForLatencyMessage pongForLatencyMessage;
-	pongForLatencyMessage.unix_time_ns				  = unix_time_ns;
-	pongForLatencyMessage.server_to_client_latency_ns = diff_ns;
+	pongForLatencyMessage.unix_time_us				  = unix_time_us;
+	pongForLatencyMessage.server_to_client_latency_us = diff_us;
 	SendMessageToServer(&pongForLatencyMessage, sizeof(pongForLatencyMessage));
 }
 

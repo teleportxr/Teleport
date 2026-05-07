@@ -614,7 +614,7 @@ namespace teleport
 
 		struct PingForLatencyCommand : public Command
 		{
-			int64_t unix_time_ns=0;
+			int64_t unix_time_us=0;
 
 			PingForLatencyCommand()
 				:Command(CommandPayloadType::PingForLatency)
@@ -631,7 +631,7 @@ namespace teleport
 		{
 			/// Specifies what type of client message this is.
 			ClientMessagePayloadType clientMessagePayloadType;
-			int64_t timestamp_unix_ms = 0;
+			int64_t timestamp_session_us = 0;
 			ClientMessage(ClientMessagePayloadType t) : clientMessagePayloadType(t) {}
 
 		} TELEPORT_PACKED;
@@ -781,8 +781,8 @@ namespace teleport
 
 		struct PongForLatencyMessage :public ClientMessage
 		{
-			int64_t unix_time_ns = 0;
-			int64_t server_to_client_latency_ns = 0;
+			int64_t unix_time_us = 0;
+			int64_t server_to_client_latency_us = 0;
 			PongForLatencyMessage()
 				:ClientMessage(ClientMessagePayloadType::PongForLatency)
 			{}

@@ -60,7 +60,7 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	// Configure for video stream, tag data stream, audio stream and geometry stream.
 	if (!source->configure(std::move(streams), 3,sourceParams))
 	{
-		TELEPORT_BREAK_ONCE("Failed to configure network source node\n");
+		TELEPORT_BREAK_ONCE("Failed to configure network source node");
 		return false;
 	}
 

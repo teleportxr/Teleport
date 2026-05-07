@@ -1,7 +1,7 @@
 #include "URLParser.h"
 #include "ErrorHandling.h"
 #include <regex>
-#include <fmt/core.h>
+#include <format>
 using std::string;
 using std::regex;
 
@@ -20,7 +20,7 @@ DomainPortPath teleport::core::GetDomainPortPath(const std::string &url)
 		string port_str = R"((?::([0-9]+)))";
 		string path_str = R"((?:\/([-a-zA-Z0-9@:%_\+~#=]+(?:\/[-a-zA-Z0-9@:%_\+~#=]+)*)\/?))";
 		string param_str = R"((?:\?([-a-zA-Z0-9@:%_\+~#=,\/.]+(?:&[-a-zA-Z0-9@:%_\+~#=,\/.]+)*)\/?))";
-		string re_str = fmt::format(R"(^{protocol_str}?{domain_str}{port_str}?{path_str}?{param_str}?)", fmt::arg("protocol_str", protocol_str), fmt::arg("domain_str", domain_str), fmt::arg("port_str", port_str), fmt::arg("path_str", path_str), fmt::arg("param_str", param_str));
+		string re_str = std::format(R"(^{0}?{1}{2}?{3}?{4}?)", protocol_str, domain_str, port_str, path_str, param_str);
 		regex re(re_str, std::regex_constants::icase);
 		std::smatch match;
 		if (std::regex_search(url, match, re))

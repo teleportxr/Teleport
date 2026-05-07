@@ -191,7 +191,7 @@ The class uses RAII principles with smart pointers for automatic resource cleanu
 
 ## Error Handling
 
-All methods return boolean success/failure indicators. Error messages are logged using the Teleport logging system (`TELEPORT_CERR`, `TELEPORT_COUT`).
+All methods return boolean success/failure indicators. Error messages are logged using the Teleport logging system (`TELEPORT_WARN`, `TELEPORT_INFO`).
 
 ## Performance Considerations
 

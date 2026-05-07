@@ -81,7 +81,7 @@ message("TELEPORT_CLIENT_USE_D3D11")
 	target_link_libraries(TeleportPCClient SimulDirectX11_MT)
 endif()
 if(TELEPORT_CLIENT_USE_VULKAN)
-	target_link_libraries(TeleportPCClient SimulVulkan_MT)
+	target_link_libraries(TeleportPCClient PlatformVulkan_MT)
     if (Vulkan_FOUND)
         target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
         target_link_libraries(${PROJECT_NAME} ${Vulkan_LIBRARIES})
@@ -109,7 +109,7 @@ endif()
 
 # Common libraries
 target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore ktx)
-target_link_libraries(TeleportPCClient Core_MT SimulCrossPlatform_MT SimulMath_MT ImGui_MT fmt::fmt-header-only)
+target_link_libraries(TeleportPCClient Core_MT PlatformCrossPlatform_MT PlatformMath_MT ImGui_MT fmt::fmt-header-only)
 target_link_libraries(TeleportPCClient LibDataChannel::LibDataChannelStatic usrsctp juice-static)
 target_compile_definitions( TeleportPCClient PUBLIC FMT_HEADER_ONLY )
 

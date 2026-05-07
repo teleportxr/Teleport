@@ -322,7 +322,7 @@ Selected command layouts
      - ``PingForLatency``
    * - 8
      - int64
-     - ``unix_time_ns`` -- the server's UTC clock when the ping was sent. The client echoes it in :ref:`PongForLatencyMessage <client_to_server>`.
+     - ``unix_time_us`` -- the server's UTC clock when the ping was sent, in microseconds. The client echoes it in :ref:`PongForLatencyMessage <client_to_server>`.
 
 .. list-table:: SetOriginNodeCommand (id = 128, acked)
    :widths: 5 14 30

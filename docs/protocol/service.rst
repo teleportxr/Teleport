@@ -94,9 +94,9 @@ All packets sent by the client over the Data Service share a common 9-byte ``Cli
 +========================+==========================+======================================+
 |      1                 | ClientMessagePayloadType | Discriminator (see below).           |
 +------------------------+--------------------------+--------------------------------------+
-|      8                 | int64                    | ``timestamp_unix_ms`` -- milliseconds|
-|                        |                          | since the *client*'s reference time  |
-|                        |                          | base (see :ref:`conventions`).       |
+|      8                 | int64                    | ``timestamp_session_us`` --          |
+|                        |                          | microseconds since the *client*'s    |
+|                        |                          | session start (see :ref:`conventions`).|
 +------------------------+--------------------------+--------------------------------------+
 |      0+                | message body             | Packed, 1-byte aligned, little-endian|
 +------------------------+--------------------------+--------------------------------------+
@@ -274,7 +274,7 @@ It is a :ref:`ClientMessage <client_message_header>` and therefore begins with t
      - ``Handshake`` (= 1).
    * - 8
      - int64
-     - ``timestamp_unix_ms`` (see :ref:`client_message_header`).
+     - ``timestamp_session_us`` (see :ref:`client_message_header`).
    * - 4
      - uint32
      - ``startDisplayInfo.width``

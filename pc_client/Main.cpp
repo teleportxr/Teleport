@@ -1064,7 +1064,7 @@ int main(int argc, char *argv[])
 	current_path = current_path.append("client").lexically_normal();
 	if (!std::filesystem::exists(current_path))
 	{
-		TELEPORT_INTERNAL_CERR("Cannot find pc_client directory");
+		TELEPORT_WARN("Cannot find pc_client directory");
 		return -1;
 	}
 	std::filesystem::current_path(current_path);

@@ -92,6 +92,8 @@ using namespace std::string_literals;
 #include "libavstream/pipeline.hpp"
 
 #include "ClientRender/AnimationInstance.h"
+#include <NodeComponents/SubSceneComponent.h>
+#include <json.hpp>
 
 #define VK_MAX 0x10
 
@@ -146,7 +148,7 @@ bool					 ImGuiBegin(const char *txt, bool *on_off, ImGuiWindowFlags flags)
 	begin_end_stack.push_back(txt);
 	if (debug_begin_end)
 	{
-		TELEPORT_CERR << "ImGuiBegin " << txt << "\n";
+		TELEPORT_WARN("ImGuiBegin {}", txt);
 	}
 	return ImGui::Begin(txt, on_off, flags);
 }
@@ -155,16 +157,16 @@ void ImGuiEnd()
 {
 	if (begin_end_stack.size() == 0)
 	{
-		TELEPORT_CERR << "Called ImGuiEnd too many times...\n";
+		TELEPORT_WARN("Called ImGuiEnd too many times...");
 		debug_begin_end = true;
 		return;
 	}
 	if (debug_begin_end)
 	{
-		TELEPORT_CERR << "ImGuiEnd " << begin_end_stack.back().c_str() << "\n";
+		TELEPORT_WARN("ImGuiEnd {}", begin_end_stack.back().c_str());
 		if (begin_end_stack.size() == 1)
 		{
-			TELEPORT_CERR << "Empty.\n";
+			TELEPORT_WARN("Empty.");
 		}
 	}
 	begin_end_stack.pop_back();
@@ -373,7 +375,7 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		int idx = fileLoader->FindIndexInPathStack(font_filename, texture_paths);
 		if (idx <= -2)
 		{
-			TELEPORT_CERR << font_filename << " not found.\nSearched in: \n";
+			TELEPORT_WARN("{} not found.\nSearched in", font_filename);
 			std::cerr << "\tWorking directory: " << std::filesystem::current_path().string() << "\n";
 			for (auto &p : texture_paths)
 			{
@@ -860,8 +862,7 @@ void Gui::OnKeyboard(unsigned wParam, bool is_key_down)
 	}
 #endif
 }
-#include <NodeComponents/SubSceneComponent.h>
-#include <json.hpp>
+
 using json = nlohmann::json;
 json j;
 void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)

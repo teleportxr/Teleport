@@ -42,24 +42,22 @@ The reference server is axis-agnostic: every server-to-client packet that contai
 Time bases
 ==========
 
-There are four distinct time bases on the wire. Implementations must keep them separate.
+There are three distinct time bases on the wire. Implementations must keep them separate.
 
 .. list-table::
-   :widths: 18 14 25
+   :widths: 18 25 25
    :header-rows: 1
 
    * - Time base
      - Where it appears
      - Meaning
-   * - UTC Unix microseconds (``int64``)
-     - ``SetupCommand.startTimestamp_utc_unix_us``
-     - Wall-clock instant when the server session began.
-   * - UTC Unix milliseconds (``int64``)
-     - 9-byte ``ClientMessage`` header
-     - Wall-clock instant the client created this message.
-   * - UTC Unix nanoseconds (``int64``)
-     - ``PingForLatencyCommand.unix_time_ns`` and the matching ``PongForLatencyMessage`` echo
-     - Used only for round-trip / one-way latency estimation; never assume sub-microsecond accuracy.
+   * - Server UTC Unix microseconds (``int64``)
+     - ``SetupCommand.startTimestamp_utc_unix_us``;
+       ``PingForLatencyCommand.unix_time_us`` and the matching ``PongForLatencyMessage`` echo
+     - The server's wall clock. Used as the session-start anchor and as the timestamp for round-trip / one-way latency estimation. The same clock in both fields, used for two different purposes.
+   * - Client session-relative microseconds (``int64``)
+     - 9-byte ``ClientMessage`` header (``timestamp_session_us``)
+     - Microseconds elapsed on the client since its local session start. Monotonic within a session; not comparable across clients or to any UTC clock.
    * - Stream ``uint32`` timestamp
      - First/last fragment of every ``NetworkPacket`` on the legacy SRT/EFP transport
      - Frame presentation time in the encoder's timebase. Not present on WebRTC SCTP messages.

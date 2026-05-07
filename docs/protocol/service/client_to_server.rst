@@ -31,7 +31,7 @@ Every client-to-server message begins with the 9-byte :cpp:struct:`teleport::cor
      - The message type (see table below).
    * - 8
      - int64
-     - ``timestamp_unix_ms`` -- the client's UTC clock when the message was constructed, in milliseconds.
+     - ``timestamp_session_us`` -- microseconds elapsed on the client since its local session start when this message was constructed.
 
 .. list-table:: ClientMessagePayloadType
    :widths: 8 30 50
@@ -297,10 +297,10 @@ Reference implementation: :cpp:struct:`teleport::core::PongForLatencyMessage`. S
      - Standard header (``PongForLatency``, timestamp).
    * - 8
      - int64
-     - ``unix_time_ns`` -- the value echoed from the matching ``PingForLatencyCommand``.
+     - ``unix_time_us`` -- the value echoed from the matching ``PingForLatencyCommand``.
    * - 8
      - int64
-     - ``server_to_client_latency_ns`` -- the client's measured one-way latency from server to client (nanoseconds).
+     - ``server_to_client_latency_us`` -- the client's measured one-way latency from server to client (microseconds).
 
 Acknowledgement (id = 12)
 =========================

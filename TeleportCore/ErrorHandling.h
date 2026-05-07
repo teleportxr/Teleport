@@ -10,17 +10,12 @@
 #include <cerrno>
 #include <assert.h>
 #include <stdexcept> // for runtime_error
+#include <format>
 
 #if TELEPORT_INTERNAL_CHECKS
 #ifdef check
 #undef TELEPORT_INTERNAL_CHECKS
 #define TELEPORT_INTERNAL_CHECKS 0
-#else
-#if __cplusplus>=202002L
-#include <format>
-#else
-#include <fmt/core.h>
-#endif
 #endif
 #endif
 #ifdef _MSC_VER
@@ -83,7 +78,7 @@ namespace teleport
 #define TELEPORT_CERR_BREAK(msg, errCode) std::cerr << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 #define TELEPORT_COUT_BREAK(msg, errCode) std::cout << __FILE__ << "(" << __LINE__ << "): " << msg << std::endl; throw(errCode);
 
-#define TELEPORT_BREAK_ONCE(msg) {TELEPORT_CERR<<msg<<std::endl;DEBUG_BREAK_ONCE}
+#define TELEPORT_BREAK_ONCE(msg) {teleport::InternalWarn( __FILE__,__LINE__, __func__, msg); DEBUG_BREAK_ONCE}
 
 #if TELEPORT_INTERNAL_CHECKS
 	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...) {teleport::InternalWarn( __FILE__,__LINE__, __func__, txt, ##__VA_ARGS__);DEBUG_BREAK_ONCE}

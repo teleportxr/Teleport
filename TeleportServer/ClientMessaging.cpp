@@ -384,7 +384,7 @@ void ClientMessaging::setNodeAnimationSpeed(avs::uid nodeID, avs::uid animationI
 void ClientMessaging::pingForLatency()
 {
 	teleport::core::PingForLatencyCommand pingForLatencyCommand;
-	pingForLatencyCommand.unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	pingForLatencyCommand.unix_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	if (sendCommand(pingForLatencyCommand) > 1)
 	{
 		TELEPORT_WARN_NOSPAM("Pinging on queue.\n");
@@ -781,13 +781,13 @@ void ClientMessaging::receivePongForLatency(const std::vector<uint8_t>& packet)
 		TELEPORT_INTERNAL_COUT("Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "");
 		return;
 	}
-	int64_t unix_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	int64_t unix_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	core::PongForLatencyMessage msg;
 	memcpy(&msg, packet.data() , sizeof(core::PongForLatencyMessage));
-	int64_t diff_ns = unix_time_ns - msg.unix_time_ns;
+	int64_t diff_us = unix_time_us - msg.unix_time_us;
 
-	clientNetworkState.client_to_server_latency_ms = float(double(diff_ns) * 0.000001);
-	clientNetworkState.server_to_client_latency_ms= float(double(msg.server_to_client_latency_ns) * 0.000001);
+	clientNetworkState.client_to_server_latency_ms = float(double(diff_us) * 0.001);
+	clientNetworkState.server_to_client_latency_ms= float(double(msg.server_to_client_latency_us) * 0.001);
 }
 
 void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)

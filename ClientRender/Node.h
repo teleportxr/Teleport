@@ -188,7 +188,7 @@ namespace teleport
 			{
 				if (index >= materials.size() || index < 0)
 				{
-					TELEPORT_CERR << "Failed to set material at index " << index << "! Index not valid for material list of size " << materials.size() << " in node \"" << name.c_str() << "\"(Node_" << id << ")!\n";
+					TELEPORT_WARN("Failed to set material at index {}! Index not valid for material list of size {} in node \"{}\"(Node_{})!",index, materials.size(), name.c_str(), id) ;
 				}
 				else
 				{
@@ -199,7 +199,7 @@ namespace teleport
 			{
 				if (index >= materials.size() || index < 0)
 				{
-					TELEPORT_CERR << "Failed to get material at index " << index << "! Index not valid for material list of size " << materials.size() << " in node \"" << name.c_str() << "\"(Node_" << id << ")!\n";
+					TELEPORT_WARN("Failed to get material at index {}! Index not valid for material list of size {} in node \"{}\"(Node_{})!",index, materials.size(), name.c_str(), id) ;
 					return nullptr;
 				}
 
