@@ -22,7 +22,7 @@ Teleport is a top-level application-layer protocol. It uses three transport laye
      - Standard network layers
 
 
-Simul provides reference implementations of both client and server.
+Teleport XR Ltd provides reference implementations of both client and server.
 The protocol and software should be considered pre-alpha, suitable for testing, evaluation and experimentation.
 
 The protocol uses three concurrent connections between a client and server:

@@ -40,6 +40,14 @@ jobs:
     - name: Make
       run: cmake --build build_docs --target Sphinx DoxygenUnity DoxygenUnreal -j$(nproc)
 
+    - name: Preserve CNAME from teleport-docs
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/teleportxr/teleport-docs/main/CNAME \
+          -o ./build_docs/docs/sphinx/CNAME \
+          && echo "CNAME preserved." \
+          || echo "No CNAME found in teleport-docs; skipping."
+
     - name: Deploy to teleport-docs
       if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       uses: peaceiris/actions-gh-pages@v4
