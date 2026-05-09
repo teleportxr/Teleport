@@ -1163,7 +1163,18 @@ int main(int argc, char *argv[])
 			{
 				int fbw = 0, fbh = 0;
 				glfwGetFramebufferSize(g_window, &fbw, &fbh);
-				if (fbw > 0 && fbh > 0) clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
+				if (fbw > 0 && fbh > 0)
+				{
+					// Linux equivalent of GetClientRect: feed the GLFW framebuffer size into
+					// the DisplaySurface so InitSwapChain/CreateFramebuffers see a valid extent
+					// even before the window has been mapped/realized (when surface caps may
+					// still report 0x0 or VK_KHR's "undefined" sentinel).
+					w->viewport.x = 0;
+					w->viewport.y = 0;
+					w->viewport.w = fbw;
+					w->viewport.h = fbh;
+					clientRenderer->ResizeView(0, fbw, fbh);
+				}
 			}
 			clientRenderer->OnFrameMove(fTime, time_step);
 			fTime += time_step;

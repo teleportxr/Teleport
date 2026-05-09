@@ -45,6 +45,9 @@ namespace teleport
 			//! Maximum back-off (in milliseconds) between reconnection attempts. The back-off
 			//! doubles after each failed attempt and is clamped to this value.
 			unsigned int reconnectMaxBackoffMs = 4000;
+			//! Font size used by the 2D user interface. Must match one of the sizes baked
+			//! into the ImGui font atlas (currently 12 or 18).
+			unsigned int uiFontSize = 18;
 		};
 		struct DebugOptions
 		{

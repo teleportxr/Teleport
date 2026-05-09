@@ -110,6 +110,21 @@ std::map<int, ImFont *> fontInter;
 #define STR_VECTOR4 "%3.3f %3.3f %3.3f %3.3f"
 PlatformWindow *platformWindow = nullptr;
 
+//! Returns the ImFont matching the user's selected UI font size, falling back
+//! to size 18 (and then to defaultFont) if the requested size is not baked
+//! into the font atlas.
+static ImFont *GetUIFont()
+{
+	const auto &config = teleport::client::Config::GetInstance();
+	auto		it	   = fontInter.find((int)config.options.uiFontSize);
+	if (it != fontInter.end())
+		return it->second;
+	auto fb = fontInter.find(18);
+	if (fb != fontInter.end())
+		return fb->second;
+	return defaultFont;
+}
+
 bool			Gui::url_input = false;
 
 #define TIMED_TOOLTIP(...)                                                                                                                                     \
@@ -922,7 +937,7 @@ void Gui::OverlayMenu(GraphicsDeviceContext &deviceContext)
 	ImGui::SetNextWindowSizeConstraints(size, size);
 	ImGui::SetNextWindowSize(size);
 
-	ImGui::PushFont(fontInter[18]);
+	ImGui::PushFont(GetUIFont());
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	try
 	{
@@ -1100,7 +1115,7 @@ void Gui::BeginDebugGui(GraphicsDeviceContext &deviceContext)
 	{
 		return;
 	}
-	ImGui::PushFont(fontInter[18]);
+	ImGui::PushFont(GetUIFont());
 	if (ImGuiBegin("Teleport XR", nullptr, window_flags))
 	{
 		in_debug_gui++;
@@ -2746,7 +2761,7 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	ImGui_ImplPlatform_SetMousePos((int)((0.5f + mouse.x) * float(vp.w)), (int)((0.5f - mouse.y) * float(vp.h)), vp.w, vp.h);
 	ImGui_ImplPlatform_SetMouseDown(0, mouseButtons[0]);
 #endif
-	ImGui::PushFont(fontInter[18]);
+	ImGui::PushFont(GetUIFont());
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
 									ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 

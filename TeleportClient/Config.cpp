@@ -175,6 +175,9 @@ void Config::LoadOptions()
 		options.maxReconnectAttempts	= (unsigned int)ini.GetLongValue("", "MaxReconnectAttempts", options.maxReconnectAttempts);
 		options.reconnectInitialBackoffMs = (unsigned int)ini.GetLongValue("", "ReconnectInitialBackoffMs", options.reconnectInitialBackoffMs);
 		options.reconnectMaxBackoffMs	= (unsigned int)ini.GetLongValue("", "ReconnectMaxBackoffMs", options.reconnectMaxBackoffMs);
+		options.uiFontSize				= (unsigned int)ini.GetLongValue("", "UIFontSize", options.uiFontSize);
+		if (options.uiFontSize != 12 && options.uiFontSize != 18)
+			options.uiFontSize = 18;
 	}
 }
 
@@ -190,6 +193,7 @@ void Config::SaveOptions()
 		str += fmt::format("\nMaxReconnectAttempts={0}", options.maxReconnectAttempts);
 		str += fmt::format("\nReconnectInitialBackoffMs={0}", options.reconnectInitialBackoffMs);
 		str += fmt::format("\nReconnectMaxBackoffMs={0}", options.reconnectMaxBackoffMs);
+		str += fmt::format("\nUIFontSize={0}", options.uiFontSize);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);
 		LoadOptions();
