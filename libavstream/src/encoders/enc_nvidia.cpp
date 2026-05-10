@@ -649,7 +649,8 @@ namespace avs
 			inputBufferHeight = (size_t)surface->getHeight() + (surface->getHeight() + 1) / 2;
 			break;
 		default:
-			assert(false);
+			AVSLOG(Error) << "EncoderNV: unsupported NV_ENC_BUFFER_FORMAT " << static_cast<int>(m_inputData.format);
+			return Result::Node_InvalidConfiguration;
 		}
 
 		for (int i = 0; i < m_numBuffers; ++i)

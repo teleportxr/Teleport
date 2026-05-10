@@ -328,14 +328,16 @@ Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)
 			}
 			if (numBytesRead >stream.buffer.size())
 			{
-				assert(false);
+				AVSLOG(Error) << "WebRtcNetworkSink: read returned " << numBytesRead
+				              << " bytes, exceeding buffer size " << stream.buffer.size();
 				return Result::Failed;
 			}
 			return result;
 		}
 		else
 		{
-			assert(false);
+			AVSLOG(Error) << "WebRtcNetworkSink: input node " << static_cast<int>(inputNodeIndex)
+			              << " does not implement IOInterface";
 			return Result::Node_Incompatible;
 		}
 	};

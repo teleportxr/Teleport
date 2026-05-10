@@ -532,8 +532,8 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 		else
 		{
-			assert(false);
-			return Result::Node_Incompatible;
+			AVSLOG(Error) << "WebRtcNetworkSource: no IOInterface for input " << static_cast<int>(inputNodeIndex);
+			return Result::Node_NotConfigured;
 		}
 	};
 	bool disconnected=false;

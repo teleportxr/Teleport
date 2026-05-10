@@ -75,7 +75,7 @@ namespace avs {
 			}
 			else
 			{
-				assert(false);
+				AVSLOG(Error) << "Forwarder: input node does not implement IOInterface";
 				return Result::Node_Incompatible;
 			}
 		};
@@ -92,7 +92,7 @@ namespace avs {
 			}
 			else
 			{
-				assert(false);
+				AVSLOG(Error) << "Forwarder: output node does not implement IOInterface";
 				return Result::Node_Incompatible;
 			}
 		};

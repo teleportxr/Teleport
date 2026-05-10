@@ -111,7 +111,8 @@ Result Decoder::configure(const DeviceHandle& device, int frameWidth, int frameH
 		m_parser.reset(new NALUParser_H265);
 		break;
 	default:
-		assert(false);
+		AVSLOG(Error) << "Decoder: unsupported VideoCodec " << static_cast<int>(params.codec);
+		return Result::DecoderBackend_CodecNotSupported;
 	}
 
 	// Create and configure video parser

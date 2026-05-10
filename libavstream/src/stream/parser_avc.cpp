@@ -33,7 +33,8 @@ namespace avs
 			m_parser.reset(new NALUParser_H265);
 			break;
 		default:
-			assert(false);
+			AVSLOG(Error) << "StreamParserAVC: unsupported VideoCodec " << static_cast<int>(m_codec);
+			return Result::DecoderBackend_CodecNotSupported;
 		}
 
 		return Result::OK;

@@ -379,6 +379,11 @@ void SessionClient::ReceiveCommand(const std::vector<uint8_t> &buffer)
 
 void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
 {
+	if (packet.size() < sizeof(teleport::core::CommandPayloadType))
+	{
+		TELEPORT_INTERNAL_CERR("Truncated command packet ({0} bytes)", packet.size());
+		return;
+	}
 	teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<const teleport::core::CommandPayloadType *>(packet.data()));
 	switch (commandPayloadType)
 	{
