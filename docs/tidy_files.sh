@@ -19,7 +19,7 @@ while IFS= read -r -d '' file; do
     target="${file%.html}.new"
     echo "$file"
     echo "call $TIDY $file > $target"
-    "$TIDY" "$file" > "$target" || true
+    "$TIDY" -q "$file" > "$target" || true
 done < <(find . -type f -name '*.html' -print0)
 
 while IFS= read -r -d '' new; do

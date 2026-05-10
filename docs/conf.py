@@ -29,7 +29,7 @@ author = 'Roderick Kennedy'
 # ones.
 extensions = [ "breathe","myst_parser","sphinxcontrib.mermaid", "sphinx.ext.graphviz","sphinxcontrib.jquery"]
 
-mermaid1_output_format='png'
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -77,7 +77,7 @@ cpp_id_attributes = ['AVSTREAM_API', 'TELEPORT_SERVER_API']
 
 # npm install -g @mermaid-js/mermaid-cli
 import os, sys
-mermaid_output_format ='png'
+mermaid_output_format = 'svg'
 mermaid_cmd = 'mmdc.cmd' if sys.platform == 'win32' else 'mmdc'
 if os.environ.get('MERMAID_PUPPETEER_CONFIG'):
 	mermaid_params = ['-p', os.environ['MERMAID_PUPPETEER_CONFIG']]

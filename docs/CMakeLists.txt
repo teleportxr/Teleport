@@ -8,7 +8,8 @@ set(pc_client_HEADER_DIRS ${TELEPORT_ROOT_DIR}/pc_client)
 set(AndroidClient_HEADER_DIRS ${TELEPORT_ROOT_DIR}/AndroidClient)
 #message("pc_client_HEADER_DIRS ${pc_client_HEADER_DIRS}")
 set(AV ${TELEPORT_ROOT_DIR}/libavstream/include/libavstream)
-set(libavstream_HEADER_DIRS ${AV} ${AV}/audio ${AV}/decoders ${AV}/encoders ${AV}/geometry ${AV}/network ${AV}/platforms ${AV}/stream ${AV}/surfaces)
+set(AV_EXPORT ${TELEPORT_ROOT_DIR}/libavstream/export_include/libavstream)
+set(libavstream_HEADER_DIRS ${AV} ${AV}/audio ${AV}/decoders ${AV}/encoders ${AV}/geometry ${AV}/network ${AV}/platforms ${AV}/stream ${AV}/surfaces ${AV_EXPORT})
 
 set(teleportclient_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportClient)
 set(teleportcore_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportCore ${TELEPORT_ROOT_DIR}/TeleportCore/export_include/TeleportCore)
@@ -92,6 +93,28 @@ set(FIND_DOXYGEN_OUTPUTS ${FIND_DOXYGEN_OUTPUTS} -Dbreathe_projects.TeleportUnit
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../firstparty/Platform/CMake" ${CMAKE_MODULE_PATH})
 find_package(Sphinx REQUIRED)
+
+# Find Chrome/Chromium for Mermaid SVG rendering via Puppeteer
+find_program(CHROME_EXECUTABLE
+    NAMES google-chrome google-chrome-stable chromium-browser chromium chrome
+    HINTS
+        "C:/Program Files/Google/Chrome/Application"
+        "C:/Program Files (x86)/Google/Chrome/Application"
+        "/Applications/Google Chrome.app/Contents/MacOS"
+    DOC "Chrome/Chromium browser used by mmdc (Mermaid CLI) to render diagrams"
+)
+if(CHROME_EXECUTABLE)
+    message(STATUS "Mermaid: using Chrome at ${CHROME_EXECUTABLE}")
+    # Puppeteer expects forward slashes even on Windows
+    cmake_path(CONVERT "${CHROME_EXECUTABLE}" TO_CMAKE_PATH_LIST CHROME_EXECUTABLE_FWD NORMALIZE)
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/puppeteer-config.json"
+        "{\n  \"executablePath\": \"${CHROME_EXECUTABLE_FWD}\"\n}\n")
+    set(MERMAID_PUPPETEER_ENV
+        "MERMAID_PUPPETEER_CONFIG=${CMAKE_CURRENT_BINARY_DIR}/puppeteer-config.json")
+else()
+    message(WARNING "Mermaid: Chrome/Chromium not found -- diagrams may not render")
+    set(MERMAID_PUPPETEER_ENV "")
+endif()
 set(SPHINX_SOURCE ${CMAKE_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/sphinx) #Sphinx won't create this for us
@@ -124,6 +147,7 @@ set(RST_FILES ${RST_ROOT_FILES} ${RST_DOCS_FILES} ${RST_REF_FILES} ${RST_PROTOCO
 set(ALL_RST_FILES ${RST_FILES} ${THEME_FILES} ${THEME_CSS_FILES} ${PY_FILES})
 add_custom_target(Sphinx ALL
 					COMMAND
+					${CMAKE_COMMAND} -E env ${MERMAID_PUPPETEER_ENV}
 					${SPHINX_EXECUTABLE} -b html -c${CMAKE_CURRENT_SOURCE_DIR}
 					# Tell Breathe where to find the Doxygen output
 					${FIND_DOXYGEN_OUTPUTS}

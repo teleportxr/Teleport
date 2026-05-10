@@ -29,7 +29,7 @@ object to point to the Default Teleport Render Pipeline, found in Teleport/Resou
 
 For global settings for the plugin, in the Project Settings panel, select *Teleport*.
 
-.. image:: /images/unreal/ProjectSettings.png
+.. image:: /docs/images/unreal/ProjectSettings.png
   :width: 600
   :alt: Teleport has a page on the Project Settings panel.
 
@@ -39,13 +39,13 @@ Resource Management
 ===================
 Resources in a Unreal project can be streamed to clients if they have been *extracted* - i.e. if they have been converted to and stored in, the standard formats that the Teleport protocol uses.
 
-.. image:: /images/Unreal/TeleportMenu.png
+.. image:: /docs/images/unreal/TeleportMenu.png
   :width: 600
   :alt: Selecting the Resource Manager option in the Teleport Menu.
 
 Select the "Teleport" menu from Unreal Editor's menu bar, and click on "Resource Manager". The Resource Manager window will open.
 
-.. image:: /images/Unreal/ResourceManager.png
+.. image:: /docs/images/unreal/ResourceManager.png
   :width: 600
   :alt: Teleport Resource Manager in the Unreal Editor.
 
@@ -74,7 +74,7 @@ Inputs
 To show the Inputs Panel, select Inputs from the Teleport menu on the main menu bar.
 Here, you can specify the inputs you want to receive from connected clients.
 
-.. image:: /images/Unreal/InputsPanel.png
+.. image:: /docs/images/unreal/InputsPanel.png
   :width: 600
   :alt: Teleport has a page on the Project Settings panel.
 
@@ -126,7 +126,7 @@ Pose Mapping
 ------------
 XR devices such as headsets, handsets and trackers report their state as a "pose", containing position and orientation in space. These poses can be mapped to spatial nodes using the Teleport Controller component in Unreal.
 
-.. image:: /images/Unreal/TeleportController.png
+.. image:: /docs/images/unreal/TeleportController.png
   :width: 600
   :alt: Inspector properties of a teleport Controller component.
 
@@ -139,7 +139,7 @@ Player Session Hierarchy
 
 Typically, the Unreal Game Objects would be arranged as follows in Unreal:
 
-.. image:: /images/Unreal/PlayerHierarchy.png
+.. image:: /docs/images/unreal/PlayerHierarchy.png
   :alt: Example player prefab hierarchy.
   :width: 400
 
