@@ -159,38 +159,30 @@ SDK Reference
 ===============
 
 Global
-~~~~~~
+------
 
- doxygenclass:: teleport::TeleportSettings
-	project: TeleportUnreal
-	members:
+.. doxygenclass:: UTeleportSettings
+	:project: TeleportUnreal
+	:members:
 
 Singleton Components
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
-.. doxygenclass:: teleport::Monitor
+.. doxygenclass:: ATeleportMonitor
 	:project: TeleportUnreal
 	:members:
 
-.. doxygenclass:: teleport::TagHandler
-	:project: TeleportUnreal
-	:members:
-	
-.. doxygenclass:: teleport::Teleport_SessionComponent
+.. doxygenclass:: UTeleportSessionComponent
 	:project: TeleportUnreal
 	:members:
 
 Components
-~~~~~~~~~~
+----------
 
-.. doxygenclass:: teleport::StreamableRoot
+.. doxygenclass:: UStreamableRootComponent
 	:project: TeleportUnreal
 	:members:
 
-.. doxygenclass:: teleport::StreamableNode
-	:project: TeleportUnreal
-	:members:
-
-.. doxygenclass:: teleport::StreamableProperties
+.. doxygenclass:: UStreamableNode
 	:project: TeleportUnreal
 	:members:

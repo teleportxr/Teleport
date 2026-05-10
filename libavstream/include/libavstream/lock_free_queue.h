@@ -49,13 +49,12 @@ namespace avs
 
 		/*!
 		 * Configure queue.
-		 * \param maxBufferSize Maximum size of a buffer in the queue.
-		 * \param maxBuffers Maximum number of buffers in the queue.
+		 * \param ringBufferSizeBytes Size of the ring buffer in bytes.
 		 * \param name Name of the node.
 		 * \warning Reconfiguring an already configured Queue performs an implicit flush.
-		 * \return 
+		 * \return
 		 *  - Result::OK on success.
-		 *  - Result::Node_InvalidConfiguration if maxBuffers is zero.
+		 *  - Result::Node_InvalidConfiguration if ringBufferSizeBytes is zero.
 		 */
 		Result configure(size_t ringBufferSizeBytes, const char *name);
 

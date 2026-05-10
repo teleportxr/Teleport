@@ -89,19 +89,20 @@ Message packets (client-to-server)
 
 All packets sent by the client over the Data Service share a common 9-byte ``ClientMessage`` header. The ``Handshake`` (described below) is the only client message sent over the **signaling** WebSocket; every other client message is sent over the **reliable** channel (id 100) or the **unreliable** channel (id 120).
 
-+------------------------+--------------------------+--------------------------------------+
-|          bytes         |        type              |    description                       |
-+========================+==========================+======================================+
-|      1                 | ClientMessagePayloadType | Discriminator (see below).           |
-+------------------------+--------------------------+--------------------------------------+
-|      8                 | int64                    | ``timestamp_session_us`` --          |
-|                        |                          | microseconds since the *client*'s    |
-|                        |                          | session start (see :ref:`conventions`).|
-+------------------------+--------------------------+--------------------------------------+
-|      0+                | message body             | Packed, 1-byte aligned, little-endian|
-+------------------------+--------------------------+--------------------------------------+
-|      0+                | appended data            | Optional, message-specific.          |
-+------------------------+--------------------------+--------------------------------------+
++------------------------+--------------------------+-----------------------------------------+
+|          bytes         |        type              |    description                          |
++========================+==========================+=========================================+
+|      1                 | ClientMessagePayloadType | Discriminator (see below).              |
++------------------------+--------------------------+-----------------------------------------+
+|      8                 | int64                    | ``timestamp_session_us`` --             |
+|                        |                          | microseconds since the *client*'s       |
+|                        |                          | note: in instantiation                  |
+|                        |                          | session start (see :ref:`conventions`). |
++------------------------+--------------------------+-----------------------------------------+
+|      0+                | message body             | Packed, 1-byte aligned, little-endian   |
++------------------------+--------------------------+-----------------------------------------+
+|      0+                | appended data            | Optional, message-specific.             |
++------------------------+--------------------------+-----------------------------------------+
 
 The full client-to-server message catalogue is in :doc:`service/client_to_server`.
 

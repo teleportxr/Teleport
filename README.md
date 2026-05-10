@@ -99,6 +99,7 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 - Third-party: Draco compression, FreeType fonts, OpenSSL, FLEX/Bison
 - Linux: GLFW dependencies: https://www.glfw.org/docs/latest/compile_guide.html#compile_deps_wayland
 - Linux: PulseAudio for audio (sudo apt install libpulse-dev)
+    libsecret-1-dev
 
 ### Linux Dependencies - Debian
 
@@ -212,7 +213,9 @@ The UE4 plugin is not currently functional, it will be updated in 2024.
 
 1. Install Doxygen.
 2. Install Python.
-3. Install the following Python packages:
+3. Install html tidy (https://binaries.html-tidy.org/ or sudo apt install tidy)
+4. Install mermaid cli 	npm install -g @mermaid-js/mermaid-cli (./node_modules/.bin/mmdc)
+4. Install the following Python packages:
 
     pip install sphinx
     pip install breathe
@@ -220,11 +223,11 @@ The UE4 plugin is not currently functional, it will be updated in 2024.
     pip install sphinxcontrib.mermaid
     pip install sphinxcontrib.jquery
 
-4. In CMakeGUI, enable TELEPORT_BUILD_DOCS.
+5. In CMakeGUI, enable TELEPORT_BUILD_DOCS.
 
     This adds the projects "doxygen" and "sphinx" to the Visual Studio solution.
 
-5. Build the projects: this installs the html documentation to [BUILD_FOLDER]/docs/sphinx/index.html
+6. Build the projects: this installs the html documentation to [BUILD_FOLDER]/docs/sphinx/index.html
 
 ## Firewall setup
 1. Go to Windows Security->Firewall & Network->Advanced Settings.

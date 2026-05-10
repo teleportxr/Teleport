@@ -12,7 +12,7 @@
 #include "TeleportCore/Logging.h"
 #include "ThisPlatform/Threads.h"
 #include "draco/compression/decode.h"
-#include <fmt/core.h>
+#include <format>
 #include <fstream>
 #include <ktx.h>
 #include <ktx/lib/gl_format.h>
@@ -742,7 +742,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 		std::string texlist;
 		for (auto t_uid : incompleteMaterial->missingTextureUids)
 		{
-			texlist += fmt::format("{0},", t_uid);
+			texlist += std::format("{0},", t_uid);
 		}
 		TELEPORT_INTERNAL_COUT("CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.",
 							   id,
@@ -1450,7 +1450,7 @@ void ResourceCreator::thread_TranscodeTextures()
 				{
 					// Convert from Png to raw data:
 #if TELEPORT_INTERNAL_CHECKS
-					std::ofstream ofs(fmt::format("temp/{0}_{1}.png", transcoding->name, i).c_str(), std::ios::binary);
+					std::ofstream ofs(std::format("temp/{0}_{1}.png", transcoding->name, i).c_str(), std::ios::binary);
 					ofs.write(((char *)basePtr + imageOffsets[i]), (size_t)imageSizes[i]);
 #endif
 					int num_channels = 0;

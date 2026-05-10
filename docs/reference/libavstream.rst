@@ -18,5 +18,6 @@ LibAVStream EFP over WebRTC for data stream reliability and deliverability.
 
 Namespace
 ---------
+
 .. doxygennamespace :: avs
 

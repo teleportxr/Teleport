@@ -1,8 +1,0 @@
-A: teleportvr.io: 176.74.19.166 - Calland?
-
-Cpanel:
-Url: https://lrs2.layerip.com:2083/
-User: teleportvr
-PW: Ur#8N*p8jxE#UsTHr&72*R8Kvjp\
-
-ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAj7WsuvjkCko2vxzzBl1uUQp5etwFKvbAyn0ut22FBZMTFyYbi1Ml/vRUmpwFwoL4b+Kepnziq4eT8Y1rLVbjkOl8LWRd9aqg3GNXoFvxk1Haj5k5k4M92MBoEHINR1O+mblqFcdAwqgIj1ris7JfjZmfuw9HpGC38jQ/8cluGaIrpOJbw2x49hM4tZ3TBLCsMjbL/ridIcmpOo8vQ14MvgEsaoyYtjT6l8HRAeBLGUerv6DJGaynM9qM5oJYMxmIec1MhaNtPuNiNboRcDMEEA+KprdNg+EaKquRpARlnVYpEmQyrsFLvcjXPbtSGqYoIhCKp8F/CwehiqbVVV9VYQ==

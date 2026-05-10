@@ -35,7 +35,7 @@ Finally, we start are own thread, calling ``processBuffersOnThread()``, to proce
 
 Below is a flow chart showing the creation of the AMediaCodec.
 
-.. image:: /images/reference/AMediaCodecSetUp.png
+.. image:: /docs/images/reference/AMediaCodecSetUp.png
   :width: 800
   :alt: AMediaCodec Set Up.
 
@@ -49,6 +49,6 @@ Of primary interest from the ``AMediaCodec`` perspective is the functions ``onAs
 
 The final step happens in ``onAsyncImageAvailable()``, where the decoded image from the ``AMediaCodec`` is passed to the ``AImageReader`` for us to process into a ``VkImage``. See :ref:`video_vulkan_android_import_and_ycbcr`.
 
-.. image:: /images/reference/AMediaCodecAndAImageReaderVideoDecoding.png
+.. image:: /docs/images/reference/AMediaCodecAndAImageReaderVideoDecoding.png
   :width: 800
   :alt: AMediaCodec and AImageReader Video Decoding.

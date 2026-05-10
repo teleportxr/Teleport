@@ -30,7 +30,7 @@
 #if __cplusplus>=202002L
 #include <format>
 #else
-#include <fmt/core.h>
+#include <format>
 #endif
 
 using namespace teleport;
@@ -740,7 +740,7 @@ TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t
 #if __cplusplus>=202002L
 	std::string msg=std::format("Textures Remaining {} ",num);
 #else
-	std::string msg=fmt::format("Textures Remaining {} ",num);
+	std::string msg=std::format("Textures Remaining {} ",num);
 #endif
 	auto nextt= GeometryStore::GetInstance().getNextTextureToCompress();
 	if (nextt.name.length())
@@ -750,7 +750,7 @@ TELEPORT_EXPORT bool Server_GetMessageForNextCompressedTexture(char *str, size_t
 	#if __cplusplus>=202002L
 		msg+=std::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
 	#else
-		msg+=fmt::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
+		msg+=std::format("Compressing texture {0} ({1},{2}): {3:02d} %",nextt.name,nextt.width,nextt.height,(int)prog);
 	#endif
 	}
 	size_t sz=std::min(len-1, msg.length());

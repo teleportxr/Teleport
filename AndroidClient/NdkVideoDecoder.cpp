@@ -9,7 +9,7 @@
 #include <Platform/Vulkan/EffectPass.h>
 #include <Platform/Vulkan/RenderPlatform.h>
 #include <TeleportCore/ErrorHandling.h>
-#include <fmt/core.h>
+#include <format>
 #include <magic_enum/magic_enum.hpp>
 
 #include <iostream>
@@ -42,10 +42,10 @@ void BitwiseDecrement(std::atomic<_Ty>& status, const _Ty& value)
 
 #if NDK_VIDEO_DECODER_LOG
 #define NDK_VIDEO_DECODER_LOG_MSG_COUT(msg) { TELEPORT_INTERNAL_COUT("NdkVideoDecoder - {}", msg); }
-#define NDK_VIDEO_DECODER_LOG_FMT_COUT(msg, ...) NDK_VIDEO_DECODER_LOG_MSG_COUT(fmt::format(msg, __VA_ARGS__))
+#define NDK_VIDEO_DECODER_LOG_FMT_COUT(msg, ...) NDK_VIDEO_DECODER_LOG_MSG_COUT(std::format(msg, __VA_ARGS__))
 
 #define NDK_VIDEO_DECODER_LOG_MSG_CERR(msg) { TELEPORT_INTERNAL_CERR("NdkVideoDecoder - {}", msg); }
-#define NDK_VIDEO_DECODER_LOG_FMT_CERR(msg, ...) NDK_VIDEO_DECODER_LOG_MSG_CERR(fmt::format(msg, __VA_ARGS__))
+#define NDK_VIDEO_DECODER_LOG_FMT_CERR(msg, ...) NDK_VIDEO_DECODER_LOG_MSG_CERR(std::format(msg, __VA_ARGS__))
 #else
 #define NDK_VIDEO_DECODER_LOG_MSG_COUT(msg)
 #define NDK_VIDEO_DECODER_LOG_FMT_COUT(msg, ...)
@@ -227,7 +227,7 @@ void NdkVideoDecoder::Initialize(platform::crossplatform::RenderPlatform* p, pla
 	//Set up reflected textures
 	reflectedTextures.resize(maxImages);
 	for (int i = 0; i < maxImages; i++)
-		reflectedTextures[i].sourceTexture = (platform::vulkan::Texture*)renderPlatform->CreateTexture(fmt::format("video source {0}", i).c_str());
+		reflectedTextures[i].sourceTexture = (platform::vulkan::Texture*)renderPlatform->CreateTexture(std::format("video source {0}", i).c_str());
 	
 	//Set up ImageListener and onImageAvailable callback
 	static AImageReader_ImageListener imageListener;
@@ -557,7 +557,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	imageCI.pQueueFamilyIndices = nullptr;
 	imageCI.initialLayout = vk::ImageLayout::eUndefined;
 	VK_CHECK(vulkanDevice->createImage(&imageCI, nullptr, &reflectedTexture.videoSourceVkImage));
-	platform::vulkan::SetVulkanName(ndkVideoDecoder->renderPlatform, reflectedTexture.videoSourceVkImage, fmt::format("NdkVideoDecoder: VideoSource {}: VkImage", ndkVideoDecoder->reflectedTextureIndex));
+	platform::vulkan::SetVulkanName(ndkVideoDecoder->renderPlatform, reflectedTexture.videoSourceVkImage, std::format("NdkVideoDecoder: VideoSource {}: VkImage", ndkVideoDecoder->reflectedTextureIndex));
 	
 
 	//Set up MemoryDedicatedAllocateInfo and ImportAndroidHardwareBufferInfoANDROID - Required for AHB images.
@@ -576,7 +576,7 @@ void NdkVideoDecoder::onAsyncImageAvailable(void* context, AImageReader* reader)
 	
 	//Allocate the memory within Vulkan.
 	VK_CHECK(vulkanDevice->allocateMemory(&mem_alloc_info, nullptr, &reflectedTexture.videoSourceVkDeviceMemory));
-	platform::vulkan::SetVulkanName(ndkVideoDecoder->renderPlatform, reflectedTexture.videoSourceVkDeviceMemory, fmt::format("NdkVideoDecoder: VideoSource {}: VkDeviceMemory", ndkVideoDecoder->reflectedTextureIndex));
+	platform::vulkan::SetVulkanName(ndkVideoDecoder->renderPlatform, reflectedTexture.videoSourceVkDeviceMemory, std::format("NdkVideoDecoder: VideoSource {}: VkDeviceMemory", ndkVideoDecoder->reflectedTextureIndex));
 	
 	//Bind the back memory to the Image
 	//Dedicated memory bindings require offset 0.

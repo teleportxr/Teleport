@@ -38,8 +38,8 @@ namespace teleport
 			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate, avs::uid root_uid);
 
 			//! @brief Update all animations, given the current timestamp, which is the time in microseconds since the server's datum timestamp.
-			//! @param boneList 
-			//! @param timestampUs 
+			//! @param timestampUs Time in microseconds since the server's datum timestamp.
+			//! @param root_uid UID of the root node.
 			bool update( int64_t timestampUs, avs::uid root_uid);
 
 			std::shared_ptr<AnimationInstance> GetOrCreateAnimationInstance(avs::uid root_uid);

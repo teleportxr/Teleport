@@ -4,7 +4,7 @@
 #include <libavstream/lock_free_queue.h>
 #include <libavstream/pipeline.hpp>
 #include <utility>
-#include <fmt/core.h>
+#include <format>
 #include <random>
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput d;
@@ -80,7 +80,7 @@ TEST_CASE( "Lock-Free Queue", "[lfq]" ) {
     consumerThread->join();
     for(int i=0;i<test_blocks.size()&&i<blocks.size();i++)
     {
-        string str=fmt::format("Test block {0}",i);
+        string str=std::format("Test block {0}",i);
         INFO( str );
         REQUIRE(test_blocks[i]==blocks[i]);
         

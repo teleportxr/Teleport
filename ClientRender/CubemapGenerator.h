@@ -37,6 +37,7 @@ namespace teleport
 								 float timeSeconds = 0.0f);
 
 			/// Save the generated cubemap to an HDR file as a cubemap cross
+			/// @param deviceContext Graphics device context
 			/// @param filename Path where to save the HDR file
 			/// @return True if save was successful
 			bool SaveToHDR(platform::crossplatform::GraphicsDeviceContext &deviceContext, const std::string& filename);

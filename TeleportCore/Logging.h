@@ -3,11 +3,7 @@
 #include <string.h>
 #include <iostream>
 
-#if __cplusplus>=202002L
 #include <format>
-#else
-#include <fmt/core.h>
-#endif
 
 #if defined(__ANDROID__)
 #include <android/log.h>
@@ -38,28 +34,20 @@ namespace teleport
 #if defined(__ANDROID__)
 	// On Android, use __android_log_print directly
 	template <typename... Args>
-	void log_print(const char* source, const char* format, Args&&... args)
+	void log_print(const char* source, const std::format_string<Args...> format, Args&&... args)
 	{
-		std::string message = fmt::format(format, std::forward<Args>(args)...);
+		std::string message = std::vformat(format.get(), std::make_format_args(args...));
 		__android_log_print(ANDROID_LOG_INFO, source, "%s", message.c_str());
 	}
-#elif __cplusplus >= 202002L
+#else
 	template <typename... Args>
 	void log_print(const char* source, const std::format_string<Args...> format, Args&&... args)
 	{
 		std::string message = std::vformat(format.get(), std::make_format_args(args...));
 		log_print_impl(source, message);
 	}
-#else
-	template <typename... Args>
-	void log_print(const char* source, const char* format, Args&&... args)
-	{
-		std::string message = fmt::format(format, std::forward<Args>(args)...);
-		log_print_impl(source, message);
-	}
 #endif
 
-#if __cplusplus>=202002L
 	template <typename... Args>
 	void Warn(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args&&... args)
 	{
@@ -80,20 +68,6 @@ namespace teleport
 		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
 		std::cerr << str2 << "\n";
 	}
-#else
-	template <typename... Args>
-	void Warn(const char *file, int line, const char *function,const char *txt, Args... args)
-	{
-		std::string str = fmt::format("{0} ({1}): warning: {2}: {3}", file, line,function, txt);
-		std::cerr << fmt::format(str, args...).c_str() << "\n";
-	}
-	template <typename... Args>
-	void Info(const char *file, int line, const char *function,const char *txt, Args... args)
-	{
-		std::string str = fmt::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
-		std::cout << fmt::format(str, args...).c_str() << "\n";
-	}
-#endif
 }
 
 #define TELEPORT_WARN(txt, ...)\

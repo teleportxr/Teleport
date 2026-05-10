@@ -6,7 +6,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <array>
-#include <fmt/format.h>
+#include <format>
 #include <iostream>
 #include <list>
 #include <map>
@@ -36,10 +36,10 @@
 
 [[noreturn]] inline void Throw(std::string failureMessage, const char* originator = nullptr, const char* sourceLocation = nullptr) {
     if (originator != nullptr) {
-        failureMessage += fmt::format("\n    Origin: {0}", originator);
+        failureMessage += std::format("\n    Origin: {0}", originator);
     }
     if (sourceLocation != nullptr) {
-        failureMessage += fmt::format("\n    Source: {0}", sourceLocation);
+        failureMessage += std::format("\n    Source: {0}", sourceLocation);
     }
 
     throw std::logic_error(failureMessage);
@@ -59,7 +59,7 @@
         }                                    \
     }
 [[noreturn]] inline void ThrowXrResult(XrResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {
-    Throw(fmt::format("XrResult failure [{}]", teleport::client::to_string(res)), originator, sourceLocation);
+    Throw(std::format("XrResult failure [{}]", teleport::client::to_string(res)), originator, sourceLocation);
 }
 
 inline XrResult CheckXrResult(XrResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {
@@ -75,7 +75,7 @@ inline XrResult CheckXrResult(XrResult res, const char* originator = nullptr, co
 
 
 [[noreturn]] inline void throwVkResult(VkResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {
-	throw(fmt::format("VkResult failure [%s]", teleport::android::vkResultString(res).c_str()), originator, sourceLocation);
+	throw(std::format("VkResult failure [%s]", teleport::android::vkResultString(res).c_str()), originator, sourceLocation);
 }
 
 inline VkResult CheckVkResult(VkResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {

@@ -46,7 +46,7 @@ bool DefaultHTTPService::initialize(std::string mountDirectory, std::string cert
 
 	if (certPath.size() > 0 && privateKeyPath.size() > 0)
 	{
-		TELEPORT_INTERNAL_COUT("SSL certificate and key provided. Usng HTTPS server." << "");
+		TELEPORT_INTERNAL_COUT("SSL certificate and key provided. Usng HTTPS server.");
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 		mServer.reset(new httplib::SSLServer(certPath.c_str(), privateKeyPath.c_str()));
 		mUsingSSL = true;
@@ -54,7 +54,7 @@ bool DefaultHTTPService::initialize(std::string mountDirectory, std::string cert
 	}
 	else
 	{
-		TELEPORT_INTERNAL_COUT("SSL certificate and key not provided. Usng HTTP server." << "");
+		TELEPORT_INTERNAL_COUT("SSL certificate and key not provided. Usng HTTP server.");
 		mServer.reset(new httplib::Server());
 		mUsingSSL = false;
 	}

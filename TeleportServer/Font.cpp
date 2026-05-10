@@ -6,7 +6,7 @@
 #include <stb_truetype.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
-#include <fmt/core.h>
+#include <format>
 
 #include <TeleportCore/ErrorHandling.h>
 #include <TeleportCore/Logging.h>
@@ -52,7 +52,7 @@ bool server::Font::ExtractMsdfFont(core::FontAtlas &fontAtlas,std::string ttf_pa
 	std::string chars=" !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 	std::string charset_input="";
 	for(size_t i=0;i<chars.size();i++)
-		charset_input+=fmt::format("{} ",(int)chars[i]);
+		charset_input+=std::format("{} ",(int)chars[i]);
 	charset.parse(charset_input.c_str(),charset_input.size());
 	//fontGeometry.loadGlyphset(font,1.0,charset);
 	fontGeometry.loadCharset(font,1.0,Charset::ASCII);

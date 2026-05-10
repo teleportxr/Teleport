@@ -11,7 +11,7 @@
 #include <openxr/openxr_platform.h>
 #include <openxr/openxr_oculus.h>
 #include <openxr/openxr_oculus_helpers.h>
-#include <fmt/core.h>
+#include <format>
 #include <sstream>
 #include <iostream>
 #include "TeleportCore/ErrorHandling.h"
@@ -239,7 +239,7 @@ bool OpenXR::InitSystem()
 	systemInfo.formFactor = app_config_form;
 	if (!CheckXrResult(xr_instance, xrGetSystem(xr_instance, &systemInfo, &xr_system_id)))
 	{
-		std::cerr << fmt::format("Failed to Get XR System\n").c_str() << std::endl;
+		std::cerr << std::format("Failed to Get XR System\n").c_str() << std::endl;
 		return false;
 	}
 	    // AppSpaceWarp Get recommended motion vector resolution, we don't recommend to use higher
@@ -474,7 +474,7 @@ bool OpenXR::StartSession()
 	sessionInfo.systemId = xr_system_id;
 	if (!CheckXrResult(xr_instance, xrCreateSession(xr_instance, &sessionInfo, &xr_session)))
 	{
-		std::cerr << fmt::format("Failed to create XR Session\n").c_str() << std::endl;
+		std::cerr << std::format("Failed to create XR Session\n").c_str() << std::endl;
 		return false;
 	}
 

@@ -12,7 +12,7 @@
 #include "TeleportCore/InputTypes.h"
 #include "TeleportCore/Logging.h"
 #include "libavstream/common.hpp"
-#include <fmt/core.h>
+#include <format>
 #include <libavstream/geometry/mesh_interface.hpp>
 #include <limits>
 
@@ -641,14 +641,27 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &
 		return;
 	}
 	size_t commandSize = sizeof(teleport::core::AcknowledgeHandshakeCommand);
+	if (packet.size() < commandSize)
+	{
+		TELEPORT_INTERNAL_CERR("Bad AcknowledgeHandshake. Packet size {0} < command size {1}", packet.size(), commandSize);
+		return;
+	}
 
 	// Extract command from packet.
 	teleport::core::AcknowledgeHandshakeCommand command;
 	memcpy(static_cast<void *>(&command), packet.data(), commandSize);
 
-	// Extract list of visible nodes.
+	// Extract list of visible nodes — guard against malformed visibleNodeCount.
+	const size_t expectedTrailing = sizeof(avs::uid) * static_cast<size_t>(command.visibleNodeCount);
+	if (command.visibleNodeCount > 0 && (packet.size() - commandSize) < expectedTrailing)
+	{
+		TELEPORT_INTERNAL_CERR("Bad AcknowledgeHandshake. visibleNodeCount {0} exceeds packet bytes ({1} available)",
+			command.visibleNodeCount, packet.size() - commandSize);
+		return;
+	}
 	std::vector<avs::uid> visibleNodes(command.visibleNodeCount);
-	memcpy(visibleNodes.data(), packet.data() + commandSize, sizeof(avs::uid) * command.visibleNodeCount);
+	if (command.visibleNodeCount > 0)
+		memcpy(visibleNodes.data(), packet.data() + commandSize, expectedTrailing);
 
 	mCommandInterface->SetVisibleNodes(visibleNodes);
 

@@ -184,14 +184,14 @@ SDK Reference
 ===============
 
 Global
-~~~~~~
+------
 
- doxygenclass:: teleport::TeleportSettings
-	project: TeleportUnity
-	members:
+.. doxygenclass:: teleport::TeleportSettings
+   :project: TeleportUnity
+   :members:
 
 Singleton Components
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 .. doxygenclass:: teleport::Monitor
 	:project: TeleportUnity
@@ -206,7 +206,7 @@ Singleton Components
 	:members:
 
 Components
-~~~~~~~~~~
+----------
 
 .. doxygenclass:: teleport::StreamableRoot
 	:project: TeleportUnity

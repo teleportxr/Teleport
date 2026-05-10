@@ -5,7 +5,7 @@
 #include "Platform/CrossPlatform/Framebuffer.h"
 #include "Renderer.h"
 #include "TeleportClient/Log.h"
-#include <fmt/core.h>
+#include <format>
 #if TELEPORT_CLIENT_USE_VULKAN
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
@@ -925,14 +925,14 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 				vertex_shader += "_mv";
 			}
 			bool		uses_lightmap = node->IsStatic() && node->GetGlobalIlluminationTextureUid() != 0;
-			std::string pixel_shader  = fmt::format("{base}({lightmap}_{ambient}_{normal_map}_{emissive}_{combined_map}_{max_lights})",
-													fmt::arg("base", base_pixel_shader),
-													fmt::arg("lightmap", uses_lightmap),
-													fmt::arg("ambient", !uses_lightmap),
-													fmt::arg("normal_map", normal_map),
-													fmt::arg("emissive", emissive),
-													fmt::arg("combined_map", combined_map),
-													fmt::arg("max_lights", 0));
+			std::string pixel_shader  = std::format("{}({}_{}_{}_{}_{}_{})",
+													 base_pixel_shader,
+													 uses_lightmap,
+													 !uses_lightmap,
+													 normal_map,
+													 emissive,
+													 combined_map,
+													 0);
 			if (rezzing)
 			{
 				pixel_shader = "ps_digitizing";
@@ -1639,20 +1639,20 @@ void InstanceRenderer::RenderNodeOverlay(crossplatform::GraphicsDeviceContext			
 				for (const auto &s : animationLayerStates)
 				{
 					const auto &a = s.getState();
-					str += fmt::format("{0} anim {1}\n", node->id, a.animationState.animationId);
+					str += std::format("{0} anim {1}\n", node->id, a.animationState.animationId);
 				}
 				renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&pos), str.c_str(), (const float *)(&white), bkg);
 			}*/
 		}
 		else if (mesh)
 		{
-			str = fmt::format("{0} {1}: {2}", node->id, node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
+			str = std::format("{0} {1}: {2}", node->id, node->name.c_str(), mesh->GetMeshCreateInfo().name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&pos), str.c_str(), (const float *)(&white), bkg, 0, 0, false);
 		}
 		else
 		{
 			vec4 yellow(1.0f, 1.0f, 0.0f, 1.0f);
-			str = fmt::format("{0} {1}", node->id, node->name.c_str());
+			str = std::format("{0} {1}", node->id, node->name.c_str());
 			renderPlatform->PrintAt3dPos(deviceContext, (const float *)(&pos), str.c_str(), (const float *)(&yellow), bkg, 0, 0, false);
 		}
 	}

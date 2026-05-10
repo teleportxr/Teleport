@@ -26,7 +26,6 @@ class AVSTREAM_API Packetizer final : public PipelineNode
 public:
 	/*!
 	 * Constructor.
-	 * \param parser Bitstream parser type to use.
 	 */
 	explicit Packetizer();
 

@@ -29,6 +29,7 @@ namespace avs
 
 		/// Configure decoder.
 		/// \param target The object that performas the actual decoding.
+		/// \param name Name of this decoder node.
 		/// \return
 		///  - Result::OK on success.
 		///  - Result::Node_AlreadyConfigured if decoder was already in configured state.

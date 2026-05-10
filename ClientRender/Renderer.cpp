@@ -33,7 +33,7 @@
 #include "Tests.h"
 #include <chrono>
 #include <ctime>
-#include <fmt/core.h>
+#include <format>
 #include <imgui.h>
 #include <regex>
 #if TELEPORT_CLIENT_USE_VULKAN
@@ -1751,7 +1751,7 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 			size_t cur_alloc = mem->GetCurrentVideoBytesAllocated();
 			size_t mem_freed = mem->GetTotalVideoBytesFreed();
 
-			profiling_text += fmt::format("\n\nAllocated {}k\nFreed {}k\nCurrent {}k", mem_alloc / 1024, mem_freed / 1024, cur_alloc / 1024);
+			profiling_text += std::format("\n\nAllocated {}k\nFreed {}k\nCurrent {}k", mem_alloc / 1024, mem_freed / 1024, cur_alloc / 1024);
 		}
 	}
 
@@ -1869,13 +1869,13 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 	}
 	gui.BeginFrame(deviceContext);
 	gui.BeginDebugGui(deviceContext);
-	gui.LinePrint(fmt::format("Framerate {0}", framerate));
+	gui.LinePrint(std::format("Framerate {0}", framerate));
 	static vec4 white(1.f, 1.f, 1.f, 1.f);
 	static vec4 text_colour = {1.0f, 1.0f, 0.5f, 1.0f};
 	static vec4 background	= {0.0f, 0.0f, 0.0f, 0.5f};
 	if (config.debugOptions.useDebugShader)
 	{
-		gui.LinePrint(fmt::format("Override Shader: {0}", config.debugOptions.debugShader));
+		gui.LinePrint(std::format("Override Shader: {0}", config.debugOptions.debugShader));
 	}
 	gui.BeginTabBar("tabs");
 	if (gui.Tab("Debug"))
@@ -2205,7 +2205,7 @@ void Renderer::SaveCurrentCubemap(platform::crossplatform::GraphicsDeviceContext
 	auto millis				  = std::chrono::duration_cast<std::chrono::milliseconds>(duration_since_epoch).count();
 
 	// Modern string formatting with fmt (already available in the project)
-	std::string filename	  = fmt::format("debug_cubemap_{}_{}.hdr", passName, millis);
+	std::string filename	  = std::format("debug_cubemap_{}_{}.hdr", passName, millis);
 
 	// Save the cubemap
 	if (cubemapGenerator->SaveToHDR(deviceContext, filename))

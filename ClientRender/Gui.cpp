@@ -15,7 +15,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
-#include <fmt/core.h>
+#include <format>
 #include <magic_enum/magic_enum.hpp>
 #include <filesystem>
 
@@ -201,7 +201,7 @@ void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags, const char *t
 }
 #define IMGUITREENODEEX(str_id, flags, txt, ...)                                                                                                               \
 	{                                                                                                                                                          \
-		std::string str = fmt::format(txt, __VA_ARGS__);                                                                                                       \
+		std::string str = std::format(txt, __VA_ARGS__);                                                                                                       \
 		ImGuiTreeNodeEx(str_id, flags, str.c_str());                                                                                                           \
 	}
 static inline ImVec4 ImLerp(const ImVec4 &a, const ImVec4 &b, float t)
@@ -1403,10 +1403,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 								// list layers.
 								for (int i = 0; i < 1; i++)
 								{
-									DoRow("Layer", fmt::format("{0}", i).c_str());
+									DoRow("Layer", std::format("{0}", i).c_str());
 									const auto &layerState = animLayerStates[i];
 									const auto &st		   = layerState.getState();
-									DoRow("State", fmt::format("{0}, {1}", layerState.interpState, layerState.sequenceNumber).c_str());
+									DoRow("State", std::format("{0}, {1}", layerState.interpState, layerState.sequenceNumber).c_str());
 									std::shared_ptr<Animation> prevAnim, anim;
 									if (st.previousAnimationState.animationId != 0)
 									{
@@ -1425,14 +1425,14 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 									{
 										nextAnimDuration = anim->duration;
 									}
-									auto txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}",
+									auto txt = std::format("{0:6d}: {1:4.2f}, {2:4.2f}",
 														   st.previousAnimationState.animationId,
 														   st.previousAnimationState.timeRatio,
 														   st.previousAnimationState.speedUnitsPerS);
 
 									DoRow(prevAnim ? prevAnim->getName().c_str() : "Previous", txt.c_str());
-									DoRow("Interp", fmt::format("{0}", st.interpolation).c_str());
-									txt = fmt::format("{0:6d}: {1:4.2f}, {2:4.2f}",
+									DoRow("Interp", std::format("{0}", st.interpolation).c_str());
+									txt = std::format("{0:6d}: {1:4.2f}, {2:4.2f}",
 													  st.animationState.animationId,
 													  st.animationState.timeRatio,
 													  st.animationState.speedUnitsPerS);
@@ -1543,7 +1543,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						for (auto anim_uid : ids)
 						{
 							const auto &anim = geometryCache->mAnimationManager.Get(anim_uid);
-							if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", anim_uid, anim->name.c_str()).c_str()))
+							if (ImGui::TreeNodeEx(std::format("{0}: {1} ", anim_uid, anim->name.c_str()).c_str()))
 							{
 								if (ImGui::IsItemClicked())
 								{
@@ -1658,11 +1658,11 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					ImGui::TableNextColumn();
 					ImGui::Text("Refs:");
 					ImGui::TableNextColumn();
-					ImGui::Text("%s", fmt::format("{0}", selected_animation.use_count() - 1).c_str());
+					ImGui::Text("%s", std::format("{0}", selected_animation.use_count() - 1).c_str());
 					auto DoRow = [this](const int index, const char *text, auto... rest) -> void
 					{
 						ImGui::TableNextColumn();
-						ImGui::Text("%s", fmt::format("{0}", index).c_str());
+						ImGui::Text("%s", std::format("{0}", index).c_str());
 						ImGui::TableNextColumn();
 						ImGui::Text(text, rest...);
 					};
@@ -1680,10 +1680,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				avs::uid root_id = selected_skeleton->GetRootId();
 				auto	 root	 = geometryCache->mNodeManager.GetNode(root_id);
 				ImGui::Text("Root:");
-				if (ImGui::TreeNodeEx(fmt::format("{0} ", root_id).c_str(),
+				if (ImGui::TreeNodeEx(std::format("{0} ", root_id).c_str(),
 									  flags | ImGuiTreeNodeFlags_Leaf,
 									  "%s",
-									  fmt::format("{0}: {1} ", root_id, root ? root->name : "").c_str()))
+									  std::format("{0}: {1} ", root_id, root ? root->name : "").c_str()))
 				{
 					if (ImGui::IsItemClicked())
 					{
@@ -1701,10 +1701,10 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 						continue;
 					}
 					auto n = geometryCache->mNodeManager.GetNode(bone_uid);
-					if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(),
+					if (ImGui::TreeNodeEx(std::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str(),
 										  flags | ImGuiTreeNodeFlags_Leaf,
 										  "%s",
-										  fmt::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
+										  std::format("{0}: {1} ", bone_uid, n->name.c_str()).c_str()))
 					{
 						if (ImGui::IsItemClicked())
 						{
@@ -1777,7 +1777,7 @@ void Gui::Materials(const ResourceManager<avs::uid, clientrender::Material> &mat
 	{
 		bool		selected = (selected_uid == id);
 		const auto &material = materialManager.Get(id);
-		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, material->getName().c_str()).c_str(),
+		if (ImGui::TreeNodeEx(std::format("{0}: {1} ", id, material->getName().c_str()).c_str(),
 							  ImGuiTreeNodeFlags_Leaf | (selected ? ImGuiTreeNodeFlags_Selected : 0)))
 		{
 			if (ImGui::IsItemClicked())
@@ -1803,7 +1803,7 @@ void Gui::Meshes(const ResourceManager<avs::uid, clientrender::Mesh> &meshManage
 	{
 		bool		selected = (selected_uid == id);
 		const auto &mesh	 = meshManager.Get(id);
-		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, mesh->GetMeshCreateInfo().name.c_str()).c_str(),
+		if (ImGui::TreeNodeEx(std::format("{0}: {1} ", id, mesh->GetMeshCreateInfo().name.c_str()).c_str(),
 							  ImGuiTreeNodeFlags_Leaf | (selected ? ImGuiTreeNodeFlags_Selected : 0)))
 		{
 			if (ImGui::IsItemClicked())
@@ -1827,7 +1827,7 @@ void Gui::Textures(const ResourceManager<avs::uid, clientrender::Texture> &textu
 	for (auto id : ids)
 	{
 		const auto &texture = textureManager.Get(id);
-		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, texture->GetTextureCreateInfo().name.c_str()).c_str(), ImGuiTreeNodeFlags_Leaf))
+		if (ImGui::TreeNodeEx(std::format("{0}: {1} ", id, texture->GetTextureCreateInfo().name.c_str()).c_str(), ImGuiTreeNodeFlags_Leaf))
 		{
 			if (ImGui::IsItemClicked())
 			{
@@ -1871,7 +1871,7 @@ void Gui::Anims(const ResourceManager<avs::uid, clientrender::Animation> &animMa
 	for (auto id : ids)
 	{
 		const auto &anim = animManager.Get(id);
-		if (ImGui::TreeNodeEx(fmt::format("{0}: {1} ", id, anim->name.c_str()).c_str()))
+		if (ImGui::TreeNodeEx(std::format("{0}: {1} ", id, anim->name.c_str()).c_str()))
 		{
 			if (ImGui::IsItemClicked())
 			{
@@ -1923,7 +1923,7 @@ void Gui::Lights(const ResourceManager<avs::uid, clientrender::Light> &lightMana
 				ImGui::TableNextColumn();
 				ImGui::TextUnformatted(clientrender::ToString(lci.type));
 				ImGui::TableNextColumn();
-				ImGui::ColorButton(fmt::format("##lclr{0}", id).c_str(),
+				ImGui::ColorButton(std::format("##lclr{0}", id).c_str(),
 					ImVec4(lci.lightColour.x, lci.lightColour.y, lci.lightColour.z, lci.lightColour.w),
 					ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(16, 16));
 				ImGui::SameLine();
@@ -1963,16 +1963,16 @@ void Gui::InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient,
 			switch (m.serverInputDefinition.inputType)
 			{
 			case teleport::core::InputType::FloatState:
-				val = fmt::format("{0}", I.analogueStates[m.serverInputDefinition.inputId]);
+				val = std::format("{0}", I.analogueStates[m.serverInputDefinition.inputId]);
 				break;
 			case teleport::core::InputType::IntegerState:
-				val = fmt::format("{0}", I.binaryStates[m.serverInputDefinition.inputId]);
+				val = std::format("{0}", I.binaryStates[m.serverInputDefinition.inputId]);
 				break;
 			case teleport::core::InputType::FloatEvent:
-				val = fmt::format("{0}", fmt::format("{0}", I.getLastAnalogueEvent(m.serverInputDefinition.inputId).strength));
+				val = std::format("{0}", std::format("{0}", I.getLastAnalogueEvent(m.serverInputDefinition.inputId).strength));
 				break;
 			case teleport::core::InputType::IntegerEvent:
-				val = fmt::format("{0}", I.getLastBinaryEvent(m.serverInputDefinition.inputId).activated);
+				val = std::format("{0}", I.getLastBinaryEvent(m.serverInputDefinition.inputId).activated);
 				break;
 			default:
 				break;
@@ -1990,9 +1990,9 @@ void Gui::InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient,
 		{
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##frst", "%s", fmt::format("{0}", p.first).c_str());
+			ImGui::LabelText("##frst", "%s", std::format("{0}", p.first).c_str());
 			ImGui::TableNextColumn();
-			ImGui::LabelText("##second", "%s", fmt::format("{0}", p.second).c_str());
+			ImGui::LabelText("##second", "%s", std::format("{0}", p.second).c_str());
 		}
 		ImGui::EndTable();
 	}
@@ -2072,8 +2072,8 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	}
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
-	draw_list->AddText(pos, col, fmt::format("{0}: {1:4.1f}", node.name, node.inwardBandwidthKps).c_str());
-	draw_list->AddText(ImVec2(pos.x, pos.y + line.y), col, fmt::format("{0}", node.maxPacketKb).c_str());
+	draw_list->AddText(pos, col, std::format("{0}: {1:4.1f}", node.name, node.inwardBandwidthKps).c_str());
+	draw_list->AddText(ImVec2(pos.x, pos.y + line.y), col, std::format("{0}", node.maxPacketKb).c_str());
 }
 
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
@@ -2164,7 +2164,7 @@ bool Gui::DebugPanel(client::DebugOptions &debugOptions)
 	LinePrint("Cubemap Generation:");
 	auto	   &config		= client::Config::GetInstance();
 	std::string currentPass = (config.options.lobbyView == client::LobbyView::NEON) ? "neon" : "white";
-	LinePrint(fmt::format("Current pass: {0}", currentPass));
+	LinePrint(std::format("Current pass: {0}", currentPass));
 	if (ImGui::Button("Save Current Cubemap"))
 	{
 		saveCurrentCubemap = true;
@@ -2205,7 +2205,7 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 		auto &tag = videoTagDataCubeArray[i];
 		LinePrint(platform::core::QuickFormat("%d lights", tag.coreData.lightCount));
 		vec3 pos = tag.coreData.cameraTransform.position;
-		LinePrint(fmt::format("\t{0},{1},{2}", pos.x, pos.y, pos.z));
+		LinePrint(std::format("\t{0},{1},{2}", pos.x, pos.y, pos.z));
 		auto *gpu_tag_buffer = videoTagDataCube;
 		if (gpu_tag_buffer)
 		{
@@ -2268,7 +2268,7 @@ void Gui::GeometryOSD()
 		for (size_t i = 0; i < cache_uids.size(); i++)
 		{
 			auto g = clientrender::GeometryCache::GetGeometryCache(cache_uids[i]);
-			cache_names.push_back(fmt::format("{0}, {1}", cache_uids[i], g->GetName()));
+			cache_names.push_back(std::format("{0}, {1}", cache_uids[i], g->GetName()));
 		}
 		for (size_t i = 0; i < cache_uids.size(); i++)
 		{
@@ -2298,32 +2298,32 @@ void Gui::GeometryOSD()
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 150.0f);
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Client ID"));
+		LinePrint(std::format("Client ID"));
 		ImGui::TableNextColumn();
 		if (sessionClient)
 		{
-			LinePrint(fmt::format("{0}", sessionClient->GetClientID()));
+			LinePrint(std::format("{0}", sessionClient->GetClientID()));
 		}
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Session time"));
+		LinePrint(std::format("Session time"));
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("{0}", double(geometryCache->GetSessionTimeUs().count()) / 1000000.0).c_str());
+		LinePrint(std::format("{0}", double(geometryCache->GetSessionTimeUs().count()) / 1000000.0).c_str());
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Session start"));
+		LinePrint(std::format("Session start"));
 		ImGui::TableNextColumn();
 		if (sessionClient)
 		{
-			LinePrint(fmt::format("{0}", double(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us) / 1000000.0).c_str());
+			LinePrint(std::format("{0}", double(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us) / 1000000.0).c_str());
 		}
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Nodes: {0}", geometryCache->mNodeManager.GetNodeCount()), white);
+		LinePrint(std::format("Nodes: {0}", geometryCache->mNodeManager.GetNodeCount()), white);
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Meshes: {0}", geometryCache->mMeshManager.GetCache(cacheLock).size()), white);
+		LinePrint(std::format("Meshes: {0}", geometryCache->mMeshManager.GetCache(cacheLock).size()), white);
 		ImGui::TableNextColumn();
-		LinePrint(fmt::format("Lights: {0}", geometryCache->mLightManager.GetCache(cacheLock).size()), white);
+		LinePrint(std::format("Lights: {0}", geometryCache->mLightManager.GetCache(cacheLock).size()), white);
 		ImGui::EndTable();
 	}
 
@@ -2338,11 +2338,11 @@ void Gui::GeometryOSD()
 	const auto &missing = geometryCache->GetMissingResources();
 	if (missing.size())
 	{
-		LinePrint(fmt::format("Missing Resources: {0}", missing.size()).c_str());
+		LinePrint(std::format("Missing Resources: {0}", missing.size()).c_str());
 		for (const auto &missingPair : missing)
 		{
 			const clientrender::MissingResource &missingResource = missingPair.second;
-			std::string							 txt			 = fmt::format("\t{0} {1} from ", stringOf(missingResource.resourceType), missingResource.id);
+			std::string							 txt			 = std::format("\t{0} {1} from ", stringOf(missingResource.resourceType), missingResource.id);
 			for (auto &u : missingResource.waitingResources)
 			{
 				auto		type = u.get()->type;
@@ -2353,10 +2353,10 @@ void Gui::GeometryOSD()
 					auto n = geometryCache->mNodeManager.GetNode(id);
 					if (n)
 					{
-						name = fmt::format(" ({0})", n->name);
+						name = std::format(" ({0})", n->name);
 					}
 				}
-				txt += fmt::format("{0}{1} {2}, ", stringOf(type), name, (uint64_t)id);
+				txt += std::format("{0}{1} {2}, ", stringOf(type), name, (uint64_t)id);
 			}
 			LinePrint(txt.c_str());
 		}
@@ -2452,7 +2452,7 @@ void Gui::NodeTree(const std::vector<std::weak_ptr<clientrender::Node>> &root_no
 		if (sessionClient)
 		{
 			auto &clientServerState = sessionClient->GetClientServerState();
-			if (ImGui::Button(fmt::format("{0}", clientServerState.origin_node_uid).c_str()))
+			if (ImGui::Button(std::format("{0}", clientServerState.origin_node_uid).c_str()))
 			{
 				if (clientServerState.origin_node_uid)
 				{
@@ -2798,7 +2798,7 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				{
 					continue;
 				}
-				std::string str = fmt::format("{0}", t);
+				std::string str = std::format("{0}", t);
 				if (ImGui::BeginTabItem(str.c_str()))
 				{
 					client::ConnectionStatus	  status		  = client::ConnectionStatus::UNCONNECTED;
@@ -2975,13 +2975,38 @@ void Gui::MainOptions()
 	int	 i	  = 0;
 	for (const auto &e : conn)
 	{
-		std::string ename = fmt::format("{0}", e.second);
+		std::string ename = std::format("{0}", e.second);
 		ImGui::RadioButton(ename.c_str(), &c, i++);
 		ImGui::SameLine();
 	}
 	if ((client::StartupConnectOption)c != config.options.startupConnectOption)
 	{
 		config.options.startupConnectOption = (client::StartupConnectOption)c;
+	}
+	if (!fontInter.empty())
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##UIFontSize", "UI Font Size");
+		ImGui::TableNextColumn();
+		int minSize = fontInter.begin()->first;
+		int maxSize = fontInter.rbegin()->first;
+		int v		= (int)config.options.uiFontSize;
+		if (ImGui::SliderInt("##uiFontSize", &v, minSize, maxSize))
+		{
+			int best	 = minSize;
+			int bestDiff = (v > best) ? (v - best) : (best - v);
+			for (const auto &kv : fontInter)
+			{
+				int d = (v > kv.first) ? (v - kv.first) : (kv.first - v);
+				if (d < bestDiff)
+				{
+					best	 = kv.first;
+					bestDiff = d;
+				}
+			}
+			config.options.uiFontSize = (unsigned int)best;
+		}
 	}
 }
 
@@ -3099,16 +3124,16 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		ImGui_ImplPlatform_Get3DTouchClientPos(client_press);
 		for(int i=0;i<hand_pos_press.size();i++)
 		{
-			std::string lbl=fmt::format("pos {0}",i);
+			std::string lbl=std::format("pos {0}",i);
 			vec4 v=hand_pos_press[i];
-			std::string txt=fmt::format("{0: .3f},{1: .3f},{2: .3f},{3: .3f}",v.x,v.y,v.z,v.w);
+			std::string txt=std::format("{0: .3f},{1: .3f},{2: .3f},{3: .3f}",v.x,v.y,v.z,v.w);
 			ImGui::LabelText(lbl.c_str(),txt.c_str());
 		}
 		for(int i=0;i<client_press.size();i++)
 		{
-			std::string lbl=fmt::format("press {0}",i);
+			std::string lbl=std::format("press {0}",i);
 			vec3 v=client_press[i];
-			std::string txt=fmt::format("{0: .3f},{1: .3f},{2: .3f}",v.x,v.y,v.z);
+			std::string txt=std::format("{0: .3f},{1: .3f},{2: .3f}",v.x,v.y,v.z);
 			ImGui::LabelText(lbl.c_str(),txt.c_str());
 		}
 #endif
@@ -3299,7 +3324,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					ImGui::SameLine();
 					KeyboardLine("qwertyuiop");
 					// ImGui::SameLine();
-					// ImGui::Text(fmt::format("{0: .0f} {1: .0f}",io.MousePos.x,io.MousePos.y).c_str());
+					// ImGui::Text(std::format("{0: .0f} {1: .0f}",io.MousePos.x,io.MousePos.y).c_str());
 					// Sleep(1000);
 					ImGui::Text("	");
 					ImGui::SameLine();

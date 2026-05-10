@@ -29,7 +29,7 @@
 #endif
 #include <openxr/openxr_platform.h>
 
-#include "fmt/core.h"
+#include <format>
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -169,7 +169,7 @@ bool UseOpenXR::StartSession()
 	if (!CheckXrResult(xr_instance,res))
 	{
 		xr_system_id=XR_NULL_SYSTEM_ID;
-		std::cerr<<fmt::format("Failed to create XR Session\n").c_str() << std::endl;
+		std::cerr<<std::format("Failed to create XR Session\n").c_str() << std::endl;
 		return false;
 	}
 

@@ -105,8 +105,6 @@ public:
 
 	/*!
 	 * Write data to the output stream.
-	 * \param tag data buffer
-	 * \param tag data buffer size
 	 * \return
 	 *  - Result::OK on success.
 	 *  - Result::Node_NotConfigured if encoder was not in configured state.

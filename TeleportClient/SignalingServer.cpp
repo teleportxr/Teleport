@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
-#include <fmt/core.h>
+#include <format>
 
 using namespace teleport;
 using namespace client;

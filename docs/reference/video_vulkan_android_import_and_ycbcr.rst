@@ -51,7 +51,7 @@ The following is brief description on how this is implemented:
 
 Flow chart:
 
-.. image:: /images/reference/AMediaCodecToVkImageAndVkDeviceMemory.png
+.. image:: /docs/images/reference/AMediaCodecToVkImageAndVkDeviceMemory.png
   :width: 800
   :alt: AMediaCodec to VkImage and VkDeviceMemory.
 
@@ -65,7 +65,7 @@ YCbCr Colour Space
 
 YCbCr is favoured over RGB for video broadcasting and streaming as the format implicitly compresses the video data, saving on bandwidth. YCbCr is based on the YUV standard for broadcast television, wherein the video signal is split into a luma (Y) and two chroma (Cb/Cr) components. It is vital to remember that the chroma components are defined to be the difference between the original colour and the luma signal, and therefore the chroma components are signed values ranging from -0.5 to 0.5, whereas the luma component ranges from 0.0 to 1.0, in a signed normalised co-ordinate space.
 
-.. image:: /images/reference/YCbCr.GIF
+.. image:: /docs/images/reference/YCbCr.gif
   :width: 800
   :alt: The YCbCr colour space.
 
@@ -80,7 +80,7 @@ Further compression of the video data can be achieved by downsampling the chroma
 * a: number of chrominance samples (Cb, Cr) in the first row of J pixels.
 * b: number of changes of chrominance samples (Cb, Cr) between first and second row of J pixels.
 
-.. image:: /images/reference/ChromaSubsampling.png
+.. image:: /docs/images/reference/ChromaSubsampling.png
   :width: 800
   :alt: Chroma Subsampling types.
 
@@ -136,11 +136,11 @@ This qualifier refers to the how the data is organised in memory.
 +------+-------------+-------------------------------------------------------------------------------------------------------------------------+
 
 
-.. image:: /images/reference/YUV_formats.png
+.. image:: /docs/images/reference/YUV_formats.png
   :width: 800
   :alt: Layouts of alternative colour formats.
 
-.. image:: /images/reference/800px-Yuv420.svg.png
+.. image:: /docs/images/reference/800px-Yuv420.svg.png
   :width: 800
   :alt: Layout of a YUV420 image.
 
@@ -237,7 +237,7 @@ We create a ``VKSamplerYcbcrConversionKHR`` from a ``VkSamplerYcbcrConversionCre
 
 With the ``VKSamplerYcbcrConversionKHR`` created, we assign this to ``VkSamplerYcbcrConversionInfoKHR::conversion`` and chain the ``VkSamplerYcbcrConversionInfoKHR`` structure into a ``VkSamplerCreateInfo`` structure for ``platform::vulkan::RenderPlatform``'s single video sampler and into a ``VkImageViewCreateInfo`` structure for each instance of ``platform::vulkan::Texture`` where a YCbCr conversion is needed.
 
-.. image:: /images/reference/VKSamplerYcbcrConversionKHRCreationAndSetUpForVkImageViewAndVkSampler.png
+.. image:: /docs/images/reference/VKSamplerYcbcrConversionKHRCreationAndSetUpForVkImageViewAndVkSampler.png
   :width: 800
   :alt: VKSamplerYcbcrConversionKHR creation and set up for VkImageView and VkSampler.
 

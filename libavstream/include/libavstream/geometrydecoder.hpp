@@ -20,7 +20,6 @@ namespace avs
 	public:
 		/*!
 		 * Constructor.
-		 * \param backend Decoder backend type to use.
 		 */
 		explicit GeometryDecoder();
 

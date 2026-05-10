@@ -11,7 +11,7 @@ set(AV ${TELEPORT_ROOT_DIR}/libavstream/include/libavstream)
 set(libavstream_HEADER_DIRS ${AV} ${AV}/audio ${AV}/decoders ${AV}/encoders ${AV}/geometry ${AV}/network ${AV}/platforms ${AV}/stream ${AV}/surfaces)
 
 set(teleportclient_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportClient)
-set(teleportcore_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportCore)
+set(teleportcore_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportCore ${TELEPORT_ROOT_DIR}/TeleportCore/export_include/TeleportCore)
 
 set(teleportrenderer_DIR	${TELEPORT_ROOT_DIR}/ClientRender)
 set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR} ${teleportrenderer_DIR}/NodeComponents ${teleportrenderer_DIR}/AVParser)
@@ -19,8 +19,14 @@ set(teleportrenderer_HEADER_DIRS ${teleportrenderer_DIR} ${teleportrenderer_DIR}
 set(teleportserver_HEADER_DIRS ${TELEPORT_ROOT_DIR}/TeleportServer ${TELEPORT_ROOT_DIR}/TeleportServer/Plugin ${TELEPORT_ROOT_DIR}/TeleportServer/Plugin/PluginMain.cpp ${TELEPORT_ROOT_DIR}/TeleportServer/Plugin/PluginClient.cpp)
 set(DOXYGEN_INPUT_DIR ${pc_client_HEADER_DIRS} ${AndroidClient_HEADER_DIRS} ${libavstream_HEADER_DIRS} ${teleportcore_HEADER_DIRS} ${teleportclient_HEADER_DIRS} ${teleportrenderer_HEADER_DIRS} ${teleportserver_HEADER_DIRS})
 #message("DOXYGEN_INPUT_DIR ${DOXYGEN_INPUT_DIR}")
+
 string (REPLACE ";" "\",\"" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
-string (REPLACE "/" "\\" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+	string (REPLACE "/" "\\" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
+else()
+	string (REPLACE "\/\/" "/" DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR}")
+endif()
+
 #file(GLOB_RECURSE PUBLIC_HEADERS ${pc_client_HEADER_DIR}/*.h)
 set(DOXYGEN_INPUT_DIR "\"${DOXYGEN_INPUT_DIR}\"")
 set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen)
@@ -29,7 +35,7 @@ set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
 set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 #Replace variables inside @@ with the current values
 configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
-file(MAKE_DIRECTORY ${DOXYGEN_OUTPUT_DIR}) #Doxygen won't create this for us
+file(MAKE_DIRECTORY ${DOXYGEN_OUTPUT_DIR}) # Doxygen won't create this for us
 add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
 					#DEPENDS ${PUBLIC_HEADERS}
 					COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
@@ -37,7 +43,7 @@ add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
 					COMMENT "${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}")
 add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE} ${DOXYFILE_IN} ${DOXYFILE_OUT})
 set_target_properties( Doxygen PROPERTIES FOLDER Docs)
-set(FIND_DOXYGEN_OUTPUTS -Dbreathe_projects.TeleportVR=${DOXYGEN_OUTPUT_DIR}/xml)
+set(FIND_DOXYGEN_OUTPUTS -Dbreathe_projects.TeleportXR=${DOXYGEN_OUTPUT_DIR}/xml)
 
 # Now a Doxygen project to build the Unreal C# docs.
 set(TELEPORT_DOXYGEN_UNREAL_INPUT_DIR ${TELEPORT_ROOT_DIR}/firstparty/teleport-unreal)
@@ -145,18 +151,25 @@ if(NOT "${TELEPORT_DOXYGEN_UNITY_INPUT_DIR}" STREQUAL "")
 endif()
 
 # see http://www.html-tidy.org/
-set(TELEPORT_DOCS_TIDY_EXECUTABLE "C:/Program Files/tidy 5.8.0/bin/tidy.exe" CACHE FILEPATH "path to tidy.exe for htmltidy")
+if(CMAKE_HOST_WIN32)
+	set(TELEPORT_DOCS_TIDY_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat")
+	set(_default_tidy "C:/Program Files/tidy 5.8.0/bin/tidy.exe")
+else()
+	set(TELEPORT_DOCS_TIDY_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.sh")
+	set(_default_tidy "tidy")
+endif()
+set(TELEPORT_DOCS_TIDY_EXECUTABLE "${_default_tidy}" CACHE FILEPATH "path to tidy executable for htmltidy")
 
 if(TELEPORT_DOCS_TIDY_EXECUTABLE)
 	add_custom_target(Tidy ALL
-					COMMAND 
-					${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
-					MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat"
-					COMMENT "${CMAKE_CURRENT_SOURCE_DIR}/tidy_files.bat" "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
-					SOURCES tidy_files.bat ${ALL_HTML_FILES})
+					COMMAND
+					${TELEPORT_DOCS_TIDY_SCRIPT} "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
+					MAIN_DEPENDENCY "${TELEPORT_DOCS_TIDY_SCRIPT}"
+					COMMENT "${TELEPORT_DOCS_TIDY_SCRIPT}" "${TELEPORT_DOCS_TIDY_EXECUTABLE}" "${SPHINX_BUILD}"
+					SOURCES ${TELEPORT_DOCS_TIDY_SCRIPT} ${ALL_HTML_FILES})
 	add_dependencies(Tidy Sphinx)
 set_target_properties( Tidy PROPERTIES FOLDER Docs)
-endif() 
+endif()
 
 if(TELEPORT_DOCS_VALIDATOR_EXECUTABLE)
 	# see https://validator.github.io/validator/

@@ -28,7 +28,6 @@ namespace avs
 	public:
 		/*!
 		 * Constructor.
-		 * \param backend TagDataDecoder backend type to use.
 		 */
 		TagDataDecoder();
 

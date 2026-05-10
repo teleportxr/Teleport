@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonNetworking.h"
-#include <fmt/core.h>
+#include <format>
 #include <string>
 
 namespace teleport
@@ -44,7 +44,7 @@ namespace teleport
 		//! Format ClientDynamicLighting as JSON-style string for debugging, in declaration order.
 		inline std::string ClientDynamicLightingToString(const ClientDynamicLighting& c)
 		{
-			return fmt::format(
+			return std::format(
 				R"({{
     "specularPos": {{"x": {}, "y": {}}},
     "specularCubemapSize": {},
@@ -73,7 +73,7 @@ namespace teleport
 		//! Format SetLightingCommand as JSON-style string for debugging, in declaration order.
 		inline std::string SetLightingCommandToString(const SetLightingCommand& cmd)
 		{
-			return fmt::format(
+			return std::format(
 				R"({{
   "type": "SetLightingCommand",
   "ack_id": {},
@@ -87,7 +87,7 @@ namespace teleport
 		//! Format SetupCommand as JSON-style string for debugging
 		inline std::string SetupCommandToString(const SetupCommand& cmd)
 		{
-			return fmt::format(
+			return std::format(
 				R"({{
   "type": "SetupCommand",
   "debug_stream": {},

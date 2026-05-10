@@ -109,9 +109,8 @@ endif()
 
 # Common libraries
 target_link_libraries(TeleportPCClient libavstream TeleportAudio ClientRender TeleportClient TeleportCore ktx)
-target_link_libraries(TeleportPCClient Core_MT PlatformCrossPlatform_MT PlatformMath_MT ImGui_MT fmt::fmt-header-only)
+target_link_libraries(TeleportPCClient Core_MT PlatformCrossPlatform_MT PlatformMath_MT ImGui_MT)
 target_link_libraries(TeleportPCClient LibDataChannel::LibDataChannelStatic usrsctp juice-static)
-target_compile_definitions( TeleportPCClient PUBLIC FMT_HEADER_ONLY )
 
 if(WIN32)
 	# Windows-specific libraries

@@ -3,7 +3,7 @@
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/ErrorHandling.h"
 #include <magic_enum/magic_enum.hpp>
-#include <fmt/core.h>
+#include <format>
 #include <sstream>
 #include <filesystem>
 
@@ -141,7 +141,7 @@ void Config::SaveBookmarks()
 		string str;
 		for(const auto &b:bookmarks)
 		{
-			str+=fmt::format("{0} {1}\n",b.url,b.title);
+			str+=std::format("{0} {1}\n",b.url,b.title);
 		}
 		std::string filename = (path(GetStorageFolder()) / "config/bookmarks.txt"s).string();
 		fileLoader->Save(str.data(),(uint32_t)str.length(),filename.c_str(),true);
@@ -186,14 +186,14 @@ void Config::SaveOptions()
 	auto *fileLoader=platform::core::FileLoader::GetFileLoader();
 	{
 		string str;
-		str += fmt::format("LobbyView={0}", magic_enum::enum_name(options.lobbyView));
-		str += fmt::format("\nStartupConnectOption={0}", magic_enum::enum_name(options.startupConnectOption));
-		str += fmt::format("\nSimulateVR={0}", options.simulateVR);
-		str += fmt::format("\nShowGeometryOffline={0}", options.showGeometryOffline);
-		str += fmt::format("\nMaxReconnectAttempts={0}", options.maxReconnectAttempts);
-		str += fmt::format("\nReconnectInitialBackoffMs={0}", options.reconnectInitialBackoffMs);
-		str += fmt::format("\nReconnectMaxBackoffMs={0}", options.reconnectMaxBackoffMs);
-		str += fmt::format("\nUIFontSize={0}", options.uiFontSize);
+		str += std::format("LobbyView={0}", magic_enum::enum_name(options.lobbyView));
+		str += std::format("\nStartupConnectOption={0}", magic_enum::enum_name(options.startupConnectOption));
+		str += std::format("\nSimulateVR={0}", options.simulateVR);
+		str += std::format("\nShowGeometryOffline={0}", options.showGeometryOffline);
+		str += std::format("\nMaxReconnectAttempts={0}", options.maxReconnectAttempts);
+		str += std::format("\nReconnectInitialBackoffMs={0}", options.reconnectInitialBackoffMs);
+		str += std::format("\nReconnectMaxBackoffMs={0}", options.reconnectMaxBackoffMs);
+		str += std::format("\nUIFontSize={0}", options.uiFontSize);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);
 		LoadOptions();
@@ -222,7 +222,7 @@ void Config::StoreRecentURL(const char *r)
 		string str;
 		for(const auto &i:recent_server_urls)
 		{
-			str+=fmt::format("{0}\n",i);
+			str+=std::format("{0}\n",i);
 		}
 		std::string filename=(path(GetStorageFolder())/"config/recent_servers.txt").string();
 		fileLoader->Save(str.data(),(unsigned int)str.length(),filename.c_str(),true);

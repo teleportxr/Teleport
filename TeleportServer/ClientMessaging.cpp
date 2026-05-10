@@ -133,17 +133,17 @@ void ClientMessaging::sendNodeMovementUpdates()
 		u.isGlobal=false;
 		u.nodeID=nodeID;
 		u.server_time_us=server_time_us;
-		u.position=avsNode->localTransform.position;
-		u.rotation=avsNode->localTransform.rotation;
-		u.scale=avsNode->localTransform.scale;
+		u.position=packed(avsNode->localTransform.position);
+		u.rotation=packed(avsNode->localTransform.rotation);
+		u.scale=packed(avsNode->localTransform.scale);
 		u.velocity={0,0,0};
 		u.angularVelocityAxis={0,0,0};
 		u.angularVelocityAngle=0.0f;
-		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.position);
-		avs::ConvertRotation(serverSettings.serverAxesStandard, axesStandard, u.rotation);
-		avs::ConvertScale	(serverSettings.serverAxesStandard, axesStandard, u.scale);
-		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.velocity);
-		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.angularVelocityAxis);
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, unpacked(u.position));
+		avs::ConvertRotation(serverSettings.serverAxesStandard, axesStandard, unpacked(u.rotation));
+		avs::ConvertScale	(serverSettings.serverAxesStandard, axesStandard, unpacked(u.scale));
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, unpacked(u.velocity));
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, unpacked(u.angularVelocityAxis));
 		i++;
 
 	}

@@ -4,7 +4,7 @@
 #include "Platform/Core/FileLoader.h"
 #include <curl/curl.h>
 #include <filesystem>
-#include <fmt/chrono.h>
+#include <format>
 #include <fstream>
 #include <functional> // For std::hash
 #include <iostream>
@@ -428,9 +428,9 @@ std::string HTTPUtil::Transfer::getModifiedSinceHeader()
 {
 	//	If-Modified-Since: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
 	// e.g. If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT
-	// TODO: because fmt::format with a time_point adds a silly number of decimal places to the "seconds", we can't use it for the whole time.
+	// TODO: because std::format with a time_point adds a silly number of decimal places to the "seconds", we can't use it for the whole time.
 	// instead, we must extract the seconds separately.
-	std::string header = fmt::format("If-Modified-Since: {:%a, %d %b %Y %H:%M}:00 GMT", mRequest.cacheUpdated, 0);
+	std::string header = std::format("If-Modified-Since: {:%a, %d %b %Y %H:%M}:00 GMT", mRequest.cacheUpdated, 0);
 	// write(header.c_str(),header.length());
 	return header;
 }

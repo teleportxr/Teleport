@@ -1,7 +1,7 @@
 #include "CmdBuffer.h"
 #include "AndroidOpenXR.h"
 #include <iostream>
-#include <fmt/format.h>
+#include <format>
 using namespace teleport;
 using namespace android;
 
@@ -19,7 +19,7 @@ using namespace android;
 
 
 [[noreturn]] void throwVkResult(VkResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {
-	throw(fmt::format("VkResult failure {} {} {}", vkResultString(res).c_str(), originator, sourceLocation));
+	throw(std::format("VkResult failure {} {} {}", vkResultString(res).c_str(), originator, sourceLocation));
 }
 
 VkResult CheckVkResult(VkResult res, const char* originator = nullptr, const char* sourceLocation = nullptr) {

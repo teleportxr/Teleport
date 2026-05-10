@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "main_disabled" ]
   pull_request:
-    branches: [ "main_disabled" ]
+    branches: [ "main" ]
 
 jobs:
   build:

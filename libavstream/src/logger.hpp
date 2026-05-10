@@ -10,7 +10,7 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
-#include <fmt/core.h>
+#include <format>
 
 #define QUEUE_LOGGING 0
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -120,23 +120,23 @@ namespace avs
 	template <typename... Args>
 	void Log(Logger &l,const char *txt, Args... args)
 	{
-		std::string str = fmt::format(txt,  args...);
+		std::string str = std::format(txt,  args...);
 		l.log(str);
 	}
     
 	template <typename... Args>
 	void Info(Logger &l,const char *file, int line, const char *function,const char *txt, Args... args)
 	{
-		std::string str = fmt::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
-		str = fmt::format(str,  args...);
+		std::string str = std::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
+		str = std::format(str,  args...);
 		l.log(str);
 	}
     
 	template <typename... Args>
 	void Warn(Logger &l,const char *file, int line, const char *function,const char *txt, Args... args)
 	{
-		std::string str = fmt::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
-		str = fmt::format(str,  args...);
+		std::string str = std::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
+		str = std::format(str,  args...);
 		l.warn(str);
 	}
 

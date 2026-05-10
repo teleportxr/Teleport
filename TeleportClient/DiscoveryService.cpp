@@ -11,7 +11,7 @@
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
-#include <fmt/core.h>
+#include <format>
 
 using namespace teleport;
 using namespace client;
@@ -104,7 +104,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	// Use wss:// for port 443 (e.g. cloud-hosted servers behind a TLS-terminating router such as Heroku),
 	// otherwise plain ws:// (e.g. local testing on 8080/8081).
 	const char *scheme = (serverDiscoveryPort == 443) ? "wss" : "ws";
-	std::string ws_url = fmt::format("{0}://{1}:{2}/{3}", scheme, base_url, serverDiscoveryPort, path);
+	std::string ws_url = std::format("{0}://{1}:{2}/{3}", scheme, base_url, serverDiscoveryPort, path);
 
 	TELEPORT_INTERNAL_COUT("Websocket open() {}", ws_url);
 	try

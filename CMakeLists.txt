@@ -496,7 +496,7 @@ if(TELEPORT_SERVER)
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "" FORCE)
 endif()
 
-if(TELEPORT_SERVER OR TELEPORT_BUILD_DOCS)
+if(TELEPORT_SERVER )
 	add_subdirectory(TeleportServer)
 endif()
  

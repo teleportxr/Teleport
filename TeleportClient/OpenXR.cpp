@@ -9,7 +9,7 @@
 #define XR_USE_TIMESPEC 1
 #include <openxr/openxr_platform.h>
 #include "OpenXR.h"
-#include "fmt/core.h"
+#include <format>
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "Platform/CrossPlatform/AxesStandard.h"
 #include "Platform/Math/Orientation.h"
@@ -2990,7 +2990,7 @@ const std::string &OpenXR::GetDebugString() const
 
 	// Note: when the runtime thinks no-one's wearing the headset, it will go into SYNCHRONIZED mode, and stop taking controller inputs.
 	// prevent this by blocking the light sensor on the inside of the headset with some tape etc.
-	str+=fmt::format("XrSessionState: {0}\n",stringOf(xr_session_state));
+	str+=std::format("XrSessionState: {0}\n",stringOf(xr_session_state));
 	str+="Bound profile paths:\n";
 	for(int i=0;i<activeInteractionProfilePaths.size();i++)
 	{
@@ -3010,23 +3010,23 @@ const std::string &OpenXR::GetDebugString() const
 			case XR_ACTION_TYPE_POSE_INPUT:
 			{
 				//teleport::core::Pose pose_stagespace=ConvertGLStageSpacePoseToLocalSpacePose(state.pose_stageSpace);
-				//str+=fmt::format("{: .3f},{: .3f},{: .3f}    - {: .2f},{: .2f},{: .2f},{: .2f}",pose_stagespace.position.x,pose_stagespace.position.y,pose_stagespace.position.z
+				//str+=std::format("{: .3f},{: .3f},{: .3f}    - {: .2f},{: .2f},{: .2f},{: .2f}",pose_stagespace.position.x,pose_stagespace.position.y,pose_stagespace.position.z
 				//						,pose_stagespace.orientation.x,pose_stagespace.orientation.y,pose_stagespace.orientation.z,pose_stagespace.orientation.w);
 			}
 			break;
 			case XR_ACTION_TYPE_BOOLEAN_INPUT:
 			{
-			//	str+=fmt::format("{0}",state.u32!=0?"true":"false");
+			//	str+=std::format("{0}",state.u32!=0?"true":"false");
 			}
 			break;
 			case XR_ACTION_TYPE_FLOAT_INPUT:
 			{
-			//	str+=fmt::format("{: .3f}",state.f32);
+			//	str+=std::format("{: .3f}",state.f32);
 			}
 			break;
 			case XR_ACTION_TYPE_VECTOR2F_INPUT:
 			{
-			//..	str+=fmt::format("{0},{1}",state.vec2f[0],state.vec2f[1]);
+			//..	str+=std::format("{0},{1}",state.vec2f[0],state.vec2f[1]);
 			}
 			break;
 			case XR_ACTION_TYPE_VIBRATION_OUTPUT:

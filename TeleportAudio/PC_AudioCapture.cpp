@@ -7,7 +7,7 @@
 #include <audioclient.h>
 #include <mmdeviceapi.h>
 #include <comdef.h>
-#include <fmt/format.h>
+#include <format>
 #include <xaudio2.h>
 #include "TeleportCore/StringFunctions.h"
 
@@ -36,7 +36,7 @@ std::string teleport::audio::GetMessageForHresult(long h)
 	_com_error error(hr);
 	std::string cs;
 	std::wstring wstr = error.ErrorMessage();
-	cs=fmt::format("Error 0x{0:x}: {1}", (long long)hr,teleport::core::WStringToString(wstr));
+	cs=std::format("Error 0x{0:x}: {1}", (long long)hr,teleport::core::WStringToString(wstr));
 	return cs;
 }
 

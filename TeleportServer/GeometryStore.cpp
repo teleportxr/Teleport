@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <regex>
-#include <fmt/core.h>
+#include <format>
 
 #if defined ( _WIN32 )
 #include <sys/stat.h>
@@ -1126,7 +1126,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 		try
 		{
 			std::filesystem::path p = filePath + meshFilename;
-			string dracoFilename = p.replace_extension(fmt::format("_{0}.draco", i)).string();
+			string dracoFilename = p.replace_extension(std::format("_{0}.draco", i)).string();
 			// Encode as draco native:
 			draco::Status status= dracoEncoder.EncodeMeshToBuffer(dracoMesh,&dracoEncoderBuffer);
 			if(!status.ok())
@@ -1149,7 +1149,7 @@ static bool CompressMesh(avs::CompressedMesh &compressedMesh,avs::Mesh &sourceMe
 				}
 			}
 			// And encode as glb.
-			string glbSubFilename = p.replace_extension(fmt::format("_{0}.glb", i)).string();
+			string glbSubFilename = p.replace_extension(std::format("_{0}.glb", i)).string();
 			dracoEncoderBuffer.Clear();
 			gltfEncoder.EncodeToBuffer(dracoMesh, &dracoEncoderBuffer);
 			buf = dracoEncoderBuffer.buffer();
@@ -1232,7 +1232,7 @@ bool GeometryStore::storeMesh(avs::uid id,const std::string &assetPath,std::time
 			
 			std::string subFilename = filePath+meshFilename;
 			std::filesystem::path p=subFilename;
-			p = p.replace_extension(fmt::format("_{0}.glb", i));
+			p = p.replace_extension(std::format("_{0}.glb", i));
 			subFilename = p.string();
 
 		}
@@ -1551,7 +1551,7 @@ void GeometryStore::compressNextTexture()
 					static bool writeout=false;
 					if(writeout)
 					{
-						std::string filename = fmt::format("{0}/{1}-{2}-{3}.png", cachePath,extractedTexture.getName(),m, i);
+						std::string filename = std::format("{0}/{1}-{2}-{3}.png", cachePath,extractedTexture.getName(),m, i);
 						stbi_write_png(filename.c_str(),w,h,bytesPerPixel==4?4:1, (const unsigned char *)(img.data()), w * bytesPerPixel);
 					}
 					n++;

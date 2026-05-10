@@ -10,6 +10,7 @@
 #include "TeleportCore/FontAtlas.h"
 #include "TeleportCore/Logging.h"
 #include "ThisPlatform/Threads.h"
+#include <format>
 #include <fstream>
 #include <iostream>
 
@@ -788,7 +789,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 		skeleton_uids.push_back(skeleton_uid);
 		avs::Skeleton &avsSkeleton = subSceneDG.skeletons[skeleton_uid];
 
-		avsSkeleton.name		   = fmt::format("{0} skeleton {1}", filename_url, i);
+		avsSkeleton.name		   = std::format("{0} skeleton {1}", filename_url, i);
 		int numBones			   = dracoSkin->NumJoints();
 		avsSkeleton.boneIDs.resize(numBones);
 		//  We'll only use boneIDs in this case because the joints are actual nodes.

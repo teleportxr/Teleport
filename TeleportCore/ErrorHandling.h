@@ -26,7 +26,6 @@ namespace teleport
 {
 	extern void DebugBreak();
 #if TELEPORT_INTERNAL_CHECKS
-#if __cplusplus>=202002L
 	template <typename... Args>
 	void InternalWarn(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args&&... args)
 	{
@@ -41,18 +40,6 @@ namespace teleport
 		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
 		std::cerr << str1<<str2 << "\n";
 	}
-#else
-	template<typename... Args> void InternalWarn(const char *file,int line, const char *function,const char *txt, Args... args)
-	{
-		std::string str = fmt::format("{0} ({1}): warning: {2}: {3}", file, line,function, txt);
-		std::cerr<<fmt::format(str,args...).c_str() << "\n";
-	}
-	template<typename... Args> void InternalInfo(const char *file,int line, const char *function,const char *txt, Args...args)
-	{
-		std::string str = fmt::format("{0} ({1}): info: {2}: {3}", file, line,function, txt);
-		std::cout<<fmt::format(str,args...).c_str() << "\n";
-	}
-#endif
 #else
 	template<typename... Args> void InternalWarn(const char *,int,const char *,const char *, Args... )
 	{

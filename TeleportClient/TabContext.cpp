@@ -3,7 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include <map>
 #include <string>
-#include <fmt/format.h>
+#include <format>
 #include "Platform/Core/StringToWString.h"
 #ifdef _MSC_VER
 // For ShellExecute

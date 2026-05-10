@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <tchar.h>
 #include <psapi.h>
-#include <fmt/core.h>
+#include <format>
 #include <iostream>
 #include <vector>
 #include <algorithm>

@@ -74,7 +74,7 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	setupCommand.startTimestamp_utc_unix_us = startTimestamp_utc_unix_us;
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings->backgroundMode;
-	setupCommand.backgroundColour = clientSettings->backgroundColour;
+	setupCommand.backgroundColour = packed(clientSettings->backgroundColour);
 	setupCommand.draw_distance = clientSettings->drawDistance;
 	setupCommand.backgroundTexture = clientSettings->backgroundTexture;
 
@@ -147,11 +147,11 @@ void ClientData::reparentNode(avs::uid nodeID)
 	if (!node)
 		return;
 	teleport::core::Pose pose;
-	pose.orientation	= node->localTransform.rotation;
-	pose.position		= node->localTransform.position;
+	pose.orientation	= packed(node->localTransform.rotation);
+	pose.position		= packed(node->localTransform.position);
 	const auto &lastSetupCommand=clientMessaging->GetLastSetupCommand();
-	avs::ConvertRotation(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.orientation);
-	avs::ConvertPosition(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.position);
+	avs::ConvertRotation(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, unpacked(pose.orientation));
+	avs::ConvertPosition(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, unpacked(pose.position));
 	teleport::core::UpdateNodeStructureCommand command(nodeID, node->parentID, pose);
 	command.confirmationNumber = nextConfirmationNumber++;
 	auto& s = orthogonalNodeStates[nodeID];

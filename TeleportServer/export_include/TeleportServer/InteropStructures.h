@@ -16,9 +16,7 @@
 #include <libavstream/geometry/mesh_interface.hpp>
 #endif
 
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
 #ifndef TELEPORT_PACKED
 	#if defined(__GNUC__) || defined(__clang__)
 		#define TELEPORT_PACKED __attribute__ ((packed,aligned(1)))
@@ -185,7 +183,7 @@ struct InteropMesh
 			size_t dataSize = sizeof(avs::Attribute) * primitiveArrays[i].attributeCount;
 
 			newMesh.primitiveArrays[i].attributes = new avs::Attribute[dataSize];
-			memcpy_s(newMesh.primitiveArrays[i].attributes, dataSize, primitiveArrays[i].attributes, dataSize);
+			memcpy(newMesh.primitiveArrays[i].attributes, primitiveArrays[i].attributes, dataSize);
 		}
 
 		//Zip all of the maps back together.
@@ -205,7 +203,7 @@ struct InteropMesh
 
 			//Memcpy the data into a new memory location; the old location will be cleared/moved by C#'s garbage collector.
 			newMesh.buffers[bufferIDs[i]].data = new uint8_t[buffers[i].byteLength];
-			memcpy_s(const_cast<uint8_t*>(newMesh.buffers[bufferIDs[i]].data), buffers[i].byteLength, buffers[i].data, buffers[i].byteLength);
+			memcpy(const_cast<uint8_t*>(newMesh.buffers[bufferIDs[i]].data), buffers[i].data, buffers[i].byteLength);
 		}
 		newMesh.inverseBindMatricesAccessorID=inverseBindMatricesAccessorID;
 		return newMesh;
@@ -378,6 +376,6 @@ struct InteropFontAtlas
 	int numMaps=0;
 	InteropFontMap *fontMaps=nullptr;
 };
-#ifdef _MSC_VER
+
 #pragma pack(pop)
-#endif
+

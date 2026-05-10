@@ -317,7 +317,7 @@ if(LIBAV_USE_CUDA)
 	)
 	set_target_properties(cuda_kernels PROPERTIES FOLDER AVStream)
 endif()
-set(CMAKE_CXX_STANDARD 17 )
+set(CMAKE_CXX_STANDARD 20 )
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(libavstream STATIC ${hdr_private} ${src_private} ${hdr_public} ${src_platform})
 
@@ -385,7 +385,7 @@ target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
 														#${PTHREAD_INCLUDE_DIR}
 														PUBLIC include include/libavstream export_include
 														${curl_include_paths})
-target_compile_features(libavstream PRIVATE cxx_std_17)
+target_compile_features(libavstream PRIVATE cxx_std_20)
 
 if(LIBAAV_BUILD_SHARED_LIBS)
 	target_compile_definitions(libavstream

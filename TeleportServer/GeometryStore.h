@@ -2,6 +2,7 @@
 #include <ctime>
 #include <unordered_map>
 #include <vector>
+#include <thread>
 
 #include "libavstream/geometry/mesh_interface.hpp"
 #include "TeleportCore/Animation.h"

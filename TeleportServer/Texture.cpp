@@ -6,7 +6,7 @@
 #include "TeleportCore/Logging.h"
 #include "GeometryStore.h"
 #include <filesystem>
-#include <fmt/core.h>
+#include <format>
 #include <ktx.h>
 #include <vkformat_enum.h>
 #define STB_IMAGE_IMPLEMENTATION
