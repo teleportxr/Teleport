@@ -9,6 +9,7 @@
 #include "Material.h"
 #include "NodeComponents/SubSceneComponent.h"
 #include "TeleportClient/Config.h"
+#include "TeleportClient/SessionClient.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "ThisPlatform/Threads.h"
@@ -646,6 +647,8 @@ void ResourceCreator::CreateTexture(avs::uid server_uid, avs::uid id, const avs:
 	geometryCache->ReceivedResource(id);
 	if (geometryCache->mTextureManager.Get(id))
 	{
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: CreateTexture duplicate (uid={}, name={})",
+			teleport::client::SessionClient::GetConnectElapsedMs(), id, texture.name);
 		return;
 	}
 	std::shared_ptr<clientrender::Texture::TextureCreateInfo> texInfo = std::make_shared<clientrender::Texture::TextureCreateInfo>();
@@ -672,6 +675,8 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 	}
 	if (geometryCache->mMaterialManager.Get(id))
 	{
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: CreateMaterial duplicate (uid={}, name={})",
+			teleport::client::SessionClient::GetConnectElapsedMs(), id, material.name);
 		return;
 	}
 	std::shared_ptr<IncompleteMaterial> incompleteMaterial = std::make_shared<IncompleteMaterial>(id, "", avs::GeometryPayloadType::Material);
@@ -954,6 +959,8 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 	// If we recreate the node here, we must either reset the missing resource count or add to it.
 	if (geometryCache->mNodeManager.HasNode(id))
 	{
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: CreateNode duplicate (uid={}, name={})",
+			teleport::client::SessionClient::GetConnectElapsedMs(), id, avsNode.name);
 		TELEPORT_WARN("CreateNode {} {} Already created.", id, avsNode.name);
 		// leaves nodes with no children. why?
 		auto n							 = geometryCache->mNodeManager.GetNode(id);

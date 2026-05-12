@@ -114,7 +114,7 @@ void ResourceManager<u,T>::Add(u id, std::shared_ptr<T> & newItem, float postUse
 	auto f = cachedItems.find(id);
 	if(f!=cachedItems.end())
 	{
-		TELEPORT_WARN("Trying to add an id that's already present.");
+		TELEPORT_WARN("ResourceManager::Add duplicate (cache_uid={}, id={})", cache_uid, id);
 		return;
 	}
 	ResourceData resd = {newItem, postUseLifetime_s, 0};

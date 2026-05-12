@@ -5,6 +5,7 @@
 #include "Platform/Core/FileLoader.h"
 #include "ResourceCreator.h"
 #include "TeleportClient/Config.h"
+#include "TeleportClient/SessionClient.h"
 #include "TeleportCore/Animation.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/FontAtlas.h"
@@ -1543,6 +1544,8 @@ avs::Result GeometryDecoder::decodeRemoveNodes(GeometryDecodeData &geometryDecod
 avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 {
 	avs::uid  uid = geometryDecodeData.uid;
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: decodeNode (uid={}, {} bytes)",
+		teleport::client::SessionClient::GetConnectElapsedMs(), uid, geometryDecodeData.data.size());
 
 	avs::Node node;
 

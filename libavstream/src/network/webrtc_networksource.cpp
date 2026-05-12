@@ -374,7 +374,13 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 				return false;
 		}
 	};
-	if(needsRecreate(m_data->rtcPeerConnection))
+	// A new offer that differs from the cached one carries fresh ICE credentials (ufrag/pwd).
+	// libdatachannel's underlying juice agent does not pick up changed remote credentials when
+	// setRemoteDescription is called on a still-active PeerConnection, so it keeps validating
+	// incoming STUN packets against the previous ufrag and rejects them all
+	// ("STUN remote ufrag check failed"). Recreate the PeerConnection in that case.
+	bool offerChanged = offer.length() && offer != sdp;
+	if(needsRecreate(m_data->rtcPeerConnection) || offerChanged)
 	{
 		if(m_data->rtcPeerConnection)
 		{
@@ -382,6 +388,7 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 			m_data->rtcPeerConnection.reset();
 		}
 		cachedCandidates.clear();
+		offer.clear();
 		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	}
 	try

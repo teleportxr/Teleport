@@ -560,6 +560,7 @@ void SessionClient::SendReceivedResources()
 
 	if (receivedResources.size() != 0)
 	{
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SendReceivedResources queued ({} uids)", GetConnectElapsedMs(), receivedResources.size());
 
 		teleport::core::ReceivedResourcesMessage message(receivedResources.size());
 
@@ -776,6 +777,8 @@ void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 
 void SessionClient::Ack(uint64_t ack_id)
 {
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: Ack queued (ack_id={}, transport={})",
+		GetConnectElapsedMs(), ack_id, currentReceiveTransport == CommandTransport::Signaling ? "Signaling" : "WebRTC");
 	teleport::core::AcknowledgementMessage msg;
 	TimestampMessage(msg);
 	msg.ack_id = ack_id;
@@ -911,6 +914,7 @@ void SessionClient::ReceiveNodeAnimationUpdate(const std::vector<uint8_t> &packe
 
 void SessionClient::ReceiveSetupLightingCommand(const std::vector<uint8_t> &packet)
 {
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupLighting received", GetConnectElapsedMs());
 	size_t commandSize = sizeof(teleport::core::SetLightingCommand);
 	if (packet.size() < commandSize)
 	{
@@ -994,6 +998,7 @@ void SessionClient::ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet
 
 void SessionClient::ReceiveUpdateNodeStructureCommand(const std::vector<uint8_t> &packet)
 {
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: UpdateNodeStructure received", GetConnectElapsedMs());
 	size_t commandSize = sizeof(teleport::core::UpdateNodeStructureCommand);
 	// Copy command out of packet.
 	teleport::core::UpdateNodeStructureCommand updateNodeStructureCommand;
