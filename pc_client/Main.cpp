@@ -1161,20 +1161,28 @@ int main(int argc, char *argv[])
 			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(&g_surface);
 			if (w)
 			{
-				int fbw = 0, fbh = 0;
-				glfwGetFramebufferSize(g_window, &fbw, &fbh);
-				if (fbw > 0 && fbh > 0)
+				// Bootstrap only: if the DisplaySurface viewport has never been set (e.g. on
+				// platforms/compositors where VkSurfaceCapabilitiesKHR::currentExtent is the
+				// "undefined" sentinel before the window is mapped), seed it from GLFW so the
+				// first InitSwapChain/CreateFramebuffers has a valid extent. After that, the
+				// viewport is owned by DisplaySurface::Resize() (called from EndFrame) and
+				// must match the current swapchain framebuffer extent — overwriting it here
+				// would desync the render area from the framebuffer and also defeat the
+				// size-change detection in Resize(), causing VUID-VkRenderPassBeginInfo-pNext-02852/02853.
+				if (w->viewport.w == 0 || w->viewport.h == 0)
 				{
-					// Linux equivalent of GetClientRect: feed the GLFW framebuffer size into
-					// the DisplaySurface so InitSwapChain/CreateFramebuffers see a valid extent
-					// even before the window has been mapped/realized (when surface caps may
-					// still report 0x0 or VK_KHR's "undefined" sentinel).
-					w->viewport.x = 0;
-					w->viewport.y = 0;
-					w->viewport.w = fbw;
-					w->viewport.h = fbh;
-					clientRenderer->ResizeView(0, fbw, fbh);
+					int fbw = 0, fbh = 0;
+					glfwGetFramebufferSize(g_window, &fbw, &fbh);
+					if (fbw > 0 && fbh > 0)
+					{
+						w->viewport.x = 0;
+						w->viewport.y = 0;
+						w->viewport.w = fbw;
+						w->viewport.h = fbh;
+					}
 				}
+				if (w->viewport.w > 0 && w->viewport.h > 0)
+					clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
 			}
 			clientRenderer->OnFrameMove(fTime, time_step);
 			fTime += time_step;
@@ -1209,9 +1217,9 @@ int main(int argc, char *argv[])
 	if (fileLoader->GetRecordFilesLoaded())
 	{
 		auto l = fileLoader->GetFilesLoaded();
-		std::cout << "Files loaded:" << std::endl;
+		TELEPORT_INTERNAL_COUT(Default, "Files loaded:");
 		for (const auto &s : l)
-			std::cout << s << std::endl;
+			TELEPORT_INTERNAL_COUT(Default, "{}", s);
 	}
 
 	client::SessionClient::DestroySessionClients();

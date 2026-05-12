@@ -189,7 +189,7 @@ void VertexBuffer::Create(VertexBufferCreateInfo* pVertexBufferCreateInfo)
 
 		if(desc[i].format == platform::crossplatform::UNKNOWN)
 		{
-			TELEPORT_INTERNAL_COUT("ERROR: Unknown format for attribute: {}", desc[i].semanticName);
+			TELEPORT_INTERNAL_COUT(Default, "ERROR: Unknown format for attribute: {}", desc[i].semanticName);
 		}
 
 		size_t this_size = GetByteSize(attr);

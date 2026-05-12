@@ -20,5 +20,6 @@ Mesh::Mesh(const SubSceneCreate &subSceneCreate)
 
 Mesh::~Mesh()
 {
-	std::cerr << "Destroying mesh " << m_CI.name << "\n";
+	if (!m_CI.name.empty())
+		std::cerr << "Destroying mesh " << m_CI.id << " (" << m_CI.name << ")" << std::endl;
 }

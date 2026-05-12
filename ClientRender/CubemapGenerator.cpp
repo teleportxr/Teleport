@@ -282,7 +282,7 @@ bool CubemapGenerator::SaveToHDR(platform::crossplatform::GraphicsDeviceContext 
 	try
 	{
 		m_renderPlatform->SaveTexture(deviceContext, m_hdrCrossTexture.get(), filename.c_str());
-		TELEPORT_INTERNAL_COUT("CubemapGenerator: Successfully saved HDR cubemap cross to {}", filename);
+		TELEPORT_INTERNAL_COUT(Default, "CubemapGenerator: Successfully saved HDR cubemap cross to {}", filename);
 		return true;
 	}
 	catch (...)

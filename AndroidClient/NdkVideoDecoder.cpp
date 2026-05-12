@@ -41,7 +41,7 @@ void BitwiseDecrement(std::atomic<_Ty>& status, const _Ty& value)
 }
 
 #if NDK_VIDEO_DECODER_LOG
-#define NDK_VIDEO_DECODER_LOG_MSG_COUT(msg) { TELEPORT_INTERNAL_COUT("NdkVideoDecoder - {}", msg); }
+#define NDK_VIDEO_DECODER_LOG_MSG_COUT(msg) { TELEPORT_INTERNAL_COUT(Default, "NdkVideoDecoder - {}", msg); }
 #define NDK_VIDEO_DECODER_LOG_FMT_COUT(msg, ...) NDK_VIDEO_DECODER_LOG_MSG_COUT(std::format(msg, __VA_ARGS__))
 
 #define NDK_VIDEO_DECODER_LOG_MSG_CERR(msg) { TELEPORT_INTERNAL_CERR("NdkVideoDecoder - {}", msg); }

@@ -29,10 +29,10 @@ SignalingClient::~SignalingClient()
 		webSocket->resetCallbacks();
 		if (webSocket.use_count() > 1)
 		{
-			TELEPORT_INTERNAL_COUT(": info: Websocket " << clientID << " remains after deletion with " << webSocket.use_count() << " uses.");
+			TELEPORT_INTERNAL_COUT(Default, ": info: Websocket " << clientID << " remains after deletion with " << webSocket.use_count() << " uses.");
 		}
 	}
-	TELEPORT_INTERNAL_COUT(": info: ~SignalingClient " << clientID << " destroyed.");
+	TELEPORT_INTERNAL_COUT(Default, ": info: ~SignalingClient " << clientID << " destroyed.");
 }
 
 bool SignalingService::initialize(uint64_t server_id, std::set<uint16_t> discoPorts,  std::string desIP)
@@ -258,8 +258,8 @@ void SignalingService::processInitialRequest(avs::uid uid,
 			clientUids.insert(clientID);
 			if (uid != clientID)
 			{
-				TELEPORT_INTERNAL_COUT(": info: Remapped from " << uid << " to " << clientID);
-				TELEPORT_INTERNAL_COUT(": info: signalingClient has " << signalingClient->clientID);
+				TELEPORT_INTERNAL_COUT(Default, ": info: Remapped from " << uid << " to " << clientID);
+				TELEPORT_INTERNAL_COUT(Default, ": info: signalingClient has " << signalingClient->clientID);
 				writeSignalingClients->erase(uid);
 				clientUids.erase(uid);
 				uid = clientID;
@@ -267,7 +267,7 @@ void SignalingService::processInitialRequest(avs::uid uid,
 		}
 		std::string ipAddr;
 		ipAddr = signalingClient->ip_addr_port;
-		TELEPORT_INTERNAL_COUT("Received connection request from " << ipAddr << " identifying as client " << clientID << " .");
+		TELEPORT_INTERNAL_COUT(Default, "Received connection request from " << ipAddr << " identifying as client " << clientID << " .");
 
 		//Skip clients we have already added.
 		if (signalingClient->signalingState == core::SignalingState::START)
@@ -280,7 +280,7 @@ void SignalingService::processInitialRequest(avs::uid uid,
 			// The client might, as far as we know, have lost the information it needs to continue the connection.
 			// THerefore we should resend everything required.
 			signalingClient->signalingState = core::SignalingState::STREAMING;
-			TELEPORT_INTERNAL_COUT("Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them.");
+			TELEPORT_INTERNAL_COUT(Default, "Warning: Client " << clientID << " reconnected, but we didn't know we'd lost them.");
 			// It may be just that the connection request was already in flight when we accepted its predecessor.
 			sendResponseToClient(signalingClient,clientID);
 			return;
@@ -400,7 +400,7 @@ void SignalingService::sendResponseToClient(std::shared_ptr<SignalingClient> &si
 	catch (...)
 	{
 	}
-	TELEPORT_INTERNAL_COUT("Sending server discovery response to client ID: " << clientID);
+	TELEPORT_INTERNAL_COUT(Default, "Sending server discovery response to client ID: " << clientID);
 }
 
 void SignalingService::sendToClient(avs::uid clientID, std::string str)

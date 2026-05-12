@@ -25,6 +25,17 @@
 namespace teleport
 {
 	extern void DebugBreak();
+
+	//! Logging categories for TELEPORT_INTERNAL_COUT. Each category may be enabled or disabled at runtime.
+	enum class LogCategory
+	{
+		Default,
+		Time,
+	};
+
+	extern bool IsLogCategoryEnabled(LogCategory category);
+	extern void SetLogCategoryEnabled(LogCategory category, bool enabled);
+
 #if TELEPORT_INTERNAL_CHECKS
 	template <typename... Args>
 	void InternalWarn(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args&&... args)
@@ -73,13 +84,15 @@ namespace teleport
 	#define TELEPORT_INTERNAL_LOG_UNSAFE(...) \
 		{ TeleportLogUnsafe(__VA_ARGS__); }
 	#define TELEPORT_INTERNAL_CERR(txt, ...) teleport::InternalWarn(__FILE__,__LINE__, __func__, txt, ##__VA_ARGS__)
-	#define TELEPORT_INTERNAL_COUT(txt, ...) teleport::InternalInfo(__FILE__,__LINE__, __func__, txt, ##__VA_ARGS__)
+	#define TELEPORT_INTERNAL_COUT(category, txt, ...) \
+		do { if (teleport::IsLogCategoryEnabled(teleport::LogCategory::category)) \
+			teleport::InternalInfo(__FILE__,__LINE__, __func__, txt, ##__VA_ARGS__); } while(0)
 
 #else
 	#define TELEPORT_INTERNAL_BREAK_ONCE(txt, ...)
 	#define TELEPORT_INTERNAL_LOG_UNSAFE(...)
 	#define TELEPORT_INTERNAL_CERR(txt, ...)
-	#define TELEPORT_INTERNAL_COUT(txt, ...)
+	#define TELEPORT_INTERNAL_COUT(category, txt, ...)
 #endif
 #define TELEPORT_ASSERT(c)\
 	if(!(c)){TELEPORT_CERR<<"Assertion failed for "<<#c<<"\n";}

@@ -32,7 +32,7 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	}
 
 	// Generate a white-themed cubemap
-	TELEPORT_INTERNAL_COUT("Generating white cubemap...");
+	TELEPORT_INTERNAL_COUT(Default, "Generating white cubemap...");
 	if (!generator.GenerateCubemap("white", 512, 0.0f))
 	{
 		TELEPORT_INTERNAL_CERR("Failed to generate white cubemap");
@@ -48,7 +48,7 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	}
 
 	// Generate a neon-themed cubemap with animation
-	TELEPORT_INTERNAL_COUT("Generating neon cubemap...");
+	TELEPORT_INTERNAL_COUT(Default, "Generating neon cubemap...");
 	if (!generator.GenerateCubemap("neon", 512, 5.0f)) // 5 seconds for animation
 	{
 		TELEPORT_INTERNAL_CERR("Failed to generate neon cubemap");
@@ -64,7 +64,7 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 	}
 
 	// Generate a higher resolution neon cubemap
-	TELEPORT_INTERNAL_COUT("Generating high-res neon cubemap...");
+	TELEPORT_INTERNAL_COUT(Default, "Generating high-res neon cubemap...");
 	if (!generator.GenerateCubemap("neon", 1024, 10.0f)) // 10 seconds for different animation phase
 	{
 		TELEPORT_INTERNAL_CERR("Failed to generate high-res neon cubemap");
@@ -79,7 +79,7 @@ bool GenerateExampleCubemaps(RenderPlatform* renderPlatform, const std::string& 
 		return false;
 	}
 
-	TELEPORT_INTERNAL_COUT("Successfully generated all cubemaps!");
+	TELEPORT_INTERNAL_COUT(Default, "Successfully generated all cubemaps!");
 	return true;
 }
 
@@ -108,7 +108,7 @@ bool GenerateAnimatedCubemapSequence(RenderPlatform* renderPlatform, const std::
 		return false;
 	}
 
-	TELEPORT_INTERNAL_COUT("Generating animated cubemap sequence...");
+	TELEPORT_INTERNAL_COUT(Default, "Generating animated cubemap sequence...");
 
 	for (int frame = 0; frame < frameCount; ++frame)
 	{
@@ -136,11 +136,11 @@ bool GenerateAnimatedCubemapSequence(RenderPlatform* renderPlatform, const std::
 		// Progress indicator
 		if (frame % 10 == 0)
 		{
-			TELEPORT_INTERNAL_COUT("Generated frame " << frame << "/" << frameCount);
+			TELEPORT_INTERNAL_COUT(Default, "Generated frame " << frame << "/" << frameCount);
 		}
 	}
 
-	TELEPORT_INTERNAL_COUT("Successfully generated animated cubemap sequence!");
+	TELEPORT_INTERNAL_COUT(Default, "Successfully generated animated cubemap sequence!");
 	return true;
 }
 
@@ -158,7 +158,7 @@ void ExampleUsageInRenderLoop(RenderPlatform* renderPlatform)
 		if (generator->Initialize())
 		{
 			initialized = true;
-			TELEPORT_INTERNAL_COUT("CubemapGenerator initialized for runtime use");
+			TELEPORT_INTERNAL_COUT(Default, "CubemapGenerator initialized for runtime use");
 		}
 		else
 		{

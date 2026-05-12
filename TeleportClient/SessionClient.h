@@ -75,6 +75,13 @@ namespace teleport
 			//! out a back-off period before attempting another offer to the same server.
 			RECONNECTING
 		};
+		//! Identifies which transport a command arrived on, so that any acknowledgement
+		//! can be routed back to the server via the same path.
+		enum class CommandTransport : uint8_t
+		{
+			Signaling,
+			WebRTC
+		};
 		inline const char *StringOf(ConnectionStatus s)
 		{
 			switch(s)
@@ -139,6 +146,8 @@ namespace teleport
 					const teleport::core::Input& input,
 					double time, double deltaTime);
 			float GetLatencyMs() const;
+			//! Returns milliseconds elapsed since the most recent Connect() call. Safe to call from any thread.
+			static double GetConnectElapsedMs();
 			//! @brief Returns the current connection status as determined by the signaling
 			//! @return 
 			ConnectionStatus GetConnectionStatus() const;
@@ -202,7 +211,10 @@ namespace teleport
 		private:
 			void ConfirmOrthogonalStateToClient(uint64_t confNumber);
 			void ReceiveCommand(const std::vector<uint8_t> &buffer);
-			void ReceiveCommandPacket(const std::vector<uint8_t> &buffer);
+			void ReceiveCommandPacket(const std::vector<uint8_t> &buffer, CommandTransport transport);
+			//! Transport the command currently being processed arrived on. Used by Ack()
+			//! to route the acknowledgement back over the same channel.
+			CommandTransport currentReceiveTransport = CommandTransport::Signaling;
 
 			void SendDisplayInfo(const avs::DisplayInfo& displayInfo);
 			void SendNodePoses(const teleport::core::Pose& headPose,const std::map<avs::uid,teleport::core::PoseDynamic> poses);

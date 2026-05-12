@@ -1,5 +1,6 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
+#include <array>
 #include <cstdarg>  // for va_list, va_start, va_end
 #include <cstdio>   // for vsnprintf
 #ifdef _MSC_VER
@@ -11,6 +12,30 @@
 void teleport::log_print_impl(const char* source, const std::string& message)
 {
 	std::cout << source << " " << message << std::endl;
+}
+
+namespace teleport
+{
+	static std::array<bool, 2> g_logCategoryEnabled = {
+		false,	// Default
+		true,	// Time
+	};
+
+	bool IsLogCategoryEnabled(LogCategory category)
+	{
+		size_t idx = static_cast<size_t>(category);
+		if (idx >= g_logCategoryEnabled.size())
+			return false;
+		return g_logCategoryEnabled[idx];
+	}
+
+	void SetLogCategoryEnabled(LogCategory category, bool enabled)
+	{
+		size_t idx = static_cast<size_t>(category);
+		if (idx >= g_logCategoryEnabled.size())
+			return;
+		g_logCategoryEnabled[idx] = enabled;
+	}
 }
 
 #if TELEPORT_INTERNAL_CHECKS

@@ -73,7 +73,7 @@ void OpenXRRenderModel::OneTimeInitialize()
 		XR_CHECK(xrEnumerateRenderModelPathsFB(xr_session, pathCount, &pathCount, nullptr));
 		if (pathCount > 0)
 		{
-			TELEPORT_LOG("OpenXRRenderModel: found %u models ", pathCount);
+			TELEPORT_INTERNAL_COUT(Default, "OpenXRRenderModel: found %u models ", pathCount);
 			paths_.resize(pathCount, { XR_TYPE_RENDER_MODEL_PATH_INFO_FB });
 			/// Fill in the path data
 			XR_CHECK(xrEnumerateRenderModelPathsFB(xr_session, pathCount, &pathCount, &paths_[0]));
@@ -84,7 +84,7 @@ void OpenXRRenderModel::OneTimeInitialize()
 				uint32_t bufCount = 0;
 				XR_CHECK(xrPathToString(xr_instance, p.path, bufCount, &bufCount, nullptr));
 				XR_CHECK(xrPathToString(xr_instance, p.path, bufCount, &bufCount, &buf[0]));
-				TELEPORT_LOG("OpenXRRenderModel: path=%u `%s`", (uint32_t)p.path, &buf[0]);
+				TELEPORT_INTERNAL_COUT(Default, "OpenXRRenderModel: path=%u `%s`", (uint32_t)p.path, &buf[0]);
 			}
 			/// Get properties
 			for (const auto& p : paths_)
@@ -148,7 +148,7 @@ std::vector<uint8_t> OpenXRRenderModel::LoadRenderModel(std::string path)
 					XrResult rs=xrLoadRenderModelFB(xr_session, &loadInfo, &rmb);
 					if (XR_UNQUALIFIED_SUCCESS(rs))
 					{
-						TELEPORT_LOG(
+						TELEPORT_INTERNAL_COUT(Default, 
 							"OpenXRRenderModel: loading modelKey %u size %u ",
 							prop.modelKey,
 							rmb.bufferCountOutput);
@@ -157,14 +157,14 @@ std::vector<uint8_t> OpenXRRenderModel::LoadRenderModel(std::string path)
 						rmb.bufferCapacityInput = rmb.bufferCountOutput;
 						if (!XR_UNQUALIFIED_SUCCESS(xrLoadRenderModelFB(xr_session, &loadInfo, &rmb)))
 						{
-							TELEPORT_LOG(
+							TELEPORT_INTERNAL_COUT(Default, 
 								"OpenXRRenderModel: FAILED to load modelKey %u on pass 2",
 								prop.modelKey);
 							buffer.resize(0);
 						}
 						else
 						{
-							TELEPORT_LOG(
+							TELEPORT_INTERNAL_COUT(Default, 
 								"OpenXRRenderModel: loaded modelKey %u buffer size is %u",
 								prop.modelKey,
 								buffer.size());
@@ -173,7 +173,7 @@ std::vector<uint8_t> OpenXRRenderModel::LoadRenderModel(std::string path)
 					}
 					else
 					{
-						TELEPORT_LOG(
+						TELEPORT_INTERNAL_COUT(Default, 
 							"OpenXRRenderModel: FAILED to load modelKey %u on pass 1",
 							prop.modelKey);
 					}
@@ -181,7 +181,7 @@ std::vector<uint8_t> OpenXRRenderModel::LoadRenderModel(std::string path)
 			}
 			else
 			{
-				TELEPORT_LOG(
+				TELEPORT_INTERNAL_COUT(Default, 
 					"OpenXRRenderModel: FAILED to load prop for path '%s'",
 					pathString.c_str());
 			}

@@ -9,6 +9,7 @@
 #include "Material.h"
 #include "NodeComponents/SubSceneComponent.h"
 #include "TeleportClient/Config.h"
+#include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "ThisPlatform/Threads.h"
 #include "draco/compression/decode.h"
@@ -654,7 +655,7 @@ void ResourceCreator::CreateTexture(avs::uid server_uid, avs::uid id, const avs:
 	texInfo->width													  = texture.width;
 	texInfo->height													  = texture.height;
 
-	TELEPORT_LOG("Received texture {0} ({1}), awaiting decompression.", id, texture.name);
+	TELEPORT_INTERNAL_COUT(Default, "Received texture {0} ({1}), awaiting decompression.", id, texture.name);
 	{
 		std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 		texturesToTranscode.emplace_back(
@@ -744,7 +745,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 		{
 			texlist += std::format("{0},", t_uid);
 		}
-		TELEPORT_INTERNAL_COUT("CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.",
+		TELEPORT_INTERNAL_COUT(Default, "CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.",
 							   id,
 							   material.name,
 							   texlist,
@@ -826,7 +827,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid, avs::uid id, const avs
 	{
 		return;
 	}
-	TELEPORT_INTERNAL_COUT("CreateSkeleton({0}, {1})", id, skeleton.name);
+	TELEPORT_INTERNAL_COUT(Default, "CreateSkeleton({0}, {1})", id, skeleton.name);
 
 	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id, skeleton.name, avs::GeometryPayloadType::Skeleton);
 
@@ -1000,7 +1001,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 		auto skeleton = geometryCache->mSkeletonManager.Get(avsNode.skeletonID);
 		if (!skeleton)
 		{
-			TELEPORT_INTERNAL_COUT("MeshNode_{} ({}) missing Skeleton {}", id, avsNode.name, avsNode.skeletonID);
+			TELEPORT_INTERNAL_COUT(Default, "MeshNode_{} ({}) missing Skeleton {}", id, avsNode.name, avsNode.skeletonID);
 			isMissingResources = true;
 			auto &missing	   = geometryCache->GetMissingResource(avsNode.skeletonID, avs::GeometryPayloadType::Skeleton);
 			missing.waitingResources.insert(node);
@@ -1018,7 +1019,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 		auto skeletonNode = geometryCache->mNodeManager.GetNode(avsNode.skeletonNodeID);
 		if (!skeletonNode)
 		{
-			TELEPORT_INTERNAL_COUT("MeshNode_{} ({}) missing Skeleton Node {}", id, avsNode.name, avsNode.skeletonNodeID);
+			TELEPORT_INTERNAL_COUT(Default, "MeshNode_{} ({}) missing Skeleton Node {}", id, avsNode.name, avsNode.skeletonNodeID);
 			isMissingResources = true;
 			auto &missing	   = geometryCache->GetMissingResource(avsNode.skeletonNodeID, avs::GeometryPayloadType::Node);
 			missing.waitingResources.insert(node);
@@ -1044,7 +1045,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 			{
 				isMissingResources = true;
 				node->IncrementMissingResources();
-				TELEPORT_INTERNAL_COUT(
+				TELEPORT_INTERNAL_COUT(Default,
 					"Node {0} ({1}) missing Mesh {2}, total missing resources: {3}", id, avsNode.name, avsNode.data_uid, node->GetMissingResourceCount());
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::Mesh).waitingResources.insert(node);
 			}
@@ -1158,7 +1159,7 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 		geometryCache->GetMissingResource(mat_uid, avs::GeometryPayloadType::Material).waitingResources.insert(node);
 		node->IncrementMissingResources();
 		//	TELEPORT_CERR << "MeshNode_" << id << "(" << avsNode.name << ") missing Material " << avsNode.materials[i] << std::endl;
-		TELEPORT_INTERNAL_COUT("Node {0} ({1}) missing Material {2}, total missing resources: {3}", id, avsNode.name, mat_uid, node->GetMissingResourceCount());
+		TELEPORT_INTERNAL_COUT(Default, "Node {0} ({1}) missing Material {2}, total missing resources: {3}", id, avsNode.name, mat_uid, node->GetMissingResourceCount());
 	}
 
 	size_t num_remaining = RESOURCES_AWAITED(node);
@@ -1352,6 +1353,7 @@ KTX_error_code ktxImageExtractionCallback(int miplevel, int face, int width, int
 void ResourceCreator::thread_TranscodeTextures()
 {
 	SetThisThreadName("thread_TranscodeTextures");
+	static bool s_firstTranscodeLogged = false;
 	auto &config = teleport::client::Config::GetInstance();
 	while (shouldBeTranscoding)
 	{
@@ -1486,6 +1488,7 @@ void ResourceCreator::thread_TranscodeTextures()
 				{
 					// TELEPORT_CERR << "Texture \"" << transcoding->name << "\" uid "<< transcoding->texture_uid<<", Type "<<int(transcoding->textureCI->type)
 					// << std::endl;
+					if (!s_firstTranscodeLogged) { s_firstTranscodeLogged = true; TELEPORT_INTERNAL_COUT(Time, "First texture transcode complete (uid={}, name={})", transcoding->texture_uid, transcoding->name); }
 					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
 				else
@@ -1572,6 +1575,7 @@ void ResourceCreator::thread_TranscodeTextures()
 				{
 					// TELEPORT_CERR << "Texture \"" << transcoding->name << "\" uid "<< transcoding->texture_uid<<", Type "<<int(transcoding->textureCI->type)
 					// << std::endl;
+					if (!s_firstTranscodeLogged) { s_firstTranscodeLogged = true; TELEPORT_INTERNAL_COUT(Time, "First texture transcode complete (uid={}, name={})", transcoding->texture_uid, transcoding->name); }
 					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
 				else
@@ -1681,6 +1685,7 @@ void ResourceCreator::thread_TranscodeTextures()
 					}
 					if (result == KTX_SUCCESS)
 					{
+						if (!s_firstTranscodeLogged) { s_firstTranscodeLogged = true; TELEPORT_INTERNAL_COUT(Time, "First texture transcode complete (uid={}, name={})", transcoding->texture_uid, transcoding->name); }
 						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 					}
 					else

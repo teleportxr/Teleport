@@ -42,7 +42,7 @@ Result LinuxAudioPlayer::configure(const AudioSettings& audioSettings)
 {
 	if (mConfigured)
 	{
-		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Audio player has already been configured.");
+		TELEPORT_INTERNAL_COUT(Default, "LinuxAudioPlayer: Audio player has already been configured.");
 		return Result::AudioPlayerAlreadyConfigured;
 	}
 
@@ -166,7 +166,7 @@ Result LinuxAudioPlayer::startRecording(std::function<void(const uint8_t* data, 
 
 	if (mRecording)
 	{
-		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Already recording.");
+		TELEPORT_INTERNAL_COUT(Default, "LinuxAudioPlayer: Already recording.");
 		return Result::OK;
 	}
 
@@ -237,7 +237,7 @@ Result LinuxAudioPlayer::processRecordedAudio()
 {
 	if (!mRecording)
 	{
-		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Not recording.");
+		TELEPORT_INTERNAL_COUT(Default, "LinuxAudioPlayer: Not recording.");
 		return Result::AudioProcessingError;
 	}
 	// Audio is processed asynchronously in the capture thread
@@ -248,7 +248,7 @@ Result LinuxAudioPlayer::stopRecording()
 {
 	if (!mRecording)
 	{
-		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Not recording.");
+		TELEPORT_INTERNAL_COUT(Default, "LinuxAudioPlayer: Not recording.");
 		return Result::OK;
 	}
 
@@ -266,7 +266,7 @@ Result LinuxAudioPlayer::deconfigure()
 {
 	if (!mConfigured)
 	{
-		TELEPORT_INTERNAL_COUT("LinuxAudioPlayer: Can't deconfigure audio player because it is not configured.");
+		TELEPORT_INTERNAL_COUT(Default, "LinuxAudioPlayer: Can't deconfigure audio player because it is not configured.");
 		return Result::AudioPlayerNotConfigured;
 	}
 

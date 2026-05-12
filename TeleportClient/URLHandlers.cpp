@@ -41,8 +41,8 @@ std::string teleport::client::GetLauncherForProtocol(std::string protocol)
 	{
 		exe = GetAssocString(pqa, ASSOCSTR_EXECUTABLE);
 		cmd = GetAssocString(pqa, ASSOCSTR_COMMAND);
-		TELEPORT_INTERNAL_COUT("{}", exe);
-		TELEPORT_INTERNAL_COUT("{}", cmd);
+		TELEPORT_INTERNAL_COUT(Default, "{}", exe);
+		TELEPORT_INTERNAL_COUT(Default, "{}", cmd);
 	}
 	pqa->Release();
 	

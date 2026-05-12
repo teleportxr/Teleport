@@ -171,6 +171,14 @@ avs::Result GeometryDecoder::decode(avs::uid							 server_uid,
 									avs::GeometryTargetBackendInterface *target,
 									avs::uid							 resource_uid)
 {
+	static bool s_firstGeomLogged = false;
+	static std::chrono::steady_clock::time_point s_firstGeomTime;
+	if (!s_firstGeomLogged)
+	{
+		s_firstGeomLogged = true;
+		s_firstGeomTime	  = std::chrono::steady_clock::now();
+		TELEPORT_INTERNAL_COUT(Time, "First geometry chunk received from network (type={}, uid={})", static_cast<int>(type), resource_uid);
+	}
 	GeometryFileFormat geometryFileFormat = GeometryFileFormat::TELEPORT_NATIVE;
 	decodeData.emplace(server_uid,
 					   "",
@@ -264,6 +272,12 @@ avs::Result GeometryDecoder::receiveFromWeb(avs::uid							  server_uid,
 {
 	if (bufferSize)
 	{
+		static bool s_firstWebAssetLogged = false;
+		if (!s_firstWebAssetLogged)
+		{
+			s_firstWebAssetLogged = true;
+			TELEPORT_INTERNAL_COUT(Time, "First HTTPS asset received (uid={}, url={}, {} bytes)", resource_uid, uri, bufferSize);
+		}
 		return decodeFromBuffer(server_uid, buffer, bufferSize, uri, type, target, resource_uid, sourceAxesStandard);
 	}
 	return avs::Result::OK;
@@ -1347,8 +1361,7 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	// Log TexturePointer for debugging
-	TELEPORT_LOG("Received TexturePointer: resourceId={0}, url={1}", texture_uid, url);
+	TELEPORT_INTERNAL_COUT(Time, "TexturePointer: HTTPS fetch queued (uid={}, url={})", texture_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid);
 }
@@ -1365,8 +1378,7 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	// Log MeshPointer for debugging
-	TELEPORT_LOG("Received MeshPointer: resourceId={0}, url={1}", mesh_uid, url);
+	TELEPORT_INTERNAL_COUT(Time, "MeshPointer: HTTPS fetch queued (uid={}, url={})", mesh_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid);
 }

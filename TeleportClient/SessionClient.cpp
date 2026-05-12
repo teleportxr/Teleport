@@ -154,7 +154,7 @@ bool SessionClient::HandleConnections()
 					currentReconnectBackoffMs	= std::min(currentReconnectBackoffMs * 2u, config.options.reconnectMaxBackoffMs);
 					nextReconnectTime			= now + std::chrono::milliseconds(currentReconnectBackoffMs);
 					reconnectAttemptDeadline	= nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);
-					TELEPORT_INTERNAL_COUT("Reconnect attempt {0} timed out; next attempt in {1} ms.", reconnectAttempts, currentReconnectBackoffMs);
+					TELEPORT_INTERNAL_COUT(Default, "Reconnect attempt {0} timed out; next attempt in {1} ms.", reconnectAttempts, currentReconnectBackoffMs);
 					return false;
 				}
 			}
@@ -181,6 +181,7 @@ bool SessionClient::HandleConnections()
 bool SessionClient::Connect(const char *remote_ip, uint timeout, avs::uid cl_id)
 {
 	tBegin	 = avs::Platform::getTimestamp();
+	TELEPORT_INTERNAL_COUT(Time, "T+0.0 ms: Connect initiated to {}", remote_ip);
 	remoteIP = remote_ip;
 	// TODO: don't reset this if reconnecting.
 	ResetSessionState();
@@ -355,7 +356,7 @@ avs::Result SessionClient::decode(const void *buffer, size_t bufferSizeInBytes)
 		return avs::Result::Failed;
 	std::vector<uint8_t> packet(bufferSizeInBytes);
 	memcpy(packet.data(), (uint8_t *)buffer, bufferSizeInBytes);
-	ReceiveCommandPacket(packet);
+	ReceiveCommandPacket(packet, CommandTransport::WebRTC);
 	return avs::Result::OK;
 }
 
@@ -374,16 +375,17 @@ void SessionClient::SetTimestamp(std::chrono::microseconds t)
 
 void SessionClient::ReceiveCommand(const std::vector<uint8_t> &buffer)
 {
-	ReceiveCommandPacket(buffer);
+	ReceiveCommandPacket(buffer, CommandTransport::Signaling);
 }
 
-void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet)
+void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet, CommandTransport transport)
 {
 	if (packet.size() < sizeof(teleport::core::CommandPayloadType))
 	{
 		TELEPORT_INTERNAL_CERR("Truncated command packet ({0} bytes)", packet.size());
 		return;
 	}
+	currentReceiveTransport = transport;
 	teleport::core::CommandPayloadType commandPayloadType = *(reinterpret_cast<const teleport::core::CommandPayloadType *>(packet.data()));
 	switch (commandPayloadType)
 	{
@@ -453,6 +455,12 @@ void SessionClient::TimestampMessage(teleport::core::ClientMessage &msg)
 {
 	auto ts				  = avs::Platform::getTimestamp();
 	msg.timestamp_session_us = (int64_t)(avs::Platform::getTimeElapsedInMilliseconds(tBegin, ts) * 1000.0);
+}
+
+double SessionClient::GetConnectElapsedMs()
+{
+	auto now = avs::Platform::getTimestamp();
+	return avs::Platform::getTimeElapsedInMilliseconds(tBegin, now);
 }
 
 void SessionClient::SendNodePoses(const teleport::core::Pose &headPose, const std::map<avs::uid, teleport::core::PoseDynamic> poses)
@@ -619,7 +627,7 @@ bool SessionClient::SendMessageToServer(const void *c, size_t sz) const
 
 void SessionClient::SendHandshake(const teleport::core::Handshake &handshake, const std::vector<avs::uid> &clientResourceIDs)
 {
-	TELEPORT_INTERNAL_CERR("Sending handshake via Websockets");
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: Handshake sent ({} cached resources)", GetConnectElapsedMs(), clientResourceIDs.size());
 	size_t handshakeSize	= sizeof(teleport::core::Handshake);
 	size_t resourceListSize = sizeof(avs::uid) * clientResourceIDs.size();
 
@@ -671,11 +679,12 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &
 	mCommandInterface->SetVisibleNodes(visibleNodes);
 
 	connectionStatus = ConnectionStatus::CONNECTED;
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: AcknowledgeHandshake received — CONNECTED ({} visible nodes)", GetConnectElapsedMs(), command.visibleNodeCount);
 }
 
 void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 {
-	TELEPORT_INTERNAL_CERR("ReceiveSetupCommand");
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand received", GetConnectElapsedMs());
 	if (connectionStatus == client::ConnectionStatus::AWAITING_SETUP || setupCommand.session_id != lastSessionId)
 	{
 		size_t commandSize = sizeof(teleport::core::SetupCommand);
@@ -688,14 +697,18 @@ void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 		ApplySetup(*s);
 
 		// Log the received setup command for debugging
-		TELEPORT_INTERNAL_COUT("\n===== CLIENT RECEIVED SETUPCOMMAND =====\n{}\n===== END SETUPCOMMAND =====",
+		TELEPORT_INTERNAL_COUT(Default, "\n===== CLIENT RECEIVED SETUPCOMMAND =====\n{}\n===== END SETUPCOMMAND =====",
 			teleport::core::SetupCommandToString(setupCommand));
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: calling clientPipeline.Init", GetConnectElapsedMs());
 		if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
 			return;
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: clientPipeline.Init done; configuring encoder", GetConnectElapsedMs());
 		unreliableToServerEncoder.configure(&messageToServerStack, "Unreliable Message Encoder");
 		messageToServerPipeline.link({&unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue});
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: calling OnSetupCommandReceived", GetConnectElapsedMs());
 		if (!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand))
 			return;
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: OnSetupCommandReceived done; starting pipeline", GetConnectElapsedMs());
 		// Set it running.
 		clientPipeline.pipeline.processAsync();
 	}
@@ -737,6 +750,7 @@ void SessionClient::ReceiveVideoReconfigureCommand(const std::vector<uint8_t> &p
 
 void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 {
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetOriginNode received", GetConnectElapsedMs());
 	size_t commandSize = sizeof(teleport::core::SetOriginNodeCommand);
 	if (packet.size() != commandSize)
 	{
@@ -765,7 +779,19 @@ void SessionClient::Ack(uint64_t ack_id)
 	teleport::core::AcknowledgementMessage msg;
 	TimestampMessage(msg);
 	msg.ack_id = ack_id;
-	sendMessageToServer(msg);
+	if (currentReceiveTransport == CommandTransport::Signaling)
+	{
+		// Route the ack back over the signaling websocket so that commands
+		// received before the WebRTC reliable channel is open can still be
+		// acknowledged on the same transport they arrived on.
+		std::vector<uint8_t> bin(sizeof(msg));
+		memcpy(bin.data(), &msg, sizeof(msg));
+		DiscoveryService::GetInstance().SendBinary(server_uid, bin);
+	}
+	else
+	{
+		sendMessageToServer(msg);
+	}
 }
 
 void SessionClient::ReceiveNodeVisibilityUpdate(const std::vector<uint8_t> &packet)
@@ -1004,7 +1030,7 @@ void SessionClient::ReceiveAssignNodePosePathCommand(const std::vector<uint8_t> 
 	str.resize(assignNodePosePathCommand.pathLength);
 	memcpy(static_cast<void *>(str.data()), packet.data() + commandSize, assignNodePosePathCommand.pathLength);
 	nodePosePaths[assignNodePosePathCommand.nodeID] = str;
-	TELEPORT_INTERNAL_COUT("Received pose for node {0}: {1}", assignNodePosePathCommand.nodeID, str);
+	TELEPORT_INTERNAL_COUT(Default, "Received pose for node {0}: {1}", assignNodePosePathCommand.nodeID, str);
 	mCommandInterface->AssignNodePosePath(assignNodePosePathCommand, str);
 }
 
@@ -1097,7 +1123,7 @@ void SessionClient::BeginReconnect()
 	const auto now			  = std::chrono::steady_clock::now();
 	nextReconnectTime		  = now + std::chrono::milliseconds(currentReconnectBackoffMs);
 	reconnectAttemptDeadline  = nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);
-	TELEPORT_INTERNAL_COUT("Reconnecting to {0}; first attempt in {1} ms.", GetServerURL(), currentReconnectBackoffMs);
+	TELEPORT_INTERNAL_COUT(Default, "Reconnecting to {0}; first attempt in {1} ms.", GetServerURL(), currentReconnectBackoffMs);
 }
 
 void SessionClient::GiveUpAndShutDown()

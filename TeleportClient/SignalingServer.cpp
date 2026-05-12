@@ -140,6 +140,7 @@ void SignalingServer::ProcessReceivedMessages()
 					if (clientID != 0)
 					{
 						awaiting = true;
+						TELEPORT_INTERNAL_COUT(Time, "connect-response received (clientID={}, serverID={}) — signaling complete", clientID, serverID);
 					}
 				}
 			}

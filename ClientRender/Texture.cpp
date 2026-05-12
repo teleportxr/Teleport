@@ -98,7 +98,7 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	bool rt = false;
 	bool ds = false;
 	int num_samp = 1;
-	TELEPORT_LOG("Creating texture {0}",pTextureCreateInfo.name);
+	TELEPORT_INTERNAL_COUT(Default, "Creating texture {0}",pTextureCreateInfo.name);
 	platform::crossplatform::TextureCreate textureCreate;
 	textureCreate.w					= pTextureCreateInfo.width;
 	textureCreate.l					= pTextureCreateInfo.height;

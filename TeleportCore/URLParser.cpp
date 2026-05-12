@@ -25,10 +25,10 @@ DomainPortPath teleport::core::GetDomainPortPath(const std::string &url)
 		std::smatch match;
 		if (std::regex_search(url, match, re))
 		{
-			TELEPORT_INTERNAL_COUT("Domain regex:");
+			TELEPORT_INTERNAL_COUT(Default, "Domain regex:");
 			for (size_t m=0;m<match.size();m++)
 			{
-				TELEPORT_INTERNAL_COUT("\t{}: {}", m, match[m].str());
+				TELEPORT_INTERNAL_COUT(Default, "\t{}: {}", m, match[m].str());
 			}
 		}
 		domainPortPath.domain = (match.size() > 2 && match[2].matched) ? match[2].str() : "";

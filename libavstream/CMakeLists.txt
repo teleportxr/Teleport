@@ -395,6 +395,7 @@ if(LIBAAV_BUILD_SHARED_LIBS)
 endif()
 target_compile_definitions(libavstream PRIVATE LIBAV_USE_CUDA=$<BOOL:${LIBAV_USE_CUDA}> )
 target_compile_definitions(libavstream PRIVATE TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH=$<BOOL:${TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH}>)
+target_compile_definitions(libavstream PRIVATE TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(libavstream PRIVATE PLATFORM_64BIT)

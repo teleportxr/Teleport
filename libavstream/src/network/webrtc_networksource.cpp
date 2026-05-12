@@ -14,7 +14,10 @@
 #include <sys/prctl.h>
 #endif
 
+#include <atomic>
+#include <chrono>
 #include <functional>
+#include <sstream>
 
 //rtc
 #include <rtc/rtc.hpp>
@@ -107,11 +110,24 @@ avs::StreamingConnectionState ConvertConnectionState(rtc::PeerConnection::State 
 	}
 }
 
+// Timestamp (nanoseconds) set when the WebRTC offer arrives; used in ICE callbacks.
+static std::atomic<long long> s_iceStartNs{0};
+
+static double iceElapsedMs()
+{
+	long long start = s_iceStartNs.load(std::memory_order_relaxed);
+	if (!start)
+		return 0.0;
+	using namespace std::chrono;
+	return duration<double, std::milli>(steady_clock::now().time_since_epoch()).count()
+		   - static_cast<double>(start) * 1e-6;
+}
+
 static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Configuration& config,
 avs::WebRtcNetworkSource *src)
 {
 	auto pc = std::make_shared<rtc::PeerConnection>(config);
-	
+
 	src->SetStreamingConnectionState(avs::StreamingConnectionState::NEW_UNCONNECTED);
 	// NB: do not capture pc here. The callback is owned by pc, so capturing pc by value
 	// would create a shared_ptr self-cycle and the PeerConnection (and its juice ICE agent
@@ -119,7 +135,8 @@ avs::WebRtcNetworkSource *src)
 	pc->onStateChange(
 		[src](rtc::PeerConnection::State state)
 		{
-			std::cout << "PeerConnection onStateChange to: " << state << std::endl;
+			std::ostringstream oss; oss << state;
+			TELEPORT_INTERNAL_COUT(Time, "ICE+{:.0f} ms: PeerConnection state → {}", iceElapsedMs(), oss.str());
 			src->SetStreamingConnectionState(ConvertConnectionState(state));
 			if(state==rtc::PeerConnection::State::Closed)
 			{
@@ -129,12 +146,13 @@ avs::WebRtcNetworkSource *src)
 
 	pc->onIceStateChange([](rtc::PeerConnection::IceState state)
 		{
-			std::cout << "Ice State: " << avs::stringOf(state)<< std::endl;
+			TELEPORT_INTERNAL_COUT(Time, "ICE+{:.0f} ms: ICE state → {}", iceElapsedMs(), avs::stringOf(state));
 		});
 
 	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
 		{
-			std::cout << "Gathering State: " << state << std::endl;
+			std::ostringstream oss; oss << state;
+			TELEPORT_INTERNAL_COUT(Time, "ICE+{:.0f} ms: Gathering state → {}", iceElapsedMs(), oss.str());
 		});
 
 	pc->onLocalDescription([src](rtc::Description description)
@@ -316,6 +334,13 @@ void WebRtcNetworkSource::resetPeerConnection()
 
 void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 {
+	// Mark when the WebRTC offer arrived so ICE timing is relative to this moment.
+	using namespace std::chrono;
+	s_iceStartNs.store(
+		duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).count(),
+		std::memory_order_relaxed);
+	TELEPORT_INTERNAL_COUT(Time, "ICE+0 ms: WebRTC offer received — ICE negotiation starting");
+
 	rtc::Description rtcDescription(sdp,"offer");
 	rtc::Configuration config;
 	// Enable TCP for e.g. Heroku

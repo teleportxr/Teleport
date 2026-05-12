@@ -70,7 +70,7 @@ TELEPORT_EXPORT void Client_SetClientInputDefinitions(avs::uid clientID, int num
 TELEPORT_EXPORT void Client_SetClientSettings(avs::uid clientID,const ClientSettings &clientSettings)
 {
 	size_t sz=sizeof(ClientSettings);
-	TELEPORT_INTERNAL_COUT("sizeof ClientSettings is {0}", sz);
+	TELEPORT_INTERNAL_COUT(Default, "sizeof ClientSettings is {0}", sz);
 	auto client = ClientManager::instance().GetClient(clientID);
 	if (!client)
 	{
@@ -462,7 +462,7 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 
 	if(failed)
 	{
-		TELEPORT_INTERNAL_COUT("Retrieved network stats of Client " << clientID << ".");
+		TELEPORT_INTERNAL_COUT(Default, "Retrieved network stats of Client " << clientID << ".");
 		failed=false;
 	}
 	// Thread safe
@@ -483,7 +483,7 @@ TELEPORT_EXPORT bool Client_GetClientDisplayInfo(avs::uid clientID, avs::Display
 
 	if (failed)
 	{
-		TELEPORT_INTERNAL_COUT("Retrieved network stats of Client " << clientID << ".");
+		TELEPORT_INTERNAL_COUT(Default, "Retrieved network stats of Client " << clientID << ".");
 		failed = false;
 	}
 	// Thread safe

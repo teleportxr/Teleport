@@ -41,7 +41,7 @@ void teleport::client::DiscoveryService::ShutdownInstance()
 
 DiscoveryService::DiscoveryService()
 {
-	cyclePorts={ 443, 80, 8080 };//,80,443,10600,10700,10800};
+	cyclePorts={ 443 };//,80,443,10600,10700,10800};
 }
 
 DiscoveryService::~DiscoveryService()
@@ -106,7 +106,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 	const char *scheme = (serverDiscoveryPort == 443) ? "wss" : "ws";
 	std::string ws_url = std::format("{0}://{1}:{2}/{3}", scheme, base_url, serverDiscoveryPort, path);
 
-	TELEPORT_INTERNAL_COUT("Websocket open() {}", ws_url);
+	TELEPORT_INTERNAL_COUT(Default, "Websocket open() {}", ws_url);
 	try
 	{
 		if(ws)
@@ -136,7 +136,7 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 	{
 		signalingServer->cyclePortIndex++;
 		signalingServer->cyclePortIndex %= cyclePorts.size();
-		TELEPORT_INTERNAL_COUT("Cycling ports: connecting to {} on port {}", signalingServer->url, cyclePorts[signalingServer->cyclePortIndex]);
+		TELEPORT_INTERNAL_COUT(Default, "Cycling ports: connecting to {} on port {}", signalingServer->url, cyclePorts[signalingServer->cyclePortIndex]);
 	}
 	auto receiveWebSocketMessage = [this,server_uid](const rtc::message_variant message)
 	{
@@ -163,7 +163,7 @@ void DiscoveryService::InitSocket(uint64_t server_uid)
 	ws->onMessage(receiveWebSocketMessage);
 	ws->onOpen([server_uid]()
 	{
-		TELEPORT_INTERNAL_CERR("Websocket onOpen {}", server_uid);
+		TELEPORT_INTERNAL_COUT(Time, "WebSocket opened (server_uid={})", server_uid);
 	});
 	uint16_t remotePort = signalingServer->GetPort();
 	ResetConnection(server_uid, signalingServer->url, remotePort);

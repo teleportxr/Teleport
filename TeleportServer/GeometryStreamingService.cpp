@@ -116,7 +116,7 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 			if (unconfirmed_priority_counts[priority] == 0)
 			{
 				unconfirmed_priority_counts.erase(priority);
-				TELEPORT_INTERNAL_COUT("Got all nodes of priority " << priority << "");
+				TELEPORT_INTERNAL_COUT(Default, "Got all nodes of priority " << priority << "");
 			}
 		}
 	}

@@ -1111,7 +1111,7 @@ void InstanceRenderer::RemoveGeometryCacheFromInstanceRender(avs::uid cache_uid,
 
 void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubSceneNodeStates &subSceneNodeStates, avs::uid node_uid)
 {
-	TELEPORT_INTERNAL_COUT("RemoveNodeFromInstanceRender: {}, {}", cache_uid, node_uid);
+	TELEPORT_INTERNAL_COUT(Default, "RemoveNodeFromInstanceRender: {}, {}", cache_uid, node_uid);
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 
 	if (!g)
@@ -1194,7 +1194,7 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubScene
 
 void InstanceRenderer::UpdateNodeInInstanceRender(avs::uid cache_uid, avs::uid root_id, avs::uid node_uid)
 {
-	TELEPORT_INTERNAL_COUT("UpdateNodeInInstanceRender: {}, {}", cache_uid, node_uid);
+	TELEPORT_INTERNAL_COUT(Default, "UpdateNodeInInstanceRender: {}, {}", cache_uid, node_uid);
 	auto g = GeometryCache::GetGeometryCache(cache_uid);
 	if (!g)
 	{
@@ -2092,7 +2092,7 @@ bool InstanceRenderer::GetHandshake(teleport::core::Handshake &handshake)
 void InstanceRenderer::OnVideoStreamClosed()
 {
 	auto &clientPipeline = sessionClient->GetClientPipeline();
-	TELEPORT_LOG("VIDEO STREAM CLOSED\n");
+	TELEPORT_INTERNAL_COUT(Default, "VIDEO STREAM CLOSED\n");
 	clientPipeline.pipeline.deconfigure();
 	clientPipeline.videoQueue.deconfigure();
 	clientPipeline.audioQueue.deconfigure();
@@ -2103,7 +2103,7 @@ void InstanceRenderer::OnVideoStreamClosed()
 
 void InstanceRenderer::OnReconnectGaveUp()
 {
-	TELEPORT_LOG("RECONNECT GAVE UP - tearing down local reflection of server {0}", server_uid);
+	TELEPORT_INTERNAL_COUT(Default, "RECONNECT GAVE UP - tearing down local reflection of server {0}", server_uid);
 	OnVideoStreamClosed();
 	if (geometryCache)
 	{
@@ -2116,7 +2116,7 @@ void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideo
 {
 	auto	   &clientPipeline = sessionClient->GetClientPipeline();
 	const auto &videoConfig	   = reconfigureVideoCommand.video_config;
-	TELEPORT_LOG("VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
+	TELEPORT_INTERNAL_COUT(Default, "VIDEO STREAM RECONFIGURED: clr %d x %d dpth %d x %d",
 				 videoConfig.video_width,
 				 videoConfig.video_height,
 				 videoConfig.depth_width,

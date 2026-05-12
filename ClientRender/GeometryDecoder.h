@@ -131,7 +131,7 @@ namespace teleport
 
 		private:
 			std::thread decodeThread;
-			bool decodeThreadActive;
+			std::atomic<bool> decodeThreadActive={true};
 			avs::ThreadSafeQueue<GeometryDecodeData> decodeData;
 
 		private:

@@ -8,7 +8,7 @@
 
 using namespace teleport;
 using namespace clientrender;
-#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(txt, ##__VA_ARGS__)
+#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(Default, txt, ##__VA_ARGS__)
 
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform = nullptr;
 
@@ -94,7 +94,7 @@ clientrender::MissingResource &GeometryCache::GetMissingResource(avs::uid id, av
 	{
 		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 		m_ResourceRequests.push_back(id);
-		TELEPORT_INTERNAL_COUT("Resource {0} of type {1} is missing so far.", id, stringOf(resourceType));
+		TELEPORT_INTERNAL_COUT(Default, "Resource {0} of type {1} is missing so far.", id, stringOf(resourceType));
 		if (m_ResourceRequests.size() > 4096) DebugBreak();
 	}
 	if (resourceType != missingPair->second.resourceType)
@@ -349,7 +349,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 				if (incompleteMaterial->materialInfo.normal.texture_uid == id) incompleteMaterial->materialInfo.normal.texture = scrTexture;
 				if (incompleteMaterial->materialInfo.combined.texture_uid == id) incompleteMaterial->materialInfo.combined.texture = scrTexture;
 				if (incompleteMaterial->materialInfo.emissive.texture_uid == id) incompleteMaterial->materialInfo.emissive.texture = scrTexture;
-				TELEPORT_LOG(
+				TELEPORT_INTERNAL_COUT(Default, 
 					"Waiting Material {0}({1}) got Texture {2}({3})", incompleteMaterial->id, incompleteMaterial->materialInfo.name, id, textureInfo.name);
 
 				// If only this texture and this function are pointing to the material, then it is complete.
@@ -359,7 +359,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 				}
 				else
 				{
-					TELEPORT_LOG(" Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
+					TELEPORT_INTERNAL_COUT(Default, " Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
 				}
 			}
 			break;

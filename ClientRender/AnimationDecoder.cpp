@@ -194,11 +194,11 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton			 &raw_skeleton,
 	}
 
 	const tinygltf::Scene &scene = model.scenes[defaultScene];
-	TELEPORT_LOG("Importing from default scene #{} with name {}", defaultScene, scene.name);
+	TELEPORT_INTERNAL_COUT(Default, "Importing from default scene #{} with name {}", defaultScene, scene.name);
 
 	if (scene.nodes.empty())
 	{
-		TELEPORT_LOG("Scene has no node.");
+		TELEPORT_INTERNAL_COUT(Default, "Scene has no node.");
 		return false;
 	}
 
@@ -207,7 +207,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton			 &raw_skeleton,
 	ozz::vector<tinygltf::Skin> skins = GetSkinsForScene(scene, model);
 	if (skins.empty())
 	{
-		TELEPORT_LOG("No skin exists in the scene, the whole scene graph "
+		TELEPORT_INTERNAL_COUT(Default, "No skin exists in the scene, the whole scene graph "
 					 "will be considered as a skeleton.");
 		// Uses all scene nodes.
 		for (auto &node : scene.nodes)
@@ -219,7 +219,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton			 &raw_skeleton,
 	{
 		if (skins.size() > 1)
 		{
-			TELEPORT_LOG("Multiple skins exist in the scene, they will all "
+			TELEPORT_INTERNAL_COUT(Default, "Multiple skins exist in the scene, they will all "
 						 "be exported to a single skeleton.");
 		}
 
@@ -245,7 +245,7 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton			 &raw_skeleton,
 
 	if (!raw_skeleton.Validate())
 	{
-		TELEPORT_LOG("Output skeleton failed validation. This is likely an implementation issue.");
+		TELEPORT_INTERNAL_COUT(Default, "Output skeleton failed validation. This is likely an implementation issue.");
 		return false;
 	}
 	return true;
@@ -263,7 +263,7 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 	// Validate interpolation type.
 	if (_sampler.interpolation.empty())
 	{
-		TELEPORT_LOG("Invalid sampler interpolation.");
+		TELEPORT_INTERNAL_COUT(Default, "Invalid sampler interpolation.");
 		return false;
 	}
 
@@ -358,7 +358,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		static bool samplingRateWarn = false;
 		if (!samplingRateWarn)
 		{
-			TELEPORT_LOG("The animation sampling rate is set to 0 "
+			TELEPORT_INTERNAL_COUT(Default, "The animation sampling rate is set to 0 "
 						 "(automatic) but glTF does not carry scene frame "
 						 "rate information. Assuming a sampling rate of {} Hz",
 						 _sampling_rate);
@@ -461,11 +461,11 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		}
 		// std::cout<<joints<<"\n";
 
-		TELEPORT_LOG("Processed animation '{}' (tracks: {}, duration: {} s).", _animation->name, _animation->tracks.size(), _animation->duration);
+		TELEPORT_INTERNAL_COUT(Default, "Processed animation '{}' (tracks: {}, duration: {} s).", _animation->name, _animation->tracks.size(), _animation->duration);
 
 		if (!_animation->Validate())
 		{
-			TELEPORT_LOG("Animation '{}' failed validation.", _animation->name);
+			TELEPORT_INTERNAL_COUT(Default, "Animation '{}' failed validation.", _animation->name);
 			return false;
 		}
 	}

@@ -22,7 +22,7 @@ namespace teleport
 			oboe::DataCallbackResult onAudioReady(oboe::AudioStream* audioStream, void* audioData, int32_t numFrames)
 			{
 				std::lock_guard lock(bufferMutex);
-				TELEPORT_INTERNAL_COUT("onAudioReady numFrames {0}\n",numFrames);
+				TELEPORT_INTERNAL_COUT(Default, "onAudioReady numFrames {0}\n",numFrames);
 				// We requested AudioFormat::Float. So if the stream opens
 			// we know we got the Float format.
 				// If you do not specify a format then you should check what format
@@ -132,7 +132,7 @@ Result AndroidAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	if (state == oboe::StreamState::Open)
 	{
 		oboe::AudioFormat format = m_data->mStream->getFormat();
-		TELEPORT_INTERNAL_COUT("AudioStream format is {0}", oboe::convertToText(format));
+		TELEPORT_INTERNAL_COUT(Default, "AudioStream format is {0}", oboe::convertToText(format));
 		oboe::Result result = m_data->mStream->requestStart();
 		if (result != oboe::Result::OK)
 		{
@@ -148,7 +148,7 @@ Result AndroidAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	{
 		std::lock_guard lock(m_data->bufferMutex);
 	}
-	TELEPORT_INTERNAL_COUT("playStream data size {0}\n", dataSize);
+	TELEPORT_INTERNAL_COUT(Default, "playStream data size {0}\n", dataSize);
 	return Result::OK;
 }
 

@@ -74,7 +74,7 @@ Result PC_AudioPlayer::asyncInitializeAudioDevice()
 	hr = XAudio2Create(mDevice.GetAddressOf());
 	if (FAILED(hr))
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Error occurred trying to create the XAudio2 device.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Error occurred trying to create the XAudio2 device.");
 		return Result::AudioDeviceInitializationError;
 	}
 
@@ -82,7 +82,7 @@ Result PC_AudioPlayer::asyncInitializeAudioDevice()
 	hr = mDevice->CreateMasteringVoice(&mMasteringVoice);
 	if (FAILED(hr))
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Error occurred trying to create the mastering voice.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Error occurred trying to create the mastering voice.");
 		return Result::AudioMasteringVoiceCreationError;
 	}
 
@@ -99,7 +99,7 @@ Result PC_AudioPlayer::configure(const AudioSettings& audioSettings)
 {
 	if (mConfigured)
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Audio player has already been configured.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Audio player has already been configured.");
 		return Result::AudioPlayerAlreadyConfigured;
 	}
 
@@ -231,7 +231,7 @@ Result PC_AudioPlayer::startRecording(std::function<void(const uint8_t * data, s
 
 	if (mRecording)
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Already recording.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Already recording.");
 		return Result::OK;
 	}
 
@@ -250,7 +250,7 @@ Result PC_AudioPlayer::processRecordedAudio()
 {
 	if (!mRecording)
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Not recording.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Not recording.");
 		return Result::AudioProcessingError;
 	}
 
@@ -261,7 +261,7 @@ Result PC_AudioPlayer::stopRecording()
 {
 	if (!mRecording)
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Not recording.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Not recording.");
 		return Result::OK;
 	}
 
@@ -280,7 +280,7 @@ Result PC_AudioPlayer::deconfigure()
 {
 	if (!mConfigured)
 	{
-		TELEPORT_INTERNAL_COUT("PC_AudioPlayer: Can't deconfigure audio player because it is not configured.");
+		TELEPORT_INTERNAL_COUT(Default, "PC_AudioPlayer: Can't deconfigure audio player because it is not configured.");
 		return Result::AudioPlayerNotConfigured;
 	}
 

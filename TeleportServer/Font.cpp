@@ -300,7 +300,7 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 		TELEPORT_WARN("Black font texture {0}",avsTexture.name);
 	}
     // create file
-    TELEPORT_INTERNAL_COUT("height = {0}, fill rate = {1}\n", height, 100*filled/(double)(width*height)); fflush(stdout);
+    TELEPORT_INTERNAL_COUT(Default, "height = {0}, fill rate = {1}\n", height, 100*filled/(double)(width*height)); fflush(stdout);
 	//std::string png_filename=std::string(ttf_path_utf8)+".png";
 
 
@@ -312,14 +312,14 @@ bool server::Font::ExtractFont(core::FontAtlas &fontAtlas,std::string ttf_path_u
 	{
         for (int j = 0; j < numSizes; j++)
 		{
-            TELEPORT_INTERNAL_COUT("size    {0}\n", ranges[j].font_size);
-            TELEPORT_INTERNAL_COUT("ascent  {0}\n", ascents[j]);
-            TELEPORT_INTERNAL_COUT("descent {0}\n", descents[j]);
-            TELEPORT_INTERNAL_COUT("linegap {0}\n", linegaps[j]);
+            TELEPORT_INTERNAL_COUT(Default, "size    {0}\n", ranges[j].font_size);
+            TELEPORT_INTERNAL_COUT(Default, "ascent  {0}\n", ascents[j]);
+            TELEPORT_INTERNAL_COUT(Default, "descent {0}\n", descents[j]);
+            TELEPORT_INTERNAL_COUT(Default, "linegap {0}\n", linegaps[j]);
             vector<stbtt_packedchar> m = glyph_metrics[j];
 			 for (int i = 0; i < NUM_GLYPHS; i++)
 			{
-                TELEPORT_INTERNAL_COUT("    '{0}':  (x0,y0) = ({1},{2}),  (x1,y1) = ({3},{4}),  (xoff,yoff) = ({5},{6}),  (xoff2,yoff2) = ({7},{8}),  xadvance = {9}\n", 
+                TELEPORT_INTERNAL_COUT(Default, "    '{0}':  (x0,y0) = ({1},{2}),  (x1,y1) = ({3},{4}),  (xoff,yoff) = ({5},{6}),  (xoff2,yoff2) = ({7},{8}),  xadvance = {9}\n",
                        32+i, m[i].x0, m[i].y0, m[i].x1, m[i].y1, m[i].xoff, m[i].yoff, m[i].xoff2, m[i].yoff2, m[i].xadvance);
             }
         }   
