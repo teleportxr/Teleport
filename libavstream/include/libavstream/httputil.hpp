@@ -28,7 +28,7 @@ namespace avs
 
 	struct HTTPUtilConfig
 	{
-		const char *cacheDirectory="";
+		std::string cacheDirectory;
 		int32_t remoteHTTPPort = 0;
 		uint32_t connectionTimeout = 5000;
 		uint32_t maxConnections = 10;

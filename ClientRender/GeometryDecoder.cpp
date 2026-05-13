@@ -150,7 +150,7 @@ GeometryDecoder::GeometryDecoder()
 	httpUtilConfig.maxConnections = 12;
 	httpUtilConfig.useSSL		  = true;
 	auto &config				  = teleport::client::Config::GetInstance();
-	httpUtilConfig.cacheDirectory = (path(config.GetStorageFolder()) / "http_cache"s).string().c_str();
+	httpUtilConfig.cacheDirectory = (path(config.GetStorageFolder()) / "http_cache"s).string();
 	hTTPUtil.initialize(httpUtilConfig);
 }
 
