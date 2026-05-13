@@ -262,8 +262,9 @@ void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
 	{
 		request.cached = true;
 		file_time_type write_time = std::filesystem::last_write_time(path(request.cachedFilePath));
-		auto sctp = time_point_cast<system_clock::duration>(write_time - FILE_TIME_TYPE::now() + system_clock::now());
-		// auto sctp = FILE_TIME_TYPE::time_since_epoch(write_time);
+		// Convert file_time_type to system_clock::time_point for If-Modified-Since header.
+		// Use file_time_type::clock::to_sys() (C++20) to perform the clock conversion correctly.
+		auto sctp = time_point_cast<system_clock::duration>(FILE_TIME_TYPE::to_sys(write_time));
 		request.cacheUpdated = std::chrono::floor<seconds>(sctp);
 	}
 	else
