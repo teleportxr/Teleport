@@ -94,7 +94,7 @@ using namespace std::string_literals;
 #include "ClientRender/AnimationInstance.h"
 #include <NodeComponents/SubSceneComponent.h>
 #include <json.hpp>
-
+#pragma optimize("",off)
 #define VK_MAX 0x10
 
 bool KeysDown[VK_MAX];
@@ -187,6 +187,7 @@ void ImGuiEnd()
 	begin_end_stack.pop_back();
 	ImGui::End();
 }
+
 void ImGuiTreeNodeEx(const char *str_id, ImGuiTreeNodeFlags flags, const char *txt)
 {
 	if (!txt)
@@ -439,7 +440,7 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		AddFont("forkawesome-webfont.ttf", 32.f, &config, glyph_ranges1.Data);
 		io.Fonts->Build(); // Build the atlas while 'ranges' is still in scope and not deleted.
 	}
-	std::vector<int>					  fontSizes = {12, 18};
+	std::vector<int>					  fontSizes = {12, 18, 24, 36};
 	static std::vector<ImVector<ImWchar>> glyph_ranges2;
 	glyph_ranges2.resize(fontSizes.size());
 	for (int i = 0; i < fontSizes.size(); i++)
@@ -448,7 +449,7 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		fontInter[sz] = AddFont("Inter-Regular.ttf", float(sz));
 		ImFontConfig config;
 		config.MergeMode		= true;
-		config.GlyphMinAdvanceX = 20.0f;
+		config.GlyphMinAdvanceX = float(sz);
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
 		builder.AddText(ICON_FK_SEARCH);
@@ -470,7 +471,7 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		builder.AddText(ICON_FK_CHEVRON_RIGHT);
 		builder.AddText(ICON_FK_CHEVRON_DOWN);
 		builder.BuildRanges(&glyph_ranges2[i]); // Build the final result (ordered ranges with all the unique characters submitted)
-		AddFont("forkawesome-webfont.ttf", 20.f, &config, glyph_ranges2[i].Data);
+		AddFont("forkawesome-webfont.ttf", float(sz), &config, glyph_ranges2[i].Data);
 		io.Fonts->Build(); // Build the atlas while 'ranges' is still in scope and not deleted.
 	}
 	io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen; // VR more like a touch screen.
@@ -2497,7 +2498,8 @@ bool Gui::BeginMainMenuBar()
 	float  height	  = ImGui::GetFrameHeight();
 	ImVec2 window_pos = ImVec2(0, 0), window_pos_pivot = ImVec2(0, 0);
 	float  w = ImGui::GetMainViewport()->Size.x;
-	ImGui::SetNextWindowSize(ImVec2(w, 48.f));
+	auto			&config		  = client::Config::GetInstance();
+	ImGui::SetNextWindowSize(ImVec2(w, 2.f*config.options.uiFontSize));
 	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always, window_pos_pivot);
 	// g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
 	const ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -2518,18 +2520,26 @@ void Gui::EndMainMenuBar()
 
 void Gui::ShowSettings2D()
 {
-	auto &config = client::Config::GetInstance();
-	ImGui::SetNextWindowPos(ImVec2(40, 60)); // always at the window origin
-	float w = ImGui::GetMainViewport()->Size.x - 80.0f;
-	ImGui::SetNextWindowSize(ImVec2(w, ImGui::GetWindowHeight() - 80));
-	ImGui::SetNextItemWidth(w);
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize |
+	auto			&config		  = client::Config::GetInstance();
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
 									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
-	ImGui::SameLine(ImGui::GetWindowWidth() - 80);
+	// Explicit size: AlwaysAutoResize combined with SameLine(GetWindowWidth() - N) below would
+	// create a frame-to-frame feedback loop and make the window grow unboundedly.
+	const ImVec2 vp_size = ImGui::GetMainViewport()->Size;
+	ImGui::SetNextWindowPos(ImVec2(40.f, 100.f));
+	ImGui::SetNextWindowSize(ImVec2(vp_size.x - 80.f, vp_size.y - 120.f));
 	ImGuiBegin("Settings", 0, window_flags);
 	ImGui::PushFont(defaultFont);
 	ImGui::LabelText("##Settings", "Settings");
 	ImGui::PopFont();
+	ImGui::SameLine(ImGui::GetWindowWidth() - 50.f);
+	buttonSize={1.5f*config.options.uiFontSize, (float)config.options.uiFontSize};
+	if (ImGui::Button(ICON_FK_TIMES, *(ImVec2*)&buttonSize))
+	{
+		show_options   = false;
+		show_bookmarks = false;
+		config.SaveOptions();
+	}
 	if (ImGui::BeginTable("options", 2))
 	{
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f);
@@ -2593,8 +2603,10 @@ void		Gui::Navigate(const std::string &url)
 
 void Gui::MenuBar2D()
 {
+	auto &config = client::Config::GetInstance();
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.00f, 0.00f, 0.0f));
-	if (ImGui::Button(ICON_FK_RENREN, ImVec2(36, 24)))
+	buttonSize={1.5f*config.options.uiFontSize, (float)config.options.uiFontSize};
+	if (ImGui::Button(ICON_FK_RENREN,  *(ImVec2*)&buttonSize))
 	{
 		cancelConnectHandler(current_tab_context);
 	}
@@ -2607,7 +2619,6 @@ void Gui::MenuBar2D()
 		ImGui::SetKeyboardFocusHere();
 		overwrite_url_edit = false;
 	}
-	auto &config = client::Config::GetInstance();
 	{
 		if (!current_tab_context)
 		{
@@ -2636,31 +2647,15 @@ void Gui::MenuBar2D()
 		auto	 sessionClient = client::SessionClient::GetSessionClient(server_uid);
 		bool	 connecting	   = sessionClient ? sessionClient->IsConnecting() : false;
 		bool	 connected	   = sessionClient ? sessionClient->IsConnected() : false;
-		ImGui::SameLine();
-		int num_buttons = 5;
 
-#if TELEPORT_INTERNAL_CHECKS
-		if (config.dev_mode)
+		if (UrlEdit() && connecting)
 		{
-			num_buttons++;
+			cancel_please = true;
 		}
-#endif
-		ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * 40 - 8);
-		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
-		{
-			current_url	   = url_buffer;
-			connect_please = true;
-			if (connecting)
-			{
-				cancel_please = true;
-			}
-		}
-		url_input = ImGui::IsItemActive();
-		ImGui::PopItemWidth();
 		ImGui::SameLine();
 		if (!connecting)
 		{
-			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, ImVec2(36, 24)))
+			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT,  *(ImVec2*)&buttonSize))
 			{
 				connect_please = true;
 			}
@@ -2671,7 +2666,7 @@ void Gui::MenuBar2D()
 		}
 		else
 		{
-			if (ImGui::Button(ICON_FK_TIMES, ImVec2(36, 24)))
+			if (ImGui::Button(ICON_FK_TIMES,  *(ImVec2*)&buttonSize))
 			{
 				cancel_please = true;
 			}
@@ -2695,7 +2690,7 @@ void Gui::MenuBar2D()
 		}
 
 		ImGui::SameLine();
-		if (ImGui::Button(ICON_FK_FOLDER_O, ImVec2(36, 24)))
+		if (ImGui::Button(ICON_FK_FOLDER_O,  *(ImVec2*)&buttonSize))
 		{
 			show_bookmarks = !show_bookmarks;
 			selected_url   = "";
@@ -2711,7 +2706,7 @@ void Gui::MenuBar2D()
 			TIMED_TOOLTIP("Bookmarks");
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(ICON_FK_COG, ImVec2(36, 24)))
+		if (ImGui::Button(ICON_FK_COG,  *(ImVec2*)&buttonSize))
 		{
 			show_options = !show_options;
 			if (!show_options)
@@ -2728,12 +2723,13 @@ void Gui::MenuBar2D()
 		if (config.dev_mode)
 		{
 			ImGui::SameLine();
-			if (ImGui::Button(ICON_FK_WRENCH, ImVec2(36, 24)))
+			if (ImGui::Button(ICON_FK_WRENCH,  *(ImVec2*)&buttonSize))
 			{
 				guiType = GuiType::Debug;
 			}
 		}
 #endif
+		
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 		{
 			TIMED_TOOLTIP("Dev");
@@ -2742,6 +2738,30 @@ void Gui::MenuBar2D()
 	ImGui::PopStyleColor();
 }
 
+bool Gui::UrlEdit()
+{
+	bool ret=false;
+	auto &config = client::Config::GetInstance();
+	ImGui::SameLine();
+	int num_buttons = 5;
+
+#if TELEPORT_INTERNAL_CHECKS
+		if (config.dev_mode)
+		{
+			num_buttons++;
+		}
+#endif
+		ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * buttonSize.x - 8);
+		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			current_url	   = url_buffer;
+			connect_please = true;
+			ret=true;
+		}
+		url_input = ImGui::IsItemActive();
+		ImGui::PopItemWidth();
+		return ret;
+}
 void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 {
 	LightStyle();

@@ -94,6 +94,7 @@ namespace teleport
 			void EndTabBar();
 			bool Tab(const char *txt);
 			void EndTab();
+			bool UrlEdit();
 			GuiType GetGuiType() const
 			{
 				return guiType;
@@ -183,6 +184,7 @@ namespace teleport
 			int32_t current_tab_context = 0;
 			bool in_tabs=false;
 			float azimuth=0.0f, tilt = 0.0f;
+			vec2 buttonSize;	// modified each frame based on font size.
 			std::string current_url;
 			std::vector<std::string> server_ips;
 			std::function<void(int32_t,const std::string &)> connectHandler;

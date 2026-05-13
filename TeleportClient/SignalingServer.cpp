@@ -107,8 +107,6 @@ void SignalingServer::ProcessReceivedMessages()
 			std::string type = message["teleport-signal-type"];
 			if (type == "connect-response")
 			{
-				clearResources = true;
-				awaiting = false;
 				if (message.contains("content"))
 				{
 					json content = message["content"];
@@ -122,12 +120,20 @@ void SignalingServer::ProcessReceivedMessages()
 					{
 						srv_id = content["serverID"];
 					}
-					if (srv_id !=0 && cl_id !=0 && serverID == srv_id && clientID == cl_id)
+					// A duplicate response (same clientID and serverID as the one we already
+					// hold) must not re-arm 'awaiting': Discover() would then return the
+					// clientID a second time and HandleConnections() would call
+					// SessionClient::Connect() again, resetting tBegin and re-entering
+					// AWAITING_SETUP. Only treat this as a fresh response if the ids changed.
+					const bool sameIds = (srv_id != 0 && cl_id != 0 && serverID == srv_id && clientID == cl_id);
+					if (sameIds)
 					{
-						clearResources = false;
+						// Duplicate: leave clearResources/awaiting untouched.
 					}
 					else
 					{
+						clearResources = true;
+						awaiting = false;
 						if (clientID != cl_id)
 						{
 							clientID = cl_id;
@@ -136,11 +142,11 @@ void SignalingServer::ProcessReceivedMessages()
 						{
 							serverID = srv_id;
 						}
-					}
-					if (clientID != 0)
-					{
-						awaiting = true;
-						TELEPORT_INTERNAL_COUT(Time, "connect-response received (clientID={}, serverID={}) — signaling complete", clientID, serverID);
+						if (clientID != 0)
+						{
+							awaiting = true;
+							TELEPORT_INTERNAL_COUT(Time, "connect-response received (clientID={}, serverID={}) — signaling complete", clientID, serverID);
+						}
 					}
 				}
 			}

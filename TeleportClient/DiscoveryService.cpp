@@ -199,10 +199,14 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		signalingServer->remotePort = signalPort;
 		signalingServer->url = url;
 		signalingServer->uid = server_uid;
+		// Only flush message queues when the target actually changed. The previous
+		// behaviour reset every tick, which could drop a passed-on message (offer /
+		// candidate) that ProcessReceivedMessages had just queued for the WebRTC
+		// source to consume.
+		signalingServer->Reset();
 	}
 	if(!signalingServer->url.length())
 		return 0;
-	signalingServer->Reset();
 	signalingServer->active=true;
 	bool serverDiscovered = false;
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;

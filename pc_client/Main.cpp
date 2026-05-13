@@ -38,6 +38,9 @@
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
+#elif defined(__linux__)
+#include "UnixDebugOutput.h"
+DebugOutput debug_buffer(true, nullptr, 128);
 #endif
 
 #if TELEPORT_CLIENT_USE_D3D12
@@ -689,6 +692,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include "Platform/ImGui/imgui_impl_platform.h"
+#include "Platform/Vulkan/DisplaySurface.h"
 
 namespace fs = std::filesystem;
 
@@ -828,6 +832,25 @@ static void GlfwCharCallback(GLFWwindow *, unsigned int codepoint)
 	io.AddInputCharacter(codepoint);
 }
 
+// Required for compositors (Wayland and some XWayland setups) where
+// VkSurfaceCapabilitiesKHR::currentExtent is the "undefined" sentinel: without
+// this, DisplaySurface::Resize() has no way to learn the new framebuffer size
+// and the swapchain stays at its bootstrap extent, so the compositor scales
+// the fixed-size image to fill the resized window.
+static void GlfwFramebufferSizeCallback(GLFWwindow * /*win*/, int width, int height)
+{
+	if (width <= 0 || height <= 0)
+		return;
+	if (g_surface == VK_NULL_HANDLE)
+		return;
+	auto *w = displaySurfaceManager.GetWindow(&g_surface);
+	if (!w)
+		return;
+	// On Linux the only DisplaySurface implementation is the Vulkan one (see
+	// InitRendererLinux), so this cast is safe.
+	static_cast<platform::vulkan::DisplaySurface *>(w)->SetRequestedExtent((uint32_t)width, (uint32_t)height);
+}
+
 static const char *ImGuiGetClipboardTextGlfw(void *user_data)
 {
 	const char *t =glfwGetClipboardString((GLFWwindow *)user_data);
@@ -877,9 +900,17 @@ static void GlfwCursorPosCallback(GLFWwindow *win, double xpos, double ypos)
 	int rightDown = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 	int middleDown = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
 	clientRenderer->OnMouseMove((int)xpos, (int)ypos, leftDown != 0, rightDown != 0, middleDown != 0, 0);
-	int w = 0, h = 0;
-	glfwGetWindowSize(win, &w, &h);
-	if (!useOpenXR.IsSessionActive()) ImGui_ImplPlatform_SetMousePos((int)xpos, (int)ypos, w, h);
+	int ws = 0, hs = 0;
+	glfwGetWindowSize(win, &ws, &hs);
+	int fbw = 0, fbh = 0;
+	glfwGetFramebufferSize(win, &fbw, &fbh);
+	// ImGui's io.DisplaySize is set from the render viewport, which is sized in framebuffer pixels
+	// (see glfwGetFramebufferSize use in the main loop). GLFW cursor positions are in screen
+	// coordinates, which differ on HiDPI / scaled displays. Rescale into framebuffer space so
+	// io.MousePos lives in the same coordinate system as io.DisplaySize.
+	double sx = (ws > 0) ? (double)fbw / (double)ws : 1.0;
+	double sy = (hs > 0) ? (double)fbh / (double)hs : 1.0;
+	if (!useOpenXR.IsSessionActive()) ImGui_ImplPlatform_SetMousePos((int)(xpos * sx), (int)(ypos * sy), fbw, fbh);
 }
 
 void ShutdownRendererLinux()
@@ -1091,6 +1122,15 @@ int main(int argc, char *argv[])
 	config.SetStorageFolder(storage_folder.c_str());
 	clientApp.Initialize();
 	gui.SetServerIPs(config.recent_server_urls);
+	if (config.log_filename.size() > 0)
+	{
+		// On Linux, treat any path that does not begin with '/' as relative to the storage folder.
+		if (config.log_filename.front() != '/')
+		{
+			config.log_filename = storage_folder + "/" + config.log_filename;
+		}
+		debug_buffer.setLogFile(config.log_filename.c_str());
+	}
 
 	// Bring up GLFW and create a window before the Vulkan instance, so that we can
 	// query the platform-specific surface extensions GLFW needs.
@@ -1112,6 +1152,7 @@ int main(int argc, char *argv[])
 	glfwSetCharCallback(g_window, GlfwCharCallback);
 	glfwSetMouseButtonCallback(g_window, GlfwMouseButtonCallback);
 	glfwSetCursorPosCallback(g_window, GlfwCursorPosCallback);
+	glfwSetFramebufferSizeCallback(g_window, GlfwFramebufferSizeCallback);
 
 	std::vector<std::string> required_instance_extensions;
 	{

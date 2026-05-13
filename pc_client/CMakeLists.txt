@@ -20,6 +20,7 @@ set(srcs
 	ProcessHandler.cpp
 	UseOpenXR.cpp
 	UseOpenXR.h
+	UnixDebugOutput.h
 	Resource.h
 	targetver.h
 	../ClientApp/ClientApp.cpp

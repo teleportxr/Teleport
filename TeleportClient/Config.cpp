@@ -176,7 +176,7 @@ void Config::LoadOptions()
 		options.reconnectInitialBackoffMs = (unsigned int)ini.GetLongValue("", "ReconnectInitialBackoffMs", options.reconnectInitialBackoffMs);
 		options.reconnectMaxBackoffMs	= (unsigned int)ini.GetLongValue("", "ReconnectMaxBackoffMs", options.reconnectMaxBackoffMs);
 		options.uiFontSize				= (unsigned int)ini.GetLongValue("", "UIFontSize", options.uiFontSize);
-		if (options.uiFontSize != 12 && options.uiFontSize != 18)
+		if (options.uiFontSize < 12  || options.uiFontSize > 72)
 			options.uiFontSize = 18;
 	}
 }

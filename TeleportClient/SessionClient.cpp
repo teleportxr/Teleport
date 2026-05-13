@@ -180,6 +180,16 @@ bool SessionClient::HandleConnections()
 
 bool SessionClient::Connect(const char *remote_ip, uint timeout, avs::uid cl_id)
 {
+	// HandleConnections() already gates the discovery branch on OFFERING/RECONNECTING,
+	// but a stray duplicate connect-response (or any future path that re-invokes
+	// Connect) must not reset tBegin or session state once we're past the initial
+	// handshake. Treat such calls as no-ops with a warning.
+	if (connectionStatus != client::ConnectionStatus::OFFERING && connectionStatus != client::ConnectionStatus::RECONNECTING)
+	{
+		TELEPORT_WARN("SessionClient::Connect ignored: already past OFFERING (status={}, clientID={}, cl_id={})",
+					  static_cast<int>(connectionStatus), clientID, cl_id);
+		return true;
+	}
 	tBegin	 = avs::Platform::getTimestamp();
 	TELEPORT_INTERNAL_COUT(Time, "T+0.0 ms: Connect initiated to {}", remote_ip);
 	remoteIP = remote_ip;
