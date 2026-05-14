@@ -1111,7 +1111,7 @@ int main(int argc, char *argv[])
 			home = pw->pw_dir;
 	}
 	if (home)
-	{
+	{ 
 		storage_folder = std::string(home) + "/.local/share/TeleportXR";
 		std::filesystem::create_directories(storage_folder);
 	}
