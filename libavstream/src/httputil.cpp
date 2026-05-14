@@ -266,9 +266,13 @@ void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
 		// Use file_time_type::clock::to_sys() (C++20) to perform the clock conversion correctly.
 		auto sctp = time_point_cast<system_clock::duration>(FILE_TIME_TYPE::to_sys(write_time));
 		request.cacheUpdated = std::chrono::floor<seconds>(sctp);
+		AVSLOG(Info) << "CheckForCachedFile: FOUND " << request.url << " at " << request.cachedFilePath << " (mtime: " << std::format("{:%Y-%m-%d %H:%M:%S}", request.cacheUpdated) << ")\n";
 	}
 	else
+	{
 		request.cached = false;
+		AVSLOG(Info) << "CheckForCachedFile: NOT FOUND " << request.url << " (would be at: " << request.cachedFilePath << ")\n";
+	}
 }
 
 bool HTTPUtil::AddRequest(const HTTPPayloadRequest &request)
@@ -396,7 +400,13 @@ void HTTPUtil::Transfer::start(const HTTPPayloadRequest &request)
 		struct curl_slist *headerlist = nullptr;
 		if (request.cached)
 		{
-			headerlist = curl_slist_append(NULL, getModifiedSinceHeader().c_str());
+			std::string header = getModifiedSinceHeader();
+			AVSLOG(Info) << "  -> CACHED file, adding header: " << header << "\n";
+			headerlist = curl_slist_append(NULL, header.c_str());
+		}
+		else
+		{
+			AVSLOG(Info) << "  -> NOT CACHED (file not found or caching disabled)\n";
 		}
 		if (headerlist) curl_easy_setopt(mHandle, CURLOPT_HTTPHEADER, headerlist);
 		// curl_easy_setopt(mHandle, CURLOPT_READDATA, this);
