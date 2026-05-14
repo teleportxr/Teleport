@@ -379,8 +379,12 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 	// setRemoteDescription is called on a still-active PeerConnection, so it keeps validating
 	// incoming STUN packets against the previous ufrag and rejects them all
 	// ("STUN remote ufrag check failed"). Recreate the PeerConnection in that case.
+	// Note: When PeerConnection enters terminal state (Closed/Failed), the cached offer is cleared
+	// by SetStreamingConnectionState(). On reconnect, we must always recreate to avoid reusing
+	// a stale PeerConnection with new ICE credentials.
 	bool offerChanged = offer.length() && offer != sdp;
-	if(needsRecreate(m_data->rtcPeerConnection) || offerChanged)
+	bool mustRecreateOnReconnect = !offer.length();  // offer was cleared on terminal state
+	if(needsRecreate(m_data->rtcPeerConnection) || offerChanged || mustRecreateOnReconnect)
 	{
 		if(m_data->rtcPeerConnection)
 		{
