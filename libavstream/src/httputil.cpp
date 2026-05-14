@@ -255,7 +255,11 @@ void HTTPUtil::CacheReceivedFile(const Transfer &transfer)
 
 void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
 {
-	if (!request.shouldCache) return;
+	if (!request.shouldCache)
+	{
+		AVSLOG(Info) << "CheckForCachedFile: CACHING DISABLED for " << request.url << "\n";
+		return;
+	}
 
 	request.cachedFilePath = URLToFilePath(request.url);
 	if (request.cachedFilePath.length()>0&&std::filesystem::exists(request.cachedFilePath))
