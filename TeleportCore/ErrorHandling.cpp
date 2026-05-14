@@ -16,9 +16,10 @@ void teleport::log_print_impl(const char* source, const std::string& message)
 
 namespace teleport
 {
-	static std::array<bool, 2> g_logCategoryEnabled = {
+	static std::array<bool, 3> g_logCategoryEnabled = {
 		false,	// Default
 		true,	// Time
+		true,	// Resource
 	};
 
 	bool IsLogCategoryEnabled(LogCategory category)

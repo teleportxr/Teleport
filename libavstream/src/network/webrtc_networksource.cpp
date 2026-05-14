@@ -824,6 +824,7 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 				return;
 			uint8_t outputNodeIndex = o->second;
 			dataChannel.bytesReceived += b.size();
+			AVSLOG(Info) << "WebRtcNetworkSource onMessage: Received " << b.size() << " bytes on stream " << (int)streamIndex << " (id=" << (int)id << ")" << std::endl;
 			auto & stream=q_ptr()->m_streams[streamIndex];
 			if (!stream.framed)
 			{
@@ -859,9 +860,10 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 				}
 				if (numBytesWrittenToOutput!=b.size())
 				{
-					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP onMessage: {0}: failed to write all to output Node.\n",stream.label);
+					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP onMessage: {0}: failed to write all to output Node. Wrote {1} of {2} bytes.\n",stream.label, numBytesWrittenToOutput, b.size());
 					return;
 				}
+				AVSLOG(Info) << "WebRtcNetworkSource: Successfully wrote " << numBytesWrittenToOutput << " bytes to output node for stream " << stream.label << std::endl;
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
 				q_ptr()->bytes_received+=numBytesWrittenToOutput;
 #endif

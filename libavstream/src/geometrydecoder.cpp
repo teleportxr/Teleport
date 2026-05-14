@@ -89,16 +89,24 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 	PipelineNode::process(timestamp,deltaTime);
 	if (!m_configured)
 	{
+		static bool loggedNotConfigured = false;
+		if (!loggedNotConfigured)
+		{
+			loggedNotConfigured = true;
+			AVSLOG(Warning) << "GeometryDecoder::process: Not configured!" << std::endl;
+		}
 		return Result::Node_NotConfigured;
 	}
 	auto *gti = dynamic_cast<GeometryTargetInterface*>(getOutput(0));
 	if (!gti)
 	{
+		AVSLOG(Warning) << "GeometryDecoder::process: Invalid output!" << std::endl;
 		return Result::Node_InvalidOutput;
 	}
 	IOInterface* input = dynamic_cast<IOInterface*>(getInput(0));
 	if (!input)
 	{
+		AVSLOG(Warning) << "GeometryDecoder::process: Invalid input!" << std::endl;
 		return Result::Node_InvalidInput;
 	}
 	Result result = Result::OK;
@@ -110,6 +118,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 
 		if (result == Result::IO_Empty)
 		{
+			// Queue is empty - this is normal when no data is being sent
 			break;
 		}
 
@@ -125,6 +134,7 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 			return result;
 		}
 
+		AVSLOG(Info) << "GeometryDecoder: Read " << bytesRead << " bytes from queue" << std::endl;
 		PayloadInfoType payloadInfoType = (PayloadInfoType)m_buffer[4];
 
 		size_t dataOffset;

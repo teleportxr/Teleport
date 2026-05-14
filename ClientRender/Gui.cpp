@@ -2045,7 +2045,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	static float  yspacing	  = 20.0f;
 	static float  thickness	  = 3.0f;
 	static float  sz		  = 36.0f;
-	static ImVec4 colf		  = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
+	static ImVec4 colf		  = ImVec4(0.4f, 1.0f, 0.4f, 1.0f);
 	ImU32		  col		  = ImColor(colf);
 	const ImU32	  join_colour = ImColor(255, 255, 255, 90);
 	const ImU32	  fill_colour = ImColor(16, 64, 16, 255);
