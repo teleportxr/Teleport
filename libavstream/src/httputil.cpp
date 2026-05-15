@@ -279,6 +279,12 @@ void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
 	}
 }
 
+void HTTPUtil::addRequest(const HTTPPayloadRequest &request)
+{
+	std::lock_guard<std::mutex> lock(mMutex);
+	mRequestQueue.push(request);
+}
+
 bool HTTPUtil::AddRequest(const HTTPPayloadRequest &request)
 {
 	// Try all transfers starting from the last.

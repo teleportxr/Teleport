@@ -143,8 +143,8 @@ void CreateSubScene(core::DecodedGeometry				 &subSceneDG,
 
 GeometryDecoder::GeometryDecoder()
 {
-	decodeThread	   = std::thread(&GeometryDecoder::decodeAsync, this);
 	decodeThreadActive = true;
+	decodeThread	   = std::thread(&GeometryDecoder::decodeAsync, this);
 	avs::HTTPUtilConfig httpUtilConfig;
 	httpUtilConfig.remoteHTTPPort = 443;
 	httpUtilConfig.maxConnections = 12;
@@ -152,12 +152,16 @@ GeometryDecoder::GeometryDecoder()
 	auto &config				  = teleport::client::Config::GetInstance();
 	httpUtilConfig.cacheDirectory = (path(config.GetStorageFolder()) / "http_cache"s).string();
 	hTTPUtil.initialize(httpUtilConfig);
+	httpThreadActive = true;
+	httpThread		 = std::thread(&GeometryDecoder::httpAsync, this);
 }
 
 GeometryDecoder::~GeometryDecoder()
 {
+	httpThreadActive = false;
+	if (httpThread.joinable()) httpThread.join();
 	decodeThreadActive = false;
-	decodeThread.join();
+	if (decodeThread.joinable()) decodeThread.join();
 }
 
 void GeometryDecoder::setCacheFolder(const std::string &f)
@@ -259,7 +263,7 @@ avs::Result GeometryDecoder::decodeFromWeb(avs::uid								 server_uid,
 		&GeometryDecoder::receiveFromWeb, this, server_uid, uri, std::placeholders::_1, std::placeholders::_2, type, target, resource_uid, sourceAxesStandard);
 	req.callbackFn	= std::move(f);
 	req.shouldCache = true;
-	hTTPUtil.GetRequestQueue().push(req);
+	hTTPUtil.addRequest(req);
 	return avs::Result::OK;
 }
 
@@ -278,7 +282,13 @@ avs::Result GeometryDecoder::receiveFromWeb(avs::uid							  server_uid,
 		if (!s_firstWebAssetLogged)
 		{
 			s_firstWebAssetLogged = true;
-			TELEPORT_INTERNAL_COUT(Resource, "First HTTPS asset received (uid={}, url={}, {} bytes)", resource_uid, uri, bufferSize);
+			TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: First HTTPS asset received (uid={}, url={}, {} bytes)",
+				teleport::client::SessionClient::GetConnectElapsedMs(), resource_uid, uri, bufferSize);
+		}
+		else
+		{
+			TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: HTTPS asset received (uid={}, url={}, {} bytes)",
+				teleport::client::SessionClient::GetConnectElapsedMs(), resource_uid, uri, bufferSize);
 		}
 		return decodeFromBuffer(server_uid, buffer, bufferSize, uri, type, target, resource_uid, sourceAxesStandard);
 	}
@@ -335,8 +345,20 @@ void GeometryDecoder::decodeAsync()
 			decodeInternal(decodeData.front());
 			decodeData.pop();
 		}
+		else
+		{
+			std::this_thread::sleep_for(1ms);
+		}
+	}
+}
+
+void GeometryDecoder::httpAsync()
+{
+	SetThisThreadName("GeometryDecoder::httpAsync");
+	while (httpThreadActive)
+	{
 		hTTPUtil.process();
-		std::this_thread::yield();
+		std::this_thread::sleep_for(1ms);
 	}
 }
 
@@ -1363,7 +1385,8 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	TELEPORT_INTERNAL_COUT(Resource, "TexturePointer: HTTPS fetch queued (uid={}, url={})", texture_uid, url);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid);
 }
@@ -1380,7 +1403,8 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	TELEPORT_INTERNAL_COUT(Resource, "MeshPointer: HTTPS fetch queued (uid={}, url={})", mesh_uid, url);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: MeshPointer: HTTPS fetch queued (uid={}, url={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), mesh_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid);
 }

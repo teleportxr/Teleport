@@ -136,6 +136,10 @@ Result Pipeline::process()
 		timings.resize(m_nodes.size());
 	}
 	Result result = Result::OK;
+	thread_local int s_lastBreakIndex = -2;
+	thread_local int s_lastBreakCode = -1;
+	bool brokeOut = false;
+	size_t breakIndex = 0;
 	for (size_t index = 0; index < m_nodes.size(); ++index)
 	{
 		PipelineNode* node = m_nodes[index];
@@ -154,8 +158,29 @@ Result Pipeline::process()
 		}
 		if (!result && result != Result::IO_Empty)
 		{
+			brokeOut = true;
+			breakIndex = index;
 			break;
 		}
+	}
+	if (brokeOut)
+	{
+		int code = (int)(Result::Code)result;
+		if ((int)breakIndex != s_lastBreakIndex || code != s_lastBreakCode)
+		{
+			AVSLOG(Info) << "Pipeline: stalled at node[" << breakIndex << "] '"
+				<< m_nodes[breakIndex]->getDisplayName() << "' result=" << code
+				<< " t=" << timestamp << "ms\n";
+			s_lastBreakIndex = (int)breakIndex;
+			s_lastBreakCode = code;
+		}
+	}
+	else if (s_lastBreakIndex != -2)
+	{
+		AVSLOG(Info) << "Pipeline: recovered (previously stalled at node[" << s_lastBreakIndex
+			<< "] code=" << s_lastBreakCode << ") t=" << timestamp << "ms\n";
+		s_lastBreakIndex = -2;
+		s_lastBreakCode = -1;
 	}
 	if (isProfiling)
 	{

@@ -80,7 +80,9 @@ namespace avs
 		{
 		return cert_path.c_str();
 		}
-		std::queue<HTTPPayloadRequest>& GetRequestQueue() { return mRequestQueue; } 
+		std::queue<HTTPPayloadRequest>& GetRequestQueue() { return mRequestQueue; }
+		//! Thread-safe enqueue of an HTTP request.
+		void addRequest(const HTTPPayloadRequest &request);
 
 	private:
 		std::string cacheDirectory;

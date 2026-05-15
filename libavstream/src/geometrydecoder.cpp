@@ -97,6 +97,11 @@ Result GeometryDecoder::process(uint64_t timestamp, uint64_t deltaTime)
 		}
 		return Result::Node_NotConfigured;
 	}
+	if (!m_loggedFirstProcess)
+	{
+		m_loggedFirstProcess = true;
+		AVSLOG(Info) << "GeometryDecoder::process: first call (configured) t=" << timestamp << "ms\n";
+	}
 	auto *gti = dynamic_cast<GeometryTargetInterface*>(getOutput(0));
 	if (!gti)
 	{

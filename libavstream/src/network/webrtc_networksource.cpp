@@ -836,6 +836,7 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 					return;
 				}
 				avs::Result result=avs::Result::OK;
+				size_t bytesToWrite = 0;
 				if(stream.expects_frame_info)
 				{
 					StreamPayloadInfo frameInfo;
@@ -843,24 +844,25 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 					frameInfo.dataSize = b.size() - sizeof(size_t);
 					frameInfo.connectionTime = TimerUtil::GetElapsedTimeS();
 					frameInfo.broken = false;
-					size_t bufferSize = sizeof(StreamPayloadInfo) + b.size()-sizeof(size_t);
-					if (bufferSize > q_ptr()->m_tempBuffer.size())
+					bytesToWrite = sizeof(StreamPayloadInfo) + b.size()-sizeof(size_t);
+					if (bytesToWrite > q_ptr()->m_tempBuffer.size())
 					{
-						q_ptr()->m_tempBuffer.resize(bufferSize);
+						q_ptr()->m_tempBuffer.resize(bytesToWrite);
 					}
 
 					memcpy(q_ptr()->m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
 					//skip over the payload size, go straight to the payload type:
 					memcpy(&q_ptr()->m_tempBuffer[sizeof(StreamPayloadInfo)], b.data()+sizeof(size_t), b.size()-sizeof(size_t));
-					result = outputNode->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
+					result = outputNode->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bytesToWrite, numBytesWrittenToOutput);
 				}
 				else
 				{
-				result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+					bytesToWrite = b.size();
+					result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 				}
-				if (numBytesWrittenToOutput!=b.size())
+				if (numBytesWrittenToOutput!=bytesToWrite)
 				{
-					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP onMessage: {0}: failed to write all to output Node. Wrote {1} of {2} bytes.\n",stream.label, numBytesWrittenToOutput, b.size());
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP onMessage: " << stream.label << ": failed to write all to output Node. Wrote " << numBytesWrittenToOutput << " of " << bytesToWrite << " bytes." << std::endl;
 					return;
 				}
 				AVSLOG(Info) << "WebRtcNetworkSource: Successfully wrote " << numBytesWrittenToOutput << " bytes to output node for stream " << stream.label << std::endl;
