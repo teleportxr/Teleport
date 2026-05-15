@@ -11,6 +11,7 @@
 #undef teleport_tinygltf
 #include "Eigen/Geometry"
 #include <TeleportCore/Logging.h>
+#include <TeleportClient/SessionClient.h>
 #include <ranges>
 
 using namespace teleport;
@@ -1171,7 +1172,9 @@ bool GeometryDecoder::DecodeScene(const teleport::clientrender::GeometryDecodeDa
 	std::string					err;
 	std::string					warn;
 
-	// teleport_tinygltf::SetImageLoader( &LoadImageDataFunction, nullptr) ;
+	// Skip synchronous image decoding inside tinygltf. Embedded PNG/JPEG bytes are read directly from
+	// the bufferView in ConvertGltfModelToDecodedGeometry and handed to the texture transcode thread.
+	loader.SetImageLoader(&LoadImageDataFunction, nullptr);
 
 	const uint8_t *source = geometryDecodeData.data.data() + geometryDecodeData.offset;
 	uint32_t	   sz	  = (uint32_t)geometryDecodeData.bytesRemaining();
@@ -1179,7 +1182,15 @@ bool GeometryDecoder::DecodeScene(const teleport::clientrender::GeometryDecodeDa
 	{
 		// Get extensions, we might want to look at VRM properties.
 		loader.SetStoreOriginalJSONForExtrasAndExtensions(true);
+		const double parseStartMs = teleport::client::SessionClient::GetConnectElapsedMs();
 		bool ret = loader.LoadBinaryFromMemory(&model, &err, &warn, source, sz); // for binary glTF(.glb)
+		const double parseElapsedMs = teleport::client::SessionClient::GetConnectElapsedMs() - parseStartMs;
+		if (parseElapsedMs > 50.0)
+		{
+			TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: tinygltf::LoadBinaryFromMemory (uid={}, in={} bytes, images={}) in {:.1f} ms",
+				teleport::client::SessionClient::GetConnectElapsedMs(),
+				geometryDecodeData.uid, sz, model.images.size(), parseElapsedMs);
+		}
 
 		if (!warn.empty())
 		{
@@ -1201,5 +1212,14 @@ bool GeometryDecoder::DecodeScene(const teleport::clientrender::GeometryDecodeDa
 	{
 		return false;
 	}
-	return ConvertGltfModelToDecodedGeometry(this, model, geometryDecodeData.target, dg, geometryDecodeData.filename_or_url, stationary);
+	const double convStartMs = teleport::client::SessionClient::GetConnectElapsedMs();
+	bool convOk = ConvertGltfModelToDecodedGeometry(this, model, geometryDecodeData.target, dg, geometryDecodeData.filename_or_url, stationary);
+	const double convElapsedMs = teleport::client::SessionClient::GetConnectElapsedMs() - convStartMs;
+	if (convElapsedMs > 50.0)
+	{
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: ConvertGltfModelToDecodedGeometry (uid={}, ok={}) in {:.1f} ms",
+			teleport::client::SessionClient::GetConnectElapsedMs(),
+			geometryDecodeData.uid, convOk, convElapsedMs);
+	}
+	return convOk;
 }

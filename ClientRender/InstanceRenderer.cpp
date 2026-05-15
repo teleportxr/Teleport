@@ -2050,15 +2050,20 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 		clientPipeline.pipeline.link({&clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget});
 	}
 	{
-		clientPipeline.reliableOutQueue.configure(3000 * 64, "Reliable out");
+		clientPipeline.reliableFromServerQueue.configure(3000 * 64, "Reliable from server");
 		clientPipeline.commandDecoder.configure(sessionClient, "Reliable Decoder");
-		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableOutQueue);
-		clientPipeline.pipeline.link({&clientPipeline.reliableOutQueue, &clientPipeline.commandDecoder});
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableFromServerQueue);
+		clientPipeline.pipeline.link({&clientPipeline.reliableFromServerQueue, &clientPipeline.commandDecoder});
 	}
-	// And the generic queue for messages TO the server:
+	// And the generic queues for messages TO the server:
 	{
 		clientPipeline.unreliableToServerQueue.configure(3000 * 64, "Unreliable in");
 		avs::PipelineNode::link(clientPipeline.unreliableToServerQueue, *(clientPipeline.source.get()));
+	}
+	{
+		// Reliable queue for acks and other guaranteed-delivery messages to the server (WebRTC channel 100).
+		clientPipeline.reliableToServerQueue.configure(3000 * 64, "Reliable to server");
+		avs::PipelineNode::link(clientPipeline.reliableToServerQueue, *(clientPipeline.source.get()));
 	}
 	// Tow special-purpose queues for time-sensitive messages TO the server:
 	{

@@ -109,9 +109,12 @@ namespace teleport
 
 			teleport::client::ClientPipeline clientPipeline;
 			mutable avs::ClientServerMessageStack messageToServerStack;
+			mutable avs::ClientServerMessageStack reliableMessageStack;
 			// The following MIGHT be moved later to a separate Pipeline class:
 			avs::Pipeline messageToServerPipeline;
 			avs::GenericEncoder unreliableToServerEncoder;
+			avs::Pipeline reliableToServerPipeline;
+			avs::GenericEncoder reliableToServerEncoder;
 			ClientServerState clientServerState;
 		protected:
 			static avs::uid CreateSessionClient(TabContext *tabContext, const std::string &domain);
@@ -222,7 +225,7 @@ namespace teleport
 			void SendReceivedResources();
 			void SendNodeUpdates();
 			void SendKeyframeRequest();
-			void Ack(uint64_t ack_id);
+			void Ack(uint64_t ack_id, CommandTransport transport);
 
 			void TimestampMessage(teleport::core::ClientMessage &msg);
 			// WebRTC:

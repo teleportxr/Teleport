@@ -259,6 +259,8 @@ avs::Result GeometryDecoder::decodeFromWeb(avs::uid								 server_uid,
 		std::string					   url_root		 = geometryCache->GetDefaultURLRoot();
 		req.url										 = "https://" + url_root + req.url;
 	}
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: HTTPS requested (uid={}, url={})",
+				teleport::client::SessionClient::GetConnectElapsedMs(), resource_uid, uri);
 	auto f = std::bind(
 		&GeometryDecoder::receiveFromWeb, this, server_uid, uri, std::placeholders::_1, std::placeholders::_2, type, target, resource_uid, sourceAxesStandard);
 	req.callbackFn	= std::move(f);
@@ -278,18 +280,6 @@ avs::Result GeometryDecoder::receiveFromWeb(avs::uid							  server_uid,
 {
 	if (bufferSize)
 	{
-		static bool s_firstWebAssetLogged = false;
-		if (!s_firstWebAssetLogged)
-		{
-			s_firstWebAssetLogged = true;
-			TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: First HTTPS asset received (uid={}, url={}, {} bytes)",
-				teleport::client::SessionClient::GetConnectElapsedMs(), resource_uid, uri, bufferSize);
-		}
-		else
-		{
-			TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: HTTPS asset received (uid={}, url={}, {} bytes)",
-				teleport::client::SessionClient::GetConnectElapsedMs(), resource_uid, uri, bufferSize);
-		}
 		return decodeFromBuffer(server_uid, buffer, bufferSize, uri, type, target, resource_uid, sourceAxesStandard);
 	}
 	return avs::Result::OK;
@@ -342,8 +332,24 @@ void GeometryDecoder::decodeAsync()
 		}
 		if (!decodeData.empty())
 		{
-			decodeInternal(decodeData.front());
+			auto &gdd = decodeData.front();
+			const avs::GeometryPayloadType decodeType = gdd.type;
+			const size_t                   decodeSize = gdd.data.size();
+			const avs::uid                 decodeUid  = gdd.uid;
+			const std::string              decodeUrl  = gdd.filename_or_url;
+			const double                   decodeStartMs = teleport::client::SessionClient::GetConnectElapsedMs();
+
+			decodeInternal(gdd);
 			decodeData.pop();
+
+			const double decodeElapsedMs = teleport::client::SessionClient::GetConnectElapsedMs() - decodeStartMs;
+			if (decodeElapsedMs > 50.0)
+			{
+				TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: decodeInternal (type={}, uid={}, in={} bytes, url={}) in {:.1f} ms",
+					teleport::client::SessionClient::GetConnectElapsedMs(),
+					avs::stringOf(decodeType), decodeUid, decodeSize, decodeUrl,
+					decodeElapsedMs);
+			}
 		}
 		else
 		{

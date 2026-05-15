@@ -300,6 +300,7 @@ void SessionClient::Frame(const avs::DisplayInfo								&displayInfo,
 
 	// TODO: These pipelines could be on different threads,
 	messageToServerPipeline.process();
+	reliableToServerPipeline.process();
 }
 
 void SessionClient::SetServerPath(std::string path)
@@ -696,37 +697,48 @@ void SessionClient::ReceiveHandshakeAcknowledgement(const std::vector<uint8_t> &
 void SessionClient::ReceiveSetupCommand(const std::vector<uint8_t> &packet)
 {
 	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand received", GetConnectElapsedMs());
-	if (connectionStatus == client::ConnectionStatus::AWAITING_SETUP || setupCommand.session_id != lastSessionId)
+	size_t commandSize = sizeof(teleport::core::SetupCommand);
+	if (packet.size() != commandSize)
 	{
-		size_t commandSize = sizeof(teleport::core::SetupCommand);
-		if (packet.size() != commandSize)
-		{
-			TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}", commandSize, packet.size());
-			return;
-		}
-		const teleport::core::SetupCommand *s = reinterpret_cast<const teleport::core::SetupCommand *>(packet.data());
-		ApplySetup(*s);
-
-		// Log the received setup command for debugging
-		TELEPORT_INTERNAL_COUT(Default, "\n===== CLIENT RECEIVED SETUPCOMMAND =====\n{}\n===== END SETUPCOMMAND =====",
-			teleport::core::SetupCommandToString(setupCommand));
-		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: calling clientPipeline.Init", GetConnectElapsedMs());
-		if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
-			return;
-		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: clientPipeline.Init done; configuring encoder", GetConnectElapsedMs());
-		unreliableToServerEncoder.configure(&messageToServerStack, "Unreliable Message Encoder");
-		messageToServerPipeline.link({&unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue});
-		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: calling OnSetupCommandReceived", GetConnectElapsedMs());
-		if (!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand))
-			return;
-		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: OnSetupCommandReceived done; starting pipeline", GetConnectElapsedMs());
-		// Set it running.
-		clientPipeline.pipeline.processAsync();
+		TELEPORT_INTERNAL_CERR("Bad SetupCommand. Size should be {0} but it's {1}", commandSize, packet.size());
+		return;
 	}
+	const teleport::core::SetupCommand *s = reinterpret_cast<const teleport::core::SetupCommand *>(packet.data());
+	// A duplicate SetupCommand for a session we have already processed must be a no-op:
+	// re-running Init + sending a fresh Handshake would tear down the just-established
+	// pipeline on the server side and leave the reliable data channel in a stale state,
+	// which is the proximate cause of the "gave up resending SetOriginNodeCommand"
+	// failure observed on reconnect.
+	if (connectionStatus != client::ConnectionStatus::AWAITING_SETUP && s->session_id == lastSessionId)
+	{
+		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: duplicate for session {} — ignoring", GetConnectElapsedMs(), lastSessionId);
+		return;
+	}
+	const bool sameSession = (s->session_id == lastSessionId);
+	ApplySetup(*s);
+
+	// Log the received setup command for debugging
+	TELEPORT_INTERNAL_COUT(Default, "\n===== CLIENT RECEIVED SETUPCOMMAND =====\n{}\n===== END SETUPCOMMAND =====",
+		teleport::core::SetupCommandToString(setupCommand));
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: calling clientPipeline.Init", GetConnectElapsedMs());
+	if (!clientPipeline.Init(setupCommand, remoteIP.c_str()))
+		return;
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: clientPipeline.Init done; configuring encoder", GetConnectElapsedMs());
+	unreliableToServerEncoder.configure(&messageToServerStack, "Unreliable Message Encoder");
+	messageToServerPipeline.link({&unreliableToServerEncoder, &clientPipeline.unreliableToServerQueue});
+	reliableToServerEncoder.configure(&reliableMessageStack, "Reliable to server");
+	reliableToServerPipeline.link({&reliableToServerEncoder, &clientPipeline.reliableToServerQueue});
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: calling OnSetupCommandReceived", GetConnectElapsedMs());
+	if (!mCommandInterface->OnSetupCommandReceived(remoteIP.c_str(), setupCommand))
+		return;
+	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: SetupCommand: OnSetupCommandReceived done; starting pipeline", GetConnectElapsedMs());
+	// Set it running.
+	clientPipeline.pipeline.processAsync();
+
 	teleport::core::Handshake handshake;
 	mCommandInterface->GetHandshake(handshake);
 	std::vector<avs::uid> resourceIDs;
-	if (setupCommand.session_id == lastSessionId)
+	if (sameSession)
 	{
 		resourceIDs				= mCommandInterface->GetGeometryResources();
 		handshake.resourceCount = resourceIDs.size();
@@ -782,17 +794,17 @@ void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 			"Received out-of-date origin node {0}, counter was {1}, but last update was {2}.", command.origin_node, command.valid_counter, receivedInitialPos);
 	}
 	// And acknowledge it.
-	Ack(command.ack_id);
+	Ack(command.ack_id, currentReceiveTransport);
 }
 
-void SessionClient::Ack(uint64_t ack_id)
+void SessionClient::Ack(uint64_t ack_id, CommandTransport transport)
 {
 	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: Ack queued (ack_id={}, transport={})",
-		GetConnectElapsedMs(), ack_id, currentReceiveTransport == CommandTransport::Signaling ? "Signaling" : "WebRTC");
+		GetConnectElapsedMs(), ack_id, transport == CommandTransport::Signaling ? "Signaling" : "WebRTC");
 	teleport::core::AcknowledgementMessage msg;
 	TimestampMessage(msg);
 	msg.ack_id = ack_id;
-	if (currentReceiveTransport == CommandTransport::Signaling)
+	if (transport == CommandTransport::Signaling)
 	{
 		// Route the ack back over the signaling websocket so that commands
 		// received before the WebRTC reliable channel is open can still be
@@ -803,7 +815,10 @@ void SessionClient::Ack(uint64_t ack_id)
 	}
 	else
 	{
-		sendMessageToServer(msg);
+		// Send acks on the reliable WebRTC channel (100) so they are guaranteed to arrive.
+		auto b = std::make_shared<std::vector<uint8_t>>(sizeof(msg));
+		memcpy(b->data(), &msg, sizeof(msg));
+		reliableMessageStack.PushBuffer(b);
 	}
 }
 
@@ -953,7 +968,7 @@ void SessionClient::ReceiveSetupLightingCommand(const std::vector<uint8_t> &pack
 			"Received out-of-date lighting setup, counter was {}, but last update was {}.", setLightingCommand.ack_id, receivedLightingAckId);
 	}
 	// And acknowledge it.
-	Ack(setLightingCommand.ack_id);
+	Ack(setLightingCommand.ack_id, currentReceiveTransport);
 }
 
 void SessionClient::ReceiveSetupInputsCommand(const std::vector<uint8_t> &packet)

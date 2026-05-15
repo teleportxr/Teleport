@@ -24,6 +24,7 @@ namespace avs
 		HTTPCallbackFn callbackFn;
 		bool cached = false;		// filled by HTTPUtil when the file is present.
 		std::string cachedFilePath; // filled by HTTPUtil .
+		std::string etag;			// filled by HTTPUtil from cached sidecar; sent as If-None-Match.
 	};
 
 	struct HTTPUtilConfig

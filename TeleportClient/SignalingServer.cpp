@@ -25,6 +25,9 @@ uint16_t teleport::client::SignalingServer::GetPort() const
 }
 void teleport::client::SignalingServer::Reset()
 {
+	// A hard reset (URL/port change, socket replacement) means any pending connect
+	// is no longer relevant — clear the gate so Discover() can issue a fresh one.
+	connectInFlight = false;
 	{
 		std::lock_guard lock(messagesToSendMutex);
 		while (!messagesToSend.empty())
@@ -126,6 +129,9 @@ void SignalingServer::ProcessReceivedMessages()
 					// SessionClient::Connect() again, resetting tBegin and re-entering
 					// AWAITING_SETUP. Only treat this as a fresh response if the ids changed.
 					const bool sameIds = (srv_id != 0 && cl_id != 0 && serverID == srv_id && clientID == cl_id);
+					// Either way, the in-flight connect has been resolved — release the
+					// gate so a future reconnect can issue a new request.
+					connectInFlight = false;
 					if (sameIds)
 					{
 						// Duplicate: leave clearResources/awaiting untouched.
@@ -195,6 +201,7 @@ void SignalingServer::QueueDisconnectionMessage()
 	json message = {{"teleport-signal-type", "disconnect"}};
 	QueueMessage(message.dump());
 	awaiting = false;
+	connectInFlight = false;
 	closingDown=true;
 }
 

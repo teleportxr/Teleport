@@ -15,6 +15,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
+#include <cmath>
 #include <format>
 #include <magic_enum/magic_enum.hpp>
 #include <filesystem>
@@ -414,7 +415,10 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 	{
 		ImFontConfig config;
 		config.MergeMode		= true;
+		config.PixelSnapH		= true;
 		config.GlyphMinAdvanceX = 32.0f;
+		config.GlyphMaxAdvanceX = 32.0f;
+		config.GlyphOffset		= ImVec2(0.0f, 3.0f);
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
 		builder.AddText(ICON_FK_SEARCH);
@@ -449,7 +453,10 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		fontInter[sz] = AddFont("Inter-Regular.ttf", float(sz));
 		ImFontConfig config;
 		config.MergeMode		= true;
+		config.PixelSnapH		= true;
 		config.GlyphMinAdvanceX = float(sz);
+		config.GlyphMaxAdvanceX = float(sz);
+		config.GlyphOffset		= ImVec2(0.0f, std::round(float(sz) * 0.1f));
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
 		builder.AddText(ICON_FK_SEARCH);
@@ -2499,7 +2506,8 @@ bool Gui::BeginMainMenuBar()
 	ImVec2 window_pos = ImVec2(0, 0), window_pos_pivot = ImVec2(0, 0);
 	float  w = ImGui::GetMainViewport()->Size.x;
 	auto			&config		  = client::Config::GetInstance();
-	ImGui::SetNextWindowSize(ImVec2(w, 2.f*config.options.uiFontSize));
+	auto   &style				   = ImGui::GetStyle();
+	ImGui::SetNextWindowSize(ImVec2(w, 2.f*config.options.uiFontSize+style.FramePadding.y*2.f));
 	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always, window_pos_pivot);
 	// g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
 	const ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -2533,7 +2541,7 @@ void Gui::ShowSettings2D()
 	ImGui::LabelText("##Settings", "Settings");
 	ImGui::PopFont();
 	ImGui::SameLine(ImGui::GetWindowWidth() - 50.f);
-	buttonSize={1.5f*config.options.uiFontSize, (float)config.options.uiFontSize};
+	buttonSize={1.5f*config.options.uiFontSize, 1.5f*(float)config.options.uiFontSize};
 	if (ImGui::Button(ICON_FK_TIMES, *(ImVec2*)&buttonSize))
 	{
 		show_options   = false;
@@ -2605,7 +2613,8 @@ void Gui::MenuBar2D()
 {
 	auto &config = client::Config::GetInstance();
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.00f, 0.00f, 0.0f));
-	buttonSize={1.5f*config.options.uiFontSize, (float)config.options.uiFontSize};
+	//ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+	buttonSize={1.5f*config.options.uiFontSize, 1.5f*(float)config.options.uiFontSize};
 	if (ImGui::Button(ICON_FK_RENREN,  *(ImVec2*)&buttonSize))
 	{
 		cancelConnectHandler(current_tab_context);
@@ -2735,6 +2744,7 @@ void Gui::MenuBar2D()
 			TIMED_TOOLTIP("Dev");
 		}
 	}
+	//ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
 }
 

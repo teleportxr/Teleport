@@ -86,7 +86,7 @@ namespace avs
 		std::unordered_map<uint8_t, uint8_t> inputToStreamIndex;
 		//! Map input nodes to streams outgoing. One to one relation.
 		std::unordered_map<uint8_t, uint8_t> streamIndexToOutput;
-		Result sendData(uint8_t id, const uint8_t* packet, size_t sz);
+		Result sendData(uint8_t streamIndex, const uint8_t* packet, size_t sz);
 	};
 }
 avs::StreamingConnectionState ConvertConnectionState(rtc::PeerConnection::State rtcState)
@@ -577,7 +577,10 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		uint32_t streamIndex = m_data->inputToStreamIndex[i];
 		if (streamIndex >= m_streams.size())
+		{
+			AVSLOG(Error) << "WebRtcNetworkSource: Invalid stream index " << streamIndex << " for input " << i << "\n";
 			continue;
+		}
 		PipelineNode* node = getInput(i);
 		if (!node)
 			continue;
@@ -617,7 +620,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			//}
 			//else
 			{
-				res = m_data->sendData(stream.id, dataChannel.sendBuffer.data(), numBytesRead);
+				res = m_data->sendData((uint8_t)streamIndex, dataChannel.sendBuffer.data(), numBytesRead);
 			}
 			if(res==Result::Network_Disconnection)
 				disconnected=true;
@@ -891,10 +894,15 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		return true;
 }
 
-Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet, size_t sz)
+Result WebRtcNetworkSource::Private::sendData(uint8_t streamIndex, const uint8_t* packet, size_t sz)
 {
-	auto index = idToStreamIndex[id];
-	auto& dataChannel = dataChannels[idToStreamIndex[id]];
+	if (streamIndex >= dataChannels.size())
+	{
+		std::cerr << "WebRTC: invalid stream index " << (int)streamIndex << " in sendData.\n";
+		return Result::Failed;
+	}
+	auto& dataChannel = dataChannels[streamIndex];
+	const auto& stream = q_ptr()->m_streams[streamIndex];
 	auto c = dataChannel.rtcDataChannel;
 	if (c)
 	{
@@ -914,26 +922,26 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 				if (c->bufferedAmount() + sz >= 1024 * 1024 * 16)
 				{
 					dataChannel.readyToSend = false;
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it would overflow the webrtc buffer.\n";
+					std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << " as it would overflow the webrtc buffer.\n";
 					return Result::Failed;
 				}
 				// Can't send a buffer greater than 262144. even 64k is dodgy:
 				if (sz >= c->maxMessageSize())
 				{
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
+					std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
 					return Result::Failed;
 				}
 				if (!c->send((std::byte*)packet, sz))
 				{
 					dataChannel.readyToSend = false;
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
 					return Result::Failed;
 				}
 				dataChannel.bytesSent += sz;
 			}
 			else
 			{
- 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
+ 				std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
 				// Surface the drop on the public state so SessionClient can react and
 				// initiate a reconnect on its next Frame.
 				if (q_ptr()->GetStreamingConnectionState() == StreamingConnectionState::CONNECTED)

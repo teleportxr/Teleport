@@ -11,14 +11,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Code Style Guidelines
 - C++20 standard
-- 4-space indentation
+- 4-space indentation with tabs
 - Braces on new line (Allman style)
 - 160 character line limit
 - Class names: PascalCase (e.g., `TextureManager`)
-- Methods/functions: camelCase (e.g., `loadTexture()`)
-- Error handling: Use `TELEPORT_ASSERT`, `TELEPORT_CERR` macros
+- Methods/functions: PascalCase (e.g., `LoadTexture()`)
+- Variables: camelCase (e.g., `newTexture`)
+- Error handling: Use `TELEPORT_ASSERT`, `TELEPORT_INTERNAL_CERR` macros
 - Project structure: Components are clearly separated into client/server libraries
 
 ## Third-party Dependencies
-- Handle with CMake using submodules where possible
+- Handle with CMake using FetchContent where possible
 - Check README.md for detailed build requirements

@@ -35,6 +35,7 @@ namespace teleport
 			avs::Pipeline pipeline;
 
 			avs::LockFreeQueue unreliableToServerQueue;
+			avs::LockFreeQueue reliableToServerQueue;
 			avs::SingleQueue nodePosesQueue;
 			avs::SingleQueue inputStateQueue;
 			std::shared_ptr<avs::NetworkSource> source;
@@ -53,7 +54,7 @@ namespace teleport
 			avs::AudioDecoder avsAudioDecoder;
 			avs::AudioTarget avsAudioTarget;
 
-			avs::LockFreeQueue reliableOutQueue;
+			avs::LockFreeQueue reliableFromServerQueue;
 			avs::GenericDecoder commandDecoder;
 
 			avs::DecoderParams decoderParams = {};

@@ -2,6 +2,7 @@
 // (c) Copyright 2018-2021 Simul Software Ltd
 
 #include "Platform/Core/FileLoader.h"
+#include <cctype>
 #include <curl/curl.h>
 #include <filesystem>
 #include <format>
@@ -251,6 +252,14 @@ void HTTPUtil::CacheReceivedFile(const Transfer &transfer)
 	if (!fileLoader) return;
 	fileLoader->Save(transfer.getReceivedData(), (uint32_t)transfer.getReceivedDataSize(), transfer.mRequest.cachedFilePath.c_str(), false);
 	fileCacheSize += transfer.getReceivedDataSize();
+	// Persist the ETag (if the server returned one) as a sidecar so subsequent
+	// runs can send If-None-Match and hit the server's content-hash 304 path.
+	if (!transfer.mRequest.etag.empty())
+	{
+		std::string etagPath = transfer.mRequest.cachedFilePath + ".etag";
+		fileLoader->Save(reinterpret_cast<const uint8_t *>(transfer.mRequest.etag.data()),
+		                 (uint32_t)transfer.mRequest.etag.size(), etagPath.c_str(), false);
+	}
 }
 
 void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
@@ -270,7 +279,19 @@ void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
 		// Use file_time_type::clock::to_sys() (C++20) to perform the clock conversion correctly.
 		auto sctp = time_point_cast<system_clock::duration>(FILE_TIME_TYPE::to_sys(write_time));
 		request.cacheUpdated = std::chrono::floor<seconds>(sctp);
-		AVSLOG(Info) << "CheckForCachedFile: FOUND " << request.url << " at " << request.cachedFilePath << " (mtime: " << std::format("{:%Y-%m-%d %H:%M:%S}", request.cacheUpdated) << ")\n";
+		// Load the ETag sidecar if present so we can send If-None-Match.
+		std::string etagPath = request.cachedFilePath + ".etag";
+		if (std::filesystem::exists(etagPath))
+		{
+			std::ifstream etagFile(etagPath, std::ios::binary);
+			if (etagFile)
+			{
+				std::ostringstream ss;
+				ss << etagFile.rdbuf();
+				request.etag = ss.str();
+			}
+		}
+		AVSLOG(Info) << "CheckForCachedFile: FOUND " << request.url << " at " << request.cachedFilePath << " (mtime: " << std::format("{:%Y-%m-%d %H:%M:%S}", request.cacheUpdated) << (request.etag.empty() ? "" : ", etag: " + request.etag) << ")\n";
 	}
 	else
 	{
@@ -407,12 +428,22 @@ void HTTPUtil::Transfer::start(const HTTPPayloadRequest &request)
 		}
 		mCurrentSize = 0;
 		mRequest = request;
+		// Clear any ETag carried over from a previous transfer; it will be
+		// repopulated from the response headers if the server sends one.
+		std::string requestEtag = mRequest.etag;
+		mRequest.etag.clear();
 		struct curl_slist *headerlist = nullptr;
 		if (request.cached)
 		{
 			std::string header = getModifiedSinceHeader();
 			AVSLOG(Info) << "  -> CACHED file, adding header: " << header << "\n";
 			headerlist = curl_slist_append(NULL, header.c_str());
+			if (!requestEtag.empty())
+			{
+				std::string etagHeader = "If-None-Match: " + requestEtag;
+				AVSLOG(Info) << "  -> CACHED file, adding header: " << etagHeader << "\n";
+				headerlist = curl_slist_append(headerlist, etagHeader.c_str());
+			}
 		}
 		else
 		{
@@ -449,11 +480,9 @@ std::string HTTPUtil::Transfer::getModifiedSinceHeader()
 {
 	//	If-Modified-Since: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
 	// e.g. If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT
-	// TODO: because std::format with a time_point adds a silly number of decimal places to the "seconds", we can't use it for the whole time.
-	// instead, we must extract the seconds separately.
-	std::string header = std::format("If-Modified-Since: {:%a, %d %b %Y %H:%M}:00 GMT", mRequest.cacheUpdated, 0);
-	// write(header.c_str(),header.length());
-	return header;
+	// Cast to second precision so %S prints whole seconds without a fractional part.
+	auto sec_tp = std::chrono::time_point_cast<std::chrono::seconds>(mRequest.cacheUpdated);
+	return std::format("If-Modified-Since: {:%a, %d %b %Y %H:%M:%S} GMT", sec_tp);
 }
 
 void HTTPUtil::Transfer::addBufferHeader()
@@ -480,4 +509,24 @@ void HTTPUtil::Transfer::write(const char *data, size_t dataSize)
 	memcpy(&mBuffer[mCurrentSize], data, dataSize);
 	mCurrentSize = newSize;
 }
-void HTTPUtil::Transfer::headers(const char *data, size_t dataSize) {}
+void HTTPUtil::Transfer::headers(const char *data, size_t dataSize)
+{
+	// curl invokes this once per response header line, including the trailing CRLF.
+	// Capture the ETag so it can be persisted next to the cached file and sent as
+	// If-None-Match on subsequent requests.
+	static constexpr const char etagPrefix[] = "etag:";
+	constexpr size_t etagPrefixLen = sizeof(etagPrefix) - 1;
+	if (dataSize <= etagPrefixLen) return;
+	for (size_t i = 0; i < etagPrefixLen; ++i)
+	{
+		if (std::tolower(static_cast<unsigned char>(data[i])) != etagPrefix[i]) return;
+	}
+	size_t valStart = etagPrefixLen;
+	while (valStart < dataSize && (data[valStart] == ' ' || data[valStart] == '\t')) ++valStart;
+	size_t valEnd = dataSize;
+	while (valEnd > valStart && (data[valEnd - 1] == '\r' || data[valEnd - 1] == '\n' || data[valEnd - 1] == ' ' || data[valEnd - 1] == '\t')) --valEnd;
+	if (valEnd > valStart)
+	{
+		mRequest.etag.assign(data + valStart, valEnd - valStart);
+	}
+}

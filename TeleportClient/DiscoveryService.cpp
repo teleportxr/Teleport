@@ -230,6 +230,19 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		{
 			if (ws->isOpen())
 			{
+				// Don't issue a fresh "connect" while a previous one is still awaiting
+				// its "connect-response". Two connects in flight cause the server to
+				// dispatch two SetupCommands, which leads to duplicate Handshakes and
+				// the reconnect-state corruption diagnosed in the C++ client reconnect
+				// failure. A 5 s window is well above any reasonable signaling RTT and
+				// short enough to recover if the response is genuinely lost.
+				const auto now = std::chrono::steady_clock::now();
+				if (signalingServer->connectInFlight
+					&& (now - signalingServer->connectSentAt) < std::chrono::seconds(5))
+				{
+					frame = 1;
+					return 0;
+				}
 				json message = {{"teleport-signal-type", "connect"}
 									,{"content",	{
 														{"teleport", "0.9"}
@@ -239,6 +252,8 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 									}
 								};
 				ws->send(message.dump());
+				signalingServer->connectInFlight = true;
+				signalingServer->connectSentAt = now;
 				frame = 100;
 			}
 			else if (ws->readyState() == rtc::WebSocket::State::Closed)

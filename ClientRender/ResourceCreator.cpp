@@ -647,8 +647,6 @@ void ResourceCreator::CreateTexture(avs::uid server_uid, avs::uid id, const avs:
 	geometryCache->ReceivedResource(id);
 	if (geometryCache->mTextureManager.Get(id))
 	{
-		TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: CreateTexture duplicate (uid={}, name={})",
-			teleport::client::SessionClient::GetConnectElapsedMs(), id, texture.name);
 		return;
 	}
 	std::shared_ptr<clientrender::Texture::TextureCreateInfo> texInfo = std::make_shared<clientrender::Texture::TextureCreateInfo>();
@@ -1062,10 +1060,10 @@ void ResourceCreator::CreateNode(avs::uid server_uid, avs::uid id, const avs::No
 			node->SetTextCanvas(geometryCache->mTextCanvasManager.Get(avsNode.data_uid));
 			if (!node->GetTextCanvas())
 			{
-				TELEPORT_CERR << "MeshNode " << id << "(" << avsNode.name << ") missing Mesh " << avsNode.data_uid << std::endl;
-
 				isMissingResources = true;
 				node->IncrementMissingResources();
+				TELEPORT_INTERNAL_COUT(Default,
+					"Node {0} ({1}) missing TextCanvas {2}, total missing resources: {3}", id, avsNode.name, avsNode.data_uid, node->GetMissingResourceCount());
 				geometryCache->GetMissingResource(avsNode.data_uid, avs::GeometryPayloadType::TextCanvas).waitingResources.insert(node);
 			}
 			else
@@ -1360,30 +1358,37 @@ KTX_error_code ktxImageExtractionCallback(int miplevel, int face, int width, int
 void ResourceCreator::thread_TranscodeTextures()
 {
 	SetThisThreadName("thread_TranscodeTextures");
-	static bool s_firstTranscodeLogged = false;
 	auto &config = teleport::client::Config::GetInstance();
 	while (shouldBeTranscoding)
 	{
 		if (!config.debugOptions.enableTextureTranscodingThread)
 		{
-			std::this_thread::sleep_for(1700ms);
+			std::this_thread::sleep_for(100ms);
 			continue;
 		}
-		// std::this_thread::yield(); //Yield at the start, as we don't want to yield before we unlock (when lock goes out of scope).
-
 		// Copy the data out of the shared data structure and minimise thread stalls due to mutexes
 		std::shared_ptr<UntranscodedTexture> transcoding;
+		bool queueEmpty = false;
 		{
 			std::lock_guard<std::mutex> lock_texturesToTranscode(mutex_texturesToTranscode);
 			if (!texturesToTranscode.size())
 			{
-				std::this_thread::sleep_for(10ms);
-				std::this_thread::yield();
-				continue;
+				queueEmpty = true;
 			}
-			transcoding = texturesToTranscode[0];
-			texturesToTranscode.erase(texturesToTranscode.begin());
+			else
+			{
+				transcoding = texturesToTranscode[0];
+				texturesToTranscode.erase(texturesToTranscode.begin());
+			}
 		}
+		if (queueEmpty)
+		{
+			std::this_thread::sleep_for(10ms);
+			std::this_thread::yield();
+			continue;
+		}
+
+		const double transcodeStartMs = teleport::client::SessionClient::GetConnectElapsedMs();
 
 		{
 			auto geometryCache = GeometryCache::GetGeometryCache(transcoding->cache_or_server_uid);
@@ -1495,7 +1500,6 @@ void ResourceCreator::thread_TranscodeTextures()
 				{
 					// TELEPORT_CERR << "Texture \"" << transcoding->name << "\" uid "<< transcoding->texture_uid<<", Type "<<int(transcoding->textureCI->type)
 					// << std::endl;
-					if (!s_firstTranscodeLogged) { s_firstTranscodeLogged = true; TELEPORT_INTERNAL_COUT(Time, "First texture transcode complete (uid={}, name={})", transcoding->texture_uid, transcoding->name); }
 					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
 				else
@@ -1582,7 +1586,6 @@ void ResourceCreator::thread_TranscodeTextures()
 				{
 					// TELEPORT_CERR << "Texture \"" << transcoding->name << "\" uid "<< transcoding->texture_uid<<", Type "<<int(transcoding->textureCI->type)
 					// << std::endl;
-					if (!s_firstTranscodeLogged) { s_firstTranscodeLogged = true; TELEPORT_INTERNAL_COUT(Time, "First texture transcode complete (uid={}, name={})", transcoding->texture_uid, transcoding->name); }
 					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
 				else
@@ -1692,7 +1695,6 @@ void ResourceCreator::thread_TranscodeTextures()
 					}
 					if (result == KTX_SUCCESS)
 					{
-						if (!s_firstTranscodeLogged) { s_firstTranscodeLogged = true; TELEPORT_INTERNAL_COUT(Time, "First texture transcode complete (uid={}, name={})", transcoding->texture_uid, transcoding->name); }
 						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 					}
 					else
@@ -1709,6 +1711,20 @@ void ResourceCreator::thread_TranscodeTextures()
 					ktxTexture_Destroy(ktxt);
 				}
 			}
+		}
+
+		const double transcodeElapsedMs = teleport::client::SessionClient::GetConnectElapsedMs() - transcodeStartMs;
+		if (transcodeElapsedMs > 50.0)
+		{
+			TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: Transcoded texture (uid={}, name={}, fmt={}, in={} bytes, out={}x{}) in {:.1f} ms",
+				teleport::client::SessionClient::GetConnectElapsedMs(),
+				transcoding->texture_uid,
+				transcoding->name,
+				magic_enum::enum_name(transcoding->compressionFormat),
+				transcoding->data.size(),
+				transcoding->textureCI->width,
+				transcoding->textureCI->height,
+				transcodeElapsedMs);
 		}
 	}
 }
