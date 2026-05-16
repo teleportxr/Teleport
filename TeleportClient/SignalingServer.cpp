@@ -203,6 +203,13 @@ void SignalingServer::QueueDisconnectionMessage()
 	awaiting = false;
 	connectInFlight = false;
 	closingDown=true;
+	// User-initiated disconnect ends our session identity with the server. Clear
+	// clientID/serverID so the next Discover() doesn't treat us as "already
+	// accepted" and suppress the fresh "connect" (the gate in Discover() is
+	// (clientID != 0 && !awaiting) == alreadyAccepted). BeginReconnect uses a
+	// different path that deliberately preserves these ids for session resume.
+	clientID = 0;
+	serverID = 0;
 }
 
 void SignalingServer::QueueBinaryMessage(std::vector<uint8_t> &bin)

@@ -231,30 +231,36 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 			if (ws->isOpen())
 			{
 				// Don't issue a fresh "connect" while a previous one is still awaiting
-				// its "connect-response". Two connects in flight cause the server to
-				// dispatch two SetupCommands, which leads to duplicate Handshakes and
-				// the reconnect-state corruption diagnosed in the C++ client reconnect
-				// failure. A 5 s window is well above any reasonable signaling RTT and
-				// short enough to recover if the response is genuinely lost.
+				// its "connect-response", AND don't keep pinging once the server has
+				// already accepted us (signalingState transitioned past START). The
+				// server's signaling handler treats every connect as either a
+				// duplicate-needing-resync or a fresh request, which causes
+				// SetupCommand storms during a healthy session. A genuine session
+				// loss resets clientID via BeginReconnect → Reset paths (Reset()
+				// clears clientID as well as connectInFlight — see SignalingServer).
 				const auto now = std::chrono::steady_clock::now();
-				if (signalingServer->connectInFlight
-					&& (now - signalingServer->connectSentAt) < std::chrono::seconds(5))
+				const bool inFlight = signalingServer->connectInFlight
+					&& (now - signalingServer->connectSentAt) < std::chrono::seconds(5);
+				const bool alreadyAccepted = (signalingServer->clientID != 0 && !signalingServer->awaiting);
+				if (inFlight || alreadyAccepted)
 				{
-					frame = 1;
-					return 0;
+					frame = 100;
 				}
-				json message = {{"teleport-signal-type", "connect"}
-									,{"content",	{
-														{"teleport", "0.9"}
-														,{"clientID", signalingServer->clientID}
-														,{"identity", identity.identity}
-													}
-									}
-								};
-				ws->send(message.dump());
-				signalingServer->connectInFlight = true;
-				signalingServer->connectSentAt = now;
-				frame = 100;
+				else
+				{
+					json message = {{"teleport-signal-type", "connect"}
+										,{"content",	{
+															{"teleport", "0.9"}
+															,{"clientID", signalingServer->clientID}
+															,{"identity", identity.identity}
+														}
+										}
+									};
+					ws->send(message.dump());
+					signalingServer->connectInFlight = true;
+					signalingServer->connectSentAt = now;
+					frame = 100;
+				}
 			}
 			else if (ws->readyState() == rtc::WebSocket::State::Closed)
 			{

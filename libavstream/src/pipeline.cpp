@@ -7,8 +7,8 @@
 
 using namespace avs;
 
-Pipeline::Pipeline()
-	: m_d(this)
+Pipeline::Pipeline(std::string_view name)
+	: name(name), m_d(this)
 {
 	reset();
 
@@ -105,14 +105,18 @@ void Pipeline::processAsync()
 	pipelineThreadActive = true;
 }
 
+#include <sys/prctl.h>
 void Pipeline::processAsyncFn()
 {
+	prctl(PR_SET_NAME, (long)"Pipeline::processAsyncFn", 0, 0, 0);
 	while (pipelineThreadActive)
 	{
 		Result result= process();
 		if(!result)
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::yield();
 	}
+	std::cout << "Pipeline " << name << ": has stopped.\n";
 }
 
 Result Pipeline::process()
@@ -191,7 +195,11 @@ Result Pipeline::process()
 
 void Pipeline::deconfigure()
 {
-	pipelineThreadActive=false;
+	if(pipelineThreadActive)
+	{
+		pipelineThreadActive=false;
+		AVSLOG(Info) << "Pipeline " << name << ": deconfiguring and stopping async processing thread...\n";
+	}
 	if(pipelineThread.joinable())
 		pipelineThread.join();
 	for (PipelineNode* node : m_nodes)

@@ -76,7 +76,9 @@ namespace teleport
 			void Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager);
 			void Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &animManager);
 			void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
+			void Canvases(const ResourceManager<avs::uid, clientrender::TextCanvas> &textCanvasManager);
 			void Lights(const ResourceManager<avs::uid, clientrender::Light> &lightManager);
+			void Lighting(clientrender::GeometryCache *geometryCache);
 			void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>&);
 			void CubemapOSD(platform::crossplatform::Texture *videoTexture);
 			void TagOSD(std::vector<SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);

@@ -5,7 +5,7 @@
 using namespace teleport;
 using namespace client;
 
-ClientPipeline::ClientPipeline()
+ClientPipeline::ClientPipeline(): pipeline("ClientPipeline")
 {
 	source.reset(new avs::WebRtcNetworkSource());
 }
@@ -47,7 +47,7 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 				,{40,"video_tags"			,""				,"VideoTagQueue",true	,false}
 				,{60,"audio_server_to_client",""			,"AudioQueue"	,true	,true}		// 2-way
 				,{80,"geometry"				,""				,"GeometryQueue",true	,false}
-				,{100,"reliable"			,"Reliable to server"	,"Reliable out"	,false	,true}		// 2-way
+				,{100,"reliable"			,"Reliable to server"	,"Reliable from server"	,false	,true}		// 2-way
 				,{120,"unreliable"			,"Unreliable in",""				,false	,true}		// 2-way
 			};
 

@@ -1601,7 +1601,11 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		case avs::NodeDataType::Mesh:
 		{
 			node.data_uid	= NextUint64;
-
+			if(!node.data_uid)
+			{
+				TELEPORT_INTERNAL_CERR("Node {}, component {} has Mesh data type but zero data UID", node.name, i);
+			}
+		}
 			node.skeletonID = NextUint64;
 			NextList(uint16_t, int16_t, node.joint_indices) NextList(uint16_t, avs::uid, node.animations) NextList(uint16_t, avs::uid, node.materials)
 				node.renderState.lightmapScaleOffset = NextVec4;
@@ -1619,10 +1623,12 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		{
 			if (!readString(geometryDecodeData, node.url))
 			{
+				TELEPORT_INTERNAL_CERR("Node {},component {} has invalid URL", node.name, i);
 				return avs::Result::Failed;
 			}
 			if (!readString(geometryDecodeData, node.query_url))
 			{
+				TELEPORT_INTERNAL_CERR("Node {},component {} has invalid query URL", node.name, i);
 				return avs::Result::Failed;
 			}
 		}
@@ -1630,6 +1636,10 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		{
 			// nothing node-specific to add at present.
 			node.data_uid = NextUint64;
+			if(!node.data_uid)
+			{
+				TELEPORT_INTERNAL_CERR("Node {},component {} has TextCanvas data type but zero data UID", node.name, i);
+			}
 		}
 		break;
 		default:

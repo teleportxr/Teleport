@@ -256,18 +256,36 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 		memcpy(m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
 		memcpy(&m_tempBuffer[sizeof(StreamPayloadInfo)], rPacket->pFrameData, rPacket->mFrameSize);
 		// The mStreamID is encoded sender-side within the EFP wrapper.
-		
-		uint8_t streamIndex = m_data->idToStreamIndex[rPacket->mStreamID];// streamID is 20,40,60, etc
-		uint8_t outputNodeIndex = m_data->streamIndexToOutput[streamIndex];
-		IOInterface *outputNode = dynamic_cast<IOInterface*>(getOutput(outputNodeIndex));
-		if (!outputNode)
+
+		auto idIt = m_data->idToStreamIndex.find(rPacket->mStreamID);
+		if (idIt == m_data->idToStreamIndex.end())
+		{
+			std::cerr << "WebRtcNetworkSource EFP Callback: unknown streamID " << (int)rPacket->mStreamID
+				<< " (no entry in idToStreamIndex). Dropping " << rPacket->mFrameSize << " bytes." << std::endl;
+			return;
+		}
+		uint8_t streamIndex = idIt->second;// streamID is 20,40,60, etc
+		auto outIt = m_data->streamIndexToOutput.find(streamIndex);
+		if (outIt == m_data->streamIndexToOutput.end())
+		{
+			const auto& s = m_streams[streamIndex];
+			std::cerr << "WebRtcNetworkSource EFP Callback: stream " << (int)streamIndex
+				<< " (streamID=" << (int)rPacket->mStreamID << ", label=\"" << s.label
+				<< "\", outputName=\"" << s.outputName
+				<< "\") has no entry in streamIndexToOutput — receiving node's display name does not match stream.outputName."
+				<< " Dropping " << rPacket->mFrameSize << " bytes." << std::endl;
+			return;
+		}
+		uint8_t outputNodeIndex = outIt->second;
+		IOInterface *ioOutput = dynamic_cast<IOInterface*>(getOutput(outputNodeIndex));
+		if (!ioOutput)
 		{
 			AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
 			return;
 		}
 
 		size_t numBytesWrittenToOutput;
-		auto result = outputNode->write(m_data->q_ptr(), m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
+		auto result = ioOutput->write(m_data->q_ptr(), m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
 
 		if (!result)
 		{
@@ -301,11 +319,23 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 {
 	std::string name=node->getDisplayName();
-	for (int i=0;i<m_streams.size();i++)
+	bool matched = false;
+	for (int i=0;i<(int)m_streams.size();i++)
 	{
 		auto& stream = m_streams[i];
-		if(stream.inputName==name)
+		if(!stream.inputName.empty() && stream.inputName==name)
+		{
 			m_data->inputToStreamIndex[slot] = i;
+			matched = true;
+		}
+	}
+	if(!matched)
+	{
+		std::cerr << "WebRtcNetworkSource::onInputLink: node display name \""
+			<< name << "\" (slot " << slot << ") matches no stream.inputName. Known inputNames:";
+		for (int i = 0; i < (int)m_streams.size(); i++)
+			std::cerr << " [" << i << "]\"" << m_streams[i].inputName << "\"";
+		std::cerr << std::endl;
 	}
 	IOInterface *nodeIO = dynamic_cast<IOInterface *>(node);
 	if(slot>=inputInterfaces.size())
@@ -319,11 +349,23 @@ Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
 {
 	std::string name = node->getDisplayName();
-	for (int i = 0; i < m_streams.size(); i++)
+	bool matched = false;
+	for (int i = 0; i < (int)m_streams.size(); i++)
 	{
 		auto& stream = m_streams[i];
-		if (stream.outputName == name)
+		if (!stream.outputName.empty() && stream.outputName == name)
+		{
 			m_data->streamIndexToOutput[i] = slot;
+			matched = true;
+		}
+	}
+	if(!matched)
+	{
+		std::cerr << "WebRtcNetworkSource::onOutputLink: node display name \""
+			<< name << "\" (slot " << slot << ") matches no stream.outputName. Known outputNames:";
+		for (int i = 0; i < (int)m_streams.size(); i++)
+			std::cerr << " [" << i << "]\"" << m_streams[i].outputName << "\"";
+		std::cerr << std::endl;
 	}
 	return Result::OK;
 }
@@ -469,18 +511,36 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 
 void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 {
-	uint8_t streamIndex = m_data->idToStreamIndex[m_params.httpStreamID];
-	uint8_t nodeIndex = m_data->streamIndexToOutput[streamIndex];
+	auto idIt = m_data->idToStreamIndex.find(m_params.httpStreamID);
+	if (idIt == m_data->idToStreamIndex.end())
+	{
+		std::cerr << "WebRtcNetworkSource::receiveHTTPFile: httpStreamID " << (int)m_params.httpStreamID
+			<< " has no entry in idToStreamIndex. Dropping " << bufferSize << " bytes." << std::endl;
+		return;
+	}
+	uint8_t streamIndex = idIt->second;
+	auto outIt = m_data->streamIndexToOutput.find(streamIndex);
+	if (outIt == m_data->streamIndexToOutput.end())
+	{
+		const auto& s = m_streams[streamIndex];
+		std::cerr << "WebRtcNetworkSource::receiveHTTPFile: stream " << (int)streamIndex
+			<< " (httpStreamID=" << (int)m_params.httpStreamID << ", label=\"" << s.label
+			<< "\", outputName=\"" << s.outputName
+			<< "\") has no entry in streamIndexToOutput — receiving node's display name does not match stream.outputName."
+			<< " Dropping " << bufferSize << " bytes." << std::endl;
+		return;
+	}
+	uint8_t nodeIndex = outIt->second;
 
-	IOInterface * outputNode = dynamic_cast<IOInterface*>(getOutput(nodeIndex));
-	if (!outputNode)
+	IOInterface * ioOutput = dynamic_cast<IOInterface*>(getOutput(nodeIndex));
+	if (!ioOutput)
 	{
 		AVSLOG(Warning) << "WebRtcNetworkSource HTTP Callback: Invalid output node. Should be an avs::Queue.";
 		return;
 	}
 
 	size_t numBytesWrittenToOutput;
-	auto result = outputNode->write(this, buffer, bufferSize, numBytesWrittenToOutput);
+	auto result = ioOutput->write(this, buffer, bufferSize, numBytesWrittenToOutput);
 
 	if (!result)
 	{
@@ -575,7 +635,14 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	bool disconnected=false;
 	for (uint32_t i = 0; i < (uint32_t)getNumInputSlots(); ++i)
 	{
-		uint32_t streamIndex = m_data->inputToStreamIndex[i];
+		auto inIt = m_data->inputToStreamIndex.find((uint8_t)i);
+		if (inIt == m_data->inputToStreamIndex.end())
+		{
+			std::cerr << "WebRtcNetworkSource: input slot " << i
+				<< " has no entry in inputToStreamIndex — sending node's display name does not match any stream.inputName. Skipping." << std::endl;
+			continue;
+		}
+		uint32_t streamIndex = inIt->second;
 		if (streamIndex >= m_streams.size())
 		{
 			AVSLOG(Error) << "WebRtcNetworkSource: Invalid stream index " << streamIndex << " for input " << i << "\n";
@@ -770,7 +837,11 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	else if(label=="unreliable")
 		forced_id=120;
 	else
+	{
+		std::cerr << "WebRtcNetworkSource::onDataChannel: unknown channel label \""
+			<< label << "\" — rejecting." << std::endl;
 		return false;
+	}
 	std::cout<<"onDataChannel: "<<dc->label()<<" id "<<forced_id<<"\n";
 	// make the id even.
 	uint16_t id = EVEN_ID(forced_id);
@@ -792,8 +863,11 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	if (dcIndex < 0)
 	{
 		// TODO: Inform the server that a channel has not been recognized - don't send data on it.
-		
-		std::cerr << "Bad dataChannel index "<<dcIndex<<"\n";
+		std::cerr << "WebRtcNetworkSource::onDataChannel: channel label \""
+			<< label << "\" (forced_id=" << forced_id << ") matches no stream.label. Known labels:";
+		for (int i = 0; i < (int)q_ptr()->m_streams.size(); i++)
+			std::cerr << " [" << i << "]\"" << q_ptr()->m_streams[i].label << "\"";
+		std::cerr << std::endl;
 		return false;
 	}
 	idToStreamIndex[id] = dcIndex;
@@ -821,10 +895,26 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	dc->onMessage([this,&dataChannel,id](rtc::binary b)
 		{
 		// data holds either std::string or rtc::binary
-			uint8_t streamIndex = idToStreamIndex[id];
+			auto idIt = idToStreamIndex.find(id);
+			if (idIt == idToStreamIndex.end())
+			{
+				std::cerr << "WebRtcNetworkSource onMessage: id=" << (int)id
+					<< " has no entry in idToStreamIndex — dropping " << b.size()
+					<< " bytes. (onDataChannel was never called for this id, or its label was unrecognised.)" << std::endl;
+				return;
+			}
+			uint8_t streamIndex = idIt->second;
 			auto o = streamIndexToOutput.find(streamIndex);
 			if (o == streamIndexToOutput.end())
+			{
+				const auto& s = q_ptr()->m_streams[streamIndex];
+				std::cerr << "WebRtcNetworkSource onMessage: stream " << (int)streamIndex
+					<< " (id=" << (int)id << ", label=\"" << s.label
+					<< "\", outputName=\"" << s.outputName
+					<< "\") has no entry in streamIndexToOutput — receiving node's display name does not match stream.outputName."
+					<< " Dropping " << b.size() << " bytes." << std::endl;
 				return;
+			}
 			uint8_t outputNodeIndex = o->second;
 			dataChannel.bytesReceived += b.size();
 			AVSLOG(Info) << "WebRtcNetworkSource onMessage: Received " << b.size() << " bytes on stream " << (int)streamIndex << " (id=" << (int)id << ")" << std::endl;
@@ -832,8 +922,9 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 			if (!stream.framed)
 			{
 				size_t numBytesWrittenToOutput=0;
-				avs::IOInterface *outputNode = dynamic_cast<avs::IOInterface*>(q_ptr()->getOutput(outputNodeIndex));
-				if (!outputNode)
+				avs::IOInterface *ioOutput = dynamic_cast<avs::IOInterface*>(q_ptr()->getOutput(outputNodeIndex));
+				avs::PipelineNode *outputNode1 = dynamic_cast<avs::PipelineNode*>(q_ptr()->getOutput(outputNodeIndex));
+				if (!ioOutput)
 				{
 					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should implement avs::IOInterface.\n";
 					return;
@@ -856,19 +947,19 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 					memcpy(q_ptr()->m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
 					//skip over the payload size, go straight to the payload type:
 					memcpy(&q_ptr()->m_tempBuffer[sizeof(StreamPayloadInfo)], b.data()+sizeof(size_t), b.size()-sizeof(size_t));
-					result = outputNode->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bytesToWrite, numBytesWrittenToOutput);
+					result = ioOutput->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bytesToWrite, numBytesWrittenToOutput);
 				}
 				else
 				{
 					bytesToWrite = b.size();
-					result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+					result = ioOutput->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 				}
 				if (numBytesWrittenToOutput!=bytesToWrite)
 				{
 					AVSLOG(Warning) << "WebRtcNetworkSource EFP onMessage: " << stream.label << ": failed to write all to output Node. Wrote " << numBytesWrittenToOutput << " of " << bytesToWrite << " bytes." << std::endl;
 					return;
 				}
-				AVSLOG(Info) << "WebRtcNetworkSource: Successfully wrote " << numBytesWrittenToOutput << " bytes to output node for stream " << stream.label << std::endl;
+				AVSLOG(Info) << "WebRtcNetworkSource: Successfully wrote " << numBytesWrittenToOutput << " bytes to output node " << outputNode1->name << " for stream " << stream.label << std::endl;
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
 				q_ptr()->bytes_received+=numBytesWrittenToOutput;
 #endif

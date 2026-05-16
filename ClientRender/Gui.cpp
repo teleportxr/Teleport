@@ -1181,7 +1181,8 @@ void Gui::DrawTexture(const crossplatform::Texture *texture, float m, int slice)
 
 	int width  = texture->width;
 	int height = texture->length;
-	width	   = std::max(width, 256);
+	width	   = std::max(width, 32);
+	width	   = std::min(width, 256);
 	if (width != texture->width)
 	{
 		height = (width * texture->length) / texture->width;
@@ -1896,6 +1897,112 @@ void Gui::Anims(const ResourceManager<avs::uid, clientrender::Animation> &animMa
 	ImGui::EndGroup();
 }
 
+void Gui::Canvases(const ResourceManager<avs::uid, clientrender::TextCanvas> &textCanvasManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids			 = textCanvasManager.GetAllIDs();
+	avs::uid	selected_uid = GetSelectedUid();
+	for (auto id : ids)
+	{
+		bool		selected   = (selected_uid == id);
+		const auto &textCanvas = textCanvasManager.Get(id);
+		if (ImGui::TreeNodeEx(std::format("{0}: {1}", id, textCanvas->textCanvasCreateInfo.text.c_str()).c_str(),
+							  ImGuiTreeNodeFlags_Leaf | (selected ? ImGuiTreeNodeFlags_Selected : 0)))
+		{
+			if (ImGui::IsItemClicked())
+			{
+				if (!show_inspector)
+				{
+					show_inspector = true;
+				}
+				Select(cache_uid, id);
+			}
+			ImGui::TreePop();
+		}
+	}
+	ImGui::EndGroup();
+}
+
+void Gui::Lighting(clientrender::GeometryCache *geometryCache)
+{
+	if (!geometryCache)
+	{
+		return;
+	}
+	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
+	if (sessionClient)
+	{
+		const auto &setupCommand = sessionClient->GetSetupCommand();
+		ImGui::Separator();
+		ImGui::TextUnformatted("Background");
+		ImGui::Text("Mode: %s", std::string(magic_enum::enum_name(setupCommand.backgroundMode)).c_str());
+		switch (setupCommand.backgroundMode)
+		{
+			case teleport::core::BackgroundMode::COLOUR:
+			{
+				const auto &c = setupCommand.backgroundColour;
+				ImGui::ColorButton("##bgcolour",
+								   ImVec4(c.x, c.y, c.z, c.w),
+								   ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
+								   ImVec2(32, 32));
+				ImGui::SameLine();
+				ImGui::Text("%.2f %.2f %.2f %.2f", c.x, c.y, c.z, c.w);
+			}
+			break;
+			case teleport::core::BackgroundMode::TEXTURE:
+			{
+				avs::uid uid	 = setupCommand.backgroundTexture;
+				auto	 texture = geometryCache->mTextureManager.Get(uid);
+				if (texture)
+				{
+					ImGui::Text("Texture %lu: %s", uid, texture->GetTextureCreateInfo().name.c_str());
+					DrawTexture(texture->GetSimulTexture(), 0.0f, 0);
+				}
+				else
+				{
+					ImGui::TextDisabled("Texture %lu: (not loaded)", uid);
+				}
+			}
+			break;
+			case teleport::core::BackgroundMode::VIDEO:
+				ImGui::TextDisabled("Video background");
+				break;
+			case teleport::core::BackgroundMode::NONE:
+			default:
+				break;
+		}
+
+		const auto &dl = sessionClient->GetDynamicLighting();
+		ImGui::Separator();
+		ImGui::TextUnformatted("Environment Cubemaps");
+		ImGui::Text("Lighting Mode: %s", std::string(magic_enum::enum_name(dl.lightingMode)).c_str());
+		auto drawCubemap = [&](const char *label, avs::uid uid)
+		{
+			if (!uid)
+			{
+				ImGui::Text("%s: (none)", label);
+				return;
+			}
+			auto t = geometryCache->mTextureManager.Get(uid);
+			if (t)
+			{
+				ImGui::Text("%s %lu: %s", label, uid, t->GetTextureCreateInfo().name.c_str());
+				DrawTexture(t->GetSimulTexture());
+			}
+			else
+			{
+				ImGui::TextDisabled("%s %lu: (not loaded)", label, uid);
+			}
+		};
+		drawCubemap("Diffuse Cubemap", dl.diffuse_cubemap_texture_uid);
+		drawCubemap("Specular Cubemap", dl.specular_cubemap_texture_uid);
+	}
+
+	ImGui::Separator();
+	ImGui::TextUnformatted("Lights");
+	Lights(geometryCache->mLightManager);
+}
+
 void Gui::Lights(const ResourceManager<avs::uid, clientrender::Light> &lightManager)
 {
 	ImGui::BeginGroup();
@@ -2048,7 +2155,7 @@ void Gui::NetworkPanel(teleport::client::ClientPipeline &clientPipeline)
 
 void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 {
-	static float  xspacing	  = 150.0f;
+	static float  xspacing	  = 175.0f;
 	static float  yspacing	  = 20.0f;
 	static float  thickness	  = 3.0f;
 	static float  sz		  = 36.0f;
@@ -2080,8 +2187,8 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	}
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
-	draw_list->AddText(pos, col, std::format("{0}: {1:4.1f}", node.name, node.inwardBandwidthKps).c_str());
-	draw_list->AddText(ImVec2(pos.x, pos.y + line.y), col, std::format("{0}", node.maxPacketKb).c_str());
+	std::string str=std::format("{0}: {1:4.1f} {2}", node.name, node.inwardBandwidthKps, node.maxPacketKb);
+	draw_list->AddText(ImVec2(pos.x+line.y, pos.y + line.y), col, str.c_str());
 }
 
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
@@ -2434,9 +2541,14 @@ void Gui::Scene()
 		Textures(geometryCache->mTextureManager);
 		ImGui::EndTabItem();
 	}
+	if (ImGui::BeginTabItem("Canvases"))
+	{
+		Canvases(geometryCache->mTextCanvasManager);
+		ImGui::EndTabItem();
+	}
 	if (ImGui::BeginTabItem("Lighting"))
 	{
-		Lights(geometryCache->mLightManager);
+		Lighting(geometryCache.get());
 		ImGui::EndTabItem();
 	}
 

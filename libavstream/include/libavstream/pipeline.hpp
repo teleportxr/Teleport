@@ -41,8 +41,9 @@ class AVSTREAM_API Pipeline final
 	std::thread pipelineThread;
 	std::atomic<bool> pipelineThreadActive=false;
 	void processAsyncFn();
+	std::string name;
 public:
-	Pipeline();
+	Pipeline(std::string_view name);
 	~Pipeline();
 
 	void SetPipelineBlocked(bool b)

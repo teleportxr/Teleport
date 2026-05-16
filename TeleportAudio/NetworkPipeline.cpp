@@ -32,7 +32,7 @@ using namespace teleport::audio;
 		SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
 		SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
-		pipeline.reset(new avs::Pipeline);
+		pipeline.reset(new avs::Pipeline("NetworkPipeline"));
 		networkSink.reset(new avs::WebRtcNetworkSink);
 
 		if(audioQueue)
