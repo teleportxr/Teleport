@@ -46,6 +46,9 @@ namespace teleport
 			// Buffer queue for audio data
 			avs::ThreadSafeQueue<std::vector<uint8_t>> mAudioBufferQueue;
 
+			// Scratch buffer used to apply volume scaling before writing to PulseAudio.
+			std::vector<uint8_t> mScaledAudioBuffer;
+
 			// Recording callback and thread
 			std::function<void(const uint8_t* data, size_t dataSize)> mRecordingCallback;
 			std::atomic<bool> mCaptureRunning{false};

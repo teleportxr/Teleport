@@ -42,7 +42,7 @@ private:
 				if(str[pos]=='\n')
 				{
 					str[pos]=0;
-					rc=__android_log_write(logPriority, "TeleportVR", str.c_str())>0;
+					rc=__android_log_write(logPriority, "TeleportXR", str.c_str())>0;
 					if(str.length()>pos+1)
 						str=str.substr(pos+1,str.length()-pos-1);
 					else
@@ -66,12 +66,12 @@ void RedirectStdCoutCerr()
 	auto *olderr = std::cerr.rdbuf(&androidCerr);
 	if (oldout != &androidCout)
 	{
-		__android_log_write(ANDROID_LOG_DEBUG, "TeleportVR", "redirected cout");
+		__android_log_write(ANDROID_LOG_DEBUG, "TeleportXR", "redirected cout");
 	}
 	std::cout<<"Testing cout redirect."<<std::endl;
 	if (olderr != &androidCerr)
 	{
-		__android_log_write(ANDROID_LOG_DEBUG, "TeleportVR", "redirected cerr");
+		__android_log_write(ANDROID_LOG_DEBUG, "TeleportXR", "redirected cerr");
 	}
 	std::cerr<<"Testing cerr redirect."<<std::endl;
 }

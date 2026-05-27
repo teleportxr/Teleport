@@ -188,6 +188,9 @@ Result PC_AudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	}
 	mAudioBufferQueue.emplace(std::vector<uint8_t>(data, data + dataSize));
 
+	// Apply the user-configured playback volume via XAudio2's source-voice gain.
+	mSourceVoice->SetVolume(mVolume);
+
 	XAUDIO2_BUFFER xaBuffer;
 	ZeroMemory(&xaBuffer, sizeof(XAUDIO2_BUFFER));
 	xaBuffer.AudioBytes = (UINT32)dataSize;

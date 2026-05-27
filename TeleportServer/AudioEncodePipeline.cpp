@@ -23,7 +23,7 @@ Result AudioEncodePipeline::initialize(const ServerSettings& settings, const Aud
 	encoderParams.codec = audioSettings.codec;
 
 	encoder.reset(new avs::AudioEncoder(new AudioEncoder(&settings)));
-	pipeline.reset(new avs::Pipeline);
+	pipeline.reset(new avs::Pipeline("AudioPipeline"));
 
 	if (!encoder->configure(encoderParams))
 	{

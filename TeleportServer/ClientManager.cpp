@@ -22,7 +22,7 @@
 std::shared_ptr<VisualStudioDebugOutput> debug_buffer;
 #else
 #include "UnixDebugOutput.h"
-std::shared_ptr<DebugOutput> debug_buffer(true, "teleport_server.log", 128);
+std::shared_ptr<DebugOutput> debug_buffer=std::make_shared<DebugOutput>(true, "teleport_server.log", 128);
 #endif
 
 namespace teleport
@@ -149,8 +149,10 @@ ClientManager &ClientManager::instance()
 ClientManager::ClientManager()
 {
 	mLastTickTimestamp = avs::Platform::getTimestamp();
+#ifdef _MSC_VER
 	if(!debug_buffer)	
 		debug_buffer=std::make_shared<VisualStudioDebugOutput>(true, "teleport_server.log", 128);
+#endif
 }
 
 ClientManager::~ClientManager()
@@ -299,7 +301,13 @@ void ClientManager::tick(float deltaTime)
 			c.second->clientMessaging->handleEvents(deltaTime);
 			std::string msg;
 			if (signalingService.GetNextMessage(c.first, msg))
-				c.second->clientMessaging->clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(msg);
+			{
+				// Avatar-negotiation messages travel as JSON text frames on
+				// the signaling WebSocket; intercept them here so they do
+				// not reach the WebRTC streaming-control pipeline.
+				if (!c.second->RouteIncomingSignalingMessage(msg))
+					c.second->clientMessaging->clientNetworkContext.NetworkPipeline.receiveStreamingControlMessage(msg);
+			}
 			std::vector<uint8_t> bin;
 			while (signalingService.GetNextBinaryMessage(c.first, bin))
 			{
@@ -337,7 +345,7 @@ bool ClientManager::startSession(avs::uid clientID, std::string clientIP)
 		if (clients.size() >= mMaxClients)
 			return false;
 	}
-	TELEPORT_INTERNAL_COUT(Default, "Started session for clientID " << clientID << " at IP " << clientIP.c_str());
+	TELEPORT_INTERNAL_COUT(Default, "Started session for clientID {} at IP {}", clientID, clientIP.c_str());
 	std::lock_guard<std::mutex> videoLock(videoMutex);
 	std::lock_guard<std::mutex> audioLock(audioMutex);
 

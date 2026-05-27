@@ -31,6 +31,8 @@ namespace teleport
 	{
 		Default,
 		Time,
+		Resource,
+		Signaling,
 	};
 
 	extern bool IsLogCategoryEnabled(LogCategory category);

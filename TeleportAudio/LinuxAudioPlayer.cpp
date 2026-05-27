@@ -135,7 +135,33 @@ Result LinuxAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 	}
 
 	int error;
-	if (pa_simple_write(mPlaybackStream, data, dataSize, &error) < 0)
+	const float volume = mVolume;
+	const void *writeData = data;
+	if (volume < 0.999f && mAudioSettings.bitsPerSample == 32 && (dataSize % sizeof(float)) == 0)
+	{
+		mScaledAudioBuffer.resize(dataSize);
+		const float *src = reinterpret_cast<const float *>(data);
+		float		*dst = reinterpret_cast<float *>(mScaledAudioBuffer.data());
+		const size_t numSamples = dataSize / sizeof(float);
+		for (size_t i = 0; i < numSamples; ++i)
+		{
+			dst[i] = src[i] * volume;
+		}
+		writeData = mScaledAudioBuffer.data();
+	}
+	else if (volume < 0.999f && mAudioSettings.bitsPerSample == 16 && (dataSize % sizeof(int16_t)) == 0)
+	{
+		mScaledAudioBuffer.resize(dataSize);
+		const int16_t *src = reinterpret_cast<const int16_t *>(data);
+		int16_t		  *dst = reinterpret_cast<int16_t *>(mScaledAudioBuffer.data());
+		const size_t   numSamples = dataSize / sizeof(int16_t);
+		for (size_t i = 0; i < numSamples; ++i)
+		{
+			dst[i] = static_cast<int16_t>(static_cast<float>(src[i]) * volume);
+		}
+		writeData = mScaledAudioBuffer.data();
+	}
+	if (pa_simple_write(mPlaybackStream, writeData, dataSize, &error) < 0)
 	{
 		TELEPORT_INTERNAL_CERR("LinuxAudioPlayer: Failed to write audio data: {}", pa_strerror(error));
 		return Result::AudioWriteError;

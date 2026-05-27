@@ -35,6 +35,8 @@ ClientMessaging::ClientMessaging(SignalingService &signalingService,
 	, onDisconnect(onDisconnect)
 	, reportHandshake(reportHandshakeFn)
 	, disconnectTimeout(disconnectTimeout)
+	, commandPipeline("commandPipeline")
+	, messagePipeline("messagePipeline")
 {
 	ackStates.emplace(core::CommandPayloadType::SetOriginNode,ackSetOriginNodeCommand);
 	ackStates.emplace(core::CommandPayloadType::SetupLighting,ackSetLightingCommand);
@@ -139,11 +141,11 @@ void ClientMessaging::sendNodeMovementUpdates()
 		u.velocity={0,0,0};
 		u.angularVelocityAxis={0,0,0};
 		u.angularVelocityAngle=0.0f;
-		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, unpacked(u.position));
-		avs::ConvertRotation(serverSettings.serverAxesStandard, axesStandard, unpacked(u.rotation));
-		avs::ConvertScale	(serverSettings.serverAxesStandard, axesStandard, unpacked(u.scale));
-		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, unpacked(u.velocity));
-		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, unpacked(u.angularVelocityAxis));
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.position);
+		avs::ConvertRotation(serverSettings.serverAxesStandard, axesStandard, u.rotation);
+		avs::ConvertScale	(serverSettings.serverAxesStandard, axesStandard, u.scale);
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.velocity);
+		avs::ConvertPosition(serverSettings.serverAxesStandard, axesStandard, u.angularVelocityAxis);
 		i++;
 
 	}
@@ -205,7 +207,7 @@ void ClientMessaging::tick(float deltaTime)
 	}
 	if (!clientNetworkContext.NetworkPipeline.isProcessingEnabled())
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Network error occurred with client " << getClientIP() <<", disconnecting." << "");
+		TELEPORT_INTERNAL_COUT(Default, "Network error occurred with client {}, disconnecting. ", getClientIP());
 		Disconnect();
 		return;
 	}
@@ -260,7 +262,7 @@ void ClientMessaging::handleEvents(float deltaTime)
 	const teleport::core::InputEventMotion* motionEventsPtr		= latestInputStateAndEvents.motionEvents.data();
 	for (auto c : latestInputStateAndEvents.analogueEvents)
 	{
-		TELEPORT_INTERNAL_COUT(Default, "processNewInput: "<<c.eventID <<" "<<(int)c.inputID<<" "<<c.strength<< "");
+		TELEPORT_INTERNAL_COUT(Default, "processNewInput: {} {} {}", c.eventID, (int)c.inputID, c.strength);
 	}
 	for (int i=0;i<latestInputStateAndEvents.analogueStates.size();i++)
 	{
@@ -480,7 +482,7 @@ void ClientMessaging::ensureStreamingPipeline()
 			MessageDecoder.configure(this,"MessageDecoder");
 			messagePipeline.link({&clientNetworkContext.NetworkPipeline.unreliableReceiveQueue, &MessageDecoder});
 		}
-		TELEPORT_INTERNAL_COUT(Default, "Received handshake from clientID" << clientID << " at IP " << clientIP.c_str() << " .");
+		TELEPORT_INTERNAL_COUT(Default, "Received handshake from clientID {} at IP {} .", clientID, clientIP);
 
 		if (serverSettings.isReceivingAudio)
 		{
@@ -699,7 +701,7 @@ void ClientMessaging::receiveInputEvents(const std::vector<uint8_t> &packet)
 		latestInputStateAndEvents.analogueEvents.insert(latestInputStateAndEvents.analogueEvents.end(), analogueData, analogueData + msg.numAnalogueEvents);
 		for (auto c : latestInputStateAndEvents.analogueEvents)
 		{
-			TELEPORT_INTERNAL_COUT(Default, "Analogue: " << c.eventID << " " << (int)c.inputID << " " << c.strength << "");
+			TELEPORT_INTERNAL_COUT(Default, "Analogue: {} {} {}", c.eventID, (int)c.inputID, c.strength);
 		}
 		src += analogueEventSize;
 	}
@@ -719,7 +721,7 @@ void ClientMessaging::receiveDisplayInfo(const std::vector<uint8_t> &packet)
 {
 	if (packet.size() != sizeof(core::DisplayInfoMessage))
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed display info packet of length: " << packet.size() << "");
+		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed display info packet of length: {}", packet.size());
 		return;
 	}
 
@@ -742,7 +744,7 @@ void ClientMessaging::receiveAcknowledgement(const std::vector<uint8_t> &packet)
 	core::AcknowledgementMessage msg;
 	if (packet.size()!=sizeof(core::AcknowledgementMessage))
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed OriginRequest packet of length: " << packet.size() << "");
+		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed OriginRequest packet of length: {}", packet.size());
 		return;
 	}
 	memcpy(&msg, packet.data(), sizeof(msg));
@@ -761,7 +763,7 @@ void ClientMessaging::receiveKeyframeRequest(const std::vector<uint8_t>& packet)
 {
 	if (packet.size() < sizeof(core::KeyframeRequestMessage))
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "");
+		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed KeyframeRequestMessage packet of length: {}", packet.size());
 		return;
 	}
 	if (captureComponentDelegates.requestKeyframe)
@@ -778,7 +780,7 @@ void ClientMessaging::receivePongForLatency(const std::vector<uint8_t>& packet)
 {
 	if (packet.size() != sizeof(core::PongForLatencyMessage))
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed KeyframeRequestMessage packet of length: " << packet.size() << "");
+		TELEPORT_INTERNAL_COUT(Default, "Session: Received malformed KeyframeRequestMessage packet of length: {}", packet.size());
 		return;
 	}
 	int64_t unix_time_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -824,7 +826,7 @@ void ClientMessaging::receiveClientMessage(const std::vector<uint8_t> &packet)
 				teleport::core::NodePose nodePose;
 				memcpy(&nodePose,src,sizeof(nodePose));
 				src+=sizeof(nodePose);
-				teleport::core::PoseDynamic nodePoseDynamic=nodePose.poseDynamic;
+				teleport::core::PoseDynamic nodePoseDynamic=*((teleport::core::PoseDynamic*)&nodePose.poseDynamic);
 				avs::ConvertRotation(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.orientation);
 				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.pose.position);
 				avs::ConvertPosition(clientNetworkContext.axesStandard,serverSettings.serverAxesStandard, nodePoseDynamic.velocity);

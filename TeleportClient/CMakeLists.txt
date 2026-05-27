@@ -17,6 +17,8 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 # Source
 set(src_files
+	AvatarManager.cpp
+	AvatarManager.h
 	basic_linear_algebra.h
 	ClientDeviceState.cpp
 	ClientDeviceState.h
@@ -74,7 +76,6 @@ target_include_directories(TeleportClient PUBLIC ../thirdparty/json)
 
 target_include_directories(TeleportClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include )
 
-target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/fmt/include )
 target_include_directories(TeleportClient PUBLIC ${SIMUL_PLATFORM_DIR}/External )
 
 #include libdatachannel

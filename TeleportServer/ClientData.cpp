@@ -5,6 +5,10 @@
 #include "TeleportServer/GeometryStore.h"
 #include "TeleportServer/ClientManager.h"
 #include "TeleportServer/InteropStructures.h"
+#include "TeleportServer/SignalingService.h"
+
+#include <nlohmann/json.hpp>
+
 using namespace teleport;
 using namespace server;
 
@@ -25,6 +29,49 @@ ClientData::ClientData(avs::uid clid, std::shared_ptr<ClientMessaging> clientMes
 	videoEncodePipeline = std::make_shared<VideoEncodePipeline>();
 	audioEncodePipeline = std::make_shared<AudioEncodePipeline>();
 	clientID=clid;
+	// AvatarService writes JSON text frames straight onto the per-client
+	// signaling WebSocket; route them through ClientManager's shared
+	// SignalingService rather than the WebRTC binary path.
+	SignalingService &sig = ClientManager::instance().signalingService;
+	avs::uid cid = clientID;
+	avatarService = std::make_shared<AvatarService>(clientID,
+		[&sig, cid](const std::string &str)
+		{
+			sig.sendToClient(cid, str);
+		});
+}
+
+bool ClientData::RouteIncomingSignalingMessage(const std::string &msg)
+{
+	if (msg.empty())
+		return false;
+	nlohmann::json j;
+	try
+	{
+		j = nlohmann::json::parse(msg);
+	}
+	catch (const std::exception &)
+	{
+		// Not JSON; leave it to the streaming-control pipeline.
+		return false;
+	}
+	if (!j.is_object() || !j.contains("teleport-signal-type"))
+		return false;
+	const std::string type = j.at("teleport-signal-type").get<std::string>();
+	const nlohmann::json content = j.contains("content") ? j.at("content") : nlohmann::json::object();
+	if (type == "avatar-offer")
+	{
+		if (avatarService)
+			avatarService->HandleOffer(content);
+		return true;
+	}
+	if (type == "avatar-revoke")
+	{
+		if (avatarService)
+			avatarService->HandleRevoke(content);
+		return true;
+	}
+	return false;
 }
 
 void ClientData::StartStreaming(uint32_t connectionTimeout
@@ -150,8 +197,8 @@ void ClientData::reparentNode(avs::uid nodeID)
 	pose.orientation	= packed(node->localTransform.rotation);
 	pose.position		= packed(node->localTransform.position);
 	const auto &lastSetupCommand=clientMessaging->GetLastSetupCommand();
-	avs::ConvertRotation(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, unpacked(pose.orientation));
-	avs::ConvertPosition(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, unpacked(pose.position));
+	avs::ConvertRotation(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.orientation);
+	avs::ConvertPosition(lastSetupCommand.axesStandard, clientMessaging->getClientNetworkContext()->axesStandard, pose.position);
 	teleport::core::UpdateNodeStructureCommand command(nodeID, node->parentID, pose);
 	command.confirmationNumber = nextConfirmationNumber++;
 	auto& s = orthogonalNodeStates[nodeID];
@@ -198,7 +245,7 @@ void ClientData::resendUnconfirmedOrthogonalStates()
 				continue;
 			if (serverTimeUs - unconfirmedState.second.serverTimeSentUs > resendOrthogonalStateTimeout)
 			{
-				TELEPORT_INTERNAL_COUT(Default, "Resending unconfirmed state for node " << nodeState.first);
+				TELEPORT_INTERNAL_COUT(Default, "Resending unconfirmed state for node {}", nodeState.first);
 				unconfirmedState.second.serverTimeSentUs = serverTimeUs;
 				switch (unconfirmedState.first)
 				{

@@ -31,6 +31,7 @@ namespace teleport
 {
 	namespace client
 	{
+		class AvatarManager;
 		class GeometryCacheBackendInterface;
 		class TabContext;
 		class SessionCommandInterface
@@ -109,9 +110,12 @@ namespace teleport
 
 			teleport::client::ClientPipeline clientPipeline;
 			mutable avs::ClientServerMessageStack messageToServerStack;
+			mutable avs::ClientServerMessageStack reliableMessageStack;
 			// The following MIGHT be moved later to a separate Pipeline class:
 			avs::Pipeline messageToServerPipeline;
 			avs::GenericEncoder unreliableToServerEncoder;
+			avs::Pipeline reliableToServerPipeline;
+			avs::GenericEncoder reliableToServerEncoder;
 			ClientServerState clientServerState;
 		protected:
 			static avs::uid CreateSessionClient(TabContext *tabContext, const std::string &domain);
@@ -201,6 +205,12 @@ namespace teleport
 			{
 				return clientPipeline;
 			}
+			//! Avatar-negotiation state for this server. The host application
+			//! sets its PolicyCallback via this object's SetOnAvatarPolicy().
+			AvatarManager &GetAvatarManager()
+			{
+				return *avatarManager;
+			}
 			// Debugging:
 			void KillStreaming();
 			void SetTimestamp(std::chrono::microseconds t);
@@ -222,7 +232,7 @@ namespace teleport
 			void SendReceivedResources();
 			void SendNodeUpdates();
 			void SendKeyframeRequest();
-			void Ack(uint64_t ack_id);
+			void Ack(uint64_t ack_id, CommandTransport transport);
 
 			void TimestampMessage(teleport::core::ClientMessage &msg);
 			// WebRTC:
@@ -316,6 +326,10 @@ namespace teleport
 			//! The previous frame's StreamingConnectionState; used to detect transitions
 			//! from CONNECTED to DISCONNECTED/FAILED/CLOSED.
 			avs::StreamingConnectionState lastStreamingState = avs::StreamingConnectionState::UNINITIALIZED;
+
+			//! Per-server avatar negotiation state. Constructed in the
+			//! SessionClient ctor; sendFn routes through DiscoveryService.
+			std::shared_ptr<AvatarManager> avatarManager;
 		};
 	}
 }

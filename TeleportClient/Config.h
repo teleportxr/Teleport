@@ -48,6 +48,12 @@ namespace teleport
 			//! Font size used by the 2D user interface. Must match one of the sizes baked
 			//! into the ImGui font atlas (currently 12 or 18).
 			unsigned int uiFontSize = 18;
+			//! Linear gain applied to streamed audio output. 1.0 = unmodified, 0.0 = muted.
+			float volume = 1.0f;
+			//! URL of the avatar this client will offer to servers via avatar-policy /
+			//! avatar-offer (see plans/avatars_implementation.md). Empty string means
+			//! "no avatar; let the server fall back to its default".
+			std::string avatarUrl;
 		};
 		struct DebugOptions
 		{

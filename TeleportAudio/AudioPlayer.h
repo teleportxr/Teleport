@@ -27,6 +27,14 @@ namespace teleport
 			bool isConfigured() const { return mConfigured; }
 			bool isRecording() const { return mRecording; }
 			bool isInputDeviceAvailable() const { return mInputDeviceAvailable; }
+			//! Set the linear playback gain. 1.0 = unmodified, 0.0 = muted. Values outside [0,1] are clamped.
+			void setVolume(float v)
+			{
+				if (v < 0.0f) v = 0.0f;
+				if (v > 1.0f) v = 1.0f;
+				mVolume = v;
+			}
+			float getVolume() const { return mVolume; }
 
 		protected:
 			AudioSettings mAudioSettings;
@@ -36,6 +44,7 @@ namespace teleport
 			bool mRecordingAllowed;
 			bool mInputDeviceAvailable;
 			Result mLastResult;
+			float mVolume = 1.0f;
 		};
 	}
 }

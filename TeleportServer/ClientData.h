@@ -2,6 +2,7 @@
 
 #include "libavstream/common.hpp"
 
+#include "TeleportServer/AvatarService.h"
 #include "TeleportServer/ClientMessaging.h"
 #include "TeleportServer/ServerSettings.h"
 #include "TeleportServer/AudioEncodePipeline.h"
@@ -56,6 +57,14 @@ namespace teleport
 			std::shared_ptr<VideoEncodePipeline> videoEncodePipeline;
 			std::shared_ptr<AudioEncodePipeline> audioEncodePipeline;
 			std::shared_ptr<teleport::server::ClientMessaging> clientMessaging;
+			std::shared_ptr<AvatarService> avatarService;
+
+			//! Inspect a JSON text frame pulled off the signaling WebSocket
+			//! and dispatch it to AvatarService when it carries one of the
+			//! avatar-negotiation signal types. Returns true if the message
+			//! was consumed; false leaves the caller to forward it through
+			//! the WebRTC streaming-control pipeline as before.
+			bool RouteIncomingSignalingMessage(const std::string &msg);
 
 			void SetConnectionState(ConnectionState c);
 			ConnectionState GetConnectionState() const

@@ -14,6 +14,7 @@ namespace teleport
 	{
 		struct AndroidAudioPlayer::Private:public oboe::AudioStreamDataCallback
 		{
+			AndroidAudioPlayer* parent = nullptr;
 			oboe::AudioStreamBuilder builder;
 			std::shared_ptr<oboe::AudioStream> mStream;
 			std::vector<float> buffer;
@@ -39,6 +40,15 @@ namespace teleport
 				// memory size to copy from buffer.
 				size_t memsize = ct * sizeof(float);
 				memcpy(outputData, buffer.data(), memsize);
+				// Apply the user-configured playback volume.
+				const float volume = parent ? parent->getVolume() : 1.0f;
+				if (volume < 0.999f)
+				{
+					for (int32_t i = 0; i < ct; ++i)
+					{
+						outputData[i] *= volume;
+					}
+				}
 				// if we didn't manage to fill the output buffer, fill the rest with zeroes.
 				if (ct < numFrames)
 					memset((void*)(outputData + ct), 0, numFrames * sizeof(float) - memsize);
@@ -54,6 +64,7 @@ namespace teleport
 AndroidAudioPlayer::AndroidAudioPlayer()
 {
 	m_data = new Private;
+	m_data->parent = this;
 }
 
 AndroidAudioPlayer::~AndroidAudioPlayer()

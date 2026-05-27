@@ -70,15 +70,18 @@ namespace teleport
 		{
 			avs::ConvertTransform(fromStandard,toStandard,transform);
 		}
-		void  ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec4 &rotation)
+		template<typename v4>
+		void  ConvertRotation(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, v4 &rotation)
 		{
 			avs::ConvertRotation(fromStandard,toStandard,rotation);
 		}
-		void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &position)
+		template<typename v3>
+		void ConvertPosition(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, v3 &position)
 		{
 			avs::ConvertPosition(fromStandard,toStandard,position);
 		}
-		void  ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, vec3 &scale)
+		template<typename v3>
+		void  ConvertScale(avs::AxesStandard fromStandard, avs::AxesStandard toStandard, v3 &scale)
 		{
 			avs::ConvertScale(fromStandard,toStandard,scale);
 		}
@@ -212,8 +215,10 @@ GeometryStore::GeometryStore()
 	
 	uid_to_path[0]=".";
 	path_to_uid["."] = 0;
+	#ifdef _MSC_VER
 	if (!debug_buffer)
 		debug_buffer = std::make_shared<VisualStudioDebugOutput>(true, "teleport_server.log", 128);
+		#endif
 
 	kill = false;
 	compressTexturesThread = std::thread(&GeometryStore::CompressTexturesAsync, this);

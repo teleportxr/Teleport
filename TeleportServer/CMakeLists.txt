@@ -6,6 +6,10 @@ set(DEBUG_CONFIGURATIONS Debug)
 
 #Source files
 set(src
+	AvatarService.cpp
+	AvatarService.h
+	AvatarValidationCache.h
+	IAvatarValidator.h
 	ClientNetworkContext.h
 	ClientNetworkContext.cpp
 	ClientData.cpp
@@ -15,7 +19,7 @@ set(src
 	ClientManager.cpp
 	ClientManager.h
 	SignalingService.cpp
-	SignalingService.h 
+	SignalingService.h
 	ExtractedTypes.h
 	Font.h
 	Font.cpp
@@ -39,9 +43,12 @@ set(src
 	HTTPService.h 
 	DefaultHTTPService.cpp
 	DefaultHTTPService.h 
-	Texture.h 
+	Texture.h
 	Texture.cpp
-	UnixDebugOutput.h 
+	CubemapRearrangement.h
+	CubemapKTX2Transformer.cpp
+	CubemapRearrangementExample.cpp
+	UnixDebugOutput.h
 )
 set(src_plugin
 	Plugin/PluginClient.cpp
@@ -147,23 +154,32 @@ target_include_directories(TeleportServer PUBLIC "${CMAKE_SOURCE_DIR}/thirdparty
 
 #Include CUDA library location.
 if(UNIX)
-	target_link_directories(TeleportServer PUBLIC ${LIBAV_CUDA_DIR}/lib64 /usr/lib/x86_64-linux-gnu)
-	message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
+	if(LIBAV_USE_CUDA)
+		target_link_directories(TeleportServer PUBLIC ${LIBAV_CUDA_DIR}/lib64)
+		message("{LIBAV_CUDA_DIR}/libx64 ${LIBAV_CUDA_DIR}/libx64")
+	endif()
+	target_link_directories(TeleportServer PUBLIC /usr/lib/x86_64-linux-gnu)
 endif()
-target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib PRIVATE ../thirdparty/compressonator/lib/bin/x64)
-target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream efp fmt LibDataChannel::LibDataChannelStatic ktx msdf-atlas-gen msdfgen-core msdfgen-ext )
+if(WIN32)
+	target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib PRIVATE ../thirdparty/compressonator/lib/bin/x64)
+endif()
+target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream efp LibDataChannel::LibDataChannelStatic ktx msdf-atlas-gen msdfgen-core msdfgen-ext )
 
-if(TELEPORT_USE_DYNAMIC_RUNTIME)
-	target_link_libraries(TeleportServer Compressonator_MD.lib)
+if(WIN32)
+	if(TELEPORT_USE_DYNAMIC_RUNTIME)
+		target_link_libraries(TeleportServer Compressonator_MD.lib)
+	else()
+		target_link_libraries(TeleportServer Compressonator_MT.lib)
+	endif()
 else()
-	target_link_libraries(TeleportServer Compressonator_MT.lib)
+	target_link_libraries(TeleportServer CMP_Framework)
 endif()
 
 target_link_libraries(TeleportServer draco::draco)
 if(WIN32)
 	target_link_libraries(TeleportServer winmm d3d12 Secur32.lib)
 else()
-	target_link_libraries(TeleportServer ssl crypto cuda cudart atomic)
+	target_link_libraries(TeleportServer ssl crypto atomic)
 endif()
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
@@ -184,7 +200,7 @@ file(GLOB LIBAV_EXPORT_HEADERS "${CMAKE_SOURCE_DIR}/libavstream/export_include/*
 file(GLOB CORE_EXPORT_HEADERS "${CMAKE_SOURCE_DIR}/TeleportCore/export_include/**/*.h")
 file(GLOB SERVER_EXPORT_HEADERS "${CMAKE_SOURCE_DIR}/TeleportServer/export_include/**/*.h")
 
-if(TELEPORT_SERVER)
+if(0)
 	file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR} RESULT 1)
 	file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR}/libavstream RESULT 1)
 	file(MAKE_DIRECTORY ${TELEPORT_SERVER_INCLUDE_DIR}/TeleportCore RESULT 1)

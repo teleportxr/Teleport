@@ -10,7 +10,8 @@
 #include <libavstream/geometrydecoder.hpp>
 #include <libavstream/mesh.hpp>
 #include <libavstream/tagdatadecoder.hpp>
-#include <libavstream/audiodecoder.h>
+#include <libavstream/audiodecoder_opus.h>
+#include <libavstream/audioencoder_opus.h>
 #include <libavstream/genericdecoder.h>
 #include <libavstream/audio/audiotarget.h>
 #include "TeleportCore/CommonNetworking.h"
@@ -35,6 +36,7 @@ namespace teleport
 			avs::Pipeline pipeline;
 
 			avs::LockFreeQueue unreliableToServerQueue;
+			avs::LockFreeQueue reliableToServerQueue;
 			avs::SingleQueue nodePosesQueue;
 			avs::SingleQueue inputStateQueue;
 			std::shared_ptr<avs::NetworkSource> source;
@@ -49,11 +51,21 @@ namespace teleport
 			avs::GeometryDecoder avsGeometryDecoder;
 			avs::GeometryTarget avsGeometryTarget;
 
-			avs::Queue audioQueue;
-			avs::AudioDecoder avsAudioDecoder;
-			avs::AudioTarget avsAudioTarget;
+			// Phase 2.4: WebRTC media-track Opus path. Frames arrive via
+			// WebRtcNetworkSource::setOpusFrameCallback (not via a libavstream
+			// queue), are decoded to 48 kHz int16 PCM, then pushed into
+			// opusAudioTarget which wraps the AudioStreamTarget audio player.
+			avs::OpusAudioDecoder opusAudioDecoder;
+			avs::AudioTarget opusAudioTarget;
 
-			avs::LockFreeQueue reliableOutQueue;
+			// Phase 2.5: outbound mic path. PCM captured from the audio player
+			// is fed into opusAudioEncoder; encoded Opus packets are forwarded
+			// to WebRtcNetworkSource::sendOpusFrame via the encoder's frame
+			// callback. The encoder runs as a pipeline node so it is ticked
+			// each frame to drain any partially-buffered PCM.
+			avs::OpusAudioEncoder opusAudioEncoder;
+
+			avs::LockFreeQueue reliableFromServerQueue;
 			avs::GenericDecoder commandDecoder;
 
 			avs::DecoderParams decoderParams = {};

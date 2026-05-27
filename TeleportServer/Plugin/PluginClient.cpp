@@ -462,7 +462,7 @@ TELEPORT_EXPORT bool Client_GetClientNetworkStats(avs::uid clientID, avs::Networ
 
 	if(failed)
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Retrieved network stats of Client " << clientID << ".");
+		TELEPORT_INTERNAL_COUT(Default, "Retrieved network stats of Client " ,  clientID ,  ".");
 		failed=false;
 	}
 	// Thread safe
@@ -483,7 +483,7 @@ TELEPORT_EXPORT bool Client_GetClientDisplayInfo(avs::uid clientID, avs::Display
 
 	if (failed)
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Retrieved network stats of Client " << clientID << ".");
+		TELEPORT_INTERNAL_COUT(Default, "Retrieved network stats of Client {}" ,  clientID );
 		failed = false;
 	}
 	// Thread safe

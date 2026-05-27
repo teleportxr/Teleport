@@ -5,7 +5,7 @@
 using namespace teleport;
 using namespace client;
 
-ClientPipeline::ClientPipeline()
+ClientPipeline::ClientPipeline(): pipeline("ClientPipeline")
 {
 	source.reset(new avs::WebRtcNetworkSource());
 }
@@ -14,6 +14,7 @@ ClientPipeline::~ClientPipeline()
 {
 	Shutdown();
 	unreliableToServerQueue.deconfigure();
+	reliableToServerQueue.deconfigure();
 	nodePosesQueue.deconfigure();
 	inputStateQueue.deconfigure();
 	source->deconfigure();
@@ -28,11 +29,11 @@ ClientPipeline::~ClientPipeline()
 	avsGeometryDecoder.deconfigure();
 	avsGeometryTarget.deconfigure();
 
-	audioQueue.deconfigure();
-	avsAudioDecoder.deconfigure();
-	avsAudioTarget.deconfigure();
+	opusAudioDecoder.deconfigure();
+	opusAudioTarget.deconfigure();
+	opusAudioEncoder.deconfigure();
 
-	reliableOutQueue.deconfigure();
+	reliableFromServerQueue.deconfigure();
 	commandDecoder.deconfigure();
 }
 
@@ -44,9 +45,8 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 			{
 				{20,"video"					,""				,"VideoQueue"	,true	,false}
 				,{40,"video_tags"			,""				,"VideoTagQueue",true	,false}
-				,{60,"audio_server_to_client",""			,"AudioQueue"	,true	,true}		// 2-way
 				,{80,"geometry"				,""				,"GeometryQueue",true	,false}
-				,{100,"reliable"			,""				,"Reliable out"	,false	,false}		// 2-way
+				,{100,"reliable"			,"Reliable to server"	,"Reliable from server"	,false	,true}		// 2-way
 				,{120,"unreliable"			,"Unreliable in",""				,false	,true}		// 2-way
 			};
 
@@ -58,7 +58,8 @@ bool ClientPipeline::Init(const teleport::core::SetupCommand& setupCommand, cons
 	sourceParams.useSSL = setupCommand.using_ssl;
 
 	// Configure for video stream, tag data stream, audio stream and geometry stream.
-	if (!source->configure(std::move(streams), 3,sourceParams))
+	// Input slots: reliableToServerQueue, unreliableToServerQueue, nodePosesQueue, inputStateQueue.
+	if (!source->configure(std::move(streams), 4,sourceParams))
 	{
 		TELEPORT_BREAK_ONCE("Failed to configure network source node");
 		return false;

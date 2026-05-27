@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 // for std::future,await:
@@ -50,6 +51,17 @@ namespace teleport
 			bool active = false;
 			bool closingDown = false;
 			bool clearResources = true;
+			// Set when a "connect" signaling message has been sent and we are waiting
+			// for the corresponding "connect-response". Discover() must not send
+			// another "connect" while this is true, otherwise the server gets two
+			// initial requests in rapid succession and dispatches two SetupCommands.
+			bool connectInFlight = false;
+			std::chrono::steady_clock::time_point connectSentAt{};
+			// True once a warning has been emitted for an empty/invalid host or port,
+			// so Discover() does not spam the log every frame while the caller keeps
+			// polling with the same bad address. Cleared whenever url or remotePort
+			// is changed to a different value.
+			bool invalidAddressLogged = false;
 		};
 	}
 }

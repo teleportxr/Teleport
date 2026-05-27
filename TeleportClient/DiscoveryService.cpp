@@ -3,6 +3,7 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "TeleportCore/CommonNetworking.h"
+#include "TeleportCore/Avatars.h"
 #include "TeleportClient/Identity.h"
 #define RTC_ENABLE_WEBSOCKET 1
 #include <rtc/websocket.hpp>
@@ -91,11 +92,20 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 		base_url=url.substr(0,first_slash);
 		path=url.substr(first_slash+1,url.length()-first_slash-1);
 	}
-	// Validate URL components before attempting to connect.
-	// An empty host or zero port produces an invalid WebSocket URL; deactivate the server to stop retrying.
+	// Validate URL components before attempting to connect. An empty host
+	// cannot produce a usable WebSocket URL; deactivate the server to stop
+	// retrying. Discover() guards against this case too, so this branch is a
+	// defensive net for callers that reach ResetConnection by other paths
+	// (e.g. the in-flight ws close handler). serverDiscoveryPort has already
+	// been resolved by GetPort(), so a zero here would indicate a bad
+	// cyclePorts table rather than a caller-supplied port.
 	if (base_url.empty() || serverDiscoveryPort == 0)
 	{
-		TELEPORT_WARN("Signaling server {} has invalid address (host='{}', port={}): deactivating.", server_uid, base_url, serverDiscoveryPort);
+		if (!signalingServer->invalidAddressLogged)
+		{
+			TELEPORT_WARN("Signaling server {} has invalid address (host='{}', port={}): deactivating.", server_uid, base_url, serverDiscoveryPort);
+			signalingServer->invalidAddressLogged = true;
+		}
 		std::lock_guard lock(signalingServersMutex);
 		if (signalingServers.count(server_uid))
 			signalingServers[server_uid]->active = false;
@@ -199,14 +209,31 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		signalingServer->remotePort = signalPort;
 		signalingServer->url = url;
 		signalingServer->uid = server_uid;
+		// A fresh address gets a fresh chance to log if it too turns out to be invalid.
+		signalingServer->invalidAddressLogged = false;
 		// Only flush message queues when the target actually changed. The previous
 		// behaviour reset every tick, which could drop a passed-on message (offer /
 		// candidate) that ProcessReceivedMessages had just queued for the WebRTC
 		// source to consume.
 		signalingServer->Reset();
 	}
-	if(!signalingServer->url.length())
+	// Validate the host before doing any work. An empty host cannot produce a
+	// usable WebSocket URL, so we must not activate the server (otherwise Tick()
+	// would keep recreating sockets and ResetConnection would fire its warning
+	// on every frame). Note: remotePort == 0 is legitimate — it asks the
+	// SignalingServer to use the cycling default ports (see GetPort()).
+	const size_t firstSlash = signalingServer->url.find('/');
+	const std::string host = (firstSlash == std::string::npos) ? signalingServer->url : signalingServer->url.substr(0, firstSlash);
+	if (host.empty())
+	{
+		if (!signalingServer->invalidAddressLogged)
+		{
+			TELEPORT_WARN("Signaling server {} has empty host (url='{}'): not connecting.", server_uid, signalingServer->url);
+			signalingServer->invalidAddressLogged = true;
+		}
+		signalingServer->active = false;
 		return 0;
+	}
 	signalingServer->active=true;
 	bool serverDiscovered = false;
 	std::shared_ptr<rtc::WebSocket> ws = signalingServer->webSocket;
@@ -230,16 +257,45 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 		{
 			if (ws->isOpen())
 			{
-				json message = {{"teleport-signal-type", "connect"}
-									,{"content",	{
-														{"teleport", "0.9"}
-														,{"clientID", signalingServer->clientID}
-														,{"identity", identity.identity}
-													}
-									}
-								};
-				ws->send(message.dump());
-				frame = 100;
+				// Don't issue a fresh "connect" while a previous one is still awaiting
+				// its "connect-response", AND don't keep pinging once the server has
+				// already accepted us (signalingState transitioned past START). The
+				// server's signaling handler treats every connect as either a
+				// duplicate-needing-resync or a fresh request, which causes
+				// SetupCommand storms during a healthy session. A genuine session
+				// loss resets clientID via BeginReconnect → Reset paths (Reset()
+				// clears clientID as well as connectInFlight — see SignalingServer).
+				const auto now = std::chrono::steady_clock::now();
+				const bool inFlight = signalingServer->connectInFlight
+					&& (now - signalingServer->connectSentAt) < std::chrono::seconds(5);
+				const bool alreadyAccepted = (signalingServer->clientID != 0 && !signalingServer->awaiting);
+				if (inFlight || alreadyAccepted)
+				{
+					frame = 100;
+				}
+				else
+				{
+					// Advertise session-level capabilities so the server knows
+					// which optional protocol features this client supports.
+					// Native PC/Android clients do not yet implement avatar
+					// relay (no in-process glTF loader / HTTP fetcher), so the
+					// flag is false until that lands. See plans/avatars_plan.md.
+					teleport::core::SignalingCapabilities capabilities;
+					capabilities.avatarRelay = false;
+					json message = {{"teleport-signal-type", "connect"}
+										,{"content",	{
+															{"teleport", "0.9"}
+															,{"clientID", signalingServer->clientID}
+															,{"identity", identity.identity}
+															,{"capabilities", capabilities}
+														}
+										}
+									};
+					ws->send(message.dump());
+					signalingServer->connectInFlight = true;
+					signalingServer->connectSentAt = now;
+					frame = 100;
+				}
 			}
 			else if (ws->readyState() == rtc::WebSocket::State::Closed)
 			{

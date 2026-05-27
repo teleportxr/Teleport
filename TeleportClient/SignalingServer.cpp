@@ -25,6 +25,9 @@ uint16_t teleport::client::SignalingServer::GetPort() const
 }
 void teleport::client::SignalingServer::Reset()
 {
+	// A hard reset (URL/port change, socket replacement) means any pending connect
+	// is no longer relevant — clear the gate so Discover() can issue a fresh one.
+	connectInFlight = false;
 	{
 		std::lock_guard lock(messagesToSendMutex);
 		while (!messagesToSend.empty())
@@ -59,7 +62,7 @@ void SignalingServer::SendMessages()
 		{
 			if (webSocket)
 				webSocket->send(messagesToSend.front());
-			// TELEPORT_CERR << "webSocket->send: " << messagesToSend.front() << "  .\n";
+			TELEPORT_INTERNAL_COUT(Signaling, "Signaling send: {}", messagesToSend.front() );
 			messagesToSend.pop();
 		}
 	}
@@ -81,7 +84,7 @@ void SignalingServer::QueueMessage(const std::string &msg)
 }
 void SignalingServer::ReceiveMessage(const std::string &msg)
 {
-	//TELEPORT_INTERNAL_COUT(": info: ReceiveWebSocketsMessage " << msg);
+	TELEPORT_INTERNAL_COUT(Signaling, "Signaling Receive: {}", msg);
 	std::lock_guard lock(messagesReceivedMutex);
 	messagesReceived.push(msg);
 }
@@ -126,6 +129,9 @@ void SignalingServer::ProcessReceivedMessages()
 					// SessionClient::Connect() again, resetting tBegin and re-entering
 					// AWAITING_SETUP. Only treat this as a fresh response if the ids changed.
 					const bool sameIds = (srv_id != 0 && cl_id != 0 && serverID == srv_id && clientID == cl_id);
+					// Either way, the in-flight connect has been resolved — release the
+					// gate so a future reconnect can issue a new request.
+					connectInFlight = false;
 					if (sameIds)
 					{
 						// Duplicate: leave clearResources/awaiting untouched.
@@ -195,7 +201,15 @@ void SignalingServer::QueueDisconnectionMessage()
 	json message = {{"teleport-signal-type", "disconnect"}};
 	QueueMessage(message.dump());
 	awaiting = false;
+	connectInFlight = false;
 	closingDown=true;
+	// User-initiated disconnect ends our session identity with the server. Clear
+	// clientID/serverID so the next Discover() doesn't treat us as "already
+	// accepted" and suppress the fresh "connect" (the gate in Discover() is
+	// (clientID != 0 && !awaiting) == alreadyAccepted). BeginReconnect uses a
+	// different path that deliberately preserves these ids for session resume.
+	clientID = 0;
+	serverID = 0;
 }
 
 void SignalingServer::QueueBinaryMessage(std::vector<uint8_t> &bin)

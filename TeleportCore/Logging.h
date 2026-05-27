@@ -51,7 +51,7 @@ namespace teleport
 	template <typename... Args>
 	void Warn(const char *file, int line, const char *function,const std::format_string<Args...> txt, Args&&... args)
 	{
-		std::string str1 = std::format("{} ({}): warning: {}: ", file, line,function);
+		std::string str1 = std::format("{} ({}): warning: {}: ", file, line, function);
 		std::string str2 = std::vformat(txt.get(), std::make_format_args(args...) );
 		std::cerr << str1<<str2 << "\n";
 	}

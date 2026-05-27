@@ -90,8 +90,8 @@ void Config::LoadBookmarks()
 	}
 	else
 	{
-		bookmarks.push_back({"home.teleportvr.io","home.teleportvr.io"});
-		bookmarks.push_back({"test.teleportvr.io","test.teleportvr.io"});
+		bookmarks.push_back({"home.teleportxr.io","home.teleportxr.io"});
+		bookmarks.push_back({"test.teleportxr.io","test.teleportxr.io"});
 		bookmarks.push_back({"192.168.3.40","192.168.3.40"});
 		SaveBookmarks();
 	}
@@ -178,6 +178,10 @@ void Config::LoadOptions()
 		options.uiFontSize				= (unsigned int)ini.GetLongValue("", "UIFontSize", options.uiFontSize);
 		if (options.uiFontSize < 12  || options.uiFontSize > 72)
 			options.uiFontSize = 18;
+		options.volume					= (float)ini.GetDoubleValue("", "Volume", options.volume);
+		if (options.volume < 0.0f) options.volume = 0.0f;
+		if (options.volume > 1.0f) options.volume = 1.0f;
+		options.avatarUrl				= ini.GetValue("", "AvatarUrl", options.avatarUrl.c_str());
 	}
 }
 
@@ -194,6 +198,8 @@ void Config::SaveOptions()
 		str += std::format("\nReconnectInitialBackoffMs={0}", options.reconnectInitialBackoffMs);
 		str += std::format("\nReconnectMaxBackoffMs={0}", options.reconnectMaxBackoffMs);
 		str += std::format("\nUIFontSize={0}", options.uiFontSize);
+		str += std::format("\nVolume={0}", options.volume);
+		str += std::format("\nAvatarUrl={0}", options.avatarUrl);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);
 		LoadOptions();
