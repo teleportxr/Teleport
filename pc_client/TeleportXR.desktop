@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=TeleportXR
+GenericName=Spatial Streaming Client
+Comment=XR streaming client for the TeleportXR protocol
+Exec=/opt/TeleportXR/bin/TeleportPCClient %u
+TryExec=/opt/TeleportXR/bin/TeleportPCClient
+Icon=TeleportXR
+Terminal=false
+Categories=Network;Graphics;
+MimeType=x-scheme-handler/teleport;
+StartupWMClass=TeleportXR
+StartupNotify=true
+Keywords=XR;VR;OpenXR;Teleport;Streaming;

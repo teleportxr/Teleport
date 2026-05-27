@@ -27,9 +27,7 @@
 #include <thread>
 #include "ElasticFrameProtocol.h"
 
-#if TELEPORT_CLIENT
 #include <libavstream/httputil.hpp>
-#endif
 
 namespace avs
 {
@@ -127,9 +125,6 @@ namespace avs
 
 		std::vector<char> m_tempBuffer;
 		RingBuffer<RawPacket, 12000> m_recvBuffer;
-#if TELEPORT_CLIENT
-		HTTPUtil m_httpUtil;
-#endif
 	};
 
 } // avs

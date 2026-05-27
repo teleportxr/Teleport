@@ -17,7 +17,9 @@ endif()
 # Private source
 set(src_private_root
 	src/audiodecoder.cpp
+	src/audiodecoder_opus.cpp
 	src/audioencoder.cpp
+	src/audioencoder_opus.cpp
 	src/context.cpp
 	src/decoder.cpp
 	src/encoder.cpp
@@ -146,7 +148,9 @@ source_group("Private Headers\\util" src FILES ${hdr_private_util} )
 # Public source
 set(hdr_public_root
 	include/libavstream/audiodecoder.h
+	include/libavstream/audiodecoder_opus.h
 	include/libavstream/audioencoder.h
+	include/libavstream/audioencoder_opus.h
 	include/libavstream/buffer.hpp
 	include/libavstream/common.hpp
 	include/libavstream/context.hpp
@@ -220,10 +224,10 @@ set(hdr_export
 	export_include/libavstream/node.h
 	export_include/libavstream/abi.h
 )
-if(NOT TELEPORT_SERVER)
-	set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)
-	set(src_private_root ${src_private_root} src/httputil.cpp)
-endif()
+
+set(hdr_public_root ${hdr_public_root} include/libavstream/httputil.hpp)
+set(src_private_root ${src_private_root} src/httputil.cpp)
+
 
 set(hdr_public ${hdr_public_root} ${hdr_public_network} ${src_public_stream} ${src_public_decoders} ${src_public_encoders} ${src_public_surfaces} ${src_public_platforms} ${hdr_public_geometry} ${hdr_public_audio} ${hdr_export})
 source_group("Public Headers" src FILES ${hdr_public_root} )
@@ -353,28 +357,30 @@ endif()
 
 # don't want curl tests.
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-if(TELEPORT_CLIENT )
-    set(BUILD_CURL_EXE OFF CACHE BOOL "")
-	set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
-	if(TELEPORT_WINDOWS)
-   		set(CURL_STATIC_CRT ON CACHE BOOL "")
-		set(CURL_USE_SCHANNEL ON CACHE BOOL "")
-	else()
-   		set(CURL_STATIC_CRT OFF CACHE BOOL "")
-		set(CURL_USE_SCHANNEL OFF CACHE BOOL "")
-	endif()
-	include(FetchContent)
-	FetchContent_Declare(
+
+set(BUILD_CURL_EXE OFF CACHE BOOL "")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+if(TELEPORT_WINDOWS)
+	set(CURL_STATIC_CRT ON CACHE BOOL "")
+	set(CURL_USE_SCHANNEL ON CACHE BOOL "")
+else()
+	set(CURL_STATIC_CRT OFF CACHE BOOL "")
+	set(CURL_USE_SCHANNEL OFF CACHE BOOL "")
+endif()
+include(FetchContent)
+FetchContent_Declare(
 	  curl
 	  GIT_REPOSITORY https://github.com/teleportxr/curl.git
 	  GIT_TAG        9eb8e07e026735f3d92a825fc0e5f46f83b80f3f
 	  SOURCE_DIR curl
-	)
-	FetchContent_MakeAvailable(curl)
-	target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1)
-	set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
-	set(curl_libraries libcurl)
-	RecurseApplyFolder(${curl_SOURCE_DIR} thirdparty/curl)
+)
+FetchContent_MakeAvailable(curl)
+target_compile_definitions(libcurl PRIVATE BUILDING_LIBCURL=1)
+set(curl_include_paths "${CURL_SOURCE_DIR}/include" ${CURL_BINARY_DIR})
+set(curl_libraries libcurl)
+
+if(TELEPORT_CLIENT )
+	#RecurseApplyFolder(${curl_SOURCE_DIR} thirdparty/curl)
 	target_compile_definitions(libavstream PUBLIC TELEPORT_CLIENT=1)
 endif()
 target_include_directories(libavstream PRIVATE src PRIVATE ${CMAKE_SOURCE_DIR}
@@ -419,9 +425,6 @@ if(LIBAV_USE_CUDA)
 	target_link_directories(libavstream PUBLIC "${LIBAV_CUDA_DIR}/lib64")
 	target_link_libraries(libavstream cuda cudart nv)
 endif()
-
-#fmt
-target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/Platform/External/fmt/include )
 #Platform etc
 target_include_directories(libavstream PUBLIC ${CMAKE_SOURCE_DIR}/firstparty/ )
 target_include_directories(libavstream PUBLIC export_include )
@@ -457,10 +460,15 @@ endif()
 target_include_directories(libavstream PRIVATE "${CMAKE_SOURCE_DIR}/thirdparty/libdatachannel/deps/json/single_include")
 target_compile_definitions( libavstream PUBLIC FMT_HEADER_ONLY )
 
+# libopus for Opus audio decoding (Phase 2.4 of audio_over_webrtc_media.md)
+if(TARGET opus)
+	target_link_libraries(libavstream opus)
+endif()
+
 # Unit testing.
 if(TELEPORT_TEST)
 	find_package(Catch2 REQUIRED)
 	add_executable(libavstream_test src/test/test.cpp)
 	set_target_properties(libavstream_test PROPERTIES FOLDER AVStream)
-	target_link_libraries(libavstream_test Catch2WithMain libavstream efp fmt LibDataChannel::LibDataChannelStatic )
+	target_link_libraries(libavstream_test Catch2WithMain libavstream efp LibDataChannel::LibDataChannelStatic )
 endif()

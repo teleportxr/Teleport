@@ -23,9 +23,7 @@
 #include <rtc/rtc.hpp>
 #include <nlohmann/json.hpp>
 #include "TeleportCore/ErrorHandling.h"
-#if TELEPORT_CLIENT
 #include <libavstream/httputil.hpp>
-#endif
 #include <ios>
 #ifdef _MSC_VER
 FILE _iob[] = { *stdin, *stdout, *stderr };
@@ -81,12 +79,31 @@ namespace avs
 		std::unique_ptr<ElasticFrameProtocolReceiver> m_EFPReceiver;
 		NetworkSourceCounters m_counters;
 		bool onDataChannel(shared_ptr<rtc::DataChannel> dc);
+		void onTrack(shared_ptr<rtc::Track> track);
 		std::unordered_map<uint32_t, uint8_t> idToStreamIndex;
 		//! Map input nodes to streams outgoing. Many to one relation.
 		std::unordered_map<uint8_t, uint8_t> inputToStreamIndex;
 		//! Map input nodes to streams outgoing. One to one relation.
 		std::unordered_map<uint8_t, uint8_t> streamIndexToOutput;
-		Result sendData(uint8_t id, const uint8_t* packet, size_t sz);
+		Result sendData(uint8_t streamIndex, const uint8_t* packet, size_t sz);
+		// Inbound audio media track (Phase 2.1: observation only).
+		std::shared_ptr<rtc::Track> rtcAudioRecvTrack;
+		std::atomic<uint64_t> audioRtpFramesReceived{0};
+		std::atomic<uint64_t> audioRtpBytesReceived{0};
+		// Phase 2.4: forward depacketized Opus frames to a user-supplied callback
+		// (typically wired to an avs::OpusAudioDecoder owned by the client pipeline).
+		WebRtcNetworkSource::OpusFrameCallback opusFrameCallback;
+		std::mutex opusFrameCallbackMutex;
+		// Phase 2.5: outbound (mic) audio. The negotiated audio mid is sendrecv,
+		// so the same rtc::Track is used for both directions. The packetizer
+		// chain wraps raw Opus payloads into RTP packets carrying payloadType
+		// 111 at the 48 kHz Opus clock.
+		std::shared_ptr<rtc::RtpPacketizationConfig> opusRtpConfig;
+		std::shared_ptr<rtc::RtcpSrReporter> opusSrReporter;
+		std::atomic<bool> audioSendTrackOpen{false};
+		std::atomic<uint64_t> audioRtpFramesSent{0};
+		std::atomic<uint64_t> audioRtpBytesSent{0};
+		std::mutex audioSendMutex;
 	};
 }
 avs::StreamingConnectionState ConvertConnectionState(rtc::PeerConnection::State rtcState)
@@ -188,6 +205,14 @@ avs::WebRtcNetworkSource *src)
 		}
 	});
 
+	// Inbound media tracks arrive here. Phase 2.1: handle the audio track from the
+	// server's offer (Opus over RTP). The depacketizer strips RTP headers and surfaces
+	// raw Opus frames via onMessage; we currently only count them for sanity checking.
+	pc->onTrack([src](shared_ptr<rtc::Track> track)
+	{
+		src->m_data->onTrack(track);
+	});
+
 	//peerConnectionMap.emplace(id, pc);
 	return pc;
 };
@@ -198,7 +223,14 @@ using namespace avs;
 WebRtcNetworkSource::WebRtcNetworkSource()
 	: NetworkSource(new WebRtcNetworkSource::Private(this))
 {
-	rtc::InitLogger(rtc::LogLevel::Warning);
+	rtc::InitLogger(rtc::LogLevel::Info, [](rtc::LogLevel level, std::string message)
+	{
+		// Forward libdatachannel logs through TELEPORT_INTERNAL_COUT so they
+		// land in the client log alongside our own diagnostics.
+		std::ostringstream os;
+		os << "rtc[" << level << "]: " << message;
+		TELEPORT_INTERNAL_COUT(Default, "{}", os.str());
+	});
 	m_data = static_cast<WebRtcNetworkSource::Private*>(m_d);
 }
 
@@ -256,18 +288,36 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 		memcpy(m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
 		memcpy(&m_tempBuffer[sizeof(StreamPayloadInfo)], rPacket->pFrameData, rPacket->mFrameSize);
 		// The mStreamID is encoded sender-side within the EFP wrapper.
-		
-		uint8_t streamIndex = m_data->idToStreamIndex[rPacket->mStreamID];// streamID is 20,40,60, etc
-		uint8_t outputNodeIndex = m_data->streamIndexToOutput[streamIndex];
-		IOInterface *outputNode = dynamic_cast<IOInterface*>(getOutput(outputNodeIndex));
-		if (!outputNode)
+
+		auto idIt = m_data->idToStreamIndex.find(rPacket->mStreamID);
+		if (idIt == m_data->idToStreamIndex.end())
+		{
+			std::cerr << "WebRtcNetworkSource EFP Callback: unknown streamID " << (int)rPacket->mStreamID
+				<< " (no entry in idToStreamIndex). Dropping " << rPacket->mFrameSize << " bytes." << std::endl;
+			return;
+		}
+		uint8_t streamIndex = idIt->second;// streamID is 20,40,60, etc
+		auto outIt = m_data->streamIndexToOutput.find(streamIndex);
+		if (outIt == m_data->streamIndexToOutput.end())
+		{
+			const auto& s = m_streams[streamIndex];
+			std::cerr << "WebRtcNetworkSource EFP Callback: stream " << (int)streamIndex
+				<< " (streamID=" << (int)rPacket->mStreamID << ", label=\"" << s.label
+				<< "\", outputName=\"" << s.outputName
+				<< "\") has no entry in streamIndexToOutput — receiving node's display name does not match stream.outputName."
+				<< " Dropping " << rPacket->mFrameSize << " bytes." << std::endl;
+			return;
+		}
+		uint8_t outputNodeIndex = outIt->second;
+		IOInterface *ioOutput = dynamic_cast<IOInterface*>(getOutput(outputNodeIndex));
+		if (!ioOutput)
 		{
 			AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should be an avs::Queue.";
 			return;
 		}
 
 		size_t numBytesWrittenToOutput;
-		auto result = outputNode->write(m_data->q_ptr(), m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
+		auto result = ioOutput->write(m_data->q_ptr(), m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
 
 		if (!result)
 		{
@@ -301,11 +351,23 @@ Result WebRtcNetworkSource::configure(std::vector<NetworkSourceStream>&& in_stre
 Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 {
 	std::string name=node->getDisplayName();
-	for (int i=0;i<m_streams.size();i++)
+	bool matched = false;
+	for (int i=0;i<(int)m_streams.size();i++)
 	{
 		auto& stream = m_streams[i];
-		if(stream.inputName==name)
+		if(!stream.inputName.empty() && stream.inputName==name)
+		{
 			m_data->inputToStreamIndex[slot] = i;
+			matched = true;
+		}
+	}
+	if(!matched)
+	{
+		std::cerr << "WebRtcNetworkSource::onInputLink: node display name \""
+			<< name << "\" (slot " << slot << ") matches no stream.inputName. Known inputNames:";
+		for (int i = 0; i < (int)m_streams.size(); i++)
+			std::cerr << " [" << i << "]\"" << m_streams[i].inputName << "\"";
+		std::cerr << std::endl;
 	}
 	IOInterface *nodeIO = dynamic_cast<IOInterface *>(node);
 	if(slot>=inputInterfaces.size())
@@ -319,11 +381,23 @@ Result WebRtcNetworkSource::onInputLink(int slot, PipelineNode* node)
 Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
 {
 	std::string name = node->getDisplayName();
-	for (int i = 0; i < m_streams.size(); i++)
+	bool matched = false;
+	for (int i = 0; i < (int)m_streams.size(); i++)
 	{
 		auto& stream = m_streams[i];
-		if (stream.outputName == name)
+		if (!stream.outputName.empty() && stream.outputName == name)
+		{
 			m_data->streamIndexToOutput[i] = slot;
+			matched = true;
+		}
+	}
+	if(!matched)
+	{
+		std::cerr << "WebRtcNetworkSource::onOutputLink: node display name \""
+			<< name << "\" (slot " << slot << ") matches no stream.outputName. Known outputNames:";
+		for (int i = 0; i < (int)m_streams.size(); i++)
+			std::cerr << " [" << i << "]\"" << m_streams[i].outputName << "\"";
+		std::cerr << std::endl;
 	}
 	return Result::OK;
 }
@@ -469,18 +543,36 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 
 void WebRtcNetworkSource::receiveHTTPFile(const char* buffer, size_t bufferSize)
 {
-	uint8_t streamIndex = m_data->idToStreamIndex[m_params.httpStreamID];
-	uint8_t nodeIndex = m_data->streamIndexToOutput[streamIndex];
+	auto idIt = m_data->idToStreamIndex.find(m_params.httpStreamID);
+	if (idIt == m_data->idToStreamIndex.end())
+	{
+		std::cerr << "WebRtcNetworkSource::receiveHTTPFile: httpStreamID " << (int)m_params.httpStreamID
+			<< " has no entry in idToStreamIndex. Dropping " << bufferSize << " bytes." << std::endl;
+		return;
+	}
+	uint8_t streamIndex = idIt->second;
+	auto outIt = m_data->streamIndexToOutput.find(streamIndex);
+	if (outIt == m_data->streamIndexToOutput.end())
+	{
+		const auto& s = m_streams[streamIndex];
+		std::cerr << "WebRtcNetworkSource::receiveHTTPFile: stream " << (int)streamIndex
+			<< " (httpStreamID=" << (int)m_params.httpStreamID << ", label=\"" << s.label
+			<< "\", outputName=\"" << s.outputName
+			<< "\") has no entry in streamIndexToOutput — receiving node's display name does not match stream.outputName."
+			<< " Dropping " << bufferSize << " bytes." << std::endl;
+		return;
+	}
+	uint8_t nodeIndex = outIt->second;
 
-	IOInterface * outputNode = dynamic_cast<IOInterface*>(getOutput(nodeIndex));
-	if (!outputNode)
+	IOInterface * ioOutput = dynamic_cast<IOInterface*>(getOutput(nodeIndex));
+	if (!ioOutput)
 	{
 		AVSLOG(Warning) << "WebRtcNetworkSource HTTP Callback: Invalid output node. Should be an avs::Queue.";
 		return;
 	}
 
 	size_t numBytesWrittenToOutput;
-	auto result = outputNode->write(this, buffer, bufferSize, numBytesWrittenToOutput);
+	auto result = ioOutput->write(this, buffer, bufferSize, numBytesWrittenToOutput);
 
 	if (!result)
 	{
@@ -575,9 +667,19 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	bool disconnected=false;
 	for (uint32_t i = 0; i < (uint32_t)getNumInputSlots(); ++i)
 	{
-		uint32_t streamIndex = m_data->inputToStreamIndex[i];
-		if (streamIndex >= m_streams.size())
+		auto inIt = m_data->inputToStreamIndex.find((uint8_t)i);
+		if (inIt == m_data->inputToStreamIndex.end())
+		{
+			std::cerr << "WebRtcNetworkSource: input slot " << i
+				<< " has no entry in inputToStreamIndex — sending node's display name does not match any stream.inputName. Skipping." << std::endl;
 			continue;
+		}
+		uint32_t streamIndex = inIt->second;
+		if (streamIndex >= m_streams.size())
+		{
+			AVSLOG(Error) << "WebRtcNetworkSource: Invalid stream index " << streamIndex << " for input " << i << "\n";
+			continue;
+		}
 		PipelineNode* node = getInput(i);
 		if (!node)
 			continue;
@@ -617,7 +719,7 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 			//}
 			//else
 			{
-				res = m_data->sendData(stream.id, dataChannel.sendBuffer.data(), numBytesRead);
+				res = m_data->sendData((uint8_t)streamIndex, dataChannel.sendBuffer.data(), numBytesRead);
 			}
 			if(res==Result::Network_Disconnection)
 				disconnected=true;
@@ -752,8 +854,6 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		forced_id=20;
 	else if(label=="video_tags")
 		forced_id=40;
-	else if(label=="audio_server_to_client")
-		forced_id=60;
 	else if(label=="geometry")
 		forced_id=80;
 	else if(label=="geometry_unframed")
@@ -767,7 +867,11 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	else if(label=="unreliable")
 		forced_id=120;
 	else
+	{
+		std::cerr << "WebRtcNetworkSource::onDataChannel: unknown channel label \""
+			<< label << "\" — rejecting." << std::endl;
 		return false;
+	}
 	std::cout<<"onDataChannel: "<<dc->label()<<" id "<<forced_id<<"\n";
 	// make the id even.
 	uint16_t id = EVEN_ID(forced_id);
@@ -789,8 +893,11 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	if (dcIndex < 0)
 	{
 		// TODO: Inform the server that a channel has not been recognized - don't send data on it.
-		
-		std::cerr << "Bad dataChannel index "<<dcIndex<<"\n";
+		std::cerr << "WebRtcNetworkSource::onDataChannel: channel label \""
+			<< label << "\" (forced_id=" << forced_id << ") matches no stream.label. Known labels:";
+		for (int i = 0; i < (int)q_ptr()->m_streams.size(); i++)
+			std::cerr << " [" << i << "]\"" << q_ptr()->m_streams[i].label << "\"";
+		std::cerr << std::endl;
 		return false;
 	}
 	idToStreamIndex[id] = dcIndex;
@@ -818,23 +925,42 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	dc->onMessage([this,&dataChannel,id](rtc::binary b)
 		{
 		// data holds either std::string or rtc::binary
-			uint8_t streamIndex = idToStreamIndex[id];
+			auto idIt = idToStreamIndex.find(id);
+			if (idIt == idToStreamIndex.end())
+			{
+				std::cerr << "WebRtcNetworkSource onMessage: id=" << (int)id
+					<< " has no entry in idToStreamIndex — dropping " << b.size()
+					<< " bytes. (onDataChannel was never called for this id, or its label was unrecognised.)" << std::endl;
+				return;
+			}
+			uint8_t streamIndex = idIt->second;
 			auto o = streamIndexToOutput.find(streamIndex);
 			if (o == streamIndexToOutput.end())
+			{
+				const auto& s = q_ptr()->m_streams[streamIndex];
+				std::cerr << "WebRtcNetworkSource onMessage: stream " << (int)streamIndex
+					<< " (id=" << (int)id << ", label=\"" << s.label
+					<< "\", outputName=\"" << s.outputName
+					<< "\") has no entry in streamIndexToOutput — receiving node's display name does not match stream.outputName."
+					<< " Dropping " << b.size() << " bytes." << std::endl;
 				return;
+			}
 			uint8_t outputNodeIndex = o->second;
 			dataChannel.bytesReceived += b.size();
+			AVSLOG(Info) << "WebRtcNetworkSource onMessage: Received " << b.size() << " bytes on stream " << (int)streamIndex << " (id=" << (int)id << ")" << std::endl;
 			auto & stream=q_ptr()->m_streams[streamIndex];
 			if (!stream.framed)
 			{
 				size_t numBytesWrittenToOutput=0;
-				avs::IOInterface *outputNode = dynamic_cast<avs::IOInterface*>(q_ptr()->getOutput(outputNodeIndex));
-				if (!outputNode)
+				avs::IOInterface *ioOutput = dynamic_cast<avs::IOInterface*>(q_ptr()->getOutput(outputNodeIndex));
+				avs::PipelineNode *outputNode1 = dynamic_cast<avs::PipelineNode*>(q_ptr()->getOutput(outputNodeIndex));
+				if (!ioOutput)
 				{
 					AVSLOG(Warning) << "WebRtcNetworkSource EFP Callback: Invalid output node. Should implement avs::IOInterface.\n";
 					return;
 				}
 				avs::Result result=avs::Result::OK;
+				size_t bytesToWrite = 0;
 				if(stream.expects_frame_info)
 				{
 					StreamPayloadInfo frameInfo;
@@ -842,26 +968,28 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 					frameInfo.dataSize = b.size() - sizeof(size_t);
 					frameInfo.connectionTime = TimerUtil::GetElapsedTimeS();
 					frameInfo.broken = false;
-					size_t bufferSize = sizeof(StreamPayloadInfo) + b.size()-sizeof(size_t);
-					if (bufferSize > q_ptr()->m_tempBuffer.size())
+					bytesToWrite = sizeof(StreamPayloadInfo) + b.size()-sizeof(size_t);
+					if (bytesToWrite > q_ptr()->m_tempBuffer.size())
 					{
-						q_ptr()->m_tempBuffer.resize(bufferSize);
+						q_ptr()->m_tempBuffer.resize(bytesToWrite);
 					}
 
 					memcpy(q_ptr()->m_tempBuffer.data(), &frameInfo, sizeof(StreamPayloadInfo));
 					//skip over the payload size, go straight to the payload type:
 					memcpy(&q_ptr()->m_tempBuffer[sizeof(StreamPayloadInfo)], b.data()+sizeof(size_t), b.size()-sizeof(size_t));
-					result = outputNode->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bufferSize, numBytesWrittenToOutput);
+					result = ioOutput->write(q_ptr(), (const void*)q_ptr()->m_tempBuffer.data(), bytesToWrite, numBytesWrittenToOutput);
 				}
 				else
 				{
-				result = outputNode->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
+					bytesToWrite = b.size();
+					result = ioOutput->write(q_ptr(), (const void*)b.data(), b.size(), numBytesWrittenToOutput);
 				}
-				if (numBytesWrittenToOutput!=b.size())
+				if (numBytesWrittenToOutput!=bytesToWrite)
 				{
-					AVSLOG_NOSPAM(Warning,"WebRtcNetworkSource EFP onMessage: {0}: failed to write all to output Node.\n",stream.label);
+					AVSLOG(Warning) << "WebRtcNetworkSource EFP onMessage: " << stream.label << ": failed to write all to output Node. Wrote " << numBytesWrittenToOutput << " of " << bytesToWrite << " bytes." << std::endl;
 					return;
 				}
+				AVSLOG(Info) << "WebRtcNetworkSource: Successfully wrote " << numBytesWrittenToOutput << " bytes to output node " << outputNode1->name << " for stream " << stream.label << std::endl;
 #if TELEPORT_LIBAV_MEASURE_PIPELINE_BANDWIDTH
 				q_ptr()->bytes_received+=numBytesWrittenToOutput;
 #endif
@@ -887,10 +1015,136 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 		return true;
 }
 
-Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet, size_t sz)
+void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 {
-	auto index = idToStreamIndex[id];
-	auto& dataChannel = dataChannels[idToStreamIndex[id]];
+	if(!track)
+		return;
+	auto desc = track->description();
+	const std::string mid = track->mid();
+	const std::string type = desc.type(); // "audio" / "video"
+	if(type != "audio")
+	{
+		TELEPORT_INTERNAL_COUT(Default, "WebRTC: ignoring non-audio track mid={} type={}", mid, type);
+		return;
+	}
+	if(rtcAudioRecvTrack)
+	{
+		TELEPORT_INTERNAL_COUT(Default, "WebRTC: replacing existing audio recv track (was mid={})", rtcAudioRecvTrack->mid());
+	}
+	rtcAudioRecvTrack = track;
+	// Build a bidirectional media handler chain so the same sendrecv track
+	// can both receive (depacketize) and send (packetize) Opus payloads.
+	//
+	// Outgoing path:  raw Opus -> OpusRtpPacketizer.outgoing() (RTP wrap)
+	//                          -> RtcpSrReporter.outgoing()    (track for SR)
+	// Incoming path:  RTP      -> OpusRtpDepacketizer.incoming() (strip header)
+	//                          -> RtcpReceivingSession.incoming() (RTCP)
+	// Phase 2.5: payload type 111 (Opus) at 48 kHz. SSRC is generated locally;
+	// the answerer is free to choose its outbound SSRC.
+	constexpr uint8_t kOpusPayloadType = 111;
+	constexpr uint32_t kOpusClockRate  = 48000;
+	const uint32_t outboundSsrc = static_cast<uint32_t>(0xC0DEC000u + (audioRtpFramesReceived.load() & 0xFFu));
+	opusRtpConfig  = std::make_shared<rtc::RtpPacketizationConfig>(
+		outboundSsrc, "teleport-mic", kOpusPayloadType, kOpusClockRate);
+	auto packetizer	= std::make_shared<rtc::OpusRtpPacketizer>(opusRtpConfig);
+	opusSrReporter	= std::make_shared<rtc::RtcpSrReporter>(opusRtpConfig);
+	auto depacketizer = std::make_shared<rtc::OpusRtpDepacketizer>();
+	auto rtcpRecvSession = std::make_shared<rtc::RtcpReceivingSession>();
+	packetizer->addToChain(opusSrReporter);
+	packetizer->addToChain(depacketizer);
+	packetizer->addToChain(rtcpRecvSession);
+	track->setMediaHandler(packetizer);
+	auto privateSelf = this;
+	// RtpDepacketizer attaches a FrameInfo to every depacketized payload, so
+	// libdatachannel dispatches these through the frame callback path rather
+	// than the message callback path. Using onMessage() here would silently
+	// receive zero packets.
+	track->onFrame(
+		[privateSelf, mid](rtc::binary frame, rtc::FrameInfo /*info*/)
+		{
+			uint64_t n = ++privateSelf->audioRtpFramesReceived;
+			privateSelf->audioRtpBytesReceived += frame.size();
+			if(n == 1 || (n % 250) == 0)
+			{
+				TELEPORT_INTERNAL_COUT(Default,
+					"WebRTC audio recv: {} Opus frames ({} bytes total), last frame {} bytes",
+					n, privateSelf->audioRtpBytesReceived.load(), frame.size());
+			}
+			// Phase 2.4: forward the Opus payload to the registered decoder callback.
+			WebRtcNetworkSource::OpusFrameCallback cb;
+			{
+				std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+				cb = privateSelf->opusFrameCallback;
+			}
+			if(cb)
+				cb(mid, reinterpret_cast<const uint8_t*>(frame.data()), frame.size());
+		});
+	track->onOpen([mid, privateSelf]()
+	{
+		privateSelf->audioSendTrackOpen.store(true);
+		TELEPORT_INTERNAL_COUT(Default, "WebRTC audio track opened (mid={}) — sendrecv ready", mid);
+	});
+	track->onClosed([mid, privateSelf]()
+	{
+		privateSelf->audioSendTrackOpen.store(false);
+		TELEPORT_INTERNAL_COUT(Default, "WebRTC audio track closed (mid={})", mid);
+	});
+	// Track may already be open by the time onTrack fires.
+	if(track->isOpen())
+		audioSendTrackOpen.store(true);
+	TELEPORT_INTERNAL_COUT(Default, "WebRTC: bidirectional audio track attached (mid={}, type={})", mid, type);
+}
+
+void WebRtcNetworkSource::setOpusFrameCallback(OpusFrameCallback cb)
+{
+	std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
+	m_data->opusFrameCallback = std::move(cb);
+}
+
+Result WebRtcNetworkSource::sendOpusFrame(const uint8_t* data, size_t size)
+{
+	if(!data || size == 0)
+		return Result::Failed;
+	std::shared_ptr<rtc::Track> track;
+	std::shared_ptr<rtc::RtpPacketizationConfig> rtpConfig;
+	{
+		std::lock_guard<std::mutex> lock(m_data->audioSendMutex);
+		track     = m_data->rtcAudioRecvTrack;
+		rtpConfig = m_data->opusRtpConfig;
+	}
+	if(!track || !rtpConfig || !track->isOpen())
+		return Result::Failed;
+	// Advance the RTP timestamp by one Opus frame (20 ms at 48 kHz = 960 samples).
+	// libdatachannel's packetizer reads rtpConfig->timestamp when wrapping.
+	rtpConfig->timestamp += 960;
+	bool sent = track->send(reinterpret_cast<const std::byte*>(data), size);
+	if(!sent)
+		return Result::Failed;
+	uint64_t n = ++m_data->audioRtpFramesSent;
+	m_data->audioRtpBytesSent += size;
+	if(n == 1 || (n % 250) == 0)
+	{
+		TELEPORT_INTERNAL_COUT(Default,
+			"WebRTC audio send: {} Opus frames ({} bytes total), last frame {} bytes",
+			n, m_data->audioRtpBytesSent.load(), size);
+	}
+	return Result::OK;
+}
+
+bool WebRtcNetworkSource::isAudioSendTrackOpen() const
+{
+	return m_data && m_data->audioSendTrackOpen.load();
+}
+
+Result WebRtcNetworkSource::Private::sendData(uint8_t streamIndex, const uint8_t* packet, size_t sz)
+{
+	if (streamIndex >= dataChannels.size())
+	{
+		std::cerr << "WebRTC: invalid stream index " << (int)streamIndex << " in sendData.\n";
+		return Result::Failed;
+	}
+	auto& dataChannel = dataChannels[streamIndex];
+	const auto& stream = q_ptr()->m_streams[streamIndex];
 	auto c = dataChannel.rtcDataChannel;
 	if (c)
 	{
@@ -910,26 +1164,26 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t id, const uint8_t* packet,
 				if (c->bufferedAmount() + sz >= 1024 * 1024 * 16)
 				{
 					dataChannel.readyToSend = false;
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it would overflow the webrtc buffer.\n";
+					std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << " as it would overflow the webrtc buffer.\n";
 					return Result::Failed;
 				}
 				// Can't send a buffer greater than 262144. even 64k is dodgy:
 				if (sz >= c->maxMessageSize())
 				{
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
+					std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << " as it is too large for a webrtc data channel.\n";
 					return Result::Failed;
 				}
 				if (!c->send((std::byte*)packet, sz))
 				{
 					dataChannel.readyToSend = false;
-					std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
+					std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << ", buffered amount is " << c->bufferedAmount() << ", available is " << c->availableAmount() << ".\n";
 					return Result::Failed;
 				}
 				dataChannel.bytesSent += sz;
 			}
 			else
 			{
- 				std::cerr << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
+ 				std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
 				// Surface the drop on the public state so SessionClient can react and
 				// initiate a reconnect on its next Frame.
 				if (q_ptr()->GetStreamingConnectionState() == StreamingConnectionState::CONNECTED)

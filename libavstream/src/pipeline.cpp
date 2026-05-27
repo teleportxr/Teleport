@@ -7,8 +7,8 @@
 
 using namespace avs;
 
-Pipeline::Pipeline()
-	: m_d(this)
+Pipeline::Pipeline(std::string_view name)
+	: name(name), m_d(this)
 {
 	reset();
 
@@ -102,17 +102,22 @@ void Pipeline::processAsync()
 {
 	if(!pipelineThread.joinable())
 		pipelineThread = std::thread(&Pipeline::processAsyncFn, this);
-	pipelineThreadActive = true;
 }
 
+#include <sys/prctl.h>
 void Pipeline::processAsyncFn()
 {
+	pipelineThreadActive = true;
+	prctl(PR_SET_NAME, (long)"Pipeline::processAsyncFn", 0, 0, 0);
+	std::cout << "Pipeline " << name << ": has started.\n";
 	while (pipelineThreadActive)
 	{
 		Result result= process();
 		if(!result)
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		std::this_thread::yield();
 	}
+	std::cout << "Pipeline " << name << ": has stopped.\n";
 }
 
 Result Pipeline::process()
@@ -136,6 +141,10 @@ Result Pipeline::process()
 		timings.resize(m_nodes.size());
 	}
 	Result result = Result::OK;
+	thread_local int s_lastBreakIndex = -2;
+	thread_local int s_lastBreakCode = -1;
+	bool brokeOut = false;
+	size_t breakIndex = 0;
 	for (size_t index = 0; index < m_nodes.size(); ++index)
 	{
 		PipelineNode* node = m_nodes[index];
@@ -154,8 +163,29 @@ Result Pipeline::process()
 		}
 		if (!result && result != Result::IO_Empty)
 		{
+			brokeOut = true;
+			breakIndex = index;
 			break;
 		}
+	}
+	if (brokeOut)
+	{
+		int code = (int)(Result::Code)result;
+		if ((int)breakIndex != s_lastBreakIndex || code != s_lastBreakCode)
+		{
+			AVSLOG(Info) << "Pipeline: stalled at node[" << breakIndex << "] '"
+				<< m_nodes[breakIndex]->getDisplayName() << "' result=" << code
+				<< " t=" << timestamp << "ms\n";
+			s_lastBreakIndex = (int)breakIndex;
+			s_lastBreakCode = code;
+		}
+	}
+	else if (s_lastBreakIndex != -2)
+	{
+		AVSLOG(Info) << "Pipeline: recovered (previously stalled at node[" << s_lastBreakIndex
+			<< "] code=" << s_lastBreakCode << ") t=" << timestamp << "ms\n";
+		s_lastBreakIndex = -2;
+		s_lastBreakCode = -1;
 	}
 	if (isProfiling)
 	{
@@ -166,7 +196,11 @@ Result Pipeline::process()
 
 void Pipeline::deconfigure()
 {
-	pipelineThreadActive=false;
+	if(pipelineThreadActive)
+	{
+		pipelineThreadActive=false;
+		AVSLOG(Info) << "Pipeline " << name << ": deconfiguring and stopping async processing thread...\n";
+	}
 	if(pipelineThread.joinable())
 		pipelineThread.join();
 	for (PipelineNode* node : m_nodes)

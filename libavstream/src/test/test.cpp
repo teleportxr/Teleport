@@ -36,7 +36,7 @@ TEST_CASE( "Lock-Free Queue", "[lfq]" ) {
         blocks.push_back(std::move(b));
     }
     auto producerThread = new std::thread([&blocks,&lfq]() {
-        avs::Pipeline pipeline;
+        avs::Pipeline pipeline("Producer");
         pipeline.add(&lfq);
 	    auto wait=std::chrono::microseconds((int)pow(10,distribution10(generator)%4));
         for(size_t i=0;i<blocks.size();i++){
@@ -55,7 +55,7 @@ TEST_CASE( "Lock-Free Queue", "[lfq]" ) {
     });
     running=true;
     auto consumerThread = new std::thread([&test_blocks,&blocks,&lfq,&running]() {
-        avs::Pipeline pipeline;
+        avs::Pipeline pipeline("Consumer");
         pipeline.add(&lfq);
 	    auto wait=std::chrono::microseconds((int)pow(10,distribution10(generator)%4));
         while(running||lfq.blockCount>0){

@@ -19,7 +19,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/../src
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/nv/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/asio/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/efp
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/curl/include
+#LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/curl/include
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../thirdparty/srt/build_android/$(TARGET_ARCH_ABI)/include/srt
 

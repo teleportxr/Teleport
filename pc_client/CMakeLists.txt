@@ -11,7 +11,7 @@ if(${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER})
 endif()
 
 #configure_file(client_default.ini assets/client.ini) 
-file(GLOB inifiles "client_default.ini" assets/client.ini)
+file(GLOB inifiles "../client/client_default.ini" assets/client.ini)
 set(srcs
 	Main.cpp
 	MemoryUtil.cpp
@@ -100,7 +100,7 @@ if(WIN32)
 	set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 	set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=$ENV{$WindowsSdkVerBinPath};$(PATH)")
 endif()
-target_include_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/fmt/include ${SIMUL_PLATFORM_DIR}/External/imgui)
+target_include_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/imgui)
 target_compile_features(TeleportPCClient PRIVATE cxx_std_17)
 target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
 
@@ -178,23 +178,40 @@ LIST(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA
 LIST(APPEND CPACK_NSIS_DELETE_ICONS_EXTRA
     "Delete '$INSTDIR\\\\TeleportClient.lnk'"
 )
-install(TARGETS TeleportPCClient
-		RUNTIME
-		DESTINATION build/bin/Release
-		COMPONENT client)
+if(TELEPORT_WINDOWS)
+	install(TARGETS TeleportPCClient RUNTIME DESTINATION build/bin/Release COMPONENT client)
+	set(TELEPORT_CLIENT_DATA_DEST "pc_client")
+else()
+	# Linux .deb layout (CPACK_PACKAGING_INSTALL_PREFIX=/opt/TeleportXR):
+	#   /opt/TeleportXR/bin/TeleportPCClient
+	#   /opt/TeleportXR/client/...               (runtime cwd after upward-walk in Main.cpp)
+	# Icon and desktop entry use absolute paths so they land under /usr/share regardless
+	# of the package prefix, where the freedesktop tooling expects them.
+	install(TARGETS TeleportPCClient RUNTIME DESTINATION bin COMPONENT client)
+	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
+		DESTINATION /usr/share/icons/hicolor/256x256/apps
+		RENAME TeleportXR.png COMPONENT client)
+	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/TeleportXR.desktop"
+		DESTINATION /usr/share/applications COMPONENT client)
+	# Convenience symlink so the binary can be invoked from a shell.
+	install(CODE "
+		file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/bin\")
+		file(CREATE_LINK \"/opt/TeleportXR/bin/TeleportPCClient\"
+			\"\$ENV{DESTDIR}/usr/bin/teleportxr\" SYMBOLIC)
+	" COMPONENT client)
+	set(TELEPORT_CLIENT_DATA_DEST "client")
+endif()
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build/bin/Release COMPONENT client )
-install(FILES "${CMAKE_BINARY_DIR}\\\\bin\\\\Release\\\\TeleportPCClient.exe" DESTINATION build/bin/Release COMPONENT client )
-if(LIBAV_USE_CUDA)
-	install(FILES "${LIBAV_CUDA_DIR}\\\\bin\\\\cudart64_110.dll" DESTINATION build/bin/Release COMPONENT client )
+if(TELEPORT_WINDOWS AND LIBAV_USE_CUDA)
+	install(FILES "${LIBAV_CUDA_DIR}/bin/cudart64_110.dll" DESTINATION build/bin/Release COMPONENT client)
 endif()
-install(FILES ${INSTALL_TEXTURES} DESTINATION pc_client/textures COMPONENT client )
-install(FILES ${INSTALL_FONTS} DESTINATION pc_client/assets/fonts COMPONENT client )
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}\\\\assets\\\\localGeometryCache" DESTINATION pc_client/assets COMPONENT client)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client COMPONENT client)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}\\\\client_default.ini" DESTINATION pc_client/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}\\\\shaderbin\\\\" DESTINATION pc_client/assets/shaders COMPONENT client)
+install(FILES ${INSTALL_TEXTURES} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/textures COMPONENT client)
+install(FILES ${INSTALL_FONTS} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/fonts COMPONENT client)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/client/assets/localGeometryCache" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets COMPONENT client)
+install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST} COMPONENT client)
+install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets RENAME client.ini COMPONENT client OPTIONAL)
+install(DIRECTORY "${CMAKE_BINARY_DIR}/shaderbin/" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/shaders COMPONENT client)
 
 SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
   WriteRegStr HKCR 'Teleport' '' 'URL:Teleport Protocol'
@@ -204,9 +221,7 @@ SET(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "
 SET(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS "
   DeleteRegKey HKCR 'Teleport'
  ")
-message("FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client")
-
-install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
+install(FILES ${shaders} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/Shaders COMPONENT client)
 
 
 # Create an installer for the client:
@@ -217,21 +232,35 @@ install(FILES ${shaders} DESTINATION pc_client\\\\Shaders COMPONENT client)
 #        COMPONENT applications)
 set(CPACK_PACKAGE_NAME "TeleportClientInstaller")
 set(CPACK_PACKAGE_VENDOR "Simul")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for the TeleportVR PC CLient")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for the TeleportXR PC CLient")
 
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "TeleportVR")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "TeleportXR")
 #
-set(CPACK_GENERATOR "NSIS")
-set (CPACK_PROJECT_CONFIG_FILE "${CMAKE_SOURCE_DIR}/pc_client/CPackOptions.cmake")
-set(CPACK_COMPONENTS_ALL client )
+set(CPACK_PROJECT_CONFIG_FILE "${CMAKE_SOURCE_DIR}/pc_client/CPackOptions.cmake")
+set(CPACK_COMPONENTS_ALL client)
 
 if(TELEPORT_WINDOWS)
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportClientLicence.md")
-##Create an icon which will be displayed inside the installation wizard, and an icon for the installer and uninstaller. Tell CPack about these icons.
-set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
-set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
-set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\Installers\\\\TeleportIcon.ico")
-##Set the programs, directories and files, displayed under the Start menu shortcut.
-set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
+	set(CPACK_GENERATOR "NSIS")
+	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md")
+	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
+else()
+	set(CPACK_GENERATOR "DEB")
+	# Stage payload under /opt/TeleportXR. Absolute install() destinations
+	# (e.g. /usr/share/applications) escape this prefix and are honoured literally.
+	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/TeleportXR")
+	set(CPACK_PACKAGE_NAME "teleportxr")
+	set(CPACK_DEBIAN_PACKAGE_NAME "teleportxr")
+	set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Simul <contact@simul.co>")
+	set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+	set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
+	set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+	set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/simul/Teleport")
+	set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
+		"TeleportXR spatial streaming client\n TeleportXR streams XR scenes from a remote server to a local OpenXR\n headset or desktop window using the Teleport protocol.")
+	# Let dpkg-shlibdeps fill in shared-library dependencies automatically.
+	set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 endif()
 include(CPack)

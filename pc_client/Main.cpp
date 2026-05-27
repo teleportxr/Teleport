@@ -274,7 +274,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	teleport_path = fs::current_path().parent_path().string();
 
 	// replacing Windows' broken resource system, just load our icon from a png:
-	const char filename[] = "textures\\teleportvr.png";
+	const char filename[] = "textures\\teleportxr.png";
 	size_t bufferSize = fs::file_size(filename);
 	std::vector<unsigned char> buffer(bufferSize);
 	std::ifstream ifs(filename, std::ifstream::in | std::ofstream::binary);
@@ -393,18 +393,18 @@ void InitRenderer(HWND hWnd, bool try_init_vr, bool dev_mode)
 		// Whether run from the project directory or from the executable location, we want to be
 		// able to find the shaders and textures:
 		renderPlatform->PushTexturePath("");
-		renderPlatform->PushTexturePath("Textures");
-		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
-		renderPlatform->PushTexturePath("../../pc_client/Textures");
-		renderPlatform->PushTexturePath("assets/Textures");
+		renderPlatform->PushTexturePath("textures");
+		renderPlatform->PushTexturePath("../../../../pc_client/textures");
+		renderPlatform->PushTexturePath("../../pc_client/textures");
+		renderPlatform->PushTexturePath("assets/textures");
 		// Or from the Simul directory -e.g. by automatic builds:
 
-		renderPlatform->PushTexturePath("pc_client/Textures");
+		renderPlatform->PushTexturePath("pc_client/textures");
 		renderPlatform->PushShaderPath("pc_client/Shaders");
 		renderPlatform->PushShaderPath("../client/Shaders");
 		renderPlatform->PushShaderPath("../../client/Shaders");
 		renderPlatform->PushShaderPath("../../../../client/Shaders");
-		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushTexturePath("textures");
 		renderPlatform->PushShaderPath("Shaders"); // working directory C:\Teleport
 
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Shaders/SFX").c_str());
@@ -691,6 +691,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #include <pwd.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include "Platform/External/stb/stb_image.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "Platform/Vulkan/DisplaySurface.h"
 
@@ -983,16 +984,16 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 
 	{
 		renderPlatform->PushTexturePath("");
-		renderPlatform->PushTexturePath("Textures");
-		renderPlatform->PushTexturePath("../../../../pc_client/Textures");
-		renderPlatform->PushTexturePath("../../pc_client/Textures");
-		renderPlatform->PushTexturePath("assets/Textures");
-		renderPlatform->PushTexturePath("pc_client/Textures");
+		renderPlatform->PushTexturePath("textures");
+		renderPlatform->PushTexturePath("../../../../pc_client/textures");
+		renderPlatform->PushTexturePath("../../pc_client/textures");
+		renderPlatform->PushTexturePath("assets/textures");
+		renderPlatform->PushTexturePath("pc_client/textures");
 		renderPlatform->PushShaderPath("pc_client/Shaders");
 		renderPlatform->PushShaderPath("../client/Shaders");
 		renderPlatform->PushShaderPath("../../client/Shaders");
 		renderPlatform->PushShaderPath("../../../../client/Shaders");
-		renderPlatform->PushTexturePath("Textures");
+		renderPlatform->PushTexturePath("textures");
 		renderPlatform->PushShaderPath("Shaders");
 
 		renderPlatform->PushShaderPath((src_dir + "/firstparty/Platform/Shaders/SFX").c_str());
@@ -1054,6 +1055,10 @@ int main(int argc, char *argv[])
 	// shader effect parsing.
 	std::locale::global(std::locale::classic());
 
+	// Enable Default-category internal logging so diagnostic TELEPORT_INTERNAL_COUT(Default, ...)
+	// messages (e.g. WebRTC media track attachment, audio decoder traces) reach the log file.
+	teleport::SetLogCategoryEnabled(teleport::LogCategory::Signaling, true);
+
 	// Parse command line
 	for (int i = 1; i < argc; i++)
 	{
@@ -1111,7 +1116,7 @@ int main(int argc, char *argv[])
 			home = pw->pw_dir;
 	}
 	if (home)
-	{
+	{ 
 		storage_folder = std::string(home) + "/.local/share/TeleportXR";
 		std::filesystem::create_directories(storage_folder);
 	}
@@ -1141,6 +1146,7 @@ int main(int argc, char *argv[])
 	}
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	glfwWindowHintString(GLFW_WAYLAND_APP_ID, "TeleportXR");
 	g_window = glfwCreateWindow(800, 500, "Teleport Spatial Client", nullptr, nullptr);
 	if (!g_window)
 	{
@@ -1153,6 +1159,17 @@ int main(int argc, char *argv[])
 	glfwSetMouseButtonCallback(g_window, GlfwMouseButtonCallback);
 	glfwSetCursorPosCallback(g_window, GlfwCursorPosCallback);
 	glfwSetFramebufferSizeCallback(g_window, GlfwFramebufferSizeCallback);
+
+	{
+		int w, h, ch;
+		unsigned char *pixels = stbi_load("assets/textures/teleportxr.png", &w, &h, &ch, 4);
+		if (pixels)
+		{
+			GLFWimage icon{w, h, pixels};
+			glfwSetWindowIcon(g_window, 1, &icon);
+			stbi_image_free(pixels);
+		}
+	}
 
 	std::vector<std::string> required_instance_extensions;
 	{
@@ -1255,6 +1272,7 @@ int main(int argc, char *argv[])
 	mosquitto_lib_cleanup();
 #endif
 
+	fileLoader = platform::core::FileLoader::GetFileLoader();
 	if (fileLoader->GetRecordFilesLoaded())
 	{
 		auto l = fileLoader->GetFilesLoaded();
