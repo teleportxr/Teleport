@@ -71,7 +71,7 @@ void NetworkPipeline::initialise(const ServerNetworkSettings& inNetworkSettings)
 	SinkParams.requiredLatencyMs = inNetworkSettings.requiredLatencyMs;
 	SinkParams.connectionTimeout = inNetworkSettings.connectionTimeout;
 
-	mPipeline.reset(new avs::Pipeline);
+	mPipeline.reset(new avs::Pipeline("NetworkPipeline"));
 
 	mNetworkSink.reset(new avs::WebRtcNetworkSink);
 	std::vector<avs::NetworkSinkStream> streams;

@@ -70,7 +70,7 @@ Result VideoEncodePipeline::initialize( const VideoEncodeParams& videoEncodePara
 		return Result::Code::InvalidGraphicsResource;
 	}
 
-	mPipeline.reset(new avs::Pipeline);
+	mPipeline.reset(new avs::Pipeline("VideoEncodePipeline"));
 	mEncoder.reset(new avs::Encoder);
 	mInputSurface.reset(new avs::Surface);
 	mTagDataOutput = dynamic_cast<avs::IOInterface*>(tagDataOutput);

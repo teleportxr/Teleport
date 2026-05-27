@@ -116,7 +116,7 @@ void GeometryStreamingService::confirmResource(avs::uid resource_uid)
 			if (unconfirmed_priority_counts[priority] == 0)
 			{
 				unconfirmed_priority_counts.erase(priority);
-				TELEPORT_INTERNAL_COUT(Default, "Got all nodes of priority " << priority << "");
+				TELEPORT_INTERNAL_COUT(Default, "Got all nodes of priority {}", priority);
 			}
 		}
 	}
@@ -435,7 +435,7 @@ void GeometryStreamingService::startStreaming(server::ClientNetworkContext *cont
 	handshake			 = h;
 	clientNetworkContext = context;
 
-	avsPipeline.reset(new avs::Pipeline);
+	avsPipeline.reset(new avs::Pipeline("GeometryPipeline"));
 	avsGeometrySource.reset(new avs::GeometrySource);
 	avsGeometryEncoder.reset(new avs::GeometryEncoder);
 	avsGeometrySource->configure(this);

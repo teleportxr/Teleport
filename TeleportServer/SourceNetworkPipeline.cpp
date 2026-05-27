@@ -23,7 +23,7 @@ SourceNetworkPipeline::~SourceNetworkPipeline()
 
 void SourceNetworkPipeline::initialize(const avs::NetworkSourceParams& sourceParams, avs::Queue* audioQueue, avs::AudioDecoder* audioDecoder, avs::AudioTarget* audioTarget)
 {
-	pipeline.reset(new avs::Pipeline);
+	pipeline.reset(new avs::Pipeline("SourceNetworkPipeline"));
 	networkSource.reset(new avs::WebRtcNetworkSource);
 
 	if (audioQueue)

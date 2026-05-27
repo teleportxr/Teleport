@@ -10,6 +10,7 @@
 #include <safe/safe.h>
 #include "TeleportServer/Export.h"
 #include "TeleportCore/CommonNetworking.h"
+#include "TeleportCore/Avatars.h"
 
 namespace rtc
 {
@@ -33,6 +34,10 @@ namespace teleport
 			std::queue<std::vector<uint8_t>> binaryMessagesReceived;
 			core::SignalingState signalingState = core::SignalingState::START;
 			std::mutex webSocketsMessagesMutex;
+			//! Session-level capabilities advertised by the client in its
+			//! `connect` signaling message. Defaults to all-false so that
+			//! a client which omits the field is treated conservatively.
+			core::SignalingCapabilities capabilities;
 		};
 		//! Signaling service for establishing connections with clients.
 		class TELEPORT_SERVER_API SignalingService

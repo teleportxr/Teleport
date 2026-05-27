@@ -6,19 +6,11 @@ set(TELEPORT_VERSION 1.0.0)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 if(NOT DEFINED TELEPORT_SOLUTION_NAME OR "${TELEPORT_SOLUTION_NAME}" MATCHES "")
-	if(TELEPORT_UNITY)
-		project(Teleport_Server_Unity VERSION ${TELEPORT_VERSION})
-	elseif(TELEPORT_SERVER)
-		project(Teleport_Server VERSION ${TELEPORT_VERSION})
-	elseif(TELEPORT_CLIENT)
-		project(Teleport_Client VERSION ${TELEPORT_VERSION})
-	elseif(TELEPORT_BUILD_DOCS)
-		project(Teleport_Docs VERSION ${TELEPORT_VERSION})
+	if(TELEPORT_BUILD_DOCS)
 		set(VS_STARTUP_PROJECT Sphinx)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Sphinx)
-	else()
-		project(Teleport VERSION ${TELEPORT_VERSION})
 	endif()
+	project(Teleport VERSION ${TELEPORT_VERSION})
 else() 
 	project("${TELEPORT_SOLUTION_NAME}" VERSION ${TELEPORT_VERSION})
 endif()
@@ -77,6 +69,7 @@ option(TELEPORT_BUILD_DOCS "Build documentation?" OFF)
 option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
 option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
 option(TELEPORT_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime? Only for server builds." OFF)
+option(TELEPORT_ASAN "Enable AddressSanitizer?" OFF)
 if(TELEPORT_USE_DYNAMIC_RUNTIME)
 	set(TELEPORT_RUNTIME dynamic)
 else()
@@ -160,6 +153,24 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cpp-httplib)
 
+# Get libopus (audio codec for WebRTC media transport - see docs/protocol/audio.rst)
+set(OPUS_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+set(OPUS_BUILD_SHARED_LIBRARY OFF CACHE BOOL "" FORCE)
+set(OPUS_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(OPUS_INSTALL_PKG_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
+set(OPUS_INSTALL_CMAKE_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+  opus
+  GIT_REPOSITORY https://github.com/xiph/opus.git
+  GIT_SHALLOW 1
+  GIT_TAG        v1.5.2
+  SOURCE_DIR opus
+)
+FetchContent_MakeAvailable(opus)
+if(TARGET opus)
+	set_target_properties(opus PROPERTIES FOLDER thirdparty)
+endif()
+
 # Get websocketpp (source-only fetch; not built by Teleport)
 FetchContent_Declare(
   websocketpp
@@ -225,7 +236,7 @@ endif()
 if(TELEPORT_UNITY)
 	set(TELEPORT_SERVER true)
 else()
-	option(TELEPORT_SERVER "Build for server? If true, client will not be built." ${TELEPORT_SERVER})
+	option(TELEPORT_SERVER "Build for server?" ${TELEPORT_SERVER})
 endif()
 if(TELEPORT_SERVER)
 #E:\Code\Teleport\TeleportUnity\teleport_build\_deps\freetype-build\Release
@@ -285,23 +296,33 @@ if(TELEPORT_SERVER)
 	set(OPTION_BUILD_BROTLIG OFF CACHE BOOL "" FORCE)
 	set(OPTION_BUILD_GUI OFF CACHE BOOL "" FORCE)
 	set(OPTION_CMP_DIRECTX OFF CACHE BOOL "" FORCE)
-	# Get the AMD Compressonator library for texture compression. Unfortunately, this is not well-configured for FetchContent, so
-	# instead we incorporate the raw libraries.
-	#FetchContent_Declare(
-	#  compressonator
-	#  GIT_REPOSITORY https://github.com/GPUOpen-Tools/compressonator.git
-	#  GIT_TAG        V4.4.19
-	#  SOURCE_DIR compressonator
-	#)
-	#FetchContent_MakeAvailable(compressonator)
-	set(TELEPORT_CLIENT OFF)
-else()
-	if(TELEPORT_BUILD_DOCS)
-		option(TELEPORT_CLIENT "Build for client?" OFF)
-	else()
-		option(TELEPORT_CLIENT "Build for client?" ON)
+	# On Windows we use the prebuilt Compressonator .lib files in thirdparty/compressonator/lib/bin/x64/.
+	# Those are PE import libraries and cannot link on Linux, so fetch the upstream source and add only the
+	# CMP_Core + CMP_Framework subdirectories directly — running the upstream root CMakeLists drags in Qt/Vulkan/etc.
+	if(NOT WIN32)
+		FetchContent_Declare(
+			compressonator
+			GIT_REPOSITORY https://github.com/GPUOpen-Tools/compressonator.git
+			GIT_TAG        V4.5.52
+			GIT_SHALLOW    TRUE
+			SOURCE_DIR     compressonator-src
+		)
+		FetchContent_GetProperties(compressonator)
+		if(NOT compressonator_POPULATED)
+			FetchContent_Populate(compressonator)
+		endif()
+		set(PROJECT_FOLDER_SDK_LIBS "thirdparty/compressonator")
+		# cmp_framework references ${PROJECT_SOURCE_DIR}/applications/... — override PROJECT_SOURCE_DIR
+		# so those paths resolve under the fetched compressonator source instead of the Teleport root.
+		set(_teleport_project_source_dir_saved ${PROJECT_SOURCE_DIR})
+		set(PROJECT_SOURCE_DIR ${compressonator_SOURCE_DIR})
+		add_subdirectory(${compressonator_SOURCE_DIR}/cmp_core ${compressonator_BINARY_DIR}/cmp_core EXCLUDE_FROM_ALL)
+		add_subdirectory(${compressonator_SOURCE_DIR}/cmp_framework ${compressonator_BINARY_DIR}/cmp_framework EXCLUDE_FROM_ALL)
+		set(PROJECT_SOURCE_DIR ${_teleport_project_source_dir_saved})
 	endif()
 endif()
+
+option(TELEPORT_CLIENT "Build for client?" ON)
 
 if(TELEPORT_CLIENT)
 	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
@@ -467,6 +488,10 @@ function(SetTeleportDefaults targname)
 		target_compile_options(${targname} PRIVATE -fPIC)
 		# dummy for stdcall, PLUS make Clang show debug info for strings and other stl stuff:
 		target_compile_definitions(${targname} PRIVATE TELEPORT_STDCALL= )
+		if(TELEPORT_ASAN)
+			target_compile_options(${targname} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+			target_link_options(${targname} PRIVATE -fsanitize=address)
+		endif()
 	endif()
 	target_compile_definitions(${targname} PRIVATE CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} TELEPORT_SUPPORT_AUDIO=$<BOOL:${TELEPORT_SUPPORT_AUDIO}> CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} TELEPORT_INTERNAL_CHECKS=$<BOOL:${TELEPORT_INTERNAL_CHECKS}>)
 endfunction()
@@ -489,8 +514,6 @@ endfunction()
 add_subdirectory(TeleportCore)
 
 if(TELEPORT_SERVER)
-	# Server doesn't include Platform, so load fmt separately.
-	add_subdirectory(firstparty/Platform/External/fmt)
 	set(LIBAV_USE_DYNAMIC_RUNTIME ${TELEPORT_USE_DYNAMIC_RUNTIME} CACHE BOOL "" FORCE)
 	set(LIBAV_BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 	set(SA_BUILD_SHARED_LIB ON CACHE BOOL "" FORCE)
@@ -581,6 +604,10 @@ unset(STATIC CACHE)
 #	target_compile_options(basisu PRIVATE -Wno-array-bounds -Wno-reorder-ctor)
 #endif()
 #set_target_properties( basisu PROPERTIES FOLDER thirdparty/basis_universal)
+
+if(TELEPORT_SERVER)
+	add_subdirectory(Utils)
+endif()
 
 if(TELEPORT_BUILD_DOCS)
 	add_subdirectory ("docs")
