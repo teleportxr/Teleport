@@ -6,6 +6,7 @@
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
 #include <optional>
+#include <functional>
 #include "networksource.h"
 #include <unordered_map>
 #include <libavstream/httputil.hpp>
@@ -83,6 +84,42 @@ namespace avs
 		}
 		void SetStreamingConnectionState(StreamingConnectionState s);
 		void resetPeerConnection();
+
+		/*!
+		 * Callback signature for an inbound Opus audio RTP frame after
+		 * depacketization. The payload is one Opus packet (typically 20 ms,
+		 * 48 kHz, mono). \p mid is the WebRTC transceiver mid the frame
+		 * arrived on (used by Phase 2b AudioSourceMapping to route to a
+		 * per-peer decoder).
+		 */
+		using OpusFrameCallback = std::function<void(const std::string& mid, const uint8_t* data, size_t size)>;
+
+		/*!
+		 * Register a callback invoked on every inbound Opus RTP frame.
+		 * Pass nullptr to clear. Set before the audio track opens.
+		 */
+		void setOpusFrameCallback(OpusFrameCallback cb);
+
+		/*!
+		 * Send a single Opus packet (typically 20 ms, payload type 111) over
+		 * the negotiated sendrecv audio track. The packet is RTP-wrapped by
+		 * the libdatachannel packetizer chain and sent immediately.
+		 *
+		 * Safe to call before the track opens; the call is a no-op in that
+		 * case and returns Result::Failed.
+		 *
+		 * \param data    raw Opus payload (no RTP header)
+		 * \param size    payload length in bytes
+		 * \return Result::OK on success, Result::Failed if no track is open.
+		 */
+		Result sendOpusFrame(const uint8_t* data, size_t size);
+
+		/*!
+		 * True once the sendrecv audio track is open and ready to receive
+		 * packets via sendOpusFrame(). Used by the client pipeline to decide
+		 * whether mic audio should be encoded and dispatched.
+		 */
+		bool isAudioSendTrackOpen() const;
 	protected:
 		StreamingConnectionState webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 		std::vector<std::string> messagesToSend;

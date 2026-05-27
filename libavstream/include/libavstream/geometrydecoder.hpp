@@ -84,6 +84,7 @@ namespace avs
 		std::vector<uint8_t> m_buffer;
 		avs::uid server_uid = 0;
 		bool m_configured = false;
+		bool m_loggedFirstProcess = false;
 		int m_streamId = 0;
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;

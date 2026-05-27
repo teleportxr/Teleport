@@ -90,7 +90,8 @@ namespace teleport
 
 		private:
 			void decodeAsync();
-			
+			void httpAsync();
+
 			bool readString(GeometryDecodeData &geometryDecodeData,std::string &str) const;
 
 			avs::Result decodeInternal(GeometryDecodeData &geometryDecodeData);
@@ -132,6 +133,8 @@ namespace teleport
 		private:
 			std::thread decodeThread;
 			std::atomic<bool> decodeThreadActive={true};
+			std::thread httpThread;
+			std::atomic<bool> httpThreadActive={true};
 			avs::ThreadSafeQueue<GeometryDecodeData> decodeData;
 
 		private:

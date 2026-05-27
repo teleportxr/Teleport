@@ -3,7 +3,9 @@
 Commands from Server to Client
 ##############################
 
-The **Server** sends commands to the **Client** over the **reliable** WebRTC data channel (id 100, label ``reliable``). All commands are little-endian, packed (no padding) C structs whose first byte is a :cpp:enum:`teleport::core::CommandPayloadType` discriminator. Coordinates and units are converted on the server to the client's :ref:`AxesStandard <conventions>` before sending.
+The **Server** sends commands to the **Client** over the **reliable** WebRTC data channel (id 100, label ``reliable``). All commands are little-endian, packed (no padding) C structs whose first byte is a ``CommandPayloadType`` (a ``uint8_t``; reference enum: ``teleport::core::CommandPayloadType``) discriminator. The complete set of values is in the table below. Coordinates and units are converted on the server to the client's :ref:`AxesStandard <conventions>` before sending.
+
+Any command described on this page MAY instead be delivered as a binary frame on the signaling WebSocket — the payload bytes are identical, and the server uses this fallback transport whenever the WebRTC ``reliable`` data channel is not yet ``open`` (notably for ``SetupCommand``). Receivers MUST accept commands on either transport for the lifetime of the session; see :ref:`signaling_reliable_fallback`.
 
 The complete set of command types is enumerated below. Variable-length commands declare the count of the trailing array(s) inside the struct; the receiver reads ``sizeof(StructType)`` bytes followed by the trailing data.
 
@@ -21,77 +23,85 @@ The complete set of command types is enumerated below. Variable-length commands 
      - (never sent)
    * - 1
      - ``Shutdown``
-     - :cpp:struct:`teleport::core::ShutdownCommand`
+     - ``teleport::core::ShutdownCommand``
      - none
    * - 2
      - ``Setup``
-     - :cpp:struct:`teleport::core::SetupCommand`
+     - ``teleport::core::SetupCommand``
      - none (154 bytes; see :doc:`../service`)
    * - 3
      - ``AcknowledgeHandshake``
-     - :cpp:struct:`teleport::core::AcknowledgeHandshakeCommand`
+     - ``teleport::core::AcknowledgeHandshakeCommand``
      - ``visibleNodeCount`` × ``uid``
    * - 4
      - ``ReconfigureVideo``
-     - :cpp:struct:`teleport::core::ReconfigureVideoCommand`
-     - none (carries a fresh :cpp:struct:`avs::VideoConfig`)
+     - ``teleport::core::ReconfigureVideoCommand``
+     - none (carries a fresh ``avs::VideoConfig``)
    * - 5
      - ``NodeVisibility``
-     - :cpp:struct:`teleport::core::NodeVisibilityCommand`
+     - ``teleport::core::NodeVisibilityCommand``
      - ``nodesShowCount`` + ``nodesHideCount`` uids
    * - 6
      - ``UpdateNodeMovement``
-     - :cpp:struct:`teleport::core::UpdateNodeMovementCommand`
-     - ``updatesCount`` × :cpp:struct:`teleport::core::MovementUpdate`
+     - ``teleport::core::UpdateNodeMovementCommand``
+     - ``updatesCount`` × ``teleport::core::MovementUpdate``
    * - 7
      - ``UpdateNodeEnabledState``
-     - :cpp:struct:`teleport::core::UpdateNodeEnabledStateCommand`
-     - ``updatesCount`` × :cpp:struct:`teleport::core::NodeUpdateEnabledState`
+     - ``teleport::core::UpdateNodeEnabledStateCommand``
+     - ``updatesCount`` × ``teleport::core::NodeUpdateEnabledState``
    * - 8
      - ``SetNodeHighlighted``
-     - :cpp:struct:`teleport::core::SetNodeHighlightedCommand`
+     - ``teleport::core::SetNodeHighlightedCommand``
      - none
    * - 9
      - ``ApplyNodeAnimation``
-     - :cpp:struct:`teleport::core::ApplyAnimationCommand`
-     - none (embeds :cpp:struct:`teleport::core::ApplyAnimation`)
+     - ``teleport::core::ApplyAnimationCommand``
+     - none (embeds ``teleport::core::ApplyAnimation``)
    * - 10
      - ``UpdateNodeAnimationControlX``
      - (reserved)
      - reserved
    * - 11
      - ``SetNodeAnimationSpeed``
-     - :cpp:struct:`teleport::core::SetNodeAnimationSpeedCommand`
+     - ``teleport::core::SetNodeAnimationSpeedCommand``
      - none
    * - 12
      - ``SetupLighting``
-     - :cpp:struct:`teleport::core::SetLightingCommand`
+     - ``teleport::core::SetLightingCommand``
      - ``num_gi_textures`` × ``uid`` (acked; see ``ack_id``)
    * - 13
      - ``UpdateNodeStructure``
-     - :cpp:struct:`teleport::core::UpdateNodeStructureCommand`
+     - ``teleport::core::UpdateNodeStructureCommand``
      - none
    * - 14
      - ``AssignNodePosePath``
-     - :cpp:struct:`teleport::core::AssignNodePosePathCommand`
+     - ``teleport::core::AssignNodePosePathCommand``
      - ``pathLength`` UTF-8 bytes
    * - 15
      - ``SetupInputs``
-     - :cpp:struct:`teleport::core::SetupInputsCommand`
-     - ``numInputs`` × :cpp:struct:`teleport::core::InputDefinitionNetPacket` (each followed by ``pathLength`` UTF-8 bytes)
+     - ``teleport::core::SetupInputsCommand``
+     - ``numInputs`` × ``teleport::core::InputDefinitionNetPacket`` (each followed by ``pathLength`` UTF-8 bytes)
    * - 16
      - ``PingForLatency``
-     - :cpp:struct:`teleport::core::PingForLatencyCommand`
+     - ``teleport::core::PingForLatencyCommand``
      - none (sent over the unreliable channel; client replies with :ref:`PongForLatency <client_to_server>`)
+   * - 17
+     - ``AudioSourceMapping``
+     - ``teleport::core::AudioSourceMappingCommand``
+     - ``addedCount`` AddedEntry + ``removedCount`` RemovedEntry (see :ref:`audio_source_mapping`)
+   * - 18
+     - ``AudioParticipantStateChange``
+     - ``teleport::core::AudioParticipantStateChangeCommand``
+     - ``updateCount`` × Update (see :ref:`audio_participant_state`)
    * - 128
      - ``SetOriginNode``
-     - :cpp:struct:`teleport::core::SetOriginNodeCommand`
+     - ``teleport::core::SetOriginNodeCommand``
      - none (acked; see ``ack_id``)
 
 Acknowledged commands
 =====================
 
-Commands derived from :cpp:struct:`teleport::core::AckedCommand` (currently ``SetupLighting`` and ``SetOriginNode``) carry an additional ``uint64_t ack_id`` field after the 1-byte type. The client must reply with an :ref:`AcknowledgementMessage <client_to_server>` containing the same ``ack_id``. ``ack_id`` increases monotonically per session; clients can ignore any id less than or equal to one already received.
+Commands derived from ``AckedCommand`` (reference: ``teleport::core::AckedCommand``; currently ``SetupLighting`` and ``SetOriginNode``) carry an additional ``uint64_t ack_id`` field after the 1-byte type. The client must reply with an :ref:`AcknowledgementMessage <client_to_server>` containing the same ``ack_id``. ``ack_id`` increases monotonically per session; clients can ignore any id less than or equal to one already received.
 
 Selected command layouts
 ========================
@@ -119,7 +129,7 @@ Selected command layouts
      - ``ReconfigureVideo``
    * - 89
      - avs::VideoConfig
-     - New video configuration (same layout as inside :cpp:struct:`teleport::core::SetupCommand`).
+     - New video configuration (same layout as inside ``teleport::core::SetupCommand``).
 
 .. list-table:: NodeVisibilityCommand (id = 5)
    :widths: 5 14 30
@@ -248,7 +258,7 @@ Selected command layouts
      - ``ack_id``
    * - 57
      - ClientDynamicLighting
-     - Dynamic lighting parameters (specular/diffuse/light positions, sizes, mips, mode, two cubemap uids). See :cpp:struct:`teleport::core::ClientDynamicLighting`.
+     - Dynamic lighting parameters (specular/diffuse/light positions, sizes, mips, mode, two cubemap uids; reference: ``teleport::core::ClientDynamicLighting``).
 
 .. list-table:: UpdateNodeStructureCommand (id = 13)
    :widths: 5 14 30

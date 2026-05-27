@@ -6,7 +6,7 @@ HTTP Service
 
 The HTTP service is the third leg of the protocol. It serves bulk static assets (textures and meshes) over plain HTTP or HTTPS, separately from the real-time data transport. Its purpose is to keep large, immutable, cacheable payloads off the latency-sensitive WebRTC data channels.
 
-Reference implementation: :cpp:class:`teleport::server::DefaultHTTPService`, backed by `cpp-httplib <https://github.com/yhirose/cpp-httplib>`__. The service runs in a dedicated thread inside the same server process as ``ClientManager``.
+Reference implementation (``teleport::server::DefaultHTTPService``, backed by `cpp-httplib <https://github.com/yhirose/cpp-httplib>`__). The service runs in a dedicated thread inside the same server process as ``ClientManager``.
 
 Endpoint
 ========
@@ -19,7 +19,7 @@ Endpoint
 URL format
 ==========
 
-Asset URLs are constructed by the server in :cpp:func:`teleport::server::GeometryEncoder::encodeTexturePointer`::
+Asset URLs are constructed by the server (reference: ``teleport::server::GeometryEncoder::encodeTexturePointer``)::
 
     https://<httpRoot>/<relative-path>.<extension>
 
@@ -47,7 +47,7 @@ The full URL is delivered to the client *inside the geometry stream*, as the pay
 Client behaviour
 ================
 
-The reference client's :cpp:class:`teleport::clientrender::GeometryDecoder` keeps an internal :cpp:class:`avs::HTTPUtil` with up to **12 simultaneous HTTPS connections** and an on-disk cache rooted at ``<storage>/http_cache/``.
+The reference client's geometry decoder (``teleport::clientrender::GeometryDecoder``) keeps an internal HTTP utility (``avs::HTTPUtil``) with up to **12 simultaneous HTTPS connections** and an on-disk cache rooted at ``<storage>/http_cache/``.
 
 * If the URL inside a ``TexturePointer`` / ``MeshPointer`` already contains ``://``, it is fetched verbatim.
 * Otherwise it is treated as a relative path and the cache's ``defaultURLRoot`` is prepended with the scheme ``https://``. ``defaultURLRoot`` is initialised to the cache name, which the reference client sets to the server's host name.

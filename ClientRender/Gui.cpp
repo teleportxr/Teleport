@@ -15,6 +15,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
+#include <cmath>
 #include <format>
 #include <magic_enum/magic_enum.hpp>
 #include <filesystem>
@@ -414,7 +415,10 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 	{
 		ImFontConfig config;
 		config.MergeMode		= true;
+		config.PixelSnapH		= true;
 		config.GlyphMinAdvanceX = 32.0f;
+		config.GlyphMaxAdvanceX = 32.0f;
+		config.GlyphOffset		= ImVec2(0.0f, 3.0f);
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
 		builder.AddText(ICON_FK_SEARCH);
@@ -449,7 +453,10 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		fontInter[sz] = AddFont("Inter-Regular.ttf", float(sz));
 		ImFontConfig config;
 		config.MergeMode		= true;
+		config.PixelSnapH		= true;
 		config.GlyphMinAdvanceX = float(sz);
+		config.GlyphMaxAdvanceX = float(sz);
+		config.GlyphOffset		= ImVec2(0.0f, std::round(float(sz) * 0.1f));
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
 		builder.AddText(ICON_FK_SEARCH);
@@ -1174,7 +1181,8 @@ void Gui::DrawTexture(const crossplatform::Texture *texture, float m, int slice)
 
 	int width  = texture->width;
 	int height = texture->length;
-	width	   = std::max(width, 256);
+	width	   = std::max(width, 32);
+	width	   = std::min(width, 256);
 	if (width != texture->width)
 	{
 		height = (width * texture->length) / texture->width;
@@ -1889,6 +1897,112 @@ void Gui::Anims(const ResourceManager<avs::uid, clientrender::Animation> &animMa
 	ImGui::EndGroup();
 }
 
+void Gui::Canvases(const ResourceManager<avs::uid, clientrender::TextCanvas> &textCanvasManager)
+{
+	ImGui::BeginGroup();
+	const auto &ids			 = textCanvasManager.GetAllIDs();
+	avs::uid	selected_uid = GetSelectedUid();
+	for (auto id : ids)
+	{
+		bool		selected   = (selected_uid == id);
+		const auto &textCanvas = textCanvasManager.Get(id);
+		if (ImGui::TreeNodeEx(std::format("{0}: {1}", id, textCanvas->textCanvasCreateInfo.text.c_str()).c_str(),
+							  ImGuiTreeNodeFlags_Leaf | (selected ? ImGuiTreeNodeFlags_Selected : 0)))
+		{
+			if (ImGui::IsItemClicked())
+			{
+				if (!show_inspector)
+				{
+					show_inspector = true;
+				}
+				Select(cache_uid, id);
+			}
+			ImGui::TreePop();
+		}
+	}
+	ImGui::EndGroup();
+}
+
+void Gui::Lighting(clientrender::GeometryCache *geometryCache)
+{
+	if (!geometryCache)
+	{
+		return;
+	}
+	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
+	if (sessionClient)
+	{
+		const auto &setupCommand = sessionClient->GetSetupCommand();
+		ImGui::Separator();
+		ImGui::TextUnformatted("Background");
+		ImGui::Text("Mode: %s", std::string(magic_enum::enum_name(setupCommand.backgroundMode)).c_str());
+		switch (setupCommand.backgroundMode)
+		{
+			case teleport::core::BackgroundMode::COLOUR:
+			{
+				const auto &c = setupCommand.backgroundColour;
+				ImGui::ColorButton("##bgcolour",
+								   ImVec4(c.x, c.y, c.z, c.w),
+								   ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
+								   ImVec2(32, 32));
+				ImGui::SameLine();
+				ImGui::Text("%.2f %.2f %.2f %.2f", c.x, c.y, c.z, c.w);
+			}
+			break;
+			case teleport::core::BackgroundMode::TEXTURE:
+			{
+				avs::uid uid	 = setupCommand.backgroundTexture;
+				auto	 texture = geometryCache->mTextureManager.Get(uid);
+				if (texture)
+				{
+					ImGui::Text("Texture %lu: %s", uid, texture->GetTextureCreateInfo().name.c_str());
+					DrawTexture(texture->GetSimulTexture(), 0.0f, 0);
+				}
+				else
+				{
+					ImGui::TextDisabled("Texture %lu: (not loaded)", uid);
+				}
+			}
+			break;
+			case teleport::core::BackgroundMode::VIDEO:
+				ImGui::TextDisabled("Video background");
+				break;
+			case teleport::core::BackgroundMode::NONE:
+			default:
+				break;
+		}
+
+		const auto &dl = sessionClient->GetDynamicLighting();
+		ImGui::Separator();
+		ImGui::TextUnformatted("Environment Cubemaps");
+		ImGui::Text("Lighting Mode: %s", std::string(magic_enum::enum_name(dl.lightingMode)).c_str());
+		auto drawCubemap = [&](const char *label, avs::uid uid)
+		{
+			if (!uid)
+			{
+				ImGui::Text("%s: (none)", label);
+				return;
+			}
+			auto t = geometryCache->mTextureManager.Get(uid);
+			if (t)
+			{
+				ImGui::Text("%s %lu: %s", label, uid, t->GetTextureCreateInfo().name.c_str());
+				DrawTexture(t->GetSimulTexture());
+			}
+			else
+			{
+				ImGui::TextDisabled("%s %lu: (not loaded)", label, uid);
+			}
+		};
+		drawCubemap("Diffuse Cubemap", dl.diffuse_cubemap_texture_uid);
+		drawCubemap("Specular Cubemap", dl.specular_cubemap_texture_uid);
+	}
+
+	ImGui::Separator();
+	ImGui::TextUnformatted("Lights");
+	Lights(geometryCache->mLightManager);
+}
+
 void Gui::Lights(const ResourceManager<avs::uid, clientrender::Light> &lightManager)
 {
 	ImGui::BeginGroup();
@@ -2041,11 +2155,11 @@ void Gui::NetworkPanel(teleport::client::ClientPipeline &clientPipeline)
 
 void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 {
-	static float  xspacing	  = 150.0f;
+	static float  xspacing	  = 175.0f;
 	static float  yspacing	  = 20.0f;
 	static float  thickness	  = 3.0f;
 	static float  sz		  = 36.0f;
-	static ImVec4 colf		  = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
+	static ImVec4 colf		  = ImVec4(0.4f, 1.0f, 0.4f, 1.0f);
 	ImU32		  col		  = ImColor(colf);
 	const ImU32	  join_colour = ImColor(255, 255, 255, 90);
 	const ImU32	  fill_colour = ImColor(16, 64, 16, 255);
@@ -2073,8 +2187,8 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	}
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
-	draw_list->AddText(pos, col, std::format("{0}: {1:4.1f}", node.name, node.inwardBandwidthKps).c_str());
-	draw_list->AddText(ImVec2(pos.x, pos.y + line.y), col, std::format("{0}", node.maxPacketKb).c_str());
+	std::string str=std::format("{0}: {1:4.1f} {2}", node.name, node.inwardBandwidthKps, node.maxPacketKb);
+	draw_list->AddText(ImVec2(pos.x+line.y, pos.y + line.y), col, str.c_str());
 }
 
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
@@ -2427,9 +2541,14 @@ void Gui::Scene()
 		Textures(geometryCache->mTextureManager);
 		ImGui::EndTabItem();
 	}
+	if (ImGui::BeginTabItem("Canvases"))
+	{
+		Canvases(geometryCache->mTextCanvasManager);
+		ImGui::EndTabItem();
+	}
 	if (ImGui::BeginTabItem("Lighting"))
 	{
-		Lights(geometryCache->mLightManager);
+		Lighting(geometryCache.get());
 		ImGui::EndTabItem();
 	}
 
@@ -2499,7 +2618,8 @@ bool Gui::BeginMainMenuBar()
 	ImVec2 window_pos = ImVec2(0, 0), window_pos_pivot = ImVec2(0, 0);
 	float  w = ImGui::GetMainViewport()->Size.x;
 	auto			&config		  = client::Config::GetInstance();
-	ImGui::SetNextWindowSize(ImVec2(w, 2.f*config.options.uiFontSize));
+	auto   &style				   = ImGui::GetStyle();
+	ImGui::SetNextWindowSize(ImVec2(w, 2.f*config.options.uiFontSize+style.FramePadding.y*2.f));
 	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always, window_pos_pivot);
 	// g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
 	const ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -2533,7 +2653,7 @@ void Gui::ShowSettings2D()
 	ImGui::LabelText("##Settings", "Settings");
 	ImGui::PopFont();
 	ImGui::SameLine(ImGui::GetWindowWidth() - 50.f);
-	buttonSize={1.5f*config.options.uiFontSize, (float)config.options.uiFontSize};
+	buttonSize={1.5f*config.options.uiFontSize, 1.5f*(float)config.options.uiFontSize};
 	if (ImGui::Button(ICON_FK_TIMES, *(ImVec2*)&buttonSize))
 	{
 		show_options   = false;
@@ -2551,6 +2671,64 @@ void Gui::ShowSettings2D()
 			DevModeOptions();
 		}
 #endif
+		ImGui::EndTable();
+	}
+	ImGuiEnd();
+}
+
+void Gui::ShowAvatarSettings2D()
+{
+	auto			&config		  = client::Config::GetInstance();
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
+									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	const ImVec2 vp_size = ImGui::GetMainViewport()->Size;
+	ImGui::SetNextWindowPos(ImVec2(40.f, 100.f));
+	ImGui::SetNextWindowSize(ImVec2(vp_size.x - 80.f, vp_size.y - 120.f));
+	ImGuiBegin("AvatarSettings", 0, window_flags);
+	ImGui::PushFont(defaultFont);
+	ImGui::LabelText("##AvatarSettings", "Avatar");
+	ImGui::PopFont();
+	ImGui::SameLine(ImGui::GetWindowWidth() - 50.f);
+	buttonSize = {1.5f * config.options.uiFontSize, 1.5f * (float)config.options.uiFontSize};
+	if (ImGui::Button(ICON_FK_TIMES, *(ImVec2 *)&buttonSize))
+	{
+		// Discard edits and return to the main settings page.
+		show_avatar_settings = false;
+		show_options		 = true;
+	}
+	if (ImGui::BeginTable("avatar_options", 2))
+	{
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 300.0f);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 400.0f);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##AvatarUrlLabel", "Avatar URL");
+		ImGui::TableNextColumn();
+		ImGui::PushItemWidth(-1.0f);
+		ImGui::InputText("##AvatarUrl", avatar_url_buffer, MAX_URL_SIZE);
+		ImGui::PopItemWidth();
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::TableNextColumn();
+		if (ImGui::Button("Save"))
+		{
+			avatar_url_buffer[MAX_URL_SIZE - 1] = 0;
+			config.options.avatarUrl			= std::string(avatar_url_buffer);
+			config.SaveOptions();
+			show_avatar_settings				= false;
+			show_options						= true;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear"))
+		{
+			avatar_url_buffer[0] = 0;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel"))
+		{
+			show_avatar_settings = false;
+			show_options		 = true;
+		}
 		ImGui::EndTable();
 	}
 	ImGuiEnd();
@@ -2605,7 +2783,8 @@ void Gui::MenuBar2D()
 {
 	auto &config = client::Config::GetInstance();
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.00f, 0.00f, 0.0f));
-	buttonSize={1.5f*config.options.uiFontSize, (float)config.options.uiFontSize};
+	//ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+	buttonSize={1.5f*config.options.uiFontSize, 1.5f*(float)config.options.uiFontSize};
 	if (ImGui::Button(ICON_FK_RENREN,  *(ImVec2*)&buttonSize))
 	{
 		cancelConnectHandler(current_tab_context);
@@ -2735,6 +2914,7 @@ void Gui::MenuBar2D()
 			TIMED_TOOLTIP("Dev");
 		}
 	}
+	//ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
 }
 
@@ -2932,7 +3112,11 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		ImGuiEnd();
 	}
 
-	if (show_options)
+	if (show_avatar_settings)
+	{
+		ShowAvatarSettings2D();
+	}
+	else if (show_options)
 	{
 		ShowSettings2D();
 	}
@@ -3026,6 +3210,36 @@ void Gui::MainOptions()
 				}
 			}
 			config.options.uiFontSize = (unsigned int)best;
+		}
+	}
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##Volume", "Volume");
+		ImGui::TableNextColumn();
+		float vol = config.options.volume;
+		if (ImGui::SliderFloat("##volume", &vol, 0.0f, 1.0f, "%.2f"))
+		{
+			if (vol < 0.0f) vol = 0.0f;
+			if (vol > 1.0f) vol = 1.0f;
+			config.options.volume = vol;
+		}
+	}
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##AvatarLabel", "Avatar");
+		ImGui::TableNextColumn();
+		if (ImGui::Button("Avatar..."))
+		{
+			// Seed the edit buffer from the persisted value so the sub-page
+			// opens showing the current URL (or empty when none is set).
+			const std::string &u = config.options.avatarUrl;
+			size_t n = std::min((size_t)(MAX_URL_SIZE - 1), u.size());
+			memcpy(avatar_url_buffer, u.c_str(), n);
+			avatar_url_buffer[n] = 0;
+			show_avatar_settings = true;
+			show_options         = false;
 		}
 	}
 }

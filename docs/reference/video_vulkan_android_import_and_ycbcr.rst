@@ -4,7 +4,7 @@
 Video with Vulkan on Android
 ############################
 
-Simul's Android client supports the decoding of video streams through the use of the Android NDK AMedia and AImage libraries. See :ref:`video_ndk_decoding`. We currently require the support of these two Vulkan device extensions:
+Teleport's Android client supports the decoding of video streams through the use of the Android NDK AMedia and AImage libraries. See :ref:`video_ndk_decoding`. We currently require the support of these two Vulkan device extensions:
 
 * VK_KHR_sampler_ycbcr_conversion (https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_KHR_sampler_ycbcr_conversion.html).
 * VK_ANDROID_external_memory_android_hardware_buffer (https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VK_ANDROID_external_memory_android_hardware_buffer.html).
@@ -19,7 +19,7 @@ When available from Khronos, that and suitable drivers and runtimes are availabl
 Importing a Video Stream into Vulkan
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Simul's Android client has ``class teleport::android::NdkVideoDecoder`` that interfaces with ``class teleport::android::VideoDecoderBackend``, which extends ``class avs::DecoderBackendInterface``. The NdkVideoDecoder sets up a ``AMediaCodec`` Decoder and ``AImageListener``, from which an ``AImage`` and its ``AHardwareBuffer`` can be obtained. The ``AHardwareBuffer`` is obtained from the ``AImage`` by calling ``AImage_getHardwareBuffer()``; and a ``AHardwareBuffer_Desc`` can also be obtained by calling ``AHardwareBuffer_describe()``. From this point the ``class NdkVideoDecoder`` uses the VK_ANDROID_external_memory_android_hardware_buffer extension to import the memory held by the ``AHardwareBuffer`` into Vulkan.
+Teleport's Android client has ``class teleport::android::NdkVideoDecoder`` that interfaces with ``class teleport::android::VideoDecoderBackend``, which extends ``class avs::DecoderBackendInterface``. The NdkVideoDecoder sets up a ``AMediaCodec`` Decoder and ``AImageListener``, from which an ``AImage`` and its ``AHardwareBuffer`` can be obtained. The ``AHardwareBuffer`` is obtained from the ``AImage`` by calling ``AImage_getHardwareBuffer()``; and a ``AHardwareBuffer_Desc`` can also be obtained by calling ``AHardwareBuffer_describe()``. From this point the ``class NdkVideoDecoder`` uses the VK_ANDROID_external_memory_android_hardware_buffer extension to import the memory held by the ``AHardwareBuffer`` into Vulkan.
 The following is brief description on how this is implemented:
 
 * We call ``vkGetAndroidHardwareBufferPropertiesANDROID()`` filling out the chained structures: ``VkAndroidHardwareBufferPropertiesANDROID`` and ``VkAndroidHardwareBufferFormatPropertiesANDROID``.
@@ -51,21 +51,21 @@ The following is brief description on how this is implemented:
 
 Flow chart:
 
-.. image:: /docs/images/reference/AMediaCodecToVkImageAndVkDeviceMemory.png
+.. image:: AMediaCodecToVkImageAndVkDeviceMemory.png
   :width: 800
   :alt: AMediaCodec to VkImage and VkDeviceMemory.
 
 Vulkan Sampler YCbCr Conversion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Simul's Rendering library *Platform* (https://github.com/teleportxr/Platform/tree/dev) supports the use of YCbCr samplers for Vulkan. 
+Teleport's Rendering library *Platform* (https://github.com/teleportxr/Platform/tree/dev) supports the use of YCbCr samplers for Vulkan. 
 
 YCbCr Colour Space
 ------------------
 
 YCbCr is favoured over RGB for video broadcasting and streaming as the format implicitly compresses the video data, saving on bandwidth. YCbCr is based on the YUV standard for broadcast television, wherein the video signal is split into a luma (Y) and two chroma (Cb/Cr) components. It is vital to remember that the chroma components are defined to be the difference between the original colour and the luma signal, and therefore the chroma components are signed values ranging from -0.5 to 0.5, whereas the luma component ranges from 0.0 to 1.0, in a signed normalised co-ordinate space.
 
-.. image:: /docs/images/reference/YCbCr.gif
+.. image:: YCbCr.gif
   :width: 800
   :alt: The YCbCr colour space.
 
@@ -80,7 +80,7 @@ Further compression of the video data can be achieved by downsampling the chroma
 * a: number of chrominance samples (Cb, Cr) in the first row of J pixels.
 * b: number of changes of chrominance samples (Cb, Cr) between first and second row of J pixels.
 
-.. image:: /docs/images/reference/ChromaSubsampling.png
+.. image:: ChromaSubsampling.png
   :width: 800
   :alt: Chroma Subsampling types.
 
@@ -136,11 +136,11 @@ This qualifier refers to the how the data is organised in memory.
 +------+-------------+-------------------------------------------------------------------------------------------------------------------------+
 
 
-.. image:: /docs/images/reference/YUV_formats.png
+.. image:: YUV_formats.png
   :width: 800
   :alt: Layouts of alternative colour formats.
 
-.. image:: /docs/images/reference/800px-Yuv420.svg.png
+.. image:: 800px-Yuv420.svg.png
   :width: 800
   :alt: Layout of a YUV420 image.
 
@@ -227,17 +227,17 @@ The downsampling method used on the server must match the upsampling method used
 
 Reference: `Khronos Chroma Reconstruction <https://registry.khronos.org/vulkan/specs/1.3/html/chap16.html#textures-chroma-reconstruction>`_
 
-Simul's Implementation
+Teleport's Implementation
 ----------------------
 
-Simul's Implementation uses 4:2:0 NV12 Semi Planar, BT.709. 
+Teleport's Implementation uses 4:2:0 NV12 Semi Planar, BT.709. 
 On Meta Quest and Meta Quest 2, the ``AMediaCodec`` selects a vendor specific format ``OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m``. This is `Khronos OpenMax <https://www.khronos.org/openmax/>`_ `Qualcomm <https://www.qualcomm.com/home>`_ extension that is specific to Qualcomm SoCs (System On Chip) such as the Snapdragon 835/Adreno 540 (Meta Quest) and the Qualcomm Snapdragon XR2/Adreno 650 (Meta Quest 2).
 
 We create a ``VKSamplerYcbcrConversionKHR`` from a ``VkSamplerYcbcrConversionCreateInfoKHR``. The majority of the memebers of the structure can filled out using the ``VkAndroidHardwareBufferFormatPropertiesANDROID`` structure acquired earlier. Here again ``VkSamplerYcbcrConversionCreateInfoKHR::format`` is set to ``VK_FORMAT_UNDEFINED`` as the format is defined in the chained ``VkExternalFormatANDROID`` structure. ``VkComponentMapping`` is set to ``VK_COMPONENT_SWIZZLE_IDENTITY`` for the R, G, B and A values. The component remapping is useful for when the Cb and Cr components are swapped such as the NV21 memory layout for 4:2:0. For ``VkSamplerYcbcrConversionCreateInfoKHR::chromaFilter`` we use ``VK_FILTER_NEAREST`` so as not to 'blend' between the chrominance pixels, and we disable ``VkSamplerYcbcrConversionCreateInfoKHR::forceExplicitReconstruction``.
 
 With the ``VKSamplerYcbcrConversionKHR`` created, we assign this to ``VkSamplerYcbcrConversionInfoKHR::conversion`` and chain the ``VkSamplerYcbcrConversionInfoKHR`` structure into a ``VkSamplerCreateInfo`` structure for ``platform::vulkan::RenderPlatform``'s single video sampler and into a ``VkImageViewCreateInfo`` structure for each instance of ``platform::vulkan::Texture`` where a YCbCr conversion is needed.
 
-.. image:: /docs/images/reference/VKSamplerYcbcrConversionKHRCreationAndSetUpForVkImageViewAndVkSampler.png
+.. image:: VKSamplerYcbcrConversionKHRCreationAndSetUpForVkImageViewAndVkSampler.png
   :width: 800
   :alt: VKSamplerYcbcrConversionKHR creation and set up for VkImageView and VkSampler.
 

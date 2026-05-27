@@ -6,12 +6,7 @@ Input
 
 Teleport has a dynamic input model: the server tells the client which inputs it expects, and the client reports their values each frame. Inputs are not hard-coded into the protocol -- the server can declare anything from a single boolean button up to dozens of named axes per session.
 
-Reference implementations:
-
-* Wire enums — :cpp:enum:`teleport::core::InputType`, typedef ``InputId`` (``TeleportCore/InputTypes.h``).
-* Server declaration — :cpp:struct:`teleport::core::SetupInputsCommand`, :cpp:struct:`teleport::core::InputDefinitionNetPacket`.
-* Client mapping — :cpp:class:`teleport::client::OpenXR` (``OpenXR::OnInputsSetupChanged``).
-* Client messages — :cpp:struct:`teleport::core::InputStatesMessage`, :cpp:struct:`teleport::core::InputEventsMessage`.
+Reference implementations (wire enums ``teleport::core::InputType`` and typedef ``InputId`` in ``TeleportCore/InputTypes.h``; server declaration ``teleport::core::SetupInputsCommand`` and ``teleport::core::InputDefinitionNetPacket``; client mapping ``teleport::client::OpenXR`` via ``OpenXR::OnInputsSetupChanged``; client messages ``teleport::core::InputStatesMessage`` and ``teleport::core::InputEventsMessage``).
 
 Negotiation: SetupInputsCommand
 ===============================

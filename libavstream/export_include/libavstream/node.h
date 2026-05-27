@@ -10,9 +10,6 @@ namespace avs
 {
 	extern void AVSTREAM_API ConvertTransform(AxesStandard fromStandard, AxesStandard toStandard, Transform &transform);
 	extern void AVSTREAM_API ConvertTransformMatrix(AxesStandard fromStandard, AxesStandard toStandard, mat4 &transform);
-	extern void AVSTREAM_API ConvertRotation(AxesStandard fromStandard, AxesStandard toStandard, vec4 &rotation);
-	extern void AVSTREAM_API ConvertPosition(AxesStandard fromStandard, AxesStandard toStandard, vec3 &position);
-	extern void AVSTREAM_API ConvertScale(AxesStandard fromStandard, AxesStandard toStandard, vec3 &scale);
 	extern int8_t AVSTREAM_API ConvertAxis(AxesStandard fromStandard, AxesStandard toStandard, int8_t axis);
 	
 	//char (*__kaboom)[sizeof( std::string )] = 1;

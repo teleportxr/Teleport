@@ -7,7 +7,7 @@ cmake_path(CONVERT "${CMAKE_CURRENT_SOURCE_DIR}/../" TO_CMAKE_PATH_LIST TELEPORT
 set(pc_client_HEADER_DIRS ${TELEPORT_ROOT_DIR}/pc_client)
 set(AndroidClient_HEADER_DIRS ${TELEPORT_ROOT_DIR}/AndroidClient)
 #message("pc_client_HEADER_DIRS ${pc_client_HEADER_DIRS}")
-set(AV ${TELEPORT_ROOT_DIR}/libavstream/include/libavstream)
+set(AV ${TELEPORT_ROOT_DIR}/libavstream/include/libavstream) 
 set(AV_EXPORT ${TELEPORT_ROOT_DIR}/libavstream/export_include/libavstream)
 set(libavstream_HEADER_DIRS ${AV} ${AV}/audio ${AV}/decoders ${AV}/encoders ${AV}/geometry ${AV}/network ${AV}/platforms ${AV}/stream ${AV}/surfaces ${AV_EXPORT})
 

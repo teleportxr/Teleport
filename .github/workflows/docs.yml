@@ -1,4 +1,4 @@
-name: Makefile CI
+name: Docs
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
       run: |
         sudo apt-get update -y
         sudo apt-get install -y \
-          libvulkan-dev libpulse-dev libssl-dev \
+          libvulkan-dev libpulse-dev libsecret-1-dev libssl-dev \
           doxygen graphviz \
           python3-sphinx python3-breathe python3-myst-parser python3-sphinxcontrib.jquery python3-pip \
           libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libxkbcommon0 libxcomposite1 \

@@ -76,7 +76,9 @@ namespace teleport
 			void Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager);
 			void Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &animManager);
 			void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
+			void Canvases(const ResourceManager<avs::uid, clientrender::TextCanvas> &textCanvasManager);
 			void Lights(const ResourceManager<avs::uid, clientrender::Light> &lightManager);
+			void Lighting(clientrender::GeometryCache *geometryCache);
 			void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>&);
 			void CubemapOSD(platform::crossplatform::Texture *videoTexture);
 			void TagOSD(std::vector<SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
@@ -166,6 +168,7 @@ namespace teleport
 			void DarkStyle();
 			void RebindStyle();
 			void ShowSettings2D();
+			void ShowAvatarSettings2D();
 			void MenuBar2D();
 			void MainOptions();
 			void ListBookmarks();
@@ -219,6 +222,14 @@ namespace teleport
 			std::string selected_url;
 			bool show_bookmarks = false;
 			bool show_options = false;
+			//! When true the settings panel is replaced with a sub-page for
+			//! editing the avatar URL. Reached via the "Avatar..." button on
+			//! the main settings page (ShowSettings2D).
+			bool show_avatar_settings = false;
+			//! Edit buffer for the avatar URL on the avatar settings sub-page.
+			//! Initialised from client::Config::options.avatarUrl when the
+			//! sub-page is opened, and written back when the user clicks Save.
+			char avatar_url_buffer[MAX_URL_SIZE] = {0};
 			platform::crossplatform::Texture *vrHeadsetIconTexture = nullptr;
 			platform::crossplatform::Texture *viveControllerTexture = nullptr;
 			bool connect_please = false;

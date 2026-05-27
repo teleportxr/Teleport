@@ -8,6 +8,7 @@
 
 namespace avs
 {
+
 	/*!
 	 * Video encoder node `[input-active, output-active, 1/1]`
 	 *

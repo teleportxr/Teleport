@@ -58,7 +58,7 @@ using namespace clientrender;
 using namespace platform;
 static Renderer *rendererInstance = nullptr;
 
-void msgHandler(avs::LogSeverity severity, const char *msg, void *userData)
+void			 msgHandler(avs::LogSeverity severity, const char *msg, void *userData)
 {
 	if (severity > avs::LogSeverity::Warning)
 	{
@@ -805,8 +805,8 @@ void Renderer::SetRenderPose(crossplatform::GraphicsDeviceContext &deviceContext
 	// MUST call init each frame, or whenever the matrices change.
 	deviceContext.viewStruct.Init();
 	// transform current mouse/pointer direction:
-	
-	platform::crossplatform::Quaternionf q				 = *((platform::crossplatform::Quaternionf*)&originPose.orientation);
+
+	platform::crossplatform::Quaternionf q				 = *((platform::crossplatform::Quaternionf *)&originPose.orientation);
 	renderState.current_controller_dir					 = (!q).RotateVector(renderState.controller_dir);
 
 	crossplatform::MultiviewGraphicsDeviceContext *mvgdc = deviceContext.AsMultiviewGraphicsDeviceContext();
@@ -832,7 +832,7 @@ teleport::core::Pose Renderer::GetOriginPose(avs::uid server_uid)
 	if (origin_node)
 	{
 		origin_pose.position	= packed(origin_node->GetGlobalPosition());
-		vec4 r=origin_node->GetGlobalRotation();
+		vec4 r					= origin_node->GetGlobalRotation();
 		origin_pose.orientation = packed(r);
 	}
 
@@ -868,11 +868,11 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 			current_tab_context = client::TabContext::AddTabContext();
 		}
 		// std::shared_ptr<client::TabContext> tabContext = client::TabContext::GetTabContext(current_tab_context);
-		// tabContext->ConnectTo("home.teleportvr.io");
+		// tabContext->ConnectTo("home.teleportxr.io");
 	}
 #endif
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "RenderView");
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "Setup");
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "RenderView");
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "Setup");
 	bool mv = (deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr);
 	if (renderState.multiview != mv)
 	{
@@ -951,8 +951,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	renderState.next_nearest_link_uid		= 0;
 	renderState.next_nearest_link_cache_uid = 0;
 	renderState.next_nearest_link_distance	= 1e10f;
-	SIMUL_COMBINED_PROFILE_END(deviceContext)
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "Servers");
+	PLATFORM_COMBINED_PROFILE_END(deviceContext)
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "Servers");
 	for (const auto &server_uid : server_uids)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
@@ -972,8 +972,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 			}
 		}
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 
 	// Init the viewstruct in local space - i.e. with no server offsets.
 	SetRenderPose(deviceContext, teleport::core::Pose());
@@ -1082,7 +1082,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 										if (pose_index >= 0)
 										{
 											auto				   &pose = poses[pose_index];
-											clientrender::Transform tr(pose.position, *((quat*)(&pose.orientation)), {1.f, 1.f, 1.f});
+											clientrender::Transform tr(pose.position, *((quat *)(&pose.orientation)), {1.f, 1.f, 1.f});
 											node->SetGlobalTransform(tr);
 										}
 									}
@@ -1635,9 +1635,6 @@ void Renderer::ResizeView(int view_id, int W, int H)
 }
 static platform::core::Timer timer;
 #define ONSCREEN_PROF 1
-#if ONSCREEN_PROF
-platform::core::DefaultProfiler cpuProfiler;
-#endif
 void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture, int w, int h, long long frame, void *context_allocator)
 {
 	if (reload_shaders)
@@ -1660,15 +1657,19 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	deviceContext.predictedDisplayTimeS		   = client::ClientTime::GetInstance().GetTimeS();
 #if ONSCREEN_PROF
 #if PLATFORM_INTERNAL_PROFILING
-	platform::core::SetProfilingInterface(GET_THREAD_ID(), &cpuProfiler);
-	cpuProfiler.SetMaxLevel(12);
+	renderPlatform->GetGpuProfiler()->RestoreDeviceObjects(renderPlatform);
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
 	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
-	renderPlatform->GetGpuProfiler()->StartFrame(deviceContext);
 #endif
-	SIMUL_COMBINED_PROFILE_STARTFRAME(deviceContext)
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "all");
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
+	{
+		platform::crossplatform::GpuProfilingInterface *gpuProfilingInterface = platform::crossplatform::GetGpuProfilingInterface(deviceContext);
+		if (gpuProfilingInterface)
+		{
+			gpuProfilingInterface->StartFrame(deviceContext);
+		}
+	}
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "all");
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "Renderer::Render");
 #endif
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
@@ -1736,13 +1737,13 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 		renderState.hDRRenderer->Render(deviceContext, renderState.hdrFramebuffer->GetTexture(), 1.0f, gamma);
 	}
 #if ONSCREEN_PROF
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 	static char c = 0;
 	c--;
 	if (!c)
 	{
 		std::string &profiling_text = gui.GetProfilingText();
-		profiling_text				= cpuProfiler.GetDebugText();
+		//profiling_text				= cpuProfiler.GetDebugText();
 
 		auto *mem					= renderPlatform->GetMemoryInterface();
 		if (mem)
@@ -1755,7 +1756,7 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 		}
 	}
 
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 #endif
 	if (renderState.openXR->HaveXRDevice())
 	{
@@ -1774,10 +1775,7 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	}
 	errno = 0;
 #if ONSCREEN_PROF
-#if PLATFORM_INTERNAL_PROFILING
-	renderPlatform->GetGpuProfiler()->EndFrame(deviceContext);
-#endif
-	SIMUL_COMBINED_PROFILE_ENDFRAME(deviceContext)
+	PLATFORM_COMBINED_PROFILE_ENDFRAME(deviceContext)
 #endif
 }
 
@@ -1812,7 +1810,7 @@ void Renderer::UpdateVRGuiMouse()
 	teleport::core::Pose p					  = renderState.openXR->GetActionPose(client::RIGHT_AIM_POSE);
 	// from hand to overlay is diff:
 	vec3					   start		  = *((vec3 *)&p.position);
-	static vec3				   y			  = {0, 1.0f, 0};
+	static constexpr vec3	   y			  = {0.f, 1.f, 0.f};
 	teleport::core::Pose	   overlay_pose	  = renderState.openXR->ConvertGLSpaceToEngineeringSpace(renderState.openXR->overlay.pose);
 	vec3					   overlay_centre = *((vec3 *)&overlay_pose.position);
 	crossplatform::Quaternionf ovrl_q		  = *(crossplatform::Quaternionf *)&overlay_pose.orientation;
@@ -1958,8 +1956,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 				clientrender::AVSTextureHandle th = r->GetInstanceRenderState().avsTexture;
 				if (th)
 				{
-					clientrender::AVSTexture	  &tx = *th;
-					AVSTextureImpl				  *ti = static_cast<AVSTextureImpl *>(&tx);
+					clientrender::AVSTexture &tx = *th;
+					AVSTextureImpl			 *ti = static_cast<AVSTextureImpl *>(&tx);
 					if (ti)
 					{
 						gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);

@@ -6,6 +6,7 @@
 #include "Renderer.h"
 #include "TeleportClient/Log.h"
 #include <format>
+#include <libavstream/network/webrtc_networksource.h>
 #if TELEPORT_CLIENT_USE_VULKAN
 #include "Platform/Vulkan/RenderPlatform.h"
 #endif
@@ -269,8 +270,9 @@ void InstanceRenderer::RecomposeCubemap(crossplatform::GraphicsDeviceContext &de
 
 void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 {
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "InstanceRenderer::RenderView");
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "InstanceRenderer::RenderView");
 	auto						   renderPlatform = deviceContext.renderPlatform;
+	audioPlayer.setVolume(config.options.volume);
 
 	clientrender::AVSTextureHandle th			  = instanceRenderState.avsTexture;
 	clientrender::AVSTexture	  &tx			  = *th;
@@ -365,7 +367,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext &deviceCo
 	{
 		RenderLocalNodes(deviceContext);
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 }
 
 void InstanceRenderer::ApplyCameraMatrices(crossplatform::GraphicsDeviceContext &deviceContext, RenderState &renderState)
@@ -501,7 +503,7 @@ RenderStateTracker renderStateTracker;
 
 void			   InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &deviceContext)
 {
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "initial");
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "initial");
 	ApplyCameraMatrices(deviceContext, renderState);
 	ApplySceneMatrices(deviceContext);
 	double serverTimeS =
@@ -561,28 +563,28 @@ void			   InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContex
 		renderPlatform->SetTexture(deviceContext, renderState.pbrEffect_specularCubemap, specularCubemapTexture);
 		renderPlatform->ApplyResourceGroup(deviceContext, 1);
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "passes");
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "passes");
 	// TODO: Find a way to protect this without locks.
 	std::lock_guard<std::mutex> passRenders_lock(passRenders_mutex);
 	for (auto p : passRenders)
 	{
 		RenderPass(deviceContext, *p.second.get(), p.first);
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "links");
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "links");
 	for (const auto &l : linkRenders)
 	{
 		RenderLink(deviceContext, *l.second.get());
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 
-	SIMUL_COMBINED_PROFILE_START(deviceContext, "canvases");
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, "canvases");
 	for (const auto &c : canvasRenders)
 	{
 		RenderTextCanvas(deviceContext, c.second.get());
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 	if (config.debugOptions.showOverlays)
 	{
 		auto &rootNodes = geometryCache->mNodeManager.GetRootNodes();
@@ -668,7 +670,7 @@ static uint64_t MakeNodeHash(avs::uid root_node_uid, avs::uid cache_uid, avs::ui
 
 void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext &deviceContext, PassRender &p, platform::crossplatform::EffectPass *pass)
 {
-	SIMUL_COMBINED_PROFILE_START(deviceContext, pass->name.c_str());
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, pass->name.c_str());
 	renderPlatform->SetTopology(deviceContext, crossplatform::Topology::TRIANGLELIST);
 
 	p.layout->Apply(deviceContext);
@@ -680,7 +682,7 @@ void InstanceRenderer::RenderPass(platform::crossplatform::GraphicsDeviceContext
 	p.layout->Unapply(deviceContext);
 	renderPlatform->SetLayout(deviceContext, nullptr);
 	renderPlatform->UnapplyPass(deviceContext);
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 }
 
 void InstanceRenderer::AddNodeToInstanceRender(avs::uid cache_uid, SubSceneNodeStates &subSceneNodeStates, avs::uid node_uid)
@@ -1414,7 +1416,7 @@ void InstanceRenderer::ApplyModelMatrix(crossplatform::GraphicsDeviceContext &de
 
 void InstanceRenderer::RenderMaterial(crossplatform::GraphicsDeviceContext &deviceContext, const MaterialRender &materialRender)
 {
-	SIMUL_COMBINED_PROFILE_START(deviceContext, materialRender.material->getName().c_str());
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, materialRender.material->getName().c_str());
 	ApplyMaterialConstants(deviceContext, materialRender.material);
 	for (auto r : materialRender.meshRenders)
 	{
@@ -1424,7 +1426,7 @@ void InstanceRenderer::RenderMaterial(crossplatform::GraphicsDeviceContext &devi
 	{
 		RenderInstancedMeshes(deviceContext, *(i.second.get()));
 	}
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 }
 
 void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceContext, const MeshRender &meshRender)
@@ -1494,11 +1496,11 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 	{
 		return;
 	}
-	SIMUL_COMBINED_PROFILE_START(deviceContext, meshInfo.name.c_str());
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, meshInfo.name.c_str());
 	renderPlatform->SetVertexBuffers(deviceContext, 0, 1, v, nullptr);
 	renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
 	renderPlatform->DrawIndexed(deviceContext, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 }
 
 void InstanceRenderer::RenderInstancedMeshes(crossplatform::GraphicsDeviceContext &deviceContext, const InstancedRender &instancedRender)
@@ -1574,12 +1576,12 @@ void InstanceRenderer::RenderInstancedMeshes(crossplatform::GraphicsDeviceContex
 	{
 		return;
 	}
-	SIMUL_COMBINED_PROFILE_START(deviceContext, meshInfo.name.c_str());
+	PLATFORM_COMBINED_PROFILE_START(deviceContext, meshInfo.name.c_str());
 	renderPlatform->SetVertexBuffers(deviceContext, 0, 2, v, nullptr);
 	renderPlatform->SetIndexBuffer(deviceContext, ib->GetSimulIndexBuffer());
 	renderPlatform->DrawIndexedInstanced(
 		deviceContext, (int)instancedRender.meshInstanceRenders.size(), 0, (int)ib->GetIndexBufferCreateInfo().indexCount, 0, 0);
-	SIMUL_COMBINED_PROFILE_END(deviceContext);
+	PLATFORM_COMBINED_PROFILE_END(deviceContext);
 	renderPlatform->SetVertexBuffers(deviceContext, 1, 1, nullptr, nullptr);
 }
 
@@ -1990,50 +1992,60 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 			clientPipeline.pipeline.link({&clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder});
 		}
 	}
-	// Audio
+	// Audio (Phase 2.4): Opus RTP arriving on the WebRTC audio media track,
+	// decoded to 48 kHz int16 mono PCM and pushed into the AudioStreamTarget.
 	{
-		clientPipeline.avsAudioDecoder.configure(60);
 		audio::AudioSettings audioSettings;
 		audioSettings.codec			= audio::AudioCodec::PCM;
 		audioSettings.numChannels	= 1;
 		audioSettings.sampleRate	= 48000;
-		audioSettings.bitsPerSample = 32;
+		audioSettings.bitsPerSample = 16;
 		audioPlayer.configure(audioSettings);
 		audioStreamTarget.reset(new audio::AudioStreamTarget(&audioPlayer));
-		clientPipeline.avsAudioTarget.configure(audioStreamTarget.get());
 
-		clientPipeline.audioQueue.configure(4096, 120, "AudioQueue");
+		clientPipeline.opusAudioDecoder.configure(audioSettings.numChannels, audioSettings.sampleRate);
+		clientPipeline.opusAudioTarget.configure(audioStreamTarget.get());
+		clientPipeline.pipeline.link({&clientPipeline.opusAudioDecoder, &clientPipeline.opusAudioTarget});
 
-		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.audioQueue);
-		avs::PipelineNode::link(clientPipeline.audioQueue, clientPipeline.avsAudioDecoder);
-		clientPipeline.pipeline.link({&clientPipeline.avsAudioDecoder, &clientPipeline.avsAudioTarget});
+		// Route depacketized Opus frames from the WebRTC audio track into the decoder queue.
+		// The mid parameter will be used by Phase 2b AudioSourceMapping for per-peer routing.
+		if (auto *webrtcSource = dynamic_cast<avs::WebRtcNetworkSource *>(clientPipeline.source.get()))
+		{
+			auto *decoderPtr = &clientPipeline.opusAudioDecoder;
+			webrtcSource->setOpusFrameCallback(
+				[decoderPtr](const std::string & /*mid*/, const uint8_t *data, size_t size)
+				{
+					decoderPtr->submitOpusFrame(data, size);
+				});
+		}
 
-		// Audio Input
+		// Phase 2.5: outbound mic over WebRTC media track. Captured PCM is fed
+		// into the Opus encoder; encoded packets are forwarded directly to
+		// WebRtcNetworkSource::sendOpusFrame, which RTP-wraps and transmits
+		// them on the sendrecv audio mid.
 		if (setupCommand.audio_input_enabled)
 		{
-			int					   framerate	   = 60;
-			uint32_t			   udpBufferSize   = static_cast<uint32_t>(clientPipeline.source->getSystemBufferSize());
-			int					   maxBandwidthKpS = udpBufferSize * framerate;
-			audio::NetworkSettings networkSettings = {static_cast<int32_t>(maxBandwidthKpS),
-													  static_cast<int32_t>(udpBufferSize),
-													  setupCommand.requiredLatencyMs,
-													  (int32_t)setupCommand.idle_connection_timeout};
-
-			audioInputNetworkPipeline.reset(new audio::NetworkPipeline());
-			audioInputQueue.configure(4096, 120, "AudioInputQueue");
-			audioInputNetworkPipeline->initialise(networkSettings, &audioInputQueue);
-
-			// The callback will be called when audio input is received.
-			auto f = [this](const uint8_t *data, size_t dataSize) -> void
-			{
-				size_t bytesWritten;
-				if (audioInputQueue.write(nullptr, data, dataSize, bytesWritten))
+			auto *webrtcSource = dynamic_cast<avs::WebRtcNetworkSource *>(clientPipeline.source.get());
+			clientPipeline.opusAudioEncoder.configure(audioSettings.numChannels, audioSettings.sampleRate);
+			clientPipeline.opusAudioEncoder.setEncodedFrameCallback(
+				[webrtcSource](const uint8_t *data, size_t size)
 				{
-					audioInputNetworkPipeline->process();
-				}
+					if (webrtcSource)
+						webrtcSource->sendOpusFrame(data, size);
+				});
+			clientPipeline.pipeline.add(&clientPipeline.opusAudioEncoder);
+
+			auto *encoderPtr = &clientPipeline.opusAudioEncoder;
+			auto recordingFn = [encoderPtr](const uint8_t *data, size_t dataSize) -> void
+			{
+				encoderPtr->submitPcmFrame(data, dataSize);
+				// Drain available 20 ms frames immediately on the capture thread
+				// so we don't depend on the pipeline tick to flush latency-sensitive
+				// audio packets.
+				encoderPtr->process(0, 0);
 			};
 			// The audio player will stop recording automatically when deconfigured.
-			audioPlayer.startRecording(f);
+			audioPlayer.startRecording(recordingFn);
 		}
 	}
 	auto &resourceCreator = ResourceCreator::GetInstance();
@@ -2050,15 +2062,20 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 		clientPipeline.pipeline.link({&clientPipeline.avsGeometryDecoder, &clientPipeline.avsGeometryTarget});
 	}
 	{
-		clientPipeline.reliableOutQueue.configure(3000 * 64, "Reliable out");
+		clientPipeline.reliableFromServerQueue.configure(3000 * 64, "Reliable from server");
 		clientPipeline.commandDecoder.configure(sessionClient, "Reliable Decoder");
-		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableOutQueue);
-		clientPipeline.pipeline.link({&clientPipeline.reliableOutQueue, &clientPipeline.commandDecoder});
+		avs::PipelineNode::link(*(clientPipeline.source.get()), clientPipeline.reliableFromServerQueue);
+		clientPipeline.pipeline.link({&clientPipeline.reliableFromServerQueue, &clientPipeline.commandDecoder});
 	}
-	// And the generic queue for messages TO the server:
+	// And the generic queues for messages TO the server:
 	{
 		clientPipeline.unreliableToServerQueue.configure(3000 * 64, "Unreliable in");
 		avs::PipelineNode::link(clientPipeline.unreliableToServerQueue, *(clientPipeline.source.get()));
+	}
+	{
+		// Reliable queue for acks and other guaranteed-delivery messages to the server (WebRTC channel 100).
+		clientPipeline.reliableToServerQueue.configure(3000 * 64, "Reliable to server");
+		avs::PipelineNode::link(clientPipeline.reliableToServerQueue, *(clientPipeline.source.get()));
 	}
 	// Tow special-purpose queues for time-sensitive messages TO the server:
 	{
@@ -2095,7 +2112,9 @@ void InstanceRenderer::OnVideoStreamClosed()
 	TELEPORT_INTERNAL_COUT(Default, "VIDEO STREAM CLOSED\n");
 	clientPipeline.pipeline.deconfigure();
 	clientPipeline.videoQueue.deconfigure();
-	clientPipeline.audioQueue.deconfigure();
+	clientPipeline.opusAudioDecoder.deconfigure();
+	clientPipeline.opusAudioTarget.deconfigure();
+	clientPipeline.opusAudioEncoder.deconfigure();
 	clientPipeline.geometryQueue.deconfigure();
 
 	receivedInitialPos = 0;

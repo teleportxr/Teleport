@@ -32,7 +32,7 @@ Signaling
 
 The WebSocket is open. The first JSON frame the client sends is ``connect``, carrying its ``identity`` and ``client_id``. The server may close the WebSocket at this point if the identity is rejected. See :doc:`signaling` for the message catalogue.
 
-Once the server accepts the connection, the WebRTC SDP exchange begins (``offer`` / ``answer`` / ``candidate``). When all six SCTP data channels have opened, the server transmits the binary :cpp:struct:`teleport::core::Handshake` frame.
+Once the server accepts the connection, the WebRTC SDP exchange begins (``offer`` / ``answer`` / ``candidate``). When all six SCTP data channels have opened, the server transmits the binary ``Handshake`` frame (reference: ``teleport::core::Handshake``; layout in :doc:`service`).
 
 Handshake
 ---------
@@ -78,29 +78,38 @@ The protocol does not currently define mid-session reconnection. A new ``Handsha
 Connection state enumeration
 ============================
 
-The reference client exposes the underlying transport state through :cpp:enum:`avs::StreamingConnectionState`:
+The reference client exposes the underlying transport state through the values below (reference: ``avs::StreamingConnectionState``, a ``uint8_t``):
 
-.. list-table::
-   :widths: 10 30
+.. list-table:: StreamingConnectionState
+   :widths: 8 22 50
    :header-rows: 1
 
    * - Value
+     - Name
      - Meaning
-   * - ``UNINITIALIZED``
+   * - 0
+     - ``UNINITIALIZED``
      - The pipeline has not been configured.
-   * - ``NEW_UNCONNECTED``
+   * - 1
+     - ``NEW_UNCONNECTED``
      - WebSocket open, awaiting WebRTC negotiation.
-   * - ``CONNECTING``
+   * - 2
+     - ``CONNECTING``
      - Performing the SDP/ICE exchange.
-   * - ``CONNECTED``
+   * - 3
+     - ``CONNECTED``
      - All six data channels are open; ``Handshake`` may be exchanged.
-   * - ``DISCONNECTED``
+   * - 4
+     - ``DISCONNECTED``
      - Clean shutdown.
-   * - ``FAILED``
+   * - 5
+     - ``FAILED``
      - The transport reported an unrecoverable error.
-   * - ``CLOSED``
+   * - 6
+     - ``CLOSED``
      - The WebSocket was closed by the peer.
-   * - ``ERROR_STATE``
+   * - 7
+     - ``ERROR_STATE``
      - Internal error in the local pipeline.
 
 Timeouts

@@ -29,7 +29,6 @@
 #else
 #include "TeleportAudio/LinuxAudioPlayer.h"
 #endif
-#include "TeleportAudio/NetworkPipeline.h"
 #include <chrono>
 
 namespace teleport
@@ -161,8 +160,6 @@ namespace teleport
 			teleport::audio::LinuxAudioPlayer audioPlayer;
 #endif
 			std::unique_ptr<teleport::audio::AudioStreamTarget> audioStreamTarget;
-			std::unique_ptr<teleport::audio::NetworkPipeline> audioInputNetworkPipeline;
-			avs::Queue audioInputQueue;
 			static constexpr uint32_t NominalJitterBufferLength = 0;
 			static constexpr uint32_t MaxJitterBufferLength		= 50;
 

@@ -3,7 +3,7 @@ name: build_pc_client
 on:
   workflow_dispatch:
   push:
-    branches: [ "main_disabled" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -21,12 +21,12 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6.0.2
       with:
-        lfs: 'true'
+        lfs: 'false'
         submodules: 'false'
     - name: Git Submodules
       run: |
         cd ${{github.workspace}}
-        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/curl" "libavstream/thirdparty/efp"
+        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/efp"
         cd ${{github.workspace}}/thirdparty/libdatachannel
     - name: Log
       shell: cmd
@@ -104,11 +104,7 @@ jobs:
         name: installer
         path: artifacts/*.*
         github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
-    - name: Setup tmate session
-      if: failure()
-      uses: mxschmitt/action-tmate@v3.23
-      with:
-        limit-access-to-actor: true
+
 
   release:
     runs-on: windows-2022

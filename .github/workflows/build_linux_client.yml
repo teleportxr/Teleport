@@ -1,0 +1,118 @@
+name: build_linux_client
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      WORKFLOW_BUILD_TYPE: Release
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6.0.2
+      with:
+        lfs: 'false' 
+        submodules: 'false'
+
+    - name: Git Submodules
+      run: |
+        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/efp"
+
+    - name: Log
+      run: |
+        git log -1 --pretty=%B > release_notes.md
+        echo -n "TELEPORT_COMMIT=" > teleport_commit.properties
+        git rev-parse --short HEAD >> teleport_commit.properties
+        echo "TELEPORT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        git log -10 --date=format:"%a %d %b" --no-merges --pretty=format:"%cd : %s" > teleport_log.md
+
+    - name: Dotenv Action
+      uses: falti/dotenv-action@v1.2.0
+      with:
+        path: teleport_commit.properties
+        log-variables: true
+        export-variables: true
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ninja-build \
+          libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+          libgl1-mesa-dev \
+          libwayland-dev wayland-protocols libxkbcommon-dev \
+          libpulse-dev \
+          libopenxr-dev libsecret-1-dev \
+          dpkg-dev
+
+    - name: Vulkan
+      uses: humbletim/install-vulkan-sdk@v1.2
+      with:
+        version: 1.3.290.0
+
+    - name: Running cmake (linux)
+      run: |
+        cd ${{ github.workspace }}
+        mkdir build_pc_client
+        cmake -S . -B build_pc_client -G Ninja \
+          -DLIBAV_USE_CUDA=false \
+          -DPLATFORM_USE_ASSIMP=false \
+          -DPLATFORM_BUILD_ASSIMP=false \
+          -DTELEPORT_SOLUTION_NAME=TeleportClient \
+          -DVULKAN_SDK="$VULKAN_SDK" \
+          -DVULKAN_SDK_DIR="$VULKAN_SDK" \
+          -DVulkan_LIBRARY="$VULKAN_SDK/lib/libvulkan.so" \
+          -DVulkan_INCLUDE_DIR="$VULKAN_SDK/include" \
+          -DVulkan_GLSLANG_VALIDATOR_EXECUTABLE="$VULKAN_SDK/bin/glslangValidator" \
+          -DVulkan_GLSLC_EXECUTABLE="$VULKAN_SDK/bin/glslc" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DENABLE_ENCRYPTION=false \
+          -DPLATFORM_SUPPORT_OPENGL=false \
+          -DPLATFORM_SUPPORT_VULKAN=true \
+          -DSIMUL_BUILD_SAMPLES=false \
+          -DPLATFORM_BUILD_SAMPLES=false \
+          -DTELEPORT_CLIENT_USE_VULKAN=true \
+          -DSIMUL_DEBUG_SHADERS=false
+
+    - name: Build
+      run: cmake --build ${{ github.workspace }}/build_pc_client --config ${{ env.WORKFLOW_BUILD_TYPE }}
+
+    - name: Test
+      working-directory: ${{ github.workspace }}/build_pc_client
+      run: ctest -C ${{ env.WORKFLOW_BUILD_TYPE }}
+
+    - name: Installer
+      run: |
+        mkdir artifacts
+        cd build_pc_client
+        cpack -G DEB
+        cd ${{ github.workspace }}
+        cp "build_pc_client/TeleportClientInstaller-$TELEPORT_COMMIT-x64.deb" artifacts/ 2>/dev/null || \
+          cp build_pc_client/TeleportClientInstaller*.deb artifacts/
+        cp teleport_commit.properties artifacts/
+        cp release_notes.md artifacts/
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: linux-installer
+        path: artifacts/*.*
+
+  release:
+    runs-on: ubuntu-24.04
+    needs: build
+    timeout-minutes: 20
+    steps:
+    - name: Download a Build Artifact
+      uses: actions/download-artifact@v3.1.0
+      with:
+        name: linux-installer
+        path: installer
+    - name: Check
+      run: ls -R installer

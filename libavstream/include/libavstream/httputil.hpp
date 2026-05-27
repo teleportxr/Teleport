@@ -24,6 +24,7 @@ namespace avs
 		HTTPCallbackFn callbackFn;
 		bool cached = false;		// filled by HTTPUtil when the file is present.
 		std::string cachedFilePath; // filled by HTTPUtil .
+		std::string etag;			// filled by HTTPUtil from cached sidecar; sent as If-None-Match.
 	};
 
 	struct HTTPUtilConfig
@@ -80,7 +81,9 @@ namespace avs
 		{
 		return cert_path.c_str();
 		}
-		std::queue<HTTPPayloadRequest>& GetRequestQueue() { return mRequestQueue; } 
+		std::queue<HTTPPayloadRequest>& GetRequestQueue() { return mRequestQueue; }
+		//! Thread-safe enqueue of an HTTP request.
+		void addRequest(const HTTPPayloadRequest &request);
 
 	private:
 		std::string cacheDirectory;

@@ -4,9 +4,9 @@
 Data Transfer
 #############
 
-The Teleport Data Service is the real-time transport that carries the six logical streams listed in :doc:`service`. Two transports are supported by the reference code:
+The Teleport Data Service is the real-time transport that carries the logical streams listed in :doc:`service`. Two transports are supported by the reference code:
 
-* **WebRTC** (default): used by the reference server (``avs::WebRtcNetworkSink``) and the reference client (``avs::WebRtcNetworkSource``). Recommended for all new implementations.
+* **WebRTC** (default): five SCTP data channels for application payloads plus zero or more RTP media tracks for audio (see :doc:`audio`). Recommended for all new implementations.
 * **SRT + EFP** (optional/legacy): compiled in only when ``TELEPORT_SUPPORT_SRT`` is defined; described at the end of this page for backward compatibility.
 
 Reliability requirements
@@ -27,12 +27,13 @@ Negotiation
 
 A WebRTC PeerConnection is established between client and server using the
 SDP/ICE exchange described in :doc:`signaling`. Once the PeerConnection
-has reached the ``connected`` state, six SCTP data channels are opened.
+has reached the ``connected`` state, five SCTP data channels are opened
+and, if audio is enabled (see :doc:`audio`), one or more RTP audio
+tracks are negotiated in the same SDP.
 
-Each channel has a fixed *label* and a recommended numeric *id*. The
-client's :cpp:class:`avs::WebRtcNetworkSource` and the server's
-:cpp:class:`avs::WebRtcNetworkSink` match channels by **label**, so any
-implementation must use these exact strings:
+Each data channel has a fixed *label* and a recommended numeric *id*.
+Implementations match channels by **label**, so any implementation must
+use these exact strings:
 
 .. list-table:: WebRTC data channels
    :widths: 6 14 7 7 7 25
@@ -56,12 +57,6 @@ implementation must use these exact strings:
      - No
      - No
      - One framed payload per video frame.
-   * - 60
-     - ``audio_server_to_client``
-     - No
-     - No
-     - Yes
-     - Bidirectional. Server-to-client carries the server's audio output; client-to-server carries microphone capture if ``SetupCommand.audio_input_enabled`` is non-zero.
    * - 80
      - ``geometry``
      - Yes
@@ -80,6 +75,20 @@ implementation must use these exact strings:
      - No
      - Yes
      - Per-frame poses, input states, latency pong.
+
+Audio does not use an SCTP data channel; it is carried as WebRTC media
+tracks (RTP / SRTP) negotiated alongside the channels above. See
+:doc:`audio` for the full specification including codec, multi-party
+fan-out, and source identification.
+
+.. note::
+
+   Earlier revisions of this protocol used a sixth SCTP data channel,
+   label ``audio_server_to_client`` (id 60), carrying raw PCM frames.
+   That channel is **deprecated**; new implementations MUST use the
+   media-track transport in :doc:`audio`. Servers MAY continue to open
+   the data channel for one release cycle to preserve backward
+   compatibility, but MUST NOT depend on it.
 
 Framing
 ~~~~~~~
@@ -107,6 +116,27 @@ Recovery
 * **Reliable channels**: SCTP itself guarantees delivery; no
   protocol-level recovery is required.
 
+Reliable channel: dual transport
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Payloads carried on the ``reliable`` data channel (id 100) MAY also be
+exchanged as binary WebSocket frames on the signaling connection
+described in :doc:`signaling`. The payload bytes are identical on both
+transports; the discriminator byte at the start of every payload is
+sufficient to parse it.
+
+Implementations MUST accept reliable-channel payloads on either
+transport, and MUST send reliable-channel payloads on the WebRTC
+``reliable`` data channel when it is in the ``open`` state, falling back
+to a binary WebSocket frame on the signaling connection otherwise. See
+:ref:`signaling_reliable_fallback` for the full normative rules.
+
+This does **not** apply to any other data channel or to the audio
+media tracks: the ``geometry``, ``video``, ``video_tags`` and
+``unreliable`` channels, and the audio RTP tracks described in
+:doc:`audio`, have no signaling-WebSocket fallback and MUST be used
+over WebRTC only.
+
 .. _legacy_srt_efp:
 
 Legacy transport: SRT + EFP
@@ -122,7 +152,7 @@ Transport (SRT) wrapped in the Elastic Frame Protocol (EFP). SRT
 provides retransmission of lost UDP packets; EFP provides framing,
 fragmentation and per-stream sub-addressing inside SRT.
 
-For the Simul fork of SRT, see https://github.com/teleportxr/srt.
+For the Teleport XR fork of SRT, see https://github.com/teleportxr/srt.
 For more on SRT, see https://www.haivision.com/resources/streaming-video-definitions/srt/.
 For EFP, see https://github.com/teleportxr/efp.
 

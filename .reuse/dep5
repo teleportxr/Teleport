@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: teleport
-Upstream-Contact: Roderick Kennedy <contact@teleportvr.io>
+Upstream-Contact: Roderick Kennedy <contact@teleportxr.io>
 Source: https://github.com/simul/teleport
 
 Files: thirdparty/*

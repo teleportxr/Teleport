@@ -8,7 +8,7 @@ The client emits messages over two WebRTC data channels:
 * the **reliable** channel (id 100) for ``Acknowledgement``, ``OrthogonalAcknowledgement``, ``ReceivedResources``, ``ResourceLost``, ``NodeStatus``, ``DisplayInfo`` and ``Handshake`` traffic that must not be lost;
 * the **unreliable** channel (id 120) for per-frame messages: ``ControllerPoses``, ``InputStates``, ``InputEvents``, ``KeyframeRequest`` and ``PongForLatency``.
 
-The :ref:`Handshake <handshake>` is the only message sent over the signaling WebSocket; everything else uses one of the data channels.
+Any **reliable**-channel message MAY instead be sent as a binary frame on the signaling WebSocket. The payload bytes are identical, and a client MUST use this fallback transport whenever the WebRTC ``reliable`` data channel is not yet ``open`` (notably for the initial ``Handshake``). Servers MUST accept reliable messages on either transport for the lifetime of the session; see :ref:`signaling_reliable_fallback`. The ``unreliable`` channel has no such fallback.
 
 The **Client** sends all of its messages in its local units and :ref:`AxesStandard <conventions>`. The **Server** is responsible for converting incoming data to its own internal representation, and for converting outgoing commands to the client's units.
 
@@ -17,7 +17,7 @@ The **Client** sends all of its messages in its local units and :ref:`AxesStanda
 Common header
 =============
 
-Every client-to-server message begins with the 9-byte :cpp:struct:`teleport::core::ClientMessage` header:
+Every client-to-server message begins with the 9-byte ``ClientMessage`` header (reference: ``teleport::core::ClientMessage``):
 
 .. list-table:: ClientMessage header
    :widths: 5 14 30
@@ -45,45 +45,45 @@ Every client-to-server message begins with the 9-byte :cpp:struct:`teleport::cor
      - (never sent)
    * - 1
      - ``Handshake``
-     - :cpp:struct:`teleport::core::Handshake` (sent over the signaling WebSocket; see :ref:`handshake`)
+     - ``teleport::core::Handshake`` (initial send normally goes on the signaling WebSocket via the reliable-channel fallback, see :ref:`handshake` and :ref:`signaling_reliable_fallback`)
    * - 2
      - ``NodeStatus``
-     - :cpp:struct:`teleport::core::NodeStatusMessage`
+     - ``teleport::core::NodeStatusMessage``
    * - 3
      - ``ReceivedResources``
-     - :cpp:struct:`teleport::core::ReceivedResourcesMessage`
+     - ``teleport::core::ReceivedResourcesMessage``
    * - 4
      - ``ControllerPoses``
-     - :cpp:struct:`teleport::core::NodePosesMessage`
+     - ``teleport::core::NodePosesMessage``
    * - 5
      - ``ResourceLost``
-     - :cpp:struct:`teleport::core::ResourceLostMessage`
+     - ``teleport::core::ResourceLostMessage``
    * - 6
      - ``InputStates``
-     - :cpp:struct:`teleport::core::InputStatesMessage`
+     - ``teleport::core::InputStatesMessage``
    * - 7
      - ``InputEvents``
-     - :cpp:struct:`teleport::core::InputEventsMessage`
+     - ``teleport::core::InputEventsMessage``
    * - 8
      - ``DisplayInfo``
-     - :cpp:struct:`teleport::core::DisplayInfoMessage`
+     - ``teleport::core::DisplayInfoMessage``
    * - 9
      - ``KeyframeRequest``
-     - :cpp:struct:`teleport::core::KeyframeRequestMessage`
+     - ``teleport::core::KeyframeRequestMessage``
    * - 10
      - ``PongForLatency``
-     - :cpp:struct:`teleport::core::PongForLatencyMessage`
+     - ``teleport::core::PongForLatencyMessage``
    * - 11
      - ``OrthogonalAcknowledgement``
-     - :cpp:struct:`teleport::core::OrthogonalAcknowledgementMessage`
+     - ``teleport::core::OrthogonalAcknowledgementMessage``
    * - 12
      - ``Acknowledgement``
-     - :cpp:struct:`teleport::core::AcknowledgementMessage`
+     - ``teleport::core::AcknowledgementMessage``
 
 DisplayInfo (id = 8)
 ====================
 
-Reference implementation: :cpp:struct:`teleport::core::DisplayInfoMessage`
+The byte layout (reference: ``teleport::core::DisplayInfoMessage``):
 
 .. list-table:: DisplayInfoMessage
    :widths: 5 14 30
@@ -108,7 +108,7 @@ Reference implementation: :cpp:struct:`teleport::core::DisplayInfoMessage`
 ControllerPoses (id = 4)
 ========================
 
-Reference implementation: :cpp:struct:`teleport::core::NodePosesMessage`. Sent on the **unreliable** channel.
+Sent on the **unreliable** channel (reference: ``teleport::core::NodePosesMessage``).
 
 .. list-table:: NodePosesMessage
    :widths: 5 14 30
@@ -133,7 +133,7 @@ Reference implementation: :cpp:struct:`teleport::core::NodePosesMessage`. Sent o
 ReceivedResources (id = 3)
 ==========================
 
-Reference implementation: :cpp:struct:`teleport::core::ReceivedResourcesMessage`. Sent on the **reliable** channel.
+Sent on the **reliable** channel (reference: ``teleport::core::ReceivedResourcesMessage``).
 
 .. list-table:: ReceivedResourcesMessage
    :widths: 5 14 30
@@ -155,7 +155,7 @@ Reference implementation: :cpp:struct:`teleport::core::ReceivedResourcesMessage`
 NodeStatus (id = 2)
 ===================
 
-Reference implementation: :cpp:struct:`teleport::core::NodeStatusMessage`. Sent on the **reliable** channel to tell the server which nodes the client is currently rendering, and which it has chosen to release.
+Sent on the **reliable** channel to tell the server which nodes the client is currently rendering, and which it has chosen to release (reference: ``teleport::core::NodeStatusMessage``).
 
 .. list-table:: NodeStatusMessage
    :widths: 5 14 30
@@ -183,7 +183,7 @@ Reference implementation: :cpp:struct:`teleport::core::NodeStatusMessage`. Sent 
 ResourceLost (id = 5)
 =====================
 
-Reference implementation: :cpp:struct:`teleport::core::ResourceLostMessage`. Sent on the **reliable** channel to tell the server that a previously-confirmed resource has been lost (e.g. due to a decoder error) and must be re-sent.
+Sent on the **reliable** channel to tell the server that a previously-confirmed resource has been lost (e.g. due to a decoder error) and must be re-sent (reference: ``teleport::core::ResourceLostMessage``).
 
 .. list-table:: ResourceLostMessage
    :widths: 5 14 30
@@ -205,7 +205,7 @@ Reference implementation: :cpp:struct:`teleport::core::ResourceLostMessage`. Sen
 InputStates (id = 6)
 ====================
 
-Reference implementation: :cpp:struct:`teleport::core::InputStatesMessage`. Sent on the **unreliable** channel each frame, after :ref:`SetupInputs <server_to_client>` has been received. Carries the current value of every state-typed input declared by the server. See :doc:`../input` for the full input model.
+Sent on the **unreliable** channel each frame, after :ref:`SetupInputs <server_to_client>` has been received. Carries the current value of every state-typed input declared by the server (reference: ``teleport::core::InputStatesMessage``). See :doc:`../input` for the full input model.
 
 .. list-table:: InputStatesMessage
    :widths: 5 14 30
@@ -233,7 +233,7 @@ Reference implementation: :cpp:struct:`teleport::core::InputStatesMessage`. Sent
 InputEvents (id = 7)
 ====================
 
-Reference implementation: :cpp:struct:`teleport::core::InputEventsMessage`. Sent on the **unreliable** channel when one or more event-typed inputs have fired since the last frame.
+Sent on the **unreliable** channel when one or more event-typed inputs have fired since the last frame (reference: ``teleport::core::InputEventsMessage``).
 
 .. list-table:: InputEventsMessage
    :widths: 5 14 30
@@ -267,7 +267,7 @@ Reference implementation: :cpp:struct:`teleport::core::InputEventsMessage`. Sent
 KeyframeRequest (id = 9)
 ========================
 
-Reference implementation: :cpp:struct:`teleport::core::KeyframeRequestMessage`. Sent on the **unreliable** channel when the video decoder has lost sync; the server forces the encoder to emit the next frame as an IDR.
+Sent on the **unreliable** channel when the video decoder has lost sync; the server forces the encoder to emit the next frame as an IDR (reference: ``teleport::core::KeyframeRequestMessage``).
 
 .. list-table:: KeyframeRequestMessage
    :widths: 5 14 30
@@ -283,7 +283,7 @@ Reference implementation: :cpp:struct:`teleport::core::KeyframeRequestMessage`. 
 PongForLatency (id = 10)
 ========================
 
-Reference implementation: :cpp:struct:`teleport::core::PongForLatencyMessage`. Sent on the **unreliable** channel in response to :ref:`PingForLatency <server_to_client>`. The server uses the round-trip to estimate one-way latency.
+Sent on the **unreliable** channel in response to :ref:`PingForLatency <server_to_client>`. The server uses the round-trip to estimate one-way latency (reference: ``teleport::core::PongForLatencyMessage``).
 
 .. list-table:: PongForLatencyMessage
    :widths: 5 14 30
@@ -305,7 +305,7 @@ Reference implementation: :cpp:struct:`teleport::core::PongForLatencyMessage`. S
 Acknowledgement (id = 12)
 =========================
 
-Reference implementation: :cpp:struct:`teleport::core::AcknowledgementMessage`. Sent on the **reliable** channel in response to any :ref:`AckedCommand <server_to_client>` (currently ``SetupLighting`` and ``SetOriginNode``).
+Sent on the **reliable** channel in response to any :ref:`AckedCommand <server_to_client>` (currently ``SetupLighting`` and ``SetOriginNode``; reference: ``teleport::core::AcknowledgementMessage``).
 
 .. list-table:: AcknowledgementMessage
    :widths: 5 14 30
@@ -324,7 +324,7 @@ Reference implementation: :cpp:struct:`teleport::core::AcknowledgementMessage`. 
 OrthogonalAcknowledgement (id = 11)
 ===================================
 
-Reference implementation: :cpp:struct:`teleport::core::OrthogonalAcknowledgementMessage`. Sent on the **reliable** channel to confirm a single ``confirmationNumber`` carried by a ``NodeStateCommand`` (e.g. ``UpdateNodeStructure``). Allows independent state updates to be confirmed without the monotonic ``ack_id`` ordering of ``AckedCommand``.
+Sent on the **reliable** channel to confirm a single ``confirmationNumber`` carried by a ``NodeStateCommand`` (e.g. ``UpdateNodeStructure``). Allows independent state updates to be confirmed without the monotonic ``ack_id`` ordering of ``AckedCommand`` (reference: ``teleport::core::OrthogonalAcknowledgementMessage``).
 
 .. list-table:: OrthogonalAcknowledgementMessage
    :widths: 5 14 30

@@ -4,7 +4,7 @@ Data Service
 
 Initialization
 ^^^^^^^^^^^^^^
-After a **Connecting Client** completes signaling, the Data Service has been created. This connection has six logical streams (channels). Each is identified on the wire by a numeric **stream id** that is the same on the server and the client.
+After a **Connecting Client** completes signaling, the Data Service has been created. This connection has five logical data-channel streams plus, when audio is enabled, one or more RTP audio media tracks negotiated in the same SDP (see :doc:`audio`). Each data channel is identified on the wire by a numeric **stream id** that is the same on the server and the client.
 
 .. list-table:: Data Service Channels
    :widths: 8 14 7 7 7 24
@@ -28,12 +28,6 @@ After a **Connecting Client** completes signaling, the Data Service has been cre
      - No
      - No
      - Per-frame video metadata; framed payloads.
-   * - 60
-     - ``audio_server_to_client``
-     - No
-     - No
-     - Yes
-     - Bidirectional audio; framed payloads.
    * - 80
      - ``geometry``
      - Yes
@@ -53,7 +47,7 @@ After a **Connecting Client** completes signaling, the Data Service has been cre
      - Yes
      - Unreliable, time-sensitive messages (per-frame poses, input states).
 
-The reference server defines these streams in ``NetworkPipeline::initialise``; the reference client mirrors them in ``ClientPipeline::Init``. The labels above must match exactly across implementations; the numeric ids are conventional but recommended.
+The labels above must match exactly across implementations; the numeric ids are conventional but recommended. Audio is carried as WebRTC media tracks rather than a data channel; see :doc:`audio` for the codec, multi-party fan-out and source identification.
 
 The video stream can be configured as H.264 or HEVC; see :ref:`video`.
 
@@ -113,9 +107,7 @@ The full client-to-server message catalogue is in :doc:`service/client_to_server
 Setup Command
 ^^^^^^^^^^^^^
 
-The **Setup Command** is the first command sent by the server, immediately after the signaling exchange completes. It tells the client how to configure its video decoder, what time-base the server is using, and which background to render. Its total size is 154 bytes (``static_assert(sizeof(SetupCommand) == 154)``).
-
-Reference implementation: :cpp:struct:`teleport::core::SetupCommand`.
+The **Setup Command** is the first command sent by the server, immediately after the signaling exchange completes. It tells the client how to configure its video decoder and audio path, what time-base the server is using, and which background to render. Its total size is 171 bytes (``static_assert(sizeof(SetupCommand) == 171)``; reference: ``teleport::core::SetupCommand``).
 
 .. list-table:: SetupCommand
    :widths: 5 14 30
@@ -145,6 +137,9 @@ Reference implementation: :cpp:struct:`teleport::core::SetupCommand`.
    * - 89
      - VideoConfig
      - ``video_config`` (see below).
+   * - 17
+     - AudioConfig
+     - ``audio_config`` -- codec, sample rate, selection policy and caps for the audio media tracks. See :ref:`audio_config`.
    * - 4
      - float
      - ``draw_distance`` (metres).
@@ -153,7 +148,7 @@ Reference implementation: :cpp:struct:`teleport::core::SetupCommand`.
      - ``axesStandard`` -- the server's axis convention; the server converts everything sent to the client into the client's standard.
    * - 1
      - uint8
-     - ``audio_input_enabled`` (1 if the server accepts an audio stream from the client).
+     - ``audio_input_enabled`` (1 if the server accepts a microphone media track from the client; otherwise the client's outbound audio transceiver is set to ``inactive``).
    * - 1
      - uint8 (bool)
      - ``using_ssl`` -- if non-zero, the client should fetch HTTP assets over HTTPS.
@@ -173,7 +168,7 @@ Reference implementation: :cpp:struct:`teleport::core::SetupCommand`.
 VideoConfig
 ~~~~~~~~~~~
 
-89 bytes (``static_assert(sizeof(VideoConfig) == 89)``). Reference implementation: :cpp:struct:`avs::VideoConfig`. Lighting cubemap layout is **not** in ``VideoConfig`` -- it is sent later via the ``SetupLighting`` command (see :doc:`service/server_to_client`).
+89 bytes (``static_assert(sizeof(VideoConfig) == 89)``; reference: ``avs::VideoConfig``). Lighting cubemap layout is **not** in ``VideoConfig`` -- it is sent later via the ``SetupLighting`` command (see :doc:`service/server_to_client`).
 
 .. list-table:: VideoConfig
    :widths: 5 14 30
@@ -259,7 +254,7 @@ Handshake
 
 After receiving the **Setup Command**, the client sends a ``Handshake`` message back to the server. In the reference implementation this single message is sent as a **binary WebSocket frame** over the signaling connection (see ``DiscoveryService::SendBinary``); all other client messages travel over the Data Service.
 
-The ``Handshake`` is variable-size: it carries the fixed body below followed by ``resourceCount`` ``avs::uid`` entries listing the resources the client already has cached. Total fixed body size: 58 bytes (``static_assert(sizeof(Handshake) == 58)``). Reference implementation: :cpp:struct:`teleport::core::Handshake`.
+The ``Handshake`` is variable-size: it carries the fixed body below followed by ``resourceCount`` ``avs::uid`` entries listing the resources the client already has cached. Total fixed body size: 58 bytes (``static_assert(sizeof(Handshake) == 58)``; reference: ``teleport::core::Handshake``).
 
 It is a :ref:`ClientMessage <client_message_header>` and therefore begins with the standard 9-byte header.
 
@@ -341,7 +336,7 @@ When the server receives the **Handshake**, it starts streaming data and sends a
      - uid[]
      - uids of nodes the client should expect to be streamed.
 
-See :cpp:struct:`teleport::core::AcknowledgeHandshakeCommand`.
+(Reference: ``teleport::core::AcknowledgeHandshakeCommand``.)
 
 Once the **Client** has received the ``AcknowledgeHandshake``, initialization is complete and the client enters the main continuous Update mode.
 

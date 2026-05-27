@@ -9,7 +9,7 @@ The protocol is open, meaning that anyone can use it, either by writing a client
 Teleport is a top-level application-layer protocol. It uses three transport layers in parallel: a WebSocket connection for signaling, a media/data transport (WebRTC by default, with optional SRT/EFP support) for real-time streams, and an HTTP(S) service for static asset retrieval.
 
 .. list-table:: Network Layers
-   :widths: 5 30
+   :widths: 15 30
    :header-rows: 0
 
    * - Teleport XR
@@ -25,6 +25,24 @@ Teleport is a top-level application-layer protocol. It uses three transport laye
 Teleport XR Ltd provides reference implementations of both client and server.
 The protocol and software should be considered pre-alpha, suitable for testing, evaluation and experimentation.
 
+Here is the code:
+
+
+.. list-table:: Reference Code
+   :widths: 15 30
+   :header-rows: 1
+
+   * - URL
+     - Contents
+   * - https://github.com/teleportxr/Teleport/
+     - Native C++ Client app for Windows, Linux and Quest, Native C++ server library for Unreal and Unity-based servers.
+   * - https://github.com/teleportxr/teleport-nodejs
+     - Lightweight nodejs server library. Use `npm install teleportxr`.
+   * - https://github.com/teleportxr/teleport-nodejs-server-example
+     - Lightweight nodejs server example: uses the `teleportxr` npm package.
+   * - https://github.com/teleportxr/teleport-web-client
+     - Web client suitable for embedding (pre-alpha)
+
 The protocol uses three concurrent connections between a client and server:
 
 +------------------------+------------------------------------------------------------+
@@ -34,13 +52,13 @@ The protocol uses three concurrent connections between a client and server:
 |                        | out-of-band messages while streaming.                      |
 +------------------------+------------------------------------------------------------+
 | Data Service           | The real-time transport. The reference implementation      |
-|                        | uses WebRTC data channels; see :ref:`data_transfer`. It    |
-|                        | carries six logical streams (video, video tags, audio,     |
-|                        | geometry, reliable commands/messages, unreliable           |
-|                        | messages).                                                 |
+|                        | uses WebRTC, with five SCTP data channels (video, video    |
+|                        | tags, geometry, reliable commands/messages, unreliable     |
+|                        | messages; see :ref:`data_transfer`) plus RTP media tracks  |
+|                        | for audio (see :doc:`protocol/audio`).                     |
 +------------------------+------------------------------------------------------------+
 | Static Data (HTTP)     | An HTTP or HTTPS service used to retrieve large assets     |
-|                        | (textures, meshes, materials) by ``avs::uid``. See         |
+|                        | (textures, meshes, materials). See         |
 |                        | :ref:`http_service`.                                       |
 +------------------------+------------------------------------------------------------+
 
@@ -53,10 +71,12 @@ attach to the Data Service and the HTTP service.
     flowchart LR
         C[Client]
         S[Server]
+        D[Data Source]
         C <-- "WebSocket: signaling (JSON + binary)" --> S
         C <-- "WebRTC: 6 data channels" --> S
-        C -- "HTTP(S) GET /uid.ext" --> S
+        C <-- "HTTP(S) GET /asset.ext" --> D
 
+The data source may be the same server, or it may be one or more other sources.
 
 .. toctree::
 	:glob:

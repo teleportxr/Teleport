@@ -143,8 +143,8 @@ void CreateSubScene(core::DecodedGeometry				 &subSceneDG,
 
 GeometryDecoder::GeometryDecoder()
 {
-	decodeThread	   = std::thread(&GeometryDecoder::decodeAsync, this);
 	decodeThreadActive = true;
+	decodeThread	   = std::thread(&GeometryDecoder::decodeAsync, this);
 	avs::HTTPUtilConfig httpUtilConfig;
 	httpUtilConfig.remoteHTTPPort = 443;
 	httpUtilConfig.maxConnections = 12;
@@ -152,12 +152,16 @@ GeometryDecoder::GeometryDecoder()
 	auto &config				  = teleport::client::Config::GetInstance();
 	httpUtilConfig.cacheDirectory = (path(config.GetStorageFolder()) / "http_cache"s).string();
 	hTTPUtil.initialize(httpUtilConfig);
+	httpThreadActive = true;
+	httpThread		 = std::thread(&GeometryDecoder::httpAsync, this);
 }
 
 GeometryDecoder::~GeometryDecoder()
 {
+	httpThreadActive = false;
+	if (httpThread.joinable()) httpThread.join();
 	decodeThreadActive = false;
-	decodeThread.join();
+	if (decodeThread.joinable()) decodeThread.join();
 }
 
 void GeometryDecoder::setCacheFolder(const std::string &f)
@@ -178,7 +182,7 @@ avs::Result GeometryDecoder::decode(avs::uid							 server_uid,
 	{
 		s_firstGeomLogged = true;
 		s_firstGeomTime	  = std::chrono::steady_clock::now();
-		TELEPORT_INTERNAL_COUT(Time, "First geometry chunk received from network (type={}, uid={})", static_cast<int>(type), resource_uid);
+		TELEPORT_INTERNAL_COUT(Resource, "First geometry chunk received from network (type={}, uid={})", static_cast<int>(type), resource_uid);
 	}
 	GeometryFileFormat geometryFileFormat = GeometryFileFormat::TELEPORT_NATIVE;
 	decodeData.emplace(server_uid,
@@ -192,6 +196,7 @@ avs::Result GeometryDecoder::decode(avs::uid							 server_uid,
 					   resource_uid,
 					   platform::crossplatform::AxesStandard::Engineering);
 
+	TELEPORT_INTERNAL_COUT(Resource, "Receiving resource (type={}, uid={})", static_cast<int>(type), resource_uid);
 	switch (type)
 	{
 	case avs::GeometryPayloadType::Mesh:
@@ -254,11 +259,13 @@ avs::Result GeometryDecoder::decodeFromWeb(avs::uid								 server_uid,
 		std::string					   url_root		 = geometryCache->GetDefaultURLRoot();
 		req.url										 = "https://" + url_root + req.url;
 	}
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: HTTPS requested (uid={}, url={})",
+				teleport::client::SessionClient::GetConnectElapsedMs(), resource_uid, uri);
 	auto f = std::bind(
 		&GeometryDecoder::receiveFromWeb, this, server_uid, uri, std::placeholders::_1, std::placeholders::_2, type, target, resource_uid, sourceAxesStandard);
 	req.callbackFn	= std::move(f);
 	req.shouldCache = true;
-	hTTPUtil.GetRequestQueue().push(req);
+	hTTPUtil.addRequest(req);
 	return avs::Result::OK;
 }
 
@@ -273,12 +280,6 @@ avs::Result GeometryDecoder::receiveFromWeb(avs::uid							  server_uid,
 {
 	if (bufferSize)
 	{
-		static bool s_firstWebAssetLogged = false;
-		if (!s_firstWebAssetLogged)
-		{
-			s_firstWebAssetLogged = true;
-			TELEPORT_INTERNAL_COUT(Time, "First HTTPS asset received (uid={}, url={}, {} bytes)", resource_uid, uri, bufferSize);
-		}
 		return decodeFromBuffer(server_uid, buffer, bufferSize, uri, type, target, resource_uid, sourceAxesStandard);
 	}
 	return avs::Result::OK;
@@ -331,11 +332,39 @@ void GeometryDecoder::decodeAsync()
 		}
 		if (!decodeData.empty())
 		{
-			decodeInternal(decodeData.front());
+			auto &gdd = decodeData.front();
+			const avs::GeometryPayloadType decodeType = gdd.type;
+			const size_t                   decodeSize = gdd.data.size();
+			const avs::uid                 decodeUid  = gdd.uid;
+			const std::string              decodeUrl  = gdd.filename_or_url;
+			const double                   decodeStartMs = teleport::client::SessionClient::GetConnectElapsedMs();
+
+			decodeInternal(gdd);
 			decodeData.pop();
+
+			const double decodeElapsedMs = teleport::client::SessionClient::GetConnectElapsedMs() - decodeStartMs;
+			if (decodeElapsedMs > 50.0)
+			{
+				TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: decodeInternal (type={}, uid={}, in={} bytes, url={}) in {:.1f} ms",
+					teleport::client::SessionClient::GetConnectElapsedMs(),
+					avs::stringOf(decodeType), decodeUid, decodeSize, decodeUrl,
+					decodeElapsedMs);
+			}
 		}
+		else
+		{
+			std::this_thread::sleep_for(1ms);
+		}
+	}
+}
+
+void GeometryDecoder::httpAsync()
+{
+	SetThisThreadName("GeometryDecoder::httpAsync");
+	while (httpThreadActive)
+	{
 		hTTPUtil.process();
-		std::this_thread::yield();
+		std::this_thread::sleep_for(1ms);
 	}
 }
 
@@ -1362,7 +1391,8 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	TELEPORT_INTERNAL_COUT(Time, "TexturePointer: HTTPS fetch queued (uid={}, url={})", texture_uid, url);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid);
 }
@@ -1379,7 +1409,8 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	TELEPORT_INTERNAL_COUT(Time, "MeshPointer: HTTPS fetch queued (uid={}, url={})", mesh_uid, url);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: MeshPointer: HTTPS fetch queued (uid={}, url={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), mesh_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid);
 }
@@ -1544,7 +1575,7 @@ avs::Result GeometryDecoder::decodeRemoveNodes(GeometryDecodeData &geometryDecod
 avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 {
 	avs::uid  uid = geometryDecodeData.uid;
-	TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: decodeNode (uid={}, {} bytes)",
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: decodeNode (uid={}, {} bytes)",
 		teleport::client::SessionClient::GetConnectElapsedMs(), uid, geometryDecodeData.data.size());
 
 	avs::Node node;
@@ -1567,10 +1598,13 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 
 		switch (node.data_type)
 		{
-		case avs::NodeDataType::Mesh:
-		{
-			node.data_uid	= NextUint64;
-
+			case avs::NodeDataType::Mesh:
+			{
+				node.data_uid	= NextUint64;
+				if(!node.data_uid)
+				{
+					TELEPORT_INTERNAL_CERR("Node {}, component {} has Mesh data type but zero data UID", node.name, i);
+				}
 			node.skeletonID = NextUint64;
 			NextList(uint16_t, int16_t, node.joint_indices) NextList(uint16_t, avs::uid, node.animations) NextList(uint16_t, avs::uid, node.materials)
 				node.renderState.lightmapScaleOffset = NextVec4;
@@ -1588,17 +1622,24 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 		{
 			if (!readString(geometryDecodeData, node.url))
 			{
+				TELEPORT_INTERNAL_CERR("Node {},component {} has invalid URL", node.name, i);
 				return avs::Result::Failed;
 			}
 			if (!readString(geometryDecodeData, node.query_url))
 			{
+				TELEPORT_INTERNAL_CERR("Node {},component {} has invalid query URL", node.name, i);
 				return avs::Result::Failed;
 			}
 		}
+		break;
 		case avs::NodeDataType::TextCanvas:
 		{
 			// nothing node-specific to add at present.
 			node.data_uid = NextUint64;
+			if(!node.data_uid)
+			{
+				TELEPORT_INTERNAL_CERR("Node {},component {} has TextCanvas data type but zero data UID", node.name, i);
+			}
 		}
 		break;
 		default:
