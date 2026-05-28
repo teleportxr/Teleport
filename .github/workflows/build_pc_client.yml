@@ -84,7 +84,7 @@ jobs:
       shell: cmd
       # continue-on-error: true
       run: |
-        MSBuild ${{github.workspace}}/build_pc_client/Teleport_Client.sln /m:1 /p:Configuration=Release /p:Platform=x64  /t:Client\TeleportPCClient
+        MSBuild ${{github.workspace}}/build_pc_client/Teleport.sln /m:1 /p:Configuration=Release /p:Platform=x64  /t:Client\TeleportPCClient
     - name: Test
       working-directory: ${{github.workspace}}/build_pc_client
       # Execute tests defined by the CMake configuration.
