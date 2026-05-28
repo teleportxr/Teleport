@@ -10,6 +10,7 @@
 #include <format>
 #include <xaudio2.h>
 #include "TeleportCore/StringFunctions.h"
+#include "TeleportCore/ErrorHandling.h"
 
 
 using namespace teleport;

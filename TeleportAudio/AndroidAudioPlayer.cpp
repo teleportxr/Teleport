@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 #include <oboe/Oboe.h>
+#include "TeleportCore/ErrorHandling.h"
 
 using namespace teleport::audio;
 
