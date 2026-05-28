@@ -262,5 +262,9 @@ else()
 		"TeleportXR spatial streaming client\n TeleportXR streams XR scenes from a remote server to a local OpenXR\n headset or desktop window using the Teleport protocol.")
 	# Let dpkg-shlibdeps fill in shared-library dependencies automatically.
 	set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+	# dpkg-shlibdeps runs from the package staging root; point it at the bundled
+	# private libs so it doesn't error on libktx, libglfw, libdraco, etc.
+	string(REGEX REPLACE "^/" "" _rel_prefix "${CPACK_PACKAGING_INSTALL_PREFIX}")
+	set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS_PRIVATE_DIRS "${_rel_prefix}/lib")
 endif()
 include(CPack)
