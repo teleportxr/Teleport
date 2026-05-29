@@ -7,6 +7,11 @@
 #include "libavstream/common_maths.h"
 #include "InputTypes.h"
 
+// Ensure 1-byte packing for network protocol structs (critical for cross-platform compatibility)
+
+#pragma pack(push, 1)
+
+
 #ifndef TELEPORT_PACKED
 	#if defined(__GNUC__) || defined(__clang__)
 		#define TELEPORT_PACKED __attribute__ ((packed,aligned(1)))
@@ -44,8 +49,9 @@ namespace avs
 		int32_t		shadowmap_x=0;
 		int32_t		shadowmap_y=0;
 		int32_t		shadowmap_size=0;
-	} AVS_PACKED;	// 89 bytes
-	static_assert (sizeof(VideoConfig) == 89, "ClientDynamicLighting Size is not correct");
+	} AVS_PACKED;	// 89 bytes - CRITICAL: Network protocol contract. Must match across all platforms.
+	// pragma pack(1) from libavstream/common_exports.h ensures 1-byte alignment
+	static_assert (sizeof(VideoConfig) == 89, "VideoConfig Size is not correct");
 
 	struct AudioConfig
 	{
@@ -806,8 +812,4 @@ namespace teleport
 	} //namespace 
 
 }
-#ifdef _MSC_VER
 #pragma pack(pop)
-#else
-#pragma pack()
-#endif
