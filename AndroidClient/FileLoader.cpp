@@ -27,7 +27,7 @@ AAssetManager* android::FileLoader::s_AssetManager = nullptr;
 namespace fs = std::filesystem;
 #else
 #define SIMUL_FILESYSTEM 1
-#include <experimental/filesystem>
+#include <filesystem>
 namespace fs = std::experimental::filesystem;
 #endif
 

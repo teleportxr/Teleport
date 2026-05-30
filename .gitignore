@@ -31,6 +31,6 @@ build_*/
 .vscode/
 CMake/
 /binary_cache
-/build_android_vs/AndroidClient/AndroidPackaging/app/src/main/assets
+AndroidPackaging
 /client/VrSamples/VisualStudio/VisualStudio.Packaging
 /libavstream/thirdparty/curl-7.74.0-android-arm64-v8a
