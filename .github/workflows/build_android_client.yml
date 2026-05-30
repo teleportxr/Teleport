@@ -1,0 +1,111 @@
+name: build_android_client
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    env:
+      WORKFLOW_BUILD_TYPE: Release
+      WORKFLOW_PLATFORM: Android-arm64-v8a
+      WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+      VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
+      VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
+      ANDROID_NDK_VERSION: 25.2.9519653
+      AGDE_VSIX_URL: https://dl.google.com/android/agde/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6.0.2
+      with:
+        lfs: 'false'
+        submodules: 'false'
+
+    - name: Git Submodules
+      run: |
+        cd ${{github.workspace}}
+        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "thirdparty/oboe" "libavstream/thirdparty/efp"
+
+    - name: Log
+      shell: cmd
+      run: |
+        git log -1 --pretty=%B>>release_notes.md
+        echo|set /p=TELEPORT_COMMIT=>teleport_commit.properties
+        git rev-parse --short HEAD>>teleport_commit.properties
+        echo "TELEPORT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        git log -10 --date=format:"%%a %%d %%b" --no-merges --pretty=format:"%%cd : %%s" > "teleport_log.md"
+
+    - name: Dotenv Action
+      uses: falti/dotenv-action@v1.2.0
+      with:
+        path: teleport_commit.properties
+        log-variables: true
+        export-variables: true
+
+    - name: Setup JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android NDK
+      shell: pwsh
+      run: |
+        sdkmanager --install "ndk;${{env.ANDROID_NDK_VERSION}}" "platforms;android-29" "build-tools;34.0.0" "platform-tools"
+        echo "ANDROID_NDK_HOME=$env:ANDROID_SDK_ROOT\ndk\${{env.ANDROID_NDK_VERSION}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "ANDROID_NDK_ROOT=$env:ANDROID_SDK_ROOT\ndk\${{env.ANDROID_NDK_VERSION}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+    - name: Vulkan
+      uses: humbletim/install-vulkan-sdk@v1.2
+      with:
+        version: 1.3.290.0
+
+    - name: Install Android Game Development Extension
+      shell: pwsh
+      run: |
+        $vsix = "$env:RUNNER_TEMP\AGDE.vsix"
+        Invoke-WebRequest -Uri "${{env.AGDE_VSIX_URL}}" -OutFile $vsix
+        $vsixInstaller = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -prerelease -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find **\VSIXInstaller.exe | Select-Object -First 1
+        Write-Host "Using VSIXInstaller at $vsixInstaller"
+        Start-Process -FilePath $vsixInstaller -ArgumentList "/quiet","/admin",$vsix -Wait -NoNewWindow
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v3
+
+    - name: Initial Checks
+      shell: pwsh
+      run: |
+        echo "TELEPORT_COMMIT ${{env.TELEPORT_COMMIT}}"
+        echo "VULKAN_SDK_DIR ${{env.VULKAN_SDK_DIR}}"
+        echo "ANDROID_SDK_ROOT $env:ANDROID_SDK_ROOT"
+        echo "ANDROID_NDK_HOME $env:ANDROID_NDK_HOME"
+        echo "JAVA_HOME $env:JAVA_HOME"
+        msbuild -version
+
+    - name: Build
+      shell: cmd
+      run: |
+        MSBuild ${{github.workspace}}/build_android_vs/TeleportVRQuestClient.sln /m:1 /p:Configuration=${{env.WORKFLOW_BUILD_TYPE}} /p:Platform=${{env.WORKFLOW_PLATFORM}} /t:TeleportVRClient
+
+    - name: Collect APK
+      shell: pwsh
+      run: |
+        mkdir artifacts
+        Get-ChildItem -Path "${{github.workspace}}/build_android_vs" -Recurse -Filter "*.apk" | Copy-Item -Destination artifacts/
+        Copy-Item teleport_commit.properties artifacts/
+        Copy-Item release_notes.md artifacts/
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: android-apk
+        path: artifacts/*.*
+        github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
