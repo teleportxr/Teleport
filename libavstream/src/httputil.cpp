@@ -17,14 +17,6 @@
 
 using namespace std::chrono;
 using namespace std::filesystem;
-#ifdef _MSC_VER
-#include <filesystem>
-#define FILE_TIME_TYPE _File_time_clock
-#else
-#include <filesystem>
-using namespace std::filesystem;
-#define FILE_TIME_TYPE std::filesystem::file_time_type::clock
-#endif
 using namespace std::string_literals;
 inline void CheckCurlError(CURLcode code, const char *context)
 {
@@ -276,8 +268,9 @@ void HTTPUtil::CheckForCachedFile(HTTPPayloadRequest &request)
 		request.cached = true;
 		file_time_type write_time = std::filesystem::last_write_time(path(request.cachedFilePath));
 		// Convert file_time_type to system_clock::time_point for If-Modified-Since header.
-		// Use file_time_type::clock::to_sys() (C++20) to perform the clock conversion correctly.
-		auto sctp = time_point_cast<system_clock::duration>(FILE_TIME_TYPE::to_sys(write_time));
+		// Portable conversion (no to_sys/clock_cast needed): rebase the file-clock time onto system_clock.
+		auto sctp = time_point_cast<system_clock::duration>(
+			write_time - std::filesystem::file_time_type::clock::now() + system_clock::now());
 		request.cacheUpdated = std::chrono::floor<seconds>(sctp);
 		// Load the ETag sidecar if present so we can send If-None-Match.
 		std::string etagPath = request.cachedFilePath + ".etag";

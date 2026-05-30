@@ -131,13 +131,13 @@ Result AndroidAudioPlayer::playStream(const uint8_t* data, size_t dataSize)
 {
 	if (!mInitialized)
 	{
-		SCA_CERR << "AndroidAudioPlayer: Can't play audio stream because the audio player has not been initialized." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: Can't play audio stream because the audio player has not been initialized.\n");
 		return Result::AudioPlayerNotInitialized;
 	}
 
 	if (!mConfigured)
 	{
-		SCA_CERR << "AndroidAudioPlayer: Can't play audio stream because the audio player has not been configured."  << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: Can't play audio stream because the audio player has not been configured.\n");
 		return Result::AudioPlayerNotConfigured;
 	}
 	auto state=m_data->mStream->getState();
@@ -168,25 +168,25 @@ Result AndroidAudioPlayer::startRecording(std::function<void(const uint8_t * dat
 {
 	if (!mInitialized)
 	{
-		SCA_CERR << "AndroidAudioPlayer: Can't record audio because the audio player has not been initialized." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: Can't record audio because the audio player has not been initialized.\n");
 		return Result::AudioPlayerNotInitialized;
 	}
 
 	if (!mConfigured)
 	{
-		SCA_CERR << "AndroidAudioPlayer: Can't record audio because the audio player has not been configured." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: Can't record audio because the audio player has not been configured.\n");
 		return Result::AudioPlayerNotConfigured;
 	}
 
 	if (!mRecordingAllowed)
 	{
-		SCA_CERR << "AndroidAudioPlayer: The user has not granted permission to record audio." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: The user has not granted permission to record audio.\n");
 		return Result::AudioRecordingNotPermitted;
 	}
 
 	if (mRecording)
 	{
-		SCA_CERR << "AndroidAudioPlayers: Already recording." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayers: Already recording.\n");
 		return Result::OK;
 	}
 
@@ -205,7 +205,7 @@ Result AndroidAudioPlayer::stopRecording()
 {
 	if (!mRecording)
 	{
-		SCA_CERR << "AndroidAudioPlayer: Not recording." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: Not recording.\n");
 		return Result::OK;
 	}
 
@@ -218,7 +218,7 @@ Result AndroidAudioPlayer::deconfigure()
 {
 	if (!mConfigured)
 	{
-		SCA_CERR << "AndroidAudioPlayer: Can't deconfigure audio player because it is not configured." << std::endl;
+		TELEPORT_INTERNAL_CERR("AndroidAudioPlayer: Can't deconfigure audio player because it is not configured.\n");
 		return Result::AudioPlayerNotConfigured;
 	}
 	auto result=m_data->mStream->requestStop();
