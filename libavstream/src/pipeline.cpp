@@ -104,11 +104,15 @@ void Pipeline::processAsync()
 		pipelineThread = std::thread(&Pipeline::processAsyncFn, this);
 }
 
+#ifdef __linux__
 #include <sys/prctl.h>
+#endif
 void Pipeline::processAsyncFn()
 {
 	pipelineThreadActive = true;
+#ifdef __linux__
 	prctl(PR_SET_NAME, (long)"Pipeline::processAsyncFn", 0, 0, 0);
+#endif
 	std::cout << "Pipeline " << name << ": has started.\n";
 	while (pipelineThreadActive)
 	{

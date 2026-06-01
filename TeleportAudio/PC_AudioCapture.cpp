@@ -11,6 +11,7 @@
 #include <xaudio2.h>
 #include "TeleportCore/StringFunctions.h"
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Logging.h"
 
 
 using namespace teleport;
@@ -104,7 +105,7 @@ std::string teleport::audio::GetMessageForHresult(long h)
 		format.cbSize = 0;
 		if(!mAudioClient)
 		{
-			SCA_CERR << "PC_AudioCapture::configure: mAudioClient is null." << std::endl;
+			TELEPORT_INTERNAL_CERR("PC_AudioCapture::configure: mAudioClient is null.\n");
 			return Result::AudioRecorderInitializationError;
 		}
 		HRESULT hr = mAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, 200000, 0, &format, nullptr);
@@ -151,7 +152,7 @@ std::string teleport::audio::GetMessageForHresult(long h)
 	{
 		if (mAsync)
 		{
-			SCA_CERR << "PC_AudioCapture: processRecordedAudio can't be called when in async mode." << std::endl;
+			TELEPORT_INTERNAL_CERR("PC_AudioCapture: processRecordedAudio can't be called when in async mode.\n");
 			return Result::AudioProcessingError;
 		}
 
@@ -163,7 +164,7 @@ std::string teleport::audio::GetMessageForHresult(long h)
 		HRESULT hr = mAudioClient->Stop();
 		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to stop the audio client." << std::endl;
+			TELEPORT_INTERNAL_CERR("PC_AudioCapture: Error occurred trying to stop the audio client.\n");
 			return Result::AudioRecorderStartError;
 		}
 
@@ -190,7 +191,7 @@ std::string teleport::audio::GetMessageForHresult(long h)
 		HRESULT hr = mAudioCaptureClient->GetNextPacketSize(&packetSize);
 		if (FAILED(hr))
 		{
-			SCA_CERR << "PC_AudioCapture: Error occurred trying to get the next packet size from audio capture client." << std::endl;
+			TELEPORT_INTERNAL_CERR("PC_AudioCapture: Error occurred trying to get the next packet size from audio capture client.\n");
 			return Result::AudioProcessingError;
 		}
 
