@@ -88,8 +88,8 @@ void SessionClient::DestroySessionClients()
 	sessionClients.clear();
 }
 
-SessionClient::SessionClient(avs::uid s, TabContext *tc, const std::string &dom) : server_uid(s), domain(dom), tabContext(tc), messageToServerPipeline("messageToServerPipeline")
-,reliableToServerPipeline("reliableToServerPipeline")
+SessionClient::SessionClient(avs::uid s, TabContext *tc, const std::string &dom) : server_uid(s), domain(dom), messageToServerPipeline("messageToServerPipeline")
+,reliableToServerPipeline("reliableToServerPipeline"), tabContext(tc)
 {
 	if (server_uid == 0)
 		setupCommand.startTimestamp_utc_unix_us =

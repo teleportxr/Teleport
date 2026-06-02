@@ -1294,7 +1294,9 @@ void OpenXR::ChangedInteractionProfile()
 		{
 			std::string pathstr = FromXrPath(xr_instance, interactionProfile.interactionProfile);
 			if (interactionProfile.interactionProfile)
+			{
 				TELEPORT_INTERNAL_CERR("userHandLeftActiveProfile {}", pathstr.c_str());
+			}
 			//if(pathstr=="/interaction_profiles/microsoft/hand_interaction
 			userHandLeftActiveProfile = interactionProfile.interactionProfile;
 			if (userHandLeftActiveProfile)
@@ -1307,7 +1309,9 @@ void OpenXR::ChangedInteractionProfile()
 		{
 			std::string pathstr = FromXrPath(xr_instance, interactionProfile.interactionProfile);
 			if (interactionProfile.interactionProfile)
+			{
 				TELEPORT_INTERNAL_CERR("userHandRightActiveProfile {}", pathstr.c_str());
+			}
 			userHandRightActiveProfile = interactionProfile.interactionProfile;
 			if(userHandRightActiveProfile)
 				activeInteractionProfilePaths.push_back(userHandRightActiveProfile);

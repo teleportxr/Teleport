@@ -122,7 +122,7 @@ void DiscoveryService::ResetConnection(uint64_t server_uid,std::string url, uint
 		if(ws)
 			ws->open(ws_url);
 	}
-	catch(std::exception& e)
+	catch([[maybe_unused]] std::exception& e)
 	{
 		TELEPORT_INTERNAL_CERR("{}", (e.what() ? e.what() : "Unknown exception"));
 	}
@@ -377,7 +377,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 			signalingServer->SendMessages();
 		}
 	}
-	catch(std::exception& e)
+	catch([[maybe_unused]] std::exception& e)
 	{
 		TELEPORT_INTERNAL_CERR("{}", (e.what() ? e.what() : "Unknown exception"));
 	}
@@ -388,7 +388,7 @@ void DiscoveryService::Tick(uint64_t server_uid)
 	{
 		signalingServer->ProcessReceivedMessages();
 	}
-	catch(std::exception& e)
+	catch([[maybe_unused]] std::exception& e)
 	{
 		TELEPORT_INTERNAL_CERR("{}", (e.what() ? e.what() : "Unknown exception"));
 	}

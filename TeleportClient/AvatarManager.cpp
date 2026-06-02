@@ -103,7 +103,7 @@ namespace teleport
 			{
 				policy = content.get<core::AvatarPolicy>();
 			}
-			catch (const std::exception &e)
+			catch ([[maybe_unused]] const std::exception &e)
 			{
 				TELEPORT_INTERNAL_CERR("avatar-policy parse failed for server {}: {}", serverID, e.what());
 				return;
@@ -129,7 +129,7 @@ namespace teleport
 			{
 				result = content.get<core::AvatarResult>();
 			}
-			catch (const std::exception &e)
+			catch ([[maybe_unused]] const std::exception &e)
 			{
 				TELEPORT_INTERNAL_CERR("avatar-result parse failed for server {}: {}", serverID, e.what());
 				return;
@@ -153,7 +153,7 @@ namespace teleport
 			{
 				revoke = content.get<core::AvatarRevoke>();
 			}
-			catch (const std::exception &e)
+			catch ([[maybe_unused]] const std::exception &e)
 			{
 				TELEPORT_INTERNAL_CERR("avatar-revoke parse failed for server {}: {}", serverID, e.what());
 				return;
