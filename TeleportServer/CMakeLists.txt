@@ -172,7 +172,8 @@ if(WIN32)
 		target_link_libraries(TeleportServer Compressonator_MT.lib)
 	endif()
 else()
-	target_link_libraries(TeleportServer CMP_Framework)
+	# CMP_Compressonator provides CMP_ConvertTexture (used in Texture.cpp); CMP_Framework alone does not.
+	target_link_libraries(TeleportServer CMP_Compressonator)
 endif()
 
 target_link_libraries(TeleportServer draco::draco)

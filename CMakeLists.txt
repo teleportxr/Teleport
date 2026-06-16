@@ -298,7 +298,9 @@ if(TELEPORT_SERVER)
 	set(OPTION_CMP_DIRECTX OFF CACHE BOOL "" FORCE)
 	# On Windows we use the prebuilt Compressonator .lib files in thirdparty/compressonator/lib/bin/x64/.
 	# Those are PE import libraries and cannot link on Linux, so fetch the upstream source and add only the
-	# CMP_Core + CMP_Framework subdirectories directly — running the upstream root CMakeLists drags in Qt/Vulkan/etc.
+	# CMP_Core + CMP_Framework + CMP_Compressonator subdirectories directly — running the upstream root
+	# CMakeLists drags in Qt/Vulkan/etc. CMP_Compressonator provides the high-level CMP_ConvertTexture API
+	# used by TeleportServer/Texture.cpp (CMP_Framework alone does not define it).
 	if(NOT WIN32)
 		FetchContent_Declare(
 			compressonator
@@ -311,6 +313,21 @@ if(TELEPORT_SERVER)
 		if(NOT compressonator_POPULATED)
 			FetchContent_Populate(compressonator)
 		endif()
+		# Upstream V4.5.52 bug: cmp_compressonatorlib/dxtc/codec_dxtc_alpha.cpp defines a file-local
+		# static cmp_getBlockPackedIndicesSNorm() that collides with an identically-named function
+		# pulled in from CMP_Core's bcn_common_kernel.h (USE_CMP_CORE_API is set in common.h). MSVC
+		# tolerates the duplicate; clang reports an ambiguous call. Rename the file-local copy (and its
+		# single call site) so the call binds to it, preserving the legacy behaviour the alpha codec was
+		# written against. Idempotent, so it is safe to re-run on every configure.
+		set(_cmp_alpha_src ${compressonator_SOURCE_DIR}/cmp_compressonatorlib/dxtc/codec_dxtc_alpha.cpp)
+		if(EXISTS ${_cmp_alpha_src})
+			file(READ ${_cmp_alpha_src} _cmp_alpha_contents)
+			if(NOT _cmp_alpha_contents MATCHES "cmp_getBlockPackedIndicesSNorm_legacy")
+				string(REPLACE "cmp_getBlockPackedIndicesSNorm" "cmp_getBlockPackedIndicesSNorm_legacy" _cmp_alpha_contents "${_cmp_alpha_contents}")
+				file(WRITE ${_cmp_alpha_src} "${_cmp_alpha_contents}")
+				message(STATUS "Patched compressonator codec_dxtc_alpha.cpp for clang overload ambiguity")
+			endif()
+		endif()
 		set(PROJECT_FOLDER_SDK_LIBS "thirdparty/compressonator")
 		# cmp_framework references ${PROJECT_SOURCE_DIR}/applications/... — override PROJECT_SOURCE_DIR
 		# so those paths resolve under the fetched compressonator source instead of the Teleport root.
@@ -318,6 +335,7 @@ if(TELEPORT_SERVER)
 		set(PROJECT_SOURCE_DIR ${compressonator_SOURCE_DIR})
 		add_subdirectory(${compressonator_SOURCE_DIR}/cmp_core ${compressonator_BINARY_DIR}/cmp_core EXCLUDE_FROM_ALL)
 		add_subdirectory(${compressonator_SOURCE_DIR}/cmp_framework ${compressonator_BINARY_DIR}/cmp_framework EXCLUDE_FROM_ALL)
+		add_subdirectory(${compressonator_SOURCE_DIR}/cmp_compressonatorlib ${compressonator_BINARY_DIR}/cmp_compressonatorlib EXCLUDE_FROM_ALL)
 		set(PROJECT_SOURCE_DIR ${_teleport_project_source_dir_saved})
 	endif()
 endif()

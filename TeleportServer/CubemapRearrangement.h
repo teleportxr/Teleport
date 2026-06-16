@@ -75,5 +75,11 @@ namespace teleport::server
 		/// Get texture dimensions
 		static void GetDimensions(const ktxTexture2* texture,
 								 uint32_t& width, uint32_t& height, uint32_t& mipCount);
+
+		/// Decode every face of a BC6H cubemap mip level to RGBA16F (8 bytes/texel). Intended for
+		/// tooling and verification. On success, faces has 6 entries each of faceWidth*faceWidth*8
+		/// bytes, in face order +X,-X,+Y,-Y,+Z,-Z. Returns false if the texture is not BC6H or on error.
+		static bool DecodeFacesRGBA16F(const ktxTexture2* source, uint32_t mip, uint32_t& faceWidth,
+									   std::vector<std::vector<uint8_t>>& faces);
 	};
 }

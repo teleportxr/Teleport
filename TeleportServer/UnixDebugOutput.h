@@ -118,7 +118,8 @@ public:
 				fn=buffer;
 			}
 #endif
-			fn+="/";
+			if(fn.length())
+				fn+="/";
 			fn+=logfilename;
 		}
 		logFile.open(fn.c_str());
