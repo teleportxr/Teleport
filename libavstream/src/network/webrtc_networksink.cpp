@@ -10,9 +10,13 @@
 #include <iostream>
 #include <cmath>
 #include <functional>
+#include <mutex>
+#include <atomic>
 #include <parallel_hashmap/phmap.h>
 
 #include <rtc/rtc.hpp>
+#include <rtc/rtpdepacketizer.hpp>
+#include <rtc/rtcpreceivingsession.hpp>
 #include <nlohmann/json.hpp>
 
 #include <ElasticFrameProtocol.h>
@@ -50,7 +54,7 @@ namespace avs
 	{
 		AVSTREAM_PRIVATEINTERFACE(WebRtcNetworkSink, PipelineNode)
 		phmap::flat_hash_map<uint64_t, ServerDataChannel> dataChannels;
-		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection; 
+		std::shared_ptr<rtc::PeerConnection> rtcPeerConnection;
 		void onDataChannelReceived(shared_ptr<rtc::DataChannel> dc);
 		void onDataChannel(shared_ptr<rtc::DataChannel> dc);
 		phmap::flat_hash_map<int, uint8_t> idToStreamIndex;
@@ -60,6 +64,18 @@ namespace avs
 		std::unique_ptr<ElasticFrameProtocolSender> m_EFPSender;
 		bool recreateConnection = false;
 		rtc::PeerConnection::State currentState = rtc::PeerConnection::State::New;
+
+		// Gated media-track audio: only active when audioOpusPayloadType != 0.
+		// The server adds a recvonly audio track to the SDP offer so the client
+		// can send its microphone audio as Opus RTP. Frames are forwarded to
+		// micFrameCallback (wired by the caller, e.g. the SFU AudioRouter).
+		uint8_t audioOpusPayloadType = 0;
+		std::shared_ptr<rtc::Track> rtcMicRecvTrack;
+		std::atomic<uint64_t> micRtpFramesReceived{0};
+		WebRtcNetworkSink::MicFrameCallback micFrameCallback;
+		std::mutex micFrameCallbackMutex;
+		//! Attach the depacketizer handler chain and frame callback to a recvonly mic track.
+		void onMicTrack(shared_ptr<rtc::Track> track);
 		shared_ptr<rtc::PeerConnection> createServerPeerConnection(const rtc::Configuration& config,
 			std::function<void(const std::string&)> sendConfigMessage,
 			std::function<void(shared_ptr<rtc::DataChannel>)> onDataChannelReceived, std::string id)
@@ -194,6 +210,18 @@ void WebRtcNetworkSink::CreatePeerConnection()
 		, std::bind(&WebRtcNetworkSink::Private::onDataChannelReceived, m_data, std::placeholders::_1)
 		, "1");
 
+	// If audio media tracks are enabled (codec != 0), add a recvonly Opus track so the SDP
+	// offer includes an audio m-line. The client will answer with sendonly, and the negotiated
+	// track will carry mic audio as Opus RTP frames routed to micFrameCallback.
+	m_data->rtcMicRecvTrack.reset();
+	if (m_data->audioOpusPayloadType != 0)
+	{
+		rtc::Description::Audio micDesc("mic", rtc::Description::Direction::RecvOnly);
+		micDesc.addOpusCodec(static_cast<int>(m_data->audioOpusPayloadType));
+		auto micTrack = m_data->rtcPeerConnection->addTrack(micDesc);
+		m_data->onMicTrack(micTrack);
+	}
+
 	// Now ensure data channels are initialized...
 
 	// Called by the parser interface if the stream uses one
@@ -260,6 +288,7 @@ bool WebRtcNetworkSink::isProcessingEnabled() const
 Result WebRtcNetworkSink::deconfigure()
 {
 	m_data->m_EFPSender.reset();
+	m_data->rtcMicRecvTrack.reset();
 	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
 	m_data->dataChannels.clear();
 	if (m_data->rtcPeerConnection)
@@ -279,6 +308,68 @@ Result WebRtcNetworkSink::deconfigure()
 	setNumOutputSlots(0);
 
 	return Result::OK;
+}
+
+void WebRtcNetworkSink::setAudioOpusPayloadType(uint8_t payloadType)
+{
+	m_data->audioOpusPayloadType = payloadType;
+}
+
+void WebRtcNetworkSink::setMicFrameCallback(MicFrameCallback cb)
+{
+	std::lock_guard<std::mutex> lock(m_data->micFrameCallbackMutex);
+	m_data->micFrameCallback = std::move(cb);
+}
+
+void WebRtcNetworkSink::Private::onMicTrack(shared_ptr<rtc::Track> track)
+{
+	if (!track)
+		return;
+
+	rtcMicRecvTrack = track;
+
+	// Build the incoming handler chain for the recvonly mic track:
+	//   RTP packet → OpusRtpDepacketizer (strip header, fire onFrame)
+	//              → RtcpReceivingSession (generate RTCP RR / PLI feedback)
+	auto depacketizer = std::make_shared<rtc::OpusRtpDepacketizer>();
+	auto rtcpSession  = std::make_shared<rtc::RtcpReceivingSession>();
+	depacketizer->addToChain(rtcpSession);
+	track->setMediaHandler(depacketizer);
+
+	auto self = this;
+	std::string mid = track->mid();
+
+	// libdatachannel dispatches depacketized payloads through onFrame (not onMessage)
+	// because RtpDepacketizer attaches FrameInfo to each output message.
+	track->onFrame(
+		[self, mid](rtc::binary frame, rtc::FrameInfo /*info*/)
+		{
+			uint64_t n = ++self->micRtpFramesReceived;
+			if (n == 1 || (n % 250) == 0)
+			{
+				AVSLOG(Info) << "WebRTC mic recv: " << n
+					<< " Opus frames (mid=" << mid << "), last=" << frame.size() << " bytes\n";
+			}
+			WebRtcNetworkSink::MicFrameCallback cb;
+			{
+				std::lock_guard<std::mutex> lock(self->micFrameCallbackMutex);
+				cb = self->micFrameCallback;
+			}
+			if (cb)
+				cb(reinterpret_cast<const uint8_t*>(frame.data()), frame.size());
+		});
+
+	track->onOpen([mid]()
+	{
+		AVSLOG(Info) << "WebRTC mic track opened (mid=" << mid << ") — receiving mic audio\n";
+	});
+	track->onClosed([mid, self]()
+	{
+		self->micRtpFramesReceived.store(0);
+		AVSLOG(Info) << "WebRTC mic track closed (mid=" << mid << ")\n";
+	});
+
+	AVSLOG(Info) << "WebRTC: recvonly mic track registered (mid=" << mid << ")\n";
 }
 
 Result WebRtcNetworkSink::process(uint64_t timestamp, uint64_t deltaTime)

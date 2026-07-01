@@ -6,7 +6,7 @@ Audio
 
 Audio is carried as one or more **WebRTC media tracks** (RTP / SRTP) negotiated in the same SDP exchange that creates the data channels described in :doc:`data_transfer`. Each track carries Opus, with parameters published to the client in the :ref:`audio_config` block of ``SetupCommand``.
 
-In a multi-client (room) session the server acts as a **Selective Forwarding Unit (SFU)**: each client's microphone arrives at the server on one inbound track, and the server forwards a subset of those tracks to every other client as separate outbound tracks. Mapping of tracks to source client uids and admission decisions are signalled over the ``reliable`` data channel.
+In a multi-client (room) session the server acts as a **Selective Forwarding Unit (SFU)**: each client's microphone arrives at the server on one inbound track, and the server forwards a subset of those tracks to every other client as separate outbound tracks. Each outbound stream carries a server-assigned :ref:`audio stream index <audio_stream_index>` and is bound to a scene node by an :ref:`audio emitter component <audio_emitter_component>`, so clients perform their own spatialisation. Which sources each listener receives is decided by the SFU's :ref:`selection policy <audio_selection>`. Client uids are never exposed to other clients.
 
 Codec and RTP parameters
 ========================
@@ -60,7 +60,7 @@ For a session with N participants the server provisions transceivers per peer as
      - ``sendonly``
      - One outbound voice per other peer that the SFU has selected for this listener.
 
-Tracks are identified end-to-end by their SDP ``mid`` attribute. The mapping ``mid → sourceClientUid`` is delivered on the ``reliable`` channel via the :ref:`audio_source_mapping` command; clients MUST NOT rely on parsing ``a=msid`` or any other SDP attribute for source identification.
+Each outbound track carries one :ref:`audio stream index <audio_stream_index>`; the server sets the track's SDP ``mid`` to the decimal index, and this is the only binding between the RTP transport and the index. Clients read it from the received track (e.g. ``RTCRtpTransceiver.mid``) and MUST NOT infer a source from m-line order, ``a=msid`` or SSRC. The index is bound to a scene node by an :ref:`audio emitter component <audio_emitter_component>` delivered on the geometry channel.
 
 A client that does not provide microphone input still receives ``sendonly`` transceivers from the server (it is a *listener*); it may negotiate ``inactive`` on its own outbound m-line.
 
@@ -109,7 +109,7 @@ A 17-byte block inside :ref:`setup_command` describing the audio configuration t
      - uint16
      - ``evictionGraceMs``. Hysteresis applied by the SFU before evicting a peer that has fallen out of the selected set. ``0`` disables hysteresis.
 
-If ``codec == 0`` no audio media tracks are present in the SDP, no ``AudioSourceMapping`` or ``AudioParticipantStateChange`` commands will be sent, and any client microphone state is ignored.
+If ``codec == 0`` no audio media tracks are present in the SDP, no audio emitter components are streamed, and any client microphone state is ignored.
 
 ``SetupCommand.audio_input_enabled`` remains the gate on **client-to-server** microphone capture (the inbound transceiver on the server is set to ``inactive`` if it is zero).
 
@@ -135,7 +135,7 @@ When the room has more potential speakers than ``maxInboundStreams``, the SFU ch
    * - ``ActiveSpeaker``
      - Forward the ``maxInboundStreams`` peers with the highest recent audio energy.
    * - ``Custom``
-     - Selection is performed by application code on the server. Clients treat the resulting :ref:`audio_source_mapping` updates as authoritative.
+     - Selection is performed by application code on the server. Clients treat the resulting :ref:`audio emitter component <audio_emitter_component>` updates as authoritative.
 
 When the ``symmetric routing`` flag (``AudioConfig.flags`` bit 2) is set, the SFU guarantees that if A is in B's selected set then B is in A's selected set; this may cause the actual forwarded count to exceed ``maxInboundStreams`` by at most one per pair affected.
 
@@ -143,105 +143,94 @@ The SFU MUST NOT forward a participant's own microphone back to them (loopback s
 
 Selection is recomputed on a server-defined cadence and on every join/leave. To avoid UI thrash on a peer hovering at the selection boundary, the server SHOULD apply the ``evictionGraceMs`` hysteresis before removing a transceiver that has just dropped out of the selected set.
 
-.. _audio_source_mapping:
+.. _audio_stream_index:
 
-``AudioSourceMapping`` command
-==============================
+Audio stream index
+==========================
 
-Sent by the server to a client whenever the set of audio tracks delivered to that client changes (a peer joined, left, was admitted by the selection policy, or was evicted). Carried on the ``reliable`` channel as a standard :ref:`server-to-client command <command_packet>`.
+Every outbound audio stream is tagged with an **audio stream index**: a 32-bit integer assigned by the server and unique within a session.
 
-.. list-table:: AudioSourceMapping
-   :widths: 5 14 30
+* Indices come from a strictly increasing per-session counter. ``0`` is reserved to mean *no stream* (see :ref:`audio_emitter_component`).
+* An index is **never reused** within a session, even after the stream it named has stopped, so a client can discard decode state for a stopped stream with no risk of a late packet being misattributed to a new source. A session cannot plausibly exhaust 2\ :sup:`32` − 1 streams; a server that otherwise would MUST start a new session rather than wrap.
+* The server encodes the index in the track ``mid`` (its decimal form). Because ``mid`` is immutable for the life of an m-line, the SFU MUST NOT recycle an m-line for a different stream: a stopped stream's m-line is set ``inactive`` and retired, and every new stream uses a new m-line with a new index. This is what makes non-reuse structural rather than a convention.
+
+**Invalidation.** A stream stops when its source leaves, is evicted by the selection policy, or is muted. The server signals this by updating the owning node's :ref:`audio emitter component <audio_emitter_component>`: it clears the index to ``0`` if the source is still present but silent, or removes the component (or the whole node) if the source is gone. On either, the client stops and discards playback for that index, which is never allocated again.
+
+.. _audio_emitter_component:
+
+Audio emitter component
+===============================
+
+Audio is bound to the scene by an **audio emitter**, an optional component of a :doc:`node <geometry_payload>`. A node may carry an emitter *in addition to* a mesh or any other data, so an avatar is one node with both a mesh and an emitter. Emitters are added, updated and removed with their node on the geometry channel; there is no separate audio-mapping command.
+
+.. list-table:: AudioEmitter
+   :widths: 5 14 40
    :header-rows: 1
 
    * - Bytes
      - Type
      - Description
+   * - 4
+     - uint32
+     - ``audioStreamIndex``. The :ref:`stream <audio_stream_index>` this emitter plays, or ``0`` when the emitter is present but currently silent (see ``reason``).
    * - 1
-     - CommandPayloadType
-     - ``AudioSourceMapping`` (id assigned in :doc:`service/server_to_client`).
-   * - 2
-     - uint16
-     - ``addedCount`` = A.
-   * - 2
-     - uint16
-     - ``removedCount`` = R.
-   * - variable
-     - AddedEntry[A]
-     - Each: ``uint8 midLength``, ``midLength`` UTF-8 bytes (SDP ``mid``), ``uint64 sourceClientUid``.
-   * - variable
-     - RemovedEntry[R]
-     - Each: ``uint8 midLength``, ``midLength`` UTF-8 bytes.
-
-A client MUST treat the mapping as cumulative state: an ``Added`` entry whose ``mid`` is already known replaces the existing ``sourceClientUid``; a ``Removed`` entry whose ``mid`` is unknown is ignored. If a mapping arrives for a ``mid`` whose transceiver is not yet known locally (renegotiation race), the client MUST buffer it and apply it when the transceiver appears.
-
-The very first ``AudioSourceMapping`` of a session may be sent with ``A == 0`` and ``R == 0`` to mean "the audio subsystem is ready; no peers are currently selected".
-
-.. _audio_participant_state:
-
-``AudioParticipantStateChange`` command
-=======================================
-
-Sent by the server to inform a client of changes to the audio state of *other* participants whose presence is otherwise visible (i.e. they are nodes in the scene). This is distinct from :ref:`audio_source_mapping`, which describes the transport-level set; ``AudioParticipantStateChange`` describes intent and is used to render UI ("out of range", "muted", "left") without the user mis-attributing silence to a fault.
-
-.. list-table:: AudioParticipantStateChange
-   :widths: 5 14 30
-   :header-rows: 1
-
-   * - Bytes
-     - Type
-     - Description
+     - uint8
+     - ``flags``. Bit 0 ``spatialised``: when clear, the emitter plays at constant ``gain`` and ignores the node transform. Other bits reserved, MUST be zero.
    * - 1
-     - CommandPayloadType
-     - ``AudioParticipantStateChange`` (id assigned in :doc:`service/server_to_client`).
-   * - 2
-     - uint16
-     - ``updateCount`` = N.
-   * - 10 × N
-     - Update[N]
-     - Each: ``uint64 sourceClientUid``, ``uint8 state``, ``uint8 reason``.
+     - uint8
+     - ``reason``. Why a ``0`` index is silent, for UI: ``0`` none, ``1`` OutOfRange, ``2`` CapExceeded, ``3`` Muted.
+   * - 4
+     - float
+     - ``gain``. Linear playback gain; ``1.0`` = unity.
+   * - 4
+     - float
+     - ``minDistanceMetres``. Distance below which no attenuation is applied (spatialised emitters only).
+   * - 4
+     - float
+     - ``maxDistanceMetres``. Distance beyond which the emitter is inaudible (spatialised emitters only).
 
-``state``:
+**Client-side spatialisation.** For a spatialised emitter the client computes attenuation (and panning) from the owning node's world transform relative to the listener, rolling off between ``minDistanceMetres`` and ``maxDistanceMetres``. This layers on top of the SFU's coarse admission: the server chooses *whether* a listener receives a stream, the client chooses *how loud*, so a source fades smoothly instead of cutting hard at the selection boundary.
 
-* ``0`` ``Streaming`` — audio is being forwarded to this listener.
-* ``1`` ``Culled`` — known participant excluded by the selection policy.
-* ``2`` ``Disabled`` — participant is in the room but their microphone is off / muted by application policy.
-* ``3`` ``Left`` — participant has disconnected.
+**Orphan / non-spatial audio.** A source that should not be positioned — an announcer, a music bed, or a source whose node the client cannot place (culled, beyond ``drawDistance``, or not yet arrived) — is played non-spatially: either the server clears the ``spatialised`` flag, or the client falls back to non-spatial playback when it lacks the owning node's transform. Every source is still a node; a disembodied source is simply a node with no mesh and ``spatialised`` clear.
 
-``reason`` is informational and may be ``0`` (none). Defined non-zero values: ``1`` ``ProximityOut``, ``2`` ``CapExceeded``, ``3`` ``PolicyEvicted``, ``4`` ``ServerMuted``, ``5`` ``SelfMuted``.
+**Silent-but-present.** With ``audioStreamIndex == 0`` the emitter names no stream while the node persists, and ``reason`` lets the client render "muted" or "out of range" on the avatar. This subsumes the former ``AudioParticipantStateChange`` command.
+
+.. note::
+   The ``AudioSourceMapping`` and ``AudioParticipantStateChange`` command ids are **reserved (deprecated)**. Servers implementing this revision MUST NOT send them; clients MAY ignore them if received.
 
 Join and leave
 ==============
 
 When peer X joins a room that already contains peers Y\ :sub:`1`, …, Y\ :sub:`k`:
 
-1. The server adds, on X's PeerConnection: one ``recvonly`` transceiver for X's microphone, plus up to ``maxInboundStreams`` ``sendonly`` transceivers carrying the SFU-selected subset of {Y\ :sub:`i`}.
-2. For each Y\ :sub:`i` whose selection set now contains X, the server adds one ``sendonly`` transceiver on Y\ :sub:`i`'s PeerConnection and triggers renegotiation per :doc:`signaling`.
-3. The server sends ``AudioSourceMapping`` to X (listing all admitted Y\ :sub:`i`) and to every Y\ :sub:`i` whose set changed.
-4. The server sends ``AudioParticipantStateChange`` to surface the user-visible state changes.
+1. The server adds, on X's PeerConnection: one ``recvonly`` transceiver for X's microphone, plus up to ``maxInboundStreams`` ``sendonly`` transceivers for the SFU-selected subset of {Y\ :sub:`i`}. Each ``sendonly`` transceiver is given a fresh :ref:`audio stream index <audio_stream_index>` as its ``mid``.
+2. The server streams to X, on the geometry channel, the node for each admitted Y\ :sub:`i` (if not already present), carrying an :ref:`audio emitter component <audio_emitter_component>` whose ``audioStreamIndex`` names that Y\ :sub:`i`'s track.
+3. For each Y\ :sub:`i` whose selection set now contains X, the server adds one ``sendonly`` transceiver on Y\ :sub:`i`'s PeerConnection (a new index) and updates X's node there with an emitter component; renegotiation proceeds per :doc:`signaling`.
 
-When peer X leaves, the reverse: outbound transceivers carrying X are stopped on every affected peer, ``AudioSourceMapping`` carries the removed ``mid``\ s, and ``AudioParticipantStateChange`` carries ``Left`` for X.
+When peer X leaves, the reverse: the outbound transceivers carrying X are stopped and their m-lines retired on every affected peer, and X's node — with its emitter — is removed via ``RemoveNodes``. The indices X used are never reallocated.
 
 Example
 =======
 
-A 3-peer room with ``codec=Opus``, ``maxInboundStreams=2``, ``selectionPolicy=Proximity``, symmetric routing on:
+A 3-peer room with ``codec=Opus``, ``maxInboundStreams=2``, ``selectionPolicy=Proximity``, symmetric routing on. ``A_node``, ``B_node`` and ``C_node`` are the peers' avatar nodes:
 
 .. code-block:: text
 
-    Peer A's PeerConnection:        Peer B's PeerConnection:        Peer C's PeerConnection:
-      mid=0  recvonly  (A's mic)      mid=0  recvonly  (B's mic)      mid=0  recvonly  (C's mic)
-      mid=1  sendonly  (← B)          mid=1  sendonly  (← A)          mid=1  sendonly  (← A)
-      mid=2  sendonly  (← C)          mid=2  sendonly  (← C)          mid=2  sendonly  (← B)
+    Peer A's PeerConnection:            Peer B's PeerConnection:            Peer C's PeerConnection:
+      mid=0   recvonly (A's mic)          mid=0   recvonly (B's mic)          mid=0   recvonly (C's mic)
+      mid=17  sendonly (stream 17)        mid=19  sendonly (stream 19)        mid=21  sendonly (stream 21)
+      mid=18  sendonly (stream 18)        mid=20  sendonly (stream 20)        mid=22  sendonly (stream 22)
 
-    AudioSourceMapping to A: added {mid=1→B.uid, mid=2→C.uid}
-    AudioSourceMapping to B: added {mid=1→A.uid, mid=2→C.uid}
-    AudioSourceMapping to C: added {mid=1→A.uid, mid=2→B.uid}
+    To A:  B_node.emitter.audioStreamIndex = 17    C_node.emitter.audioStreamIndex = 18
+    To B:  A_node.emitter.audioStreamIndex = 19    C_node.emitter.audioStreamIndex = 20
+    To C:  A_node.emitter.audioStreamIndex = 21    B_node.emitter.audioStreamIndex = 22
+
+A receives audio on ``mid=17``; ``B_node``'s emitter names stream 17, so A plays it positioned at ``B_node``'s transform.
 
 Lifecycle
 =========
 
-Audio media tracks are negotiated as part of the initial SDP offer/answer described in :doc:`signaling`. They become active as soon as DTLS-SRTP completes for that bundle; there is no separate ``StartAudio`` command. ``ShutdownCommand`` and any transport-level close end all audio tracks.
+Audio media tracks are negotiated as part of the initial SDP offer/answer described in :doc:`signaling`. They become active as soon as DTLS-SRTP completes for that bundle; there is no separate ``StartAudio`` command. Audio emitter components are streamed, updated and removed with their nodes on the geometry channel, and an individual stream ends when its :ref:`index is invalidated <audio_stream_index>`. ``ShutdownCommand`` and any transport-level close end all audio tracks.
 
 Mid-session reconfiguration of codec, sample rate or channel count is **not** supported: changes to :ref:`audio_config` require a new ``SetupCommand`` (i.e. a fresh session). Changes to ``maxInboundStreams``, ``selectionPolicy``, ``proximityRadiusMetres`` and ``evictionGraceMs`` MAY be applied at runtime by issuing a fresh ``SetupCommand`` with the same ``session_id``; in this case clients MUST re-apply the new policy parameters without dropping cached state.
 

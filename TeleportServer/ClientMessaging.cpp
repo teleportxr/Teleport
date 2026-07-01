@@ -477,6 +477,23 @@ void ClientMessaging::ensureStreamingPipeline()
 				static_cast<int32_t>(disconnectTimeout)
 			};
 
+			// Enable the recvonly Opus mic track before initialise() so that
+			// CreatePeerConnection includes it in the SDP offer.
+			if (serverSettings.useAudioMediaTracks)
+			{
+				constexpr uint8_t kOpusPayloadType = 111; // standard dynamic Opus payload type
+				clientNetworkContext.NetworkPipeline.setAudioOpusPayloadType(kOpusPayloadType);
+				avs::uid cid = clientID;
+				clientNetworkContext.NetworkPipeline.setMicFrameCallback(
+					[cid](const uint8_t* data, size_t size)
+					{
+						// Forward Opus frames from the client mic RTP track to the
+						// existing audio-input handler (same path as the data-channel route).
+						if (teleport::server::processAudioInput)
+							teleport::server::processAudioInput(cid, data, size);
+					});
+			}
+
 			clientNetworkContext.NetworkPipeline.initialise(networkSettings);
 
 			MessageDecoder.configure(this,"MessageDecoder");

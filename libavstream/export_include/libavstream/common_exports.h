@@ -80,7 +80,8 @@ namespace avs
 		Unused1,
 		SkeletonUnused,
 		Link,
-		Script
+		Script,
+		AudioEmitter
 	};
 
 	enum class GeometryPayloadType : uint8_t

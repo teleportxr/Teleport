@@ -6,6 +6,7 @@
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
 #include <unordered_map>
+#include <functional>
 #include <libavstream/stream/parser_interface.hpp>
 
 namespace avs
@@ -81,6 +82,19 @@ namespace avs
 
 		Result onInputLink(int slot, PipelineNode* node) override;
 		Result onOutputLink(int slot, PipelineNode* node) override;
+
+		//! Callback type for Opus frames received from the client microphone via an RTP media track.
+		//! Only fires when audio_config.codec != 0 (gated by setAudioOpusPayloadType).
+		using MicFrameCallback = std::function<void(const uint8_t* data, size_t size)>;
+
+		//! Enable (payloadType != 0) or disable (payloadType == 0) the recvonly Opus mic track.
+		//! Must be called before CreatePeerConnection (i.e. before configure()).
+		void setAudioOpusPayloadType(uint8_t payloadType);
+
+		//! Register a callback that receives raw Opus frames from the client microphone.
+		//! Thread-safe; may be called at any time.
+		void setMicFrameCallback(MicFrameCallback cb);
+
 	protected:
 		void CreatePeerConnection();
 		Result packData(const uint8_t* buffer, size_t bufferSize, uint32_t inputNodeIndex) override;

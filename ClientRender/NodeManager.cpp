@@ -1,5 +1,7 @@
 #include "NodeManager.h"
 
+#include "NodeComponents/AudioEmitterComponent.h"
+
 using namespace teleport;
 using namespace clientrender;
 using teleport::core::Pose;
@@ -156,6 +158,17 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 	node->SetHolderClientId(avsNode.holder_client_id);
 	node->SetPriority(avsNode.priority);
 	node->SetGlobalIlluminationTextureUid(avsNode.renderState.globalIlluminationUid);
+
+	if (avsNode.hasAudioEmitter)
+	{
+		auto emitter					= node->GetOrCreateComponent<AudioEmitterComponent>();
+		emitter->audioStreamIndex		= avsNode.audioStreamIndex;
+		emitter->flags					= avsNode.audioEmitterFlags;
+		emitter->silenceReason			= static_cast<AudioEmitterComponent::SilenceReason>(avsNode.audioEmitterReason);
+		emitter->gain					= avsNode.audioGain;
+		emitter->minDistanceMetres		= avsNode.audioMinDistanceMetres;
+		emitter->maxDistanceMetres		= avsNode.audioMaxDistanceMetres;
+	}
 
 	if(avsNode.url.length())
 		node->AddLink(avsNode.url);

@@ -95,6 +95,24 @@ namespace teleport
   "requiredLatencyMs": {},
   "idle_connection_timeout": {},
   "session_id": {},
+  "video_config": {{
+    "video_width": {},
+    "video_height": {},
+    "depth_width": {},
+    "depth_height": {}
+  }},
+  "audio_config": {{
+    "codec": {},
+    "rtpPayloadType": {},
+    "sampleRateHz": {},
+    "channelCount": {},
+    "frameDurationMs": {},
+    "flags": {},
+    "maxInboundStreams": {},
+    "selectionPolicy": {},
+    "proximityRadiusMetres": {},
+    "evictionGraceMs": {}
+  }},
   "draw_distance": {},
   "axesStandard": {},
   "audio_input_enabled": {},
@@ -102,20 +120,27 @@ namespace teleport
   "startTimestamp_utc_unix_us": {},
   "backgroundMode": "{}",
   "backgroundColour": {{"r": {}, "g": {}, "b": {}, "a": {}}},
-  "backgroundTexture": {},
-  "video_config": {{
-    "video_width": {},
-    "video_height": {},
-    "depth_width": {},
-    "depth_height": {}
-  }},
-  "note": "ClientDynamicLighting is sent via SetLightingCommand"
+  "backgroundTexture": {}
 }})",
 				cmd.debug_stream,
 				cmd.debug_network_packets,
 				cmd.requiredLatencyMs,
 				cmd.idle_connection_timeout,
 				cmd.session_id,
+				cmd.video_config.video_width,
+				cmd.video_config.video_height,
+				cmd.video_config.depth_width,
+				cmd.video_config.depth_height,
+				static_cast<int>(cmd.audio_config.codec),
+				static_cast<int>(cmd.audio_config.rtpPayloadType),
+				cmd.audio_config.sampleRateHz,
+				static_cast<int>(cmd.audio_config.channelCount),
+				static_cast<int>(cmd.audio_config.frameDurationMs),
+				static_cast<int>(cmd.audio_config.flags),
+				static_cast<int>(cmd.audio_config.maxInboundStreams),
+				static_cast<int>(cmd.audio_config.selectionPolicy),
+				cmd.audio_config.proximityRadiusMetres,
+				cmd.audio_config.evictionGraceMs,
 				cmd.draw_distance,
 				static_cast<int>(cmd.axesStandard),
 				static_cast<int>(cmd.audio_input_enabled),
@@ -126,11 +151,7 @@ namespace teleport
 				cmd.backgroundColour.y,
 				cmd.backgroundColour.z,
 				cmd.backgroundColour.w,
-				cmd.backgroundTexture,
-				cmd.video_config.video_width,
-				cmd.video_config.video_height,
-				cmd.video_config.depth_width,
-				cmd.video_config.depth_height
+				cmd.backgroundTexture
 			);
 		}
 	}

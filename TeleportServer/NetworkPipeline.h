@@ -8,6 +8,7 @@
 #include <libavstream/libavstream.hpp>
 #include <libavstream/genericdecoder.h>
 #include <libavstream/lock_free_queue.h>
+#include <libavstream/network/webrtc_networksink.h>
 
 #define WITH_TELEPORT_STATS 1
 
@@ -42,6 +43,14 @@ namespace teleport
 
 			bool getNextStreamingControlMessage(std::string &str);
 			void receiveStreamingControlMessage(const std::string& str);
+
+			//! Enable the recvonly Opus mic track in the WebRTC offer.
+			//! payloadType == 0 disables it (default). Must be called before initialise().
+			void setAudioOpusPayloadType(uint8_t payloadType);
+
+			//! Register a callback for raw Opus frames from the client microphone.
+			//! Thread-safe; may be called after initialise().
+			void setMicFrameCallback(avs::WebRtcNetworkSink::MicFrameCallback cb);
 
 			avs::LockFreeQueue ColorQueue;
 			avs::LockFreeQueue TagDataQueue;
