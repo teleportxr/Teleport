@@ -51,14 +51,12 @@ namespace teleport
 			avs::GeometryDecoder avsGeometryDecoder;
 			avs::GeometryTarget avsGeometryTarget;
 
-			// Phase 2.4: WebRTC media-track Opus path. Frames arrive via
-			// WebRtcNetworkSource::setOpusFrameCallback (not via a libavstream
-			// queue), are decoded to 48 kHz int16 PCM, then pushed into
-			// opusAudioTarget which wraps the AudioStreamTarget audio player.
-			avs::OpusAudioDecoder opusAudioDecoder;
-			avs::AudioTarget opusAudioTarget;
+			// Inbound WebRTC Opus voices are decoded and spatialised by
+			// teleport::audio::SpatialAudioMixer (owned by InstanceRenderer), keyed
+			// by the emitting node uid; they no longer flow through a libavstream
+			// decoder/target here.
 
-			// Phase 2.5: outbound mic path. PCM captured from the audio player
+			// Outbound mic path. PCM captured from the audio player
 			// is fed into opusAudioEncoder; encoded Opus packets are forwarded
 			// to WebRtcNetworkSource::sendOpusFrame via the encoder's frame
 			// callback. The encoder runs as a pipeline node so it is ticked

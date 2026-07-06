@@ -336,10 +336,8 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 		put(node->priority);
 		put(node->parentID);
 		
-		// components. A node may carry a data component (mesh/light/etc.) and, in addition, an audio emitter.
+		// components.
 		uint8_t numComponents = (node->data_type != avs::NodeDataType::None) ? 1 : 0;
-		if (node->hasAudioEmitter)
-			numComponents++;
 		put(numComponents);
 		if (node->data_type != avs::NodeDataType::None)
 		{
@@ -387,16 +385,6 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 				put(queryLength);
 				put((uint8_t *)node->query_url.data(), queryLength);
 			}
-		}
-		if (node->hasAudioEmitter)
-		{
-			put((uint8_t)avs::NodeDataType::AudioEmitter);
-			put(node->audioStreamIndex);
-			put(node->audioEmitterFlags);
-			put(node->audioEmitterReason);
-			put(node->audioGain);
-			put(node->audioMinDistanceMetres);
-			put(node->audioMaxDistanceMetres);
 		}
 		geometryStreamingService->encodedResource(uid);
 	}

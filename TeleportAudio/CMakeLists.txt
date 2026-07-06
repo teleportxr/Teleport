@@ -20,6 +20,8 @@ set( src_crossplatform
 	AudioPlayer.h
 	NetworkPipeline.cpp
 	NetworkPipeline.h
+	SpatialAudioMixer.cpp
+	SpatialAudioMixer.h
 	)
 set( src_pc
 	PC_AudioPlayer.cpp
@@ -57,6 +59,11 @@ set_target_properties( TeleportAudio PROPERTIES FOLDER Teleport )
 
 target_include_directories(TeleportAudio PUBLIC ../libavstream/include ../libavstream/export_include ../)
 target_include_directories(TeleportAudio PUBLIC ../firstparty )
+
+# libopus: the SpatialAudioMixer decodes each forwarded voice stream directly.
+if(TARGET opus)
+	target_link_libraries(TeleportAudio opus)
+endif()
 
 if(PLATFORM_LINUX)
 	find_package(PkgConfig REQUIRED)

@@ -14,7 +14,7 @@
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Platform/CrossPlatform/Shaders/camera_constants.sl"
 #include "TeleportAudio/AudioCommon.h"
-#include "TeleportAudio/AudioStreamTarget.h"
+#include "TeleportAudio/SpatialAudioMixer.h"
 #include "TeleportClient/ClientPipeline.h"
 #include "TeleportClient/Config.h"
 #include "TeleportClient/OpenXR.h"
@@ -152,14 +152,23 @@ namespace teleport
 			// determined by the stream setup command:
 			vec4 colourOffsetScale;
 			vec4 depthOffsetScale;
+			// audioPlayer captures the local microphone (mono). spatialPlaybackPlayer
+			// renders the SpatialAudioMixer's summed stereo output; they are separate
+			// devices because capture and playback need different channel counts.
 #ifdef _MSC_VER
 			teleport::audio::PC_AudioPlayer audioPlayer;
+			teleport::audio::PC_AudioPlayer spatialPlaybackPlayer;
 #elif __ANDROID__
 			teleport::audio::AndroidAudioPlayer audioPlayer;
+			teleport::audio::AndroidAudioPlayer spatialPlaybackPlayer;
 #else
 			teleport::audio::LinuxAudioPlayer audioPlayer;
+			teleport::audio::LinuxAudioPlayer spatialPlaybackPlayer;
 #endif
-			std::unique_ptr<teleport::audio::AudioStreamTarget> audioStreamTarget;
+			teleport::audio::SpatialAudioMixer spatialAudioMixer;
+			//! Per-frame: publish each active audio source's stereo gains from its node's
+			//! world transform relative to the listener. Driven from RenderLocalNodes.
+			void UpdateSpatialAudio();
 			static constexpr uint32_t NominalJitterBufferLength = 0;
 			static constexpr uint32_t MaxJitterBufferLength		= 50;
 

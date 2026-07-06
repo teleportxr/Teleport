@@ -61,4 +61,20 @@ target_include_directories(avatar_validation_cache PRIVATE
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
    ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+
+# spatial_audio exercises the client-side SpatialAudioMixer: the spatialisation
+# maths (header-only) and multi-source Opus mixing. Links the TeleportAudio
+# static library (which carries the mixer + LinuxAudioPlayer/PulseAudio) and
+# libopus for the test's synthetic Opus frames.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
+add_executable(spatial_audio test_spatial_audio.cpp)
+add_test(NAME spatial_audio COMMAND spatial_audio)
+target_link_libraries(spatial_audio PRIVATE Catch2::Catch2WithMain TeleportAudio TeleportCore opus ${PULSEAUDIO_LIBRARIES})
+target_include_directories(spatial_audio PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportAudio
+   ${CMAKE_SOURCE_DIR}/libavstream/include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/firstparty)
 endif()

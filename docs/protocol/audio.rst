@@ -6,7 +6,7 @@ Audio
 
 Audio is carried as one or more **WebRTC media tracks** (RTP / SRTP) negotiated in the same SDP exchange that creates the data channels described in :doc:`data_transfer`. Each track carries Opus, with parameters published to the client in the :ref:`audio_config` block of ``SetupCommand``.
 
-In a multi-client (room) session the server acts as a **Selective Forwarding Unit (SFU)**: each client's microphone arrives at the server on one inbound track, and the server forwards a subset of those tracks to every other client as separate outbound tracks. Each outbound stream carries a server-assigned :ref:`audio stream index <audio_stream_index>` and is bound to a scene node by an :ref:`audio emitter component <audio_emitter_component>`, so clients perform their own spatialisation. Which sources each listener receives is decided by the SFU's :ref:`selection policy <audio_selection>`. Client uids are never exposed to other clients.
+In a multi-client (room) session the server acts as a **Selective Forwarding Unit (SFU)**: each client's microphone arrives at the server on one inbound track, and the server forwards a subset of those tracks to every other client as separate outbound tracks. Each outbound track is :ref:`bound to a scene node <audio_node_binding>` by setting the track's SDP ``mid`` to the decimal uid of the node that emits it, so clients perform their own spatialisation. Which sources each listener receives is decided by the SFU's :ref:`selection policy <audio_selection>`. Client uids are never exposed to other clients.
 
 Codec and RTP parameters
 ========================
@@ -60,7 +60,7 @@ For a session with N participants the server provisions transceivers per peer as
      - ``sendonly``
      - One outbound voice per other peer that the SFU has selected for this listener.
 
-Each outbound track carries one :ref:`audio stream index <audio_stream_index>`; the server sets the track's SDP ``mid`` to the decimal index, and this is the only binding between the RTP transport and the index. Clients read it from the received track (e.g. ``RTCRtpTransceiver.mid``) and MUST NOT infer a source from m-line order, ``a=msid`` or SSRC. The index is bound to a scene node by an :ref:`audio emitter component <audio_emitter_component>` delivered on the geometry channel.
+Each outbound track is :ref:`bound to a scene node <audio_node_binding>` by its SDP ``mid``, which the server sets to the decimal uid of the emitting node. This is the only binding between the RTP transport and the scene; clients read it from the received track (e.g. ``RTCRtpTransceiver.mid``) and MUST NOT infer a source from m-line order, ``a=msid`` or SSRC.
 
 A client that does not provide microphone input still receives ``sendonly`` transceivers from the server (it is a *listener*); it may negotiate ``inactive`` on its own outbound m-line.
 
@@ -109,7 +109,7 @@ A 17-byte block inside :ref:`setup_command` describing the audio configuration t
      - uint16
      - ``evictionGraceMs``. Hysteresis applied by the SFU before evicting a peer that has fallen out of the selected set. ``0`` disables hysteresis.
 
-If ``codec == 0`` no audio media tracks are present in the SDP, no audio emitter components are streamed, and any client microphone state is ignored.
+If ``codec == 0`` no audio media tracks are present in the SDP and any client microphone state is ignored.
 
 ``SetupCommand.audio_input_enabled`` remains the gate on **client-to-server** microphone capture (the inbound transceiver on the server is set to ``inactive`` if it is zero).
 
@@ -135,7 +135,7 @@ When the room has more potential speakers than ``maxInboundStreams``, the SFU ch
    * - ``ActiveSpeaker``
      - Forward the ``maxInboundStreams`` peers with the highest recent audio energy.
    * - ``Custom``
-     - Selection is performed by application code on the server. Clients treat the resulting :ref:`audio emitter component <audio_emitter_component>` updates as authoritative.
+     - Selection is performed by application code on the server. Clients treat the set of forwarded tracks as authoritative.
 
 When the ``symmetric routing`` flag (``AudioConfig.flags`` bit 2) is set, the SFU guarantees that if A is in B's selected set then B is in A's selected set; this may cause the actual forwarded count to exceed ``maxInboundStreams`` by at most one per pair affected.
 
@@ -143,94 +143,52 @@ The SFU MUST NOT forward a participant's own microphone back to them (loopback s
 
 Selection is recomputed on a server-defined cadence and on every join/leave. To avoid UI thrash on a peer hovering at the selection boundary, the server SHOULD apply the ``evictionGraceMs`` hysteresis before removing a transceiver that has just dropped out of the selected set.
 
-.. _audio_stream_index:
+.. _audio_node_binding:
 
-Audio stream index
-==========================
+Binding audio to nodes
+======================
 
-Every outbound audio stream is tagged with an **audio stream index**: a 32-bit integer assigned by the server and unique within a session.
+An outbound audio track is bound to the scene entirely by its SDP ``mid``: the server sets ``mid`` to the **decimal uid of the emitting node** — an avatar, or any object that emits sound. That node is an ordinary :doc:`node <geometry_payload>` on the geometry channel; nothing audio-specific is carried in the node payload, and there is no separate audio-mapping command.
 
-* Indices come from a strictly increasing per-session counter. ``0`` is reserved to mean *no stream* (see :ref:`audio_emitter_component`).
-* An index is **never reused** within a session, even after the stream it named has stopped, so a client can discard decode state for a stopped stream with no risk of a late packet being misattributed to a new source. A session cannot plausibly exhaust 2\ :sup:`32` − 1 streams; a server that otherwise would MUST start a new session rather than wrap.
-* The server encodes the index in the track ``mid`` (its decimal form). Because ``mid`` is immutable for the life of an m-line, the SFU MUST NOT recycle an m-line for a different stream: a stopped stream's m-line is set ``inactive`` and retired, and every new stream uses a new m-line with a new index. This is what makes non-reuse structural rather than a convention.
+* A track whose ``mid`` names a node is **spatialised** by the client at that node's world transform.
+* ``mid`` ``0`` — or a ``mid`` naming a node the client cannot currently place (culled, beyond ``drawDistance``, or not yet arrived) — is played **non-spatially**. Non-spatial audio therefore needs no node: an announcer or music bed is simply a track with ``mid = 0``.
 
-**Invalidation.** A stream stops when its source leaves, is evicted by the selection policy, or is muted. The server signals this by updating the owning node's :ref:`audio emitter component <audio_emitter_component>`: it clears the index to ``0`` if the source is still present but silent, or removes the component (or the whole node) if the source is gone. On either, the client stops and discards playback for that index, which is never allocated again.
+Because ``mid`` is immutable for the life of an m-line, the binding is stable for the whole session. When a source mutes/unmutes, or the SFU drops and later re-adds it, the server toggles that **same** m-line between ``sendonly`` and ``inactive`` rather than allocating a new one — so the node uid on the ``mid`` never changes, and a late packet arriving after ``inactive`` is unambiguously the same source. No per-stream index is needed.
 
-.. _audio_emitter_component:
-
-Audio emitter component
-===============================
-
-Audio is bound to the scene by an **audio emitter**, an optional component of a :doc:`node <geometry_payload>`. A node may carry an emitter *in addition to* a mesh or any other data, so an avatar is one node with both a mesh and an emitter. Emitters are added, updated and removed with their node on the geometry channel; there is no separate audio-mapping command.
-
-.. list-table:: AudioEmitter
-   :widths: 5 14 40
-   :header-rows: 1
-
-   * - Bytes
-     - Type
-     - Description
-   * - 4
-     - uint32
-     - ``audioStreamIndex``. The :ref:`stream <audio_stream_index>` this emitter plays, or ``0`` when the emitter is present but currently silent (see ``reason``).
-   * - 1
-     - uint8
-     - ``flags``. Bit 0 ``spatialised``: when clear, the emitter plays at constant ``gain`` and ignores the node transform. Other bits reserved, MUST be zero.
-   * - 1
-     - uint8
-     - ``reason``. Why a ``0`` index is silent, for UI: ``0`` none, ``1`` OutOfRange, ``2`` CapExceeded, ``3`` Muted.
-   * - 4
-     - float
-     - ``gain``. Linear playback gain; ``1.0`` = unity.
-   * - 4
-     - float
-     - ``minDistanceMetres``. Distance below which no attenuation is applied (spatialised emitters only).
-   * - 4
-     - float
-     - ``maxDistanceMetres``. Distance beyond which the emitter is inaudible (spatialised emitters only).
-
-**Client-side spatialisation.** For a spatialised emitter the client computes attenuation (and panning) from the owning node's world transform relative to the listener, rolling off between ``minDistanceMetres`` and ``maxDistanceMetres``. This layers on top of the SFU's coarse admission: the server chooses *whether* a listener receives a stream, the client chooses *how loud*, so a source fades smoothly instead of cutting hard at the selection boundary.
-
-**Orphan / non-spatial audio.** A source that should not be positioned — an announcer, a music bed, or a source whose node the client cannot place (culled, beyond ``drawDistance``, or not yet arrived) — is played non-spatially: either the server clears the ``spatialised`` flag, or the client falls back to non-spatial playback when it lacks the owning node's transform. Every source is still a node; a disembodied source is simply a node with no mesh and ``spatialised`` clear.
-
-**Silent-but-present.** With ``audioStreamIndex == 0`` the emitter names no stream while the node persists, and ``reason`` lets the client render "muted" or "out of range" on the avatar. This subsumes the former ``AudioParticipantStateChange`` command.
+**Client-side spatialisation.** For a track bound to a placed node the client computes attenuation (and panning) from that node's world transform relative to the listener. This layers on top of the SFU's coarse admission: the server chooses *whether* a listener receives a track, the client chooses *how loud*, so a source fades smoothly instead of cutting hard at the selection boundary. Gain and rolloff are client/application defaults and are **not** carried on the wire.
 
 .. note::
-   The ``AudioSourceMapping`` and ``AudioParticipantStateChange`` command ids are **reserved (deprecated)**. Servers implementing this revision MUST NOT send them; clients MAY ignore them if received.
+   Earlier drafts carried an ``AudioEmitter`` node component and a per-stream *audio stream index*; both are withdrawn in favour of ``mid = node uid``. The ``NodeDataType`` value ``AudioEmitter`` and the ``AudioSourceMapping`` / ``AudioParticipantStateChange`` command ids remain **reserved** — servers MUST NOT send them, and clients MAY ignore them if received.
 
 Join and leave
 ==============
 
 When peer X joins a room that already contains peers Y\ :sub:`1`, …, Y\ :sub:`k`:
 
-1. The server adds, on X's PeerConnection: one ``recvonly`` transceiver for X's microphone, plus up to ``maxInboundStreams`` ``sendonly`` transceivers for the SFU-selected subset of {Y\ :sub:`i`}. Each ``sendonly`` transceiver is given a fresh :ref:`audio stream index <audio_stream_index>` as its ``mid``.
-2. The server streams to X, on the geometry channel, the node for each admitted Y\ :sub:`i` (if not already present), carrying an :ref:`audio emitter component <audio_emitter_component>` whose ``audioStreamIndex`` names that Y\ :sub:`i`'s track.
-3. For each Y\ :sub:`i` whose selection set now contains X, the server adds one ``sendonly`` transceiver on Y\ :sub:`i`'s PeerConnection (a new index) and updates X's node there with an emitter component; renegotiation proceeds per :doc:`signaling`.
+1. The server adds, on X's PeerConnection: one ``recvonly`` transceiver for X's microphone, plus up to ``maxInboundStreams`` ``sendonly`` transceivers for the SFU-selected subset of {Y\ :sub:`i`}. Each ``sendonly`` transceiver's ``mid`` is set to the uid of the Y\ :sub:`i` node it carries.
+2. The server streams to X, on the geometry channel, the node for each admitted Y\ :sub:`i` (if not already present). No audio-specific payload is added; the binding is the track ``mid``.
+3. For each Y\ :sub:`i` whose selection set now contains X, the server adds one ``sendonly`` transceiver on Y\ :sub:`i`'s PeerConnection with ``mid`` set to X's node uid; renegotiation proceeds per :doc:`signaling`.
 
-When peer X leaves, the reverse: the outbound transceivers carrying X are stopped and their m-lines retired on every affected peer, and X's node — with its emitter — is removed via ``RemoveNodes``. The indices X used are never reallocated.
+When peer X leaves, the reverse: the outbound transceivers carrying X are stopped and their m-lines retired on every affected peer, and X's node is removed via ``RemoveNodes``.
 
 Example
 =======
 
-A 3-peer room with ``codec=Opus``, ``maxInboundStreams=2``, ``selectionPolicy=Proximity``, symmetric routing on. ``A_node``, ``B_node`` and ``C_node`` are the peers' avatar nodes:
+A 3-peer room with ``codec=Opus``, ``maxInboundStreams=2``, ``selectionPolicy=Proximity``, symmetric routing on. The peers' avatar nodes have uids ``1001`` (A), ``1002`` (B) and ``1003`` (C). Each ``sendonly`` track's ``mid`` is the uid of the node it carries:
 
 .. code-block:: text
 
     Peer A's PeerConnection:            Peer B's PeerConnection:            Peer C's PeerConnection:
-      mid=0   recvonly (A's mic)          mid=0   recvonly (B's mic)          mid=0   recvonly (C's mic)
-      mid=17  sendonly (stream 17)        mid=19  sendonly (stream 19)        mid=21  sendonly (stream 21)
-      mid=18  sendonly (stream 18)        mid=20  sendonly (stream 20)        mid=22  sendonly (stream 22)
+      mid=0     recvonly (A's mic)        mid=0     recvonly (B's mic)        mid=0     recvonly (C's mic)
+      mid=1002  sendonly (B's voice)      mid=1001  sendonly (A's voice)      mid=1001  sendonly (A's voice)
+      mid=1003  sendonly (C's voice)      mid=1003  sendonly (C's voice)      mid=1002  sendonly (B's voice)
 
-    To A:  B_node.emitter.audioStreamIndex = 17    C_node.emitter.audioStreamIndex = 18
-    To B:  A_node.emitter.audioStreamIndex = 19    C_node.emitter.audioStreamIndex = 20
-    To C:  A_node.emitter.audioStreamIndex = 21    B_node.emitter.audioStreamIndex = 22
-
-A receives audio on ``mid=17``; ``B_node``'s emitter names stream 17, so A plays it positioned at ``B_node``'s transform.
+A receives B's voice on ``mid=1002`` — that is ``B_node``'s uid — so A plays it positioned at ``B_node``'s transform. (The listener's own mic m-line ``mid`` is arbitrary and never a node uid.)
 
 Lifecycle
 =========
 
-Audio media tracks are negotiated as part of the initial SDP offer/answer described in :doc:`signaling`. They become active as soon as DTLS-SRTP completes for that bundle; there is no separate ``StartAudio`` command. Audio emitter components are streamed, updated and removed with their nodes on the geometry channel, and an individual stream ends when its :ref:`index is invalidated <audio_stream_index>`. ``ShutdownCommand`` and any transport-level close end all audio tracks.
+Audio media tracks are negotiated as part of the initial SDP offer/answer described in :doc:`signaling`. They become active as soon as DTLS-SRTP completes for that bundle; there is no separate ``StartAudio`` command. The emitting nodes are streamed, updated and removed on the geometry channel like any other node; an individual voice ends when its m-line is set ``inactive`` or closed. ``ShutdownCommand`` and any transport-level close end all audio tracks.
 
 Mid-session reconfiguration of codec, sample rate or channel count is **not** supported: changes to :ref:`audio_config` require a new ``SetupCommand`` (i.e. a fresh session). Changes to ``maxInboundStreams``, ``selectionPolicy``, ``proximityRadiusMetres`` and ``evictionGraceMs`` MAY be applied at runtime by issuing a fresh ``SetupCommand`` with the same ``session_id``; in this case clients MUST re-apply the new policy parameters without dropping cached state.
 

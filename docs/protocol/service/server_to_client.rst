@@ -88,11 +88,11 @@ The complete set of command types is enumerated below. Variable-length commands 
    * - 17
      - ``AudioSourceMapping``
      - *(reserved)*
-     - Deprecated; superseded by the :ref:`audio emitter component <audio_emitter_component>`. MUST NOT be sent.
+     - Deprecated; audio is bound by the :ref:`track mid = node uid <audio_node_binding>`. MUST NOT be sent.
    * - 18
      - ``AudioParticipantStateChange``
      - *(reserved)*
-     - Deprecated; superseded by the :ref:`audio emitter component <audio_emitter_component>`. MUST NOT be sent.
+     - Deprecated; audio is bound by the :ref:`track mid = node uid <audio_node_binding>`. MUST NOT be sent.
    * - 128
      - ``SetOriginNode``
      - ``teleport::core::SetOriginNodeCommand``

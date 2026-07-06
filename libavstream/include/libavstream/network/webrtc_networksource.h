@@ -88,17 +88,29 @@ namespace avs
 		/*!
 		 * Callback signature for an inbound Opus audio RTP frame after
 		 * depacketization. The payload is one Opus packet (typically 20 ms,
-		 * 48 kHz, mono). \p mid is the WebRTC transceiver mid the frame
-		 * arrived on (used by Phase 2b AudioSourceMapping to route to a
-		 * per-peer decoder).
+		 * 48 kHz, mono). \p mid is the WebRTC track's SDP mid, which the server
+		 * sets to the decimal uid of the emitting scene node (see
+		 * docs/protocol/audio.rst); the client routes/spatialises on it.
 		 */
 		using OpusFrameCallback = std::function<void(const std::string& mid, const uint8_t* data, size_t size)>;
+
+		/*!
+		 * Invoked when an inbound audio track closes. \p mid identifies the
+		 * emitting node uid, so the client can release that source's decoder.
+		 */
+		using OpusTrackClosedCallback = std::function<void(const std::string& mid)>;
 
 		/*!
 		 * Register a callback invoked on every inbound Opus RTP frame.
 		 * Pass nullptr to clear. Set before the audio track opens.
 		 */
 		void setOpusFrameCallback(OpusFrameCallback cb);
+
+		/*!
+		 * Register a callback invoked when an inbound audio track closes.
+		 * Pass nullptr to clear.
+		 */
+		void setOpusTrackClosedCallback(OpusTrackClosedCallback cb);
 
 		/*!
 		 * Send a single Opus packet (typically 20 ms, payload type 111) over

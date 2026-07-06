@@ -1594,12 +1594,9 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 	size_t numComponents  = (size_t)NextByte;
 	for (size_t i = 0; i < numComponents; i++)
 	{
-		avs::NodeDataType componentType = static_cast<avs::NodeDataType>(NextByte);
-		// A node may carry several components; keep data_type as the last non-emitter (visual/data) component.
-		if (componentType != avs::NodeDataType::AudioEmitter)
-			node.data_type = componentType;
+		node.data_type = static_cast<avs::NodeDataType>(NextByte);
 
-		switch (componentType)
+		switch (node.data_type)
 		{
 			case avs::NodeDataType::Mesh:
 			{
@@ -1645,15 +1642,6 @@ avs::Result GeometryDecoder::decodeNode(GeometryDecodeData &geometryDecodeData)
 			}
 		}
 		break;
-		case avs::NodeDataType::AudioEmitter:
-			node.hasAudioEmitter		= true;
-			node.audioStreamIndex		= NextUint32;
-			node.audioEmitterFlags		= NextByte;
-			node.audioEmitterReason		= NextByte;
-			node.audioGain				= NextFloat;
-			node.audioMinDistanceMetres	= NextFloat;
-			node.audioMaxDistanceMetres	= NextFloat;
-			break;
 		default:
 			break;
 		};

@@ -97,7 +97,6 @@ set(src_node_components
 
 set(hdr_node_components
 	NodeComponents/AnimationComponent.h
-	NodeComponents/AudioEmitterComponent.h
 	NodeComponents/AnimationState.h
 	NodeComponents/Component.h
 	NodeComponents/SubSceneComponent.h

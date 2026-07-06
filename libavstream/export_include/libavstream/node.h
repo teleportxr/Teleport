@@ -54,15 +54,6 @@ namespace avs
 
 		std::string url;		// if node is a link/portal
 		std::string query_url;	// if node is a link/portal
-
-		// AUDIO EMITTER (optional component). See docs/protocol/audio.rst.
-		bool hasAudioEmitter=false;
-		uint32_t audioStreamIndex=0;		//!< Server-assigned stream index, or 0 when present but silent.
-		uint8_t audioEmitterFlags=1;		//!< Bit 0 = spatialised.
-		uint8_t audioEmitterReason=0;		//!< SilenceReason when audioStreamIndex==0.
-		float audioGain=1.0f;				//!< Linear playback gain.
-		float audioMinDistanceMetres=1.0f;	//!< Below this distance, no attenuation (spatialised only).
-		float audioMaxDistanceMetres=100.0f;//!< Beyond this distance, inaudible (spatialised only).
 	} AVS_PACKED;
 	//static_assert (sizeof(Node) == 308, "avs::Node size is not correct");
 	// TODO: On Android, sizeof(string) seems to be 24, not 32, so this won't be the same.

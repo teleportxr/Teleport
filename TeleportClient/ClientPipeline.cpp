@@ -29,8 +29,6 @@ ClientPipeline::~ClientPipeline()
 	avsGeometryDecoder.deconfigure();
 	avsGeometryTarget.deconfigure();
 
-	opusAudioDecoder.deconfigure();
-	opusAudioTarget.deconfigure();
 	opusAudioEncoder.deconfigure();
 
 	reliableFromServerQueue.deconfigure();

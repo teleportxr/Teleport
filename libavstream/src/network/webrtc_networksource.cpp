@@ -17,6 +17,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <map>
 #include <sstream>
 
 //rtc
@@ -93,7 +94,13 @@ namespace avs
 		// Phase 2.4: forward depacketized Opus frames to a user-supplied callback
 		// (typically wired to an avs::OpusAudioDecoder owned by the client pipeline).
 		WebRtcNetworkSource::OpusFrameCallback opusFrameCallback;
+		WebRtcNetworkSource::OpusTrackClosedCallback opusTrackClosedCallback;
 		std::mutex opusFrameCallbackMutex;
+		// Additional inbound voice tracks in the SFU model: each forwarded voice
+		// arrives on its own track whose SDP mid is the emitting node uid. Held
+		// here (keyed by mid) so they are not garbage-collected. The first audio
+		// track remains the sendrecv mic track in rtcAudioRecvTrack (above).
+		std::map<std::string, std::shared_ptr<rtc::Track>> rtcAudioReceiveTracks;
 		// Phase 2.5: outbound (mic) audio. The negotiated audio mid is sendrecv,
 		// so the same rtc::Track is used for both directions. The packetizer
 		// chain wraps raw Opus payloads into RTP packets carrying payloadType
@@ -1027,9 +1034,48 @@ void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 		TELEPORT_INTERNAL_COUT(Default, "WebRTC: ignoring non-audio track mid={} type={}", mid, type);
 		return;
 	}
+	auto privateSelf = this;
 	if(rtcAudioRecvTrack)
 	{
-		TELEPORT_INTERNAL_COUT(Default, "WebRTC: replacing existing audio recv track (was mid={})", rtcAudioRecvTrack->mid());
+		// A subsequent audio track is a receive-only forwarded voice: its SDP mid
+		// is the emitting node uid. Set up a depacketize-only chain and forward its
+		// frames tagged with that mid; keep it alive in rtcAudioReceiveTracks.
+		{
+			std::lock_guard<std::mutex> lock(opusFrameCallbackMutex);
+			rtcAudioReceiveTracks[mid] = track;
+		}
+		auto depacketizer	 = std::make_shared<rtc::OpusRtpDepacketizer>();
+		auto rtcpRecvSession = std::make_shared<rtc::RtcpReceivingSession>();
+		depacketizer->addToChain(rtcpRecvSession);
+		track->setMediaHandler(depacketizer);
+		track->onFrame(
+			[privateSelf, mid](rtc::binary frame, rtc::FrameInfo /*info*/)
+			{
+				++privateSelf->audioRtpFramesReceived;
+				privateSelf->audioRtpBytesReceived += frame.size();
+				WebRtcNetworkSource::OpusFrameCallback cb;
+				{
+					std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+					cb = privateSelf->opusFrameCallback;
+				}
+				if(cb)
+					cb(mid, reinterpret_cast<const uint8_t*>(frame.data()), frame.size());
+			});
+		track->onClosed(
+			[privateSelf, mid]()
+			{
+				TELEPORT_INTERNAL_COUT(Default, "WebRTC: forwarded voice track closed (mid={})", mid);
+				WebRtcNetworkSource::OpusTrackClosedCallback cb;
+				{
+					std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+					cb = privateSelf->opusTrackClosedCallback;
+					privateSelf->rtcAudioReceiveTracks.erase(mid);
+				}
+				if(cb)
+					cb(mid);
+			});
+		TELEPORT_INTERNAL_COUT(Default, "WebRTC: forwarded voice track attached (mid={})", mid);
+		return;
 	}
 	rtcAudioRecvTrack = track;
 	// Build a bidirectional media handler chain so the same sendrecv track
@@ -1054,7 +1100,6 @@ void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 	packetizer->addToChain(depacketizer);
 	packetizer->addToChain(rtcpRecvSession);
 	track->setMediaHandler(packetizer);
-	auto privateSelf = this;
 	// RtpDepacketizer attaches a FrameInfo to every depacketized payload, so
 	// libdatachannel dispatches these through the frame callback path rather
 	// than the message callback path. Using onMessage() here would silently
@@ -1088,6 +1133,13 @@ void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 	{
 		privateSelf->audioSendTrackOpen.store(false);
 		TELEPORT_INTERNAL_COUT(Default, "WebRTC audio track closed (mid={})", mid);
+		WebRtcNetworkSource::OpusTrackClosedCallback cb;
+		{
+			std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+			cb = privateSelf->opusTrackClosedCallback;
+		}
+		if(cb)
+			cb(mid);
 	});
 	// Track may already be open by the time onTrack fires.
 	if(track->isOpen())
@@ -1099,6 +1151,12 @@ void WebRtcNetworkSource::setOpusFrameCallback(OpusFrameCallback cb)
 {
 	std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
 	m_data->opusFrameCallback = std::move(cb);
+}
+
+void WebRtcNetworkSource::setOpusTrackClosedCallback(OpusTrackClosedCallback cb)
+{
+	std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
+	m_data->opusTrackClosedCallback = std::move(cb);
 }
 
 Result WebRtcNetworkSource::sendOpusFrame(const uint8_t* data, size_t size)
