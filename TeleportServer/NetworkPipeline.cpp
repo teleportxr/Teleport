@@ -259,6 +259,20 @@ void NetworkPipeline::release()
 	initialized = false;
 }
 
+void NetworkPipeline::setAudioOpusPayloadType(uint8_t payloadType)
+{
+	auto* sink = dynamic_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
+	if (sink)
+		sink->setAudioOpusPayloadType(payloadType);
+}
+
+void NetworkPipeline::setMicFrameCallback(avs::WebRtcNetworkSink::MicFrameCallback cb)
+{
+	auto* sink = dynamic_cast<avs::WebRtcNetworkSink*>(mNetworkSink.get());
+	if (sink)
+		sink->setMicFrameCallback(std::move(cb));
+}
+
 bool NetworkPipeline::process()
 {
 	TELEPORT_PROFILE_AUTOZONE;

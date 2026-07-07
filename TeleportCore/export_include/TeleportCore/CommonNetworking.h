@@ -53,12 +53,22 @@ namespace avs
 	// pragma pack(1) from libavstream/common_exports.h ensures 1-byte alignment
 	static_assert (sizeof(VideoConfig) == 89, "VideoConfig Size is not correct");
 
+	//! Audio configuration carried inside SetupCommand (17 bytes).
+	//! See docs/protocol/audio.rst §AudioConfig for the full specification.
 	struct AudioConfig
 	{
-		uint32_t sampleRate = 44100;
-		uint32_t bitsPerSample = 16;
-		uint32_t numChannels = 2;
+		uint8_t  codec              = 1;    //!< 0=disabled (no media tracks); 1=Opus. Others reserved.
+		uint8_t  rtpPayloadType     = 111;  //!< Dynamic payload type advertised in SDP a=rtpmap.
+		uint32_t sampleRateHz       = 48000;//!< Opus clock-rate; decoder may resample for playback.
+		uint8_t  channelCount       = 1;    //!< 1=mono, 2=stereo.
+		uint8_t  frameDurationMs    = 20;   //!< Permitted: 10, 20, 40, 60.
+		uint8_t  flags              = 3;    //!< Bit 0: in-band FEC. Bit 1: DTX. Bit 2: symmetric routing.
+		uint8_t  maxInboundStreams  = 0;    //!< Per-listener cap; 0 = no limit.
+		uint8_t  selectionPolicy    = 0;    //!< 0=All, 1=Fifo, 2=Proximity, 3=ActiveSpeaker, 4=Custom.
+		float    proximityRadiusMetres = 0.0f; //!< Used when selectionPolicy == Proximity.
+		uint16_t evictionGraceMs    = 0;    //!< Hysteresis before evicting a peer. 0 disables.
 	} AVS_PACKED;
+	static_assert(sizeof(AudioConfig) == 17, "AudioConfig Size is not correct");
 
 	//! Information on the resolution of a client's display.
 	struct DisplayInfo
@@ -145,8 +155,9 @@ namespace teleport
 			AssignNodePosePath,				// id
 			SetupInputs,					// 0
 			PingForLatency,
+			AudioSourceMapping,
+			AudioParticipantStateChange,
 			SetOriginNode=128
-			// 0
 		} TELEPORT_PACKED;
 		inline const char *StringOf(CommandPayloadType type)
 		{
@@ -169,6 +180,9 @@ namespace teleport
 				case CommandPayloadType::UpdateNodeStructure			:return "UpdateNodeStructure";
 				case CommandPayloadType::AssignNodePosePath				:return "AssignNodePosePath";
 				case CommandPayloadType::SetupInputs					:return "SetupInputs";
+				case CommandPayloadType::PingForLatency				:return "PingForLatency";
+				case CommandPayloadType::AudioSourceMapping			:return "AudioSourceMapping";
+				case CommandPayloadType::AudioParticipantStateChange:return "AudioParticipantStateChange";
 			default:
 			return "Invalid";
 			};
@@ -337,18 +351,19 @@ namespace teleport
 			int32_t				requiredLatencyMs = 0;								//!< 9+4=13
 			uint32_t			idle_connection_timeout = 5000;						//!< 13+4=17
 			uint64_t			session_id = 0;										//!< 17+8=25	The server's session id changes when the server session changes.	37 bytes
-			avs::VideoConfig	video_config;										//!< 25+89=114	Video setup structure. 41+89=130 bytes
-			float				draw_distance = 0.0f;								//!< 114+4=118	Maximum distance in metres to render locally. 134
-			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< 118+1=119	The axis standard that the server uses, may be different from the client's. 147
-			uint8_t				audio_input_enabled = 0;							//!< 119+1=120	Server accepts audio stream from client.
-			bool				using_ssl = true;									//!< 120+1=121	Not in use, for later.
-			int64_t				startTimestamp_utc_unix_us = 0;						//!< 121+8=129	UTC Unix Timestamp in microseconds when the server session began.
+			avs::VideoConfig	video_config;										//!< 25+89=114	Video setup structure.
+			avs::AudioConfig	audio_config;										//!< 114+17=131	Audio media-track config. See docs/protocol/audio.rst.
+			float				draw_distance = 0.0f;								//!< 131+4=135	Maximum distance in metres to render locally.
+			avs::AxesStandard	axesStandard = avs::AxesStandard::NotInitialized;	//!< 135+1=136	The axis standard that the server uses, may be different from the client's.
+			uint8_t				audio_input_enabled = 0;							//!< 136+1=137	Server accepts a microphone media track from the client.
+			bool				using_ssl = true;									//!< 137+1=138	Not in use, for later.
+			int64_t				startTimestamp_utc_unix_us = 0;						//!< 138+8=146	UTC Unix Timestamp in microseconds when the server session began.
 			// TODO: replace this with a background Material, which MAY contain video, texture and/or plain colours.
-			BackgroundMode		backgroundMode;										//!< 129+1=130	Whether the server supplies a background, and of which type.
-			vec4_packed			backgroundColour;									//!< 130+16=146 If the background is of the COLOUR type, which colour to use.
-			avs::uid			backgroundTexture=0;								//!< 146+8=154
+			BackgroundMode		backgroundMode;										//!< 146+1=147	Whether the server supplies a background, and of which type.
+			vec4_packed			backgroundColour;									//!< 147+16=163	If the background is of the COLOUR type, which colour to use.
+			avs::uid			backgroundTexture=0;								//!< 163+8=171
 		} TELEPORT_PACKED;
-		static_assert (sizeof(SetupCommand) == 154, "SetupCommand Size is not correct");
+		static_assert (sizeof(SetupCommand) == 171, "SetupCommand Size is not correct");
 // 		TODO: track missing resources for backgroundTexture or ClientDynamicLighting
 
 		//! A command that expects an acknowledgement of receipt from the client using an AcknowledgementMessage.
@@ -391,6 +406,24 @@ namespace teleport
 			avs::uid		origin_node=0;		//!< The session uid of the node to use as the origin.
 			//! A validity value. Larger values indicate newer data, so the client ignores messages with smaller validity than the last one received.
 			uint64_t		valid_counter = 0;
+		} TELEPORT_PACKED;
+
+		//! Sent from server to client when the set of audio tracks delivered to a client changes.
+		//! Followed by addedCount AddedEntry (uint8 midLen + midLen UTF-8 bytes + uint64 sourceClientUid)
+		//! then removedCount RemovedEntry (uint8 midLen + midLen UTF-8 bytes).
+		struct AudioSourceMappingCommand : public Command
+		{
+			AudioSourceMappingCommand() : Command(CommandPayloadType::AudioSourceMapping) {}
+			uint16_t addedCount   = 0;
+			uint16_t removedCount = 0;
+		} TELEPORT_PACKED;
+
+		//! Sent from server to client to report user-visible audio state changes for other participants.
+		//! Followed by updateCount Update entries (uint64 sourceClientUid + uint8 state + uint8 reason = 10 bytes each).
+		struct AudioParticipantStateChangeCommand : public Command
+		{
+			AudioParticipantStateChangeCommand() : Command(CommandPayloadType::AudioParticipantStateChange) {}
+			uint16_t updateCount = 0;
 		} TELEPORT_PACKED;
 
 		//! The definition of a single input that the server expects the client to provide when needed.

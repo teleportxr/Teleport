@@ -81,6 +81,11 @@ namespace teleport
 			int32_t defaultDiffuseCubemapSize = 0;
 			int32_t defaultLightCubemapSize = 0;
 			int32_t defaultShadowmapSize = 0;
+
+			//! When true, audio is carried as WebRTC media tracks (see docs/protocol/audio.rst):
+			//! this drives SetupCommand.audio_config.codec. When false, audio uses the legacy
+			//! "audio_server_to_client" data channel. Appended at the end to preserve interop layout.
+			bool useAudioMediaTracks = true;
 		} TELEPORT_PACKED;
 		struct ClientSettings
 		{

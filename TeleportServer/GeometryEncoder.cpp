@@ -337,11 +337,10 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 		put(node->parentID);
 		
 		// components.
-		if(node->data_type==avs::NodeDataType::None)
-			put((uint8_t)(0));
-		else
+		uint8_t numComponents = (node->data_type != avs::NodeDataType::None) ? 1 : 0;
+		put(numComponents);
+		if (node->data_type != avs::NodeDataType::None)
 		{
-			put((uint8_t)(1));
 			put(node->data_type);
 			// If the node's priority is less than the *client's* minimum, we don't want
 			// to send its mesh.
@@ -355,7 +354,7 @@ avs::Result GeometryEncoder::encodeNodes(std::vector<avs::uid> nodeUids)
 				PUT_LIST(uint16_t,node->materials);
 				put(node->renderState.lightmapScaleOffset);
 				put(node->renderState.globalIlluminationUid);
-		
+
 			}
 			else
 			{

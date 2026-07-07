@@ -17,6 +17,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <map>
 #include <sstream>
 
 //rtc
@@ -93,7 +94,13 @@ namespace avs
 		// Phase 2.4: forward depacketized Opus frames to a user-supplied callback
 		// (typically wired to an avs::OpusAudioDecoder owned by the client pipeline).
 		WebRtcNetworkSource::OpusFrameCallback opusFrameCallback;
+		WebRtcNetworkSource::OpusTrackClosedCallback opusTrackClosedCallback;
 		std::mutex opusFrameCallbackMutex;
+		// Additional inbound voice tracks in the SFU model: each forwarded voice
+		// arrives on its own track whose SDP mid is the emitting node uid. Held
+		// here (keyed by mid) so they are not garbage-collected. The first audio
+		// track remains the sendrecv mic track in rtcAudioRecvTrack (above).
+		std::map<std::string, std::shared_ptr<rtc::Track>> rtcAudioReceiveTracks;
 		// Phase 2.5: outbound (mic) audio. The negotiated audio mid is sendrecv,
 		// so the same rtc::Track is used for both directions. The packetizer
 		// chain wraps raw Opus payloads into RTP packets carrying payloadType
@@ -406,6 +413,20 @@ void WebRtcNetworkSource::resetPeerConnection()
 	m_data->rtcPeerConnection.reset();
 }
 
+// The ICE ufrag identifies the ICE session. It changes on a fresh connection or an
+// ICE restart, but NOT on an ordinary renegotiation (e.g. the server adding a
+// sendonly audio m-line). We key the "recreate vs. renegotiate" decision on it.
+static std::string ExtractIceUfrag(const std::string& sdp)
+{
+	static const std::string key = "a=ice-ufrag:";
+	size_t p = sdp.find(key);
+	if (p == std::string::npos)
+		return std::string();
+	p += key.size();
+	size_t e = sdp.find_first_of("\r\n", p);
+	return sdp.substr(p, e == std::string::npos ? std::string::npos : e - p);
+}
+
 void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 {
 	// Mark when the WebRTC offer arrived so ICE timing is relative to this moment.
@@ -448,17 +469,19 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 				return false;
 		}
 	};
-	// A new offer that differs from the cached one carries fresh ICE credentials (ufrag/pwd).
-	// libdatachannel's underlying juice agent does not pick up changed remote credentials when
-	// setRemoteDescription is called on a still-active PeerConnection, so it keeps validating
-	// incoming STUN packets against the previous ufrag and rejects them all
-	// ("STUN remote ufrag check failed"). Recreate the PeerConnection in that case.
-	// Note: When PeerConnection enters terminal state (Closed/Failed), the cached offer is cleared
-	// by SetStreamingConnectionState(). On reconnect, we must always recreate to avoid reusing
-	// a stale PeerConnection with new ICE credentials.
-	bool offerChanged = offer.length() && offer != sdp;
-	bool mustRecreateOnReconnect = !offer.length();  // offer was cleared on terminal state
-	if(needsRecreate(m_data->rtcPeerConnection) || offerChanged || mustRecreateOnReconnect)
+	// Distinguish an in-place RENEGOTIATION (the server added/changed a media m-line but
+	// kept the same ICE session — e.g. an SFU adding a sendonly voice track) from a fresh
+	// connection or ICE restart. libdatachannel's juice agent does not pick up *changed*
+	// remote ICE credentials on an active PeerConnection ("STUN remote ufrag check failed"),
+	// so we must recreate when the ufrag changes — but an offer that differs only in its
+	// media sections, with the SAME ufrag, is a legal renegotiation we can apply in place
+	// (which keeps the video/geometry data channels alive). Terminal state, or no cached
+	// offer (cleared on Closed/Failed), always forces a recreate on reconnect.
+	const std::string newUfrag = ExtractIceUfrag(sdp);
+	const std::string oldUfrag = ExtractIceUfrag(offer);
+	bool haveCachedOffer = offer.length() != 0;
+	bool iceCredentialsChanged = haveCachedOffer && !newUfrag.empty() && newUfrag != oldUfrag;
+	if(needsRecreate(m_data->rtcPeerConnection) || !haveCachedOffer || iceCredentialsChanged)
 	{
 		if(m_data->rtcPeerConnection)
 		{
@@ -1027,9 +1050,48 @@ void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 		TELEPORT_INTERNAL_COUT(Default, "WebRTC: ignoring non-audio track mid={} type={}", mid, type);
 		return;
 	}
+	auto privateSelf = this;
 	if(rtcAudioRecvTrack)
 	{
-		TELEPORT_INTERNAL_COUT(Default, "WebRTC: replacing existing audio recv track (was mid={})", rtcAudioRecvTrack->mid());
+		// A subsequent audio track is a receive-only forwarded voice: its SDP mid
+		// is the emitting node uid. Set up a depacketize-only chain and forward its
+		// frames tagged with that mid; keep it alive in rtcAudioReceiveTracks.
+		{
+			std::lock_guard<std::mutex> lock(opusFrameCallbackMutex);
+			rtcAudioReceiveTracks[mid] = track;
+		}
+		auto depacketizer	 = std::make_shared<rtc::OpusRtpDepacketizer>();
+		auto rtcpRecvSession = std::make_shared<rtc::RtcpReceivingSession>();
+		depacketizer->addToChain(rtcpRecvSession);
+		track->setMediaHandler(depacketizer);
+		track->onFrame(
+			[privateSelf, mid](rtc::binary frame, rtc::FrameInfo /*info*/)
+			{
+				++privateSelf->audioRtpFramesReceived;
+				privateSelf->audioRtpBytesReceived += frame.size();
+				WebRtcNetworkSource::OpusFrameCallback cb;
+				{
+					std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+					cb = privateSelf->opusFrameCallback;
+				}
+				if(cb)
+					cb(mid, reinterpret_cast<const uint8_t*>(frame.data()), frame.size());
+			});
+		track->onClosed(
+			[privateSelf, mid]()
+			{
+				TELEPORT_INTERNAL_COUT(Default, "WebRTC: forwarded voice track closed (mid={})", mid);
+				WebRtcNetworkSource::OpusTrackClosedCallback cb;
+				{
+					std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+					cb = privateSelf->opusTrackClosedCallback;
+					privateSelf->rtcAudioReceiveTracks.erase(mid);
+				}
+				if(cb)
+					cb(mid);
+			});
+		TELEPORT_INTERNAL_COUT(Default, "WebRTC: forwarded voice track attached (mid={})", mid);
+		return;
 	}
 	rtcAudioRecvTrack = track;
 	// Build a bidirectional media handler chain so the same sendrecv track
@@ -1054,7 +1116,6 @@ void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 	packetizer->addToChain(depacketizer);
 	packetizer->addToChain(rtcpRecvSession);
 	track->setMediaHandler(packetizer);
-	auto privateSelf = this;
 	// RtpDepacketizer attaches a FrameInfo to every depacketized payload, so
 	// libdatachannel dispatches these through the frame callback path rather
 	// than the message callback path. Using onMessage() here would silently
@@ -1088,6 +1149,13 @@ void WebRtcNetworkSource::Private::onTrack(shared_ptr<rtc::Track> track)
 	{
 		privateSelf->audioSendTrackOpen.store(false);
 		TELEPORT_INTERNAL_COUT(Default, "WebRTC audio track closed (mid={})", mid);
+		WebRtcNetworkSource::OpusTrackClosedCallback cb;
+		{
+			std::lock_guard<std::mutex> lock(privateSelf->opusFrameCallbackMutex);
+			cb = privateSelf->opusTrackClosedCallback;
+		}
+		if(cb)
+			cb(mid);
 	});
 	// Track may already be open by the time onTrack fires.
 	if(track->isOpen())
@@ -1099,6 +1167,12 @@ void WebRtcNetworkSource::setOpusFrameCallback(OpusFrameCallback cb)
 {
 	std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
 	m_data->opusFrameCallback = std::move(cb);
+}
+
+void WebRtcNetworkSource::setOpusTrackClosedCallback(OpusTrackClosedCallback cb)
+{
+	std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
+	m_data->opusTrackClosedCallback = std::move(cb);
 }
 
 Result WebRtcNetworkSource::sendOpusFrame(const uint8_t* data, size_t size)

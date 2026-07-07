@@ -80,7 +80,8 @@ namespace avs
 		Unused1,
 		SkeletonUnused,
 		Link,
-		Script
+		Script,
+		AudioEmitter	//!< Reserved. Audio is bound via the track SDP mid = emitting node uid; not carried in the node payload. See docs/protocol/audio.rst.
 	};
 
 	enum class GeometryPayloadType : uint8_t

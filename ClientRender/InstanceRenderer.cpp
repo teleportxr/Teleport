@@ -19,6 +19,24 @@ using namespace teleport;
 using namespace clientrender;
 using namespace platform;
 
+namespace
+{
+	// A WebRTC audio track's SDP mid is the decimal uid of the emitting node
+	// (see docs/protocol/audio.rst). Returns 0 for a non-numeric/absent mid, which
+	// the mixer treats as a non-spatial source.
+	uint64_t ParseNodeUid(const std::string &mid)
+	{
+		if (mid.empty())
+			return 0;
+		for (char c : mid)
+		{
+			if (c < '0' || c > '9')
+				return 0;
+		}
+		return std::strtoull(mid.c_str(), nullptr, 10);
+	}
+}
+
 // TODO: Implement Vector, Matrix and Quaternion conversions between avs:: <-> math:: <-> CppSl.h - AJR
 template <typename T1, typename T2> T1 ConvertVec2(const T2 &value)
 {
@@ -272,7 +290,7 @@ void InstanceRenderer::RenderView(crossplatform::GraphicsDeviceContext &deviceCo
 {
 	PLATFORM_COMBINED_PROFILE_START(deviceContext, "InstanceRenderer::RenderView");
 	auto						   renderPlatform = deviceContext.renderPlatform;
-	audioPlayer.setVolume(config.options.volume);
+	spatialPlaybackPlayer.setVolume(config.options.volume);
 
 	clientrender::AVSTextureHandle th			  = instanceRenderState.avsTexture;
 	clientrender::AVSTexture	  &tx			  = *th;
@@ -501,6 +519,44 @@ struct RenderStateTracker
 };
 RenderStateTracker renderStateTracker;
 
+void InstanceRenderer::UpdateSpatialAudio()
+{
+	auto sources = spatialAudioMixer.GetActiveSources();
+	if (sources.empty())
+		return;
+
+	// Listener world pose = origin node's global transform composed with the head
+	// pose (stage-space), mirroring the view composition in Renderer::RenderView.
+	auto &clientServerState = sessionClient->GetClientServerState();
+	crossplatform::Quaternionf headRot((const float *)&clientServerState.headPose.orientation);
+	vec3 headPos((const float *)&clientServerState.headPose.position);
+	vec3 listenerPos = headPos;
+	crossplatform::Quaternionf listenerRot = headRot;
+	if (auto originNode = geometryCache->mNodeManager.GetNode(clientServerState.origin_node_uid))
+	{
+		crossplatform::Quaternionf originRot = originNode->GetGlobalRotation();
+		listenerPos = originNode->GetGlobalPosition() + originRot.RotateVector(headPos);
+		listenerRot = originRot * headRot;
+	}
+	const vec3 rightV = listenerRot.RotateVector(vec3(1.0f, 0.0f, 0.0f));
+	const audio::AudioVec3 lPos{listenerPos.x, listenerPos.y, listenerPos.z};
+	const audio::AudioVec3 lRight{rightV.x, rightV.y, rightV.z};
+
+	for (uint64_t uid : sources)
+	{
+		std::shared_ptr<Node> node = (uid != 0) ? geometryCache->mNodeManager.GetNode(uid) : nullptr;
+		if (!node)
+		{
+			// uid 0, or a node not (yet) present: play non-spatially (centre, constant power).
+			spatialAudioMixer.SetSourceSpatial(uid, 0.70710678f, 0.70710678f);
+			continue;
+		}
+		const vec3 &sp = node->GetGlobalPosition();
+		const audio::StereoGains g = audio::ComputeStereoGains(lPos, lRight, {sp.x, sp.y, sp.z});
+		spatialAudioMixer.SetSourceSpatial(uid, g.left, g.right);
+	}
+}
+
 void			   InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContext &deviceContext)
 {
 	PLATFORM_COMBINED_PROFILE_START(deviceContext, "initial");
@@ -509,6 +565,8 @@ void			   InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContex
 	double serverTimeS =
 		client::ClientTime::GetInstance().ClientToServerTimeS(sessionClient->GetSetupCommand().startTimestamp_utc_unix_us, deviceContext.predictedDisplayTimeS);
 	geometryCache->mNodeManager.UpdateExtrapolatedPositions(serverTimeS);
+	// Node world transforms are now current for this frame; refresh spatial audio gains.
+	UpdateSpatialAudio();
 	auto  renderPlatform	= deviceContext.renderPlatform;
 	auto &clientServerState = sessionClient->GetClientServerState();
 	// Now, any nodes bound to OpenXR poses will be updated. This may include hand objects, for example.
@@ -1992,41 +2050,52 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 			clientPipeline.pipeline.link({&clientPipeline.tagDataQueue, &clientPipeline.tagDataDecoder});
 		}
 	}
-	// Audio (Phase 2.4): Opus RTP arriving on the WebRTC audio media track,
-	// decoded to 48 kHz int16 mono PCM and pushed into the AudioStreamTarget.
+	// Audio: inbound Opus voices arrive on WebRTC media tracks, each track's SDP
+	// mid being the emitting node's uid (see docs/protocol/audio.rst). They are
+	// decoded, spatialised and summed by SpatialAudioMixer into stereo playback;
+	// positioning is refreshed per frame in UpdateSpatialAudio(). The local mic is
+	// captured separately, in mono, on its own device.
 	{
-		audio::AudioSettings audioSettings;
-		audioSettings.codec			= audio::AudioCodec::PCM;
-		audioSettings.numChannels	= 1;
-		audioSettings.sampleRate	= 48000;
-		audioSettings.bitsPerSample = 16;
-		audioPlayer.configure(audioSettings);
-		audioStreamTarget.reset(new audio::AudioStreamTarget(&audioPlayer));
+		audio::AudioSettings playbackSettings;
+		playbackSettings.codec			= audio::AudioCodec::PCM;
+		playbackSettings.numChannels	= 2;	// stereo, for constant-power panning
+		playbackSettings.sampleRate		= 48000;
+		playbackSettings.bitsPerSample	= 16;
+		spatialPlaybackPlayer.configure(playbackSettings);
+		spatialPlaybackPlayer.setVolume(config.options.volume);
+		spatialAudioMixer.Start(&spatialPlaybackPlayer);
 
-		clientPipeline.opusAudioDecoder.configure(audioSettings.numChannels, audioSettings.sampleRate);
-		clientPipeline.opusAudioTarget.configure(audioStreamTarget.get());
-		clientPipeline.pipeline.link({&clientPipeline.opusAudioDecoder, &clientPipeline.opusAudioTarget});
-
-		// Route depacketized Opus frames from the WebRTC audio track into the decoder queue.
-		// The mid parameter will be used by Phase 2b AudioSourceMapping for per-peer routing.
+		// Route depacketized Opus frames to the mixer, keyed by the emitting node
+		// uid parsed from the track mid; release the source when its track closes.
 		if (auto *webrtcSource = dynamic_cast<avs::WebRtcNetworkSource *>(clientPipeline.source.get()))
 		{
-			auto *decoderPtr = &clientPipeline.opusAudioDecoder;
+			auto *mixer = &spatialAudioMixer;
 			webrtcSource->setOpusFrameCallback(
-				[decoderPtr](const std::string & /*mid*/, const uint8_t *data, size_t size)
+				[mixer](const std::string &mid, const uint8_t *data, size_t size)
 				{
-					decoderPtr->submitOpusFrame(data, size);
+					mixer->PushOpusFrame(ParseNodeUid(mid), data, size);
+				});
+			webrtcSource->setOpusTrackClosedCallback(
+				[mixer](const std::string &mid)
+				{
+					mixer->RemoveSource(ParseNodeUid(mid));
 				});
 		}
 
-		// Phase 2.5: outbound mic over WebRTC media track. Captured PCM is fed
+		// Outbound mic over the sendrecv audio track (mono). Captured PCM is fed
 		// into the Opus encoder; encoded packets are forwarded directly to
-		// WebRtcNetworkSource::sendOpusFrame, which RTP-wraps and transmits
-		// them on the sendrecv audio mid.
+		// WebRtcNetworkSource::sendOpusFrame, which RTP-wraps and transmits them.
 		if (setupCommand.audio_input_enabled)
 		{
+			audio::AudioSettings micSettings;
+			micSettings.codec			= audio::AudioCodec::PCM;
+			micSettings.numChannels		= 1;
+			micSettings.sampleRate		= 48000;
+			micSettings.bitsPerSample	= 16;
+			audioPlayer.configure(micSettings);
+
 			auto *webrtcSource = dynamic_cast<avs::WebRtcNetworkSource *>(clientPipeline.source.get());
-			clientPipeline.opusAudioEncoder.configure(audioSettings.numChannels, audioSettings.sampleRate);
+			clientPipeline.opusAudioEncoder.configure(micSettings.numChannels, micSettings.sampleRate);
 			clientPipeline.opusAudioEncoder.setEncodedFrameCallback(
 				[webrtcSource](const uint8_t *data, size_t size)
 				{
@@ -2112,8 +2181,8 @@ void InstanceRenderer::OnVideoStreamClosed()
 	TELEPORT_INTERNAL_COUT(Default, "VIDEO STREAM CLOSED\n");
 	clientPipeline.pipeline.deconfigure();
 	clientPipeline.videoQueue.deconfigure();
-	clientPipeline.opusAudioDecoder.deconfigure();
-	clientPipeline.opusAudioTarget.deconfigure();
+	spatialAudioMixer.Stop();
+	spatialPlaybackPlayer.deconfigure();
 	clientPipeline.opusAudioEncoder.deconfigure();
 	clientPipeline.geometryQueue.deconfigure();
 

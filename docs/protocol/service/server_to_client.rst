@@ -87,12 +87,12 @@ The complete set of command types is enumerated below. Variable-length commands 
      - none (sent over the unreliable channel; client replies with :ref:`PongForLatency <client_to_server>`)
    * - 17
      - ``AudioSourceMapping``
-     - ``teleport::core::AudioSourceMappingCommand``
-     - ``addedCount`` AddedEntry + ``removedCount`` RemovedEntry (see :ref:`audio_source_mapping`)
+     - *(reserved)*
+     - Deprecated; audio is bound by the :ref:`track mid = node uid <audio_node_binding>`. MUST NOT be sent.
    * - 18
      - ``AudioParticipantStateChange``
-     - ``teleport::core::AudioParticipantStateChangeCommand``
-     - ``updateCount`` × Update (see :ref:`audio_participant_state`)
+     - *(reserved)*
+     - Deprecated; audio is bound by the :ref:`track mid = node uid <audio_node_binding>`. MUST NOT be sent.
    * - 128
      - ``SetOriginNode``
      - ``teleport::core::SetOriginNodeCommand``

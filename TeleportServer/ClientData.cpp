@@ -118,6 +118,11 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	// TODO: this must change:
 	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
+	// Audio media-track configuration (see docs/protocol/audio.rst). When useAudioMediaTracks
+	// is set, codec=1 (Opus) tells the client to expect WebRTC media tracks; otherwise codec=0
+	// keeps the client on the legacy "audio_server_to_client" data channel. The remaining
+	// AudioConfig fields keep their struct defaults (48000 Hz, mono, 20 ms, FEC+DTX).
+	setupCommand.audio_config.codec = serverSettings.useAudioMediaTracks ? 1 : 0;
 	setupCommand.startTimestamp_utc_unix_us = startTimestamp_utc_unix_us;
 	setupCommand.using_ssl = use_ssl;
 	setupCommand.backgroundMode = clientSettings->backgroundMode;
