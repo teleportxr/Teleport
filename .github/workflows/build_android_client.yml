@@ -18,11 +18,11 @@ jobs:
       VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
       ANDROID_NDK_VERSION: 25.2.9519653
-      AGDE_VSIX_URL: https://dl.google.com/android/agde/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
+      AGDE_VSIX_URL: https://dl.google.com/android/agde/release/98/20260126-194813/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v6.0.2
+      uses: actions/checkout@v6.0.2 
       with:
         lfs: 'false'
         submodules: 'false'
