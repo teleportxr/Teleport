@@ -17,7 +17,7 @@ jobs:
       WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
-      ANDROID_NDK_VERSION: 25.2.9519653
+      ANDROID_NDK_VERSION: 26.3.11579264
       AGDE_VSIX_URL: https://dl.google.com/android/agde/release/98/20260126-194813/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
 
     steps:
