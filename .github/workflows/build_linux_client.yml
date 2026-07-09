@@ -95,8 +95,8 @@ jobs:
         cd build_pc_client
         cpack -G DEB
         cd ${{ github.workspace }}
-        cp "build_pc_client/TeleportClientInstaller-$TELEPORT_COMMIT-x64.deb" artifacts/ 2>/dev/null || \
-          cp build_pc_client/TeleportClientInstaller*.deb artifacts/
+        cp "build_pc_client/teleportxr-$TELEPORT_COMMIT-x64.deb" artifacts/ 2>/dev/null || \
+          cp build_pc_client/teleportxr-*.deb artifacts/
         cp teleport_commit.properties artifacts/
         cp release_notes.md artifacts/
 
