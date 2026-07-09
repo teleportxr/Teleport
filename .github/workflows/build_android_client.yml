@@ -17,7 +17,9 @@ jobs:
       WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
-      ANDROID_NDK_VERSION: 26.3.11579264
+      # r27c: first NDK whose libc++ (LLVM 18) provides a complete, non-experimental
+      # <format>. r26 lacks std::format even in C++20 mode, breaking RuntimeError.h.
+      ANDROID_NDK_VERSION: 27.2.12479018
       AGDE_VSIX_URL: https://dl.google.com/android/agde/release/98/20260126-194813/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
 
     steps:
