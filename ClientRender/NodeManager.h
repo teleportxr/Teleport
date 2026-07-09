@@ -12,16 +12,6 @@
 #include "Node.h"
 #include "Platform/CrossPlatform/Quaterniond.h"
 #include "ResourceManager.h"
-#include "flecs.h"
-
-struct flecs_local_pos
-{
-	vec3 value;
-};
-struct flecs_local_orientation
-{
-	platform::crossplatform::Quaternionf value;
-};
 
 namespace teleport
 {

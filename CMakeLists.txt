@@ -195,18 +195,6 @@ if(NOT zlib_POPULATED)
   FetchContent_Populate(zlib)
 endif()
 
-# Get flecs (source files compiled into ClientRender via configure_file)
-FetchContent_Declare(
-  flecs
-  GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
-  GIT_TAG        57ad5d39e1018074a640c1ba6df94bac015f5a58
-  SOURCE_DIR flecs
-)
-FetchContent_GetProperties(flecs)
-if(NOT flecs_POPULATED)
-  FetchContent_Populate(flecs)
-endif()
-
 
 if(TELEPORT_TEST)
 	FetchContent_Declare(
