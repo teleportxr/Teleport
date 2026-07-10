@@ -83,7 +83,7 @@
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CppLanguageStandard>cpp2a</CppLanguageStandard>
-    <AndroidNdkVersion>26.3.11579264</AndroidNdkVersion>
+    <AndroidNdkVersion>27.2.12479018</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
