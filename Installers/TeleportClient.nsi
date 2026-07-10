@@ -60,7 +60,7 @@ VIProductVersion ${TELEPORT_VERSION_NUMBER}.0
 !define MUI_WELCOMEPAGE_TEXT "This wizard will install Teleport Client ${TELEPORT_VERSION_NUMBER} to your machine.\n\nCommit ${TELEPORT_COMMIT}\n\n${LOG_TEXT}"
 !define MUI_DIRECTORYPAGE_TEXT_TOP "Choose the installation directory."
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "TeleportClientLicense.rtf"
+!insertmacro MUI_PAGE_LICENSE "TeleportClientLicence.txt"
 
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
