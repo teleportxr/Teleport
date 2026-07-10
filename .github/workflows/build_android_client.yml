@@ -8,7 +8,57 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # Cross-compiles the Android arm64-v8a static libraries (OpenSSL, curl, the
+  # libdatachannel WebRTC stack) that the AGDE solution links from
+  # build_android_vs/external_libs/. These are normally staged by hand on a
+  # developer machine (and .gitignored), so CI reproduces them here. Runs on
+  # Linux because cross-compiling OpenSSL with the NDK is far more reliable
+  # there; NDK-built arm64 archives link into the Windows AGDE build unchanged.
+  android-deps:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      ANDROID_NDK_VERSION: 27.2.12479018
+      ANDROID_API: 29
+      OPENSSL_VERSION: 3.0.15
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6.0.2
+      with:
+        lfs: 'false'
+        submodules: 'false'
+
+    - name: libdatachannel submodule (recursive)
+      run: git submodule update --init --recursive --force -- "thirdparty/libdatachannel"
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android NDK
+      run: |
+        sdkmanager --install "ndk;${ANDROID_NDK_VERSION}" "platforms;android-${ANDROID_API}"
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+    - name: Cache Android deps
+      id: deps-cache
+      uses: actions/cache@v4
+      with:
+        path: build_android_deps
+        key: android-deps-${{ env.ANDROID_NDK_VERSION }}-ossl${{ env.OPENSSL_VERSION }}-${{ hashFiles('.github/scripts/build_android_deps.sh') }}-${{ hashFiles('.gitmodules', 'thirdparty/libdatachannel/.gitmodules') }}
+
+    - name: Build Android dependencies
+      run: |
+        chmod +x .github/scripts/build_android_deps.sh
+        ./.github/scripts/build_android_deps.sh
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: android-deps
+        path: build_android_deps/stage/
+        if-no-files-found: error
+
   build:
+    needs: android-deps
     runs-on: windows-2022
     timeout-minutes: 120
     env:
@@ -92,6 +142,14 @@ jobs:
         echo "ANDROID_NDK_HOME $env:ANDROID_NDK_HOME"
         echo "JAVA_HOME $env:JAVA_HOME"
         msbuild -version
+
+    - name: Download prebuilt Android dependencies
+      uses: actions/download-artifact@v7
+      with:
+        name: android-deps
+        path: ${{github.workspace}}
+      # Overlays build_android_vs/external_libs/*.a and the curl headers into
+      # the tree at the paths the AGDE projects expect.
 
     - name: Build
       shell: cmd

@@ -39,11 +39,6 @@
     <ClInclude Include="..\..\TeleportCore\Time.h" />
     <ClInclude Include="..\..\TeleportCore\URLParser.h" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\firstparty\Platform\External\fmt\fmt.vcxproj">
-      <Project>{a0950608-b6b3-4c21-ad2b-f1fdda03eadc}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C5385FFA-B456-40F0-B0C7-3397A7FEFE42}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0.22000.0</WindowsTargetPlatformVersion>

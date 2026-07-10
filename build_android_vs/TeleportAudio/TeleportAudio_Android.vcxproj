@@ -25,9 +25,6 @@
     <ProjectReference Include="..\firstparty\Platform\CrossPlatform\SimulCrossPlatform_MT.vcxproj">
       <Project>{160adc84-9b1c-3598-a176-5eb52cecb5b1}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\firstparty\Platform\External\fmt\fmt.vcxproj">
-      <Project>{a0950608-b6b3-4c21-ad2b-f1fdda03eadc}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\libavstream\libavstream_Android.vcxproj">
       <Project>{6f52b627-c756-44dd-ae24-a9370c3dbddc}</Project>
     </ProjectReference>
