@@ -118,7 +118,10 @@ if(WIN32)
 	target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader)
 	target_link_libraries(TeleportPCClient winmm directxtex_MT)
 	target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)
-	target_link_libraries(TeleportPCClient ws2_32.lib libssl.lib iphlpapi.lib bcrypt.lib)
+	# libssl depends on libcrypto (the WPACKET_* symbols live there); link both from the
+	# bundled static OpenSSL so they resolve against a matched build. See the OpenSSL block
+	# in the root CMakeLists.txt.
+	target_link_libraries(TeleportPCClient ws2_32.lib libssl.lib libcrypto.lib crypt32.lib iphlpapi.lib bcrypt.lib)
 	target_link_libraries(TeleportPCClient -ignore:4711)
 	target_link_libraries(TeleportPCClient Shlwapi.lib)
 	target_link_options(TeleportPCClient PUBLIC /ignore:4711)
