@@ -245,10 +245,9 @@ set(CPACK_COMPONENTS_ALL client)
 if(TELEPORT_WINDOWS)
 	set(CPACK_GENERATOR "NSIS")
 	# NSIS MUI chooses the license page parser based on the file extension;
-	# a .md file can be mis-detected, so stage a plain-text copy for the installer.
-	configure_file("${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md"
-		"${CMAKE_BINARY_DIR}/TeleportClientLicence.txt" COPYONLY)
-	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/TeleportClientLicence.txt")
+	# a plain-text copy is kept alongside the markdown source so the installer
+	# and the standalone NSIS script both reference a file NSIS can parse reliably.
+	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
 	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
