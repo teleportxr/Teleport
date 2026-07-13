@@ -96,7 +96,7 @@ jobs:
         mkdir artifacts
         cd build_pc_client
         $cpackResult = 0
-        CPack -C CPackConfig.cmake
+        cpack -C Release --config CPackConfig.cmake
         if ($LASTEXITCODE -ne 0) { $cpackResult = $LASTEXITCODE }
         cd ${{github.workspace}}
         $nsisLog = "build_pc_client/_CPack_Packages/win64/NSIS/NSISOutput.log"
