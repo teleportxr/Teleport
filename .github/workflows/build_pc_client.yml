@@ -21,7 +21,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6.0.2
       with:
-        lfs: 'false'
+        lfs: 'true'
         submodules: 'false'
     - name: Git Submodules
       run: |
@@ -91,11 +91,19 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.WORKFLOW_BUILD_TYPE}}
     - name: Installer
+      shell: pwsh
       run: |
         mkdir artifacts
         cd build_pc_client
+        $cpackResult = 0
         CPack -C CPackConfig.cmake
+        if ($LASTEXITCODE -ne 0) { $cpackResult = $LASTEXITCODE }
         cd ${{github.workspace}}
+        $nsisLog = "build_pc_client/_CPack_Packages/win64/NSIS/NSISOutput.log"
+        if (Test-Path $nsisLog) {
+          copy $nsisLog artifacts/
+        }
+        if ($cpackResult -ne 0) { exit $cpackResult }
         copy build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe artifacts/
         copy teleport_commit.properties  artifacts/
         copy release_notes.md  artifacts/

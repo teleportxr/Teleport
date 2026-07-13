@@ -195,18 +195,6 @@ if(NOT zlib_POPULATED)
   FetchContent_Populate(zlib)
 endif()
 
-# Get flecs (source files compiled into ClientRender via configure_file)
-FetchContent_Declare(
-  flecs
-  GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
-  GIT_TAG        57ad5d39e1018074a640c1ba6df94bac015f5a58
-  SOURCE_DIR flecs
-)
-FetchContent_GetProperties(flecs)
-if(NOT flecs_POPULATED)
-  FetchContent_Populate(flecs)
-endif()
-
 
 if(TELEPORT_TEST)
 	FetchContent_Declare(
@@ -401,16 +389,22 @@ endif()
 if(TELEPORT_WINDOWS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS")
 	set(OPENSSL_APPLINK_SOURCE "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include/openssl/applink.c" CACHE STRING "" )
-	set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64 CACHE STRING "" )
-	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include CACHE STRING "" )
-	set(OPENSSL_LIBRARIES ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib CACHE STRING "" )
-	set(OPENSSL_CRYPTO_LIBRARY libcrypto.lib CACHE STRING "" )
-	set(SSL_EAY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(SSL_EAY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(SSL_EAY_LIBRARY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(SSL_EAY_LIBRARY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(LIB_EAY_DEBUG ${OPENSSL_LIBRARIES}/libcrypto.lib CACHE STRING "" )
-	set(LIB_EAY_RELEASE ${OPENSSL_LIBRARIES}/libcrypto.lib CACHE STRING "" )
+	# Force use of the bundled static OpenSSL 3.0.8 (thirdparty/openssl) for every client
+	# component, including libdatachannel, which is added below. libdatachannel calls
+	# find_package(OpenSSL), and without these hints CMake's FindOpenSSL picks up the CI
+	# runner's system OpenSSL in C:\Program Files\OpenSSL (dynamic /MD). That pairs the
+	# bundled static libssl with an incompatible libcrypto, so the internal WPACKET_*
+	# symbols libssl relies on go unresolved at link time. Pre-seeding the modern
+	# FindOpenSSL result variables with the exact bundled .lib paths keeps everything on
+	# one matched, static /MT OpenSSL. (The legacy SSL_EAY_*/LIB_EAY_* variables used here
+	# previously are ignored by CMake >= 3.x FindOpenSSL.)
+	set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64 CACHE PATH "" FORCE)
+	set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
+	set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "" FORCE)
+	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include CACHE PATH "" FORCE)
+	set(OPENSSL_SSL_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libssl.lib CACHE FILEPATH "" FORCE)
+	set(OPENSSL_CRYPTO_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libcrypto.lib CACHE FILEPATH "" FORCE)
+	set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} CACHE STRING "" FORCE)
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
 	#add_subdirectory(thirdparty/srt/submodules/pthread-win32)

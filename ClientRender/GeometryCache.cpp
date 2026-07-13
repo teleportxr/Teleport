@@ -18,7 +18,6 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	  mTextCanvasManager(c_uid), mFontAtlasManager(c_uid), mIndexBufferManager(c_uid, &clientrender::IndexBuffer::Destroy),
 	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
-	flecs_world.set_entity_range(1, 50000000);
 	auto addFn = std::bind(&Renderer::UpdateNodeInRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
 	mNodeManager.SetFunctionAddNodeForRender(addFn);
 	auto removeFn = std::bind(&Renderer::RemoveNodeFromRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
@@ -29,7 +28,6 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 
 GeometryCache::~GeometryCache()
 {
-	flecs_world.quit();
 	auto uids = mMeshManager.GetAllIDs();
 	for (auto u : uids)
 	{

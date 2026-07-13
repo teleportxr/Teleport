@@ -1697,14 +1697,9 @@ void ResourceCreator::thread_TranscodeTextures()
 					{
 						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 					}
-					else
-					{
-						if (ktxt->classId == ktxTexture2_c)
-						{
-							ktxTexture2 *ktx2Texture = (ktxTexture2 *)ktxt;
-							result					 = ktxTexture2_IterateLoadLevelFaces(ktx2Texture, ktxImageExtractionCallback, &cbData);
-						}
-					}
+					// Note: ktxTexture_IterateLoadLevelFaces already dispatches through the ktxTexture vtbl,
+					// which for a ktxTexture2 calls ktxTexture2_IterateLoadLevelFaces. Calling that internal
+					// (non-exported) function directly is both redundant and unresolved at link time on MSVC.
 				}
 				if (ktxt)
 				{

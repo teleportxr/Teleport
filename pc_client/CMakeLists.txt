@@ -118,7 +118,10 @@ if(WIN32)
 	target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader)
 	target_link_libraries(TeleportPCClient winmm directxtex_MT)
 	target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)
-	target_link_libraries(TeleportPCClient ws2_32.lib libssl.lib iphlpapi.lib bcrypt.lib)
+	# libssl depends on libcrypto (the WPACKET_* symbols live there); link both from the
+	# bundled static OpenSSL so they resolve against a matched build. See the OpenSSL block
+	# in the root CMakeLists.txt.
+	target_link_libraries(TeleportPCClient ws2_32.lib libssl.lib libcrypto.lib crypt32.lib iphlpapi.lib bcrypt.lib)
 	target_link_libraries(TeleportPCClient -ignore:4711)
 	target_link_libraries(TeleportPCClient Shlwapi.lib)
 	target_link_options(TeleportPCClient PUBLIC /ignore:4711)
@@ -241,7 +244,11 @@ set(CPACK_COMPONENTS_ALL client)
 
 if(TELEPORT_WINDOWS)
 	set(CPACK_GENERATOR "NSIS")
-	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md")
+	# NSIS MUI chooses the license page parser based on the file extension;
+	# a .md file can be mis-detected, so stage a plain-text copy for the installer.
+	configure_file("${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md"
+		"${CMAKE_BINARY_DIR}/TeleportClientLicence.txt" COPYONLY)
+	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/TeleportClientLicence.txt")
 	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")

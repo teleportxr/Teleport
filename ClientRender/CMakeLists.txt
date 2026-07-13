@@ -4,8 +4,6 @@ project( ClientRender )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 
-configure_file(${flecs_SOURCE_DIR}/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.c @ONLY)
-configure_file(${flecs_SOURCE_DIR}/flecs.h ${CMAKE_CURRENT_BINARY_DIR}/flecs.h @ONLY)
 
 # Source
 set( src_root
@@ -120,8 +118,6 @@ source_group("Shaders" src FILES ${shaders} )
 source_group("Shader Includes" src FILES ${shader_includes} )
 source_group("Global Shader Includes" src FILES ${global_shader_includes} )
 
-set(flecs_files ${CMAKE_CURRENT_BINARY_DIR}/flecs.c ${CMAKE_CURRENT_BINARY_DIR}/flecs.h
-	)
 source_group("Source Files\\Node Components" src FILES ${src_node_components})
 source_group("Header Files\\Node Components" src FILES ${hdr_node_components})
 source_group("AVParser" src FILES ${av_parser} )
@@ -136,7 +132,7 @@ if(ANDROID)
 endif()
 
 #For MT runtime
-add_static_library(ClientRender SOURCES ${src_public} ${av_parser} ${flecs_files} ${shaders} ${shader_includes} ${global_shader_includes})  
+add_static_library(ClientRender SOURCES ${src_public} ${av_parser} ${shaders} ${shader_includes} ${global_shader_includes})  
 SetTeleportDefaults(ClientRender)
 #Include its root directory
 target_include_directories(ClientRender PRIVATE src)
