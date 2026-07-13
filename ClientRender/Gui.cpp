@@ -3307,13 +3307,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	ImGuiIO		&io			   = ImGui::GetIO();
 	static bool	 in3d		   = true;
 	static float window_width  = 720.0f;
-	static float window_height = 260.0f;
-#if TELEPORT_INTERNAL_CHECKS
-	if (config.dev_mode)
-	{
-		window_height = 400.0f;
-	}
-#endif
+	static float window_height = 400.0f;
 	ImVec2 size_min(window_width, window_height);
 	ImVec2 size_max(window_width, window_height);
 	ImGui_ImplPlatform_NewFrame(in3d, (int)size_max.x, (int)size_max.y, menu_pos, azimuth, tilt, width_m);
@@ -3348,8 +3342,6 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 			}
 			windowFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
 		}
-		ImGui::LogToTTY();
-
 		const auto &[dateStr, timeStr] = GetCurrentDateTimeStrings();
 		std::string title			   = "Teleport XR"; // + dateStr + " " + timeStr;
 		ImGuiBegin(title.c_str(), &show_hide, windowFlags);
@@ -3573,6 +3565,17 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					ImGui::Text("	  ");
 					ImGui::SameLine();
 					KeyboardLine("zxcvbnm,./");
+					ImGui::Text("		");
+					ImGui::SameLine();
+					if (ImGui::Button("Space", ImVec2(46 * 7 + 8 * 6, 32)))
+					{
+						refocus = 0;
+						keys_pressed.push_back(' ');
+						if (connecting)
+						{
+							cancelConnectHandler(current_tab_context);
+						}
+					}
 				}
 			}
 		}
