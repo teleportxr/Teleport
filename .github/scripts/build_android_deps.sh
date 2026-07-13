@@ -77,6 +77,32 @@ build_openssl()
 	PATH="$TOOLCHAIN/bin:$PATH" make install_sw
 }
 
+# Emit the explicit -DOPENSSL_* cache variables that find_package(OpenSSL)
+# needs. When cross-compiling for Android, the NDK toolchain sets
+# CMAKE_FIND_ROOT_PATH_MODE_{LIBRARY,INCLUDE}=ONLY, so find_library/find_path
+# search only the NDK sysroot and silently ignore OPENSSL_ROOT_DIR. Pointing
+# CMake straight at the staged static archives and headers sidesteps that.
+OSSL_LIBDIR=""
+openssl_cmake_args()
+{
+	if [ -z "$OSSL_LIBDIR" ]; then
+		if [ -f "$OSSL_PREFIX/lib/libcrypto.a" ]; then
+			OSSL_LIBDIR="$OSSL_PREFIX/lib"
+		elif [ -f "$OSSL_PREFIX/lib64/libcrypto.a" ]; then
+			OSSL_LIBDIR="$OSSL_PREFIX/lib64"
+		else
+			echo "ERROR: OpenSSL static libs not found under $OSSL_PREFIX" >&2
+			exit 1
+		fi
+	fi
+	printf '%s ' \
+		"-DOPENSSL_ROOT_DIR=$OSSL_PREFIX" \
+		"-DOPENSSL_USE_STATIC_LIBS=ON" \
+		"-DOPENSSL_INCLUDE_DIR=$OSSL_PREFIX/include" \
+		"-DOPENSSL_CRYPTO_LIBRARY=$OSSL_LIBDIR/libcrypto.a" \
+		"-DOPENSSL_SSL_LIBRARY=$OSSL_LIBDIR/libssl.a"
+}
+
 # ---------------------------------------------------------------------------
 # 2. curl (libcurl.a) — built from the teleportxr fork against the OpenSSL above.
 # ---------------------------------------------------------------------------
@@ -93,7 +119,7 @@ build_curl()
 		-DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$ANDROID_API" \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=OFF -DBUILD_CURL_EXE=OFF -DBUILD_TESTING=OFF \
-		-DCURL_USE_OPENSSL=ON -DOPENSSL_ROOT_DIR="$OSSL_PREFIX" \
+		-DCURL_USE_OPENSSL=ON $(openssl_cmake_args) \
 		-DCURL_USE_LIBPSL=OFF -DUSE_LIBIDN2=OFF -DCURL_ENABLE_SSL=ON
 	cmake --build curl-build -j"$NPROC"
 	find curl-build -name 'libcurl.a' -exec cp -v {} "$EXT/libcurl.a" \;
@@ -116,7 +142,7 @@ build_libdatachannel()
 		-DBUILD_SHARED_LIBS=OFF \
 		-DNO_TESTS=ON -DNO_EXAMPLES=ON \
 		-DUSE_NICE=OFF -DUSE_GNUTLS=OFF -DUSE_MBEDTLS=OFF \
-		-DOPENSSL_ROOT_DIR="$OSSL_PREFIX"
+		$(openssl_cmake_args)
 	cmake --build "$WORK/ldc-build" -j"$NPROC"
 
 	local b="$WORK/ldc-build"
@@ -127,8 +153,9 @@ build_libdatachannel()
 }
 
 build_openssl
-cp -v "$OSSL_PREFIX/lib/libssl.a"    "$EXT/libssl.a"
-cp -v "$OSSL_PREFIX/lib/libcrypto.a" "$EXT/libcrypto.a"
+openssl_cmake_args >/dev/null   # resolves OSSL_LIBDIR (lib vs lib64)
+cp -v "$OSSL_LIBDIR/libssl.a"    "$EXT/libssl.a"
+cp -v "$OSSL_LIBDIR/libcrypto.a" "$EXT/libcrypto.a"
 build_curl
 build_libdatachannel
 
