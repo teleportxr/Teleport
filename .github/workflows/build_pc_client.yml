@@ -96,18 +96,20 @@ jobs:
         mkdir artifacts
         cd build_pc_client
         $cpackResult = 0
-        cpack -C Release --config CPackConfig.cmake
+        cpack --verbose -C Release --config CPackConfig.cmake
         if ($LASTEXITCODE -ne 0) { $cpackResult = $LASTEXITCODE }
         cd ${{github.workspace}}
-        $nsisLog = "build_pc_client/_CPack_Packages/win64/NSIS/NSISOutput.log"
-        if (Test-Path $nsisLog) {
-          copy $nsisLog artifacts/
+        $nsisDir = "build_pc_client/_CPack_Packages/win64/NSIS"
+        if (Test-Path $nsisDir) {
+          copy "$nsisDir/NSISOutput.log" artifacts/ -ErrorAction SilentlyContinue
+          copy "$nsisDir/project.nsi" artifacts/ -ErrorAction SilentlyContinue
         }
         if ($cpackResult -ne 0) { exit $cpackResult }
         copy build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe artifacts/
         copy teleport_commit.properties  artifacts/
         copy release_notes.md  artifacts/
     - uses: actions/upload-artifact@v7.0.1
+      if: always()
       with:
         name: installer
         path: artifacts/*.*

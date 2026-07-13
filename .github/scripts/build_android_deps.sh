@@ -71,7 +71,7 @@ build_openssl()
 	export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
 	PATH="$TOOLCHAIN/bin:$PATH" ./Configure android-arm64 \
 		-D__ANDROID_API__="$ANDROID_API" \
-		no-shared no-tests no-apps \
+		no-shared no-tests \
 		--prefix="$OSSL_PREFIX" --openssldir="$OSSL_PREFIX"
 	PATH="$TOOLCHAIN/bin:$PATH" make -j"$NPROC"
 	PATH="$TOOLCHAIN/bin:$PATH" make install_sw
