@@ -143,7 +143,10 @@ build_libdatachannel()
 		-DNO_TESTS=ON -DNO_EXAMPLES=ON \
 		-DUSE_NICE=OFF -DUSE_GNUTLS=OFF -DUSE_MBEDTLS=OFF \
 		$(openssl_cmake_args)
-	cmake --build "$WORK/ldc-build" -j"$NPROC"
+	# datachannel-static is declared EXCLUDE_FROM_ALL, so the default "all"
+	# target would build only the shared libdatachannel.so. Build the static
+	# target explicitly; its deps (juice/srtp2/usrsctp) come along transitively.
+	cmake --build "$WORK/ldc-build" --target datachannel-static -j"$NPROC"
 
 	local b="$WORK/ldc-build"
 	find "$b" -name 'libdatachannel-static.a' -exec cp -v {} "$EXT/libdatachannel-static.a" \;

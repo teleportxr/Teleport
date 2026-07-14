@@ -248,7 +248,10 @@ if(TELEPORT_WINDOWS)
 	# a plain-text copy is kept alongside the markdown source so the installer
 	# and the standalone NSIS script both reference a file NSIS can parse reliably.
 	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
-	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+	# CPACK_PACKAGE_ICON maps to NSIS MUI_HEADERIMAGE_BITMAP, which must be a BMP
+	# (makensis aborts on a non-bitmap here). Use the same header bitmap as the
+	# standalone Installers/TeleportClient.nsi. The .ico is only for MUI_ICON below.
+	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/Teleport Logo 150x57.bmp")
 	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
