@@ -17,6 +17,8 @@
 #   build_android_vs/external_libs/libusrsctp.a
 #   build_android_vs/external_libs/libozz_*.a                          (ozz-animation)
 #   build_pc_client/ozz-animation/include/ozz/...                      (headers)
+#   build_android_vs/external_libs/libktx.a                            (KTX)
+#   build_pc_client/ktx/include/ktx.h                                  (headers)
 #   libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include/curl/*  (headers)
 #   build_android_vs/_deps/magic_enum_src/include/magic_enum/...       (headers)
 #
@@ -208,6 +210,45 @@ build_libdatachannel
 build_ozz
 
 # ---------------------------------------------------------------------------
+# 3c. KTX-Software (libktx.a) — texture loading/saving used by ClientRender.
+#     The PC CMake build fetches KTX into ${CMAKE_BINARY_DIR}/ktx; the AGDE
+#     build does not run that path, so we cross-compile it here and stage the
+#     headers under build_pc_client/ktx/include to match ClientRender_Android.
+# ---------------------------------------------------------------------------
+KTX_VERSION="v4.4.2"
+KTX_SRC_DIR="$WORK/ktx"
+KTX_BUILD_DIR="$WORK/ktx-build"
+build_ktx()
+{
+	if [ -f "$EXT/libktx.a" ] && [ -f "$STAGE/build_pc_client/ktx/include/ktx.h" ]; then
+		echo "-- KTX already built"
+		return 0
+	fi
+	cd "$WORK"
+	if [ ! -d "$KTX_SRC_DIR" ]; then
+		git clone --depth 1 --branch "$KTX_VERSION" \
+			https://github.com/KhronosGroup/KTX-Software.git "$KTX_SRC_DIR"
+	fi
+	rm -rf "$KTX_BUILD_DIR"
+	cmake -S "$KTX_SRC_DIR" -B "$KTX_BUILD_DIR" \
+		-DCMAKE_TOOLCHAIN_FILE="$NDK_CMAKE_TC" \
+		-DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$ANDROID_API" \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DBUILD_SHARED_LIBS=OFF \
+		-DKTX_FEATURE_TOOLS=OFF -DKTX_FEATURE_TESTS=OFF \
+		-DKTX_FEATURE_GL_UPLOAD=OFF
+	cmake --build "$KTX_BUILD_DIR" -j"$NPROC"
+
+	cp -v "$KTX_BUILD_DIR/libktx.a" "$EXT/libktx.a"
+
+	mkdir -p "$STAGE/build_pc_client/ktx"
+	cp -a "$KTX_SRC_DIR/include" "$STAGE/build_pc_client/ktx/"
+	cp -a "$KTX_SRC_DIR/lib"     "$STAGE/build_pc_client/ktx/"
+}
+
+build_ktx
+
+# ---------------------------------------------------------------------------
 # 4. magic_enum header-only library used by Platform/Vulkan and ClientRender.
 #    The AGDE .vcxproj files reference _deps/magic_enum_src/include, but the
 #    Android build does not run CMake for firstparty/Platform, so we stage the
@@ -238,10 +279,11 @@ ls -l "$EXT"
 echo "curl headers: $CURL_HDR_DIR"
 echo "magic_enum headers: $MAGIC_ENUM_DIR/include"
 echo "ozz headers: $STAGE/build_pc_client/ozz-animation/include"
+echo "ktx headers: $STAGE/build_pc_client/ktx/include"
 
 # Fail early if anything the AGDE link step needs is missing.
 missing=0
-for lib in libssl.a libcrypto.a libcurl.a libdatachannel-static.a libjuice-static.a libsrtp2.a libusrsctp.a libozz_animation_offline.a libozz_animation.a libozz_base.a; do
+for lib in libssl.a libcrypto.a libcurl.a libdatachannel-static.a libjuice-static.a libsrtp2.a libusrsctp.a libozz_animation_offline.a libozz_animation.a libozz_base.a libktx.a; do
 	if [ ! -f "$EXT/$lib" ]; then
 		echo "ERROR: missing $lib" >&2
 		missing=1
@@ -249,6 +291,10 @@ for lib in libssl.a libcrypto.a libcurl.a libdatachannel-static.a libjuice-stati
 done
 if [ ! -f "$MAGIC_ENUM_DIR/include/magic_enum/magic_enum.hpp" ]; then
 	echo "ERROR: missing magic_enum/magic_enum.hpp" >&2
+	missing=1
+fi
+if [ ! -f "$STAGE/build_pc_client/ktx/include/ktx.h" ]; then
+	echo "ERROR: missing ktx.h" >&2
 	missing=1
 fi
 exit "$missing"

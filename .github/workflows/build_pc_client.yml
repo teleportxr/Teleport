@@ -138,7 +138,9 @@ jobs:
     - name: Download a Build Artifact
       uses: actions/download-artifact@v8.0.1
       with:
-        github-token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        # No github-token: this downloads an artifact from the same workflow run
+        # (needs: build), so the automatic GITHUB_TOKEN suffices. A custom PAT here
+        # only invites "Bad credentials" 401s when it expires.
         # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
         name: installer
         # Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE
