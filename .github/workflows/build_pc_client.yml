@@ -104,7 +104,19 @@ jobs:
           copy "$nsisDir/NSISOutput.log" artifacts/ -ErrorAction SilentlyContinue
           copy "$nsisDir/project.nsi" artifacts/ -ErrorAction SilentlyContinue
         }
-        if ($cpackResult -ne 0) { exit $cpackResult }
+        # On failure, echo the NSIS log to the console so the actual makensis error is
+        # visible in the workflow output (the artifact upload step is skipped on failure).
+        if ($cpackResult -ne 0) {
+          $log = "$nsisDir/NSISOutput.log"
+          if (Test-Path $log) {
+            Write-Host "==== NSISOutput.log ===="
+            Get-Content $log | Write-Host
+            Write-Host "==== end NSISOutput.log ===="
+          } else {
+            Write-Host "NSISOutput.log not found at $log"
+          }
+          exit $cpackResult
+        }
         copy build_pc_client/TeleportClientInstaller-${{env.TELEPORT_COMMIT}}-x64.exe artifacts/
         copy teleport_commit.properties  artifacts/
         copy release_notes.md  artifacts/

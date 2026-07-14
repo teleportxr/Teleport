@@ -162,9 +162,35 @@ cp -v "$OSSL_LIBDIR/libcrypto.a" "$EXT/libcrypto.a"
 build_curl
 build_libdatachannel
 
+# ---------------------------------------------------------------------------
+# 4. magic_enum header-only library used by Platform/Vulkan and ClientRender.
+#    The AGDE .vcxproj files reference _deps/magic_enum_src/include, but the
+#    Android build does not run CMake for firstparty/Platform, so we stage the
+#    same version that the PC FetchContent build downloads.
+# ---------------------------------------------------------------------------
+MAGIC_ENUM_VERSION="0.9.5"
+MAGIC_ENUM_DIR="$STAGE/build_android_vs/_deps/magic_enum_src"
+stage_magic_enum()
+{
+	if [ -d "$MAGIC_ENUM_DIR/include" ]; then
+		echo "-- magic_enum already staged"
+		return 0
+	fi
+	cd "$WORK"
+	rm -rf magic_enum magic_enum.zip
+	curl -fsSL -o magic_enum.zip \
+		"https://github.com/Neargye/magic_enum/archive/refs/tags/v$MAGIC_ENUM_VERSION.zip"
+	unzip -q magic_enum.zip
+	mv "magic_enum-$MAGIC_ENUM_VERSION" "$MAGIC_ENUM_DIR"
+	rm -f magic_enum.zip
+}
+
+stage_magic_enum
+
 echo "== Staged Android dependencies =="
 ls -l "$EXT"
 echo "curl headers: $CURL_HDR_DIR"
+echo "magic_enum headers: $MAGIC_ENUM_DIR/include"
 
 # Fail early if anything the AGDE link step needs is missing.
 missing=0
@@ -174,4 +200,8 @@ for lib in libssl.a libcrypto.a libcurl.a libdatachannel-static.a libjuice-stati
 		missing=1
 	fi
 done
+if [ ! -f "$MAGIC_ENUM_DIR/include/magic_enum/magic_enum.hpp" ]; then
+	echo "ERROR: missing magic_enum/magic_enum.hpp" >&2
+	missing=1
+fi
 exit "$missing"
