@@ -181,6 +181,7 @@ stage_magic_enum()
 	curl -fsSL -o magic_enum.zip \
 		"https://github.com/Neargye/magic_enum/archive/refs/tags/v$MAGIC_ENUM_VERSION.zip"
 	unzip -q magic_enum.zip
+	mkdir -p "$(dirname "$MAGIC_ENUM_DIR")"
 	mv "magic_enum-$MAGIC_ENUM_VERSION" "$MAGIC_ENUM_DIR"
 	rm -f magic_enum.zip
 }
