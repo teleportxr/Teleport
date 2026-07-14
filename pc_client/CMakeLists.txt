@@ -251,7 +251,13 @@ if(TELEPORT_WINDOWS)
 	# CPACK_PACKAGE_ICON maps to NSIS MUI_HEADERIMAGE_BITMAP, which must be a BMP
 	# (makensis aborts on a non-bitmap here). Use the same header bitmap as the
 	# standalone Installers/TeleportClient.nsi. The .ico is only for MUI_ICON below.
-	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportLogo150x57.bmp")
+	#
+	# This value feeds NSIS's File command, which needs Windows backslashes; forward
+	# slashes give "no files found". CPack neither converts the separators nor escapes
+	# the value when writing CPackConfig.cmake, so emit doubled backslashes: the raw
+	# config round-trip collapses them to single backslashes in the generated project.nsi
+	# (same convention as CPACK_NSIS_EXTRA_INSTALL_COMMANDS below).
+	string(REPLACE "/" "\\\\" CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportLogo150x57.bmp")
 	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
