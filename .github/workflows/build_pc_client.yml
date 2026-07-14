@@ -136,7 +136,7 @@ jobs:
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
     steps:
     - name: Download a Build Artifact
-      uses: actions/download-artifact@v3.1.0
+      uses: actions/download-artifact@v8.0.1
       with:
         github-token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
