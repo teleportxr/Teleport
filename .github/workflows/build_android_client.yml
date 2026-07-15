@@ -171,6 +171,12 @@ jobs:
       # Overlays build_android_vs/external_libs/*.a and the curl headers into
       # the tree at the paths the AGDE projects expect.
 
+    - name: Build host shader compiler
+      shell: cmd
+      run: |
+        cmake -B build_pc_client -S firstparty\Platform -A x64
+        cmake --build build_pc_client --config Release --target Sfx
+
     - name: Build
       shell: cmd
       run: |
