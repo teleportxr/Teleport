@@ -30,6 +30,9 @@ build/
 build_*/
 .vscode/
 CMake/
+# but track the top-level CMake/ directory (AGDE toolchain support):
+!/CMake/
+!/CMake/**
 /binary_cache
 AndroidPackaging
 /client/VrSamples/VisualStudio/VisualStudio.Packaging

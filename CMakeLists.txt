@@ -70,12 +70,54 @@ option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
 option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
 option(TELEPORT_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime? Only for server builds." OFF)
 option(TELEPORT_ASAN "Enable AddressSanitizer?" OFF)
+option(TELEPORT_ANDROID_MINIMAL_SETUP "Only fetch dependencies for the Android AGDE build; do not build the client." OFF)
+if(TELEPORT_ANDROID_MINIMAL_SETUP)
+	message(STATUS "Teleport Android minimal setup enabled: dependencies will be fetched, but the client/platform targets will not be built.")
+endif()
 if(TELEPORT_USE_DYNAMIC_RUNTIME)
 	set(TELEPORT_RUNTIME dynamic)
 else()
 	set(TELEPORT_RUNTIME static)
 endif()
 Include(FetchContent)
+
+# Single source of truth for the ozz-animation version, used by both the full client
+# build and the Android minimal setup below.
+set(TELEPORT_OZZ_GIT_TAG 0.16.0)
+
+if(TELEPORT_ANDROID_MINIMAL_SETUP)
+	# Android AGDE minimal setup: fetch ozz-animation and generate its static-library
+	# project, then stop — nothing else in this file is configured. Intended to be run
+	# with the AGDE toolchain (CMake/AGDE.toolchain.cmake) and -B build_android_vs, so
+	# that the generated thirdparty/ozz_animation/ozz_animation.vcxproj sits alongside
+	# the hand-rolled projects and is referenced by TeleportVRQuestClient.sln.
+	if(CMAKE_GENERATOR MATCHES "^Visual Studio")
+		# The hand-rolled solution only has Debug and Release configurations.
+		set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
+		# No ZERO_CHECK: the generated project must build inside the hand-rolled
+		# solution without referencing CMake's regeneration machinery.
+		set(CMAKE_SUPPRESS_REGENERATION ON)
+	endif()
+	# Pin the project GUID so the hand-rolled TeleportVRQuestClient.sln and the
+	# ProjectReferences in the hand-rolled vcxproj files can refer to the generated
+	# project by a stable GUID on every machine.
+	set(ozz_animation_GUID_CMAKE "8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A" CACHE INTERNAL "Pinned project GUID for ozz_animation")
+	# Fetch only — ozz's own build system is not used; thirdparty/ozz_animation
+	# compiles the fetched sources as a single static library.
+	if(POLICY CMP0169)
+		cmake_policy(SET CMP0169 OLD)
+	endif()
+	FetchContent_Declare(
+	  ozz-animation
+	  GIT_REPOSITORY https://github.com/guillaumeblanc/ozz-animation.git
+		GIT_SHALLOW 1
+	  GIT_TAG        ${TELEPORT_OZZ_GIT_TAG}
+	  SOURCE_DIR ozz-animation
+	)
+	FetchContent_Populate(ozz-animation)
+	add_subdirectory(thirdparty/ozz_animation)
+	return()
+endif()
 
 macro(get_all_targets_recursive targets dir)
 	get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
@@ -551,7 +593,7 @@ if(TELEPORT_CLIENT)
 	  ozz-animation
 	  GIT_REPOSITORY https://github.com/guillaumeblanc/ozz-animation.git
 		GIT_SHALLOW 1
-	  GIT_TAG        0.16.0
+	  GIT_TAG        ${TELEPORT_OZZ_GIT_TAG}
 	  SOURCE_DIR ozz-animation
 	)
 	FetchContent_MakeAvailable(ozz-animation)

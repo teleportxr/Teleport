@@ -90,6 +90,11 @@ jobs:
         cd ${{github.workspace}}
         git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "thirdparty/oboe" "libavstream/thirdparty/efp"
 
+    - name: Fetch OpenXR loader libraries (LFS)
+      # The checkout runs with lfs disabled; materialise just the Android OpenXR
+      # loader libraries the TeleportVRClient link step needs.
+      run: git lfs pull --include "client/OpenXR/Libs/Android/arm64-v8a/*"
+
     - name: Log
       shell: cmd
       run: |
@@ -156,6 +161,19 @@ jobs:
         path: ${{github.workspace}}
       # Overlays build_android_vs/external_libs/*.a and the curl headers into
       # the tree at the paths the AGDE projects expect.
+
+    - name: Generate ozz-animation AGDE project via CMake
+      shell: pwsh
+      # Fetches ozz-animation and generates thirdparty/ozz_animation/ozz_animation.vcxproj
+      # inside build_android_vs, using the AGDE toolchain so the project targets the same
+      # Android-arm64-v8a/Clang platform as the hand-rolled projects. The hand-rolled
+      # TeleportVRQuestClient.sln references the generated project by its pinned GUID.
+      run: |
+        cmake -B build_android_vs -S . `
+          -G "Visual Studio 17 2022" `
+          -A Android-arm64-v8a -T Clang `
+          -DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake `
+          -DTELEPORT_ANDROID_MINIMAL_SETUP=ON
 
     - name: Build
       shell: cmd
