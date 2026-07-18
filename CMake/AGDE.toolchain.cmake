@@ -130,6 +130,26 @@ if(NOT DEFINED CMAKE_ANDROID_NDK)
 	endif()
 endif()
 
+# CMake's Visual Studio flow cannot extract the compiler path from AGDE builds: its
+# probe resolves cl.exe via PATH inside a post-build event, and AGDE's build
+# environment provides neither cl.exe nor clang.exe on PATH, so "No CMAKE_C_COMPILER
+# could be found" results. Point CMake at the NDK's clang directly — the build itself
+# is still driven by MSBuild and AGDE's Clang toolset; these paths inform CMake only.
+# (Compiler *identification* still runs through MSBuild/AGDE and works.)
+if(CMAKE_HOST_WIN32)
+	if(NOT CMAKE_ANDROID_NDK)
+		message(FATAL_ERROR "AGDE toolchain: Android NDK not found. Set ANDROID_NDK_HOME or "
+			"ANDROID_NDK_ROOT in the environment, or pass -DTELEPORT_ANDROID_NDK=<path>.")
+	endif()
+	set(_agde_llvm_bin "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/windows-x86_64/bin")
+	if(NOT DEFINED CMAKE_C_COMPILER)
+		set(CMAKE_C_COMPILER "${_agde_llvm_bin}/clang.exe")
+	endif()
+	if(NOT DEFINED CMAKE_CXX_COMPILER)
+		set(CMAKE_CXX_COMPILER "${_agde_llvm_bin}/clang++.exe")
+	endif()
+endif()
+
 # Keep find_package/find_library/find_path away from host (Windows) libraries; programs
 # such as build tools must still be found on the host.
 if(CMAKE_ANDROID_NDK)

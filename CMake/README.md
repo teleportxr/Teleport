@@ -116,7 +116,11 @@ projects to CMake generation as the approach is proven.
   have this problem.
 - **Compiler detection runs through MSBuild.** At configure time CMake builds its
   compiler-identification project with the AGDE platform/toolset, so configuration
-  itself requires AGDE and the NDK to be installed and working.
+  itself requires AGDE and the NDK to be installed and working. The compiler *path*
+  cannot be extracted from AGDE build output (CMake's probe looks for cl.exe on PATH),
+  so the toolchain pre-sets `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER` to the NDK's clang —
+  which is why the NDK must be locatable (via `ANDROID_NDK_HOME`/`ANDROID_NDK_ROOT` or
+  `-DTELEPORT_ANDROID_NDK`) at configure time.
 - **MSVC-oriented properties appear in generated projects** (`CharacterSet`,
   `UseDebugLibraries`, and similar): CMake's generator writes them because the
   toolset is not one it recognises. AGDE's Clang toolset ignores properties it does
