@@ -181,14 +181,8 @@ jobs:
         cmake -B build_android_vs -S . `
           -G "Visual Studio 17 2022" `
           -A Android-arm64-v8a -T Clang `
-          -DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake `
+          "-DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake" `
           -DTELEPORT_ANDROID_MINIMAL_SETUP=ON
-
-    - name: Build host shader compiler
-      shell: cmd
-      run: |
-        cmake -B build_pc_client -S firstparty\Platform -A x64
-        cmake --build build_pc_client --config Release --target Sfx
 
     - name: Build host shader compiler
       shell: cmd

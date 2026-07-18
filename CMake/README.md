@@ -108,6 +108,12 @@ projects to CMake generation as the approach is proven.
 
 ## Known caveats
 
+- **In PowerShell, quote the toolchain argument.** PowerShell splits an unquoted
+  token that starts with `-` at the first `.`, so
+  `-DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake` reaches cmake as two arguments
+  (`…=CMake/AGDE` plus a stray `.toolchain.cmake` source path). Write
+  `"-DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake"` instead. `cmd.exe` does not
+  have this problem.
 - **Compiler detection runs through MSBuild.** At configure time CMake builds its
   compiler-identification project with the AGDE platform/toolset, so configuration
   itself requires AGDE and the NDK to be installed and working.
