@@ -245,14 +245,22 @@ set(CPACK_COMPONENTS_ALL client)
 if(TELEPORT_WINDOWS)
 	set(CPACK_GENERATOR "NSIS")
 	# NSIS MUI chooses the license page parser based on the file extension;
-	# a .md file can be mis-detected, so stage a plain-text copy for the installer.
-	configure_file("${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md"
-		"${CMAKE_BINARY_DIR}/TeleportClientLicence.txt" COPYONLY)
-	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/TeleportClientLicence.txt")
-	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+	# a plain-text copy is kept alongside the markdown source so the installer
+	# and the standalone NSIS script both reference a file NSIS can parse reliably.
+	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
+	# CPACK_PACKAGE_ICON maps to NSIS MUI_HEADERIMAGE_BITMAP, which must be a BMP
+	# (makensis aborts on a non-bitmap here). Use the same header bitmap as the
+	# standalone Installers/TeleportClient.nsi. The .ico is only for MUI_ICON below.
+	#
+	# This value feeds NSIS's File command, which needs Windows backslashes; forward
+	# slashes give "no files found". CPack neither converts the separators nor escapes
+	# the value when writing CPackConfig.cmake, so emit doubled backslashes: the raw
+	# config round-trip collapses them to single backslashes in the generated project.nsi
+	# (same convention as CPACK_NSIS_EXTRA_INSTALL_COMMANDS below).
+	string(REPLACE "/" "\\\\" CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportLogo150x57.bmp")
 	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
-	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
+	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
 else()
 	set(CPACK_GENERATOR "DEB")
 	# Stage payload under /opt/TeleportXR. Absolute install() destinations

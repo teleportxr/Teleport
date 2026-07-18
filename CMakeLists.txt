@@ -116,6 +116,28 @@ if(TELEPORT_ANDROID_MINIMAL_SETUP)
 	)
 	FetchContent_Populate(ozz-animation)
 	add_subdirectory(thirdparty/ozz_animation)
+
+	# OpenXR loader for the TeleportVRClient link step. The copies formerly stored in
+	# git LFS are not fetchable when the LFS budget is exhausted, so take the loader
+	# from the same Khronos Maven artefact that the Gradle packaging step uses (keep
+	# the version in sync with AndroidPackaging/app/build.gradle), and place it where
+	# the hand-rolled vcxproj expects it.
+	set(TELEPORT_OPENXR_LOADER_VERSION 1.0.33)
+	set(_oxr_aar ${CMAKE_BINARY_DIR}/openxr_loader_for_android-${TELEPORT_OPENXR_LOADER_VERSION}.aar)
+	file(DOWNLOAD
+		https://repo1.maven.org/maven2/org/khronos/openxr/openxr_loader_for_android/${TELEPORT_OPENXR_LOADER_VERSION}/openxr_loader_for_android-${TELEPORT_OPENXR_LOADER_VERSION}.aar
+		${_oxr_aar}
+		EXPECTED_HASH SHA256=ff815aa7e5418bf8488577029ded65fb113bc38d0e574e972039f5aac2f4a0f8
+		SHOW_PROGRESS)
+	if(NOT DEFINED TELEPORT_AGDE_ABI)
+		set(TELEPORT_AGDE_ABI arm64-v8a)
+	endif()
+	set(_oxr_so prefab/modules/openxr_loader/libs/android.${TELEPORT_AGDE_ABI}/libopenxr_loader.so)
+	file(ARCHIVE_EXTRACT INPUT ${_oxr_aar} DESTINATION ${CMAKE_BINARY_DIR}/openxr_loader_aar PATTERNS ${_oxr_so})
+	foreach(_oxr_config Debug Release)
+		file(COPY ${CMAKE_BINARY_DIR}/openxr_loader_aar/${_oxr_so}
+			DESTINATION ${CMAKE_SOURCE_DIR}/client/OpenXR/Libs/Android/${TELEPORT_AGDE_ABI}/${_oxr_config})
+	endforeach()
 	return()
 endif()
 

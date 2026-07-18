@@ -41,9 +41,16 @@ jobs:
       uses: android-actions/setup-android@v3
 
     - name: Install Android NDK
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r27c
+        link-to-sdk: true
+
+    - name: Install Android platform and export NDK path
       run: |
-        sdkmanager --install "ndk;${ANDROID_NDK_VERSION}" "platforms;android-${ANDROID_API}"
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+        sdkmanager --install "platforms;android-${ANDROID_API}"
+        echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
 
     - name: Cache Android deps
       id: deps-cache
@@ -90,11 +97,6 @@ jobs:
         cd ${{github.workspace}}
         git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "thirdparty/oboe" "libavstream/thirdparty/efp"
 
-    - name: Fetch OpenXR loader libraries (LFS)
-      # The checkout runs with lfs disabled; materialise just the Android OpenXR
-      # loader libraries the TeleportVRClient link step needs.
-      run: git lfs pull --include "client/OpenXR/Libs/Android/arm64-v8a/*"
-
     - name: Log
       shell: cmd
       run: |
@@ -121,11 +123,18 @@ jobs:
       uses: android-actions/setup-android@v3
 
     - name: Install Android NDK
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r27c
+        link-to-sdk: true
+
+    - name: Install Android SDK components and export NDK path
       shell: pwsh
       run: |
-        sdkmanager --install "ndk;${{env.ANDROID_NDK_VERSION}}" "platforms;android-29" "build-tools;34.0.0" "platform-tools"
-        echo "ANDROID_NDK_HOME=$env:ANDROID_SDK_ROOT\ndk\${{env.ANDROID_NDK_VERSION}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "ANDROID_NDK_ROOT=$env:ANDROID_SDK_ROOT\ndk\${{env.ANDROID_NDK_VERSION}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        sdkmanager --install "platforms;android-29" "build-tools;34.0.0" "platform-tools"
+        echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     - name: Vulkan
       uses: humbletim/install-vulkan-sdk@v1.2
@@ -174,6 +183,18 @@ jobs:
           -A Android-arm64-v8a -T Clang `
           -DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake `
           -DTELEPORT_ANDROID_MINIMAL_SETUP=ON
+
+    - name: Build host shader compiler
+      shell: cmd
+      run: |
+        cmake -B build_pc_client -S firstparty\Platform -A x64
+        cmake --build build_pc_client --config Release --target Sfx
+
+    - name: Build host shader compiler
+      shell: cmd
+      run: |
+        cmake -B build_pc_client -S firstparty\Platform -A x64
+        cmake --build build_pc_client --config Release --target Sfx
 
     - name: Build
       shell: cmd

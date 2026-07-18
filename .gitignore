@@ -34,6 +34,8 @@ CMake/
 !/CMake/
 !/CMake/**
 /binary_cache
+# Fetched from Maven by the TELEPORT_ANDROID_MINIMAL_SETUP configure step:
+/client/OpenXR/Libs/Android/**/libopenxr_loader.so
 AndroidPackaging
 /client/VrSamples/VisualStudio/VisualStudio.Packaging
 /libavstream/thirdparty/curl-7.74.0-android-arm64-v8a
