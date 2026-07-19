@@ -140,7 +140,7 @@ double		GetTimeInSeconds()
 }
 
 // TODO: Is this necessary, or just call ALooper_pollOnce() directly?
-int ALooper_pollAll(int timeoutMillis, int *outFd, int *outEvents, void **outData)
+int shim_ALooper_pollAll(int timeoutMillis, int *outFd, int *outEvents, void **outData)
 {
 	int result;
 	do
@@ -172,7 +172,7 @@ void android_main(struct android_app *app)
 	// wait for the main window:
 	while (app->window == nullptr)
 	{
-		if (ALooper_pollAll(1, nullptr, &events, (void **)&source) >= 0)
+		if (shim_ALooper_pollAll(1, nullptr, &events, (void **)&source) >= 0)
 		{
 			if (source != NULL)
 			{
@@ -277,7 +277,7 @@ void android_main(struct android_app *app)
 			// If the timeout is zero, returns immediately without blocking.
 			// If the timeout is negative, waits indefinitely until an event appears.
 			const int timeoutMilliseconds = (appState.resumed == false && openXR.IsSessionActive() == false && app->destroyRequested == 0) ? -1 : 0;
-			if (ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **)&source) < 0)
+			if (shim_ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **)&source) < 0)
 			{
 				break;
 			}
