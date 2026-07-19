@@ -30,7 +30,7 @@ through the ordinary `-A` / `-T` mechanism.
   (see `.github/workflows/build_android_client.yml`).
 - Android NDK `27.2.12479018` (r27c — pinned in `release.properties`), with
   `ANDROID_NDK_HOME` or `ANDROID_NDK_ROOT` set so both AGDE and the toolchain can find it.
-- CMake 3.21 or later.
+- CMake 3.24 or later (for `CMAKE_VS_NO_COMPILE_BATCHING`).
 
 ## Usage
 
@@ -125,6 +125,13 @@ projects to CMake generation as the approach is proven.
   `UseDebugLibraries`, and similar): CMake's generator writes them because the
   toolset is not one it recognises. AGDE's Clang toolset ignores properties it does
   not consume; they are noise, not errors.
+- **Compile batching must stay off.** CMake normally writes a folder-valued
+  `<ObjectFileName>$(IntDir)</ObjectFileName>`, which makes MSBuild batch all sources
+  into one Clang invocation — AGDE's MultiToolTask rejects that ("MultiToolTask build
+  is not compatible with batched Clang invocation"). The toolchain therefore sets
+  `CMAKE_VS_NO_COMPILE_BATCHING ON`, giving per-file object names. If a future AGDE
+  version still objects, the fallback is adding `"NativeBuildBackend=OriginalMSBuild"`
+  (or `"UseMultiToolTask=false"`) to `CMAKE_VS_GLOBALS`.
 - **Unmapped compile/link flags flow through `AdditionalOptions`.** CMake maps flags
   to MSBuild XML using its default (MSVC-oriented) flag table; GNU-style flags that do
   not match are appended verbatim to `<AdditionalOptions>`, which AGDE's clang tasks

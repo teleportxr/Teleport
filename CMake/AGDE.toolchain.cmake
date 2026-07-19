@@ -172,6 +172,12 @@ set(CMAKE_VS_GLOBALS
 	"CppLanguageStandard=cpp2a"
 )
 
+# AGDE's MultiToolTask rejects MSBuild's batched Clang invocation, which CMake's
+# default folder-valued ObjectFileName ($(IntDir)) triggers. Emit per-file object
+# names instead (requires CMake >= 3.24). The toolchain is re-read inside every
+# try_compile, so this reaches the ABI/feature-detection projects too.
+set(CMAKE_VS_NO_COMPILE_BATCHING ON)
+
 # ---------------------------------------------------------------------------
 # agde_enable_packaging(<target> GRADLE_DIR <dir> [MODULE <name>])
 #
