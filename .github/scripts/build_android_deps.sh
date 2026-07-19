@@ -15,8 +15,6 @@
 #   build_android_vs/external_libs/libjuice-static.a
 #   build_android_vs/external_libs/libsrtp2.a
 #   build_android_vs/external_libs/libusrsctp.a
-#   build_android_vs/external_libs/libozz_*.a                          (ozz-animation)
-#   build_pc_client/ozz-animation/include/ozz/...                      (headers)
 #   build_android_vs/external_libs/libktx.a                            (KTX)
 #   build_pc_client/ktx/include/ktx.h                                  (headers)
 #   libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include/curl/*  (headers)
@@ -160,46 +158,9 @@ build_libdatachannel()
 	find "$b" -name 'libusrsctp.a'             -exec cp -v {} "$EXT/libusrsctp.a" \;
 }
 
-# ---------------------------------------------------------------------------
-# 3b. ozz-animation (libozz_animation_offline.a, libozz_animation.a,
-#     libozz_base.a) — animation runtime/offline libraries used by ClientRender.
-#     The PC CMake build fetches ozz into ${CMAKE_BINARY_DIR}/ozz-animation;
-#     the AGDE build does not run that CMake path, so we cross-compile it here
-#     and stage the headers under build_pc_client/ozz-animation/include to match
-#     the existing ClientRender_Android include path.
-# ---------------------------------------------------------------------------
-OZZ_VERSION="0.16.0"
-OZZ_SRC_DIR="$WORK/ozz-animation"
-OZZ_BUILD_DIR="$WORK/ozz-build"
-build_ozz()
-{
-	if [ -f "$EXT/libozz_animation_offline.a" ] && [ -f "$EXT/libozz_animation.a" ] && [ -f "$EXT/libozz_base.a" ] && [ -d "$STAGE/build_pc_client/ozz-animation/include/ozz" ]; then
-		echo "-- ozz-animation already built"
-		return 0
-	fi
-	cd "$WORK"
-	if [ ! -d "$OZZ_SRC_DIR" ]; then
-		git clone --depth 1 --branch "$OZZ_VERSION" \
-			https://github.com/guillaumeblanc/ozz-animation.git "$OZZ_SRC_DIR"
-	fi
-	rm -rf "$OZZ_BUILD_DIR"
-	cmake -S "$OZZ_SRC_DIR" -B "$OZZ_BUILD_DIR" \
-		-DCMAKE_TOOLCHAIN_FILE="$NDK_CMAKE_TC" \
-		-DANDROID_ABI="$ABI" -DANDROID_PLATFORM="android-$ANDROID_API" \
-		-DCMAKE_BUILD_TYPE=Release \
-		-DBUILD_SHARED_LIBS=OFF \
-		-Dozz_build_tools=OFF -Dozz_build_fbx=OFF -Dozz_build_gltf=OFF \
-		-Dozz_build_samples=OFF -Dozz_build_howtos=OFF -Dozz_build_tests=OFF \
-		-Dozz_build_postfix=OFF
-	cmake --build "$OZZ_BUILD_DIR" -j"$NPROC"
-
-	cp -v "$OZZ_BUILD_DIR/src/animation/offline/libozz_animation_offline.a" "$EXT/libozz_animation_offline.a"
-	cp -v "$OZZ_BUILD_DIR/src/animation/runtime/libozz_animation.a"          "$EXT/libozz_animation.a"
-	cp -v "$OZZ_BUILD_DIR/src/base/libozz_base.a"                             "$EXT/libozz_base.a"
-
-	mkdir -p "$STAGE/build_pc_client/ozz-animation"
-	cp -a "$OZZ_SRC_DIR/include" "$STAGE/build_pc_client/ozz-animation/"
-}
+# (ozz-animation is no longer cross-compiled here: the Android build now gets it
+# from the CMake-generated AGDE project — see thirdparty/ozz_animation/ and the
+# TELEPORT_ANDROID_MINIMAL_SETUP configure step.)
 
 build_openssl
 openssl_cmake_args >/dev/null   # resolves OSSL_LIBDIR (lib vs lib64)
@@ -207,7 +168,6 @@ cp -v "$OSSL_LIBDIR/libssl.a"    "$EXT/libssl.a"
 cp -v "$OSSL_LIBDIR/libcrypto.a" "$EXT/libcrypto.a"
 build_curl
 build_libdatachannel
-build_ozz
 
 # ---------------------------------------------------------------------------
 # 3c. KTX-Software (libktx.a) — texture loading/saving used by ClientRender.
@@ -278,12 +238,11 @@ echo "== Staged Android dependencies =="
 ls -l "$EXT"
 echo "curl headers: $CURL_HDR_DIR"
 echo "magic_enum headers: $MAGIC_ENUM_DIR/include"
-echo "ozz headers: $STAGE/build_pc_client/ozz-animation/include"
 echo "ktx headers: $STAGE/build_pc_client/ktx/include"
 
 # Fail early if anything the AGDE link step needs is missing.
 missing=0
-for lib in libssl.a libcrypto.a libcurl.a libdatachannel-static.a libjuice-static.a libsrtp2.a libusrsctp.a libozz_animation_offline.a libozz_animation.a libozz_base.a libktx.a; do
+for lib in libssl.a libcrypto.a libcurl.a libdatachannel-static.a libjuice-static.a libsrtp2.a libusrsctp.a libktx.a; do
 	if [ ! -f "$EXT/$lib" ]; then
 		echo "ERROR: missing $lib" >&2
 		missing=1
