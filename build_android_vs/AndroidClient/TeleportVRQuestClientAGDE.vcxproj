@@ -71,7 +71,7 @@
       <ShowProgress>true</ShowProgress>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../thirdparty/openxr-sdk/include;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../TeleportClient/export_include;../../TeleportCore/export_include;../ClientRender;../../ClientRender/export_include;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../ozz-animation/include;../oboe_audio/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../thirdparty/openxr-sdk/include;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../TeleportClient/export_include;../../TeleportCore/export_include;../ClientRender;../../ClientRender/export_include;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../ozz-animation/include;../oboe-audio/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>PLATFORM_STD_FILESYSTEM=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
     <PreBuildEvent>
@@ -94,7 +94,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ShowProgress>true</ShowProgress>
     </Link>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../thirdparty/openxr-sdk/include;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../TeleportClient/export_include;../../TeleportCore/export_include;../ClientRender;../../ClientRender/export_include;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../ozz-animation/include;../oboe_audio/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../firstparty;../../thirdparty/openxr-sdk/include;../../client/3rdParty/meta/OpenXR/Include;../../;./;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External;../../firstparty/Platform/Android;../../thirdparty/enet/include;../../TeleportClient/export_include;../../TeleportCore/export_include;../ClientRender;../../ClientRender/export_include;../_deps/magic_enum_src/include;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../ozz-animation/include;../oboe-audio/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;PLATFORM_STD_FILESYSTEM=1;TELEPORT_CLIENT_USE_VULKAN=1;TELEPORT_INTERNAL_CHECKS=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
