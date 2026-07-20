@@ -17,7 +17,9 @@ file(GLOB OBOE_SOURCES
 	${OBOE_DIR}/src/*.cpp
 	${OBOE_DIR}/src/common/*.cpp
 	${OBOE_DIR}/src/aaudio/*.cpp
-	${OBOE_DIR}/src/opensles/*.cpp)
+	${OBOE_DIR}/src/opensles/*.cpp
+	${OBOE_DIR}/src/flowgraph/*.cpp
+	${OBOE_DIR}/src/resampler/*.cpp)
 
 add_library(oboe_audio STATIC ${OBOE_SOURCES})
 target_include_directories(oboe_audio
