@@ -117,6 +117,18 @@ if(TELEPORT_ANDROID_MINIMAL_SETUP)
 	FetchContent_Populate(ozz-animation)
 	add_subdirectory(thirdparty/ozz_animation)
 
+	# Oboe audio library, built from source to avoid LFS-tracked prebuilt .a.
+	set(oboe_audio_GUID_CMAKE "A1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D" CACHE INTERNAL "Pinned project GUID for oboe_audio")
+	FetchContent_Declare(
+	  oboe-audio
+	  GIT_REPOSITORY https://github.com/google/oboe.git
+	  GIT_SHALLOW 1
+	  GIT_TAG 1.9.0
+	  SOURCE_DIR oboe-audio
+	)
+	FetchContent_Populate(oboe-audio)
+	add_subdirectory(thirdparty/oboe_audio)
+
 	# OpenXR loader for the TeleportVRClient link step. The copies formerly stored in
 	# git LFS are not fetchable when the LFS budget is exhausted, so take the loader
 	# from the same Khronos Maven artefact that the Gradle packaging step uses (keep
