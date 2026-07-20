@@ -32,13 +32,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ClientRender\Animation.cpp" />
+    <ClCompile Include="..\..\ClientRender\AnimationInstance.cpp" />
     <ClCompile Include="..\..\ClientRender\API.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\BitReader.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\HevcParser.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\Parser.cpp" />
     <ClCompile Include="..\..\ClientRender\Camera.cpp" />
+    <ClCompile Include="..\..\ClientRender\Camera2D.cpp" />
     <ClCompile Include="..\..\ClientRender\CanvasTextRenderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Common.cpp" />
+    <ClCompile Include="..\..\ClientRender\CubemapGenerator.cpp" />
     <ClCompile Include="..\..\ClientRender\FontAtlas.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryCache.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryDecoder.cpp" />
@@ -77,6 +80,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h" />
+    <ClInclude Include="..\..\ClientRender\AnimationInstance.h" />
     <ClInclude Include="..\..\ClientRender\API.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\BitReader.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\H264Types.h" />
@@ -84,8 +88,10 @@
     <ClInclude Include="..\..\ClientRender\AVParser\HevcTypes.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\Parser.h" />
     <ClInclude Include="..\..\ClientRender\Camera.h" />
+    <ClInclude Include="..\..\ClientRender\Camera2D.h" />
     <ClInclude Include="..\..\ClientRender\CanvasTextRenderer.h" />
     <ClInclude Include="..\..\ClientRender\Common.h" />
+    <ClInclude Include="..\..\ClientRender\CubemapGenerator.h" />
     <ClInclude Include="..\..\ClientRender\DeviceContext.h" />
     <ClInclude Include="..\..\ClientRender\FontAtlas.h" />
     <ClInclude Include="..\..\ClientRender\GeometryCache.h" />

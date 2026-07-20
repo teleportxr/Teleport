@@ -76,6 +76,7 @@
     <ClCompile Include="..\..\libavstream\src\api\cuda_dx12.cpp" />
     <ClCompile Include="..\..\libavstream\src\audiodecoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\audioencoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\audioencoder_opus.cpp" />
     <ClCompile Include="..\..\libavstream\src\audio\audiotarget.cpp" />
     <ClCompile Include="..\..\libavstream\src\buffer.cpp" />
     <ClCompile Include="..\..\libavstream\src\context.cpp" />

@@ -22,6 +22,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\TeleportClient\AvatarManager.h" />
     <ClInclude Include="..\..\TeleportClient\basic_linear_algebra.h" />
     <ClInclude Include="..\..\TeleportClient\ClientDeviceState.h" />
     <ClInclude Include="..\..\TeleportClient\ClientPipeline.h" />
@@ -38,6 +39,7 @@
     <ClInclude Include="..\..\TeleportClient\URLHandlers.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\TeleportClient\AvatarManager.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientDeviceState.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientPipeline.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientTime.cpp" />
