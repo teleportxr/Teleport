@@ -2094,6 +2094,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 			micSettings.bitsPerSample	= 16;
 			audioPlayer.configure(micSettings);
 
+#if !defined(PLATFORM_ANDROID)
 			auto *webrtcSource = dynamic_cast<avs::WebRtcNetworkSource *>(clientPipeline.source.get());
 			clientPipeline.opusAudioEncoder.configure(micSettings.numChannels, micSettings.sampleRate);
 			clientPipeline.opusAudioEncoder.setEncodedFrameCallback(
@@ -2115,6 +2116,7 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 			};
 			// The audio player will stop recording automatically when deconfigured.
 			audioPlayer.startRecording(recordingFn);
+#endif
 		}
 	}
 	auto &resourceCreator = ResourceCreator::GetInstance();
@@ -2183,7 +2185,9 @@ void InstanceRenderer::OnVideoStreamClosed()
 	clientPipeline.videoQueue.deconfigure();
 	spatialAudioMixer.Stop();
 	spatialPlaybackPlayer.deconfigure();
+#if !defined(PLATFORM_ANDROID)
 	clientPipeline.opusAudioEncoder.deconfigure();
+#endif
 	clientPipeline.geometryQueue.deconfigure();
 
 	receivedInitialPos = 0;
