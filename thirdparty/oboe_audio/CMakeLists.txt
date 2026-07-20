@@ -13,13 +13,8 @@ if(NOT EXISTS ${OBOE_DIR}/src)
 	message(FATAL_ERROR "oboe sources not found at ${OBOE_DIR}; configure with TELEPORT_ANDROID_MINIMAL_SETUP=ON from the top level.")
 endif()
 
-file(GLOB OBOE_SOURCES
-	${OBOE_DIR}/src/*.cpp
-	${OBOE_DIR}/src/common/*.cpp
-	${OBOE_DIR}/src/aaudio/*.cpp
-	${OBOE_DIR}/src/opensles/*.cpp
-	${OBOE_DIR}/src/flowgraph/*.cpp
-	${OBOE_DIR}/src/resampler/*.cpp)
+file(GLOB_RECURSE OBOE_SOURCES
+	${OBOE_DIR}/src/*.cpp)
 
 add_library(oboe_audio STATIC ${OBOE_SOURCES})
 target_include_directories(oboe_audio
