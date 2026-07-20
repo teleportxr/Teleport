@@ -152,13 +152,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;../../../../firstparty/Platform/External;$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;../../../_deps/magic_enum_src/include;../../../../firstparty/Platform/External/VulkanMemoryAllocator/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR;VMA_STATIC_VULKAN_FUNCTIONS=0</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;../../../../firstparty/Platform/External;$(VS_NdkRoot)sources\third_party\vulkan\src\include;../../../../firstparty;../../../_deps/magic_enum_src/include;../../../../firstparty/Platform/External/VulkanMemoryAllocator/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PLATFORM_SUPPORT_VULKAN_SAMPLER_YCBCR=1;PLATFORM_SUPPORT_VULKAN_MULTIVIEW=1;SIMUL_INTERNAL_CHECKS=1;VK_USE_PLATFORM_ANDROID_KHR;VMA_STATIC_VULKAN_FUNCTIONS=0</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
