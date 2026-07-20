@@ -71,6 +71,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ktx", "thirdparty\ktx\ktx.v
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ozz_animation", "thirdparty\ozz_animation\ozz_animation.vcxproj", "{8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fmt", "firstparty\Platform\External\fmt\fmt.vcxproj", "{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Android-arm64-v8a = Debug|Android-arm64-v8a
@@ -246,6 +248,14 @@ Global
 		{8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
 		{8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A}.Release|x64.ActiveCfg = Release|Android-arm64-v8a
 		{8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A}.Release|x64.Build.0 = Release|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Debug|Android-arm64-v8a.ActiveCfg = Debug|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Debug|Android-arm64-v8a.Build.0 = Debug|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Debug|x64.ActiveCfg = Debug|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Debug|x64.Build.0 = Debug|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Release|Android-arm64-v8a.ActiveCfg = Release|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Release|Android-arm64-v8a.Build.0 = Release|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Release|x64.ActiveCfg = Release|Android-arm64-v8a
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC}.Release|x64.Build.0 = Release|Android-arm64-v8a
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -276,6 +286,7 @@ Global
 		{3D42A6D5-353A-3FCE-A97A-4DA5FC90AC90} = {93C8F41F-9A3E-4E5B-BCA4-1AC7AB72CDE1}
 		{22A6A42B-F2BB-4324-8866-4D7E74D40C66} = {EAF8894D-7418-41AC-B3BB-8C64AEAB8D08}
 		{8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A} = {EAF8894D-7418-41AC-B3BB-8C64AEAB8D08}
+		{A0950608-B6B3-4C21-AD2B-F1FDDA03EADC} = {A0A7B7B9-6298-4643-A97B-56C9EE57F604}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AA27821A-B243-4828-B197-11884857C085}
