@@ -65,8 +65,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <Link>
       <!-- fmt intentionally omitted: External/fmt is unbuildable/unavailable in this pinned Platform commit; unused by any Android-compiled source -->
-      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;mediandk;OpenSLES</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget);$(SolutionDir)../thirdparty/curl/curl-android-arm64-v8a/lib</AdditionalLibraryDirectories>
+      <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;openxr_loader;oboe_audio;mediandk;OpenSLES</LibraryDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget);$(SolutionDir)../thirdparty/curl/curl-android-arm64-v8a/lib;$(SolutionDir)thirdparty\oboe_audio\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)external_libs/libdatachannel-static.a;$(SolutionDir)external_libs/libjuice-static.a;$(SolutionDir)external_libs/libsrtp2.a;$(SolutionDir)external_libs/libusrsctp.a;$(SolutionDir)external_libs/libssl.a;$(SolutionDir)external_libs/libcrypto.a;$(SolutionDir)external_libs/libcurl.a;$(VS_NdkRoot)toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\aarch64-linux-android\libz.a;$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libxrspacewarp.so;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>true</ShowProgress>
     </Link>
@@ -89,7 +89,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <Link>
       <LibraryDependencies>Core_MT;SimulCrossPlatform_MT;SimulMath_MT;SimulVulkan_MT;vulkan;log;atomic;android;mediandk;OpenSLES</LibraryDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget);$(SolutionDir)../thirdparty/curl/curl-android-arm64-v8a/lib;$(SolutionDir)/lib/$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)bin\$(Platform)\$(Configuration)\$(PlatformTarget)\;$(SolutionDir)../client/OpenXR\Libs\Android\$(PlatformTarget)\$(Configuration);$(SolutionDir)../thirdparty/vulkan/bin/$(PlatformTarget);$(SolutionDir)../thirdparty/curl/curl-android-arm64-v8a/lib;$(SolutionDir)/lib/$(Configuration);$(SolutionDir)thirdparty\oboe_audio\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(SolutionDir)../client/OpenXR/Libs/Android/arm64-v8a/$(Configuration)/libopenxr_loader.so;$(SolutionDir)../thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so;$(SolutionDir)external_libs/libdatachannel-static.a;$(SolutionDir)external_libs/libjuice-static.a;$(SolutionDir)external_libs/libsrtp2.a;$(SolutionDir)external_libs/libusrsctp.a;$(SolutionDir)external_libs/libssl.a;$(SolutionDir)external_libs/libcrypto.a;$(SolutionDir)external_libs/libcurl.a;$(VS_NdkRoot)toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\aarch64-linux-android\libz.a;$(SolutionDir)external_libs/libktx.a;%(AdditionalDependencies)</AdditionalDependencies>
       <ShowProgress>true</ShowProgress>
     </Link>
