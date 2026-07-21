@@ -3,9 +3,9 @@ name: Docs
 on:
   workflow_dispatch:
   push:
-    branches: [ "mainx" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "mainx" ]
+    branches: [ "main" ]
 
 jobs:
   build_docs:

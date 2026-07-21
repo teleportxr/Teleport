@@ -3,9 +3,9 @@ name: build_pc_client
 on:
   workflow_dispatch:
   push:
-    branches: [ "mainx" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "mainx" ]
+    branches: [ "main" ]
 
 jobs:
   build:
