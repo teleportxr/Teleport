@@ -32,7 +32,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ClientRender\Animation.cpp" />
+    <ClCompile Include="..\..\ClientRender\AnimationDecoder.cpp" />
     <ClCompile Include="..\..\ClientRender\AnimationInstance.cpp" />
+    <ClCompile Include="..\..\ClientRender\AnimationRetargeter.cpp" />
     <ClCompile Include="..\..\ClientRender\API.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\BitReader.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\HevcParser.cpp" />
@@ -53,6 +55,7 @@
     <ClCompile Include="..\..\ClientRender\Material.cpp" />
     <ClCompile Include="..\..\ClientRender\MemoryUtil.cpp" />
     <ClCompile Include="..\..\ClientRender\Mesh.cpp" />
+    <ClCompile Include="..\..\ClientRender\MeshDecoder.cpp" />
     <ClCompile Include="..\..\ClientRender\Node.cpp" />
     <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationComponent.cpp" />
     <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationState.cpp" />

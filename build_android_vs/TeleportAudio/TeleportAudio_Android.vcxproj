@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -34,6 +34,9 @@
     <ProjectReference Include="..\thirdparty\oboe_audio\oboe_audio.vcxproj">
       <Project>{a1b2c3d4-e5f6-4a5b-9c8d-7e6f5a4b3c2d}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\thirdparty\opus_android\opus.vcxproj">
+      <Project>{c3d4e5f6-a7b8-49c0-91d2-e3f4a5b6c7d8}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\TeleportAudio\AndroidAudioPlayer.cpp" />
@@ -42,6 +45,7 @@
     <ClCompile Include="..\..\TeleportAudio\AudioStreamTarget.cpp" />
     <ClCompile Include="..\..\TeleportAudio\CustomAudioStreamTarget.cpp" />
     <ClCompile Include="..\..\TeleportAudio\NetworkPipeline.cpp" />
+    <ClCompile Include="..\..\TeleportAudio\SpatialAudioMixer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\TeleportAudio\AndroidAudioPlayer.h" />
@@ -182,13 +186,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../oboe-audio/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../oboe-audio/include;../opus/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../oboe-audio/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../oboe-audio/include;../opus/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -45,6 +45,7 @@
     <ClCompile Include="..\..\TeleportClient\ClientTime.cpp" />
     <ClCompile Include="..\..\TeleportClient\Config.cpp" />
     <ClCompile Include="..\..\TeleportClient\DiscoveryService.cpp" />
+    <ClCompile Include="..\..\TeleportClient\Identity.cpp" />
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />

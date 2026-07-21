@@ -84,6 +84,8 @@ Include(FetchContent)
 # Single source of truth for the ozz-animation version, used by both the full client
 # build and the Android minimal setup below.
 set(TELEPORT_OZZ_GIT_TAG 0.16.0)
+# Single source of truth for the libopus version, likewise shared.
+set(TELEPORT_OPUS_GIT_TAG v1.5.2)
 
 if(TELEPORT_ANDROID_MINIMAL_SETUP)
 	# Android AGDE minimal setup: fetch ozz-animation and generate its static-library
@@ -128,6 +130,20 @@ if(TELEPORT_ANDROID_MINIMAL_SETUP)
 	)
 	FetchContent_Populate(oboe-audio)
 	add_subdirectory(thirdparty/oboe_audio)
+
+	# libopus, needed by TeleportAudio's SpatialAudioMixer and libavstream's Opus
+	# encoder/decoder on Android. Fetch only — thirdparty/opus_android compiles the
+	# fetched sources as a single static library, as for ozz/oboe above.
+	set(opus_GUID_CMAKE "C3D4E5F6-A7B8-49C0-91D2-E3F4A5B6C7D8" CACHE INTERNAL "Pinned project GUID for opus")
+	FetchContent_Declare(
+	  opus
+	  GIT_REPOSITORY https://github.com/xiph/opus.git
+	  GIT_SHALLOW 1
+	  GIT_TAG ${TELEPORT_OPUS_GIT_TAG}
+	  SOURCE_DIR opus
+	)
+	FetchContent_Populate(opus)
+	add_subdirectory(thirdparty/opus_android)
 
 	# OpenXR loader for the TeleportVRClient link step. The copies formerly stored in
 	# git LFS are not fetchable when the LFS budget is exhausted, so take the loader
@@ -239,7 +255,7 @@ FetchContent_Declare(
   opus
   GIT_REPOSITORY https://github.com/xiph/opus.git
   GIT_SHALLOW 1
-  GIT_TAG        v1.5.2
+  GIT_TAG        ${TELEPORT_OPUS_GIT_TAG}
   SOURCE_DIR opus
 )
 FetchContent_MakeAvailable(opus)
