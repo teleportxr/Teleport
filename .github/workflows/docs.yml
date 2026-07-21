@@ -3,9 +3,9 @@ name: Docs
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "docs-patch1" ]
+    branches: [ "mainx" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "mainx" ]
 
 jobs:
   build_docs:

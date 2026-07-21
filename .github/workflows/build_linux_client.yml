@@ -3,7 +3,7 @@ name: build_linux_client
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "mainx" ]
   pull_request:
     branches: [ "main" ]
 

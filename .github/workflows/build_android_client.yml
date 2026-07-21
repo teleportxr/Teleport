@@ -202,8 +202,11 @@ jobs:
         $keystorePath = "$packagingDir/ci-debug.keystore"
         keytool -genkey -v -keystore $keystorePath -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
           -alias android -storepass android -keypass android -dname "CN=CI, OU=TeleportXR, O=TeleportXR"
+        # Java's Properties.load() treats backslash as an escape character, so the path written
+        # here must use forward slashes even on Windows or it gets silently mangled on read.
+        $keystorePathForProps = $keystorePath -replace '\\', '/'
         @"
-        RELEASE_STORE_FILE=$keystorePath
+        RELEASE_STORE_FILE=$keystorePathForProps
         RELEASE_STORE_PASSWORD=android
         RELEASE_KEY_ALIAS=android
         RELEASE_KEY_PASSWORD=android
