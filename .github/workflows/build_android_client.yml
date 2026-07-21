@@ -190,18 +190,30 @@ jobs:
         cmake -B build_pc_client -S firstparty\Platform -A x64
         cmake --build build_pc_client --config Release --target Sfx
 
+    - name: Restore cached CI debug keystore
+      uses: actions/cache@v4
+      with:
+        path: ${{github.workspace}}/build_android_vs/AndroidClient/AndroidPackaging/ci-debug.keystore
+        # Fixed key, never invalidated by source changes: this keystore just needs to be the
+        # same file release-over-release so successive CI-built APKs stay mutually upgradable
+        # (Android requires matching signatures to install one build over another).
+        key: android-ci-debug-keystore-v1
+
     - name: Generate CI debug keystore for release signing
       shell: pwsh
       # build_android_vs/AndroidClient/AndroidPackaging/app/build.gradle loads keystore.properties
       # for its release signingConfig. That file is gitignored by convention (.gitignore:13) since
       # it normally holds a developer's real keystore path/passwords, so CI provisions its own
       # throwaway debug keystore instead, matching the dummy android/android/android convention
-      # already present in the committed gradle.properties.
+      # already present in the committed gradle.properties. Generation is skipped when the cache
+      # step above already restored a keystore from a previous run, so the signature is stable.
       run: |
         $packagingDir = "${{github.workspace}}/build_android_vs/AndroidClient/AndroidPackaging"
         $keystorePath = "$packagingDir/ci-debug.keystore"
-        keytool -genkey -v -keystore $keystorePath -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
-          -alias android -storepass android -keypass android -dname "CN=CI, OU=TeleportXR, O=TeleportXR"
+        if (-not (Test-Path $keystorePath)) {
+          keytool -genkey -v -keystore $keystorePath -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+            -alias android -storepass android -keypass android -dname "CN=CI, OU=TeleportXR, O=TeleportXR"
+        }
         # Java's Properties.load() treats backslash as an escape character, so the path written
         # here must use forward slashes even on Windows or it gets silently mangled on read.
         $keystorePathForProps = $keystorePath -replace '\\', '/'

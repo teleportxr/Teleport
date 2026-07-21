@@ -5,7 +5,7 @@ on:
   push:
     branches: [ "mainx" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "mainx" ]
 
 jobs:
   build:
