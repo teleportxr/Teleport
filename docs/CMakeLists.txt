@@ -1,5 +1,39 @@
 cmake_minimum_required(VERSION 3.22)
 project(Teleport_Docs)
+
+# Obtain Unity and Unreal plugin sources for documentation generation at
+# configure time. This replaces the previous firstparty/... git submodules,
+# which were only needed by the docs build.
+include(FetchContent)
+
+set(TELEPORT_UNITY_REPO_URL "https://github.com/teleportxr/teleport-unity.git" CACHE STRING "URL for teleport-unity documentation sources")
+set(TELEPORT_UNITY_REPO_TAG "22ba5bb5baf55c1e370eb499688a85004bdd8555" CACHE STRING "Git tag/commit for teleport-unity documentation sources")
+FetchContent_Declare(
+	teleport-unity-docs
+	GIT_REPOSITORY ${TELEPORT_UNITY_REPO_URL}
+	GIT_TAG ${TELEPORT_UNITY_REPO_TAG}
+	GIT_SHALLOW 0
+	SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/teleport-unity
+)
+FetchContent_GetProperties(teleport-unity-docs)
+if(NOT teleport-unity-docs_POPULATED)
+	FetchContent_Populate(teleport-unity-docs)
+endif()
+
+set(TELEPORT_UNREAL_REPO_URL "https://github.com/teleportxr/teleport-unreal.git" CACHE STRING "URL for teleport-unreal documentation sources")
+set(TELEPORT_UNREAL_REPO_TAG "c450012d98b9e86ee51e6e9c492c54d919d966e2" CACHE STRING "Git tag/commit for teleport-unreal documentation sources")
+FetchContent_Declare(
+	teleport-unreal-docs
+	GIT_REPOSITORY ${TELEPORT_UNREAL_REPO_URL}
+	GIT_TAG ${TELEPORT_UNREAL_REPO_TAG}
+	GIT_SHALLOW 0
+	SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/teleport-unreal
+)
+FetchContent_GetProperties(teleport-unreal-docs)
+if(NOT teleport-unreal-docs_POPULATED)
+	FetchContent_Populate(teleport-unreal-docs)
+endif()
+
 find_package(Doxygen REQUIRED)
 cmake_path(CONVERT "${CMAKE_CURRENT_SOURCE_DIR}/../" TO_CMAKE_PATH_LIST TELEPORT_ROOT_DIR NORMALIZE)
 # Find all the public headers
@@ -47,7 +81,7 @@ set_target_properties( Doxygen PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS -Dbreathe_projects.TeleportXR=${DOXYGEN_OUTPUT_DIR}/xml)
 
 # Now a Doxygen project to build the Unreal C# docs.
-set(TELEPORT_DOXYGEN_UNREAL_INPUT_DIR ${TELEPORT_ROOT_DIR}/firstparty/teleport-unreal)
+set(TELEPORT_DOXYGEN_UNREAL_INPUT_DIR ${teleport-unreal-docs_SOURCE_DIR})
 set(DOXYGEN_UNREAL_INPUT_DIR ${TELEPORT_DOXYGEN_UNREAL_INPUT_DIR})
 set(DOXYGEN_UNREAL_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_unreal)
 set(DOXYGEN_UNREAL_INDEX_FILE ${DOXYGEN_UNREAL_OUTPUT_DIR}/xml/index.xml)
@@ -69,7 +103,7 @@ set_target_properties( DoxygenUnreal PROPERTIES FOLDER Docs)
 set(FIND_DOXYGEN_OUTPUTS ${FIND_DOXYGEN_OUTPUTS} -Dbreathe_projects.TeleportUnreal=${DOXYGEN_UNREAL_OUTPUT_DIR}/xml)
 
 # Now a Doxygen project to build the Unity C# docs.
-set(TELEPORT_DOXYGEN_UNITY_INPUT_DIR ${TELEPORT_ROOT_DIR}/firstparty/teleport-unity)
+set(TELEPORT_DOXYGEN_UNITY_INPUT_DIR ${teleport-unity-docs_SOURCE_DIR})
 set(DOXYGEN_UNITY_INPUT_DIR ${TELEPORT_DOXYGEN_UNITY_INPUT_DIR})
 set(DOXYGEN_UNITY_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen_unity)
 set(DOXYGEN_UNITY_INDEX_FILE ${DOXYGEN_UNITY_OUTPUT_DIR}/xml/index.xml)

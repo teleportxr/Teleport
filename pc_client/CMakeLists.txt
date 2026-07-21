@@ -118,7 +118,10 @@ if(WIN32)
 	target_link_libraries(TeleportPCClient debug openxr_loaderd optimized openxr_loader)
 	target_link_libraries(TeleportPCClient winmm directxtex_MT)
 	target_link_directories(TeleportPCClient PUBLIC ../thirdparty/openssl/x64/lib)
-	target_link_libraries(TeleportPCClient ws2_32.lib libssl.lib iphlpapi.lib bcrypt.lib)
+	# libssl depends on libcrypto (the WPACKET_* symbols live there); link both from the
+	# bundled static OpenSSL so they resolve against a matched build. See the OpenSSL block
+	# in the root CMakeLists.txt.
+	target_link_libraries(TeleportPCClient ws2_32.lib libssl.lib libcrypto.lib crypt32.lib iphlpapi.lib bcrypt.lib)
 	target_link_libraries(TeleportPCClient -ignore:4711)
 	target_link_libraries(TeleportPCClient Shlwapi.lib)
 	target_link_options(TeleportPCClient PUBLIC /ignore:4711)
@@ -241,11 +244,23 @@ set(CPACK_COMPONENTS_ALL client)
 
 if(TELEPORT_WINDOWS)
 	set(CPACK_GENERATOR "NSIS")
-	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.md")
-	set(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
+	# NSIS MUI chooses the license page parser based on the file extension;
+	# a plain-text copy is kept alongside the markdown source so the installer
+	# and the standalone NSIS script both reference a file NSIS can parse reliably.
+	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
+	# CPACK_PACKAGE_ICON maps to NSIS MUI_HEADERIMAGE_BITMAP, which must be a BMP
+	# (makensis aborts on a non-bitmap here). Use the same header bitmap as the
+	# standalone Installers/TeleportClient.nsi. The .ico is only for MUI_ICON below.
+	#
+	# This value feeds NSIS's File command, which needs Windows backslashes; forward
+	# slashes give "no files found". CPack neither converts the separators nor escapes
+	# the value when writing CPackConfig.cmake, so emit doubled backslashes: the raw
+	# config round-trip collapses them to single backslashes in the generated project.nsi
+	# (same convention as CPACK_NSIS_EXTRA_INSTALL_COMMANDS below).
+	string(REPLACE "/" "\\\\" CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportLogo150x57.bmp")
 	set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
 	set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/Installers/TeleportIcon.ico")
-	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient" "Teleport VR Client")
+	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
 else()
 	set(CPACK_GENERATOR "DEB")
 	# Stage payload under /opt/TeleportXR. Absolute install() destinations

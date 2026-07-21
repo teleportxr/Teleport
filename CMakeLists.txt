@@ -70,12 +70,104 @@ option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
 option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
 option(TELEPORT_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime? Only for server builds." OFF)
 option(TELEPORT_ASAN "Enable AddressSanitizer?" OFF)
+option(TELEPORT_ANDROID_MINIMAL_SETUP "Only fetch dependencies for the Android AGDE build; do not build the client." OFF)
+if(TELEPORT_ANDROID_MINIMAL_SETUP)
+	message(STATUS "Teleport Android minimal setup enabled: dependencies will be fetched, but the client/platform targets will not be built.")
+endif()
 if(TELEPORT_USE_DYNAMIC_RUNTIME)
 	set(TELEPORT_RUNTIME dynamic)
 else()
 	set(TELEPORT_RUNTIME static)
 endif()
 Include(FetchContent)
+
+# Single source of truth for the ozz-animation version, used by both the full client
+# build and the Android minimal setup below.
+set(TELEPORT_OZZ_GIT_TAG 0.16.0)
+# Single source of truth for the libopus version, likewise shared.
+set(TELEPORT_OPUS_GIT_TAG v1.5.2)
+
+if(TELEPORT_ANDROID_MINIMAL_SETUP)
+	# Android AGDE minimal setup: fetch ozz-animation and generate its static-library
+	# project, then stop — nothing else in this file is configured. Intended to be run
+	# with the AGDE toolchain (CMake/AGDE.toolchain.cmake) and -B build_android_vs, so
+	# that the generated thirdparty/ozz_animation/ozz_animation.vcxproj sits alongside
+	# the hand-rolled projects and is referenced by TeleportVRQuestClient.sln.
+	if(CMAKE_GENERATOR MATCHES "^Visual Studio")
+		# The hand-rolled solution only has Debug and Release configurations.
+		set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
+		# No ZERO_CHECK: the generated project must build inside the hand-rolled
+		# solution without referencing CMake's regeneration machinery.
+		set(CMAKE_SUPPRESS_REGENERATION ON)
+	endif()
+	# Pin the project GUID so the hand-rolled TeleportVRQuestClient.sln and the
+	# ProjectReferences in the hand-rolled vcxproj files can refer to the generated
+	# project by a stable GUID on every machine.
+	set(ozz_animation_GUID_CMAKE "8C9ECEE0-7B1A-4E9F-9B7E-4D2A1F7C6B3A" CACHE INTERNAL "Pinned project GUID for ozz_animation")
+	# Fetch only — ozz's own build system is not used; thirdparty/ozz_animation
+	# compiles the fetched sources as a single static library.
+	if(POLICY CMP0169)
+		cmake_policy(SET CMP0169 OLD)
+	endif()
+	FetchContent_Declare(
+	  ozz-animation
+	  GIT_REPOSITORY https://github.com/guillaumeblanc/ozz-animation.git
+		GIT_SHALLOW 1
+	  GIT_TAG        ${TELEPORT_OZZ_GIT_TAG}
+	  SOURCE_DIR ozz-animation
+	)
+	FetchContent_Populate(ozz-animation)
+	add_subdirectory(thirdparty/ozz_animation)
+
+	# Oboe audio library, built from source to avoid LFS-tracked prebuilt .a.
+	set(oboe_audio_GUID_CMAKE "A1B2C3D4-E5F6-4A5B-9C8D-7E6F5A4B3C2D" CACHE INTERNAL "Pinned project GUID for oboe_audio")
+	FetchContent_Declare(
+	  oboe-audio
+	  GIT_REPOSITORY https://github.com/google/oboe.git
+	  GIT_SHALLOW 1
+	  GIT_TAG 1.9.0
+	  SOURCE_DIR oboe-audio
+	)
+	FetchContent_Populate(oboe-audio)
+	add_subdirectory(thirdparty/oboe_audio)
+
+	# libopus, needed by TeleportAudio's SpatialAudioMixer and libavstream's Opus
+	# encoder/decoder on Android. Fetch only — thirdparty/opus_android compiles the
+	# fetched sources as a single static library, as for ozz/oboe above.
+	set(opus_GUID_CMAKE "C3D4E5F6-A7B8-49C0-91D2-E3F4A5B6C7D8" CACHE INTERNAL "Pinned project GUID for opus")
+	FetchContent_Declare(
+	  opus
+	  GIT_REPOSITORY https://github.com/xiph/opus.git
+	  GIT_SHALLOW 1
+	  GIT_TAG ${TELEPORT_OPUS_GIT_TAG}
+	  SOURCE_DIR opus
+	)
+	FetchContent_Populate(opus)
+	add_subdirectory(thirdparty/opus_android)
+
+	# OpenXR loader for the TeleportVRClient link step. The copies formerly stored in
+	# git LFS are not fetchable when the LFS budget is exhausted, so take the loader
+	# from the same Khronos Maven artefact that the Gradle packaging step uses (keep
+	# the version in sync with AndroidPackaging/app/build.gradle), and place it where
+	# the hand-rolled vcxproj expects it.
+	set(TELEPORT_OPENXR_LOADER_VERSION 1.0.33)
+	set(_oxr_aar ${CMAKE_BINARY_DIR}/openxr_loader_for_android-${TELEPORT_OPENXR_LOADER_VERSION}.aar)
+	file(DOWNLOAD
+		https://repo1.maven.org/maven2/org/khronos/openxr/openxr_loader_for_android/${TELEPORT_OPENXR_LOADER_VERSION}/openxr_loader_for_android-${TELEPORT_OPENXR_LOADER_VERSION}.aar
+		${_oxr_aar}
+		EXPECTED_HASH SHA256=ff815aa7e5418bf8488577029ded65fb113bc38d0e574e972039f5aac2f4a0f8
+		SHOW_PROGRESS)
+	if(NOT DEFINED TELEPORT_AGDE_ABI)
+		set(TELEPORT_AGDE_ABI arm64-v8a)
+	endif()
+	set(_oxr_so prefab/modules/openxr_loader/libs/android.${TELEPORT_AGDE_ABI}/libopenxr_loader.so)
+	file(ARCHIVE_EXTRACT INPUT ${_oxr_aar} DESTINATION ${CMAKE_BINARY_DIR}/openxr_loader_aar PATTERNS ${_oxr_so})
+	foreach(_oxr_config Debug Release)
+		file(COPY ${CMAKE_BINARY_DIR}/openxr_loader_aar/${_oxr_so}
+			DESTINATION ${CMAKE_SOURCE_DIR}/client/OpenXR/Libs/Android/${TELEPORT_AGDE_ABI}/${_oxr_config})
+	endforeach()
+	return()
+endif()
 
 macro(get_all_targets_recursive targets dir)
 	get_property(subdirectories DIRECTORY ${dir} PROPERTY SUBDIRECTORIES)
@@ -163,7 +255,7 @@ FetchContent_Declare(
   opus
   GIT_REPOSITORY https://github.com/xiph/opus.git
   GIT_SHALLOW 1
-  GIT_TAG        v1.5.2
+  GIT_TAG        ${TELEPORT_OPUS_GIT_TAG}
   SOURCE_DIR opus
 )
 FetchContent_MakeAvailable(opus)
@@ -193,18 +285,6 @@ FetchContent_Declare(
 FetchContent_GetProperties(zlib)
 if(NOT zlib_POPULATED)
   FetchContent_Populate(zlib)
-endif()
-
-# Get flecs (source files compiled into ClientRender via configure_file)
-FetchContent_Declare(
-  flecs
-  GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
-  GIT_TAG        57ad5d39e1018074a640c1ba6df94bac015f5a58
-  SOURCE_DIR flecs
-)
-FetchContent_GetProperties(flecs)
-if(NOT flecs_POPULATED)
-  FetchContent_Populate(flecs)
 endif()
 
 
@@ -401,16 +481,22 @@ endif()
 if(TELEPORT_WINDOWS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS")
 	set(OPENSSL_APPLINK_SOURCE "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include/openssl/applink.c" CACHE STRING "" )
-	set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64 CACHE STRING "" )
-	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include CACHE STRING "" )
-	set(OPENSSL_LIBRARIES ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib CACHE STRING "" )
-	set(OPENSSL_CRYPTO_LIBRARY libcrypto.lib CACHE STRING "" )
-	set(SSL_EAY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(SSL_EAY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(SSL_EAY_LIBRARY_DEBUG ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(SSL_EAY_LIBRARY_RELEASE ${OPENSSL_LIBRARIES}/libssl.lib CACHE STRING "" )
-	set(LIB_EAY_DEBUG ${OPENSSL_LIBRARIES}/libcrypto.lib CACHE STRING "" )
-	set(LIB_EAY_RELEASE ${OPENSSL_LIBRARIES}/libcrypto.lib CACHE STRING "" )
+	# Force use of the bundled static OpenSSL 3.0.8 (thirdparty/openssl) for every client
+	# component, including libdatachannel, which is added below. libdatachannel calls
+	# find_package(OpenSSL), and without these hints CMake's FindOpenSSL picks up the CI
+	# runner's system OpenSSL in C:\Program Files\OpenSSL (dynamic /MD). That pairs the
+	# bundled static libssl with an incompatible libcrypto, so the internal WPACKET_*
+	# symbols libssl relies on go unresolved at link time. Pre-seeding the modern
+	# FindOpenSSL result variables with the exact bundled .lib paths keeps everything on
+	# one matched, static /MT OpenSSL. (The legacy SSL_EAY_*/LIB_EAY_* variables used here
+	# previously are ignored by CMake >= 3.x FindOpenSSL.)
+	set(OPENSSL_ROOT_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64 CACHE PATH "" FORCE)
+	set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
+	set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "" FORCE)
+	set(OPENSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include CACHE PATH "" FORCE)
+	set(OPENSSL_SSL_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libssl.lib CACHE FILEPATH "" FORCE)
+	set(OPENSSL_CRYPTO_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libcrypto.lib CACHE FILEPATH "" FORCE)
+	set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} CACHE STRING "" FORCE)
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
 	#add_subdirectory(thirdparty/srt/submodules/pthread-win32)
@@ -557,7 +643,7 @@ if(TELEPORT_CLIENT)
 	  ozz-animation
 	  GIT_REPOSITORY https://github.com/guillaumeblanc/ozz-animation.git
 		GIT_SHALLOW 1
-	  GIT_TAG        0.16.0
+	  GIT_TAG        ${TELEPORT_OZZ_GIT_TAG}
 	  SOURCE_DIR ozz-animation
 	)
 	FetchContent_MakeAvailable(ozz-animation)

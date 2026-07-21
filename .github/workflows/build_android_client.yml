@@ -8,7 +8,70 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # Cross-compiles the Android arm64-v8a static libraries (OpenSSL, curl, the
+  # libdatachannel WebRTC stack) that the AGDE solution links from
+  # build_android_vs/external_libs/. These are normally staged by hand on a
+  # developer machine (and .gitignored), so CI reproduces them here. Runs on
+  # Linux because cross-compiling OpenSSL with the NDK is far more reliable
+  # there; NDK-built arm64 archives link into the Windows AGDE build unchanged.
+  android-deps:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      ANDROID_NDK_VERSION: 27.2.12479018
+      ANDROID_API: 29
+      OPENSSL_VERSION: 3.0.15
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6.0.2
+      with:
+        lfs: 'false'
+        submodules: 'false'
+
+    - name: libdatachannel submodule (recursive)
+      run: git submodule update --init --recursive --force -- "thirdparty/libdatachannel"
+
+    - name: Setup JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android NDK
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r27c
+        link-to-sdk: true
+
+    - name: Install Android platform and export NDK path
+      run: |
+        sdkmanager --install "platforms;android-${ANDROID_API}"
+        echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
+    - name: Cache Android deps
+      id: deps-cache
+      uses: actions/cache@v4
+      with:
+        path: build_android_deps
+        key: android-deps-${{ env.ANDROID_NDK_VERSION }}-ossl${{ env.OPENSSL_VERSION }}-${{ hashFiles('.github/scripts/build_android_deps.sh') }}-${{ hashFiles('.gitmodules', 'thirdparty/libdatachannel/.gitmodules') }}
+
+    - name: Build Android dependencies
+      run: |
+        chmod +x .github/scripts/build_android_deps.sh
+        ./.github/scripts/build_android_deps.sh
+
+    - uses: actions/upload-artifact@v7.0.1
+      with:
+        name: android-deps
+        path: build_android_deps/stage/
+        if-no-files-found: error
+
   build:
+    needs: android-deps
     runs-on: windows-2022
     timeout-minutes: 120
     env:
@@ -17,12 +80,14 @@ jobs:
       WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
       VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
-      ANDROID_NDK_VERSION: 25.2.9519653
-      AGDE_VSIX_URL: https://dl.google.com/android/agde/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
+      # r27c: first NDK whose libc++ (LLVM 18) provides a complete, non-experimental
+      # <format>. r26 lacks std::format even in C++20 mode, breaking RuntimeError.h.
+      ANDROID_NDK_VERSION: 27.2.12479018
+      AGDE_VSIX_URL: https://dl.google.com/android/agde/release/98/20260126-194813/AndroidGameDevelopmentExtension-2022-v26.1.102.vsix
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v6.0.2
+      uses: actions/checkout@v6.0.2 
       with:
         lfs: 'false'
         submodules: 'false'
@@ -30,7 +95,7 @@ jobs:
     - name: Git Submodules
       run: |
         cd ${{github.workspace}}
-        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "thirdparty/oboe" "libavstream/thirdparty/efp"
+        git submodule update --init --recursive --force -- "firstparty/Platform" "thirdparty/draco" "thirdparty/basis_universal" "thirdparty/libdatachannel" "libavstream/thirdparty/efp"
 
     - name: Log
       shell: cmd
@@ -58,11 +123,18 @@ jobs:
       uses: android-actions/setup-android@v3
 
     - name: Install Android NDK
+      uses: nttld/setup-ndk@v1
+      id: setup-ndk
+      with:
+        ndk-version: r27c
+        link-to-sdk: true
+
+    - name: Install Android SDK components and export NDK path
       shell: pwsh
       run: |
-        sdkmanager --install "ndk;${{env.ANDROID_NDK_VERSION}}" "platforms;android-29" "build-tools;34.0.0" "platform-tools"
-        echo "ANDROID_NDK_HOME=$env:ANDROID_SDK_ROOT\ndk\${{env.ANDROID_NDK_VERSION}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "ANDROID_NDK_ROOT=$env:ANDROID_SDK_ROOT\ndk\${{env.ANDROID_NDK_VERSION}}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        sdkmanager --install "platforms;android-29" "build-tools;34.0.0" "platform-tools"
+        echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "ANDROID_NDK_ROOT=${{ steps.setup-ndk.outputs.ndk-path }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     - name: Vulkan
       uses: humbletim/install-vulkan-sdk@v1.2
@@ -90,6 +162,76 @@ jobs:
         echo "ANDROID_NDK_HOME $env:ANDROID_NDK_HOME"
         echo "JAVA_HOME $env:JAVA_HOME"
         msbuild -version
+
+    - name: Download prebuilt Android dependencies
+      uses: actions/download-artifact@v7
+      with:
+        name: android-deps
+        path: ${{github.workspace}}
+      # Overlays build_android_vs/external_libs/*.a and the curl headers into
+      # the tree at the paths the AGDE projects expect.
+
+    - name: Generate ozz-animation AGDE project via CMake
+      shell: pwsh
+      # Fetches ozz-animation and generates thirdparty/ozz_animation/ozz_animation.vcxproj
+      # inside build_android_vs, using the AGDE toolchain so the project targets the same
+      # Android-arm64-v8a/Clang platform as the hand-rolled projects. The hand-rolled
+      # TeleportVRQuestClient.sln references the generated project by its pinned GUID.
+      run: |
+        cmake -B build_android_vs -S . `
+          -G "Visual Studio 17 2022" `
+          -A Android-arm64-v8a -T Clang `
+          "-DCMAKE_TOOLCHAIN_FILE=CMake/AGDE.toolchain.cmake" `
+          -DTELEPORT_ANDROID_MINIMAL_SETUP=ON
+
+    - name: Build host shader compiler
+      shell: cmd
+      run: |
+        cmake -B build_pc_client -S firstparty\Platform -A x64
+        cmake --build build_pc_client --config Release --target Sfx
+
+    - name: Restore cached CI debug keystore
+      uses: actions/cache@v4
+      with:
+        path: ${{github.workspace}}/build_android_vs/AndroidClient/AndroidPackaging/ci-debug.keystore
+        # Fixed key, never invalidated by source changes: this keystore just needs to be the
+        # same file release-over-release so successive CI-built APKs stay mutually upgradable
+        # (Android requires matching signatures to install one build over another).
+        key: android-ci-debug-keystore-v1
+
+    - name: Generate CI debug keystore for release signing
+      shell: pwsh
+      # build_android_vs/AndroidClient/AndroidPackaging/app/build.gradle loads keystore.properties
+      # for its release signingConfig. That file is gitignored by convention (.gitignore:13) since
+      # it normally holds a developer's real keystore path/passwords, so CI provisions its own
+      # throwaway debug keystore instead, matching the dummy android/android/android convention
+      # already present in the committed gradle.properties. Generation is skipped when the cache
+      # step above already restored a keystore from a previous run, so the signature is stable.
+      run: |
+        $packagingDir = "${{github.workspace}}/build_android_vs/AndroidClient/AndroidPackaging"
+        $keystorePath = "$packagingDir/ci-debug.keystore"
+        if (-not (Test-Path $keystorePath)) {
+          keytool -genkey -v -keystore $keystorePath -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+            -alias android -storepass android -keypass android -dname "CN=CI, OU=TeleportXR, O=TeleportXR"
+        }
+        # Java's Properties.load() treats backslash as an escape character, so the path written
+        # here must use forward slashes even on Windows or it gets silently mangled on read.
+        $keystorePathForProps = $keystorePath -replace '\\', '/'
+        @"
+        RELEASE_STORE_FILE=$keystorePathForProps
+        RELEASE_STORE_PASSWORD=android
+        RELEASE_KEY_ALIAS=android
+        RELEASE_KEY_PASSWORD=android
+        "@ | Out-File -FilePath "$packagingDir/keystore.properties" -Encoding utf8
+
+    - name: Switch to JDK 11 for AGDE's Gradle packaging step
+      shell: pwsh
+      # The Gradle 6.7.1 + AGP 4.2.2 project checked into build_android_vs/AndroidClient/AndroidPackaging
+      # for :app:assembleRelease has a Groovy/ASM build-script compiler that can't parse JDK 17 class
+      # files. sdkmanager above needs JDK 17, so switch to the runner's preinstalled JDK 11 only for
+      # the MSBuild step that invokes gradlew.bat.
+      run: |
+        echo "JAVA_HOME=$env:JAVA_HOME_11_X64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     - name: Build
       shell: cmd

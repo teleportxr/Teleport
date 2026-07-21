@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -26,16 +26,24 @@
     <ProjectReference Include="..\TeleportCore\TeleportCore_Android.vcxproj">
       <Project>{c5385ffa-b456-40f0-b0c7-3397a7fefe42}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\thirdparty\ozz_animation\ozz_animation.vcxproj">
+      <Project>{8c9ecee0-7b1a-4e9f-9b7e-4d2a1f7c6b3a}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ClientRender\Animation.cpp" />
+    <ClCompile Include="..\..\ClientRender\AnimationDecoder.cpp" />
+    <ClCompile Include="..\..\ClientRender\AnimationInstance.cpp" />
+    <ClCompile Include="..\..\ClientRender\AnimationRetargeter.cpp" />
     <ClCompile Include="..\..\ClientRender\API.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\BitReader.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\HevcParser.cpp" />
     <ClCompile Include="..\..\ClientRender\AVParser\Parser.cpp" />
     <ClCompile Include="..\..\ClientRender\Camera.cpp" />
+    <ClCompile Include="..\..\ClientRender\Camera2D.cpp" />
     <ClCompile Include="..\..\ClientRender\CanvasTextRenderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Common.cpp" />
+    <ClCompile Include="..\..\ClientRender\CubemapGenerator.cpp" />
     <ClCompile Include="..\..\ClientRender\FontAtlas.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryCache.cpp" />
     <ClCompile Include="..\..\ClientRender\GeometryDecoder.cpp" />
@@ -47,6 +55,7 @@
     <ClCompile Include="..\..\ClientRender\Material.cpp" />
     <ClCompile Include="..\..\ClientRender\MemoryUtil.cpp" />
     <ClCompile Include="..\..\ClientRender\Mesh.cpp" />
+    <ClCompile Include="..\..\ClientRender\MeshDecoder.cpp" />
     <ClCompile Include="..\..\ClientRender\Node.cpp" />
     <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationComponent.cpp" />
     <ClCompile Include="..\..\ClientRender\NodeComponents\AnimationState.cpp" />
@@ -74,6 +83,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ClientRender\Animation.h" />
+    <ClInclude Include="..\..\ClientRender\AnimationInstance.h" />
     <ClInclude Include="..\..\ClientRender\API.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\BitReader.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\H264Types.h" />
@@ -81,8 +91,10 @@
     <ClInclude Include="..\..\ClientRender\AVParser\HevcTypes.h" />
     <ClInclude Include="..\..\ClientRender\AVParser\Parser.h" />
     <ClInclude Include="..\..\ClientRender\Camera.h" />
+    <ClInclude Include="..\..\ClientRender\Camera2D.h" />
     <ClInclude Include="..\..\ClientRender\CanvasTextRenderer.h" />
     <ClInclude Include="..\..\ClientRender\Common.h" />
+    <ClInclude Include="..\..\ClientRender\CubemapGenerator.h" />
     <ClInclude Include="..\..\ClientRender\DeviceContext.h" />
     <ClInclude Include="..\..\ClientRender\FontAtlas.h" />
     <ClInclude Include="..\..\ClientRender\GeometryCache.h" />
@@ -134,14 +146,14 @@
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <CppLanguageStandard>cpp17</CppLanguageStandard>
-    <AndroidNdkVersion>25.2.9519653</AndroidNdkVersion>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
+    <AndroidNdkVersion>27.2.12479018</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -165,14 +177,14 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../../firstparty/Platform/Android;../../;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../libavstream/include;../../libavstream/export_include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../_deps/magic_enum_src/include;../../TeleportCore/export_include;../../TeleportClient/export_include;../../build_pc_client/ktx/include;../../build_pc_client/ktx/lib;../../build_pc_client;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../../firstparty/Platform/Android;../../;../../thirdparty/openxr-sdk/include;../../libavstream/include;../../libavstream/export_include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../_deps/magic_enum_src/include;../../TeleportCore/export_include;../../TeleportClient/export_include;../../build_pc_client/ktx/include;../../build_pc_client/ktx/lib;../../build_pc_client;../ozz-animation/include;$(VULKAN_SDK)\Include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;DRACO_TRANSCODER_SUPPORTED=1;TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
       <ErrorFormatSecurity>false</ErrorFormatSecurity>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../../firstparty/Platform/Android;../../;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../_deps/magic_enum_src/include;../../TeleportCore/export_include;../../TeleportClient/export_include;../../build_pc_client/ktx/include;../../build_pc_client/ktx/lib;../../build_pc_client;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../firstparty/Platform/External;../../ClientRender;../../firstparty;../../firstparty/Platform/External/VulkanMemoryAllocator/include;../../firstparty/Platform/Android;../../;../../thirdparty/openxr-sdk/include;../../libavstream/include;../../libavstream/export_include;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External/imgui;../../thirdparty/draco/src;../../thirdparty/draco/third_party/tinygltf;../../thirdparty/draco/third_party/eigen;../../thirdparty/ndk-projects;../../firstparty/Platform/External/stb;../_deps/magic_enum_src/include;../../TeleportCore/export_include;../../TeleportClient/export_include;../../build_pc_client/ktx/include;../../build_pc_client/ktx/lib;../../build_pc_client;../ozz-animation/include;$(VULKAN_SDK)\Include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=1;TELEPORT_CLIENT_USE_VULKAN=1;DRACO_TRANSCODER_SUPPORTED=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <ErrorFormatSecurity>false</ErrorFormatSecurity>
       <Optimization>Disabled</Optimization>

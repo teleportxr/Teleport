@@ -30,7 +30,6 @@ template<typename T> auto find( std::vector<std::weak_ptr<T>> &v, std::shared_pt
 
 NodeManager::NodeManager()
 {
-	//ECS_COMPONENT_DEFINE(flecs_world, flecs_pos);
 }
 
 std::shared_ptr<Node> NodeManager::CreateNode(std::chrono::microseconds session_time_us,avs::uid id, const avs::Node &avsNode)

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -76,6 +76,7 @@
     <ClCompile Include="..\..\libavstream\src\api\cuda_dx12.cpp" />
     <ClCompile Include="..\..\libavstream\src\audiodecoder.cpp" />
     <ClCompile Include="..\..\libavstream\src\audioencoder.cpp" />
+    <ClCompile Include="..\..\libavstream\src\audioencoder_opus.cpp" />
     <ClCompile Include="..\..\libavstream\src\audio\audiotarget.cpp" />
     <ClCompile Include="..\..\libavstream\src\buffer.cpp" />
     <ClCompile Include="..\..\libavstream\src\context.cpp" />
@@ -134,14 +135,14 @@
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <CppLanguageStandard>cpp17</CppLanguageStandard>
-    <AndroidNdkVersion>25.2.9519653</AndroidNdkVersion>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
+    <AndroidNdkVersion>27.2.12479018</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -165,13 +166,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External;../../;../../libavstream/include;../../libavstream/export_include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../thirdparty/curl/curl-android-arm64-v8a/include;../../libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External;../../;../../libavstream/include;../../libavstream/export_include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../thirdparty/curl/curl-android-arm64-v8a/include;../../libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../opus/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID;LIBAVSTREAM_SUPPORT_VULKAN=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External;../../;../../libavstream/include;../../libavstream/export_include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../thirdparty/curl/curl-android-arm64-v8a/include;../../libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;../../firstparty;../../firstparty/Platform/Android;../../firstparty/Platform/External/fmt/include;../../firstparty/Platform/External;../../;../../libavstream/include;../../libavstream/export_include;../../libavstream/src;../../libavstream/thirdparty/nv/include;../../libavstream/thirdparty/asio/include;../../libavstream/thirdparty/efp;../../thirdparty/curl/curl-android-arm64-v8a/include;../../libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include;../../libavstream/thirdparty/srt/build_android/lib/$(PlatformTarget)/include/srt;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../opus/include;$(VS_NdkRoot)sources/third_party/vulkan/src/include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNIX=1;ASIO_STANDALONE;SRT_NO_DEPRECATED;LIBAV_USE_SRT=1;PLATFORM_ANDROID;LIBAVSTREAM_SUPPORT_VULKAN=1</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>

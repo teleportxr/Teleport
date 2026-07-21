@@ -7,9 +7,6 @@
 [submodule "thirdparty/draco"]
 	path = thirdparty/draco
 	url = https://github.com/rvkennedy/draco.git
-[submodule "firstparty/teleport-unity"]
-	path = firstparty/teleport-unity
-	url = ../teleport-unity.git
 [submodule "firstparty/Platform"]
 	path = firstparty/Platform
 	url = https://github.com/simul/Platform.git
@@ -19,9 +16,6 @@
 [submodule "thirdparty/oboe"]
 	path = thirdparty/oboe
 	url = https://github.com/google/oboe.git
-[submodule "firstparty/teleport-unreal"]
-	path = firstparty/teleport-unreal
-	url = ../teleport-unreal.git
 [submodule "firstparty/teleport-nodejs"]
 	path = firstparty/teleport-nodejs
 	url = ../teleport-nodejs.git

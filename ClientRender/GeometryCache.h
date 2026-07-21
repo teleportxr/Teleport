@@ -14,7 +14,6 @@
 #include "ResourceManager.h"
 #include "TeleportCore/FontAtlas.h"
 #include "TeleportClient/GeometryCacheBackendInterface.h"
-#include "flecs.h"
 
 namespace teleport
 {
@@ -82,7 +81,6 @@ namespace teleport
 			static platform::crossplatform::RenderPlatform *renderPlatform;
 			avs::uid cache_uid = 0;
 			avs::uid parent_cache_uid = 0;
-			flecs::world flecs_world;
 			std::string name;
 		public:
 			GeometryCache(avs::uid c_uid, avs::uid parent_cache_uid,const std::string &name);
@@ -194,7 +192,6 @@ namespace teleport
 				ClearResourceRequests();
 				ClearReceivedResources();
 				m_CompletedNodes.clear();
-				flecs_world.reset();
 			}
 
 			MissingResource &GetMissingResource(avs::uid id, avs::GeometryPayloadType resourceType);

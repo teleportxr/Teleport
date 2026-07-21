@@ -48,19 +48,19 @@ VIProductVersion ${TELEPORT_VERSION_NUMBER}.0
 !define RELEASE_DIR ${SIMUL_DIR}\build\bin\
 
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "Teleport Logo 150x57.bmp"
+!define MUI_HEADERIMAGE_BITMAP "TeleportLogo150x57.bmp"
 
 !define MUI_ABORTWARNING
 
 !define WELCOME_TITLE 'Teleport Client ${TELEPORT_VERSION_NUMBER}'
 !define MUI_ICON "TeleportIcon.ico"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "Teleport Logo 164x314.bmp" 
+!define MUI_WELCOMEFINISHPAGE_BITMAP "TeleportLogo164x314.bmp"
 !define MUI_WELCOMEPAGE_TITLE '${WELCOME_TITLE}'
 !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
 !define MUI_WELCOMEPAGE_TEXT "This wizard will install Teleport Client ${TELEPORT_VERSION_NUMBER} to your machine.\n\nCommit ${TELEPORT_COMMIT}\n\n${LOG_TEXT}"
 !define MUI_DIRECTORYPAGE_TEXT_TOP "Choose the installation directory."
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "TeleportClientLicense.rtf"
+!insertmacro MUI_PAGE_LICENSE "TeleportClientLicence.txt"
 
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
@@ -22,6 +22,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\TeleportClient\AvatarManager.h" />
     <ClInclude Include="..\..\TeleportClient\basic_linear_algebra.h" />
     <ClInclude Include="..\..\TeleportClient\ClientDeviceState.h" />
     <ClInclude Include="..\..\TeleportClient\ClientPipeline.h" />
@@ -38,11 +39,13 @@
     <ClInclude Include="..\..\TeleportClient\URLHandlers.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\TeleportClient\AvatarManager.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientDeviceState.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientPipeline.cpp" />
     <ClCompile Include="..\..\TeleportClient\ClientTime.cpp" />
     <ClCompile Include="..\..\TeleportClient\Config.cpp" />
     <ClCompile Include="..\..\TeleportClient\DiscoveryService.cpp" />
+    <ClCompile Include="..\..\TeleportClient\Identity.cpp" />
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />
@@ -83,14 +86,14 @@
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>29</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <CppLanguageStandard>cpp17</CppLanguageStandard>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <PlatformToolset>Clang</PlatformToolset>
     <AndroidMinSdkVersion>28</AndroidMinSdkVersion>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <CppLanguageStandard>cpp17</CppLanguageStandard>
-    <AndroidNdkVersion>25.2.9519653</AndroidNdkVersion>
+    <CppLanguageStandard>cpp2a</CppLanguageStandard>
+    <AndroidNdkVersion>27.2.12479018</AndroidNdkVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -189,13 +192,13 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include;../../TeleportCore/export_include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../thirdparty/openxr-sdk/include;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include;../../TeleportCore/export_include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;DEBUG;_DEBUG</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Android-arm64-v8a'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../client/3rdParty/khronos/openxr/OpenXR-SDK/include/;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include;../../TeleportCore/export_include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../firstparty/Platform/External;../../firstparty;../../firstparty/Platform/Android;../../;../../libavstream/include;../../libavstream/export_include;../../thirdparty/enet/include;../../thirdparty/basis_universal;../../thirdparty/basis_universal/transcoder;../../thirdparty/openxr-sdk/include;../../firstparty/Platform/External/fmt/include;../../thirdparty/libdatachannel/include;../../thirdparty/libdatachannel/deps/json/include;../_deps/magic_enum_src/include;../../TeleportCore/export_include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>TELEPORT_INTERNAL_CHECKS=1;UNIX=1;PLATFORM_ANDROID;NDEBUG</PreprocessorDefinitions>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
