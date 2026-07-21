@@ -190,12 +190,31 @@ jobs:
         cmake -B build_pc_client -S firstparty\Platform -A x64
         cmake --build build_pc_client --config Release --target Sfx
 
+    - name: Generate CI debug keystore for release signing
+      shell: pwsh
+      # build_android_vs/AndroidClient/AndroidPackaging/app/build.gradle loads keystore.properties
+      # for its release signingConfig. That file is gitignored by convention (.gitignore:13) since
+      # it normally holds a developer's real keystore path/passwords, so CI provisions its own
+      # throwaway debug keystore instead, matching the dummy android/android/android convention
+      # already present in the committed gradle.properties.
+      run: |
+        $packagingDir = "${{github.workspace}}/build_android_vs/AndroidClient/AndroidPackaging"
+        $keystorePath = "$packagingDir/ci-debug.keystore"
+        keytool -genkey -v -keystore $keystorePath -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 `
+          -alias android -storepass android -keypass android -dname "CN=CI, OU=TeleportXR, O=TeleportXR"
+        @"
+        RELEASE_STORE_FILE=$keystorePath
+        RELEASE_STORE_PASSWORD=android
+        RELEASE_KEY_ALIAS=android
+        RELEASE_KEY_PASSWORD=android
+        "@ | Out-File -FilePath "$packagingDir/keystore.properties" -Encoding utf8
+
     - name: Switch to JDK 11 for AGDE's Gradle packaging step
       shell: pwsh
-      # AGDE auto-generates a Gradle 6.7.1 + AGP 4.2.2 project for :app:assembleRelease
-      # (see build_android_vs/AndroidClient/AndroidPackaging), whose Groovy/ASM build-script
-      # compiler can't parse JDK 17 class files. sdkmanager above needs JDK 17, so switch to
-      # the runner's preinstalled JDK 11 only for the MSBuild step that invokes gradlew.bat.
+      # The Gradle 6.7.1 + AGP 4.2.2 project checked into build_android_vs/AndroidClient/AndroidPackaging
+      # for :app:assembleRelease has a Groovy/ASM build-script compiler that can't parse JDK 17 class
+      # files. sdkmanager above needs JDK 17, so switch to the runner's preinstalled JDK 11 only for
+      # the MSBuild step that invokes gradlew.bat.
       run: |
         echo "JAVA_HOME=$env:JAVA_HOME_11_X64" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
