@@ -11,9 +11,7 @@
 #include <libavstream/mesh.hpp>
 #include <libavstream/tagdatadecoder.hpp>
 #include <libavstream/audiodecoder_opus.h>
-#if !defined(PLATFORM_ANDROID)
 #include <libavstream/audioencoder_opus.h>
-#endif
 #include <libavstream/genericdecoder.h>
 #include <libavstream/audio/audiotarget.h>
 #include "TeleportCore/CommonNetworking.h"
@@ -63,9 +61,7 @@ namespace teleport
 			// to WebRtcNetworkSource::sendOpusFrame via the encoder's frame
 			// callback. The encoder runs as a pipeline node so it is ticked
 			// each frame to drain any partially-buffered PCM.
-#if !defined(PLATFORM_ANDROID)
 			avs::OpusAudioEncoder opusAudioEncoder;
-#endif
 
 			avs::LockFreeQueue reliableFromServerQueue;
 			avs::GenericDecoder commandDecoder;

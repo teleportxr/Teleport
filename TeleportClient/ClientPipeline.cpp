@@ -29,9 +29,7 @@ ClientPipeline::~ClientPipeline()
 	avsGeometryDecoder.deconfigure();
 	avsGeometryTarget.deconfigure();
 
-#if !defined(PLATFORM_ANDROID)
 	opusAudioEncoder.deconfigure();
-#endif
 
 	reliableFromServerQueue.deconfigure();
 	commandDecoder.deconfigure();
