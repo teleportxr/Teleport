@@ -181,6 +181,7 @@ void Config::LoadOptions()
 		options.volume					= (float)ini.GetDoubleValue("", "Volume", options.volume);
 		if (options.volume < 0.0f) options.volume = 0.0f;
 		if (options.volume > 1.0f) options.volume = 1.0f;
+		options.micMuted				= ini.GetBoolValue("", "MicMuted", options.micMuted);
 		options.avatarUrl				= ini.GetValue("", "AvatarUrl", options.avatarUrl.c_str());
 	}
 }
@@ -199,6 +200,7 @@ void Config::SaveOptions()
 		str += std::format("\nReconnectMaxBackoffMs={0}", options.reconnectMaxBackoffMs);
 		str += std::format("\nUIFontSize={0}", options.uiFontSize);
 		str += std::format("\nVolume={0}", options.volume);
+		str += std::format("\nMicMuted={0}", options.micMuted);
 		str += std::format("\nAvatarUrl={0}", options.avatarUrl);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);

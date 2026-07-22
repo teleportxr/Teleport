@@ -50,6 +50,8 @@ namespace teleport
 			unsigned int uiFontSize = 18;
 			//! Linear gain applied to streamed audio output. 1.0 = unmodified, 0.0 = muted.
 			float volume = 1.0f;
+			//! When true, captured microphone audio is not sent to the server.
+			bool micMuted = false;
 			//! URL of the avatar this client will offer to servers via avatar-policy /
 			//! avatar-offer (see plans/avatars_implementation.md). Empty string means
 			//! "no avatar; let the server fall back to its default".

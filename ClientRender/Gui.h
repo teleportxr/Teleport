@@ -139,6 +139,8 @@ namespace teleport
 			void Navigate(const std::string &url);
 			void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
 			const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
+			//! Normalised (0-1) mic input level for the current server, pushed each frame by Renderer::Update().
+			void SetMicAmplitude(float a) { micAmplitude = a; }
 			void SetServerIPs(const std::vector<std::string> &server_ips);
 			avs::uid GetSelectedServer() const;
 			avs::uid GetSelectedCache() const;
@@ -199,6 +201,7 @@ namespace teleport
 			static bool url_input;
 			bool reset_menu_pos=false;
 			avs::DecoderStatus videoStatus;
+			float micAmplitude = 0.0f;
 			float width_m=0.6f;
 			std::vector<unsigned int> keys_pressed;
 			void ShowFont();

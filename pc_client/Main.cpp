@@ -1169,6 +1169,10 @@ int main(int argc, char *argv[])
 			glfwSetWindowIcon(g_window, 1, &icon);
 			stbi_image_free(pixels);
 		}
+		else
+		{
+			TELEPORT_WARN("Window icon not found: assets/textures/teleportxr.png");
+		}
 	}
 
 	std::vector<std::string> required_instance_extensions;

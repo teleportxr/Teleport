@@ -15,6 +15,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
+#include <algorithm>
 #include <cmath>
 #include <format>
 #include <magic_enum/magic_enum.hpp>
@@ -429,6 +430,8 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);
 		builder.AddText(ICON_FK_COG);
 		builder.AddText(ICON_FK_WRENCH);
+		builder.AddText(ICON_FK_MICROPHONE);
+		builder.AddText(ICON_FK_MICROPHONE_SLASH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
@@ -467,6 +470,8 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);
 		builder.AddText(ICON_FK_COG);
 		builder.AddText(ICON_FK_WRENCH);
+		builder.AddText(ICON_FK_MICROPHONE);
+		builder.AddText(ICON_FK_MICROPHONE_SLASH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
@@ -2885,6 +2890,31 @@ void Gui::MenuBar2D()
 			TIMED_TOOLTIP("Bookmarks");
 		}
 		ImGui::SameLine();
+		{
+			bool micMuted = config.options.micMuted;
+			if (ImGui::Button(micMuted ? ICON_FK_MICROPHONE_SLASH : ICON_FK_MICROPHONE, *(ImVec2*)&buttonSize))
+			{
+				config.options.micMuted = !micMuted;
+				config.SaveOptions();
+			}
+			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			{
+				TIMED_TOOLTIP(micMuted ? "Unmute microphone" : "Mute microphone");
+			}
+			// Green bar under the mic icon showing live input amplitude. Drawn on the foreground
+			// draw list (screen space, unclipped) rather than the window draw list, since the menu
+			// bar window is sized tightly around the buttons and would otherwise clip a bar drawn
+			// just below them.
+			ImVec2	   barMin	= ImGui::GetItemRectMin();
+			ImVec2	   barMax	= ImGui::GetItemRectMax();
+			float	   amp		= std::clamp(micAmplitude, 0.0f, 1.0f);
+			ImVec2	   trackMin = ImVec2(barMin.x, barMax.y + 2.0f);
+			ImVec2	   trackMax = ImVec2(barMax.x, barMax.y + 6.0f);
+			ImDrawList *fgDrawList = ImGui::GetForegroundDrawList();
+			fgDrawList->AddRectFilled(trackMin, trackMax, IM_COL32(0, 0, 0, 128));
+			fgDrawList->AddRectFilled(trackMin, ImVec2(trackMin.x + (trackMax.x - trackMin.x) * amp, trackMax.y), IM_COL32(0, 255, 0, 255));
+		}
+		ImGui::SameLine();
 		if (ImGui::Button(ICON_FK_COG,  *(ImVec2*)&buttonSize))
 		{
 			show_options = !show_options;
@@ -3499,6 +3529,25 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				if (ImGui::Button(ICON_FK_COG, ImVec2(64, 32)))
 				{
 					show_options = !show_options;
+				}
+				ImGui::SameLine();
+				{
+					bool micMuted = config.options.micMuted;
+					if (ImGui::Button(micMuted ? ICON_FK_MICROPHONE_SLASH : ICON_FK_MICROPHONE, ImVec2(64, 32)))
+					{
+						config.options.micMuted = !micMuted;
+						config.SaveOptions();
+					}
+					// Green bar under the mic icon showing live input amplitude. See the 2D toolbar's
+					// equivalent block above for why this uses the foreground draw list.
+					ImVec2	   barMin	= ImGui::GetItemRectMin();
+					ImVec2	   barMax	= ImGui::GetItemRectMax();
+					float	   amp		= std::clamp(micAmplitude, 0.0f, 1.0f);
+					ImVec2	   trackMin = ImVec2(barMin.x, barMax.y + 2.0f);
+					ImVec2	   trackMax = ImVec2(barMax.x, barMax.y + 6.0f);
+					ImDrawList *fgDrawList = ImGui::GetForegroundDrawList();
+					fgDrawList->AddRectFilled(trackMin, trackMax, IM_COL32(0, 0, 0, 128));
+					fgDrawList->AddRectFilled(trackMin, ImVec2(trackMin.x + (trackMax.x - trackMin.x) * amp, trackMax.y), IM_COL32(0, 255, 0, 255));
 				}
 #if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)

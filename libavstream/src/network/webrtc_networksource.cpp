@@ -441,18 +441,39 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 	// Enable TCP for e.g. Heroku
 	//config.enableIceTcp=true;
 	config.enableIceUdpMux=true;
-	for(size_t i=0;i<1000;i++)
+	if(!remoteIceServers.empty())
 	{
-		const char *srv=iceServers[i];
-		if(!srv)
-			break;
-		try
+		// Prefer the server-supplied list (may include TURN) over the built-in STUN-only
+		// default, so the client doesn't need any TURN credentials hardcoded or locally
+		// configured — the server, which already needs TURN configured for its own side,
+		// is the single source of truth.
+		for(const auto &srv : remoteIceServers)
 		{
-			config.iceServers.emplace_back(srv);
+			try
+			{
+				config.iceServers.emplace_back(srv);
+			}
+			catch(const std::exception &e)
+			{
+				AVSLOG(Warning)<<"Skipping server-supplied ICE server '"<<srv<<"': "<<(e.what()?e.what():"")<<"\n";
+			}
 		}
-		catch(const std::exception &e)
+	}
+	else
+	{
+		for(size_t i=0;i<1000;i++)
 		{
-			AVSLOG(Warning)<<"Skipping ICE server '"<<srv<<"': "<<(e.what()?e.what():"")<<"\n";
+			const char *srv=iceServers[i];
+			if(!srv)
+				break;
+			try
+			{
+				config.iceServers.emplace_back(srv);
+			}
+			catch(const std::exception &e)
+			{
+				AVSLOG(Warning)<<"Skipping ICE server '"<<srv<<"': "<<(e.what()?e.what():"")<<"\n";
+			}
 		}
 	}
 	auto needsRecreate = [](const std::shared_ptr<rtc::PeerConnection>& pc) -> bool
@@ -853,6 +874,43 @@ AVSLOG(Info) << "---"<< candidate<<" "<< std::endl;
 			if (l != message.end())
 				mlineindex = l->get<int>();
 			receiveCandidate(candidate,mid,mlineindex);
+		}
+		else if (type == "ice-servers")
+		{
+			// Server-supplied ICE server list (STUN/TURN), sent before the offer so it's
+			// ready by the time receiveOffer() builds the rtc::Configuration. Each entry
+			// follows the W3C RTCIceServer shape {urls, username?, credential?}; any
+			// credentials are folded into the URL as userinfo for rtc::IceServer's
+			// single-string constructor, e.g. "turn:host:port" -> "turn:user:pass@host:port".
+			remoteIceServers.clear();
+			auto s = message.find("iceServers");
+			if (s != message.end() && s->is_array())
+			{
+				for (const auto &entry : *s)
+				{
+					std::string url;
+					auto u = entry.find("urls");
+					if (u != entry.end())
+					{
+						if (u->is_string())
+							url = u->get<std::string>();
+						else if (u->is_array() && !u->empty())
+							url = (*u)[0].get<std::string>();
+					}
+					if (url.empty())
+						continue;
+					std::string username = entry.value("username", "");
+					std::string credential = entry.value("credential", "");
+					if (!username.empty() && !credential.empty())
+					{
+						auto colon = url.find(':');
+						if (colon != std::string::npos)
+							url = url.substr(0, colon + 1) + username + ":" + credential + "@" + url.substr(colon + 1);
+					}
+					remoteIceServers.push_back(url);
+				}
+			}
+			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received " << remoteIceServers.size() << " server-supplied ICE server(s).\n";
 		}
 	}
 	catch (std::invalid_argument inv)

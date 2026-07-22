@@ -144,6 +144,13 @@ namespace avs
 		void receiveOffer(const std::string& offer);
 		void receiveCandidate(const std::string& candidate, const std::string& mid,int mlineindex);
 		std::string offer;
+		//! ICE server URLs (STUN/TURN) supplied by the server via a "ice-servers" signaling
+		//! message, received before the offer. Each entry is a full URL, with any username/
+		//! password embedded as userinfo (e.g. "turn:user:pass@host:port"), ready to pass
+		//! directly to rtc::IceServer's single-string constructor. Empty until the server
+		//! sends one; receiveOffer() falls back to the built-in STUN-only avs::iceServers[]
+		//! list when this is empty.
+		std::vector<std::string> remoteIceServers;
 		std::vector<IOInterface *> inputInterfaces;
 		struct Candidate
 		{

@@ -1398,6 +1398,7 @@ void Renderer::OnFrameMove(double fTime, float time_step)
 		}
 
 		gui.SetVideoDecoderStatus(ir->GetVideoDecoderStatus());
+		gui.SetMicAmplitude(ir->GetMicAmplitude());
 	}
 
 	if (config.options.simulateVR && !have_vr_device)

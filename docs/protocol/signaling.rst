@@ -30,6 +30,7 @@ The full message exchange:
             C->>S: connect (text)
         end
         S->>C: connect-response (text)
+        S-->>C: ice-servers (text)
         S-->>C: offer (text)
         par
             S-->>C: candidate (text, one or more)
@@ -89,6 +90,24 @@ Sent by the server in response to ``connect``.
     }
 
 ``clientID`` and ``serverID`` are unsigned 64-bit numbers. They are unique on the server: no two clients can have the same ID. The ``serverID`` represents the session: if it matches a previous connection from the same client, cached resource and node ids persist; otherwise the client must clear all resource and node ids for this server.
+
+``ice-servers``
+^^^^^^^^^^^^^^^
+
+The server may send an ``ice-servers`` message after ``connect-response`` and before ``offer``, listing the STUN/TURN servers the client should use for ICE candidate gathering. This lets a deployment configure TURN once, on the server, rather than requiring every client to carry its own TURN credentials.
+
+  .. code-block:: JSON
+
+    {
+        "teleport-signal-type": "ice-servers",
+        "iceServers": [
+            { "urls": "stun:stun.example.com:19302" },
+            { "urls": "turn:turn.example.com:3478", "username": "user", "credential": "pass" }
+        ]
+    }
+
+Each entry follows the standard WebRTC ``RTCIceServer`` shape: ``urls`` (a string or an array of strings), and optional ``username``/``credential`` for TURN entries. A client that does not receive this message, or receives an empty list, MUST fall back to its own default ICE server configuration.
+If provided, a client **may** use the ``iceServers`` list for WebRTC connections it creates for this session.
 
 ``offer`` / ``answer``
 ^^^^^^^^^^^^^^^^^^^^^^
