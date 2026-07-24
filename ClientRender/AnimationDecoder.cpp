@@ -267,13 +267,25 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 		return false;
 	}
 
+	if (_sampler.input < 0 || _sampler.input >= static_cast<int>(model.accessors.size()))
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor index out of range.");
+		return false;
+	}
 	auto &input = model.accessors[_sampler.input];
-	assert(input.maxValues.size() == 1);
 
 	// The max[0] property of the input accessor is the animation duration
 	// this is required to be present by the spec:
 	// "Animation Sampler's input accessor must have min and max properties
 	// defined."
+	// tinygltf does not enforce this, so a malformed or truncated glTF/glb
+	// can leave maxValues empty; guard against that here rather than with
+	// an assert (which is compiled out in Release/NDEBUG builds).
+	if (input.maxValues.size() != 1)
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor is missing its max property.");
+		return false;
+	}
 	const float duration = static_cast<float>(input.maxValues[0]);
 
 	// If this channel's duration is larger than the animation's duration
@@ -283,9 +295,22 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 		*_duration = duration;
 	}
 
-	assert(input.type == TINYGLTF_TYPE_SCALAR);
+	if (input.type != TINYGLTF_TYPE_SCALAR)
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor has an unexpected type.");
+		return false;
+	}
+	if (_sampler.output < 0 || _sampler.output >= static_cast<int>(model.accessors.size()))
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler output accessor index out of range.");
+		return false;
+	}
 	auto &_output = model.accessors[_sampler.output];
-	assert(_output.type == TINYGLTF_TYPE_VEC3 || _output.type == TINYGLTF_TYPE_VEC4);
+	if (_output.type != TINYGLTF_TYPE_VEC3 && _output.type != TINYGLTF_TYPE_VEC4)
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler output accessor has an unexpected type.");
+		return false;
+	}
 
 	const ozz::span<const float> timestamps = BufferView<float>(model, input);
 	if (timestamps.empty())
@@ -425,6 +450,10 @@ bool ImportAnimations(const tinygltf::Model					&model,
 			// if(j=="leftLowerArm")
 			for (auto &channel : channels)
 			{
+				if (channel->sampler < 0 || channel->sampler >= static_cast<int>(gltf_animation.samplers.size()))
+				{
+					continue;
+				}
 				auto &sampler = gltf_animation.samplers[channel->sampler];
 				if (!SampleAnimationChannel(model, sampler, channel->target_path, _sampling_rate, &_animation->duration, &track, sourceAxesStandard, targetAxesStandard))
 				{
@@ -483,7 +512,11 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size, avs::AxesStandard 
 	tinygltf::Model model;
 	std::string		err;
 	std::string		warn;
-	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
+	if (!loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), ""))
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Failed to parse animation glb: {}", err);
+		return false;
+	}
 	json config;
 	//! Mapping from node names to the initial poses.
 	if (!ImportSkeleton(*raw_skeleton, model, (platform::crossplatform::AxesStandard)sourceAxesStandard,  (platform::crossplatform::AxesStandard)targetAxesStandard))

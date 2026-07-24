@@ -102,7 +102,7 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 	InstantaneousAnimationState &state = const_cast<InstantaneousAnimationState &>(layerState.getState(time_us));
 	if (!state.animationState.animation)
 	{
-		TELEPORT_WARN("state.animationState.animation is null");
+		//TELEPORT_WARN("state.animationState.animation is null");
 		layerState.getState(time_us);
 		return false;
 	}
@@ -167,6 +167,11 @@ bool AnimationInstance::Update(float dt_s, int64_t time_us)
 		layerState.previousSampler.locals.resize(num_soa_joints);
 		layerState.previousSampler.joint_weights.resize(num_soa_joints, ozz::math::simd_float4::one());
 		ozz::animation::SamplingJob previousSamplingJob;
+		if (!state.previousAnimationState.animation)
+		{
+			TELEPORT_WARN("state.previousAnimationState.animation is null");
+			return false;
+		}
 		previousSamplingJob.animation = state.previousAnimationState.animation->GetOzzAnimation(id);
 		layerState.previousContext.Resize(num_joints);
 		previousSamplingJob.context = &layerState.previousContext;

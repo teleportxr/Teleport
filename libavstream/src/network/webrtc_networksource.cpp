@@ -410,6 +410,18 @@ Result WebRtcNetworkSource::onOutputLink(int slot, PipelineNode* node)
 }
 void WebRtcNetworkSource::resetPeerConnection()
 {
+	// Release audio track references (and their onFrame/onClosed closures) before the
+	// PeerConnection that owns their underlying transport is destroyed. libdatachannel's
+	// internal processor threads can still be mid-invocation of a track's onFrame/onClosed
+	// callback when this runs; leaving rtcAudioRecvTrack/rtcAudioReceiveTracks pointing at
+	// tracks whose transport is being torn down out from under them is a use-after-free
+	// waiting to happen. See deconfigure() for the same pattern.
+	{
+		std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
+		m_data->rtcAudioRecvTrack.reset();
+		m_data->rtcAudioReceiveTracks.clear();
+	}
+	m_data->audioSendTrackOpen.store(false);
 	m_data->rtcPeerConnection.reset();
 }
 
@@ -506,6 +518,16 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 	{
 		if(m_data->rtcPeerConnection)
 		{
+			// Same ordering as resetPeerConnection()/deconfigure(): release audio track
+			// references before the PeerConnection owning their transport is destroyed,
+			// so a still-in-flight onFrame/onClosed callback on a libdatachannel processor
+			// thread can't run against a track whose transport is mid-teardown.
+			{
+				std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
+				m_data->rtcAudioRecvTrack.reset();
+				m_data->rtcAudioReceiveTracks.clear();
+			}
+			m_data->audioSendTrackOpen.store(false);
 			try { m_data->rtcPeerConnection->close(); } catch(...) {}
 			m_data->rtcPeerConnection.reset();
 		}
@@ -652,6 +674,14 @@ Result WebRtcNetworkSource::deconfigure()
 	inputInterfaces.clear();
 	webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
 	setNumOutputSlots(0);
+	// Release audio track references before dropping the PeerConnection that owns their
+	// underlying transport — see resetPeerConnection() for why this ordering matters.
+	{
+		std::lock_guard<std::mutex> lock(m_data->opusFrameCallbackMutex);
+		m_data->rtcAudioRecvTrack.reset();
+		m_data->rtcAudioReceiveTracks.clear();
+	}
+	m_data->audioSendTrackOpen.store(false);
 	// This should clear out the rtcDataChannel shared_ptrs, so that rtcPeerConnection can destroy them.
 	m_data->dataChannels.clear();
 	m_data->rtcPeerConnection = nullptr;

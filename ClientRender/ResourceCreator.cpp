@@ -899,8 +899,14 @@ avs::Result ResourceCreator::CreateAnimation(avs::uid server_uid, avs::uid id, t
 	if (animation.compressedData.size() > 0)
 	{
 		std::shared_ptr<clientrender::Animation> completeAnimation = std::make_shared<clientrender::Animation>(animation.name);
-		completeAnimation->LoadFromGlb(animation.compressedData.data(), animation.compressedData.size(), sourceAxesStandard, avs::AxesStandard::EngineeringStyle);
-		geometryCache->CompleteAnimation(id, completeAnimation);
+		if (completeAnimation->LoadFromGlb(animation.compressedData.data(), animation.compressedData.size(), sourceAxesStandard, avs::AxesStandard::EngineeringStyle))
+		{
+			geometryCache->CompleteAnimation(id, completeAnimation);
+		}
+		else
+		{
+			RESOURCECREATOR_DEBUG_COUT("CreateAnimation({0}, {1}): failed to parse animation glb.", id, animation.name);
+		}
 	}
 	else
 	{

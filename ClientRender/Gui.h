@@ -1,12 +1,12 @@
 #pragma once
-#include "Platform/CrossPlatform/Texture.h"
-#include "Platform/CrossPlatform/RenderPlatform.h"
-#include "Platform/CrossPlatform/DeviceContext.h"
-#include "ClientRender/NodeManager.h"
 #include "ClientRender/GeometryCache.h"
+#include "ClientRender/NodeManager.h"
 #include "ClientRender/Texture.h"
-#include "libavstream/decoders/dec_interface.h"
+#include "Platform/CrossPlatform/DeviceContext.h"
+#include "Platform/CrossPlatform/RenderPlatform.h"
+#include "Platform/CrossPlatform/Texture.h"
 #include "TeleportClient/Config.h"
+#include "libavstream/decoders/dec_interface.h"
 #include <functional>
 #ifdef __ANDROID__
 struct ANativeWindow;
@@ -15,7 +15,7 @@ struct ANativeWindow;
 #define MAX_URL_SIZE (2500)
 namespace avs
 {
-	class  Pipeline ;
+	class Pipeline;
 }
 
 namespace teleport
@@ -41,73 +41,74 @@ namespace teleport
 		};
 		enum class GuiType
 		{
-			None
-			,Connection
-			,Debug
+			None,
+			Connection,
+			Debug
 		};
-		#ifdef __ANDROID__
+#ifdef __ANDROID__
 		typedef ANativeWindow PlatformWindow;
-		#else
-		typedef void* PlatformWindow;
-		#endif
+#else
+		typedef void *PlatformWindow;
+#endif
 		class Gui
 		{
 			bool BeginMainMenuBar();
 			void EndMainMenuBar();
+
 		public:
-			Gui(client::OpenXR &o):openXR(o)
+			Gui(client::OpenXR &o) : openXR(o)
 			{
 			}
 			~Gui()
 			{
 			}
 			void SetPlatformWindow(PlatformWindow *w);
-			void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r,PlatformWindow *w);
+			void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r, PlatformWindow *w);
 			void InvalidateDeviceObjects();
 			void LoadShaders();
 			void RecompileShaders();
 			void Render3DConnectionGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-			void Render2DConnectionGUI(platform::crossplatform::GraphicsDeviceContext& deviceContext);
-			void DrawTexture(const platform::crossplatform::Texture* texture,float mip=-1.0f,int slice=0);
-			void LinePrint(const std::string& str, const float* clr = nullptr);
-			void LinePrint(const char* txt,const float *clr=nullptr);
+			void Render2DConnectionGUI(platform::crossplatform::GraphicsDeviceContext &deviceContext);
+			void DrawTexture(const platform::crossplatform::Texture *texture, float mip = -1.0f, int slice = 0);
+			void LinePrint(const std::string &str, const float *clr = nullptr);
+			void LinePrint(const char *txt, const float *clr = nullptr);
 			void Materials(const ResourceManager<avs::uid, clientrender::Material> &materialManager);
 			void Meshes(const ResourceManager<avs::uid, clientrender::Mesh> &meshManager);
 			void Textures(const ResourceManager<avs::uid, clientrender::Texture> &textureManager);
 			void Skeletons(const ResourceManager<avs::uid, clientrender::Skeleton> &animManager);
-			void Anims(const ResourceManager<avs::uid,clientrender::Animation>& animManager);
+			void Anims(const ResourceManager<avs::uid, clientrender::Animation> &animManager);
 			void Canvases(const ResourceManager<avs::uid, clientrender::TextCanvas> &textCanvasManager);
 			void Lights(const ResourceManager<avs::uid, clientrender::Light> &lightManager);
 			void Lighting(clientrender::GeometryCache *geometryCache);
-			void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>>&);
+			void NodeTree(const std::vector<std::weak_ptr<clientrender::Node>> &);
 			void CubemapOSD(platform::crossplatform::Texture *videoTexture);
-			void TagOSD(std::vector<SceneCaptureCubeTagData> &videoTagDataCubeArray,VideoTagDataCube videoTagDataCube[]);
+			void TagOSD(std::vector<SceneCaptureCubeTagData> &videoTagDataCubeArray, VideoTagDataCube videoTagDataCube[]);
 
-			void InputsPanel(avs::uid server_uid,client::SessionClient* sessionClient, client::OpenXR* openXR);
+			void InputsPanel(avs::uid server_uid, client::SessionClient *sessionClient, client::OpenXR *openXR);
 			void NetworkPanel(teleport::client::ClientPipeline &clientPipeline);
 			void DrawPipelineNode(const avs::PipelineNode &node, float x, float y);
 			void DrawPipeline(const avs::Pipeline &pipeline);
 			void ProfilingPanel();
 			/// @returns true if changed.
-			bool DebugPanel(client::DebugOptions &debugOptions);
-			void GeometryOSD();
-			void Scene();
-			void BeginTabBar(const char *txt);
-			void EndTabBar();
-			bool Tab(const char *txt);
-			void EndTab();
-			bool UrlEdit();
+			bool	DebugPanel(client::DebugOptions &debugOptions);
+			void	GeometryOSD();
+			void	Scene();
+			void	BeginTabBar(const char *txt);
+			void	EndTabBar();
+			bool	Tab(const char *txt);
+			void	EndTab();
+			bool	UrlEdit();
 			GuiType GetGuiType() const
 			{
 				return guiType;
 			}
 			void SetGuiType(GuiType t);
 			// Unitless,relative to debug gui size, [-1,+1]
-			void SetDebugGuiMouse(vec2 m,bool leftButton);
+			void SetDebugGuiMouse(vec2 m, bool leftButton);
 			void OnKeyboard(unsigned wParam, bool bKeyDown);
 			void OverlayMenu(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void BeginFrame(platform::crossplatform::GraphicsDeviceContext &deviceContext);
-			void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext& deviceContext);
+			void BeginDebugGui(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void EndDebugGui(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void EndFrame(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 
@@ -115,11 +116,11 @@ namespace teleport
 			{
 				changeRender = fn;
 			}
-			void SetConsoleCommandHandler(std::function<void(const std::string&)> fn)
+			void SetConsoleCommandHandler(std::function<void(const std::string &)> fn)
 			{
 				console = fn;
 			}
-			void SetConnectHandler(std::function<void(int32_t,const std::string&)> fn);
+			void SetConnectHandler(std::function<void(int32_t, const std::string &)> fn);
 			void SetCancelConnectHandler(std::function<void(int32_t)> fn);
 			void SetStartXRSessionHandler(std::function<void()> fn)
 			{
@@ -133,19 +134,31 @@ namespace teleport
 			{
 				selectionHandler = fn;
 			}
-			void Update(const std::vector<vec4>& hand_pos_press,bool have_vr);
+			void Update(const std::vector<vec4> &hand_pos_press, bool have_vr);
 			void SetScaleMetres();
-			bool URLInputActive() const { return url_input; }
+			bool URLInputActive() const
+			{
+				return url_input;
+			}
 			void Navigate(const std::string &url);
-			void SetVideoDecoderStatus(const avs::DecoderStatus& status) { videoStatus = status; }
-			const avs::DecoderStatus& GetVideoDecoderStatus() { return videoStatus; }
+			void SetVideoDecoderStatus(const avs::DecoderStatus &status)
+			{
+				videoStatus = status;
+			}
+			const avs::DecoderStatus &GetVideoDecoderStatus()
+			{
+				return videoStatus;
+			}
 			//! Normalised (0-1) mic input level for the current server, pushed each frame by Renderer::Update().
-			void SetMicAmplitude(float a) { micAmplitude = a; }
-			void SetServerIPs(const std::vector<std::string> &server_ips);
+			void SetMicAmplitude(float a)
+			{
+				micAmplitude = a;
+			}
+			void	 SetServerIPs(const std::vector<std::string> &server_ips);
 			avs::uid GetSelectedServer() const;
 			avs::uid GetSelectedCache() const;
 			avs::uid GetSelectedUid() const;
-			vec3 Get3DPos()
+			vec3	 Get3DPos()
 			{
 				return menu_pos;
 			}
@@ -153,91 +166,112 @@ namespace teleport
 			void SelectPrevious();
 			void SelectNext();
 			// Replaces Windows GetCursorPos if necessary.
-			static int GetCursorPos(long p[2]);
+			static int	 GetCursorPos(long p[2]);
 			std::string &GetProfilingText()
 			{
-				return profilingText;	
+				return profilingText;
 			}
-			bool saveCurrentCubemap=false;
+			int GetProfilingLevel() const
+			{
+				return profilingLevel;
+			}
+			void SetProfilingLevel(int level)
+			{
+				profilingLevel = level;
+			}
+			int GetCPUProfilingLevel() const
+			{
+				return cpuProfilingLevel;
+			}
+			void SetCPUProfilingLevel(int level)
+			{
+				cpuProfilingLevel = level;
+			}
+			bool saveCurrentCubemap = false;
+
 		protected:
-			std::string profilingText;
-			GuiType guiType=GuiType::None;
-			std::function<void(const std::string &)> console;
+			std::string															  profilingText;
+			GuiType																  guiType = GuiType::None;
+			std::function<void(const std::string &)>							  console;
 			std::function<void(ShaderMode newShaderMode, int debugHighlightBone)> changeRender;
-			client::OpenXR &openXR;
-			avs::uid cache_uid=0;
-			void LightStyle();
-			void DarkStyle();
-			void RebindStyle();
-			void ShowSettings2D();
-			void ShowAvatarSettings2D();
-			void MenuBar2D();
-			void MainOptions();
-			void ListBookmarks();
-			void DevModeOptions();
-			ColourStyle style= ColourStyle::NONE;
-			void DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext, platform::crossplatform::Texture* texture,float mip,int slice);
+			client::OpenXR														 &openXR;
+			avs::uid															  cache_uid			= 0;
+			int																	  profilingLevel	= 5;
+			int																	  cpuProfilingLevel = 5;
+			void																  LightStyle();
+			void																  DarkStyle();
+			void																  RebindStyle();
+			void																  ShowSettings2D();
+			void																  ShowAvatarSettings2D();
+			void																  MenuBar2D();
+			void																  MainOptions();
+			void																  ListBookmarks();
+			void																  DevModeOptions();
+			ColourStyle															  style = ColourStyle::NONE;
+			void											  DelegatedDrawTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext,
+																				   platform::crossplatform::Texture				  *texture,
+																				   float										   mip,
+																				   int											   slice);
 
+			void											  TreeNode(const std::shared_ptr<Node> node, const char *search_text);
 
-			void TreeNode(const std::shared_ptr<Node> node,const char *search_text);
+			platform::crossplatform::RenderPlatform			 *renderPlatform = nullptr;
+			vec3											  view_pos;
+			vec3											  view_dir;
+			vec3											  menu_pos;
+			vec2											  bookmarks_pos;
+			int32_t											  current_tab_context = 0;
+			bool											  in_tabs			  = false;
+			float											  azimuth = 0.0f, tilt = 0.0f;
+			vec2											  buttonSize; // modified each frame based on font size.
+			std::string										  current_url;
+			std::vector<std::string>						  server_ips;
+			std::function<void(int32_t, const std::string &)> connectHandler;
+			std::function<void(int32_t)>					  cancelConnectHandler;
+			std::function<void()>							  startXRSessionHandler;
+			std::function<void()>							  endXRSessionHandler;
+			std::function<void()>							  selectionHandler;
 
-			platform::crossplatform::RenderPlatform* renderPlatform=nullptr;
-			vec3 view_pos;
-			vec3 view_dir;
-			vec3 menu_pos;
-			vec2 bookmarks_pos;
-			int32_t current_tab_context = 0;
-			bool in_tabs=false;
-			float azimuth=0.0f, tilt = 0.0f;
-			vec2 buttonSize;	// modified each frame based on font size.
-			std::string current_url;
-			std::vector<std::string> server_ips;
-			std::function<void(int32_t,const std::string &)> connectHandler;
-			std::function<void(int32_t)> cancelConnectHandler;
-			std::function<void()> startXRSessionHandler;
-			std::function<void()> endXRSessionHandler;
-			std::function<void()> selectionHandler;
-		
-			static bool url_input;
-			bool reset_menu_pos=false;
-			avs::DecoderStatus videoStatus;
-			float micAmplitude = 0.0f;
-			float width_m=0.6f;
-			std::vector<unsigned int> keys_pressed;
-			void ShowFont();
-			char url_buffer[MAX_URL_SIZE];
-			bool have_vr_device = false;
+			static bool										  url_input;
+			bool											  reset_menu_pos = false;
+			avs::DecoderStatus								  videoStatus;
+			float											  micAmplitude = 0.0f;
+			float											  width_m	   = 0.6f;
+			std::vector<unsigned int>						  keys_pressed;
+			void											  ShowFont();
+			char											  url_buffer[MAX_URL_SIZE];
+			bool											  have_vr_device = false;
 			struct Selection
 			{
-				avs::uid cache_uid=0;
-				avs::uid selected_uid=0;
-				bool operator==(const Selection& s) const
+				avs::uid cache_uid	  = 0;
+				avs::uid selected_uid = 0;
+				bool	 operator==(const Selection &s) const
 				{
-					return (cache_uid==s.cache_uid&&selected_uid==s.selected_uid);
+					return (cache_uid == s.cache_uid && selected_uid == s.selected_uid);
 				}
 			};
 			std::vector<Selection> selection_history;
-			size_t selection_cursor;
-			avs::uid selected_server=0;
+			size_t				   selection_cursor;
+			avs::uid			   selected_server = 0;
 
-			bool show_inspector=false;
-			std::vector<vec4> hand_pos_press;
-			std::string selected_url;
-			bool show_bookmarks = false;
-			bool show_options = false;
+			bool				   show_inspector  = false;
+			std::vector<vec4>	   hand_pos_press;
+			std::string			   selected_url;
+			bool				   show_bookmarks							  = false;
+			bool				   show_options								  = false;
 			//! When true the settings panel is replaced with a sub-page for
 			//! editing the avatar URL. Reached via the "Avatar..." button on
 			//! the main settings page (ShowSettings2D).
-			bool show_avatar_settings = false;
+			bool show_avatar_settings										  = false;
 			//! Edit buffer for the avatar URL on the avatar settings sub-page.
 			//! Initialised from client::Config::options.avatarUrl when the
 			//! sub-page is opened, and written back when the user clicks Save.
-			char avatar_url_buffer[MAX_URL_SIZE] = {0};
-			platform::crossplatform::Texture *vrHeadsetIconTexture = nullptr;
-			platform::crossplatform::Texture *viveControllerTexture = nullptr;
-			bool connect_please = false;
-			bool cancel_please = false;
-			int mip_current = 0;
+			char							  avatar_url_buffer[MAX_URL_SIZE] = {0};
+			platform::crossplatform::Texture *vrHeadsetIconTexture			  = nullptr;
+			platform::crossplatform::Texture *viveControllerTexture			  = nullptr;
+			bool							  connect_please				  = false;
+			bool							  cancel_please					  = false;
+			int								  mip_current					  = 0;
 		};
 	}
 }

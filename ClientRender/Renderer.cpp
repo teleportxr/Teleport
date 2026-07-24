@@ -450,41 +450,21 @@ void Renderer::InitLocalGeometry()
 								   &localResourceCreator,
 								   specular_cubemap_uid);
 
-#if 0
-	platform::crossplatform::AxesStandard sourceAxesStandard=platform::crossplatform::AxesStandard::OpenGL;
+#if 1
+	platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::OpenGL;
 	// test gltf loading.
-	avs::uid gltf_uid = geometryDecoder.decodeFromFile(0,
-													   "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm",
-													   avs::GeometryPayloadType::Mesh,
-													   &localResourceCreator,
-													   0,
-													   sourceAxesStandard);
+	avs::uid gltf_uid										 = geometryDecoder.decodeFromFile(
+		   0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm", avs::GeometryPayloadType::Mesh, &localResourceCreator, 0, sourceAxesStandard);
+	geometryDecoder.decodeFromFile(
+		0, "assets/localGeometryCache/animations/Idle.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
+	geometryDecoder.decodeFromFile(
+		0, "assets/localGeometryCache/animations/Running.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
+	geometryDecoder.decodeFromFile(
+		0, "assets/localGeometryCache/animations/Jump.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(
+		0, "assets/localGeometryCache/animations/Waving.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(0,
-								   "assets/localGeometryCache/animations/Walking.vrma",
-								   avs::GeometryPayloadType::Animation,
-								   &localResourceCreator,
-								   0,
-								   sourceAxesStandard);
-	avs::uid anim_uid =geometryDecoder.decodeFromFile(0,
-								   "assets/localGeometryCache/animations/Running.vrma",
-								   avs::GeometryPayloadType::Animation,
-								   &localResourceCreator,
-								   0,
-								   sourceAxesStandard);
-	geometryDecoder.decodeFromFile(0,
-								   "assets/localGeometryCache/animations/RumbaDancing.vrma",
-								   avs::GeometryPayloadType::Animation,
-								   &localResourceCreator,
-								   0,
-								   sourceAxesStandard);
-	 geometryDecoder.decodeFromFile(0,
-													   "assets/localGeometryCache/animations/Waving.vrma",
-													   avs::GeometryPayloadType::Animation,
-													   &localResourceCreator,
-													   0,
-													   sourceAxesStandard);
-	geometryDecoder.decodeFromFile(0,
-								   "assets/localGeometryCache/animations/T-Pose.vrma",//
+								   "assets/localGeometryCache/animations/T-Pose.vrma", //
 								   avs::GeometryPayloadType::Animation,
 								   &localResourceCreator,
 								   0,
@@ -511,7 +491,7 @@ void Renderer::InitLocalGeometry()
 		float		 angle				 = float(i) / float(num) * 2.0f * 3.14159f;
 
 		gltfNode.localTransform.position = vec3(r * sin(angle), r * cos(angle), 1.0f);
-		// gltfNode.localTransform.rotation = {0.707f, 0, 0, 0.707f};
+
 		gltfNode.localTransform.scale	 = vec3(sc, sc, sc);
 		avs::uid node_uid				 = avs::GenerateUid();
 		localResourceCreator.CreateNode(0, node_uid, gltfNode);
@@ -921,13 +901,12 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 			}
 		}
 	}
-	static bool override_show_local_geometry = config.options.showGeometryOffline;
 	// Local geometry is essentially the UI hands.
 	// We show them if: the UI has been activated,
 	//				or: we are not currently connected to a server.
 	// But only if we're in VR mode.
 	bool show_local_geometry =
-		((server_uids.size() == 0 || gui.GetGuiType() != GuiType::None) && (have_vr_device || config.options.simulateVR)) || override_show_local_geometry;
+		((server_uids.size() == 0 || gui.GetGuiType() != GuiType::None) && (have_vr_device || config.options.simulateVR)) || config.options.showGeometryOffline;
 	if (!server_uids.size())
 	{
 		std::string passName = (int)config.options.lobbyView ? "neon" : "white";
@@ -966,10 +945,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 			origin_pose.orientation = *((vec4_packed *)&origin_node->GetGlobalRotation());
 			SetRenderPose(deviceContext, GetOriginPose(server_uid));
 			GetInstanceRenderer(server_uid)->RenderView(deviceContext);
-			if (config.debugOptions.showAxes)
-			{
-				renderPlatform->DrawAxes(deviceContext, mat4::identity(), 2.0f);
-			}
+		}
+		if (config.debugOptions.showStageSpace)
+		{
+			renderPlatform->DrawAxes(deviceContext, mat4::identity(), 2.0f);
 		}
 	}
 	PLATFORM_COMBINED_PROFILE_END(deviceContext);
@@ -1660,7 +1639,10 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 #if PLATFORM_INTERNAL_PROFILING
 	renderPlatform->GetGpuProfiler()->RestoreDeviceObjects(renderPlatform);
 	crossplatform::SetGpuProfilingInterface(deviceContext, renderPlatform->GetGpuProfiler());
-	renderPlatform->GetGpuProfiler()->SetMaxLevel(5);
+	renderPlatform->GetGpuProfiler()->SetMaxLevel(gui.GetProfilingLevel());
+	auto *cpuProfilingInterface = platform::core::GetProfilingInterface(GET_THREAD_ID());
+	if(cpuProfilingInterface)
+		cpuProfilingInterface->SetMaxLevel(gui.GetCPUProfilingLevel());
 #endif
 	{
 		platform::crossplatform::GpuProfilingInterface *gpuProfilingInterface = platform::crossplatform::GetGpuProfilingInterface(deviceContext);
@@ -1739,22 +1721,40 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 	}
 #if ONSCREEN_PROF
 	PLATFORM_COMBINED_PROFILE_END(deviceContext);
+	// Track frame-time spread between panel refreshes, so the panel shows a useful window rather than one instantaneous sample.
+	static float minFrameMs = 0.0f, maxFrameMs = 0.0f, sumFrameMs = 0.0f;
+	static int	 frameSamples = 0;
+	if (framerate > 0.0f)
+	{
+		float frameMs = 1000.0f / framerate;
+		if (frameSamples == 0 || frameMs < minFrameMs)
+			minFrameMs = frameMs;
+		if (frameSamples == 0 || frameMs > maxFrameMs)
+			maxFrameMs = frameMs;
+		sumFrameMs += frameMs;
+		frameSamples++;
+	}
 	static char c = 0;
 	c--;
 	if (!c)
 	{
 		std::string &profiling_text = gui.GetProfilingText();
-		//profiling_text				= cpuProfiler.GetDebugText();
-
-		auto *mem					= renderPlatform->GetMemoryInterface();
-		if (mem)
+		float		 avgFrameMs		= frameSamples ? sumFrameMs / frameSamples : 0.0f;
+		profiling_text = std::format("FPS {:.1f}\nFrame time (ms): min {:.2f} / avg {:.2f} / max {:.2f}", framerate, minFrameMs, avgFrameMs, maxFrameMs);
+		minFrameMs = maxFrameMs = sumFrameMs = 0.0f;
+		frameSamples				  = 0;
+#if PLATFORM_INTERNAL_PROFILING
+		auto *cpuProfilingInterface = platform::core::GetProfilingInterface(GET_THREAD_ID());
+		if (cpuProfilingInterface)
 		{
-			size_t mem_alloc = mem->GetTotalVideoBytesAllocated();
-			size_t cur_alloc = mem->GetCurrentVideoBytesAllocated();
-			size_t mem_freed = mem->GetTotalVideoBytesFreed();
-
-			profiling_text += std::format("\n\nAllocated {}k\nFreed {}k\nCurrent {}k", mem_alloc / 1024, mem_freed / 1024, cur_alloc / 1024);
+			profiling_text += std::format("\n\nCPU:\n{}", cpuProfilingInterface->GetDebugText());
 		}
+		auto *gpuProfiler = renderPlatform->GetGpuProfiler();
+		if (gpuProfiler)
+		{
+			profiling_text += std::format("\nGPU:\n{}", gpuProfiler->GetDebugText());
+		}
+#endif
 	}
 
 	PLATFORM_COMBINED_PROFILE_END(deviceContext);
@@ -1923,25 +1923,22 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 			vec3  offset			= camera_local_pos;
 			auto  originPose		= GetOriginPose(server_uid);
 			gui.LinePrint(instanceRenderer->receivedInitialPos
-							  ? (platform::core::QuickFormat("Origin: %4.4f %4.4f %4.4f", originPose.position.x, originPose.position.y, originPose.position.z))
+							  ? (std::format("Origin: {} {} {}", originPose.position.x, originPose.position.y, originPose.position.z))
 							  : "Origin:",
 						  white);
-			gui.LinePrint(platform::core::QuickFormat(" Local: %4.4f %4.4f %4.4f",
-													  clientServerState.headPose.position.x,
-													  clientServerState.headPose.position.y,
-													  clientServerState.headPose.position.z),
-						  white);
-			//	gui.LinePrint(platform::core::QuickFormat(" Final: %4.4f %4.4f %4.4f\n", clientServerState.headPose.globalPose.position.x,
+			gui.LinePrint(
+				std::format(
+					" Local: {} {} {}", clientServerState.headPose.position.x, clientServerState.headPose.position.y, clientServerState.headPose.position.z),
+				white);
+			//	gui.LinePrint(std::format(" Final: {} {} {}\n", clientServerState.headPose.globalPose.position.x,
 			// clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
 			if (instanceRenderer->videoPosDecoded)
 			{
-				gui.LinePrint(platform::core::QuickFormat(
-								  " Video: %4.4f %4.4f %4.4f", instanceRenderer->videoPos.x, instanceRenderer->videoPos.y, instanceRenderer->videoPos.z),
-							  white);
+				gui.LinePrint(std::format(" Video: {} {} {}", instanceRenderer->videoPos.x, instanceRenderer->videoPos.y, instanceRenderer->videoPos.z), white);
 			}
 			else
 			{
-				gui.LinePrint(platform::core::QuickFormat(" Video: -"), white);
+				gui.LinePrint(std::format(" Video: - "), white);
 			}
 		}
 		gui.EndTab();
@@ -1961,15 +1958,15 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 					AVSTextureImpl			 *ti = static_cast<AVSTextureImpl *>(&tx);
 					if (ti)
 					{
-						gui.LinePrint(platform::core::QuickFormat("Video Texture"), white);
+						gui.LinePrint("Video Texture", white);
 						gui.DrawTexture(ti->texture);
 					}
 				}
-				gui.LinePrint(platform::core::QuickFormat("Specular"), white);
+				gui.LinePrint("Specular", white);
 				gui.DrawTexture(r->GetInstanceRenderState().specularCubemapTexture);
-				gui.LinePrint(platform::core::QuickFormat("DiffuseC"), white);
+				gui.LinePrint("DiffuseC", white);
 				gui.DrawTexture(r->GetInstanceRenderState().diffuseCubemapTexture);
-				gui.LinePrint(platform::core::QuickFormat("Lighting"), white);
+				gui.LinePrint("Lighting", white);
 				gui.DrawTexture(r->GetInstanceRenderState().lightingCubemapTexture);
 			}
 		}
@@ -2002,8 +1999,8 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 			for (size_t i = 0; i < 8; i++)
 			{
 				uint32_t	value = (uint32_t(status) & uint32_t(0xF << (i * 4))) >> (i * 4);
-				std::string str	  = std::string(names[i + 1]) + ": %d";
-				gui.LinePrint(platform::core::QuickFormat(str.c_str(), value), white);
+				std::string str	  = std::string(names[i + 1]);
+				gui.LinePrint(std::format("{}: {}", str.c_str(), value), white);
 			}
 		}
 		gui.LinePrint(" ", white);
@@ -2016,11 +2013,11 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 			const avs::DecoderParams &params				= sessionClient->GetClientPipeline().decoderParams;
 			const auto				 &videoCodecNames		= magic_enum::enum_names<avs::VideoCodec>();
 			const auto				 &decoderFrequencyNames = magic_enum::enum_names<avs::DecodeFrequency>();
-			gui.LinePrint(platform::core::QuickFormat("Video Codec: %s", videoCodecNames[size_t(params.codec)]));
-			gui.LinePrint(platform::core::QuickFormat("Decode Frequency: %s", decoderFrequencyNames[size_t(params.decodeFrequency)]));
-			gui.LinePrint(platform::core::QuickFormat("Use 10-Bit Decoding: %s", params.use10BitDecoding ? "true" : "false"));
-			gui.LinePrint(platform::core::QuickFormat("Chroma Format: %s", params.useYUV444ChromaFormat ? "YUV444" : "YUV420"));
-			gui.LinePrint(platform::core::QuickFormat("Use Alpha Layer Decoding: %s", params.useAlphaLayerDecoding ? "true" : "false"));
+			gui.LinePrint(std::format("Video Codec: {}", videoCodecNames[size_t(params.codec)]));
+			gui.LinePrint(std::format("Decode Frequency: {}", decoderFrequencyNames[size_t(params.decodeFrequency)]));
+			gui.LinePrint(std::format("Use 10-Bit Decoding: {}", params.use10BitDecoding ? "true" : "false"));
+			gui.LinePrint(std::format("Chroma Format: {}", params.useYUV444ChromaFormat ? "YUV444" : "YUV420"));
+			gui.LinePrint(std::format("Use Alpha Layer Decoding: {}", params.useAlphaLayerDecoding ? "true" : "false"));
 		}
 		gui.EndTab();
 	}

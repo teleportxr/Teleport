@@ -134,6 +134,8 @@ template <typename stringType> stringType GetMappedBoneName(const stringType &bN
 	}
 	stringType n = bName;
 	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+	replace_all(n,"bip_c_"s, ""s);
+	replace_all(n,"bip_"s, ""s);
 	replace_all(n,"_l_"s, "_left"s);
 	replace_all(n,"_r_"s, "_right"s);
 	size_t underscore_pos=n.find('_');
