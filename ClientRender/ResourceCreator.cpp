@@ -905,7 +905,7 @@ avs::Result ResourceCreator::CreateAnimation(avs::uid server_uid, avs::uid id, t
 		}
 		else
 		{
-			RESOURCECREATOR_DEBUG_COUT("CreateAnimation({0}, {1}): failed to parse animation glb.", id, animation.name);
+			TELEPORT_WARN("CreateAnimation({0}, {1}): failed to parse animation glb.", id, animation.name);
 		}
 	}
 	else

@@ -1057,7 +1057,7 @@ int main(int argc, char *argv[])
 
 	// Enable Default-category internal logging so diagnostic TELEPORT_INTERNAL_COUT(Default, ...)
 	// messages (e.g. WebRTC media track attachment, audio decoder traces) reach the log file.
-	teleport::SetLogCategoryEnabled(teleport::LogCategory::Signaling, true);
+	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, true);
 
 	// Parse command line
 	for (int i = 1; i < argc; i++)

@@ -14,6 +14,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <set>
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4018; disable : 4804)
@@ -774,9 +775,11 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 			avsNode.localTransform.position = vec3(tr.coeff(0), tr.coeff(1), tr.coeff(2));
 
 			{
-				auto			   rt = aff.rotation();
-				Eigen::Quaterniond q(rt);
+				Eigen::Matrix3d rotation, scaling;
+				aff.computeRotationScaling(&rotation, &scaling);
+				Eigen::Quaterniond q(rotation);
 				avsNode.localTransform.rotation = {(float)q.x(), (float)q.y(), (float)q.z(), (float)q.w()};
+				avsNode.localTransform.scale	= {(float)scaling(0, 0), (float)scaling(1, 1), (float)scaling(2, 2)};
 			}
 		}
 		else
@@ -877,8 +880,9 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 			{
 				const mat4 &b = *((const mat4 *)invBindPtr);
 
-				avsNode.inverseBindMatrices[j] =
-					platform::crossplatform::ConvertMatrix(subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, b);
+				// Only transpose from glTF's column-major layout here; the axis conversion to Engineering
+				// happens once for all paths, in CreateFromDecodedGeometry.
+				avsNode.inverseBindMatrices[j] = b;
 				avsNode.inverseBindMatrices[j].transpose();
 				invBindPtr += 16;
 			}
@@ -938,6 +942,9 @@ avs::Result GeometryDecoder::DracoMeshToDecodedGeometry(avs::uid							  primiti
 
 avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCreator *target, core::DecodedGeometry &dg, const std::string &name)
 {
+	// Accessors may be shared between primitives (and between meshes); the in-place axis conversion below
+	// must be applied to each accessor exactly once.
+	std::set<avs::uid> convertedAccessors;
 	// Create the materials:
 	for (auto m : dg.internalMaterials)
 	{
@@ -1054,25 +1061,40 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 			}
 			if (dg.axesStandard != platform::crossplatform::AxesStandard::Engineering)
 			{
-				for (size_t i = 0; i < meshElementCreate.m_VertexCount; i++)
+				for (size_t i = 0; i < primitiveArray.attributeCount; i++)
 				{
-					vec3 p = platform::crossplatform::ConvertPosition(
-						dg.axesStandard, platform::crossplatform::AxesStandard::Engineering, meshElementCreate.m_Vertices[i]);
-					const_cast<vec3 *>(meshElementCreate.m_Vertices)[i] = p;
-					if (meshElementCreate.m_Normals)
+					const avs::Attribute &attrib = primitiveArray.attributes[i];
+					if (attrib.semantic != avs::AttributeSemantic::POSITION && attrib.semantic != avs::AttributeSemantic::NORMAL &&
+						attrib.semantic != avs::AttributeSemantic::TANGENT)
 					{
-						vec3 n = platform::crossplatform::ConvertPosition(
-							dg.axesStandard, platform::crossplatform::AxesStandard::Engineering, meshElementCreate.m_Normals[i]);
-						const_cast<vec3 *>(meshElementCreate.m_Normals)[i] = n;
+						continue;
 					}
-					if (meshElementCreate.m_Tangents)
+					if (!convertedAccessors.insert(attrib.accessor).second)
 					{
-						vec3 t = platform::crossplatform::ConvertPosition(
-							dg.axesStandard, platform::crossplatform::AxesStandard::Engineering, meshElementCreate.m_Tangents[i].xyz);
-						vec4 T;
-						T.xyz												= t;
-						T.w													= 1.0;
-						const_cast<vec4 *>(meshElementCreate.m_Tangents)[i] = T;
+						continue;
+					}
+					const avs::Accessor		  &accessor	  = dg.accessors[attrib.accessor];
+					const avs::BufferView	  &bufferView = dg.bufferViews[accessor.bufferView];
+					const avs::GeometryBuffer &buffer	  = dg.buffers[bufferView.buffer];
+					// Address the data exactly as the attribute scan above does for m_Vertices etc.
+					uint8_t					  *data		  = const_cast<uint8_t *>(buffer.data + bufferView.byteOffset);
+					if (attrib.semantic == avs::AttributeSemantic::TANGENT)
+					{
+						vec4 *tangents = reinterpret_cast<vec4 *>(data);
+						for (size_t j = 0; j < accessor.count; j++)
+						{
+							// The w component is the bitangent sign; a proper rotation between standards leaves it unchanged.
+							tangents[j].xyz = platform::crossplatform::ConvertPosition(
+								dg.axesStandard, platform::crossplatform::AxesStandard::Engineering, tangents[j].xyz);
+						}
+					}
+					else
+					{
+						vec3 *v = reinterpret_cast<vec3 *>(data);
+						for (size_t j = 0; j < accessor.count; j++)
+						{
+							v[j] = platform::crossplatform::ConvertPosition(dg.axesStandard, platform::crossplatform::AxesStandard::Engineering, v[j]);
+						}
 					}
 				}
 			}

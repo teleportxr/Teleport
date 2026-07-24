@@ -14,6 +14,7 @@
 #include "ozz/gltf2ozz.h"
 #include <json.hpp>
 #include <ozz/base/containers/set.h>
+#include <algorithm>
 
 using nlohmann::json;
 
@@ -274,19 +275,26 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 	}
 	auto &input = model.accessors[_sampler.input];
 
+	const ozz::span<const float> timestamps = BufferView<float>(model, input);
+
 	// The max[0] property of the input accessor is the animation duration
 	// this is required to be present by the spec:
 	// "Animation Sampler's input accessor must have min and max properties
 	// defined."
-	// tinygltf does not enforce this, so a malformed or truncated glTF/glb
-	// can leave maxValues empty; guard against that here rather than with
-	// an assert (which is compiled out in Release/NDEBUG builds).
-	if (input.maxValues.size() != 1)
+	// tinygltf does not enforce this, so files from some exporters (e.g.
+	// VRoid .vrma) can leave maxValues empty; in that case derive the
+	// duration from the largest timestamp in the accessor data itself
+	// rather than rejecting the whole animation.
+	float duration = 0.0f;
+	if (input.maxValues.size() == 1)
 	{
-		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor is missing its max property.");
-		return false;
+		duration = static_cast<float>(input.maxValues[0]);
 	}
-	const float duration = static_cast<float>(input.maxValues[0]);
+	else if (!timestamps.empty())
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor is missing its max property. Deriving duration from timestamp data.");
+		duration = *std::max_element(timestamps.begin(), timestamps.end());
+	}
 
 	// If this channel's duration is larger than the animation's duration
 	// then increase the animation duration to match.
@@ -312,7 +320,6 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 		return false;
 	}
 
-	const ozz::span<const float> timestamps = BufferView<float>(model, input);
 	if (timestamps.empty())
 	{
 		return true;
@@ -368,7 +375,7 @@ const tinygltf::Node *FindNodeByName(const tinygltf::Model &model, const std::st
 
 	return nullptr;
 }
-
+#pragma optimize("", off)
 bool ImportAnimations(const tinygltf::Model					&model,
 					  const ozz::animation::Skeleton		&skeleton,
 					  float									 _sampling_rate,
@@ -527,6 +534,7 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size, avs::AxesStandard 
 	ozz::unique_ptr<ozz::animation::Skeleton> skeleton = skeletonBuilder(*raw_skeleton);
 	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation),  (platform::crossplatform::AxesStandard)sourceAxesStandard,  (platform::crossplatform::AxesStandard)targetAxesStandard))
 	{
+		TELEPORT_INTERNAL_COUT(Default, "Failed to import animations from glb.");
 		return false;
 	}
 	duration=raw_animation->duration;

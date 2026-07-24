@@ -454,14 +454,14 @@ void Renderer::InitLocalGeometry()
 	platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::OpenGL;
 	// test gltf loading.
 	avs::uid gltf_uid										 = geometryDecoder.decodeFromFile(
-		   0, "assets/localGeometryCache/meshes/viverse_avatar_model_151475.vrm", avs::GeometryPayloadType::Mesh, &localResourceCreator, 0, sourceAxesStandard);
-	geometryDecoder.decodeFromFile(
+		   0, "assets/localGeometryCache/meshes/sample.vrm", avs::GeometryPayloadType::Mesh, &localResourceCreator, 0, sourceAxesStandard);
+	avs::uid anim_uid = geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/animations/Idle.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(
-		0, "assets/localGeometryCache/animations/Running.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
+		0, "assets/localGeometryCache/animations/Clapping.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(
-		0, "assets/localGeometryCache/animations/Jump.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
-	avs::uid anim_uid = geometryDecoder.decodeFromFile(
+		0, "assets/localGeometryCache/animations/LookAround.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
+	geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/animations/Waving.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(0,
 								   "assets/localGeometryCache/animations/T-Pose.vrma", //
@@ -500,7 +500,7 @@ void Renderer::InitLocalGeometry()
 		auto subSceneC = node->GetComponent<clientrender::SubSceneComponent>();
 		if (subSceneC)
 		{
-			subSceneC->PlayAnimation(0, anim_uid);
+			//subSceneC->PlayAnimation(0, anim_uid);
 		}
 	}
 #endif
