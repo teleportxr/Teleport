@@ -11,12 +11,24 @@ function(SETUP_TESTS)
 endfunction()
 
 SETUP_TESTS(
-   anim
    avatars
 )
 # The avatars test exercises the codecs defined in TeleportCore/AvatarsJson.cpp,
-# so it must link against TeleportCore (the anim test currently has no body).
+# so it must link against TeleportCore.
 target_link_libraries(avatars PRIVATE TeleportCore)
+
+# anim exercises the animation retargeter's bind-frame conjugation maths.
+# It compiles the AnimationRetargeter translation unit directly so it doesn't
+# need the whole ClientRender library (Vulkan, draco, ktx etc.). Requires the
+# ozz targets, which are only fetched when TELEPORT_CLIENT is enabled.
+if(TARGET ozz_animation)
+   add_executable(anim
+      test_anim.cpp
+      ${CMAKE_SOURCE_DIR}/ClientRender/AnimationRetargeter.cpp)
+   add_test(NAME anim COMMAND anim)
+   target_link_libraries(anim PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
+   target_include_directories(anim PRIVATE ${CMAKE_SOURCE_DIR})
+endif()
 # TeleportCore's public Avatars.h header transitively pulls in
 # libavstream/common_exports.h for the avs::uid alias; the include
 # path isn't propagated by the static library, so wire it up here.

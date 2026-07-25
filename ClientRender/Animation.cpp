@@ -176,10 +176,11 @@ void Animation::Retarget(std::shared_ptr<Skeleton> target_skeleton)
 	}
 	if(retargeted_animations[target_skeleton->id])
 		return;
-	ozz::animation::offline::RawAnimation retargeted_raw_animation = *raw_animation;
-
-	// Load your skeletons and animation
-	ozz::animation::offline::RawAnimation source_animation;
+	// Animations built from bone keyframe lists (ToOzz) have no source raw skeleton, so cannot be retargeted.
+	if (!raw_animation || !raw_skeleton)
+	{
+		return;
+	}
 
 	// Retarget the animation
 	auto retargeted_animation = clientrender::RetargetAnimation(*raw_animation, *raw_skeleton, *(target_skeleton->GetRawSkeleton()));

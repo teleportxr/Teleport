@@ -329,12 +329,11 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 	bool valid = false;
 	if (_target_path == "translation")
 	{
-		// TODO: Restore translation
-		//valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
-		//for(auto &t:_track->translations)
-		//{
-		//	t.value=ConvertPosition(sourceAxesStandard,targetAxesStandard,t.value);
-		//}
+		valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
+		for(auto &t:_track->translations)
+		{
+			t.value=ConvertPosition(sourceAxesStandard,targetAxesStandard,t.value);
+		}
 	}
 	else if (_target_path == "rotation")
 	{
@@ -375,7 +374,6 @@ const tinygltf::Node *FindNodeByName(const tinygltf::Model &model, const std::st
 
 	return nullptr;
 }
-#pragma optimize("", off)
 bool ImportAnimations(const tinygltf::Model					&model,
 					  const ozz::animation::Skeleton		&skeleton,
 					  float									 _sampling_rate,

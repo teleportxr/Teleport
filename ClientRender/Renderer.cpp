@@ -454,7 +454,7 @@ void Renderer::InitLocalGeometry()
 	platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::OpenGL;
 	// test gltf loading.
 	avs::uid gltf_uid										 = geometryDecoder.decodeFromFile(
-		   0, "assets/localGeometryCache/meshes/sample.vrm", avs::GeometryPayloadType::Mesh, &localResourceCreator, 0, sourceAxesStandard);
+		   0, "assets/localGeometryCache/meshes/sample2.vrm", avs::GeometryPayloadType::Mesh, &localResourceCreator, 0, sourceAxesStandard);
 	avs::uid anim_uid = geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/animations/Idle.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(
@@ -462,7 +462,7 @@ void Renderer::InitLocalGeometry()
 	geometryDecoder.decodeFromFile(
 		0, "assets/localGeometryCache/animations/LookAround.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(
-		0, "assets/localGeometryCache/animations/Waving.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
+		0, "assets/localGeometryCache/animations/Walking.vrma", avs::GeometryPayloadType::Animation, &localResourceCreator, 0, sourceAxesStandard);
 	geometryDecoder.decodeFromFile(0,
 								   "assets/localGeometryCache/animations/T-Pose.vrma", //
 								   avs::GeometryPayloadType::Animation,
