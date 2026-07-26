@@ -3277,6 +3277,18 @@ void Gui::MainOptions()
 	{
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
+		ImGui::LabelText("##VSync", "VSync");
+		ImGui::TableNextColumn();
+		bool v = config.options.vsync;
+		ImGui::Checkbox("##vsync", &v);
+		if (v != config.options.vsync)
+		{
+			config.options.vsync = v;
+		}
+	}
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
 		ImGui::LabelText("##AvatarLabel", "Avatar");
 		ImGui::TableNextColumn();
 		if (ImGui::Button("Avatar..."))

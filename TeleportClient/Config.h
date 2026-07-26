@@ -52,6 +52,8 @@ namespace teleport
 			float volume = 1.0f;
 			//! When true, captured microphone audio is not sent to the server.
 			bool micMuted = false;
+			//! vsync rendering to the window. When false, the client will render as fast as possible.
+			bool vsync = true;
 			//! URL of the avatar this client will offer to servers via avatar-policy /
 			//! avatar-offer (see plans/avatars_implementation.md). Empty string means
 			//! "no avatar; let the server fall back to its default".

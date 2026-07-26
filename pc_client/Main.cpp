@@ -470,7 +470,7 @@ void InitRenderer(HWND hWnd, bool try_init_vr, bool dev_mode)
 	// if(config.recent_server_urls.size())
 	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
-	dsmi->AddWindow(hWnd);
+	dsmi->AddWindow(hWnd, platform::crossplatform::PixelFormat::UNKNOWN, config.options.vsync);
 	dsmi->SetRenderer(clientRenderer);
 }
 static platform::core::DefaultProfiler cpuProfiler;
@@ -625,6 +625,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 			if(w)
 			{
+			// Apply vsync changes made in the Settings GUI.
+			bool vsync = client::Config::GetInstance().options.vsync;
+			if (w->IsVsync() != vsync)
+				w->SetVsync(vsync);
 			clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
 			}
 			// Call StartFrame here so the command list will be in a recording state for D3D12
@@ -1042,7 +1046,7 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)window);
 	if (g_surface != VK_NULL_HANDLE)
 	{
-		dsmi->AddWindow(&g_surface);
+		dsmi->AddWindow(&g_surface, platform::crossplatform::PixelFormat::UNKNOWN, config.options.vsync);
 	}
 	dsmi->SetRenderer(clientRenderer);
 }
@@ -1223,6 +1227,10 @@ int main(int argc, char *argv[])
 			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(&g_surface);
 			if (w)
 			{
+				// Apply vsync changes made in the Settings GUI.
+				bool vsync = client::Config::GetInstance().options.vsync;
+				if (w->IsVsync() != vsync)
+					w->SetVsync(vsync);
 				// Bootstrap only: if the DisplaySurface viewport has never been set (e.g. on
 				// platforms/compositors where VkSurfaceCapabilitiesKHR::currentExtent is the
 				// "undefined" sentinel before the window is mapped), seed it from GLFW so the
