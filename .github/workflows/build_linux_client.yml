@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 90
     env:
       WORKFLOW_BUILD_TYPE: Release
+      CC: clang
+      CXX: clang++
 
     steps:
     - name: Checkout
@@ -58,11 +60,18 @@ jobs:
       with:
         version: 1.3.290.0
 
+    - name: Compiler versions
+      run: |
+        clang --version
+        cmake --version
+
     - name: Running cmake (linux)
       run: |
         cd ${{ github.workspace }}
         mkdir build_pc_client
         cmake -S . -B build_pc_client -G Ninja \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
           -DLIBAV_USE_CUDA=false \
           -DPLATFORM_USE_ASSIMP=false \
           -DPLATFORM_BUILD_ASSIMP=false \
