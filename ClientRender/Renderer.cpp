@@ -450,7 +450,7 @@ void Renderer::InitLocalGeometry()
 								   &localResourceCreator,
 								   specular_cubemap_uid);
 
-#if 1
+#if 0
 	platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::OpenGL;
 	// test gltf loading.
 	avs::uid gltf_uid										 = geometryDecoder.decodeFromFile(

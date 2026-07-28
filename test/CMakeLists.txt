@@ -61,6 +61,14 @@ target_include_directories(avatar_manager PRIVATE
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_SOURCE_DIR}/libavstream/export_include)
 
+# redact exercises the header-only URL/proof redaction helpers in
+# TeleportCore/Redact.h. Header-only, so no TeleportCore link is needed —
+# just the include path.
+add_executable(redact test_redact.cpp)
+add_test(NAME redact COMMAND redact)
+target_link_libraries(redact PRIVATE Catch2::Catch2WithMain)
+target_include_directories(redact PRIVATE ${CMAKE_SOURCE_DIR}/TeleportCore/export_include)
+
 # avatar_validation_cache exercises the header-only LRU cache used by
 # host-supplied IAvatarValidator implementations (plan §4.1). No
 # TeleportServer link is required — the header pulls in IAvatarValidator

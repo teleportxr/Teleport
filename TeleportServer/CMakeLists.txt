@@ -9,6 +9,7 @@ set(src
 	AvatarService.cpp
 	AvatarService.h
 	AvatarValidationCache.h
+	IAvatarImporter.h
 	IAvatarValidator.h
 	ClientNetworkContext.h
 	ClientNetworkContext.cpp

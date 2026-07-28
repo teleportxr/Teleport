@@ -1,6 +1,7 @@
 #include "AvatarManager.h"
 
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Redact.h"
 
 using nlohmann::json;
 
@@ -183,8 +184,10 @@ namespace teleport
 			if (!sendFn)
 				return;
 			json content = offer;
-			TELEPORT_INTERNAL_COUT(Default, "avatar-offer  -> server {} policy_id={} have_avatar={}"
-				, serverID, offer.policyId, offer.haveAvatar);
+			// The URL may carry a bearer token; only ever log it redacted
+			// (plans/avatars_plan.md §8).
+			TELEPORT_INTERNAL_COUT(Default, "avatar-offer  -> server {} policy_id={} have_avatar={} url={}"
+				, serverID, offer.policyId, offer.haveAvatar, offer.url ? core::RedactUrl(*offer.url) : "<none>");
 			sendFn(Envelope(kSignalTypeAvatarOffer, content));
 		}
 
@@ -219,6 +222,12 @@ namespace teleport
 		{
 			std::lock_guard lock(mutex);
 			return lastResult;
+		}
+
+		avs::uid AvatarManager::GetAvatarNodeUid() const
+		{
+			std::lock_guard lock(mutex);
+			return lastResult ? lastResult->nodeUid : 0;
 		}
 	}
 }

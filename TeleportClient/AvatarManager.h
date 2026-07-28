@@ -73,6 +73,12 @@ namespace teleport
 			std::optional<core::AvatarOffer>   GetLastOffer() const;
 			std::optional<core::AvatarResult>  GetLastResult() const;
 
+			//! Session uid of this client's avatar root node in the server
+			//! scene (from the last avatar-result), or 0 before one arrives.
+			//! The local view may use it to recognise — and e.g. hide in
+			//! first person — its own avatar in the streamed geometry.
+			avs::uid GetAvatarNodeUid() const;
+
 		private:
 			void HandlePolicy(const nlohmann::json &content);
 			void HandleResult(const nlohmann::json &content);

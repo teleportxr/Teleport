@@ -521,9 +521,10 @@ if(TELEPORT_UNIX)
 endif()
 option(NO_TESTS "" ON)
 
-	add_subdirectory(thirdparty/libdatachannel)
-	set_target_properties(datachannel PROPERTIES EXCLUDE_FROM_ALL ON)
-	set_target_properties(datachannel PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+	# EXCLUDE_FROM_ALL: only datachannel-static is linked (by libavstream); this also
+	# skips libdatachannel's install() rules, which would otherwise make CPack demand
+	# the never-built libdatachannel.so. Dependency targets still build.
+	add_subdirectory(thirdparty/libdatachannel EXCLUDE_FROM_ALL)
  
 	set(sctp_werror OFF)
 	set_target_properties( datachannel PROPERTIES FOLDER thirdparty/datachannel)

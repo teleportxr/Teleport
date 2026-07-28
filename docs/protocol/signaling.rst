@@ -70,9 +70,13 @@ Sent by the client. A **Client** that wants to join (the **Connecting Client**) 
     }
 
 ``clientID`` is zero if the client has not yet connected to this server session, and may be a unique non-zero id if it is attempting to reconnect.
+
 ``teleport`` is the protocol version (currently ``"0.9"``).
+
 ``identity`` is an opaque string the client supplies for application-level authentication (may be empty).
+
 ``capabilities`` is a free-form object advertising optional protocol features supported by the client. Unknown keys MUST be ignored. Currently defined keys: ``avatar_relay`` (boolean, see :ref:`signaling_avatars`).
+
 ``connect-response``
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -89,7 +93,9 @@ Sent by the server in response to ``connect``.
         }
     }
 
-``clientID`` and ``serverID`` are unsigned 64-bit numbers. They are unique on the server: no two clients can have the same ID. The ``serverID`` represents the session: if it matches a previous connection from the same client, cached resource and node ids persist; otherwise the client must clear all resource and node ids for this server.
+``clientID`` and ``serverID`` are unsigned 64-bit numbers. They are unique on the server: no two clients can have the same ID.
+The ``serverID`` represents the session: if it matches a previous connection from the same client, cached resource and node ids may persist (but this must not be assumed);
+otherwise the client must clear all resource and node ids for this server.
 
 ``ice-servers``
 ^^^^^^^^^^^^^^^
@@ -214,7 +220,14 @@ The exchange when the WebRTC handshake finished before the server sends setup:
 Avatar negotiation
 ^^^^^^^^^^^^^^^^^^
 
-If the server supports user avatars it may send an ``avatar-policy`` at any time after ``connect-response``. The client replies with an ``avatar-offer``; the server confirms with an ``avatar-result``. Servers may later send ``avatar-revoke`` to invalidate an accepted avatar. In **relay** mode the server forwards the owner's URL and proof to peers as ``peer-avatar`` messages, and a peer that fails to fetch the URL replies ``peer-avatar-failed``.
+If the server supports user avatars it may send an ``avatar-policy`` at any time after ``connect-response``.
+If avatars are not supported, the client may ignore the message and will not be asked to provide an avatar.
+If avatars are supported, the client may respond with an ``avatar-offer`` message containing a URL for the
+avatar it wants to use. If avatars are required, the client should send an ``avatar-offer`` even if it has no avatar to offer (``have_avatar == false``).
+If avatars are required and the client has no avatar to offer, the server may terminate the connection or use a default avatar for the client.
+The server will reply with an ``avatar-result`` indicating whether the offer was accepted or rejected.
+Servers may later send ``avatar-revoke`` to invalidate an accepted avatar.
+In **relay** mode the server forwards the owner's URL and proof to peers as ``peer-avatar`` messages, and a peer that fails to fetch the URL replies ``peer-avatar-failed``.
 
 The full protocol — wire fields, requirements bag, proof schemes, security and privacy model — is specified in ``plans/avatars_plan.md`` in the source tree.
 
@@ -257,7 +270,9 @@ Relay-mode peer messages:
     { "teleport-signal-type": "peer-avatar-failed",
       "content": { "peer_node_uid": 200, "reason": "fetch_timeout" } }
 
-Avatar negotiation only runs when the client advertises support in ``connect.content.capabilities``. A client that omits the field (or sets ``avatar_relay`` to false) only receives **import**-mode avatars — i.e. ``avatar-result.delivery == "import"`` and avatars stream through the standard geometry pipeline rather than as ``peer-avatar`` messages.
+Avatar negotiation itself is not gated on any capability: every client receives ``avatar-policy`` and is expected to answer it. What ``connect.content.capabilities`` gates is the **distribution mode**. A client that omits the field, or sets ``avatar_relay`` to false, only receives **import**-mode avatars — i.e. ``avatar-result.delivery == "import"``, and avatars reach it through the standard geometry pipeline rather than as ``peer-avatar`` messages.
+
+In import mode ``avatar-result.node_uid`` is the session uid of the avatar's root node in the server's scene, and the owning client may use it to recognise its own avatar in geometry traffic (for example to hide it in a first-person view). It is ``0`` when the server accepted the avatar but imported nothing — the client should treat a zero uid as "no node to track", not as an error. Peers are never sent the owner's original URL in this mode; they receive the imported geometry like any other scene resource.
 
 ``disconnect``
 ^^^^^^^^^^^^^^

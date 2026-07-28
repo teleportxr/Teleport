@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include "TeleportServer/AvatarService.h"
+#include "TeleportServer/IAvatarImporter.h"
 
 using nlohmann::json;
 using namespace teleport::core;
@@ -147,4 +148,55 @@ TEST_CASE("AvatarService::HandleRevoke clears cached offer / result", "[avatar-s
 	svc.HandleRevoke(revoke);
 	REQUIRE_FALSE(svc.GetLastOffer().has_value());
 	REQUIRE_FALSE(svc.GetLastResult().has_value());
+}
+
+namespace
+{
+	// Phase-4 stub importer recording calls and returning a fixed node uid.
+	struct StubImporter : teleport::server::IAvatarImporter
+	{
+		avs::uid nodeUid = 0;
+		int      defaultImports = 0;
+		int      removals = 0;
+
+		avs::uid ImportValidatedForClient(avs::uid, const teleport::server::AvatarValidationResult &) override
+		{
+			return nodeUid;
+		}
+		avs::uid ImportDefaultForClient(avs::uid) override
+		{
+			defaultImports++;
+			return nodeUid;
+		}
+		void RemoveForClient(avs::uid) override
+		{
+			removals++;
+		}
+	};
+}
+
+TEST_CASE("AvatarService with importer reports the imported default node uid", "[avatar-service]")
+{
+	CapturedSender sink;
+	AvatarService svc(42, sink.fn());
+	StubImporter importer;
+	importer.nodeUid = 4242;
+	svc.SetImporter(&importer);
+	svc.SendPolicy(MakePolicy(11));
+	sink.frames.clear();
+
+	AvatarOffer offer;
+	offer.policyId = 11;
+	svc.HandleOffer(json(offer));
+
+	REQUIRE(sink.frames.size() == 1);
+	const json &content = sink.frames.front().at("content");
+	REQUIRE(content.at("status").get<std::string>() == "using_default");
+	REQUIRE(content.at("node_uid").get<avs::uid>() == 4242);
+	REQUIRE(importer.defaultImports == 1);
+
+	// A revoke tears the imported node down.
+	json revoke = { { "policy_id", 11 } };
+	svc.HandleRevoke(revoke);
+	REQUIRE(importer.removals == 1);
 }

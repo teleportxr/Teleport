@@ -13,11 +13,14 @@ namespace teleport
 {
 	namespace server
 	{
-		//! Per-client server-side state for avatar negotiation. Phase 2 of
-		//! the implementation in plans/avatars_implementation.md: round-trip
-		//! a policy, receive an offer, always reply with using_default. No
-		//! validation, no download, no import. Behaviour is the same
-		//! regardless of whether the client offered an avatar or not.
+		class IAvatarImporter;
+
+		//! Per-client server-side state for avatar negotiation. Phases 2–4
+		//! of the implementation in plans/avatars_implementation.md:
+		//! round-trip a policy, receive an offer, reply with using_default.
+		//! Validation and download stay host-side (IAvatarValidator); when
+		//! an IAvatarImporter is supplied, the default-avatar reply carries
+		//! the real node uid of the imported scene node instead of 0.
 		//!
 		//! One AvatarService is owned by each ClientData; incoming
 		//! `avatar-offer` and `avatar-revoke` JSON text frames are dispatched
@@ -28,6 +31,13 @@ namespace teleport
 			using SendFn = std::function<void(const std::string &)>;
 
 			AvatarService(avs::uid clientID, SendFn sendFn);
+
+			//! Supply the host application's importer (may be nullptr to
+			//! clear). Not owned; must outlive this service.
+			void SetImporter(IAvatarImporter *i)
+			{
+				importer = i;
+			}
 
 			//! Send (or re-send) the policy to the owning client. The
 			//! client is expected to reply with an avatar-offer.
@@ -66,6 +76,7 @@ namespace teleport
 
 			avs::uid                          clientID = 0;
 			SendFn                            sendFn;
+			IAvatarImporter                  *importer = nullptr;
 			std::optional<core::AvatarPolicy> currentPolicy;
 			std::optional<core::AvatarOffer>  lastOffer;
 			std::optional<core::AvatarResult> lastResult;
