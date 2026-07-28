@@ -16,6 +16,3 @@
 [submodule "thirdparty/oboe"]
 	path = thirdparty/oboe
 	url = https://github.com/google/oboe.git
-[submodule "firstparty/teleport-nodejs"]
-	path = firstparty/teleport-nodejs
-	url = ../teleport-nodejs.git
