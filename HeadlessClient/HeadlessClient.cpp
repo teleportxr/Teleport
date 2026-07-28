@@ -1,0 +1,177 @@
+#include "HeadlessClient.h"
+#include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Logging.h"
+#include <libavstream/queue.hpp>
+
+HeadlessClient::HeadlessClient()
+	: commandInterface(std::make_unique<HeadlessSessionCommandInterface>(nullptr, currentMode))
+	, geometryBackend(std::make_unique<HeadlessGeometryCacheBackend>())
+{
+}
+
+HeadlessClient::~HeadlessClient()
+{
+	Disconnect();
+}
+
+bool HeadlessClient::Connect(const std::string &url)
+{
+	if (sessionClient && sessionClient->IsConnected())
+	{
+		TELEPORT_WARN("Already connected");
+		return false;
+	}
+
+	try
+	{
+		tabContext.ConnectTo(url);
+		TELEPORT_LOG("Initiated connection to {}", url);
+		return true;
+	}
+	catch (const std::exception &e)
+	{
+		TELEPORT_WARN("Connection failed: {}", e.what());
+		return false;
+	}
+}
+
+void HeadlessClient::Disconnect()
+{
+	if (sessionClient)
+	{
+		sessionClient->Disconnect(5000, true);
+		sessionClient = nullptr;
+	}
+}
+
+void HeadlessClient::TickOnce(double time, double dt)
+{
+	inputState.UpdateTime(time);
+
+	// First tick: update session client if available
+	if (!sessionClient)
+	{
+		sessionClient = teleport::client::SessionClient::GetSessionClient(tabContext.GetServerUid());
+		if (sessionClient && !commandInterface->GetSessionClient().lock())
+		{
+			commandInterface = std::make_unique<HeadlessSessionCommandInterface>(sessionClient);
+			sessionClient->SetSessionCommandInterface(commandInterface.get());
+			sessionClient->SetGeometryCache(geometryBackend.get());
+		}
+	}
+
+	if (!sessionClient)
+		return;
+
+	// Handle connections (e.g., WebSocket signaling)
+	sessionClient->HandleConnections();
+
+	// Drain video queue if connected (stats accumulation without actual decode)
+	ProcessVideo();
+
+	// If connected, send pose/input
+	if (sessionClient->IsConnected())
+	{
+		auto snapshot = inputState.GetSnapshot();
+		sessionClient->Frame(
+			snapshot.displayInfo,
+			snapshot.headPose,
+			snapshot.controllerPoses,
+			snapshot.originValidCounter,
+			snapshot.input,
+			snapshot.time,
+			dt
+		);
+	}
+}
+
+bool HeadlessClient::IsConnected() const
+{
+	return sessionClient && sessionClient->IsConnected();
+}
+
+std::string HeadlessClient::GetStatus() const
+{
+	if (!sessionClient)
+		return "Status: DISCONNECTED (no session)\n";
+
+	auto status = sessionClient->GetConnectionStatus();
+	std::string statusStr;
+	switch (status)
+	{
+	case teleport::client::ConnectionStatus::UNCONNECTED:
+		statusStr = "UNCONNECTED";
+		break;
+	case teleport::client::ConnectionStatus::OFFERING:
+		statusStr = "OFFERING";
+		break;
+	case teleport::client::ConnectionStatus::AWAITING_SETUP:
+		statusStr = "AWAITING_SETUP";
+		break;
+	case teleport::client::ConnectionStatus::HANDSHAKING:
+		statusStr = "HANDSHAKING";
+		break;
+	case teleport::client::ConnectionStatus::CONNECTED:
+		statusStr = "CONNECTED";
+		break;
+	case teleport::client::ConnectionStatus::RECONNECTING:
+		statusStr = "RECONNECTING";
+		break;
+	default:
+		statusStr = "UNKNOWN";
+	}
+
+	std::string result = "Status: " + statusStr + "\n";
+	result += "Server: " + sessionClient->GetServerIP() + ":" + std::to_string(sessionClient->GetPort()) + "\n";
+	result += "Latency: " + std::to_string(static_cast<int>(sessionClient->GetLatencyMs())) + " ms\n";
+	result += "Inputs Available: " + std::to_string(GetInputDefinitions().size()) + "\n";
+
+	return result;
+}
+
+const std::vector<teleport::core::InputDefinition> &HeadlessClient::GetInputDefinitions() const
+{
+	if (sessionClient)
+		return sessionClient->GetInputDefinitions();
+	static std::vector<teleport::core::InputDefinition> empty;
+	return empty;
+}
+
+void HeadlessClient::ProcessVideo()
+{
+	if (!sessionClient)
+		return;
+
+	auto &cp = sessionClient->GetClientPipeline();
+	cp.videoQueue.drop();
+}
+
+void HeadlessClient::SendBinaryInput(avs::uid id, uint8_t value)
+{
+	if (!sessionClient || !sessionClient->IsConnected())
+	{
+		TELEPORT_WARN("Cannot send input: not connected");
+		return;
+	}
+	inputState.AddBinaryEvent(static_cast<teleport::core::InputId>(id), value != 0);
+}
+
+void HeadlessClient::SendAnalogueInput(avs::uid id, float value)
+{
+	if (!sessionClient || !sessionClient->IsConnected())
+	{
+		TELEPORT_WARN("Cannot send input: not connected");
+		return;
+	}
+	inputState.AddAnalogueEvent(static_cast<teleport::core::InputId>(id), value);
+}
+
+void HeadlessClient::SendMotionInput(avs::uid id, float x, float y)
+{
+	if (!sessionClient || !sessionClient->IsConnected())
+	{
+		TELEPORT_WARN("Cannot send input: not connected");
+		return;
+	}
+	inputState.AddMotionEvent(static_cast<teleport::core::InputId>(id), x, y);
+}

@@ -1,0 +1,51 @@
+#pragma once
+
+#include "TeleportClient/TabContext.h"
+#include "TeleportClient/SessionClient.h"
+#include "HeadlessSessionCommandInterface.h"
+#include "HeadlessGeometryCacheBackend.h"
+#include "HeadlessInputState.h"
+#include <memory>
+#include <string>
+
+class HeadlessClient
+{
+public:
+	HeadlessClient();
+	~HeadlessClient();
+
+	bool Connect(const std::string &url);
+	void Disconnect();
+
+	void TickOnce(double time, double dt);
+
+	bool IsConnected() const;
+	std::string GetStatus() const;
+
+	void SetMode(HeadlessMode mode)
+	{
+		currentMode = mode;
+		if (commandInterface)
+			commandInterface->SetMode(mode);
+	}
+	HeadlessMode GetMode() const { return currentMode; }
+
+	HeadlessInputState &GetInputState() { return inputState; }
+	const std::vector<teleport::core::InputDefinition> &GetInputDefinitions() const;
+
+	void SendBinaryInput(avs::uid id, uint8_t value);
+	void SendAnalogueInput(avs::uid id, float value);
+	void SendMotionInput(avs::uid id, float x, float y);
+
+private:
+	void ProcessVideo();
+
+	HeadlessMode currentMode = HeadlessMode::Minimal;
+	teleport::client::TabContext tabContext;
+	std::shared_ptr<teleport::client::SessionClient> sessionClient;
+	std::unique_ptr<HeadlessSessionCommandInterface> commandInterface;
+	std::unique_ptr<HeadlessGeometryCacheBackend> geometryBackend;
+	HeadlessInputState inputState;
+
+	double lastUpdateTime = 0.0;
+};

@@ -20,6 +20,8 @@ set(src_files
 	AvatarManager.cpp
 	AvatarManager.h
 	basic_linear_algebra.h
+	ClientBootstrap.cpp
+	ClientBootstrap.h
 	ClientDeviceState.cpp
 	ClientDeviceState.h
 	ClientPipeline.cpp

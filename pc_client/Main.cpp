@@ -22,6 +22,7 @@
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "ProcessHandler.h"
+#include "TeleportClient/ClientBootstrap.h"
 #include "TeleportClient/TabContext.h"
 #include "TeleportClient/URLHandlers.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -177,28 +178,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	if (!std::filesystem::exists(current_path))
 		return -1;
 	std::filesystem::current_path(current_path);
-	auto &config = client::Config::GetInstance();
-	// Get a folder we can write to:
-	char szPath[MAX_PATH];
 
-	HRESULT hResult = SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath);
-	if (hResult == S_OK)
+	// Bootstrap client environment (find assets, resolve storage folder, load config)
+	if (!client::BootstrapClientEnvironment(cmdLine))
 	{
-		storage_folder = std::string(szPath) + "/TeleportXR";
+		TELEPORT_INTERNAL_CERR("Failed to bootstrap client environment");
+		return -1;
 	}
-	if (storage_folder.length() > 200)
-	{
-		// Too long, use the current path.
-		storage_folder = std::filesystem::current_path().string();
-		if (storage_folder.length() > 200)
-		{
-			// Too long, use the current path.
-			std::cerr << "Storage path " << storage_folder << " is too long." << std::endl;
-			exit(135);
-		}
-	}
-	config.SetStorageFolder(storage_folder.c_str());
-	clientApp.Initialize();
+
+	auto &config = client::Config::GetInstance();
+	storage_folder = client::GetStorageFolderPath();
+
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)
 	{
@@ -1109,27 +1099,16 @@ int main(int argc, char *argv[])
 	}
 	std::filesystem::current_path(current_path);
 
-	auto &config = client::Config::GetInstance();
+	// Bootstrap client environment (find assets, resolve storage folder, load config)
+	if (!client::BootstrapClientEnvironment(cmdLine))
+	{
+		TELEPORT_WARN("Failed to bootstrap client environment");
+		return -1;
+	}
 
-	// Get storage folder (Linux equivalent of CSIDL_LOCAL_APPDATA)
-	const char *home = getenv("HOME");
-	if (!home)
-	{
-		struct passwd *pw = getpwuid(getuid());
-		if (pw)
-			home = pw->pw_dir;
-	}
-	if (home)
-	{ 
-		storage_folder = std::string(home) + "/.local/share/TeleportXR";
-		std::filesystem::create_directories(storage_folder);
-	}
-	else
-	{
-		storage_folder = std::filesystem::current_path().string();
-	}
-	config.SetStorageFolder(storage_folder.c_str());
-	clientApp.Initialize();
+	auto &config = client::Config::GetInstance();
+	storage_folder = client::GetStorageFolderPath();
+
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)
 	{
