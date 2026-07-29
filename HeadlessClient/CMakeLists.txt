@@ -7,6 +7,7 @@ set(srcs
 	HeadlessSessionCommandInterface.h HeadlessSessionCommandInterface.cpp
 	HeadlessGeometryCacheBackend.h HeadlessGeometryCacheBackend.cpp
 	HeadlessGeometryTarget.h HeadlessGeometryTarget.cpp
+	HeadlessGeometryDecoder.h HeadlessGeometryDecoder.cpp
 	HeadlessInputState.h HeadlessInputState.cpp
 	ReplCommandParser.h ReplCommandParser.cpp
 	Repl.h Repl.cpp

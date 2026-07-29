@@ -22,6 +22,10 @@ public:
 	bool IsConnected() const;
 	std::string GetStatus() const;
 
+	//! Reports on the geometry the server has streamed. `what` selects the section:
+	//! empty for a summary, "nodes" for the tracked node list, "resources" for pointer URLs.
+	std::string GetGeometryReport(const std::string &what) const;
+
 	void SetMode(HeadlessMode mode)
 	{
 		currentMode = mode;
@@ -43,6 +47,9 @@ private:
 	HeadlessMode currentMode = HeadlessMode::Minimal;
 	teleport::client::TabContext tabContext;
 	std::shared_ptr<teleport::client::SessionClient> sessionClient;
+	//! Uid that sessionClient was resolved from, so we notice when TabContext promotes
+	//! next_server_uid to server_uid on connection completion.
+	avs::uid activeServerUid = 0;
 	std::unique_ptr<HeadlessSessionCommandInterface> commandInterface;
 	std::unique_ptr<HeadlessGeometryCacheBackend> geometryBackend;
 	HeadlessInputState inputState;

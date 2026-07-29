@@ -92,7 +92,13 @@ namespace avs
 
 	void Queue::drop()
 	{
-		m_dataSizes[m_front] = 0;
+		std::lock_guard<std::mutex> lock(m_mutex);
+		// An empty queue has m_front == -1, and a flushed or unconfigured queue has no m_dataSizes at all,
+		// so only clear the front size when there is actually an element to drop.
+		if (m_dataSizes && m_numElements > 0)
+		{
+			m_dataSizes[m_front] = 0;
+		}
 		m_numElements = 0;
 		m_front = -1;
 	}
