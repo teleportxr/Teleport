@@ -42,7 +42,7 @@ dumpbin /IMPORTS build_pc_client/bin/Release/TeleportHeadlessClient.exe | findst
 
 ### ✅ M1: Minimal Mode Complete
 
-- ClientBootstrap extraction (shared across pc_client + headless_client)
+- ClientBootstrap extraction (shared across pc_client + HeadlessClient)
 - Minimal mode REPL with connect/disconnect/status/move/turn commands
 - Non-GPU pipeline wiring (video receive but no decode, stats accumulation)
 - Input state management (pose synchronisation between REPL/tick threads)
@@ -83,7 +83,7 @@ dumpbin /IMPORTS build_pc_client/bin/Release/TeleportHeadlessClient.exe | findst
 ## Key Files
 
 ### New Files
-- `Teleport/headless_client/*` — all headless client implementation
+- `Teleport/HeadlessClient/*` — all headless client implementation
 - `Teleport/TeleportClient/ClientBootstrap.h/.cpp` — shared bootstrap logic
 
 ### Modified Files
