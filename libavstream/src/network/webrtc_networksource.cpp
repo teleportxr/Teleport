@@ -889,10 +889,10 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 		}
 		else if (type == "candidate")
 		{
-			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote candidate " ;
+			//AVSLOG(Info) << ": info: WebRtcNetworkSource: Received remote candidate " ;
 			auto c = message.find("candidate");
 			string candidate=c->get<std::string>();
-AVSLOG(Info) << "---"<< candidate<<" "<< std::endl;
+			//AVSLOG(Info) << "---"<< candidate<<" "<< std::endl;
 			auto m= message.find("mid");
 			std::string mid;
 			if (m != message.end())
