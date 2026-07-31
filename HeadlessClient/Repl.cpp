@@ -212,6 +212,12 @@ void Repl::ProcessCommand(const ReplCommand &cmd)
 			std::cout << "Unknown mode: " << cmd.args[0] << "\n";
 		}
 	}
+	else if (cmd.verb == "geometry")
+	{
+		std::cout << "\n=== Geometry ===\n";
+		std::cout << client.GetGeometryReport(cmd.args.empty() ? std::string() : cmd.args[0]);
+		std::cout << "\n";
+	}
 	else if (cmd.verb == "quit" || cmd.verb == "exit")
 	{
 		client.Disconnect();
@@ -237,6 +243,9 @@ void Repl::PrintHelp() const
 		<< "  input analogue <id> <f> - Send analogue input event\n"
 		<< "  input motion <id> <x> <y> - Send motion input event\n"
 		<< "  mode <minimal|simulated> - Set client mode\n"
+		<< "  geometry             - Summarise streamed geometry\n"
+		<< "  geometry nodes       - List tracked nodes\n"
+		<< "  geometry resources   - List pointer resource URLs\n"
 		<< "  help                 - Show this help\n"
 		<< "  quit / exit          - Exit the client\n";
 }

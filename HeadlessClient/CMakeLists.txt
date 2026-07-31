@@ -7,6 +7,7 @@ set(srcs
 	HeadlessSessionCommandInterface.h HeadlessSessionCommandInterface.cpp
 	HeadlessGeometryCacheBackend.h HeadlessGeometryCacheBackend.cpp
 	HeadlessGeometryTarget.h HeadlessGeometryTarget.cpp
+	HeadlessGeometryDecoder.h HeadlessGeometryDecoder.cpp
 	HeadlessInputState.h HeadlessInputState.cpp
 	ReplCommandParser.h ReplCommandParser.cpp
 	Repl.h Repl.cpp
@@ -72,5 +73,5 @@ set_target_properties(teleport_terminal PROPERTIES FOLDER Client)
 if(TELEPORT_UNIX)
 	install(TARGETS teleport_terminal RUNTIME DESTINATION bin COMPONENT client)
 elseif(TELEPORT_WINDOWS)
-	install(TARGETS teleport_terminal RUNTIME DESTINATION build/bin/Release COMPONENT client)
+	install(TARGETS teleport_terminal RUNTIME DESTINATION bin COMPONENT client)
 endif()

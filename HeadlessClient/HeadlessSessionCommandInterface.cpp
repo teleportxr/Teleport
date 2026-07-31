@@ -6,14 +6,16 @@
 #include <libavstream/pipeline.hpp>
 #include <libavstream/common_maths.h>
 
-HeadlessSessionCommandInterface::HeadlessSessionCommandInterface(std::shared_ptr<teleport::client::SessionClient> sc, HeadlessMode mode_)
-	: sessionClient(sc), mode(mode_)
+HeadlessSessionCommandInterface::HeadlessSessionCommandInterface(std::shared_ptr<teleport::client::SessionClient> sc,
+																 HeadlessMode								  mode_,
+																 HeadlessGeometryCacheBackend				 *cache,
+																 avs::uid									  serverUid_)
+	: sessionClient(sc), mode(mode_), geometryCache(cache), serverUid(serverUid_)
 {
-	if (mode == HeadlessMode::Simulated)
-	{
-		geometryTarget = std::make_unique<HeadlessGeometryTarget>();
-		TELEPORT_LOG("HeadlessSessionCommandInterface: simulated mode, geometry target created");
-	}
+	// Geometry is tracked in both modes. Neither of these touches a graphics API, and without
+	// them the server's geometry stream has nowhere to go and its packets are dropped.
+	geometryTarget	= std::make_unique<HeadlessGeometryTarget>(geometryCache);
+	geometryDecoder = std::make_unique<HeadlessGeometryDecoder>(geometryCache);
 }
 
 bool HeadlessSessionCommandInterface::OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand)
@@ -50,6 +52,17 @@ bool HeadlessSessionCommandInterface::OnSetupCommandReceived(const char *server_
 		// Configure video queue for reception but don't decode (we'll drain it with drop())
 		cp.videoQueue.configure(300000, 16, "VideoQueue");
 		avs::PipelineNode::link(*(cp.source.get()), cp.videoQueue);
+
+		// Geometry. The queue's name must be "GeometryQueue" to match the stream table in
+		// ClientPipeline, which routes stream 80 by the receiving node's display name.
+		// avs::GeometryDecoder handles framing and hands our backend the payload type and uid;
+		// the backend parses nodes and records pointer URLs without fetching any asset.
+		cp.avsGeometryDecoder.configure(80, serverUid, geometryDecoder.get());
+		cp.avsGeometryTarget.configure(geometryTarget.get());
+		cp.geometryQueue.configure(16000000, 20, "GeometryQueue");
+		avs::PipelineNode::link(*(cp.source.get()), cp.geometryQueue);
+		avs::PipelineNode::link(cp.geometryQueue, cp.avsGeometryDecoder);
+		cp.pipeline.link({&cp.avsGeometryDecoder, &cp.avsGeometryTarget});
 
 		TELEPORT_LOG("Pipeline wiring complete");
 		return true;

@@ -2,6 +2,7 @@
 
 #include "TeleportClient/SessionClient.h"
 #include "HeadlessGeometryTarget.h"
+#include "HeadlessGeometryDecoder.h"
 #include <memory>
 #include <set>
 
@@ -14,7 +15,14 @@ enum class HeadlessMode
 class HeadlessSessionCommandInterface : public teleport::client::SessionCommandInterface
 {
 public:
-	explicit HeadlessSessionCommandInterface(std::shared_ptr<teleport::client::SessionClient> sc, HeadlessMode mode = HeadlessMode::Minimal);
+	//! `cache` is owned by HeadlessClient and outlives this object; it receives the geometry
+	//! the server streams and supplies the acknowledgement lists SessionClient drains.
+	//! `serverUid` identifies the geometry cache to the decoder; SessionClient keeps its own copy
+	//! private, so HeadlessClient passes the uid it resolved the session from.
+	HeadlessSessionCommandInterface(std::shared_ptr<teleport::client::SessionClient> sc,
+									HeadlessMode								   mode		 = HeadlessMode::Minimal,
+									HeadlessGeometryCacheBackend				  *cache	 = nullptr,
+									avs::uid									   serverUid = 0);
 	virtual ~HeadlessSessionCommandInterface() = default;
 
 	bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand) override;
@@ -51,5 +59,10 @@ private:
 	uint64_t originValidCounter = 0;
 	avs::uid originNodeUid = 0;
 	size_t visibleNodesCount = 0;
-	std::unique_ptr<HeadlessGeometryTarget> geometryTarget;
+	HeadlessGeometryCacheBackend *geometryCache = nullptr;
+	avs::uid					  serverUid	   = 0;
+	//! Both are referenced by pipeline nodes for the lifetime of the connection, so they must
+	//! not be recreated while the pipeline is running.
+	std::unique_ptr<HeadlessGeometryTarget>	 geometryTarget;
+	std::unique_ptr<HeadlessGeometryDecoder> geometryDecoder;
 };

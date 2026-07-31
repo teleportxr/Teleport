@@ -254,7 +254,9 @@ using nlohmann::json;
 void SessionClient::Disconnect(uint timeout, bool resetClientID)
 {
 	remoteIP = "";
-	mCommandInterface->OnVideoStreamClosed();
+	// A session client that was never given a command interface can still be disconnected.
+	if (mCommandInterface)
+		mCommandInterface->OnVideoStreamClosed();
 
 	connectionStatus	  = ConnectionStatus::UNCONNECTED;
 	receivedInitialPos	  = 0;

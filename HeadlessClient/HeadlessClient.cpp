@@ -4,9 +4,10 @@
 #include <libavstream/queue.hpp>
 
 HeadlessClient::HeadlessClient()
-	: commandInterface(std::make_unique<HeadlessSessionCommandInterface>(nullptr, currentMode))
-	, geometryBackend(std::make_unique<HeadlessGeometryCacheBackend>())
+	: geometryBackend(std::make_unique<HeadlessGeometryCacheBackend>())
 {
+	// geometryBackend must exist before the command interface, which holds a pointer to it.
+	commandInterface = std::make_unique<HeadlessSessionCommandInterface>(nullptr, currentMode, geometryBackend.get());
 }
 
 HeadlessClient::~HeadlessClient()
@@ -42,26 +43,42 @@ void HeadlessClient::Disconnect()
 		sessionClient->Disconnect(5000, true);
 		sessionClient = nullptr;
 	}
+	// A connection still in progress lives under the tab's "next" uid, which the line above
+	// would miss; cancel through the tab context so a pending attempt is dropped too.
+	tabContext.CancelConnection();
+	activeServerUid = 0;
 }
 
 void HeadlessClient::TickOnce(double time, double dt)
 {
 	inputState.UpdateTime(time);
 
-	// First tick: update session client if available
-	if (!sessionClient)
+	// A connection in progress lives under the tab's "next" uid; TabContext only promotes it to
+	// the main server uid once ConnectionComplete() fires. We must therefore re-resolve every tick
+	// and drive whichever client is live, or the pending connection is never ticked and can never
+	// complete. Note GetSessionClient(0) would auto-create a domainless placeholder, so never ask
+	// for uid 0 here.
+	avs::uid activeUid = tabContext.GetServerUid();
+	if (!activeUid)
+		activeUid = tabContext.GetNextServerUid();
+
+	if (!activeUid)
 	{
-		sessionClient = teleport::client::SessionClient::GetSessionClient(tabContext.GetServerUid());
-		if (sessionClient && !commandInterface->GetSessionClient().lock())
-		{
-			commandInterface = std::make_unique<HeadlessSessionCommandInterface>(sessionClient);
-			sessionClient->SetSessionCommandInterface(commandInterface.get());
-			sessionClient->SetGeometryCache(geometryBackend.get());
-		}
+		sessionClient	= nullptr;
+		activeServerUid = 0;
+		return;
 	}
 
-	if (!sessionClient)
-		return;
+	if (!sessionClient || activeServerUid != activeUid)
+	{
+		sessionClient = teleport::client::SessionClient::GetSessionClient(activeUid);
+		if (!sessionClient)
+			return;
+		activeServerUid	 = activeUid;
+		commandInterface = std::make_unique<HeadlessSessionCommandInterface>(sessionClient, currentMode, geometryBackend.get(), activeUid);
+		sessionClient->SetSessionCommandInterface(commandInterface.get());
+		sessionClient->SetGeometryCache(geometryBackend.get());
+	}
 
 	// Handle connections (e.g., WebSocket signaling)
 	sessionClient->HandleConnections();
@@ -127,6 +144,19 @@ std::string HeadlessClient::GetStatus() const
 	result += "Inputs Available: " + std::to_string(GetInputDefinitions().size()) + "\n";
 
 	return result;
+}
+
+std::string HeadlessClient::GetGeometryReport(const std::string &what) const
+{
+	if (!geometryBackend)
+		return "No geometry cache.\n";
+	if (what == "nodes")
+		return geometryBackend->GetNodeReport();
+	if (what == "resources")
+		return geometryBackend->GetResourceReport();
+	if (what.empty())
+		return geometryBackend->GetSummary();
+	return "Usage: geometry [nodes|resources]\n";
 }
 
 const std::vector<teleport::core::InputDefinition> &HeadlessClient::GetInputDefinitions() const

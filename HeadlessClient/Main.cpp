@@ -43,49 +43,6 @@ int main(int argc, char *argv[])
 		cmdLine += argv[i];
 	}
 
-	// Find the pc_client directory by searching for client/client_default.ini
-	std::filesystem::path current_path = std::filesystem::current_path();
-	if (!std::filesystem::exists("client/client_default.ini"))
-	{
-#ifdef _WIN32
-		wchar_t filename[700];
-		DWORD res = GetModuleFileNameW(nullptr, filename, 700);
-		if (res)
-		{
-			current_path = filename;
-			current_path = current_path.remove_filename();
-		}
-#else
-		char exe_path[1024];
-		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-		if (len != -1)
-		{
-			exe_path[len] = '\0';
-			current_path = std::filesystem::path(exe_path).parent_path();
-		}
-#endif
-		// Search up the directory tree for client/client_default.ini
-		while (!current_path.empty() && !std::filesystem::exists("client/client_default.ini"))
-		{
-			std::filesystem::path prev_path = current_path;
-			current_path = current_path.append("../").lexically_normal();
-			if (prev_path == current_path)
-				break;
-			if (std::filesystem::exists(current_path))
-				std::filesystem::current_path(current_path);
-			else
-				break;
-		}
-	}
-
-	current_path = current_path.append("client").lexically_normal();
-	if (!std::filesystem::exists(current_path))
-	{
-		TELEPORT_WARN("Cannot find client directory");
-		return 1;
-	}
-	std::filesystem::current_path(current_path);
-
 	// Initialize config
 	auto &config = teleport::client::Config::GetInstance();
 	auto *fileLoader = platform::core::FileLoader::GetFileLoader();

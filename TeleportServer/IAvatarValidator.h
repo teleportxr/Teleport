@@ -10,8 +10,7 @@ namespace teleport
 {
 	namespace server
 	{
-		//! Verdict returned by an IAvatarValidator. Mirrors the
-		//! avatar-result reasons enumerated in plans/avatars_plan.md §3.3 —
+		//! Verdict returned by an IAvatarValidator.
 		//! `reasons` is a list of short machine-readable codes such as
 		//! "file_too_large", "format_not_allowed", "hash_mismatch",
 		//! "download_failed". The optional `message` is human-readable
