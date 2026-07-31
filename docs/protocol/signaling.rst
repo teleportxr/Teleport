@@ -75,7 +75,7 @@ Sent by the client. A **Client** that wants to join (the **Connecting Client**) 
 
 ``identity`` is an opaque string the client supplies for application-level authentication (may be empty).
 
-``capabilities`` (optional) is a free-form object advertising optional protocol features supported by the client. Unknown keys MUST be ignored. Currently defined keys: ``avatar_relay`` (boolean, see :ref:`signaling_avatars`).
+``capabilities`` (optional) is a free-form object advertising optional protocol features supported by the client. Unknown keys MUST be ignored, so the set can grow without a version bump. No keys are currently defined; the member is the extension point for future signaling-level capabilities. Avatar support is **not** among them — see :ref:`signaling_avatars`.
 
 Servers MUST ignore any unrecognised member of ``content``, so the message can be extended without breaking older implementations.
 

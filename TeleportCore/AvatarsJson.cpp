@@ -226,54 +226,7 @@ namespace teleport
 			if (j.contains("reason"))    r.reason   = j.at("reason").get<std::string>();
 		}
 
-		// PeerAvatar --------------------------------------------------
-
-		void to_json(json &j, const PeerAvatar &p)
-		{
-			j = json{
-				{ "peer_client_id", p.peerClientId },
-				{ "peer_node_uid",  p.peerNodeUid },
-				{ "revoked",        p.revoked }
-			};
-			putOpt(j, "url",          p.url);
-			putOpt(j, "content_hash", p.contentHash);
-			putOpt(j, "format",       p.format);
-			if (p.proof.has_value())
-				j["proof"] = *p.proof;
-		}
-
-		void from_json(const json &j, PeerAvatar &p)
-		{
-			p = PeerAvatar{};
-			if (!j.is_object())
-				return;
-			if (j.contains("peer_client_id")) p.peerClientId = j.at("peer_client_id").get<avs::uid>();
-			if (j.contains("peer_node_uid"))  p.peerNodeUid  = j.at("peer_node_uid").get<avs::uid>();
-			if (j.contains("revoked"))        p.revoked      = j.at("revoked").get<bool>();
-			getOpt(j, "url",          p.url);
-			getOpt(j, "content_hash", p.contentHash);
-			getOpt(j, "format",       p.format);
-			if (j.contains("proof") && !j.at("proof").is_null())
-				p.proof = j.at("proof").get<AvatarProofOffer>();
-		}
-
-		// PeerAvatarFailed --------------------------------------------
-
-		void to_json(json &j, const PeerAvatarFailed &p)
-		{
-			j = json{
-				{ "peer_node_uid", p.peerNodeUid },
-				{ "reason",        p.reason }
-			};
-		}
-
-		void from_json(const json &j, PeerAvatarFailed &p)
-		{
-			p = PeerAvatarFailed{};
-			if (!j.is_object())
-				return;
-			if (j.contains("peer_node_uid")) p.peerNodeUid = j.at("peer_node_uid").get<avs::uid>();
-			if (j.contains("reason"))        p.reason      = j.at("reason").get<std::string>();
-		}
+		// No peer-facing avatar codecs: a client is only told about its own
+		// avatar (plans/avatars_plan.md §2.2).
 	}
 }

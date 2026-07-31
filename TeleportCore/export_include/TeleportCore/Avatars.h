@@ -28,25 +28,23 @@ namespace teleport
 
 		//! Session-level capability bag advertised by the client in the
 		//! `connect` signaling message. Free-form on the wire — unknown
-		//! keys MUST be ignored by the peer.
+		//! keys MUST be ignored by the peer. It is an extension point for
+		//! future signaling-level capabilities; none are defined at
+		//! present. Avatars deliberately need none: an avatar reaches a
+		//! client as an ordinary mesh pointer, which every client can
+		//! already fetch (plans/avatars_plan.md D7).
 		struct SignalingCapabilities
 		{
-			//! True if the client can fetch peer avatars directly from
-			//! their host (relay mode); false means the server must
-			//! import-and-stream peer avatars through the geometry pipe.
-			bool avatarRelay = false;
 		};
 
-		inline void to_json(json &j, const SignalingCapabilities &c)
+		inline void to_json(json &j, const SignalingCapabilities &)
 		{
-			j = json{ { "avatar_relay", c.avatarRelay } };
+			j = json::object();
 		}
 
-		inline void from_json(const json &j, SignalingCapabilities &c)
+		inline void from_json(const json &, SignalingCapabilities &c)
 		{
 			c = SignalingCapabilities{};
-			if (j.is_object() && j.contains("avatar_relay") && j.at("avatar_relay").is_boolean())
-				c.avatarRelay = j.at("avatar_relay").get<bool>();
 		}
 
 		// ---------------------------------------------------------------
@@ -124,7 +122,10 @@ namespace teleport
 			std::string              status = "rejected";
 			avs::uid                 nodeUid = 0;
 			bool                     usingDefault = false;
-			std::string              delivery = "import";
+			//! "relay" (the default) — peers were given the owner's own url;
+			//! "import" — the server re-hosted the asset. Informational: it
+			//! says nothing about any other client's avatar.
+			std::string              delivery = "relay";
 			std::vector<std::string> reasons;
 		};
 
@@ -135,24 +136,10 @@ namespace teleport
 			std::string reason;
 		};
 
-		//! server -> peer client: peer-avatar (relay mode)
-		struct PeerAvatar
-		{
-			avs::uid                        peerClientId = 0;
-			avs::uid                        peerNodeUid = 0;
-			std::optional<std::string>      url;
-			std::optional<std::string>      contentHash;
-			std::optional<std::string>      format;
-			std::optional<AvatarProofOffer> proof;
-			bool                            revoked = false;
-		};
-
-		//! peer client -> server: peer-avatar-failed (relay mode)
-		struct PeerAvatarFailed
-		{
-			avs::uid    peerNodeUid = 0;
-			std::string reason;
-		};
+		// There are deliberately no peer-facing avatar messages. A client is
+		// only ever told about its own avatar; another client's arrives as an
+		// ordinary node carrying a mesh pointer, through the geometry
+		// pipeline (plans/avatars_plan.md §2.2).
 
 		// JSON codecs are implemented in TeleportCore/AvatarsJson.cpp.
 		// Declared here so argument-dependent lookup in nlohmann::json's
@@ -174,9 +161,5 @@ namespace teleport
 		void from_json(const json &j, AvatarResult &r);
 		void to_json(json &j, const AvatarRevoke &r);
 		void from_json(const json &j, AvatarRevoke &r);
-		void to_json(json &j, const PeerAvatar &p);
-		void from_json(const json &j, PeerAvatar &p);
-		void to_json(json &j, const PeerAvatarFailed &p);
-		void from_json(const json &j, PeerAvatarFailed &p);
 	}
 }
