@@ -86,8 +86,8 @@ bool HeadlessSessionCommandInterface::GetHandshake(teleport::core::Handshake &ha
 	handshake.axesStandard = avs::AxesStandard::EngineeringStyle;
 	handshake.MetresPerUnit = 1.0f;
 	handshake.FOV = 90.0f;
-	handshake.framerate = 20.0f;
-	handshake.udpBufferSize = sc->GetClientPipeline().source ? sc->GetClientPipeline().source->getSystemBufferSize() : 65536;
+	handshake.framerate = 20;
+	handshake.udpBufferSize = sc->GetClientPipeline().source ? static_cast<uint32_t>(sc->GetClientPipeline().source->getSystemBufferSize()) : 65536;
 	handshake.maxBandwidthKpS = 50000;
 
 	return true;

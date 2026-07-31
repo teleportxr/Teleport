@@ -65,7 +65,7 @@ Sent by the client. A **Client** that wants to join (the **Connecting Client**) 
             "clientID": 0,
             "teleport": "0.9",
             "identity": "<opaque identity string>",
-            "capabilities": { "avatar_relay": true }
+            "capabilities": { "example_capability": true }
         }
     }
 
@@ -75,7 +75,9 @@ Sent by the client. A **Client** that wants to join (the **Connecting Client**) 
 
 ``identity`` is an opaque string the client supplies for application-level authentication (may be empty).
 
-``capabilities`` is a free-form object advertising optional protocol features supported by the client. Unknown keys MUST be ignored. Currently defined keys: ``avatar_relay`` (boolean, see :ref:`signaling_avatars`).
+``capabilities`` (optional) is a free-form object advertising optional protocol features supported by the client. Unknown keys MUST be ignored. Currently defined keys: ``avatar_relay`` (boolean, see :ref:`signaling_avatars`).
+
+Servers MUST ignore any unrecognised member of ``content``, so the message can be extended without breaking older implementations.
 
 ``connect-response``
 ^^^^^^^^^^^^^^^^^^^^
@@ -227,7 +229,8 @@ avatar it wants to use. If avatars are required, the client should send an ``ava
 If avatars are required and the client has no avatar to offer, the server may terminate the connection or use a default avatar for the client.
 The server will reply with an ``avatar-result`` indicating whether the offer was accepted or rejected.
 Servers may later send ``avatar-revoke`` to invalidate an accepted avatar.
-In **relay** mode the server forwards the owner's URL and proof to peers as ``peer-avatar`` messages, and a peer that fails to fetch the URL replies ``peer-avatar-failed``.
+
+Every avatar message concerns the recipient's **own** avatar. No signaling message tells a client anything about another client's avatar.
 
 The full protocol — wire fields, requirements bag, proof schemes, security and privacy model — is specified in ``plans/avatars_plan.md`` in the source tree.
 
@@ -255,24 +258,24 @@ The full protocol — wire fields, requirements bag, proof schemes, security and
                    "node_uid": 999, "using_default": false, "delivery": "relay",
                    "reasons": [] } }
 
-Relay-mode peer messages:
+If an avatar policy is implemented, every client receives ``avatar-policy`` and is expected to answer it.
 
-  .. code-block:: JSON
+An accepted avatar reaches other clients as an ordinary node in the scene whose mesh resource is delivered as a :ref:`MeshPointer <geometry_payload>` chunk — a URL the receiving client fetches over HTTPS, exactly as for any other mesh. ``avatar-result.delivery`` tells the owner whose URL that pointer carries:
 
-    { "teleport-signal-type": "peer-avatar",
-      "content": { "peer_client_id": 100, "peer_node_uid": 200,
-                   "url": "https://avatars.example.com/u/42.glb",
-                   "content_hash": "sha256:abcd", "format": "glb",
-                   "revoked": false } }
+.. list-table::
+   :widths: 10 40
+   :header-rows: 1
 
-  .. code-block:: JSON
+   * - ``delivery``
+     - Meaning
+   * - ``"relay"``
+     - The default. The pointer carries the owner's own URL, so peers fetch the asset from the avatar host. The URL is therefore visible to every other client in the session; an owner that does not want this sets ``"allow_relay": false`` on its offer. A relayed URL must end in a recognised asset extension (``.glb``, ``.vrm``, ``.gltf``), since clients select a decoder by extension.
+   * - ``"import"``
+     - The server re-hosts the asset at a URL it controls and the pointer carries that. Peers never see the owner's URL.
 
-    { "teleport-signal-type": "peer-avatar-failed",
-      "content": { "peer_node_uid": 200, "reason": "fetch_timeout" } }
+The server chooses the mode, may choose differently for different peers, and may change it during the session without notifying anyone. A client that cannot fetch a pointer reports it with the ordinary ``ResourceLost`` message on the reliable client-to-server channel; the server then re-hosts for that client alone. There is no avatar-specific failure message.
 
-Avatar negotiation itself is not gated on any capability: every client receives ``avatar-policy`` and is expected to answer it. What ``connect.content.capabilities`` gates is the **distribution mode**. A client that omits the field, or sets ``avatar_relay`` to false, only receives **import**-mode avatars — i.e. ``avatar-result.delivery == "import"``, and avatars reach it through the standard geometry pipeline rather than as ``peer-avatar`` messages.
-
-In import mode ``avatar-result.node_uid`` is the session uid of the avatar's root node in the server's scene, and the owning client may use it to recognise its own avatar in geometry traffic (for example to hide it in a first-person view). It is ``0`` when the server accepted the avatar but imported nothing — the client should treat a zero uid as "no node to track", not as an error. Peers are never sent the owner's original URL in this mode; they receive the imported geometry like any other scene resource.
+``avatar-result.node_uid`` is the session uid of the avatar's root node in the server's scene. The owning client may use it to recognise its own avatar in geometry traffic — for example to hide it in a first-person view. It is ``0`` when the server accepted the avatar but created no node; treat a zero uid as "no node to track", not as an error.
 
 ``disconnect``
 ^^^^^^^^^^^^^^

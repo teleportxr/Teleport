@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 	}
 	catch (const std::exception &e)
 	{
-		TELEPORT_INTERNAL_CERR("Fatal error: {}", e.what());
+		TELEPORT_WARN("Fatal error: {}", e.what());
 		return 2;
 	}
 }
