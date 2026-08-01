@@ -22,6 +22,7 @@
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "ProcessHandler.h"
+#include "TeleportClient/ClientBootstrap.h"
 #include "TeleportClient/TabContext.h"
 #include "TeleportClient/URLHandlers.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -177,28 +178,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	if (!std::filesystem::exists(current_path))
 		return -1;
 	std::filesystem::current_path(current_path);
-	auto &config = client::Config::GetInstance();
-	// Get a folder we can write to:
-	char szPath[MAX_PATH];
 
-	HRESULT hResult = SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath);
-	if (hResult == S_OK)
+	// Bootstrap client environment (find assets, resolve storage folder, load config)
+	if (!client::BootstrapClientEnvironment(cmdLine))
 	{
-		storage_folder = std::string(szPath) + "/TeleportXR";
+		TELEPORT_INTERNAL_CERR("Failed to bootstrap client environment");
+		return -1;
 	}
-	if (storage_folder.length() > 200)
-	{
-		// Too long, use the current path.
-		storage_folder = std::filesystem::current_path().string();
-		if (storage_folder.length() > 200)
-		{
-			// Too long, use the current path.
-			std::cerr << "Storage path " << storage_folder << " is too long." << std::endl;
-			exit(135);
-		}
-	}
-	config.SetStorageFolder(storage_folder.c_str());
-	clientApp.Initialize();
+
+	auto &config = client::Config::GetInstance();
+	storage_folder = client::GetStorageFolderPath();
+
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)
 	{
@@ -470,7 +460,7 @@ void InitRenderer(HWND hWnd, bool try_init_vr, bool dev_mode)
 	// if(config.recent_server_urls.size())
 	//	client::SessionClient::GetSessionClient(1)->SetServerIP(config.recent_server_urls[0]);
 
-	dsmi->AddWindow(hWnd);
+	dsmi->AddWindow(hWnd, platform::crossplatform::PixelFormat::UNKNOWN, config.options.vsync);
 	dsmi->SetRenderer(clientRenderer);
 }
 static platform::core::DefaultProfiler cpuProfiler;
@@ -625,6 +615,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(hWnd);
 			if(w)
 			{
+			// Apply vsync changes made in the Settings GUI.
+			bool vsync = client::Config::GetInstance().options.vsync;
+			if (w->IsVsync() != vsync)
+				w->SetVsync(vsync);
 			clientRenderer->ResizeView(0, w->viewport.w, w->viewport.h);
 			}
 			// Call StartFrame here so the command list will be in a recording state for D3D12
@@ -1042,7 +1036,7 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)window);
 	if (g_surface != VK_NULL_HANDLE)
 	{
-		dsmi->AddWindow(&g_surface);
+		dsmi->AddWindow(&g_surface, platform::crossplatform::PixelFormat::UNKNOWN, config.options.vsync);
 	}
 	dsmi->SetRenderer(clientRenderer);
 }
@@ -1057,7 +1051,7 @@ int main(int argc, char *argv[])
 
 	// Enable Default-category internal logging so diagnostic TELEPORT_INTERNAL_COUT(Default, ...)
 	// messages (e.g. WebRTC media track attachment, audio decoder traces) reach the log file.
-	teleport::SetLogCategoryEnabled(teleport::LogCategory::Signaling, true);
+	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, true);
 
 	// Parse command line
 	for (int i = 1; i < argc; i++)
@@ -1105,27 +1099,16 @@ int main(int argc, char *argv[])
 	}
 	std::filesystem::current_path(current_path);
 
-	auto &config = client::Config::GetInstance();
+	// Bootstrap client environment (find assets, resolve storage folder, load config)
+	if (!client::BootstrapClientEnvironment(cmdLine))
+	{
+		TELEPORT_WARN("Failed to bootstrap client environment");
+		return -1;
+	}
 
-	// Get storage folder (Linux equivalent of CSIDL_LOCAL_APPDATA)
-	const char *home = getenv("HOME");
-	if (!home)
-	{
-		struct passwd *pw = getpwuid(getuid());
-		if (pw)
-			home = pw->pw_dir;
-	}
-	if (home)
-	{ 
-		storage_folder = std::string(home) + "/.local/share/TeleportXR";
-		std::filesystem::create_directories(storage_folder);
-	}
-	else
-	{
-		storage_folder = std::filesystem::current_path().string();
-	}
-	config.SetStorageFolder(storage_folder.c_str());
-	clientApp.Initialize();
+	auto &config = client::Config::GetInstance();
+	storage_folder = client::GetStorageFolderPath();
+
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)
 	{
@@ -1168,6 +1151,10 @@ int main(int argc, char *argv[])
 			GLFWimage icon{w, h, pixels};
 			glfwSetWindowIcon(g_window, 1, &icon);
 			stbi_image_free(pixels);
+		}
+		else
+		{
+			TELEPORT_WARN("Window icon not found: assets/textures/teleportxr.png");
 		}
 	}
 
@@ -1219,6 +1206,10 @@ int main(int argc, char *argv[])
 			platform::crossplatform::DisplaySurface *w = displaySurfaceManager.GetWindow(&g_surface);
 			if (w)
 			{
+				// Apply vsync changes made in the Settings GUI.
+				bool vsync = client::Config::GetInstance().options.vsync;
+				if (w->IsVsync() != vsync)
+					w->SetVsync(vsync);
 				// Bootstrap only: if the DisplaySurface viewport has never been set (e.g. on
 				// platforms/compositors where VkSurfaceCapabilitiesKHR::currentExtent is the
 				// "undefined" sentinel before the window is mapped), seed it from GLFW so the

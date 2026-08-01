@@ -1,6 +1,9 @@
 #include "TeleportServer/AvatarService.h"
 
+#include "TeleportServer/IAvatarImporter.h"
+
 #include "TeleportCore/ErrorHandling.h"
+#include "TeleportCore/Redact.h"
 
 using nlohmann::json;
 
@@ -52,8 +55,10 @@ namespace teleport
 				return;
 			}
 			lastOffer = offer;
-			TELEPORT_INTERNAL_COUT(Default, "avatar-offer  <- client {} policy_id={} have_avatar={}"
-				, clientID, offer.policyId, offer.haveAvatar);
+			// The URL may carry a bearer token; only ever log it redacted
+			// (plans/avatars_plan.md §8).
+			TELEPORT_INTERNAL_COUT(Default, "avatar-offer  <- client {} policy_id={} have_avatar={} url={}"
+				, clientID, offer.policyId, offer.haveAvatar, offer.url ? core::RedactUrl(*offer.url) : "<none>");
 
 			// If we have not sent a policy, or the offer references a different
 			// policy_id, reject so the client knows it is talking about something
@@ -71,13 +76,15 @@ namespace teleport
 				return;
 			}
 
-			// Phase 2: regardless of what the client offered, the server uses
-			// its default avatar. nodeUid is 0 because no real node has been
-			// imported.
+			// Validation is host-side in the C++ server (IAvatarValidator has
+			// no library default), so every matching offer falls back to the
+			// default avatar. With an importer wired, the default is a real
+			// scene node whose uid travels back in the result; without one,
+			// nodeUid stays 0 (Phase-2 behaviour).
 			core::AvatarResult ok;
 			ok.policyId     = offer.policyId;
 			ok.status       = "using_default";
-			ok.nodeUid      = 0;
+			ok.nodeUid      = importer ? importer->ImportDefaultForClient(clientID) : 0;
 			ok.usingDefault = true;
 			ok.delivery     = "import";
 			Reply(ok);
@@ -89,11 +96,13 @@ namespace teleport
 			if (content.is_object() && content.contains("policy_id"))
 				policyId = content.at("policy_id").get<avs::uid>();
 			TELEPORT_INTERNAL_COUT(Default, "avatar-revoke <- client {} policy_id={}", clientID, policyId);
-			// In Phase 2 a revoke from the client just drops cached state; the
-			// server keeps the same policy in force and a new offer is expected
-			// next.
+			// A revoke from the client withdraws its avatar: drop cached
+			// state and remove any imported node. The server keeps the same
+			// policy in force and a new offer is expected next.
 			lastOffer.reset();
 			lastResult.reset();
+			if (importer)
+				importer->RemoveForClient(clientID);
 		}
 
 		void AvatarService::Reply(const core::AvatarResult &result)

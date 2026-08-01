@@ -421,6 +421,7 @@ if(TELEPORT_SERVER)
 endif()
 
 option(TELEPORT_CLIENT "Build for client?" ON)
+option(TELEPORT_HEADLESS_CLIENT "Build headless terminal client?" ${TELEPORT_CLIENT})
 
 if(TELEPORT_CLIENT)
 	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
@@ -521,9 +522,10 @@ if(TELEPORT_UNIX)
 endif()
 option(NO_TESTS "" ON)
 
-	add_subdirectory(thirdparty/libdatachannel)
-	set_target_properties(datachannel PROPERTIES EXCLUDE_FROM_ALL ON)
-	set_target_properties(datachannel PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD ON)
+	# EXCLUDE_FROM_ALL: only datachannel-static is linked (by libavstream); this also
+	# skips libdatachannel's install() rules, which would otherwise make CPack demand
+	# the never-built libdatachannel.so. Dependency targets still build.
+	add_subdirectory(thirdparty/libdatachannel EXCLUDE_FROM_ALL)
  
 	set(sctp_werror OFF)
 	set_target_properties( datachannel PROPERTIES FOLDER thirdparty/datachannel)
@@ -676,6 +678,9 @@ if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 	add_subdirectory(TeleportAudio)
 	add_subdirectory(libavstream)
 	add_subdirectory(pc_client)
+	if(TELEPORT_HEADLESS_CLIENT)
+		add_subdirectory(HeadlessClient)
+	endif()
 	add_subdirectory(ClientRender)
 	#message("2 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
 	add_subdirectory(TeleportClient)

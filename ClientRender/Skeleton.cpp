@@ -125,7 +125,7 @@ void RecurseChildrenIntoOzz(ozz::animation::offline::RawSkeleton		&raw_skeleton,
 	}
 	else
 	{
-		TELEPORT_WARN("Failed to create joint mapping for skeleto: {}n.",idx_in_bones);
+		TELEPORT_WARN("Failed to create joint mapping of id {} for skeleton: {}.", n.id, idx_in_bones);
 	}
 	std::vector<avs::uid> sorted_children;
 	

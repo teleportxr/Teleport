@@ -196,6 +196,9 @@ else()
 		RENAME TeleportXR.png COMPONENT client)
 	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/TeleportXR.desktop"
 		DESTINATION /usr/share/applications COMPONENT client)
+	# Runtime window icon: Main.cpp loads this relative to the client working directory.
+	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
+		DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/textures COMPONENT client)
 	# Convenience symlink so the binary can be invoked from a shell.
 	install(CODE "
 		file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/bin\")

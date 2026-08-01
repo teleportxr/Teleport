@@ -5,6 +5,8 @@
 #include "Platform/CrossPlatform/Framebuffer.h"
 #include "Renderer.h"
 #include "TeleportClient/Log.h"
+#include <algorithm>
+#include <cmath>
 #include <format>
 #include <libavstream/network/webrtc_networksource.h>
 #if TELEPORT_CLIENT_USE_VULKAN
@@ -34,6 +36,30 @@ namespace
 				return 0;
 		}
 		return std::strtoull(mid.c_str(), nullptr, 10);
+	}
+
+	// Normalised (0-1) perceptual level of a mono 16-bit PCM buffer, for the mic amplitude meter.
+	// Raw linear RMS of speech rarely exceeds ~0.05-0.1 even when shouting, so a direct 0-1 mapping
+	// reads as almost empty. Instead map dBFS onto [0,1] like a conventional VU/level meter, with
+	// -50dB (near silence) at the bottom and -6dB (just under clipping) at the top.
+	float ComputePcmRmsLevel(const uint8_t *data, size_t dataSize)
+	{
+		const int16_t *samples		= reinterpret_cast<const int16_t *>(data);
+		size_t sampleCount			= dataSize / sizeof(int16_t);
+		if (sampleCount == 0)
+			return 0.0f;
+		double sumSquares = 0.0;
+		for (size_t i = 0; i < sampleCount; i++)
+		{
+			double s = samples[i] / 32768.0;
+			sumSquares += s * s;
+		}
+		double rms				 = std::sqrt(sumSquares / sampleCount);
+		constexpr double minDb	 = -50.0;
+		constexpr double maxDb	 = -6.0;
+		double			 db		 = 20.0 * std::log10(std::max(rms, 1e-6));
+		double			 level	 = (db - minDb) / (maxDb - minDb);
+		return static_cast<float>(std::clamp(level, 0.0, 1.0));
 	}
 }
 
@@ -2105,8 +2131,13 @@ bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const telep
 			clientPipeline.pipeline.add(&clientPipeline.opusAudioEncoder);
 
 			auto *encoderPtr = &clientPipeline.opusAudioEncoder;
-			auto recordingFn = [encoderPtr](const uint8_t *data, size_t dataSize) -> void
+			auto recordingFn = [encoderPtr, this](const uint8_t *data, size_t dataSize) -> void
 			{
+				// Keep the amplitude meter live even while muted, so the UI can confirm
+				// the mic itself is working before the user unmutes it.
+				micAmplitude.store(ComputePcmRmsLevel(data, dataSize));
+				if (config.options.micMuted)
+					return;
 				encoderPtr->submitPcmFrame(data, dataSize);
 				// Drain available 20 ms frames immediately on the capture thread
 				// so we don't depend on the pipeline tick to flush latency-sensitive

@@ -200,9 +200,15 @@ void TabContext::ConnectionComplete(avs::uid uid)
 {
 	if (uid==next_server_uid)
 	{
-		auto currentSessionClient = SessionClient::GetSessionClient(server_uid);
-		if (currentSessionClient)
-			currentSessionClient->Disconnect(0);
+		// On a first connection server_uid is still 0, and GetSessionClient(0) would create a
+		// domainless placeholder client rather than returning null - there is no outgoing session
+		// to disconnect in that case. Guard as CancelConnection() does.
+		if (server_uid != 0)
+		{
+			auto currentSessionClient = SessionClient::GetSessionClient(server_uid);
+			if (currentSessionClient)
+				currentSessionClient->Disconnect(0);
+		}
 		server_uid = next_server_uid;
 		next_server_uid=0;
 	}

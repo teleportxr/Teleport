@@ -22,6 +22,7 @@
 #include "client/Shaders/cubemap_constants.sl"
 #include "client/Shaders/video_types.sl"
 #include <libavstream/surfaces/surface_interface.hpp>
+#include <atomic>
 #if _MSC_VER
 #include "TeleportAudio/PC_AudioPlayer.h"
 #elif __ANDROID__
@@ -165,6 +166,10 @@ namespace teleport
 			teleport::audio::LinuxAudioPlayer audioPlayer;
 			teleport::audio::LinuxAudioPlayer spatialPlaybackPlayer;
 #endif
+			// Normalised (0-1) RMS level of the most recently captured mic buffer, updated on the
+			// capture thread and read by the GUI each frame for the amplitude meter. Kept live even
+			// while micMuted, so the meter still shows the mic is working while muted.
+			std::atomic<float> micAmplitude{0.0f};
 			teleport::audio::SpatialAudioMixer spatialAudioMixer;
 			//! Per-frame: publish each active audio source's stereo gains from its node's
 			//! world transform relative to the listener. Driven from RenderLocalNodes.
@@ -348,6 +353,10 @@ namespace teleport
 			virtual avs::DecoderStatus GetVideoDecoderStatus()
 			{
 				return avs::DecoderStatus::DecoderUnavailable;
+			}
+			float GetMicAmplitude() const
+			{
+				return micAmplitude.load();
 			}
 
 			void UpdateTagDataBuffers(platform::crossplatform::GraphicsDeviceContext &deviceContext);

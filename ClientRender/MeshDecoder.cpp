@@ -199,66 +199,6 @@ namespace teleport::core
 		}
 	}
 
-	// Helper function to convert from glTF node TRS to Transform
-	avs::Transform ConvertNodeTransform(const tinygltf::Node &node, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
-	{
-		avs::Transform transform;
-
-		// Initialize with identity
-		transform.position = {0.0f, 0.0f, 0.0f};
-		transform.rotation = {0.0f, 0.0f, 0.0f, 1.0f}; // Identity quaternion (w=1)
-		transform.scale	   = {1.0f, 1.0f, 1.0f};
-
-		// If we have a matrix, decompose it to TRS
-		if (!node.matrix.empty())
-		{
-			// Convert the matrix to appropriate format
-			mat4 matrix;
-			for (int i = 0; i < 16; i++)
-			{
-				matrix.m[i] = static_cast<float>(node.matrix[i]);
-			}
-
-			// Decompose matrix to TRS
-			// This would depend on your math library implementation
-			// For example:
-			// DecomposeMatrix(matrix, transform.position, transform.rotation, transform.scale);
-
-			// Or use separate components if provided
-		}
-		else
-		{
-			// Use separate TRS components if available
-			if (!node.translation.empty())
-			{
-				transform.position.x = static_cast<float>(node.translation[0]);
-				transform.position.y = static_cast<float>(node.translation[1]);
-				transform.position.z = static_cast<float>(node.translation[2]);
-			}
-
-			if (!node.rotation.empty())
-			{
-				// glTF uses XYZW quaternion format
-				transform.rotation.x = static_cast<float>(node.rotation[0]);
-				transform.rotation.y = static_cast<float>(node.rotation[1]);
-				transform.rotation.z = static_cast<float>(node.rotation[2]);
-				transform.rotation.w = static_cast<float>(node.rotation[3]);
-			}
-
-			if (!node.scale.empty())
-			{
-				transform.scale.x = static_cast<float>(node.scale[0]);
-				transform.scale.y = static_cast<float>(node.scale[1]);
-				transform.scale.z = static_cast<float>(node.scale[2]);
-			}
-		}
-
-		// Convert transform from source axes standard to target
-		avs::ConvertTransform(sourceStandard, targetStandard, transform);
-
-		return transform;
-	}
-
 	static std::vector<std::string> name_order = {
 		"hips",			"spine",		 "chest",		  "spine1",		  "upperchest",	   "spine2",	"neck",			 "head",
 		"leftshoulder", "leftupperarm",	 "leftuparm",	  "leftlowerarm", "leftforearm",   "lefthand",	"rightshoulder", "rightupperarm",
@@ -866,7 +806,7 @@ namespace teleport::core
 			// Extract transformation data
 			if (!gltfNode.matrix.empty())
 			{
-				// If matrix is provided, decompose it
+				// If matrix is provided, decompose it to TRS
 				Eigen::Matrix4d matrix;
 				for (int j = 0; j < 16; j++)
 				{
@@ -879,14 +819,12 @@ namespace teleport::core
 				avsNode.localTransform.position = vec3((float)tr.coeff(0), (float)tr.coeff(1), (float)tr.coeff(2));
 
 				{
-					auto			   rt = aff.rotation();
-					Eigen::Quaterniond q(rt);
+					Eigen::Matrix3d rotation, scaling;
+					aff.computeRotationScaling(&rotation, &scaling);
+					Eigen::Quaterniond q(rotation);
 					avsNode.localTransform.rotation = {(float)q.x(), (float)q.y(), (float)q.z(), (float)q.w()};
+					avsNode.localTransform.scale	= {(float)scaling(0, 0), (float)scaling(1, 1), (float)scaling(2, 2)};
 				}
-				// In a real implementation, you'd decompose this matrix
-				// For now, we'll just use it as-is assuming your system handles matrix transforms
-				// But typically you'd convert it to TRS components
-				// DecomposeMatrix(matrix, avsNode.localTransform.position, avsNode.localTransform.rotation, avsNode.localTransform.scale);
 			}
 			else
 			{
@@ -1083,7 +1021,6 @@ namespace teleport::core
 				break;
 			}
 		}
-		std::set<avs::uid> skeleton_roots;
 		// Set up skinned meshes and skeleton references
 		for (int i = 0; i < (int)model.nodes.size(); i++)
 		{
@@ -1098,12 +1035,12 @@ namespace teleport::core
 				avs::uid			  skeleton_uid = skeleton_uids[gltfNode.skin];
 				if (!dg.skeletons[skeleton_uid].boneIDs.size())
 				{
-					for (int j = 0; j < skeleton_uids.size(); j++)
+					for (const auto &[skinIndex, mergedSkeletonUid] : skeleton_uids)
 					{
-						avs::Skeleton &sk = dg.skeletons[skeleton_uids[i]];
+						avs::Skeleton &sk = dg.skeletons[mergedSkeletonUid];
 						if (sk.boneIDs.size() > 0 && sk.rootBoneId == dg.skeletons[skeleton_uid].rootBoneId)
 						{
-							skeleton_uid = skeleton_uids[i];
+							skeleton_uid = mergedSkeletonUid;
 							break;
 						}
 					}
@@ -1111,7 +1048,6 @@ namespace teleport::core
 				avs::Skeleton &avsSkeleton = dg.skeletons[skeleton_uid];
 				int			   root_index  = skin.skeleton >= 0 ? skin.skeleton : skin.joints[0];
 				avsNode.skeletonNodeID	   = avsSkeleton.rootBoneId;
-				skeleton_roots.insert(avsNode.skeletonNodeID);
 				// Set root node
 				if (!avsSkeleton.boneIDs.empty())
 				{
@@ -1141,20 +1077,12 @@ namespace teleport::core
 			auto &rootNode		= dg.nodes[avsSkeleton.rootBoneId];
 			rootNode.skeletonID = s.second;
 		}
-		if (vrmSpecVersion < 1.0)
-		{
-			//	dg.vrmFixRotation=true;
-			for (auto r : skeleton_roots)
-			{
-				auto &rootNode = dg.nodes[r];
-				{
-					platform::crossplatform::Quaternionf q = rootNode.localTransform.rotation;
-					q.Rotate(PI, {0, 1.0f, 0});
-					rootNode.localTransform.rotation = {q.x, q.y, q.z, q.s};
-				}
-			}
-		}
-
+		// No facing correction is needed for VRM 0.x: its models face -Z in glTF axes, which the
+		// OpenGL->Engineering conversion maps directly to engine-forward +Y. Rotating skeleton roots here
+		// (as previously done) only yawed mesh nodes parented inside the skeleton (hair, glasses),
+		// leaving top-level mesh nodes untouched, so parts disagreed by 180 degrees.
+		// VRM 1.0 and glTF-conforming assets face +Z (imported: -Y); if those should also face +Y,
+		// yaw the scene root nodes here, keyed on vrmSpecVersion >= 1.0.
 
 		// Set clockwise faces flag
 		// glTF uses counter-clockwise winding by default

@@ -277,11 +277,10 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 				{
 					// Advertise session-level capabilities so the server knows
 					// which optional protocol features this client supports.
-					// Native PC/Android clients do not yet implement avatar
-					// relay (no in-process glTF loader / HTTP fetcher), so the
-					// flag is false until that lands. See plans/avatars_plan.md.
+					// None are defined at present — avatars need none, since
+					// an avatar arrives as an ordinary mesh pointer that the
+					// geometry decoder already fetches. See plans/avatars_plan.md.
 					teleport::core::SignalingCapabilities capabilities;
-					capabilities.avatarRelay = false;
 					json message = {{"teleport-signal-type", "connect"}
 										,{"content",	{
 															{"teleport", "0.9"}

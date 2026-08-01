@@ -219,6 +219,18 @@ void LinuxAudioPlayer::captureThreadFunc()
 		sampleSpec.format = PA_SAMPLE_S16LE;
 	}
 
+	const size_t bufferSize = (mAudioSettings.sampleRate * mAudioSettings.numChannels * mAudioSettings.bitsPerSample / 8) / 100; // 10ms buffer
+
+	// Request a fragment size matching our intended 10ms read chunk. Without this, pa_simple_new
+	// falls back to PulseAudio's own default buffering, which can add substantial latency (well
+	// beyond the ~10ms this code otherwise implies) between a sound occurring and us reading it.
+	pa_buffer_attr bufferAttr;
+	bufferAttr.maxlength = static_cast<uint32_t>(-1);
+	bufferAttr.tlength	 = static_cast<uint32_t>(-1);
+	bufferAttr.prebuf	 = static_cast<uint32_t>(-1);
+	bufferAttr.minreq	 = static_cast<uint32_t>(-1);
+	bufferAttr.fragsize	 = static_cast<uint32_t>(bufferSize);
+
 	int error;
 	pa_simple* captureStream = pa_simple_new(
 		nullptr,
@@ -228,7 +240,7 @@ void LinuxAudioPlayer::captureThreadFunc()
 		"Audio Capture",
 		&sampleSpec,
 		nullptr,
-		nullptr,
+		&bufferAttr,
 		&error
 	);
 
@@ -239,7 +251,6 @@ void LinuxAudioPlayer::captureThreadFunc()
 		return;
 	}
 
-	const size_t bufferSize = (mAudioSettings.sampleRate * mAudioSettings.numChannels * mAudioSettings.bitsPerSample / 8) / 100; // 10ms buffer
 	std::vector<uint8_t> buffer(bufferSize);
 
 	while (mCaptureRunning)

@@ -105,9 +105,32 @@ ozz::span<const T> BufferView(const tinygltf::Model& _model,
     return ozz::span<const T>();
   }
 
+  if (_accessor.bufferView < 0 ||
+      _accessor.bufferView >= static_cast<int>(_model.bufferViews.size())) {
+    ozz::log::Err() << "Invalid buffer view access. Accessor buffer view "
+                       "index is out of range."
+                    << std::endl;
+    return ozz::span<const T>();
+  }
   const tinygltf::BufferView& bufferView =
       _model.bufferViews[_accessor.bufferView];
+  if (bufferView.buffer < 0 ||
+      bufferView.buffer >= static_cast<int>(_model.buffers.size())) {
+    ozz::log::Err() << "Invalid buffer view access. Buffer view buffer "
+                       "index is out of range."
+                    << std::endl;
+    return ozz::span<const T>();
+  }
   const tinygltf::Buffer& buffer = _model.buffers[bufferView.buffer];
+  const size_t byte_offset =
+      static_cast<size_t>(bufferView.byteOffset) + _accessor.byteOffset;
+  const size_t byte_length = static_cast<size_t>(_accessor.count) * sizeof(T);
+  if (byte_offset + byte_length > buffer.data.size()) {
+    ozz::log::Err() << "Invalid buffer view access. Accessor byte range "
+                       "exceeds buffer size."
+                    << std::endl;
+    return ozz::span<const T>();
+  }
   const T* begin = reinterpret_cast<const T*>(
       buffer.data.data() + bufferView.byteOffset + _accessor.byteOffset);
   return ozz::span<const T>(begin, _accessor.count);

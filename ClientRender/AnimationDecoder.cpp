@@ -14,6 +14,7 @@
 #include "ozz/gltf2ozz.h"
 #include <json.hpp>
 #include <ozz/base/containers/set.h>
+#include <algorithm>
 
 using nlohmann::json;
 
@@ -267,14 +268,33 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 		return false;
 	}
 
+	if (_sampler.input < 0 || _sampler.input >= static_cast<int>(model.accessors.size()))
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor index out of range.");
+		return false;
+	}
 	auto &input = model.accessors[_sampler.input];
-	assert(input.maxValues.size() == 1);
+
+	const ozz::span<const float> timestamps = BufferView<float>(model, input);
 
 	// The max[0] property of the input accessor is the animation duration
 	// this is required to be present by the spec:
 	// "Animation Sampler's input accessor must have min and max properties
 	// defined."
-	const float duration = static_cast<float>(input.maxValues[0]);
+	// tinygltf does not enforce this, so files from some exporters (e.g.
+	// VRoid .vrma) can leave maxValues empty; in that case derive the
+	// duration from the largest timestamp in the accessor data itself
+	// rather than rejecting the whole animation.
+	float duration = 0.0f;
+	if (input.maxValues.size() == 1)
+	{
+		duration = static_cast<float>(input.maxValues[0]);
+	}
+	else if (!timestamps.empty())
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor is missing its max property. Deriving duration from timestamp data.");
+		duration = *std::max_element(timestamps.begin(), timestamps.end());
+	}
 
 	// If this channel's duration is larger than the animation's duration
 	// then increase the animation duration to match.
@@ -283,11 +303,23 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 		*_duration = duration;
 	}
 
-	assert(input.type == TINYGLTF_TYPE_SCALAR);
+	if (input.type != TINYGLTF_TYPE_SCALAR)
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler input accessor has an unexpected type.");
+		return false;
+	}
+	if (_sampler.output < 0 || _sampler.output >= static_cast<int>(model.accessors.size()))
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler output accessor index out of range.");
+		return false;
+	}
 	auto &_output = model.accessors[_sampler.output];
-	assert(_output.type == TINYGLTF_TYPE_VEC3 || _output.type == TINYGLTF_TYPE_VEC4);
+	if (_output.type != TINYGLTF_TYPE_VEC3 && _output.type != TINYGLTF_TYPE_VEC4)
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Animation sampler output accessor has an unexpected type.");
+		return false;
+	}
 
-	const ozz::span<const float> timestamps = BufferView<float>(model, input);
 	if (timestamps.empty())
 	{
 		return true;
@@ -297,12 +329,11 @@ bool SampleAnimationChannel(const tinygltf::Model							  &model,
 	bool valid = false;
 	if (_target_path == "translation")
 	{
-		// TODO: Restore translation
-		//valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
-		//for(auto &t:_track->translations)
-		//{
-		//	t.value=ConvertPosition(sourceAxesStandard,targetAxesStandard,t.value);
-		//}
+		valid = SampleChannel(model, _sampler.interpolation, _output, timestamps, _sampling_rate, duration, &_track->translations);
+		for(auto &t:_track->translations)
+		{
+			t.value=ConvertPosition(sourceAxesStandard,targetAxesStandard,t.value);
+		}
 	}
 	else if (_target_path == "rotation")
 	{
@@ -343,7 +374,6 @@ const tinygltf::Node *FindNodeByName(const tinygltf::Model &model, const std::st
 
 	return nullptr;
 }
-
 bool ImportAnimations(const tinygltf::Model					&model,
 					  const ozz::animation::Skeleton		&skeleton,
 					  float									 _sampling_rate,
@@ -425,6 +455,10 @@ bool ImportAnimations(const tinygltf::Model					&model,
 			// if(j=="leftLowerArm")
 			for (auto &channel : channels)
 			{
+				if (channel->sampler < 0 || channel->sampler >= static_cast<int>(gltf_animation.samplers.size()))
+				{
+					continue;
+				}
 				auto &sampler = gltf_animation.samplers[channel->sampler];
 				if (!SampleAnimationChannel(model, sampler, channel->target_path, _sampling_rate, &_animation->duration, &track, sourceAxesStandard, targetAxesStandard))
 				{
@@ -483,7 +517,11 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size, avs::AxesStandard 
 	tinygltf::Model model;
 	std::string		err;
 	std::string		warn;
-	loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), "");
+	if (!loader.LoadBinaryFromMemory(&model, &err, &warn, data, static_cast<unsigned int>(size), ""))
+	{
+		TELEPORT_INTERNAL_COUT(Default, "Failed to parse animation glb: {}", err);
+		return false;
+	}
 	json config;
 	//! Mapping from node names to the initial poses.
 	if (!ImportSkeleton(*raw_skeleton, model, (platform::crossplatform::AxesStandard)sourceAxesStandard,  (platform::crossplatform::AxesStandard)targetAxesStandard))
@@ -494,6 +532,7 @@ bool Animation::LoadFromGlb(const uint8_t *data, size_t size, avs::AxesStandard 
 	ozz::unique_ptr<ozz::animation::Skeleton> skeleton = skeletonBuilder(*raw_skeleton);
 	if (!ImportAnimations(model, *skeleton, 0.0f, &(*raw_animation),  (platform::crossplatform::AxesStandard)sourceAxesStandard,  (platform::crossplatform::AxesStandard)targetAxesStandard))
 	{
+		TELEPORT_INTERNAL_COUT(Default, "Failed to import animations from glb.");
 		return false;
 	}
 	duration=raw_animation->duration;

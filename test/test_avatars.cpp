@@ -12,23 +12,21 @@
 using nlohmann::json;
 using namespace teleport::core;
 
-TEST_CASE("SignalingCapabilities round-trips through JSON", "[avatars][capabilities]")
+TEST_CASE("SignalingCapabilities serialises as an empty object", "[avatars][capabilities]")
 {
-	SignalingCapabilities a;
-	a.avatarRelay = true;
-	json j = a;
-	REQUIRE(j.at("avatar_relay").get<bool>() == true);
-	SignalingCapabilities b = j.get<SignalingCapabilities>();
-	REQUIRE(b.avatarRelay == true);
+	// No capabilities are defined: the bag is an extension point only.
+	// Avatars deliberately need none — an avatar arrives as an ordinary
+	// mesh pointer, which every client can already fetch.
+	json j = SignalingCapabilities{};
+	REQUIRE(j.is_object());
+	REQUIRE(j.empty());
 }
 
-TEST_CASE("SignalingCapabilities defaults to all-false on empty / missing keys", "[avatars][capabilities]")
+TEST_CASE("SignalingCapabilities ignores unknown keys rather than failing", "[avatars][capabilities]")
 {
-	SignalingCapabilities c = json::object().get<SignalingCapabilities>();
-	REQUIRE(c.avatarRelay == false);
-
-	SignalingCapabilities d = json::parse("{\"unknown_future_flag\": true}").get<SignalingCapabilities>();
-	REQUIRE(d.avatarRelay == false);
+	REQUIRE_NOTHROW(json::object().get<SignalingCapabilities>());
+	REQUIRE_NOTHROW(json::parse("{\"unknown_future_flag\": true}").get<SignalingCapabilities>());
+	REQUIRE_NOTHROW(json::parse("{\"avatar_relay\": true}").get<SignalingCapabilities>());
 }
 
 TEST_CASE("AvatarPolicy round-trips through JSON", "[avatars]")
@@ -148,32 +146,12 @@ TEST_CASE("AvatarRevoke round-trips", "[avatars]")
 	REQUIRE(q.reason == "licence_expired");
 }
 
-TEST_CASE("PeerAvatar round-trips", "[avatars]")
+TEST_CASE("AvatarResult defaults to relay delivery", "[avatars]")
 {
-	PeerAvatar p;
-	p.peerClientId = 100;
-	p.peerNodeUid = 200;
-	p.url = "https://example.com/a.glb";
-	p.contentHash = "sha256:ff";
-	p.format = "glb";
-	AvatarProofOffer pr{ "well-known-url", "https://example.com/.well-known/avatar-binding" };
-	p.proof = pr;
-	json j = p;
-	PeerAvatar q = j.get<PeerAvatar>();
-	REQUIRE(q.peerClientId == 100);
-	REQUIRE(q.peerNodeUid == 200);
-	REQUIRE(q.url == p.url);
-	REQUIRE(q.contentHash == p.contentHash);
-	REQUIRE(q.format == p.format);
-	REQUIRE(q.proof.has_value());
-	REQUIRE(q.proof->scheme == "well-known-url");
-}
-
-TEST_CASE("PeerAvatarFailed round-trips", "[avatars]")
-{
-	PeerAvatarFailed f{ 200, "404" };
-	json j = f;
-	PeerAvatarFailed g = j.get<PeerAvatarFailed>();
-	REQUIRE(g.peerNodeUid == 200);
-	REQUIRE(g.reason == "404");
+	// Relay is the default: peers fetch the owner's own url. A result that
+	// omits the field must not be read as the server having re-hosted.
+	AvatarResult r;
+	REQUIRE(r.delivery == "relay");
+	AvatarResult q = json::parse("{\"policy_id\": 1, \"status\": \"accepted\"}").get<AvatarResult>();
+	REQUIRE(q.delivery == "relay");
 }

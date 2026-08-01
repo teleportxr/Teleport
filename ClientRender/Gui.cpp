@@ -15,10 +15,11 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
+#include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <format>
 #include <magic_enum/magic_enum.hpp>
-#include <filesystem>
 
 #ifdef _MSC_VER
 #include <Windows.h>
@@ -95,7 +96,7 @@ using namespace std::string_literals;
 #include "ClientRender/AnimationInstance.h"
 #include <NodeComponents/SubSceneComponent.h>
 #include <json.hpp>
-#pragma optimize("",off)
+#pragma optimize("", off)
 #define VK_MAX 0x10
 
 bool KeysDown[VK_MAX];
@@ -119,14 +120,18 @@ static ImFont *GetUIFont()
 	const auto &config = teleport::client::Config::GetInstance();
 	auto		it	   = fontInter.find((int)config.options.uiFontSize);
 	if (it != fontInter.end())
+	{
 		return it->second;
+	}
 	auto fb = fontInter.find(18);
 	if (fb != fontInter.end())
+	{
 		return fb->second;
+	}
 	return defaultFont;
 }
 
-bool			Gui::url_input = false;
+bool Gui::url_input = false;
 
 #define TIMED_TOOLTIP(...)                                                                                                                                     \
 	{                                                                                                                                                          \
@@ -429,6 +434,8 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);
 		builder.AddText(ICON_FK_COG);
 		builder.AddText(ICON_FK_WRENCH);
+		builder.AddText(ICON_FK_MICROPHONE);
+		builder.AddText(ICON_FK_MICROPHONE_SLASH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
@@ -467,6 +474,8 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		builder.AddText(ICON_FK_FOLDER_OPEN_O);
 		builder.AddText(ICON_FK_COG);
 		builder.AddText(ICON_FK_WRENCH);
+		builder.AddText(ICON_FK_MICROPHONE);
+		builder.AddText(ICON_FK_MICROPHONE_SLASH);
 		builder.AddText(ICON_FK_TIMES);
 		builder.AddText(ICON_FK_RENREN);
 		builder.AddText(ICON_FK_ARROW_LEFT);
@@ -1938,38 +1947,35 @@ void Gui::Lighting(clientrender::GeometryCache *geometryCache)
 		ImGui::Text("Mode: %s", std::string(magic_enum::enum_name(setupCommand.backgroundMode)).c_str());
 		switch (setupCommand.backgroundMode)
 		{
-			case teleport::core::BackgroundMode::COLOUR:
+		case teleport::core::BackgroundMode::COLOUR:
+		{
+			const auto &c = setupCommand.backgroundColour;
+			ImGui::ColorButton("##bgcolour", ImVec4(c.x, c.y, c.z, c.w), ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(32, 32));
+			ImGui::SameLine();
+			ImGui::Text("%.2f %.2f %.2f %.2f", c.x, c.y, c.z, c.w);
+		}
+		break;
+		case teleport::core::BackgroundMode::TEXTURE:
+		{
+			avs::uid uid	 = setupCommand.backgroundTexture;
+			auto	 texture = geometryCache->mTextureManager.Get(uid);
+			if (texture)
 			{
-				const auto &c = setupCommand.backgroundColour;
-				ImGui::ColorButton("##bgcolour",
-								   ImVec4(c.x, c.y, c.z, c.w),
-								   ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
-								   ImVec2(32, 32));
-				ImGui::SameLine();
-				ImGui::Text("%.2f %.2f %.2f %.2f", c.x, c.y, c.z, c.w);
+				ImGui::Text("Texture %lu: %s", uid, texture->GetTextureCreateInfo().name.c_str());
+				DrawTexture(texture->GetSimulTexture(), 0.0f, 0);
 			}
-			break;
-			case teleport::core::BackgroundMode::TEXTURE:
+			else
 			{
-				avs::uid uid	 = setupCommand.backgroundTexture;
-				auto	 texture = geometryCache->mTextureManager.Get(uid);
-				if (texture)
-				{
-					ImGui::Text("Texture %lu: %s", uid, texture->GetTextureCreateInfo().name.c_str());
-					DrawTexture(texture->GetSimulTexture(), 0.0f, 0);
-				}
-				else
-				{
-					ImGui::TextDisabled("Texture %lu: (not loaded)", uid);
-				}
+				ImGui::TextDisabled("Texture %lu: (not loaded)", uid);
 			}
+		}
+		break;
+		case teleport::core::BackgroundMode::VIDEO:
+			ImGui::TextDisabled("Video background");
 			break;
-			case teleport::core::BackgroundMode::VIDEO:
-				ImGui::TextDisabled("Video background");
-				break;
-			case teleport::core::BackgroundMode::NONE:
-			default:
-				break;
+		case teleport::core::BackgroundMode::NONE:
+		default:
+			break;
 		}
 
 		const auto &dl = sessionClient->GetDynamicLighting();
@@ -2015,12 +2021,12 @@ void Gui::Lights(const ResourceManager<avs::uid, clientrender::Light> &lightMana
 	{
 		if (ImGui::BeginTable("lights", 6, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY))
 		{
-			ImGui::TableSetupColumn("UID",       ImGuiTableColumnFlags_WidthFixed,   60.0f);
-			ImGui::TableSetupColumn("Name",      ImGuiTableColumnFlags_WidthStretch, 120.0f);
-			ImGui::TableSetupColumn("Type",      ImGuiTableColumnFlags_WidthFixed,   60.0f);
-			ImGui::TableSetupColumn("Colour",    ImGuiTableColumnFlags_WidthFixed,  100.0f);
-			ImGui::TableSetupColumn("Range",     ImGuiTableColumnFlags_WidthFixed,   55.0f);
-			ImGui::TableSetupColumn("Direction", ImGuiTableColumnFlags_WidthFixed,  120.0f);
+			ImGui::TableSetupColumn("UID", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+			ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 120.0f);
+			ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+			ImGui::TableSetupColumn("Colour", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+			ImGui::TableSetupColumn("Range", ImGuiTableColumnFlags_WidthFixed, 55.0f);
+			ImGui::TableSetupColumn("Direction", ImGuiTableColumnFlags_WidthFixed, 120.0f);
 			ImGui::TableHeadersRow();
 			for (auto id : ids)
 			{
@@ -2039,8 +2045,9 @@ void Gui::Lights(const ResourceManager<avs::uid, clientrender::Light> &lightMana
 				ImGui::TextUnformatted(clientrender::ToString(lci.type));
 				ImGui::TableNextColumn();
 				ImGui::ColorButton(std::format("##lclr{0}", id).c_str(),
-					ImVec4(lci.lightColour.x, lci.lightColour.y, lci.lightColour.z, lci.lightColour.w),
-					ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder, ImVec2(16, 16));
+								   ImVec4(lci.lightColour.x, lci.lightColour.y, lci.lightColour.z, lci.lightColour.w),
+								   ImGuiColorEditFlags_NoTooltip | ImGuiColorEditFlags_NoBorder,
+								   ImVec2(16, 16));
 				ImGui::SameLine();
 				ImGui::Text("%.2f %.2f %.2f", lci.lightColour.x, lci.lightColour.y, lci.lightColour.z);
 				ImGui::TableNextColumn();
@@ -2187,8 +2194,8 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 	}
 	draw_list->AddNgonFilled(pos, sz * 0.5f, fill_colour, 6);
 	draw_list->AddNgon(pos, sz * 0.5f, col, 6, thickness);
-	std::string str=std::format("{0}: {1:4.1f} {2}", node.name, node.inwardBandwidthKps, node.maxPacketKb);
-	draw_list->AddText(ImVec2(pos.x+line.y, pos.y + line.y), col, str.c_str());
+	std::string str = std::format("{0}: {1:4.1f} {2}", node.name, node.inwardBandwidthKps, node.maxPacketKb);
+	draw_list->AddText(ImVec2(pos.x + line.y, pos.y + line.y), col, str.c_str());
 }
 
 void Gui::DrawPipeline(const avs::Pipeline &pipeline)
@@ -2213,6 +2220,17 @@ void Gui::ProfilingPanel()
 {
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysVerticalScrollbar;
 	ImGui::BeginChild("Prof", ImVec2(-1, -1), true, window_flags);
+	ImGui::Text("GPU: ");
+	ImGui::SameLine();
+	ImGui::SliderInt("##prof", &profilingLevel, 1, 18);
+	ImGui::SameLine();
+	ImGui::Text("CPU: ");
+	ImGui::SameLine();
+	ImGui::SliderInt("##profc", &cpuProfilingLevel, 1, 18);
+	if(ImGui::Button("Copy to Clipboard"))
+	{
+		ImGui::SetClipboardText(profilingText.c_str());
+	}
 	ImGui::Text("%s", profilingText.c_str());
 	ImGui::EndChild();
 }
@@ -2616,10 +2634,10 @@ bool Gui::BeginMainMenuBar()
 									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	float  height	  = ImGui::GetFrameHeight();
 	ImVec2 window_pos = ImVec2(0, 0), window_pos_pivot = ImVec2(0, 0);
-	float  w = ImGui::GetMainViewport()->Size.x;
-	auto			&config		  = client::Config::GetInstance();
-	auto   &style				   = ImGui::GetStyle();
-	ImGui::SetNextWindowSize(ImVec2(w, 2.f*config.options.uiFontSize+style.FramePadding.y*2.f));
+	float  w	  = ImGui::GetMainViewport()->Size.x;
+	auto  &config = client::Config::GetInstance();
+	auto  &style  = ImGui::GetStyle();
+	ImGui::SetNextWindowSize(ImVec2(w, 2.f * config.options.uiFontSize + style.FramePadding.y * 2.f));
 	ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always, window_pos_pivot);
 	// g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
 	const ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -2641,8 +2659,8 @@ void Gui::EndMainMenuBar()
 void Gui::ShowSettings2D()
 {
 	auto			&config		  = client::Config::GetInstance();
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
-									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings |
+									ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	// Explicit size: AlwaysAutoResize combined with SameLine(GetWindowWidth() - N) below would
 	// create a frame-to-frame feedback loop and make the window grow unboundedly.
 	const ImVec2 vp_size = ImGui::GetMainViewport()->Size;
@@ -2653,8 +2671,8 @@ void Gui::ShowSettings2D()
 	ImGui::LabelText("##Settings", "Settings");
 	ImGui::PopFont();
 	ImGui::SameLine(ImGui::GetWindowWidth() - 50.f);
-	buttonSize={1.5f*config.options.uiFontSize, 1.5f*(float)config.options.uiFontSize};
-	if (ImGui::Button(ICON_FK_TIMES, *(ImVec2*)&buttonSize))
+	buttonSize = {1.5f * config.options.uiFontSize, 1.5f * (float)config.options.uiFontSize};
+	if (ImGui::Button(ICON_FK_TIMES, *(ImVec2 *)&buttonSize))
 	{
 		show_options   = false;
 		show_bookmarks = false;
@@ -2679,8 +2697,8 @@ void Gui::ShowSettings2D()
 void Gui::ShowAvatarSettings2D()
 {
 	auto			&config		  = client::Config::GetInstance();
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking |
-									ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings |
+									ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
 	const ImVec2 vp_size = ImGui::GetMainViewport()->Size;
 	ImGui::SetNextWindowPos(ImVec2(40.f, 100.f));
 	ImGui::SetNextWindowSize(ImVec2(vp_size.x - 80.f, vp_size.y - 120.f));
@@ -2715,8 +2733,8 @@ void Gui::ShowAvatarSettings2D()
 			avatar_url_buffer[MAX_URL_SIZE - 1] = 0;
 			config.options.avatarUrl			= std::string(avatar_url_buffer);
 			config.SaveOptions();
-			show_avatar_settings				= false;
-			show_options						= true;
+			show_avatar_settings = false;
+			show_options		 = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Clear"))
@@ -2783,9 +2801,9 @@ void Gui::MenuBar2D()
 {
 	auto &config = client::Config::GetInstance();
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.00f, 0.00f, 0.00f, 0.0f));
-	//ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-	buttonSize={1.5f*config.options.uiFontSize, 1.5f*(float)config.options.uiFontSize};
-	if (ImGui::Button(ICON_FK_RENREN,  *(ImVec2*)&buttonSize))
+	// ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+	buttonSize = {1.5f * config.options.uiFontSize, 1.5f * (float)config.options.uiFontSize};
+	if (ImGui::Button(ICON_FK_RENREN, *(ImVec2 *)&buttonSize))
 	{
 		cancelConnectHandler(current_tab_context);
 	}
@@ -2834,7 +2852,7 @@ void Gui::MenuBar2D()
 		ImGui::SameLine();
 		if (!connecting)
 		{
-			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT,  *(ImVec2*)&buttonSize))
+			if (ImGui::Button(ICON_FK_LONG_ARROW_RIGHT, *(ImVec2 *)&buttonSize))
 			{
 				connect_please = true;
 			}
@@ -2845,7 +2863,7 @@ void Gui::MenuBar2D()
 		}
 		else
 		{
-			if (ImGui::Button(ICON_FK_TIMES,  *(ImVec2*)&buttonSize))
+			if (ImGui::Button(ICON_FK_TIMES, *(ImVec2 *)&buttonSize))
 			{
 				cancel_please = true;
 			}
@@ -2869,7 +2887,7 @@ void Gui::MenuBar2D()
 		}
 
 		ImGui::SameLine();
-		if (ImGui::Button(ICON_FK_FOLDER_O,  *(ImVec2*)&buttonSize))
+		if (ImGui::Button(ICON_FK_FOLDER_O, *(ImVec2 *)&buttonSize))
 		{
 			show_bookmarks = !show_bookmarks;
 			selected_url   = "";
@@ -2885,7 +2903,32 @@ void Gui::MenuBar2D()
 			TIMED_TOOLTIP("Bookmarks");
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(ICON_FK_COG,  *(ImVec2*)&buttonSize))
+		{
+			bool micMuted = config.options.micMuted;
+			if (ImGui::Button(micMuted ? ICON_FK_MICROPHONE_SLASH : ICON_FK_MICROPHONE, *(ImVec2 *)&buttonSize))
+			{
+				config.options.micMuted = !micMuted;
+				config.SaveOptions();
+			}
+			if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+			{
+				TIMED_TOOLTIP(micMuted ? "Unmute microphone" : "Mute microphone");
+			}
+			// Green bar under the mic icon showing live input amplitude. Drawn on the foreground
+			// draw list (screen space, unclipped) rather than the window draw list, since the menu
+			// bar window is sized tightly around the buttons and would otherwise clip a bar drawn
+			// just below them.
+			ImVec2		barMin	   = ImGui::GetItemRectMin();
+			ImVec2		barMax	   = ImGui::GetItemRectMax();
+			float		amp		   = std::clamp(micAmplitude, 0.0f, 1.0f);
+			ImVec2		trackMin   = ImVec2(barMin.x, barMax.y + 2.0f);
+			ImVec2		trackMax   = ImVec2(barMax.x, barMax.y + 6.0f);
+			ImDrawList *fgDrawList = ImGui::GetForegroundDrawList();
+			fgDrawList->AddRectFilled(trackMin, trackMax, IM_COL32(0, 0, 0, 128));
+			fgDrawList->AddRectFilled(trackMin, ImVec2(trackMin.x + (trackMax.x - trackMin.x) * amp, trackMax.y), IM_COL32(0, 255, 0, 255));
+		}
+		ImGui::SameLine();
+		if (ImGui::Button(ICON_FK_COG, *(ImVec2 *)&buttonSize))
 		{
 			show_options = !show_options;
 			if (!show_options)
@@ -2902,51 +2945,51 @@ void Gui::MenuBar2D()
 		if (config.dev_mode)
 		{
 			ImGui::SameLine();
-			if (ImGui::Button(ICON_FK_WRENCH,  *(ImVec2*)&buttonSize))
+			if (ImGui::Button(ICON_FK_WRENCH, *(ImVec2 *)&buttonSize))
 			{
 				guiType = GuiType::Debug;
 			}
 		}
 #endif
-		
+
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 		{
 			TIMED_TOOLTIP("Dev");
 		}
 	}
-	//ImGui::PopStyleVar();
+	// ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
 }
 
 bool Gui::UrlEdit()
 {
-	bool ret=false;
+	bool  ret	 = false;
 	auto &config = client::Config::GetInstance();
 	ImGui::SameLine();
-	int num_buttons = 5;
+	int num_buttons = 6;
 
 #if TELEPORT_INTERNAL_CHECKS
-		if (config.dev_mode)
-		{
-			num_buttons++;
-		}
+	if (config.dev_mode)
+	{
+		num_buttons++;
+	}
 #endif
-		ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * buttonSize.x - 8);
-		if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
-		{
-			current_url	   = url_buffer;
-			connect_please = true;
-			ret=true;
-		}
-		url_input = ImGui::IsItemActive();
-		ImGui::PopItemWidth();
-		return ret;
+	ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * buttonSize.x - 8);
+	if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
+	{
+		current_url	   = url_buffer;
+		connect_please = true;
+		ret			   = true;
+	}
+	url_input = ImGui::IsItemActive();
+	ImGui::PopItemWidth();
+	return ret;
 }
 void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 {
 	LightStyle();
-	auto vp = renderPlatform->GetViewport(deviceContext, 0);
-	ImGuiIO &io = ImGui::GetIO();
+	auto	 vp	   = renderPlatform->GetViewport(deviceContext, 0);
+	ImGuiIO &io	   = ImGui::GetIO();
 	io.DisplaySize = ImVec2((float)(vp.w), (float)(vp.h));
 	ImGui_ImplPlatform_NewFrame(false, vp.w, vp.h);
 #ifdef _MSC_VER
@@ -3220,9 +3263,27 @@ void Gui::MainOptions()
 		float vol = config.options.volume;
 		if (ImGui::SliderFloat("##volume", &vol, 0.0f, 1.0f, "%.2f"))
 		{
-			if (vol < 0.0f) vol = 0.0f;
-			if (vol > 1.0f) vol = 1.0f;
+			if (vol < 0.0f)
+			{
+				vol = 0.0f;
+			}
+			if (vol > 1.0f)
+			{
+				vol = 1.0f;
+			}
 			config.options.volume = vol;
+		}
+	}
+	{
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::LabelText("##VSync", "VSync");
+		ImGui::TableNextColumn();
+		bool v = config.options.vsync;
+		ImGui::Checkbox("##vsync", &v);
+		if (v != config.options.vsync)
+		{
+			config.options.vsync = v;
 		}
 	}
 	{
@@ -3235,11 +3296,11 @@ void Gui::MainOptions()
 			// Seed the edit buffer from the persisted value so the sub-page
 			// opens showing the current URL (or empty when none is set).
 			const std::string &u = config.options.avatarUrl;
-			size_t n = std::min((size_t)(MAX_URL_SIZE - 1), u.size());
+			size_t			   n = std::min((size_t)(MAX_URL_SIZE - 1), u.size());
 			memcpy(avatar_url_buffer, u.c_str(), n);
 			avatar_url_buffer[n] = 0;
 			show_avatar_settings = true;
-			show_options         = false;
+			show_options		 = false;
 		}
 	}
 }
@@ -3308,8 +3369,8 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 	static bool	 in3d		   = true;
 	static float window_width  = 720.0f;
 	static float window_height = 400.0f;
-	ImVec2 size_min(window_width, window_height);
-	ImVec2 size_max(window_width, window_height);
+	ImVec2		 size_min(window_width, window_height);
+	ImVec2		 size_max(window_width, window_height);
 	ImGui_ImplPlatform_NewFrame(in3d, (int)size_max.x, (int)size_max.y, menu_pos, azimuth, tilt, width_m);
 	static int refocus	 = 0;
 	bool	   show_hide = true;
@@ -3458,7 +3519,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				{
 					ImGui::SetKeyboardFocusHere();
 				}
-				int num_buttons = 4;
+				int num_buttons = 5;
 
 #if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)
@@ -3499,6 +3560,25 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 				if (ImGui::Button(ICON_FK_COG, ImVec2(64, 32)))
 				{
 					show_options = !show_options;
+				}
+				ImGui::SameLine();
+				{
+					bool micMuted = config.options.micMuted;
+					if (ImGui::Button(micMuted ? ICON_FK_MICROPHONE_SLASH : ICON_FK_MICROPHONE, ImVec2(64, 32)))
+					{
+						config.options.micMuted = !micMuted;
+						config.SaveOptions();
+					}
+					// Green bar under the mic icon showing live input amplitude. See the 2D toolbar's
+					// equivalent block above for why this uses the foreground draw list.
+					ImVec2		barMin	   = ImGui::GetItemRectMin();
+					ImVec2		barMax	   = ImGui::GetItemRectMax();
+					float		amp		   = std::clamp(micAmplitude, 0.0f, 1.0f);
+					ImVec2		trackMin   = ImVec2(barMin.x, barMax.y + 2.0f);
+					ImVec2		trackMax   = ImVec2(barMax.x, barMax.y + 6.0f);
+					ImDrawList *fgDrawList = ImGui::GetForegroundDrawList();
+					fgDrawList->AddRectFilled(trackMin, trackMax, IM_COL32(0, 0, 0, 128));
+					fgDrawList->AddRectFilled(trackMin, ImVec2(trackMin.x + (trackMax.x - trackMin.x) * amp, trackMax.y), IM_COL32(0, 255, 0, 255));
 				}
 #if TELEPORT_INTERNAL_CHECKS
 				if (config.dev_mode)

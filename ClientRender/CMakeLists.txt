@@ -166,6 +166,13 @@ if(TELEPORT_CLIENT_USE_VULKAN)
 	target_include_directories(ClientRender PRIVATE "${Vulkan_INCLUDE_DIR}")
 endif()
 target_compile_definitions(ClientRender PUBLIC TELEPORT_CLIENT_USE_VULKAN=$<BOOL:${TELEPORT_CLIENT_USE_VULKAN}> TELEPORT_CLIENT_USE_D3D12=$<BOOL:${TELEPORT_CLIENT_USE_D3D12}> TELEPORT_CLIENT_USE_D3D11=$<BOOL:${TELEPORT_CLIENT_USE_D3D11}> TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER=$<BOOL:${TELEPORT_CLIENT_USE_PLATFORM_VIDEO_DECODER}> TINYGLTF_NO_STB_IMAGE=1)
+# Threads Platform's CPU/GPU profiling macros through to Renderer.cpp/InstanceRenderer.cpp, so the "Profiling" debug
+# panel can show a real per-pass timing breakdown when -DPLATFORM_INTERNAL_PROFILING=ON is passed to CMake.
+if(PLATFORM_INTERNAL_PROFILING)
+	target_compile_definitions(ClientRender PRIVATE PLATFORM_INTERNAL_PROFILING=1)
+else()
+	target_compile_definitions(ClientRender PRIVATE PLATFORM_INTERNAL_PROFILING=0)
+endif()
 
 if(ANDROID)
 	#Include OpenGL ES 3.0
