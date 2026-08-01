@@ -86,6 +86,20 @@ target_include_directories(avatar_validation_cache PRIVATE
 # maths (header-only) and multi-source Opus mixing. Links the TeleportAudio
 # static library (which carries the mixer + LinuxAudioPlayer/PulseAudio) and
 # libopus for the test's synthetic Opus frames.
+# identity exercises the provider-agnostic identity manager with a fake provider:
+# that a sign-in is remembered across sessions without contacting the provider, and
+# that signing out forgets it. It links the TeleportClient library, since the manager
+# transitively reaches Config, the platform FileLoader, and the OS credential store.
+if(TARGET TeleportClient)
+   add_executable(identity test_identity.cpp)
+   add_test(NAME identity COMMAND identity)
+   target_link_libraries(identity PRIVATE Catch2::Catch2WithMain TeleportClient TeleportCore Core_MT)
+   target_include_directories(identity PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/thirdparty/json)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
 add_executable(spatial_audio test_spatial_audio.cpp)

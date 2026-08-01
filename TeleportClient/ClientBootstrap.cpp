@@ -18,15 +18,10 @@ namespace teleport
 	{
 		static std::string s_storage_folder;
 
-		bool BootstrapClientEnvironment(const std::string &cmdLine)
+		bool FindClientDirectory()
 		{
-			(void)cmdLine; // Currently unused (EnsureSingleProcess is called separately in main())
-
-			auto *fileLoader = platform::core::FileLoader::GetFileLoader();
-			fileLoader->SetRecordFilesLoaded(true);
-
-			// Find the pc_client directory by searching for client/client_default.ini
 			std::filesystem::path current_path = std::filesystem::current_path();
+			// Find the client directory by searching for client/client_default.ini
 			if (!std::filesystem::exists("client/client_default.ini"))
 			{
 #ifdef _WIN32
@@ -69,6 +64,14 @@ namespace teleport
 				return false;
 			}
 			std::filesystem::current_path(current_path);
+			return true;
+		}
+		bool BootstrapClientEnvironment(const std::string &cmdLine)
+		{
+			(void)cmdLine; // Currently unused (EnsureSingleProcess is called separately in main())
+
+			auto *fileLoader = platform::core::FileLoader::GetFileLoader();
+			fileLoader->SetRecordFilesLoaded(true);
 
 			// Resolve platform-specific storage folder
 #ifdef _WIN32
@@ -116,9 +119,10 @@ namespace teleport
 			// Initialize config
 			auto &config = Config::GetInstance();
 			config.SetStorageFolder(s_storage_folder.c_str());
+			config.LoadConfigFromIniFile();
 
 			return true;
-		}
+		} 
 
 		std::string GetStorageFolderPath()
 		{

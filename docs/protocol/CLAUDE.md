@@ -1,0 +1,2 @@
+**IMPORTANT** The protocol documentation should not describe the reference implementation, but may briefly link to the documentation of the reference code.
+**IMPORTANT** Provide short, concise examples wherever possible.

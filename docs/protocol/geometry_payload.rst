@@ -954,7 +954,24 @@ Example body bytes for the URL ``"/a/b.ktx2"``::
 MeshPointer payload
 ===================
 
-A ``MeshPointer`` chunk has the identical layout to :ref:`texture_pointer_payload`, but the body fetched from the URL is decoded as a :ref:`mesh_payload`.
+A ``MeshPointer`` chunk has the identical layout to :ref:`texture_pointer_payload`. Most geometry is delivered this way rather than inline.
+
+The body fetched from the URL is **not** necessarily a :ref:`mesh_payload`; the client selects a decoder from the URL's extension:
+
+.. list-table::
+   :widths: 20 40
+   :header-rows: 1
+
+   * - Extension
+     - Decoded as
+   * - ``.glb``, ``.vrm``, ``.vrma``
+     - glTF 2.0 binary.
+   * - ``.gltf``
+     - glTF 2.0 text.
+   * - ``.mesh``, ``.mesh_compressed``
+     - Teleport-native :ref:`mesh_payload`.
+
+An unrecognised extension is rejected. Servers MUST therefore give pointer URLs an extension the client can dispatch on; content type alone is not sufficient.
 
 .. list-table:: MeshPointer body
    :widths: 14 22 8 60

@@ -189,6 +189,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	auto &config = client::Config::GetInstance();
 	storage_folder = client::GetStorageFolderPath();
 
+	// Loads bookmarks, recent servers and options, and starts the client clock.
+	clientApp.Initialize();
+
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)
 	{
@@ -1098,7 +1101,11 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	std::filesystem::current_path(current_path);
-
+	if(!client::FindClientDirectory())
+	{
+		TELEPORT_WARN("Cannot find client directory");
+		return -1;
+	}
 	// Bootstrap client environment (find assets, resolve storage folder, load config)
 	if (!client::BootstrapClientEnvironment(cmdLine))
 	{
@@ -1108,6 +1115,9 @@ int main(int argc, char *argv[])
 
 	auto &config = client::Config::GetInstance();
 	storage_folder = client::GetStorageFolderPath();
+
+	// Loads bookmarks, recent servers and options, and starts the client clock.
+	clientApp.Initialize();
 
 	gui.SetServerIPs(config.recent_server_urls);
 	if (config.log_filename.size() > 0)

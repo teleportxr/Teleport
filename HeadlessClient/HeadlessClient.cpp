@@ -1,4 +1,5 @@
 #include "HeadlessClient.h"
+#include "TeleportClient/Identity.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include <libavstream/queue.hpp>
@@ -51,6 +52,8 @@ void HeadlessClient::Disconnect()
 
 void HeadlessClient::TickOnce(double time, double dt)
 {
+	// Applies the result of a sign-in running on the identity worker thread. Cheap when idle.
+	teleport::client::identity.Update();
 	inputState.UpdateTime(time);
 
 	// A connection in progress lives under the tab's "next" uid; TabContext only promotes it to
