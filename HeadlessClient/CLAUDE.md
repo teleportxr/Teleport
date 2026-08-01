@@ -19,12 +19,6 @@ Two primary use cases:
 - **HeadlessGeometryTarget** — `avs::GeometryTargetBackendInterface`. Records structure only; creates no GPU resources
 - **HeadlessGeometryDecoder** — `avs::GeometryDecoderBackendInterface`. Parses Node/RemoveNodes/Skeleton in full, reads and records pointer URLs without fetching, acknowledges all other payload types by uid without parsing their bodies
 - **HeadlessInputState** — thread-safe pose and input state shared between REPL and tick threads
-- **Identity** — `teleport::client::identity`, shared with the GUI client. `Main.cpp` registers
-  `GoogleDeviceIdentityProvider` (OAuth 2.0 device authorization grant, since there is no browser
-  here) and `GuestIdentityProvider` before `Init()`, so the GUI client's loopback provider is not
-  used. `TickOnce()` calls `identity.Update()`; the sign-in itself runs on the identity worker
-  thread. The profile cache in `<storage>/config/identity.json` is shared with the GUI client, so
-  a desktop sign-in on the same machine is picked up with no interaction
 - **Repl** — blocking REPL loop reading commands from stdin
 - **ReplCommandParser** — dependency-free command tokenizer (used for Catch2 unit tests in future)
 
@@ -132,12 +126,6 @@ mode <minimal|simulated> - Switch client mode (M3)
 geometry                - Summary: nodes, resources, pointers, pending acks
 geometry nodes          - Tracked nodes with data/parent/skeleton uids
 geometry resources      - Pointer resource URLs, and uids referenced but never sent
-
-# Identity
-identity                - Show who the client is signed in as, and available providers
-signin [provider]       - Sign in. Google uses the device authorization grant: a URL and a
-                          short code are printed for the user to enter on another device
-signout                 - Forget the current identity and its stored credentials
 
 # Exit
 quit / exit             - Exit the client

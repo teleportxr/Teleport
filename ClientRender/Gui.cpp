@@ -3288,50 +3288,6 @@ void Gui::MainOptions()
 		}
 	}
 	{
-		// Account. Signing in is always user-initiated: nothing here happens on startup.
-		auto &identity = client::identity;
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::LabelText("##AccountLabel", "Account");
-		ImGui::TableNextColumn();
-		ImGui::TextUnformatted(identity.GetDisplayText().c_str());
-		switch (identity.GetState())
-		{
-		case client::SignInState::SignedIn:
-			if (ImGui::Button("Sign out"))
-			{
-				identity.SignOut();
-			}
-			break;
-		case client::SignInState::WaitingForUser:
-		case client::SignInState::Restoring:
-			if (ImGui::Button("Cancel##signin"))
-			{
-				identity.CancelSignIn();
-			}
-			break;
-		default:
-		{
-			std::string error = identity.GetLastError();
-			if (!error.empty())
-			{
-				ImGui::TextUnformatted(error.c_str());
-			}
-			for (const auto &provider : identity.GetProviders())
-			{
-				std::string label = std::format("Sign in with {0}##{1}", provider->GetDisplayName(), provider->GetName());
-				if (ImGui::Button(label.c_str()))
-				{
-					identity.SignIn(provider->GetName());
-				}
-				ImGui::SameLine();
-			}
-			ImGui::NewLine();
-		}
-		break;
-		}
-	}
-	{
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::LabelText("##AvatarLabel", "Avatar");
