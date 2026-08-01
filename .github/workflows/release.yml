@@ -1,14 +1,15 @@
 name: release
 
 # Publishes a GitHub release for any pushed tag, carrying the Windows installer,
-# the Linux .deb and the Android APK.
+# the Linux .deb, the macOS .pkg and the Android APK.
 #
-# This workflow does not build anything: it reuses the artifacts the three
+# This workflow does not build anything: it reuses the artifacts the four
 # build_* workflows already produced for the tagged commit. So the tagged commit
-# must have green runs of build_pc_client.yml, build_linux_client.yml and
-# build_android_client.yml before the tag is pushed - merge to main, wait for the
-# builds, then tag that commit. Every download is pinned to github.sha, so a
-# commit without those runs fails here and publishes nothing.
+# must have green runs of build_pc_client.yml, build_linux_client.yml,
+# build_macos_client.yml and build_android_client.yml before the tag is pushed -
+# merge to main, wait for the builds, then tag that commit. Every download is
+# pinned to github.sha, so a commit without those runs fails here and publishes
+# nothing.
 
 on:
   workflow_dispatch:
@@ -52,6 +53,17 @@ jobs:
         path: dist/linux
         if_no_artifact_found: fail
 
+    - name: Download macOS installer
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        workflow: build_macos_client.yml
+        workflow_conclusion: success
+        commit: ${{github.sha}}
+        name: macos-installer
+        path: dist/macos
+        if_no_artifact_found: fail
+
     - name: Download Android APK
       uses: dawidd6/action-download-artifact@v6
       with:
@@ -72,7 +84,7 @@ jobs:
       run: |
         set -euo pipefail
         ls -R dist
-        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/android/*.apk"; do
+        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/macos/*.pkg" "dist/android/*.apk"; do
           if ! compgen -G "$pattern" > /dev/null; then
             echo "::error::No file matching $pattern - refusing to publish an incomplete release."
             exit 1
@@ -93,7 +105,7 @@ jobs:
       with:
         token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         tag: ${{ inputs.tag || github.ref_name }}
-        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/android/*.apk"
+        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/android/*.apk"
         bodyFile: "dist/windows/release_notes.md"
         # Re-running repairs a release published with a broken or partial asset
         # set, rather than silently doing nothing as skipIfReleaseExists did.

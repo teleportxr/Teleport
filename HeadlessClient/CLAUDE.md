@@ -1,6 +1,9 @@
 # TeleportHeadlessClient
 
-Terminal-controlled Teleport client for Linux and Windows, with no GUI, GPU, or OpenXR dependency.
+Terminal-controlled Teleport client for Linux, Windows and macOS, with no GUI, GPU, or OpenXR dependency.
+
+On macOS this is the *only* client that is built: `TELEPORT_GUI_CLIENT` is forced OFF there,
+since `pc_client`/`ClientRender` need Vulkan, GLFW and an OpenXR runtime.
 
 ## Purpose
 
@@ -31,12 +34,35 @@ Two primary use cases:
 
 ```bash
 cmake -B build_pc_client -S . -DTELEPORT_HEADLESS_CLIENT=ON
-cmake --build build_pc_client --target TeleportHeadlessClient
+cmake --build build_pc_client --target teleport_terminal
 ```
 
-On Windows, verify the build does NOT pull in unwanted dependencies (openxr_loader check):
+`TELEPORT_HEADLESS_CLIENT` already defaults to the value of `TELEPORT_CLIENT`, so it only
+needs stating explicitly when the GUI client has been switched off.
+
+On macOS (Apple Silicon; needs the Xcode command line tools):
+
 ```bash
-dumpbin /IMPORTS build_pc_client/bin/Release/TeleportHeadlessClient.exe | findstr /i "openxr"
+brew install ninja pkg-config openssl@3
+cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DTELEPORT_GUI_CLIENT=OFF -DTELEPORT_CLIENT_USE_VULKAN=OFF \
+  -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+cmake --build build_macos
+```
+
+Build the default target rather than just `teleport_terminal`: the Platform submodule has
+`install()` rules for libraries that `cpack` expects to exist, and a target-specific build
+leaves them unbuilt.
+
+Verify the build does NOT pull in unwanted dependencies (openxr_loader check):
+
+```bash
+# Windows
+dumpbin /IMPORTS build_pc_client/bin/Release/teleport_terminal.exe | findstr /i "openxr"
+# Linux
+ldd build_pc_client/bin/teleport_terminal | grep -iE 'vulkan|openxr|glfw|pulse'
+# macOS
+otool -L build_macos/bin/teleport_terminal | grep -iE 'vulkan|moltenvk|openxr|glfw|pulse'
 ```
 
 ## Implementation Status

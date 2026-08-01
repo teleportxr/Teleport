@@ -16,6 +16,9 @@ set(srcs
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
 	add_static_executable(teleport_terminal CONSOLE SOURCES ${srcs})
+elseif(TELEPORT_MACOS)
+	set(def_platform PLATFORM_MACOS)
+	add_static_executable(teleport_terminal CONSOLE SOURCES ${srcs})
 elseif(TELEPORT_UNIX)
 	set(def_platform PLATFORM_LINUX)
 	add_static_executable(teleport_terminal CONSOLE SOURCES ${srcs})
@@ -43,13 +46,20 @@ target_link_libraries(teleport_terminal
 	TeleportClient
 	TeleportCore
 	Core_MT
-	PlatformVulkan_MT
 	PlatformCrossPlatform_MT
 	PlatformMath_MT
 	LibDataChannel::LibDataChannelStatic
 	usrsctp
 	juice-static
 )
+
+# The Platform submodule only adds its Vulkan subdirectory for Windows and Linux, so the
+# target does not exist on macOS. The headless client draws nothing and its sole Platform
+# include is Platform/Core/FileLoader.h, so this is a link-order convenience, not a
+# real dependency.
+if(TARGET PlatformVulkan_MT)
+	target_link_libraries(teleport_terminal PlatformVulkan_MT)
+endif()
 
 if(WIN32)
 	target_link_directories(teleport_terminal PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib)
@@ -61,6 +71,9 @@ if(WIN32)
 		iphlpapi.lib
 		bcrypt.lib
 	)
+elseif(TELEPORT_MACOS)
+	# No -ldl on macOS: dlopen and friends live in libSystem.
+	target_link_libraries(teleport_terminal ssl crypto pthread)
 elseif(TELEPORT_UNIX)
 	target_link_libraries(teleport_terminal ssl crypto pthread dl)
 endif()

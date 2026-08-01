@@ -100,15 +100,20 @@ if(TARGET TeleportClient)
       ${CMAKE_SOURCE_DIR}/thirdparty/json)
 endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
-add_executable(spatial_audio test_spatial_audio.cpp)
-add_test(NAME spatial_audio COMMAND spatial_audio)
-target_link_libraries(spatial_audio PRIVATE Catch2::Catch2WithMain TeleportAudio TeleportCore opus ${PULSEAUDIO_LIBRARIES})
-target_include_directories(spatial_audio PRIVATE
-   ${CMAKE_SOURCE_DIR}
-   ${CMAKE_SOURCE_DIR}/TeleportAudio
-   ${CMAKE_SOURCE_DIR}/libavstream/include
-   ${CMAKE_SOURCE_DIR}/libavstream/export_include
-   ${CMAKE_SOURCE_DIR}/firstparty)
+# Guarded on the target rather than built unconditionally: a headless-only build
+# (macOS, TELEPORT_GUI_CLIENT=OFF) never adds TeleportAudio, and the PulseAudio
+# pkg-config probe below is REQUIRED, so it would hard-fail at configure time.
+if(TARGET TeleportAudio)
+   find_package(PkgConfig REQUIRED)
+   pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
+   add_executable(spatial_audio test_spatial_audio.cpp)
+   add_test(NAME spatial_audio COMMAND spatial_audio)
+   target_link_libraries(spatial_audio PRIVATE Catch2::Catch2WithMain TeleportAudio TeleportCore opus ${PULSEAUDIO_LIBRARIES})
+   target_include_directories(spatial_audio PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/TeleportAudio
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/firstparty)
+endif()
 endif()

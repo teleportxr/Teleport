@@ -52,6 +52,8 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 
 ### Clients
 - PC: Windows desktop with optional OpenXR support
+- Linux: desktop client, plus the headless terminal client
+- macOS: headless terminal client only (Apple Silicon) — see below
 - Android: Native Android client with OpenXR
 - Meta Quest: Dedicated VR client
 - Cross-platform: Vulkan and DirectX 12 rendering
@@ -105,6 +107,13 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 
     sudo apt install libpulse-dev libopenxr-dev
 
+### macOS Dependencies
+
+macOS builds the headless terminal client only. Requires the Xcode command line tools
+(`xcode-select --install`) and Homebrew:
+
+    brew install ninja pkg-config openssl@3
+
 This is a sophisticated, production-ready VR/AR streaming platform that enables remote rendering scenarios where heavy 3D content runs on powerful servers and streams to lightweight VR/AR clients. It's particularly useful for enterprise VR applications, cloud gaming, and collaborative virtual environments.
 
 ## Getting the source
@@ -145,6 +154,27 @@ or if you have already cloned the main repo,
     * Uncheck 'ENABLE_ENCRYPTION' option from srt.
     * Set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to your installed Cuda version
 4. Configure, generate, open and build the Visual Studio project *in Release Configuration first*.
+
+## Building the macOS headless client
+
+macOS supports the headless terminal client (`teleport_terminal`) only: the GUI client needs
+Vulkan, GLFW and an OpenXR runtime, which are not ported. Apple Silicon only.
+
+    brew install ninja pkg-config openssl@3
+    cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DTELEPORT_GUI_CLIENT=OFF -DTELEPORT_CLIENT_USE_VULKAN=OFF \
+      -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+    cmake --build build_macos
+
+The binary is `build_macos/bin/teleport_terminal`. To produce an (unsigned) installer:
+
+    cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack
+
+CI signs and notarises the package; see `docs/macos_signing_secrets.md` for the credentials
+that requires. Locally built packages are unsigned, so Gatekeeper will refuse them until you
+clear the quarantine attribute:
+
+    xattr -d com.apple.quarantine teleportxr-*.pkg
 
 ## Building Unity plugin
 

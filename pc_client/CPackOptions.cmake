@@ -13,6 +13,13 @@ if("${TELEPORT_COMMIT}" STREQUAL "")
 	message("CPACK_PACKAGING_INSTALL_PREFIX ${CPACK_PACKAGING_INSTALL_PREFIX}")
 	#C:/TestInstallTeleport)
 endif()
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${TELEPORT_COMMIT}-x64")
+# CPACK_TELEPORT_PACKAGE_ARCH is set in CMake/TeleportPackaging.cmake: x64 on Windows and
+# Linux, arm64 on macOS. It has to be a CPACK_* name to survive into CPackConfig.cmake,
+# which is all this file can see. Default kept for a stale CPackConfig.cmake from before
+# the variable existed.
+if(NOT CPACK_TELEPORT_PACKAGE_ARCH)
+	set(CPACK_TELEPORT_PACKAGE_ARCH "x64")
+endif()
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${TELEPORT_COMMIT}-${CPACK_TELEPORT_PACKAGE_ARCH}")
 message("CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME}")
  

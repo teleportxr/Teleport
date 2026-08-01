@@ -19,11 +19,19 @@ message("TELEPORT_SOLUTION_NAME: ${TELEPORT_SOLUTION_NAME}")
 message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 
 
+# TELEPORT_UNIX means "POSIX" and is ON for both Linux and macOS; TELEPORT_LINUX and
+# TELEPORT_MACOS distinguish the two where the difference matters (packaging, PulseAudio,
+# the ThisPlatform shim, prctl-based thread naming).
 set(TELEPORT_UNIX OFF)
 set(TELEPORT_WINDOWS OFF)
+set(TELEPORT_LINUX OFF)
+set(TELEPORT_MACOS OFF)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	set(TELEPORT_WINDOWS ON)
+elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	set(TELEPORT_MACOS ON)
+	set(TELEPORT_UNIX ON)
 endif()
 
 set(CMAKE_CXX_STANDARD 20 )
@@ -40,9 +48,26 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	set(CMAKE_USE_PTHREADS_INIT 1)
 	set(THREADS_PREFER_PTHREAD_FLAG ON)
 	set(TELEPORT_UNIX ON)
+	set(TELEPORT_LINUX ON)
 	# fix linkage for lots of libraries:
 	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Linux)
+endif()
+
+if(TELEPORT_MACOS)
+	set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+	set(CMAKE_HAVE_THREADS_LIBRARY 1)
+	set(CMAKE_USE_WIN32_THREADS_INIT 0)
+	set(CMAKE_USE_PTHREADS_INIT 1)
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fPIC)
+	# Apple Silicon only. A universal binary would require every dependency
+	# (OpenSSL, libdatachannel, usrsctp, juice, draco) to be built for both slices
+	# and lipo'd together; not worth it while macOS support is headless-only.
+	set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "" FORCE)
+	set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
+	# ThisPlatform/{StringFunctions,Threads}.h - the macOS counterpart of the Linux shim.
+	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/MacOS)
 endif()
 
 # FetchContent download timestamp policy:
@@ -422,10 +447,26 @@ endif()
 
 option(TELEPORT_CLIENT "Build for client?" ON)
 option(TELEPORT_HEADLESS_CLIENT "Build headless terminal client?" ${TELEPORT_CLIENT})
+# The GUI client (pc_client/ClientRender) needs Vulkan, GLFW and an OpenXR runtime. The
+# headless terminal client needs none of those, so it can be built on its own - which is
+# what macOS does, there being no usable OpenXR runtime there.
+option(TELEPORT_GUI_CLIENT "Build the GUI/OpenXR PC client?" ${TELEPORT_CLIENT})
+if(TELEPORT_MACOS AND TELEPORT_GUI_CLIENT)
+	message(STATUS "macOS: forcing TELEPORT_GUI_CLIENT OFF; only the headless client is ported.")
+	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
+endif()
+if(NOT TELEPORT_CLIENT)
+	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
+endif()
 
 if(TELEPORT_CLIENT)
 	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 		option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
+	elseif(TELEPORT_MACOS)
+		# No MoltenVK port; the headless client draws nothing. Leaving this ON would make
+		# libavstream compile surface_vulkan.cpp and want a PlatformVulkan target that the
+		# Platform submodule does not build on Darwin.
+		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	else()
 		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ON)
 	endif()
@@ -632,7 +673,8 @@ endif()
 if(TELEPORT_SERVER)
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT TeleportServer)
 endif()
-if(TELEPORT_CLIENT)
+# ozz-animation is used only by ClientRender, so a headless-only build skips the fetch entirely.
+if(TELEPORT_GUI_CLIENT)
 	set(ozz_build_tools ON CACHE BOOL "" FORCE)
 	set(ozz_build_gltf ON CACHE BOOL "" FORCE)
 	set(ozz_build_samples OFF CACHE BOOL "" FORCE)
@@ -661,7 +703,12 @@ add_subdirectory(thirdparty/draco)
 set(SA_BUILD_SHARED_LIB ${TELEPORT_SERVER})
 
 if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
-	set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openssl/x64)
+	# thirdparty/openssl/x64 holds Windows import libraries only. Pointing OPENSSL_ROOT_DIR
+	# at it on macOS defeats the FindOpenSSL hints in TeleportClient/CMakeLists.txt, which
+	# are what steer the build onto Homebrew's openssl@3.
+	if(NOT TELEPORT_MACOS)
+		set(OPENSSL_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openssl/x64)
+	endif()
 	set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
 	set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "" FORCE)
 	set(PLATFORM_IMPLEMENT_STB_IMAGE OFF CACHE BOOL "" FORCE)
@@ -674,17 +721,27 @@ if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 	set(TELEPORT_USE_DYNAMIC_RUNTIME OFF CACHE BOOL "")
 	set(LIBAV_BUILD_SHARED_LIBS OFF CACHE BOOL "")
 	set(SA_BUILD_SHARED_LIB OFF CACHE BOOL "")
-	# TeleportAudio and libavstream must be built before client components that depend on them
-	add_subdirectory(TeleportAudio)
+	# TeleportAudio and libavstream must be built before client components that depend on them.
+	# TeleportAudio is PulseAudio-only on POSIX and is not used by the headless client, so a
+	# headless-only build (macOS) skips it rather than needing a CoreAudio backend first.
+	if(TELEPORT_GUI_CLIENT)
+		add_subdirectory(TeleportAudio)
+	endif()
 	add_subdirectory(libavstream)
-	add_subdirectory(pc_client)
+	if(TELEPORT_GUI_CLIENT)
+		add_subdirectory(pc_client)
+	endif()
 	if(TELEPORT_HEADLESS_CLIENT)
 		add_subdirectory(HeadlessClient)
 	endif()
-	add_subdirectory(ClientRender)
+	if(TELEPORT_GUI_CLIENT)
+		add_subdirectory(ClientRender)
+	endif()
 	#message("2 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
 	add_subdirectory(TeleportClient)
-	add_subdirectory(client/JavaScriptWorker)
+	if(TELEPORT_GUI_CLIENT)
+		add_subdirectory(client/JavaScriptWorker)
+	endif()
 	#message("3 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
 endif()
 
@@ -723,4 +780,11 @@ if(TELEPORT_BUILD_DOCS)
 endif()
 if(TELEPORT_TEST)
 add_subdirectory(test)
+endif()
+
+# Installer configuration. Must come last: include(CPack), which this performs, has to see
+# the final value of every CPACK_* variable, and variables set inside a subdirectory are
+# not visible here — so all of them are set in the module itself.
+if(TELEPORT_CLIENT)
+	include(${CMAKE_CURRENT_SOURCE_DIR}/CMake/TeleportPackaging.cmake)
 endif()
