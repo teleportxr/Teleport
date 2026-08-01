@@ -48,8 +48,8 @@
     <ClCompile Include="..\..\TeleportClient\Config.cpp" />
     <ClCompile Include="..\..\TeleportClient\DiscoveryService.cpp" />
     <ClCompile Include="..\..\TeleportClient\Identity.cpp" />
-    <ClInclude Include="..\..\TeleportClient\IdentityStore.cpp" />
-    <ClInclude Include="..\..\TeleportClient\GuestIdentityProvider.cpp" />
+    <ClCompile Include="..\..\TeleportClient\IdentityStore.cpp" />
+    <ClCompile Include="..\..\TeleportClient\GuestIdentityProvider.cpp" />
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />
