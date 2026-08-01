@@ -7,3 +7,11 @@
 *.so filter=lfs diff=lfs merge=lfs -text
 *.a filter=lfs diff=lfs merge=lfs -text
 
+# These four binaries predate LFS tracking and are stored as raw git blobs.
+# Without this override the lfs clean filter rewrites them to pointers on every
+# comparison, so git reports them as permanently modified.
+client/OpenXR/Libs/Android/arm64-v8a/Debug/libxrspacewarp.so -filter -diff -merge -text
+libavstream/thirdparty/glfw/win64/glfw3.lib -filter -diff -merge -text
+libavstream/tools/win32/xxd.exe -filter -diff -merge -text
+thirdparty/vulkan/bin/arm64-v8a/libVkLayer_khronos_validation.so -filter -diff -merge -text
+

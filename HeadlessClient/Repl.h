@@ -20,6 +20,7 @@ private:
 	void ProcessCommand(const ReplCommand &cmd);
 	void PrintHelp() const;
 	void PrintStatus() const;
+	void PrintIdentity() const;
 
 	HeadlessClient &client;
 	ReplCommandParser parser;

@@ -33,10 +33,19 @@ set(src_files
 	DiscoveryService.h
 	DiscoveryService.cpp
 	GeometryCacheBackendInterface.h
-	GoogleOAuth.cpp
-	GoogleOAuth.h
+	GoogleDeviceIdentityProvider.cpp
+	GoogleDeviceIdentityProvider.h
+	GoogleIdentityProvider.cpp
+	GoogleIdentityProvider.h
+	GuestIdentityProvider.cpp
+	GuestIdentityProvider.h
 	Identity.h
 	Identity.cpp
+	IdentityProvider.h
+	IdentityStore.cpp
+	IdentityStore.h
+	OAuthHttp.cpp
+	OAuthHttp.h
 	Log.cpp
 	Log.h
 	OpenXR.cpp
@@ -99,6 +108,59 @@ if(TELEPORT_CLIENT_SUPPORT_IPSME)
 endif()
 
 target_compile_definitions(TeleportClient PUBLIC TELEPORT_CLIENT_SUPPORT_IPSME=$<BOOL:${TELEPORT_CLIENT_SUPPORT_IPSME}> WINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
+
+# Google OAuth client credentials are compiled in rather than read from a config file the user
+# could open. Supply them in the environment, or in a .env file (never committed) beside this
+# repository or its parent workspace. Without them, Google sign-in is simply not offered.
+#
+# There are two clients: the desktop one for the GUI client's loopback flow, and a "TV and
+# Limited Input device" one for the terminal client's device flow. They are separate
+# registrations in the Google Cloud console and their tokens are not interchangeable.
+set(TELEPORT_GOOGLE_CREDENTIAL_VARS
+	TELEPORT_GOOGLE_CLIENT_ID
+	TELEPORT_GOOGLE_CLIENT_SECRET
+	TELEPORT_GOOGLE_DEVICE_CLIENT_ID
+	TELEPORT_GOOGLE_DEVICE_CLIENT_SECRET)
+foreach(_var ${TELEPORT_GOOGLE_CREDENTIAL_VARS})
+	set(${_var} "$ENV{${_var}}")
+endforeach()
+foreach(_dotenv "${CMAKE_SOURCE_DIR}/.env" "${CMAKE_SOURCE_DIR}/../.env")
+	if(EXISTS "${_dotenv}")
+		# Re-run cmake when the credentials change.
+		set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_dotenv}")
+		file(STRINGS "${_dotenv}" _dotenv_lines)
+		foreach(_line ${_dotenv_lines})
+			# KEY=VALUE, ignoring comments, blank lines, "export " and surrounding quotes.
+			if(_line MATCHES "^[ \t]*(export[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*(.*)$")
+				set(_key "${CMAKE_MATCH_2}")
+				set(_value "${CMAKE_MATCH_3}")
+				string(REGEX REPLACE "[ \t]+$" "" _value "${_value}")
+				string(REGEX REPLACE "^[\"'](.*)[\"']$" "\\1" _value "${_value}")
+				# The environment wins, so a one-off build can override the file.
+				if(_key IN_LIST TELEPORT_GOOGLE_CREDENTIAL_VARS AND NOT ${_key})
+					set(${_key} "${_value}")
+				endif()
+			endif()
+		endforeach()
+	endif()
+endforeach()
+
+if(TELEPORT_GOOGLE_CLIENT_ID)
+	message(STATUS "TeleportClient: Google sign-in enabled for client id ${TELEPORT_GOOGLE_CLIENT_ID}")
+else()
+	message(STATUS "TeleportClient: no TELEPORT_GOOGLE_CLIENT_ID set (environment or .env); Google sign-in will be unavailable in the GUI client.")
+endif()
+if(TELEPORT_GOOGLE_DEVICE_CLIENT_ID)
+	message(STATUS "TeleportClient: device sign-in enabled for client id ${TELEPORT_GOOGLE_DEVICE_CLIENT_ID}")
+else()
+	message(STATUS "TeleportClient: no TELEPORT_GOOGLE_DEVICE_CLIENT_ID set; Google sign-in will be unavailable in the terminal client.")
+endif()
+# PRIVATE: the credentials must not leak into the compile line of every dependent target.
+target_compile_definitions(TeleportClient PRIVATE
+	TELEPORT_GOOGLE_CLIENT_ID="${TELEPORT_GOOGLE_CLIENT_ID}"
+	TELEPORT_GOOGLE_CLIENT_SECRET="${TELEPORT_GOOGLE_CLIENT_SECRET}"
+	TELEPORT_GOOGLE_DEVICE_CLIENT_ID="${TELEPORT_GOOGLE_DEVICE_CLIENT_ID}"
+	TELEPORT_GOOGLE_DEVICE_CLIENT_SECRET="${TELEPORT_GOOGLE_DEVICE_CLIENT_SECRET}")
 
 #Include cpp-httplib
 target_include_directories(TeleportClient PUBLIC ${cpp-httplib_SOURCE_DIR})

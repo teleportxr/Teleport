@@ -110,21 +110,37 @@ inline void SetThreadPriority(std::thread &thread,int p)
 #include <cerrno>
 #define THREAD_TYPE pthread_t
 #include <thread>
+#ifndef __APPLE__
 #include <sys/prctl.h>
+#endif
 
 THREAD_TYPE GetThreadId()
 {
 return pthread_self();
 }
 
+// Kept in step by hand with firstparty/Platform/{Linux,MacOS}/ThisPlatform/Threads.h,
+// which carry the same two functions for the Platform library.
 inline void SetThreadName(std::thread& thread, const char* name)
 {
+#ifdef __APPLE__
+	// macOS has no pthread_setname_np(pthread_t, ...): a thread can only name itself,
+	// so naming another thread is not expressible. Threads stay unnamed in Instruments
+	// and crash reports; this affects diagnostics only.
+	(void)thread;
+	(void)name;
+#else
 	pthread_setname_np(thread.native_handle(), name);
+#endif
 }
 
 inline void SetThisThreadName(const char* name)
 {
+#ifdef __APPLE__
+	pthread_setname_np(name);
+#else
 	prctl(PR_SET_NAME, (long)name, 0, 0, 0);
+#endif
 }
 
 inline void SetThreadPriority(std::thread& thread, int p)

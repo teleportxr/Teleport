@@ -86,15 +86,34 @@ target_include_directories(avatar_validation_cache PRIVATE
 # maths (header-only) and multi-source Opus mixing. Links the TeleportAudio
 # static library (which carries the mixer + LinuxAudioPlayer/PulseAudio) and
 # libopus for the test's synthetic Opus frames.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
-add_executable(spatial_audio test_spatial_audio.cpp)
-add_test(NAME spatial_audio COMMAND spatial_audio)
-target_link_libraries(spatial_audio PRIVATE Catch2::Catch2WithMain TeleportAudio TeleportCore opus ${PULSEAUDIO_LIBRARIES})
-target_include_directories(spatial_audio PRIVATE
-   ${CMAKE_SOURCE_DIR}
-   ${CMAKE_SOURCE_DIR}/TeleportAudio
-   ${CMAKE_SOURCE_DIR}/libavstream/include
-   ${CMAKE_SOURCE_DIR}/libavstream/export_include
-   ${CMAKE_SOURCE_DIR}/firstparty)
+# identity exercises the provider-agnostic identity manager with a fake provider:
+# that a sign-in is remembered across sessions without contacting the provider, and
+# that signing out forgets it. It links the TeleportClient library, since the manager
+# transitively reaches Config, the platform FileLoader, and the OS credential store.
+if(TARGET TeleportClient)
+   add_executable(identity test_identity.cpp)
+   add_test(NAME identity COMMAND identity)
+   target_link_libraries(identity PRIVATE Catch2::Catch2WithMain TeleportClient TeleportCore Core_MT)
+   target_include_directories(identity PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/thirdparty/json)
+endif()
+
+# Guarded on the target rather than built unconditionally: a headless-only build
+# (macOS, TELEPORT_GUI_CLIENT=OFF) never adds TeleportAudio, and the PulseAudio
+# pkg-config probe below is REQUIRED, so it would hard-fail at configure time.
+if(TARGET TeleportAudio)
+   find_package(PkgConfig REQUIRED)
+   pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
+   add_executable(spatial_audio test_spatial_audio.cpp)
+   add_test(NAME spatial_audio COMMAND spatial_audio)
+   target_link_libraries(spatial_audio PRIVATE Catch2::Catch2WithMain TeleportAudio TeleportCore opus ${PULSEAUDIO_LIBRARIES})
+   target_include_directories(spatial_audio PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/TeleportAudio
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/firstparty)
+endif()
 endif()

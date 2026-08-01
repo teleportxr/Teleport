@@ -147,7 +147,6 @@ Renderer *Renderer::GetRenderer()
 {
 	return rendererInstance;
 }
-#include "TeleportClient/GoogleOAuth.h"
 void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *u, PlatformWindow *active_window)
 {
 	u->SetSessionChangedCallback(std::bind(&Renderer::XrSessionChanged, this, std::placeholders::_1));
@@ -1162,6 +1161,8 @@ void Renderer::ChangePass(ShaderMode newShaderMode, int debugBone)
 
 void Renderer::Update(std::chrono::microseconds unix_time_us)
 {
+	// Applies the result of any background sign-in. Identity work never blocks this thread.
+	client::identity.Update();
 	renderState.timestampUs = unix_time_us;
 	double timeElapsed_s	= double(unix_time_us.count() - previousTimestampUs.count()) / 1000000.0; // ms to seconds
 	if (timeElapsed_s > 0.0)

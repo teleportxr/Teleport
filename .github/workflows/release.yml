@@ -1,43 +1,114 @@
 name: release
 
+# Publishes a GitHub release for any pushed tag, carrying the Windows installer,
+# the Linux .deb, the macOS .pkg and the Android APK.
+#
+# This workflow does not build anything: it reuses the artifacts the four
+# build_* workflows already produced for the tagged commit. So the tagged commit
+# must have green runs of build_pc_client.yml, build_linux_client.yml,
+# build_macos_client.yml and build_android_client.yml before the tag is pushed -
+# merge to main, wait for the builds, then tag that commit. Every download is
+# pinned to github.sha, so a commit without those runs fails here and publishes
+# nothing.
+
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (defaults to the ref this workflow runs on)"
+        required: false
   push:
     tags:
-      - "v*"
+      # "**" rather than "*" so tags containing a slash (release/1.0) match too.
+      - "**"
 
 jobs:
-  deploy:
-    runs-on: windows-2022
+  release:
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
-    env:
-      WORKFLOW_BUILD_TYPE: Release
-      WORKFLOW_VULKAN_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
-      VULKAN_SDK: D:/a/Teleport/Teleport/VULKAN_SDK
-      VULKAN_SDK_DIR: D:/a/Teleport/Teleport/VULKAN_SDK
 
     steps:
-    - name: Download artifact
-      id: download-artifact
+    # Each artifact carries its own release_notes.md and teleport_commit.properties,
+    # so they are unpacked into separate directories to stop the three copies
+    # overwriting each other.
+    - name: Download Windows installer
       uses: dawidd6/action-download-artifact@v6
       with:
         github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         workflow: build_pc_client.yml
-    - name: Show
-      run: |
-        ls -R .
-    - name: Dotenv Action
-      uses: falti/dotenv-action@v1.1.2
+        workflow_conclusion: success
+        commit: ${{github.sha}}
+        name: installer
+        path: dist/windows
+        if_no_artifact_found: fail
+
+    - name: Download Linux installer
+      uses: dawidd6/action-download-artifact@v6
       with:
-        path: installer/teleport_commit.properties
-        log-variables: true
-        export-variables: true
+        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        workflow: build_linux_client.yml
+        workflow_conclusion: success
+        commit: ${{github.sha}}
+        name: linux-installer
+        path: dist/linux
+        if_no_artifact_found: fail
+
+    - name: Download macOS installer
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        workflow: build_macos_client.yml
+        workflow_conclusion: success
+        commit: ${{github.sha}}
+        name: macos-installer
+        path: dist/macos
+        if_no_artifact_found: fail
+
+    - name: Download Android APK
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        workflow: build_android_client.yml
+        workflow_conclusion: success
+        commit: ${{github.sha}}
+        name: android-apk
+        path: dist/android
+        if_no_artifact_found: fail
+
+    - name: Verify release assets
+      shell: bash
+      # if_no_artifact_found catches a missing artifact, but not an artifact that
+      # uploaded without its installer: build_pc_client.yml uploads with
+      # `if: always()`, so a run whose Installer step failed still yields an
+      # "installer" artifact holding nothing but the NSIS logs.
+      run: |
+        set -euo pipefail
+        ls -R dist
+        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/macos/*.pkg" "dist/android/*.apk"; do
+          if ! compgen -G "$pattern" > /dev/null; then
+            echo "::error::No file matching $pattern - refusing to publish an incomplete release."
+            exit 1
+          fi
+        done
+        # Cross-check that the artifacts really are the tagged commit's build.
+        # teleport_commit.properties holds an abbreviated hash, so test it as a
+        # prefix of the full SHA rather than comparing for equality.
+        actual="$(sed -n 's/^TELEPORT_COMMIT=//p' dist/windows/teleport_commit.properties | tr -d ' \r\n')"
+        echo "tagged commit $GITHUB_SHA, artifact commit $actual"
+        case "$GITHUB_SHA" in
+          "$actual"*) ;;
+          *) echo "::error::Artifacts are from commit $actual, but the tag points at $GITHUB_SHA." ; exit 1 ;;
+        esac
+
     - name: Create Release
       uses: ncipollo/release-action@v1.14.0
-      env:
-        GH_TOKEN: ${{secrets.TELEPORT_GENERIC_TOKEN}}
       with:
-        artifacts: "installer/*.exe"
-        bodyFile: "installer/release_notes.md"
-        skipIfReleaseExists: true
+        token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
+        tag: ${{ inputs.tag || github.ref_name }}
+        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/android/*.apk"
+        bodyFile: "dist/windows/release_notes.md"
+        # Re-running repairs a release published with a broken or partial asset
+        # set, rather than silently doing nothing as skipIfReleaseExists did.
+        allowUpdates: true
+        replacesArtifacts: true
         artifactErrorsFailBuild: true

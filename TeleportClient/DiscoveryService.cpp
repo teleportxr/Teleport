@@ -281,11 +281,17 @@ uint64_t DiscoveryService::Discover(uint64_t server_uid, std::string url, uint16
 					// an avatar arrives as an ordinary mesh pointer that the
 					// geometry decoder already fetches. See plans/avatars_plan.md.
 					teleport::core::SignalingCapabilities capabilities;
+					// Identity is provider-agnostic: the server learns which provider vouched for
+					// the user and a stable subject id, but never the user's email address.
+					IdentityProfile identityProfile = identity.GetProfile();
+					json			identityJson	= {{"provider", identityProfile.provider},
+													   {"subject", identityProfile.subject},
+													   {"displayName", identityProfile.displayName}};
 					json message = {{"teleport-signal-type", "connect"}
 										,{"content",	{
 															{"teleport", "0.9"}
 															,{"clientID", signalingServer->clientID}
-															,{"identity", identity.identity}
+															,{"identity", identityJson}
 															,{"capabilities", capabilities}
 														}
 										}

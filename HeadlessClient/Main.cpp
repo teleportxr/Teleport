@@ -1,6 +1,9 @@
 #include "HeadlessClient.h"
 #include "Repl.h"
 #include "TeleportClient/Config.h"
+#include "TeleportClient/GoogleDeviceIdentityProvider.h"
+#include "TeleportClient/GuestIdentityProvider.h"
+#include "TeleportClient/Identity.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "Platform/Core/FileLoader.h"
@@ -86,6 +89,16 @@ int main(int argc, char *argv[])
 	config.SetStorageFolder(storage_folder.c_str());
 	config.LoadConfigFromIniFile();
 
+	// Identity: this client has no browser, so Google sign-in uses the device authorization
+	// grant — the user is given a code to enter on a phone or another computer. Registering the
+	// providers here means Identity::Init() does not fall back to the GUI client's loopback flow,
+	// which would need a browser on this machine. Init() itself only restores a remembered
+	// sign-in; nothing prompts the user until they type "signin".
+	auto &identity = teleport::client::identity;
+	identity.RegisterProvider(std::make_shared<teleport::client::GoogleDeviceIdentityProvider>());
+	identity.RegisterProvider(std::make_shared<teleport::client::GuestIdentityProvider>());
+	identity.Init();
+
 	TELEPORT_LOG("Teleport Headless Client starting");
 
 	// Setup signal handlers for graceful shutdown
@@ -127,6 +140,7 @@ int main(int argc, char *argv[])
 
 		// Shutdown
 		repl.Stop();
+		identity.Shutdown();
 		headlessClient.Disconnect();
 
 		if (replThread.joinable())

@@ -39,3 +39,6 @@ CMake/
 AndroidPackaging
 /client/VrSamples/VisualStudio/VisualStudio.Packaging
 /libavstream/thirdparty/curl-7.74.0-android-arm64-v8a
+
+# Local build-time secrets (Google OAuth client credentials etc.)
+.env

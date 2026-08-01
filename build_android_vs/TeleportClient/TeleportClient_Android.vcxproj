@@ -30,6 +30,8 @@
     <ClInclude Include="..\..\TeleportClient\Config.h" />
     <ClInclude Include="..\..\TeleportClient\DiscoveryService.h" />
     <ClInclude Include="..\..\TeleportClient\GeometryCacheBackendInterface.h" />
+    <ClInclude Include="..\..\TeleportClient\IdentityStore.h" />
+    <ClInclude Include="..\..\TeleportClient\GuestIdentityProvider.h" />
     <ClInclude Include="..\..\TeleportClient\Log.h" />
     <ClInclude Include="..\..\TeleportClient\OpenXR.h" />
     <ClInclude Include="..\..\TeleportClient\OpenXRRenderModel.h" />
@@ -46,6 +48,8 @@
     <ClCompile Include="..\..\TeleportClient\Config.cpp" />
     <ClCompile Include="..\..\TeleportClient\DiscoveryService.cpp" />
     <ClCompile Include="..\..\TeleportClient\Identity.cpp" />
+    <ClInclude Include="..\..\TeleportClient\IdentityStore.cpp" />
+    <ClInclude Include="..\..\TeleportClient\GuestIdentityProvider.cpp" />
     <ClCompile Include="..\..\TeleportClient\Log.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXR.cpp" />
     <ClCompile Include="..\..\TeleportClient\OpenXRRenderModel.cpp" />

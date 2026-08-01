@@ -106,12 +106,18 @@ void Pipeline::processAsync()
 
 #ifdef __linux__
 #include <sys/prctl.h>
+#elif defined(__APPLE__)
+#include <pthread.h>
 #endif
 void Pipeline::processAsyncFn()
 {
 	pipelineThreadActive = true;
 #ifdef __linux__
 	prctl(PR_SET_NAME, (long)"Pipeline::processAsyncFn", 0, 0, 0);
+#elif defined(__APPLE__)
+	// macOS can only name the calling thread, which is exactly what this is.
+	// The name is truncated to 64 bytes, so keep it short.
+	pthread_setname_np("avs::Pipeline");
 #endif
 	std::cout << "Pipeline " << name << ": has started.\n";
 	while (pipelineThreadActive)

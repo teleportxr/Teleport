@@ -88,6 +88,7 @@
 #endif
 using namespace std::string_literals;
 #include "Platform/Core/StringFunctions.h"
+#include "TeleportClient/Identity.h"
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
 #include "TeleportClient/TabContext.h"

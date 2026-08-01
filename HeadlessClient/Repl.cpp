@@ -1,4 +1,5 @@
 #include "Repl.h"
+#include "TeleportClient/Identity.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "TeleportCore/Input.h"
@@ -218,6 +219,47 @@ void Repl::ProcessCommand(const ReplCommand &cmd)
 		std::cout << client.GetGeometryReport(cmd.args.empty() ? std::string() : cmd.args[0]);
 		std::cout << "\n";
 	}
+	else if (cmd.verb == "identity")
+	{
+		PrintIdentity();
+	}
+	else if (cmd.verb == "signin")
+	{
+		auto			  &identity	 = teleport::client::identity;
+		const auto		  &providers = identity.GetProviders();
+		// Default to the first provider that needs the user, which is the interesting one.
+		std::string providerName = cmd.args.empty() ? std::string() : cmd.args[0];
+		if (providerName.empty())
+		{
+			for (const auto &p : providers)
+			{
+				if (p->RequiresInteraction())
+				{
+					providerName = p->GetName();
+					break;
+				}
+			}
+		}
+		if (providerName.empty())
+		{
+			std::cout << "No identity providers are available in this build.\n";
+			return;
+		}
+		if (identity.SignIn(providerName))
+		{
+			// The flow runs on a worker thread and prints its instructions when Google replies.
+			std::cout << "Signing in with " << providerName << "...\n";
+		}
+		else
+		{
+			std::cout << "Could not start sign-in (already in progress, or no such provider: " << providerName << ")\n";
+		}
+	}
+	else if (cmd.verb == "signout")
+	{
+		teleport::client::identity.SignOut();
+		std::cout << "Signed out\n";
+	}
 	else if (cmd.verb == "quit" || cmd.verb == "exit")
 	{
 		client.Disconnect();
@@ -246,8 +288,35 @@ void Repl::PrintHelp() const
 		<< "  geometry             - Summarise streamed geometry\n"
 		<< "  geometry nodes       - List tracked nodes\n"
 		<< "  geometry resources   - List pointer resource URLs\n"
+		<< "  identity             - Show who this client is signed in as\n"
+		<< "  signin [provider]    - Sign in; prints a URL and a code to enter elsewhere\n"
+		<< "  signout              - Forget the current identity\n"
 		<< "  help                 - Show this help\n"
 		<< "  quit / exit          - Exit the client\n";
+}
+
+void Repl::PrintIdentity() const
+{
+	auto	   &identity = teleport::client::identity;
+	std::cout << "\n=== Identity ===\n";
+	std::cout << identity.GetDisplayText() << "\n";
+	if (identity.IsSignedIn())
+	{
+		teleport::client::IdentityProfile profile = identity.GetProfile();
+		std::cout << "Provider: " << profile.provider << "\n";
+		std::cout << "Subject:  " << profile.subject << "\n";
+		if (!profile.email.empty())
+			std::cout << "Email:    " << profile.email << " (kept locally; not sent to servers)\n";
+	}
+	const std::string error = identity.GetLastError();
+	if (!error.empty())
+		std::cout << "Last error: " << error << "\n";
+	std::cout << "Providers:";
+	for (const auto &p : identity.GetProviders())
+	{
+		std::cout << " " << p->GetName();
+	}
+	std::cout << "\n\n";
 }
 
 void Repl::PrintStatus() const
