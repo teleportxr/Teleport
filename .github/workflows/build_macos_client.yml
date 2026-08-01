@@ -7,12 +7,15 @@ name: build_macos_client
 # graphics API enabled the Platform submodule also skips its Vulkan subdirectory and its
 # .sfx shader compilation, so no Vulkan SDK is needed on the runner.
 #
-# The build produces a signed, notarised .pkg, so it needs the Apple credentials listed in
-# docs/macos_signing_secrets.md. When any of them is missing - a fork, a pull request from a
-# fork, or a repository where the secrets have not been configured yet - the check-secrets
-# job below reports that, and the build job is skipped rather than run. A skipped job is
-# neutral, so the workflow finishes green instead of failing on something the run had no way
-# of providing.
+# Signing and notarisation need the Apple credentials listed in docs/macos_signing_secrets.md.
+# When any of them is missing - a fork, a pull request from a fork, or a repository where the
+# secrets have not been configured yet - the build still runs in full and produces an unsigned
+# .pkg, so macOS never loses compile coverage. Only the signing steps are skipped, and the run
+# still finishes green rather than failing on something it had no way of providing.
+#
+# The unsigned package is uploaded as "macos-installer-unsigned". release.yml downloads
+# "macos-installer", so an unsigned build can never reach a release page: a tag built without
+# credentials fails at the download step and publishes nothing.
 
 on:
   workflow_dispatch:
@@ -57,20 +60,24 @@ jobs:
         done
         if [ -n "$missing" ]; then
           echo "available=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::Skipping the macOS build: no Apple signing credentials for$missing. See docs/macos_signing_secrets.md."
-          echo "### macOS build skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Building macOS unsigned: no Apple signing credentials for$missing. See docs/macos_signing_secrets.md."
+          echo "### macOS built unsigned" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "The following signing secrets are not available to this run:" >> "$GITHUB_STEP_SUMMARY"
+          echo "The build, tests and packaging ran in full, but the following signing secrets" >> "$GITHUB_STEP_SUMMARY"
+          echo "were not available to this run, so the package was neither signed nor notarised:" >> "$GITHUB_STEP_SUMMARY"
           for name in $missing; do echo "- \`$name\`" >> "$GITHUB_STEP_SUMMARY"; done
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "See \`Teleport/docs/macos_signing_secrets.md\` for how to create them." >> "$GITHUB_STEP_SUMMARY"
+          echo "It was uploaded as \`macos-installer-unsigned\`, which \`release.yml\` does not" >> "$GITHUB_STEP_SUMMARY"
+          echo "consume, so tagging this commit will not produce a release." >> "$GITHUB_STEP_SUMMARY"
+          echo "See \`Teleport/docs/macos_signing_secrets.md\` for how to create the secrets." >> "$GITHUB_STEP_SUMMARY"
         else
           echo "available=true" >> "$GITHUB_OUTPUT"
         fi
 
   build:
+    # Not gated on check-secrets: the build, tests and packaging run either way, so macOS
+    # keeps its compile coverage on forks. Only the signing steps below are conditional.
     needs: check-secrets
-    if: needs.check-secrets.outputs.available == 'true'
     runs-on: macos-15
     timeout-minutes: 90
     env:
@@ -113,9 +120,10 @@ jobs:
         cmake --version
         sw_vers
 
-    # Every signing step below is unconditional: the check-secrets job has already
-    # established that all nine credentials are present, or this job would not be running.
+    # The five signing steps below are gated on check-secrets. Everything else in this job
+    # runs unconditionally, so a credential-less run still proves that macOS compiles.
     - name: Import signing certificates
+      if: needs.check-secrets.outputs.available == 'true'
       env:
         MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
         MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -150,6 +158,7 @@ jobs:
         security find-identity -v -p codesigning "$KEYCHAIN"
 
     - name: Resolve signing identities
+      if: needs.check-secrets.outputs.available == 'true'
       env:
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       run: |
@@ -159,7 +168,9 @@ jobs:
 
     - name: Running cmake (macos)
       # The installer identity has to be known at configure time: cpack reads it from
-      # CPackConfig.cmake, which is generated now, not when cpack runs.
+      # CPackConfig.cmake, which is generated now, not when cpack runs. INSTALLER_IDENTITY is
+      # exported by "Resolve signing identities", so it is unset on an unsigned run - hence
+      # the :- default, which is what TeleportPackaging.cmake expects for "do not sign".
       run: |
         cmake -S . -B build_macos -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
@@ -174,7 +185,7 @@ jobs:
           -DPLATFORM_BUILD_SAMPLES=false \
           -DSIMUL_DEBUG_SHADERS=false \
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR" \
-          -DTELEPORT_MACOS_INSTALLER_IDENTITY="$INSTALLER_IDENTITY"
+          -DTELEPORT_MACOS_INSTALLER_IDENTITY="${INSTALLER_IDENTITY:-}"
 
     - name: Build
       # The default target, not just teleport_terminal: the Platform submodule has
@@ -199,6 +210,7 @@ jobs:
           echo "::error::teleport_terminal is not an arm64 binary."; exit 1; }
 
     - name: Sign the binary
+      if: needs.check-secrets.outputs.available == 'true'
       # --options runtime enables the hardened runtime, which notarisation requires;
       # --timestamp embeds a secure timestamp, likewise required.
       run: |
@@ -212,6 +224,7 @@ jobs:
       run: cpack -C Release --verbose
 
     - name: Verify the signature survived packaging
+      if: needs.check-secrets.outputs.available == 'true'
       # CMake's install step can rewrite an executable's RPATH, which invalidates a
       # signature applied beforehand. Expand the package and re-verify rather than
       # discovering it on a user's machine.
@@ -228,6 +241,7 @@ jobs:
         codesign --verify --strict --verbose=2 "$BIN"
 
     - name: Notarise and staple
+      if: needs.check-secrets.outputs.available == 'true'
       env:
         APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
         APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
@@ -257,9 +271,23 @@ jobs:
         cp release_notes.md artifacts/
         ls -l artifacts
 
-    - uses: actions/upload-artifact@v7.0.1
+    - name: Upload signed installer
+      if: needs.check-secrets.outputs.available == 'true'
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: macos-installer
+        path: artifacts/*.*
+        if-no-files-found: error
+
+    # Deliberately a different artifact name. release.yml downloads "macos-installer", so an
+    # unsigned package can never reach a release page - a tag built without credentials fails
+    # at that download and publishes nothing. This artifact exists for CI coverage and local
+    # testing; installing it needs `xattr -d com.apple.quarantine` first.
+    - name: Upload unsigned installer
+      if: needs.check-secrets.outputs.available != 'true'
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: macos-installer-unsigned
         path: artifacts/*.*
         if-no-files-found: error
 
