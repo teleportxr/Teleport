@@ -73,6 +73,11 @@ if(WIN32)
 	)
 elseif(TELEPORT_MACOS)
 	# No -ldl on macOS: dlopen and friends live in libSystem.
+	# Homebrew's openssl@3 is keg-only, so its lib dir is not on the default linker
+	# search path; OPENSSL_ROOT_DIR is passed on the cmake command line.
+	if(OPENSSL_ROOT_DIR)
+		target_link_directories(teleport_terminal PRIVATE ${OPENSSL_ROOT_DIR}/lib)
+	endif()
 	target_link_libraries(teleport_terminal ssl crypto pthread)
 elseif(TELEPORT_UNIX)
 	target_link_libraries(teleport_terminal ssl crypto pthread dl)
