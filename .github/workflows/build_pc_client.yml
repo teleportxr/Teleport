@@ -123,9 +123,10 @@ jobs:
     - uses: actions/upload-artifact@v7.0.1
       if: always()
       with:
+        # No github-token: this uploads to this workflow's own run, so the automatic
+        # GITHUB_TOKEN suffices. See the note on the download step below.
         name: installer
         path: artifacts/*.*
-        github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
 
 
   release:

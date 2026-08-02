@@ -26,15 +26,22 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: write   # create and update the release, and upload its assets
+      actions: read     # list the runs and artifacts of the build_* workflows
 
     steps:
     # Each artifact carries its own release_notes.md and teleport_commit.properties,
     # so they are unpacked into separate directories to stop the three copies
     # overwriting each other.
+    #
+    # No github_token on the four downloads, and no token on the release step: every
+    # one of them acts on this same repository, so the automatic GITHUB_TOKEN with the
+    # permissions above suffices. A custom PAT here only invites "Bad credentials"
+    # 401s when it expires.
     - name: Download Windows installer
       uses: dawidd6/action-download-artifact@v6
       with:
-        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         workflow: build_pc_client.yml
         workflow_conclusion: success
         commit: ${{github.sha}}
@@ -45,7 +52,6 @@ jobs:
     - name: Download Linux installer
       uses: dawidd6/action-download-artifact@v6
       with:
-        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         workflow: build_linux_client.yml
         workflow_conclusion: success
         commit: ${{github.sha}}
@@ -56,7 +62,6 @@ jobs:
     - name: Download macOS installer
       uses: dawidd6/action-download-artifact@v6
       with:
-        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         workflow: build_macos_client.yml
         workflow_conclusion: success
         commit: ${{github.sha}}
@@ -67,7 +72,6 @@ jobs:
     - name: Download Android APK
       uses: dawidd6/action-download-artifact@v6
       with:
-        github_token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         workflow: build_android_client.yml
         workflow_conclusion: success
         commit: ${{github.sha}}
@@ -103,7 +107,6 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1.14.0
       with:
-        token: ${{secrets.TELEPORT_GENERIC_TOKEN}}
         tag: ${{ inputs.tag || github.ref_name }}
         artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/android/*.apk"
         bodyFile: "dist/windows/release_notes.md"

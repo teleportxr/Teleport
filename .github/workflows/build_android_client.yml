@@ -248,6 +248,8 @@ jobs:
 
     - uses: actions/upload-artifact@v7.0.1
       with:
+        # No github-token: this uploads to this workflow's own run, so the automatic
+        # GITHUB_TOKEN suffices. A custom PAT only invites "Bad credentials" 401s
+        # when it expires.
         name: android-apk
         path: artifacts/*.*
-        github-token: ${{secrets.TELEPORT_RELEASES_TOKEN}}
