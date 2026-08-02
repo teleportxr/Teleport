@@ -152,6 +152,9 @@ void InstanceRenderer::RestoreDeviceObjects(platform::crossplatform::RenderPlatf
 	auto		domainPortPath = core::GetDomainPortPath(url_root);
 	GeometryCache::CreateGeometryCache(server_uid, -1, domainPortPath.domain);
 	geometryCache							   = GeometryCache::GetGeometryCache(server_uid);
+	// Saving from this cache must land somewhere writable. Without this it would fall back to a
+	// bare filename, i.e. the working directory - the client data directory, owned by root.
+	geometryCache->setSaveFolder(client::Config::GetInstance().GetStorageFolder() + "/" + domainPortPath.domain);
 	instanceRenderState.videoTexture		   = renderPlatform->CreateTexture();
 	instanceRenderState.specularCubemapTexture = renderPlatform->CreateTexture();
 	instanceRenderState.diffuseCubemapTexture  = renderPlatform->CreateTexture();

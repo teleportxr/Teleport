@@ -150,34 +150,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		TELEPORT_INTERNAL_CERR("CoInitialize failed. Exiting.");
 		return 0;
 	}
-	// run from pc_client directory.
-	std::filesystem::path current_path = std::filesystem::current_path();
-	if (!std::filesystem::exists("client/client_default.ini"))
-	{
-		wchar_t filename[700];
-		DWORD res = GetModuleFileNameW(nullptr, filename, 700);
-		if (res)
-		{
-			current_path = filename;
-			current_path = current_path.remove_filename();
-		}
-		// Get into the pc_client directory.
-		while (!current_path.empty() && !std::filesystem::exists("client/client_default.ini"))
-		{
-			std::filesystem::path prev_path = current_path;
-			// std::string rel_pc_client="../../pc_client";
-			current_path = current_path.append("../").lexically_normal();
-			if (prev_path == current_path) break;
-			if (std::filesystem::exists(current_path))
-				std::filesystem::current_path(current_path);
-			else
-				break;
-		}
-	}
-	current_path = current_path.append("client").lexically_normal();
-	if (!std::filesystem::exists(current_path))
+	// Locate the client data directory and run from it; the renderer loads its assets relative to it.
+	if (!client::FindClientDirectory())
 		return -1;
-	std::filesystem::current_path(current_path);
 
 	// Bootstrap client environment (find assets, resolve storage folder, load config)
 	if (!client::BootstrapClientEnvironment(cmdLine))
@@ -264,7 +239,9 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	WNDCLASSEXW wcex;
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
-	teleport_path = fs::current_path().parent_path().string();
+	// The directory above the client data: the source root in a development build, which is where
+	// the shader sources and build directory used below are found.
+	teleport_path = client::GetClientDataDirectory().parent_path().string();
 
 	// replacing Windows' broken resource system, just load our icon from a png:
 	const char filename[] = "textures\\teleportxr.png";
@@ -975,7 +952,9 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 		}
 	}
 
-	teleport_path = fs::current_path().parent_path().string();
+	// The directory above the client data: the source root in a development build, which is where
+	// the shader sources and build directory used below are found.
+	teleport_path = client::GetClientDataDirectory().parent_path().string();
 	std::string src_dir = teleport_path;
 	std::string build_dir = teleport_path + "/build_pc_client";
 
@@ -1070,40 +1049,9 @@ int main(int argc, char *argv[])
 	auto *fileLoader = platform::core::FileLoader::GetFileLoader();
 	fileLoader->SetRecordFilesLoaded(true);
 
-	// Find the pc_client directory
-	std::filesystem::path current_path = std::filesystem::current_path();
-	if (!std::filesystem::exists("client/client_default.ini"))
-	{
-		// Try to find it relative to executable
-		char exe_path[1024];
-		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-		if (len != -1)
-		{
-			exe_path[len] = '\0';
-			current_path = std::filesystem::path(exe_path).parent_path();
-		}
-		while (!current_path.empty() && !std::filesystem::exists("client/client_default.ini"))
-		{
-			std::filesystem::path prev_path = current_path;
-			current_path = current_path.append("../").lexically_normal();
-			if (prev_path == current_path)
-				break;
-			if (std::filesystem::exists(current_path))
-				std::filesystem::current_path(current_path);
-			else
-				break;
-		}
-	}
-	current_path = current_path.append("client").lexically_normal();
-	if (!std::filesystem::exists(current_path))
-	{
-		TELEPORT_WARN("Cannot find pc_client directory");
-		return -1;
-	}
-	std::filesystem::current_path(current_path);
+	// Locate the client data directory and run from it; the renderer loads its assets relative to it.
 	if(!client::FindClientDirectory())
 	{
-		TELEPORT_WARN("Cannot find client directory");
 		return -1;
 	}
 	// Bootstrap client environment (find assets, resolve storage folder, load config)

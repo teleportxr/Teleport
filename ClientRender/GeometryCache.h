@@ -145,7 +145,9 @@ namespace teleport
 				mTextCanvasManager.Update(timeElapsed_s, lifetimeFactor);
 				mFontAtlasManager.Update(timeElapsed_s, lifetimeFactor);
 			}
-			void setCacheFolder(const std::string &f);
+			//! Where SaveResource and SaveNodeTree write. Must be a directory the user can write to -
+			//! never the client data directory, which belongs to root once the client is installed.
+			void setSaveFolder(const std::string &f);
 			void SaveNodeTree(const std::shared_ptr<clientrender::Node> &n) const;
 
 			std::vector<avs::uid> GetAllResourceIDs()
@@ -272,7 +274,7 @@ namespace teleport
 			mutable std::mutex resourceRequestsMutex;
 			std::vector<avs::uid> m_ResourceRequests;  // Resources the client will request from the server.
 			std::vector<avs::uid> m_ReceivedResources; // Resources received.
-			std::string cacheFolder;
+			std::string saveFolder; // Write destination only; resources are never read back from here.
 			phmap::flat_hash_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 			phmap::flat_hash_map<avs::uid, std::string> resourceURLs;
 			std::string defaultURLRoot;

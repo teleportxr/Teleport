@@ -175,13 +175,21 @@ endif()
 # CPack configuration (generators, NSIS strings, Debian fields, include(CPack)) lives in
 # CMake/TeleportPackaging.cmake, included from the root CMakeLists.txt after all
 # subdirectories. Only this target's install() rules belong here.
+# TELEPORT_CLIENT_DATA_DEST is the destination for the client's runtime data, relative to
+# the install prefix. It must be set before the first install() rule that uses it: an unset
+# value expands to nothing, turning "${TELEPORT_CLIENT_DATA_DEST}/assets/textures" into the
+# absolute /assets/textures, which lands at the root of the target filesystem.
 if(TELEPORT_WINDOWS)
-	install(TARGETS TeleportPCClient RUNTIME DESTINATION build/bin/Release COMPONENT client)
 	set(TELEPORT_CLIENT_DATA_DEST "pc_client")
+	install(TARGETS TeleportPCClient RUNTIME DESTINATION build/bin/Release COMPONENT client)
 else()
+	# "share/<package>" is the FHS layout for read-only data inside /opt/<package>, and is the
+	# name teleport::client::ResolveClientDataDirectory looks for first. Lower case to match the
+	# /usr/share/teleportxr a distribution package would use, so that only the prefix would differ.
+	set(TELEPORT_CLIENT_DATA_DEST "share/teleportxr")
 	# Linux .deb layout (CPACK_PACKAGING_INSTALL_PREFIX=/opt/TeleportXR):
 	#   /opt/TeleportXR/bin/TeleportPCClient
-	#   /opt/TeleportXR/client/...               (runtime cwd after upward-walk in Main.cpp)
+	#   /opt/TeleportXR/share/teleportxr/...     (data directory, found by walking up from bin/)
 	# Icon and desktop entry use absolute paths so they land under /usr/share regardless
 	# of the package prefix, where the freedesktop tooling expects them.
 	install(TARGETS TeleportPCClient RUNTIME DESTINATION bin COMPONENT client)
@@ -199,7 +207,6 @@ else()
 		file(CREATE_LINK \"/opt/TeleportXR/bin/TeleportPCClient\"
 			\"\$ENV{DESTDIR}/usr/bin/teleportxr\" SYMBOLIC)
 	" COMPONENT client)
-	set(TELEPORT_CLIENT_DATA_DEST "client")
 endif()
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")

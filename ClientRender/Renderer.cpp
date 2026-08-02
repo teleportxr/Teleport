@@ -237,7 +237,9 @@ void Renderer::Init(crossplatform::RenderPlatform *r, teleport::client::OpenXR *
 	geometryDecoder.setCacheFolder(config.GetStorageFolder());
 	auto  localInstanceRenderer = GetInstanceRenderer(0);
 	auto &localGeometryCache	= localInstanceRenderer->geometryCache;
-	localGeometryCache->setCacheFolder("assets/localGeometryCache");
+	// Read-only local assets live in the client data directory and are loaded by relative path
+	// below; anything saved back out goes to the storage folder, which the user can write to.
+	localGeometryCache->setSaveFolder(config.GetStorageFolder() + "/localGeometryCache");
 
 	InitLocalGeometry();
 	client::identity.Init();

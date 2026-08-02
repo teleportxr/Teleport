@@ -70,6 +70,22 @@ if(TELEPORT_MACOS)
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/MacOS)
 endif()
 
+# Runtime library search path for the *installed* binaries. The packages bundle their own
+# copies of libktx, libdraco, libozz_*, libcurl and libopus under <prefix>/lib, and CMake
+# strips the build-tree rpath when installing, so without this the installed client dies at
+# startup with "libktx.so.4: cannot open shared object file: No such file or directory".
+#   $ORIGIN/../lib — executables in <prefix>/bin finding the bundled libraries
+#   $ORIGIN        — bundled libraries finding each other (ozz-animation is three .so files)
+# This has to be set before any dependency is fetched or added: a target's INSTALL_RPATH is
+# initialised from this variable at target-creation time, so it does not reach targets that
+# already exist. Deliberately not CMAKE_INSTALL_RPATH_USE_LINK_PATH, which would bake the
+# absolute build-tree directories of the linked libraries into the shipped binaries.
+if(TELEPORT_MACOS)
+	set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib")
+elseif(TELEPORT_LINUX)
+	set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/../lib")
+endif()
+
 # FetchContent download timestamp policy:
 cmake_policy(SET CMP0135 NEW)
 cmake_policy(SET CMP0077 NEW)

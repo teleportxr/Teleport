@@ -3,6 +3,7 @@
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/Logging.h"
 #include <filesystem>
+#include <cstdlib>
 #include <cstring>
 
 #ifdef _WIN32
@@ -11,60 +12,124 @@
 	#include <unistd.h>
 	#include <pwd.h>
 #endif
+#ifdef __APPLE__
+	#include <mach-o/dyld.h>
+#endif
+
+namespace
+{
+	//! The file that identifies a directory as the client data directory.
+	const char *const kClientDataMarker = "client_default.ini";
+
+	//! Names to try for the data directory, relative to a candidate root, in priority order:
+	//!  - "share/teleportxr" is the installed layout, /opt/TeleportXR/share/teleportxr, which is
+	//!    also what /usr/share/teleportxr would look like if the client is ever packaged for a
+	//!    distribution archive - only the prefix differs, so this name need not change.
+	//!  - "client" is the source tree, where the data sits beside the build directory.
+	const char *const kClientDataDirNames[] = {"share/teleportxr", "client"};
+
+	//! The directory containing the running executable, or an empty path if it cannot be determined.
+	std::filesystem::path ExecutableDirectory()
+	{
+#ifdef _WIN32
+		wchar_t filename[700];
+		DWORD res = GetModuleFileNameW(nullptr, filename, 700);
+		if (!res) return {};
+		return std::filesystem::path(filename).parent_path();
+#elif defined(__APPLE__)
+		char exe_path[1024];
+		uint32_t size = sizeof(exe_path);
+		if (_NSGetExecutablePath(exe_path, &size) != 0) return {};
+		return std::filesystem::path(exe_path).parent_path();
+#else
+		char exe_path[1024];
+		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+		if (len == -1) return {};
+		exe_path[len] = '\0';
+		return std::filesystem::path(exe_path).parent_path();
+#endif
+	}
+
+	//! Whichever of kClientDataDirNames exists directly below root, or an empty path if none does.
+	std::filesystem::path DataDirectoryBelow(const std::filesystem::path &root)
+	{
+		if (root.empty()) return {};
+		std::error_code ec;
+		for (const char *name : kClientDataDirNames)
+		{
+			std::filesystem::path candidate = root / name;
+			if (std::filesystem::exists(candidate / kClientDataMarker, ec)) return candidate;
+		}
+		return {};
+	}
+}
 
 namespace teleport
 {
 	namespace client
 	{
 		static std::string s_storage_folder;
+		static std::filesystem::path s_client_data_dir;
+
+		std::filesystem::path ResolveClientDataDirectory()
+		{
+			std::error_code ec;
+			// An explicit override wins, so that an uninstalled build can be pointed at any data directory.
+			if (const char *env = std::getenv("TELEPORT_CLIENT_DATA_DIR"))
+			{
+				std::filesystem::path dir(env);
+				if (std::filesystem::exists(dir / kClientDataMarker, ec)) return dir;
+				TELEPORT_WARN("TELEPORT_CLIENT_DATA_DIR is set to {}, which contains no {}. Ignoring it.", env, kClientDataMarker);
+			}
+			// The working directory, for a client started from the directory above its data.
+			std::filesystem::path found = DataDirectoryBelow(std::filesystem::current_path(ec));
+			if (!found.empty()) return found;
+			// Then the executable's directory and each directory above it: bin/ -> the install prefix
+			// for a packaged client, and the build output directory -> the source root for a dev build.
+			std::filesystem::path dir = ExecutableDirectory();
+			while (!dir.empty())
+			{
+				found = DataDirectoryBelow(dir);
+				if (!found.empty()) return found;
+				std::filesystem::path parent = dir.parent_path();
+				if (parent == dir) break;
+				dir = parent;
+			}
+			return {};
+		}
 
 		bool FindClientDirectory()
 		{
-			std::filesystem::path current_path = std::filesystem::current_path();
-			// Find the client directory by searching for client/client_default.ini
-			if (!std::filesystem::exists("client/client_default.ini"))
+			std::filesystem::path dir = ResolveClientDataDirectory();
+			if (dir.empty())
 			{
-#ifdef _WIN32
-				// Windows: try to find it relative to executable
-				wchar_t filename[700];
-				DWORD res = GetModuleFileNameW(nullptr, filename, 700);
-				if (res)
-				{
-					current_path = filename;
-					current_path = current_path.remove_filename();
-				}
-#else
-				// Linux: try to find it relative to executable
-				char exe_path[1024];
-				ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-				if (len != -1)
-				{
-					exe_path[len] = '\0';
-					current_path = std::filesystem::path(exe_path).parent_path();
-				}
-#endif
-				// Search up the directory tree for client/client_default.ini
-				while (!current_path.empty() && !std::filesystem::exists("client/client_default.ini"))
-				{
-					std::filesystem::path prev_path = current_path;
-					current_path = current_path.append("../").lexically_normal();
-					if (prev_path == current_path)
-						break;
-					if (std::filesystem::exists(current_path))
-						std::filesystem::current_path(current_path);
-					else
-						break;
-				}
-			}
-
-			current_path = current_path.append("client").lexically_normal();
-			if (!std::filesystem::exists(current_path))
-			{
-				TELEPORT_WARN("Cannot find client directory");
+				TELEPORT_WARN("Cannot find the client data directory: no {} below the working directory or the executable.", kClientDataMarker);
 				return false;
 			}
-			std::filesystem::current_path(current_path);
+			std::error_code ec;
+			s_client_data_dir = std::filesystem::absolute(dir, ec).lexically_normal();
+			// The renderer, GUI and shader loader all read through paths relative to the data
+			// directory ("assets/localGeometryCache/...", "textures", "assets/shaders"), so it also
+			// becomes the working directory. Nothing may *write* through those relative paths: once
+			// installed the data directory belongs to root. Write to GetStorageFolderPath() instead.
+			std::filesystem::current_path(s_client_data_dir, ec);
+			if (ec)
+			{
+				TELEPORT_WARN("Cannot enter the client data directory {}: {}", s_client_data_dir.string(), ec.message());
+				return false;
+			}
 			return true;
+		}
+
+		const std::filesystem::path &GetClientDataDirectory()
+		{
+			return s_client_data_dir;
+		}
+
+		std::string GetClientDataPath(const std::string &relativePath)
+		{
+			if (s_client_data_dir.empty()) return relativePath;
+			return (s_client_data_dir / relativePath).lexically_normal().string();
 		}
 		bool BootstrapClientEnvironment(const std::string &cmdLine)
 		{
