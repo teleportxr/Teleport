@@ -8,8 +8,12 @@ name: release
 # must have green runs of build_pc_client.yml, build_linux_client.yml,
 # build_macos_client.yml and build_android_client.yml before the tag is pushed -
 # merge to main, wait for the builds, then tag that commit. Every download is
-# pinned to github.sha, so a commit without those runs fails here and publishes
-# nothing.
+# pinned to the commit the released tag points at, so a commit without those runs
+# fails here and publishes nothing.
+#
+# Dispatching manually: the "Use workflow from" dropdown only chooses which copy of
+# this file runs. What gets released is the `tag` input, so set it - leaving it blank
+# releases the dropdown's ref under its own name.
 #
 # The macOS package is taken signed when the build had the Apple credentials and
 # unsigned when it did not; an unsigned one is released with a note in the body
@@ -35,6 +39,28 @@ jobs:
       actions: read     # list the runs and artifacts of the build_* workflows
 
     steps:
+    # github.sha is NOT the commit being released. On workflow_dispatch it is the head of
+    # whatever ref the "Use workflow from" dropdown selected, which has nothing to do with
+    # the `tag` input - dispatching against main while asking for tag v2.0 would otherwise
+    # download main's artifacts and publish them under v2.0, with the cross-check below
+    # comparing them against main's SHA and happily agreeing. So the tag is resolved to its
+    # commit once, here, and everything downstream keys off that.
+    #
+    # On a tag push, inputs.tag is empty and github.ref_name is the tag, so this resolves to
+    # the same commit github.sha already held; the two triggers stay consistent.
+    - name: Resolve the commit being released
+      id: target
+      shell: bash
+      env:
+        GH_TOKEN: ${{github.token}}
+        REF: ${{ inputs.tag || github.ref_name }}
+      run: |
+        set -euo pipefail
+        # This endpoint dereferences annotated tags, so it yields the commit either way.
+        sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/$REF" --jq .sha)"
+        echo "releasing $REF at $sha"
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
     # Each artifact carries its own release_notes.md and teleport_commit.properties,
     # so they are unpacked into separate directories to stop the three copies
     # overwriting each other.
@@ -48,7 +74,7 @@ jobs:
       with:
         workflow: build_pc_client.yml
         workflow_conclusion: success
-        commit: ${{github.sha}}
+        commit: ${{steps.target.outputs.sha}}
         name: installer
         path: dist/windows
         if_no_artifact_found: fail
@@ -58,7 +84,7 @@ jobs:
       with:
         workflow: build_linux_client.yml
         workflow_conclusion: success
-        commit: ${{github.sha}}
+        commit: ${{steps.target.outputs.sha}}
         name: linux-installer
         path: dist/linux
         if_no_artifact_found: fail
@@ -73,7 +99,7 @@ jobs:
       with:
         workflow: build_macos_client.yml
         workflow_conclusion: success
-        commit: ${{github.sha}}
+        commit: ${{steps.target.outputs.sha}}
         name: macos-installer
         path: dist/macos
         if_no_artifact_found: warn
@@ -97,7 +123,7 @@ jobs:
       with:
         workflow: build_macos_client.yml
         workflow_conclusion: success
-        commit: ${{github.sha}}
+        commit: ${{steps.target.outputs.sha}}
         name: macos-installer-unsigned
         path: dist/macos
         if_no_artifact_found: fail
@@ -107,7 +133,7 @@ jobs:
       with:
         workflow: build_android_client.yml
         workflow_conclusion: success
-        commit: ${{github.sha}}
+        commit: ${{steps.target.outputs.sha}}
         name: android-apk
         path: dist/android
         if_no_artifact_found: fail
@@ -118,6 +144,8 @@ jobs:
       # uploaded without its installer: build_pc_client.yml uploads with
       # `if: always()`, so a run whose Installer step failed still yields an
       # "installer" artifact holding nothing but the NSIS logs.
+      env:
+        TARGET_SHA: ${{steps.target.outputs.sha}}
       run: |
         set -euo pipefail
         ls -R dist
@@ -127,14 +155,16 @@ jobs:
             exit 1
           fi
         done
-        # Cross-check that the artifacts really are the tagged commit's build.
+        # Cross-check that the artifacts really are the tagged commit's build. Compared
+        # against the resolved TARGET_SHA, not GITHUB_SHA - on a dispatch the latter is
+        # the dropdown's ref, so it would agree with the wrong artifacts.
         # teleport_commit.properties holds an abbreviated hash, so test it as a
         # prefix of the full SHA rather than comparing for equality.
         actual="$(sed -n 's/^TELEPORT_COMMIT=//p' dist/windows/teleport_commit.properties | tr -d ' \r\n')"
-        echo "tagged commit $GITHUB_SHA, artifact commit $actual"
-        case "$GITHUB_SHA" in
+        echo "releasing commit $TARGET_SHA, artifact commit $actual"
+        case "$TARGET_SHA" in
           "$actual"*) ;;
-          *) echo "::error::Artifacts are from commit $actual, but the tag points at $GITHUB_SHA." ; exit 1 ;;
+          *) echo "::error::Artifacts are from commit $actual, but the release points at $TARGET_SHA." ; exit 1 ;;
         esac
 
     # Gatekeeper refuses an unsigned package outright, with an error that does not
