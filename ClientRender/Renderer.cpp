@@ -139,6 +139,9 @@ Renderer::Renderer(Gui &g) : previousTimestampUs(0), gui(g), config(teleport::cl
 
 Renderer::~Renderer()
 {
+	// Cancel any sign-in still waiting on the browser and join the identity worker here, rather
+	// than leaving it to the global's destructor at static-destruction time.
+	client::identity.Shutdown();
 	InvalidateDeviceObjects();
 	rendererInstance = nullptr;
 }

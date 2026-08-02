@@ -427,6 +427,8 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		config.GlyphOffset		= ImVec2(0.0f, 3.0f);
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
+		builder.AddText(ICON_FK_USER_CIRCLE);
+		builder.AddText(ICON_FK_USER_CIRCLE_O);
 		builder.AddText(ICON_FK_SEARCH);
 		builder.AddText(ICON_FK_LONG_ARROW_LEFT);
 		builder.AddText(ICON_FK_BOOK);
@@ -467,6 +469,8 @@ void Gui::RestoreDeviceObjects(crossplatform::RenderPlatform *r, PlatformWindow 
 		config.GlyphOffset		= ImVec2(0.0f, std::round(float(sz) * 0.1f));
 		ImFontGlyphRangesBuilder builder;
 		builder.AddChar('a');
+		builder.AddText(ICON_FK_USER_CIRCLE);
+		builder.AddText(ICON_FK_USER_CIRCLE_O);
 		builder.AddText(ICON_FK_SEARCH);
 		builder.AddText(ICON_FK_LONG_ARROW_LEFT);
 		builder.AddText(ICON_FK_BOOK);
@@ -2753,6 +2757,93 @@ void Gui::ShowAvatarSettings2D()
 	ImGuiEnd();
 }
 
+//! Who the user is, and the only place in the GUI that can start a sign-in. Drawn as a separate
+//! window anchored under the menu bar's identity button rather than as a popup, because the menu
+//! bar window is sized tightly around its buttons and clips anything drawn below them.
+//!
+//! Nothing here knows which providers exist: the buttons come from Identity::GetProviders(), so a
+//! provider that is unavailable in this build is simply absent rather than offered and broken.
+void Gui::ShowIdentity2D()
+{
+	auto			&identity	  = client::identity;
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings |
+									ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+
+	// Right-align the panel with the button, using the previous frame's width: AlwaysAutoResize
+	// means the width is only known after a draw. The bookmarks list is positioned the same way.
+	static float identity_width = 0.0f;
+	ImGui::SetNextWindowPos(ImVec2(identity_pos.x - identity_width, identity_pos.y));
+
+	ImGuiBegin("Identity", 0, window_flags);
+	identity_width = ImGui::GetWindowWidth();
+	switch (identity.GetState())
+	{
+	case client::SignInState::SignedIn:
+	{
+		const client::IdentityProfile profile = identity.GetProfile();
+		ImGui::TextUnformatted(profile.displayName.empty() ? profile.subject.c_str() : profile.displayName.c_str());
+		for (const auto &p : identity.GetProviders())
+		{
+			if (profile.provider == p->GetName())
+			{
+				ImGui::TextUnformatted(p->GetDisplayName());
+				break;
+			}
+		}
+		// Shown here, but deliberately never sent to a server: see DiscoveryService.
+		if (!profile.email.empty())
+		{
+			ImGui::TextUnformatted(profile.email.c_str());
+		}
+		ImGui::Separator();
+		if (ImGui::Button("Sign out"))
+		{
+			identity.SignOut();
+		}
+		break;
+	}
+	case client::SignInState::Restoring:
+	case client::SignInState::WaitingForUser:
+	{
+		const std::string status = identity.GetDisplayText();
+		ImGui::TextUnformatted(status.c_str());
+		ImGui::Separator();
+		if (ImGui::Button("Cancel"))
+		{
+			identity.CancelSignIn();
+		}
+		break;
+	}
+	default:
+	{
+		// SignedOut, or Failed: in both cases the user's next move is to choose a provider.
+		if (identity.GetState() == client::SignInState::Failed)
+		{
+			const std::string error = identity.GetLastError();
+			ImGui::TextUnformatted(error.empty() ? "Sign-in failed" : error.c_str());
+			ImGui::Separator();
+		}
+		const auto &providers = identity.GetProviders();
+		if (providers.empty())
+		{
+			ImGui::TextUnformatted("No identity providers are available in this build.");
+			break;
+		}
+		ImGui::TextUnformatted("Sign in with:");
+		for (const auto &p : providers)
+		{
+			// The one place the client may open a browser, and only because the user clicked.
+			if (ImGui::Button(p->GetDisplayName()))
+			{
+				identity.SignIn(p->GetName());
+			}
+		}
+		break;
+	}
+	}
+	ImGuiEnd();
+}
+
 void Gui::ListBookmarks()
 {
 	auto								&config		   = client::Config::GetInstance();
@@ -2895,6 +2986,7 @@ void Gui::MenuBar2D()
 			if (show_bookmarks)
 			{
 				show_options  = false;
+				show_identity = false;
 				ImVec2 pos	  = ImGui::GetCursorScreenPos();
 				bookmarks_pos = {ImGui::GetWindowWidth(), pos.y};
 			}
@@ -2937,10 +3029,40 @@ void Gui::MenuBar2D()
 				show_bookmarks = false;
 				config.SaveOptions();
 			}
+			else
+			{
+				show_identity = false;
+			}
 		}
 		if (ImGui::IsItemActive() || ImGui::IsItemHovered())
 		{
 			TIMED_TOOLTIP("Settings");
+		}
+		ImGui::SameLine();
+		{
+			// A filled icon when signed in, an outline when not, so the state is readable at a
+			// glance. Nothing here names a particular identity provider: the panel below simply
+			// lists whichever providers this build registered.
+			const bool signedIn = client::identity.IsSignedIn();
+			if (ImGui::Button(signedIn ? ICON_FK_USER_CIRCLE : ICON_FK_USER_CIRCLE_O, *(ImVec2 *)&buttonSize))
+			{
+				show_identity = !show_identity;
+				if (show_identity)
+				{
+					show_bookmarks = false;
+					show_options   = false;
+					ImVec2 pos	   = ImGui::GetCursorScreenPos();
+					identity_pos   = {ImGui::GetWindowWidth(), pos.y};
+				}
+			}
+			if (!show_identity && (ImGui::IsItemActive() || ImGui::IsItemHovered()))
+			{
+				// The display text is the whole story when signed in ("Roderick (Google)"), so the
+				// user need not open the panel to see who they are.
+				// "%s": the text is user data, and SetTooltip is printf-style.
+				const std::string identityTooltip = client::identity.GetDisplayText();
+				TIMED_TOOLTIP("%s", identityTooltip.c_str());
+			}
 		}
 #if TELEPORT_INTERNAL_CHECKS
 		if (config.dev_mode)
@@ -2967,7 +3089,9 @@ bool Gui::UrlEdit()
 	bool  ret	 = false;
 	auto &config = client::Config::GetInstance();
 	ImGui::SameLine();
-	int num_buttons = 6;
+	// The URL field takes whatever the buttons to its right do not. Keep this in step with
+	// MenuBar2D: a button added there without incrementing this is simply pushed off the edge.
+	int num_buttons = 7;
 
 #if TELEPORT_INTERNAL_CHECKS
 	if (config.dev_mode)
@@ -3177,6 +3301,10 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		bookmarks_width = ImGui::GetWindowWidth();
 		ListBookmarks();
 		ImGuiEnd();
+	}
+	else if (show_identity)
+	{
+		ShowIdentity2D();
 	}
 	// ImGuiEnd();
 	ImGui::PopFont();

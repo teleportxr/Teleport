@@ -126,7 +126,7 @@ Node header
    * - holder_client_id
      - ``uint64`` (``avs::uid``)
      - 8
-     - Owning client id, or ``0`` if the node is not held by any client.
+     - Owning client id, or ``0`` if the node is not held by any client. A non-zero value marks the node's lifetime as bounded by that client's session: see :doc:`client_nodes`.
    * - priority
      - ``int32``
      - 4

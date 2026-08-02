@@ -76,7 +76,7 @@ A server must be capable of supporting clients in at least ``EngineeringStyle`` 
 * The server publishes the axes its scene is authored in via ``SetupCommand.axesStandard``. Clients should remember this value but it is informational only; numbers on the wire are always already in the client's standard.
 * Linear units are **metres**.
 * Quaternions are stored as ``vec4_packed`` with the layout ``(x, y, z, w)``.
-* All transforms are local (relative to the parent node); root nodes are relative to the session origin specified by ``SetOriginNodeCommand``.
+* All transforms are local, i.e. relative to the parent node. A root node -- one whose ``parent_uid`` is zero -- is therefore expressed directly in the server's global space, and its global transform is its local transform. Node transforms are **not** relative to the session origin: the origin is itself an ordinary node in that same global space. See :doc:`client_nodes`.
 
 Time base
 =========
