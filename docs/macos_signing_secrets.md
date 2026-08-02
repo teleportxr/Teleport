@@ -4,15 +4,25 @@
 submits it to Apple for notarisation. This page describes how to create each of the nine
 repository secrets it reads.
 
-If any one of them is missing, the workflow's `check-secrets` job says so and the macOS build
-job is **skipped**, not failed. A skipped job is neutral in GitHub Actions, so the run
-finishes green: a fork, or a pull request from a fork, is never blocked by credentials it had
-no way of seeing. The names of the missing secrets appear in the run summary.
+If any one of them is missing, the workflow's `check-secrets` job says so and the build still
+runs **in full** — compile, `ctest`, dependency checks and `cpack` — producing an **unsigned**
+`.pkg`. Only the signing and notarisation steps are skipped, and the run finishes green. So a
+fork, or a pull request from a fork, keeps full macOS compile coverage without being blocked by
+credentials it had no way of seeing. The names of the missing secrets appear in the run summary.
 
-The consequence is that no `macos-installer` artifact is produced. `release.yml` requires that
-artifact for the tagged commit, so **without these secrets, tagging will not produce a
-release** — it fails at the download step with "no artifact found" and publishes nothing. That
-is deliberate: an unsigned macOS package is not something to put on a release page.
+The unsigned package is uploaded as **`macos-installer-unsigned`**, deliberately *not* the
+`macos-installer` name that `release.yml` downloads. The consequence is that **without these
+secrets, tagging will not produce a release** — it fails at the macOS download step with "no
+artifact found" and publishes nothing, including the Windows, Linux and Android assets. That is
+deliberate: an unsigned macOS package is not something to put on a release page, and a partial
+release is worse than none.
+
+To use an unsigned build for local testing, download the artifact and clear the quarantine flag
+before installing:
+
+```bash
+xattr -d com.apple.quarantine teleportxr-*.pkg
+```
 
 **Prerequisite:** an active [Apple Developer Program](https://developer.apple.com/programs/)
 membership (£79/$99 per year). A free Apple ID cannot issue Developer ID certificates, which

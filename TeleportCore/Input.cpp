@@ -1,11 +1,14 @@
 // (C) Copyright 2018-2021 Simul Software Ltd
 #include "Input.h"
 #include "TeleportCore/ErrorHandling.h"
+#include <cmath>
 using namespace teleport;
 using namespace core;
 static uint32_t nextEventID = 0;
 #ifdef _MSC_VER
-#define isnanf isnan
+#define isnanf(x) isnan(x)
+#else
+#define isnanf(x) std::isnan(x)
 #endif
 
 void Input::clearEvents()
