@@ -10,6 +10,10 @@ name: release
 # merge to main, wait for the builds, then tag that commit. Every download is
 # pinned to github.sha, so a commit without those runs fails here and publishes
 # nothing.
+#
+# The macOS package is taken signed when the build had the Apple credentials and
+# unsigned when it did not; an unsigned one is released with a note in the body
+# telling users to clear the quarantine flag.
 
 on:
   workflow_dispatch:
@@ -59,13 +63,42 @@ jobs:
         path: dist/linux
         if_no_artifact_found: fail
 
-    - name: Download macOS installer
+    # build_macos_client.yml uploads "macos-installer" when the Apple signing secrets
+    # were available to the run and "macos-installer-unsigned" when they were not, so
+    # the two are tried in that order: a signed package is always preferred, and an
+    # unsigned one is accepted rather than blocking the release. `warn` instead of
+    # `fail` lets the first step come up empty without ending the job.
+    - name: Download macOS installer (signed)
       uses: dawidd6/action-download-artifact@v6
       with:
         workflow: build_macos_client.yml
         workflow_conclusion: success
         commit: ${{github.sha}}
         name: macos-installer
+        path: dist/macos
+        if_no_artifact_found: warn
+
+    # Tested by looking at what landed on disk rather than at an action output, so
+    # this does not depend on the download action's reporting.
+    - name: Check for a signed macOS package
+      id: macos
+      shell: bash
+      run: |
+        set -euo pipefail
+        if compgen -G "dist/macos/*.pkg" > /dev/null; then
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "signed=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Download macOS installer (unsigned fallback)
+      if: steps.macos.outputs.signed != 'true'
+      uses: dawidd6/action-download-artifact@v6
+      with:
+        workflow: build_macos_client.yml
+        workflow_conclusion: success
+        commit: ${{github.sha}}
+        name: macos-installer-unsigned
         path: dist/macos
         if_no_artifact_found: fail
 
@@ -103,6 +136,27 @@ jobs:
           "$actual"*) ;;
           *) echo "::error::Artifacts are from commit $actual, but the tag points at $GITHUB_SHA." ; exit 1 ;;
         esac
+
+    # Gatekeeper refuses an unsigned package outright, with an error that does not
+    # explain itself, so the release notes have to say so and give the way round it.
+    - name: Note the unsigned macOS package
+      if: steps.macos.outputs.signed != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::warning::No signed macOS package for this commit - releasing the unsigned build. See docs/macos_signing_secrets.md."
+        {
+          echo ""
+          echo "## macOS package is unsigned"
+          echo ""
+          echo "This release's \`.pkg\` was built without Apple signing credentials, so it is"
+          echo "neither signed nor notarised. macOS will refuse to open it until the quarantine"
+          echo "flag is cleared:"
+          echo ""
+          echo '```bash'
+          echo "xattr -d com.apple.quarantine teleportxr-*.pkg"
+          echo '```'
+        } >> dist/windows/release_notes.md
 
     - name: Create Release
       uses: ncipollo/release-action@v1.14.0

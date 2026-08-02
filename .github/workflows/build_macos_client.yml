@@ -67,8 +67,9 @@ jobs:
           echo "were not available to this run, so the package was neither signed nor notarised:" >> "$GITHUB_STEP_SUMMARY"
           for name in $missing; do echo "- \`$name\`" >> "$GITHUB_STEP_SUMMARY"; done
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "It was uploaded as \`macos-installer-unsigned\`, which \`release.yml\` does not" >> "$GITHUB_STEP_SUMMARY"
-          echo "consume, so tagging this commit will not produce a release." >> "$GITHUB_STEP_SUMMARY"
+          echo "It was uploaded as \`macos-installer-unsigned\`. \`release.yml\` falls back to that" >> "$GITHUB_STEP_SUMMARY"
+          echo "artifact, so tagging this commit still produces a release, but its macOS package" >> "$GITHUB_STEP_SUMMARY"
+          echo "will be unsigned and users will have to clear the quarantine flag to install it." >> "$GITHUB_STEP_SUMMARY"
           echo "See \`Teleport/docs/macos_signing_secrets.md\` for how to create the secrets." >> "$GITHUB_STEP_SUMMARY"
         else
           echo "available=true" >> "$GITHUB_OUTPUT"
@@ -279,10 +280,10 @@ jobs:
         path: artifacts/*.*
         if-no-files-found: error
 
-    # Deliberately a different artifact name. release.yml downloads "macos-installer", so an
-    # unsigned package can never reach a release page - a tag built without credentials fails
-    # at that download and publishes nothing. This artifact exists for CI coverage and local
-    # testing; installing it needs `xattr -d com.apple.quarantine` first.
+    # Deliberately a different artifact name, so signed and unsigned are never confused for
+    # each other. release.yml tries "macos-installer" first and falls back to this one, so a
+    # tag built without credentials still releases - with a note in the body, since installing
+    # an unsigned package needs `xattr -d com.apple.quarantine` first.
     - name: Upload unsigned installer
       if: needs.check-secrets.outputs.available != 'true'
       uses: actions/upload-artifact@v7.0.1
