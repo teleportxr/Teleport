@@ -187,9 +187,9 @@ else()
 	# name teleport::client::ResolveClientDataDirectory looks for first. Lower case to match the
 	# /usr/share/teleportxr a distribution package would use, so that only the prefix would differ.
 	set(TELEPORT_CLIENT_DATA_DEST "share/teleportxr")
-	# Linux .deb layout (CPACK_PACKAGING_INSTALL_PREFIX=/opt/TeleportXR):
-	#   /opt/TeleportXR/bin/TeleportPCClient
-	#   /opt/TeleportXR/share/teleportxr/...     (data directory, found by walking up from bin/)
+	# Linux .deb layout (CPACK_PACKAGING_INSTALL_PREFIX=/opt/teleportxr):
+	#   /opt/teleportxr/bin/TeleportPCClient
+	#   /opt/teleportxr/share/teleportxr/...     (data directory, found by walking up from bin/)
 	# Icon and desktop entry use absolute paths so they land under /usr/share regardless
 	# of the package prefix, where the freedesktop tooling expects them.
 	install(TARGETS TeleportPCClient RUNTIME DESTINATION bin COMPONENT client)
@@ -204,7 +204,7 @@ else()
 	# Convenience symlink so the binary can be invoked from a shell.
 	install(CODE "
 		file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/bin\")
-		file(CREATE_LINK \"/opt/TeleportXR/bin/TeleportPCClient\"
+		file(CREATE_LINK \"/opt/teleportxr/bin/TeleportPCClient\"
 			\"\$ENV{DESTDIR}/usr/bin/teleportxr\" SYMBOLIC)
 	" COMPONENT client)
 endif()

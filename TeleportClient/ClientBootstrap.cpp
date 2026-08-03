@@ -22,7 +22,7 @@ namespace
 	const char *const kClientDataMarker = "client_default.ini";
 
 	//! Names to try for the data directory, relative to a candidate root, in priority order:
-	//!  - "share/teleportxr" is the installed layout, /opt/TeleportXR/share/teleportxr, which is
+	//!  - "share/teleportxr" is the installed layout, /opt/teleportxr/share/teleportxr, which is
 	//!    also what /usr/share/teleportxr would look like if the client is ever packaged for a
 	//!    distribution archive - only the prefix differs, so this name need not change.
 	//!  - "client" is the source tree, where the data sits beside the build directory.

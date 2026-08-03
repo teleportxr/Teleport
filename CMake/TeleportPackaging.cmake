@@ -71,7 +71,7 @@ if(TELEPORT_WINDOWS)
 elseif(TELEPORT_MACOS)
 	set(CPACK_GENERATOR "productbuild")
 	# Same staging prefix as the Linux .deb.
-	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/TeleportXR")
+	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/teleportxr")
 	set(CPACK_PACKAGE_NAME "teleportxr")
 	# Reverse-DNS package identifier. Gatekeeper ties the notarisation ticket to it,
 	# so it must stay stable across releases.
@@ -87,16 +87,16 @@ elseif(TELEPORT_MACOS)
 
 else()
 	set(CPACK_GENERATOR "DEB")
-	# Stage payload under /opt/TeleportXR. Absolute install() destinations
+	# Stage payload under /opt/teleportxr. Absolute install() destinations
 	# (e.g. /usr/share/applications) escape this prefix and are honoured literally.
-	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/TeleportXR")
+	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/teleportxr")
 	set(CPACK_PACKAGE_NAME "teleportxr")
 	set(CPACK_DEBIAN_PACKAGE_NAME "teleportxr")
-	set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Simul <contact@simul.co>")
+	set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Teleport XR <contact@teleportxr.io>")
 	set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 	set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 	set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-	set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/simul/Teleport")
+	set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/teleportxr/Teleport")
 	set(CPACK_DEBIAN_PACKAGE_DESCRIPTION
 		"TeleportXR spatial streaming client\n TeleportXR streams XR scenes from a remote server to a local OpenXR\n headset or desktop window using the Teleport protocol.")
 	# Let dpkg-shlibdeps fill in shared-library dependencies automatically.
@@ -114,7 +114,7 @@ if(TELEPORT_MACOS)
 	if(TARGET teleport_terminal)
 		install(CODE "
 			file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/local/bin\")
-			file(CREATE_LINK \"/opt/TeleportXR/bin/teleport_terminal\"
+			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_terminal\"
 				\"\$ENV{DESTDIR}/usr/local/bin/teleport_terminal\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
