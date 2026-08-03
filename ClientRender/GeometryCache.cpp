@@ -166,9 +166,9 @@ void GeometryCache::ClearCompletedNodes()
 	m_CompletedNodes.clear();
 }
 
-void GeometryCache::setCacheFolder(const std::string &f)
+void GeometryCache::setSaveFolder(const std::string &f)
 {
-	cacheFolder = f;
+	saveFolder = f;
 }
 
 template <typename T> void put(std::vector<uint8_t> &buffer, T t)
@@ -197,7 +197,7 @@ void GeometryCache::SaveNodeTree(const std::shared_ptr<clientrender::Node> &n) c
 {
 	auto *fileLoader	 = platform::core::FileLoader::GetFileLoader();
 	std::string filename = n->name + ".node";
-	std::string f		 = cacheFolder.length() ? (cacheFolder + "/") + filename : filename;
+	std::string f		 = saveFolder.length() ? (saveFolder + "/") + filename : filename;
 	std::vector<uint8_t> buffer;
 	::SaveNodeTree(n, buffer);
 	fileLoader->Save((const void *)buffer.data(), (unsigned)buffer.size(), f.c_str(), false);
@@ -479,7 +479,7 @@ bool GeometryCache::SaveResource(const IncompleteResource &res)
 	using namespace std::filesystem;
 	filename += ".";
 	filename += res.GetFileExtension();
-	std::string f = cacheFolder.length() ? (cacheFolder + "/") + filename : filename;
+	std::string f = saveFolder.length() ? (saveFolder + "/") + filename : filename;
 	path fullPath = path(f);
 	try
 	{

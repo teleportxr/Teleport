@@ -167,6 +167,19 @@ jobs:
           *) echo "::error::Artifacts are from commit $actual, but the release points at $TARGET_SHA." ; exit 1 ;;
         esac
 
+    - name: Rename release assets to the released tag
+      shell: bash
+      env:
+        TAG: ${{ inputs.tag || github.ref_name }}
+      run: |
+        set -euo pipefail
+        # Tags may contain slashes (release/1.0); sanitise for use in a filename.
+        safe_tag="${TAG//\//-}"
+        mv dist/windows/*.exe "dist/windows/TeleportClientInstaller-${safe_tag}-x64.exe"
+        mv dist/linux/*.deb   "dist/linux/teleportxr-${safe_tag}-x64.deb"
+        mv dist/macos/*.pkg   "dist/macos/teleportxr-${safe_tag}-arm64.pkg"
+        mv dist/android/*.apk "dist/android/teleportxr-${safe_tag}.apk"
+
     # Gatekeeper refuses an unsigned package outright, with an error that does not
     # explain itself, so the release notes have to say so and give the way round it.
     - name: Note the unsigned macOS package

@@ -92,6 +92,7 @@ The data source may be the same server, or it may be one or more other sources.
 	protocol/video
 	protocol/video_metadata
 	protocol/geometry_payload
+	protocol/client_nodes
 	protocol/audio
 	protocol/input
 	protocol/asset_portability

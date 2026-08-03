@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: teleport
-Upstream-Contact: Roderick Kennedy <contact@teleportxr.io>
-Source: https://github.com/simul/teleport
+Upstream-Contact: Teleport XR <contact@teleportxr.io>
+Source: https://github.com/teleportxr/Teleport
 
 Files: thirdparty/*
 Copyright: 2017 Jane Doe <jane@example.com>
@@ -12,5 +12,5 @@ Copyright: 2017 Jane Doe <jane@example.com>
 License: CC-BY-4.0
 
 Files: firstparty/Platform/*
-Copyright: 2017 Simul Software Ltd <contact@simul.co>
+Copyright: 2017-2026 Simul Software Ltd <contact@simul.co>
 License: CC0-1.0

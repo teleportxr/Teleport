@@ -203,6 +203,7 @@ namespace teleport
 			void																  RebindStyle();
 			void																  ShowSettings2D();
 			void																  ShowAvatarSettings2D();
+			void																  ShowIdentity2D();
 			void																  MenuBar2D();
 			void																  MainOptions();
 			void																  ListBookmarks();
@@ -220,6 +221,9 @@ namespace teleport
 			vec3											  view_dir;
 			vec3											  menu_pos;
 			vec2											  bookmarks_pos;
+			//! Right-hand edge and vertical offset of the identity button, used to anchor the
+			//! identity panel beneath it, exactly as bookmarks_pos anchors the bookmarks list.
+			vec2											  identity_pos;
 			int32_t											  current_tab_context = 0;
 			bool											  in_tabs			  = false;
 			float											  azimuth = 0.0f, tilt = 0.0f;
@@ -259,6 +263,9 @@ namespace teleport
 			std::string			   selected_url;
 			bool				   show_bookmarks							  = false;
 			bool				   show_options								  = false;
+			//! When true the identity panel is shown beneath the menu bar's identity button.
+			//! Mutually exclusive with the bookmarks and settings panels.
+			bool				   show_identity							  = false;
 			//! When true the settings panel is replaced with a sub-page for
 			//! editing the avatar URL. Reached via the "Avatar..." button on
 			//! the main settings page (ShowSettings2D).
