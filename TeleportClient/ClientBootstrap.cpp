@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "Platform/Core/FileLoader.h"
 #include "TeleportCore/Logging.h"
+#include "TeleportCore/StringFunctions.h"
 #include <filesystem>
 #include <cstdlib>
 #include <cstring>
@@ -75,7 +76,8 @@ namespace teleport
 		{
 			std::error_code ec;
 			// An explicit override wins, so that an uninstalled build can be pointed at any data directory.
-			if (const char *env = std::getenv("TELEPORT_CLIENT_DATA_DIR"))
+			std::string env = teleport::core::GetEnvVar("TELEPORT_CLIENT_DATA_DIR");
+			if (!env.empty())
 			{
 				std::filesystem::path dir(env);
 				if (std::filesystem::exists(dir / kClientDataMarker, ec)) return dir;
