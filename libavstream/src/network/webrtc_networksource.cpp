@@ -691,6 +691,12 @@ Result WebRtcNetworkSource::deconfigure()
 	m_streams.clear();
 
 	m_data->m_EFPReceiver.reset();
+	// Clear any latched failure. process() early-outs forever on a stored
+	// Network_Disconnection ("Can't recover from a disconnection, must reset") — this is
+	// that reset. A node that has been torn down must not carry a stale failure into its
+	// next configure(), or the rebuilt source is dead on arrival and the client silently
+	// stops sending: no poses, no resource acknowledgements.
+	setResult(avs::Result::OK);
 	return Result::OK;
 }
 
