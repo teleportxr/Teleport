@@ -45,7 +45,8 @@ namespace teleport
 		}
 		//! The value of an environment variable, or an empty string if it is not set.
 		//! Uses _dupenv_s on Windows to avoid the CRT deprecation warning for getenv.
-		inline std::string GetEnvironmentVariable(const char *name)
+		//! (Not called GetEnvironmentVariable: windows.h #defines that name away.)
+		inline std::string GetEnvVar(const char *name)
 		{
 #ifdef _WIN32
 			char *value = nullptr;

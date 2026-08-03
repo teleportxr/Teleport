@@ -76,7 +76,7 @@ namespace teleport
 		{
 			std::error_code ec;
 			// An explicit override wins, so that an uninstalled build can be pointed at any data directory.
-			std::string env = teleport::core::GetEnvironmentVariable("TELEPORT_CLIENT_DATA_DIR");
+			std::string env = teleport::core::GetEnvVar("TELEPORT_CLIENT_DATA_DIR");
 			if (!env.empty())
 			{
 				std::filesystem::path dir(env);
