@@ -28,6 +28,23 @@ namespace
 	//!  - "client" is the source tree, where the data sits beside the build directory.
 	const char *const kClientDataDirNames[] = {"share/teleportxr", "client"};
 
+	//! The value of an environment variable, or an empty string if it is not set.
+	//! Uses _dupenv_s on Windows to avoid the CRT deprecation warning for getenv.
+	std::string GetEnvironmentVariable(const char *name)
+	{
+#ifdef _WIN32
+		char *value = nullptr;
+		size_t size = 0;
+		if (_dupenv_s(&value, &size, name) != 0 || !value) return {};
+		std::string result(value);
+		free(value);
+		return result;
+#else
+		const char *value = std::getenv(name);
+		return value ? value : "";
+#endif
+	}
+
 	//! The directory containing the running executable, or an empty path if it cannot be determined.
 	std::filesystem::path ExecutableDirectory()
 	{
@@ -75,7 +92,8 @@ namespace teleport
 		{
 			std::error_code ec;
 			// An explicit override wins, so that an uninstalled build can be pointed at any data directory.
-			if (const char *env = std::getenv("TELEPORT_CLIENT_DATA_DIR"))
+			std::string env = GetEnvironmentVariable("TELEPORT_CLIENT_DATA_DIR");
+			if (!env.empty())
 			{
 				std::filesystem::path dir(env);
 				if (std::filesystem::exists(dir / kClientDataMarker, ec)) return dir;
