@@ -1380,7 +1380,7 @@ void Renderer::OnFrameMove(double fTime, float time_step)
 			sessionClient->Frame(displayInfo,
 								 sessionClient->GetClientServerState().headPose,
 								 nodePoses,
-								 instanceRenderer->receivedInitialPos,
+								 sessionClient->GetOriginValidCounter(),
 								 sessionClient->GetClientServerState().input,
 								 fTime,
 								 time_step);
@@ -1932,7 +1932,7 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 			auto &clientServerState = sessionClient->GetClientServerState();
 			vec3  offset			= camera_local_pos;
 			auto  originPose		= GetOriginPose(server_uid);
-			gui.LinePrint(instanceRenderer->receivedInitialPos
+			gui.LinePrint(sessionClient->GetOriginValidCounter()
 							  ? (std::format("Origin: {} {} {}", originPose.position.x, originPose.position.y, originPose.position.z))
 							  : "Origin:",
 						  white);

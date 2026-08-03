@@ -2191,7 +2191,7 @@ void Gui::DrawPipelineNode(const avs::PipelineNode &node, float x, float y)
 			DrawPipelineNode(*n, nextx, nexty); // N-gon
 		}
 	}
-	const ImU32 fail_colour = ImColor(255, 0, 0, 90);
+	const ImU32 fail_colour = ImColor(255, 128, 0, 90);
 	avs::Result r			= node.getLastResult();
 	if (r != avs::Result::OK && r != avs::Result::IO_Empty)
 	{

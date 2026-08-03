@@ -1927,7 +1927,8 @@ void InstanceRenderer::SetOrigin(unsigned long long ctr, avs::uid origin_uid)
 {
 	auto &clientServerState			  = sessionClient->GetClientServerState();
 	clientServerState.origin_node_uid = origin_uid;
-	receivedInitialPos				  = ctr;
+	// The counter itself is not stored here: SessionClient owns it, and duplicating it
+	// let the two copies disagree. Read it via SessionClient::GetOriginValidCounter().
 }
 
 bool InstanceRenderer::OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand)
@@ -2209,29 +2210,27 @@ bool InstanceRenderer::GetHandshake(teleport::core::Handshake &handshake)
 	return true;
 }
 
-void InstanceRenderer::OnVideoStreamClosed()
+void InstanceRenderer::OnStreamingSessionEnded()
 {
 	auto &clientPipeline = sessionClient->GetClientPipeline();
-	TELEPORT_INTERNAL_COUT(Default, "VIDEO STREAM CLOSED\n");
+	TELEPORT_INTERNAL_COUT(Default, "STREAMING SESSION ENDED\n");
 	clientPipeline.pipeline.deconfigure();
 	clientPipeline.videoQueue.deconfigure();
 	spatialAudioMixer.Stop();
 	spatialPlaybackPlayer.deconfigure();
 	clientPipeline.opusAudioEncoder.deconfigure();
 	clientPipeline.geometryQueue.deconfigure();
-
-	receivedInitialPos = 0;
+	// The origin counter is SessionClient's, and it clears it around this call.
 }
 
 void InstanceRenderer::OnReconnectGaveUp()
 {
 	TELEPORT_INTERNAL_COUT(Default, "RECONNECT GAVE UP - tearing down local reflection of server {0}", server_uid);
-	OnVideoStreamClosed();
+	OnStreamingSessionEnded();
 	if (geometryCache)
 	{
 		geometryCache->ClearAll();
 	}
-	receivedInitialPos = 0;
 }
 
 void InstanceRenderer::OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand)

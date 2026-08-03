@@ -126,9 +126,9 @@ Sent on the **unreliable** channel (reference: ``teleport::core::NodePosesMessag
    * - 2
      - uint16
      - ``numPoses`` = N.
-   * - N × 36
+   * - N × 60
      - NodePose[]
-     - For each pose: 8-byte node uid, 28-byte ``PoseDynamic_packed`` (pose + linear velocity + angular velocity), all in stage space.
+     - For each pose: 8-byte node uid, 52-byte ``PoseDynamic_packed`` (28-byte ``Pose_packed`` + vec3 linear velocity + vec3 angular velocity), all in stage space.
 
 ReceivedResources (id = 3)
 ==========================

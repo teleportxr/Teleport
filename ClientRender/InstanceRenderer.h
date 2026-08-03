@@ -188,7 +188,6 @@ namespace teleport
 			VideoTagDataCube videoTagDataCube[RenderState::maxTagDataSize];
 			bool videoPosDecoded = false;
 			vec3 videoPos;
-			unsigned long long receivedInitialPos = 0;
 			InstanceRenderState &GetInstanceRenderState()
 			{
 				return instanceRenderState;
@@ -377,7 +376,7 @@ namespace teleport
 			void UpdateNodeAnimation(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &animationUpdate) override;
 			bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand) override;
 			bool GetHandshake(teleport::core::Handshake &handshake) override;
-			void OnVideoStreamClosed() override;
+			void OnStreamingSessionEnded() override;
 			void OnReconnectGaveUp() override;
 			void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand) override;
 			void OnInputsSetupChanged(const std::vector<teleport::core::InputDefinition> &inputDefinitions) override;

@@ -167,9 +167,56 @@ Selected command layouts
    * - 8
      - size_t
      - ``updatesCount`` = N
-   * - N * sizeof(MovementUpdate)
+   * - N * 85
      - MovementUpdate[]
      - Per-node motion updates.
+
+Only nodes streamed with ``stationary`` = false will move: the client early-outs on
+``isStatic`` in ``Node::TickExtrapolatedTransform``.
+
+.. list-table:: MovementUpdate (85 bytes, packed)
+   :widths: 5 14 30
+   :header-rows: 1
+
+   * - Bytes
+     - Type
+     - Description
+   * - 8
+     - int64
+     - ``server_time_us``, microseconds since ``SetupCommand.startTimestamp_utc_unix_us``.
+   * - 1
+     - bool
+     - ``isGlobal``. False means the transform is local to the node's parent, which is what
+       a node parented under a client's origin node requires.
+   * - 8
+     - uid
+     - ``nodeID``.
+   * - 12
+     - vec3
+     - ``position``, metres.
+   * - 16
+     - vec4
+     - ``rotation``, quaternion (x, y, z, w).
+   * - 12
+     - vec3
+     - ``scale``.
+   * - 12
+     - vec3
+     - ``velocity``, metres per second, for extrapolation to predicted display time.
+   * - 12
+     - vec3
+     - ``angularVelocityAxis``, unit axis.
+   * - 4
+     - float
+     - ``angularVelocityAngle``, radians per second about that axis.
+
+All values are already converted into the client's ``AxesStandard`` by the server.
+
+.. note::
+   Sending a non-zero ``velocity`` or ``angularVelocityAngle`` permanently enables a heavily
+   damped smoothing filter on the client (``smoothingEnabled`` in
+   ``ClientRender/Node.cpp``), which interpolates at roughly 0.0166 per frame and is never
+   switched off again. Servers that update a node frequently should leave both zero.
 
 .. list-table:: SetNodeHighlightedCommand (id = 8)
    :widths: 5 14 30

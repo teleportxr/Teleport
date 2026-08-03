@@ -39,7 +39,16 @@ namespace teleport
 		public:
 			virtual bool OnSetupCommandReceived(const char* server_ip, const teleport::core::SetupCommand& setupCommand) = 0;
 			virtual bool GetHandshake( teleport::core::Handshake& handshake) = 0;
-			virtual void OnVideoStreamClosed() = 0;
+			//! Called when the streaming session has ended: the server sent Shutdown, or the
+			//! client disconnected. The implementation should tear down its local streaming
+			//! resources — video, audio and geometry pipelines and their queues.
+			//!
+			//! This is not a video-specific notification, despite its former name
+			//! (OnVideoStreamClosed): video is one of several streams torn down here, and
+			//! neither caller has anything to do with video in particular. Implementations
+			//! must not reset session protocol state such as the origin counter — that
+			//! belongs to SessionClient, which resets it around this call.
+			virtual void OnStreamingSessionEnded() = 0;
 			//! Called when the client has exhausted its reconnection attempts after losing
 			//! the streaming connection. The implementation should tear down the local
 			//! reflection of the remote scene (geometry cache, video texture, etc.) and
@@ -167,8 +176,23 @@ namespace teleport
 			std::string GetConnectionURL() const;
 			int GetPort() const;
 
-			unsigned long long receivedInitialPos = 0;
+			//! Validity counter of the most recent SetOriginNodeCommand we accepted. Zero
+			//! means we have no origin yet.
+			//!
+			//! This is the single source of truth for that counter. It does double duty:
+			//! it rejects out-of-date origin commands (see ReceiveOriginNodeId), and it
+			//! gates whether the client reports head and controller poses at all — see
+			//! poseValidCounter in Frame(). InstanceRenderer used to keep its own copy,
+			//! also called receivedInitialPos, which the two classes reset in different
+			//! places and which could therefore disagree.
+			unsigned long long originValidCounter = 0;
 			unsigned long long receivedLightingAckId = 0;
+
+			//! The origin counter; zero until an origin has been received. See above.
+			unsigned long long GetOriginValidCounter() const
+			{
+				return originValidCounter;
+			}
 
 			uint64_t GetClientID() const
 			{
@@ -309,6 +333,9 @@ namespace teleport
 			//! Tear down the streaming pipeline without clearing identity state. Called by
 			//! BeginReconnect; also called as part of GiveUpAndShutDown.
 			void TearDownStreamingPipeline();
+			//! Reset the session protocol state this class owns, then ask the command
+			//! interface to tear down its local streaming resources.
+			void EndStreamingSession();
 
 			std::string remoteIP;
 			std::string connected_url;

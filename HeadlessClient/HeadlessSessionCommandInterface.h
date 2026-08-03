@@ -27,7 +27,7 @@ public:
 
 	bool OnSetupCommandReceived(const char *server_ip, const teleport::core::SetupCommand &setupCommand) override;
 	bool GetHandshake(teleport::core::Handshake &handshake) override;
-	void OnVideoStreamClosed() override;
+	void OnStreamingSessionEnded() override;
 	void OnReconnectGaveUp() override;
 	void OnReconfigureVideo(const teleport::core::ReconfigureVideoCommand &reconfigureVideoCommand) override;
 

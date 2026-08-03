@@ -254,13 +254,9 @@ using nlohmann::json;
 void SessionClient::Disconnect(uint timeout, bool resetClientID)
 {
 	remoteIP = "";
-	// A session client that was never given a command interface can still be disconnected.
-	if (mCommandInterface)
-		mCommandInterface->OnVideoStreamClosed();
+	EndStreamingSession();
 
 	connectionStatus	  = ConnectionStatus::UNCONNECTED;
-	receivedInitialPos	  = 0;
-	receivedLightingAckId = 0;
 	if (resetClientID)
 	{
 		clientID = 0;
@@ -456,7 +452,7 @@ void SessionClient::ReceiveCommandPacket(const std::vector<uint8_t> &packet, Com
 	switch (commandPayloadType)
 	{
 	case teleport::core::CommandPayloadType::Shutdown:
-		mCommandInterface->OnVideoStreamClosed();
+		EndStreamingSession();
 		break;
 	case teleport::core::CommandPayloadType::Setup:
 		ReceiveSetupCommand(packet);
@@ -837,16 +833,16 @@ void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 	}
 	teleport::core::SetOriginNodeCommand command;
 	memcpy(static_cast<void *>(&command), packet.data(), commandSize);
-	if (command.valid_counter > receivedInitialPos)
+	if (command.valid_counter > originValidCounter)
 	{
 		//TELEPORT_INTERNAL_COUT("Received origin node {0} with counter {1}.", command.origin_node, command.valid_counter);
-		receivedInitialPos = command.valid_counter;
+		originValidCounter = command.valid_counter;
 		mCommandInterface->SetOrigin(command.valid_counter, command.origin_node);
 	}
 	else
 	{
 		TELEPORT_INTERNAL_CERR(
-			"Received out-of-date origin node {0}, counter was {1}, but last update was {2}.", command.origin_node, command.valid_counter, receivedInitialPos);
+			"Received out-of-date origin node {0}, counter was {1}, but last update was {2}.", command.origin_node, command.valid_counter, originValidCounter);
 	}
 	// And acknowledge it.
 	Ack(command.ack_id, currentReceiveTransport);
@@ -1175,6 +1171,25 @@ void SessionClient::ResetSessionState()
 	memset(&clientDynamicLighting, 0, sizeof(clientDynamicLighting));
 	inputDefinitions.clear();
 	nodePosePaths.clear();
+}
+
+//! End the streaming session: drop the session protocol state we own, then let the
+//! command interface tear down its local streaming resources.
+//!
+//! The two halves used to be conflated inside the interface call itself (then named
+//! OnVideoStreamClosed), which meant the renderer was resetting a counter belonging to
+//! this class — and keeping a second copy of it that the two could disagree about. The
+//! ordering here is deliberate: our own state goes first, so an implementation that
+//! reads back from us during teardown sees a consistent view.
+void SessionClient::EndStreamingSession()
+{
+	originValidCounter	  = 0;
+	receivedLightingAckId = 0;
+	// A session client that was never given a command interface can still be ended.
+	if (mCommandInterface)
+	{
+		mCommandInterface->OnStreamingSessionEnded();
+	}
 }
 
 void SessionClient::TearDownStreamingPipeline()

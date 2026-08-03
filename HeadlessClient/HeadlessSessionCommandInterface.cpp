@@ -93,9 +93,9 @@ bool HeadlessSessionCommandInterface::GetHandshake(teleport::core::Handshake &ha
 	return true;
 }
 
-void HeadlessSessionCommandInterface::OnVideoStreamClosed()
+void HeadlessSessionCommandInterface::OnStreamingSessionEnded()
 {
-	TELEPORT_LOG("Video stream closed");
+	TELEPORT_LOG("Streaming session ended");
 }
 
 void HeadlessSessionCommandInterface::OnReconnectGaveUp()
