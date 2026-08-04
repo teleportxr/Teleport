@@ -86,6 +86,17 @@ elseif(TELEPORT_LINUX)
 	set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/../lib")
 endif()
 
+# Default install() component for dependencies that don't declare one of their own. CPack's
+# productbuild (macOS) generator treats CPACK_COMPONENTS_ALL as a filter: an install() rule
+# with no explicit COMPONENT falls into the synthetic "Unspecified" component, which isn't
+# "client", so it is silently dropped from the .pkg. libcurl (pulled in by libavstream's
+# FetchContent'd curl), libktx, libdraco and ozz-animation all install themselves via their
+# own upstream CMakeLists, none of which tag COMPONENT client — so without this they vanish
+# from the macOS installer while still working by accident on Linux/Windows, where the
+# DEB/NSIS generators package the whole install tree regardless of component. Must be set
+# before those dependencies are fetched, same as CMAKE_INSTALL_RPATH above.
+set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "client")
+
 # FetchContent download timestamp policy:
 cmake_policy(SET CMP0135 NEW)
 cmake_policy(SET CMP0077 NEW)
