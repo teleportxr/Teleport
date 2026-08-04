@@ -564,6 +564,23 @@ if(TELEPORT_WINDOWS)
 	set(TELEPORT_CLIENT_MOSQUITTO_INCLUDE_DIR "E:/Code/Teleport/IPSME/mosquitto-2.0.18/include" CACHE PATH "Mosquitto install path for IPSME support")
 endif()
 
+if(TELEPORT_MACOS)
+	# On macOS the bundled thirdparty/openssl/x64 directory only contains Windows import
+	# libraries, so use Homebrew's openssl@3 instead. On Apple Silicon the keg lives under
+	# /opt/homebrew; on Intel under /usr/local. If the user already passed OPENSSL_ROOT_DIR
+	# on the command line, leave it alone.
+	if(NOT OPENSSL_ROOT_DIR)
+		if(EXISTS /opt/homebrew/opt/openssl)
+			set(OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl CACHE PATH "OpenSSL root directory for macOS" FORCE)
+		elseif(EXISTS /usr/local/opt/openssl)
+			set(OPENSSL_ROOT_DIR /usr/local/opt/openssl CACHE PATH "OpenSSL root directory for macOS" FORCE)
+		endif()
+	endif()
+	if(OPENSSL_ROOT_DIR)
+		message(STATUS "Using Homebrew OpenSSL: ${OPENSSL_ROOT_DIR}")
+	endif()
+endif()
+
 # This must go before the openssl settings, or it won't generate:
 # Settings for libdatachannel:
 set(NO_WEBSOCKET OFF)

@@ -93,3 +93,47 @@ if(TELEPORT_UNIX)
 elseif(TELEPORT_WINDOWS)
 	install(TARGETS teleport_terminal RUNTIME DESTINATION bin COMPONENT client)
 endif()
+
+if(TELEPORT_MACOS)
+	# Unlike libktx/libcurl/libopus/libdraco/libozz_*, which are FetchContent-built as
+	# real targets in this project and install(TARGETS ...) themselves into <prefix>/lib,
+	# Homebrew's libssl/libcrypto are prebuilt dylibs found by find_package(OpenSSL) —
+	# nothing else copies them into the package. Bundle them by hand, same destination.
+	# Homebrew dylibs carry an absolute install_name (e.g.
+	# /opt/homebrew/opt/openssl@3/lib/libssl.3.dylib) rather than an @rpath-relative one,
+	# so copying the files above is not enough on its own: teleport_terminal, and
+	# libssl.3.dylib's own reference to libcrypto, still point at the Homebrew path baked
+	# in at link time. On a Mac without that exact keg installed this fails at launch with
+	# "Library not loaded: .../openssl@3/lib/libssl.3.dylib". Rewrite the load commands to
+	# point at the copies bundled next to the binary instead.
+	#
+	# The literal /opt/teleportxr below matches CPACK_PACKAGING_INSTALL_PREFIX in
+	# CMake/TeleportPackaging.cmake, not ${CMAKE_INSTALL_PREFIX}: CPack overrides the
+	# install prefix only for its own packaging-time install() run, without touching the
+	# CMAKE_INSTALL_PREFIX cache variable, so a variable reference here would bake in the
+	# ordinary build-time prefix instead.
+	if(OPENSSL_ROOT_DIR)
+		install(FILES
+			${OPENSSL_ROOT_DIR}/lib/libssl.3.dylib
+			${OPENSSL_ROOT_DIR}/lib/libcrypto.3.dylib
+			DESTINATION lib COMPONENT client
+		)
+		install(CODE "
+			set(_stage \"\$ENV{DESTDIR}/opt/teleportxr\")
+			execute_process(COMMAND install_name_tool
+				-change \"${OPENSSL_ROOT_DIR}/lib/libssl.3.dylib\" \"@loader_path/../lib/libssl.3.dylib\"
+				-change \"${OPENSSL_ROOT_DIR}/lib/libcrypto.3.dylib\" \"@loader_path/../lib/libcrypto.3.dylib\"
+				\"\${_stage}/bin/teleport_terminal\"
+			)
+			execute_process(COMMAND install_name_tool
+				-id \"@loader_path/libssl.3.dylib\"
+				-change \"${OPENSSL_ROOT_DIR}/lib/libcrypto.3.dylib\" \"@loader_path/libcrypto.3.dylib\"
+				\"\${_stage}/lib/libssl.3.dylib\"
+			)
+			execute_process(COMMAND install_name_tool
+				-id \"@loader_path/libcrypto.3.dylib\"
+				\"\${_stage}/lib/libcrypto.3.dylib\"
+			)
+		" COMPONENT client)
+	endif()
+endif()
