@@ -51,6 +51,18 @@ public:
 	std::weak_ptr<teleport::client::SessionClient> GetSessionClient() const { return sessionClient; }
 	void SetMode(HeadlessMode newMode) { mode = newMode; }
 
+	//! The origin validity counter last received from the server, or zero if we have not
+	//! been given an origin node. SessionClient::Frame will not send node poses while this
+	//! is zero, so it has to reach HeadlessInputState for the client to report its head
+	//! pose at all — and a server that never sees a head pose cannot drive anything from it.
+	uint64_t GetOriginValidCounter() const { return originValidCounter; }
+
+	//! How many server-driven transform updates have arrived. Zero after connecting to a
+	//! server that should be moving something is the symptom of every failure in that path.
+	size_t GetMovementUpdateCount() const { return movementUpdateCount; }
+	//! How many animation state changes have arrived.
+	size_t GetAnimationUpdateCount() const { return animationUpdateCount; }
+
 private:
 	std::weak_ptr<teleport::client::SessionClient> sessionClient;
 	HeadlessMode mode = HeadlessMode::Minimal;
@@ -59,6 +71,13 @@ private:
 	uint64_t originValidCounter = 0;
 	avs::uid originNodeUid = 0;
 	size_t visibleNodesCount = 0;
+	//! Totals for server-driven motion and animation, so `status` can report whether either
+	//! is arriving at all without having to read back through the log.
+	size_t movementUpdateCount = 0;
+	size_t animationUpdateCount = 0;
+	//! Movement arrives at 20 Hz per moving node for the whole session, so it is logged
+	//! periodically rather than every time.
+	int	   movementLogCountdown = 0;
 	HeadlessGeometryCacheBackend *geometryCache = nullptr;
 	avs::uid					  serverUid	   = 0;
 	//! Both are referenced by pipeline nodes for the lifetime of the connection, so they must

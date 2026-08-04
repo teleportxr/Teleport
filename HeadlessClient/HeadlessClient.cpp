@@ -92,6 +92,24 @@ void HeadlessClient::TickOnce(double time, double dt)
 	// If connected, send pose/input
 	if (sessionClient->IsConnected())
 	{
+		// Server-session time: microseconds since the datum the server declared in its
+		// SetupCommand. Everything the server timestamps - animation states above all - is
+		// measured against it, and SessionClient::GetTimestamp() is how the rest of the
+		// client reads "now". Only the GUI renderer used to set it, so a headless client
+		// read every timestamp against zero and saw states dated minutes into the future.
+		const int64_t startTimestampUnixUs = sessionClient->GetSetupCommand().startTimestamp_utc_unix_us;
+		if (startTimestampUnixUs != 0)
+		{
+			const auto unixNowUs = std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::system_clock::now().time_since_epoch());
+			sessionClient->SetTimestamp(std::chrono::microseconds(unixNowUs.count() - startTimestampUnixUs));
+		}
+		// Carry the origin validity counter from the SetOriginNode command into the input
+		// state. SessionClient::Frame gates SendNodePoses on it being non-zero, so without
+		// this the client silently never reports its head pose, and any server behaviour
+		// driven by that pose - a follower avatar, proximity audio - simply never happens.
+		if (commandInterface)
+			inputState.SetOriginValidCounter(commandInterface->GetOriginValidCounter());
 		auto snapshot = inputState.GetSnapshot();
 		sessionClient->Frame(
 			snapshot.displayInfo,
@@ -145,6 +163,11 @@ std::string HeadlessClient::GetStatus() const
 	result += "Server: " + sessionClient->GetServerIP() + ":" + std::to_string(sessionClient->GetPort()) + "\n";
 	result += "Latency: " + std::to_string(static_cast<int>(sessionClient->GetLatencyMs())) + " ms\n";
 	result += "Inputs Available: " + std::to_string(GetInputDefinitions().size()) + "\n";
+	if (commandInterface)
+	{
+		result += "Movement updates: " + std::to_string(commandInterface->GetMovementUpdateCount()) + "\n";
+		result += "Animation updates: " + std::to_string(commandInterface->GetAnimationUpdateCount()) + "\n";
+	}
 
 	return result;
 }

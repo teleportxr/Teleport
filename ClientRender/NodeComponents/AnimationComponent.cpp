@@ -106,21 +106,24 @@ std::shared_ptr<AnimationInstance> AnimationComponent::GetOrCreateAnimationInsta
 	return animationInstances[root_uid];
 }
 
-void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation, avs::uid root_uid)
+//! Returns false if the state could not be applied, so that a caller holding a sub-scene can
+//! keep it and try again. Every failure here is a "not yet" rather than an error: the asset,
+//! its skeleton and its clip all arrive asynchronously over HTTPS, in no guaranteed order.
+bool AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation, avs::uid root_uid)
 {
 	if (applyAnimation.animLayer >= 32)
 	{
 		TELEPORT_WARN("Exceeded maximum animation layer number.");
-		return;
+		return false;
 	}
 	if (!owner.GetSkeleton())
 	{
-		return;
+		return false;
 	}
 	auto instance = GetOrCreateAnimationInstance(root_uid);
 	if (!instance)
 	{
-		return;
+		return false;
 	}
 	// The cache is the one holding the animation resource, which for a sub-scene is the outer cache,
 	// not the one this node lives in. An unresolvable cacheID is a server or protocol error, but it
@@ -129,14 +132,16 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 	if (!cache)
 	{
 		TELEPORT_WARN("Animation update for node {} names cache {}, which does not exist.", applyAnimation.nodeID, applyAnimation.cacheID);
-		return;
+		return false;
 	}
 	auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
-	if (anim)
+	if (!anim)
 	{
-		Retarget(*anim);
+		// The clip is still being fetched. Common, and not an error.
+		return false;
 	}
-	instance->SetAnimationState(timestampUs, applyAnimation);
+	Retarget(*anim);
+	return instance->SetAnimationState(timestampUs, applyAnimation);
 }
 
 bool AnimationComponent::update(int64_t timestampUs, avs::uid root_uid)

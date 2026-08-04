@@ -506,7 +506,11 @@ void NodeManager::UpdateNodeAnimation(std::chrono::microseconds timestampUs,cons
 		auto subSceneC = node->GetComponent<SubSceneComponent>();
 		if(subSceneC)
 		{
-			subSceneC->ApplyAnimation(timestampUs, animationUpdate);
+			// May not be applicable yet - the asset behind a MeshPointer is acknowledged when
+			// the pointer arrives, long before it has been fetched and turned into a skeleton.
+			// The component holds the state; we remember to retry it.
+			if(!subSceneC->ForwardAnimation(timestampUs, animationUpdate))
+				nodesWithPendingAnimation.insert(node->id);
 			return;
 		}
 	}
@@ -567,6 +571,24 @@ void NodeManager::UpdateExtrapolatedPositions(double serverTimeS)
 
 void NodeManager::Update( std::chrono::microseconds timestamp_us)
 {
+	// Retry animation states that arrived before their sub-scene was usable. Tracked by uid
+	// rather than walked from the roots, because a client avatar hangs off an origin node and
+	// so is not a root itself.
+	for(auto it=nodesWithPendingAnimation.begin(); it!=nodesWithPendingAnimation.end();)
+	{
+		auto node=GetNode(*it);
+		auto subSceneC=node?node->GetComponent<SubSceneComponent>():nullptr;
+		if(!subSceneC)
+		{
+			it=nodesWithPendingAnimation.erase(it);
+			continue;
+		}
+		subSceneC->TryPendingAnimation(timestamp_us);
+		if(subSceneC->HasPendingAnimation())
+			++it;
+		else
+			it=nodesWithPendingAnimation.erase(it);
+	}
 	rootNodes_mutex.lock();
 	nodeList_t expiredNodes;
 	for(const std::weak_ptr<Node> node : rootNodes)
@@ -626,6 +648,7 @@ void NodeManager::Clear()
 	earlyEnabledUpdates.clear();
 	earlyNodeHighlights.clear();
 	earlyAnimationUpdates.clear();
+	nodesWithPendingAnimation.clear();
 	earlyAnimationControlUpdates.clear();
 	earlyAnimationSpeedUpdates.clear();
 	hiddenNodes.clear();

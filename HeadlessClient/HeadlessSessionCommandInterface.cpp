@@ -158,7 +158,25 @@ void HeadlessSessionCommandInterface::SetVisibleNodes(const std::vector<avs::uid
 
 void HeadlessSessionCommandInterface::UpdateNodeMovement(const std::vector<teleport::core::MovementUpdate> &updateList)
 {
-	TELEPORT_LOG("Nodes moved: {}", updateList.size());
+	// Log the values, not just the count: server-driven motion is the one thing a headless
+	// client can verify end to end that a rendering client can only be watched for, and
+	// "Nodes moved: 1" is true of a follower that is working and of one stuck at the origin.
+	// Rate-limited, because these arrive at 20 Hz per moving node for the whole session.
+	movementUpdateCount += updateList.size();
+	const bool report	 = (movementLogCountdown-- <= 0);
+	if (report)
+		movementLogCountdown = 40; // roughly every two seconds at a 20 Hz motion tick
+	for (const auto &u : updateList)
+	{
+		if (!report)
+			break;
+		TELEPORT_LOG("Node {} moved to ({:.2f}, {:.2f}, {:.2f}) rot ({:.2f}, {:.2f}, {:.2f}, {:.2f}){} [{} updates so far]",
+					 u.nodeID,
+					 u.position.x, u.position.y, u.position.z,
+					 u.rotation.x, u.rotation.y, u.rotation.z, u.rotation.w,
+					 u.isGlobal ? " global" : " parent-local",
+					 movementUpdateCount);
+	}
 }
 
 void HeadlessSessionCommandInterface::UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState> &updateList)
@@ -172,6 +190,24 @@ void HeadlessSessionCommandInterface::SetNodeHighlighted(avs::uid nodeID, bool i
 
 void HeadlessSessionCommandInterface::UpdateNodeAnimation(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &animationUpdate)
 {
+	// Every field, unconditionally: a well-behaved server emits these only when the
+	// locomotion state changes, so there are few of them and each one matters. The lead is
+	// the interesting part — it is the cross-fade duration, and a server sending "now"
+	// produces a visible snap that nothing else here would reveal.
+	animationUpdateCount++;
+	const double leadMs = double(animationUpdate.timestampUs - timestampUs.count()) / 1000.0;
+	TELEPORT_LOG("Animation on node {}: clip {} cache {} layer {} at t={} us ({:+.0f} ms from now), "
+				 "start {:.2f} s, rate {:.2f}, loop {} [{} so far]",
+				 animationUpdate.nodeID,
+				 animationUpdate.animationID,
+				 animationUpdate.cacheID,
+				 animationUpdate.animLayer,
+				 animationUpdate.timestampUs,
+				 leadMs,
+				 animationUpdate.animTimeAtTimestamp,
+				 animationUpdate.speedUnitsPerSecond,
+				 animationUpdate.loop ? "yes" : "no",
+				 animationUpdateCount);
 }
 
 void HeadlessSessionCommandInterface::OnStreamingControlMessage(const std::string &str)

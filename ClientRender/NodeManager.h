@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <map>
+#include <set>
 #include <memory>
 #include <parallel_hashmap/phmap.h>
 
@@ -141,6 +142,10 @@ namespace teleport
 			std::map<avs::uid, teleport::core::NodeUpdateEnabledState> earlyEnabledUpdates;
 			std::map<avs::uid, bool> earlyNodeHighlights;
 			std::map<avs::uid, teleport::core::ApplyAnimation> earlyAnimationUpdates;
+			//! Nodes holding a sub-scene animation state that could not be applied yet, retried
+			//! each frame by Update(). Distinct from earlyAnimationUpdates, which is for updates
+			//! that arrived before the *node* did.
+			std::set<avs::uid> nodesWithPendingAnimation;
 			std::map<avs::uid, std::vector<EarlyAnimationControl>> earlyAnimationControlUpdates;
 			std::map<avs::uid, std::vector<EarlyAnimationSpeed>> earlyAnimationSpeedUpdates;
 			/// For tracking which nodes have been hidden.

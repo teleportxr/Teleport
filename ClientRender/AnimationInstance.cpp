@@ -34,18 +34,18 @@ void AnimationInstance::Init()
 	locals.resize(num_soa_joints);
 }
 
-void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation)
+bool AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation)
 {
 	if (!skeleton)
 	{
-		return;
+		return false;
 	}
 	if (applyAnimation.animLayer >= numAnimationLayerStates)
 	{
 		if (applyAnimation.animLayer >= 3)
 		{
 			TELEPORT_WARN("Exceeded maximum animation layer number.");
-			return;
+			return false;
 		}
 		numAnimationLayerStates	 = applyAnimation.animLayer + 1;
 		const int num_soa_joints = skeleton->num_soa_joints();
@@ -62,26 +62,44 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	st.loop			  = applyAnimation.loop;
 	st.matchTransition&=st.loop;
 	auto cache		  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
-	if (cache)
+	if (!cache)
 	{
-		auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
-		if (anim)
-		{
-			const auto *ozz_animation = anim->GetOzzAnimation(id);
-			if (!ozz_animation || ozz_animation->num_tracks() != skeleton->num_joints())
-			{
-				return;
-			}
-			st.animation = anim;
-			// animTimeAtTimestamp says where in the clip we should be when the state applies.
-			// The state itself stores a normalised ratio, so convert against the clip's duration.
-			if (anim->duration > 0.0f)
-			{
-				st.timeRatio = applyAnimation.animTimeAtTimestamp / anim->duration;
-			}
-		}
+		return false;
+	}
+	auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
+	if (!anim)
+	{
+		// Clip not fetched yet.
+		return false;
+	}
+	const auto *ozz_animation = anim->GetOzzAnimation(id);
+	if (!ozz_animation)
+	{
+		// Retargeting onto this skeleton has not produced a runtime animation. Either the
+		// clip has no source skeleton to retarget from (a native keyframe animation cannot be
+		// retargeted - it carries bone indices, not joint names), or the joint names do not
+		// match this rig.
+		TELEPORT_WARN_INTERNAL("Animation {} has not been retargeted onto skeleton {}: it cannot drive this rig. "
+							   "Check that the clip and the avatar share joint names, and that both were imported "
+							   "in the same axes standard.",
+							   applyAnimation.animationID, id);
+		return false;
+	}
+	if (ozz_animation->num_tracks() != skeleton->num_joints())
+	{
+		TELEPORT_WARN_INTERNAL("Animation {} has {} tracks but skeleton {} has {} joints; refusing to play it.",
+							   applyAnimation.animationID, ozz_animation->num_tracks(), id, skeleton->num_joints());
+		return false;
+	}
+	st.animation = anim;
+	// animTimeAtTimestamp says where in the clip we should be when the state applies.
+	// The state itself stores a normalised ratio, so convert against the clip's duration.
+	if (anim->duration > 0.0f)
+	{
+		st.timeRatio = applyAnimation.animTimeAtTimestamp / anim->duration;
 	}
 	animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);
+	return true;
 }
 
 bool AnimationInstance::Update(float dt_s, int64_t time_us)

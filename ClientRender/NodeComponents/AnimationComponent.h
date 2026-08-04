@@ -38,7 +38,9 @@ namespace teleport
 
 			//! Update the animation state.
 			//! @param timestampUs Server-session time, microseconds. Must share its datum with animationUpdate.timestampUs.
-			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate, avs::uid root_uid);
+			//! @return false if it could not be applied yet - the skeleton or the clip has not
+			//!	 arrived. The caller should keep the state and try again rather than drop it.
+			bool setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate, avs::uid root_uid);
 
 			//! @brief Update all animations, given the current timestamp, which is the time in microseconds since the server's datum timestamp.
 			//! @param timestampUs Server-session time in microseconds, i.e. since the server's datum timestamp. NOT unix time.

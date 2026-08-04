@@ -33,7 +33,8 @@ namespace teleport
 			avs::uid						 id = 0;
 			AnimationInstance(std::shared_ptr<Skeleton> sk);
 			void Init();
-			void SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation);
+			//! @return false if the clip is not yet usable on this skeleton (not fetched, or not retargeted).
+			bool SetAnimationState(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &applyAnimation);
 			bool Update(float dt_s, int64_t time_us);
 			void GetBoneMatrices(std::vector<mat4>			&m,
 								 const std::vector<int16_t> &mapMeshToSkeleton,

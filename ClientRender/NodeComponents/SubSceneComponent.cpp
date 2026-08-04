@@ -41,23 +41,78 @@ std::vector<std::shared_ptr<Node>> SubSceneComponent::GetSkeletonRootNodes() con
 	return roots;
 }
 
-void SubSceneComponent::ApplyAnimation(std::chrono::microseconds sessionTimeUs, const teleport::core::ApplyAnimation &applyAnimation)
+bool SubSceneComponent::ForwardAnimation(std::chrono::microseconds sessionTimeUs, const teleport::core::ApplyAnimation &applyAnimation)
 {
 	if (!applyAnimation.animationID)
 	{
-		return;
+		return false;
 	}
 	// root_uid is owner.id because the renderer keys each sub-scene's animation instance on
 	// SubSceneNodeStates::root_id, which is the id of the node that holds the sub-scene.
 	// Any other value creates an instance that is written but never ticked.
-	for (auto node : GetSkeletonRootNodes())
+	const auto roots   = GetSkeletonRootNodes();
+	bool	   applied = false;
+	for (auto node : roots)
 	{
 		auto animC = node->GetOrCreateComponent<AnimationComponent>();
-		if (animC)
+		if (animC && animC->setAnimationState(sessionTimeUs, applyAnimation, owner.id))
 		{
-			animC->setAnimationState(sessionTimeUs, applyAnimation, owner.id);
+			applied = true;
 		}
 	}
+	if (!applied)
+	{
+		// The sub-scene has not finished loading, or its clip has not arrived. Hold the state
+		// and keep trying: see the note on this function's declaration for why nothing else
+		// will bring it back.
+		pendingAnimation	= applyAnimation;
+		hasPendingAnimation = true;
+	}
+	else
+	{
+		hasPendingAnimation = false;
+	}
+	return applied;
+}
+
+void SubSceneComponent::TryPendingAnimation(std::chrono::microseconds sessionTimeUs)
+{
+	if (!hasPendingAnimation)
+	{
+		return;
+	}
+	if (ForwardAnimation(sessionTimeUs, pendingAnimation))
+	{
+		TELEPORT_INTERNAL_COUT(Resource, "Node {}: deferred animation {} applied once the sub-scene finished loading.",
+							   owner.id, pendingAnimation.animationID);
+		return;
+	}
+	// Still not ready. Say so occasionally: an avatar that never animates is otherwise
+	// completely silent, and the reason is always one of a handful of things.
+	const int64_t nowUs = sessionTimeUs.count();
+	if (nowUs - lastPendingWarningUs < 5000000)
+	{
+		return;
+	}
+	lastPendingWarningUs = nowUs;
+	const char *reason	 = "unknown";
+	if (!mesh)
+	{
+		reason = "the sub-scene's mesh has not arrived";
+	}
+	else if (!mesh->GetMeshCreateInfo().subscene_cache_uid)
+	{
+		reason = "the mesh is not a sub-scene (no sub-scene cache)";
+	}
+	else if (GetSkeletonRootNodes().empty())
+	{
+		reason = "the sub-scene has no skeleton yet (still decoding, or the asset has no rig)";
+	}
+	else
+	{
+		reason = "the skeleton is present but the clip could not be applied (see earlier warnings)";
+	}
+	TELEPORT_WARN("Node {}: animation {} is still waiting - {}.", owner.id, pendingAnimation.animationID, reason);
 }
 
 void SubSceneComponent::PlayAnimation(std::chrono::microseconds sessionTimeUs, avs::uid cache_uid, avs::uid anim_uid)
@@ -70,5 +125,5 @@ void SubSceneComponent::PlayAnimation(std::chrono::microseconds sessionTimeUs, a
 	applyAnimation.loop				   = true;
 	applyAnimation.speedUnitsPerSecond = 1.0f;
 	applyAnimation.timestampUs		   = sessionTimeUs.count();
-	ApplyAnimation(sessionTimeUs, applyAnimation);
+	ForwardAnimation(sessionTimeUs, applyAnimation);
 }

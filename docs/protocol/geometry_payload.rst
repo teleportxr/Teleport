@@ -992,6 +992,36 @@ An unrecognised extension is rejected. Servers MUST therefore give pointer URLs 
      - ``uint8[url length]``
      - variable
      - Absolute URL or relative path; see :doc:`http`.
+   * - axesStandard
+     - ``uint8``
+     - 1
+     - Optional; see :ref:`pointer_axes_standard`.
+
+.. _pointer_axes_standard:
+
+Axes standard of a pointed-to asset
+-----------------------------------
+
+``MeshPointer`` and ``AnimationPointer`` bodies end with a ``uint8`` :cpp:enum:`avs::AxesStandard` giving the frame the **asset behind the URL** is authored in. This is distinct from the server's scene standard (``SetupCommand.axesStandard``) and from the client's own.
+
+The field is **appended after the url and is optional**. A server that predates it ends the body at the url; both the reference client and the browser client stop reading there, so the field is additive and safe against older peers in both directions.
+
+``NotInitialized`` (0), or the field being absent, means *"the same standard as the server's scene"* — the client falls back to ``SetupCommand.axesStandard``. Only assets that disagree with the server need declare anything.
+
+The common case that disagrees is glTF: ``.glb``, ``.vrm`` and ``.vrma`` are **always Y-up right-handed** (``GlStyle``, 21) whatever the scene around them uses, because that is what the glTF specification mandates. A server whose scene is Z-up ``EngineeringStyle`` must therefore declare ``GlStyle`` for such assets, or the client will import them tipped on their side.
+
+.. warning::
+   A mesh and any animation retargeted onto it **must agree**. Retargeting matches joints by
+   name between two skeletons, and a skeleton imported in one frame cannot drive one imported
+   in another.
+
+.. warning::
+   In the current reference client, declaring a standard other than the server's for a
+   ``MeshPointer`` converts the mesh's *vertex* positions, normals and tangents, but **not**
+   the sub-scene's node transforms — that conversion is present but commented out in
+   ``ClientRender/GeometryDecoder.cpp``. Until it is enabled, a sub-scene asset with a node
+   hierarchy (any rigged avatar) should be left at the server's standard, with the clips that
+   drive it left to match.
 
 .. _material_pointer_payload:
 
@@ -1042,6 +1072,11 @@ Added in the same revision as :ref:`node_payload`'s existing fields; a client bu
      - ``uint8[url length]``
      - variable
      - Absolute URL or relative path; see :doc:`http`.
+   * - axesStandard
+     - ``uint8``
+     - 1
+     - Optional; see :ref:`pointer_axes_standard`. A ``.vrma`` is glTF, so Y-up — but it must
+       match whatever the avatar it is retargeted onto was imported as.
 
 .. _remove_nodes_payload:
 

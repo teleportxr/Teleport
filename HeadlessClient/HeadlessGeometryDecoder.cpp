@@ -186,7 +186,17 @@ avs::Result HeadlessGeometryDecoder::DecodePointer(Reader &r, avs::uid uid, avs:
 	}
 	if (cache)
 		cache->TrackPointer(uid, type, url);
+	// Mesh and animation pointers carry the axes standard the asset is authored in, appended
+	// after the url. It is optional, so its absence is normal rather than an error, and means
+	// "the same standard as the server's scene".
+	uint8_t axesStandard = 0;
+	if (type == avs::GeometryPayloadType::MeshPointer || type == avs::GeometryPayloadType::AnimationPointer)
+	{
+		if (r.Remaining(1))
+			axesStandard = r.Get<uint8_t>();
+	}
 	// No fetch: the uid was acknowledged in decode(), which is all the server is waiting for.
-	TELEPORT_LOG("Geometry: {} {} -> {} (recorded, not downloaded)", avs::stringOf(type), uid, url);
+	TELEPORT_LOG("Geometry: {} {} -> {} (axes={}, recorded, not downloaded)",
+				 avs::stringOf(type), uid, url, axesStandard ? std::to_string(axesStandard) : std::string("server's own"));
 	return avs::Result::OK;
 }

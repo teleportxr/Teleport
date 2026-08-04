@@ -766,8 +766,6 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 		avsNode.parentID								   = (dracoNode->NumParents() ? node_uids[p.value()] : (avs::uid)(0));
 		auto								  mt		   = dracoNode->GetTrsMatrix();
 
-		platform::crossplatform::AxesStandard axesStandard = platform::crossplatform::AxesStandard::OpenGL;
-
 		if (mt.MatrixSet())
 		{
 			auto			matrix = mt.Matrix().value();
@@ -803,7 +801,15 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 				avsNode.localTransform.scale = {(float)sc.coeff(0), (float)sc.coeff(1), (float)sc.coeff(2)};
 			}
 		}
-		/*if (axesStandard != platform::crossplatform::AxesStandard::Engineering)
+		// Convert this sub-scene node's transform into the frame everything inside a sub-scene
+		// is normalised to. The mesh's *vertices* are converted further down on the same
+		// condition, so leaving this out converts half the asset and leaves the node hierarchy
+		// in the source frame - which is a rigged avatar's bind pose.
+		//
+		// Nothing happens unless the asset was declared as using a different standard from the
+		// server's (see the axesStandard field on MeshPointer). An undeclared asset arrives as
+		// the server's own standard, which is what dg.axesStandard is compared against.
+		if (subSceneDG.axesStandard != platform::crossplatform::AxesStandard::Engineering)
 		{
 			avsNode.localTransform.position = platform::crossplatform::ConvertPosition(
 				subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, avsNode.localTransform.position);
@@ -812,7 +818,7 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 			avsNode.localTransform.rotation = (const float *)&q;
 			avsNode.localTransform.scale	= platform::crossplatform::ConvertScale(
 				   subSceneDG.axesStandard, platform::crossplatform::AxesStandard::Engineering, avsNode.localTransform.scale);
-		}*/
+		}
 		avsNode.data_type = avs::NodeDataType::Mesh;
 		if (meshGroupIndex.value() < dracoScene.NumMeshGroups())
 		{
@@ -1422,6 +1428,40 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid);
 }
 
+//! Read the axes standard a pointer chunk's asset is authored in.
+//!
+//! The field is appended after the url, and is optional: a server built before it existed
+//! simply ends the body at the url, and both this and the pre-existing decoders stop reading
+//! there. Absent, or NotInitialized, means "the same standard as the server's own scene",
+//! which is what the server declared in its SetupCommand.
+//!
+//! It matters because a glTF-family asset (.glb/.vrm/.vrma) is always Y-up right-handed,
+//! whatever the server's scene uses, and the importer applies a real per-joint conversion
+//! from this standard to the client's. Getting it wrong tips the asset on its side.
+platform::crossplatform::AxesStandard GeometryDecoder::readPointerAxesStandard(GeometryDecodeData &geometryDecodeData) const
+{
+	platform::crossplatform::AxesStandard axesStandard = platform::crossplatform::AxesStandard::NotInitialized;
+	if (geometryDecodeData.bytesRemaining() >= 1)
+	{
+		axesStandard = (platform::crossplatform::AxesStandard)geometryDecodeData.data[geometryDecodeData.offset++];
+	}
+	if (axesStandard == platform::crossplatform::AxesStandard::NotInitialized)
+	{
+		// Fall back to the server's own standard. Note this is what the old default of
+		// Engineering silently assumed; it is only correct when the server says so.
+		auto sessionClient = teleport::client::SessionClient::GetSessionClient(geometryDecodeData.server_or_cache_uid);
+		if (sessionClient)
+		{
+			axesStandard = (platform::crossplatform::AxesStandard)sessionClient->GetSetupCommand().axesStandard;
+		}
+	}
+	if (axesStandard == platform::crossplatform::AxesStandard::NotInitialized)
+	{
+		axesStandard = platform::crossplatform::AxesStandard::Engineering;
+	}
+	return axesStandard;
+}
+
 avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecodeData)
 {
 	avs::uid mesh_uid  = geometryDecodeData.uid;
@@ -1433,11 +1473,12 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 	geometryCache->ReceivedResource(mesh_uid);
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+	const platform::crossplatform::AxesStandard axesStandard = readPointerAxesStandard(geometryDecodeData);
 
-	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: MeshPointer: HTTPS fetch queued (uid={}, url={})",
-		teleport::client::SessionClient::GetConnectElapsedMs(), mesh_uid, url);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: MeshPointer: HTTPS fetch queued (uid={}, url={}, axes={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), mesh_uid, url, (int)axesStandard);
 
-	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid);
+	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid, axesStandard);
 }
 
 avs::Result GeometryDecoder::decodeAnimationPointer(GeometryDecodeData &geometryDecodeData)
@@ -1451,11 +1492,12 @@ avs::Result GeometryDecoder::decodeAnimationPointer(GeometryDecodeData &geometry
 	geometryCache->ReceivedResource(animation_uid);
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+	const platform::crossplatform::AxesStandard axesStandard = readPointerAxesStandard(geometryDecodeData);
 
-	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: AnimationPointer: HTTPS fetch queued (uid={}, url={})",
-		teleport::client::SessionClient::GetConnectElapsedMs(), animation_uid, url);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: AnimationPointer: HTTPS fetch queued (uid={}, url={}, axes={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), animation_uid, url, (int)axesStandard);
 
-	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Animation, geometryDecodeData.target, animation_uid);
+	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Animation, geometryDecodeData.target, animation_uid, axesStandard);
 }
 
 avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geometryDecodeData)

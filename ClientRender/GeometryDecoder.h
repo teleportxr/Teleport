@@ -112,6 +112,9 @@ namespace teleport
 			avs::Result decodeTexturePointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeMeshPointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeAnimationPointer(GeometryDecodeData& geometryDecodeData);
+			//! Read the optional trailing axes-standard byte of a pointer chunk, falling back to
+			//! the server's own standard when it is absent. See the definition.
+			platform::crossplatform::AxesStandard readPointerAxesStandard(GeometryDecodeData& geometryDecodeData) const;
 			avs::Result decodeTexture(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeAnimation(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeNode(GeometryDecodeData &geometryDecodeData);
