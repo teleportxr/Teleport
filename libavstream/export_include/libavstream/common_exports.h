@@ -100,6 +100,7 @@ namespace avs
 		MeshPointer,
 		MaterialPointer,
 		RemoveNodes,
+		AnimationPointer,	//!< 14. URL of an out-of-band Animation, same body layout as MeshPointer.
 		MaxGeometryPayload
 	};
 	//! Features supported by a client.

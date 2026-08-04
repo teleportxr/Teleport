@@ -31,18 +31,17 @@ AnimationComponent::~AnimationComponent()
 {
 }
 
-void AnimationComponent::PlayAnimation(avs::uid cache_id, avs::uid anim_uid, avs::uid root_uid, uint32_t layer, float speed)
+void AnimationComponent::PlayAnimation(std::chrono::microseconds sessionTimeUs, avs::uid cache_id, avs::uid anim_uid, avs::uid root_uid, uint32_t layer, float speed)
 {
 	teleport::core::ApplyAnimation applyAnimation;
-	applyAnimation.speedUnitsPerSecond		 = speed;
-	applyAnimation.animLayer				 = (uint32_t)layer;
-	applyAnimation.animationID				 = anim_uid;
-	applyAnimation.cacheID					 = cache_id;
-	applyAnimation.nodeID					 = 0;
-	applyAnimation.loop						 = true;
-	std::chrono::microseconds timestampNowUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch());
-	applyAnimation.timestampUs				 = timestampNowUs.count();
-	setAnimationState(timestampNowUs, applyAnimation, root_uid);
+	applyAnimation.speedUnitsPerSecond = speed;
+	applyAnimation.animLayer		   = (uint32_t)layer;
+	applyAnimation.animationID		   = anim_uid;
+	applyAnimation.cacheID			   = cache_id;
+	applyAnimation.nodeID			   = 0;
+	applyAnimation.loop				   = true;
+	applyAnimation.timestampUs		   = sessionTimeUs.count();
+	setAnimationState(sessionTimeUs, applyAnimation, root_uid);
 }
 
 std::map<std::string, teleport::core::PoseScale>::const_iterator FindMatch(const std::map<std::string, teleport::core::PoseScale> &poses, std::string name)
@@ -86,20 +85,24 @@ void AnimationComponent::Retarget(Animation &anim)
 
 std::shared_ptr<AnimationInstance> AnimationComponent::GetOrCreateAnimationInstance(avs::uid root_uid)
 {
-	if (root_uid == 0)
+	auto skeleton = owner.GetSkeleton();
+	if (!skeleton)
 	{
-		if (animationInstances.size())
-		{
-			return animationInstances.begin()->second;
-		}
 		return std::shared_ptr<AnimationInstance>();
+	}
+	// root_uid 0 means "this node's only instance", which is what the renderer's top-level pass
+	// asks for. Return the sole existing instance, or create it - returning null here would leave
+	// a node that is ticked every frame but can never be given a state.
+	if (root_uid == 0 && animationInstances.size())
+	{
+		return animationInstances.begin()->second;
 	}
 	auto f = animationInstances.find(root_uid);
 	if (f != animationInstances.end())
 	{
 		return f->second;
 	}
-	animationInstances.emplace(root_uid, std::make_shared<AnimationInstance>(owner.GetSkeleton()));
+	animationInstances.emplace(root_uid, std::make_shared<AnimationInstance>(skeleton));
 	return animationInstances[root_uid];
 }
 
@@ -115,8 +118,20 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 		return;
 	}
 	auto instance = GetOrCreateAnimationInstance(root_uid);
-	auto cache	  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
-	auto anim	  = cache->mAnimationManager.Get(applyAnimation.animationID);
+	if (!instance)
+	{
+		return;
+	}
+	// The cache is the one holding the animation resource, which for a sub-scene is the outer cache,
+	// not the one this node lives in. An unresolvable cacheID is a server or protocol error, but it
+	// must not take the client down with it.
+	auto cache = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
+	if (!cache)
+	{
+		TELEPORT_WARN("Animation update for node {} names cache {}, which does not exist.", applyAnimation.nodeID, applyAnimation.cacheID);
+		return;
+	}
+	auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
 	if (anim)
 	{
 		Retarget(*anim);
@@ -133,7 +148,7 @@ bool AnimationComponent::update(int64_t timestampUs, avs::uid root_uid)
 	auto instance = GetOrCreateAnimationInstance(root_uid);
 	if (!instance)
 	{
-		instance.reset(new AnimationInstance(owner.GetSkeleton()));
+		return false;
 	}
 	float dt		= lastTimestampUs ? float(double(timestampUs - lastTimestampUs) / 1000000.0) : 0.0f;
 	lastTimestampUs = timestampUs;

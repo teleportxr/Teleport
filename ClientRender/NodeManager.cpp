@@ -1,4 +1,6 @@
 #include "NodeManager.h"
+#include "NodeComponents/AnimationComponent.h"
+#include "NodeComponents/SubSceneComponent.h"
 
 using namespace teleport;
 using namespace clientrender;
@@ -489,16 +491,29 @@ void NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 void NodeManager::UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate)
 {
 	std::shared_ptr<Node> node = GetNode(animationUpdate.nodeID);
-	if(node)
-	{
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationState(timestampUs,animationUpdate, 0);
-	}
-	else
+	if(!node)
 	{
 		std::lock_guard<std::mutex> lock(early_mutex);
 		earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
+		return;
 	}
+	// A node whose content came from a URL holds an entire sub-scene, decoded into its own cache
+	// with client-local uids. The server addresses the outer node, but the skeleton lives inside,
+	// so the update has to be forwarded to each skeleton root in the sub-scene. The animation
+	// resource itself stays in animationUpdate.cacheID - usually the outer, server-facing cache.
+	if(!node->GetSkeleton())
+	{
+		auto subSceneC = node->GetComponent<SubSceneComponent>();
+		if(subSceneC)
+		{
+			subSceneC->ApplyAnimation(timestampUs, animationUpdate);
+			return;
+		}
+	}
+	// root_uid 0 is "this node's only animation instance", which is what the renderer's top-level
+	// pass asks for (SubSceneNodeStates::root_id defaults to 0 outside a sub-scene).
+	auto animC=node->GetOrCreateComponent<AnimationComponent>();
+	animC->setAnimationState(timestampUs,animationUpdate, 0);
 }
 
 bool NodeManager::ReparentNode(const teleport::core::UpdateNodeStructureCommand& updateNodeStructureCommand)

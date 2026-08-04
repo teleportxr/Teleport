@@ -17,6 +17,21 @@ static float UsToS(int64_t startTimestampUs,int64_t endTimestampUs)
 	return float(double(endTimestampUs-startTimestampUs) / 1000000.0);
 }
 
+//! Duration in seconds of the clip a state refers to, or zero if the clip never resolved -
+//! a state whose animation uid was unknown, or whose clip was still in flight, is stored with
+//! a null animation and must not be dereferenced.
+static float DurationOf(const AnimationState &st)
+{
+	return st.animation ? st.animation->duration : 0.0f;
+}
+
+//! Advance a normalised time ratio by t seconds of playback of a clip lasting d seconds.
+//! A zero duration (unresolved clip) leaves the ratio where it was.
+static float AdvanceTimeRatio(float timeRatio, float t, float d)
+{
+	return d > 0.0f ? timeRatio + t / d : timeRatio;
+}
+
 
 AnimationLayerStateSequence::AnimationLayerStateSequence()
 {
@@ -47,11 +62,14 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 			//create an intermediate state, a snapshot of the current state, from which to interpolate.
 			if (st.timestampUs > last->first && st.timestampUs > time_now_us)
 			{
+				const AnimationState previous	= last->second;
 				AnimationState &intermediate	= animationStates[time_now_us];
-				const AnimationState &previous	= last->second;
 				intermediate.animationId		= previous.animationId;
-				float d							= previous.animation->duration;
-				intermediate.timeRatio			= d ? (previous.timeRatio + float((time_now_us-st.timestampUs) / 1000000.0) * previous.speedUnitsPerS / d) : 0.0f;
+				// The snapshot is the previous state advanced to now, so the elapsed time runs from
+				// the previous state's own timestamp - not from the new state, which is in the future
+				// and would wind the clip backwards.
+				float elapsed_s					= UsToS(previous.timestampUs, time_now_us) * previous.speedUnitsPerS;
+				intermediate.timeRatio			= AdvanceTimeRatio(previous.timeRatio, elapsed_s, DurationOf(previous));
 				intermediate.loop				= previous.loop;
 				intermediate.speedUnitsPerS		= previous.speedUnitsPerS;
 				intermediate.timestampUs		= time_now_us;
@@ -63,38 +81,22 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 	sequenceNumber++;
 	if(st.matchTransition&&animationStates.size()>0)
 	{
-		auto &lastState=animationStates.rbegin().operator*().second;
-		float d0 = lastState.animation->duration;
-		if(d0 > 0)
+		const AnimationState lastState = animationStates.rbegin()->second;
+		float d0 = DurationOf(lastState);
+		float d1 = DurationOf(st);
+		if(d0 > 0 && d1 > 0)
 		{
 			float R0 = lastState.timeRatio;
 			auto &state=animationStates[st.timestampUs];
 			state=st;
-			if(state.timestampUs > lastState.timestampUs)
+			// Match the footfall across a change of clip: the phase is carried over by integrating
+			// a linearly-changing duration, so a walk cycle blending into a run keeps its rhythm.
+			float dt = UsToS(lastState.timestampUs,state.timestampUs);
+			float r = dt != 0.0f ? (d1 - d0) / dt : 0.0f;
+			if (r > 0)
 			{
-				float d1 = state.animation->duration;
-				// correct time ratio at new state?
-				float dt = UsToS(lastState.timestampUs,state.timestampUs);
-				float r = (d1 - d0) / (dt);
-				if (r > 0)
-				{
-					float R1 = R0 + std::log(d1 / d0) / r;
-					state.timeRatio = R1;
-					return;
-				}
-			}
-			else
-			{
-				float d1 = state.animation->duration;
-				// correct time ratio at new state?
-				float dt = UsToS(lastState.timestampUs,state.timestampUs);
-				float r = (d1 - d0) / (dt);
-				if (r > 0)
-				{
-					float R1 = R0 + std::log(d1 / d0) / r;
-					state.timeRatio = R1;
-					return;
-				}
+				state.timeRatio = R0 + std::log(d1 / d0) / r;
+				return;
 			}
 		}
 	}
@@ -144,9 +146,9 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 		st.animationState.loop				= s1->second.loop;
 		st.animationState.matchTransition	= s1->second.matchTransition;
 		st.animationState.animation			= s1->second.animation;
-		float d								= s1->second.animation->duration;
+		float d								= DurationOf(s1->second);
 		float t								= s1->second.speedUnitsPerS * UsToS(s1->second.timestampUs, timestampUs);
-		st.animationState.timeRatio			= s1->second.timeRatio + d?(t / d):0.0f;
+		st.animationState.timeRatio			= AdvanceTimeRatio(s1->second.timeRatio, t, d);
 		interpState							= 1;
 		return st;
 	}
@@ -165,8 +167,8 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 			st.animationState.loop				= animationState.loop;
 			st.animationState.matchTransition	= animationState.matchTransition;
 			st.animationState.animation			= animationState.animation;
-			float d								= animationState.animation->duration;
-			st.animationState.timeRatio			= s_last->second.timeRatio + d?(t / d):0.0f;
+			float d								= DurationOf(animationState);
+			st.animationState.timeRatio			= AdvanceTimeRatio(s_last->second.timeRatio, t, d);
 			st.previousAnimationState			= animationState;
 			if (animationStates.size() > 1)
 			{
@@ -192,9 +194,9 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 		st.animationState.loop				= s1->second.loop;
 		st.animationState.matchTransition	= s1->second.matchTransition;
 		st.animationState.animation			= s1->second.animation;
-		float d								= s1->second.animation->duration;
+		float d								= DurationOf(s1->second);
 		float t								= s1->second.speedUnitsPerS * UsToS(s1->second.timestampUs, timestampUs);
-		st.animationState.timeRatio			= s1->second.timeRatio + d?(t / d):0.0f;
+		st.animationState.timeRatio			= AdvanceTimeRatio(s1->second.timeRatio, t, d);
 		interpState							= 4;
 		return st;
 	}
@@ -222,35 +224,34 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 	if (s0 != animationStates.begin())
 		animationStates.erase(animationStates.begin());
 	interpState = 5;
+	const float d0 = DurationOf(animationState0);
+	const float d1 = DurationOf(animationState1);
 	if(st.animationState.matchTransition)
 	{
-		float d0			= animationState0.animation->duration;
-		float d1			= animationState1.animation->duration;
-		float t0			= 0;
+		// Both clips share one phase, so footfall survives the transition. Treat the duration as
+		// changing linearly from d0 to d1 over the blend and integrate dt/duration(t) across it,
+		// which is where the logarithm comes from.
 		float t1			= UsToS(s1->first-s0->first);
-		float R0 = animationState0.timeRatio;
-		float R1 = animationState1.timeRatio;
-		float r				= (d1-d0)/(t1-t0);
+		float R0			= animationState0.timeRatio;
+		float r				= (t1 > 0.0f) ? (d1-d0)/t1 : 0.0f;
 		float R;
-		if(r>0)
+		if(r > 0.0f && d0 > 0.0f && t*r + d0 > 0.0f)
 		{
-			R				= R0 + log(((t-t0)*r+d0)/d0)/r;
+			R				= R0 + log((t*r+d0)/d0)/r;
 		}
 		else
 		{
-			R = R0 + d0 ? (t / d0):0.0f;
+			// Constant duration (or an unresolved clip): the integral degenerates to t/d0.
+			R				= AdvanceTimeRatio(R0, t, d0);
 		}
 		st.previousAnimationState.timeRatio	= R;
 		st.animationState.timeRatio			= R;
 	}
-	else // anims are independent.
+	else // anims are independent, so each runs on its own phase.
 	{
-		float t0							= animationState0.speedUnitsPerS * UsToS(animationState0.timestampUs, timestampUs);
-		float d0							= animationState0.animation->duration;
-		st.animationState.timeRatio			= d0?(t / d0):0.0f;
+		st.previousAnimationState.timeRatio	= AdvanceTimeRatio(animationState0.timeRatio, t, d0);
 		float t1							= animationState1.speedUnitsPerS * UsToS(animationState1.timestampUs, timestampUs);
-		float d1							= animationState1.animation->duration;
-		st.previousAnimationState.timeRatio	= d1?(t1 / d1) : 0.0f;
+		st.animationState.timeRatio			= AdvanceTimeRatio(animationState1.timeRatio, t1, d1);
 	}
 	return st;
 }

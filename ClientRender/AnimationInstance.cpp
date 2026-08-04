@@ -9,11 +9,11 @@
 
 using namespace teleport::clientrender;
 
-AnimationInstance::AnimationInstance(std::shared_ptr<Skeleton> sk) : skeleton(sk->GetOzzSkeleton())
+AnimationInstance::AnimationInstance(std::shared_ptr<Skeleton> sk) : skeleton(sk ? sk->GetOzzSkeleton() : nullptr)
 {
-	id = sk->id;
 	if (sk)
 	{
+		id = sk->id;
 		Init();
 	}
 }
@@ -54,15 +54,13 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	}
 	AnimationState st;
 	st.animationId	  = applyAnimation.animationID;
-	st.timeRatio	 = 0;
+	st.timeRatio	  = 0;
 	st.speedUnitsPerS = applyAnimation.speedUnitsPerSecond;
-	// The timestamp where the state applies.
-	st.timestampUs	  = applyAnimation.timestampUs + 10000000;
+	// The timestamp where the state applies, in server-session time - the same datum the state map
+	// is keyed on and Update() is queried with.
+	st.timestampUs	  = applyAnimation.timestampUs;
 	st.loop			  = applyAnimation.loop;
 	st.matchTransition&=st.loop;
-	if(st.matchTransition)
-	{
-	}
 	auto cache		  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
 	if (cache)
 	{
@@ -75,6 +73,12 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 				return;
 			}
 			st.animation = anim;
+			// animTimeAtTimestamp says where in the clip we should be when the state applies.
+			// The state itself stores a normalised ratio, so convert against the clip's duration.
+			if (anim->duration > 0.0f)
+			{
+				st.timeRatio = applyAnimation.animTimeAtTimestamp / anim->duration;
+			}
 		}
 	}
 	animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);

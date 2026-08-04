@@ -148,7 +148,12 @@ namespace teleport
 			UpdateNodeEnabledState,			// id
 			SetNodeHighlighted,				// id
 			ApplyNodeAnimation,				// id
-			UpdateNodeAnimationControlX,
+			//! Reserved, id 10. Never had a struct or a handler. The slot is held rather than removed
+			//! because deleting it would renumber every command after it, silently breaking the wire
+			//! against the Node.js, web and Unity implementations.
+			Reserved_AnimationControl,
+			//! id 11. **Do not send.** SessionClient::ReceiveCommandPacket has no case for this and
+			//! falls through to its break-on-unknown default. Use ApplyAnimation::speedUnitsPerSecond.
 			SetNodeAnimationSpeed,			// id
 			SetupLighting,					// 0
 			UpdateNodeStructure,			// id
@@ -174,7 +179,7 @@ namespace teleport
 				case CommandPayloadType::UpdateNodeEnabledState			:return "UpdateNodeEnabledState";
 				case CommandPayloadType::SetNodeHighlighted				:return "SetNodeHighlighted";
 				case CommandPayloadType::ApplyNodeAnimation				:return "ApplyNodeAnimation";
-				case CommandPayloadType::UpdateNodeAnimationControlX	:return "UpdateNodeAnimationControlX";
+				case CommandPayloadType::Reserved_AnimationControl		:return "Reserved_AnimationControl";
 				case CommandPayloadType::SetNodeAnimationSpeed			:return "SetNodeAnimationSpeed";
 				case CommandPayloadType::SetupLighting					:return "SetupLighting";
 				case CommandPayloadType::UpdateNodeStructure			:return "UpdateNodeStructure";

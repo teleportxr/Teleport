@@ -10,19 +10,19 @@ namespace teleport
 	{
 		struct FloatKeyframe
 		{
-			float time; //Milliseconds
+			float time; //Seconds
 			float value;
 		};
 
 		struct Vector3Keyframe
 		{
-			float time; //Milliseconds
+			float time; //Seconds
 			vec3 value;
 		};
 
 		struct Vector4Keyframe
 		{
-			float time; //Milliseconds
+			float time; //Seconds
 			vec4 value;
 		};
 		//! A list of keyframes to be used in an animation.

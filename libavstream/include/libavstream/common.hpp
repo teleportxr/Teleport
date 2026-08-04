@@ -190,6 +190,9 @@ namespace avs
 			case GeometryPayloadType::TextCanvas:		return "TextCanvas";
 			case GeometryPayloadType::TexturePointer:	return "TexturePointer";
 			case GeometryPayloadType::MeshPointer:		return "MeshPointer";
+			case GeometryPayloadType::MaterialPointer:	return "MaterialPointer";
+			case GeometryPayloadType::RemoveNodes:		return "RemoveNodes";
+			case GeometryPayloadType::AnimationPointer:	return "AnimationPointer";
 			default:
 				return "Invalid";
 		}

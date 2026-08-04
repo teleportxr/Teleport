@@ -206,11 +206,13 @@ namespace teleport
 		struct AnimationState
 		{
 			avs::uid				   animationId		= 0;
-			int64_t					   timestampUs		= 0;
-			float					   speedUnitsPerS	= 1.0f;
-			float					   timeRatio		= 0.0f;
+			int64_t					   timestampUs		= 0;		//!< Server-session time. See AnimationLayerStateSequence.
+			float					   speedUnitsPerS	= 1.0f;		//!< Playback-rate multiplier, not metres per second.
+			float					   timeRatio		= 0.0f;		//!< Normalised position in the clip at timestampUs.
 			bool					   loop				= true;
 			bool					   matchTransition	= true;		//!< If true, the transition from the previous anim to this one will be synchronized, e.g. walking/running.
+			//! May be null: a state whose clip has not arrived, or whose uid was unknown, is still
+			//! stored so that it applies once the clip resolves. Never dereference without checking.
 			std::shared_ptr<Animation> animation;
 		};
 		struct InstantaneousAnimationState
@@ -222,13 +224,22 @@ namespace teleport
 		//! Manages the state of a specific animation layer applied to a specific skeleton.
 		//! AnimationLayerStateSequence contains zero or more AnimationStates.
 		//! An AnimationState specifies the state at a given timestamp.
+		//!
+		//! **Every timestamp here is server-session time**: microseconds since
+		//! SetupCommand::startTimestamp_utc_unix_us, as returned by SessionClient::GetTimestamp().
+		//! That is the datum ApplyAnimation::timestampUs uses, so the map key, AddState's argument
+		//! and getState's argument must all agree. Querying in unix time instead puts every lookup
+		//! decades past the last state, and playback silently degenerates to garbage.
 		class AnimationLayerStateSequence
 		{
 		public:
 			AnimationLayerStateSequence();
 			void						Init(int num_soa_joints, int num_joints);
-			//! Add a state to the sequence.
+			//! Add a state to the sequence. A state dated later than timestampUs cross-fades from
+			//! the current state; one dated now or earlier applies immediately.
+			//! @param timestampUs "Now", in server-session time.
 			void						AddState(std::chrono::microseconds timestampUs, const AnimationState &st);
+			//! @param timestampUs "Now", in server-session time.
 			const InstantaneousAnimationState &getState(int64_t timestampUs) const;
 			const InstantaneousAnimationState &getState() const;
 

@@ -86,6 +86,9 @@ Payload types
    * - 13
      - RemoveNodes
      - ``uint16`` count followed by that many ``avs::uid`` values to delete from the client's scene. **Has no resource uid in the header.** See :ref:`remove_nodes_payload`.
+   * - 14
+     - AnimationPointer
+     - ``uint16`` URL length + URL bytes. As ``MeshPointer``, but the fetched body is decoded as an ``Animation``. See :ref:`animation_pointer_payload`.
 
 .. _node_payload:
 
@@ -997,6 +1000,49 @@ MaterialPointer payload
 
 Reserved. ``MaterialPointer`` (id 12) is not currently emitted; receivers must skip the chunk by advancing past ``payloadSize`` bytes. The intended body matches :ref:`texture_pointer_payload` but for Material resources.
 
+.. _animation_pointer_payload:
+
+AnimationPointer payload
+========================
+
+An ``AnimationPointer`` chunk has the identical body layout to :ref:`texture_pointer_payload`: a ``uint16`` URL length followed by that many UTF-8 bytes. The client fetches the URL over HTTPS and decodes the reply body as an ``Animation`` payload — exactly the relationship ``MeshPointer`` has to ``Mesh``.
+
+This is the **only** way to deliver an animation that the client can play on a streamed avatar. The inline :ref:`animation_payload` carries keyframes indexed by ``int16`` bone number against a server-authored ``Skeleton``, and so cannot be retargeted onto a skeleton the client decoded for itself from a glTF or VRM asset; a ``.vrma`` or ``.glb`` clip fetched by pointer carries **joint names**, which is what retargeting matches on.
+
+The URL must end in an extension the client can dispatch on:
+
+.. list-table::
+   :widths: 20 40
+   :header-rows: 1
+
+   * - Extension
+     - Decoded as
+   * - ``.vrma``, ``.glb``, ``.vrm``
+     - glTF 2.0 binary. Retargetable.
+   * - ``.gltf``
+     - glTF 2.0 text. Retargetable.
+
+Servers MUST mint **one uid per (clip, axes standard)**: like every other resource, a uid identifies one axes-converted variant, and a single uid cannot carry two.
+
+Added in the same revision as :ref:`node_payload`'s existing fields; a client built before it rejects payload type 14 as unknown and skips the chunk, which is safe because each chunk is framed by ``payloadSize``.
+
+.. list-table:: AnimationPointer body
+   :widths: 14 22 8 60
+   :header-rows: 1
+
+   * - Field
+     - Type
+     - Size (bytes)
+     - Description
+   * - url length
+     - ``uint16``
+     - 2
+     - UTF-8 byte count.
+   * - url
+     - ``uint8[url length]``
+     - variable
+     - Absolute URL or relative path; see :doc:`http`.
+
 .. _remove_nodes_payload:
 
 RemoveNodes payload
@@ -1030,7 +1076,7 @@ Example body removing two nodes with uids ``0x11`` and ``0x22``::
 Resource lifecycle
 ==================
 
-For every chunk *other* than ``RemoveNodes``, ``TexturePointer``, ``MeshPointer`` and ``MaterialPointer``, the server records the uid as "in flight" and waits for the client to confirm receipt by sending ``ReceivedResourcesMessage`` (id 4) on the reliable client-to-server channel. See :doc:`service/client_to_server`.
+For every chunk *other* than ``RemoveNodes``, ``TexturePointer``, ``MeshPointer``, ``MaterialPointer`` and ``AnimationPointer``, the server records the uid as "in flight" and waits for the client to confirm receipt by sending ``ReceivedResourcesMessage`` (id 4) on the reliable client-to-server channel. See :doc:`service/client_to_server`.
 
 For pointer chunks, the server treats the resource as delivered as soon as the chunk leaves the encoder; the actual asset is then fetched out-of-band over HTTPS. The client is still expected to send ``ReceivedResourcesMessage`` once the HTTP body has been decoded.
 

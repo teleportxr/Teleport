@@ -1405,8 +1405,12 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 		//								to its current animated local position.
 		// For each bone matrix, pos_local= (bone_matrix_j) * pos_original_local
 		auto animationComponent = node->GetComponent<AnimationComponent>();
+		// Animation states are stored keyed on server-session time (ApplyAnimation::timestampUs),
+		// so they must be queried in the same datum. renderState.timestampUs is raw unix time and
+		// would put every query ~55 years past the last state.
+		const int64_t sessionTimeUs = sessionClient ? sessionClient->GetTimestamp().count() : renderState.timestampUs.count();
 		// static size_t match_joint_count=22;
-		if (animationComponent && animationComponent->update(renderState.timestampUs.count(), subSceneNodeStates.root_id))
+		if (animationComponent && animationComponent->update(sessionTimeUs, subSceneNodeStates.root_id))
 		{
 			// We want to update the instance of this animation component associated with this instance of the submesh.
 		}
@@ -1837,7 +1841,17 @@ void InstanceRenderer::UpdateNodeAnimation(std::chrono::microseconds timestampUs
 						  << ", timestamp " << animationUpdate.timestampUs << "\n";
 		}
 	}
-	geometryCache->mNodeManager.UpdateNodeAnimation(timestampUs, animationUpdate);
+	// cacheID 0 means "the cache containing the target node". Caches are created client-side with
+	// client-local uids, so a server has no way to name one; this is how it says "wherever the node
+	// you told me about lives". Resolve it here, where the cache is known, so that everything
+	// downstream sees a real uid. Note this is the cache holding the animation *resource*, which
+	// for a sub-scene node is the outer cache, not the sub-scene the skeleton lives in.
+	teleport::core::ApplyAnimation resolved = animationUpdate;
+	if (resolved.cacheID == 0)
+	{
+		resolved.cacheID = geometryCache->GetCacheUid();
+	}
+	geometryCache->mNodeManager.UpdateNodeAnimation(timestampUs, resolved);
 }
 
 void InstanceRenderer::UpdateTagDataBuffers(crossplatform::GraphicsDeviceContext &deviceContext)

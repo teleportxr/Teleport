@@ -212,6 +212,7 @@ avs::Result GeometryDecoder::decode(avs::uid							 server_uid,
 	case avs::GeometryPayloadType::TexturePointer:
 	case avs::GeometryPayloadType::MeshPointer:
 	case avs::GeometryPayloadType::RemoveNodes:
+	case avs::GeometryPayloadType::AnimationPointer:
 		break;
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
@@ -398,6 +399,8 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData &geometryDecodeDa
 		return decodeTexturePointer(geometryDecodeData);
 	case avs::GeometryPayloadType::MeshPointer:
 		return decodeMeshPointer(geometryDecodeData);
+	case avs::GeometryPayloadType::AnimationPointer:
+		return decodeAnimationPointer(geometryDecodeData);
 	default:
 		TELEPORT_BREAK_ONCE("Invalid Geometry payload");
 		return avs::Result::GeometryDecoder_InvalidPayload;
@@ -1435,6 +1438,24 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 		teleport::client::SessionClient::GetConnectElapsedMs(), mesh_uid, url);
 
 	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Mesh, geometryDecodeData.target, mesh_uid);
+}
+
+avs::Result GeometryDecoder::decodeAnimationPointer(GeometryDecodeData &geometryDecodeData)
+{
+	avs::uid animation_uid = geometryDecodeData.uid;
+
+	uint16_t urlLength	   = NextUint16;
+	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
+	// Mark the resource as received. As far as the Server is concerned, its job is done.
+	std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(geometryDecodeData.server_or_cache_uid);
+	geometryCache->ReceivedResource(animation_uid);
+	string url((size_t)urlLength, ' ');
+	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
+
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: AnimationPointer: HTTPS fetch queued (uid={}, url={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), animation_uid, url);
+
+	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Animation, geometryDecodeData.target, animation_uid);
 }
 
 avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geometryDecodeData)

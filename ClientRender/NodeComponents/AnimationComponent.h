@@ -31,14 +31,17 @@ namespace teleport
 
 			void Retarget( Animation &anim);
 			
-			//! Shortcut, play this animation on the given layer.
-			void PlayAnimation(avs::uid cache_id, avs::uid anim_uid, avs::uid root_uid, uint32_t layer = 0, float speed = 1.0f);
-	
-			// Update the animation state.
+			//! Shortcut, play this animation on the given layer, starting now.
+			//! @param sessionTimeUs Server-session time: microseconds since SetupCommand::startTimestamp_utc_unix_us,
+			//!	 which is the datum every animation timestamp is measured against. See SessionClient::GetTimestamp().
+			void PlayAnimation(std::chrono::microseconds sessionTimeUs, avs::uid cache_id, avs::uid anim_uid, avs::uid root_uid, uint32_t layer = 0, float speed = 1.0f);
+
+			//! Update the animation state.
+			//! @param timestampUs Server-session time, microseconds. Must share its datum with animationUpdate.timestampUs.
 			void setAnimationState(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate, avs::uid root_uid);
 
 			//! @brief Update all animations, given the current timestamp, which is the time in microseconds since the server's datum timestamp.
-			//! @param timestampUs Time in microseconds since the server's datum timestamp.
+			//! @param timestampUs Server-session time in microseconds, i.e. since the server's datum timestamp. NOT unix time.
 			//! @param root_uid UID of the root node.
 			bool update( int64_t timestampUs, avs::uid root_uid);
 

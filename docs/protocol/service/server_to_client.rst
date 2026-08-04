@@ -58,13 +58,13 @@ The complete set of command types is enumerated below. Variable-length commands 
      - ``teleport::core::ApplyAnimationCommand``
      - none (embeds ``teleport::core::ApplyAnimation``)
    * - 10
-     - ``UpdateNodeAnimationControlX``
+     - ``Reserved_AnimationControl``
      - (reserved)
-     - reserved
+     - reserved -- never had a struct or a handler. The id is held so that those after it stay put.
    * - 11
      - ``SetNodeAnimationSpeed``
      - ``teleport::core::SetNodeAnimationSpeedCommand``
-     - none
+     - none -- **do not send**; see below.
    * - 12
      - ``SetupLighting``
      - ``teleport::core::SetLightingCommand``
@@ -256,19 +256,44 @@ All values are already converted into the client's ``AxesStandard`` by the serve
      - ``nodeID``
    * - 8
      - uid
-     - ``cacheID``
+     - ``cacheID`` -- which geometry cache holds the animation resource. **Zero means "the cache
+       containing** ``nodeID`` **"**, which is what a server normally sends: caches are created
+       client-side with client-local uids, so the server has no way to name one. A non-zero value
+       that the client cannot resolve is warned about and the update dropped.
    * - 8
      - uid
      - ``animationID``
    * - 4
      - float
-     - ``animTimeAtTimestamp`` -- where in the animation we should be at ``timestampUs``.
+     - ``animTimeAtTimestamp`` -- where in the animation we should be at ``timestampUs``, in
+       **seconds** from the start of the clip.
    * - 4
      - float
-     - ``speedUnitsPerSecond``
+     - ``speedUnitsPerSecond`` -- a **playback-rate multiplier**, not metres per second. ``1.0``
+       plays the clip at its authored rate, ``2.0`` at double speed. Use it to match a locomotion
+       clip to the speed the node is actually moving at, which removes foot-sliding without
+       needing more clips.
    * - 1
      - bool
      - ``loop``
+
+Total 46 bytes. ``SessionClient::ReceiveNodeAnimationUpdate`` requires that size **exactly** and
+silently drops any packet of another length.
+
+.. note::
+   ``timestampUs`` in the future is the mechanism for cross-fading: the client synthesises a
+   snapshot of the current state at "now" and interpolates from it to the new state, so the lead
+   time *is* the blend duration. A timestamp of "now" gives a hard snap.
+
+.. note::
+   ``animLayer`` must be ``0``. ``AnimationInstance::Update`` processes only layer 0; states
+   written to any other layer are stored and never applied.
+
+.. note::
+   A node whose renderable content came from a URL (a glTF or VRM asset) holds an entire
+   *sub-scene*, decoded into its own cache with client-local uids. Address ``nodeID`` at the outer
+   node the server created; the client forwards the update to the skeletons inside. ``cacheID``
+   still refers to the cache holding the **animation**, which is the outer one.
 
 .. list-table:: SetNodeAnimationSpeedCommand (id = 11)
    :widths: 5 14 30
@@ -289,6 +314,12 @@ All values are already converted into the client's ``AxesStandard`` by the serve
    * - 4
      - float
      - ``speed``
+
+.. warning::
+   **Do not send this command.** ``SessionClient::ReceiveCommandPacket`` has no case for id 11 and
+   falls through to its break-on-unknown default. The struct is documented because it is still
+   defined, not because it works. Set the playback rate with ``ApplyAnimation.speedUnitsPerSecond``
+   instead.
 
 .. list-table:: SetLightingCommand (id = 12, acked)
    :widths: 5 14 30

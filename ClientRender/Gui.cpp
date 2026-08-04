@@ -1277,6 +1277,28 @@ static std::pair<std::string, std::string> GetCurrentDateTimeStrings()
 	return {dateStr, timeStr};
 }
 
+//! Server-session time for the session that owns this cache - the datum every animation
+//! timestamp is measured against (see AnimationComponent::PlayAnimation). A sub-scene cache
+//! has no session of its own, so walk up to the parent cache that does.
+static std::chrono::microseconds SessionTimeForCache(avs::uid cache_uid)
+{
+	for (int depth = 0; cache_uid != 0 && depth < 8; depth++)
+	{
+		auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
+		if (sessionClient)
+		{
+			return sessionClient->GetTimestamp();
+		}
+		auto cache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
+		if (!cache)
+		{
+			break;
+		}
+		cache_uid = cache->GetParentCacheUid();
+	}
+	return std::chrono::microseconds(0);
+}
+
 void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 {
 	if (in_debug_gui != 1)
@@ -1485,7 +1507,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 									ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str());
 									if (ImGui::IsItemClicked())
 									{
-										animC->PlayAnimation(cache_uid, anim_uid, 0);
+										animC->PlayAnimation(SessionTimeForCache(cache_uid), cache_uid, anim_uid, 0);
 									}
 								}
 								auto parentCache = GeometryCache::GetGeometryCache(geometryCache->GetParentCacheUid());
@@ -1499,7 +1521,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 										ImGui::TreeNodeEx(anim->name.c_str(), flags, " %s", anim->name.c_str());
 										if (ImGui::IsItemClicked())
 										{
-											animC->PlayAnimation(geometryCache->GetParentCacheUid(), anim_uid, 0);
+											animC->PlayAnimation(SessionTimeForCache(cache_uid), geometryCache->GetParentCacheUid(), anim_uid, 0);
 										}
 									}
 								}
@@ -1574,7 +1596,8 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 									{
 										show_inspector = true;
 									}
-									subSceneC->PlayAnimation(0, anim_uid);
+									// The listed clips come from geometryCache, so that is the cache holding them.
+								subSceneC->PlayAnimation(SessionTimeForCache(cache_uid), cache_uid, anim_uid);
 								}
 								ImGui::TreePop();
 							}

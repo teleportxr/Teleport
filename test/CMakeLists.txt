@@ -28,6 +28,22 @@ if(TARGET ozz_animation)
    add_test(NAME anim COMMAND anim)
    target_link_libraries(anim PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
    target_include_directories(anim PRIVATE ${CMAKE_SOURCE_DIR})
+
+   # animation_state exercises the state sequence that decides what a skeleton is playing at a
+   # given moment. Like anim, it compiles the translation unit directly; the two
+   # clientrender::Animation members it needs are supplied by the test itself, so ClientRender
+   # (and with it Vulkan, draco and ktx) stays out of the link.
+   add_executable(animation_state
+      test_animation_state.cpp
+      ${CMAKE_SOURCE_DIR}/ClientRender/NodeComponents/AnimationState.cpp)
+   add_test(NAME animation_state COMMAND animation_state)
+   target_link_libraries(animation_state PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
+   target_include_directories(animation_state PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/ClientRender
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/firstparty)
 endif()
 # TeleportCore's public Avatars.h header transitively pulls in
 # libavstream/common_exports.h for the avs::uid alias; the include

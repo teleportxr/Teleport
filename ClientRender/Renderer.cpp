@@ -98,12 +98,6 @@ static const char  *ToString(clientrender::Light::Type type)
 	return lightTypeName;
 }
 
-static const char *stringof(avs::GeometryPayloadType t)
-{
-	static const char *txt[] = {"Invalid", "Mesh", "Material", "MaterialInstance", "Texture", "Animation", "Node", "Skeleton", "Bone"};
-	return txt[(size_t)t];
-}
-
 avs::SurfaceBackendInterface *AVSTextureImpl::createSurface() const
 {
 #if TELEPORT_CLIENT_USE_D3D12
