@@ -54,6 +54,14 @@ Build the default target rather than just `teleport_terminal`: the Platform subm
 `install()` rules for libraries that `cpack` expects to exist, and a target-specific build
 leaves them unbuilt.
 
+Packaging (macOS only): the `install()` rules in `CMakeLists.txt` bundle Homebrew's
+`libssl.3.dylib`/`libcrypto.3.dylib` into `<prefix>/lib` and rewrite `teleport_terminal`'s
+load commands to `@loader_path`-relative paths via `install_name_tool`. Without this, the
+installed binary references the absolute Homebrew path baked in at link time
+(e.g. `/opt/homebrew/opt/openssl@3/lib/libssl.3.dylib`) and fails to launch on any Mac
+without that exact keg installed ("Library not loaded"). Verify with
+`otool -L build_macos/bin/teleport_terminal | grep -i ssl` after `cpack`.
+
 Verify the build does NOT pull in unwanted dependencies (openxr_loader check):
 
 ```bash
