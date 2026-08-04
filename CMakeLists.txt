@@ -102,7 +102,13 @@ cmake_policy(SET CMP0135 NEW)
 cmake_policy(SET CMP0077 NEW)
 
 set(PLATFORM_USE_FMT ON)
-set(PLATFORM_SUPPORT_D3D12 ${TELEPORT_WINDOWS})
+# CACHE (without FORCE) only seeds the default when the variable isn't already defined, so a
+# command-line -DPLATFORM_SUPPORT_D3D12=... (as build_pc_client.yml passes) still wins. A plain
+# set() here would silently stomp that override on every configure, which used to leave the
+# DirectX12 platform library configured (and install()-ed by CPack) even when the CI workflow
+# explicitly disabled it and nothing links it — the narrow MSBuild target list then never built
+# it, so packaging failed with "file INSTALL cannot find ... PlatformDirectX12_MT.lib".
+set(PLATFORM_SUPPORT_D3D12 ${TELEPORT_WINDOWS} CACHE BOOL "Support Direct3D 12 in Platform")
 set(PLATFORM_USE_ASSIMP OFF CACHE BOOL "" FORCE)
 set(PLATFORM_BUILD_ASSIMP OFF CACHE BOOL "" FORCE)
 set(PLATFORM_SUPPORT_D3D11 OFF)
@@ -731,8 +737,14 @@ if(TELEPORT_SERVER)
 endif()
 # ozz-animation is used only by ClientRender, so a headless-only build skips the fetch entirely.
 if(TELEPORT_GUI_CLIENT)
-	set(ozz_build_tools ON CACHE BOOL "" FORCE)
-	set(ozz_build_gltf ON CACHE BOOL "" FORCE)
+	# ClientRender only links ozz_animation and ozz_animation_offline (see
+	# ClientRender/CMakeLists.txt); it never touches ozz_geometry, ozz_options,
+	# ozz_animation_tools, or the gltf2ozz command-line converter. Leaving these ON used to
+	# configure those extra targets (and their unconditional install() rules) without CI's
+	# narrow MSBuild target list ever actually building them, so CPack failed trying to
+	# install .dll/.exe files that were never produced.
+	set(ozz_build_tools OFF CACHE BOOL "" FORCE)
+	set(ozz_build_gltf OFF CACHE BOOL "" FORCE)
 	set(ozz_build_samples OFF CACHE BOOL "" FORCE)
 	set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
 	set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
@@ -799,6 +811,25 @@ if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 		add_subdirectory(client/JavaScriptWorker)
 	endif()
 	#message("3 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
+endif()
+
+# draco (thirdparty/draco/cmake/draco_install.cmake) and ozz-animation both unconditionally
+# install a handful of command-line tool targets (draco_decoder, draco_encoder,
+# draco_transcoder, ozz_options, ozz_geometry, and — unless ozz_build_tools/ozz_build_gltf
+# above suppress them — ozz_animation_tools/gltf2ozz) that nothing in Teleport actually links.
+# The Windows CI workflow (build_pc_client.yml) builds only TeleportPCClient/teleport_terminal
+# via a targeted MSBuild invocation rather than the full solution, so these extra targets are
+# never compiled — yet CPack still tries to install their output files afterwards and fails
+# with "file INSTALL cannot find ... .exe/.dll". Force them to build alongside the client so
+# their install rules always have something to install. Guarded with if(TARGET ...) since
+# which of these exist depends on upstream options and platform.
+if(TARGET TeleportPCClient)
+	foreach(_extra_install_only_target draco_decoder draco_encoder draco_transcoder ozz_options ozz_geometry ozz_animation_tools gltf2ozz)
+		if(TARGET ${_extra_install_only_target})
+			add_dependencies(TeleportPCClient ${_extra_install_only_target})
+		endif()
+	endforeach()
+	unset(_extra_install_only_target)
 endif()
 
 if(TELEPORT_CLIENT_USE_D3D12)
