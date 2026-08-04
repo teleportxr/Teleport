@@ -1454,23 +1454,6 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 
 	if (!include_children)
 	{
-		// DIAGNOSTIC: the subscene block below is what positions a subscene's geometry,
-		// and it sits after this return — so a node reached with include_children=false
-		// never re-pushes its transform, and its geometry stays where it was last drawn
-		// even as the node moves.
-		if (node->GetComponent<clientrender::SubSceneComponent>())
-		{
-			// Rate-limited PER NODE: a single shared static would only ever report
-			// whichever subscene node happened to be visited first each second.
-			static std::map<avs::uid, int64_t> lastSkipReport;
-			int64_t							   nowUs = renderState.timestampUs.count();
-			int64_t							  &last	 = lastSkipReport[node->id];
-			if (nowUs - last > 1000000)
-			{
-				last = nowUs;
-				TELEPORT_WARN("SUBSCENE SKIP: node {0} returned before its subscene transform was re-pushed (include_children=false).", node->id);
-			}
-		}
 		return;
 	}
 	const auto &children = node->GetChildren();
@@ -1486,26 +1469,6 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 	auto s = node->GetComponent<clientrender::SubSceneComponent>();
 	if (s)
 	{
-		// DIAGNOSTIC: what transform is actually being pushed for this subscene, and is
-		// it changing? A static translation here means GetGlobalTransform() is stale; a
-		// changing one means the render input is correct and the fault is downstream.
-		{
-			// Key on (cache, node): subscene caches allocate their own client-local uids
-			// via GenerateLocalUid(), so ids collide across caches and a node-only key
-			// makes two unrelated nodes suppress each other's reports.
-			const avs::uid cacheUid = geometrySubCache->GetCacheUid();
-			static std::map<std::pair<avs::uid, avs::uid>, int64_t> lastPushReport;
-			int64_t												   nowUs = renderState.timestampUs.count();
-			int64_t												  &last	 = lastPushReport[{cacheUid, node->id}];
-			if (nowUs - last > 1000000)
-			{
-				last			= nowUs;
-				const vec3 &t	= node->GetGlobalTransform().m_Translation;
-				const vec3 &lt	= node->GetLocalTransform().m_Translation;
-				TELEPORT_LOG("SUBSCENE PUSH: cache {0} node {1} '{2}' local ({3} {4} {5}) global ({6} {7} {8})",
-							 cacheUid, node->id, node->name, lt.x, lt.y, lt.z, t.x, t.y, t.z);
-			}
-		}
 		if (s->mesh_uid)
 		{
 			auto ss = geometrySubCache->mMeshManager.Get(s->mesh_uid);
@@ -1558,23 +1521,6 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 	if (!meshRender.model)
 	{
 		return;
-	}
-	// DIAGNOSTIC: the matrix actually handed to the GPU for this mesh. If this stays put
-	// while the owning subscene node's push moves, the model pointer is resolving to the
-	// wrong NodeState — subSceneStatesMap/nodeStates are keyed by node id alone, while
-	// every sibling render cache keys by (root, cache_uid, node).
-	{
-		static std::map<std::pair<avs::uid, avs::uid>, int64_t> lastDrawReport;
-		const avs::uid											nodeId = meshRender.node ? meshRender.node->id : 0;
-		int64_t													nowUs  = renderState.timestampUs.count();
-		int64_t												   &last   = lastDrawReport[{meshRender.cache_uid, nodeId}];
-		if (nowUs - last > 1000000)
-		{
-			last				= nowUs;
-			const mat4 &m		= *meshRender.model;
-			TELEPORT_LOG("MESH DRAW: cache {0} node {1} model translation ({2} {3} {4})",
-						 meshRender.cache_uid, nodeId, m._41, m._42, m._43);
-		}
 	}
 	ApplyModelMatrix(deviceContext, *meshRender.model);
 	const auto &meshInfo = meshRender.mesh->GetMeshCreateInfo();

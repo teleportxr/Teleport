@@ -187,10 +187,6 @@ namespace teleport
 			//! places and which could therefore disagree.
 			unsigned long long originValidCounter = 0;
 			unsigned long long receivedLightingAckId = 0;
-			//! One-shot / rate-limited diagnostics for the pose-send path. Every gate on
-			//! that path fails silently, so their absence from a log is the evidence.
-			bool loggedFirstPoseSend = false;
-			double lastPoseGateReportTime = 0.0;
 
 			//! The origin counter; zero until an origin has been received. See above.
 			unsigned long long GetOriginValidCounter() const
