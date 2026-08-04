@@ -706,11 +706,13 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	{
 		return Result::Node_NotConfigured;
 	}
-	// Can't recover from a disconnection, must reset.
-	if(getLastResult()==Result::Network_Disconnection)
-	{
-		return Result::Network_Disconnection;
-	}
+	// NB: there is deliberately no early-out on a previously stored failure here.
+	// This node is node[0] of the client pipeline, and Pipeline::process() breaks its
+	// loop at the first node that returns a failure — so a source that refuses to run
+	// stops the geometry decoder and every other downstream node with it, and nothing
+	// received is ever delivered. It also cannot then observe its own recovery, because
+	// process() is what would notice. Send failures are reported via NoteSendFailure()
+	// and acted on by SessionClient instead.
 	PipelineNode::process(timestamp,deltaTime);
 	// receiving data from the network is handled elsewhere.
 	// Here we only handle receiving data from inputs to be sent onward.
@@ -811,7 +813,10 @@ Result WebRtcNetworkSource::process(uint64_t timestamp, uint64_t deltaTime)
 	}
 	if(disconnected)
 	{
-		return Result::Network_Disconnection;
+		// Flag it for the session to re-establish the connection, but keep processing:
+		// the outbound stream is gone, the inbound one is not, and failing here would
+		// stall the whole pipeline (see the note at the top of this function).
+		NoteSendFailure();
 	}
 	static float intro = 0.01f;
 	// update the stream stats.
@@ -1352,12 +1357,13 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t streamIndex, const uint8_t
 			else
 			{
  				std::cerr << "WebRTC: channel " << stream.label << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
-				// Surface the drop on the public state so SessionClient can react and
-				// initiate a reconnect on its next Frame.
-				if (q_ptr()->GetStreamingConnectionState() == StreamingConnectionState::CONNECTED)
-				{
-					q_ptr()->SetStreamingConnectionState(StreamingConnectionState::DISCONNECTED);
-				}
+				// Flag the drop so SessionClient can re-establish the connection on its
+				// next Frame. We must NOT write the streaming state here: it mirrors the
+				// real PeerConnection, whose sole writer is the onStateChange callback.
+				// Forging DISCONNECTED into it when the PeerConnection never actually
+				// left CONNECTED means libdatachannel never reports the transition back,
+				// and the recovery hook in SetStreamingConnectionState never fires.
+				q_ptr()->NoteSendFailure();
 				return Result::Network_Disconnection;
 			}
 		}

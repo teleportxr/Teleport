@@ -5,6 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
+#include <atomic>
 #include <optional>
 #include <functional>
 #include "networksource.h"
@@ -85,6 +86,26 @@ namespace avs
 		void SetStreamingConnectionState(StreamingConnectionState s);
 		void resetPeerConnection();
 
+		//! See NetworkSource::HasSendFailure.
+		bool HasSendFailure() const override
+		{
+			return sendFailure;
+		}
+		void ClearSendFailure() override
+		{
+			sendFailure = false;
+		}
+		//! Record that a send failed because its data channel was gone. Called from the
+		//! send path; the session polls HasSendFailure() and re-establishes the
+		//! connection. Deliberately does NOT touch webRtcState: that mirrors the real
+		//! PeerConnection state and has exactly one writer, the onStateChange callback.
+		//! Forging a DISCONNECTED value there loses the CONNECTED transition that clears
+		//! a failed node, and the source never recovers.
+		void NoteSendFailure()
+		{
+			sendFailure = true;
+		}
+
 		/*!
 		 * Callback signature for an inbound Opus audio RTP frame after
 		 * depacketization. The payload is one Opus packet (typically 20 ms,
@@ -134,6 +155,9 @@ namespace avs
 		bool isAudioSendTrackOpen() const;
 	protected:
 		StreamingConnectionState webRtcState=StreamingConnectionState::NEW_UNCONNECTED;
+		//! Set when a send finds its channel gone; see NoteSendFailure. Written from
+		//! libdatachannel callback threads and the pipeline thread, read by the session.
+		std::atomic<bool> sendFailure=false;
 		std::vector<std::string> messagesToSend;
 		void receiveHTTPFile(const char* buffer, size_t bufferSize);
 		NetworkSourceParams m_params;

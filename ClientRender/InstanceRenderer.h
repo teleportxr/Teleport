@@ -225,7 +225,18 @@ namespace teleport
 				mutable std::shared_ptr<platform::crossplatform::Buffer> instanceBuffer;
 				// key is a hash to ensure uniqueness of node and subscene instance...
 				phmap::flat_hash_map<uint64_t, MeshInstanceRender> meshInstanceRenders;
+				//! False when the instance set itself changed (a node added or removed),
+				//! forcing a full refill of the GPU instance buffer.
 				mutable bool valid = false;
+				//! The model matrices last uploaded to instanceBuffer, in iteration order.
+				//!
+				//! The buffer holds a snapshot, but each MeshInstanceRender::model points at
+				//! a NodeState::renderModelMatrix that is rewritten every frame. Without
+				//! this, a node that moves after its instance group was built keeps being
+				//! drawn from the stale snapshot: its transform updates and its geometry
+				//! does not follow. Comparing against it is far cheaper than remapping the
+				//! buffer every frame for scenery that never moves.
+				mutable std::vector<mat4> uploadedModels;
 				avs::uid cache_uid;
 				std::shared_ptr<clientrender::Material> material;
 				std::shared_ptr<clientrender::Mesh> mesh;

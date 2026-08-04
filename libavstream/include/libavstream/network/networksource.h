@@ -89,6 +89,15 @@ namespace avs
 			return false;
 		}
 		virtual StreamingConnectionState GetStreamingConnectionState() const = 0;
+		//! True if an outbound send failed because its channel was gone.
+		//!
+		//! A send failure does not stop the node: its receive-side duty — pumping data
+		//! downstream through the pipeline — is unaffected by an outbound channel dying,
+		//! and a source that stops processing takes every downstream node with it (the
+		//! pipeline breaks its loop at the first failing node). So the failure is reported
+		//! here for the session to act on, rather than by failing process().
+		virtual bool HasSendFailure() const { return false; }
+		virtual void ClearSendFailure() {}
 		virtual void sendConfigMessage(const std::string &msg) = 0;
 		const std::vector<StreamStatus>& GetStreamStatus()
 		{

@@ -324,6 +324,19 @@ void SessionClient::Frame(const avs::DisplayInfo								&displayInfo,
 			}
 			lastStreamingState = streamingState;
 		}
+		// A send that found its data channel gone. The PeerConnection may still report
+		// itself connected, so this will not show up as a state transition above — but
+		// the channel is not coming back on its own, and only a renegotiation restores
+		// it. The source keeps running meanwhile, so inbound data is still delivered.
+		if (clientPipeline.source->HasSendFailure())
+		{
+			clientPipeline.source->ClearSendFailure();
+			if (connectionStatus != ConnectionStatus::RECONNECTING)
+			{
+				TELEPORT_WARN("Streaming send to {0} failed on a closed channel; beginning reconnect.", GetServerURL());
+				BeginReconnect();
+			}
+		}
 	}
 	bool requestKeyframe = clientPipeline.decoder.idrRequired();
 	{
@@ -336,6 +349,21 @@ void SessionClient::Frame(const avs::DisplayInfo								&displayInfo,
 				if (poseValidCounter)
 				{
 					SendNodePoses(headPose, nodePoses);
+					if (!loggedFirstPoseSend)
+					{
+						loggedFirstPoseSend = true;
+						TELEPORT_LOG("Node poses: first send queued (originValidCounter={0}, {1} node poses, head {2} {3} {4}).",
+									 poseValidCounter, nodePoses.size(),
+									 headPose.position.x, headPose.position.y, headPose.position.z);
+					}
+				}
+				else if (t - lastPoseGateReportTime > 5.0)
+				{
+					// The single most common reason for a server to see no head poses.
+					// It is not obvious from the outside, because the client still acks
+					// the origin command it rejected, so the server believes all is well.
+					lastPoseGateReportTime = t;
+					TELEPORT_WARN("Node poses NOT being sent: originValidCounter is 0, i.e. no SetOriginNodeCommand has been accepted yet.");
 				}
 				SendInput(input);
 				SendReceivedResources();
@@ -835,7 +863,10 @@ void SessionClient::ReceiveOriginNodeId(const std::vector<uint8_t> &packet)
 	memcpy(static_cast<void *>(&command), packet.data(), commandSize);
 	if (command.valid_counter > originValidCounter)
 	{
-		//TELEPORT_INTERNAL_COUT("Received origin node {0} with counter {1}.", command.origin_node, command.valid_counter);
+		// Not commented out: accepting the origin is what opens the gate on sending head
+		// and controller poses, so its absence from a log is a diagnosis in itself.
+		TELEPORT_LOG("Accepted origin node {0}, counter {1} (was {2}). Pose sending is now enabled.",
+					 command.origin_node, command.valid_counter, originValidCounter);
 		originValidCounter = command.valid_counter;
 		mCommandInterface->SetOrigin(command.valid_counter, command.origin_node);
 	}
