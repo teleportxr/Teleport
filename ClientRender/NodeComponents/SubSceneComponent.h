@@ -38,7 +38,7 @@ namespace teleport
 
 			//! Forward a server-sent animation update to every skeleton in the sub-scene.
 			//! @param sessionTimeUs Server-session time, microseconds. See AnimationComponent::PlayAnimation.
-			void ApplyAnimation(std::chrono::microseconds sessionTimeUs, const teleport::core::ApplyAnimation &applyAnimation);
+			void ForwardAnimation(std::chrono::microseconds sessionTimeUs, const teleport::core::ApplyAnimation &applyAnimation);
 
 			//! Shortcut for local/debug use: play this animation on layer 0, looping, starting now.
 			void PlayAnimation(std::chrono::microseconds sessionTimeUs, avs::uid cache_uid, avs::uid anim_uid);
