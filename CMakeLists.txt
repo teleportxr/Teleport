@@ -295,7 +295,19 @@ FetchContent_Declare(
   GIT_TAG        d4d4c9599c0df978b9ad4d1c2425ed26a9c12058
   SOURCE_DIR cpp-httplib
 )
+# On Windows, cpp-httplib's own CMakeLists.txt installs its CMake package
+# config files to "${CMAKE_INSTALL_PREFIX}/cmake/httplib", baking the
+# absolute prefix into the install DESTINATION. CPack's NSIS component
+# install forbids absolute DESTINATION paths, so packaging fails even
+# though the compile succeeds. We only ever use cpp-httplib as a
+# header-only include (see TeleportClient/TeleportServer CMakeLists), so
+# shadow CMAKE_INSTALL_PREFIX with a relative value just for this fetch to
+# keep its computed destination relative.
+set(_cpp_httplib_saved_install_prefix ${CMAKE_INSTALL_PREFIX})
+set(CMAKE_INSTALL_PREFIX ".")
 FetchContent_MakeAvailable(cpp-httplib)
+set(CMAKE_INSTALL_PREFIX ${_cpp_httplib_saved_install_prefix})
+unset(_cpp_httplib_saved_install_prefix)
 
 # Get libopus (audio codec for WebRTC media transport - see docs/protocol/audio.rst)
 set(OPUS_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
