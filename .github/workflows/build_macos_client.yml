@@ -141,18 +141,25 @@ jobs:
         security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
         security set-keychain-settings -lut 21600 "$KEYCHAIN"
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+        # Default as well as search-list keychain: productsign resolves identities through
+        # the default keychain in some code paths, and blocks on an invisible unlock
+        # prompt if it lands on the runner's login keychain instead.
+        security default-keychain -d user -s "$KEYCHAIN"
 
         echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/app.p12"
         echo "$MACOS_INSTALLER_CERT_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
+        # pkgbuild --sign spawns productsign; productbuild signs the outer distribution
+        # package. All four must be trusted or the tool blocks on a GUI "allow access"
+        # prompt that can never be answered on a headless runner.
         security import "$RUNNER_TEMP/app.p12" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" \
-          -T /usr/bin/codesign -T /usr/bin/productsign
+          -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
         security import "$RUNNER_TEMP/installer.p12" -k "$KEYCHAIN" -P "$MACOS_INSTALLER_CERT_PASSWORD" \
-          -T /usr/bin/codesign -T /usr/bin/productsign
+          -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
         rm -f "$RUNNER_TEMP/app.p12" "$RUNNER_TEMP/installer.p12"
 
-        # Without this, codesign blocks on an interactive "allow access" prompt and the
-        # job hangs until it times out.
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+        # Without this, codesign/productsign block on an interactive "allow access"
+        # prompt and the job hangs until it times out.
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
         # Put it first in the search list so codesign finds the identities.
         security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
 
@@ -167,11 +174,31 @@ jobs:
         echo "APP_IDENTITY=Developer ID Application: ${{ secrets.APPLE_DEVELOPER_NAME }} ($APPLE_TEAM_ID)" >> "$GITHUB_ENV"
         echo "INSTALLER_IDENTITY=Developer ID Installer: ${{ secrets.APPLE_DEVELOPER_NAME }} ($APPLE_TEAM_ID)" >> "$GITHUB_ENV"
 
+    - name: Smoke-test installer signing
+      if: needs.check-secrets.outputs.available == 'true'
+      # cpack's pkgbuild --sign is the first real use of the Developer ID Installer key.
+      # If productsign is going to block on a keychain prompt, it hangs silently and eats
+      # the whole job timeout (this happened on the first signed run). Exercise it here
+      # on a trivial package, so the failure surfaces in minutes in a cheap step.
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        SMOKE="$RUNNER_TEMP/smoke"
+        mkdir -p "$SMOKE/root/opt/smoke"
+        echo test > "$SMOKE/root/opt/smoke/file"
+        pkgbuild --root "$SMOKE/root" --identifier "co.simul.teleportxr.smoke" \
+          --version 1.0 --install-location "/" \
+          --sign "$INSTALLER_IDENTITY" "$SMOKE/smoke.pkg"
+        pkgutil --check-signature "$SMOKE/smoke.pkg"
+
     - name: Running cmake (macos)
       # The installer identity has to be known at configure time: cpack reads it from
       # CPackConfig.cmake, which is generated now, not when cpack runs. INSTALLER_IDENTITY is
       # exported by "Resolve signing identities", so it is unset on an unsigned run - hence
       # the :- default, which is what TeleportPackaging.cmake expects for "do not sign".
+      # APP_IDENTITY likewise gates the install-time re-sign of the staged binary
+      # (HeadlessClient/CMakeLists.txt), which must happen after cpack's install step
+      # rewrites RPATHs and install_names - both invalidate a pre-applied signature.
       run: |
         cmake -S . -B build_macos -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
@@ -186,7 +213,8 @@ jobs:
           -DPLATFORM_BUILD_SAMPLES=false \
           -DSIMUL_DEBUG_SHADERS=false \
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR" \
-          -DTELEPORT_MACOS_INSTALLER_IDENTITY="${INSTALLER_IDENTITY:-}"
+          -DTELEPORT_MACOS_INSTALLER_IDENTITY="${INSTALLER_IDENTITY:-}" \
+          -DTELEPORT_MACOS_APP_IDENTITY="${APP_IDENTITY:-}"
 
     - name: Build
       # The default target, not just teleport_terminal: the Platform submodule has
@@ -221,14 +249,18 @@ jobs:
         codesign --verify --strict --verbose=2 build_macos/bin/teleport_terminal
 
     - name: Package
+      # Should take seconds; the timeout keeps a pkgbuild/productsign hang from
+      # consuming the rest of the job budget again.
+      timeout-minutes: 20
       working-directory: build_macos
       run: cpack -C Release --verbose
 
-    - name: Verify the signature survived packaging
+    - name: Verify the packaged binary signature
       if: needs.check-secrets.outputs.available == 'true'
-      # CMake's install step can rewrite an executable's RPATH, which invalidates a
-      # signature applied beforehand. Expand the package and re-verify rather than
-      # discovering it on a user's machine.
+      # The staged binary is re-signed during cpack's install step (TELEPORT_MACOS_APP_IDENTITY),
+      # after the RPATH/install_name_tool rewriting that invalidates the build-tree signature.
+      # Expand the package and verify that signature rather than discovering a broken one
+      # on a user's machine.
       run: |
         set -euo pipefail
         PKG=$(ls build_macos/*.pkg)

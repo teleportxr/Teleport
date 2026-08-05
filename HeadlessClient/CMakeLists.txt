@@ -107,11 +107,12 @@ if(TELEPORT_MACOS)
 	# "Library not loaded: .../openssl@3/lib/libssl.3.dylib". Rewrite the load commands to
 	# point at the copies bundled next to the binary instead.
 	#
-	# The literal /opt/teleportxr below matches CPACK_PACKAGING_INSTALL_PREFIX in
-	# CMake/TeleportPackaging.cmake, not ${CMAKE_INSTALL_PREFIX}: CPack overrides the
-	# install prefix only for its own packaging-time install() run, without touching the
-	# CMAKE_INSTALL_PREFIX cache variable, so a variable reference here would bake in the
-	# ordinary build-time prefix instead.
+	# Staging path below: "\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}" evaluated at install
+	# time. CPack leaves DESTDIR empty and overrides CMAKE_INSTALL_PREFIX with the
+	# staging prefix; a manual install keeps the configured prefix and honours DESTDIR.
+	# $ENV{DESTDIR} alone resolves to bare /opt/teleportxr under CPack, which made
+	# install_name_tool fail with "can't open file" and silently left the Homebrew
+	# paths in the package.
 	if(OPENSSL_ROOT_DIR)
 		install(FILES
 			${OPENSSL_ROOT_DIR}/lib/libssl.3.dylib
@@ -119,21 +120,63 @@ if(TELEPORT_MACOS)
 			DESTINATION lib COMPONENT client
 		)
 		install(CODE "
-			set(_stage \"\$ENV{DESTDIR}/opt/teleportxr\")
+			set(_stage \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}\")
 			execute_process(COMMAND install_name_tool
 				-change \"${OPENSSL_ROOT_DIR}/lib/libssl.3.dylib\" \"@loader_path/../lib/libssl.3.dylib\"
 				-change \"${OPENSSL_ROOT_DIR}/lib/libcrypto.3.dylib\" \"@loader_path/../lib/libcrypto.3.dylib\"
 				\"\${_stage}/bin/teleport_terminal\"
+				RESULT_VARIABLE _rc
 			)
+			if(NOT _rc EQUAL 0)
+				message(FATAL_ERROR \"install_name_tool failed on \${_stage}/bin/teleport_terminal\")
+			endif()
 			execute_process(COMMAND install_name_tool
 				-id \"@loader_path/libssl.3.dylib\"
 				-change \"${OPENSSL_ROOT_DIR}/lib/libcrypto.3.dylib\" \"@loader_path/libcrypto.3.dylib\"
 				\"\${_stage}/lib/libssl.3.dylib\"
+				RESULT_VARIABLE _rc
 			)
+			if(NOT _rc EQUAL 0)
+				message(FATAL_ERROR \"install_name_tool failed on \${_stage}/lib/libssl.3.dylib\")
+			endif()
 			execute_process(COMMAND install_name_tool
 				-id \"@loader_path/libcrypto.3.dylib\"
 				\"\${_stage}/lib/libcrypto.3.dylib\"
+				RESULT_VARIABLE _rc
 			)
+			if(NOT _rc EQUAL 0)
+				message(FATAL_ERROR \"install_name_tool failed on \${_stage}/lib/libcrypto.3.dylib\")
+			endif()
+		" COMPONENT client)
+	endif()
+
+	# Re-sign every staged binary after the rewriting above: CMake's install-time RPATH
+	# fixup and install_name_tool both invalidate any signature applied to the
+	# build-tree binary beforehand, so signing the build output is not enough - the
+	# copy inside the .pkg would fail Gatekeeper. This covers not just teleport_terminal
+	# but every bundled third-party tool and dylib in bin/ and lib/ (draco_decoder etc.,
+	# libssl/libcrypto/libcurl/libdraco/libopus) - notarisation rejects the whole .pkg if
+	# any single Mach-O inside it is unsigned, lacks the hardened runtime, or lacks a
+	# secure timestamp, and those third-party binaries only ever carry the ad-hoc
+	# signature the linker applies on arm64, not a Developer ID one. Only when CI passes
+	# an identity; local builds stay unsigned. Declared after install(TARGETS) and the
+	# install_name_tool block so it runs last in this directory's install script.
+	set(TELEPORT_MACOS_APP_IDENTITY "" CACHE STRING "Developer ID Application identity used to re-sign staged binaries after install-time rewriting")
+	if(TELEPORT_MACOS_APP_IDENTITY)
+		install(CODE "
+			set(_stage \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}\")
+			file(GLOB _to_sign \"\${_stage}/bin/*\" \"\${_stage}/lib/*.dylib\")
+			foreach(_bin \${_to_sign})
+				if(NOT IS_DIRECTORY \${_bin})
+					execute_process(COMMAND codesign --force --options runtime --timestamp
+						--sign \"${TELEPORT_MACOS_APP_IDENTITY}\" \"\${_bin}\"
+						RESULT_VARIABLE _rc
+					)
+					if(NOT _rc EQUAL 0)
+						message(FATAL_ERROR \"codesign failed on \${_bin}\")
+					endif()
+				endif()
+			endforeach()
 		" COMPONENT client)
 	endif()
 endif()
