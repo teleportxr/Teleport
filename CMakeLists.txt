@@ -507,12 +507,11 @@ endif()
 if(TELEPORT_CLIENT)
 	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 		option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
-	elseif(TELEPORT_MACOS)
-		# No MoltenVK port; the headless client draws nothing. Leaving this ON would make
-		# libavstream compile surface_vulkan.cpp and want a PlatformVulkan target that the
-		# Platform submodule does not build on Darwin.
-		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	else()
+		# On macOS this builds PlatformVulkan against MoltenVK (Platform submodule's
+		# firstparty/Platform/CMake/Variables.cmake and CMakeLists.txt now add a PLATFORM_MACOS
+		# branch alongside PLATFORM_WINDOWS/PLATFORM_LINUX). Requires the Vulkan SDK for macOS
+		# (bundles MoltenVK + glslangValidator) to be installed.
 		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ON)
 	endif()
 	if( ${TELEPORT_CLIENT_USE_D3D12})
