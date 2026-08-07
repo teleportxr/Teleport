@@ -938,9 +938,13 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	// until RestoreDeviceObjects is called below.
 	{
 		vk::Instance *inst = deviceManager.GetVulkanInstance();
+		SIMUL_COUT << "MACDEBUG surface-create: inst=" << (void *)inst
+				   << " *inst=" << (inst ? (void *)(VkInstance)(*inst) : nullptr)
+				   << " window=" << (void *)window << std::endl;
 		if (inst && window)
 		{
 			VkResult r = glfwCreateWindowSurface(static_cast<VkInstance>(*inst), window, nullptr, &g_surface);
+			SIMUL_COUT << "MACDEBUG glfwCreateWindowSurface result=" << (int)r << " g_surface=" << (void *)g_surface << std::endl;
 			if (r != VK_SUCCESS)
 			{
 				TELEPORT_INTERNAL_CERR("glfwCreateWindowSurface failed: {}", (int)r);
@@ -956,8 +960,11 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	// the shader sources and build directory used below are found.
 	teleport_path = client::GetClientDataDirectory().parent_path().string();
 	std::string src_dir = teleport_path;
+#if __APPLE__
+	std::string build_dir = teleport_path + "/../build";
+#else
 	std::string build_dir = teleport_path + "/build_pc_client";
-
+#endif
 	{
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("textures");
@@ -1016,9 +1023,11 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	auto &config = client::Config::GetInstance();
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)window);
+	SIMUL_COUT << "MACDEBUG before AddWindow: g_surface=" << (void *)g_surface << std::endl;
 	if (g_surface != VK_NULL_HANDLE)
 	{
 		dsmi->AddWindow(&g_surface, platform::crossplatform::PixelFormat::UNKNOWN, config.options.vsync);
+		SIMUL_COUT << "MACDEBUG AddWindow called" << std::endl;
 	}
 	dsmi->SetRenderer(clientRenderer);
 }
@@ -1080,6 +1089,10 @@ int main(int argc, char *argv[])
 
 	// Bring up GLFW and create a window before the Vulkan instance, so that we can
 	// query the platform-specific surface extensions GLFW needs.
+	glfwSetErrorCallback([](int error, const char *description)
+	{
+		SIMUL_COUT << "MACDEBUG GLFW error " << error << ": " << description << std::endl;
+	});
 	if (!glfwInit())
 	{
 		TELEPORT_INTERNAL_CERR("glfwInit failed");
@@ -1102,6 +1115,7 @@ int main(int argc, char *argv[])
 	glfwSetFramebufferSizeCallback(g_window, GlfwFramebufferSizeCallback);
 
 	{
+		TELEPORT_INFO(filesystem::current_path().string());
 		int w, h, ch;
 		unsigned char *pixels = stbi_load("assets/textures/teleportxr.png", &w, &h, &ch, 4);
 		if (pixels)
