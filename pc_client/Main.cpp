@@ -39,7 +39,7 @@
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 #include "UnixDebugOutput.h"
 DebugOutput debug_buffer(true, nullptr, 128);
 #endif

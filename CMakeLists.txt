@@ -492,14 +492,11 @@ endif()
 
 option(TELEPORT_CLIENT "Build for client?" ON)
 option(TELEPORT_HEADLESS_CLIENT "Build headless terminal client?" ${TELEPORT_CLIENT})
-# The GUI client (pc_client/ClientRender) needs Vulkan, GLFW and an OpenXR runtime. The
-# headless terminal client needs none of those, so it can be built on its own - which is
-# what macOS does, there being no usable OpenXR runtime there.
+# The GUI client (pc_client/ClientRender) needs Vulkan and GLFW, both of which now build on
+# macOS via MoltenVK (see firstparty/Platform/CMake/Variables.cmake). It also links an OpenXR
+# loader, but there is still no OpenXR *runtime* for macOS - ENABLE_VR defaults off there
+# (TeleportClient/Config.h) so the client never tries to create a real XR session.
 option(TELEPORT_GUI_CLIENT "Build the GUI/OpenXR PC client?" ${TELEPORT_CLIENT})
-if(TELEPORT_MACOS AND TELEPORT_GUI_CLIENT)
-	message(STATUS "macOS: forcing TELEPORT_GUI_CLIENT OFF; only the headless client is ported.")
-	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
-endif()
 if(NOT TELEPORT_CLIENT)
 	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
 endif()
