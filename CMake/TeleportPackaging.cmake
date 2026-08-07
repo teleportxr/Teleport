@@ -113,9 +113,18 @@ endif()
 if(TELEPORT_MACOS)
 	if(TARGET teleport_terminal)
 		install(CODE "
-			file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/local/bin\")
+			# Absolute destination, so it escapes the packaging prefix. CPack leaves
+			# DESTDIR empty and overrides CMAKE_INSTALL_PREFIX with the staging prefix
+			# (<staging>/opt/teleportxr), making the staging root two levels up; a manual
+			# install keeps the configured prefix and honours DESTDIR.
+			if(NOT \"\$ENV{DESTDIR}\" STREQUAL \"\")
+				set(_linkdir \"\$ENV{DESTDIR}/usr/local/bin\")
+			else()
+				set(_linkdir \"\${CMAKE_INSTALL_PREFIX}/../../usr/local/bin\")
+			endif()
+			file(MAKE_DIRECTORY \"\${_linkdir}\")
 			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_terminal\"
-				\"\$ENV{DESTDIR}/usr/local/bin/teleport_terminal\" SYMBOLIC)
+				\"\${_linkdir}/teleport_terminal\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
 endif()

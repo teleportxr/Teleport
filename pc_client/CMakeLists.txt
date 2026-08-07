@@ -44,6 +44,9 @@ if(WIN32)
 elseif(PLATFORM_LINUX)
 	set(def_platform PLATFORM_LINUX)
 	add_static_executable( TeleportPCClient CONSOLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles})
+elseif(TELEPORT_MACOS)
+	set(def_platform PLATFORM_MACOS)
+	add_static_executable( TeleportPCClient CONSOLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles})
 else()
 	message("Unsupported platform for TeleportPCClient!")
 	return()
@@ -100,9 +103,16 @@ if(WIN32)
 	set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 	set_target_properties( TeleportPCClient PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=$ENV{$WindowsSdkVerBinPath};$(PATH)")
 endif()
-target_include_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include ${SIMUL_PLATFORM_DIR}/External/imgui)
+target_include_directories(TeleportPCClient PUBLIC ${SIMUL_PLATFORM_DIR}/External/imgui)
+if(NOT TELEPORT_MACOS)
+	# thirdparty/openxr-sdk only vendors prebuilt Windows .lib import libraries; macOS instead
+	# fetches and builds the openxr_loader target from source (see the TELEPORT_MACOS branch
+	# below), which carries its own generated openxr/openxr.h via its usual CMake usage
+	# requirements, so it must not also pick up these vendored headers.
+	target_include_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/include)
+	target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
+endif()
 target_compile_features(TeleportPCClient PRIVATE cxx_std_17)
-target_link_directories(TeleportPCClient PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openxr-sdk/lib)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 	target_compile_definitions(TeleportPCClient PRIVATE PLATFORM_64BIT)
@@ -148,6 +158,35 @@ elseif(PLATFORM_LINUX)
 		endif()
 	endif()
 	target_link_libraries(TeleportPCClient ssl crypto)
+	target_link_libraries(TeleportPCClient pthread dl)
+	target_include_directories(TeleportPCClient PRIVATE ${SIMUL_PLATFORM_DIR}/External/glfw/include)
+	target_link_libraries(TeleportPCClient glfw)
+elseif(TELEPORT_MACOS)
+	# macOS-specific libraries.
+	# No system or vendored OpenXR loader exists for macOS: there's no Homebrew formula (no
+	# macOS OpenXR runtime ecosystem exists to package a loader for), and the vendored
+	# thirdparty/openxr-sdk/lib only ships prebuilt Windows .lib files. Build the loader from
+	# source instead - it's portable C/C++ that builds and links fine with no runtime present,
+	# which is all that's needed since ENABLE_VR defaults off on macOS (TeleportClient/Config.h)
+	# and UseOpenXR never actually calls xrCreateInstance there.
+	include(FetchContent)
+	set(BUILD_LOADER ON CACHE BOOL "" FORCE)
+	set(BUILD_API_LAYERS OFF CACHE BOOL "" FORCE)
+	set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+	set(BUILD_CONFORMANCE_TESTS OFF CACHE BOOL "" FORCE)
+	set(DYNAMIC_LOADER ON CACHE BOOL "" FORCE)
+	FetchContent_Declare(
+		openxr_sdk_macos
+		GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK-Source.git
+		GIT_TAG release-1.1.42
+	)
+	FetchContent_MakeAvailable(openxr_sdk_macos)
+	target_link_libraries(TeleportPCClient openxr_loader)
+	# ssl/crypto are not linked bare here (unlike the Linux branch above) - TeleportClient
+	# already links OpenSSL::SSL publicly (TeleportClient/CMakeLists.txt), which resolves to
+	# Homebrew's keg-only openssl@3 .dylib by full path and propagates transitively. Bare
+	# -lssl/-lcrypto would fail to link on macOS since Homebrew doesn't put openssl@3 on the
+	# linker's default search path.
 	target_link_libraries(TeleportPCClient pthread dl)
 	target_include_directories(TeleportPCClient PRIVATE ${SIMUL_PLATFORM_DIR}/External/glfw/include)
 	target_link_libraries(TeleportPCClient glfw)
