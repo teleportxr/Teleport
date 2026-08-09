@@ -284,7 +284,8 @@ jobs:
         cpack -C Release --verbose -G DragNDrop \
           -D CPACK_COMPONENTS_ALL=pcclient \
           -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
-          -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller
+          -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller \
+          -D CPACK_RESOURCE_FILE_LICENSE=
 
     - name: Verify the packaged binary signature
       if: needs.check-secrets.outputs.available == 'true'

@@ -89,6 +89,12 @@ elseif(TELEPORT_MACOS)
 	# Reverse-DNS package identifier. Gatekeeper ties the notarisation ticket to it,
 	# so it must stay stable across releases.
 	set(CPACK_PRODUCTBUILD_IDENTIFIER "co.simul.teleportxr")
+	# .pkg only: the DragNDrop run above clears this with -D CPACK_RESOURCE_FILE_LICENSE=.
+	# DragNDrop honours it too (CPack embeds it as the .dmg's software license agreement,
+	# gating the mount on an interactive "Agree" click) - not the "drag to Applications" UX
+	# TeleportPCClient's .dmg is meant to be, and it silently breaks unattended mounting
+	# (hdiutil attach has no TTY to answer the prompt in CI and fails instantly with no
+	# output - discovered by an actual CI run hanging exactly there).
 	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
 	# Set by CI to the "Developer ID Installer: ..." identity so cpack emits an
 	# already-signed .pkg; left empty for local builds, which produce an unsigned one.

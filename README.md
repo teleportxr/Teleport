@@ -187,7 +187,7 @@ runs twice:
     cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack
     cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack -G DragNDrop \
       -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
-      -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller
+      -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller -D CPACK_RESOURCE_FILE_LICENSE=
 
 The first produces `teleportxr-<commit>-arm64.pkg` (installs `teleport_terminal` to
 `/opt/teleportxr`). The second produces `TeleportPCClientInstaller-<commit>-arm64.dmg` - open
