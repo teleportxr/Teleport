@@ -46,7 +46,20 @@ elseif(PLATFORM_LINUX)
 	add_static_executable( TeleportPCClient CONSOLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles})
 elseif(TELEPORT_MACOS)
 	set(def_platform PLATFORM_MACOS)
-	add_static_executable( TeleportPCClient CONSOLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles})
+	# A real .app bundle, not a bare CONSOLE binary (unlike teleport_terminal): the icon and
+	# Info.plist below only take effect on Finder/Dock/Launchpad for a proper bundle, and
+	# MACOSX_BUNDLE (added to add_static_executable in firstparty/Platform/CMake/Include.cmake)
+	# makes CMake stage one in the build tree too, so the icon works pre-install as well as
+	# post-install/post-DMG-drag.
+	set(TELEPORT_PCCLIENT_ICNS "${CMAKE_SOURCE_DIR}/Installers/TeleportPCClient.icns")
+	set_source_files_properties(${TELEPORT_PCCLIENT_ICNS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+	add_static_executable( TeleportPCClient MACOSX_BUNDLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles} ${TELEPORT_PCCLIENT_ICNS})
+	set_target_properties(TeleportPCClient PROPERTIES
+		MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+		MACOSX_BUNDLE_ICON_FILE "TeleportPCClient.icns"
+		MACOSX_BUNDLE_GUI_IDENTIFIER "co.simul.teleportxr.pcclient"
+		MACOSX_BUNDLE_BUNDLE_NAME "TeleportPCClient"
+	)
 else()
 	message("Unsupported platform for TeleportPCClient!")
 	return()
@@ -190,6 +203,26 @@ elseif(TELEPORT_MACOS)
 	target_link_libraries(TeleportPCClient pthread dl)
 	target_include_directories(TeleportPCClient PRIVATE ${SIMUL_PLATFORM_DIR}/External/glfw/include)
 	target_link_libraries(TeleportPCClient glfw)
+
+	if(TELEPORT_CLIENT_USE_VULKAN)
+		# Main.cpp calls CFBundleGetMainBundle()/CFBundleCopyResourcesDirectoryURL() (SetupMoltenVkIcd)
+		# to locate the bundled MoltenVK ICD manifest before the first Vulkan call.
+		target_link_libraries(TeleportPCClient "-framework CoreFoundation")
+		# MoltenVK is never linked - the Vulkan loader dlopens it at runtime via the ICD manifest
+		# bundled below (Installers/MoltenVK_icd.json, staged into Contents/Resources/vulkan/icd.d
+		# by the install() rules further down). It's only needed here to find the .dylib to bundle.
+		if(NOT MOLTENVK_LIBRARY)
+			if(EXISTS /opt/homebrew/opt/molten-vk/lib/libMoltenVK.dylib)
+				set(MOLTENVK_LIBRARY /opt/homebrew/opt/molten-vk/lib/libMoltenVK.dylib CACHE FILEPATH "Path to libMoltenVK.dylib, bundled as the Vulkan ICD")
+			elseif(EXISTS /usr/local/opt/molten-vk/lib/libMoltenVK.dylib)
+				set(MOLTENVK_LIBRARY /usr/local/opt/molten-vk/lib/libMoltenVK.dylib CACHE FILEPATH "Path to libMoltenVK.dylib, bundled as the Vulkan ICD")
+			else()
+				message(WARNING "libMoltenVK.dylib not found (expected under Homebrew's molten-vk keg). "
+					"TeleportPCClient.app will not bundle a Vulkan ICD and will only run on a Mac with "
+					"MoltenVK installed system-wide. Install with 'brew install molten-vk' or set MOLTENVK_LIBRARY.")
+			endif()
+		endif()
+	endif()
 endif()
 
 if(TELEPORT_CLIENT_SUPPORT_IPSME)
@@ -218,9 +251,101 @@ endif()
 # the install prefix. It must be set before the first install() rule that uses it: an unset
 # value expands to nothing, turning "${TELEPORT_CLIENT_DATA_DEST}/assets/textures" into the
 # absolute /assets/textures, which lands at the root of the target filesystem.
+# TELEPORT_CLIENT_COMPONENT is "client" everywhere except macOS, where TeleportPCClient is
+# packaged as its own "pcclient" CPack component (a DragNDrop .dmg, CMake/TeleportPackaging.cmake)
+# separate from teleport_terminal's "client" component (a productbuild .pkg,
+# HeadlessClient/CMakeLists.txt) - the two need different generators, so they can't share a
+# component.
+set(TELEPORT_CLIENT_COMPONENT client)
 if(TELEPORT_WINDOWS)
 	set(TELEPORT_CLIENT_DATA_DEST "pc_client")
-	install(TARGETS TeleportPCClient RUNTIME DESTINATION build/bin/Release COMPONENT client)
+	install(TARGETS TeleportPCClient RUNTIME DESTINATION build/bin/Release COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+elseif(TELEPORT_MACOS)
+	set(TELEPORT_CLIENT_COMPONENT pcclient)
+	# Everything below lands inside the bundle, so the .app is a single self-contained,
+	# relocatable, drag-to-Applications unit:
+	#   TeleportPCClient.app/Contents/MacOS/TeleportPCClient       (BUNDLE DESTINATION . below)
+	#   TeleportPCClient.app/Contents/Resources/TeleportPCClient.icns  (MACOSX_PACKAGE_LOCATION, above)
+	#   TeleportPCClient.app/Contents/Frameworks/*.dylib           (fixup_bundle, below)
+	#   TeleportPCClient.app/Contents/Resources/vulkan/icd.d/       (MoltenVK, below)
+	#   TeleportPCClient.app/Contents/share/teleportxr/...          (data dir - see below)
+	#
+	# "share/teleportxr" (not Resources) so teleport::client::ResolveClientDataDirectory finds it
+	# unmodified: it walks up from the executable's directory looking for "share/teleportxr" or
+	# "client" below each ancestor (TeleportClient/ClientBootstrap.cpp), and
+	# Contents/MacOS/../share/teleportxr = Contents/share/teleportxr satisfies that walk exactly
+	# as the Linux layout's bin/../share/teleportxr does, with no code changes needed.
+	set(TELEPORT_CLIENT_DATA_DEST "TeleportPCClient.app/Contents/share/teleportxr")
+	install(TARGETS TeleportPCClient BUNDLE DESTINATION . COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+	# Copies every non-system dylib TeleportPCClient links (Homebrew's Vulkan loader and OpenSSL,
+	# plus this project's own FetchContent-built libktx/libdraco/libozz_*/libopus/libglfw/
+	# libopenxr_loader/libcurl, all currently found via absolute paths or @rpath) into
+	# Contents/Frameworks, and rewrites TeleportPCClient's load commands to match - so the .dmg
+	# produces an app that runs on a Mac with none of this project's build dependencies installed.
+	# BundleUtilities is a stock CMake module (not a new third-party dependency); fixup_bundle is
+	# CMake's documented legacy-but-supported tool for exactly this. It only follows link-time
+	# dependencies, so it never touches MoltenVK (dlopen'd via the ICD manifest, not linked) -
+	# that's bundled separately below.
+	install(CODE "
+		set(BU_CHMOD_BUNDLE_ITEMS ON)
+		include(BundleUtilities)
+		# fixup_bundle resolves each @rpath/libX.dylib dependency by searching these directories
+		# for a real file - it can't derive them from the binary's own (relative, @loader_path-
+		# based) LC_RPATH, since nothing has been copied into the bundle yet on this first pass.
+		# This project's own FetchContent-built dylibs (libktx/libdraco/libozz_*/libopus/libglfw/
+		# libopenxr_loader/libcurl) land in a different build-tree directory per upstream project
+		# (bin/, Release/, thirdparty/draco/, _deps/<name>-build/...), so search the whole build
+		# tree for *.dylib rather than hardcode each one - new dependencies then need no change here.
+		file(GLOB_RECURSE _teleport_dylibs \"${CMAKE_BINARY_DIR}/*.dylib\")
+		set(_teleport_dylib_dirs \"\")
+		foreach(_dylib \${_teleport_dylibs})
+			get_filename_component(_dylib_dir \"\${_dylib}\" DIRECTORY)
+			list(APPEND _teleport_dylib_dirs \"\${_dylib_dir}\")
+		endforeach()
+		list(REMOVE_DUPLICATES _teleport_dylib_dirs)
+		fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/TeleportPCClient.app\" \"\" \"\${_teleport_dylib_dirs};/opt/homebrew/lib;/usr/local/lib\")
+	" COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+	if(MOLTENVK_LIBRARY)
+		# Kept alongside its own manifest, not in Contents/Frameworks with everything else: the
+		# Vulkan loader resolves an ICD's "library_path" relative to the .json's own directory
+		# (see Installers/MoltenVK_icd.json - "./libMoltenVK.dylib"), and VK_ICD_FILENAMES (set at
+		# startup in pc_client/Main.cpp) points straight at this manifest.
+		install(FILES "${MOLTENVK_LIBRARY}"
+			DESTINATION TeleportPCClient.app/Contents/Resources/vulkan/icd.d COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+		install(FILES "${CMAKE_SOURCE_DIR}/Installers/MoltenVK_icd.json"
+			DESTINATION TeleportPCClient.app/Contents/Resources/vulkan/icd.d COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+	endif()
+	# Re-sign every embedded dylib plus MoltenVK, then the bundle as a whole, last. Mirrors
+	# HeadlessClient/CMakeLists.txt's TELEPORT_MACOS_APP_IDENTITY re-sign block: fixup_bundle's
+	# install_name_tool rewriting above invalidates any signature the linker applied, and
+	# notarisation rejects the .dmg if any single embedded Mach-O is unsigned or lacks the
+	# hardened runtime. Only runs when CI (or a locally-configured Developer ID) supplies an
+	# identity; local dev builds stay unsigned, matching the .pkg flow.
+	set(TELEPORT_MACOS_APP_IDENTITY "" CACHE STRING "Developer ID Application identity used to re-sign staged binaries after install-time rewriting")
+	if(TELEPORT_MACOS_APP_IDENTITY)
+		install(CODE "
+			set(_bundle \"\${CMAKE_INSTALL_PREFIX}/TeleportPCClient.app\")
+			file(GLOB _to_sign \"\${_bundle}/Contents/Frameworks/*\" \"\${_bundle}/Contents/Resources/vulkan/icd.d/*.dylib\")
+			foreach(_bin \${_to_sign})
+				if(NOT IS_DIRECTORY \${_bin})
+					execute_process(COMMAND codesign --force --options runtime --timestamp
+						--sign \"${TELEPORT_MACOS_APP_IDENTITY}\" \"\${_bin}\"
+						RESULT_VARIABLE _rc
+					)
+					if(NOT _rc EQUAL 0)
+						message(FATAL_ERROR \"codesign failed on \${_bin}\")
+					endif()
+				endif()
+			endforeach()
+			execute_process(COMMAND codesign --force --options runtime --timestamp
+				--sign \"${TELEPORT_MACOS_APP_IDENTITY}\" \"\${_bundle}\"
+				RESULT_VARIABLE _rc
+			)
+			if(NOT _rc EQUAL 0)
+				message(FATAL_ERROR \"codesign failed on \${_bundle}\")
+			endif()
+		" COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+	endif()
 else()
 	# "share/<package>" is the FHS layout for read-only data inside /opt/<package>, and is the
 	# name teleport::client::ResolveClientDataDirectory looks for first. Lower case to match the
@@ -231,32 +356,32 @@ else()
 	#   /opt/teleportxr/share/teleportxr/...     (data directory, found by walking up from bin/)
 	# Icon and desktop entry use absolute paths so they land under /usr/share regardless
 	# of the package prefix, where the freedesktop tooling expects them.
-	install(TARGETS TeleportPCClient RUNTIME DESTINATION bin COMPONENT client)
+	install(TARGETS TeleportPCClient RUNTIME DESTINATION bin COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
 		DESTINATION /usr/share/icons/hicolor/256x256/apps
-		RENAME TeleportXR.png COMPONENT client)
+		RENAME TeleportXR.png COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/TeleportXR.desktop"
-		DESTINATION /usr/share/applications COMPONENT client)
+		DESTINATION /usr/share/applications COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	# Runtime window icon: Main.cpp loads this relative to the client working directory.
 	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
-		DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/textures COMPONENT client)
+		DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/textures COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	# Convenience symlink so the binary can be invoked from a shell.
 	install(CODE "
 		file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/bin\")
 		file(CREATE_LINK \"/opt/teleportxr/bin/TeleportPCClient\"
 			\"\$ENV{DESTDIR}/usr/bin/teleportxr\" SYMBOLIC)
-	" COMPONENT client)
+	" COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 endif()
 file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
 file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
 if(TELEPORT_WINDOWS AND LIBAV_USE_CUDA)
-	install(FILES "${LIBAV_CUDA_DIR}/bin/cudart64_110.dll" DESTINATION build/bin/Release COMPONENT client)
+	install(FILES "${LIBAV_CUDA_DIR}/bin/cudart64_110.dll" DESTINATION build/bin/Release COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 endif()
-install(FILES ${INSTALL_TEXTURES} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/textures COMPONENT client)
-install(FILES ${INSTALL_FONTS} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/fonts COMPONENT client)
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/client/assets/localGeometryCache" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets COMPONENT client)
-install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST} COMPONENT client)
-install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets RENAME client.ini COMPONENT client OPTIONAL)
-install(DIRECTORY "${CMAKE_BINARY_DIR}/shaderbin/" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/shaders COMPONENT client)
+install(FILES ${INSTALL_TEXTURES} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/textures COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+install(FILES ${INSTALL_FONTS} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/fonts COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/client/assets/localGeometryCache" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST} COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets RENAME client.ini COMPONENT ${TELEPORT_CLIENT_COMPONENT} OPTIONAL)
+install(DIRECTORY "${CMAKE_BINARY_DIR}/shaderbin/" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 
-install(FILES ${shaders} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/Shaders COMPONENT client)
+install(FILES ${shaders} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/Shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})

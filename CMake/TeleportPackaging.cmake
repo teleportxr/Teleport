@@ -69,10 +69,23 @@ if(TELEPORT_WINDOWS)
 	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
 
 elseif(TELEPORT_MACOS)
+	# Two unrelated macOS packages come out of this one configure: teleport_terminal's .pkg
+	# (below, "client" component, productbuild generator) and TeleportPCClient's drag-to-
+	# Applications .dmg (pc_client/CMakeLists.txt, "pcclient" component, DragNDrop generator).
+	# CPack only supports one generator and one CPACK_PACKAGING_INSTALL_PREFIX per invocation, so
+	# they're built by running cpack twice with CLI -D/-G overrides rather than from one
+	# CPackConfig.cmake - see README.md's "Building the macOS PC client installer" section for the
+	# exact commands. The variables set unconditionally in this branch (below) are the .pkg's
+	# defaults, used when cpack runs with no overrides.
 	set(CPACK_GENERATOR "productbuild")
 	# Same staging prefix as the Linux .deb.
 	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/teleportxr")
 	set(CPACK_PACKAGE_NAME "teleportxr")
+	# DragNDrop-specific settings for the TeleportPCClient.dmg run (cpack -G DragNDrop
+	# -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/
+	# -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller). Harmless when not using that generator.
+	set(CPACK_DMG_VOLUME_NAME "TeleportPCClient")
+	set(CPACK_DMG_FORMAT "UDZO")
 	# Reverse-DNS package identifier. Gatekeeper ties the notarisation ticket to it,
 	# so it must stay stable across releases.
 	set(CPACK_PRODUCTBUILD_IDENTIFIER "co.simul.teleportxr")
@@ -127,6 +140,11 @@ if(TELEPORT_MACOS)
 				\"\${_linkdir}/teleport_terminal\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
+
+	# No manual /Applications symlink here: the CPack DragNDrop generator (used for
+	# TeleportPCClient's .dmg, cpack -G DragNDrop below) adds that symlink itself once it sees a
+	# single .app at the staging root - a hand-added one collides with it ("failed to create
+	# symbolic link ... File exists"), discovered by actually running cpack -G DragNDrop locally.
 endif()
 
 include(CPack)

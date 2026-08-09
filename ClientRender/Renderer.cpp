@@ -877,7 +877,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	}
 	crossplatform::Viewport						  viewport = renderPlatform->GetViewport(deviceContext, 0);
 
-	static std::vector<crossplatform::ViewStruct> defaultViewStructs;
+	std::vector<crossplatform::ViewStruct> defaultViewStructs;
 	if (mvgdc)
 	{
 		defaultViewStructs = mvgdc->viewStructs;
@@ -967,7 +967,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	if (mvgdc)
 	{
 		mvgdc->viewStructs = defaultViewStructs;
-		for (auto s : mvgdc->viewStructs)
+		for (auto &s : mvgdc->viewStructs)
 		{
 			s.Init();
 		}
@@ -1666,15 +1666,6 @@ void Renderer::RenderDesktopView(int view_id, void *context, void *renderTexture
 #endif
 	crossplatform::Viewport viewport = renderPlatform->GetViewport(deviceContext, 0);
 
-	if (frame < 5)
-	{
-		SIMUL_COUT << "MACDEBUG frame=" << frame << " w=" << w << " h=" << h
-				   << " viewport.w=" << viewport.w << " viewport.h=" << viewport.h
-				   << " cameraInterface=" << (void *)cameraInterface
-				   << " openXR=" << (void *)renderState.openXR
-				   << " sessionActive=" << (renderState.openXR ? renderState.openXR->IsSessionActive() : false)
-				   << std::endl;
-	}
 	if (renderState.openXR && renderState.openXR->IsSessionActive())
 	{
 		crossplatform::Texture *eyeTexture = renderState.openXR->GetRenderTexture(0);
