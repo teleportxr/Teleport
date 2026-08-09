@@ -2,59 +2,69 @@
 #pragma once
 
 #include "AudioPlayer.h"
+#include <AudioToolbox/AudioQueue.h>
+#include <deque>
+#include <functional>
+#include <future>
+#include <mutex>
+#include <vector>
 
 namespace teleport
 {
 	namespace audio
 	{
-		/*! No-op audio backend for macOS. There is no CoreAudio implementation yet - this
-			exists purely so ClientRender links and runs; audio is silently discarded.
+		/*! CoreAudio AudioQueue backend for macOS. Provides playback of decoded
+			spatial audio (stereo, 48 kHz, 16-bit PCM) and capture of microphone input
+			(mono, 48 kHz, 16-bit PCM).
 		*/
 		class MacAudioPlayer final : public AudioPlayer
 		{
 		public:
-			MacAudioPlayer()  = default;
-			~MacAudioPlayer() = default;
+			MacAudioPlayer();
+			~MacAudioPlayer();
 
-			Result initializeAudioDevice() override
-			{
-				return Result();
-			}
+			Result initializeAudioDevice() override;
+			Result configure(const AudioSettings& audioSettings) override;
+			Result playStream(const uint8_t* data, size_t dataSize) override;
+			Result startRecording(std::function<void(const uint8_t* data, size_t dataSize)> recordingCallback) override;
+			Result processRecordedAudio() override;
+			Result stopRecording() override;
+			Result deconfigure() override;
+			void onAudioProcessed() override;
 
-			Result configure(const AudioSettings &audioSettings) override
-			{
-				mAudioSettings = audioSettings;
-				return Result();
-			}
+		private:
+			Result asyncInitializeAudioDevice();
 
-			Result playStream(const uint8_t *data, size_t dataSize) override
-			{
-				return Result();
-			}
+			AudioStreamBasicDescription MakeFormat(const AudioSettings& settings) const;
+			void CreateOutputQueue();
+			void CreateInputQueue();
+			void DestroyQueues();
 
-			Result startRecording(std::function<void(const uint8_t *data, size_t dataSize)> recordingCallback) override
-			{
-				return Result();
-			}
+			void SplitAndQueueStream(const uint8_t* data, size_t dataSize);
+			void RefillOutputBuffers();
+			void RefillOutputBuffersLocked();
 
-			Result processRecordedAudio() override
-			{
-				return Result();
-			}
+			static void OutputCallback(void* inUserData, AudioQueueRef inAQ, AudioQueueBufferRef inBuffer);
+			static void InputCallback(void* inUserData, AudioQueueRef inAQ, AudioQueueBufferRef inBuffer,
+				const AudioTimeStamp* inStartTime, UInt32 inNumberPacketDescriptions,
+				const AudioStreamPacketDescription* inPacketDescs);
 
-			Result stopRecording() override
-			{
-				return Result();
-			}
+			std::future<Result> mInitResult;
 
-			Result deconfigure() override
-			{
-				return Result();
-			}
+			AudioQueueRef mOutputQueue = nullptr;
+			AudioQueueRef mInputQueue = nullptr;
+			bool mOutputStarted = false;
+			bool mInputStarted = false;
 
-			void onAudioProcessed() override
-			{
-			}
+			static constexpr size_t sNumBuffers = 3;
+			size_t mBufferByteSize = 0;
+
+			std::mutex mMutex;
+			std::deque<AudioQueueBufferRef> mFreeOutputBuffers;
+			std::deque<std::vector<uint8_t>> mPendingChunks;
+
+			std::function<void(const uint8_t* data, size_t dataSize)> mRecordingCallback;
+			std::atomic<bool> mRecording{ false };
 		};
 	}
 }

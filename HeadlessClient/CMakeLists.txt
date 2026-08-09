@@ -53,11 +53,16 @@ target_link_libraries(teleport_terminal
 	juice-static
 )
 
-# The Platform submodule only adds its Vulkan subdirectory for Windows and Linux, so the
-# target does not exist on macOS. The headless client draws nothing and its sole Platform
-# include is Platform/Core/FileLoader.h, so this is a link-order convenience, not a
-# real dependency.
-if(TARGET PlatformVulkan_MT)
+# Historically the Platform submodule only added its Vulkan subdirectory for Windows and
+# Linux, so PlatformVulkan_MT never existed on macOS and this link was a no-op there. macOS
+# now builds it too (MoltenVK, see the TELEPORT_GUI_CLIENT comment in the root CMakeLists.txt),
+# and firstparty/Platform/Vulkan/CMakeLists.txt links PlatformVulkan_MT against GLFW - so
+# linking it here on macOS would drag libglfw.dylib into teleport_terminal, defeating the
+# "no GPU/graphics dependency" guarantee the headless client is built to (see the "Confirm no
+# unwanted dependencies" check in .github/workflows/build_macos_client.yml). The headless
+# client draws nothing and its sole Platform include is Platform/Core/FileLoader.h, so this
+# is a link-order convenience on Windows/Linux, not a real dependency - safe to skip on macOS.
+if(TARGET PlatformVulkan_MT AND NOT TELEPORT_MACOS)
 	target_link_libraries(teleport_terminal PlatformVulkan_MT)
 endif()
 
