@@ -95,6 +95,12 @@ elseif(TELEPORT_MACOS)
 	# TeleportPCClient's .dmg is meant to be, and it silently breaks unattended mounting
 	# (hdiutil attach has no TTY to answer the prompt in CI and fails instantly with no
 	# output - discovered by an actual CI run hanging exactly there).
+	# .pkg only: the DragNDrop run above clears this with -D CPACK_RESOURCE_FILE_LICENSE=.
+	# DragNDrop honours it too (CPack embeds it as the .dmg's software license agreement,
+	# gating the mount on an interactive "Agree" click) - not the "drag to Applications" UX
+	# TeleportPCClient's .dmg is meant to be, and it silently breaks unattended mounting
+	# (hdiutil attach has no TTY to answer the prompt in CI and fails instantly with no
+	# output - discovered by an actual CI run hanging exactly there).
 	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
 	# Set by CI to the "Developer ID Installer: ..." identity so cpack emits an
 	# already-signed .pkg; left empty for local builds, which produce an unsigned one.
@@ -148,6 +154,11 @@ if(TELEPORT_MACOS)
 				\"\${_linkdir}/teleport_cli\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
+
+	# No manual /Applications symlink here: the CPack DragNDrop generator (used for
+	# TeleportPCClient's .dmg, cpack -G DragNDrop below) adds that symlink itself once it sees a
+	# single .app at the staging root - a hand-added one collides with it ("failed to create
+	# symbolic link ... File exists"), discovered by actually running cpack -G DragNDrop locally.
 
 	# No manual /Applications symlink here: the CPack DragNDrop generator (used for
 	# TeleportPCClient's .dmg, cpack -G DragNDrop below) adds that symlink itself once it sees a

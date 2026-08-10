@@ -6,20 +6,26 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <filesystem>
 
 #ifdef _WIN32
+#include <shlobj_core.h>
 #include <shlobj_core.h>
 #else
 #include <pwd.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <unistd.h>
 #endif
 #ifdef __APPLE__
+#include <mach-o/dyld.h>
 #include <mach-o/dyld.h>
 #endif
 
 namespace
 {
 	//! The file that identifies a directory as the client data directory.
+	const char *const kClientDataMarker		= "client_default.ini";
 	const char *const kClientDataMarker		= "client_default.ini";
 
 	//! Names to try for the data directory, relative to a candidate root, in priority order:
@@ -39,10 +45,20 @@ namespace
 		{
 			return {};
 		}
+		DWORD	res = GetModuleFileNameW(nullptr, filename, 700);
+		if (!res)
+		{
+			return {};
+		}
 		return std::filesystem::path(filename).parent_path();
 #elif defined(__APPLE__)
 		char	 exe_path[1024];
+		char	 exe_path[1024];
 		uint32_t size = sizeof(exe_path);
+		if (_NSGetExecutablePath(exe_path, &size) != 0)
+		{
+			return {};
+		}
 		if (_NSGetExecutablePath(exe_path, &size) != 0)
 		{
 			return {};
@@ -50,7 +66,12 @@ namespace
 		return std::filesystem::path(exe_path).parent_path();
 #else
 		char	exe_path[1024];
+		char	exe_path[1024];
 		ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+		if (len == -1)
+		{
+			return {};
+		}
 		if (len == -1)
 		{
 			return {};
@@ -67,10 +88,18 @@ namespace
 		{
 			return {};
 		}
+		if (root.empty())
+		{
+			return {};
+		}
 		std::error_code ec;
 		for (const char *name : kClientDataDirNames)
 		{
 			std::filesystem::path candidate = root / name;
+			if (std::filesystem::exists(candidate / kClientDataMarker, ec))
+			{
+				return candidate;
+			}
 			if (std::filesystem::exists(candidate / kClientDataMarker, ec))
 			{
 				return candidate;
@@ -85,8 +114,10 @@ namespace teleport
 	namespace client
 	{
 		static std::string			 s_storage_folder;
+		static std::string			 s_storage_folder;
 		static std::filesystem::path s_client_data_dir;
 
+		std::filesystem::path		 ResolveClientDataDirectory()
 		std::filesystem::path		 ResolveClientDataDirectory()
 		{
 			std::error_code ec;
@@ -95,6 +126,10 @@ namespace teleport
 			if (!env.empty())
 			{
 				std::filesystem::path dir(env);
+				if (std::filesystem::exists(dir / kClientDataMarker, ec))
+				{
+					return dir;
+				}
 				if (std::filesystem::exists(dir / kClientDataMarker, ec))
 				{
 					return dir;
@@ -108,6 +143,12 @@ namespace teleport
 			{
 				return found;
 			}
+			std::filesystem::path dir	= std::filesystem::current_path(ec);
+			std::filesystem::path found = DataDirectoryBelow(dir);
+			if (!found.empty())
+			{
+				return found;
+			}
 			while (!dir.empty())
 			{
 				found = DataDirectoryBelow(dir);
@@ -115,7 +156,15 @@ namespace teleport
 				{
 					return found;
 				}
+				if (!found.empty())
+				{
+					return found;
+				}
 				std::filesystem::path parent = dir.parent_path();
+				if (parent == dir)
+				{
+					break;
+				}
 				if (parent == dir)
 				{
 					break;
@@ -179,6 +228,10 @@ namespace teleport
 			{
 				return relativePath;
 			}
+			if (s_client_data_dir.empty())
+			{
+				return relativePath;
+			}
 			return (s_client_data_dir / relativePath).lexically_normal().string();
 		}
 		bool BootstrapClientEnvironment(const std::string &cmdLine)
@@ -191,6 +244,7 @@ namespace teleport
 			// Resolve platform-specific storage folder
 #ifdef _WIN32
 			// Windows: use CSIDL_LOCAL_APPDATA
+			char	szPath[MAX_PATH];
 			char	szPath[MAX_PATH];
 			HRESULT hResult = SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath);
 			if (hResult == S_OK)
@@ -205,7 +259,9 @@ namespace teleport
 				struct passwd *pw = getpwuid(getuid());
 				if (pw)
 				{
+				{
 					home = pw->pw_dir;
+				}
 				}
 			}
 			if (home)
@@ -239,6 +295,7 @@ namespace teleport
 			config.LoadConfigFromIniFile();
 
 			return true;
+		}
 		}
 
 		std::string GetStorageFolderPath()

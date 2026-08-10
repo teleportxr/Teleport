@@ -13,7 +13,11 @@ name: build_macos_client
 # secrets have not been configured yet - the build still runs in full and produces unsigned
 # packages, so macOS never loses compile coverage. Only the signing steps are skipped, and the
 # run still finishes green rather than failing on something it had no way of providing.
+# secrets have not been configured yet - the build still runs in full and produces unsigned
+# packages, so macOS never loses compile coverage. Only the signing steps are skipped, and the
+# run still finishes green rather than failing on something it had no way of providing.
 #
+# The unsigned packages are uploaded as "macos-installer-unsigned". release.yml downloads
 # The unsigned packages are uploaded as "macos-installer-unsigned". release.yml downloads
 # "macos-installer", so an unsigned build can never reach a release page: a tag built without
 # credentials fails at the download step and publishes nothing.
@@ -116,7 +120,12 @@ jobs:
       # (TeleportPCClient, via MoltenVK - see CMakeLists.txt's TELEPORT_GUI_CLIENT comment).
       # bison/flex build the Sfx shader-effect compiler pc_client needs; the headless client
       # never touches it, which is why the old headless-only job didn't need them.
+      # vulkan-loader/molten-vk/vulkan-headers/glslang are only needed for the GUI client
+      # (TeleportPCClient, via MoltenVK - see CMakeLists.txt's TELEPORT_GUI_CLIENT comment).
+      # bison/flex build the Sfx shader-effect compiler pc_client needs; the headless client
+      # never touches it, which is why the old headless-only job didn't need them.
       run: |
+        brew install ninja pkg-config openssl@3 vulkan-loader molten-vk vulkan-headers glslang bison flex
         brew install ninja pkg-config openssl@3 vulkan-loader molten-vk vulkan-headers glslang bison flex
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> "$GITHUB_ENV"
 
@@ -150,18 +159,30 @@ jobs:
         # the default keychain in some code paths, and blocks on an invisible unlock
         # prompt if it lands on the runner's login keychain instead.
         security default-keychain -d user -s "$KEYCHAIN"
+        # Default as well as search-list keychain: productsign resolves identities through
+        # the default keychain in some code paths, and blocks on an invisible unlock
+        # prompt if it lands on the runner's login keychain instead.
+        security default-keychain -d user -s "$KEYCHAIN"
 
         echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/app.p12"
         echo "$MACOS_INSTALLER_CERT_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
         # pkgbuild --sign spawns productsign; productbuild signs the outer distribution
         # package. All four must be trusted or the tool blocks on a GUI "allow access"
         # prompt that can never be answered on a headless runner.
+        # pkgbuild --sign spawns productsign; productbuild signs the outer distribution
+        # package. All four must be trusted or the tool blocks on a GUI "allow access"
+        # prompt that can never be answered on a headless runner.
         security import "$RUNNER_TEMP/app.p12" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" \
+          -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
           -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
         security import "$RUNNER_TEMP/installer.p12" -k "$KEYCHAIN" -P "$MACOS_INSTALLER_CERT_PASSWORD" \
           -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
+          -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
         rm -f "$RUNNER_TEMP/app.p12" "$RUNNER_TEMP/installer.p12"
 
+        # Without this, codesign/productsign block on an interactive "allow access"
+        # prompt and the job hangs until it times out.
+        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
         # Without this, codesign/productsign block on an interactive "allow access"
         # prompt and the job hangs until it times out.
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
@@ -196,6 +217,23 @@ jobs:
           --sign "$INSTALLER_IDENTITY" "$SMOKE/smoke.pkg"
         pkgutil --check-signature "$SMOKE/smoke.pkg"
 
+    - name: Smoke-test installer signing
+      if: needs.check-secrets.outputs.available == 'true'
+      # cpack's pkgbuild --sign is the first real use of the Developer ID Installer key.
+      # If productsign is going to block on a keychain prompt, it hangs silently and eats
+      # the whole job timeout (this happened on the first signed run). Exercise it here
+      # on a trivial package, so the failure surfaces in minutes in a cheap step.
+      timeout-minutes: 5
+      run: |
+        set -euo pipefail
+        SMOKE="$RUNNER_TEMP/smoke"
+        mkdir -p "$SMOKE/root/opt/smoke"
+        echo test > "$SMOKE/root/opt/smoke/file"
+        pkgbuild --root "$SMOKE/root" --identifier "co.simul.teleportxr.smoke" \
+          --version 1.0 --install-location "/" \
+          --sign "$INSTALLER_IDENTITY" "$SMOKE/smoke.pkg"
+        pkgutil --check-signature "$SMOKE/smoke.pkg"
+
     - name: Running cmake (macos)
       # The installer identity has to be known at configure time: cpack reads it from
       # CPackConfig.cmake, which is generated now, not when cpack runs. INSTALLER_IDENTITY is
@@ -208,11 +246,20 @@ jobs:
       # TELEPORT_GUI_CLIENT/TELEPORT_CLIENT_USE_VULKAN are ON (the CMakeLists.txt default):
       # TeleportPCClient now builds on macOS via MoltenVK, so this job builds and packages both
       # clients, same as the Windows/Linux jobs.
+      # APP_IDENTITY likewise gates the install-time re-sign of the staged binary
+      # (HeadlessClient/CMakeLists.txt) and the staged TeleportPCClient.app (pc_client/CMakeLists.txt),
+      # both of which must happen after cpack's install step rewrites RPATHs/install_names/runs
+      # fixup_bundle - all of which invalidate a pre-applied signature.
+      # TELEPORT_GUI_CLIENT/TELEPORT_CLIENT_USE_VULKAN are ON (the CMakeLists.txt default):
+      # TeleportPCClient now builds on macOS via MoltenVK, so this job builds and packages both
+      # clients, same as the Windows/Linux jobs.
       run: |
         cmake -S . -B build_macos -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DTELEPORT_GUI_CLIENT=ON \
+          -DTELEPORT_GUI_CLIENT=ON \
           -DTELEPORT_HEADLESS_CLIENT=ON \
+          -DTELEPORT_CLIENT_USE_VULKAN=ON \
           -DTELEPORT_CLIENT_USE_VULKAN=ON \
           -DENABLE_ENCRYPTION=false \
           -DLIBAV_USE_CUDA=false \
@@ -222,6 +269,8 @@ jobs:
           -DPLATFORM_BUILD_SAMPLES=false \
           -DSIMUL_DEBUG_SHADERS=false \
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR" \
+          -DTELEPORT_MACOS_INSTALLER_IDENTITY="${INSTALLER_IDENTITY:-}" \
+          -DTELEPORT_MACOS_APP_IDENTITY="${APP_IDENTITY:-}"
           -DTELEPORT_MACOS_INSTALLER_IDENTITY="${INSTALLER_IDENTITY:-}" \
           -DTELEPORT_MACOS_APP_IDENTITY="${APP_IDENTITY:-}"
 
@@ -298,9 +347,21 @@ jobs:
           -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
           -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller \
           -D CPACK_RESOURCE_FILE_LICENSE=
+      run: |
+        cpack -C Release --verbose
+        cpack -C Release --verbose -G DragNDrop \
+          -D CPACK_COMPONENTS_ALL=pcclient \
+          -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
+          -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller \
+          -D CPACK_RESOURCE_FILE_LICENSE=
 
     - name: Verify the packaged binary signature
+    - name: Verify the packaged binary signature
       if: needs.check-secrets.outputs.available == 'true'
+      # The staged binaries are re-signed during each cpack's install step
+      # (TELEPORT_MACOS_APP_IDENTITY), after the RPATH/install_name_tool/fixup_bundle rewriting
+      # that invalidates the build-tree signature. Expand the packages and verify those
+      # signatures rather than discovering a broken one on a user's machine.
       # The staged binaries are re-signed during each cpack's install step
       # (TELEPORT_MACOS_APP_IDENTITY), after the RPATH/install_name_tool/fixup_bundle rewriting
       # that invalidates the build-tree signature. Expand the packages and verify those
@@ -356,6 +417,8 @@ jobs:
         echo "$APPLE_API_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
 
         PKG=$(ls build_macos/*.pkg)
+
+        PKG=$(ls build_macos/*.pkg)
         # --wait blocks until Apple returns a verdict, typically 2-15 minutes.
         xcrun notarytool submit "$PKG" \
           --key "$RUNNER_TEMP/AuthKey.p8" \
@@ -387,11 +450,32 @@ jobs:
 
         rm -f "$RUNNER_TEMP/AuthKey.p8"
 
+        DMG=$(ls build_macos/*.dmg)
+        # Unlike the .pkg (productbuild itself signs the installer package) and the .app inside
+        # (signed by pc_client/CMakeLists.txt's install(CODE) block), nothing has signed the .dmg
+        # *container* itself yet - cpack's DragNDrop generator doesn't. Notarization of an
+        # unsigned container still succeeds (Apple only inspects its signed contents), but
+        # `spctl --context context:primary-signature` then rejects it with "no usable signature"
+        # - caught by an actual CI run. Sign the container before submitting it.
+        codesign --force --sign "$APP_IDENTITY" --timestamp "$DMG"
+        codesign --verify --verbose=2 "$DMG"
+        xcrun notarytool submit "$DMG" \
+          --key "$RUNNER_TEMP/AuthKey.p8" \
+          --key-id "$APPLE_API_KEY_ID" \
+          --issuer "$APPLE_API_ISSUER_ID" \
+          --wait --timeout 30m
+        xcrun stapler staple "$DMG"
+        xcrun stapler validate "$DMG"
+        spctl --assess --type open --context context:primary-signature -vv "$DMG"
+
+        rm -f "$RUNNER_TEMP/AuthKey.p8"
+
     - name: Installer
       run: |
         set -euo pipefail
         mkdir -p artifacts
         cp build_macos/teleportxr-*.pkg artifacts/
+        cp build_macos/TeleportPCClientInstaller-*.dmg artifacts/
         cp build_macos/TeleportPCClientInstaller-*.dmg artifacts/
         cp teleport_commit.properties artifacts/
         cp release_notes.md artifacts/

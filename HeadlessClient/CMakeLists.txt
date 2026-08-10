@@ -194,6 +194,7 @@ if(TELEPORT_MACOS)
 		)
 		install(CODE "
 			set(_stage \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}\")
+			set(_stage \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}\")
 			execute_process(COMMAND install_name_tool
 				-change \"${OPENSSL_ROOT_DIR}/lib/libssl.3.dylib\" \"@loader_path/../lib/libssl.3.dylib\"
 				-change \"${OPENSSL_ROOT_DIR}/lib/libcrypto.3.dylib\" \"@loader_path/../lib/libcrypto.3.dylib\"
@@ -208,7 +209,11 @@ if(TELEPORT_MACOS)
 				-change \"${_libssl_libcrypto_dep}\" \"@loader_path/libcrypto.3.dylib\"
 				\"\${_stage}/lib/libssl.3.dylib\"
 				RESULT_VARIABLE _rc
+				RESULT_VARIABLE _rc
 			)
+			if(NOT _rc EQUAL 0)
+				message(FATAL_ERROR \"install_name_tool failed on \${_stage}/lib/libssl.3.dylib\")
+			endif()
 			if(NOT _rc EQUAL 0)
 				message(FATAL_ERROR \"install_name_tool failed on \${_stage}/lib/libssl.3.dylib\")
 			endif()
