@@ -1,47 +1,57 @@
 cmake_minimum_required(VERSION 3.8)
 project(teleport_terminal)
 
-set(srcs
-	Main.cpp
-	HeadlessClient.h HeadlessClient.cpp
+# The headless client is split into two processes:
+#   teleport_terminal - the service: owns live connections, ticks them at 20 Hz,
+#                       and takes one-line commands over a loopback TCP socket.
+#   teleport_cli      - a small POSIX-style front end that forwards commands from
+#                       a terminal, pipe, or -e argument to the service.
+# Everything they share lives in the teleport_headless_core static library.
+
+set(core_srcs
+	HeadlessConnection.h HeadlessConnection.cpp
+	ConnectionManager.h ConnectionManager.cpp
+	CommandProcessor.h CommandProcessor.cpp
+	ControlServer.h ControlServer.cpp
+	ControlProtocol.h
+	SocketUtil.h SocketUtil.cpp
 	HeadlessSessionCommandInterface.h HeadlessSessionCommandInterface.cpp
 	HeadlessGeometryCacheBackend.h HeadlessGeometryCacheBackend.cpp
 	HeadlessGeometryTarget.h HeadlessGeometryTarget.cpp
 	HeadlessGeometryDecoder.h HeadlessGeometryDecoder.cpp
 	HeadlessInputState.h HeadlessInputState.cpp
 	ReplCommandParser.h ReplCommandParser.cpp
-	Repl.h Repl.cpp
 )
 
 if(WIN32)
 	set(def_platform PLATFORM_WINDOWS UNICODE _WIN32_WINNT=0x0601)
-	add_static_executable(teleport_terminal CONSOLE SOURCES ${srcs})
 elseif(TELEPORT_MACOS)
 	set(def_platform PLATFORM_MACOS)
-	add_static_executable(teleport_terminal CONSOLE SOURCES ${srcs})
 elseif(TELEPORT_UNIX)
 	set(def_platform PLATFORM_LINUX)
-	add_static_executable(teleport_terminal CONSOLE SOURCES ${srcs})
 else()
 	message(FATAL_ERROR "Unsupported platform for teleport_terminal")
 endif()
 
-target_include_directories(teleport_terminal PRIVATE
+# --- Shared core -------------------------------------------------------------
+
+add_library(teleport_headless_core STATIC ${core_srcs})
+
+target_include_directories(teleport_headless_core PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/../libavstream/include
 	${CMAKE_CURRENT_SOURCE_DIR}/../libavstream/export_include
 )
 
-target_link_directories(teleport_terminal PRIVATE
+target_link_directories(teleport_headless_core PUBLIC
 	${CMAKE_BINARY_DIR}/lib
 )
 
-target_compile_features(teleport_terminal PRIVATE cxx_std_17)
+target_compile_features(teleport_headless_core PUBLIC cxx_std_17)
+target_compile_definitions(teleport_headless_core PUBLIC ${def_platform})
 
-# Core libraries: TeleportClient, TeleportCore, libavstream
-# Also need Core_MT and platform libs for FileLoader and utilities
 # Deliberately NOT linked: ClientRender, ktx, OpenXR loader, GLFW, D3D libs, ImGui
-target_link_libraries(teleport_terminal
+target_link_libraries(teleport_headless_core PUBLIC
 	libavstream
 	TeleportClient
 	TeleportCore
@@ -52,6 +62,14 @@ target_link_libraries(teleport_terminal
 	usrsctp
 	juice-static
 )
+
+set_target_properties(teleport_headless_core PROPERTIES FOLDER Client)
+
+# --- Service: teleport_terminal ----------------------------------------------
+
+add_static_executable(teleport_terminal CONSOLE SOURCES Main.cpp)
+target_link_libraries(teleport_terminal teleport_headless_core)
+target_compile_features(teleport_terminal PRIVATE cxx_std_17)
 
 # Historically the Platform submodule only added its Vulkan subdirectory for Windows and
 # Linux, so PlatformVulkan_MT never existed on macOS and this link was a no-op there. macOS
@@ -88,15 +106,30 @@ elseif(TELEPORT_UNIX)
 	target_link_libraries(teleport_terminal ssl crypto pthread dl)
 endif()
 
-target_compile_definitions(teleport_terminal PRIVATE ${def_platform})
-
 SetTeleportDefaults(teleport_terminal)
 set_target_properties(teleport_terminal PROPERTIES FOLDER Client)
 
+# --- CLI: teleport_cli --------------------------------------------------------
+# Intentionally tiny: no libavstream, no WebRTC, no OpenSSL. Just the command-line
+# front end, the socket shim, and (on Windows) winsock.
+
+add_static_executable(teleport_cli CONSOLE SOURCES cli_main.cpp SocketUtil.h SocketUtil.cpp ControlProtocol.h)
+target_include_directories(teleport_cli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(teleport_cli PRIVATE cxx_std_17)
+target_compile_definitions(teleport_cli PRIVATE ${def_platform})
+if(WIN32)
+	target_link_libraries(teleport_cli ws2_32.lib)
+endif()
+
+SetTeleportDefaults(teleport_cli)
+set_target_properties(teleport_cli PROPERTIES FOLDER Client)
+
+# --- Install ------------------------------------------------------------------
+
 if(TELEPORT_UNIX)
-	install(TARGETS teleport_terminal RUNTIME DESTINATION bin COMPONENT client)
+	install(TARGETS teleport_terminal teleport_cli RUNTIME DESTINATION bin COMPONENT client)
 elseif(TELEPORT_WINDOWS)
-	install(TARGETS teleport_terminal RUNTIME DESTINATION bin COMPONENT client)
+	install(TARGETS teleport_terminal teleport_cli RUNTIME DESTINATION bin COMPONENT client)
 endif()
 
 if(TELEPORT_MACOS)
@@ -110,7 +143,8 @@ if(TELEPORT_MACOS)
 	# libssl.3.dylib's own reference to libcrypto, still point at the Homebrew path baked
 	# in at link time. On a Mac without that exact keg installed this fails at launch with
 	# "Library not loaded: .../openssl@3/lib/libssl.3.dylib". Rewrite the load commands to
-	# point at the copies bundled next to the binary instead.
+	# point at the copies bundled next to the binary instead. (teleport_cli does not link
+	# OpenSSL and needs no rewriting.)
 	#
 	# Staging path below: "\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}" evaluated at install
 	# time. CPack leaves DESTDIR empty and overrides CMAKE_INSTALL_PREFIX with the

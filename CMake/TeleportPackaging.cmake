@@ -144,6 +144,8 @@ if(TELEPORT_MACOS)
 			file(MAKE_DIRECTORY \"\${_linkdir}\")
 			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_terminal\"
 				\"\${_linkdir}/teleport_terminal\" SYMBOLIC)
+			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_cli\"
+				\"\${_linkdir}/teleport_cli\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
 

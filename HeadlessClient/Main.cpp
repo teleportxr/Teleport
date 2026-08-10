@@ -1,5 +1,6 @@
-#include "HeadlessClient.h"
-#include "Repl.h"
+#include "ConnectionManager.h"
+#include "ControlProtocol.h"
+#include "ControlServer.h"
 #include "TeleportClient/Config.h"
 #include "TeleportClient/GoogleDeviceIdentityProvider.h"
 #include "TeleportClient/GuestIdentityProvider.h"
@@ -7,16 +8,19 @@
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "Platform/Core/FileLoader.h"
-#include <iostream>
-#include <thread>
-#include <chrono>
 #include <atomic>
+#include <chrono>
 #include <csignal>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
+#include <iostream>
+#include <string>
+#include <thread>
 
 #ifdef _WIN32
 	#ifndef WIN32_LEAN_AND_MEAN
-	#define WIN32_LEAN_AND_MEAN
+		#define WIN32_LEAN_AND_MEAN
 	#endif
 	#include <windows.h>
 	#include <shlobj_core.h>
@@ -35,15 +39,48 @@ void SignalHandler(int signal)
 	}
 }
 
+static void PrintUsage(const char *argv0)
+{
+	std::cout
+		<< "Usage: " << argv0 << " [-p port] [-?]\n"
+		<< "Teleport streaming service. Holds live server connections and takes\n"
+		<< "one-line commands from teleport_cli over 127.0.0.1 (default port "
+		<< teleport_control::DEFAULT_PORT << ").\n"
+		<< "  -p <port>  Control port (also TELEPORT_SERVICE_PORT)\n"
+		<< "  -?         This help\n";
+}
+
 int main(int argc, char *argv[])
 {
-	// Parse command line
-	std::string cmdLine;
+	// Control port: -p <port> (or -p<port>), else TELEPORT_SERVICE_PORT, else default.
+	uint16_t port = teleport_control::DEFAULT_PORT;
+	if (const char *envPort = std::getenv("TELEPORT_SERVICE_PORT"))
+	{
+		if (int p = std::atoi(envPort); p > 0 && p < 65536)
+			port = static_cast<uint16_t>(p);
+	}
 	for (int i = 1; i < argc; i++)
 	{
-		if (cmdLine.length() > 0)
-			cmdLine += " ";
-		cmdLine += argv[i];
+		const char *arg = argv[i];
+		if (!std::strcmp(arg, "-?"))
+		{
+			PrintUsage(argv[0]);
+			return 0;
+		}
+		if (!std::strcmp(arg, "-p"))
+		{
+			if (i + 1 >= argc)
+			{
+				std::cerr << argv[0] << ": option requires an argument -- p\n";
+				PrintUsage(argv[0]);
+				return 2;
+			}
+			port = static_cast<uint16_t>(std::atoi(argv[++i]));
+		}
+		else if (!std::strncmp(arg, "-p", 2) && arg[2] != '\0')
+		{
+			port = static_cast<uint16_t>(std::atoi(arg + 2));
+		}
 	}
 
 	// Initialize config
@@ -93,13 +130,13 @@ int main(int argc, char *argv[])
 	// grant — the user is given a code to enter on a phone or another computer. Registering the
 	// providers here means Identity::Init() does not fall back to the GUI client's loopback flow,
 	// which would need a browser on this machine. Init() itself only restores a remembered
-	// sign-in; nothing prompts the user until they type "signin".
+	// sign-in; nothing prompts the user until a control client sends "signin".
 	auto &identity = teleport::client::identity;
 	identity.RegisterProvider(std::make_shared<teleport::client::GoogleDeviceIdentityProvider>());
 	identity.RegisterProvider(std::make_shared<teleport::client::GuestIdentityProvider>());
 	identity.Init();
 
-	TELEPORT_LOG("Teleport Headless Client starting");
+	TELEPORT_LOG("Teleport service starting");
 
 	// Setup signal handlers for graceful shutdown
 	signal(SIGINT, SignalHandler);
@@ -107,20 +144,21 @@ int main(int argc, char *argv[])
 
 	try
 	{
-		HeadlessClient headlessClient;
-		Repl repl(headlessClient);
+		ConnectionManager connectionManager;
+		ControlServer server(connectionManager);
+		if (!server.Start(port))
+		{
+			TELEPORT_WARN("Could not listen on 127.0.0.1:{} — is another instance running?", port);
+			return 1;
+		}
+		TELEPORT_LOG("Control interface listening on 127.0.0.1:{}", port);
 
-		// Start REPL thread (blocking on stdin)
-		std::thread replThread([&repl]() {
-			repl.Run();
-		});
-
-		// Tick thread: update client at a fixed rate (20 Hz for M1)
+		// Tick loop: update all connections at a fixed rate (20 Hz).
 		const double tickInterval = 1.0 / 20.0;
 		double currentTime = 0.0;
 		auto lastTickTime = std::chrono::high_resolution_clock::now();
 
-		while (running && !repl.IsStopping())
+		while (running && !server.ShutdownRequested())
 		{
 			auto now = std::chrono::high_resolution_clock::now();
 			double elapsedMs = std::chrono::duration<double, std::milli>(now - lastTickTime).count();
@@ -128,7 +166,10 @@ int main(int argc, char *argv[])
 
 			if (elapsedSecs >= tickInterval)
 			{
-				headlessClient.TickOnce(currentTime, tickInterval);
+				// Applies the result of a sign-in running on the identity worker thread.
+				// Process-global, so done once per tick rather than per connection.
+				identity.Update();
+				connectionManager.TickAll(currentTime, tickInterval);
 				currentTime += tickInterval;
 				lastTickTime = now;
 			}
@@ -138,17 +179,13 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		// Shutdown
-		repl.Stop();
+		// Shutdown: prompt, because Stop() wakes accept() with a self-connect and
+		// shuts client sockets down (the old stdin REPL used to hang on getline).
+		server.Stop();
 		identity.Shutdown();
-		headlessClient.Disconnect();
+		connectionManager.DestroyAll();
 
-		if (replThread.joinable())
-		{
-			replThread.join();
-		}
-
-		TELEPORT_LOG("Teleport Headless Client exiting");
+		TELEPORT_LOG("Teleport service exiting");
 		return 0;
 	}
 	catch (const std::exception &e)

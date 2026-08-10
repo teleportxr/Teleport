@@ -1,22 +1,21 @@
-#include "HeadlessClient.h"
-#include "TeleportClient/Identity.h"
+#include "HeadlessConnection.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include <libavstream/queue.hpp>
 
-HeadlessClient::HeadlessClient()
+HeadlessConnection::HeadlessConnection()
 	: geometryBackend(std::make_unique<HeadlessGeometryCacheBackend>())
 {
 	// geometryBackend must exist before the command interface, which holds a pointer to it.
 	commandInterface = std::make_unique<HeadlessSessionCommandInterface>(nullptr, currentMode, geometryBackend.get());
 }
 
-HeadlessClient::~HeadlessClient()
+HeadlessConnection::~HeadlessConnection()
 {
 	Disconnect();
 }
 
-bool HeadlessClient::Connect(const std::string &url)
+bool HeadlessConnection::Connect(const std::string &url)
 {
 	if (sessionClient && sessionClient->IsConnected())
 	{
@@ -27,6 +26,7 @@ bool HeadlessClient::Connect(const std::string &url)
 	try
 	{
 		tabContext.ConnectTo(url);
+		this->url = url;
 		TELEPORT_LOG("Initiated connection to {}", url);
 		return true;
 	}
@@ -37,7 +37,7 @@ bool HeadlessClient::Connect(const std::string &url)
 	}
 }
 
-void HeadlessClient::Disconnect()
+void HeadlessConnection::Disconnect()
 {
 	if (sessionClient)
 	{
@@ -48,12 +48,13 @@ void HeadlessClient::Disconnect()
 	// would miss; cancel through the tab context so a pending attempt is dropped too.
 	tabContext.CancelConnection();
 	activeServerUid = 0;
+	url.clear();
 }
 
-void HeadlessClient::TickOnce(double time, double dt)
+void HeadlessConnection::TickOnce(double time, double dt)
 {
-	// Applies the result of a sign-in running on the identity worker thread. Cheap when idle.
-	teleport::client::identity.Update();
+	// Note: identity.Update() is deliberately NOT here — identity is process-global, so the
+	// service's main loop applies it once per tick rather than once per connection.
 	inputState.UpdateTime(time);
 
 	// A connection in progress lives under the tab's "next" uid; TabContext only promotes it to
@@ -105,12 +106,12 @@ void HeadlessClient::TickOnce(double time, double dt)
 	}
 }
 
-bool HeadlessClient::IsConnected() const
+bool HeadlessConnection::IsConnected() const
 {
 	return sessionClient && sessionClient->IsConnected();
 }
 
-std::string HeadlessClient::GetStatus() const
+std::string HeadlessConnection::GetStatus() const
 {
 	if (!sessionClient)
 		return "Status: DISCONNECTED (no session)\n";
@@ -149,7 +150,7 @@ std::string HeadlessClient::GetStatus() const
 	return result;
 }
 
-std::string HeadlessClient::GetGeometryReport(const std::string &what) const
+std::string HeadlessConnection::GetGeometryReport(const std::string &what) const
 {
 	if (!geometryBackend)
 		return "No geometry cache.\n";
@@ -162,7 +163,7 @@ std::string HeadlessClient::GetGeometryReport(const std::string &what) const
 	return "Usage: geometry [nodes|resources]\n";
 }
 
-const std::vector<teleport::core::InputDefinition> &HeadlessClient::GetInputDefinitions() const
+const std::vector<teleport::core::InputDefinition> &HeadlessConnection::GetInputDefinitions() const
 {
 	if (sessionClient)
 		return sessionClient->GetInputDefinitions();
@@ -170,7 +171,7 @@ const std::vector<teleport::core::InputDefinition> &HeadlessClient::GetInputDefi
 	return empty;
 }
 
-void HeadlessClient::ProcessVideo()
+void HeadlessConnection::ProcessVideo()
 {
 	if (!sessionClient)
 		return;
@@ -179,7 +180,7 @@ void HeadlessClient::ProcessVideo()
 	cp.videoQueue.drop();
 }
 
-void HeadlessClient::SendBinaryInput(avs::uid id, uint8_t value)
+void HeadlessConnection::SendBinaryInput(avs::uid id, uint8_t value)
 {
 	if (!sessionClient || !sessionClient->IsConnected())
 	{
@@ -189,7 +190,7 @@ void HeadlessClient::SendBinaryInput(avs::uid id, uint8_t value)
 	inputState.AddBinaryEvent(static_cast<teleport::core::InputId>(id), value != 0);
 }
 
-void HeadlessClient::SendAnalogueInput(avs::uid id, float value)
+void HeadlessConnection::SendAnalogueInput(avs::uid id, float value)
 {
 	if (!sessionClient || !sessionClient->IsConnected())
 	{
@@ -199,7 +200,7 @@ void HeadlessClient::SendAnalogueInput(avs::uid id, float value)
 	inputState.AddAnalogueEvent(static_cast<teleport::core::InputId>(id), value);
 }
 
-void HeadlessClient::SendMotionInput(avs::uid id, float x, float y)
+void HeadlessConnection::SendMotionInput(avs::uid id, float x, float y)
 {
 	if (!sessionClient || !sessionClient->IsConnected())
 	{
