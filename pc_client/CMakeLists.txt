@@ -315,12 +315,17 @@ elseif(TELEPORT_MACOS)
 		install(FILES "${CMAKE_SOURCE_DIR}/Installers/MoltenVK_icd.json"
 			DESTINATION TeleportPCClient.app/Contents/Resources/vulkan/icd.d COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	endif()
-	# Re-sign every embedded dylib plus MoltenVK, then the bundle as a whole, last. Mirrors
-	# HeadlessClient/CMakeLists.txt's TELEPORT_MACOS_APP_IDENTITY re-sign block: fixup_bundle's
-	# install_name_tool rewriting above invalidates any signature the linker applied, and
-	# notarisation rejects the .dmg if any single embedded Mach-O is unsigned or lacks the
-	# hardened runtime. Only runs when CI (or a locally-configured Developer ID) supplies an
-	# identity; local dev builds stay unsigned, matching the .pkg flow.
+	# Re-sign every embedded dylib plus MoltenVK now (fixup_bundle's install_name_tool rewriting
+	# above invalidates any signature the linker applied). The bundle *as a whole* is NOT signed
+	# here - it's signed once at the very end of this file, after every install() rule that adds
+	# files under TeleportPCClient.app has run (textures/fonts/localGeometryCache/shaders/
+	# client.ini, added later via the shared TELEPORT_CLIENT_DATA_DEST rules below). Signing the
+	# bundle here would sign a manifest of what Contents/ contains *at this point*; every file
+	# install()ed afterwards would then be unsealed, and `codesign --verify --deep --strict`
+	# fails with "a sealed resource is missing or invalid" - caught by an actual CI run.
+	# Mirrors HeadlessClient/CMakeLists.txt's TELEPORT_MACOS_APP_IDENTITY re-sign block. Only
+	# runs when CI (or a locally-configured Developer ID) supplies an identity; local dev builds
+	# stay unsigned, matching the .pkg flow.
 	set(TELEPORT_MACOS_APP_IDENTITY "" CACHE STRING "Developer ID Application identity used to re-sign staged binaries after install-time rewriting")
 	if(TELEPORT_MACOS_APP_IDENTITY)
 		install(CODE "
@@ -337,13 +342,6 @@ elseif(TELEPORT_MACOS)
 					endif()
 				endif()
 			endforeach()
-			execute_process(COMMAND codesign --force --options runtime --timestamp
-				--sign \"${TELEPORT_MACOS_APP_IDENTITY}\" \"\${_bundle}\"
-				RESULT_VARIABLE _rc
-			)
-			if(NOT _rc EQUAL 0)
-				message(FATAL_ERROR \"codesign failed on \${_bundle}\")
-			endif()
 		" COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	endif()
 else()
@@ -385,3 +383,24 @@ install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELE
 install(DIRECTORY "${CMAKE_BINARY_DIR}/shaderbin/" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 
 install(FILES ${shaders} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/Shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+
+if(TELEPORT_MACOS AND TELEPORT_MACOS_APP_IDENTITY)
+	# Signs TeleportPCClient.app as a whole, sealing everything under Contents/ into its code
+	# resource manifest. Deliberately the last install() rule in this file (declaration order is
+	# execution order for a directory's cmake_install.cmake): every rule above that adds a file
+	# under the bundle - fixup_bundle/MoltenVK earlier in this file, and the shared
+	# textures/fonts/localGeometryCache/shaders/client.ini rules just above, which run for every
+	# platform - must already have run, or codesign seals a manifest that's missing whatever
+	# hasn't been installed yet, and `codesign --verify --deep --strict` on the result fails with
+	# "a sealed resource is missing or invalid" (caught by an actual CI run - see the git history
+	# of this block).
+	install(CODE "
+		execute_process(COMMAND codesign --force --options runtime --timestamp
+			--sign \"${TELEPORT_MACOS_APP_IDENTITY}\" \"\${CMAKE_INSTALL_PREFIX}/TeleportPCClient.app\"
+			RESULT_VARIABLE _rc
+		)
+		if(NOT _rc EQUAL 0)
+			message(FATAL_ERROR \"codesign failed on \${CMAKE_INSTALL_PREFIX}/TeleportPCClient.app\")
+		endif()
+	" COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+endif()
