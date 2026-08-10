@@ -813,7 +813,7 @@ endif()
 # install a handful of command-line tool targets (draco_decoder, draco_encoder,
 # draco_transcoder, ozz_options, ozz_geometry, and — unless ozz_build_tools/ozz_build_gltf
 # above suppress them — ozz_animation_tools/gltf2ozz) that nothing in Teleport actually links.
-# The Windows CI workflow (build_pc_client.yml) builds only TeleportPCClient/teleport_terminal
+# The Windows CI workflow (build_pc_client.yml) builds only TeleportPCClient/teleportd
 # via a targeted MSBuild invocation rather than the full solution, so these extra targets are
 # never compiled — yet CPack still tries to install their output files afterwards and fails
 # with "file INSTALL cannot find ... .exe/.dll". Force them to build alongside the client so

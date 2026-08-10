@@ -4,7 +4,7 @@
 #include <string>
 
 //! Constants and framing helpers for the local control protocol spoken between the
-//! teleport service (teleport_terminal) and its command-line front end (teleport_cli).
+//! teleport service (teleportd) and its command-line front end (teleport_cli).
 //! See Teleport/docs/protocol/local_control.rst for the full specification.
 //!
 //! Wire format, over a TCP connection to 127.0.0.1:
