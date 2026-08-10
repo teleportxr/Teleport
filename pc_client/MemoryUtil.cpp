@@ -6,6 +6,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <tchar.h>
+#elif defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <mach/mach.h>
+#include <mach/mach_host.h>
 #else
 #include <sys/sysinfo.h>
 #endif
@@ -23,6 +27,15 @@ long PC_MemoryUtil::getAvailableMemory() const
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx(&statex);
     return static_cast<long>(statex.ullAvailPhys);
+#elif defined(__APPLE__)
+    vm_size_t page_size = 0;
+    mach_port_t host = mach_host_self();
+    host_page_size(host, &page_size);
+    vm_statistics64_data_t vmstat;
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    if (host_statistics64(host, HOST_VM_INFO64, (host_info64_t)&vmstat, &count) != KERN_SUCCESS)
+        return 0;
+    return static_cast<long>(static_cast<uint64_t>(vmstat.free_count) * page_size);
 #else
     struct sysinfo memInfo;
     sysinfo(&memInfo);
@@ -37,6 +50,11 @@ long PC_MemoryUtil::getTotalMemory() const
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx(&statex);
     return static_cast<long>(statex.ullTotalPhys);
+#elif defined(__APPLE__)
+    uint64_t totalMem = 0;
+    size_t size = sizeof(totalMem);
+    sysctlbyname("hw.memsize", &totalMem, &size, nullptr, 0);
+    return static_cast<long>(totalMem);
 #else
     struct sysinfo memInfo;
     sysinfo(&memInfo);
@@ -65,6 +83,17 @@ void PC_MemoryUtil::printMemoryStats() const
         WIDTH, statex.ullTotalVirtual / DIV);
     _tprintf(TEXT("There are %*I64d free  KB of virtual memory.\n"),
         WIDTH, statex.ullAvailVirtual / DIV);
+#elif defined(__APPLE__)
+    uint64_t totalPhysMem = static_cast<uint64_t>(getTotalMemory());
+    uint64_t freePhysMem = static_cast<uint64_t>(getAvailableMemory());
+    long memoryLoad = totalPhysMem ? (100 - static_cast<long>(100 * freePhysMem / totalPhysMem)) : 0;
+
+    printf("There is  %*ld percent of memory in use.\n",
+        WIDTH, memoryLoad);
+    printf("There are %*llu total KB of physical memory.\n",
+        WIDTH, static_cast<unsigned long long>(totalPhysMem / DIV));
+    printf("There are %*llu free  KB of physical memory.\n",
+        WIDTH, static_cast<unsigned long long>(freePhysMem / DIV));
 #else
     struct sysinfo memInfo;
     sysinfo(&memInfo);

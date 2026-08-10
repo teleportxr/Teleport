@@ -155,26 +155,52 @@ or if you have already cloned the main repo,
     * Set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to your installed Cuda version
 4. Configure, generate, open and build the Visual Studio project *in Release Configuration first*.
 
-## Building the macOS headless client
+## Building the macOS clients
 
-macOS supports the headless terminal client (`teleport_terminal`) only: the GUI client needs
-Vulkan, GLFW and an OpenXR runtime, which are not ported. Apple Silicon only.
+macOS (Apple Silicon only) builds both clients: the headless terminal client
+(`teleport_terminal`) and, via MoltenVK (Vulkan on Metal), the GUI client (`TeleportPCClient`).
+There is still no OpenXR *runtime* for macOS, so `ENABLE_VR` defaults off there
+(`TeleportClient/Config.h`) and the GUI client never tries to create a real XR session.
 
-    brew install ninja pkg-config openssl@3
+    brew install ninja pkg-config openssl@3 vulkan-loader molten-vk vulkan-headers glslang bison flex
     cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
-      -DTELEPORT_GUI_CLIENT=OFF -DTELEPORT_CLIENT_USE_VULKAN=OFF \
       -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
     cmake --build build_macos
 
-The binary is `build_macos/bin/teleport_terminal`. To produce an (unsigned) installer:
+The binaries are `build_macos/bin/teleport_terminal` and `build_macos/bin/TeleportPCClient.app`
+(a real `.app` bundle, icon included, runnable straight from the build tree or via
+`open build_macos/bin/TeleportPCClient.app`).
+
+To build the headless client only (skips the Vulkan SDK, bison/flex, and Sfx shader
+compilation):
+
+    cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DTELEPORT_GUI_CLIENT=OFF -DTELEPORT_CLIENT_USE_VULKAN=OFF \
+      -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
+
+### Installers
+
+macOS produces two unrelated packages from the same configure - see
+`CMake/TeleportPackaging.cmake` for why they can't share one `cpack` invocation - so `cpack`
+runs twice:
 
     cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack
+    cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack -G DragNDrop \
+      -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
+      -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller -D CPACK_RESOURCE_FILE_LICENSE=
 
-CI signs and notarises the package; see `docs/macos_signing_secrets.md` for the credentials
+The first produces `teleportxr-<commit>-arm64.pkg` (installs `teleport_terminal` to
+`/opt/teleportxr`). The second produces `TeleportPCClientInstaller-<commit>-arm64.dmg` - open
+it and drag `TeleportPCClient.app` onto the `Applications` symlink, the usual macOS install
+pattern. The `.dmg` bundles every non-system library `TeleportPCClient` needs (including
+Homebrew's Vulkan loader, MoltenVK and OpenSSL), so the installed app runs without Homebrew or
+any of this project's build dependencies present.
+
+CI signs and notarises both packages; see `docs/macos_signing_secrets.md` for the credentials
 that requires. Locally built packages are unsigned, so Gatekeeper will refuse them until you
 clear the quarantine attribute:
 
-    xattr -d com.apple.quarantine teleportxr-*.pkg
+    xattr -d com.apple.quarantine teleportxr-*.pkg TeleportPCClientInstaller-*.dmg
 
 ## Building Unity plugin
 

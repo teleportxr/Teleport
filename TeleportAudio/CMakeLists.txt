@@ -35,10 +35,17 @@ set( src_linux
 	LinuxAudioPlayer.h
 	)
 
+set( src_mac
+	MacAudioPlayer.cpp
+	MacAudioPlayer.h
+	)
+
 if(WIN32)
 	set( src_public ${src_root} ${src_crossplatform} ${src_pc})
 elseif(PLATFORM_LINUX)
 	set( src_public ${src_root} ${src_crossplatform} ${src_linux})
+elseif(PLATFORM_MACOS)
+	set( src_public ${src_root} ${src_crossplatform} ${src_mac})
 else()
 	set( src_public ${src_root} ${src_crossplatform})
 endif()
@@ -70,6 +77,10 @@ if(PLATFORM_LINUX)
 	pkg_check_modules(PULSEAUDIO REQUIRED libpulse-simple)
 	target_include_directories(TeleportAudio PRIVATE ${PULSEAUDIO_INCLUDE_DIRS})
 	target_link_libraries(TeleportAudio ${PULSEAUDIO_LIBRARIES})
+endif()
+
+if(PLATFORM_MACOS)
+	target_link_libraries(TeleportAudio "-framework CoreAudio" "-framework AudioToolbox")
 endif()
 
 #target_compile_features(libavstream PRIVATE cxx_std_17)

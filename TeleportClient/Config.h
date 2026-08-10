@@ -79,7 +79,14 @@ namespace teleport
 			void LoadConfigFromIniFile();
 			std::vector<std::string> recent_server_urls;
 			int pause_for_debugger=0;
+#if defined(__APPLE__)
+			// No OpenXR runtime exists for macOS; the client still links an OpenXR loader
+			// (built from source, see pc_client/CMakeLists.txt) purely so UseOpenXR's calls
+			// resolve, but must never attempt to create a real XR session with it.
+			bool enable_vr = false;
+#else
 			bool enable_vr = true;
+#endif
 #if TELEPORT_INTERNAL_CHECKS
 			bool dev_mode=true;
 #else

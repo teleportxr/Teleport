@@ -39,7 +39,7 @@
 #ifdef _MSC_VER
 #include "Platform/Windows/VisualStudioDebugOutput.h"
 VisualStudioDebugOutput debug_buffer(true, nullptr, 128);
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 #include "UnixDebugOutput.h"
 DebugOutput debug_buffer(true, nullptr, 128);
 #endif
@@ -61,6 +61,10 @@ platform::dx11::DeviceManager deviceManager;
 #include "UseOpenXR.h"
 #if TELEPORT_CLIENT_SUPPORT_IPSME
 #include "TeleportClient/IPSME_MsgEnv.h"
+#endif
+#if defined(__APPLE__) && TELEPORT_CLIENT_USE_VULKAN
+#include <CoreFoundation/CoreFoundation.h>
+#include <climits>
 #endif
 using namespace teleport;
 
@@ -938,9 +942,13 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	// until RestoreDeviceObjects is called below.
 	{
 		vk::Instance *inst = deviceManager.GetVulkanInstance();
+		SIMUL_COUT << "MACDEBUG surface-create: inst=" << (void *)inst
+				   << " *inst=" << (inst ? (void *)(VkInstance)(*inst) : nullptr)
+				   << " window=" << (void *)window << std::endl;
 		if (inst && window)
 		{
 			VkResult r = glfwCreateWindowSurface(static_cast<VkInstance>(*inst), window, nullptr, &g_surface);
+			SIMUL_COUT << "MACDEBUG glfwCreateWindowSurface result=" << (int)r << " g_surface=" << (void *)g_surface << std::endl;
 			if (r != VK_SUCCESS)
 			{
 				TELEPORT_INTERNAL_CERR("glfwCreateWindowSurface failed: {}", (int)r);
@@ -956,8 +964,11 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	// the shader sources and build directory used below are found.
 	teleport_path = client::GetClientDataDirectory().parent_path().string();
 	std::string src_dir = teleport_path;
+#if __APPLE__
+	std::string build_dir = teleport_path + "/../build";
+#else
 	std::string build_dir = teleport_path + "/build_pc_client";
-
+#endif
 	{
 		renderPlatform->PushTexturePath("");
 		renderPlatform->PushTexturePath("textures");
@@ -1016,15 +1027,54 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	useOpenXR.SetRenderPlatform(renderPlatform);
 	auto &config = client::Config::GetInstance();
 	clientRenderer->Init(renderPlatform, &useOpenXR, (teleport::clientrender::PlatformWindow *)window);
+	SIMUL_COUT << "MACDEBUG before AddWindow: g_surface=" << (void *)g_surface << std::endl;
 	if (g_surface != VK_NULL_HANDLE)
 	{
 		dsmi->AddWindow(&g_surface, platform::crossplatform::PixelFormat::UNKNOWN, config.options.vsync);
+		SIMUL_COUT << "MACDEBUG AddWindow called" << std::endl;
 	}
 	dsmi->SetRenderer(clientRenderer);
 }
 
+#if defined(__APPLE__) && TELEPORT_CLIENT_USE_VULKAN
+// Points the Vulkan loader at the MoltenVK ICD bundled in Contents/Resources/vulkan/icd.d
+// (pc_client/CMakeLists.txt's macOS install() rules), so TeleportPCClient.app runs without
+// Homebrew's molten-vk keg installed. Must run before the first Vulkan call (DeviceManager's
+// global constructor doesn't touch the API, so first thing in main() is early enough); a GUI
+// app launched from Finder inherits no shell environment, so this can't just be documented as
+// something the user sets themselves.
+//
+// CFBundleGetMainBundle() resolves correctly whether TeleportPCClient is run from the build
+// tree (add_static_executable's MACOSX_BUNDLE stages a real .app there too) or after being
+// installed/dragged to /Applications - both are real bundles with a Contents/Resources.
+// If run as a bare unbundled binary (no Contents/Resources at all, e.g. copied out of the
+// .app) this finds nothing and silently leaves VK_ICD_FILENAMES unset, falling back to
+// whatever Vulkan ICDs are registered system-wide.
+static void SetupMoltenVkIcd()
+{
+	CFBundleRef mainBundle = CFBundleGetMainBundle();
+	if (!mainBundle)
+		return;
+	CFURLRef resourcesUrl = CFBundleCopyResourcesDirectoryURL(mainBundle);
+	if (!resourcesUrl)
+		return;
+	char resourcesPath[PATH_MAX];
+	if (CFURLGetFileSystemRepresentation(resourcesUrl, TRUE, reinterpret_cast<UInt8 *>(resourcesPath), PATH_MAX))
+	{
+		std::filesystem::path icdPath = std::filesystem::path(resourcesPath) / "vulkan" / "icd.d" / "MoltenVK_icd.json";
+		std::error_code		 ec;
+		if (std::filesystem::exists(icdPath, ec))
+			setenv("VK_ICD_FILENAMES", icdPath.string().c_str(), 1);
+	}
+	CFRelease(resourcesUrl);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
+#if defined(__APPLE__) && TELEPORT_CLIENT_USE_VULKAN
+	SetupMoltenVkIcd();
+#endif
 	// Force the C++ global locale to "C" so that std::regex compilation does not
 	// route through glibc UTF-8 collation (strxfrm), which is pathologically slow
 	// inside libstdc++'s _BracketMatcher::_M_make_cache and effectively hangs
@@ -1080,6 +1130,10 @@ int main(int argc, char *argv[])
 
 	// Bring up GLFW and create a window before the Vulkan instance, so that we can
 	// query the platform-specific surface extensions GLFW needs.
+	glfwSetErrorCallback([](int error, const char *description)
+	{
+		SIMUL_COUT << "MACDEBUG GLFW error " << error << ": " << description << std::endl;
+	});
 	if (!glfwInit())
 	{
 		TELEPORT_INTERNAL_CERR("glfwInit failed");
@@ -1102,6 +1156,7 @@ int main(int argc, char *argv[])
 	glfwSetFramebufferSizeCallback(g_window, GlfwFramebufferSizeCallback);
 
 	{
+		TELEPORT_INFO(filesystem::current_path().string());
 		int w, h, ch;
 		unsigned char *pixels = stbi_load("assets/textures/teleportxr.png", &w, &h, &ch, 4);
 		if (pixels)
@@ -1116,15 +1171,18 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	std::vector<std::string> required_instance_extensions;
 	{
+		std::vector<std::string> required_instance_extensions;
 		uint32_t count = 0;
 		const char **exts = glfwGetRequiredInstanceExtensions(&count);
 		for (uint32_t i = 0; i < count; i++)
-			required_instance_extensions.emplace_back(exts[i]);
-	}
+		{
+			std::string ext = exts[i];
+			required_instance_extensions.push_back(ext);
+		}
 
-	InitRendererLinux(g_window, config.enable_vr, config.dev_mode, required_instance_extensions);
+		InitRendererLinux(g_window, config.enable_vr, config.dev_mode, required_instance_extensions);
+	}
 	{
 		ImGuiIO &io = ImGui::GetIO();
 		io.SetClipboardTextFn = ImGuiSetClipboardTextGlfw;

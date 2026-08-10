@@ -69,13 +69,32 @@ if(TELEPORT_WINDOWS)
 	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
 
 elseif(TELEPORT_MACOS)
+	# Two unrelated macOS packages come out of this one configure: teleport_terminal's .pkg
+	# (below, "client" component, productbuild generator) and TeleportPCClient's drag-to-
+	# Applications .dmg (pc_client/CMakeLists.txt, "pcclient" component, DragNDrop generator).
+	# CPack only supports one generator and one CPACK_PACKAGING_INSTALL_PREFIX per invocation, so
+	# they're built by running cpack twice with CLI -D/-G overrides rather than from one
+	# CPackConfig.cmake - see README.md's "Building the macOS PC client installer" section for the
+	# exact commands. The variables set unconditionally in this branch (below) are the .pkg's
+	# defaults, used when cpack runs with no overrides.
 	set(CPACK_GENERATOR "productbuild")
 	# Same staging prefix as the Linux .deb.
 	set(CPACK_PACKAGING_INSTALL_PREFIX "/opt/teleportxr")
 	set(CPACK_PACKAGE_NAME "teleportxr")
+	# DragNDrop-specific settings for the TeleportPCClient.dmg run (cpack -G DragNDrop
+	# -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/
+	# -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller). Harmless when not using that generator.
+	set(CPACK_DMG_VOLUME_NAME "TeleportPCClient")
+	set(CPACK_DMG_FORMAT "UDZO")
 	# Reverse-DNS package identifier. Gatekeeper ties the notarisation ticket to it,
 	# so it must stay stable across releases.
 	set(CPACK_PRODUCTBUILD_IDENTIFIER "co.simul.teleportxr")
+	# .pkg only: the DragNDrop run above clears this with -D CPACK_RESOURCE_FILE_LICENSE=.
+	# DragNDrop honours it too (CPack embeds it as the .dmg's software license agreement,
+	# gating the mount on an interactive "Agree" click) - not the "drag to Applications" UX
+	# TeleportPCClient's .dmg is meant to be, and it silently breaks unattended mounting
+	# (hdiutil attach has no TTY to answer the prompt in CI and fails instantly with no
+	# output - discovered by an actual CI run hanging exactly there).
 	set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/Installers/TeleportClientLicence.txt")
 	# Set by CI to the "Developer ID Installer: ..." identity so cpack emits an
 	# already-signed .pkg; left empty for local builds, which produce an unsigned one.
@@ -113,11 +132,25 @@ endif()
 if(TELEPORT_MACOS)
 	if(TARGET teleport_terminal)
 		install(CODE "
-			file(MAKE_DIRECTORY \"\$ENV{DESTDIR}/usr/local/bin\")
+			# Absolute destination, so it escapes the packaging prefix. CPack leaves
+			# DESTDIR empty and overrides CMAKE_INSTALL_PREFIX with the staging prefix
+			# (<staging>/opt/teleportxr), making the staging root two levels up; a manual
+			# install keeps the configured prefix and honours DESTDIR.
+			if(NOT \"\$ENV{DESTDIR}\" STREQUAL \"\")
+				set(_linkdir \"\$ENV{DESTDIR}/usr/local/bin\")
+			else()
+				set(_linkdir \"\${CMAKE_INSTALL_PREFIX}/../../usr/local/bin\")
+			endif()
+			file(MAKE_DIRECTORY \"\${_linkdir}\")
 			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_terminal\"
-				\"\$ENV{DESTDIR}/usr/local/bin/teleport_terminal\" SYMBOLIC)
+				\"\${_linkdir}/teleport_terminal\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
+
+	# No manual /Applications symlink here: the CPack DragNDrop generator (used for
+	# TeleportPCClient's .dmg, cpack -G DragNDrop below) adds that symlink itself once it sees a
+	# single .app at the staging root - a hand-added one collides with it ("failed to create
+	# symbolic link ... File exists"), discovered by actually running cpack -G DragNDrop locally.
 endif()
 
 include(CPack)

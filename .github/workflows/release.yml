@@ -1,7 +1,7 @@
 name: release
 
 # Publishes a GitHub release for any pushed tag, carrying the Windows installer,
-# the Linux .deb, the macOS .pkg and the Android APK.
+# the Linux .deb, the macOS .pkg and .dmg, and the Android APK.
 #
 # This workflow does not build anything: it reuses the artifacts the four
 # build_* workflows already produced for the tagged commit. So the tagged commit
@@ -184,7 +184,7 @@ jobs:
       run: |
         set -euo pipefail
         ls -R dist
-        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/macos/*.pkg" "dist/android/*.apk"; do
+        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/macos/*.pkg" "dist/macos/*.dmg" "dist/android/*.apk"; do
           if ! compgen -G "$pattern" > /dev/null; then
             echo "::error::No file matching $pattern - refusing to publish an incomplete release."
             exit 1
@@ -213,6 +213,7 @@ jobs:
         mv dist/windows/*.exe "dist/windows/TeleportClientInstaller-${safe_tag}-x64.exe"
         mv dist/linux/*.deb   "dist/linux/teleportxr-${safe_tag}-x64.deb"
         mv dist/macos/*.pkg   "dist/macos/teleportxr-${safe_tag}-arm64.pkg"
+        mv dist/macos/*.dmg   "dist/macos/TeleportPCClientInstaller-${safe_tag}-arm64.dmg"
         mv dist/android/*.apk "dist/android/teleportxr-${safe_tag}.apk"
 
     # Gatekeeper refuses an unsigned package outright, with an error that does not
@@ -240,7 +241,7 @@ jobs:
       uses: ncipollo/release-action@v1.14.0
       with:
         tag: ${{ inputs.tag || github.ref_name }}
-        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/android/*.apk"
+        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/macos/*.dmg,dist/android/*.apk"
         bodyFile: "dist/windows/release_notes.md"
         # Re-running repairs a release published with a broken or partial asset
         # set, rather than silently doing nothing as skipIfReleaseExists did.
