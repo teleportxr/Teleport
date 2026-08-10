@@ -27,6 +27,8 @@
 #include "TeleportAudio/PC_AudioPlayer.h"
 #elif __ANDROID__
 #include "TeleportAudio/AndroidAudioPlayer.h"
+#elif __APPLE__
+#include "TeleportAudio/MacAudioPlayer.h"
 #else
 #include "TeleportAudio/LinuxAudioPlayer.h"
 #endif
@@ -162,6 +164,9 @@ namespace teleport
 #elif __ANDROID__
 			teleport::audio::AndroidAudioPlayer audioPlayer;
 			teleport::audio::AndroidAudioPlayer spatialPlaybackPlayer;
+#elif __APPLE__
+			teleport::audio::MacAudioPlayer audioPlayer;
+			teleport::audio::MacAudioPlayer spatialPlaybackPlayer;
 #else
 			teleport::audio::LinuxAudioPlayer audioPlayer;
 			teleport::audio::LinuxAudioPlayer spatialPlaybackPlayer;

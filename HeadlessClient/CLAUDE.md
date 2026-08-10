@@ -2,8 +2,11 @@
 
 Terminal-controlled Teleport client for Linux, Windows and macOS, with no GUI, GPU, or OpenXR dependency.
 
-On macOS this is the *only* client that is built: `TELEPORT_GUI_CLIENT` is forced OFF there,
-since `pc_client`/`ClientRender` need Vulkan, GLFW and an OpenXR runtime.
+On macOS this used to be the only client that would build; `pc_client`/`ClientRender` now build
+there too via MoltenVK (Vulkan on Metal) - see `pc_client/CLAUDE.md`. `TELEPORT_GUI_CLIENT` still
+defaults ON everywhere `TELEPORT_CLIENT` is, macOS included, so both clients build together
+unless it's explicitly turned off (`-DTELEPORT_GUI_CLIENT=OFF -DTELEPORT_CLIENT_USE_VULKAN=OFF`)
+for a headless-only configure.
 
 ## Purpose
 
@@ -40,7 +43,8 @@ cmake --build build_pc_client --target teleport_terminal
 `TELEPORT_HEADLESS_CLIENT` already defaults to the value of `TELEPORT_CLIENT`, so it only
 needs stating explicitly when the GUI client has been switched off.
 
-On macOS (Apple Silicon; needs the Xcode command line tools):
+On macOS (Apple Silicon; needs the Xcode command line tools), headless-only, skipping the
+Vulkan SDK and bison/flex that `pc_client` needs:
 
 ```bash
 brew install ninja pkg-config openssl@3
@@ -49,6 +53,8 @@ cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
 cmake --build build_macos
 ```
+
+To build both clients together, see `pc_client/CLAUDE.md` or the root `README.md`.
 
 Build the default target rather than just `teleport_terminal`: the Platform submodule has
 `install()` rules for libraries that `cpack` expects to exist, and a target-specific build

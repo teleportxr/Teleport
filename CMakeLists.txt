@@ -492,14 +492,11 @@ endif()
 
 option(TELEPORT_CLIENT "Build for client?" ON)
 option(TELEPORT_HEADLESS_CLIENT "Build headless terminal client?" ${TELEPORT_CLIENT})
-# The GUI client (pc_client/ClientRender) needs Vulkan, GLFW and an OpenXR runtime. The
-# headless terminal client needs none of those, so it can be built on its own - which is
-# what macOS does, there being no usable OpenXR runtime there.
+# The GUI client (pc_client/ClientRender) needs Vulkan and GLFW, both of which now build on
+# macOS via MoltenVK (see firstparty/Platform/CMake/Variables.cmake). It also links an OpenXR
+# loader, but there is still no OpenXR *runtime* for macOS - ENABLE_VR defaults off there
+# (TeleportClient/Config.h) so the client never tries to create a real XR session.
 option(TELEPORT_GUI_CLIENT "Build the GUI/OpenXR PC client?" ${TELEPORT_CLIENT})
-if(TELEPORT_MACOS AND TELEPORT_GUI_CLIENT)
-	message(STATUS "macOS: forcing TELEPORT_GUI_CLIENT OFF; only the headless client is ported.")
-	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
-endif()
 if(NOT TELEPORT_CLIENT)
 	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
 endif()
@@ -507,12 +504,11 @@ endif()
 if(TELEPORT_CLIENT)
 	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 		option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
-	elseif(TELEPORT_MACOS)
-		# No MoltenVK port; the headless client draws nothing. Leaving this ON would make
-		# libavstream compile surface_vulkan.cpp and want a PlatformVulkan target that the
-		# Platform submodule does not build on Darwin.
-		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	else()
+		# On macOS this builds PlatformVulkan against MoltenVK (Platform submodule's
+		# firstparty/Platform/CMake/Variables.cmake and CMakeLists.txt now add a PLATFORM_MACOS
+		# branch alongside PLATFORM_WINDOWS/PLATFORM_LINUX). Requires the Vulkan SDK for macOS
+		# (bundles MoltenVK + glslangValidator) to be installed.
 		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ON)
 	endif()
 	if( ${TELEPORT_CLIENT_USE_D3D12})

@@ -877,7 +877,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	}
 	crossplatform::Viewport						  viewport = renderPlatform->GetViewport(deviceContext, 0);
 
-	static std::vector<crossplatform::ViewStruct> defaultViewStructs;
+	std::vector<crossplatform::ViewStruct> defaultViewStructs;
 	if (mvgdc)
 	{
 		defaultViewStructs = mvgdc->viewStructs;
@@ -967,7 +967,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	if (mvgdc)
 	{
 		mvgdc->viewStructs = defaultViewStructs;
-		for (auto s : mvgdc->viewStructs)
+		for (auto &s : mvgdc->viewStructs)
 		{
 			s.Init();
 		}

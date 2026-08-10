@@ -1,7 +1,7 @@
 name: release
 
 # Publishes a GitHub release for any pushed tag, carrying the Windows installer,
-# the Linux .deb, the macOS .pkg and the Android APK.
+# the Linux .deb, the macOS .pkg and .dmg, and the Android APK.
 #
 # This workflow does not build anything: it reuses the artifacts the four
 # build_* workflows already produced for the tagged commit. So the tagged commit
@@ -15,6 +15,14 @@ name: release
 # this file runs. What gets released is the `tag` input, so set it - leaving it blank
 # releases the dropdown's ref under its own name.
 #
+# If the `tag` input names a tag that doesn't exist yet, it is created here at the
+# current HEAD of main and pushed, so a release can be cut without a separate manual
+# `git tag && git push` step first. This does NOT relax the requirement above: main's
+# HEAD still needs green build_* runs, or the download steps below fail as usual.
+# Creating the tag also satisfies the push-tags trigger below, so the same release
+# runs a second time for that tag; the concurrency group keys on the tag so that run
+# queues behind this one instead of racing it for the same release assets.
+#
 # The macOS package is taken signed when the build had the Apple credentials and
 # unsigned when it did not; an unsigned one is released with a note in the body
 # telling users to clear the quarantine flag.
@@ -23,12 +31,15 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (defaults to the ref this workflow runs on)"
+        description: "Tag to release (defaults to the ref this workflow runs on). If it doesn't exist yet, it is created at main's HEAD."
         required: false
   push:
     tags:
       # "**" rather than "*" so tags containing a slash (release/1.0) match too.
       - "**"
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
 
 jobs:
   release:
@@ -39,6 +50,30 @@ jobs:
       actions: read     # list the runs and artifacts of the build_* workflows
 
     steps:
+    # Only fires on manual dispatch of a named tag - a tag-push trigger means the tag
+    # already exists by definition, and a blank `tag` input falls back to releasing
+    # the dropdown's ref under its own name (see the comment above), which isn't a
+    # real tag to create.
+    #
+    # main is hard-coded rather than the dispatched ref deliberately: this creates
+    # a release tag, and those should only ever point at main, regardless of which
+    # branch the "Use workflow from" dropdown happened to be set to.
+    - name: Create the tag at main's HEAD if it doesn't exist yet
+      if: github.event_name == 'workflow_dispatch' && inputs.tag != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{github.token}}
+        TAG: ${{ inputs.tag }}
+      run: |
+        set -euo pipefail
+        if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+          echo "$TAG already exists - releasing it as-is."
+          exit 0
+        fi
+        main_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+        echo "$TAG does not exist yet - creating it at main's HEAD ($main_sha)"
+        gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$TAG" -f sha="$main_sha"
+
     # github.sha is NOT the commit being released. On workflow_dispatch it is the head of
     # whatever ref the "Use workflow from" dropdown selected, which has nothing to do with
     # the `tag` input - dispatching against main while asking for tag v2.0 would otherwise
@@ -149,7 +184,7 @@ jobs:
       run: |
         set -euo pipefail
         ls -R dist
-        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/macos/*.pkg" "dist/android/*.apk"; do
+        for pattern in "dist/windows/*.exe" "dist/linux/*.deb" "dist/macos/*.pkg" "dist/macos/*.dmg" "dist/android/*.apk"; do
           if ! compgen -G "$pattern" > /dev/null; then
             echo "::error::No file matching $pattern - refusing to publish an incomplete release."
             exit 1
@@ -178,6 +213,7 @@ jobs:
         mv dist/windows/*.exe "dist/windows/TeleportClientInstaller-${safe_tag}-x64.exe"
         mv dist/linux/*.deb   "dist/linux/teleportxr-${safe_tag}-x64.deb"
         mv dist/macos/*.pkg   "dist/macos/teleportxr-${safe_tag}-arm64.pkg"
+        mv dist/macos/*.dmg   "dist/macos/TeleportPCClientInstaller-${safe_tag}-arm64.dmg"
         mv dist/android/*.apk "dist/android/teleportxr-${safe_tag}.apk"
 
     # Gatekeeper refuses an unsigned package outright, with an error that does not
@@ -205,7 +241,7 @@ jobs:
       uses: ncipollo/release-action@v1.14.0
       with:
         tag: ${{ inputs.tag || github.ref_name }}
-        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/android/*.apk"
+        artifacts: "dist/windows/*.exe,dist/linux/*.deb,dist/macos/*.pkg,dist/macos/*.dmg,dist/android/*.apk"
         bodyFile: "dist/windows/release_notes.md"
         # Re-running repairs a release published with a broken or partial asset
         # set, rather than silently doing nothing as skipIfReleaseExists did.
