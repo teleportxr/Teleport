@@ -349,6 +349,14 @@ jobs:
         spctl --assess --type install -vv "$PKG"
 
         DMG=$(ls build_macos/*.dmg)
+        # Unlike the .pkg (productbuild itself signs the installer package) and the .app inside
+        # (signed by pc_client/CMakeLists.txt's install(CODE) block), nothing has signed the .dmg
+        # *container* itself yet - cpack's DragNDrop generator doesn't. Notarization of an
+        # unsigned container still succeeds (Apple only inspects its signed contents), but
+        # `spctl --context context:primary-signature` then rejects it with "no usable signature"
+        # - caught by an actual CI run. Sign the container before submitting it.
+        codesign --force --sign "$APP_IDENTITY" --timestamp "$DMG"
+        codesign --verify --verbose=2 "$DMG"
         xcrun notarytool submit "$DMG" \
           --key "$RUNNER_TEMP/AuthKey.p8" \
           --key-id "$APPLE_API_KEY_ID" \
