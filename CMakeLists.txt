@@ -102,7 +102,13 @@ cmake_policy(SET CMP0135 NEW)
 cmake_policy(SET CMP0077 NEW)
 
 set(PLATFORM_USE_FMT ON)
-set(PLATFORM_SUPPORT_D3D12 ${TELEPORT_WINDOWS})
+# CACHE (without FORCE) only seeds the default when the variable isn't already defined, so a
+# command-line -DPLATFORM_SUPPORT_D3D12=... (as build_pc_client.yml passes) still wins. A plain
+# set() here would silently stomp that override on every configure, which used to leave the
+# DirectX12 platform library configured (and install()-ed by CPack) even when the CI workflow
+# explicitly disabled it and nothing links it — the narrow MSBuild target list then never built
+# it, so packaging failed with "file INSTALL cannot find ... PlatformDirectX12_MT.lib".
+set(PLATFORM_SUPPORT_D3D12 ${TELEPORT_WINDOWS} CACHE BOOL "Support Direct3D 12 in Platform")
 set(PLATFORM_USE_ASSIMP OFF CACHE BOOL "" FORCE)
 set(PLATFORM_BUILD_ASSIMP OFF CACHE BOOL "" FORCE)
 set(PLATFORM_SUPPORT_D3D11 OFF)
@@ -295,7 +301,19 @@ FetchContent_Declare(
   GIT_TAG        d4d4c9599c0df978b9ad4d1c2425ed26a9c12058
   SOURCE_DIR cpp-httplib
 )
+# On Windows, cpp-httplib's own CMakeLists.txt installs its CMake package
+# config files to "${CMAKE_INSTALL_PREFIX}/cmake/httplib", baking the
+# absolute prefix into the install DESTINATION. CPack's NSIS component
+# install forbids absolute DESTINATION paths, so packaging fails even
+# though the compile succeeds. We only ever use cpp-httplib as a
+# header-only include (see TeleportClient/TeleportServer CMakeLists), so
+# shadow CMAKE_INSTALL_PREFIX with a relative value just for this fetch to
+# keep its computed destination relative.
+set(_cpp_httplib_saved_install_prefix ${CMAKE_INSTALL_PREFIX})
+set(CMAKE_INSTALL_PREFIX ".")
 FetchContent_MakeAvailable(cpp-httplib)
+set(CMAKE_INSTALL_PREFIX ${_cpp_httplib_saved_install_prefix})
+unset(_cpp_httplib_saved_install_prefix)
 
 # Get libopus (audio codec for WebRTC media transport - see docs/protocol/audio.rst)
 set(OPUS_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
@@ -474,14 +492,11 @@ endif()
 
 option(TELEPORT_CLIENT "Build for client?" ON)
 option(TELEPORT_HEADLESS_CLIENT "Build headless terminal client?" ${TELEPORT_CLIENT})
-# The GUI client (pc_client/ClientRender) needs Vulkan, GLFW and an OpenXR runtime. The
-# headless terminal client needs none of those, so it can be built on its own - which is
-# what macOS does, there being no usable OpenXR runtime there.
+# The GUI client (pc_client/ClientRender) needs Vulkan and GLFW, both of which now build on
+# macOS via MoltenVK (see firstparty/Platform/CMake/Variables.cmake). It also links an OpenXR
+# loader, but there is still no OpenXR *runtime* for macOS - ENABLE_VR defaults off there
+# (TeleportClient/Config.h) so the client never tries to create a real XR session.
 option(TELEPORT_GUI_CLIENT "Build the GUI/OpenXR PC client?" ${TELEPORT_CLIENT})
-if(TELEPORT_MACOS AND TELEPORT_GUI_CLIENT)
-	message(STATUS "macOS: forcing TELEPORT_GUI_CLIENT OFF; only the headless client is ported.")
-	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
-endif()
 if(NOT TELEPORT_CLIENT)
 	set(TELEPORT_GUI_CLIENT OFF CACHE BOOL "" FORCE)
 endif()
@@ -489,12 +504,11 @@ endif()
 if(TELEPORT_CLIENT)
 	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 		option(TELEPORT_CLIENT_USE_D3D12 "Use D3D12?" OFF)
-	elseif(TELEPORT_MACOS)
-		# No MoltenVK port; the headless client draws nothing. Leaving this ON would make
-		# libavstream compile surface_vulkan.cpp and want a PlatformVulkan target that the
-		# Platform submodule does not build on Darwin.
-		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" OFF)
 	else()
+		# On macOS this builds PlatformVulkan against MoltenVK (Platform submodule's
+		# firstparty/Platform/CMake/Variables.cmake and CMakeLists.txt now add a PLATFORM_MACOS
+		# branch alongside PLATFORM_WINDOWS/PLATFORM_LINUX). Requires the Vulkan SDK for macOS
+		# (bundles MoltenVK + glslangValidator) to be installed.
 		option(TELEPORT_CLIENT_USE_VULKAN "Use Vulkan?" ON)
 	endif()
 	if( ${TELEPORT_CLIENT_USE_D3D12})
@@ -719,8 +733,14 @@ if(TELEPORT_SERVER)
 endif()
 # ozz-animation is used only by ClientRender, so a headless-only build skips the fetch entirely.
 if(TELEPORT_GUI_CLIENT)
-	set(ozz_build_tools ON CACHE BOOL "" FORCE)
-	set(ozz_build_gltf ON CACHE BOOL "" FORCE)
+	# ClientRender only links ozz_animation and ozz_animation_offline (see
+	# ClientRender/CMakeLists.txt); it never touches ozz_geometry, ozz_options,
+	# ozz_animation_tools, or the gltf2ozz command-line converter. Leaving these ON used to
+	# configure those extra targets (and their unconditional install() rules) without CI's
+	# narrow MSBuild target list ever actually building them, so CPack failed trying to
+	# install .dll/.exe files that were never produced.
+	set(ozz_build_tools OFF CACHE BOOL "" FORCE)
+	set(ozz_build_gltf OFF CACHE BOOL "" FORCE)
 	set(ozz_build_samples OFF CACHE BOOL "" FORCE)
 	set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
 	set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
@@ -787,6 +807,25 @@ if(TELEPORT_CLIENT OR TELEPORT_BUILD_DOCS)
 		add_subdirectory(client/JavaScriptWorker)
 	endif()
 	#message("3 PLATFORM_GRAPHICS_APIS ${PLATFORM_GRAPHICS_APIS}")
+endif()
+
+# draco (thirdparty/draco/cmake/draco_install.cmake) and ozz-animation both unconditionally
+# install a handful of command-line tool targets (draco_decoder, draco_encoder,
+# draco_transcoder, ozz_options, ozz_geometry, and — unless ozz_build_tools/ozz_build_gltf
+# above suppress them — ozz_animation_tools/gltf2ozz) that nothing in Teleport actually links.
+# The Windows CI workflow (build_pc_client.yml) builds only TeleportPCClient/teleport_terminal
+# via a targeted MSBuild invocation rather than the full solution, so these extra targets are
+# never compiled — yet CPack still tries to install their output files afterwards and fails
+# with "file INSTALL cannot find ... .exe/.dll". Force them to build alongside the client so
+# their install rules always have something to install. Guarded with if(TARGET ...) since
+# which of these exist depends on upstream options and platform.
+if(TARGET TeleportPCClient)
+	foreach(_extra_install_only_target draco_decoder draco_encoder draco_transcoder ozz_options ozz_geometry ozz_animation_tools gltf2ozz)
+		if(TARGET ${_extra_install_only_target})
+			add_dependencies(TeleportPCClient ${_extra_install_only_target})
+		endif()
+	endforeach()
+	unset(_extra_install_only_target)
 endif()
 
 if(TELEPORT_CLIENT_USE_D3D12)
