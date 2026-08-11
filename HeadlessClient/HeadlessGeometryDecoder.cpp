@@ -43,6 +43,7 @@ avs::Result HeadlessGeometryDecoder::decode(avs::uid							 server_uid,
 	case avs::GeometryPayloadType::MeshPointer:
 	case avs::GeometryPayloadType::TexturePointer:
 	case avs::GeometryPayloadType::MaterialPointer:
+	case avs::GeometryPayloadType::AnimationPointer:
 		return DecodePointer(r, uid, type);
 	default:
 		// Mesh, Material, MaterialInstance, Texture, Animation, FontAtlas, TextCanvas: recorded
