@@ -24,6 +24,7 @@
 
 #include "ControlProtocol.h"
 #include "SocketUtil.h"
+#include "TeleportCore/StringFunctions.h"
 
 #include <cli/cli.h>
 #include <cli/clilocalsession.h>
@@ -109,9 +110,9 @@ namespace
 	{
 		CliOptions opts;
 		std::vector<std::string> operands;
-		if (const char *envPort = std::getenv("TELEPORT_SERVICE_PORT"))
+		if (const std::string envPort = teleport::core::GetEnvVar("TELEPORT_SERVICE_PORT"); !envPort.empty())
 		{
-			if (int p = std::atoi(envPort); p > 0 && p < 65536)
+			if (int p = std::atoi(envPort.c_str()); p > 0 && p < 65536)
 				opts.port = static_cast<uint16_t>(p);
 		}
 
@@ -229,10 +230,10 @@ namespace
 	std::string HistoryFilePath()
 	{
 #ifdef _WIN32
-		const char *base = std::getenv("LOCALAPPDATA");
-		if (!base)
-			base = std::getenv("USERPROFILE");
-		std::string dir = base ? std::string(base) + "/TeleportXR" : ".";
+		std::string base = teleport::core::GetEnvVar("LOCALAPPDATA");
+		if (base.empty())
+			base = teleport::core::GetEnvVar("USERPROFILE");
+		std::string dir = !base.empty() ? base + "/TeleportXR" : ".";
 #else
 		const char *base = std::getenv("HOME");
 		std::string dir = base ? std::string(base) + "/.local/share/TeleportXR" : ".";

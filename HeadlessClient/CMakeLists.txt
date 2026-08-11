@@ -124,7 +124,9 @@ set_target_properties(teleportd PROPERTIES FOLDER Client)
 # front end, the socket shim, and (on Windows) winsock.
 
 add_static_executable(teleport_cli CONSOLE SOURCES cli_main.cpp SocketUtil.h SocketUtil.cpp ControlProtocol.h)
-target_include_directories(teleport_cli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# ${CMAKE_CURRENT_SOURCE_DIR}/.. resolves "TeleportCore/StringFunctions.h" (GetEnvVar,
+# header-only) without linking TeleportCore.
+target_include_directories(teleport_cli PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_compile_features(teleport_cli PRIVATE cxx_std_17)
 target_compile_definitions(teleport_cli PRIVATE ${def_platform})
 # Interactive line editing, persistent history and tab completion. Header-only;
