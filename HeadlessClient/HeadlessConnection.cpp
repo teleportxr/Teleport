@@ -94,11 +94,13 @@ void HeadlessConnection::TickOnce(double time, double dt)
 	if (sessionClient->IsConnected())
 	{
 		auto snapshot = inputState.GetSnapshot();
+		// The origin valid counter comes from the server's SetOriginNodeCommand,
+		// which lands on the command interface — the input state never sees it.
 		sessionClient->Frame(
 			snapshot.displayInfo,
 			snapshot.headPose,
 			snapshot.controllerPoses,
-			snapshot.originValidCounter,
+			commandInterface ? commandInterface->GetOriginValidCounter() : 0,
 			snapshot.input,
 			snapshot.time,
 			dt

@@ -50,6 +50,10 @@ public:
 
 	std::weak_ptr<teleport::client::SessionClient> GetSessionClient() const { return sessionClient; }
 	void SetMode(HeadlessMode newMode) { mode = newMode; }
+	//! The valid_counter from the last SetOriginNodeCommand. SessionClient::Frame gates
+	//! pose sending on this being non-zero, so the tick loop reads it from here — it
+	//! originates from the server, not from user input.
+	uint64_t GetOriginValidCounter() const { return originValidCounter; }
 
 private:
 	std::weak_ptr<teleport::client::SessionClient> sessionClient;
