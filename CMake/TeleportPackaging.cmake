@@ -69,7 +69,7 @@ if(TELEPORT_WINDOWS)
 	set(CPACK_NSIS_MENU_LINKS "build\\\\bin\\\\Release\\\\TeleportPCClient.exe" "Teleport VR Client")
 
 elseif(TELEPORT_MACOS)
-	# Two unrelated macOS packages come out of this one configure: teleport_terminal's .pkg
+	# Two unrelated macOS packages come out of this one configure: teleportd's .pkg
 	# (below, "client" component, productbuild generator) and TeleportPCClient's drag-to-
 	# Applications .dmg (pc_client/CMakeLists.txt, "pcclient" component, DragNDrop generator).
 	# CPack only supports one generator and one CPACK_PACKAGING_INSTALL_PREFIX per invocation, so
@@ -86,11 +86,6 @@ elseif(TELEPORT_MACOS)
 	# -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller). Harmless when not using that generator.
 	set(CPACK_DMG_VOLUME_NAME "TeleportPCClient")
 	set(CPACK_DMG_FORMAT "UDZO")
-	# Window size/position and icon size/layout for the Finder window the .dmg opens to - see
-	# Installers/dmg_setup.applescript. CPack runs this via osascript against a temporary,
-	# writable copy of the volume to build a .DS_Store, then bakes that into the final image;
-	# it needs a logged-in GUI session (present locally and on GitHub's macOS runners).
-	set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/Installers/dmg_setup.applescript")
 	# Reverse-DNS package identifier. Gatekeeper ties the notarisation ticket to it,
 	# so it must stay stable across releases.
 	set(CPACK_PRODUCTBUILD_IDENTIFIER "co.simul.teleportxr")
@@ -135,7 +130,7 @@ endif()
 # macOS must use /usr/local/bin: /usr/bin is protected by System Integrity Protection
 # and a package that writes there fails to install.
 if(TELEPORT_MACOS)
-	if(TARGET teleport_terminal)
+	if(TARGET teleportd)
 		install(CODE "
 			# Absolute destination, so it escapes the packaging prefix. CPack leaves
 			# DESTDIR empty and overrides CMAKE_INSTALL_PREFIX with the staging prefix
@@ -147,8 +142,10 @@ if(TELEPORT_MACOS)
 				set(_linkdir \"\${CMAKE_INSTALL_PREFIX}/../../usr/local/bin\")
 			endif()
 			file(MAKE_DIRECTORY \"\${_linkdir}\")
-			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_terminal\"
-				\"\${_linkdir}/teleport_terminal\" SYMBOLIC)
+			file(CREATE_LINK \"/opt/teleportxr/bin/teleportd\"
+				\"\${_linkdir}/teleportd\" SYMBOLIC)
+			file(CREATE_LINK \"/opt/teleportxr/bin/teleport_cli\"
+				\"\${_linkdir}/teleport_cli\" SYMBOLIC)
 		" COMPONENT client)
 	endif()
 

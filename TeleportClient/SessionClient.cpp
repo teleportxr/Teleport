@@ -22,7 +22,11 @@ static_assert(sizeof(teleport::core::ClientDynamicLighting) == 57, "ClientDynami
 using namespace teleport;
 using namespace client;
 using namespace clientrender;
-avs::Timestamp tBegin;
+//! Base timestamp for the static GetConnectElapsedMs() logging helper, which is
+//! called from ClientRender without a SessionClient instance to hand it. It is set
+//! by every Connect(), so with multiple concurrent sessions it reflects the most
+//! recent one; per-session wire timestamps use the tBegin member instead.
+static avs::Timestamp tBeginLogBase;
 using std::string;
 
 using namespace std::string_literals;
@@ -239,6 +243,7 @@ bool SessionClient::Connect(const char *remote_ip, uint timeout, avs::uid cl_id)
 		return true;
 	}
 	tBegin	 = avs::Platform::getTimestamp();
+	tBeginLogBase = tBegin;
 	TELEPORT_INTERNAL_COUT(Time, "T+0.0 ms: Connect initiated to {}", remote_ip);
 	remoteIP = remote_ip;
 	// TODO: don't reset this if reconnecting.
@@ -333,7 +338,6 @@ void SessionClient::Frame(const avs::DisplayInfo								&displayInfo,
 	{
 		if (connectionStatus == ConnectionStatus::CONNECTED)
 		{
-			static double sendInterval = 0.1;
 			if (time - lastSendTime > sendInterval)
 			{
 				SendDisplayInfo(displayInfo);
@@ -526,7 +530,7 @@ void SessionClient::TimestampMessage(teleport::core::ClientMessage &msg)
 double SessionClient::GetConnectElapsedMs()
 {
 	auto now = avs::Platform::getTimestamp();
-	return avs::Platform::getTimeElapsedInMilliseconds(tBegin, now);
+	return avs::Platform::getTimeElapsedInMilliseconds(tBeginLogBase, now);
 }
 
 void SessionClient::SendNodePoses(const teleport::core::Pose &headPose, const std::map<avs::uid, teleport::core::PoseDynamic> poses)

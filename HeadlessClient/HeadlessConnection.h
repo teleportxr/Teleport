@@ -8,11 +8,14 @@
 #include <memory>
 #include <string>
 
-class HeadlessClient
+//! One streaming connection to one Teleport server. Formerly the monolithic
+//! HeadlessClient; now owned in multiples by ConnectionManager, one instance per
+//! open connection. Access from any thread is serialised by the manager's mutex.
+class HeadlessConnection
 {
 public:
-	HeadlessClient();
-	~HeadlessClient();
+	HeadlessConnection();
+	~HeadlessConnection();
 
 	bool Connect(const std::string &url);
 	void Disconnect();
@@ -21,6 +24,7 @@ public:
 
 	bool IsConnected() const;
 	std::string GetStatus() const;
+	const std::string &GetUrl() const { return url; }
 
 	//! Reports on the geometry the server has streamed. `what` selects the section:
 	//! empty for a summary, "nodes" for the tracked node list, "resources" for pointer URLs.
@@ -45,6 +49,7 @@ private:
 	void ProcessVideo();
 
 	HeadlessMode currentMode = HeadlessMode::Minimal;
+	std::string url;
 	teleport::client::TabContext tabContext;
 	std::shared_ptr<teleport::client::SessionClient> sessionClient;
 	//! Uid that sessionClient was resolved from, so we notice when TabContext promotes

@@ -82,10 +82,6 @@ target_include_directories(avatar_validation_cache PRIVATE
    ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
    ${CMAKE_SOURCE_DIR}/libavstream/export_include)
 
-# spatial_audio exercises the client-side SpatialAudioMixer: the spatialisation
-# maths (header-only) and multi-source Opus mixing. Links the TeleportAudio
-# static library (which carries the mixer + LinuxAudioPlayer/PulseAudio) and
-# libopus for the test's synthetic Opus frames.
 # identity exercises the provider-agnostic identity manager with a fake provider:
 # that a sign-in is remembered across sessions without contacting the provider, and
 # that signing out forgets it. It links the TeleportClient library, since the manager
@@ -98,6 +94,50 @@ if(TARGET TeleportClient)
       ${CMAKE_SOURCE_DIR}
       ${CMAKE_SOURCE_DIR}/libavstream/export_include
       ${CMAKE_SOURCE_DIR}/thirdparty/json)
+endif()
+
+# repl_command_parser exercises the whitespace-tokenising line parser shared by the
+# local control server (CommandProcessor) and the legacy stdin REPL grammar. Compiles
+# ReplCommandParser.cpp directly, so it needs neither libavstream nor TeleportClient.
+add_executable(repl_command_parser
+   test_repl_command_parser.cpp
+   ${CMAKE_SOURCE_DIR}/HeadlessClient/ReplCommandParser.cpp)
+add_test(NAME repl_command_parser COMMAND repl_command_parser)
+target_link_libraries(repl_command_parser PRIVATE Catch2::Catch2WithMain)
+target_include_directories(repl_command_parser PRIVATE ${CMAKE_SOURCE_DIR}/HeadlessClient)
+
+# control_protocol exercises the dot-stuffed wire framing in ControlProtocol.h
+# (header-only) shared by teleportd's control server and teleport_cli, plus the
+# ReplCommandParser tokeniser both of them use. Compiles ReplCommandParser.cpp
+# directly (not header-only), same as repl_command_parser above.
+add_executable(control_protocol
+   test_control_protocol.cpp
+   ${CMAKE_SOURCE_DIR}/HeadlessClient/ReplCommandParser.cpp)
+add_test(NAME control_protocol COMMAND control_protocol)
+target_link_libraries(control_protocol PRIVATE Catch2::Catch2WithMain)
+target_include_directories(control_protocol PRIVATE ${CMAKE_SOURCE_DIR}/HeadlessClient)
+
+# control_processor is a behavioural test for CommandProcessor, the local control
+# server's command dispatcher, run against a real ConnectionManager with no
+# connections created (see the test file for why "connect" itself is out of scope
+# here). ConnectionManager pulls in HeadlessConnection and so the whole of
+# TeleportClient, hence linking the same teleport_headless_core static library
+# teleportd and teleport_cli are built from, guarded the same way the
+# identity test above guards on TeleportClient.
+if(TARGET teleport_headless_core)
+   add_executable(control_processor test_control_processor.cpp)
+   add_test(NAME control_processor COMMAND control_processor)
+   target_link_libraries(control_processor PRIVATE Catch2::Catch2WithMain teleport_headless_core)
+   target_include_directories(control_processor PRIVATE ${CMAKE_SOURCE_DIR}/HeadlessClient)
+endif()
+
+# End-to-end: launch teleportd and drive it with teleport_cli over the real control
+# socket (ping, multi-connection management, CLI exit without disconnecting the
+# service, remote shutdown). Bash only; Windows CI uses the PowerShell equivalent.
+if(TARGET teleportd AND (TELEPORT_UNIX OR TELEPORT_MACOS))
+   add_test(NAME control_integration
+      COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/control_integration.sh
+         $<TARGET_FILE:teleportd> $<TARGET_FILE:teleport_cli>)
 endif()
 
 # Guarded on the target rather than built unconditionally: a headless-only build

@@ -581,6 +581,30 @@ if(TELEPORT_WINDOWS)
 	set(OPENSSL_CRYPTO_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libcrypto.lib CACHE FILEPATH "" FORCE)
 	set(OPENSSL_LIBRARIES ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY} CACHE STRING "" FORCE)
 	message("OPENSSL_CRYPTO_LIBRARY ${OPENSSL_CRYPTO_LIBRARY}")
+	# The seeding above is not sufficient on its own: on MSVC, FindOpenSSL derives its
+	# imported targets from its own LIB_EAY/SSL_EAY search (the pre-seeded
+	# OPENSSL_*_LIBRARY values are only honoured on non-MSVC platforms), and that search
+	# can still land on the runner's shared OpenSSL. An import libcrypto.lib then enters
+	# the link via OpenSSL::SSL alongside the bundled static archive, and any target
+	# that pulls members from the static one gets LNK2005 (BIO_*/SHA256 "already defined
+	# in libcrypto.lib(libcrypto-3-x64.dll)"), as happened to teleportd. FindOpenSSL only
+	# creates OpenSSL::SSL / OpenSSL::Crypto when they do not already exist, so define
+	# them here, pinned to the bundled static libs. ws2_32/crypt32 mirror the interface
+	# dependencies the module itself adds for static OpenSSL on Windows.
+	if(NOT TARGET OpenSSL::Crypto)
+		add_library(OpenSSL::Crypto UNKNOWN IMPORTED GLOBAL)
+		set_target_properties(OpenSSL::Crypto PROPERTIES
+			IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libcrypto.lib"
+			INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include"
+			INTERFACE_LINK_LIBRARIES "ws2_32;crypt32")
+	endif()
+	if(NOT TARGET OpenSSL::SSL)
+		add_library(OpenSSL::SSL UNKNOWN IMPORTED GLOBAL)
+		set_target_properties(OpenSSL::SSL PROPERTIES
+			IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libssl.lib"
+			INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/include"
+			INTERFACE_LINK_LIBRARIES "OpenSSL::Crypto")
+	endif()
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/Windows)
 	#add_subdirectory(thirdparty/srt/submodules/pthread-win32)
 
@@ -813,7 +837,7 @@ endif()
 # install a handful of command-line tool targets (draco_decoder, draco_encoder,
 # draco_transcoder, ozz_options, ozz_geometry, and — unless ozz_build_tools/ozz_build_gltf
 # above suppress them — ozz_animation_tools/gltf2ozz) that nothing in Teleport actually links.
-# The Windows CI workflow (build_pc_client.yml) builds only TeleportPCClient/teleport_terminal
+# The Windows CI workflow (build_pc_client.yml) builds only TeleportPCClient/teleportd
 # via a targeted MSBuild invocation rather than the full solution, so these extra targets are
 # never compiled — yet CPack still tries to install their output files afterwards and fails
 # with "file INSTALL cannot find ... .exe/.dll". Force them to build alongside the client so

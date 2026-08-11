@@ -287,6 +287,14 @@ namespace teleport
 			uint64_t clientID=0;
 			double time=0.0;
 			double lastSendTime=0.0;
+			//! Interval between outgoing state updates while connected. Was a
+			//! function-local static in Frame(), shared by every SessionClient in
+			//! the process; per-instance so concurrent connections don't interact.
+			double sendInterval=0.1;
+			//! Timestamp of the current connection attempt, base for session-relative
+			//! message timestamps. Was a file-scope global in SessionClient.cpp,
+			//! likewise shared by all sessions.
+			avs::Timestamp tBegin;
 			float latency_milliseconds = 0.0;
 			int time_since_origin_request=0;
 			// State received from server.
