@@ -7,6 +7,7 @@
 #include "TeleportClient/Identity.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
+#include "TeleportCore/StringFunctions.h"
 #include "Platform/Core/FileLoader.h"
 #include <atomic>
 #include <chrono>
@@ -54,9 +55,10 @@ int main(int argc, char *argv[])
 {
 	// Control port: -p <port> (or -p<port>), else TELEPORT_SERVICE_PORT, else default.
 	uint16_t port = teleport_control::DEFAULT_PORT;
-	if (const char *envPort = std::getenv("TELEPORT_SERVICE_PORT"))
+	const std::string envPort = teleport::core::GetEnvVar("TELEPORT_SERVICE_PORT");
+	if (!envPort.empty())
 	{
-		if (int p = std::atoi(envPort); p > 0 && p < 65536)
+		if (int p = std::atoi(envPort.c_str()); p > 0 && p < 65536)
 			port = static_cast<uint16_t>(p);
 	}
 	for (int i = 1; i < argc; i++)
