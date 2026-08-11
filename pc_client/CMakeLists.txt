@@ -46,7 +46,7 @@ elseif(PLATFORM_LINUX)
 	add_static_executable( TeleportPCClient CONSOLE SOURCES ${srcs} ${shaders} ${shader_includes} ${inifiles})
 elseif(TELEPORT_MACOS)
 	set(def_platform PLATFORM_MACOS)
-	# A real .app bundle, not a bare CONSOLE binary (unlike teleport_terminal): the icon and
+	# A real .app bundle, not a bare CONSOLE binary (unlike teleportd/teleport_cli): the icon and
 	# Info.plist below only take effect on Finder/Dock/Launchpad for a proper bundle, and
 	# MACOSX_BUNDLE (added to add_static_executable in firstparty/Platform/CMake/Include.cmake)
 	# makes CMake stage one in the build tree too, so the icon works pre-install as well as
@@ -253,7 +253,7 @@ endif()
 # absolute /assets/textures, which lands at the root of the target filesystem.
 # TELEPORT_CLIENT_COMPONENT is "client" everywhere except macOS, where TeleportPCClient is
 # packaged as its own "pcclient" CPack component (a DragNDrop .dmg, CMake/TeleportPackaging.cmake)
-# separate from teleport_terminal's "client" component (a productbuild .pkg,
+# separate from teleportd's "client" component (a productbuild .pkg,
 # HeadlessClient/CMakeLists.txt) - the two need different generators, so they can't share a
 # component.
 set(TELEPORT_CLIENT_COMPONENT client)

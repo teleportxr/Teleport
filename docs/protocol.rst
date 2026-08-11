@@ -97,3 +97,4 @@ The data source may be the same server, or it may be one or more other sources.
 	protocol/input
 	protocol/asset_portability
 	protocol/reconnection
+	protocol/local_control

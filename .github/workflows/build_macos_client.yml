@@ -1,9 +1,10 @@
 name: build_macos_client
 
 # Builds, signs, notarises and packages both macOS clients for Apple Silicon: the headless
-# terminal client (teleport_terminal, a productbuild .pkg) and the GUI client (TeleportPCClient,
-# a drag-to-Applications DragNDrop .dmg) - see CMake/TeleportPackaging.cmake for why they're two
-# separate CPack packages from one configure. TeleportPCClient builds via MoltenVK (Vulkan on
+# terminal client (teleportd, plus its teleport_cli front end; both ship in one productbuild
+# .pkg) and the GUI client (TeleportPCClient, a drag-to-Applications DragNDrop .dmg) - see
+# CMake/TeleportPackaging.cmake for why they're two separate CPack packages from one configure.
+# TeleportPCClient builds via MoltenVK (Vulkan on
 # Metal); OpenXR still has no macOS runtime, so ENABLE_VR stays off there (TeleportClient/Config.h)
 # and UseOpenXR never calls xrCreateInstance.
 #
@@ -225,7 +226,7 @@ jobs:
           -DTELEPORT_MACOS_APP_IDENTITY="${APP_IDENTITY:-}"
 
     - name: Build
-      # The default target, not just teleport_terminal/TeleportPCClient: the Platform submodule
+      # The default target, not just teleportd/teleport_cli/TeleportPCClient: the Platform submodule
       # has install() rules for libraries (ImGui_MT among them) that cpack expects to exist,
       # and a target-specific build would leave them unbuilt. Same as the Linux job.
       run: cmake --build build_macos --config ${{ env.WORKFLOW_BUILD_TYPE }}
@@ -236,19 +237,30 @@ jobs:
 
     - name: Confirm no unwanted dependencies
       # The headless client must not have acquired a graphics, XR or audio dependency.
+      # teleport_cli is even more constrained: intentionally no libavstream/WebRTC/OpenSSL
+      # either (HeadlessClient/CMakeLists.txt), so it gets the same graphics/XR/audio check
+      # plus a check that it didn't pick up the streaming stack teleportd needs.
       # TeleportPCClient is the opposite check: it must have picked up Vulkan/MoltenVK, since a
       # silent fallback (e.g. Vulkan_FOUND coming back false) would build a client that can never
       # render anything, and TELEPORT_CLIENT_USE_VULKAN=ON above would have masked that at
       # configure time.
       run: |
         set -euo pipefail
-        otool -L build_macos/bin/teleport_terminal
-        if otool -L build_macos/bin/teleport_terminal | grep -iE 'vulkan|moltenvk|openxr|glfw|pulse'; then
-          echo "::error::teleport_terminal linked against a graphics/XR/audio library it should not need."
+        otool -L build_macos/bin/teleportd
+        if otool -L build_macos/bin/teleportd | grep -iE 'vulkan|moltenvk|openxr|glfw|pulse'; then
+          echo "::error::teleportd linked against a graphics/XR/audio library it should not need."
           exit 1
         fi
-        file build_macos/bin/teleport_terminal | grep -q 'arm64' || {
-          echo "::error::teleport_terminal is not an arm64 binary."; exit 1; }
+        file build_macos/bin/teleportd | grep -q 'arm64' || {
+          echo "::error::teleportd is not an arm64 binary."; exit 1; }
+
+        otool -L build_macos/bin/teleport_cli
+        if otool -L build_macos/bin/teleport_cli | grep -iE 'vulkan|moltenvk|openxr|glfw|pulse|ssl|crypto|datachannel'; then
+          echo "::error::teleport_cli linked against a library it should not need (it's meant to stay tiny)."
+          exit 1
+        fi
+        file build_macos/bin/teleport_cli | grep -q 'arm64' || {
+          echo "::error::teleport_cli is not an arm64 binary."; exit 1; }
 
         otool -L "build_macos/bin/TeleportPCClient.app/Contents/MacOS/TeleportPCClient"
         otool -L "build_macos/bin/TeleportPCClient.app/Contents/MacOS/TeleportPCClient" | grep -qi vulkan || {
@@ -260,20 +272,20 @@ jobs:
       if: needs.check-secrets.outputs.available == 'true'
       # --options runtime enables the hardened runtime, which notarisation requires;
       # --timestamp embeds a secure timestamp, likewise required. TeleportPCClient isn't signed
-      # here: unlike teleport_terminal it has embedded dylibs (fixup_bundle, pc_client/CMakeLists.txt),
+      # here: unlike teleportd it has embedded dylibs (fixup_bundle, pc_client/CMakeLists.txt),
       # which only exist after cpack's install step, so its entire signing story - dylibs first,
       # bundle last - happens there instead (TELEPORT_MACOS_APP_IDENTITY).
       run: |
         set -euo pipefail
         codesign --force --options runtime --timestamp \
-          --sign "$APP_IDENTITY" build_macos/bin/teleport_terminal
-        codesign --verify --strict --verbose=2 build_macos/bin/teleport_terminal
+          --sign "$APP_IDENTITY" build_macos/bin/teleportd
+        codesign --verify --strict --verbose=2 build_macos/bin/teleportd
 
     - name: Package
       # Should take seconds; the timeout keeps a pkgbuild/productsign hang from
       # consuming the rest of the job budget again. Two unrelated packages come out of one
       # configure (see CMake/TeleportPackaging.cmake) so cpack runs twice: once with no
-      # overrides for teleport_terminal's .pkg (CPackConfig.cmake's own defaults - productbuild,
+      # overrides for teleportd's .pkg (CPackConfig.cmake's own defaults - productbuild,
       # the "client" component, /opt/teleportxr), once with CLI overrides for TeleportPCClient's
       # .dmg (DragNDrop, the "pcclient" component, staged at the DMG root instead of a filesystem
       # prefix).
@@ -298,12 +310,19 @@ jobs:
         PKG=$(ls build_macos/*.pkg)
         rm -rf "$RUNNER_TEMP/pkgcheck"
         pkgutil --expand-full "$PKG" "$RUNNER_TEMP/pkgcheck"
-        BIN=$(find "$RUNNER_TEMP/pkgcheck" -name teleport_terminal -type f | head -1)
+        BIN=$(find "$RUNNER_TEMP/pkgcheck" -name teleportd -type f | head -1)
         if [ -z "$BIN" ]; then
-          echo "::error::teleport_terminal not found inside $PKG"
+          echo "::error::teleportd not found inside $PKG"
           exit 1
         fi
         codesign --verify --strict --verbose=2 "$BIN"
+
+        CLI_BIN=$(find "$RUNNER_TEMP/pkgcheck" -name teleport_cli -type f | head -1)
+        if [ -z "$CLI_BIN" ]; then
+          echo "::error::teleport_cli not found inside $PKG"
+          exit 1
+        fi
+        codesign --verify --strict --verbose=2 "$CLI_BIN"
 
         DMG=$(ls build_macos/*.dmg)
         MOUNT="$RUNNER_TEMP/dmgcheck"
@@ -368,7 +387,7 @@ jobs:
 
         rm -f "$RUNNER_TEMP/AuthKey.p8"
 
-    - name: Installer
+            - name: Installer
       run: |
         set -euo pipefail
         mkdir -p artifacts

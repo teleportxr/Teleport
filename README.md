@@ -158,7 +158,7 @@ or if you have already cloned the main repo,
 ## Building the macOS clients
 
 macOS (Apple Silicon only) builds both clients: the headless terminal client
-(`teleport_terminal`) and, via MoltenVK (Vulkan on Metal), the GUI client (`TeleportPCClient`).
+(the `teleportd` daemon and its `teleport_cli` front end) and, via MoltenVK (Vulkan on Metal), the GUI client (`TeleportPCClient`).
 There is still no OpenXR *runtime* for macOS, so `ENABLE_VR` defaults off there
 (`TeleportClient/Config.h`) and the GUI client never tries to create a real XR session.
 
@@ -167,7 +167,7 @@ There is still no OpenXR *runtime* for macOS, so `ENABLE_VR` defaults off there
       -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"
     cmake --build build_macos
 
-The binaries are `build_macos/bin/teleport_terminal` and `build_macos/bin/TeleportPCClient.app`
+The binaries are `build_macos/bin/teleportd`, `build_macos/bin/teleport_cli` and `build_macos/bin/TeleportPCClient.app`
 (a real `.app` bundle, icon included, runnable straight from the build tree or via
 `open build_macos/bin/TeleportPCClient.app`).
 
@@ -189,7 +189,7 @@ runs twice:
       -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
       -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller -D CPACK_RESOURCE_FILE_LICENSE=
 
-The first produces `teleportxr-<commit>-arm64.pkg` (installs `teleport_terminal` to
+The first produces `teleportxr-<commit>-arm64.pkg` (installs `teleportd` and `teleport_cli` to
 `/opt/teleportxr`). The second produces `TeleportPCClientInstaller-<commit>-arm64.dmg` - open
 it and drag `TeleportPCClient.app` onto the `Applications` symlink, the usual macOS install
 pattern. The `.dmg` bundles every non-system library `TeleportPCClient` needs (including

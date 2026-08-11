@@ -29,8 +29,24 @@ Identity::~Identity()
 
 void Identity::RegisterProvider(std::shared_ptr<IdentityProvider> provider)
 {
-	if (provider && provider->IsAvailable())
-		providers.push_back(provider);
+	if (!provider || !provider->IsAvailable())
+		return;
+	// Every provider gets somewhere to put an out-of-band instruction, so that no flow has
+	// to know who is listening. Providers with no such step ignore this.
+	provider->SetSignInPromptHandler([this](const SignInPrompt &prompt) { SetSignInPrompt(prompt); });
+	providers.push_back(provider);
+}
+
+SignInPrompt Identity::GetSignInPrompt() const
+{
+	std::lock_guard<std::mutex> lock(promptMutex);
+	return signInPrompt;
+}
+
+void Identity::SetSignInPrompt(const SignInPrompt &prompt)
+{
+	std::lock_guard<std::mutex> lock(promptMutex);
+	signInPrompt = prompt;
 }
 
 const std::vector<std::shared_ptr<IdentityProvider>> &Identity::GetProviders() const
@@ -137,6 +153,8 @@ void Identity::Update()
 		worker.join();
 	workerRunning = false;
 	workerFinished = false;
+	// The worker is done, however it ended: there is nothing left for the user to act on.
+	SetSignInPrompt(SignInPrompt());
 
 	const bool succeeded = workerSucceeded.load();
 	if (succeeded && workerProfile.IsValid())
@@ -199,6 +217,9 @@ bool Identity::SignIn(const std::string &providerName)
 		std::lock_guard<std::mutex> lock(errorMutex);
 		lastError.clear();
 	}
+	// Drop any prompt left over from a previous attempt, so a caller polling `identity`
+	// never sees a stale code presented as current.
+	SetSignInPrompt(SignInPrompt());
 	state = provider->RequiresInteraction() ? SignInState::WaitingForUser : SignInState::Restoring;
 	StartWorker(provider, true);
 	return true;

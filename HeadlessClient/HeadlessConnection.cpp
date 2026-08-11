@@ -1,22 +1,21 @@
-#include "HeadlessClient.h"
-#include "TeleportClient/Identity.h"
+#include "HeadlessConnection.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include <libavstream/queue.hpp>
 
-HeadlessClient::HeadlessClient()
+HeadlessConnection::HeadlessConnection()
 	: geometryBackend(std::make_unique<HeadlessGeometryCacheBackend>())
 {
 	// geometryBackend must exist before the command interface, which holds a pointer to it.
 	commandInterface = std::make_unique<HeadlessSessionCommandInterface>(nullptr, currentMode, geometryBackend.get());
 }
 
-HeadlessClient::~HeadlessClient()
+HeadlessConnection::~HeadlessConnection()
 {
 	Disconnect();
 }
 
-bool HeadlessClient::Connect(const std::string &url)
+bool HeadlessConnection::Connect(const std::string &url)
 {
 	if (sessionClient && sessionClient->IsConnected())
 	{
@@ -27,6 +26,7 @@ bool HeadlessClient::Connect(const std::string &url)
 	try
 	{
 		tabContext.ConnectTo(url);
+		this->url = url;
 		TELEPORT_LOG("Initiated connection to {}", url);
 		return true;
 	}
@@ -37,7 +37,7 @@ bool HeadlessClient::Connect(const std::string &url)
 	}
 }
 
-void HeadlessClient::Disconnect()
+void HeadlessConnection::Disconnect()
 {
 	if (sessionClient)
 	{
@@ -48,12 +48,13 @@ void HeadlessClient::Disconnect()
 	// would miss; cancel through the tab context so a pending attempt is dropped too.
 	tabContext.CancelConnection();
 	activeServerUid = 0;
+	url.clear();
 }
 
-void HeadlessClient::TickOnce(double time, double dt)
+void HeadlessConnection::TickOnce(double time, double dt)
 {
-	// Applies the result of a sign-in running on the identity worker thread. Cheap when idle.
-	teleport::client::identity.Update();
+	// Note: identity.Update() is deliberately NOT here — identity is process-global, so the
+	// service's main loop applies it once per tick rather than once per connection.
 	inputState.UpdateTime(time);
 
 	// A connection in progress lives under the tab's "next" uid; TabContext only promotes it to
@@ -93,11 +94,13 @@ void HeadlessClient::TickOnce(double time, double dt)
 	if (sessionClient->IsConnected())
 	{
 		auto snapshot = inputState.GetSnapshot();
+		// The origin valid counter comes from the server's SetOriginNodeCommand,
+		// which lands on the command interface — the input state never sees it.
 		sessionClient->Frame(
 			snapshot.displayInfo,
 			snapshot.headPose,
 			snapshot.controllerPoses,
-			snapshot.originValidCounter,
+			commandInterface ? commandInterface->GetOriginValidCounter() : 0,
 			snapshot.input,
 			snapshot.time,
 			dt
@@ -105,64 +108,61 @@ void HeadlessClient::TickOnce(double time, double dt)
 	}
 }
 
-bool HeadlessClient::IsConnected() const
+bool HeadlessConnection::IsConnected() const
 {
 	return sessionClient && sessionClient->IsConnected();
 }
 
-std::string HeadlessClient::GetStatus() const
+ConnectionStatus HeadlessConnection::GetStatusData() const
 {
+	ConnectionStatus out;
 	if (!sessionClient)
-		return "Status: DISCONNECTED (no session)\n";
-
-	auto status = sessionClient->GetConnectionStatus();
-	std::string statusStr;
-	switch (status)
 	{
-	case teleport::client::ConnectionStatus::UNCONNECTED:
-		statusStr = "UNCONNECTED";
-		break;
-	case teleport::client::ConnectionStatus::OFFERING:
-		statusStr = "OFFERING";
-		break;
-	case teleport::client::ConnectionStatus::AWAITING_SETUP:
-		statusStr = "AWAITING_SETUP";
-		break;
-	case teleport::client::ConnectionStatus::HANDSHAKING:
-		statusStr = "HANDSHAKING";
-		break;
-	case teleport::client::ConnectionStatus::CONNECTED:
-		statusStr = "CONNECTED";
-		break;
-	case teleport::client::ConnectionStatus::RECONNECTING:
-		statusStr = "RECONNECTING";
-		break;
-	default:
-		statusStr = "UNKNOWN";
+		out.state  = "DISCONNECTED";
+		out.detail = "no session";
+		return out;
 	}
 
-	std::string result = "Status: " + statusStr + "\n";
-	result += "Server: " + sessionClient->GetServerIP() + ":" + std::to_string(sessionClient->GetPort()) + "\n";
-	result += "Latency: " + std::to_string(static_cast<int>(sessionClient->GetLatencyMs())) + " ms\n";
-	result += "Inputs Available: " + std::to_string(GetInputDefinitions().size()) + "\n";
+	switch (sessionClient->GetConnectionStatus())
+	{
+	case teleport::client::ConnectionStatus::UNCONNECTED:
+		out.state = "UNCONNECTED";
+		break;
+	case teleport::client::ConnectionStatus::OFFERING:
+		out.state = "OFFERING";
+		break;
+	case teleport::client::ConnectionStatus::AWAITING_SETUP:
+		out.state = "AWAITING_SETUP";
+		break;
+	case teleport::client::ConnectionStatus::HANDSHAKING:
+		out.state = "HANDSHAKING";
+		break;
+	case teleport::client::ConnectionStatus::CONNECTED:
+		out.state = "CONNECTED";
+		break;
+	case teleport::client::ConnectionStatus::RECONNECTING:
+		out.state = "RECONNECTING";
+		break;
+	default:
+		out.state = "UNKNOWN";
+	}
 
-	return result;
+	out.hasSession		= true;
+	out.server			= sessionClient->GetServerIP();
+	out.port			= static_cast<int>(sessionClient->GetPort());
+	out.latencyMs		= static_cast<int>(sessionClient->GetLatencyMs());
+	out.inputsAvailable = GetInputDefinitions().size();
+	return out;
 }
 
-std::string HeadlessClient::GetGeometryReport(const std::string &what) const
+GeometryReport HeadlessConnection::GetGeometryData() const
 {
 	if (!geometryBackend)
-		return "No geometry cache.\n";
-	if (what == "nodes")
-		return geometryBackend->GetNodeReport();
-	if (what == "resources")
-		return geometryBackend->GetResourceReport();
-	if (what.empty())
-		return geometryBackend->GetSummary();
-	return "Usage: geometry [nodes|resources]\n";
+		return GeometryReport{};
+	return geometryBackend->GetReport();
 }
 
-const std::vector<teleport::core::InputDefinition> &HeadlessClient::GetInputDefinitions() const
+const std::vector<teleport::core::InputDefinition> &HeadlessConnection::GetInputDefinitions() const
 {
 	if (sessionClient)
 		return sessionClient->GetInputDefinitions();
@@ -170,7 +170,7 @@ const std::vector<teleport::core::InputDefinition> &HeadlessClient::GetInputDefi
 	return empty;
 }
 
-void HeadlessClient::ProcessVideo()
+void HeadlessConnection::ProcessVideo()
 {
 	if (!sessionClient)
 		return;
@@ -179,7 +179,7 @@ void HeadlessClient::ProcessVideo()
 	cp.videoQueue.drop();
 }
 
-void HeadlessClient::SendBinaryInput(avs::uid id, uint8_t value)
+void HeadlessConnection::SendBinaryInput(avs::uid id, uint8_t value)
 {
 	if (!sessionClient || !sessionClient->IsConnected())
 	{
@@ -189,7 +189,7 @@ void HeadlessClient::SendBinaryInput(avs::uid id, uint8_t value)
 	inputState.AddBinaryEvent(static_cast<teleport::core::InputId>(id), value != 0);
 }
 
-void HeadlessClient::SendAnalogueInput(avs::uid id, float value)
+void HeadlessConnection::SendAnalogueInput(avs::uid id, float value)
 {
 	if (!sessionClient || !sessionClient->IsConnected())
 	{
@@ -199,7 +199,7 @@ void HeadlessClient::SendAnalogueInput(avs::uid id, float value)
 	inputState.AddAnalogueEvent(static_cast<teleport::core::InputId>(id), value);
 }
 
-void HeadlessClient::SendMotionInput(avs::uid id, float x, float y)
+void HeadlessConnection::SendMotionInput(avs::uid id, float x, float y)
 {
 	if (!sessionClient || !sessionClient->IsConnected())
 	{

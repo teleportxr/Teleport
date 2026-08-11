@@ -30,7 +30,7 @@ namespace teleport
 		}
 		inline std::wstring StringToWString(const std::string& text)
 		{
-			size_t origsize = strlen(text.c_str()) + 1;
+			size_t origsize = text.length() + 1;
 			const size_t newsize = origsize;
 			wchar_t* wcstring = new wchar_t[newsize + 2];
 #ifdef _MSC_VER
