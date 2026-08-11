@@ -954,7 +954,7 @@ Example body bytes for the URL ``"/a/b.ktx2"``::
 MeshPointer payload
 ===================
 
-A ``MeshPointer`` chunk has the identical layout to :ref:`texture_pointer_payload`. Most geometry is delivered this way rather than inline.
+A ``MeshPointer`` chunk has the layout of :ref:`texture_pointer_payload` plus one optional trailing byte. Most geometry is delivered this way rather than inline.
 
 The body fetched from the URL is **not** necessarily a :ref:`mesh_payload`; the client selects a decoder from the URL's extension:
 
@@ -989,6 +989,10 @@ An unrecognised extension is rejected. Servers MUST therefore give pointer URLs 
      - ``uint8[url length]``
      - variable
      - Absolute URL or relative path; see :doc:`http`.
+   * - axesStandard
+     - ``uint8``
+     - 0 or 1
+     - Optional. The :ref:`conventions` standard the fetched asset is authored in (an ``avs::AxesStandard`` value). Present only for assets that disagree with the server's own scene axes — a glTF-family file (``.glb``/``.vrm``/``.vrma``) is always ``GlStyle``. Absent or ``NotInitialized`` (0) means the asset shares the server's scene axes, so older clients that stop reading at the end of the URL behave correctly. Unlike inline geometry, the fetched body is *not* pre-converted to the client's standard; the client converts from this standard after decoding.
 
 .. _material_pointer_payload:
 

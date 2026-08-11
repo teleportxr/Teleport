@@ -1,6 +1,7 @@
 # TeleportHeadlessClient
 
-Terminal-controlled Teleport client for Linux, Windows and macOS, with no GUI, GPU, or OpenXR dependency.
+Terminal- and machine-controlled Teleport client for Linux, Windows and macOS, with no GUI, GPU,
+or OpenXR dependency.
 
 On macOS this used to be the only client that would build; `pc_client`/`ClientRender` now build
 there too via MoltenVK (Vulkan on Metal) - see `pc_client/CLAUDE.md`. `TELEPORT_GUI_CLIENT` still
@@ -8,43 +9,82 @@ defaults ON everywhere `TELEPORT_CLIENT` is, macOS included, so both clients bui
 unless it's explicitly turned off (`-DTELEPORT_GUI_CLIENT=OFF -DTELEPORT_CLIENT_USE_VULKAN=OFF`)
 for a headless-only configure.
 
-## Purpose
+## Two processes, one library
 
-Two primary use cases:
+The client is split into a service and a front end, and this is the central fact about the
+directory. A streaming connection outlives the thing that asked for it: an agent issues a command,
+reports to the user, waits for feedback and acts again, three requests that may be minutes apart.
+A session that died with its terminal could not support that at all.
 
-1. **Minimal Bot Mode** (default, M1 complete) — pure network diagnostic tool for testing server connectivity, bandwidth, and stream health without graphics rendering.
-2. **Simulated User Mode** (M3 in progress) — full-protocol test client exercising geometry streaming, request/receive/ack flow, and node visibility routing.
+| Target | Source | Role |
+|---|---|---|
+| `teleportd` | `Main.cpp` | The service. Owns live connections, ticks them at 20 Hz, listens on loopback TCP for one-line commands. |
+| `teleport_cli` | `cli_main.cpp` | POSIX front end. Sends command lines to `teleportd`, prints responses, exits. Links only `SocketUtil.cpp` — no libavstream, WebRTC, OpenSSL or JSON. |
+| `teleport_headless_core` | everything else | Static library shared by both, and by the tests. |
 
-## Architecture
+`quit` detaches a control client; `shutdown` stops the service and every stream with it.
 
-### Core Components
+## Components
 
-- **HeadlessClient** — orchestrates SessionClient lifecycle, connection management, and the main tick loop (~20 Hz)
-- **HeadlessSessionCommandInterface** — implements `teleport::client::SessionCommandInterface`, wiring non-GPU pipeline components based on mode
-- **HeadlessGeometryCacheBackend** — `teleport::client::GeometryCacheBackendInterface`. Records streamed geometry and supplies the acknowledgement lists `SessionClient` drains each frame (`ReceivedResourcesMessage`, `NodeStatusMessage`). Mutex-guarded: written from the pipeline thread, read from the tick thread
-- **HeadlessGeometryTarget** — `avs::GeometryTargetBackendInterface`. Records structure only; creates no GPU resources
-- **HeadlessGeometryDecoder** — `avs::GeometryDecoderBackendInterface`. Parses Node/RemoveNodes/Skeleton in full, reads and records pointer URLs without fetching, acknowledges all other payload types by uid without parsing their bodies
-- **HeadlessInputState** — thread-safe pose and input state shared between REPL and tick threads
-- **Repl** — blocking REPL loop reading commands from stdin
-- **ReplCommandParser** — dependency-free command tokenizer (used for Catch2 unit tests in future)
+### Control plane
 
-### Thread Model
+- **ControlProtocol.h** — wire constants and dot-stuffed line framing. Header-only, so
+  `teleport_cli` can use it without linking the core.
+- **ControlServer** — loopback listener, accept thread, one detached thread per attached control
+  client. Holds a `ControlSessionState` per client and renders each `CommandResult` in whichever
+  format that client asked for.
+- **CommandProcessor** — the dispatcher. String in, `CommandResult` out; no I/O, no framing, which
+  is what makes it unit-testable (`test/test_control_processor.cpp`).
+- **CommandResult** — `{ok, text, error, data}`. Every verb fills *both* `text` and `data`; a verb
+  that fills only one is a bug. This is what stops the prose and JSON renderings drifting apart.
+- **ConnectionReport.h/.cpp** — the plain-data structs (`ConnectionStatus`, `GeometryReport`) that
+  status and geometry prose is rendered *from*, plus those renderers. Nothing formats this prose
+  anywhere else.
+- **ReplCommandParser** — dependency-free whitespace tokeniser: verb plus args, no quoting.
+- **SocketUtil** — BSD sockets / winsock2 shim.
 
-- **Main thread** — blocking `std::getline()` REPL, processes user commands
-- **Tick thread** — fixed 20 Hz loop calling `HeadlessClient::TickOnce()`, which calls `SessionClient::HandleConnections()` and `Frame()`
+The protocol is specified in `docs/protocol/local_control.rst`. Read that before changing any
+response: the `data` schemas are a published contract that `teleport-mcp/` codes against, and the
+text bodies are what existing scripts scrape.
+
+### Streaming plane
+
+- **ConnectionManager** — owns every `HeadlessConnection`, keyed by a small integer id from 1,
+  never reused. Its mutex is what serialises command threads against the tick thread;
+  `SessionClient` is not internally thread-safe, so holding it for a whole tick or command is
+  required, not incidental.
+- **HeadlessConnection** — one streaming session (`TabContext` + `SessionClient`). Formerly the
+  monolithic `HeadlessClient`.
+- **HeadlessSessionCommandInterface** — `teleport::client::SessionCommandInterface`, wiring non-GPU
+  pipeline components according to the mode.
+- **HeadlessGeometryCacheBackend** — records streamed geometry and supplies the acknowledgement
+  lists `SessionClient` drains each frame. Mutex-guarded: written from the pipeline thread, read
+  from the tick thread.
+- **HeadlessGeometryTarget** — `avs::GeometryTargetBackendInterface`. Records structure only,
+  creates no GPU resources.
+- **HeadlessGeometryDecoder** — parses Node/RemoveNodes/Skeleton in full, records pointer URLs
+  without fetching them, acknowledges every other payload type by uid without parsing the body.
+- **HeadlessInputState** — thread-safe pose and input state shared between command and tick threads.
+
+### Modes
+
+1. **Minimal** (default) — network diagnostic: connectivity, bandwidth and stream health, no
+   geometry decoding.
+2. **Simulated** — full-protocol test client exercising geometry streaming and the
+   request/receive/ack flow.
 
 ## Build
 
 ```bash
 cmake -B build_pc_client -S . -DTELEPORT_HEADLESS_CLIENT=ON
-cmake --build build_pc_client --target teleport_terminal
+cmake --build build_pc_client
 ```
 
-`TELEPORT_HEADLESS_CLIENT` already defaults to the value of `TELEPORT_CLIENT`, so it only
-needs stating explicitly when the GUI client has been switched off.
+`TELEPORT_HEADLESS_CLIENT` defaults to the value of `TELEPORT_CLIENT`, so it only needs stating
+explicitly when the GUI client has been switched off.
 
-On macOS (Apple Silicon; needs the Xcode command line tools), headless-only, skipping the
-Vulkan SDK and bison/flex that `pc_client` needs:
+On macOS (Apple Silicon; needs the Xcode command line tools), headless-only, skipping the Vulkan
+SDK and the bison/flex that `pc_client` needs:
 
 ```bash
 brew install ninja pkg-config openssl@3
@@ -54,139 +94,75 @@ cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build build_macos
 ```
 
-To build both clients together, see `pc_client/CLAUDE.md` or the root `README.md`.
+Build the default target rather than just `teleportd`: the Platform submodule has `install()` rules
+for libraries that `cpack` expects to exist, and a target-specific build leaves them unbuilt.
 
-Build the default target rather than just `teleport_terminal`: the Platform submodule has
-`install()` rules for libraries that `cpack` expects to exist, and a target-specific build
-leaves them unbuilt.
+Packaging (macOS only): the `install()` rules bundle Homebrew's `libssl.3.dylib`/`libcrypto.3.dylib`
+into `<prefix>/lib` and rewrite the binaries' load commands to `@loader_path`-relative paths via
+`install_name_tool`. Without this, the installed binary references the absolute Homebrew path baked
+in at link time and fails to launch on any Mac without that exact keg ("Library not loaded").
+Verify with `otool -L build_macos/bin/teleportd | grep -i ssl` after `cpack`.
 
-Packaging (macOS only): the `install()` rules in `CMakeLists.txt` bundle Homebrew's
-`libssl.3.dylib`/`libcrypto.3.dylib` into `<prefix>/lib` and rewrite `teleport_terminal`'s
-load commands to `@loader_path`-relative paths via `install_name_tool`. Without this, the
-installed binary references the absolute Homebrew path baked in at link time
-(e.g. `/opt/homebrew/opt/openssl@3/lib/libssl.3.dylib`) and fails to launch on any Mac
-without that exact keg installed ("Library not loaded"). Verify with
-`otool -L build_macos/bin/teleport_terminal | grep -i ssl` after `cpack`.
-
-Verify the build does NOT pull in unwanted dependencies (openxr_loader check):
+Verify the build has NOT pulled in graphics dependencies:
 
 ```bash
 # Windows
-dumpbin /IMPORTS build_pc_client/bin/Release/teleport_terminal.exe | findstr /i "openxr"
+dumpbin /IMPORTS build_pc_client/bin/Release/teleportd.exe | findstr /i "openxr"
 # Linux
-ldd build_pc_client/bin/teleport_terminal | grep -iE 'vulkan|openxr|glfw|pulse'
+ldd build_pc_client/bin/teleportd | grep -iE 'vulkan|openxr|glfw|pulse'
 # macOS
-otool -L build_macos/bin/teleport_terminal | grep -iE 'vulkan|moltenvk|openxr|glfw|pulse'
+otool -L build_macos/bin/teleportd | grep -iE 'vulkan|moltenvk|openxr|glfw|pulse'
 ```
 
-## Implementation Status
+## Usage
 
-### ✅ M1: Minimal Mode Complete
+```bash
+teleportd [-p <port>]                        # service; default port 10510
+teleport_cli                                 # interactive (line editing, history, completion)
+teleport_cli -e "connect 127.0.0.1:8080; status"
+teleport_cli connect 127.0.0.1:8080          # operands join into one command, ssh-style
+teleport_cli -j -e connections               # JSON responses
+printf 'ping\n' | teleport_cli               # piped stdin is batch input
+```
 
-- ClientBootstrap extraction (shared across pc_client + HeadlessClient)
-- Minimal mode REPL with connect/disconnect/status/move/turn commands
-- Non-GPU pipeline wiring (video receive but no decode, stats accumulation)
-- Input state management (pose synchronisation between REPL/tick threads)
-- Mode selection via CLI or REPL command
+Exit codes: 0 all OK, 1 some command answered ERROR, 2 usage error or service unreachable.
 
-### ✅ M2: Input Event Sending Complete
+The selected connection is **per control socket**, so a fresh `teleport_cli` starts with nothing
+selected. Batch scripts must either put `connect`/`use` in the same `-e` string or prefix each
+command with `use <id>`.
 
-- Input event REPL commands: binary/analogue/motion
-- HeadlessInputState methods to add events to the input stream
-- Enhanced status output with connection state, server info, latency, input definitions count
-- Mode switching persists across status checks
+`connect` returns as soon as the attempt is initiated; poll `status` until `state` is `CONNECTED`.
 
-### ✅ M3: Simulated Mode Foundation Complete
+## Tests
 
-- HeadlessGeometryTarget class created (stub for geometry logging)
-- Mode-dependent HeadlessSessionCommandInterface initialization
-- GeometryTarget instantiation in simulated mode
-- Mode switching updates the session command interface
+| Test | Covers |
+|---|---|
+| `test/test_repl_command_parser.cpp` | tokeniser |
+| `test/test_control_protocol.cpp` | framing and dot-stuffing |
+| `test/test_control_processor.cpp` | dispatcher behaviour and the JSON schemas |
+| `test/control_integration.sh` | end-to-end: launches `teleportd`, drives it with `teleport_cli` |
 
-### ⚠️ Known Limitations
+Run them with `ctest` from `build_pc_client/test`.
 
-**M1-M2:**
-- Ctrl-C does not immediately exit; use `quit` + Enter instead (non-blocking stdin is M4)
-- Video decode completely skipped (stats-only) — network health only, no validation of frame content
-- No geometry streaming in M1 (M3 foundation laid, full integration deferred)
+## Known limitations
 
-**M3:**
-- Mesh, Material, Texture and Animation payload *bodies* are acknowledged but not parsed — decoding
-  them would pull in draco, ktx and image codecs. Node/RemoveNodes/Skeleton are parsed in full
-- Assets behind pointer URLs are deliberately never downloaded; the uid and URL are recorded
-- `MaterialPointer` is parsed on the assumption it shares the `uint16` length + URL format of
+- Video decode is skipped entirely (stats only) — network health, no validation of frame content.
+- Mesh, Material, Texture and Animation payload *bodies* are acknowledged but not parsed; decoding
+  them would pull in draco, ktx and image codecs. Node/RemoveNodes/Skeleton are parsed in full.
+- Assets behind pointer URLs are deliberately never downloaded; the uid and URL are recorded.
+- `MaterialPointer` is parsed on the assumption that it shares the `uint16` length + URL format of
   `MeshPointer`/`TexturePointer`. `clientrender::GeometryDecoder` does not implement it, so this
-  path is untested against a live server
-- No node visibility routing yet
-- Wire formats in HeadlessGeometryDecoder mirror `clientrender::GeometryDecoder`; the two must be
-  kept in step by hand until the parsers are extracted into a shared GPU-free unit
+  path is untested against a live server.
+- No node visibility routing yet.
+- Wire formats in `HeadlessGeometryDecoder` mirror `clientrender::GeometryDecoder`; the two must be
+  kept in step by hand until the parsers are extracted into a shared GPU-free unit.
+- All connections in one service share `Config::GetInstance()`: one identity, one avatar URL, one
+  storage folder. Simulating distinct users means one `teleportd` per identity.
 
-## M2-M4 Roadmap
+## Code style
 
-- **M2** ✅ — input event sending (binary/analogue/motion REPL commands), extended status with latency/node counts
-- **M3** (partial) — `simulated` mode foundation; full geometry decoding/node visibility/MeshParser extraction deferred to prevent scope creep
-- **M4** — non-blocking stdin (select/console APIs), ReplCommandParser Catch2 tests, Heroku/CI-ready piping support, full M3 geometry integration
-
-## Key Files
-
-### New Files
-- `Teleport/HeadlessClient/*` — all headless client implementation
-- `Teleport/TeleportClient/ClientBootstrap.h/.cpp` — shared bootstrap logic
-
-### Modified Files
-- `Teleport/pc_client/Main.cpp` — refactored to use ClientBootstrap
-- `Teleport/CMakeLists.txt` — added TELEPORT_HEADLESS_CLIENT option and subdirectory
-- `Teleport/TeleportClient/CMakeLists.txt` — added ClientBootstrap.cpp
-
-## REPL Commands (M1-M3)
-
-```
-# Connection
-connect <ip[:port]>      - Connect to server
-disconnect              - Disconnect from server
-
-# Status & Info
-status                  - Show connection status (state, server, latency, inputs)
-help                    - Show help
-
-# Movement/Orientation
-move <x> <y> <z>        - Set avatar position
-turn <qx> <qy> <qz> <qw> - Set avatar orientation (quaternion)
-
-# Input Events (M2)
-input list              - List available inputs
-input binary <id> <0|1> - Send binary input event
-input analogue <id> <value> - Send analogue input event
-input motion <id> <x> <y> - Send motion input event
-
-# Mode Control
-mode <minimal|simulated> - Switch client mode (M3)
-
-# Geometry
-geometry                - Summary: nodes, resources, pointers, pending acks
-geometry nodes          - Tracked nodes with data/parent/skeleton uids
-geometry resources      - Pointer resource URLs, and uids referenced but never sent
-
-# Exit
-quit / exit             - Exit the client
-```
-
-## Code Style
-
-- C++17 minimum
-- 4-space indentation (matching pc_client)
-- Naming: PascalCase classes (HeadlessClient), camelCase members (inputState)
-- TELEPORT_LOG/TELEPORT_WARN for diagnostics
-- British English spelling in comments
-
-## Testing Checklist
-
-- [x] Smoke test: `help` → `quit` works
-- [x] Move/turn commands update state
-- [x] Input commands parse and report connection status
-- [x] Mode switching (minimal ↔ simulated)
-- [x] Status shows connection info and input count
-- [ ] Against real server: connection state progression, bandwidth stats
-- [ ] No GPU required: run on headless system without NVIDIA driver
-- [ ] Geometry streaming (M3 full integration)
-- [ ] Node visibility routing (M3 full integration)
+- C++17 minimum, tabs, Allman braces, 160-column limit (matches the rest of the repo).
+- PascalCase classes and methods, camelCase members.
+- `TELEPORT_LOG`/`TELEPORT_WARN` for diagnostics — never `std::cout` from the service, which may
+  have no console attached.
+- British English spelling in comments.

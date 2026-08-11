@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ConnectionReport.h"
 #include "TeleportClient/GeometryCacheBackendInterface.h"
 #include <libavstream/node.h>
 #include <libavstream/geometry/mesh_interface.hpp>
@@ -65,10 +66,9 @@ public:
 	//! Record a payload type we acknowledged but did not parse, for the `geometry` report.
 	void CountUnparsedPayload(avs::GeometryPayloadType type);
 
-	// Reporting for the REPL.
-	std::string GetSummary() const;
-	std::string GetNodeReport() const;
-	std::string GetResourceReport() const;
+	//! Everything the `geometry` command can report, gathered under one lock. Rendering
+	//! - prose or JSON - happens in the caller; see ConnectionReport.h.
+	GeometryReport GetReport() const;
 
 private:
 	mutable std::mutex mutex;

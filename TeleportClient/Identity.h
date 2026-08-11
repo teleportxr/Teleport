@@ -44,6 +44,15 @@ namespace teleport
 			std::string GetDisplayText() const;
 			std::string GetLastError() const;
 
+			//! The out-of-band step a sign-in in progress is waiting on — visit this URL,
+			//! enter this code — or an empty prompt when there is none. Populated from the
+			//! worker thread, so a client with no console can relay it (see the `identity`
+			//! command in HeadlessClient) rather than the user having to read a log.
+			SignInPrompt GetSignInPrompt() const;
+			//! Record an out-of-band instruction. Called by providers via the handler
+			//! Identity installs on each of them, from the worker thread.
+			void SetSignInPrompt(const SignInPrompt &prompt);
+
 			//! Providers that can be offered to the user, in registration order.
 			const std::vector<std::shared_ptr<IdentityProvider>> &GetProviders() const;
 			void RegisterProvider(std::shared_ptr<IdentityProvider> provider);
@@ -68,6 +77,8 @@ namespace teleport
 			bool							workerInteractive = false;
 			mutable std::mutex	  errorMutex;
 			std::string			  lastError;
+			mutable std::mutex	  promptMutex;
+			SignInPrompt		  signInPrompt;
 		};
 		extern Identity identity;
 	}

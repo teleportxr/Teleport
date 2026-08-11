@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <string>
 
 namespace teleport
@@ -46,11 +47,37 @@ namespace teleport
 			Failed
 		};
 
+		//! An instruction the user must act on to complete a sign-in: visit a URL on another
+		//! device and enter a code. A device-code flow has no browser to redirect, so this is
+		//! the only way the user ever learns what to do — and the only way a client with no
+		//! console in front of a human, such as the headless service driven over MCP, can
+		//! relay it. Provider-agnostic: any flow with an out-of-band step can use it.
+		struct SignInPrompt
+		{
+			std::string verificationUrl;
+			std::string userCode;
+			//! How long the code stays valid from when the provider issued it. 0 if unknown.
+			int expiresInSeconds = 0;
+
+			bool IsPending() const
+			{
+				return !userCode.empty();
+			}
+			void Clear()
+			{
+				*this = SignInPrompt();
+			}
+		};
+
 		//! Interface for a source of identity. Implementations must be usable from a worker thread,
 		//! and must not touch the GUI or any rendering state.
 		class IdentityProvider
 		{
 		public:
+			//! Called from the worker thread when the user must be told to do something
+			//! out of band. Implementations of the handler must be thread-safe.
+			using SignInPromptHandler = std::function<void(const SignInPrompt &)>;
+
 			virtual ~IdentityProvider() {}
 			//! Stable name used in storage and on the wire, e.g. "google".
 			virtual const char *GetName() const = 0;
@@ -73,6 +100,9 @@ namespace teleport
 			virtual bool SignInInteractive(IdentityProfile &profile) = 0;
 			//! Abandon an interactive sign-in in progress. Called from the main thread.
 			virtual void CancelSignIn() {}
+			//! Register where to send out-of-band sign-in instructions. Identity installs one
+			//! on every provider it registers; flows with no such step ignore it.
+			virtual void SetSignInPromptHandler(SignInPromptHandler) {}
 			//! Discard all stored credentials for this provider.
 			virtual void SignOut() = 0;
 			//! True only when the provider knows the stored credentials are gone for good, as

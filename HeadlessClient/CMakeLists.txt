@@ -22,6 +22,8 @@ set(core_srcs
 	HeadlessConnection.h HeadlessConnection.cpp
 	ConnectionManager.h ConnectionManager.cpp
 	CommandProcessor.h CommandProcessor.cpp
+	CommandResult.h
+	ConnectionReport.h ConnectionReport.cpp
 	ControlServer.h ControlServer.cpp
 	ControlProtocol.h
 	SocketUtil.h SocketUtil.cpp

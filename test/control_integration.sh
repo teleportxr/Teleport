@@ -10,7 +10,9 @@ set -u
 DAEMON="$1"
 CLI="$2"
 PORT=10599
-LOG="$(mktemp -t teleportd_integration)"
+# The XXXXXX suffix is required by GNU coreutils' mktemp; BSD/macOS tolerates its
+# absence, which is why this went unnoticed until the test was run on Linux.
+LOG="$(mktemp -t teleportd_integration.XXXXXX)"
 FAILURES=0
 
 check() {
@@ -67,6 +69,22 @@ check "service survives CLI exit" "pong" "$("$CLI" -p "$PORT" -e ping)"
 
 # Piped stdin works as batch input.
 check "piped stdin" "pong" "$(printf 'ping\n' | "$CLI" -p "$PORT")"
+
+# JSON mode: -j sends "format json" first, so every body is a single compact object.
+# Checked with grep rather than jq, which CI runners are not guaranteed to have.
+OUT="$("$CLI" -p "$PORT" -j -e "ping; connections")"
+check "json ping" '{"pong":true}' "$OUT"
+check "json connections is an object" '"connections":' "$OUT"
+check "json connections keeps the surviving id" '"id":2' "$OUT"
+check "json bodies are one line each" "2" "$(printf '%s\n' "$OUT" | wc -l | tr -d ' ')"
+
+# Errors carry the message in both the status line and the body.
+OUT="$("$CLI" -p "$PORT" -j -e frobnicate 2>&1)"
+check "json error body" '"error":"unknown command: frobnicate"' "$OUT"
+check "json error status line" "ERROR unknown command: frobnicate" "$OUT"
+
+# Text is still the default: a client that never says "format" sees what it always did.
+check "text mode is unchanged" "pong" "$("$CLI" -p "$PORT" -e ping)"
 
 # Unknown commands error out with a non-zero exit status.
 "$CLI" -p "$PORT" -e frobnicate >/dev/null 2>&1

@@ -64,9 +64,7 @@ std::vector<ConnectionManager::ConnectionInfo> ConnectionManager::List() const
 		info.id = id;
 		info.url = conn->GetUrl();
 		info.connected = conn->IsConnected();
-		std::string status = conn->GetStatus();
-		size_t nl = status.find('\n');
-		info.statusLine = (nl == std::string::npos) ? status : status.substr(0, nl);
+		info.status = conn->GetStatusData();
 		out.push_back(std::move(info));
 	}
 	return out;

@@ -59,7 +59,7 @@ bool GoogleDeviceIdentityProvider::IsAvailable() const
 	return !clientId.empty();
 }
 
-void GoogleDeviceIdentityProvider::SetPromptHandler(PromptHandler handler)
+void GoogleDeviceIdentityProvider::SetSignInPromptHandler(SignInPromptHandler handler)
 {
 	promptHandler = handler;
 }
@@ -115,13 +115,16 @@ bool GoogleDeviceIdentityProvider::SignInInteractive(IdentityProfile &profile)
 		return false;
 
 	// Tell the user where to go. There is no browser here, so this is the whole point of the flow.
+	// Always logged, because a service has no terminal in front of anyone; the handler is how a
+	// client that is not a terminal — the GUI, or a machine client polling `identity` — gets it.
+	TELEPORT_LOG("To sign in, visit {} on another device and enter the code: {}", verificationUrl, userCode);
 	if (promptHandler)
 	{
-		promptHandler(verificationUrl, userCode);
-	}
-	else
-	{
-		std::cout << "\nTo sign in, visit " << verificationUrl << " on another device and enter the code: " << userCode << "\nWaiting..." << std::endl;
+		SignInPrompt prompt;
+		prompt.verificationUrl	= verificationUrl;
+		prompt.userCode			= userCode;
+		prompt.expiresInSeconds = expiresInSeconds;
+		promptHandler(prompt);
 	}
 
 	if (!PollForToken(deviceCode, intervalSeconds, expiresInSeconds))
