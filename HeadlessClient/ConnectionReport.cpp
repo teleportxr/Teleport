@@ -61,6 +61,12 @@ std::string RenderGeometryNodes(const GeometryReport &report)
 			o << " materials=" << n.materials;
 		if (n.animations)
 			o << " animations=" << n.animations;
+		for (const auto &s : n.animationStates)
+		{
+			o << " playing=" << s.animation << "@layer" << s.layer << " time=" << s.timeAtTimestamp << "s speed=" << s.speed;
+			if (s.loop)
+				o << " loop";
+		}
 		if (!n.url.empty())
 			o << " url=" << n.url;
 		o << "\n";

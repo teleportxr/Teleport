@@ -141,7 +141,18 @@ namespace
 			e["skeleton"]	= UidStr(n.skeleton);
 			e["materials"]	= n.materials;
 			e["animations"] = n.animations;
-			e["url"]		= n.url;
+			json states		= json::array();
+			for (const auto &s : n.animationStates)
+			{
+				states.push_back(json{{"animation", UidStr(s.animation)},
+									  {"layer", s.layer},
+									  {"timeAtTimestamp", s.timeAtTimestamp},
+									  {"speed", s.speed},
+									  {"loop", s.loop},
+									  {"timestampUs", s.timestampUs}});
+			}
+			e["animationStates"] = std::move(states);
+			e["url"]			 = n.url;
 			nodes.push_back(std::move(e));
 		}
 		return json{{"hasCache", report.hasCache}, {"nodes", std::move(nodes)}};

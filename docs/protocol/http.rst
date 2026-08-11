@@ -42,7 +42,7 @@ Asset URLs are constructed by the server (reference: ``teleport::server::Geometr
      * - ``.basis``
        - ``image/basis``
 
-The full URL is delivered to the client *inside the geometry stream*, as the payload of a :ref:`TexturePointer or MeshPointer chunk <geometry_payload>`. Each pointer chunk contains a ``uint16`` length followed by the UTF-8 URL bytes (a ``MeshPointer`` may append one ``axesStandard`` byte — see :ref:`mesh_pointer_payload`); the client opens that URL with HTTPS and treats the reply body as the corresponding ``Texture`` or ``Mesh`` payload (without the 17-byte chunk header).
+The full URL is delivered to the client *inside the geometry stream*, as the payload of a :ref:`TexturePointer or MeshPointer chunk <geometry_payload>`. Each pointer chunk begins with an ``axesStandard`` byte, followed by a ``uint16`` length and the UTF-8 URL bytes (see :ref:`texture_pointer_payload`); the client opens that URL with HTTPS and treats the reply body as the corresponding ``Texture`` or ``Mesh`` payload (without the 17-byte chunk header).
 
 Client behaviour
 ================

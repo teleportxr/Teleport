@@ -178,8 +178,11 @@ avs::Result HeadlessGeometryDecoder::DecodeSkeleton(Reader &r, avs::uid server_u
 
 avs::Result HeadlessGeometryDecoder::DecodePointer(Reader &r, avs::uid uid, avs::GeometryPayloadType type)
 {
+	// Leading byte of every pointer body: the axes standard the asset is authored in
+	// (a placeholder for pointer types without a geometric frame).
+	[[maybe_unused]] uint8_t axesStandard = r.Get<uint8_t>();
 	std::string url;
-	if (!r.ReadString(url))
+	if (!r.ok || !r.ReadString(url))
 	{
 		TELEPORT_WARN("Geometry: {} {} has a malformed URL", avs::stringOf(type), uid);
 		return avs::Result::Failed;

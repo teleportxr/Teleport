@@ -1408,6 +1408,10 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryDecodeData &geometry
 avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDecodeData)
 {
 	avs::uid texture_uid = geometryDecodeData.uid;
+	// Leading byte of every pointer body: the axes standard. A placeholder for texture
+	// interpretation here — textures have no geometric frame.
+	[[maybe_unused]] platform::crossplatform::AxesStandard axesStandard =
+		static_cast<platform::crossplatform::AxesStandard>(NextByte);
 	uint16_t urlLength	 = NextUint16;
 	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
 	// Mark the resource as received. As far as the Server is concerned, its job is done.
@@ -1426,6 +1430,11 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 {
 	avs::uid mesh_uid  = geometryDecodeData.uid;
 
+	// Leading byte of every pointer body: the axes standard the referenced asset is
+	// authored in. NotInitialized means "the same as the server's scene", so fall back to
+	// the standard the server declared in its SetupCommand (and ultimately to Engineering).
+	platform::crossplatform::AxesStandard sourceAxesStandard =
+		static_cast<platform::crossplatform::AxesStandard>(NextByte);
 	uint16_t urlLength = NextUint16;
 	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
 	// Mark the resource as received. As far as the Server is concerned, its job is done.
@@ -1434,14 +1443,6 @@ avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecod
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	// Optional trailing byte: the axes standard the referenced asset is authored in.
-	// Absent or NotInitialized means "the same as the server's scene", so fall back to the
-	// standard the server declared in its SetupCommand (and ultimately to Engineering).
-	platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::NotInitialized;
-	if (geometryDecodeData.offset < geometryDecodeData.data.size())
-	{
-		sourceAxesStandard = static_cast<platform::crossplatform::AxesStandard>(NextByte);
-	}
 	if (sourceAxesStandard == platform::crossplatform::AxesStandard::NotInitialized)
 	{
 		std::shared_ptr<teleport::client::SessionClient> sessionClient =
@@ -1466,6 +1467,11 @@ avs::Result GeometryDecoder::decodeAnimationPointer(GeometryDecodeData &geometry
 {
 	avs::uid animation_uid = geometryDecodeData.uid;
 
+	// Leading byte of every pointer body: the axes standard the referenced clip is
+	// authored in, exactly as for MeshPointer. The clip must agree with the avatar it
+	// will be retargeted onto.
+	platform::crossplatform::AxesStandard sourceAxesStandard =
+		static_cast<platform::crossplatform::AxesStandard>(NextByte);
 	uint16_t urlLength = NextUint16;
 	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
 	// Mark the resource as received. As far as the Server is concerned, its job is done.
@@ -1474,13 +1480,6 @@ avs::Result GeometryDecoder::decodeAnimationPointer(GeometryDecodeData &geometry
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	// Optional trailing byte: the axes standard the referenced clip is authored in, exactly
-	// as for MeshPointer. The clip must agree with the avatar it will be retargeted onto.
-	platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::NotInitialized;
-	if (geometryDecodeData.offset < geometryDecodeData.data.size())
-	{
-		sourceAxesStandard = static_cast<platform::crossplatform::AxesStandard>(NextByte);
-	}
 	if (sourceAxesStandard == platform::crossplatform::AxesStandard::NotInitialized)
 	{
 		std::shared_ptr<teleport::client::SessionClient> sessionClient =

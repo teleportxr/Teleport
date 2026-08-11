@@ -52,6 +52,23 @@ struct UnparsedPayloadCount
 	size_t		count = 0;
 };
 
+//! What the server last told a node to play, on one animation layer.
+//!
+//! This is the command as it arrived, not a simulation of it: the headless client builds no
+//! skeletons and advances no clips, so `timeAtTimestamp` is where the animation was at
+//! `timestampUs` and nothing here moves on afterwards. It is enough to assert that a server is
+//! driving the animation it means to, which is the thing that cannot otherwise be checked
+//! without a GPU.
+struct GeometryNodeAnimationState
+{
+	avs::uid animation		 = 0;
+	int32_t	 layer			 = 0;
+	float	 timeAtTimestamp = 0.0f;
+	float	 speed			 = 1.0f;
+	bool	 loop			 = false;
+	int64_t	 timestampUs	 = 0; //!< Server-session time the state applies at; may lead "now" for a cross-fade.
+};
+
 //! One tracked node, as reported by `geometry nodes`.
 struct GeometryNodeEntry
 {
@@ -63,6 +80,9 @@ struct GeometryNodeEntry
 	avs::uid	skeleton = 0;
 	size_t		materials  = 0;
 	size_t		animations = 0;
+	//! The animation states in force, one per layer the server has addressed. Empty until an
+	//! ApplyAnimation names this node.
+	std::vector<GeometryNodeAnimationState> animationStates;
 	std::string url; //!< Set for Link nodes.
 };
 

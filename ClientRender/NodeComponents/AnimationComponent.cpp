@@ -86,13 +86,13 @@ void AnimationComponent::Retarget(Animation &anim)
 
 std::shared_ptr<AnimationInstance> AnimationComponent::GetOrCreateAnimationInstance(avs::uid root_uid)
 {
-	if (root_uid == 0)
+	// Zero is the top-level instance: the renderer keys the root cache's states under 0 as well
+	// (InstanceRenderer's subSceneStatesMap[0]), so setting and updating a node that is not in a
+	// sub-scene both land here. Fall back to any existing instance first, then create - returning
+	// null instead of creating left a node outside a sub-scene with nowhere to put its state.
+	if (root_uid == 0 && animationInstances.size())
 	{
-		if (animationInstances.size())
-		{
-			return animationInstances.begin()->second;
-		}
-		return std::shared_ptr<AnimationInstance>();
+		return animationInstances.begin()->second;
 	}
 	auto f = animationInstances.find(root_uid);
 	if (f != animationInstances.end())
@@ -110,13 +110,30 @@ void AnimationComponent::setAnimationState(std::chrono::microseconds timestampUs
 		TELEPORT_WARN("Exceeded maximum animation layer number.");
 		return;
 	}
+	// Nothing to drive. The caller is expected to have resolved the animatable node already - a
+	// sub-scene's root node has no skeleton of its own - so reaching here means the state is about to
+	// be lost. Say so: silently dropping it is indistinguishable from an avatar that simply will not
+	// animate, which is expensive to diagnose.
 	if (!owner.GetSkeleton())
 	{
+		TELEPORT_WARN("Animation {} not applied to node {} ({}): it has no skeleton.", applyAnimation.animationID, owner.id, owner.name);
 		return;
 	}
 	auto instance = GetOrCreateAnimationInstance(root_uid);
-	auto cache	  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
-	auto anim	  = cache->mAnimationManager.Get(applyAnimation.animationID);
+	if (!instance)
+	{
+		return;
+	}
+	// Zero is not a cache: it is the protocol's "the cache containing nodeID", which only the caller
+	// can resolve. GetGeometryCache returns null for it, and for a cache that has since been destroyed.
+	auto cache = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
+	if (!cache)
+	{
+		TELEPORT_WARN("Animation {} not applied to node {} ({}): no geometry cache {}.", applyAnimation.animationID, owner.id, owner.name,
+					  applyAnimation.cacheID);
+		return;
+	}
+	auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
 	if (anim)
 	{
 		Retarget(*anim);
@@ -130,10 +147,12 @@ bool AnimationComponent::update(int64_t timestampUs, avs::uid root_uid)
 	{
 		return false;
 	}
+	// GetOrCreateAnimationInstance stores what it creates, so there is no case left where this is
+	// null. Building a throwaway here instead would discard the state again on every frame.
 	auto instance = GetOrCreateAnimationInstance(root_uid);
 	if (!instance)
 	{
-		instance.reset(new AnimationInstance(owner.GetSkeleton()));
+		return false;
 	}
 	float dt		= lastTimestampUs ? float(double(timestampUs - lastTimestampUs) / 1000000.0) : 0.0f;
 	lastTimestampUs = timestampUs;
