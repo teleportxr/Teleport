@@ -197,7 +197,11 @@ namespace teleport_control
 	{
 		if (sock == INVALID_SOCK)
 			return;
+#ifdef _WIN32
+		shutdown(Native(sock), SD_BOTH);
+#else
 		shutdown(Native(sock), SHUT_RDWR);
+#endif
 	}
 
 	bool SendAll(socket_t sock, const char *data, size_t size)
