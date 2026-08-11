@@ -94,6 +94,8 @@ cmake -S . -B build_macos -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build build_macos
 ```
 
+To build both clients together, see `pc_client/CLAUDE.md` or the root `README.md`.
+
 Build the default target rather than just `teleportd`: the Platform submodule has `install()` rules
 for libraries that `cpack` expects to exist, and a target-specific build leaves them unbuilt.
 
