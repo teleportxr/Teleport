@@ -9,6 +9,7 @@
 #include <cmath>
 #include <string>
 #include <unordered_map>
+#include <set>
 #include <vector>
 
 // For operator ""s
@@ -129,21 +130,90 @@ template <typename stringType> stringType GetMappedBoneName(const stringType &bN
 		mapping["rightleg"]		= "rightlowerleg";
 		mapping["righttoebase"] = "righttoes";
 	}
+	// Every role this understands, so a candidate reading can be tested rather than assumed.
+	static std::set<stringType> roles;
+	if (!roles.size())
+	{
+		for (const char *r : {"hips",			"spine",		 "chest",		  "upperchest",	   "neck",			"head",			 "jaw",
+							  "lefteye",		"righteye",		 "leftshoulder",  "leftupperarm",  "leftlowerarm",	"lefthand",		 "rightshoulder",
+							  "rightupperarm",	"rightlowerarm", "righthand",	  "leftupperleg",  "leftlowerleg",	"leftfoot",		 "lefttoes",
+							  "rightupperleg",	"rightlowerleg", "rightfoot",	  "righttoes"})
+		{
+			roles.insert(stringType(r));
+		}
+	}
 	stringType n = bName;
 	std::transform(n.begin(), n.end(), n.begin(), ::tolower);
-	replace_all(n,"bip_c_"s, ""s);
-	replace_all(n,"bip_"s, ""s);
-	replace_all(n,"_l_"s, "_left"s);
-	replace_all(n,"_r_"s, "_right"s);
-	size_t underscore_pos=n.find('_');
-	if(underscore_pos<n.length())
-		n=n.substr(underscore_pos+1,n.length()-underscore_pos-1);
-	auto m = mapping.find(n);
-	if (m == mapping.end())
+	// Namespaces: "mixamorig:LeftArm", "Armature|Hips".
+	size_t ns = n.find_last_of(":|");
+	if (ns != stringType::npos)
 	{
-		return n;
+		n = n.substr(ns + 1);
 	}
-	return m->second;
+	replace_all(n, "bip_c_"s, ""s);
+	replace_all(n, "bip_"s, ""s);
+	replace_all(n, "mixamorig"s, ""s);
+	replace_all(n, "_l_"s, "_left"s);
+	replace_all(n, "_r_"s, "_right"s);
+
+	// Trailing index, e.g. Ready Player Me's "Hips_01". Only stripped behind a separator:
+	// "Spine1" is the chest, while "Spine_1" is the first joint of a chain.
+	for (;;)
+	{
+		size_t i = n.find_last_not_of("0123456789"s);
+		if (i == stringType::npos || i + 1 >= n.length() || (n[i] != '_' && n[i] != '.' && n[i] != '-' && n[i] != ' '))
+		{
+			break;
+		}
+		n = n.substr(0, i);
+	}
+
+	// Where the meaningful part sits differs by convention - a prefix in "Avatar_Hips", the
+	// head of the name in "Hips_01" - so try each reading and take the first that is a role
+	// this knows. Guessing one position outright is what made "Hips_01" resolve to "01".
+	auto stripSeparators = [](stringType s)
+	{
+		stringType out;
+		for (auto c : s)
+		{
+			if (c != '_' && c != '.' && c != '-' && c != ' ')
+			{
+				out.push_back(c);
+			}
+		}
+		return out;
+	};
+	stringType			   whole = stripSeparators(n);
+	std::vector<stringType> candidates{whole};
+	size_t				   first = n.find('_');
+	if (first != stringType::npos)
+	{
+		candidates.push_back(stripSeparators(n.substr(first + 1)));
+	}
+	size_t last = n.find_last_of('_');
+	if (last != stringType::npos && last != first)
+	{
+		candidates.push_back(stripSeparators(n.substr(last + 1)));
+	}
+	for (const stringType &c : candidates)
+	{
+		if (c.empty())
+		{
+			continue;
+		}
+		auto m = mapping.find(c);
+		if (m != mapping.end())
+		{
+			return m->second;
+		}
+		if (roles.find(c) != roles.end())
+		{
+			return c;
+		}
+	}
+	// Nothing recognised: the whole name, so two rigs sharing an unknown convention still
+	// match each other.
+	return whole;
 };
 std::string teleport::clientrender::getMappedBoneName(const std::string &bName)
 {
