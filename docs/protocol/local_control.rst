@@ -127,7 +127,7 @@ Connection-scoped verbs -- ``status``, ``move``, ``turn``, ``input``, ``mode``, 
    * - ``geometry``
      - ``{"hasCache", "nodes", "nodesRemoved", "skeletons", "resourcesReceived", "pointers", "referencedUnsent", "pendingResourceAcks", "pendingNodeAcks", "unparsed"}``
    * - ``geometry nodes``
-     - ``{"hasCache", "nodes": [{"uid", "name", "type", "data", "parent", "skeleton", "materials", "animations", "url"}]}``
+     - ``{"hasCache", "nodes": [{"uid", "name", "type", "data", "parent", "skeleton", "materials", "animations", "animationStates", "url"}]}``
    * - ``geometry resources``
      - ``{"hasCache", "pointers": [{"uid", "type", "url"}], "missing": [uid]}``
    * - ``identity``
@@ -144,6 +144,14 @@ Connection-scoped verbs -- ``status``, ``move``, ``turn``, ``input``, ``mode``, 
 ``connect`` returns as soon as the attempt is *initiated*: the id is valid immediately, but the connection completes asynchronously. Poll ``status`` until ``state`` is ``CONNECTED``. The reported states are ``UNCONNECTED``, ``OFFERING``, ``AWAITING_SETUP``, ``HANDSHAKING``, ``CONNECTED``, ``RECONNECTING`` and ``UNKNOWN``, or ``DISCONNECTED`` when no session exists yet.
 
 ``shutdown`` stops the service and every stream it holds. ``quit``/``exit`` only detach the control connection; streams keep running, which is the point of the split.
+
+In ``geometry nodes``, ``animations`` counts the clips bound to a node, while ``animationStates`` reports what the server has most recently told it to play -- one entry per animation layer, empty until an :ref:`ApplyAnimationCommand <server_to_client>` names the node::
+
+    {"uid": "22", "name": "Avatar", "animations": 0,
+     "animationStates": [{"animation": "24", "layer": 0, "timeAtTimestamp": 0.61,
+                          "speed": 0.64, "loop": true, "timestampUs": 8412000}]}
+
+These are the command's fields as they arrived, not a simulation of playback: ``timeAtTimestamp`` is where the clip stood at ``timestampUs`` and does not advance afterwards. That is enough to check that a server is driving the animation it intends to -- note ``animations`` stays ``0`` for an avatar whose skeleton lives inside a streamed sub-scene, because the clips are bound in the sub-scene's own cache.
 
 Signing in
 ----------

@@ -146,7 +146,7 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 		st.animationState.animation			= s1->second.animation;
 		float d								= s1->second.animation->duration;
 		float t								= s1->second.speedUnitsPerS * UsToS(s1->second.timestampUs, timestampUs);
-		st.animationState.timeRatio			= s1->second.timeRatio + d?(t / d):0.0f;
+		st.animationState.timeRatio			= s1->second.timeRatio + (d ? (t / d) : 0.0f);
 		interpState							= 1;
 		return st;
 	}
@@ -166,7 +166,7 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 			st.animationState.matchTransition	= animationState.matchTransition;
 			st.animationState.animation			= animationState.animation;
 			float d								= animationState.animation->duration;
-			st.animationState.timeRatio			= s_last->second.timeRatio + d?(t / d):0.0f;
+			st.animationState.timeRatio			= s_last->second.timeRatio + (d ? (t / d) : 0.0f);
 			st.previousAnimationState			= animationState;
 			if (animationStates.size() > 1)
 			{
@@ -194,7 +194,7 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 		st.animationState.animation			= s1->second.animation;
 		float d								= s1->second.animation->duration;
 		float t								= s1->second.speedUnitsPerS * UsToS(s1->second.timestampUs, timestampUs);
-		st.animationState.timeRatio			= s1->second.timeRatio + d?(t / d):0.0f;
+		st.animationState.timeRatio			= s1->second.timeRatio + (d ? (t / d) : 0.0f);
 		interpState							= 4;
 		return st;
 	}
@@ -238,7 +238,7 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 		}
 		else
 		{
-			R = R0 + d0 ? (t / d0):0.0f;
+			R = R0 + (d0 ? (t / d0) : 0.0f);
 		}
 		st.previousAnimationState.timeRatio	= R;
 		st.animationState.timeRatio			= R;

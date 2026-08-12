@@ -1,4 +1,5 @@
 #include "HeadlessSessionCommandInterface.h"
+#include "HeadlessGeometryCacheBackend.h"
 #include "HeadlessGeometryTarget.h"
 #include "TeleportClient/ClientPipeline.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -172,6 +173,17 @@ void HeadlessSessionCommandInterface::SetNodeHighlighted(avs::uid nodeID, bool i
 
 void HeadlessSessionCommandInterface::UpdateNodeAnimation(std::chrono::microseconds timestampUs, const teleport::core::ApplyAnimation &animationUpdate)
 {
+	TELEPORT_LOG("ApplyAnimation: node {} animation {} (layer {}, time {:.2f}s, speed {:.2f}, loop {})",
+				 animationUpdate.nodeID,
+				 animationUpdate.animationID,
+				 animationUpdate.animLayer,
+				 animationUpdate.animTimeAtTimestamp,
+				 animationUpdate.speedUnitsPerSecond,
+				 animationUpdate.loop);
+	// Retained as well as logged, so `geometry nodes` can report what a node should be playing.
+	// A log line is no use to anything driving this client.
+	if (geometryCache)
+		geometryCache->TrackAnimationState(animationUpdate);
 }
 
 void HeadlessSessionCommandInterface::OnStreamingControlMessage(const std::string &str)

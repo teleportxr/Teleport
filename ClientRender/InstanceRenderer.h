@@ -309,6 +309,14 @@ namespace teleport
 
 			void UpdateMouse(vec3 orig, vec3 dir, float &distance, std::string &url);
 
+			//! This session's clock: microseconds since the setup command's datum.
+			//! Everything the server timestamps - animation states above all - is expressed in this,
+			//! not in the Unix wall-clock time RenderState carries.
+			int64_t SessionTimeUs() const
+			{
+				return sessionClient ? sessionClient->GetTimestamp().count() : 0;
+			}
+
 			void RenderBackgroundTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext,
 									platform::crossplatform::Texture *srcTexture,

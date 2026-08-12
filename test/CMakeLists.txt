@@ -12,10 +12,72 @@ endfunction()
 
 SETUP_TESTS(
    avatars
+   jcs
+   manifest
 )
 # The avatars test exercises the codecs defined in TeleportCore/AvatarsJson.cpp,
 # so it must link against TeleportCore.
 target_link_libraries(avatars PRIVATE TeleportCore)
+
+# jcs and manifest exercise TeleportCore/Jcs.cpp and ManifestJson.cpp. The
+# manifest header pulls in libavstream/common_exports.h transitively via
+# Avatars.h, so both need that include path for the avs::uid alias.
+target_link_libraries(jcs PRIVATE TeleportCore)
+target_link_libraries(manifest PRIVATE TeleportCore)
+target_include_directories(jcs PRIVATE ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+target_include_directories(manifest PRIVATE ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+
+# manifest_verify is the cross-language contract test: a manifest signed by
+# the Node.js implementation, verified by this one. It compiles the
+# ManifestVerify translation unit directly rather than linking the whole
+# TeleportServer shared library (which on Linux additionally depends on CUDA
+# and Compressonator at link time), and needs OpenSSL for Ed25519.
+add_executable(manifest_verify
+   test_manifest_verify.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/ManifestVerify.cpp)
+add_test(NAME manifest_verify COMMAND manifest_verify)
+target_link_libraries(manifest_verify PRIVATE Catch2::Catch2WithMain TeleportCore)
+target_include_directories(manifest_verify PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
+if(WIN32)
+   target_link_libraries(manifest_verify PRIVATE libssl libcrypto)
+else()
+   target_link_libraries(manifest_verify PRIVATE ssl crypto)
+endif()
+
+# manifest_resolver drives the six-stage evaluation sequence with an injected
+# transport, and exercises the SSRF guard directly. It compiles the resolver
+# and verifier translation units rather than linking TeleportServer, and needs
+# libcurl (the resolver's default transport) and OpenSSL.
+add_executable(manifest_resolver
+   test_manifest_resolver.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/DefaultAvatarManifestResolver.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/ManifestVerify.cpp)
+add_test(NAME manifest_resolver COMMAND manifest_resolver)
+target_link_libraries(manifest_resolver PRIVATE Catch2::Catch2WithMain TeleportCore libcurl)
+target_include_directories(manifest_resolver PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include
+   ${curl_include_paths})
+if(WIN32)
+   target_link_libraries(manifest_resolver PRIVATE libssl libcrypto)
+else()
+   target_link_libraries(manifest_resolver PRIVATE ssl crypto)
+endif()
+
+# manifest_cache exercises the header-only LRU used by the manifest resolver.
+add_executable(manifest_cache test_manifest_cache.cpp)
+add_test(NAME manifest_cache COMMAND manifest_cache)
+target_link_libraries(manifest_cache PRIVATE Catch2::Catch2WithMain TeleportCore)
+target_include_directories(manifest_cache PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include)
 
 # anim exercises the animation retargeter's bind-frame conjugation maths.
 # It compiles the AnimationRetargeter translation unit directly so it doesn't

@@ -4,7 +4,7 @@ project( TeleportCore )
 # Build options
 set(DEBUG_CONFIGURATIONS Debug)
 # Source
-set(src_files			Animation.cpp AvatarsJson.cpp DecodeMesh.cpp TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp
+set(src_files			Animation.cpp AvatarsJson.cpp DecodeMesh.cpp Jcs.cpp ManifestJson.cpp TeleportCore.cpp ErrorHandling.cpp FontAtlas.cpp Input.cpp
 						Time.cpp URLParser.cpp)
 file(GLOB header_files	Animation.h
 						DecodeMesh.h
@@ -22,7 +22,9 @@ file(GLOB header_files	Animation.h
 						URLParser.h )
 set(export_includes export_include/TeleportCore/InputTypes.h
 						export_include/TeleportCore/CommonNetworking.h
-						export_include/TeleportCore/Avatars.h)
+						export_include/TeleportCore/Avatars.h
+						export_include/TeleportCore/Jcs.h
+						export_include/TeleportCore/Manifest.h)
 
 if(ANDROID)
 	include_directories(../client/VrApi/Include) 

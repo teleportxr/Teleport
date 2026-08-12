@@ -23,6 +23,109 @@ using namespace teleport;
 
 using namespace clientrender;
 
+//! VRM humanoid role for each glTF node that fills one, keyed by node index.
+//!
+//! Retargeting matches joints by name, which works only while a rig happens to name its
+//! bones after the humanoid roles they play. That is a convention, not a contract: both
+//! VRM and VRM-Animation state the mapping explicitly, as node indices, and a file is free
+//! to call its nodes anything at all. Where the declaration exists it is authoritative and
+//! the names are not consulted; where it does not, the caller falls back to the node name
+//! as before.
+//!
+//! Three layouts are read, because the spec moved between versions:
+//!   VRM 0.x         extensions.VRM.humanoid.humanBones          array of {bone, node}
+//!   VRM 1.0         extensions.VRMC_vrm.humanoid.humanBones     object of role -> {node}
+//!   VRM-Animation   extensions.VRMC_vrm_animation.humanoid.humanBones   ditto
+//! The 1.0-beta animation layout carries inline sampler references and no node index; it
+//! yields nothing here and falls back to names, which is all that layout offers.
+static std::unordered_map<int, std::string> BuildVrmRoleMap(const tinygltf::Model &model)
+{
+	std::unordered_map<int, std::string> roles;
+	auto readObjectForm = [&roles, &model](const tinygltf::Value &humanBones)
+	{
+		if (!humanBones.IsObject())
+		{
+			return;
+		}
+		for (const std::string &role : humanBones.Keys())
+		{
+			const tinygltf::Value &entry = humanBones.Get(role);
+			if (!entry.IsObject() || !entry.Has("node"))
+			{
+				continue;
+			}
+			const int nodeIndex = entry.Get("node").GetNumberAsInt();
+			if (nodeIndex >= 0 && nodeIndex < (int)model.nodes.size())
+			{
+				roles[nodeIndex] = role;
+			}
+		}
+	};
+	auto humanoidOf = [&model](const char *extension) -> const tinygltf::Value *
+	{
+		auto e = model.extensions.find(extension);
+		if (e == model.extensions.end() || !e->second.IsObject() || !e->second.Has("humanoid"))
+		{
+			return nullptr;
+		}
+		const tinygltf::Value &humanoid = e->second.Get("humanoid");
+		return humanoid.Has("humanBones") ? &humanoid : nullptr;
+	};
+
+	if (const tinygltf::Value *humanoid = humanoidOf("VRMC_vrm_animation"))
+	{
+		readObjectForm(humanoid->Get("humanBones"));
+	}
+	if (roles.empty())
+	{
+		if (const tinygltf::Value *humanoid = humanoidOf("VRMC_vrm"))
+		{
+			readObjectForm(humanoid->Get("humanBones"));
+		}
+	}
+	if (roles.empty())
+	{
+		// VRM 0.x: an array of {bone, node} rather than an object keyed by role.
+		if (const tinygltf::Value *humanoid = humanoidOf("VRM"))
+		{
+			const tinygltf::Value &humanBones = humanoid->Get("humanBones");
+			if (humanBones.IsArray())
+			{
+				for (size_t i = 0; i < humanBones.ArrayLen(); i++)
+				{
+					const tinygltf::Value &entry = humanBones.Get((int)i);
+					if (!entry.IsObject() || !entry.Has("bone") || !entry.Has("node"))
+					{
+						continue;
+					}
+					const int nodeIndex = entry.Get("node").GetNumberAsInt();
+					if (nodeIndex >= 0 && nodeIndex < (int)model.nodes.size())
+					{
+						roles[nodeIndex] = entry.Get("bone").Get<std::string>();
+					}
+				}
+			}
+		}
+	}
+	if (roles.size())
+	{
+		TELEPORT_INTERNAL_COUT(Default, "VRM humanoid: {} bones named by declared role rather than by node name.", roles.size());
+	}
+	return roles;
+}
+
+//! The name a joint should be known by: its declared humanoid role where it has one, and
+//! its glTF node name otherwise.
+static std::string EffectiveNodeName(const tinygltf::Model &model, const std::unordered_map<int, std::string> &roles, int nodeIndex)
+{
+	auto r = roles.find(nodeIndex);
+	if (r != roles.end())
+	{
+		return r->second;
+	}
+	return (nodeIndex >= 0 && nodeIndex < (int)model.nodes.size()) ? model.nodes[nodeIndex].name : std::string();
+}
+
 // Returns all skins belonging to a given gltf scene
 ozz::vector<tinygltf::Skin> GetSkinsForScene(const tinygltf::Scene &_scene, const tinygltf::Model &model)
 {
@@ -137,14 +240,17 @@ static ozz::math::Float3 ConvertScale(platform::crossplatform::AxesStandard sour
 }
 
 // Recursively import a node's children
-bool ImportNode(const tinygltf::Node							 &gltfNode,
+bool ImportNode(int												 nodeIndex,
 				const tinygltf::Model							 &model,
+				const std::unordered_map<int, std::string>		 &roles,
 				ozz::animation::offline::RawSkeleton::Joint		 *_joint,
 				platform::crossplatform::AxesStandard			sourceAxesStandard,
 				platform::crossplatform::AxesStandard			targetAxesStandard)
 {
-	// Names joint.1
-	_joint->name = gltfNode.name.c_str();
+	const tinygltf::Node &gltfNode = model.nodes[nodeIndex];
+	// Named by declared humanoid role where there is one, so that retargeting matches on
+	// the role a bone plays rather than on what its author happened to call it.
+	_joint->name = EffectiveNodeName(model, roles, nodeIndex).c_str();
 
 	// Fills transform.
 	if (!CreateNodeTransform(gltfNode, &_joint->transform))
@@ -162,10 +268,9 @@ bool ImportNode(const tinygltf::Node							 &gltfNode,
 	
 	for (size_t i = 0; i < sorted_children.size(); ++i)
 	{
-		const tinygltf::Node						&child_node	 = model.nodes[sorted_children[i]];
 		ozz::animation::offline::RawSkeleton::Joint &child_joint = _joint->children[i];
 
-		if (!ImportNode(child_node, model, &child_joint, sourceAxesStandard, targetAxesStandard))
+		if (!ImportNode(sorted_children[i], model, roles, &child_joint, sourceAxesStandard, targetAxesStandard))
 		{
 			return false;
 		}
@@ -233,12 +338,12 @@ bool ImportSkeleton(ozz::animation::offline::RawSkeleton			 &raw_skeleton,
 	roots.erase(std::unique(roots.begin(), roots.end()), roots.end());
 
 	// Traverses the scene graph and record all joints starting from the roots.
+	const std::unordered_map<int, std::string> roles = BuildVrmRoleMap(model);
 	raw_skeleton.roots.resize(roots.size());
 	for (size_t i = 0; i < roots.size(); ++i)
 	{
-		const tinygltf::Node						&root_node	= model.nodes[roots[i]];
 		ozz::animation::offline::RawSkeleton::Joint &root_joint = raw_skeleton.roots[i];
-		if (!ImportNode(root_node, model, &root_joint, sourceAxesStandard, targetAxesStandard))
+		if (!ImportNode(roots[i], model, roles, &root_joint, sourceAxesStandard, targetAxesStandard))
 		{
 			return false;
 		}
@@ -414,6 +519,16 @@ bool ImportAnimations(const tinygltf::Model					&model,
 		// or scale. ozz expects animations to be stored per joint so we create a
 		// map where we record the associated channels for each joint
 		ozz::cstring_map<std::vector<const tinygltf::AnimationChannel *>> channels_per_joint;
+		// Keyed by the same effective name ImportSkeleton gave the joints, so a rig whose
+		// nodes are not named after their humanoid roles still lines up. cstring_map keys on
+		// the pointer, so these have to outlive the map - hence one stable array of them
+		// rather than a temporary per lookup.
+		const std::unordered_map<int, std::string> roles = BuildVrmRoleMap(model);
+		std::vector<std::string>				   effectiveNames(model.nodes.size());
+		for (size_t n = 0; n < model.nodes.size(); n++)
+		{
+			effectiveNames[n] = EffectiveNodeName(model, roles, (int)n);
+		}
 
 		// std::cout << "Animation: " << gltf_animation.name << std::endl;
 		for (const tinygltf::AnimationChannel &channel : gltf_animation.channels)
@@ -438,8 +553,7 @@ bool ImportAnimations(const tinygltf::Model					&model,
 				continue;
 			}
 
-			const tinygltf::Node &target_node = model.nodes[channel.target_node];
-			channels_per_joint[target_node.name.c_str()].push_back(&channel);
+			channels_per_joint[effectiveNames[channel.target_node].c_str()].push_back(&channel);
 		}
 
 		// For each joint get all its associated channels, sample them and record
@@ -466,7 +580,17 @@ bool ImportAnimations(const tinygltf::Model					&model,
 				}
 			}
 
-			const tinygltf::Node *node = FindNodeByName(model, joint_names[i]);
+			// By effective name, matching how the joint was named: a role-named joint has no
+			// node of that name to find, and its rest pose would silently go unpadded.
+			const tinygltf::Node *node = nullptr;
+			for (size_t n = 0; n < effectiveNames.size(); n++)
+			{
+				if (effectiveNames[n] == joint_names[i])
+				{
+					node = &model.nodes[n];
+					break;
+				}
+			}
 			if (node == nullptr)
 			{
 				continue;

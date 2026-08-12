@@ -2,6 +2,7 @@
 #pragma once
  
 #include "Common.h"
+#include "Platform/CrossPlatform/AxesStandard.h"
 namespace platform
 {
 	namespace crossplatform
@@ -138,9 +139,16 @@ namespace teleport
 				std::shared_ptr<std::vector<std::vector<uint8_t>>> images;
 		
 				CompressionFormat compression = CompressionFormat::UNCOMPRESSED; //The format the texture will be compressed in on the GPU.
-		
+
 				float valueScale=1.0f;	// multiplier for texel values.
-			
+
+				//! The frame the texture's contents are laid out in, as declared by the TexturePointer
+				//! that referred to it. Meaningful for cubemaps: the renderer converts its sample
+				//! directions from the client's own frame into this one, because texture contents -
+				//! unlike geometry - are never converted by the server. NotInitialized and the client's
+				//! own standard both mean "no conversion".
+				platform::crossplatform::AxesStandard axesStandard = platform::crossplatform::AxesStandard::NotInitialized;
+
 				void operator=(const TextureCreateInfo & t)
 				{
 					name	=t.name;
@@ -159,6 +167,7 @@ namespace teleport
 					compression		= t.compression;
 
 					 valueScale			=t.valueScale;
+					axesStandard	= t.axesStandard;
 				}
 			};
 

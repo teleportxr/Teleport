@@ -76,16 +76,19 @@ Payload types
      - Text-canvas description (font uid, layout, colour, text). See :ref:`text_canvas_payload`.
    * - 10
      - TexturePointer
-     - ``uint16`` URL length + URL bytes. The body is the HTTP(S) URL of an out-of-band Texture; see :ref:`texture_pointer_payload` and :doc:`http`.
+     - ``uint8`` axes standard + ``uint16`` URL length + URL bytes. The body is the HTTP(S) URL of an out-of-band Texture; see :ref:`texture_pointer_payload` and :doc:`http`.
    * - 11
      - MeshPointer
-     - ``uint16`` URL length + URL bytes. As above but for Meshes. See :ref:`mesh_pointer_payload`.
+     - ``uint8`` axes standard + ``uint16`` URL length + URL bytes. As above but for Meshes. See :ref:`mesh_pointer_payload`.
    * - 12
      - MaterialPointer
      - Reserved; not currently emitted. See :ref:`material_pointer_payload`.
    * - 13
      - RemoveNodes
      - ``uint16`` count followed by that many ``avs::uid`` values to delete from the client's scene. **Has no resource uid in the header.** See :ref:`remove_nodes_payload`.
+   * - 14
+     - AnimationPointer
+     - ``uint8`` axes standard + ``uint16`` URL length + URL bytes. As MeshPointer but for Animations. See :ref:`animation_pointer_payload`.
 
 .. _node_payload:
 
@@ -692,7 +695,7 @@ A ``Texture`` chunk carries an inline compressed texture. Large textures (over ~
 Animation payload
 =================
 
-An ``Animation`` chunk carries a per-bone keyframe track.
+An ``Animation`` chunk carries a per-bone keyframe track. Clips are more commonly delivered out-of-band as files via an :ref:`animation_pointer_payload` chunk; the inline form below is what the fetched body decodes to when it is not a glTF-family file.
 
 (In-memory representation: ``teleport::core::Animation``.)
 
@@ -927,6 +930,10 @@ TexturePointer payload
 
 A ``TexturePointer`` chunk delivers a Texture indirectly: it carries an HTTP(S) URL that the client fetches and then decodes as a :ref:`texture_payload`. See :doc:`http` for the fetch and caching rules.
 
+Every pointer body (``TexturePointer``, ``MeshPointer``, ``MaterialPointer``, ``AnimationPointer``) begins with a single axes-standard byte, ahead of the URL, so it is always in the same place. For ``MaterialPointer``, whose asset has no geometric frame, the byte is a placeholder and stays ``NotInitialized`` (0).
+
+For a texture the byte states the axes standard the file's **contents** are laid out in. It matters for cubemaps, whose six faces have an orientation. Note the asymmetry with geometry: every geometric value is converted to the client's axes standard by the server (see :ref:`axes_conversion`), but texture contents never are — the server sends the file as authored, and the client converts its sample directions into the declared frame instead.
+
 .. list-table:: TexturePointer body
    :widths: 14 22 8 60
    :header-rows: 1
@@ -935,6 +942,10 @@ A ``TexturePointer`` chunk delivers a Texture indirectly: it carries an HTTP(S) 
      - Type
      - Size (bytes)
      - Description
+   * - axesStandard
+     - ``uint8``
+     - 1
+     - The frame the texture's contents are laid out in. ``NotInitialized`` (0) means "the same as the server's scene", i.e. ``SetupCommand.axesStandard``. A texture with no orientation of its own may declare anything; clients ignore the byte unless they sample the texture as a cubemap.
    * - url length
      - ``uint16``
      - 2
@@ -944,17 +955,20 @@ A ``TexturePointer`` chunk delivers a Texture indirectly: it carries an HTTP(S) 
      - variable
      - Absolute URL (``http://`` / ``https://``) or path relative to the cache's ``defaultURLRoot``.
 
-Example body bytes for the URL ``"/a/b.ktx2"``::
+Example body bytes for a Z-up cubemap at ``"/a/b.ktx2"``::
 
-    09 00                                    -- url length = 9
-    2F 61 2F 62 2E 6B 74 78 32               -- "/a/b.ktx2"
+    09                                     -- axesStandard = EngineeringStyle
+    09 00                                  -- url length = 9
+    2F 61 2F 62 2E 6B 74 78 32             -- "/a/b.ktx2"
+
+A client whose own frame is Y-up right-handed converts each sample direction from its frame into the file's before the lookup; one already working Z-up right-handed samples the file unchanged. Note that a conversion between standards of **differing handedness** is a mirror rather than a rotation, so a client that carries environment orientation as a rotation alone cannot express it and must handle the reflection separately. Both reference clients do.
 
 .. _mesh_pointer_payload:
 
 MeshPointer payload
 ===================
 
-A ``MeshPointer`` chunk has the layout of :ref:`texture_pointer_payload` plus one optional trailing byte. Most geometry is delivered this way rather than inline.
+A ``MeshPointer`` chunk has the same layout as :ref:`texture_pointer_payload`, with a meaningful axes-standard byte. Most geometry is delivered this way rather than inline.
 
 The body fetched from the URL is **not** necessarily a :ref:`mesh_payload`; the client selects a decoder from the URL's extension:
 
@@ -981,6 +995,10 @@ An unrecognised extension is rejected. Servers MUST therefore give pointer URLs 
      - Type
      - Size (bytes)
      - Description
+   * - axesStandard
+     - ``uint8``
+     - 1
+     - The :ref:`conventions` standard the fetched asset is authored in (an ``avs::AxesStandard`` value). A glTF-family file (``.glb``/``.vrm``/``.vrma``) is always ``GlStyle``. ``NotInitialized`` (0) means the asset shares the server's scene axes. Unlike inline geometry, the fetched body is *not* pre-converted to the client's standard; the client converts from this standard after decoding.
    * - url length
      - ``uint16``
      - 2
@@ -989,10 +1007,13 @@ An unrecognised extension is rejected. Servers MUST therefore give pointer URLs 
      - ``uint8[url length]``
      - variable
      - Absolute URL or relative path; see :doc:`http`.
-   * - axesStandard
-     - ``uint8``
-     - 0 or 1
-     - Optional. The :ref:`conventions` standard the fetched asset is authored in (an ``avs::AxesStandard`` value). Present only for assets that disagree with the server's own scene axes — a glTF-family file (``.glb``/``.vrm``/``.vrma``) is always ``GlStyle``. Absent or ``NotInitialized`` (0) means the asset shares the server's scene axes, so older clients that stop reading at the end of the URL behave correctly. Unlike inline geometry, the fetched body is *not* pre-converted to the client's standard; the client converts from this standard after decoding.
+
+.. _animation_pointer_payload:
+
+AnimationPointer payload
+========================
+
+An ``AnimationPointer`` chunk has exactly the layout and semantics of :ref:`mesh_pointer_payload`, but the URL identifies an out-of-band Animation clip: the client fetches it and decodes the body as an :ref:`animation_payload` (a ``.vrma``/``.glb`` is glTF binary), registered under the chunk's uid. That uid is what ``ApplyAnimationCommand`` references, so the clip's axes standard must agree with the humanoid rig it will be retargeted onto, which arrives as a MeshPointer with its own declaration. See :doc:`service/server_to_client` for the animation commands.
 
 .. _material_pointer_payload:
 
@@ -1040,10 +1061,14 @@ For pointer chunks, the server treats the resource as delivered as soon as the c
 
 If the client's decoder fails (e.g. corrupt data, missing dependency, decoder panic), the client emits ``ResourceLostMessage`` (id 5) to ask the server to re-send. The server should treat the uid as "not yet received" and re-encode it on the next streaming pass.
 
+.. _axes_conversion:
+
 Axis conversion
 ===============
 
-Every geometric value (positions, transforms, vectors and quaternions) is converted from the server's ``AxesStandard`` (see :ref:`conventions`) to the client's standard inside the encoder, using ``avs::ConvertTransform``. The client therefore reads geometry data in **its own** axes, regardless of how the source scene is authored. The server's axes are reported in ``SetupCommand.axesStandard`` for diagnostic purposes only.
+Every geometric value (positions, transforms, vectors and quaternions) is converted from the server's ``AxesStandard`` (see :ref:`conventions`) to the client's standard inside the encoder, using ``avs::ConvertTransform``. The client therefore reads geometry data in **its own** axes, regardless of how the source scene is authored.
+
+**Asset contents are the exception.** A file referenced by a pointer chunk is served exactly as authored — the server does not rewrite a ``.glb``, and does not reproject a cubemap. Each pointer body therefore declares the frame its asset is in, in the leading axes-standard byte, and the client converts: mesh and animation data when it is decoded, cubemap sample directions when the texture is used. ``NotInitialized`` (0) in that byte means "the same as the server's scene", which is what ``SetupCommand.axesStandard`` reports.
 
 Coding conventions
 ==================

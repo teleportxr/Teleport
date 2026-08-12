@@ -14,17 +14,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\TeleportCore\Animation.cpp" />
     <ClCompile Include="..\..\TeleportCore\AvatarsJson.cpp" />
     <ClCompile Include="..\..\TeleportCore\DecodeMesh.cpp" />
     <ClCompile Include="..\..\TeleportCore\ErrorHandling.cpp" />
     <ClCompile Include="..\..\TeleportCore\FontAtlas.cpp" />
     <ClCompile Include="..\..\TeleportCore\Input.cpp" />
+    <ClCompile Include="..\..\TeleportCore\Jcs.cpp" />
+    <ClCompile Include="..\..\TeleportCore\ManifestJson.cpp" />
     <ClCompile Include="..\..\TeleportCore\TeleportCore.cpp" />
     <ClCompile Include="..\..\TeleportCore\Time.cpp" />
     <ClCompile Include="..\..\TeleportCore\URLParser.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\TeleportCore\CommonNetworking.h" />
+    <ClInclude Include="..\..\TeleportCore\Animation.h" />
     <ClInclude Include="..\..\TeleportCore\DecodeMesh.h" />
     <ClInclude Include="..\..\TeleportCore\ErrorHandling.h" />
     <ClInclude Include="..\..\TeleportCore\FontAtlas.h" />

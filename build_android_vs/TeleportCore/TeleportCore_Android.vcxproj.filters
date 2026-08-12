@@ -20,6 +20,9 @@
     <ClCompile Include="..\..\TeleportCore\AvatarsJson.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\TeleportCore\ManifestJson.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\TeleportCore\Time.cpp" />
   </ItemGroup>
   <ItemGroup>

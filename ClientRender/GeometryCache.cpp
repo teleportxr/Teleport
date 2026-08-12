@@ -8,7 +8,7 @@
 
 using namespace teleport;
 using namespace clientrender;
-#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(Default, txt, ##__VA_ARGS__)
+#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(Resource, txt, ##__VA_ARGS__)
 
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform = nullptr;
 
@@ -18,6 +18,9 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	  mTextCanvasManager(c_uid), mFontAtlasManager(c_uid), mIndexBufferManager(c_uid, &clientrender::IndexBuffer::Destroy),
 	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
+	// So the node manager can resolve an ApplyAnimation whose cacheID is zero, which the protocol
+	// defines as "the cache containing nodeID".
+	mNodeManager.SetCacheUid(c_uid);
 	auto addFn = std::bind(&Renderer::UpdateNodeInRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
 	mNodeManager.SetFunctionAddNodeForRender(addFn);
 	auto removeFn = std::bind(&Renderer::RemoveNodeFromRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
@@ -220,6 +223,12 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate &subSceneCreate)
 				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+			// As CompleteMesh does for an ordinary mesh. Without this a node that was created before
+			// its sub-scene arrived keeps a SubSceneComponent whose mesh_uid is set but whose mesh
+			// pointer is null, forever. It still renders, because InstanceRenderer looks the mesh up
+			// by uid from the manager rather than through this pointer - which is exactly why the
+			// omission went unnoticed - but anything reading the pointer gets nothing.
+			incompleteNode->SetMesh(s);
 			RESOURCE_RECEIVES(incompleteNode, subSceneCreate.uid);
 			size_t num_remaining = RESOURCES_AWAITED(*it);
 			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got SubScene {2}=cache {3}, missing {4} or {5}",

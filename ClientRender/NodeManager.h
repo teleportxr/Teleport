@@ -2,10 +2,12 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <map>
 #include <memory>
 #include <parallel_hashmap/phmap.h>
+#include <set>
 
 #include "libavstream/geometry/mesh_interface.hpp"
 
@@ -49,6 +51,22 @@ namespace teleport
 			std::shared_ptr<Node> GetNode(avs::uid nodeID) const;
 			size_t GetNodeCount() const;
 
+			//! The cache that owns this manager.
+			//! Needed to resolve an ApplyAnimation whose cacheID is zero, which the protocol defines
+			//! as "the cache containing nodeID".
+			void SetCacheUid(avs::uid u)
+			{
+				cacheUid = u;
+			}
+			avs::uid GetCacheUid() const
+			{
+				return cacheUid;
+			}
+
+			//! Every node here that owns a skeleton, and so can be animated directly.
+			//! Used to find the animatable nodes inside a sub-scene, whose root node has no skeleton of its own.
+			std::vector<std::shared_ptr<Node>> GetSkeletonNodes() const;
+
 			// Get list of nodes parented to the world root.
 			const std::vector<std::weak_ptr<Node>> &GetRootNodes() const;
 			const std::vector<std::weak_ptr<Node>> &GetSortedRootNodes();
@@ -68,6 +86,12 @@ namespace teleport
 			void UpdateNodeEnabledState(const std::vector<teleport::core::NodeUpdateEnabledState> &updateList);
 			void SetNodeHighlighted(avs::uid nodeID, bool isHighlighted);
 			void UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate);
+			//! Apply an animation state to whichever node actually owns the skeleton it should drive,
+			//! resolving into a sub-scene where the addressed node is only that sub-scene's root.
+			//! Returns false if there is nothing to animate yet, in which case the caller should retry later
+			//! and, if reason is non-null, it is filled with which step could not be resolved.
+			bool ApplyAnimationToNode(std::chrono::microseconds timestampUs, std::shared_ptr<Node> node, const teleport::core::ApplyAnimation &animationUpdate,
+									  std::string *reason = nullptr);
 
 			//! Returns true if successful, or false if not e.g. if either the node or the parent is not present.
 			bool ReparentNode(const teleport::core::UpdateNodeStructureCommand &updateNodeStructureCommand);
@@ -140,7 +164,16 @@ namespace teleport
 			std::map<avs::uid, teleport::core::MovementUpdate> earlyMovements;
 			std::map<avs::uid, teleport::core::NodeUpdateEnabledState> earlyEnabledUpdates;
 			std::map<avs::uid, bool> earlyNodeHighlights;
+			//! Animation states that could not be applied when they arrived, either because the node was
+			//! not here yet or because its sub-scene had not finished building. Retried on each Update()
+			//! until they land: the server only re-sends on a change of state, so one dropped here is a
+			//! node stuck in the wrong animation until the user happens to change gait.
 			std::map<avs::uid, teleport::core::ApplyAnimation> earlyAnimationUpdates;
+			//! When each of those was first queued, and which have already been complained about, so a
+			//! state that never lands is reported once rather than every tick or not at all.
+			std::map<avs::uid, std::chrono::microseconds> animationUpdateQueuedUs;
+			std::set<avs::uid> animationUpdatesWarned;
+			avs::uid cacheUid = 0;
 			std::map<avs::uid, std::vector<EarlyAnimationControl>> earlyAnimationControlUpdates;
 			std::map<avs::uid, std::vector<EarlyAnimationSpeed>> earlyAnimationSpeedUpdates;
 			/// For tracking which nodes have been hidden.
@@ -150,6 +183,8 @@ namespace teleport
 
 			// Links the node with the passed ID to it's parent. If the node doesn't exist, then it doesn't do anything.
 			void LinkToParentNode(std::shared_ptr<Node> child);
+			// Retry any animation states that could not be applied when they arrived.
+			void RetryAnimationUpdates(std::chrono::microseconds timestamp_us);
 			mutable std::mutex nodeLookup_mutex;
 			mutable std::mutex rootNodes_mutex;
 			mutable std::mutex early_mutex;

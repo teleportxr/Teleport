@@ -58,6 +58,12 @@ namespace teleport
 			//! avatar-offer (see plans/avatars_implementation.md). Empty string means
 			//! "no avatar; let the server fall back to its default".
 			std::string avatarUrl;
+			//! Address of a Universal Manifest describing this client's avatar — an
+			//! https URL, or a bare UMID resolved against the server's resolver. Offered
+			//! in preference to avatarUrl, but only to servers that advertise manifest
+			//! support in their policy; against any other server avatarUrl is used, so
+			//! both may be set. See docs/protocol/avatar_manifest.rst.
+			std::string manifestUrl;
 		};
 		struct DebugOptions
 		{

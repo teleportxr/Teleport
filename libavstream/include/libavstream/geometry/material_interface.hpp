@@ -140,6 +140,19 @@ namespace avs
 		TextureCompression compression;
 		bool compressed=false;
 
+		//! The axes standard the texture's contents are laid out in, as declared by the
+		//! TexturePointer that referred to it. Meaningful for cubemaps, whose six faces have
+		//! an orientation; the client converts its sample directions into this frame, because
+		//! texture contents - unlike geometry - are never converted by the server.
+		//!
+		//! Deliberately absent from the stream operators and from operator==: it is a property
+		//! of the reference, not of the file, and the file is what those two serialise and
+		//! compare. It arrives afresh with the pointer on every session.
+		//!
+		//! Must stay after `compressed`: InteropStructures.h aggregate-initialises this struct
+		//! positionally up to that member, and anything inserted before it shifts the list.
+		AxesStandard axesStandard=AxesStandard::NotInitialized;
+
 		struct Image
 		{
 			std::vector<uint8_t> data;

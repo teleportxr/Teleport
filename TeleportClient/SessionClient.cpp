@@ -113,7 +113,28 @@ SessionClient::SessionClient(avs::uid s, TabContext *tc, const std::string &dom)
 		{
 			core::AvatarOffer offer;
 			offer.policyId = policy.policyId;
-			const std::string &url = Config::GetInstance().options.avatarUrl;
+			const auto &options = Config::GetInstance().options;
+			const std::string &url = options.avatarUrl;
+
+			// Prefer a manifest, but only where the server said it accepts
+			// one: the presence of a manifest block in the requirements is
+			// the advertisement, and offering an address to a server that
+			// cannot resolve it would just cost the client its avatar.
+			if (policy.requirements.manifest.has_value() && !options.manifestUrl.empty())
+			{
+				core::AvatarManifestOffer manifest;
+				// An address containing "://" is a url; anything else is a
+				// bare UMID for the server's resolver to expand.
+				if (options.manifestUrl.find("://") != std::string::npos)
+					manifest.url = options.manifestUrl;
+				else
+					manifest.umid = options.manifestUrl;
+				offer.haveAvatar = true;
+				offer.manifest   = manifest;
+				reply(offer);
+				return;
+			}
+
 			if (url.empty())
 			{
 				offer.haveAvatar = false;

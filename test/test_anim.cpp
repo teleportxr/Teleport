@@ -428,3 +428,36 @@ TEST_CASE("Bone name normalisation maps common rig conventions onto VRM names", 
 	REQUIRE(getMappedBoneName(std::string("hips")) == "hips");
 	REQUIRE(getMappedBoneName(std::string("RightUpLeg")) == "rightupperleg");
 }
+
+TEST_CASE("Bone names with a trailing index resolve to their role", "[anim][names]")
+{
+	// Ready Player Me and similar exporters number the joints: "Hips_01", "LeftArm_011".
+	// Stripping the prefix up to the first underscore - which is right for "Avatar_Hips" -
+	// turned these into "01" and "011", so nothing matched and the avatar held its bind pose.
+	REQUIRE(getMappedBoneName(std::string("Hips_01")) == "hips");
+	REQUIRE(getMappedBoneName(std::string("Hips_66")) == "hips");
+	REQUIRE(getMappedBoneName(std::string("Spine1_03")) == "chest");
+	REQUIRE(getMappedBoneName(std::string("Spine2_04")) == "upperchest");
+	REQUIRE(getMappedBoneName(std::string("LeftArm_011")) == "leftupperarm");
+	REQUIRE(getMappedBoneName(std::string("LeftForeArm_012")) == "leftlowerarm");
+	REQUIRE(getMappedBoneName(std::string("LeftUpLeg_050")) == "leftupperleg");
+	REQUIRE(getMappedBoneName(std::string("RightToeBase_064")) == "righttoes");
+}
+
+TEST_CASE("A meaningful trailing digit is not mistaken for an index", "[anim][names]")
+{
+	// "Spine1" is the chest; only a digit behind a separator is an index.
+	REQUIRE(getMappedBoneName(std::string("Spine1")) == "chest");
+	REQUIRE(getMappedBoneName(std::string("Spine_1")) == "spine");
+	REQUIRE(getMappedBoneName(std::string("Avatar_Spine1")) == "chest");
+}
+
+TEST_CASE("The prefixed convention still resolves", "[anim][names]")
+{
+	// The VRM the example server streams, which must keep working.
+	REQUIRE(getMappedBoneName(std::string("Avatar_Hips")) == "hips");
+	REQUIRE(getMappedBoneName(std::string("Avatar_LeftArm")) == "leftupperarm");
+	REQUIRE(getMappedBoneName(std::string("Avatar_LeftForeArm")) == "leftlowerarm");
+	REQUIRE(getMappedBoneName(std::string("Avatar_LeftToeBase")) == "lefttoes");
+	REQUIRE(getMappedBoneName(std::string("mixamorig:LeftArm")) == "leftupperarm");
+}

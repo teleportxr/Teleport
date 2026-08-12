@@ -111,6 +111,7 @@ namespace teleport
 			avs::Result decodeMaterialInstance(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeTexturePointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeMeshPointer(GeometryDecodeData& geometryDecodeData);
+			avs::Result decodeAnimationPointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeTexture(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeAnimation(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeNode(GeometryDecodeData &geometryDecodeData);
