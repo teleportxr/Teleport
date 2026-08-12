@@ -177,16 +177,6 @@ GeometryReport HeadlessGeometryCacheBackend::GetReport() const
 		report.unparsed.push_back({avs::stringOf(u.first), u.second});
 
 	report.nodes.reserve(nodes.size());
-	GeometryReport				report;
-	report.hasCache						= true;
-	report.counts.nodes					= nodes.size();
-	report.counts.nodesRemoved			= nodesRemoved;
-	report.counts.skeletons				= skeletons.size();
-	report.counts.resourcesReceived		= allReceivedResources.size();
-	report.counts.pointers				= pointers.size();
-	report.counts.referencedUnsent		= referencedButNotReceived.size();
-	report.counts.pendingResourceAcks	= receivedResources.size();
-	report.counts.pendingNodeAcks		= completedNodes.size();
 
 	for (const auto &u : unparsedPayloadCounts)
 		report.unparsed.push_back({avs::stringOf(u.first), u.second});
