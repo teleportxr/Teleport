@@ -73,7 +73,8 @@ Every server-to-client packet that contains geometric data is provided in the ``
 A server must be capable of supporting clients in at least ``EngineeringStyle`` and ``GlStyle``.
 
 * The client declares its native axes as part of the :ref:`Handshake <signaling>`.
-* The server publishes the axes its scene is authored in via ``SetupCommand.axesStandard``. Clients should remember this value but it is informational only; numbers on the wire are always already in the client's standard.
+* The server publishes the axes its scene is authored in via ``SetupCommand.axesStandard``. Numbers on the wire are always already in the client's standard, so for geometry the value is informational — but a client must remember it, because it is what an unset axes-standard byte on a pointer chunk means (see :ref:`axes_conversion`).
+* Assets fetched over HTTP are the exception to "always in the client's standard": a mesh, animation or cubemap file is served as authored, and the pointer chunk that names it declares which frame that is. The client converts.
 * Linear units are **metres**.
 * Quaternions are stored as ``vec4_packed`` with the layout ``(x, y, z, w)``.
 * All transforms are local, i.e. relative to the parent node. A root node -- one whose ``parent_uid`` is zero -- is therefore expressed directly in the server's global space, and its global transform is its local transform. Node transforms are **not** relative to the session origin: the origin is itself an ordinary node in that same global space. See :doc:`client_nodes`.

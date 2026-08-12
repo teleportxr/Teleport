@@ -132,6 +132,14 @@ namespace avs
 		uint32_t arrayCount;
 		uint32_t mipCount;
 		bool cubemap=false;
+
+		TextureFormat format;
+		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
+
+
+		TextureCompression compression;
+		bool compressed=false;
+
 		//! The axes standard the texture's contents are laid out in, as declared by the
 		//! TexturePointer that referred to it. Meaningful for cubemaps, whose six faces have
 		//! an orientation; the client converts its sample directions into this frame, because
@@ -140,14 +148,10 @@ namespace avs
 		//! Deliberately absent from the stream operators and from operator==: it is a property
 		//! of the reference, not of the file, and the file is what those two serialise and
 		//! compare. It arrives afresh with the pointer on every session.
+		//!
+		//! Must stay after `compressed`: InteropStructures.h aggregate-initialises this struct
+		//! positionally up to that member, and anything inserted before it shifts the list.
 		AxesStandard axesStandard=AxesStandard::NotInitialized;
-
-		TextureFormat format;
-		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
-
-
-		TextureCompression compression;
-		bool compressed=false;
 
 		struct Image
 		{

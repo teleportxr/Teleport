@@ -44,6 +44,8 @@ Asset URLs are constructed by the server (reference: ``teleport::server::Geometr
 
 The full URL is delivered to the client *inside the geometry stream*, as the payload of a :ref:`TexturePointer or MeshPointer chunk <geometry_payload>`. Each pointer chunk begins with an ``axesStandard`` byte, followed by a ``uint16`` length and the UTF-8 URL bytes (see :ref:`texture_pointer_payload`); the client opens that URL with HTTPS and treats the reply body as the corresponding ``Texture`` or ``Mesh`` payload (without the 17-byte chunk header).
 
+The body is served exactly as authored — the server does not convert it to the client's axes standard, as it does for geometry sent inline. The ``axesStandard`` byte on the pointer says which frame the file is in, and the client converts (see :ref:`axes_conversion`). One URL therefore serves every client whatever its axes standard, and stays cacheable.
+
 Client behaviour
 ================
 
