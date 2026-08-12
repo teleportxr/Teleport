@@ -184,6 +184,7 @@ void Config::LoadOptions()
 		options.micMuted				= ini.GetBoolValue("", "MicMuted", options.micMuted);
 		options.vsync					= ini.GetBoolValue("", "VSync", options.vsync);
 		options.avatarUrl				= ini.GetValue("", "AvatarUrl", options.avatarUrl.c_str());
+		options.manifestUrl				= ini.GetValue("", "ManifestUrl", options.manifestUrl.c_str());
 	}
 }
 
@@ -204,6 +205,7 @@ void Config::SaveOptions()
 		str += std::format("\nMicMuted={0}", options.micMuted);
 		str += std::format("\nVSync={0}", options.vsync);
 		str += std::format("\nAvatarUrl={0}", options.avatarUrl);
+		str += std::format("\nManifestUrl={0}", options.manifestUrl);
 		std::string filename = (path(GetStorageFolder()) / "config/options.txt"s).string();
 		fileLoader->Save(str.data(), (unsigned int)str.length(), filename.c_str(), true);
 		LoadOptions();

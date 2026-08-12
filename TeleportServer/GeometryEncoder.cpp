@@ -708,6 +708,12 @@ avs::Result GeometryEncoder::encodeTexturePointer(avs::uid uid)
 	uint16_t urlLength = (uint16_t)url.length();
 	if ((size_t)urlLength != url.length())
 		return avs::Result::Failed;
+	// Every pointer body begins with the axes standard its asset is authored in, ahead of the
+	// url, so it is always in the same place — the decoders consume it unconditionally, and
+	// omitting it shifts the whole body by a byte. The GeometryStore records no per-texture
+	// standard, so declare NotInitialized: the client reads that as "the same as the server's
+	// scene" and falls back to SetupCommand.axesStandard.
+	put((uint8_t)avs::AxesStandard::NotInitialized);
 	// Push url length in 16 bits..
 	put(urlLength);
 	// Push name.

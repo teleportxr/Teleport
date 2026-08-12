@@ -23,6 +23,15 @@ vec2 OffsetScale(vec2 uv, vec4 offsc)
 	return uv * offsc.zw + offsc.xy;
 }
 
+// Take a sample direction from the client's own frame into the frame the background cubemap's
+// faces are laid out in. The server declares that frame in the TexturePointer's axes-standard
+// byte and never reprojects the file, so the lookup is converted instead. Identity when the
+// two frames agree, which is the usual case.
+vec3 ApplyCubemapAxes(vec3 dir)
+{
+	return mul(cubemapConstants.cubemapAxesTransform, vec4(dir, 0.0)).xyz;
+}
+
 vec2 ViewToServerScreenSpace(vec3 pos)
 {
 	vec4 clip_pos = vec4(pos, 1.0);
@@ -152,7 +161,7 @@ shader vec4 PS_FarCubemap(posTexVertexOutput IN) : SV_TARGET
 	const float PI = 3.1415926536;
 	const float TwoPI = 2.0 * PI;
 	vec3 view = TexCoordsToView(IN.texCoords);
-	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view, 0.0);
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, ApplyCubemapAxes(view), 0.0);
 	//lookup.xyz += view.xyz;
 	return lookup;
 }
@@ -175,7 +184,7 @@ shader vec4 PS_FarCubemap_MV(posTexVertexOutput IN, uint viewID
 	vec3 view_orig = -TexCoordsToView(IN.texCoords, viewID);
 	view_orig.xy = -view_orig.xy;
 	view_orig.z *= -1.0;
-	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, view_orig, 0.0);
+	vec4 lookup = cubemapTexture.SampleLevel(cubeSamplerState, ApplyCubemapAxes(view_orig), 0.0);
 	return lookup;
 }
 

@@ -1408,9 +1408,11 @@ avs::Result GeometryDecoder::decodeMaterialInstance(GeometryDecodeData &geometry
 avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDecodeData)
 {
 	avs::uid texture_uid = geometryDecodeData.uid;
-	// Leading byte of every pointer body: the axes standard. A placeholder for texture
-	// interpretation here — textures have no geometric frame.
-	[[maybe_unused]] platform::crossplatform::AxesStandard axesStandard =
+	// Leading byte of every pointer body: the axes standard the referenced asset is authored
+	// in. For a cubemap this is the frame its six faces are laid out in — unlike geometry,
+	// texture contents are never converted by the server, so the client reorients its sample
+	// directions instead. NotInitialized means "the same as the server's scene".
+	platform::crossplatform::AxesStandard sourceAxesStandard =
 		static_cast<platform::crossplatform::AxesStandard>(NextByte);
 	uint16_t urlLength	 = NextUint16;
 	FAIL_IF_INSUFFICIENT_BYTES_REMAINING(urlLength);
@@ -1420,10 +1422,25 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	string url((size_t)urlLength, ' ');
 	copy<char>(url.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, urlLength);
 
-	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={})",
-		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url);
+	if (sourceAxesStandard == platform::crossplatform::AxesStandard::NotInitialized)
+	{
+		std::shared_ptr<teleport::client::SessionClient> sessionClient =
+			teleport::client::SessionClient::GetSessionClient(geometryDecodeData.server_or_cache_uid);
+		if (sessionClient)
+		{
+			sourceAxesStandard = static_cast<platform::crossplatform::AxesStandard>(sessionClient->GetSetupCommand().axesStandard);
+		}
+	}
+	if (sourceAxesStandard == platform::crossplatform::AxesStandard::NotInitialized)
+	{
+		sourceAxesStandard = platform::crossplatform::AxesStandard::Engineering;
+	}
 
-	return decodeFromWeb(geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid);
+	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={}, axesStandard={})",
+		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url, static_cast<int>(sourceAxesStandard));
+
+	return decodeFromWeb(
+		geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid, sourceAxesStandard);
 }
 
 avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecodeData)
@@ -1526,6 +1543,8 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geom
 	}
 	texture.compressedData = std::move(geometryDecodeData.data);
 	texture.name		   = p.filename().replace_extension("").generic_string();
+	// The frame the contents are laid out in, as the TexturePointer declared it.
+	texture.axesStandard   = static_cast<avs::AxesStandard>(geometryDecodeData.sourceAxesStandard);
 	geometryDecodeData.target->CreateTexture(geometryDecodeData.server_or_cache_uid, geometryDecodeData.uid, texture);
 	return avs::Result::OK;
 }
@@ -1569,6 +1588,8 @@ avs::Result GeometryDecoder::decodeTexture(GeometryDecodeData &geometryDecodeDat
 	texture.compressedData.resize(dataSize);
 	memcpy(texture.compressedData.data(), geometryDecodeData.data.data() + geometryDecodeData.offset, dataSize);
 	geometryDecodeData.offset += dataSize;
+	// The frame the contents are laid out in, as the TexturePointer declared it.
+	texture.axesStandard = static_cast<avs::AxesStandard>(geometryDecodeData.sourceAxesStandard);
 	geometryDecodeData.target->CreateTexture(geometryDecodeData.server_or_cache_uid, texture_uid, texture);
 
 	return avs::Result::OK;

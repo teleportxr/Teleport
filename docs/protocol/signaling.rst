@@ -232,7 +232,9 @@ Servers may later send ``avatar-revoke`` to invalidate an accepted avatar.
 
 Every avatar message concerns the recipient's **own** avatar. No signaling message tells a client anything about another client's avatar.
 
-The full protocol — wire fields, requirements bag, proof schemes, security and privacy model — is specified in ``plans/avatars_plan.md`` in the source tree.
+An offer may name the avatar directly by URL, or indirectly by the address of a signed manifest describing it — see :ref:`avatar_manifest`.
+
+The remainder of the protocol — requirements bag, proof schemes, security and privacy model — is specified in ``plans/avatars_plan.md`` in the source tree.
 
   .. code-block:: JSON
 
@@ -249,6 +251,15 @@ The full protocol — wire fields, requirements bag, proof schemes, security and
                    "url": "https://avatars.example.com/u/42.glb",
                    "content_hash": "sha256:abcd",
                    "declared": { "format": "glb", "file_bytes": 4096 },
+                   "allow_relay": true } }
+
+  Or, offering a :ref:`manifest <avatar_manifest>` instead of a URL:
+
+  .. code-block:: JSON
+
+    { "teleport-signal-type": "avatar-offer",
+      "content": { "policy_id": 12345, "have_avatar": true,
+                   "manifest": { "url": "https://manifests.example/u/42.jsonld" },
                    "allow_relay": true } }
 
   .. code-block:: JSON

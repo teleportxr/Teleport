@@ -14,6 +14,7 @@ namespace teleport
 	namespace server
 	{
 		class IAvatarImporter;
+		class IAvatarManifestResolver;
 
 		//! Per-client server-side state for avatar negotiation. Phases 2–4
 		//! of the implementation in plans/avatars_implementation.md:
@@ -37,6 +38,27 @@ namespace teleport
 			void SetImporter(IAvatarImporter *i)
 			{
 				importer = i;
+			}
+
+			//! Supply the manifest resolver (may be nullptr to clear). Not
+			//! owned; must outlive this service. With none set, an offer
+			//! carrying only a manifest address is treated as an offer of
+			//! nothing — which is correct for a deployment that has not
+			//! advertised manifest support in its policy either.
+			void SetManifestResolver(IAvatarManifestResolver *r)
+			{
+				manifestResolver = r;
+			}
+
+			//! Called with the app-specific facets a resolved manifest
+			//! carried, after consent gating. Only facets this server named
+			//! in requirements.manifest.requested_facets ever reach it.
+			using ManifestProjectionFn = std::function<void(avs::uid clientID, const nlohmann::json &projection,
+				const core::ManifestReceipt &receipt)>;
+
+			void SetOnManifestProjected(ManifestProjectionFn fn)
+			{
+				onManifestProjected = std::move(fn);
 			}
 
 			//! Send (or re-send) the policy to the owning client. The
@@ -74,12 +96,23 @@ namespace teleport
 		private:
 			void Reply(const core::AvatarResult &result);
 
+			//! Resolve offer.manifest to an asset url, writing it into
+			//! offer.url so the rest of HandleOffer is unaware a manifest was
+			//! involved. Returns false when it has already replied.
+			bool ResolveManifest(core::AvatarOffer &offer);
+
 			avs::uid                          clientID = 0;
 			SendFn                            sendFn;
 			IAvatarImporter                  *importer = nullptr;
+			IAvatarManifestResolver          *manifestResolver = nullptr;
+			ManifestProjectionFn              onManifestProjected;
 			std::optional<core::AvatarPolicy> currentPolicy;
 			std::optional<core::AvatarOffer>  lastOffer;
 			std::optional<core::AvatarResult> lastResult;
+			//! Receipt from this offer's manifest evaluation, attached to
+			//! whichever avatar-result we end up sending. Cleared per offer so
+			//! a later offer never inherits an earlier one's receipt.
+			std::optional<core::ManifestReceipt> lastManifestReceipt;
 		};
 	}
 }

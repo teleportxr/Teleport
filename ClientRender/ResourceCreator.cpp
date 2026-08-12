@@ -655,6 +655,8 @@ void ResourceCreator::CreateTexture(avs::uid server_uid, avs::uid id, const avs:
 	texInfo->compression											  = clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	texInfo->width													  = texture.width;
 	texInfo->height													  = texture.height;
+	// Survives transcoding: the same texInfo is filled in and used to Create() the texture.
+	texInfo->axesStandard											  = static_cast<platform::crossplatform::AxesStandard>(texture.axesStandard);
 
 	TELEPORT_INTERNAL_COUT(Default, "Received texture {0} ({1}), awaiting decompression.", id, texture.name);
 	{

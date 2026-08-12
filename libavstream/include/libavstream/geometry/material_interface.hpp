@@ -132,6 +132,15 @@ namespace avs
 		uint32_t arrayCount;
 		uint32_t mipCount;
 		bool cubemap=false;
+		//! The axes standard the texture's contents are laid out in, as declared by the
+		//! TexturePointer that referred to it. Meaningful for cubemaps, whose six faces have
+		//! an orientation; the client converts its sample directions into this frame, because
+		//! texture contents - unlike geometry - are never converted by the server.
+		//!
+		//! Deliberately absent from the stream operators and from operator==: it is a property
+		//! of the reference, not of the file, and the file is what those two serialise and
+		//! compare. It arrives afresh with the pointer on every session.
+		AxesStandard axesStandard=AxesStandard::NotInitialized;
 
 		TextureFormat format;
 		float valueScale=1.0f;	// Scale for the texture values as transported, so we can reconstruct the true dynamic range. 
