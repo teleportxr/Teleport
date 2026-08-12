@@ -11,7 +11,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cstdio>
 #include <ctime>
 
 namespace teleport
@@ -441,14 +440,50 @@ namespace teleport
 
 		// Time ---------------------------------------------------------
 
+		// Reads exactly `digits` decimal characters at `pos` and advances it.
+		// RFC 3339 fixes the width of every field, so a short or padded field
+		// is malformed - which sscanf's "%2d" would have silently accepted.
+		static bool ReadFixedDigits(const std::string &text, size_t &pos, size_t digits, int &valueOut)
+		{
+			if (pos + digits > text.size())
+				return false;
+			int value = 0;
+			for (size_t i = 0; i < digits; i++)
+			{
+				const char c = text[pos + i];
+				if (c < '0' || c > '9')
+					return false;
+				value = value * 10 + (c - '0');
+			}
+			pos += digits;
+			valueOut = value;
+			return true;
+		}
+
+		static bool ReadSeparator(const std::string &text, size_t &pos, char expected)
+		{
+			if (pos >= text.size() || text[pos] != expected)
+				return false;
+			pos++;
+			return true;
+		}
+
 		bool ParseRfc3339(const std::string &text, int64_t &unixSecondsOut)
 		{
 			// Deliberately hand-rolled rather than std::get_time: the manifest
 			// times are always UTC RFC 3339 and this avoids both the locale
 			// dependence and the timezone handling of the standard parsers,
 			// neither of which we want deciding whether a manifest is expired.
+			// Reading the digits directly rather than with sscanf also keeps
+			// MSVC from deprecating the whole function (C4996).
 			int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-			if (std::sscanf(text.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d", &year, &month, &day, &hour, &minute, &second) != 6)
+			size_t pos = 0;
+			if (!ReadFixedDigits(text, pos, 4, year) || !ReadSeparator(text, pos, '-')
+				|| !ReadFixedDigits(text, pos, 2, month) || !ReadSeparator(text, pos, '-')
+				|| !ReadFixedDigits(text, pos, 2, day) || !ReadSeparator(text, pos, 'T')
+				|| !ReadFixedDigits(text, pos, 2, hour) || !ReadSeparator(text, pos, ':')
+				|| !ReadFixedDigits(text, pos, 2, minute) || !ReadSeparator(text, pos, ':')
+				|| !ReadFixedDigits(text, pos, 2, second))
 				return false;
 			if (month < 1 || month > 12 || day < 1 || day > 31)
 				return false;
@@ -470,7 +505,9 @@ namespace teleport
 			if (plus != std::string::npos && plus > 10)
 			{
 				int offHour = 0, offMinute = 0;
-				if (std::sscanf(text.c_str() + plus + 1, "%2d:%2d", &offHour, &offMinute) == 2)
+				size_t offPos = plus + 1;
+				if (ReadFixedDigits(text, offPos, 2, offHour) && ReadSeparator(text, offPos, ':')
+					&& ReadFixedDigits(text, offPos, 2, offMinute))
 				{
 					const int64_t offset = offHour * 3600 + offMinute * 60;
 					unixSecondsOut += (text[plus] == '+') ? -offset : offset;
