@@ -56,8 +56,11 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	st.animationId	  = applyAnimation.animationID;
 	st.timeRatio	 = 0;
 	st.speedUnitsPerS = applyAnimation.speedUnitsPerSecond;
-	// The timestamp where the state applies.
-	st.timestampUs	  = applyAnimation.timestampUs + 10000000;
+	// The timestamp where the state applies. Taken as sent: the server already dates it slightly
+	// ahead by its blend lead, and that interval is the cross-fade. Adding anything here stretches
+	// the cross-fade by the same amount, so a hard-coded offset makes every transition a slow morph
+	// towards a state that only arrives seconds later.
+	st.timestampUs	  = applyAnimation.timestampUs;
 	st.loop			  = applyAnimation.loop;
 	st.matchTransition&=st.loop;
 	if(st.matchTransition)
@@ -75,6 +78,14 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 				return;
 			}
 			st.animation = anim;
+			// Where in the clip we should be when the state applies. The server sends this in
+			// seconds and carries it across a change of clip so the footfall does not jump;
+			// timeRatio is the same position normalised, so discarding it restarts every clip
+			// from its first frame.
+			if (anim->duration > 0.0f)
+			{
+				st.timeRatio = applyAnimation.animTimeAtTimestamp / anim->duration;
+			}
 		}
 	}
 	animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);

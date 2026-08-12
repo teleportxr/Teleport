@@ -1406,7 +1406,13 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 		// For each bone matrix, pos_local= (bone_matrix_j) * pos_original_local
 		auto animationComponent = node->GetComponent<AnimationComponent>();
 		// static size_t match_joint_count=22;
-		if (animationComponent && animationComponent->update(renderState.timestampUs.count(), subSceneNodeStates.root_id))
+		// Session time, not renderState.timestampUs. That is a Unix wall-clock time, whereas an
+		// animation state is keyed by ApplyAnimation.timestampUs, which the protocol defines as
+		// microseconds since the setup command's datum. Mixing the two puts the playback head
+		// roughly 1.8e15 microseconds past the clip: the resulting time ratio is so large that a
+		// float cannot hold a fraction at all, floorf() returns the value unchanged, and the clip
+		// sticks on its first frame - visible as an animation that is applied but never plays.
+		if (animationComponent && animationComponent->update(SessionTimeUs(), subSceneNodeStates.root_id))
 		{
 			// We want to update the instance of this animation component associated with this instance of the submesh.
 		}
