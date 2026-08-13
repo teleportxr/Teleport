@@ -1932,13 +1932,15 @@ void Renderer::DrawOSD(crossplatform::GraphicsDeviceContext &deviceContext)
 			auto &clientServerState = sessionClient->GetClientServerState();
 			vec3  offset			= camera_local_pos;
 			auto  originPose		= GetOriginPose(server_uid);
+			vec3 origin_local = originPose.position;
 			gui.LinePrint(instanceRenderer->receivedInitialPos
-							  ? (std::format("Origin: {} {} {}", originPose.position.x, originPose.position.y, originPose.position.z))
+							  ? (std::format("Origin: {} {} {}", origin_local.x, origin_local.y, origin_local.z))
 							  : "Origin:",
 						  white);
+			vec3 headPose_local = clientServerState.headPose.position;
 			gui.LinePrint(
 				std::format(
-					" Local: {} {} {}", clientServerState.headPose.position.x, clientServerState.headPose.position.y, clientServerState.headPose.position.z),
+					" Local: {} {} {}", headPose_local.x, headPose_local.y, headPose_local.z),
 				white);
 			//	gui.LinePrint(std::format(" Final: {} {} {}\n", clientServerState.headPose.globalPose.position.x,
 			// clientServerState.headPose.globalPose.position.y, clientServerState.headPose.globalPose.position.z),white);
