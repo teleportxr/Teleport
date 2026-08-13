@@ -733,8 +733,8 @@ void NodeManager::RetryAnimationUpdates(std::chrono::microseconds timestamp_us)
 		{
 			animationUpdatesWarned.insert(it->first);
 			TELEPORT_WARN("Animation {} for node {} still cannot be applied after {}s: {}.",
-						  it->second.animationID,
-						  it->first,
+						  (unsigned)it->second.animationID,
+						  (unsigned)it->first,
 						  (timestamp_us - queued->second).count() / 1000000,
 						  reason);
 		}
