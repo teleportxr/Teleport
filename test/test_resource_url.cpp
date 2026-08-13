@@ -13,6 +13,7 @@
 
 #include "ClientRender/ResourceUrl.h"
 
+using teleport::clientrender::IsDataUri;
 using teleport::clientrender::ResolveUrl;
 
 static const std::string asset = "https://host.example/props/chair.glb";
@@ -66,4 +67,18 @@ TEST_CASE("Degenerate inputs are handled without inventing a url", "[url]")
 	REQUIRE(ResolveUrl("", "tex.png") == "tex.png");
 	// An authority with no path at all.
 	REQUIRE(ResolveUrl("https://host.example", "tex.png") == "https://host.example/tex.png");
+}
+
+TEST_CASE("A data uri is told apart from a file to fetch", "[url]")
+{
+	// The distinction decides whether an image is resolved and matched against the textures the
+	// server delivered, or decoded from the bytes it carries. Treating every uri as data - which
+	// this once did - sends relative paths to be decoded as if they were base64.
+	REQUIRE(IsDataUri("data:image/png;base64,iVBORw0KGgo="));
+	REQUIRE(IsDataUri("data:,"));
+	REQUIRE_FALSE(IsDataUri("tex.png"));
+	REQUIRE_FALSE(IsDataUri("/shared/atlas.png"));
+	REQUIRE_FALSE(IsDataUri("https://cdn.example/t.png"));
+	REQUIRE_FALSE(IsDataUri("mydata:not-a-data-uri.png"));
+	REQUIRE_FALSE(IsDataUri(""));
 }

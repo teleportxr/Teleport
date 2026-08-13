@@ -7,6 +7,15 @@
 #include <regex>
 #define TINYGLTF_IMPLEMENTATION
 #undef TINYGLTF_NO_STB_IMAGE
+// An asset's external image uris are ours to resolve, not tinygltf's:
+// ConvertGltfModelToDecodedGeometry completes each one against the asset's own url and either
+// shares the texture the server streamed or fetches it, and does so only for the images a used
+// material samples. tinygltf's own attempt can only get in the way. It reads from the local
+// filesystem, and we parse from memory with no base directory, so every uri is resolved against
+// the working directory: a kit .glb carrying its whole collection's material library warns twice
+// per image it cannot find - 144 images for one 46 KB asset - and a same-named file that happens
+// to sit beside the executable would be a false hit. Record the uri and leave it to us.
+#define TINYGLTF_NO_EXTERNAL_IMAGE
 #define tinygltf teleport_tinygltf
 #include "tiny_gltf.h"
 #undef teleport_tinygltf
@@ -43,14 +52,6 @@ bool LoadImageDataFunction(teleport_tinygltf::Image *, const int, std::string *,
 
 namespace teleport::core
 {
-	bool IsDataURI(const std::string &uri)
-	{
-		if (uri.size() < 1)
-		{
-			return false;
-		}
-		return true;
-	}
 	// Helper function to convert attribute semantic from glTF string to avs enum
 	avs::AttributeSemantic ConvertAttributeSemantic(const std::string &semantic)
 	{
@@ -386,6 +387,25 @@ namespace teleport::core
 			dg.accessors[accessorId] = std::move(avsAccessor);
 		}
 
+		// Only the materials some primitive actually draws with are worth having. A .glb split out
+		// of a kit declares the whole kit's material library - fifty materials and well over a
+		// hundred images for a single floor block - and every one of those materials would
+		// otherwise be created, list its textures as dependencies, and hold them open as missing
+		// resources that no primitive will ever ask to render. Nodes only ever name a material
+		// through primitive.material, so what is skipped here is unreachable by construction.
+		std::set<int> usedMaterials;
+		for (const auto &mesh : model.meshes)
+		{
+			for (const auto &primitive : mesh.primitives)
+			{
+				if (primitive.material >= 0 && primitive.material < (int)model.materials.size())
+				{
+					usedMaterials.insert(primitive.material);
+				}
+			}
+		}
+		auto MaterialIsUsed = [&usedMaterials](size_t i) { return usedMaterials.find((int)i) != usedMaterials.end(); };
+
 		// Process materials
 		avs::uid			  firstMaterial = dg.next_id;
 		std::vector<avs::uid> material_uids(model.materials.size());
@@ -393,8 +413,14 @@ namespace teleport::core
 		{
 			const tinygltf::Material &material	   = model.materials[i];
 
+			// The uid is consumed either way: material and texture uids are positional, and the
+			// two passes below index into material_uids and texture_uids by glTF index.
 			avs::uid				  material_uid = dg.next_id++;
 			material_uids[i]					   = material_uid;
+			if (!MaterialIsUsed(i))
+			{
+				continue;
+			}
 
 			avs::Material &avsMaterial			   = dg.internalMaterials[material_uid];
 			avsMaterial.name					   = material.name;
@@ -484,6 +510,10 @@ namespace teleport::core
 		// Update material texture references with the correct UIDs
 		for (size_t i = 0; i < model.materials.size(); i++)
 		{
+			if (!MaterialIsUsed(i))
+			{
+				continue;
+			}
 			const tinygltf::Material &material	   = model.materials[i];
 			avs::uid				  material_uid = material_uids[i];
 			auto					 &avsMaterial  = dg.internalMaterials[material_uid];
@@ -549,6 +579,17 @@ namespace teleport::core
 		// If you have a ResourceCreator to handle textures, you can create them here
 		if (target != nullptr)
 		{
+			// What the asset's own image uris resolve against. It must be absolute, and
+			// filename_url need not be: a MeshPointer carries whatever url the server chose, which
+			// is root-relative when the server's http root is. Completing it against the parent
+			// cache - not this one - is the point: dg.server_or_cache_uid is the sub-scene created
+			// for this asset, whose default url root is the whole url of the asset itself
+			// (GeometryCache::CreateGeometryCache), while the parent is the server whose url root
+			// completes its urls. AbsoluteResourceUrl is what decodeTexturePointer registers its
+			// urls through, so both sides name one file identically.
+			std::shared_ptr<GeometryCache> geometryCache  = GeometryCache::GetGeometryCache(dg.server_or_cache_uid);
+			const avs::uid				   parentCacheUid = geometryCache ? geometryCache->GetParentCacheUid() : 0;
+			const std::string			   assetUrl		  = AbsoluteResourceUrl(parentCacheUid, filename_url);
 			for (int i = 0; i < (int)model.images.size(); i++)
 			{
 				const tinygltf::Image &image = model.images[i];
@@ -561,6 +602,18 @@ namespace teleport::core
 					if (texture.source == static_cast<int>(i))
 					{
 						avs::uid texture_uid				= texture_uids[j];
+
+						// texture_types has an entry for exactly those textures a used material
+						// sampled, so it is the record of which images this asset needs. The rest
+						// belong to the kit the asset was split out of; fetching, decoding and
+						// uploading them costs far more than the asset itself, and nothing would
+						// ever sample the result. The draco path works the same way - see
+						// DecodeDracoScene, which creates a texture only where a material claimed
+						// its uid.
+						if (texture_types.find(texture_uid) == texture_types.end())
+						{
+							continue;
+						}
 
 						// Determine image format and compression
 						avs::TextureCompression compression = avs::TextureCompression::UNCOMPRESSED;
@@ -622,11 +675,17 @@ namespace teleport::core
 						// TexturePointers, because a mesh that needs them declares them as
 						// dependencies - so where we have already been given this file, the
 						// sub-scene shares that texture instead of fetching a second copy of it.
-						else if (!image.uri.empty() && !IsDataURI(image.uri))
+						else if (!image.uri.empty() && !IsDataUri(image.uri))
 						{
-							const std::string absoluteUrl = ResolveUrl(filename_url, image.uri);
-							std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(dg.server_or_cache_uid);
-							if (geometryCache && geometryCache->ShareTextureFromUrl(absoluteUrl, dg.server_or_cache_uid, texture_uid))
+							const std::string absoluteUrl = ResolveUrl(assetUrl, image.uri);
+							if (absoluteUrl.find("://") == std::string::npos)
+							{
+								// Nothing to fetch it from: the asset arrived without a url we can
+								// resolve against, so this image can only 404. Say so - the model
+								// would otherwise render untextured with nothing in the log.
+								TELEPORT_WARN_NOSPAM("Image \"{0}\" of {1} cannot be resolved to a url; it will be missing.", image.uri, filename_url);
+							}
+							else if (geometryCache && geometryCache->ShareTextureFromUrl(absoluteUrl, dg.server_or_cache_uid, texture_uid))
 							{
 								TELEPORT_INTERNAL_COUT(Resource, "Texture {0} of {1} shares the resource already delivered from {2}",
 									texture_uid, filename_url, absoluteUrl);
@@ -650,7 +709,7 @@ namespace teleport::core
 							}
 						}
 						// For data URIs
-						else if (!image.uri.empty() && IsDataURI(image.uri))
+						else if (!image.uri.empty() && IsDataUri(image.uri))
 						{
 							// Parse data URI and create texture
 							std::string name = texture_types[texture_uid];
@@ -1142,11 +1201,16 @@ bool GeometryDecoder::DecodeScene(const teleport::clientrender::GeometryDecodeDa
 		// Get extensions, we might want to look at VRM properties.
 		loader.SetStoreOriginalJSONForExtrasAndExtensions(true);
 		const double parseStartMs = teleport::client::SessionClient::GetConnectElapsedMs();
-		bool ret = loader.LoadBinaryFromMemory(&model, &err, &warn, source, sz); // for binary glTF(.glb)
+		// A .gltf is JSON, a .glb is the binary container. This is also the fallback path for
+		// anything draco could not decode, and that includes text glTF.
+		bool		 ret =
+			(geometryDecodeData.geometryFileFormat == GeometryFileFormat::GLTF_TEXT)
+				? loader.LoadASCIIFromString(&model, &err, &warn, (const char *)source, sz, "")
+				: loader.LoadBinaryFromMemory(&model, &err, &warn, source, sz);
 		const double parseElapsedMs = teleport::client::SessionClient::GetConnectElapsedMs() - parseStartMs;
 		if (parseElapsedMs > 50.0)
 		{
-			TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: tinygltf::LoadBinaryFromMemory (uid={}, in={} bytes, images={}) in {:.1f} ms",
+			TELEPORT_INTERNAL_COUT(Time, "T+{:.1f} ms: tinygltf parse (uid={}, in={} bytes, images={}) in {:.1f} ms",
 				teleport::client::SessionClient::GetConnectElapsedMs(),
 				geometryDecodeData.uid, sz, model.images.size(), parseElapsedMs);
 		}

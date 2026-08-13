@@ -240,14 +240,25 @@ namespace
 	// Exports each root object of the input's scene as its own .glb, at its own origin, with
 	// every texture written next to the outputs as an external file.
 	//
-	// The arrays that carry binary weight - nodes, meshes, skins, accessors, bufferViews, the
-	// buffer itself and animations - are subset per object and reindexed. Materials, textures,
-	// images, samplers, cameras and lights are copied whole, at their original indices. That
-	// asymmetry is deliberate: index references into those arrays also live inside extension
-	// JSON that tinygltf keeps as opaque `Value` data (KHR_materials_* texture infos,
-	// KHR_texture_basisu, KHR_texture_transform, KHR_lights_punctual, ...), and reindexing
-	// around them would silently point materials at the wrong textures. Keeping them costs a
-	// little JSON per object and no binary payload at all, because the images are external.
+	// Nodes, meshes, skins, accessors, bufferViews, the buffer itself, animations, materials,
+	// textures, images and samplers are all subset per object and reindexed, so an object
+	// declares only what it actually uses. That matters beyond file size: the server finds a
+	// split object's texture dependencies by reading its image uris (TeleportServer's
+	// GetExternalImageUris), so an object listing the whole collection's images makes the
+	// server stream the whole collection to a client that asked for one object.
+	//
+	// Reindexing materials and textures is not free of risk, because index references into
+	// those arrays also live inside extension JSON that tinygltf keeps as opaque `Value` data
+	// (KHR_materials_* texture infos, KHR_texture_basisu, ...). Every extension that can carry
+	// one is listed in kExtensionIndexRules or kIndexFreeExtensions below; an extension in
+	// neither turns subsetting off for the whole file (CanSubsetMaterials), which falls back to
+	// copying those arrays whole at their original indices. Refusing to subset is always safe;
+	// reindexing around an extension we do not understand would silently point materials at the
+	// wrong textures.
+	//
+	// Cameras and lights are always copied whole. A light index is reachable only through the
+	// opaque KHR_lights_punctual node extension, and neither array carries binary or on-disk
+	// weight, so subsetting them would buy nothing at the same risk.
 
 	// Index maps are per-array vectors of new index, with -1 meaning "not in this object".
 	int Remap(const std::vector<int> &map, int index)
@@ -566,11 +577,269 @@ namespace
 		return false;
 	}
 
+	// Which array an index found in extension JSON refers to.
+	enum class IndexTarget
+	{
+		Material,
+		Texture,
+		Image
+	};
+
+	enum class RuleKind
+	{
+		TextureInfo,	// member is a glTF textureInfo object - its "index" is what we remap
+		Index,			// member is a plain index
+		MappingArray	// member is an array of objects, each with a "material" index
+	};
+
+	struct ExtensionIndexRule
+	{
+		const char *extension;
+		const char *member;
+		RuleKind	kind;
+		IndexTarget target;
+	};
+
+	// Every index into materials/textures/images that we know how to find inside extension
+	// JSON. Almost all of it is the textureInfo convention, which is why the table is this
+	// repetitive: an extension attaches a texture, and the texture arrives as {"index": n}.
+	const ExtensionIndexRule kExtensionIndexRules[] = {
+		{"KHR_materials_pbrSpecularGlossiness", "diffuseTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_pbrSpecularGlossiness", "specularGlossinessTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_clearcoat", "clearcoatTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_clearcoat", "clearcoatRoughnessTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_clearcoat", "clearcoatNormalTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_sheen", "sheenColorTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_sheen", "sheenRoughnessTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_transmission", "transmissionTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_volume", "thicknessTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_specular", "specularTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_specular", "specularColorTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_iridescence", "iridescenceTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_iridescence", "iridescenceThicknessTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_anisotropy", "anisotropyTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_diffuse_transmission", "diffuseTransmissionTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"KHR_materials_diffuse_transmission", "diffuseTransmissionColorTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"VRMC_materials_mtoon", "shadeMultiplyTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"VRMC_materials_mtoon", "shadingShiftTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"VRMC_materials_mtoon", "matcapTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"VRMC_materials_mtoon", "rimMultiplyTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"VRMC_materials_mtoon", "outlineWidthMultiplyTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		{"VRMC_materials_mtoon", "uvAnimationMaskTexture", RuleKind::TextureInfo, IndexTarget::Texture},
+		// Texture-level extensions naming an alternative image for the same texture.
+		{"KHR_texture_basisu", "source", RuleKind::Index, IndexTarget::Image},
+		{"EXT_texture_webp", "source", RuleKind::Index, IndexTarget::Image},
+		{"EXT_texture_avif", "source", RuleKind::Index, IndexTarget::Image},
+		{"MSFT_texture_dds", "source", RuleKind::Index, IndexTarget::Image},
+		// Primitive-level: the alternative materials a variant can switch to.
+		{"KHR_materials_variants", "mappings", RuleKind::MappingArray, IndexTarget::Material},
+	};
+
+	// Extensions that carry no material/texture/image/sampler index at all, so subsetting can
+	// keep them untouched. KHR_draco_mesh_compression does carry a bufferView, but that one is
+	// remapped explicitly with the meshes.
+	const char *const kIndexFreeExtensions[] = {"KHR_texture_transform", "KHR_materials_ior", "KHR_materials_emissive_strength",
+		"KHR_materials_unlit", "KHR_materials_dispersion", "KHR_mesh_quantization", "KHR_draco_mesh_compression",
+		"KHR_lights_punctual", "KHR_materials_variants", "KHR_texture_basisu", "EXT_texture_webp", "EXT_texture_avif",
+		"MSFT_texture_dds"};
+
+	// Extensions we know hide an index somewhere we cannot follow. Listed separately from the
+	// unknown case only so the warning can say why.
+	struct BlockingExtension
+	{
+		const char *name;
+		const char *reason;
+	};
+
+	const BlockingExtension kBlockingExtensions[] = {
+		{"KHR_animation_pointer", "its animation targets are JSON pointer strings that name materials and textures by index"},
+		{"EXT_lights_image_based", "its lights index the document's images"},
+	};
+
+	bool IsKnownExtension(const std::string &name)
+	{
+		for (const ExtensionIndexRule &rule : kExtensionIndexRules)
+			if (name == rule.extension)
+				return true;
+		for (const char *n : kIndexFreeExtensions)
+			if (name == n)
+				return true;
+		// Document-scoped extensions are dropped from the split objects entirely.
+		return IsDocumentScopedExtension(name);
+	}
+
+	void GatherExtensionNames(const teleport_tinygltf::ExtensionMap &extensions, std::set<std::string> &into)
+	{
+		for (const auto &entry : extensions)
+			into.insert(entry.first);
+	}
+
+	// Can materials/textures/images/samplers be reindexed without silently breaking a reference
+	// we cannot see? Only if every extension in the file is one we have a rule for, or one we
+	// know carries no such index. On false, `blocker` describes the extension that stopped us.
+	bool CanSubsetMaterials(const teleport_tinygltf::Model &model, std::string &blocker)
+	{
+		std::set<std::string> names;
+		for (const std::string &name : model.extensionsUsed)
+			names.insert(name);
+		for (const std::string &name : model.extensionsRequired)
+			names.insert(name);
+
+		// extensionsUsed is routinely incomplete in the wild, so also look where the indices
+		// themselves live rather than trusting the declaration.
+		for (const teleport_tinygltf::Material &material : model.materials)
+		{
+			GatherExtensionNames(material.extensions, names);
+			GatherExtensionNames(material.pbrMetallicRoughness.extensions, names);
+			GatherExtensionNames(material.pbrMetallicRoughness.baseColorTexture.extensions, names);
+			GatherExtensionNames(material.pbrMetallicRoughness.metallicRoughnessTexture.extensions, names);
+			GatherExtensionNames(material.normalTexture.extensions, names);
+			GatherExtensionNames(material.occlusionTexture.extensions, names);
+			GatherExtensionNames(material.emissiveTexture.extensions, names);
+		}
+		for (const teleport_tinygltf::Texture &texture : model.textures)
+			GatherExtensionNames(texture.extensions, names);
+		for (const teleport_tinygltf::Image &image : model.images)
+			GatherExtensionNames(image.extensions, names);
+		for (const teleport_tinygltf::Sampler &sampler : model.samplers)
+			GatherExtensionNames(sampler.extensions, names);
+		for (const teleport_tinygltf::Mesh &mesh : model.meshes)
+		{
+			GatherExtensionNames(mesh.extensions, names);
+			for (const teleport_tinygltf::Primitive &prim : mesh.primitives)
+				GatherExtensionNames(prim.extensions, names);
+		}
+
+		for (const std::string &name : names)
+		{
+			for (const BlockingExtension &blocking : kBlockingExtensions)
+				if (name == blocking.name)
+				{
+					blocker = name + ", because " + blocking.reason;
+					return false;
+				}
+			if (!IsKnownExtension(name))
+			{
+				blocker = name + ", which this tool does not know the shape of";
+				return false;
+			}
+		}
+		return true;
+	}
+
+	// Records every material/texture/image index the given extensions carry. Out-of-range
+	// indices are dropped here, so the maps built from these sets are always in bounds.
+	void CollectExtensionIndices(const teleport_tinygltf::Model &src, const teleport_tinygltf::ExtensionMap &extensions,
+		std::set<int> &materials, std::set<int> &textures, std::set<int> &images)
+	{
+		auto record = [&](IndexTarget target, int index)
+		{
+			if (index < 0)
+				return;
+			switch (target)
+			{
+			case IndexTarget::Material:
+				if (index < (int)src.materials.size())
+					materials.insert(index);
+				break;
+			case IndexTarget::Texture:
+				if (index < (int)src.textures.size())
+					textures.insert(index);
+				break;
+			case IndexTarget::Image:
+				if (index < (int)src.images.size())
+					images.insert(index);
+				break;
+			}
+		};
+
+		for (const ExtensionIndexRule &rule : kExtensionIndexRules)
+		{
+			const auto it = extensions.find(rule.extension);
+			if (it == extensions.end() || !it->second.IsObject() || !it->second.Has(rule.member))
+				continue;
+			const teleport_tinygltf::Value &member = it->second.Get(rule.member);
+			switch (rule.kind)
+			{
+			case RuleKind::TextureInfo:
+				if (member.IsObject() && member.Has("index"))
+					record(rule.target, member.Get("index").GetNumberAsInt());
+				break;
+			case RuleKind::Index:
+				if (member.IsNumber())
+					record(rule.target, member.GetNumberAsInt());
+				break;
+			case RuleKind::MappingArray:
+				for (size_t i = 0; i < member.ArrayLen(); i++)
+				{
+					const teleport_tinygltf::Value &entry = member.Get((int)i);
+					if (entry.IsObject() && entry.Has("material"))
+						record(rule.target, entry.Get("material").GetNumberAsInt());
+				}
+				break;
+			}
+		}
+	}
+
+	// The mirror of CollectExtensionIndices: rewrites each index through its array's map. An
+	// index that did not survive the subset becomes -1, which is what "absent" means throughout
+	// glTF - better a texture that is not there than one that is silently the wrong texture.
+	void RemapExtensionIndices(teleport_tinygltf::ExtensionMap &extensions, const std::vector<int> &materialMap,
+		const std::vector<int> &textureMap, const std::vector<int> &imageMap)
+	{
+		auto mapped = [&](IndexTarget target, int index)
+		{
+			switch (target)
+			{
+			case IndexTarget::Material:
+				return Remap(materialMap, index);
+			case IndexTarget::Texture:
+				return Remap(textureMap, index);
+			case IndexTarget::Image:
+				return Remap(imageMap, index);
+			}
+			return -1;
+		};
+
+		for (const ExtensionIndexRule &rule : kExtensionIndexRules)
+		{
+			const auto it = extensions.find(rule.extension);
+			if (it == extensions.end() || !it->second.IsObject() || !it->second.Has(rule.member))
+				continue;
+			teleport_tinygltf::Value &member = it->second.Get<teleport_tinygltf::Value::Object>()[rule.member];
+			switch (rule.kind)
+			{
+			case RuleKind::TextureInfo:
+				if (member.IsObject() && member.Has("index"))
+				{
+					teleport_tinygltf::Value::Object &texinfo = member.Get<teleport_tinygltf::Value::Object>();
+					texinfo["index"] = teleport_tinygltf::Value(mapped(rule.target, texinfo["index"].GetNumberAsInt()));
+				}
+				break;
+			case RuleKind::Index:
+				if (member.IsNumber())
+					member = teleport_tinygltf::Value(mapped(rule.target, member.GetNumberAsInt()));
+				break;
+			case RuleKind::MappingArray:
+				if (member.IsArray())
+					for (teleport_tinygltf::Value &entry : member.Get<teleport_tinygltf::Value::Array>())
+					{
+						if (!entry.IsObject() || !entry.Has("material"))
+							continue;
+						teleport_tinygltf::Value::Object &mapping = entry.Get<teleport_tinygltf::Value::Object>();
+						mapping["material"] = teleport_tinygltf::Value(mapped(rule.target, mapping["material"].GetNumberAsInt()));
+					}
+				break;
+			}
+		}
+	}
+
 	// Builds a standalone model holding just the object rooted at `rootNode`, with that root
 	// placed at the origin. See the block comment above for what is subset and what is copied
-	// whole.
+	// whole. `subsetMaterials` is CanSubsetMaterials' verdict for the whole file, passed in so
+	// that every object of one split makes the same choice.
 	bool BuildObjectModel(const teleport_tinygltf::Model &src, int rootNode, const std::vector<int> &parentOf,
-		teleport_tinygltf::Model &dst, NodeClosure &closure)
+		bool subsetMaterials, teleport_tinygltf::Model &dst, NodeClosure &closure)
 	{
 		closure = BuildNodeClosure(src, rootNode, parentOf);
 
@@ -591,6 +860,64 @@ namespace
 				usedMeshes.insert(node.mesh);
 			if (node.skin >= 0 && node.skin < (int)src.skins.size())
 				usedSkins.insert(node.skin);
+		}
+
+		// --- materials, and the textures, images and samplers they reach ---
+		// Left empty when we are not subsetting, in which case the whole arrays are copied at
+		// their original indices and the maps below are never consulted.
+		std::set<int>	 usedMaterials, usedTextures, usedImages, usedSamplers;
+		std::vector<int> materialMap(src.materials.size(), -1);
+		std::vector<int> textureMap(src.textures.size(), -1);
+		std::vector<int> imageMap(src.images.size(), -1);
+		std::vector<int> samplerMap(src.samplers.size(), -1);
+		if (subsetMaterials)
+		{
+			for (int m : usedMeshes)
+				for (const teleport_tinygltf::Primitive &prim : src.meshes[(size_t)m].primitives)
+				{
+					if (prim.material >= 0 && prim.material < (int)src.materials.size())
+						usedMaterials.insert(prim.material);
+					CollectExtensionIndices(src, prim.extensions, usedMaterials, usedTextures, usedImages);
+				}
+
+			// Snapshots, because collecting from one array's extensions can add to another.
+			const std::vector<int> materialList(usedMaterials.begin(), usedMaterials.end());
+			for (int m : materialList)
+			{
+				const teleport_tinygltf::Material &material = src.materials[(size_t)m];
+				for (int t : {material.pbrMetallicRoughness.baseColorTexture.index,
+						 material.pbrMetallicRoughness.metallicRoughnessTexture.index, material.normalTexture.index,
+						 material.occlusionTexture.index, material.emissiveTexture.index})
+					if (t >= 0 && t < (int)src.textures.size())
+						usedTextures.insert(t);
+				CollectExtensionIndices(src, material.extensions, usedMaterials, usedTextures, usedImages);
+				CollectExtensionIndices(src, material.pbrMetallicRoughness.extensions, usedMaterials, usedTextures, usedImages);
+			}
+
+			const std::vector<int> textureList(usedTextures.begin(), usedTextures.end());
+			for (int t : textureList)
+			{
+				const teleport_tinygltf::Texture &texture = src.textures[(size_t)t];
+				if (texture.source >= 0 && texture.source < (int)src.images.size())
+					usedImages.insert(texture.source);
+				if (texture.sampler >= 0 && texture.sampler < (int)src.samplers.size())
+					usedSamplers.insert(texture.sampler);
+				CollectExtensionIndices(src, texture.extensions, usedMaterials, usedTextures, usedImages);
+			}
+
+			// std::set iterates in source order, so the copies below keep a stable order.
+			int next = 0;
+			for (int m : usedMaterials)
+				materialMap[(size_t)m] = next++;
+			next = 0;
+			for (int t : usedTextures)
+				textureMap[(size_t)t] = next++;
+			next = 0;
+			for (int i : usedImages)
+				imageMap[(size_t)i] = next++;
+			next = 0;
+			for (int s : usedSamplers)
+				samplerMap[(size_t)s] = next++;
 		}
 
 		// --- animation channels that still have a target in this object ---
@@ -677,8 +1004,16 @@ namespace
 			}
 		// Every image should be external by now, but an image we could not externalise must keep
 		// its bytes rather than end up dangling.
-		for (const teleport_tinygltf::Image &image : src.images)
-			useView(image.bufferView);
+		if (subsetMaterials)
+		{
+			for (int i : usedImages)
+				useView(src.images[(size_t)i].bufferView);
+		}
+		else
+		{
+			for (const teleport_tinygltf::Image &image : src.images)
+				useView(image.bufferView);
+		}
 
 		// --- one buffer, with an empty uri so WriteGltfSceneToFile emits it as the GLB BIN chunk ---
 		std::vector<int>			viewMap(src.bufferViews.size(), -1);
@@ -742,7 +1077,13 @@ namespace
 				for (auto &target : prim.targets)
 					for (auto &attribute : target)
 						attribute.second = Remap(accessorMap, attribute.second);
-				// `material` is left alone - materials keep their original indices.
+				// When we are not subsetting, materials keep their original indices and the
+				// index is left exactly as authored.
+				if (subsetMaterials)
+				{
+					prim.material = Remap(materialMap, prim.material);
+					RemapExtensionIndices(prim.extensions, materialMap, textureMap, imageMap);
+				}
 				auto it = prim.extensions.find("KHR_draco_mesh_compression");
 				if (it != prim.extensions.end() && it->second.IsObject() && it->second.Has("bufferView"))
 				{
@@ -830,15 +1171,54 @@ namespace
 			dst.animations.push_back(std::move(anim));
 		}
 
-		// --- copied whole, at their original indices ---
-		dst.materials = src.materials;
-		dst.textures  = src.textures;
-		dst.images	  = src.images;
-		dst.samplers  = src.samplers;
-		dst.cameras	  = src.cameras;
-		dst.lights	  = src.lights;
-		dst.asset	  = src.asset;
-		dst.extras	  = src.extras;
+		// --- materials, textures, images and samplers ---
+		if (subsetMaterials)
+		{
+			for (int m : usedMaterials)
+			{
+				teleport_tinygltf::Material material					= src.materials[(size_t)m];
+				material.pbrMetallicRoughness.baseColorTexture.index = Remap(textureMap, material.pbrMetallicRoughness.baseColorTexture.index);
+				material.pbrMetallicRoughness.metallicRoughnessTexture.index =
+					Remap(textureMap, material.pbrMetallicRoughness.metallicRoughnessTexture.index);
+				material.normalTexture.index	= Remap(textureMap, material.normalTexture.index);
+				material.occlusionTexture.index = Remap(textureMap, material.occlusionTexture.index);
+				material.emissiveTexture.index	= Remap(textureMap, material.emissiveTexture.index);
+				RemapExtensionIndices(material.extensions, materialMap, textureMap, imageMap);
+				RemapExtensionIndices(material.pbrMetallicRoughness.extensions, materialMap, textureMap, imageMap);
+				// tinygltf also parses materials into the legacy `values`/`additionalValues`
+				// ParameterMaps, whose texture indices are now stale. Nothing reads them here and
+				// SerializeGltfMaterial's use of them is #if 0'd out, but leaving stale indices
+				// behind is exactly the kind of thing this file is trying not to do.
+				material.values.clear();
+				material.additionalValues.clear();
+				dst.materials.push_back(std::move(material));
+			}
+			for (int t : usedTextures)
+			{
+				teleport_tinygltf::Texture texture = src.textures[(size_t)t];
+				texture.source					   = Remap(imageMap, texture.source);
+				texture.sampler					   = Remap(samplerMap, texture.sampler);
+				RemapExtensionIndices(texture.extensions, materialMap, textureMap, imageMap);
+				dst.textures.push_back(std::move(texture));
+			}
+			for (int i : usedImages)
+				dst.images.push_back(src.images[(size_t)i]);
+			for (int s : usedSamplers)
+				dst.samplers.push_back(src.samplers[(size_t)s]);
+		}
+		else
+		{
+			dst.materials = src.materials;
+			dst.textures  = src.textures;
+			dst.images	  = src.images;
+			dst.samplers  = src.samplers;
+		}
+
+		// --- always copied whole, at their original indices ---
+		dst.cameras = src.cameras;
+		dst.lights	= src.lights;
+		dst.asset	= src.asset;
+		dst.extras	= src.extras;
 		for (teleport_tinygltf::Image &image : dst.images)
 			if (image.bufferView >= 0)
 				image.bufferView = Remap(viewMap, image.bufferView);
@@ -951,6 +1331,14 @@ namespace
 			std::cerr << "Warning: whole-document extensions (VRM/VRMC_*) index the original scene's nodes "
 					  << "and are dropped from the split objects\n";
 
+		// One verdict for the whole file, so every object is built the same way.
+		std::string blocker;
+		const bool	subsetMaterials = CanSubsetMaterials(model, blocker);
+		if (!subsetMaterials)
+			std::cerr << "Warning: cannot safely reindex materials around " << blocker
+					  << ". Materials, textures, images and samplers are copied whole into every object, so each one "
+					  << "references the entire collection's textures.\n";
+
 		// Never overwrite the file we are reading from - an object whose name matches the input's
 		// takes a suffix instead. Claiming the name up front is all it takes, as UniqueFilename
 		// then treats it as already used.
@@ -964,7 +1352,7 @@ namespace
 		{
 			teleport_tinygltf::Model object;
 			NodeClosure				closure;
-			if (!BuildObjectModel(model, rootNode, parentOf, object, closure))
+			if (!BuildObjectModel(model, rootNode, parentOf, subsetMaterials, object, closure))
 				return 1;
 
 			if (closure.foreign)
@@ -1001,6 +1389,9 @@ namespace
 						  << ", Skins: " << object.skins.size() << ", Accessors: " << object.accessors.size()
 						  << ", BufferViews: " << object.bufferViews.size()
 						  << ", Animations: " << object.animations.size()
+						  << ", Materials: " << object.materials.size() << "/" << model.materials.size()
+						  << ", Textures: " << object.textures.size() << "/" << model.textures.size()
+						  << ", Images: " << object.images.size() << "/" << model.images.size()
 						  << ", Buffer bytes: " << (object.buffers.empty() ? 0 : object.buffers[0].data.size()) << "\n";
 			}
 		}
@@ -1231,6 +1622,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::cout << "✓ " << opts.inputFile << " → " << opts.outputFile << "\n";
+	std::cout << "ok " << opts.inputFile << " -> " << opts.outputFile << "\n";
 	return 0;
 }

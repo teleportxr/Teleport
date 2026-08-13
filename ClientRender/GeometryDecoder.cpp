@@ -423,6 +423,23 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData &geometryDecodeDa
 
 #pragma region DracoDecoding
 
+avs::Result GeometryDecoder::DecodeGltfWithTinyGltf(const GeometryDecodeData &geometryDecodeData)
+{
+	core::DecodedGeometry subSceneDG;
+	CreateSubScene(subSceneDG,
+				   geometryDecodeData.target,
+				   geometryDecodeData.filename_or_url,
+				   geometryDecodeData.server_or_cache_uid,
+				   geometryDecodeData.uid,
+				   geometryDecodeData.sourceAxesStandard);
+	// Todo: Sometimes stationary should be true.
+	if (!DecodeScene(geometryDecodeData, subSceneDG, false))
+	{
+		return avs::Result::Failed;
+	}
+	return CreateFromDecodedGeometry(geometryDecodeData.target, subSceneDG, geometryDecodeData.filename_or_url);
+}
+
 avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData &geometryDecodeData)
 {
 	draco::GltfDecoder	 gltfDecoder;
@@ -433,44 +450,36 @@ avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData &geometryDecode
 	if (geometryDecodeData.geometryFileFormat == GeometryFileFormat::GLTF_BINARY)
 	{
 		draco::StatusOr<std::unique_ptr<draco::Scene>> s = gltfDecoder.DecodeFromBufferToScene(&dracoDecoderBuffer);
-		if (s.status().code() == draco::Status::UNSUPPORTED_FEATURE)
+		if (s.status().code() != draco::Status::OK)
 		{
-			core::DecodedGeometry subSceneDG;
-			CreateSubScene(subSceneDG,
-						   geometryDecodeData.target,
-						   geometryDecodeData.filename_or_url,
-						   geometryDecodeData.server_or_cache_uid,
-						   geometryDecodeData.uid,
-						   geometryDecodeData.sourceAxesStandard);
-			// Todo: Sometimes stationary should be true.
-			if (!DecodeScene(geometryDecodeData, subSceneDG, false))
-			{
-				return avs::Result::Failed;
-			}
-			return CreateFromDecodedGeometry(geometryDecodeData.target, subSceneDG, geometryDecodeData.filename_or_url);
-			// try
-		}
-		else if (s.status().code() != draco::Status::OK)
-		{
-			TELEPORT_CERR << "Failed to decode " << geometryDecodeData.filename_or_url << ": " << s.status().error_msg_string() << "\n";
-			return avs::Result::Failed;
+			// Whatever draco could not take, tinygltf may still handle: it declares morph targets
+			// and most extensions unsupported, and it refuses outright any asset whose images are
+			// external files, because the tinygltf it loads with cannot find them beside a buffer
+			// (draco's GltfDecoder::CopyTextures: "Error loading image"). Those uris are precisely
+			// what ConvertGltfModelToDecodedGeometry resolves and matches against the textures the
+			// server streamed, so the asset is decodable - just not here.
+			TELEPORT_WARN_NOSPAM("draco could not decode {0} ({1}); falling back to tinygltf.",
+								 geometryDecodeData.filename_or_url, s.status().error_msg_string());
+			return DecodeGltfWithTinyGltf(geometryDecodeData);
 		}
 		scene											= std::move(s).value();
 		draco::StatusOr<std::unique_ptr<draco::Mesh>> m = gltfDecoder.DecodeFromBuffer(&dracoDecoderBuffer);
-		if (m.status().code() != draco::Status::OK)
+		if (m.status().code() == draco::Status::OK)
 		{
-			TELEPORT_CERR << m.status().error_msg_string() << "\n";
-			return avs::Result::Failed;
+			mesh = std::move(m).value();
 		}
-		mesh = std::move(m).value();
+		// A scene that decoded is enough on its own: the whole-file-as-one-mesh decode fails for
+		// any scene draco cannot flatten (mixed triangle and point primitives, say), and the scene
+		// below is what is used whenever there is one.
 	}
 	else if (geometryDecodeData.geometryFileFormat == GeometryFileFormat::GLTF_TEXT)
 	{
 		draco::StatusOr<std::unique_ptr<draco::Scene>> s = gltfDecoder.DecodeFromTextBufferToScene(&dracoDecoderBuffer);
 		if (s.status().code() != draco::Status::OK)
 		{
-			TELEPORT_CERR << s.status().error_msg_string() << "\n";
-			return avs::Result::Failed;
+			TELEPORT_WARN_NOSPAM("draco could not decode {0} ({1}); falling back to tinygltf.",
+								 geometryDecodeData.filename_or_url, s.status().error_msg_string());
+			return DecodeGltfWithTinyGltf(geometryDecodeData);
 		}
 		scene = std::move(s).value();
 	}
@@ -993,7 +1002,19 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 			avs::MeshElementCreate &meshElementCreate = meshCreate.m_MeshElementCreate[index];
 			if (primitiveArray.material > 0)
 			{
-				meshElementCreate.internalMaterial = std::make_shared<avs::Material>(dg.internalMaterials[(int)primitiveArray.material - 1]);
+				// internalMaterials is keyed by uid in the glTF paths and by index in
+				// DracoMeshToDecodedGeometry, whose material number is 1-based. Try the uid, then
+				// that 1-based index, and leave the element without an internal material if it is
+				// in neither - operator[] would otherwise silently manufacture a black one.
+				auto m = dg.internalMaterials.find(primitiveArray.material);
+				if (m == dg.internalMaterials.end())
+				{
+					m = dg.internalMaterials.find(primitiveArray.material - 1);
+				}
+				if (m != dg.internalMaterials.end())
+				{
+					meshElementCreate.internalMaterial = std::make_shared<avs::Material>(m->second);
+				}
 			}
 			meshElementCreate.vb_id = primitiveArray.attributes[0].accessor;
 			size_t vertexCount		= 0;
@@ -1184,7 +1205,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData &geometryDecodeData)
 {
 	// Parse buffer and fill struct DecodedGeometry
 	core::DecodedGeometry dg = {};
-	dg.axesStandard			 = platform::crossplatform::AxesStandard::Engineering;
+	dg.axesStandard			 = geometryDecodeData.sourceAxesStandard;
 	dg.server_or_cache_uid	 = geometryDecodeData.server_or_cache_uid;
 	dg.clear();
 	avs::uid	uid = geometryDecodeData.uid;
@@ -1260,7 +1281,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData &geometryDecodeData)
 				copy<uint8_t>(subMesh.buffer.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, bufferSize);
 			}
 			// Anything sent to us is already in the correct form.
-			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh, platform::crossplatform::AxesStandard::Engineering);
+			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh, geometryDecodeData.sourceAxesStandard);
 			if (result != avs::Result::OK)
 			{
 				return result;
@@ -1548,6 +1569,14 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geom
 		texture.compression = avs::TextureCompression::MULTIPLE_PNG;
 	}
 	else if (ext == ".png")
+	{
+		texture.compression = avs::TextureCompression::PNG;
+	}
+	else if (ext == ".jpg" || ext == ".jpeg")
+	{
+		texture.compression = avs::TextureCompression::JPEG;
+	}
+	else if (ext == ".gif")
 	{
 		texture.compression = avs::TextureCompression::PNG;
 	}

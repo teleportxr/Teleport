@@ -2230,7 +2230,7 @@ std::vector<avs::uid> GeometryStore::getMeshTextureDependencies(avs::uid meshId)
 	}
 	if (textureUids.size())
 	{
-		TELEPORT_INTERNAL_COUT("Mesh {0} ({1}{2}) depends on {3} external texture(s).", meshId, path, extension, textureUids.size());
+		TELEPORT_WARN("Mesh {0} ({1}{2}) depends on {3} external texture(s).", meshId, path, extension, textureUids.size());
 	}
 
 	std::lock_guard<std::mutex> lock(externalAssetsMutex);

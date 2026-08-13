@@ -85,7 +85,7 @@ A fetched glTF may reference its textures as external files, with a ``uri`` in i
 
 The asset's own query and fragment take no part, and percent-encoding is left exactly as authored — it is part of the URL that gets requested. Note that the cache's ``defaultURLRoot`` is **not** used here: for a sub-scene cache (which is what a ``.glb`` arrived at through a ``MeshPointer`` becomes) that root is the asset's whole URL, so the resolution above must produce an absolute URL by itself.
 
-The resolved URL identifies a texture resource, so a URL already delivered as a ``TexturePointer`` is that same resource and its texture is reused rather than fetched again — see :ref:`external_textures`. Failing that the client fetches the URL itself, through the same HTTP utility and disk cache as any other resource.
+The resolved URL identifies a texture resource, so a URL already delivered anywhere in the client's cache tree — as a ``TexturePointer``, or as an image of another asset — is that same resource and its texture is reused rather than fetched again; see :ref:`external_textures`, which also covers why a server must publish each file at one URL. Failing that the client fetches the URL itself, through the same HTTP utility and disk cache as any other resource.
 
 Lifecycle
 =========

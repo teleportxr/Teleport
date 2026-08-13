@@ -103,6 +103,9 @@ namespace teleport
 
 			avs::Result decodeInternal(GeometryDecodeData &geometryDecodeData);
 			avs::Result DecodeGltf(const GeometryDecodeData &geometryDecodeData);
+			//! Decode a glTF asset as a sub-scene with tinygltf, which is where anything draco
+			//! rejects ends up - in particular any asset whose images are external files.
+			avs::Result DecodeGltfWithTinyGltf(const GeometryDecodeData &geometryDecodeData);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, core::DecodedGeometry &dg, draco::Mesh &dracoMesh, platform::crossplatform::AxesStandard axesStandard);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,core::DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh, platform::crossplatform::AxesStandard axesStandard);
 			avs::Result DecodeDracoScene( core::DecodedGeometry &subSceneDG,clientrender::ResourceCreator *target, std::string filename_url, avs::uid server_or_cache_uid, avs::uid primitiveArrayUid, draco::Scene &dracoScene, platform::crossplatform::AxesStandard axesStandard);

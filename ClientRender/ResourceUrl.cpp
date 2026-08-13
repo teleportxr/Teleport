@@ -79,3 +79,8 @@ std::string teleport::clientrender::ResolveUrl(const std::string &base, const st
 	}
 	return origin + path;
 }
+
+bool teleport::clientrender::IsDataUri(const std::string &uri)
+{
+	return uri.rfind("data:", 0) == 0;
+}

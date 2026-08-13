@@ -22,5 +22,10 @@ namespace teleport
 		//! A `base` with no scheme cannot be resolved against, and `relative` is returned as-is
 		//! for the caller's own url-root handling to complete.
 		std::string ResolveUrl(const std::string &base, const std::string &relative);
+
+		//! True if this uri carries its own bytes ("data:image/png;base64,...") rather than naming
+		//! a file to fetch. Such a uri is neither resolved nor matched against texture resources:
+		//! there is no file, and nothing else can reference the same one.
+		bool IsDataUri(const std::string &uri);
 	}
 }
