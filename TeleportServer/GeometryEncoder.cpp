@@ -697,14 +697,25 @@ avs::Result GeometryEncoder::encodeTexturePointer(avs::uid uid)
 	GeometryStore *geometryStore = &(GeometryStore::GetInstance());
 	const ExtractedTexture *wrappedTexture = geometryStore->getWrappedTexture(uid);
 	string path = geometryStore->UidToPath(uid);
-	;
 	if (!path.length())
 		return avs::Result::Failed;
+	// The path is incomplete, because it has no file extension. We want to send the full URL of
+	// an actual file, so that even dumb fileservers or CDN's can respond with a download.
+	//
+	// Where the store holds the texture, the extension comes from the format it was compressed
+	// to. Where it does not, this is an external asset - a file served beside us that some
+	// .glb/.vrm references as one of its images - and the extension is the one it was
+	// registered with. Neither must be assumed: a texture uid with no stored texture used to
+	// dereference null here.
+	string extension = wrappedTexture ? wrappedTexture->fileExtension() : geometryStore->GetExternalAssetExtension(uid);
+	if (!extension.length())
+	{
+		TELEPORT_WARN_NOSPAM("No file extension for texture {0} at {1}, so no url can be sent for it.", uid, path);
+		return avs::Result::Failed;
+	}
 	string url = geometryStore->GetHttpRoot() + "/";
 	url += path;
-	// But even the path is incomplete, because it has no file extension. We want to send the
-	// full URL of an actual file, so that even dumb fileservers or CDN's can respond with a download.
-	url += wrappedTexture->fileExtension();
+	url += extension;
 	uint16_t urlLength = (uint16_t)url.length();
 	if ((size_t)urlLength != url.length())
 		return avs::Result::Failed;
@@ -773,6 +784,18 @@ avs::Result GeometryEncoder::encodeTexturesBackend(std::vector<avs::uid> missing
 
 			// Flag we have encoded the texture.
 			geometryStreamingService->encodedResource(uid);
+		}
+		else if (geometryStore->GetExternalAssetExtension(uid).length())
+		{
+			// An external asset: a file served beside us that a .glb/.vrm references as one of
+			// its images. There is no texture in the store to send inline - the file itself is
+			// the resource - so send the url and let the client fetch it, exactly as it does
+			// for any other texture too large to inline.
+			avs::Result result = encodeTexturePointer(uid);
+			if (result != avs::Result::OK)
+			{
+				return result;
+			}
 		}
 		else
 		{

@@ -4,6 +4,7 @@
 #endif
 #include "GeometryStore.h"
 
+#include "GltfTextureScan.h"
 #include "TeleportCore/ErrorHandling.h"
 #include "TeleportCore/Logging.h"
 #include "TeleportCore/ResourceStreams.h"
@@ -2126,6 +2127,117 @@ std::string GeometryStore::UidToPath(avs::uid u) const
 		m2[p]=u;
 	}
 	return p;
+}
+
+avs::uid GeometryStore::registerExternalAsset(const std::string &pathWithExtension)
+{
+	std::string path	  = pathWithExtension;
+	std::string extension;
+	// Split at the last period, but only if it is in the filename: a directory may contain one
+	// even though a resource path may not.
+	const size_t dot   = path.rfind('.');
+	const size_t slash = path.find_last_of("/\\");
+	if (dot != std::string::npos && (slash == std::string::npos || dot > slash))
+	{
+		extension = path.substr(dot);
+		path	  = path.substr(0, dot);
+	}
+	// Leading slashes are how these are written in a scene ("/props/chair.glb"), but resource
+	// paths here are relative to the root.
+	while (!path.empty() && (path[0] == '/' || path[0] == '\\'))
+	{
+		path.erase(path.begin());
+	}
+	const avs::uid uid = GetOrGenerateUid(path);
+	if (!uid)
+	{
+		return 0;
+	}
+	std::lock_guard<std::mutex> lock(externalAssetsMutex);
+	externalAssetExtensions[uid] = extension;
+	return uid;
+}
+
+std::string GeometryStore::GetExternalAssetExtension(avs::uid u) const
+{
+	std::lock_guard<std::mutex> lock(externalAssetsMutex);
+	auto i = externalAssetExtensions.find(u);
+	if (i == externalAssetExtensions.end())
+	{
+		return std::string();
+	}
+	return i->second;
+}
+
+std::vector<avs::uid> GeometryStore::getMeshTextureDependencies(avs::uid meshId)
+{
+	if (!meshId)
+	{
+		return {};
+	}
+	std::string extension = GetExternalAssetExtension(meshId);
+	std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+	if (extension != ".glb" && extension != ".vrm" && extension != ".gltf")
+	{
+		// Not an asset with a document of its own to declare dependencies: an extracted mesh
+		// carries its materials and textures as resources already.
+		return {};
+	}
+	const std::string path = UidToPath(meshId);
+	if (path.empty())
+	{
+		return {};
+	}
+	const std::string filename = cachePath + "/" + path + extension;
+
+	std::time_t lastModified = 0;
+	{
+		std::error_code ec;
+		const auto		writeTime = std::filesystem::last_write_time(filename, ec);
+		if (ec)
+		{
+			TELEPORT_WARN_NOSPAM("Could not read {0} to find the textures it references", filename);
+			return {};
+		}
+		lastModified = (std::time_t)writeTime.time_since_epoch().count();
+	}
+	{
+		// Parsed once: this is asked for every time a node enters a client's streamed set.
+		std::lock_guard<std::mutex> lock(externalAssetsMutex);
+		auto						cached = meshTextureDependencies.find(meshId);
+		if (cached != meshTextureDependencies.end() && cached->second.lastModified == lastModified)
+		{
+			return cached->second.textureUids;
+		}
+	}
+
+	std::vector<avs::uid> textureUids;
+	for (const std::string &uri : GetExternalImageUrisFromFile(filename))
+	{
+		const std::string texturePath = ResolveAssetRelativePath(path, uri);
+		if (texturePath.empty())
+		{
+			// A uri pointing outside this server's assets - a CDN, say. The client resolves it
+			// against the asset's own url and fetches it directly; there is nothing for us to
+			// stream.
+			continue;
+		}
+		const avs::uid textureUid = registerExternalAsset(texturePath);
+		if (textureUid && std::find(textureUids.begin(), textureUids.end(), textureUid) == textureUids.end())
+		{
+			textureUids.push_back(textureUid);
+		}
+	}
+	if (textureUids.size())
+	{
+		TELEPORT_INTERNAL_COUT("Mesh {0} ({1}{2}) depends on {3} external texture(s).", meshId, path, extension, textureUids.size());
+	}
+
+	std::lock_guard<std::mutex> lock(externalAssetsMutex);
+	ScannedTextureDependencies &scanned = meshTextureDependencies[meshId];
+	scanned.lastModified				= lastModified;
+	scanned.textureUids					= textureUids;
+	return textureUids;
 }
 
 bool GeometryStore::EnsureResourceIsLoaded(avs::uid u)

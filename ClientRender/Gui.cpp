@@ -3116,7 +3116,7 @@ bool Gui::UrlEdit()
 		num_buttons++;
 	}
 #endif
-	ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * buttonSize.x - 8);
+	ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * (buttonSize.x + 8) - 8);
 	if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 	{
 		current_url	   = url_buffer;
@@ -3677,7 +3677,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					num_buttons++;
 				}
 #endif
-				ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * 80);
+				ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * (buttonSize.x + 8) - 8);
 				if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
 				{
 					current_url = url_buffer;

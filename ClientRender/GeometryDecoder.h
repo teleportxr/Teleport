@@ -4,6 +4,7 @@
 #include <libavstream/mesh.hpp>
 
 #include "Platform/CrossPlatform/AxesStandard.h"
+#include "ResourceUrl.h"
 #include "TeleportCore/DecodeMesh.h"
 #include <map>
 #include <parallel_hashmap/phmap.h>
@@ -26,6 +27,11 @@ namespace teleport
 	namespace clientrender
 	{
 		class ResourceCreator;
+		//! Expand a url as it arrived in a pointer payload into the absolute url it will actually
+		//! be fetched from - the same expansion decodeFromWeb performs, with the cache's default
+		//! url root. Resource urls are compared as absolute urls, because that is the identity of
+		//! a resource: see GeometryCache::RegisterTextureUrl.
+		std::string AbsoluteResourceUrl(avs::uid cache_uid, const std::string &url);
 		enum class GeometryFileFormat
 		{
 			TELEPORT_NATIVE,

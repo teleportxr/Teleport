@@ -1,5 +1,6 @@
 #pragma once
 #include <ctime>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 #include <thread>
@@ -138,6 +139,34 @@ namespace teleport
 			//Compresses the next texture to be compressed; does nothing if there are no more textures to compress.
 			void compressNextTexture();
 
+			//! Register an asset that exists as a file beside the server rather than as an
+			//! extracted resource - a .glb/.vrm mesh, or a texture that one of them references.
+			//! Returns its uid.
+			//!
+			//! `pathWithExtension` is the path as it is written and served, e.g.
+			//! "props/chair.glb". The uid is minted from the path *without* the extension,
+			//! because resource paths here carry none: the extension belongs to the resource
+			//! type and is appended when a url is built (see GetOrGenerateUid, which rejects a
+			//! path containing a period, and encodeTexturePointer, which appends one). The
+			//! extension is recorded here so a url can still be built for an asset that has no
+			//! stored resource to take one from.
+			avs::uid registerExternalAsset(const std::string &pathWithExtension);
+			//! The file extension recorded for an external asset, e.g. ".glb". Empty for
+			//! anything that was not registered with registerExternalAsset.
+			std::string GetExternalAssetExtension(avs::uid u) const;
+
+			//! The textures a mesh asset references as external files, and therefore depends on.
+			//!
+			//! A .glb/.vrm may embed its images or reference them as separate files; the second
+			//! form makes each of those files a resource a client streaming the mesh must also
+			//! receive, and nothing else in the scene says so. Empty for an asset that embeds
+			//! its images, for an extracted mesh, and for anything unreadable.
+			//!
+			//! The asset is parsed once and the result kept, re-read only if the file's
+			//! modification time moves: this is asked for every time a node enters a client's
+			//! streamed set, and re-reading a 30 MB avatar each time would be absurd.
+			std::vector<avs::uid> getMeshTextureDependencies(avs::uid meshId);
+
 			/// Check for errors - these should be resolved before using this store in a server.
 			bool CheckForErrors(avs::uid uid=0) ;
 			//! Get or generate a uid. If the path already corresponds to an id, that will be returned. Otherwise a new one will be added.
@@ -189,6 +218,20 @@ namespace teleport
 
 			std::map<avs::uid, std::string> uid_to_path;
 			std::map<std::string, avs::uid> path_to_uid;
+
+			//! External assets: files served beside us rather than resources extracted into the
+			//! store. See registerExternalAsset.
+			std::map<avs::uid, std::string> externalAssetExtensions;
+			//! What a scan of one .glb/.vrm found, kept so the file is read once rather than
+			//! once per client per streaming pass.
+			struct ScannedTextureDependencies
+			{
+				std::time_t lastModified = 0;
+				std::vector<avs::uid> textureUids;
+			};
+			std::map<avs::uid, ScannedTextureDependencies> meshTextureDependencies;
+			//! Guards the two above, which are reached from each client's streaming thread.
+			mutable std::mutex externalAssetsMutex;
 			bool LoadResourceAtPath(std::string p, avs::uid u);
 			avs::uid LoadResourceFromFile(std::string p, avs::uid u);
 			

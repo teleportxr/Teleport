@@ -319,6 +319,15 @@ void GeometryStreamingService::AddNodeAndItsResourcesToStreamed(avs::uid node_ui
 		if (m.mesh_uid)
 		{
 			streamedMeshes[m.mesh_uid] += diff;
+			// A .glb/.vrm may reference its textures as external files rather than embedding
+			// them. Those files are dependencies of the mesh - the client has nothing to
+			// resolve the asset's own image uris against unless we stream them - and no
+			// material in the store names them, so they are added here, refcounted alongside
+			// the mesh exactly as a material's textures are.
+			for (avs::uid t : geometryStore->getMeshTextureDependencies(m.mesh_uid))
+			{
+				streamedTextures[t] += diff;
+			}
 		}
 		if (m.skeletonAssetID)
 		{

@@ -34,6 +34,8 @@ set(src
 	GeometryEncoder.h
 	GeometryStore.cpp
 	GeometryStore.h
+	GltfTextureScan.cpp
+	GltfTextureScan.h
 	GeometryStreamingService.cpp
 	GeometryStreamingService.h
 	NetworkPipeline.cpp

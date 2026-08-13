@@ -1,4 +1,5 @@
 #include "MeshDecoder.h"
+#include "GeometryCache.h"
 #include "GeometryDecoder.h"
 #include "ResourceCreator.h"
 #include "TeleportCore/DecodeMesh.h"
@@ -611,12 +612,42 @@ namespace teleport::core
 								target->CreateTexture(dg.server_or_cache_uid, texture_uid, avsTexture);
 							}
 						}
-						// For external URI-based images
+						// For external URI-based images: the asset references its textures as
+						// separate files rather than embedding them, which is what a .glb split
+						// out of a collection looks like. The uri is relative to the asset, so
+						// resolve it against the asset's own url and treat the result as a
+						// texture resource.
+						//
+						// The url is the identity. The server streams these same files as
+						// TexturePointers, because a mesh that needs them declares them as
+						// dependencies - so where we have already been given this file, the
+						// sub-scene shares that texture instead of fetching a second copy of it.
 						else if (!image.uri.empty() && !IsDataURI(image.uri))
 						{
-							// In a full implementation, you would likely load the external image
-							// and create a texture from it here
-							// This would depend on your application's file loading capabilities
+							const std::string absoluteUrl = ResolveUrl(filename_url, image.uri);
+							std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(dg.server_or_cache_uid);
+							if (geometryCache && geometryCache->ShareTextureFromUrl(absoluteUrl, dg.server_or_cache_uid, texture_uid))
+							{
+								TELEPORT_INTERNAL_COUT(Resource, "Texture {0} of {1} shares the resource already delivered from {2}",
+									texture_uid, filename_url, absoluteUrl);
+							}
+							else
+							{
+								// Nothing has this file. Fetch it ourselves, and note the url so a
+								// later reference to it - another image in this asset, or a
+								// TexturePointer that arrives afterwards - resolves to this same
+								// texture. Note the url must be absolute here: decodeFromWeb would
+								// otherwise complete it with the cache's default url root, and a
+								// sub-scene cache's root is the whole url of the asset itself
+								// (GeometryCache::CreateGeometryCache).
+								if (geometryCache)
+								{
+									geometryCache->RegisterTextureUrl(absoluteUrl, texture_uid);
+								}
+								TELEPORT_INTERNAL_COUT(Resource, "Texture {0} of {1} fetched from {2}",
+									texture_uid, filename_url, absoluteUrl);
+								dec->decodeFromWeb(dg.server_or_cache_uid, absoluteUrl, avs::GeometryPayloadType::Texture, target, texture_uid);
+							}
 						}
 						// For data URIs
 						else if (!image.uri.empty() && IsDataURI(image.uri))

@@ -56,6 +56,37 @@ The reference client's geometry decoder (``teleport::clientrender::GeometryDecod
 * Once the body is received, ``GeometryDecoder::receiveFromWeb`` decodes it as if it had arrived on the geometry channel, with the appropriate ``GeometryPayloadType``.
 * The cache is content-addressed by URL; the server is expected to publish each immutable asset at a unique, stable URL.
 
+.. _external_texture_urls:
+
+URIs inside a fetched asset
+---------------------------
+
+A fetched glTF may reference its textures as external files, with a ``uri`` in its ``images`` array. Those URIs are relative to the **asset**, not to the client, and are resolved as the glTF spec requires (reference: ``teleport::clientrender::ResolveUrl``):
+
+.. list-table::
+   :widths: 30 34 36
+   :header-rows: 1
+
+   * - ``uri`` in the asset
+     - Asset fetched from
+     - Resolves to
+   * - ``tex.png``
+     - ``https://host/props/chair.glb``
+     - ``https://host/props/tex.png``
+   * - ``../shared/tex.png``
+     - ``https://host/props/chair.glb``
+     - ``https://host/shared/tex.png``
+   * - ``/shared/tex.png``
+     - ``https://host/props/chair.glb``
+     - ``https://host/shared/tex.png``
+   * - ``https://cdn/tex.png``
+     - anywhere
+     - ``https://cdn/tex.png``
+
+The asset's own query and fragment take no part, and percent-encoding is left exactly as authored — it is part of the URL that gets requested. Note that the cache's ``defaultURLRoot`` is **not** used here: for a sub-scene cache (which is what a ``.glb`` arrived at through a ``MeshPointer`` becomes) that root is the asset's whole URL, so the resolution above must produce an absolute URL by itself.
+
+The resolved URL identifies a texture resource, so a URL already delivered as a ``TexturePointer`` is that same resource and its texture is reused rather than fetched again — see :ref:`external_textures`. Failing that the client fetches the URL itself, through the same HTTP utility and disk cache as any other resource.
+
 Lifecycle
 =========
 

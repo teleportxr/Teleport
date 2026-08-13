@@ -65,6 +65,8 @@ set( src_root
 	ResourceCreator.cpp
 	ResourceCreator.h
 	ResourceManager.h
+	ResourceUrl.cpp
+	ResourceUrl.h
 	Renderer.h
 	Renderer.cpp
 	ShaderResource.cpp

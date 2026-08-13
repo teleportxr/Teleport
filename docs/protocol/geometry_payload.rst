@@ -1008,6 +1008,20 @@ An unrecognised extension is rejected. Servers MUST therefore give pointer URLs 
      - variable
      - Absolute URL or relative path; see :doc:`http`.
 
+.. _external_textures:
+
+Assets with external textures
+-----------------------------
+
+A glTF may either embed its images — in a ``bufferView``, or inline as a ``data:`` URI — or reference them as separate files beside it, with a relative ``uri`` in its ``images`` array. Both forms reach clients as a ``MeshPointer``, and the second makes each referenced file a **resource in its own right**:
+
+* The **server** treats those files as dependencies of the mesh. Whenever it streams the mesh to a client it streams them too, as ordinary ``TexturePointer`` chunks, refcounted so a texture two streamed meshes share is held until both let go. The reference servers find them either from an explicit declaration (the Node.js server's ``scene.json`` ``meshes[url].textures`` array) or by reading the asset's own ``images`` array; neither materials nor nodes name them, so nothing else would.
+* The **client** resolves each ``uri`` against the URL it fetched the asset from, per the glTF spec: ``tex.png`` inside ``https://host/props/chair.glb`` is ``https://host/props/tex.png``. A leading ``/`` is relative to the scheme and authority; a ``uri`` with a scheme is used as-is.
+
+The resolved URL is the **identity** of the texture resource. A ``TexturePointer`` naming a URL and an image ``uri`` resolving to the same URL are one resource, and a client that has already been given it MUST reuse it rather than fetch, decode and upload the file a second time. A URL the server never announced is fetched by the client itself.
+
+This applies to server-owned scene assets. A client-supplied avatar is required to be self-contained (see :doc:`signaling`), and an asset offered with external references is refused rather than resolved.
+
 .. _animation_pointer_payload:
 
 AnimationPointer payload

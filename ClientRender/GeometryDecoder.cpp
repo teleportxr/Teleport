@@ -120,6 +120,20 @@ static avs::uid GenerateLocalUid()
 	return r;
 };
 
+std::string teleport::clientrender::AbsoluteResourceUrl(avs::uid cache_uid, const std::string &url)
+{
+	if (url.find("://") != std::string::npos)
+	{
+		return url;
+	}
+	std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	if (!geometryCache)
+	{
+		return url;
+	}
+	return "https://" + geometryCache->GetDefaultURLRoot() + url;
+}
+
 void CreateSubScene(core::DecodedGeometry				 &subSceneDG,
 					clientrender::ResourceCreator		 *target,
 					std::string							  filename_url,
@@ -1438,6 +1452,11 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 
 	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={}, axesStandard={})",
 		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url, static_cast<int>(sourceAxesStandard));
+
+	// The url is the identity of a texture resource: a .glb streamed to us may reference this
+	// very file as one of its images, and must then share this texture rather than fetching,
+	// decoding and uploading its own copy. See GeometryCache::RegisterTextureUrl.
+	geometryCache->RegisterTextureUrl(AbsoluteResourceUrl(geometryDecodeData.server_or_cache_uid, url), texture_uid);
 
 	return decodeFromWeb(
 		geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid, sourceAxesStandard);
