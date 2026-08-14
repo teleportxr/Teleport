@@ -66,6 +66,7 @@
     <ClCompile Include="..\..\ClientRender\Renderer.cpp" />
     <ClCompile Include="..\..\ClientRender\Resource.cpp" />
     <ClCompile Include="..\..\ClientRender\ResourceCreator.cpp" />
+    <ClCompile Include="..\..\ClientRender\ResourceUrl.cpp" />
     <ClCompile Include="..\..\ClientRender\ShaderResource.cpp" />
     <ClCompile Include="..\..\ClientRender\Skeleton.cpp" />
     <ClCompile Include="..\..\ClientRender\SkeletonInstance.cpp" />
@@ -118,6 +119,7 @@
     <ClInclude Include="..\..\ClientRender\Resource.h" />
     <ClInclude Include="..\..\ClientRender\ResourceCreator.h" />
     <ClInclude Include="..\..\ClientRender\ResourceManager.h" />
+    <ClInclude Include="..\..\ClientRender\ResourceUrl.h" />
     <ClInclude Include="..\..\ClientRender\ShaderResource.h" />
     <ClInclude Include="..\..\ClientRender\ShaderStorageBuffer.h" />
     <ClInclude Include="..\..\ClientRender\Skeleton.h" />

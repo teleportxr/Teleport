@@ -176,7 +176,7 @@ namespace teleport
 			}
 
 			// Clear all resources.
-			void ClearAll()
+			void ClearAll() override
 			{
 				mNodeManager.Clear();
 

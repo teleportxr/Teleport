@@ -996,7 +996,8 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 		renderPlatform->PushShaderPath("../../Platform/Vulkan/Sfx");
 		renderPlatform->PushShaderPath("Platform/Vulkan/Sfx/");
 		renderPlatform->PushShaderBinaryPath((build_dir + "/shaderbin/Vulkan").c_str());
-		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
+		renderPlatform->PushShaderBinaryPath((build_dir + "/../share/shaderbin/Vulkan").c_str());
+		renderPlatform->PushShaderBinaryPath("assets/shaders/Vulkan");
 #endif
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
@@ -1083,7 +1084,7 @@ int main(int argc, char *argv[])
 
 	// Enable Default-category internal logging so diagnostic TELEPORT_INTERNAL_COUT(Default, ...)
 	// messages (e.g. WebRTC media track attachment, audio decoder traces) reach the log file.
-	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, false);
+	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, true);
 
 	// Parse command line
 	for (int i = 1; i < argc; i++)
@@ -1142,7 +1143,7 @@ int main(int argc, char *argv[])
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHintString(GLFW_WAYLAND_APP_ID, "TeleportXR");
-	g_window = glfwCreateWindow(1280, 800, "Teleport Spatial Client", nullptr, nullptr);
+	g_window = glfwCreateWindow(800, 500, "Teleport Spatial Client", nullptr, nullptr);
 	if (!g_window)
 	{
 		TELEPORT_INTERNAL_CERR("glfwCreateWindow failed");
@@ -1156,7 +1157,7 @@ int main(int argc, char *argv[])
 	glfwSetFramebufferSizeCallback(g_window, GlfwFramebufferSizeCallback);
 
 	{
-		TELEPORT_INFO(filesystem::current_path().string());
+		TELEPORT_INFO(Default,filesystem::current_path().string());
 		int w, h, ch;
 		unsigned char *pixels = stbi_load("assets/textures/teleportxr.png", &w, &h, &ch, 4);
 		if (pixels)
