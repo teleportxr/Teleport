@@ -23,6 +23,46 @@ using namespace platform;
 
 namespace
 {
+	//! The frame this client works in. Everything decoded is converted to it (see
+	//! GeometryDecoder), and it is what the Handshake declares to the server below.
+	constexpr platform::crossplatform::AxesStandard ClientAxesStandard = platform::crossplatform::AxesStandard::Engineering;
+
+	//! The transform that takes a sample direction from the client's own frame into the frame a
+	//! cubemap's faces are laid out in. Texture contents - unlike geometry - are never converted
+	//! by the server, so the lookup is converted instead; the server declares the texture's frame
+	//! in the TexturePointer's axes-standard byte.
+	//!
+	//! Identity when the texture declares nothing, or already agrees with the client.
+	mat4 CubemapAxesTransform(platform::crossplatform::AxesStandard textureStandard)
+	{
+		mat4 m = mat4::identity();
+		if (textureStandard == platform::crossplatform::AxesStandard::NotInitialized || textureStandard == ClientAxesStandard)
+		{
+			return m;
+		}
+		// These conversions are exact axis permutations with sign, so converting the three unit
+		// vectors recovers the matrix exactly - including the mirror when handedness differs.
+		const vec3 basis[3] = {vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f)};
+		for (int j = 0; j < 3; j++)
+		{
+			vec3 c	  = platform::crossplatform::ConvertPosition(ClientAxesStandard, textureStandard, basis[j]);
+			m.M[0][j] = c.x;
+			m.M[1][j] = c.y;
+			m.M[2][j] = c.z;
+		}
+		return m;
+	}
+
+	//! The transform for a cubemap held in the geometry cache, or identity when it is absent.
+	mat4 CubemapAxesTransform(const std::shared_ptr<clientrender::Texture> &texture)
+	{
+		if (!texture)
+		{
+			return mat4::identity();
+		}
+		return CubemapAxesTransform(texture->GetTextureCreateInfo().axesStandard);
+	}
+
 	// A WebRTC audio track's SDP mid is the decimal uid of the emitting node
 	// (see docs/protocol/audio.rst). Returns 0 for a non-numeric/absent mid, which
 	// the mixer treats as a non-spatial source.
@@ -187,11 +227,13 @@ void InstanceRenderer::RenderBackgroundTexture(platform::crossplatform::Graphics
 	{
 		return;
 	}
-	bool multiview								  = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
-	renderState.cubemapConstants.depthOffsetScale = vec4(0, 0, 0, 0);
-	auto &clientServerState						  = sessionClient->GetClientServerState();
-	renderState.cubemapConstants.cameraPosition	  = *((vec3 *)&clientServerState.headPose.position);
-	renderState.cubemapConstants.cameraRotation	  = *((vec4 *)&clientServerState.headPose.orientation);
+	bool multiview									 = deviceContext.AsMultiviewGraphicsDeviceContext() != nullptr;
+	renderState.cubemapConstants.depthOffsetScale	 = vec4(0, 0, 0, 0);
+	auto &clientServerState							 = sessionClient->GetClientServerState();
+	renderState.cubemapConstants.cameraPosition		 = *((vec3 *)&clientServerState.headPose.position);
+	renderState.cubemapConstants.cameraRotation		 = *((vec4 *)&clientServerState.headPose.orientation);
+	// The background may be authored in a different frame from the one this client renders in.
+	renderState.cubemapConstants.cubemapAxesTransform = CubemapAxesTransform(d);
 	deviceContext.renderPlatform->SetConstantBuffer(deviceContext, &renderState.cubemapConstants);
 	if (t->IsCubemap())
 	{
@@ -458,6 +500,18 @@ void InstanceRenderer::ApplySceneMatrices(platform::crossplatform::GraphicsDevic
 	{
 		renderState.teleportSceneConstants.roughestMip = float(instanceRenderState.specularCubemapTexture->mips - 1);
 	}
+	// The locally-generated cubemaps are already in this client's frame; a streamed one need not
+	// be, so the environment sample directions are converted into whatever each one declared.
+	// Which texture is actually bound is decided in RenderLocalNodes, on the same two conditions.
+	renderState.teleportSceneConstants.diffuseCubemapAxesTransform  = mat4::identity();
+	renderState.teleportSceneConstants.specularCubemapAxesTransform = mat4::identity();
+	if (sessionClient->GetDynamicLighting().lightingMode == teleport::core::LightingMode::TEXTURE)
+	{
+		renderState.teleportSceneConstants.diffuseCubemapAxesTransform =
+			CubemapAxesTransform(geometryCache->mTextureManager.Get(sessionClient->GetDynamicLighting().diffuse_cubemap_texture_uid));
+		renderState.teleportSceneConstants.specularCubemapAxesTransform =
+			CubemapAxesTransform(geometryCache->mTextureManager.Get(sessionClient->GetDynamicLighting().specular_cubemap_texture_uid));
+	}
 	if (sessionClient->GetDynamicLighting().specular_cubemap_texture_uid != 0)
 	{
 		auto t = geometryCache->mTextureManager.Get(sessionClient->GetDynamicLighting().specular_cubemap_texture_uid);
@@ -632,7 +686,8 @@ void			   InstanceRenderer::RenderLocalNodes(crossplatform::GraphicsDeviceContex
 	{
 		platform::crossplatform::Texture *diffuseCubemapTexture	 = instanceRenderState.diffuseCubemapTexture;
 		platform::crossplatform::Texture *specularCubemapTexture = instanceRenderState.specularCubemapTexture;
-		// If lighting is via static textures.
+		// If lighting is via static textures. The axes transforms for these two are set in
+		// ApplySceneMatrices, which is where TeleportSceneConstants is uploaded.
 		if (sessionClient->GetDynamicLighting().lightingMode == teleport::core::LightingMode::TEXTURE)
 		{
 			auto d = geometryCache->mTextureManager.Get(sessionClient->GetDynamicLighting().diffuse_cubemap_texture_uid);
@@ -880,6 +935,9 @@ void InstanceRenderer::UpdateNodeRenders()
 #endif
 	passRenders.clear();
 	subSceneStatesMap.clear();
+	// Keyed on the instances that subSceneStatesMap just dropped, so it would otherwise keep buffers
+	// alive for mounts that no longer exist. ~SkeletonRender invalidates the device objects.
+	skeletonRenders.clear();
 #if 0
 	auto &subSceneNodeStates = subSceneStatesMap[0];
 	for (auto c : cacheNodes)
@@ -904,7 +962,11 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 	auto &materials				 = node->GetMaterials();
 	bool  rezzing				 = false;
 	bool  instanced				 = false;
-	if (node->IsStatic())
+	// A skinned node is excluded even when it is static: an instanced draw shares one bone-matrix
+	// constant buffer across the whole batch, so its instances cannot hold different poses -
+	// RenderInstancedMeshes binds no bone buffer at all, and the draw would use whatever the previous
+	// one left bound.
+	if (node->IsStatic() && node->GetJointIndices().empty())
 	{
 		instanced = true;
 	}
@@ -1156,6 +1218,7 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			nodeState.elementStates[element].materialRender = materialRender;
 			nodeState.elementStates[element].hash			= node_element_hash;
 			meshRender->cache_uid							= cache_uid;
+			meshRender->root_id								= subSceneNodeStates.root_id;
 			meshRender->gi_texture_id						= node->GetGlobalIlluminationTextureUid();
 			meshRender->mesh								= node->GetMesh();
 			meshRender->node								= node;
@@ -1251,6 +1314,11 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubScene
 	if (c != canvasRenders.end())
 	{
 		canvasRenders.erase(c);
+	}
+	auto sk = skeletonRenders.find(node_hash);
+	if (sk != skeletonRenders.end())
+	{
+		skeletonRenders.erase(sk);
 	}
 	const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 	if (mesh)
@@ -1406,7 +1474,13 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 		// For each bone matrix, pos_local= (bone_matrix_j) * pos_original_local
 		auto animationComponent = node->GetComponent<AnimationComponent>();
 		// static size_t match_joint_count=22;
-		if (animationComponent && animationComponent->update(renderState.timestampUs.count(), subSceneNodeStates.root_id))
+		// Session time, not renderState.timestampUs. That is a Unix wall-clock time, whereas an
+		// animation state is keyed by ApplyAnimation.timestampUs, which the protocol defines as
+		// microseconds since the setup command's datum. Mixing the two puts the playback head
+		// roughly 1.8e15 microseconds past the clip: the resulting time ratio is so large that a
+		// float cannot hold a fraction at all, floorf() returns the value unchanged, and the clip
+		// sticks on its first frame - visible as an animation that is applied but never plays.
+		if (animationComponent && animationComponent->update(SessionTimeUs(), subSceneNodeStates.root_id))
 		{
 			// We want to update the instance of this animation component associated with this instance of the submesh.
 		}
@@ -1430,16 +1504,16 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 				if (skelNode)
 				{
 					auto			  animationComponent = skelNode->GetComponent<AnimationComponent>();
+					// GetBoneMatrices sizes and fills this, including the all-identity fallback for an
+					// instance that is not animating.
 					std::vector<mat4> boneMatrices;
-					for (int i = 0; i < boneMatrices.size(); i++)
-					{
-						boneMatrices[i] = mat4::identity();
-					}
 					skeleton			   = skelNode->GetSkeleton();
 					auto animationInstance = animationComponent->GetOrCreateAnimationInstance(subSceneNodeStates.root_id);
 					animationInstance->GetBoneMatrices(
 						boneMatrices, node->GetJointIndices(), node->GetInverseBindMatrices(), skeleton->GetSkeletonToAnimMapping());
-					avs::uid sk_id = node->id;
+					// The animation state is already per-instance, keyed on the mounting node. The buffer it
+					// is written to must be too, or two mounts of one sub-scene share a pose.
+					uint64_t sk_id = MakeNodeHash(subSceneNodeStates.root_id, geometrySubCache->GetCacheUid(), node->id);
 					if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 					{
 						skeletonRenders[sk_id] = std::make_shared<SkeletonRender>();
@@ -1531,7 +1605,7 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 		{
 			return;
 		}
-		avs::uid sk_id = meshRender.node->id;
+		uint64_t sk_id = MakeNodeHash(meshRender.root_id, meshRender.cache_uid, meshRender.node->id);
 		if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 		{
 			return;
@@ -2197,7 +2271,8 @@ bool InstanceRenderer::GetHandshake(teleport::core::Handshake &handshake)
 {
 	handshake.startDisplayInfo.width  = renderState.hdrFramebuffer->GetWidth();
 	handshake.startDisplayInfo.height = renderState.hdrFramebuffer->GetHeight();
-	handshake.axesStandard			  = avs::AxesStandard::EngineeringStyle;
+	// Must agree with ClientAxesStandard above: it is the frame everything is converted into.
+	handshake.axesStandard			  = static_cast<avs::AxesStandard>(ClientAxesStandard);
 	handshake.MetresPerUnit			  = 1.0f;
 	handshake.FOV					  = 90.0f;
 	handshake.isVR					  = false;

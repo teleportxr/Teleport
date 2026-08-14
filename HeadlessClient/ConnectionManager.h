@@ -27,7 +27,9 @@ public:
 		uint32_t id;
 		std::string url;
 		bool connected;
-		std::string statusLine; //! First line of HeadlessConnection::GetStatus().
+		//! Session state; `connections` renders it one line at a time with
+		//! RenderStatusLine(). See ConnectionReport.h.
+		ConnectionStatus status;
 	};
 
 	//! Create a connection and start connecting. Returns the new id, or 0 on failure

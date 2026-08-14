@@ -22,6 +22,8 @@ set(core_srcs
 	HeadlessConnection.h HeadlessConnection.cpp
 	ConnectionManager.h ConnectionManager.cpp
 	CommandProcessor.h CommandProcessor.cpp
+	CommandResult.h
+	ConnectionReport.h ConnectionReport.cpp
 	ControlServer.h ControlServer.cpp
 	ControlProtocol.h
 	SocketUtil.h SocketUtil.cpp
@@ -78,6 +80,17 @@ set_target_properties(teleport_headless_core PROPERTIES FOLDER Client)
 # --- Service: teleportd ----------------------------------------------
 
 add_static_executable(teleportd CONSOLE SOURCES Main.cpp)
+if(WIN32)
+	# Link the bundled static OpenSSL by full path and BEFORE teleport_headless_core.
+	# If an import-library libcrypto.lib (shared OpenSSL) is reachable through the
+	# transitive dependencies, the static definitions must be established first;
+	# otherwise the linker takes BIO_*/SHA256 as imports from libcrypto-3-x64.dll and
+	# then pulls the same symbols out of the static archive (LNK2005/LNK1169).
+	target_link_libraries(teleportd
+		${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libssl.lib
+		${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib/libcrypto.lib
+	)
+endif()
 target_link_libraries(teleportd teleport_headless_core)
 target_compile_features(teleportd PRIVATE cxx_std_17)
 
@@ -95,11 +108,10 @@ if(TARGET PlatformVulkan_MT AND NOT TELEPORT_MACOS)
 endif()
 
 if(WIN32)
-	target_link_directories(teleportd PUBLIC ${CMAKE_SOURCE_DIR}/thirdparty/openssl/x64/lib)
+	# libssl/libcrypto are linked above, by full path and ahead of the transitive
+	# dependencies; the system libraries their static build needs remain here.
 	target_link_libraries(teleportd
 		ws2_32.lib
-		libssl.lib
-		libcrypto.lib
 		crypt32.lib
 		iphlpapi.lib
 		bcrypt.lib

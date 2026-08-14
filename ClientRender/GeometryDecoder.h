@@ -4,6 +4,7 @@
 #include <libavstream/mesh.hpp>
 
 #include "Platform/CrossPlatform/AxesStandard.h"
+#include "ResourceUrl.h"
 #include "TeleportCore/DecodeMesh.h"
 #include <map>
 #include <parallel_hashmap/phmap.h>
@@ -26,6 +27,11 @@ namespace teleport
 	namespace clientrender
 	{
 		class ResourceCreator;
+		//! Expand a url as it arrived in a pointer payload into the absolute url it will actually
+		//! be fetched from - the same expansion decodeFromWeb performs, with the cache's default
+		//! url root. Resource urls are compared as absolute urls, because that is the identity of
+		//! a resource: see GeometryCache::RegisterTextureUrl.
+		std::string AbsoluteResourceUrl(avs::uid cache_uid, const std::string &url);
 		enum class GeometryFileFormat
 		{
 			TELEPORT_NATIVE,
@@ -97,6 +103,9 @@ namespace teleport
 
 			avs::Result decodeInternal(GeometryDecodeData &geometryDecodeData);
 			avs::Result DecodeGltf(const GeometryDecodeData &geometryDecodeData);
+			//! Decode a glTF asset as a sub-scene with tinygltf, which is where anything draco
+			//! rejects ends up - in particular any asset whose images are external files.
+			avs::Result DecodeGltfWithTinyGltf(const GeometryDecodeData &geometryDecodeData);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid, core::DecodedGeometry &dg, draco::Mesh &dracoMesh, platform::crossplatform::AxesStandard axesStandard);
 			avs::Result DracoMeshToDecodedGeometry(avs::uid primitiveArrayUid,core::DecodedGeometry &dg, const avs::CompressedMesh &compressedMesh, platform::crossplatform::AxesStandard axesStandard);
 			avs::Result DecodeDracoScene( core::DecodedGeometry &subSceneDG,clientrender::ResourceCreator *target, std::string filename_url, avs::uid server_or_cache_uid, avs::uid primitiveArrayUid, draco::Scene &dracoScene, platform::crossplatform::AxesStandard axesStandard);
@@ -111,6 +120,7 @@ namespace teleport
 			avs::Result decodeMaterialInstance(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeTexturePointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeMeshPointer(GeometryDecodeData& geometryDecodeData);
+			avs::Result decodeAnimationPointer(GeometryDecodeData& geometryDecodeData);
 			avs::Result decodeTexture(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeAnimation(GeometryDecodeData &geometryDecodeData);
 			avs::Result decodeNode(GeometryDecodeData &geometryDecodeData);

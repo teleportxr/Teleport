@@ -682,22 +682,24 @@ vec3 ZiomaEnvBRDFApprox(vec3 specularColour, float roughness, float n_v)
 	float m3=mult*mult*mult;
 	return specularColour +vec3(m3,m3,m3);
 }
-vec3 ConvertCubemapLookup(vec3 d)
+// Take an environment sample direction from the client's own frame into the frame the cubemap's
+// faces are laid out in. `axesTransform` is diffuseCubemapAxesTransform or
+// specularCubemapAxesTransform, built from the axes standard the TexturePointer declared for
+// that texture; it is the identity when the frames agree, which is the usual case.
+vec3 ConvertCubemapLookup(vec3 d, mat4 axesTransform)
 {
-	//d=-d.xzy;
-	//d.y=-d.y;
-	return d;
+	return mul(axesTransform, vec4(d, 0.0)).xyz;
 }
 
 vec3 PBRDynamic(SurfaceState surfaceState,vec3 viewDir,SurfaceProperties surfaceProperties)
 {
 	float roughness_mip =  MipFromRoughness(surfaceProperties.roughness, roughestMip);
 	// Sample the environment maps:
-	//vec3 diffuse_env		=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceProperties.normal.z));//diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
-	//vec3 env				=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+	//vec3 diffuse_env		=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceProperties.normal.z));
+	//vec3 env				=lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));
 
-	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz),0.0).rgb;
-	vec3 env				=specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+	vec3 diffuse_env		=diffuseCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceProperties.normal.xyz, diffuseCubemapAxesTransform),0.0).rgb;
+	vec3 env				=specularCubemap.SampleLevel(cubeSamplerState,ConvertCubemapLookup(surfaceState.refl.xyz, specularCubemapAxesTransform), roughness_mip).rgb;
 
 	//vec3 envSpecularColour	= ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 specular			=surfaceState.kS* env;
@@ -714,9 +716,9 @@ vec3 PBRLightmap(SurfaceState surfaceState, vec3 viewDir, SurfaceProperties surf
 {
 	float roughness_mip = MipFromRoughness(surfaceProperties.roughness, roughestMip);
 	// Sample the environment maps:
-	//vec3 env = lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));//specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+	//vec3 env = lerp(vec3(0.3,0.3,0.3),vec3(0.8,0.8,0.8),0.5*(1.0+surfaceState.refl.z));
 
-	vec3 env = specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz), roughness_mip).rgb;
+	vec3 env = specularCubemap.SampleLevel(cubeSamplerState, ConvertCubemapLookup(surfaceState.refl.xyz, specularCubemapAxesTransform), roughness_mip).rgb;
 
 	//vec3 envSpecularColour = ZiomaEnvBRDFApprox(surfaceProperties.albedo, surfaceProperties.roughness2, surfaceState.n_v);
 	vec3 diffuse = surfaceState.kD * surfaceProperties.globalIllumination.rgb * surfaceProperties.albedo.rgb;

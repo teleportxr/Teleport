@@ -236,6 +236,11 @@ namespace teleport
 			void CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo &meshInfo);
 			void CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton);
 			void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo &textureInfo);
+			//! Register a texture in this cache under an id, and complete everything waiting on it.
+			//! CompleteTexture creates the texture and calls this; the url registry below calls it
+			//! with a texture another cache already holds, so a glb that names a file the server
+			//! has already delivered shares that one texture rather than decoding a second copy.
+			void AdoptTexture(avs::uid id, std::shared_ptr<clientrender::Texture> texture);
 			void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
 			void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 			void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo &materialInfo);
@@ -256,6 +261,30 @@ namespace teleport
 			}
 			const std::string &GetDefaultURLRoot() const { return defaultURLRoot; }
 			void SetDefaultURLRoot(const std::string &r) { defaultURLRoot=r; }
+
+			//! Note that this texture id's bytes come from this url. Called when a TexturePointer
+			//! names a texture, and when an external image uri is resolved out of a glb.
+			//!
+			//! The url is the identity of a texture resource. A .glb/.vrm may reference its
+			//! textures as external files rather than embedding them, and the server streams
+			//! those same files as TexturePointers because the mesh depends on them - so the
+			//! image uri inside the asset and the pointer the server sent name one texture, and
+			//! the client must not fetch, decode and upload it twice.
+			void RegisterTextureUrl(const std::string &url, avs::uid texture_uid);
+			//! The texture resource delivered from this url, or 0 if none is known. The registry is
+			//! kept on the root cache and so covers the whole tree: a sub-scene (a glb arrived at as
+			//! a MeshPointer is a geometry cache of its own) resolves against what its server sent
+			//! *and* against what its sibling sub-scenes have already fetched.
+			//! outCacheUid, if given, receives the uid of the cache that owns the texture.
+			avs::uid FindTextureByUrl(const std::string &url, avs::uid *outCacheUid = nullptr) const;
+			//! Share the texture delivered from `url` into another cache under `texture_uid`.
+			//! Happens at once if the texture has already arrived, and when it arrives otherwise.
+			//! Returns false if the url is not known anywhere in the tree, which is the caller's
+			//! signal to fetch it.
+			bool ShareTextureFromUrl(const std::string &url, avs::uid cache_uid, avs::uid texture_uid);
+			//! The topmost cache in this cache's parent chain; its own uid if it has no parent.
+			//! Textures are shared tree-wide, so the registry lives there and nowhere else.
+			avs::uid GetRootCacheUid() const;
 			const std::string &GetURL(avs::uid u) const
 			{
 				auto f=resourceURLs.find(u);
@@ -278,6 +307,29 @@ namespace teleport
 			phmap::flat_hash_map<avs::uid, MissingResource> m_MissingResources; //<ID of Missing Resource, Missing Resource Info>
 			phmap::flat_hash_map<avs::uid, std::string> resourceURLs;
 			std::string defaultURLRoot;
+
+			//! A texture resource identified by the url its bytes come from; see RegisterTextureUrl.
+			struct TextureUrlEntry
+			{
+				avs::uid cache_uid = 0;	  //!< the cache that owns the texture
+				avs::uid texture_uid = 0; //!< its id in that cache
+				//! (cache uid, texture uid) pairs waiting to be given this texture once it arrives.
+				//! Populated when a glb names a url whose bytes are still in flight.
+				std::vector<std::pair<avs::uid, avs::uid>> waiting;
+			};
+			mutable std::mutex textureUrlsMutex;
+			//! Populated only on the root cache - RegisterTextureUrl and FindTextureByUrl both
+			//! redirect there - so that sibling sub-scenes of one server share their textures.
+			std::map<std::string, TextureUrlEntry> texturesByUrl;
+			//! Where a texture filename was first seen. Purely diagnostic: one file served from
+			//! several urls is fetched once per url, and this makes that countable.
+			struct TextureFilenameEntry
+			{
+				std::string firstUrl;
+				bool warned = false; //!< warned once per filename, however many urls it turns up at
+			};
+			std::map<std::string, TextureFilenameEntry> textureFilenames;
+			std::map<avs::uid, std::string> textureUrlsByUid; //!< the reverse of texturesByUrl, per owning cache
 		};
 	}
 

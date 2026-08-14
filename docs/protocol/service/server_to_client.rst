@@ -223,6 +223,12 @@ Selected command layouts
      - bool
      - ``loop``
 
+The command is exactly 46 bytes on the wire; the reference client drops any packet of a different size. ``animLayer`` must be 0 — only layer 0 is implemented.
+
+``animationID`` is the uid of an Animation resource the client already holds, streamed to it beforehand as an :ref:`animation_payload` or :ref:`animation_pointer_payload` chunk; naming a clip the client has not finished receiving is silently dropped. ``cacheID`` selects which geometry cache holds the clip, or 0 for "the cache containing ``nodeID``" — which is also the value that lets the command drive a skeleton inside a streamed sub-scene (e.g. a VRM avatar arrived at as a MeshPointer).
+
+``timestampUs`` doubles as the blend control: dating the state slightly in the future makes the client snapshot what is playing now and cross-fade to the new state over the intervening time, while dating it "now" snaps. ``animTimeAtTimestamp`` is the position within the new clip at that instant, and ``speedUnitsPerSecond`` is the playback-rate multiplier from then on (not a ground speed).
+
 .. list-table:: SetNodeAnimationSpeedCommand (id = 11)
    :widths: 5 14 30
    :header-rows: 1
@@ -243,6 +249,9 @@ Selected command layouts
      - float
      - ``speed``
 
+.. note::
+   This command is deprecated.
+   
 .. list-table:: SetLightingCommand (id = 12, acked)
    :widths: 5 14 30
    :header-rows: 1

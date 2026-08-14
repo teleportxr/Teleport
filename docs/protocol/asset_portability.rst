@@ -12,6 +12,15 @@ Asset Portability
    avatar mechanism is understood as one instance of a general pattern rather than a
    special case.
 
+   The word *manifest* appears both here and in :ref:`avatar_manifest`, and the two are
+   related but not identical. The manifest sketched below is a Teleport-defined list of
+   assets carried inside an ``asset-offer``. The avatar manifest is an external
+   `Universal Manifest <https://universalmanifest.net/>`_ document, fetched from an
+   address the client supplies and signed by whoever issued it. The avatar case is the
+   concrete realisation of this pattern for the ``avatar`` class, and it resolves the
+   question this page leaves open — where a manifest lives and who vouches for it — by
+   answering "somewhere else, and its issuer".
+
 A *portable asset* is content the client brings to a world, rather than content the world
 supplies. An avatar is the obvious example, but the same shape applies to an object a user
 carries between worlds, or a collection of them held in an inventory.

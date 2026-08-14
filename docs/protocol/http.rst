@@ -42,7 +42,9 @@ Asset URLs are constructed by the server (reference: ``teleport::server::Geometr
      * - ``.basis``
        - ``image/basis``
 
-The full URL is delivered to the client *inside the geometry stream*, as the payload of a :ref:`TexturePointer or MeshPointer chunk <geometry_payload>`. Each pointer chunk contains a ``uint16`` length followed by the UTF-8 URL bytes; the client opens that URL with HTTPS and treats the reply body as the corresponding ``Texture`` or ``Mesh`` payload (without the 17-byte chunk header).
+The full URL is delivered to the client *inside the geometry stream*, as the payload of a :ref:`TexturePointer or MeshPointer chunk <geometry_payload>`. Each pointer chunk begins with an ``axesStandard`` byte, followed by a ``uint16`` length and the UTF-8 URL bytes (see :ref:`texture_pointer_payload`); the client opens that URL with HTTPS and treats the reply body as the corresponding ``Texture`` or ``Mesh`` payload (without the 17-byte chunk header).
+
+The body is served exactly as authored — the server does not convert it to the client's axes standard, as it does for geometry sent inline. The ``axesStandard`` byte on the pointer says which frame the file is in, and the client converts (see :ref:`axes_conversion`). One URL therefore serves every client whatever its axes standard, and stays cacheable.
 
 Client behaviour
 ================
@@ -53,6 +55,37 @@ The reference client's geometry decoder (``teleport::clientrender::GeometryDecod
 * Otherwise it is treated as a relative path and the cache's ``defaultURLRoot`` is prepended with the scheme ``https://``. ``defaultURLRoot`` is initialised to the cache name, which the reference client sets to the server's host name.
 * Once the body is received, ``GeometryDecoder::receiveFromWeb`` decodes it as if it had arrived on the geometry channel, with the appropriate ``GeometryPayloadType``.
 * The cache is content-addressed by URL; the server is expected to publish each immutable asset at a unique, stable URL.
+
+.. _external_texture_urls:
+
+URIs inside a fetched asset
+---------------------------
+
+A fetched glTF may reference its textures as external files, with a ``uri`` in its ``images`` array. Those URIs are relative to the **asset**, not to the client, and are resolved as the glTF spec requires (reference: ``teleport::clientrender::ResolveUrl``):
+
+.. list-table::
+   :widths: 30 34 36
+   :header-rows: 1
+
+   * - ``uri`` in the asset
+     - Asset fetched from
+     - Resolves to
+   * - ``tex.png``
+     - ``https://host/props/chair.glb``
+     - ``https://host/props/tex.png``
+   * - ``../shared/tex.png``
+     - ``https://host/props/chair.glb``
+     - ``https://host/shared/tex.png``
+   * - ``/shared/tex.png``
+     - ``https://host/props/chair.glb``
+     - ``https://host/shared/tex.png``
+   * - ``https://cdn/tex.png``
+     - anywhere
+     - ``https://cdn/tex.png``
+
+The asset's own query and fragment take no part, and percent-encoding is left exactly as authored — it is part of the URL that gets requested. Note that the cache's ``defaultURLRoot`` is **not** used here: for a sub-scene cache (which is what a ``.glb`` arrived at through a ``MeshPointer`` becomes) that root is the asset's whole URL, so the resolution above must produce an absolute URL by itself.
+
+The resolved URL identifies a texture resource, so a URL already delivered anywhere in the client's cache tree — as a ``TexturePointer``, or as an image of another asset — is that same resource and its texture is reused rather than fetched again; see :ref:`external_textures`, which also covers why a server must publish each file at one URL. Failing that the client fetches the URL itself, through the same HTTP utility and disk cache as any other resource.
 
 Lifecycle
 =========

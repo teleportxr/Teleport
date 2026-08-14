@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ConnectionReport.h"
 #include "TeleportClient/TabContext.h"
 #include "TeleportClient/SessionClient.h"
 #include "HeadlessSessionCommandInterface.h"
@@ -23,12 +24,15 @@ public:
 	void TickOnce(double time, double dt);
 
 	bool IsConnected() const;
-	std::string GetStatus() const;
 	const std::string &GetUrl() const { return url; }
 
-	//! Reports on the geometry the server has streamed. `what` selects the section:
-	//! empty for a summary, "nodes" for the tracked node list, "resources" for pointer URLs.
-	std::string GetGeometryReport(const std::string &what) const;
+	//! State of the underlying session. Rendering - prose or JSON - is the caller's
+	//! business; see ConnectionReport.h.
+	ConnectionStatus GetStatusData() const;
+
+	//! Everything the server has streamed to us. Which sections a caller renders is
+	//! decided by the `geometry` command's argument, not here.
+	GeometryReport GetGeometryData() const;
 
 	void SetMode(HeadlessMode mode)
 	{

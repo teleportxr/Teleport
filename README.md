@@ -53,7 +53,7 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 ### Clients
 - PC: Windows desktop with optional OpenXR support
 - Linux: desktop client, plus the headless terminal client
-- macOS: headless terminal client only (Apple Silicon) — see below
+- macOS: desktop client, plus the headless terminal client (Apple Silicon)
 - Android: Native Android client with OpenXR
 - Meta Quest: Dedicated VR client
 - Cross-platform: Vulkan and DirectX 12 rendering
@@ -109,7 +109,7 @@ Teleport XR is an open-source network protocol and SDK for virtual and augmented
 
 ### macOS Dependencies
 
-macOS builds the headless terminal client only. Requires the Xcode command line tools
+macOS requires the Xcode command line tools
 (`xcode-select --install`) and Homebrew:
 
     brew install ninja pkg-config openssl@3
@@ -140,7 +140,7 @@ or if you have already cloned the main repo,
 10. OpenXR, for the client. Get it from https://github.com/KhronosGroup/OpenXR-SDK.
 11. Flex/Bison Linux: sudo apt-get install flex bison
 
-## Building the PC Client
+## Building the Windows Client
 
 1. Build pthread.2019.sln in "\thirdparty\srt\submodules\pthread-win32\windows\VS2019" in Release x64.
 	* You may retarget the projects to a more recent version of the build tools.
@@ -154,6 +154,11 @@ or if you have already cloned the main repo,
     * Uncheck 'ENABLE_ENCRYPTION' option from srt.
     * Set CMAKE_CUDA_COMPILER, LIBAV_CUDA_DIR and LIBAV_CUDA_SAMPLES_DIR to your installed Cuda version
 4. Configure, generate, open and build the Visual Studio project *in Release Configuration first*.
+
+## Building the Linux Client
+
+1. After cloning the repo,call `cmake -S . -B build`
+2. `cd build & make`
 
 ## Building the macOS clients
 

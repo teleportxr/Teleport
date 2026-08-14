@@ -36,6 +36,7 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -62,10 +63,11 @@ namespace
 	void PrintUsage(const char *argv0)
 	{
 		std::fprintf(stderr,
-			"Usage: %s [-h host] [-p port] [-?] [-e commands] [command ...]\n"
+			"Usage: %s [-h host] [-p port] [-j] [-?] [-e commands] [command ...]\n"
 			"Send one-line commands to a running teleport service (teleportd).\n"
 			"  -h <host>   Service host (default 127.0.0.1)\n"
 			"  -p <port>   Service port (default %u, or TELEPORT_SERVICE_PORT)\n"
+			"  -j          Ask the service for JSON responses instead of prose\n"
 			"  -e <cmds>   Execute ';'-separated commands, then exit\n"
 			"  -?          This help\n"
 			"Bare operands are joined into one command line (ssh-style).\n",
@@ -78,6 +80,9 @@ namespace
 		uint16_t port = DEFAULT_PORT;
 		bool usageRequested = false;
 		bool parseError = false;
+		//! -j: ask the service to answer in JSON. The CLI never parses it — bodies are
+		//! printed verbatim — so this binary stays free of any JSON dependency.
+		bool json = false;
 		std::vector<std::string> commands; //! From -e and operands; empty = read stdin.
 	};
 
@@ -136,6 +141,11 @@ namespace
 				if (c == '?')
 				{
 					opts.usageRequested = true;
+					continue;
+				}
+				if (c == 'j')
+				{
+					opts.json = true;
 					continue;
 				}
 				if (c == 'h' || c == 'p' || c == 'e')
@@ -225,6 +235,26 @@ namespace
 		return true;
 	}
 
+	//! Switch the control connection to JSON responses, before anything else is sent.
+	//! The reply itself is discarded: it says only that the switch happened, which is
+	//! already evident from the shape of every response that follows.
+	bool RequestJsonFormat(socket_t sock, SocketLineReader &reader, const char *argv0)
+	{
+		std::ostringstream sink;
+		bool			   commandError = false;
+		if (!RunCommand(sock, reader, "format json", sink, sink, commandError))
+		{
+			std::fprintf(stderr, "%s: lost connection to the service\n", argv0);
+			return false;
+		}
+		if (commandError)
+		{
+			std::fprintf(stderr, "%s: service refused JSON output: %s", argv0, sink.str().c_str());
+			return false;
+		}
+		return true;
+	}
+
 	//! Where the interactive history file lives: the per-user TeleportXR storage
 	//! folder, same convention as the service.
 	std::string HistoryFilePath()
@@ -249,17 +279,20 @@ namespace
 	const char *const KNOWN_VERBS[] = {
 		"connect", "connections", "list", "use", "disconnect", "status",
 		"move", "turn", "input", "mode", "geometry", "identity", "signin",
-		"signout", "ping", "version", "shutdown", "quit",
+		"signout", "format", "ping", "version", "shutdown", "quit",
 	};
 
 	//! Interactive session: line editing, history and tab completion come from
 	//! the cli library; every entered line is forwarded to the service.
 	//! Returns the process exit code.
-	int RunInteractive(socket_t sock, const char *argv0)
+	int RunInteractive(socket_t sock, const char *argv0, bool json)
 	{
 		SocketLineReader reader(sock);
 		bool commandError = false;
 		bool connectionOk = true;
+
+		if (json && !RequestJsonFormat(sock, reader, argv0))
+			return 2;
 
 		auto forward = [&](std::ostream &out, const std::string &line) {
 			connectionOk = RunCommand(sock, reader, line, out, out, commandError);
@@ -350,7 +383,7 @@ int main(int argc, char *argv[])
 	{
 		// Interactive session: line editing, history and completion via the cli
 		// library. Batch modes (-e, operands, piped stdin) stay plain POSIX.
-		int rc = RunInteractive(sock, argv[0]);
+		int rc = RunInteractive(sock, argv[0], opts.json);
 		CloseSocket(sock);
 		SocketCleanup();
 		return rc;
@@ -359,6 +392,13 @@ int main(int argc, char *argv[])
 	SocketLineReader reader(sock);
 	bool commandError = false;
 	bool connectionOk = true;
+
+	if (opts.json && !RequestJsonFormat(sock, reader, argv[0]))
+	{
+		CloseSocket(sock);
+		SocketCleanup();
+		return 2;
+	}
 
 	auto runLine = [&](const std::string &line) -> bool {
 		// Returns false when processing should stop (quit, or broken connection).

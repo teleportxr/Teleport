@@ -11,6 +11,12 @@ set(src
 	AvatarValidationCache.h
 	IAvatarImporter.h
 	IAvatarValidator.h
+	IAvatarManifestResolver.h
+	DefaultAvatarManifestResolver.cpp
+	DefaultAvatarManifestResolver.h
+	ManifestCache.h
+	ManifestVerify.cpp
+	ManifestVerify.h
 	ClientNetworkContext.h
 	ClientNetworkContext.cpp
 	ClientData.cpp
@@ -28,6 +34,8 @@ set(src
 	GeometryEncoder.h
 	GeometryStore.cpp
 	GeometryStore.h
+	GltfTextureScan.cpp
+	GltfTextureScan.h
 	GeometryStreamingService.cpp
 	GeometryStreamingService.h
 	NetworkPipeline.cpp

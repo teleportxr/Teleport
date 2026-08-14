@@ -11,6 +11,11 @@ Finally, the documentation of the :doc:`Reference Implementation</docs/reference
 which can be used to build Teleport clients or servers, including guides on using the :doc:`Unity SDK </docs/reference/unity/index>`, :doc:`Unreal Engine SDK </docs/reference/unreal/index>`, or :doc:`NodeJS SDK </docs/reference/nodejs/index>` for setting
 up a virtual reality server.
 
+Download and Install
+--------------------
+
+https://github.com/teleportxr/Teleport/releases
+
 
 .. toctree::
 	:maxdepth: 3

@@ -29,6 +29,59 @@ namespace teleport
 			}
 		}
 
+		// AvatarManifestRequirements ----------------------------------
+
+		void to_json(json &j, const AvatarManifestRequirements &m)
+		{
+			j = m.extra.is_object() ? m.extra : json::object();
+			if (!m.accepted.empty())			j["accepted"]         = m.accepted;
+			if (!m.avatarPointers.empty())		j["avatar_pointers"]  = m.avatarPointers;
+			if (!m.requestedFacets.empty())		j["requested_facets"] = m.requestedFacets;
+			if (!m.requestedClaims.empty())		j["requested_claims"] = m.requestedClaims;
+			putOpt(j, "required_trust_tier", m.requiredTrustTier);
+			putOpt(j, "max_bytes", m.maxBytes);
+			putOpt(j, "resolver", m.resolver);
+		}
+
+		void from_json(const json &j, AvatarManifestRequirements &m)
+		{
+			m = AvatarManifestRequirements{};
+			if (!j.is_object())
+				return;
+			m.extra = j;
+			if (j.contains("accepted") && j.at("accepted").is_array())
+				m.accepted = j.at("accepted").get<std::vector<std::string>>();
+			if (j.contains("avatar_pointers") && j.at("avatar_pointers").is_array())
+				m.avatarPointers = j.at("avatar_pointers").get<std::vector<std::string>>();
+			if (j.contains("requested_facets") && j.at("requested_facets").is_array())
+				m.requestedFacets = j.at("requested_facets").get<std::vector<std::string>>();
+			if (j.contains("requested_claims") && j.at("requested_claims").is_array())
+				m.requestedClaims = j.at("requested_claims").get<std::vector<std::string>>();
+			getOpt(j, "required_trust_tier", m.requiredTrustTier);
+			getOpt(j, "max_bytes", m.maxBytes);
+			getOpt(j, "resolver", m.resolver);
+		}
+
+		// AvatarManifestOffer -----------------------------------------
+
+		void to_json(json &j, const AvatarManifestOffer &m)
+		{
+			j = json::object();
+			putOpt(j, "url",     m.url);
+			putOpt(j, "umid",    m.umid);
+			putOpt(j, "pointer", m.pointer);
+		}
+
+		void from_json(const json &j, AvatarManifestOffer &m)
+		{
+			m = AvatarManifestOffer{};
+			if (!j.is_object())
+				return;
+			getOpt(j, "url",     m.url);
+			getOpt(j, "umid",    m.umid);
+			getOpt(j, "pointer", m.pointer);
+		}
+
 		// AvatarRequirements ------------------------------------------
 
 		void to_json(json &j, const AvatarRequirements &r)
@@ -47,6 +100,8 @@ namespace teleport
 			putOpt(j, "skeleton", r.skeleton);
 			if (!r.licenceTagsAllowed.empty())
 				j["licence_tags_allowed"] = r.licenceTagsAllowed;
+			if (r.manifest.has_value())
+				j["manifest"] = *r.manifest;
 		}
 
 		void from_json(const json &j, AvatarRequirements &r)
@@ -69,6 +124,8 @@ namespace teleport
 			getOpt(j, "skeleton", r.skeleton);
 			if (j.contains("licence_tags_allowed") && j.at("licence_tags_allowed").is_array())
 				r.licenceTagsAllowed = j.at("licence_tags_allowed").get<std::vector<std::string>>();
+			if (j.contains("manifest") && j.at("manifest").is_object())
+				r.manifest = j.at("manifest").get<AvatarManifestRequirements>();
 		}
 
 		// AvatarProofPolicy / AvatarProofOffer / AvatarDeclared -------
@@ -159,6 +216,8 @@ namespace teleport
 			};
 			putOpt(j, "url",          o.url);
 			putOpt(j, "content_hash", o.contentHash);
+			if (o.manifest.has_value())
+				j["manifest"] = *o.manifest;
 			if (o.declared.has_value())
 				j["declared"] = *o.declared;
 			if (o.proof.has_value())
@@ -175,6 +234,13 @@ namespace teleport
 			if (j.contains("have_avatar")) o.haveAvatar = j.at("have_avatar").get<bool>();
 			getOpt(j, "url",          o.url);
 			getOpt(j, "content_hash", o.contentHash);
+			if (j.contains("manifest") && j.at("manifest").is_object())
+			{
+				AvatarManifestOffer m = j.at("manifest").get<AvatarManifestOffer>();
+				// An address with neither form is not an offer of anything.
+				if (m.url.has_value() || m.umid.has_value())
+					o.manifest = m;
+			}
 			if (j.contains("declared") && !j.at("declared").is_null())
 				o.declared = j.at("declared").get<AvatarDeclared>();
 			if (j.contains("proof") && !j.at("proof").is_null())
@@ -194,6 +260,8 @@ namespace teleport
 				{ "delivery",      r.delivery },
 				{ "reasons",       r.reasons }
 			};
+			if (r.manifest.has_value())
+				j["manifest"] = *r.manifest;
 		}
 
 		void from_json(const json &j, AvatarResult &r)
@@ -208,6 +276,8 @@ namespace teleport
 			if (j.contains("delivery"))      r.delivery     = j.at("delivery").get<std::string>();
 			if (j.contains("reasons") && j.at("reasons").is_array())
 				r.reasons = j.at("reasons").get<std::vector<std::string>>();
+			if (j.contains("manifest") && j.at("manifest").is_object())
+				r.manifest = j.at("manifest").get<ManifestReceipt>();
 		}
 
 		// AvatarRevoke ------------------------------------------------

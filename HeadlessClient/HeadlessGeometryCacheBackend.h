@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ConnectionReport.h"
 #include "TeleportClient/GeometryCacheBackendInterface.h"
 #include <libavstream/node.h>
 #include <libavstream/geometry/mesh_interface.hpp>
@@ -8,6 +9,14 @@
 #include <set>
 #include <string>
 #include <vector>
+
+namespace teleport
+{
+	namespace core
+	{
+		struct ApplyAnimation;
+	}
+}
 
 //! Records what the server has streamed to us, without creating any GPU resources.
 //!
@@ -62,13 +71,15 @@ public:
 	void UntrackNode(avs::uid uid);
 	void TrackPointer(avs::uid uid, avs::GeometryPayloadType type, const std::string &url);
 	void TrackSkeleton(avs::uid uid, const avs::Skeleton &skeleton);
+	//! Record the animation state the server last applied to a node, keyed by node and layer, so
+	//! `geometry nodes` can report what should be playing. Called from the session command thread.
+	void TrackAnimationState(const teleport::core::ApplyAnimation &applyAnimation);
 	//! Record a payload type we acknowledged but did not parse, for the `geometry` report.
 	void CountUnparsedPayload(avs::GeometryPayloadType type);
 
-	// Reporting for the REPL.
-	std::string GetSummary() const;
-	std::string GetNodeReport() const;
-	std::string GetResourceReport() const;
+	//! Everything the `geometry` command can report, gathered under one lock. Rendering
+	//! - prose or JSON - happens in the caller; see ConnectionReport.h.
+	GeometryReport GetReport() const;
 
 private:
 	mutable std::mutex mutex;
@@ -80,6 +91,9 @@ private:
 
 	//! Cumulative record, never cleared by the ack drain - this is what `geometry` reports.
 	std::map<avs::uid, TrackedNode>		 nodes;
+	//! Last animation state per node, per layer. Kept apart from TrackedNode because an
+	//! ApplyAnimation can arrive before the node it names has been streamed.
+	std::map<avs::uid, std::map<int32_t, GeometryNodeAnimationState>> nodeAnimationStates;
 	std::map<avs::uid, TrackedPointer>	 pointers;
 	std::map<avs::uid, std::string>		 skeletons;
 	std::set<avs::uid>					 allReceivedResources;

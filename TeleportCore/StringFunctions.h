@@ -30,7 +30,7 @@ namespace teleport
 		}
 		inline std::wstring StringToWString(const std::string& text)
 		{
-			size_t origsize = strlen(text.c_str()) + 1;
+			size_t origsize = text.length() + 1;
 			const size_t newsize = origsize;
 			wchar_t* wcstring = new wchar_t[newsize + 2];
 #ifdef _MSC_VER
@@ -45,7 +45,7 @@ namespace teleport
 		}
 		//! The value of an environment variable, or an empty string if it is not set.
 		//! Uses _dupenv_s on Windows to avoid the CRT deprecation warning for getenv.
-		//! (Not called GetEnvironmentVariable: windows.h #defines that name away.)
+		//! (Not called GetEnvironmentVariable: windows.h defines that name away.)
 		inline std::string GetEnvVar(const char *name)
 		{
 #ifdef _WIN32

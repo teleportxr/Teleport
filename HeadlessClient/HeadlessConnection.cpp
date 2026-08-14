@@ -94,11 +94,13 @@ void HeadlessConnection::TickOnce(double time, double dt)
 	if (sessionClient->IsConnected())
 	{
 		auto snapshot = inputState.GetSnapshot();
+		// The origin valid counter comes from the server's SetOriginNodeCommand,
+		// which lands on the command interface — the input state never sees it.
 		sessionClient->Frame(
 			snapshot.displayInfo,
 			snapshot.headPose,
 			snapshot.controllerPoses,
-			snapshot.originValidCounter,
+			commandInterface ? commandInterface->GetOriginValidCounter() : 0,
 			snapshot.input,
 			snapshot.time,
 			dt
@@ -111,56 +113,53 @@ bool HeadlessConnection::IsConnected() const
 	return sessionClient && sessionClient->IsConnected();
 }
 
-std::string HeadlessConnection::GetStatus() const
+ConnectionStatus HeadlessConnection::GetStatusData() const
 {
+	ConnectionStatus out;
 	if (!sessionClient)
-		return "Status: DISCONNECTED (no session)\n";
-
-	auto status = sessionClient->GetConnectionStatus();
-	std::string statusStr;
-	switch (status)
 	{
-	case teleport::client::ConnectionStatus::UNCONNECTED:
-		statusStr = "UNCONNECTED";
-		break;
-	case teleport::client::ConnectionStatus::OFFERING:
-		statusStr = "OFFERING";
-		break;
-	case teleport::client::ConnectionStatus::AWAITING_SETUP:
-		statusStr = "AWAITING_SETUP";
-		break;
-	case teleport::client::ConnectionStatus::HANDSHAKING:
-		statusStr = "HANDSHAKING";
-		break;
-	case teleport::client::ConnectionStatus::CONNECTED:
-		statusStr = "CONNECTED";
-		break;
-	case teleport::client::ConnectionStatus::RECONNECTING:
-		statusStr = "RECONNECTING";
-		break;
-	default:
-		statusStr = "UNKNOWN";
+		out.state  = "DISCONNECTED";
+		out.detail = "no session";
+		return out;
 	}
 
-	std::string result = "Status: " + statusStr + "\n";
-	result += "Server: " + sessionClient->GetServerIP() + ":" + std::to_string(sessionClient->GetPort()) + "\n";
-	result += "Latency: " + std::to_string(static_cast<int>(sessionClient->GetLatencyMs())) + " ms\n";
-	result += "Inputs Available: " + std::to_string(GetInputDefinitions().size()) + "\n";
+	switch (sessionClient->GetConnectionStatus())
+	{
+	case teleport::client::ConnectionStatus::UNCONNECTED:
+		out.state = "UNCONNECTED";
+		break;
+	case teleport::client::ConnectionStatus::OFFERING:
+		out.state = "OFFERING";
+		break;
+	case teleport::client::ConnectionStatus::AWAITING_SETUP:
+		out.state = "AWAITING_SETUP";
+		break;
+	case teleport::client::ConnectionStatus::HANDSHAKING:
+		out.state = "HANDSHAKING";
+		break;
+	case teleport::client::ConnectionStatus::CONNECTED:
+		out.state = "CONNECTED";
+		break;
+	case teleport::client::ConnectionStatus::RECONNECTING:
+		out.state = "RECONNECTING";
+		break;
+	default:
+		out.state = "UNKNOWN";
+	}
 
-	return result;
+	out.hasSession		= true;
+	out.server			= sessionClient->GetServerIP();
+	out.port			= static_cast<int>(sessionClient->GetPort());
+	out.latencyMs		= static_cast<int>(sessionClient->GetLatencyMs());
+	out.inputsAvailable = GetInputDefinitions().size();
+	return out;
 }
 
-std::string HeadlessConnection::GetGeometryReport(const std::string &what) const
+GeometryReport HeadlessConnection::GetGeometryData() const
 {
 	if (!geometryBackend)
-		return "No geometry cache.\n";
-	if (what == "nodes")
-		return geometryBackend->GetNodeReport();
-	if (what == "resources")
-		return geometryBackend->GetResourceReport();
-	if (what.empty())
-		return geometryBackend->GetSummary();
-	return "Usage: geometry [nodes|resources]\n";
+		return GeometryReport{};
+	return geometryBackend->GetReport();
 }
 
 const std::vector<teleport::core::InputDefinition> &HeadlessConnection::GetInputDefinitions() const

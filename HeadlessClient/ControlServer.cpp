@@ -4,6 +4,21 @@
 
 using namespace teleport_control;
 
+namespace
+{
+	//! Turn a command's outcome into a response payload, in whichever form this control
+	//! session asked for. Text is what every existing script and terminal sees; JSON is a
+	//! single compact line, which nlohmann guarantees contains no raw newline and always
+	//! begins with '{', so it never collides with the '.' terminator or needs stuffing.
+	std::string RenderPayload(const CommandResult &result, const ControlSessionState &state)
+	{
+		if (!state.jsonOutput)
+			return result.ok ? Ok(result.text) : Error(result.error);
+		std::string header = result.ok ? std::string(STATUS_OK) + "\n" : std::string(STATUS_ERROR) + result.error + "\n";
+		return header + result.data.dump() + "\n";
+	}
+} // namespace
+
 ControlServer::ControlServer(ConnectionManager &manager)
 	: manager(manager)
 	, processor(manager)
@@ -86,11 +101,11 @@ void ControlServer::ClientLoop(socket_t sock)
 	std::string line;
 	while (running && reader.ReadLine(line))
 	{
-		auto cmd = parser.Parse(line);
-		std::string payload = processor.Execute(cmd, state);
+		auto		  cmd	 = parser.Parse(line);
+		CommandResult result = processor.Execute(cmd, state);
 		if (state.shutdownRequested)
 			shutdownRequested = true;
-		if (!SendAll(sock, FrameResponse(payload)))
+		if (!SendAll(sock, FrameResponse(RenderPayload(result, state))))
 			break;
 		if (state.closeAfterResponse)
 			break;

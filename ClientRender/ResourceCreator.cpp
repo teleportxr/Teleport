@@ -655,6 +655,8 @@ void ResourceCreator::CreateTexture(avs::uid server_uid, avs::uid id, const avs:
 	texInfo->compression											  = clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	texInfo->width													  = texture.width;
 	texInfo->height													  = texture.height;
+	// Survives transcoding: the same texInfo is filled in and used to Create() the texture.
+	texInfo->axesStandard											  = static_cast<platform::crossplatform::AxesStandard>(texture.axesStandard);
 
 	TELEPORT_INTERNAL_COUT(Default, "Received texture {0} ({1}), awaiting decompression.", id, texture.name);
 	{
@@ -748,7 +750,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 		{
 			texlist += std::format("{0},", t_uid);
 		}
-		TELEPORT_INTERNAL_COUT(Default, "CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.",
+		TELEPORT_INTERNAL_COUT(Resource, "CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.",
 							   id,
 							   material.name,
 							   texlist,
@@ -830,7 +832,7 @@ void ResourceCreator::CreateSkeleton(avs::uid server_uid, avs::uid id, const avs
 	{
 		return;
 	}
-	TELEPORT_INTERNAL_COUT(Default, "CreateSkeleton({0}, {1})", id, skeleton.name);
+	TELEPORT_INTERNAL_COUT(Resource, "CreateSkeleton({0}, {1})", id, skeleton.name);
 
 	std::shared_ptr<IncompleteSkeleton> incompleteSkeleton = std::make_shared<IncompleteSkeleton>(id, skeleton.name, avs::GeometryPayloadType::Skeleton);
 

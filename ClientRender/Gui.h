@@ -274,6 +274,10 @@ namespace teleport
 			//! Initialised from client::Config::options.avatarUrl when the
 			//! sub-page is opened, and written back when the user clicks Save.
 			char							  avatar_url_buffer[MAX_URL_SIZE] = {0};
+			//! Edit buffer for the Universal Manifest address on the same
+			//! sub-page. Offered in preference to the avatar URL, but only to
+			//! servers that advertise manifest support, so both may be set.
+			char							  manifest_url_buffer[MAX_URL_SIZE] = {0};
 			platform::crossplatform::Texture *vrHeadsetIconTexture			  = nullptr;
 			platform::crossplatform::Texture *viveControllerTexture			  = nullptr;
 			bool							  connect_please				  = false;

@@ -8,7 +8,7 @@
 
 using namespace teleport;
 using namespace clientrender;
-#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(Default, txt, ##__VA_ARGS__)
+#define RESOURCECREATOR_DEBUG_COUT(txt, ...) TELEPORT_INTERNAL_COUT(Resource, txt, ##__VA_ARGS__)
 
 platform::crossplatform::RenderPlatform *GeometryCache::renderPlatform = nullptr;
 
@@ -18,6 +18,9 @@ GeometryCache::GeometryCache(avs::uid c_uid, avs::uid parent_c_uid, const std::s
 	  mTextCanvasManager(c_uid), mFontAtlasManager(c_uid), mIndexBufferManager(c_uid, &clientrender::IndexBuffer::Destroy),
 	  mVertexBufferManager(c_uid, &clientrender::VertexBuffer::Destroy)
 {
+	// So the node manager can resolve an ApplyAnimation whose cacheID is zero, which the protocol
+	// defines as "the cache containing nodeID".
+	mNodeManager.SetCacheUid(c_uid);
 	auto addFn = std::bind(&Renderer::UpdateNodeInRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
 	mNodeManager.SetFunctionAddNodeForRender(addFn);
 	auto removeFn = std::bind(&Renderer::RemoveNodeFromRender, Renderer::GetRenderer(), c_uid, std::placeholders::_1);
@@ -92,7 +95,7 @@ clientrender::MissingResource &GeometryCache::GetMissingResource(avs::uid id, av
 	{
 		missingPair = m_MissingResources.emplace(id, MissingResource(id, resourceType)).first;
 		m_ResourceRequests.push_back(id);
-		TELEPORT_INTERNAL_COUT(Default, "Resource {0} of type {1} is missing so far.", id, stringOf(resourceType));
+		TELEPORT_INTERNAL_COUT(Resource, "Resource {0} of type {1} is missing so far.", id, stringOf(resourceType));
 		if (m_ResourceRequests.size() > 4096) DebugBreak();
 	}
 	if (resourceType != missingPair->second.resourceType)
@@ -220,6 +223,12 @@ avs::Result GeometryCache::CreateSubScene(const SubSceneCreate &subSceneCreate)
 				continue;
 			}
 			std::shared_ptr<Node> incompleteNode = std::static_pointer_cast<Node>(*it);
+			// As CompleteMesh does for an ordinary mesh. Without this a node that was created before
+			// its sub-scene arrived keeps a SubSceneComponent whose mesh_uid is set but whose mesh
+			// pointer is null, forever. It still renders, because InstanceRenderer looks the mesh up
+			// by uid from the manager rather than through this pointer - which is exactly why the
+			// omission went unnoticed - but anything reading the pointer gets nothing.
+			incompleteNode->SetMesh(s);
 			RESOURCE_RECEIVES(incompleteNode, subSceneCreate.uid);
 			size_t num_remaining = RESOURCES_AWAITED(*it);
 			RESOURCECREATOR_DEBUG_COUT("Waiting MeshNode {0}({1}) got SubScene {2}=cache {3}, missing {4} or {5}",
@@ -312,7 +321,56 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 	std::shared_ptr<clientrender::Texture> scrTexture = std::make_shared<clientrender::Texture>(renderPlatform);
 	scrTexture->Create(textureInfo);
 
+	AdoptTexture(id, scrTexture);
+}
+
+void GeometryCache::AdoptTexture(avs::uid id, std::shared_ptr<clientrender::Texture> scrTexture)
+{
+	if (!scrTexture)
+	{
+		return;
+	}
+	const std::string textureName = std::string(scrTexture->getName());
 	mTextureManager.Add(id, scrTexture);
+
+	// Anything that named the same url and is still waiting for these bytes gets this very
+	// texture, rather than fetching and uploading a second copy of the same file.
+	std::vector<std::pair<avs::uid, avs::uid>> waiting;
+	{
+		// This cache knows which url its own texture came from; the root holds who is waiting on
+		// that url. Two locks, taken one after the other and never together.
+		std::string url;
+		{
+			std::lock_guard urlLock(textureUrlsMutex);
+			auto			u = textureUrlsByUid.find(id);
+			if (u != textureUrlsByUid.end())
+			{
+				url = u->second;
+			}
+		}
+		std::shared_ptr<GeometryCache> root = url.empty() ? nullptr : GetGeometryCache(GetRootCacheUid());
+		if (root)
+		{
+			std::lock_guard urlLock(root->textureUrlsMutex);
+			auto			e = root->texturesByUrl.find(url);
+			if (e != root->texturesByUrl.end())
+			{
+				// Taken and cleared under the lock: the publication below re-enters AdoptTexture
+				// on the waiting caches, and each waiter is only ever satisfied once.
+				waiting = std::move(e->second.waiting);
+				e->second.waiting.clear();
+			}
+		}
+	}
+	for (const auto &w : waiting)
+	{
+		std::shared_ptr<GeometryCache> waitingCache = GetGeometryCache(w.first);
+		if (waitingCache)
+		{
+			TELEPORT_INTERNAL_COUT(Resource, "Texture {0} ({1}) shared into cache {2} as {3}", id, textureName, w.first, w.second);
+			waitingCache->AdoptTexture(w.second, scrTexture);
+		}
+	}
 
 	std::lock_guard g(missingResourcesMutex);
 	// Add texture to materials waiting for texture.
@@ -332,7 +390,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 			case avs::GeometryPayloadType::FontAtlas:
 			{
 				std::shared_ptr<IncompleteFontAtlas> incompleteFontAtlas = std::static_pointer_cast<IncompleteFontAtlas>(*it);
-				RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})", incompleteFontAtlas->id, id, textureInfo.name);
+				RESOURCECREATOR_DEBUG_COUT("Waiting FontAtlas {0} got Texture {1}({2})", incompleteFontAtlas->id, id, textureName);
 				std::shared_ptr<FontAtlas> fontAtlas = std::static_pointer_cast<FontAtlas>(*it);
 				CompleteFontAtlas(incompleteFontAtlas->id, fontAtlas);
 			}
@@ -347,8 +405,8 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 				if (incompleteMaterial->materialInfo.normal.texture_uid == id) incompleteMaterial->materialInfo.normal.texture = scrTexture;
 				if (incompleteMaterial->materialInfo.combined.texture_uid == id) incompleteMaterial->materialInfo.combined.texture = scrTexture;
 				if (incompleteMaterial->materialInfo.emissive.texture_uid == id) incompleteMaterial->materialInfo.emissive.texture = scrTexture;
-				TELEPORT_INTERNAL_COUT(Default, 
-					"Waiting Material {0}({1}) got Texture {2}({3})", incompleteMaterial->id, incompleteMaterial->materialInfo.name, id, textureInfo.name);
+				TELEPORT_INTERNAL_COUT(Resource, 
+					"Waiting Material {0}({1}) got Texture {2}({3})", incompleteMaterial->id, incompleteMaterial->materialInfo.name, id, textureName);
 
 				// If only this texture and this function are pointing to the material, then it is complete.
 				if (RESOURCE_IS_COMPLETE(*it))
@@ -357,7 +415,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 				}
 				else
 				{
-					TELEPORT_INTERNAL_COUT(Default, " Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
+					TELEPORT_INTERNAL_COUT(Resource, " Still awaiting {0} resources.", RESOURCES_AWAITED(*it));
 				}
 			}
 			break;
@@ -369,7 +427,7 @@ void GeometryCache::CompleteTexture(avs::uid id, const clientrender::Texture::Te
 										   incompleteNode->id,
 										   incompleteNode->name.c_str(),
 										   id,
-										   textureInfo.name,
+										   textureName,
 										   num_remaining,
 										   incompleteNode->GetMissingResourceCount());
 
@@ -451,6 +509,167 @@ void GeometryCache::CompleteTextCanvas(avs::uid id)
 	}
 	//Resource has arrived, so we are no longer waiting for it.
 	RemoveFromMissingResources(textCanvas->textCanvasCreateInfo.uid);
+}
+
+avs::uid GeometryCache::GetRootCacheUid() const
+{
+	// -1 is the "no parent" value Renderer.cpp tests for; 0 and self-parent are the others.
+	// The depth bound is belt and braces against a malformed tree: a cycle here would hang
+	// every texture registration.
+	const GeometryCache *c = this;
+	for (int depth = 0; depth < 32; depth++)
+	{
+		avs::uid p = c->parent_cache_uid;
+		if (!p || int64_t(p) == int64_t(-1) || p == c->cache_uid)
+		{
+			break;
+		}
+		std::shared_ptr<GeometryCache> parent = GetGeometryCache(p);
+		if (!parent)
+		{
+			break;
+		}
+		c = parent.get();
+	}
+	return c->cache_uid;
+}
+
+//! The last path element of a url, without any query string: the filename the server was asked for.
+static std::string TextureFilenameOfUrl(const std::string &url)
+{
+	size_t		end	  = url.find_first_of("?#");
+	std::string path  = (end == std::string::npos) ? url : url.substr(0, end);
+	size_t		slash = path.rfind('/');
+	return (slash == std::string::npos) ? path : path.substr(slash + 1);
+}
+
+void GeometryCache::RegisterTextureUrl(const std::string &url, avs::uid texture_uid)
+{
+	if (url.empty() || !texture_uid)
+	{
+		return;
+	}
+	// The registry is tree-wide, on the root: two sub-scenes of one server that name the same
+	// file must share the texture, and neither is an ancestor of the other.
+	std::shared_ptr<GeometryCache> root = GetGeometryCache(GetRootCacheUid());
+	if (!root)
+	{
+		return;
+	}
+	{
+		std::lock_guard g(root->textureUrlsMutex);
+		auto		   &entry = root->texturesByUrl[url];
+		if (entry.texture_uid && (entry.texture_uid != texture_uid || entry.cache_uid != cache_uid))
+		{
+			// Two ids for one file. Keep the first, so everything that resolved the url earlier
+			// still points at a texture that will arrive.
+			TELEPORT_WARN_NOSPAM("Texture url {0} was already resource {1} of cache {2}; ignoring {3}", url, entry.texture_uid, entry.cache_uid, texture_uid);
+			return;
+		}
+		entry.cache_uid		= cache_uid;
+		entry.texture_uid	= texture_uid;
+
+		// One file offered at several urls is fetched, decoded and uploaded once per url, because
+		// the url is the texture's identity here and in the http cache. Nothing can be shared in
+		// that case, so say so: it is a server-side duplication, and this is what makes it visible.
+		// Once per filename, not once per url - the point is to count the files affected, and a
+		// scene may name the same file from dozens of assets.
+		const std::string filename = TextureFilenameOfUrl(url);
+		if (!filename.empty())
+		{
+			TextureFilenameEntry &seen = root->textureFilenames[filename];
+			if (seen.firstUrl.empty())
+			{
+				seen.firstUrl = url;
+			}
+			else if (seen.firstUrl != url && !seen.warned)
+			{
+				seen.warned = true;
+				TELEPORT_WARN("Texture {0} is being fetched from a second url {1}; it was already fetched from {2}. "
+							  "The server should serve one url per file.",
+							  filename, url, seen.firstUrl);
+			}
+		}
+	}
+	// The reverse map stays with the cache that owns the texture: AdoptTexture runs there, and
+	// uses it to find the url whose waiters this texture satisfies.
+	std::lock_guard g(textureUrlsMutex);
+	textureUrlsByUid[texture_uid] = url;
+}
+
+avs::uid GeometryCache::FindTextureByUrl(const std::string &url, avs::uid *outCacheUid) const
+{
+	if (url.empty())
+	{
+		return 0;
+	}
+	std::shared_ptr<GeometryCache> root = GetGeometryCache(GetRootCacheUid());
+	if (!root)
+	{
+		return 0;
+	}
+	std::lock_guard g(root->textureUrlsMutex);
+	auto			e = root->texturesByUrl.find(url);
+	if (e == root->texturesByUrl.end() || !e->second.texture_uid)
+	{
+		return 0;
+	}
+	if (outCacheUid)
+	{
+		*outCacheUid = e->second.cache_uid;
+	}
+	return e->second.texture_uid;
+}
+
+bool GeometryCache::ShareTextureFromUrl(const std::string &url, avs::uid to_cache_uid, avs::uid to_texture_uid)
+{
+	avs::uid owning_cache_uid = 0;
+	avs::uid owned_texture_uid = FindTextureByUrl(url, &owning_cache_uid);
+	if (!owned_texture_uid)
+	{
+		return false;
+	}
+	std::shared_ptr<GeometryCache> owner = GetGeometryCache(owning_cache_uid);
+	if (!owner)
+	{
+		return false;
+	}
+	if (owning_cache_uid == to_cache_uid && owned_texture_uid == to_texture_uid)
+	{
+		// It is already this cache's own texture under this id; nothing to share.
+		return true;
+	}
+	std::shared_ptr<clientrender::Texture> texture = owner->mTextureManager.Get(owned_texture_uid);
+	if (texture)
+	{
+		std::shared_ptr<GeometryCache> target = GetGeometryCache(to_cache_uid);
+		if (!target)
+		{
+			return false;
+		}
+		target->AdoptTexture(to_texture_uid, texture);
+		return true;
+	}
+	// The bytes are still in flight. Wait for them: AdoptTexture publishes to everything
+	// recorded here when they arrive. The waiting list is part of the root's entry, so this is
+	// the root's lock - never the owner's on top of it.
+	std::shared_ptr<GeometryCache> root = GetGeometryCache(GetRootCacheUid());
+	if (!root)
+	{
+		return false;
+	}
+	std::lock_guard g(root->textureUrlsMutex);
+	auto			e = root->texturesByUrl.find(url);
+	if (e == root->texturesByUrl.end())
+	{
+		return false;
+	}
+	const std::pair<avs::uid, avs::uid> waiter(to_cache_uid, to_texture_uid);
+	if (std::find(e->second.waiting.begin(), e->second.waiting.end(), waiter) == e->second.waiting.end())
+	{
+		e->second.waiting.push_back(waiter);
+	}
+	return true;
 }
 
 std::string GeometryCache::URLToFilePath(std::string url)

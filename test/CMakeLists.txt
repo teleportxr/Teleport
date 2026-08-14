@@ -12,10 +12,72 @@ endfunction()
 
 SETUP_TESTS(
    avatars
+   jcs
+   manifest
 )
 # The avatars test exercises the codecs defined in TeleportCore/AvatarsJson.cpp,
 # so it must link against TeleportCore.
 target_link_libraries(avatars PRIVATE TeleportCore)
+
+# jcs and manifest exercise TeleportCore/Jcs.cpp and ManifestJson.cpp. The
+# manifest header pulls in libavstream/common_exports.h transitively via
+# Avatars.h, so both need that include path for the avs::uid alias.
+target_link_libraries(jcs PRIVATE TeleportCore)
+target_link_libraries(manifest PRIVATE TeleportCore)
+target_include_directories(jcs PRIVATE ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+target_include_directories(manifest PRIVATE ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+
+# manifest_verify is the cross-language contract test: a manifest signed by
+# the Node.js implementation, verified by this one. It compiles the
+# ManifestVerify translation unit directly rather than linking the whole
+# TeleportServer shared library (which on Linux additionally depends on CUDA
+# and Compressonator at link time), and needs OpenSSL for Ed25519.
+add_executable(manifest_verify
+   test_manifest_verify.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/ManifestVerify.cpp)
+add_test(NAME manifest_verify COMMAND manifest_verify)
+target_link_libraries(manifest_verify PRIVATE Catch2::Catch2WithMain TeleportCore)
+target_include_directories(manifest_verify PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include)
+if(WIN32)
+   target_link_libraries(manifest_verify PRIVATE libssl libcrypto)
+else()
+   target_link_libraries(manifest_verify PRIVATE ssl crypto)
+endif()
+
+# manifest_resolver drives the six-stage evaluation sequence with an injected
+# transport, and exercises the SSRF guard directly. It compiles the resolver
+# and verifier translation units rather than linking TeleportServer, and needs
+# libcurl (the resolver's default transport) and OpenSSL.
+add_executable(manifest_resolver
+   test_manifest_resolver.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/DefaultAvatarManifestResolver.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/ManifestVerify.cpp)
+add_test(NAME manifest_resolver COMMAND manifest_resolver)
+target_link_libraries(manifest_resolver PRIVATE Catch2::Catch2WithMain TeleportCore libcurl)
+target_include_directories(manifest_resolver PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/thirdparty/openssl/include
+   ${curl_include_paths})
+if(WIN32)
+   target_link_libraries(manifest_resolver PRIVATE libssl libcrypto)
+else()
+   target_link_libraries(manifest_resolver PRIVATE ssl crypto)
+endif()
+
+# manifest_cache exercises the header-only LRU used by the manifest resolver.
+add_executable(manifest_cache test_manifest_cache.cpp)
+add_test(NAME manifest_cache COMMAND manifest_cache)
+target_link_libraries(manifest_cache PRIVATE Catch2::Catch2WithMain TeleportCore)
+target_include_directories(manifest_cache PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include)
 
 # anim exercises the animation retargeter's bind-frame conjugation maths.
 # It compiles the AnimationRetargeter translation unit directly so it doesn't
@@ -28,6 +90,28 @@ if(TARGET ozz_animation)
    add_test(NAME anim COMMAND anim)
    target_link_libraries(anim PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
    target_include_directories(anim PRIVATE ${CMAKE_SOURCE_DIR})
+endif()
+
+# animation_state pins the behaviour of AnimationLayerStateSequence: the timeline of
+# animation states a layer plays through, and how a query between two of them blends.
+# Like anim it compiles the translation unit directly rather than linking ClientRender,
+# and supplies the two clientrender::Animation members the sequence reads. The extra
+# include paths are for the headers AnimationState.h pulls in transitively: tiny_gltf.h
+# from draco's vendored copy, and ClientRender's own ozz/gltf2ozz.h.
+if(TARGET ozz_animation)
+   add_executable(animation_state
+      test_animation_state.cpp
+      ${CMAKE_SOURCE_DIR}/ClientRender/NodeComponents/AnimationState.cpp)
+   add_test(NAME animation_state COMMAND animation_state)
+   target_link_libraries(animation_state PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
+   target_include_directories(animation_state PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/ClientRender
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/firstparty
+      ${CMAKE_SOURCE_DIR}/thirdparty/draco/third_party/tinygltf)
+   target_compile_definitions(animation_state PRIVATE TINYGLTF_NO_STB_IMAGE=1)
 endif()
 # TeleportCore's public Avatars.h header transitively pulls in
 # libavstream/common_exports.h for the avs::uid alias; the include
@@ -139,6 +223,43 @@ if(TARGET teleportd AND (TELEPORT_UNIX OR TELEPORT_MACOS))
       COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/control_integration.sh
          $<TARGET_FILE:teleportd> $<TARGET_FILE:teleport_cli>)
 endif()
+
+# gltf_texture_scan is the server half of the same story: finding the external texture uris a
+# .glb/.vrm declares, so they can be streamed with the mesh. It compiles the one translation
+# unit rather than linking TeleportServer, which pulls in CUDA and Compressonator at link time.
+add_executable(gltf_texture_scan
+   test_gltf_texture_scan.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/GltfTextureScan.cpp)
+add_test(NAME gltf_texture_scan COMMAND gltf_texture_scan)
+target_link_libraries(gltf_texture_scan PRIVATE Catch2::Catch2WithMain TeleportCore)
+target_include_directories(gltf_texture_scan PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+
+# axes_conversion pins the axes-standard tables in libavstream/common_maths.h, which are
+# header-only, so nothing needs linking beyond the include paths. Mirrors
+# teleport-nodejs/test/test_axes_conversion.js: the two implementations of the same table are
+# the two halves of one wire contract, and had drifted (no EngineeringStyle <-> GlStyle entries
+# on this side at all).
+add_executable(axes_conversion test_axes_conversion.cpp)
+add_test(NAME axes_conversion COMMAND axes_conversion)
+target_link_libraries(axes_conversion PRIVATE Catch2::Catch2WithMain)
+target_include_directories(axes_conversion PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/firstparty)
+
+# resource_url pins how a client resolves the external texture uris inside a .glb against
+# the url it fetched the asset from. It compiles the one translation unit rather than
+# linking ClientRender, which would drag in Vulkan and the whole render platform for what
+# is pure string handling.
+add_executable(resource_url
+   test_resource_url.cpp
+   ${CMAKE_SOURCE_DIR}/ClientRender/ResourceUrl.cpp)
+add_test(NAME resource_url COMMAND resource_url)
+target_link_libraries(resource_url PRIVATE Catch2::Catch2WithMain)
+target_include_directories(resource_url PRIVATE ${CMAKE_SOURCE_DIR})
 
 # Guarded on the target rather than built unconditionally: a headless-only build
 # (macOS, TELEPORT_GUI_CLIENT=OFF) never adds TeleportAudio, and the PulseAudio

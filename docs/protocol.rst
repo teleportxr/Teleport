@@ -86,6 +86,7 @@ The data source may be the same server, or it may be one or more other sources.
 	protocol/conventions
 	protocol/state_machine
 	protocol/signaling
+	protocol/avatar_manifest
 	protocol/service
 	protocol/data_transfer
 	protocol/http
@@ -97,3 +98,4 @@ The data source may be the same server, or it may be one or more other sources.
 	protocol/input
 	protocol/asset_portability
 	protocol/reconnection
+	protocol/local_control

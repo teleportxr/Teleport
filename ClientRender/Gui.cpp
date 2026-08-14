@@ -2732,11 +2732,27 @@ void Gui::ShowAvatarSettings2D()
 		ImGui::PopItemWidth();
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
+		ImGui::LabelText("##ManifestUrlLabel", "Manifest");
+		ImGui::TableNextColumn();
+		ImGui::PushItemWidth(-1.0f);
+		ImGui::InputText("##ManifestUrl", manifest_url_buffer, MAX_URL_SIZE);
+		ImGui::PopItemWidth();
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Address of a signed Universal Manifest describing your avatar:\n"
+							  "an https URL, or a bare UMID for the server to resolve.\n"
+							  "Used in preference to the Avatar URL, but only with servers\n"
+							  "that support manifests — so it is safe to set both.");
+		}
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
 		ImGui::TableNextColumn();
 		if (ImGui::Button("Save"))
 		{
 			avatar_url_buffer[MAX_URL_SIZE - 1] = 0;
 			config.options.avatarUrl			= std::string(avatar_url_buffer);
+			manifest_url_buffer[MAX_URL_SIZE - 1] = 0;
+			config.options.manifestUrl			= std::string(manifest_url_buffer);
 			config.SaveOptions();
 			show_avatar_settings = false;
 			show_options		 = true;
@@ -2744,7 +2760,8 @@ void Gui::ShowAvatarSettings2D()
 		ImGui::SameLine();
 		if (ImGui::Button("Clear"))
 		{
-			avatar_url_buffer[0] = 0;
+			avatar_url_buffer[0]   = 0;
+			manifest_url_buffer[0] = 0;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Cancel"))
@@ -3099,7 +3116,7 @@ bool Gui::UrlEdit()
 		num_buttons++;
 	}
 #endif
-	ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * buttonSize.x - 8);
+	ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * (buttonSize.x + 8) - 8);
 	if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer), ImGuiInputTextFlags_EnterReturnsTrue))
 	{
 		current_url	   = url_buffer;
@@ -3422,12 +3439,16 @@ void Gui::MainOptions()
 		ImGui::TableNextColumn();
 		if (ImGui::Button("Avatar..."))
 		{
-			// Seed the edit buffer from the persisted value so the sub-page
-			// opens showing the current URL (or empty when none is set).
+			// Seed the edit buffers from the persisted values so the sub-page
+			// opens showing the current settings (or empty when none is set).
 			const std::string &u = config.options.avatarUrl;
 			size_t			   n = std::min((size_t)(MAX_URL_SIZE - 1), u.size());
 			memcpy(avatar_url_buffer, u.c_str(), n);
 			avatar_url_buffer[n] = 0;
+			const std::string &m = config.options.manifestUrl;
+			size_t			   mn = std::min((size_t)(MAX_URL_SIZE - 1), m.size());
+			memcpy(manifest_url_buffer, m.c_str(), mn);
+			manifest_url_buffer[mn] = 0;
 			show_avatar_settings = true;
 			show_options		 = false;
 		}
@@ -3656,7 +3677,7 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					num_buttons++;
 				}
 #endif
-				ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * 80);
+				ImGui::PushItemWidth(ImGui::GetWindowWidth() - num_buttons * (buttonSize.x + 8) - 8);
 				if (ImGui::InputText("##URL", url_buffer, IM_ARRAYSIZE(url_buffer)))
 				{
 					current_url = url_buffer;

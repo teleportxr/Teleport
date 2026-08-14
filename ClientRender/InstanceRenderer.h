@@ -207,11 +207,15 @@ namespace teleport
 					boneMatrices.InvalidateDeviceObjects();
 				}
 			};
-			phmap::flat_hash_map<avs::uid, std::shared_ptr<SkeletonRender>> skeletonRenders;
+			//! Key is MakeNodeHash(root_id, cache_uid, node_id): a sub-scene mounted twice walks the same
+			//! Node objects, so the mounting node has to be part of the key. Keying on the node alone gives
+			//! both mounts one buffer, and the last one updated poses both.
+			phmap::flat_hash_map<uint64_t, std::shared_ptr<SkeletonRender>> skeletonRenders;
 			struct MeshRender
 			{
 				const mat4 *model;
 				avs::uid cache_uid;
+				avs::uid root_id;		//!< The node that mounts the subscene this is an instance of; 0 for the top-level cache.
 				std::shared_ptr<clientrender::Material> material;
 				std::shared_ptr<clientrender::Mesh> mesh;
 				std::shared_ptr<clientrender::Node> node;
@@ -308,6 +312,14 @@ namespace teleport
 			void InvalidateDeviceObjects();
 
 			void UpdateMouse(vec3 orig, vec3 dir, float &distance, std::string &url);
+
+			//! This session's clock: microseconds since the setup command's datum.
+			//! Everything the server timestamps - animation states above all - is expressed in this,
+			//! not in the Unix wall-clock time RenderState carries.
+			int64_t SessionTimeUs() const
+			{
+				return sessionClient ? sessionClient->GetTimestamp().count() : 0;
+			}
 
 			void RenderBackgroundTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext);
 			void RenderVideoTexture(platform::crossplatform::GraphicsDeviceContext &deviceContext,

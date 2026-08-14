@@ -1,5 +1,12 @@
 #include "NodeManager.h"
 
+#include "GeometryCache.h"
+#include "NodeComponents/AnimationComponent.h"
+#include "NodeComponents/SubSceneComponent.h"
+#include "TeleportCore/Logging.h"
+
+#include <format>
+
 using namespace teleport;
 using namespace clientrender;
 using teleport::core::Pose;
@@ -110,12 +117,17 @@ void NodeManager::AddNode(std::chrono::microseconds session_time_us,std::shared_
 		}
 		
 		//Set playing animation, if an animation update was received early.
+		// Left queued if it still cannot be applied - a node that roots a sub-scene has nothing to
+		// animate until that sub-scene has been built. Update() retries it.
 		auto animationIt = earlyAnimationUpdates.find(node_id);
 		if (animationIt != earlyAnimationUpdates.end())
 		{
-			auto animC=node->GetOrCreateComponent<AnimationComponent>();
-			//animC->setAnimationState(session_time_us, animationIt->second);
-			earlyAnimationUpdates.erase(animationIt);
+			if (ApplyAnimationToNode(session_time_us, node, animationIt->second))
+			{
+				earlyAnimationUpdates.erase(animationIt);
+				animationUpdateQueuedUs.erase(node_id);
+				animationUpdatesWarned.erase(node_id);
+			}
 		}
 
 		//Set playing animation, if an animation control update was received early.
@@ -260,6 +272,20 @@ std::shared_ptr<Node> NodeManager::GetNode(avs::uid nodeID) const
 		return nullptr;
 	}
 	return f->second;
+}
+
+std::vector<std::shared_ptr<Node>> NodeManager::GetSkeletonNodes() const
+{
+	std::vector<std::shared_ptr<Node>> skeletonNodes;
+	std::lock_guard<std::mutex> lock(nodeLookup_mutex);
+	for (const auto &n : nodeLookup)
+	{
+		if (n.second && n.second->GetSkeleton())
+		{
+			skeletonNodes.push_back(n.second);
+		}
+	}
+	return skeletonNodes;
 }
 
 size_t NodeManager::GetNodeCount() const
@@ -486,18 +512,110 @@ void NodeManager::SetNodeHighlighted(avs::uid nodeID, bool isHighlighted)
 	}
 }
 
+//! Apply an animation state to whichever node actually owns the skeleton it should drive.
+//!
+//! The node the server addresses is not always the node that can be animated. An avatar streamed as
+//! a MeshPointer - a VRM, say - arrives as a sub-scene in a geometry cache of its own, and the node
+//! the server names is only that sub-scene's root. Its skeleton, and the AnimationComponent that
+//! goes with it, live on a node inside the sub-cache, which the server has never seen and cannot
+//! name. Resolving that is the client's job: the protocol gives cacheID zero the meaning "the cache
+//! containing nodeID", and that is the value that lets a command drive a skeleton inside a sub-scene.
+//!
+//! root_uid is what ties the state to the right instance. The renderer keys a sub-scene's
+//! per-instance state on the outer node's uid - InstanceRenderer sets SubSceneNodeStates::root_id to
+//! exactly that - so an AnimationInstance created under any other value is one nothing ever reads.
+bool NodeManager::ApplyAnimationToNode(std::chrono::microseconds timestampUs, std::shared_ptr<Node> node, const teleport::core::ApplyAnimation &animationUpdate,
+									   std::string *reason)
+{
+	auto fail = [reason](std::string why) -> bool
+	{
+		if (reason)
+		{
+			*reason = std::move(why);
+		}
+		return false;
+	};
+	if (!node)
+	{
+		return fail("the node has not arrived");
+	}
+	// Zero means "the cache containing nodeID", which is this one: that is where the node was found.
+	// The clip lives there whether or not the skeleton does, so this stays the clip's cache even when
+	// the state is applied to a node in a sub-cache below.
+	teleport::core::ApplyAnimation resolved = animationUpdate;
+	if (resolved.cacheID == 0)
+	{
+		resolved.cacheID = cacheUid;
+	}
+	// A node with its own skeleton is animated directly. root_uid 0 means "this node's own instance".
+	if (node->GetSkeleton())
+	{
+		auto animC = node->GetOrCreateComponent<AnimationComponent>();
+		animC->setAnimationState(timestampUs, resolved, 0);
+		return true;
+	}
+	// No skeleton of its own. If it roots a sub-scene, the skeleton is in there.
+	auto subSceneComponent = node->GetComponent<SubSceneComponent>();
+	if (!subSceneComponent)
+	{
+		return fail("it has no skeleton and no sub-scene component");
+	}
+	// Prefer the component's own pointer, but fall back to looking the mesh up by uid, which is what
+	// InstanceRenderer does and is therefore the field that is always populated.
+	auto mesh = subSceneComponent->mesh;
+	if (!mesh && subSceneComponent->mesh_uid)
+	{
+		auto ownCache = GeometryCache::GetGeometryCache(cacheUid);
+		if (ownCache)
+		{
+			mesh = ownCache->mMeshManager.Get(subSceneComponent->mesh_uid);
+		}
+	}
+	if (!mesh)
+	{
+		return fail(std::format("its sub-scene component has no mesh (mesh uid {})", subSceneComponent->mesh_uid));
+	}
+	avs::uid subSceneCacheUid = mesh->GetMeshCreateInfo().subscene_cache_uid;
+	if (!subSceneCacheUid)
+	{
+		return fail(std::format("its mesh {} is not a sub-scene", subSceneComponent->mesh_uid));
+	}
+	auto subCache = GeometryCache::GetGeometryCache(subSceneCacheUid);
+	if (!subCache)
+	{
+		return fail(std::format("its sub-scene cache {} does not exist", subSceneCacheUid));
+	}
+	// The sub-scene may still be building, in which case no node in it has a skeleton yet and the
+	// caller retries. Once it has, every skeleton in the sub-scene is driven by the one command.
+	auto skeletonNodes = subCache->mNodeManager.GetSkeletonNodes();
+	if (!skeletonNodes.size())
+	{
+		return fail(std::format("none of the {} nodes in its sub-scene cache {} has a skeleton",
+								subCache->mNodeManager.GetNodeCount(),
+								subSceneCacheUid));
+	}
+	for (auto &skeletonNode : skeletonNodes)
+	{
+		auto animC = skeletonNode->GetOrCreateComponent<AnimationComponent>();
+		animC->setAnimationState(timestampUs, resolved, node->id);
+	}
+	return true;
+}
+
 void NodeManager::UpdateNodeAnimation(std::chrono::microseconds timestampUs,const teleport::core::ApplyAnimation &animationUpdate)
 {
 	std::shared_ptr<Node> node = GetNode(animationUpdate.nodeID);
-	if(node)
+	if (ApplyAnimationToNode(timestampUs, node, animationUpdate))
 	{
-		auto animC=node->GetOrCreateComponent<AnimationComponent>();
-		animC->setAnimationState(timestampUs,animationUpdate, 0);
+		return;
 	}
-	else
+	// The node is not here yet, or its sub-scene has not finished building. Hold on to the state and
+	// retry: nothing else will tell us what to play, because the server only sends on a change.
+	std::lock_guard<std::mutex> lock(early_mutex);
+	earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
+	if (animationUpdateQueuedUs.find(animationUpdate.nodeID) == animationUpdateQueuedUs.end())
 	{
-		std::lock_guard<std::mutex> lock(early_mutex);
-		earlyAnimationUpdates[animationUpdate.nodeID] = animationUpdate;
+		animationUpdateQueuedUs[animationUpdate.nodeID] = timestampUs;
 	}
 }
 
@@ -580,6 +698,48 @@ void NodeManager::Update( std::chrono::microseconds timestamp_us)
 		RemoveNode(node);
 		removed_node_uids.insert(node->id);
 	}
+	RetryAnimationUpdates(timestamp_us);
+}
+
+//! Retry the animation states that could not be applied when they arrived.
+//! A sub-scene avatar takes time to download and build, and the first ApplyAnimation for it routinely
+//! lands before there is a skeleton to drive. The server will not repeat itself - it sends only on a
+//! change of locomotion state - so without this the avatar stays in whatever it was doing until the
+//! user next changes gait, and a client that missed the opening state never animates at all.
+void NodeManager::RetryAnimationUpdates(std::chrono::microseconds timestamp_us)
+{
+	std::lock_guard<std::mutex> lock(early_mutex);
+	if (!earlyAnimationUpdates.size())
+	{
+		return;
+	}
+	// Long enough that a sub-scene has had a fair chance to download and build, short enough to see
+	// while the session that caused it is still running.
+	static const std::chrono::microseconds pendingWarnAfter(5000000);
+	for (auto it = earlyAnimationUpdates.begin(); it != earlyAnimationUpdates.end();)
+	{
+		std::shared_ptr<Node> node = GetNode(it->first);
+		std::string			  reason;
+		if (ApplyAnimationToNode(timestamp_us, node, it->second, &reason))
+		{
+			animationUpdateQueuedUs.erase(it->first);
+			animationUpdatesWarned.erase(it->first);
+			it = earlyAnimationUpdates.erase(it);
+			continue;
+		}
+		auto queued = animationUpdateQueuedUs.find(it->first);
+		if (queued != animationUpdateQueuedUs.end() && timestamp_us - queued->second > pendingWarnAfter &&
+			animationUpdatesWarned.find(it->first) == animationUpdatesWarned.end())
+		{
+			animationUpdatesWarned.insert(it->first);
+			TELEPORT_WARN("Animation {} for node {} still cannot be applied after {}s: {}.",
+						  (unsigned)it->second.animationID,
+						  (unsigned)it->first,
+						  (timestamp_us - queued->second).count() / 1000000,
+						  reason);
+		}
+		it++;
+	}
 }
 
 const std::set<avs::uid> &NodeManager::GetRemovedNodeUids() const
@@ -611,6 +771,8 @@ void NodeManager::Clear()
 	earlyEnabledUpdates.clear();
 	earlyNodeHighlights.clear();
 	earlyAnimationUpdates.clear();
+	animationUpdateQueuedUs.clear();
+	animationUpdatesWarned.clear();
 	earlyAnimationControlUpdates.clear();
 	earlyAnimationSpeedUpdates.clear();
 	hiddenNodes.clear();

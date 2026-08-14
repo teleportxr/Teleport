@@ -57,23 +57,26 @@ Every server-to-client packet that contains geometric data is provided in the ``
    * - 8
      - ``ZVertical``
      - Vertical-axis flag (component bit).
-   * - 10 (= 8 | 2)
+   * - 9 (= 8 | 1)
      - ``EngineeringStyle``
      - Right-handed, +X right, +Y forward, +Z up (``ZVertical | RightHanded``).
    * - 21 (= 16 | 4 | 1)
      - ``GlStyle``
-     - Right-handed, +X right, +Y up, -Z forward.
+     - Right-handed, +X right, +Y up, -Z forward (``YVertical | RightHanded``).
    * - 42 (= 32 | 8 | 2)
      - ``UnrealStyle``
-     - Left-handed, Z up.
-   * - 69 (= 64 | 4 | 1)
+     - Left-handed, +X forward, +Y right, +Z up (``ZVertical | LeftHanded``).
+   * - 70 (= 64 | 4 | 2)
      - ``UnityStyle``
-     - Left-handed, Y up.
+     - Left-handed, +X right, +Y up, +Z forward (``YVertical | LeftHanded``).
+
+The low four bits describe the standard — handedness and which axis is vertical — but they do not identify it on their own: ``GlStyle`` and ``UnityStyle`` are both ``YVertical``, and differ from other conceivable standards with the same handedness only by convention. Bits 16, 32 and 64 are therefore discriminators that make each of the four complete standards a distinct byte. Implementations must compare against the whole byte, and may read the low bits to answer "is this left-handed" or "is Z up" — never the reverse. In particular ``EngineeringStyle`` is ``ZVertical | RightHanded`` with **no** discriminator bit, so it is 9 and not 8 | anything else.
 
 A server must be capable of supporting clients in at least ``EngineeringStyle`` and ``GlStyle``.
 
 * The client declares its native axes as part of the :ref:`Handshake <signaling>`.
-* The server publishes the axes its scene is authored in via ``SetupCommand.axesStandard``. Clients should remember this value but it is informational only; numbers on the wire are always already in the client's standard.
+* The server publishes the axes its scene is authored in via ``SetupCommand.axesStandard``. Numbers on the wire are always already in the client's standard, so for geometry the value is informational — but a client must remember it, because it is what an unset axes-standard byte on a pointer chunk means (see :ref:`axes_conversion`).
+* Assets fetched over HTTP are the exception to "always in the client's standard": a mesh, animation or cubemap file is served as authored, and the pointer chunk that names it declares which frame that is. The client converts.
 * Linear units are **metres**.
 * Quaternions are stored as ``vec4_packed`` with the layout ``(x, y, z, w)``.
 * All transforms are local, i.e. relative to the parent node. A root node -- one whose ``parent_uid`` is zero -- is therefore expressed directly in the server's global space, and its global transform is its local transform. Node transforms are **not** relative to the session origin: the origin is itself an ordinary node in that same global space. See :doc:`client_nodes`.

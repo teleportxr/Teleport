@@ -21,9 +21,6 @@ namespace teleport
 		class GoogleDeviceIdentityProvider : public IdentityProvider
 		{
 		public:
-			//! How the user is told to visit a URL and type a code. Defaults to standard output.
-			using PromptHandler = std::function<void(const std::string &verificationUrl, const std::string &userCode)>;
-
 			GoogleDeviceIdentityProvider();
 			~GoogleDeviceIdentityProvider() override;
 
@@ -46,7 +43,7 @@ namespace teleport
 			}
 			std::string GetLastError() const override;
 
-			void SetPromptHandler(PromptHandler handler);
+			void SetSignInPromptHandler(SignInPromptHandler handler) override;
 
 		private:
 			bool RequestDeviceCode(std::string &deviceCode, std::string &userCode, std::string &verificationUrl, int &intervalSeconds, int &expiresInSeconds);
@@ -63,7 +60,8 @@ namespace teleport
 
 			mutable std::mutex errorMutex;
 			std::string		   lastError;
-			PromptHandler	   promptHandler;
+			//! Set once at registration, before any worker thread exists; read from the worker.
+			SignInPromptHandler promptHandler;
 
 			std::atomic<bool> credentialsRevoked{false};
 			std::atomic<bool> cancelled{false};

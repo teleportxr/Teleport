@@ -1083,7 +1083,7 @@ int main(int argc, char *argv[])
 
 	// Enable Default-category internal logging so diagnostic TELEPORT_INTERNAL_COUT(Default, ...)
 	// messages (e.g. WebRTC media track attachment, audio decoder traces) reach the log file.
-	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, true);
+	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, false);
 
 	// Parse command line
 	for (int i = 1; i < argc; i++)
@@ -1142,7 +1142,7 @@ int main(int argc, char *argv[])
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHintString(GLFW_WAYLAND_APP_ID, "TeleportXR");
-	g_window = glfwCreateWindow(800, 500, "Teleport Spatial Client", nullptr, nullptr);
+	g_window = glfwCreateWindow(1280, 800, "Teleport Spatial Client", nullptr, nullptr);
 	if (!g_window)
 	{
 		TELEPORT_INTERNAL_CERR("glfwCreateWindow failed");

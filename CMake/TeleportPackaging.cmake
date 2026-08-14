@@ -86,6 +86,11 @@ elseif(TELEPORT_MACOS)
 	# -D CPACK_PACKAGE_NAME=TeleportMacClientInstaller). Harmless when not using that generator.
 	set(CPACK_DMG_VOLUME_NAME "TeleportPCClient")
 	set(CPACK_DMG_FORMAT "UDZO")
+	# Window size/position and icon size/layout for the Finder window the .dmg opens to - see
+	# Installers/dmg_setup.applescript. CPack runs this via osascript against a temporary,
+	# writable copy of the volume to build a .DS_Store, then bakes that into the final image;
+	# it needs a logged-in GUI session (present locally and on GitHub's macOS runners).
+	set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/Installers/dmg_setup.applescript")
 	# Reverse-DNS package identifier. Gatekeeper ties the notarisation ticket to it,
 	# so it must stay stable across releases.
 	set(CPACK_PRODUCTBUILD_IDENTIFIER "co.simul.teleportxr")

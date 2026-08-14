@@ -1,4 +1,5 @@
 #include "HeadlessGeometryCacheBackend.h"
+#include "TeleportCore/CommonNetworking.h"
 #include "TeleportCore/Logging.h"
 #include <libavstream/common.hpp>	// avs::stringOf(GeometryPayloadType)
 #include <algorithm>
@@ -112,6 +113,8 @@ void HeadlessGeometryCacheBackend::UntrackNode(avs::uid uid)
 	std::lock_guard<std::mutex> lock(mutex);
 	if (nodes.erase(uid))
 		nodesRemoved++;
+	// A removed node plays nothing, and a later node reusing the uid must not inherit this.
+	nodeAnimationStates.erase(uid);
 	// Drop any pending completion for a node the server has since removed.
 	completedNodes.erase(std::remove(completedNodes.begin(), completedNodes.end(), uid), completedNodes.end());
 }
@@ -134,77 +137,77 @@ void HeadlessGeometryCacheBackend::TrackSkeleton(avs::uid uid, const avs::Skelet
 	skeletons[uid] = skeleton.name;
 }
 
+void HeadlessGeometryCacheBackend::TrackAnimationState(const teleport::core::ApplyAnimation &applyAnimation)
+{
+	if (!applyAnimation.nodeID)
+		return;
+	std::lock_guard<std::mutex> lock(mutex);
+	// One state per layer, the later command replacing the earlier: layers blend on a real client,
+	// they do not queue, so only the most recent state per layer is in force.
+	GeometryNodeAnimationState &state = nodeAnimationStates[applyAnimation.nodeID][applyAnimation.animLayer];
+	state.animation					  = applyAnimation.animationID;
+	state.layer						  = applyAnimation.animLayer;
+	state.timeAtTimestamp			  = applyAnimation.animTimeAtTimestamp;
+	state.speed						  = applyAnimation.speedUnitsPerSecond;
+	state.loop						  = applyAnimation.loop;
+	state.timestampUs				  = applyAnimation.timestampUs;
+}
+
 void HeadlessGeometryCacheBackend::CountUnparsedPayload(avs::GeometryPayloadType type)
 {
 	std::lock_guard<std::mutex> lock(mutex);
 	unparsedPayloadCounts[type]++;
 }
 
-std::string HeadlessGeometryCacheBackend::GetSummary() const
+GeometryReport HeadlessGeometryCacheBackend::GetReport() const
 {
 	std::lock_guard<std::mutex> lock(mutex);
-	std::ostringstream o;
-	o << "Nodes tracked:        " << nodes.size() << " (" << nodesRemoved << " removed)\n";
-	o << "Skeletons:            " << skeletons.size() << "\n";
-	o << "Resources received:   " << allReceivedResources.size() << "\n";
-	o << "Pointer resources:    " << pointers.size() << " (URLs recorded, not downloaded)\n";
-	o << "Referenced, unsent:   " << referencedButNotReceived.size() << "\n";
-	o << "Acks pending send:    " << receivedResources.size() << " resources, " << completedNodes.size() << " nodes\n";
-	if (!unparsedPayloadCounts.empty())
-	{
-		o << "Acknowledged without parsing:\n";
-		for (const auto &u : unparsedPayloadCounts)
-			o << "  " << avs::stringOf(u.first) << ": " << u.second << "\n";
-	}
-	return o.str();
-}
+	GeometryReport				report;
+	report.hasCache						= true;
+	report.counts.nodes					= nodes.size();
+	report.counts.nodesRemoved			= nodesRemoved;
+	report.counts.skeletons				= skeletons.size();
+	report.counts.resourcesReceived		= allReceivedResources.size();
+	report.counts.pointers				= pointers.size();
+	report.counts.referencedUnsent		= referencedButNotReceived.size();
+	report.counts.pendingResourceAcks	= receivedResources.size();
+	report.counts.pendingNodeAcks		= completedNodes.size();
 
-std::string HeadlessGeometryCacheBackend::GetNodeReport() const
-{
-	std::lock_guard<std::mutex> lock(mutex);
-	if (nodes.empty())
-		return "No nodes tracked.\n";
-	std::ostringstream o;
+	for (const auto &u : unparsedPayloadCounts)
+		report.unparsed.push_back({avs::stringOf(u.first), u.second});
+
+	report.nodes.reserve(nodes.size());
+
+	for (const auto &u : unparsedPayloadCounts)
+		report.unparsed.push_back({avs::stringOf(u.first), u.second});
+
+	report.nodes.reserve(nodes.size());
 	for (const auto &n : nodes)
 	{
-		o << n.first << " \"" << n.second.name << "\" type=" << (int)n.second.dataType;
-		if (n.second.dataUid)
-			o << " data=" << n.second.dataUid;
-		if (n.second.parentUid)
-			o << " parent=" << n.second.parentUid;
-		if (n.second.skeletonUid)
-			o << " skeleton=" << n.second.skeletonUid;
-		if (!n.second.materials.empty())
-			o << " materials=" << n.second.materials.size();
-		if (!n.second.animations.empty())
-			o << " animations=" << n.second.animations.size();
-		if (!n.second.url.empty())
-			o << " url=" << n.second.url;
-		o << "\n";
+		GeometryNodeEntry entry;
+		entry.uid		 = n.first;
+		entry.name		 = n.second.name;
+		entry.dataType	 = (int)n.second.dataType;
+		entry.data		 = n.second.dataUid;
+		entry.parent	 = n.second.parentUid;
+		entry.skeleton	 = n.second.skeletonUid;
+		entry.materials	 = n.second.materials.size();
+		entry.animations = n.second.animations.size();
+		auto a			 = nodeAnimationStates.find(n.first);
+		if (a != nodeAnimationStates.end())
+		{
+			entry.animationStates.reserve(a->second.size());
+			for (const auto &s : a->second)
+				entry.animationStates.push_back(s.second);
+		}
+		entry.url = n.second.url;
+		report.nodes.push_back(std::move(entry));
 	}
-	return o.str();
-}
 
-std::string HeadlessGeometryCacheBackend::GetResourceReport() const
-{
-	std::lock_guard<std::mutex> lock(mutex);
-	std::ostringstream o;
-	if (pointers.empty())
-	{
-		o << "No pointer resources.\n";
-	}
-	else
-	{
-		o << "Pointer resources (not downloaded):\n";
-		for (const auto &p : pointers)
-			o << "  " << p.first << " " << avs::stringOf(p.second.type) << " " << p.second.url << "\n";
-	}
-	if (!referencedButNotReceived.empty())
-	{
-		o << "Referenced but never sent:\n  ";
-		for (avs::uid u : referencedButNotReceived)
-			o << u << " ";
-		o << "\n";
-	}
-	return o.str();
+	report.pointers.reserve(pointers.size());
+	for (const auto &p : pointers)
+		report.pointers.push_back({p.first, avs::stringOf(p.second.type), p.second.url});
+
+	report.referencedUnsent.assign(referencedButNotReceived.begin(), referencedButNotReceived.end());
+	return report;
 }

@@ -115,8 +115,31 @@ void ClientData::StartStreaming(uint32_t connectionTimeout
 	setupCommand.idle_connection_timeout = connectionTimeout;
 
 	setupCommand.session_id = session_id;
-	// TODO: this must change:
-	setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
+	// The frame the server's own scene is authored in, which is what this field means (see
+	// docs/protocol/conventions.rst). It is not the client's - geometry reaches the client
+	// already converted into the client's standard - but the client must remember it, because
+	// it is what an unset axes-standard byte on a pointer chunk falls back to.
+	//
+	// Previously hardcoded to UnityStyle regardless of the host engine, which was wrong for
+	// any non-Unity integration and disagreed with the serverAxesStandard that every
+	// conversion on this side actually converts *from*. The Unity plugin sets it to UnityStyle
+	// through Server_UpdateServerSettings (see ServerSettings.axesStandard on the C# side), so
+	// this reports the same value it always did there.
+	//
+	// A host that never called Server_UpdateServerSettings leaves it NotInitialized, which the
+	// client reads as "unknown" and which is also the value every conversion on this side is
+	// silently converting from. Say so rather than shipping a zero.
+	if (serverSettings.serverAxesStandard == avs::AxesStandard::NotInitialized)
+	{
+		TELEPORT_CERR << "serverSettings.serverAxesStandard is NotInitialized: the host has not called"
+						 " Server_UpdateServerSettings. Geometry will not be converted correctly for any"
+						 " client. Reporting UnityStyle to preserve the previous behaviour.\n";
+		setupCommand.axesStandard = avs::AxesStandard::UnityStyle;
+	}
+	else
+	{
+		setupCommand.axesStandard = serverSettings.serverAxesStandard;
+	}
 	setupCommand.audio_input_enabled = serverSettings.isReceivingAudio;
 	// Audio media-track configuration (see docs/protocol/audio.rst). When useAudioMediaTracks
 	// is set, codec=1 (Opus) tells the client to expect WebRTC media tracks; otherwise codec=0

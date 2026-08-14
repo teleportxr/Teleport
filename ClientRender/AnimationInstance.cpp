@@ -56,25 +56,52 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	st.animationId	  = applyAnimation.animationID;
 	st.timeRatio	 = 0;
 	st.speedUnitsPerS = applyAnimation.speedUnitsPerSecond;
-	// The timestamp where the state applies.
-	st.timestampUs	  = applyAnimation.timestampUs + 10000000;
+	// The timestamp where the state applies. Taken as sent: the server already dates it slightly
+	// ahead by its blend lead, and that interval is the cross-fade. Adding anything here stretches
+	// the cross-fade by the same amount, so a hard-coded offset makes every transition a slow morph
+	// towards a state that only arrives seconds later.
+	st.timestampUs	  = applyAnimation.timestampUs;
 	st.loop			  = applyAnimation.loop;
 	st.matchTransition&=st.loop;
 	if(st.matchTransition)
 	{
 	}
 	auto cache		  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
-	if (cache)
+	// The clip may not have streamed in yet. The state is stored regardless, so that it applies once the
+	// clip arrives; until then st.animation is null, which everything downstream treats as a clip of zero
+	// duration. Say so, though: a state that never resolves is indistinguishable from an avatar that
+	// simply will not animate, which is expensive to diagnose.
+	if (!cache)
+	{
+		TELEPORT_WARN("Animation {}: no geometry cache {}.", applyAnimation.animationID, applyAnimation.cacheID);
+	}
+	else
 	{
 		auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
-		if (anim)
+		if (!anim)
+		{
+			TELEPORT_WARN("Animation {} is not in cache {} yet.", applyAnimation.animationID, applyAnimation.cacheID);
+		}
+		else
 		{
 			const auto *ozz_animation = anim->GetOzzAnimation(id);
 			if (!ozz_animation || ozz_animation->num_tracks() != skeleton->num_joints())
 			{
+				// Retargeting to this skeleton has not happened or did not fit. Unlike an unresolved
+				// clip this state can never apply, so it is dropped rather than stored.
+				TELEPORT_WARN("Animation {} does not fit skeleton {}: {} tracks against {} joints.", applyAnimation.animationID, id,
+							  ozz_animation ? ozz_animation->num_tracks() : 0, skeleton->num_joints());
 				return;
 			}
 			st.animation = anim;
+			// Where in the clip we should be when the state applies. The server sends this in
+			// seconds and carries it across a change of clip so the footfall does not jump;
+			// timeRatio is the same position normalised, so discarding it restarts every clip
+			// from its first frame.
+			if (anim->duration > 0.0f)
+			{
+				st.timeRatio = applyAnimation.animTimeAtTimestamp / anim->duration;
+			}
 		}
 	}
 	animationLayerStates[applyAnimation.animLayer].AddState(timestampUs, st);
