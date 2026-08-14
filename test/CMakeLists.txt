@@ -237,6 +237,19 @@ target_include_directories(gltf_texture_scan PRIVATE
    ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
    ${CMAKE_SOURCE_DIR}/libavstream/export_include)
 
+# axes_conversion pins the axes-standard tables in libavstream/common_maths.h, which are
+# header-only, so nothing needs linking beyond the include paths. Mirrors
+# teleport-nodejs/test/test_axes_conversion.js: the two implementations of the same table are
+# the two halves of one wire contract, and had drifted (no EngineeringStyle <-> GlStyle entries
+# on this side at all).
+add_executable(axes_conversion test_axes_conversion.cpp)
+add_test(NAME axes_conversion COMMAND axes_conversion)
+target_link_libraries(axes_conversion PRIVATE Catch2::Catch2WithMain)
+target_include_directories(axes_conversion PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/firstparty)
+
 # resource_url pins how a client resolves the external texture uris inside a .glb against
 # the url it fetched the asset from. It compiles the one translation unit rather than
 # linking ClientRender, which would drag in Vulkan and the whole render platform for what

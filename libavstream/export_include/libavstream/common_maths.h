@@ -71,6 +71,10 @@ namespace avs
 			{
 				position = { position.x, position.z, position.y };
 			}
+			else if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				position = { position.x, position.z, -position.y };
+			}
 		}
 		else if (fromStandard == avs::AxesStandard::GlStyle)
 		{
@@ -81,6 +85,10 @@ namespace avs
 			else if (toStandard == avs::AxesStandard::UnityStyle)
 			{
 				position = { position.x, position.y, -position.z };
+			}
+			else if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				position = { position.x, -position.z, position.y };
 			}
 		}
 	}
@@ -115,6 +123,14 @@ namespace avs
 			{
 				rotation = { -rotation.x, -rotation.z, -rotation.y, rotation.w };
 			}
+			// Engineering and Gl are both right-handed, so the change of basis has
+			// determinant +1 and the quaternion's vector part - a pseudovector - permutes
+			// exactly as a position does. Contrast the cases above, where the handedness
+			// changes and the signs do not follow ConvertPosition.
+			else if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				rotation = { rotation.x, rotation.z, -rotation.y, rotation.w };
+			}
 		}
 		else if (fromStandard == avs::AxesStandard::GlStyle)
 		{
@@ -125,6 +141,10 @@ namespace avs
 			else if (toStandard == avs::AxesStandard::UnityStyle)
 			{
 				rotation = { -rotation.x, -rotation.y, rotation.z, rotation.w };
+			}
+			else if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				rotation = { rotation.x, -rotation.z, rotation.y, rotation.w };
 			}
 		}
 		else if (fromStandard == avs::AxesStandard::UnityStyle)
@@ -179,6 +199,12 @@ namespace avs
 			{
 				scale = { scale.x, scale.z, scale.y };
 			}
+			// The unsigned form of the ConvertPosition permutation: scale permutes with the
+			// axes but never changes sign, as a negative scale would mirror the mesh.
+			else if (toStandard == avs::AxesStandard::GlStyle)
+			{
+				scale = { scale.x, scale.z, scale.y };
+			}
 		}
 		else if (fromStandard == avs::AxesStandard::GlStyle)
 		{
@@ -189,6 +215,10 @@ namespace avs
 			else if (toStandard == avs::AxesStandard::UnityStyle)
 			{
 				scale = { scale.x, scale.y, scale.z };
+			}
+			else if (toStandard == avs::AxesStandard::EngineeringStyle)
+			{
+				scale = { scale.x, scale.z, scale.y };
 			}
 		}
 	}
@@ -249,8 +279,49 @@ namespace avs
 		}
 	};
 
+	//! Convert a premultiplying transform matrix (translation in the right-hand column) between
+	//! axes standards, deriving the result from ConvertPosition rather than from a table of its
+	//! own.
+	//!
+	//! A change of basis M turns a transform T into M T M^-1. Every M here is a signed
+	//! permutation, so M^-1 is M^T, and both products reduce to applying ConvertPosition:
+	//! M T is that conversion applied to each column of T, and (M T) M^T is it applied to each
+	//! row of the result. The translation is column 3, and converts as the position it is.
+	//!
+	//! Written this way because the alternative - a third hand-transcribed table of twelve
+	//! signed element assignments per pair - is precisely what went wrong elsewhere in this
+	//! file. There is one table, ConvertPosition, and everything else is derived from it.
+	inline mat4 convertTransformMatrixFromPositions(const mat4 &matrix, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
+	{
+		mat4 convertedMatrix = matrix;
+		// M T: each column, including the translation column, is a vector in the source frame.
+		for (int j = 0; j < 4; j++)
+		{
+			vec3 column = {convertedMatrix.M[0][j], convertedMatrix.M[1][j], convertedMatrix.M[2][j]};
+			ConvertPosition(sourceStandard, targetStandard, column);
+			convertedMatrix.M[0][j] = column.x;
+			convertedMatrix.M[1][j] = column.y;
+			convertedMatrix.M[2][j] = column.z;
+		}
+		// (M T) M^T: the rows of the 3x3 part, leaving the translation column alone - it has
+		// already been converted above, and post-multiplying by M^T does not touch it.
+		for (int i = 0; i < 3; i++)
+		{
+			vec3 row = {convertedMatrix.M[i][0], convertedMatrix.M[i][1], convertedMatrix.M[i][2]};
+			ConvertPosition(sourceStandard, targetStandard, row);
+			convertedMatrix.M[i][0] = row.x;
+			convertedMatrix.M[i][1] = row.y;
+			convertedMatrix.M[i][2] = row.z;
+		}
+		return convertedMatrix;
+	}
+
 	inline mat4 convertToStandard(const mat4 &matrix, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 	{
+		if (sourceStandard == targetStandard)
+		{
+			return matrix;
+		}
 
 		mat4 convertedMatrix = matrix;
 
@@ -288,8 +359,7 @@ namespace avs
 
 				break;
 			default:
-				// AVSLOG(Error) << "Unrecognised targetStandard in Mat4x4::convertToStandard!\n";
-				break;
+				return convertTransformMatrixFromPositions(matrix, sourceStandard, targetStandard);
 			}
 			break;
 		case avs::AxesStandard::UnrealStyle:
@@ -337,13 +407,15 @@ namespace avs
 
 				break;
 			default:
-				// AVSLOG(Error) << "Unrecognised targetStandard in Mat4x4::convertToStandard!\n";
-				break;
+				return convertTransformMatrixFromPositions(matrix, sourceStandard, targetStandard);
 			}
 			break;
+		// Engineering and Gl sources used to fall through and return the matrix untouched,
+		// silently, which made a matrix conversion between the two standards the protocol
+		// requires every server to support into a no-op. They are derived rather than
+		// transcribed; see convertTransformMatrixFromPositions.
 		default:
-			// AVSLOG(Error) << "Unrecognised sourceStandard in Mat4x4::convertToStandard!\n";
-			break;
+			return convertTransformMatrixFromPositions(matrix, sourceStandard, targetStandard);
 		}
 
 		return convertedMatrix;
