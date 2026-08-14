@@ -998,6 +998,7 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 		renderPlatform->PushShaderBinaryPath((build_dir + "/shaderbin/Vulkan").c_str());
 		renderPlatform->PushShaderBinaryPath((build_dir + "/../share/shaderbin/Vulkan").c_str());
 		renderPlatform->PushShaderBinaryPath("assets/shaders/Vulkan");
+		renderPlatform->PushShaderBinaryPath("assets/shaders/vulkan");
 #endif
 		renderPlatform->SetShaderBuildMode(platform::crossplatform::ShaderBuildMode::BUILD_IF_CHANGED);
 	}
