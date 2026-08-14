@@ -1,4 +1,4 @@
--- Lays out the Finder window CPack's DragNDrop generator shows when TeleportPCClientInstaller-*.dmg
+-- Lays out the Finder window CPack's DragNDrop generator shows when TeleportMacClientInstaller-*.dmg
 -- is opened: window size/position, icon size, and where the app and the Applications symlink sit.
 -- Run by CPack itself via osascript against a temporary, writable copy of the volume (see
 -- CPACK_DMG_DS_STORE_SETUP_SCRIPT in ../CMake/TeleportPackaging.cmake) - CPack passes the mounted

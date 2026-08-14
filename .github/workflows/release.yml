@@ -213,11 +213,32 @@ jobs:
         mv dist/windows/*.exe "dist/windows/TeleportClientInstaller-${safe_tag}-x64.exe"
         mv dist/linux/*.deb   "dist/linux/teleportxr-${safe_tag}-x64.deb"
         mv dist/macos/*.pkg   "dist/macos/teleportxr-${safe_tag}-arm64.pkg"
-        mv dist/macos/*.dmg   "dist/macos/TeleportPCClientInstaller-${safe_tag}-arm64.dmg"
+        mv dist/macos/*.dmg   "dist/macos/TeleportMacClientInstaller-${safe_tag}-arm64.dmg"
         mv dist/android/*.apk "dist/android/teleportxr-${safe_tag}.apk"
+
+    # The release body so far is just the commit message that build_pc_client.yml
+    # wrote into release_notes.md. The installation instructions are versioned in
+    # the repo (Installers/release_instructions.md) rather than inline here, so the
+    # tag being released is checked out and its copy of the file is appended -
+    # each release shows the instructions as of that tag. dist/ is untracked, so
+    # the checkout leaves the downloaded assets untouched.
+    - name: Check out the released tag
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag || github.ref_name }}
+
+    - name: Append the installation instructions
+      shell: bash
+      run: |
+        set -euo pipefail
+        {
+          echo ""
+          cat Installers/release_instructions.md
+        } >> dist/windows/release_notes.md
 
     # Gatekeeper refuses an unsigned package outright, with an error that does not
     # explain itself, so the release notes have to say so and give the way round it.
+    # Kept after the instructions so the warning is the last thing the reader sees.
     - name: Note the unsigned macOS package
       if: steps.macos.outputs.signed != 'true'
       shell: bash

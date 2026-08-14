@@ -366,6 +366,13 @@ set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 
 set(BUILD_CURL_EXE OFF CACHE BOOL "")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
+# Nothing in Teleport uses scp:// or sftp:// (only HTTP(S) asset transport), and curl's
+# CURL_USE_LIBSSH2 defaults to ON, auto-linking Homebrew's libssh2 whenever find_package(LibSSH2)
+# succeeds on the build machine. That dependency was never bundled/rewritten by the macOS
+# packaging (HeadlessClient/CMakeLists.txt), so a packaged teleportd silently linked an absolute
+# /opt/homebrew/... path and failed to launch on a Mac without that exact keg installed. Turning
+# the feature off removes the dependency at the source instead of packaging around it.
+set(CURL_USE_LIBSSH2 OFF CACHE BOOL "")
 if(TELEPORT_WINDOWS)
 	set(CURL_STATIC_CRT ON CACHE BOOL "")
 	set(CURL_USE_SCHANNEL ON CACHE BOOL "")
