@@ -2129,7 +2129,24 @@ std::string GeometryStore::UidToPath(avs::uid u) const
 	return p;
 }
 
-avs::uid GeometryStore::registerExternalAsset(const std::string &pathWithExtension)
+//! Lower-cased file extension, with its leading period.
+static std::string LowerExtension(const std::string &extension)
+{
+	std::string lower = extension;
+	std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+	return lower;
+}
+
+//! True for the glTF family, whose files are always Y-up right-handed whatever the scene around
+//! them uses. Used both to derive an asset's axes standard and to decide whether it has a document
+//! of its own that can declare texture dependencies.
+static bool IsGltfExtension(const std::string &extension)
+{
+	const std::string lower = LowerExtension(extension);
+	return lower == ".glb" || lower == ".vrm" || lower == ".gltf";
+}
+
+avs::uid GeometryStore::registerExternalAsset(const std::string &pathWithExtension, avs::AxesStandard axesStandard)
 {
 	std::string path	  = pathWithExtension;
 	std::string extension;
@@ -2153,20 +2170,46 @@ avs::uid GeometryStore::registerExternalAsset(const std::string &pathWithExtensi
 	{
 		return 0;
 	}
+	if (axesStandard == avs::AxesStandard::NotInitialized && IsGltfExtension(extension))
+	{
+		// A glTF-family file declares its own frame regardless of the scene it is served into, and
+		// the client applies a real conversion from it. Anything else keeps NotInitialized, which
+		// says "the same as the server's scene" - an ordinary 2D image has no frame to declare.
+		axesStandard = avs::AxesStandard::GlStyle;
+	}
 	std::lock_guard<std::mutex> lock(externalAssetsMutex);
-	externalAssetExtensions[uid] = extension;
+	ExternalAsset			   &asset = externalAssets[uid];
+	asset.extension					  = extension;
+	asset.axesStandard				  = axesStandard;
 	return uid;
 }
 
 std::string GeometryStore::GetExternalAssetExtension(avs::uid u) const
 {
 	std::lock_guard<std::mutex> lock(externalAssetsMutex);
-	auto i = externalAssetExtensions.find(u);
-	if (i == externalAssetExtensions.end())
+	auto i = externalAssets.find(u);
+	if (i == externalAssets.end())
 	{
 		return std::string();
 	}
-	return i->second;
+	return i->second.extension;
+}
+
+avs::AxesStandard GeometryStore::GetExternalAssetAxesStandard(avs::uid u) const
+{
+	std::lock_guard<std::mutex> lock(externalAssetsMutex);
+	auto i = externalAssets.find(u);
+	if (i == externalAssets.end())
+	{
+		return avs::AxesStandard::NotInitialized;
+	}
+	return i->second.axesStandard;
+}
+
+bool GeometryStore::IsExternalAsset(avs::uid u) const
+{
+	std::lock_guard<std::mutex> lock(externalAssetsMutex);
+	return externalAssets.find(u) != externalAssets.end();
 }
 
 std::vector<avs::uid> GeometryStore::getMeshTextureDependencies(avs::uid meshId)
@@ -2175,9 +2218,8 @@ std::vector<avs::uid> GeometryStore::getMeshTextureDependencies(avs::uid meshId)
 	{
 		return {};
 	}
-	std::string extension = GetExternalAssetExtension(meshId);
-	std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-	if (extension != ".glb" && extension != ".vrm" && extension != ".gltf")
+	const std::string extension = GetExternalAssetExtension(meshId);
+	if (!IsGltfExtension(extension))
 	{
 		// Not an asset with a document of its own to declare dependencies: an extracted mesh
 		// carries its materials and textures as resources already.

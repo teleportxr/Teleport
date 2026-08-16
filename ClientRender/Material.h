@@ -16,8 +16,18 @@ namespace teleport
 		public:
 			struct MaterialParameter
 			{
+				//! The texture's id in the cache this material belongs to, or zero where the material
+				//! does not own the texture. A texture whose identity is a url - an image a .glb
+				//! references as a separate file - is held by the session's cache and referred to
+				//! here only by `texture`, so this stays zero for it. Do not test it to ask whether
+				//! there is a texture; ask `hasTexture`.
 				avs::uid texture_uid = 0;
 				std::shared_ptr<Texture> texture;		 // Texture Reference.
+				//! Whether the material declares a texture in this slot at all. Distinct from
+				//! `texture`, which is a dummy (white/flat-normal/default-combined) when it does not,
+				//! and distinct from `texture_uid`, which is zero for a texture owned by another
+				//! cache. This is what selects the shader variant.
+				bool hasTexture = false;
 				vec2 texCoordsScale = {1, 1};			 // Scales the texture co-ordinates for lookup.
 				vec4 textureOutputScalar = {1, 1, 1, 1}; // Scales the output of the texture per channel.
 				int texCoordIndex = 0;					 // Selects which texture co-ordinates to use in sampling.

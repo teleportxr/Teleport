@@ -162,9 +162,14 @@ namespace teleport
 			{
 				return menu_pos;
 			}
+			//! Inspect resource `u` of cache `c`. The cache is part of the selection because a uid means
+			//! nothing without one - a texture a sub-scene's material samples may belong to the
+			//! session's cache - so this switches the inspected cache as well as the resource.
 			void Select(avs::uid c, avs::uid u);
 			void SelectPrevious();
 			void SelectNext();
+			//! Put the inspected cache back to the one the current history entry was selected in.
+			void RestoreSelectedCache();
 			// Replaces Windows GetCursorPos if necessary.
 			static int	 GetCursorPos(long p[2]);
 			std::string &GetProfilingText()

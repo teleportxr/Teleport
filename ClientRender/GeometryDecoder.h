@@ -30,7 +30,7 @@ namespace teleport
 		//! Expand a url as it arrived in a pointer payload into the absolute url it will actually
 		//! be fetched from - the same expansion decodeFromWeb performs, with the cache's default
 		//! url root. Resource urls are compared as absolute urls, because that is the identity of
-		//! a resource: see GeometryCache::RegisterTextureUrl.
+		//! a resource: see GeometryCache::RequestTextureFromUrl.
 		std::string AbsoluteResourceUrl(avs::uid cache_uid, const std::string &url);
 		enum class GeometryFileFormat
 		{

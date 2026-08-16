@@ -125,6 +125,12 @@ namespace teleport
 			{
 				std::string name;
 				avs::uid uid;						//session uid of the texture.
+				//! The cache that holds this texture, and against which `uid` is meaningful. A
+				//! texture whose identity is a url - an image a .glb references as a separate file -
+				//! is held by the session's cache while the materials that sample it live in the
+				//! sub-scene caches of the assets that referenced it, so a uid alone cannot find it.
+				//! Anything that navigates to a texture from a material must switch to this cache.
+				avs::uid cache_uid = 0;
 
 				uint32_t width = 0;
 				uint32_t height = 0;
@@ -153,6 +159,7 @@ namespace teleport
 				{
 					name	=t.name;
 					uid		=t.uid;
+					cache_uid		= t.cache_uid;
 
 					width			= t.width			;
 					height			= t.height			;

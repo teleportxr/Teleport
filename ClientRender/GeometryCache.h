@@ -44,6 +44,17 @@ namespace teleport
 		};
 		typedef unsigned long long geometry_cache_uid;
 
+		//! Which of a material's four texture slots is being filled. Needed where a texture is
+		//! identified by its url rather than by a uid, because the uid is what the slot is otherwise
+		//! matched on when the texture arrives.
+		enum class MaterialSlot
+		{
+			Diffuse,
+			Normal,
+			Combined,
+			Emissive
+		};
+
 		struct IncompleteMaterial : IncompleteResource
 		{
 			IncompleteMaterial(avs::uid id, const std::string &path,avs::GeometryPayloadType type)
@@ -53,6 +64,17 @@ namespace teleport
 
 			clientrender::Material::MaterialCreateInfo materialInfo;
 			std::set<avs::uid> missingTextureUids; //<ID of the texture, slot the texture should be placed into>.
+			//! Textures this material awaits by url rather than by uid: an image the asset it came
+			//! from references as a separate file, held by the session's cache rather than by this
+			//! material's own. One entry per distinct url, listing every slot that named it - an ORM
+			//! map fills the combined slot from both the occlusion and the metallic-roughness
+			//! accessor, and must still be awaited, and released, exactly once.
+			std::map<std::string, std::vector<MaterialSlot>> missingTextureUrls;
+			//! True once nothing is outstanding by either uid or url.
+			bool HasAllTextures() const
+			{
+				return missingTextureUids.empty() && missingTextureUrls.empty();
+			}
 		};
 		struct UntranscodedTexture
 		{
@@ -99,7 +121,9 @@ namespace teleport
 			{
 				return renderPlatform;
 			}
-			static const std::vector<avs::uid> &GetCacheUids();
+			//! By value, not by reference: the cache list is shared between the decode, transcode and
+			//! render threads, so a caller must be given a snapshot rather than the live vector.
+			static std::vector<avs::uid> GetCacheUids();
 			static void CreateGeometryCache(avs::uid cache_uid, avs::uid parent_cache_uid, const std::string &name);
 			static void DestroyGeometryCache(avs::uid cache_uid);
 			static void DestroyAllCaches();
@@ -236,11 +260,6 @@ namespace teleport
 			void CompleteMesh(avs::uid id, const clientrender::Mesh::MeshCreateInfo &meshInfo);
 			void CompleteSkeleton(avs::uid id, std::shared_ptr<IncompleteSkeleton> completeSkeleton);
 			void CompleteTexture(avs::uid id, const clientrender::Texture::TextureCreateInfo &textureInfo);
-			//! Register a texture in this cache under an id, and complete everything waiting on it.
-			//! CompleteTexture creates the texture and calls this; the url registry below calls it
-			//! with a texture another cache already holds, so a glb that names a file the server
-			//! has already delivered shares that one texture rather than decoding a second copy.
-			void AdoptTexture(avs::uid id, std::shared_ptr<clientrender::Texture> texture);
 			void CompleteNode(avs::uid id, std::shared_ptr<clientrender::Node> node);
 			void CompleteAnimation(avs::uid id, std::shared_ptr<clientrender::Animation> animation);
 			void CompleteMaterial(avs::uid id, const clientrender::Material::MaterialCreateInfo &materialInfo);
@@ -251,9 +270,12 @@ namespace teleport
 			//	colourFactor : Vector factor to multiply texture with to adjust strength.
 			//	dummyTexture : Texture to use if there is no texture ID assigned.
 			//	incompleteMaterial : IncompleteMaterial we are attempting to add the texture to.
+			//	slot : which of the material's four slots materialParameter is, needed where the
+			//		texture is identified by url and so cannot be matched to a slot by uid later.
 			//	materialParameter : Parameter we are modifying.
 			void AddTextureToMaterial(const avs::TextureAccessor &accessor, const vec4 &colourFactor, const std::shared_ptr<clientrender::Texture> &dummyTexture,
-									  std::shared_ptr<IncompleteMaterial> incompleteMaterial, clientrender::Material::MaterialParameter &materialParameter);
+									  std::shared_ptr<IncompleteMaterial> incompleteMaterial, MaterialSlot slot,
+									  clientrender::Material::MaterialParameter &materialParameter);
 
 			void SetLifetimeFactor(float f)
 			{
@@ -262,29 +284,65 @@ namespace teleport
 			const std::string &GetDefaultURLRoot() const { return defaultURLRoot; }
 			void SetDefaultURLRoot(const std::string &r) { defaultURLRoot=r; }
 
-			//! Note that this texture id's bytes come from this url. Called when a TexturePointer
-			//! names a texture, and when an external image uri is resolved out of a glb.
+			//! A texture resource whose identity is the url its bytes come from.
 			//!
-			//! The url is the identity of a texture resource. A .glb/.vrm may reference its
-			//! textures as external files rather than embedding them, and the server streams
-			//! those same files as TexturePointers because the mesh depends on them - so the
-			//! image uri inside the asset and the pointer the server sent name one texture, and
-			//! the client must not fetch, decode and upload it twice.
-			void RegisterTextureUrl(const std::string &url, avs::uid texture_uid);
-			//! The texture resource delivered from this url, or 0 if none is known. The registry is
-			//! kept on the root cache and so covers the whole tree: a sub-scene (a glb arrived at as
-			//! a MeshPointer is a geometry cache of its own) resolves against what its server sent
-			//! *and* against what its sibling sub-scenes have already fetched.
-			//! outCacheUid, if given, receives the uid of the cache that owns the texture.
-			avs::uid FindTextureByUrl(const std::string &url, avs::uid *outCacheUid = nullptr) const;
-			//! Share the texture delivered from `url` into another cache under `texture_uid`.
-			//! Happens at once if the texture has already arrived, and when it arrives otherwise.
-			//! Returns false if the url is not known anywhere in the tree, which is the caller's
-			//! signal to fetch it.
-			bool ShareTextureFromUrl(const std::string &url, avs::uid cache_uid, avs::uid texture_uid);
+			//! A .glb/.vrm may reference its textures as external files rather than embedding them,
+			//! and the server streams those same files as TexturePointers because the mesh depends
+			//! on them - so the image uri inside the asset and the pointer the server sent name one
+			//! resource. Such a texture is held by **one** cache, the session's root, and every
+			//! material that samples it - in whichever sub-scene it lives - refers to it by this
+			//! shared pointer. It is never entered into a sub-scene's own texture manager, because a
+			//! uid means nothing without the cache to read it against, and a sub-scene outlives
+			//! neither the session nor its siblings.
+			struct UrlTexture
+			{
+				std::shared_ptr<clientrender::Texture> texture; //!< null while the bytes are in flight
+				avs::uid uid = 0;								//!< its id in the root cache, for inspection
+			};
+			//! Obtain the texture delivered from `url`, fetching it if nothing has yet.
+			//!
+			//! Returns it at once if it has already arrived. Otherwise the fetch is issued exactly
+			//! once per url - however many assets name it, and whether the url came from a
+			//! TexturePointer or out of a glb - and the returned texture is null, meaning "wait".
+			//! `decoder` and `target` are what issues that fetch, and may be null for a caller that
+			//! only wants to know whether the url is already known.
+			//!
+			//! `preferred_uid` is the id the texture must answer to, which a TexturePointer supplies
+			//! because the server's own materials and commands refer to the texture by it. A url
+			//! reached first from inside an asset has no such id and is given one. Where both happen,
+			//! and in either order, the texture ends up answering to both ids in the root cache - one
+			//! texture under two names, rather than two textures.
+			//!
+			//! Call on any cache in the tree: the registry is the root's, and this redirects there.
+			UrlTexture RequestTextureFromUrl(const std::string &url, class GeometryDecoder *decoder, class ResourceCreator *target, avs::uid preferred_uid = 0,
+											 platform::crossplatform::AxesStandard sourceAxesStandard = platform::crossplatform::AxesStandard::NotInitialized);
+			//! Bind the texture from `url` into `slot` of `material`, which belongs to this cache -
+			//! now if it has arrived, and when it arrives otherwise. Returns it, or null to mean the
+			//! material must wait.
+			//!
+			//! The check and the registration are one atomic step, so a texture arriving at this
+			//! instant is neither missed nor notified twice. Which slots named the url is recorded on
+			//! the material, so a url two slots name - an ORM map is both occlusion and
+			//! metallic-roughness - is awaited once and released once.
+			std::shared_ptr<clientrender::Texture> BindTextureUrlToMaterial(const std::string &url, std::shared_ptr<IncompleteMaterial> material, MaterialSlot slot);
+			//! Give up every claim this cache has on a url still in flight. Called when the cache is
+			//! destroyed: its materials can never be completed now, and a waiter naming a cache that
+			//! no longer exists would keep the entry alive for nothing.
+			void AbandonTextureUrlWaiters();
+			//! Release everything waiting on `url` because its fetch failed, so those materials
+			//! complete with their dummy textures rather than stalling for the session's lifetime.
+			//! The url is left unclaimed, so a later reference to it tries the fetch again.
+			void FailTextureUrl(const std::string &url);
 			//! The topmost cache in this cache's parent chain; its own uid if it has no parent.
 			//! Textures are shared tree-wide, so the registry lives there and nowhere else.
 			avs::uid GetRootCacheUid() const;
+			//! The url an image inside a decoded asset refers to, recorded by
+			//! CreateFromDecodedGeometry before the asset's materials are created. Keyed by the
+			//! placeholder id the decoder wrote into the material's TextureAccessor - a decode-time
+			//! label, never a resource in this cache. Empty for an asset that embeds its images.
+			void SetExternalTextureUrls(const std::map<avs::uid, std::string> &urls);
+			//! The url recorded for a placeholder id, or empty if it is an ordinary texture uid.
+			std::string GetExternalTextureUrl(avs::uid placeholder_id) const;
 			const std::string &GetURL(avs::uid u) const
 			{
 				auto f=resourceURLs.find(u);
@@ -308,18 +366,30 @@ namespace teleport
 			phmap::flat_hash_map<avs::uid, std::string> resourceURLs;
 			std::string defaultURLRoot;
 
-			//! A texture resource identified by the url its bytes come from; see RegisterTextureUrl.
+			//! A material, in some cache of this tree, waiting for a url's bytes. The material is held
+			//! by shared pointer because it is not reachable by uid: an incomplete material lives only
+			//! in the missing-resource lists of the textures it lacks.
+			struct TextureUrlWaiter
+			{
+				avs::uid cache_uid = 0; //!< the cache holding the material, which may be any sub-scene
+				std::shared_ptr<IncompleteMaterial> material;
+			};
+			//! A texture resource identified by the url its bytes come from; see RequestTextureFromUrl.
 			struct TextureUrlEntry
 			{
-				avs::uid cache_uid = 0;	  //!< the cache that owns the texture
-				avs::uid texture_uid = 0; //!< its id in that cache
-				//! (cache uid, texture uid) pairs waiting to be given this texture once it arrives.
-				//! Populated when a glb names a url whose bytes are still in flight.
-				std::vector<std::pair<avs::uid, avs::uid>> waiting;
+				avs::uid texture_uid = 0; //!< its id in the root cache, which is the only cache that holds it
+				bool fetchIssued = false; //!< so several assets naming one url produce one fetch
+				//! Further ids the same texture must answer to in the root cache, because the server
+				//! named this file after an asset had already reached it and its own resources refer
+				//! to it by a uid of its choosing. One texture, several names - never several textures.
+				std::vector<avs::uid> aliasUids;
+				//! Materials waiting to be given this texture once it arrives. Populated when an asset
+				//! names a url whose bytes are still in flight.
+				std::vector<TextureUrlWaiter> waiting;
 			};
 			mutable std::mutex textureUrlsMutex;
-			//! Populated only on the root cache - RegisterTextureUrl and FindTextureByUrl both
-			//! redirect there - so that sibling sub-scenes of one server share their textures.
+			//! Populated only on the root cache - every registry entry point redirects there - so that
+			//! sibling sub-scenes of one server share their textures.
 			std::map<std::string, TextureUrlEntry> texturesByUrl;
 			//! Where a texture filename was first seen. Purely diagnostic: one file served from
 			//! several urls is fetched once per url, and this makes that countable.
@@ -329,7 +399,26 @@ namespace teleport
 				bool warned = false; //!< warned once per filename, however many urls it turns up at
 			};
 			std::map<std::string, TextureFilenameEntry> textureFilenames;
-			std::map<avs::uid, std::string> textureUrlsByUid; //!< the reverse of texturesByUrl, per owning cache
+			//! The reverse of texturesByUrl, on the root cache only: which url a texture it holds came
+			//! from, so CompleteTexture can find the waiters that arrival satisfies.
+			std::map<avs::uid, std::string> textureUrlsByUid;
+			//! Placeholder id -> url for the images of an asset decoded into this cache; see
+			//! SetExternalTextureUrls. Written once, before the asset's materials are created.
+			std::map<avs::uid, std::string> externalTextureUrls;
+
+			//! Diagnostic: note which url a texture filename was first fetched from, and warn once if
+			//! the same filename turns up at a second url. Called with textureUrlsMutex held.
+			void NoteTextureFilename(const std::string &url);
+			//! The uid-keyed half of CompleteTexture: everything in this cache that awaited this id.
+			void CompleteResourcesWaitingForTexture(avs::uid id, std::shared_ptr<clientrender::Texture> texture, const std::string &textureName);
+			//! The url-keyed half: materials anywhere in the tree that named the url this texture's
+			//! bytes came from. Does nothing unless this is the root and the id came from a url.
+			void PublishTextureToUrlWaiters(avs::uid id, std::shared_ptr<clientrender::Texture> texture);
+			//! Give `texture` to every slot of `material` that named `url`, and complete the material
+			//! if that was the last thing it lacked. Called on the cache holding the material. A null
+			//! texture means the fetch failed: the slots keep the dummies they were given, and the
+			//! material is completed anyway rather than stalling for the session's lifetime.
+			void GiveTextureToMaterial(std::shared_ptr<IncompleteMaterial> material, const std::string &url, std::shared_ptr<clientrender::Texture> texture);
 		};
 	}
 

@@ -298,7 +298,19 @@ avs::Result GeometryDecoder::receiveFromWeb(avs::uid							  server_uid,
 	{
 		return decodeFromBuffer(server_uid, buffer, bufferSize, uri, type, target, resource_uid, sourceAxesStandard);
 	}
-	return avs::Result::OK;
+	// An empty body is a failed fetch - a 404, a dead host, a refused connection. Nothing will ever
+	// decode, so anything waiting on this resource has to be told, or it waits for the session's
+	// lifetime: a material short one texture is never completed, and so never rendered at all.
+	TELEPORT_WARN_NOSPAM("Fetch of {0} returned nothing; the resource will be missing.", uri);
+	if (type == avs::GeometryPayloadType::Texture)
+	{
+		std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(server_uid);
+		if (geometryCache)
+		{
+			geometryCache->FailTextureUrl(uri);
+		}
+	}
+	return avs::Result::Failed;
 }
 
 avs::Result GeometryDecoder::decodeFromBuffer(avs::uid								server_uid,
@@ -744,6 +756,18 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 			avsTexture.compressedData = std::move(data);
 			target->CreateTexture(subscene_cache_uid, texture_uid, avsTexture);
 		}
+		else
+		{
+			// No image bytes and no recognised mime type, so nothing is created and the material
+			// that named this texture waits for a resource that will never arrive. It means the
+			// asset references the image as a separate file, which this path cannot resolve - the
+			// url of the asset is not carried into draco's texture library. draco declines such
+			// assets outright, so the tinygltf fallback normally handles them (see DecodeGltf) and
+			// this is the case where it did not. Say so rather than rendering untextured in silence.
+			TELEPORT_WARN_NOSPAM("Texture \"{0}\" of {1} has no image data ({2}); an asset with external "
+								 "images must be decoded by the glTF path, not draco's.",
+								 name, filename_url, mime.empty() ? "no mime type" : mime);
+		}
 	}
 	for (int m = 0; m < dracoScene.NumMeshGroups(); m++)
 	{
@@ -971,6 +995,17 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 	// Accessors may be shared between primitives (and between meshes); the in-place axis conversion below
 	// must be applied to each accessor exactly once.
 	std::set<avs::uid> convertedAccessors;
+	// Before the materials, because they are what reads it: which of the ids their TextureAccessors
+	// name are not textures of this cache at all, but images the asset references as separate files,
+	// identified by url and held by the session's cache. See GeometryCache::RequestTextureFromUrl.
+	if (!dg.externalTextureUrls.empty())
+	{
+		std::shared_ptr<clientrender::GeometryCache> geometryCache = clientrender::GeometryCache::GetGeometryCache(dg.server_or_cache_uid);
+		if (geometryCache)
+		{
+			geometryCache->SetExternalTextureUrls(dg.externalTextureUrls);
+		}
+	}
 	// Create the materials:
 	for (auto m : dg.internalMaterials)
 	{
@@ -1474,13 +1509,16 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={}, axesStandard={})",
 		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url, static_cast<int>(sourceAxesStandard));
 
-	// The url is the identity of a texture resource: a .glb streamed to us may reference this
-	// very file as one of its images, and must then share this texture rather than fetching,
-	// decoding and uploading its own copy. See GeometryCache::RegisterTextureUrl.
-	geometryCache->RegisterTextureUrl(AbsoluteResourceUrl(geometryDecodeData.server_or_cache_uid, url), texture_uid);
+	// The url is the identity of a texture resource: a .glb streamed to us may reference this very
+	// file as one of its images, and must then share this texture rather than fetching, decoding and
+	// uploading its own copy. Going through the registry rather than fetching directly is what makes
+	// that true in both orders - whether the pointer or the asset reaches the file first, exactly one
+	// fetch is issued. texture_uid is passed as the preferred id because the server's own materials
+	// and commands refer to the texture by it. See GeometryCache::RequestTextureFromUrl.
+	geometryCache->RequestTextureFromUrl(
+		AbsoluteResourceUrl(geometryDecodeData.server_or_cache_uid, url), this, geometryDecodeData.target, texture_uid, sourceAxesStandard);
 
-	return decodeFromWeb(
-		geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid, sourceAxesStandard);
+	return avs::Result::OK;
 }
 
 avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecodeData)

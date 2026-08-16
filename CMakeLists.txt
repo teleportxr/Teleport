@@ -251,7 +251,7 @@ FetchContent_Declare(
   ktx
   GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
 	GIT_SHALLOW 1
-  GIT_TAG        v4.4.2
+  GIT_TAG        v5.0.0-rc1
   SOURCE_DIR ktx
 )
 FetchContent_MakeAvailable(ktx)

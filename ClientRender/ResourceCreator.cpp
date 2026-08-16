@@ -17,7 +17,7 @@
 #include <format>
 #include <fstream>
 #include <ktx.h>
-#include <ktx/lib/gl_format.h>
+#include <gl_format.h>
 #include <ktxint.h>
 #include <magic_enum/magic_enum.hpp>
 #include <texture2.h>
@@ -77,20 +77,22 @@ void ResourceCreator::Initialize(platform::crossplatform::RenderPlatform *r, cli
 	m_DummyCombined								 = std::make_shared<clientrender::Texture>(renderPlatform);
 	m_DummyBlack								 = std::make_shared<clientrender::Texture>(renderPlatform);
 	m_DummyGreen								 = std::make_shared<clientrender::Texture>(renderPlatform);
-	clientrender::Texture::TextureCreateInfo tci = {"Dummy Texture",
-													0,
-													static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.x),
-													static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.y),
-													static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.z),
-													1,
-													1,
-													// clientrender::Texture::Slot::UNKNOWN,
-													clientrender::Texture::Type::TEXTURE_2D,
-													clientrender::Texture::Format::RGBA8,
-													clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
-													nullptr,
-													clientrender::Texture::CompressionFormat::UNCOMPRESSED,
-													false};
+	// Designated rather than positional: this was a bare list of values whose meaning depended on
+	// the order of TextureCreateInfo's members, so adding a member silently shifted every field
+	// after it by one and the compiler only noticed where the types happened to disagree.
+	clientrender::Texture::TextureCreateInfo tci = {.name		 = "Dummy Texture",
+													.uid		 = 0,
+													.width		 = static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.x),
+													.height		 = static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.y),
+													.depth		 = static_cast<uint32_t>(clientrender::Texture::DUMMY_DIMENSIONS.z),
+													.arrayCount	 = 1,
+													.mipCount	 = 1,
+													.type		 = clientrender::Texture::Type::TEXTURE_2D,
+													.format		 = clientrender::Texture::Format::RGBA8,
+													.sampleCount = clientrender::Texture::SampleCountBit::SAMPLE_COUNT_1_BIT,
+													.images		 = nullptr,
+													.compression = clientrender::Texture::CompressionFormat::UNCOMPRESSED,
+													.valueScale	 = 0.0f};
 
 	tci.images									 = std::make_shared<std::vector<std::vector<uint8_t>>>(1);
 	tci.name									 = "whiteBGRA";
@@ -695,6 +697,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 										*((vec4 *)&material.pbrMetallicRoughness.baseColorFactor),
 										m_DummyWhite,
 										incompleteMaterial,
+										clientrender::MaterialSlot::Diffuse,
 										incompleteMaterial->materialInfo.diffuse);
 
 	// Normal
@@ -702,6 +705,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 										vec4{material.normalTexture.scale, material.normalTexture.scale, 1.0f, 1.0f},
 										m_DummyNormal,
 										incompleteMaterial,
+										clientrender::MaterialSlot::Normal,
 										incompleteMaterial->materialInfo.normal);
 
 	// Combined
@@ -711,6 +715,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 											vec4{0, 0, material.occlusionTexture.strength, 1.0f},
 											m_DummyCombined,
 											incompleteMaterial,
+											clientrender::MaterialSlot::Combined,
 											incompleteMaterial->materialInfo.combined);
 	}
 	else
@@ -726,6 +731,7 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 											 material.pbrMetallicRoughness.roughnessOffset},
 										m_DummyCombined,
 										incompleteMaterial,
+										clientrender::MaterialSlot::Combined,
 										incompleteMaterial->materialInfo.combined);
 
 	// Emissive
@@ -733,12 +739,15 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 										vec4(material.emissiveFactor.x, material.emissiveFactor.y, material.emissiveFactor.z, 1.0f),
 										m_DummyWhite,
 										incompleteMaterial,
+										clientrender::MaterialSlot::Emissive,
 										incompleteMaterial->materialInfo.emissive);
 	// Add it to the manager, even if incomplete.
 	std::shared_ptr<clientrender::Material> scrMaterial = std::make_shared<clientrender::Material>(incompleteMaterial->materialInfo);
 	geometryCache->mMaterialManager.Add(id, scrMaterial);
 	scrMaterial->id = id;
-	if (incompleteMaterial->missingTextureUids.size() == 0)
+	// A texture this material lacks is named either by uid, when this cache owns it, or by url, when
+	// it is an image the asset referenced as a separate file and the session's cache owns it.
+	if (incompleteMaterial->HasAllTextures())
 	{
 		std::lock_guard g(geometryCache->missingResourcesMutex);
 		geometryCache->CompleteMaterial(id, incompleteMaterial->materialInfo);
@@ -749,6 +758,10 @@ void ResourceCreator::CreateMaterial(avs::uid server_uid, avs::uid id, const avs
 		for (auto t_uid : incompleteMaterial->missingTextureUids)
 		{
 			texlist += std::format("{0},", t_uid);
+		}
+		for (const auto &t_url : incompleteMaterial->missingTextureUrls)
+		{
+			texlist += t_url.first + ",";
 		}
 		TELEPORT_INTERNAL_COUT(Resource, "CreateMaterial {0} ({1}) as incomplete: missing textures: {2} awaiting {3} resources.",
 							   id,
@@ -1245,6 +1258,7 @@ static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 	case VK_FORMAT_BC5_SNORM_BLOCK:
 		return clientrender::Texture::Format::RGBA8; // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits per pixel.
 	case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+	case VK_FORMAT_BC6H_SFLOAT_BLOCK:
 		return clientrender::Texture::Format::RGBA16F; //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,
 													   //       //  VK_FORMAT_BC7_UNORM_BLOCK
 	case VK_FORMAT_R32G32B32A32_SFLOAT:
@@ -1278,6 +1292,7 @@ static teleport::clientrender::Texture::CompressionFormat VkFormatToCompressionF
 		return teleport::clientrender::Texture::CompressionFormat::BC5; // compressed texture format for Microsoft DirectX10. Identical to ATI2N_XY. Eight bits
 																		// per pixel.
 	case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+	case VK_FORMAT_BC6H_SFLOAT_BLOCK:
 		return teleport::clientrender::Texture::CompressionFormat::BC6H; //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK CMP_FORMAT_BC7
 																		 //       = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK
 	default:
@@ -1652,12 +1667,17 @@ void ResourceCreator::thread_TranscodeTextures()
 					transcoding->textureCI->format	   = VkFormatToTeleportFormat(vkfmt);
 					if (transcoding->textureCI->format == clientrender::Texture::Format::FORMAT_UNKNOWN)
 					{
-						ktx_transcode_fmt_e outputFormat   = KTX_TTF_RGBA32;
+						ktx_transcode_fmt_e outputFormat = KTX_TTF_RGBA32;
+						// UASTC HDR / ASTC HDR 4x4 payloads are transcoded to BC6H for desktop.
+						if (vkfmt == VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK)
+						{
+							outputFormat = KTX_TTF_BC6HU;
+						}
 						ktx_transcode_flags transcodeFlags = KTX_TF_HIGH_QUALITY;
 						result							   = ktxTexture2_TranscodeBasis(ktx2Texture, outputFormat, transcodeFlags);
 						if (result != KTX_SUCCESS)
 						{
-							TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n", transcoding->name);
+							TELEPORT_WARN("Texture {0} failed to transcode ktx2 basis data (error {1}).\n", transcoding->name, (int)result);
 							continue;
 						}
 						vkfmt						   = (VkFormat)(ktx2Texture->vkFormat);
