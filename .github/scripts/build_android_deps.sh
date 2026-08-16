@@ -175,7 +175,7 @@ build_libdatachannel
 #     build does not run that path, so we cross-compile it here and stage the
 #     headers under build_pc_client/ktx/include to match ClientRender_Android.
 # ---------------------------------------------------------------------------
-KTX_VERSION="v4.4.2"
+KTX_VERSION="v5.0.0-rc1"
 KTX_SRC_DIR="$WORK/ktx"
 KTX_BUILD_DIR="$WORK/ktx-build"
 build_ktx()
