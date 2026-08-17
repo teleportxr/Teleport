@@ -29,6 +29,7 @@ namespace avs
 		WebRtcNetworkSink();
 		virtual ~WebRtcNetworkSink();
 		virtual StreamingConnectionState getConnectionState() const override;
+		void SetStreamingConnectionState(StreamingConnectionState s);
 
 		/*!
 		 * Configure network node and bind to local UDP endpoint.
@@ -104,6 +105,7 @@ namespace avs
 		NetworkSinkCounters m_counters;
 		mutable std::mutex m_countersMutex;
 		bool enabled = true;
+		StreamingConnectionState webRtcState = StreamingConnectionState::NEW_UNCONNECTED;
 
 		// map from the stream indices to the channels.
 		void receiveAnswer(const std::string& answer);
