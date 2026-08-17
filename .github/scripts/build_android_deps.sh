@@ -199,11 +199,23 @@ build_ktx()
 		-DKTX_FEATURE_GL_UPLOAD=OFF
 	cmake --build "$KTX_BUILD_DIR" -j"$NPROC"
 
-	cp -v "$KTX_BUILD_DIR/libktx.a" "$EXT/libktx.a"
+	find "$KTX_BUILD_DIR" -name 'libktx.a' -exec cp -v {} "$EXT/libktx.a" \;
 
-	mkdir -p "$STAGE/build_pc_client/ktx"
-	cp -a "$KTX_SRC_DIR/include" "$STAGE/build_pc_client/ktx/"
-	cp -a "$KTX_SRC_DIR/lib"     "$STAGE/build_pc_client/ktx/"
+	mkdir -p "$STAGE/build_pc_client/ktx/include"
+	mkdir -p "$STAGE/build_pc_client/ktx/lib"
+	# KTX v5 moved public headers from include/ to lib/include/ and internal
+	# sources into lib/src/. Stage them into the v4-shaped layout that the
+	# AGDE ClientRender_Android.vcxproj include paths expect.
+	if [ -d "$KTX_SRC_DIR/lib/include" ]; then
+		cp -a "$KTX_SRC_DIR/lib/include/." "$STAGE/build_pc_client/ktx/include/"
+		cp -a "$KTX_SRC_DIR/lib/src/."     "$STAGE/build_pc_client/ktx/lib/"
+		# version.h is generated into the build tree; flatten it into lib/ too.
+		cp -v "$KTX_BUILD_DIR/lib/src/version.h" "$STAGE/build_pc_client/ktx/lib/version.h" 2>/dev/null || true
+	else
+		# KTX v4 layout (kept for compatibility with older pins).
+		cp -a "$KTX_SRC_DIR/include/." "$STAGE/build_pc_client/ktx/include/"
+		cp -a "$KTX_SRC_DIR/lib/."     "$STAGE/build_pc_client/ktx/lib/"
+	fi
 }
 
 build_ktx
