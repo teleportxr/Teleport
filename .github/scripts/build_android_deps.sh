@@ -16,7 +16,7 @@
 #   build_android_vs/external_libs/libsrtp2.a
 #   build_android_vs/external_libs/libusrsctp.a
 #   build_android_vs/external_libs/libktx.a                            (KTX)
-#   build_pc_client/ktx/include/ktx.h                                  (headers)
+#   build_pc_client/ktx/include/ktx.h  include/KHR/khr_df.h            (headers)
 #   libavstream/thirdparty/curl-7.74.0-android-arm64-v8a/include/curl/*  (headers)
 #   build_android_vs/_deps/magic_enum_src/include/magic_enum/...       (headers)
 #
@@ -175,12 +175,13 @@ build_libdatachannel
 #     build does not run that path, so we cross-compile it here and stage the
 #     headers under build_pc_client/ktx/include to match ClientRender_Android.
 # ---------------------------------------------------------------------------
-KTX_VERSION="v4.4.2"
+KTX_VERSION="v5.0.0-rc1"
 KTX_SRC_DIR="$WORK/ktx"
 KTX_BUILD_DIR="$WORK/ktx-build"
 build_ktx()
 {
-	if [ -f "$EXT/libktx.a" ] && [ -f "$STAGE/build_pc_client/ktx/include/ktx.h" ]; then
+	if [ -f "$EXT/libktx.a" ] && [ -f "$STAGE/build_pc_client/ktx/include/ktx.h" ] \
+		&& [ -f "$STAGE/build_pc_client/ktx/include/KHR/khr_df.h" ]; then
 		echo "-- KTX already built"
 		return 0
 	fi
@@ -199,11 +200,32 @@ build_ktx()
 		-DKTX_FEATURE_GL_UPLOAD=OFF
 	cmake --build "$KTX_BUILD_DIR" -j"$NPROC"
 
-	cp -v "$KTX_BUILD_DIR/libktx.a" "$EXT/libktx.a"
+	find "$KTX_BUILD_DIR" -name 'libktx.a' -exec cp -v {} "$EXT/libktx.a" \;
 
-	mkdir -p "$STAGE/build_pc_client/ktx"
-	cp -a "$KTX_SRC_DIR/include" "$STAGE/build_pc_client/ktx/"
-	cp -a "$KTX_SRC_DIR/lib"     "$STAGE/build_pc_client/ktx/"
+	mkdir -p "$STAGE/build_pc_client/ktx/include"
+	mkdir -p "$STAGE/build_pc_client/ktx/lib"
+	# KTX v5 moved public headers from include/ to lib/include/ and internal
+	# sources into lib/src/. Stage them into the v4-shaped layout that the
+	# AGDE ClientRender_Android.vcxproj include paths expect.
+	if [ -d "$KTX_SRC_DIR/lib/include" ]; then
+		cp -a "$KTX_SRC_DIR/lib/include/." "$STAGE/build_pc_client/ktx/include/"
+		cp -a "$KTX_SRC_DIR/lib/src/."     "$STAGE/build_pc_client/ktx/lib/"
+		# version.h is generated into the build tree; flatten it into lib/ too.
+		cp -v "$KTX_BUILD_DIR/lib/src/version.h" "$STAGE/build_pc_client/ktx/lib/version.h" 2>/dev/null || true
+	else
+		# KTX v4 layout (kept for compatibility with older pins).
+		cp -a "$KTX_SRC_DIR/include/." "$STAGE/build_pc_client/ktx/include/"
+		cp -a "$KTX_SRC_DIR/lib/."     "$STAGE/build_pc_client/ktx/lib/"
+	fi
+	# The public ktx.h includes <KHR/khr_df.h>. In v4 that header sat in include/ and so came
+	# free with the copy above; v5 keeps its only copy in external/dfdutils/KHR, published to
+	# CMake consumers through the ktx target's header FILE_SET BASE_DIRS. The hand-rolled AGDE
+	# projects do not link that target, so stage it beside ktx.h as v4 had it. Idempotent, so
+	# it is harmless on the v4 path.
+	if [ -d "$KTX_SRC_DIR/external/dfdutils/KHR" ]; then
+		mkdir -p "$STAGE/build_pc_client/ktx/include/KHR"
+		cp -a "$KTX_SRC_DIR/external/dfdutils/KHR/." "$STAGE/build_pc_client/ktx/include/KHR/"
+	fi
 }
 
 build_ktx

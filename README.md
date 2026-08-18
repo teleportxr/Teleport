@@ -192,10 +192,10 @@ runs twice:
     cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack
     cd build_macos && TELEPORT_COMMIT=$(git rev-parse --short HEAD) cpack -G DragNDrop \
       -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/ \
-      -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller -D CPACK_RESOURCE_FILE_LICENSE=
+      -D CPACK_PACKAGE_NAME=TeleportMacClientInstaller -D CPACK_RESOURCE_FILE_LICENSE=
 
 The first produces `teleportxr-<commit>-arm64.pkg` (installs `teleportd` and `teleport_cli` to
-`/opt/teleportxr`). The second produces `TeleportPCClientInstaller-<commit>-arm64.dmg` - open
+`/opt/teleportxr`). The second produces `TeleportMacClientInstaller-<commit>-arm64.dmg` - open
 it and drag `TeleportPCClient.app` onto the `Applications` symlink, the usual macOS install
 pattern. The `.dmg` bundles every non-system library `TeleportPCClient` needs (including
 Homebrew's Vulkan loader, MoltenVK and OpenSSL), so the installed app runs without Homebrew or
@@ -205,7 +205,7 @@ CI signs and notarises both packages; see `docs/macos_signing_secrets.md` for th
 that requires. Locally built packages are unsigned, so Gatekeeper will refuse them until you
 clear the quarantine attribute:
 
-    xattr -d com.apple.quarantine teleportxr-*.pkg TeleportPCClientInstaller-*.dmg
+    xattr -d com.apple.quarantine teleportxr-*.pkg TeleportMacClientInstaller-*.dmg
 
 ## Building Unity plugin
 

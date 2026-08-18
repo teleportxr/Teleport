@@ -935,6 +935,9 @@ void InstanceRenderer::UpdateNodeRenders()
 #endif
 	passRenders.clear();
 	subSceneStatesMap.clear();
+	// Keyed on the instances that subSceneStatesMap just dropped, so it would otherwise keep buffers
+	// alive for mounts that no longer exist. ~SkeletonRender invalidates the device objects.
+	skeletonRenders.clear();
 #if 0
 	auto &subSceneNodeStates = subSceneStatesMap[0];
 	for (auto c : cacheNodes)
@@ -959,7 +962,11 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 	auto &materials				 = node->GetMaterials();
 	bool  rezzing				 = false;
 	bool  instanced				 = false;
-	if (node->IsStatic())
+	// A skinned node is excluded even when it is static: an instanced draw shares one bone-matrix
+	// constant buffer across the whole batch, so its instances cannot hold different poses -
+	// RenderInstancedMeshes binds no bone buffer at all, and the draw would use whatever the previous
+	// one left bound.
+	if (node->IsStatic() && node->GetJointIndices().empty())
 	{
 		instanced = true;
 	}
@@ -1059,9 +1066,9 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			auto		layoutHash = platform::crossplatform::GetLayoutHash(meshLayoutDesc);
 			//  To render with normal maps, we must have normal and tangent vertex attributes, and we must have a normal map!
 			bool normal_map		   = meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::NORMAL) &&
-							  meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && (matInfo.normal.texture_uid != 0);
-			bool		emissive		  = (matInfo.emissive.texture_uid != 0 || length(matInfo.emissive.textureOutputScalar.xyz) > 0);
-			bool		combined_map	  = matInfo.combined.texture_uid != 0;
+							  meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && matInfo.normal.hasTexture;
+			bool		emissive		  = (matInfo.emissive.hasTexture || length(matInfo.emissive.textureOutputScalar.xyz) > 0);
+			bool		combined_map	  = matInfo.combined.hasTexture;
 			std::string base_pixel_shader = transparent ? "ps_transparent" : "ps_solid";
 			std::string vertex_shader	  = "vs_variants";
 			if (renderState.multiview)
@@ -1211,6 +1218,7 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			nodeState.elementStates[element].materialRender = materialRender;
 			nodeState.elementStates[element].hash			= node_element_hash;
 			meshRender->cache_uid							= cache_uid;
+			meshRender->root_id								= subSceneNodeStates.root_id;
 			meshRender->gi_texture_id						= node->GetGlobalIlluminationTextureUid();
 			meshRender->mesh								= node->GetMesh();
 			meshRender->node								= node;
@@ -1306,6 +1314,11 @@ void InstanceRenderer::RemoveNodeFromInstanceRender(avs::uid cache_uid, SubScene
 	if (c != canvasRenders.end())
 	{
 		canvasRenders.erase(c);
+	}
+	auto sk = skeletonRenders.find(node_hash);
+	if (sk != skeletonRenders.end())
+	{
+		skeletonRenders.erase(sk);
 	}
 	const std::shared_ptr<clientrender::Mesh> mesh = node->GetMesh();
 	if (mesh)
@@ -1491,16 +1504,16 @@ void InstanceRenderer::UpdateNodeForRendering(crossplatform::GraphicsDeviceConte
 				if (skelNode)
 				{
 					auto			  animationComponent = skelNode->GetComponent<AnimationComponent>();
+					// GetBoneMatrices sizes and fills this, including the all-identity fallback for an
+					// instance that is not animating.
 					std::vector<mat4> boneMatrices;
-					for (int i = 0; i < boneMatrices.size(); i++)
-					{
-						boneMatrices[i] = mat4::identity();
-					}
 					skeleton			   = skelNode->GetSkeleton();
 					auto animationInstance = animationComponent->GetOrCreateAnimationInstance(subSceneNodeStates.root_id);
 					animationInstance->GetBoneMatrices(
 						boneMatrices, node->GetJointIndices(), node->GetInverseBindMatrices(), skeleton->GetSkeletonToAnimMapping());
-					avs::uid sk_id = node->id;
+					// The animation state is already per-instance, keyed on the mounting node. The buffer it
+					// is written to must be too, or two mounts of one sub-scene share a pose.
+					uint64_t sk_id = MakeNodeHash(subSceneNodeStates.root_id, geometrySubCache->GetCacheUid(), node->id);
 					if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 					{
 						skeletonRenders[sk_id] = std::make_shared<SkeletonRender>();
@@ -1592,7 +1605,7 @@ void InstanceRenderer::RenderMesh(crossplatform::GraphicsDeviceContext &deviceCo
 		{
 			return;
 		}
-		avs::uid sk_id = meshRender.node->id;
+		uint64_t sk_id = MakeNodeHash(meshRender.root_id, meshRender.cache_uid, meshRender.node->id);
 		if (skeletonRenders.find(sk_id) == skeletonRenders.end())
 		{
 			return;

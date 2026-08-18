@@ -315,6 +315,9 @@ elseif(TELEPORT_MACOS)
 		install(FILES "${CMAKE_SOURCE_DIR}/Installers/MoltenVK_icd.json"
 			DESTINATION TeleportPCClient.app/Contents/Resources/vulkan/icd.d COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	endif()
+	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
+		DESTINATION TeleportPCClient.app/Contents/share/teleportxr/assets/textures
+		COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	# Re-sign every embedded dylib plus MoltenVK now (fixup_bundle's install_name_tool rewriting
 	# above invalidates any signature the linker applied). The bundle *as a whole* is NOT signed
 	# here - it's signed once at the very end of this file, after every install() rule that adds

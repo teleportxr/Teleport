@@ -34,7 +34,7 @@ namespace teleport
 	{
 		using json = nlohmann::json;
 
-		//! @context values this implementation was written against. A
+		//! context values this implementation was written against. A
 		//! deployment narrows or widens the accepted set through
 		//! avatar-policy.requirements.manifest.accepted.
 		constexpr const char *kManifestContextV03 = "https://universalmanifest.net/ns/v0.3";
@@ -100,12 +100,12 @@ namespace teleport
 		bool ParseManifest(const std::string &text, const std::vector<std::string> &acceptedContexts,
 			json &manifestOut, std::string &reasonOut);
 
-		//! @type / @context may each be a bare string or an array of them.
+		//! type / context may each be a bare string or an array of them.
 		std::vector<std::string> ManifestTypeList(const json &value);
 		bool                     ManifestHasType(const json &value, const std::string &wanted);
 
 		//! Pointer accessors, tolerating both the v0.1 ({name, url}) and v0.3
-		//! ({@type, target}) shapes.
+		//! ({type, target}) shapes.
 		std::string PointerName(const json &pointer);
 		std::string PointerTarget(const json &pointer);
 		bool        PointerMatches(const json &pointer, const std::string &name);

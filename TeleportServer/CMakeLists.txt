@@ -34,6 +34,8 @@ set(src
 	GeometryEncoder.h
 	GeometryStore.cpp
 	GeometryStore.h
+	GltfTextureScan.cpp
+	GltfTextureScan.h
 	GeometryStreamingService.cpp
 	GeometryStreamingService.h
 	NetworkPipeline.cpp
@@ -171,6 +173,10 @@ if(WIN32)
 	target_link_directories(TeleportServer PUBLIC ../thirdparty/openssl/x64/lib PRIVATE ../thirdparty/compressonator/lib/bin/x64)
 endif()
 target_link_libraries(TeleportServer TeleportAudio TeleportCore libavstream efp LibDataChannel::LibDataChannelStatic ktx msdf-atlas-gen msdfgen-core msdfgen-ext )
+# Texture.cpp and CubemapKTX2Transformer.cpp include <vkformat_enum.h>, which KTX generates into its
+# build tree rather than installing, so linking ktx does not bring it. Same two candidate locations
+# as ClientRender uses: v5 moved these headers from lib to lib/src.
+target_include_directories(TeleportServer PRIVATE "${CMAKE_BINARY_DIR}/ktx/lib/src" "${CMAKE_BINARY_DIR}/ktx/lib")
 
 if(WIN32)
 	if(TELEPORT_USE_DYNAMIC_RUNTIME)

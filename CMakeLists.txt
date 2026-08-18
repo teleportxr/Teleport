@@ -251,7 +251,7 @@ FetchContent_Declare(
   ktx
   GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
 	GIT_SHALLOW 1
-  GIT_TAG        v4.4.2
+  GIT_TAG        v5.0.0-rc1
   SOURCE_DIR ktx
 )
 FetchContent_MakeAvailable(ktx)
@@ -270,9 +270,43 @@ function(set_target_runtime targname rt)
 	endif()
 endfunction()
 
-set_target_runtime(ktx ${TELEPORT_RUNTIME})
-set_target_runtime(ktx_read ${TELEPORT_RUNTIME})
-set_target_runtime(astcenc-avx2-static ${TELEPORT_RUNTIME})
+# Apply the project's runtime to every compilable target in a fetched subproject's directory tree.
+# KTX v5 splits what v4 compiled into the ktx target itself into separate libraries
+# (basisu_encoder, dfdutils, astcenc-*). Those are created in directories whose
+# cmake_minimum_required is recent enough that CMP0091 is NEW, so each defaults to /MD, while ktx
+# itself is forced to /MT here - a RuntimeLibrary mismatch as soon as ktx.dll links them. Note that
+# the /MT in CMAKE_CXX_FLAGS_RELEASE is set further down this file, i.e. after the KTX tree has
+# already been added, so it never reaches these targets either. Naming targets one at a time (as we
+# did for ktx, ktx_read and astcenc-avx2-static) misses whatever the next KTX release adds, so
+# apply the runtime to the whole tree instead. Both the MSVC_RUNTIME_LIBRARY property and the
+# compile option are set: the property is the mechanism CMP0091 NEW scopes honour, the flag covers
+# any scope where the policy is still OLD. They agree, so no "overriding /MD with /MT" warning.
+function(RecurseApplyRuntime dir rt)
+	if(NOT TELEPORT_WINDOWS)
+		return()
+	endif()
+	# Default to statically-linked runtime.
+	if("${rt}" STREQUAL "")
+		set(rt "static")
+	endif()
+	if(${rt} STREQUAL "static")
+		set(runtime_lib "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+	else()
+		set(runtime_lib "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+	endif()
+	set(targets)
+	get_all_targets_recursive(targets ${dir})
+	foreach(targ ${targets})
+		# INTERFACE libraries reject non-whitelisted properties, and UTILITY targets have nothing to compile.
+		get_target_property(targ_type ${targ} TYPE)
+		if(targ_type MATCHES "^(STATIC_LIBRARY|SHARED_LIBRARY|MODULE_LIBRARY|OBJECT_LIBRARY|EXECUTABLE)$")
+			set_property(TARGET ${targ} PROPERTY MSVC_RUNTIME_LIBRARY "${runtime_lib}")
+			set_target_runtime(${targ} ${rt})
+		endif()
+	endforeach()
+endfunction()
+
+RecurseApplyRuntime(${CMAKE_BINARY_DIR}/ktx ${TELEPORT_RUNTIME})
 
 function(RecurseApplyFolder dir dest)
 	set(targets)

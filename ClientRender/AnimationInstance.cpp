@@ -67,14 +67,30 @@ void AnimationInstance::SetAnimationState(std::chrono::microseconds timestampUs,
 	{
 	}
 	auto cache		  = GeometryCache::GetGeometryCache(applyAnimation.cacheID);
-	if (cache)
+	// The clip may not have streamed in yet. The state is stored regardless, so that it applies once the
+	// clip arrives; until then st.animation is null, which everything downstream treats as a clip of zero
+	// duration. Say so, though: a state that never resolves is indistinguishable from an avatar that
+	// simply will not animate, which is expensive to diagnose.
+	if (!cache)
+	{
+		TELEPORT_WARN("Animation {}: no geometry cache {}.", applyAnimation.animationID, applyAnimation.cacheID);
+	}
+	else
 	{
 		auto anim = cache->mAnimationManager.Get(applyAnimation.animationID);
-		if (anim)
+		if (!anim)
+		{
+			TELEPORT_WARN("Animation {} is not in cache {} yet.", applyAnimation.animationID, applyAnimation.cacheID);
+		}
+		else
 		{
 			const auto *ozz_animation = anim->GetOzzAnimation(id);
 			if (!ozz_animation || ozz_animation->num_tracks() != skeleton->num_joints())
 			{
+				// Retargeting to this skeleton has not happened or did not fit. Unlike an unresolved
+				// clip this state can never apply, so it is dropped rather than stored.
+				TELEPORT_WARN("Animation {} does not fit skeleton {}: {} tracks against {} joints.", applyAnimation.animationID, id,
+							  ozz_animation ? ozz_animation->num_tracks() : 0, skeleton->num_joints());
 				return;
 			}
 			st.animation = anim;

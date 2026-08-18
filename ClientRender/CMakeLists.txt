@@ -65,6 +65,8 @@ set( src_root
 	ResourceCreator.cpp
 	ResourceCreator.h
 	ResourceManager.h
+	ResourceUrl.cpp
+	ResourceUrl.h
 	Renderer.h
 	Renderer.cpp
 	ShaderResource.cpp
@@ -142,6 +144,11 @@ target_include_directories(ClientRender PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(ClientRender PRIVATE ../libavstream/include)
 #Include stb
 target_include_directories(ClientRender PRIVATE ../firstparty/Platform/External/stb)
+# vkformat_enum.h and its neighbours are generated into KTX's build tree rather than installed, so
+# linking ktx does not bring them. KTX v5 moved them from lib to lib/src; both are listed because a
+# build tree fetched before that move still has the old layout, and a missing include directory is
+# harmless while a wrong one is a build failure.
+target_include_directories(ClientRender PRIVATE "${CMAKE_BINARY_DIR}/ktx/lib/src" "${CMAKE_BINARY_DIR}/ktx/lib")
 #Include imgui
 target_include_directories(ClientRender PRIVATE ${SIMUL_PLATFORM_DIR}/External/imgui)
 #Include draco

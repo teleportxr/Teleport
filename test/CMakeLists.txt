@@ -91,6 +91,28 @@ if(TARGET ozz_animation)
    target_link_libraries(anim PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
    target_include_directories(anim PRIVATE ${CMAKE_SOURCE_DIR})
 endif()
+
+# animation_state pins the behaviour of AnimationLayerStateSequence: the timeline of
+# animation states a layer plays through, and how a query between two of them blends.
+# Like anim it compiles the translation unit directly rather than linking ClientRender,
+# and supplies the two clientrender::Animation members the sequence reads. The extra
+# include paths are for the headers AnimationState.h pulls in transitively: tiny_gltf.h
+# from draco's vendored copy, and ClientRender's own ozz/gltf2ozz.h.
+if(TARGET ozz_animation)
+   add_executable(animation_state
+      test_animation_state.cpp
+      ${CMAKE_SOURCE_DIR}/ClientRender/NodeComponents/AnimationState.cpp)
+   add_test(NAME animation_state COMMAND animation_state)
+   target_link_libraries(animation_state PRIVATE Catch2::Catch2WithMain TeleportCore ozz_animation_offline ozz_animation ozz_base)
+   target_include_directories(animation_state PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/ClientRender
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/firstparty
+      ${CMAKE_SOURCE_DIR}/thirdparty/draco/third_party/tinygltf)
+   target_compile_definitions(animation_state PRIVATE TINYGLTF_NO_STB_IMAGE=1)
+endif()
 # TeleportCore's public Avatars.h header transitively pulls in
 # libavstream/common_exports.h for the avs::uid alias; the include
 # path isn't propagated by the static library, so wire it up here.
@@ -200,6 +222,92 @@ if(TARGET teleportd AND (TELEPORT_UNIX OR TELEPORT_MACOS))
    add_test(NAME control_integration
       COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/control_integration.sh
          $<TARGET_FILE:teleportd> $<TARGET_FILE:teleport_cli>)
+endif()
+
+# gltf_texture_scan is the server half of the same story: finding the external texture uris a
+# .glb/.vrm declares, so they can be streamed with the mesh. It compiles the one translation
+# unit rather than linking TeleportServer, which pulls in CUDA and Compressonator at link time.
+add_executable(gltf_texture_scan
+   test_gltf_texture_scan.cpp
+   ${CMAKE_SOURCE_DIR}/TeleportServer/GltfTextureScan.cpp)
+add_test(NAME gltf_texture_scan COMMAND gltf_texture_scan)
+target_link_libraries(gltf_texture_scan PRIVATE Catch2::Catch2WithMain TeleportCore)
+target_include_directories(gltf_texture_scan PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/TeleportServer/export_include
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include)
+
+# axes_conversion pins the axes-standard tables in libavstream/common_maths.h, which are
+# header-only, so nothing needs linking beyond the include paths. Mirrors
+# teleport-nodejs/test/test_axes_conversion.js: the two implementations of the same table are
+# the two halves of one wire contract, and had drifted (no EngineeringStyle <-> GlStyle entries
+# on this side at all).
+add_executable(axes_conversion test_axes_conversion.cpp)
+add_test(NAME axes_conversion COMMAND axes_conversion)
+target_link_libraries(axes_conversion PRIVATE Catch2::Catch2WithMain)
+target_include_directories(axes_conversion PRIVATE
+   ${CMAKE_SOURCE_DIR}
+   ${CMAKE_SOURCE_DIR}/libavstream/export_include
+   ${CMAKE_SOURCE_DIR}/firstparty)
+
+# resource_url pins how a client resolves the external texture uris inside a .glb against
+# the url it fetched the asset from. It compiles the one translation unit rather than
+# linking ClientRender, which would drag in Vulkan and the whole render platform for what
+# is pure string handling.
+add_executable(resource_url
+   test_resource_url.cpp
+   ${CMAKE_SOURCE_DIR}/ClientRender/ResourceUrl.cpp)
+add_test(NAME resource_url COMMAND resource_url)
+target_link_libraries(resource_url PRIVATE Catch2::Catch2WithMain)
+target_include_directories(resource_url PRIVATE ${CMAKE_SOURCE_DIR})
+
+# texture_url_registry pins how a texture identified by a url rather than a uid is owned and
+# shared: the session's cache holds it, every asset that names the file refers to that one texture,
+# and a material created before the bytes arrive is given them afterwards. Unlike the tests above it
+# links ClientRender rather than compiling a translation unit, because the registry is part of
+# GeometryCache and inseparable from it. Guarded on the target for the same reason spatial_audio is:
+# a headless build has no ClientRender. No render platform is set up, so the tests stop short of
+# completing a texture - everything here is the bookkeeping around that.
+if(TARGET ClientRender)
+   add_executable(texture_url_registry test_texture_url_registry.cpp)
+   add_test(NAME texture_url_registry COMMAND texture_url_registry)
+   target_link_libraries(texture_url_registry PRIVATE Catch2::Catch2WithMain ClientRender TeleportCore)
+   # ClientRender links the Platform libraries privately, so an executable that pulls in its
+   # renderer symbols has to name them too. Nothing here draws anything - the link is what the test
+   # needs, not a device.
+   if(TELEPORT_CLIENT_USE_VULKAN)
+      target_link_libraries(texture_url_registry PRIVATE PlatformVulkan_MT ${Vulkan_LIBRARIES})
+   endif()
+   if(TELEPORT_CLIENT_USE_D3D12)
+      target_link_libraries(texture_url_registry PRIVATE SimulDirectX12_MT)
+   endif()
+   # The graphics backend and the cross-platform layer refer to each other, so on a linker that
+   # takes archives in order one pass is not enough; naming it again after resolves the cycle.
+   target_link_libraries(texture_url_registry PRIVATE PlatformCrossPlatform_MT PlatformMath_MT Core_MT ImGui_MT PlatformCrossPlatform_MT TeleportClient)
+   # TeleportClient's OpenXR support is the last thing needing a library of its own. Found the same
+   # way pc_client finds it, and named after TeleportClient above: it is a shared library, so it has
+   # to follow every archive that refers to it. A build without OpenXR simply does not get this test.
+   find_package(OpenXR QUIET)
+   if(TARGET OpenXR::openxr_loader)
+      target_link_libraries(texture_url_registry PRIVATE OpenXR::openxr_loader)
+   elseif(TARGET openxr_loader)
+      target_link_libraries(texture_url_registry PRIVATE openxr_loader)
+   else()
+      find_package(PkgConfig QUIET)
+      if(PKG_CONFIG_FOUND)
+         pkg_check_modules(TEST_OPENXR openxr)
+         if(TEST_OPENXR_FOUND)
+            target_link_libraries(texture_url_registry PRIVATE ${TEST_OPENXR_LIBRARIES})
+            target_link_directories(texture_url_registry PRIVATE ${TEST_OPENXR_LIBRARY_DIRS})
+         endif()
+      endif()
+   endif()
+   target_include_directories(texture_url_registry PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/ClientRender
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/firstparty)
 endif()
 
 # Guarded on the target rather than built unconditionally: a headless-only build

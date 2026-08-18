@@ -329,6 +329,27 @@ TELEPORT_EXPORT avs::uid Server_GetOrGenerateUid(const char *path)
 	return GeometryStore::GetInstance().GetOrGenerateUid(str);
 }
 
+/// Register a file served beside the server rather than extracted into its store - a .glb/.vrm mesh,
+/// or a texture that one of them references - and return its unique id (avs::uid).
+///
+/// `pathWithExtension` is the path as it is written and served, e.g. "props/chair.glb". Such an
+/// asset is streamed to clients as a pointer to its url; the client fetches and decodes the file
+/// itself. Where it is a glTF-family file that references its textures as separate files rather than
+/// embedding them, those files are its dependencies and are streamed with it - the server finds them
+/// by reading the asset's own `images` array, so they need no registering of their own.
+///
+/// `axesStandard` may be left as NotInitialized, in which case a glTF-family file is taken to be
+/// Y-up right-handed and anything else to have no frame of its own. See
+/// GeometryStore::registerExternalAsset.
+TELEPORT_EXPORT avs::uid Server_RegisterExternalAsset(const char *pathWithExtension, avs::AxesStandard axesStandard)
+{
+	TELEPORT_PROFILE_AUTOZONE;
+	if (!pathWithExtension)
+		return 0;
+	std::string str = (pathWithExtension);
+	return GeometryStore::GetInstance().registerExternalAsset(str, axesStandard);
+}
+
 /// Get the unique id (avs::uid) corresponding to the given resource path. Returns 0 if none is defined.
 TELEPORT_EXPORT avs::uid Server_PathToUid(const char* path)
 {

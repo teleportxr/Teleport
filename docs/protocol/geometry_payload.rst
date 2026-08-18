@@ -1008,6 +1008,32 @@ An unrecognised extension is rejected. Servers MUST therefore give pointer URLs 
      - variable
      - Absolute URL or relative path; see :doc:`http`.
 
+.. _external_textures:
+
+Assets with external textures
+-----------------------------
+
+A glTF may either embed its images — in a ``bufferView``, or inline as a ``data:`` URI — or reference them as separate files beside it, with a relative ``uri`` in its ``images`` array. Both forms reach clients as a ``MeshPointer``, and the second makes each referenced file a **resource in its own right**:
+
+* The **server** treats those files as dependencies of the mesh. Whenever it streams the mesh to a client it streams them too, as ordinary ``TexturePointer`` chunks, refcounted so a texture two streamed meshes share is held until both let go. The reference servers find them either from an explicit declaration (the Node.js server's ``scene.json`` ``meshes[url].textures`` array) or by reading the asset's own ``images`` array; neither materials nor nodes name them, so nothing else would.
+* The **client** resolves each ``uri`` against the URL it fetched the asset from, per the glTF spec: ``tex.png`` inside ``https://host/props/chair.glb`` is ``https://host/props/tex.png``. A leading ``/`` is relative to the scheme and authority; a ``uri`` with a scheme is used as-is.
+
+The resolved URL is the **identity** of the texture resource. A ``TexturePointer`` naming a URL and an image ``uri`` resolving to the same URL are one resource, and a client that has already been given it MUST reuse it rather than fetch, decode and upload the file a second time. That applies across the whole of a client's cache tree, not only between an asset and its server: two sub-scenes fetched from two different ``MeshPointer`` URLs that name one texture URL share the one texture. A URL the server never announced is fetched by the client itself.
+
+Reuse is required whether or not the file has finished arriving. A server streams a mesh and the textures it depends on in the same pass, so an asset commonly reaches an image ``uri`` while the matching ``TexturePointer`` is still being fetched; a client that only reuses textures it has *finished* decoding fetches most of them twice. Exactly one fetch per URL is the requirement, however many assets name it and in whatever order.
+
+Ownership follows from identity. Because one URL is one resource shared by every asset that names it, such a texture belongs to the **session's** cache — not to the sub-scene of whichever asset reached it first. A sub-scene neither outlives the session nor is visible to its siblings, so a texture held there could be shared with neither; and a uid issued by one cache means nothing in another. A sub-scene's materials therefore *refer* to the texture without holding it, and a uid alone does not identify one of these textures — the cache holding it is part of the answer. The reference client keeps the URL registry on the root cache and records the owning cache on the texture itself, so that a tool navigating from a material to its texture knows where to look.
+
+Where both a ``TexturePointer`` and an asset name one URL, the uid the server chose is authoritative — the server's own materials and commands refer to the texture by it — and the client makes the single texture answer to that uid as well as to any it had already issued for the URL. One texture under several names, never several textures.
+
+A fetch that fails releases whatever is waiting on it rather than stalling: the materials that named the URL complete with their fallback textures and render visibly wrong, instead of never completing and so never rendering at all. The URL is left unclaimed, so a later reference to it may try again.
+
+Because the URL is the identity, a server MUST publish each file at **one** URL. The same bytes offered under two paths — a per-asset directory holding its own copy of a shared texture, say — are two resources to every client, fetched, decoded and held in GPU memory once each. The reference client warns (``is being fetched from a second url``) when it sees one filename at two URLs.
+
+A client fetches only those images a material it will actually draw with samples. An asset split out of a larger collection commonly declares the whole collection's ``images`` array while using a handful of them, and the images no primitive's material references are not resources the client needs.
+
+This applies to server-owned scene assets. A client-supplied avatar is required to be self-contained (see :doc:`signaling`), and an asset offered with external references is refused rather than resolved.
+
 .. _animation_pointer_payload:
 
 AnimationPointer payload
@@ -1055,7 +1081,7 @@ Example body removing two nodes with uids ``0x11`` and ``0x22``::
 Resource lifecycle
 ==================
 
-For every chunk *other* than ``RemoveNodes``, ``TexturePointer``, ``MeshPointer`` and ``MaterialPointer``, the server records the uid as "in flight" and waits for the client to confirm receipt by sending ``ReceivedResourcesMessage`` (id 4) on the reliable client-to-server channel. See :doc:`service/client_to_server`.
+For every chunk *other* than ``RemoveNodes``, ``TexturePointer``, ``MeshPointer`` and ``MaterialPointer``, the server records the uid as "in flight" and waits for the client to confirm receipt by sending ``ReceivedResourcesMessage`` (id 3) on the reliable client-to-server channel. See :doc:`service/client_to_server`.
 
 For pointer chunks, the server treats the resource as delivered as soon as the chunk leaves the encoder; the actual asset is then fetched out-of-band over HTTPS. The client is still expected to send ``ReceivedResourcesMessage`` once the HTTP body has been decoded.
 

@@ -52,20 +52,26 @@ namespace avs
 		std::vector<uid> boneIDs;
 		// std::vector<mat4> inverseBindMatrices;
 
+		//! A copy, deliberately: a Skeleton no longer carries any geometric data. Its bones are
+		//! uids and its name is a string, and none of those have a frame — the inverse bind
+		//! matrices that did are commented out of the struct above.
+		//!
+		//! The signature keeps the two standards so callers (GeometryStore stores one skeleton
+		//! per standard) do not have to care whether this is currently a conversion or a copy,
+		//! and so that restoring inverseBindMatrices needs no changes at the call sites. If you
+		//! restore them, convert each with avs::ConvertTransformMatrix and add a case to
+		//! test/test_axes_conversion.cpp; until then there is nothing here to get wrong.
+		//!
+		//! rootBoneId used to be dropped on the floor here, which silently unparented the
+		//! skeleton of every client whose axes standard differed from the store's.
 		static Skeleton convertToStandard(const Skeleton &skeleton, avs::AxesStandard sourceStandard, avs::AxesStandard targetStandard)
 		{
+			(void)sourceStandard;
+			(void)targetStandard;
 			avs::Skeleton convertedSkeleton;
-			convertedSkeleton.name	  = skeleton.name;
-			convertedSkeleton.boneIDs = skeleton.boneIDs;
-
-			/*	for (size_t i = 0; i < skeleton.inverseBindMatrices.size(); ++i)
-				{
-					convertedSkeleton.inverseBindMatrices.push_back(skeleton.inverseBindMatrices[i]);
-					mat4 &m = convertedSkeleton.inverseBindMatrices[i];
-					Transform tr;
-					m=mat4::inverse(m);
-					avs::ConvertTransformMatrix(sourceStandard, targetStandard, m);
-				}*/
+			convertedSkeleton.name		  = skeleton.name;
+			convertedSkeleton.rootBoneId  = skeleton.rootBoneId;
+			convertedSkeleton.boneIDs	  = skeleton.boneIDs;
 			return convertedSkeleton;
 		}
 	};

@@ -120,6 +120,20 @@ static avs::uid GenerateLocalUid()
 	return r;
 };
 
+std::string teleport::clientrender::AbsoluteResourceUrl(avs::uid cache_uid, const std::string &url)
+{
+	if (url.find("://") != std::string::npos)
+	{
+		return url;
+	}
+	std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(cache_uid);
+	if (!geometryCache)
+	{
+		return url;
+	}
+	return "https://" + geometryCache->GetDefaultURLRoot() + url;
+}
+
 void CreateSubScene(core::DecodedGeometry				 &subSceneDG,
 					clientrender::ResourceCreator		 *target,
 					std::string							  filename_url,
@@ -284,7 +298,19 @@ avs::Result GeometryDecoder::receiveFromWeb(avs::uid							  server_uid,
 	{
 		return decodeFromBuffer(server_uid, buffer, bufferSize, uri, type, target, resource_uid, sourceAxesStandard);
 	}
-	return avs::Result::OK;
+	// An empty body is a failed fetch - a 404, a dead host, a refused connection. Nothing will ever
+	// decode, so anything waiting on this resource has to be told, or it waits for the session's
+	// lifetime: a material short one texture is never completed, and so never rendered at all.
+	TELEPORT_WARN_NOSPAM("Fetch of {0} returned nothing; the resource will be missing.", uri);
+	if (type == avs::GeometryPayloadType::Texture)
+	{
+		std::shared_ptr<GeometryCache> geometryCache = GeometryCache::GetGeometryCache(server_uid);
+		if (geometryCache)
+		{
+			geometryCache->FailTextureUrl(uri);
+		}
+	}
+	return avs::Result::Failed;
 }
 
 avs::Result GeometryDecoder::decodeFromBuffer(avs::uid								server_uid,
@@ -409,6 +435,23 @@ avs::Result GeometryDecoder::decodeInternal(GeometryDecodeData &geometryDecodeDa
 
 #pragma region DracoDecoding
 
+avs::Result GeometryDecoder::DecodeGltfWithTinyGltf(const GeometryDecodeData &geometryDecodeData)
+{
+	core::DecodedGeometry subSceneDG;
+	CreateSubScene(subSceneDG,
+				   geometryDecodeData.target,
+				   geometryDecodeData.filename_or_url,
+				   geometryDecodeData.server_or_cache_uid,
+				   geometryDecodeData.uid,
+				   geometryDecodeData.sourceAxesStandard);
+	// Todo: Sometimes stationary should be true.
+	if (!DecodeScene(geometryDecodeData, subSceneDG, false))
+	{
+		return avs::Result::Failed;
+	}
+	return CreateFromDecodedGeometry(geometryDecodeData.target, subSceneDG, geometryDecodeData.filename_or_url);
+}
+
 avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData &geometryDecodeData)
 {
 	draco::GltfDecoder	 gltfDecoder;
@@ -419,44 +462,36 @@ avs::Result GeometryDecoder::DecodeGltf(const GeometryDecodeData &geometryDecode
 	if (geometryDecodeData.geometryFileFormat == GeometryFileFormat::GLTF_BINARY)
 	{
 		draco::StatusOr<std::unique_ptr<draco::Scene>> s = gltfDecoder.DecodeFromBufferToScene(&dracoDecoderBuffer);
-		if (s.status().code() == draco::Status::UNSUPPORTED_FEATURE)
+		if (s.status().code() != draco::Status::OK)
 		{
-			core::DecodedGeometry subSceneDG;
-			CreateSubScene(subSceneDG,
-						   geometryDecodeData.target,
-						   geometryDecodeData.filename_or_url,
-						   geometryDecodeData.server_or_cache_uid,
-						   geometryDecodeData.uid,
-						   geometryDecodeData.sourceAxesStandard);
-			// Todo: Sometimes stationary should be true.
-			if (!DecodeScene(geometryDecodeData, subSceneDG, false))
-			{
-				return avs::Result::Failed;
-			}
-			return CreateFromDecodedGeometry(geometryDecodeData.target, subSceneDG, geometryDecodeData.filename_or_url);
-			// try
-		}
-		else if (s.status().code() != draco::Status::OK)
-		{
-			TELEPORT_CERR << "Failed to decode " << geometryDecodeData.filename_or_url << ": " << s.status().error_msg_string() << "\n";
-			return avs::Result::Failed;
+			// Whatever draco could not take, tinygltf may still handle: it declares morph targets
+			// and most extensions unsupported, and it refuses outright any asset whose images are
+			// external files, because the tinygltf it loads with cannot find them beside a buffer
+			// (draco's GltfDecoder::CopyTextures: "Error loading image"). Those uris are precisely
+			// what ConvertGltfModelToDecodedGeometry resolves and matches against the textures the
+			// server streamed, so the asset is decodable - just not here.
+			TELEPORT_WARN_NOSPAM("draco could not decode {0} ({1}); falling back to tinygltf.",
+								 geometryDecodeData.filename_or_url, s.status().error_msg_string());
+			return DecodeGltfWithTinyGltf(geometryDecodeData);
 		}
 		scene											= std::move(s).value();
 		draco::StatusOr<std::unique_ptr<draco::Mesh>> m = gltfDecoder.DecodeFromBuffer(&dracoDecoderBuffer);
-		if (m.status().code() != draco::Status::OK)
+		if (m.status().code() == draco::Status::OK)
 		{
-			TELEPORT_CERR << m.status().error_msg_string() << "\n";
-			return avs::Result::Failed;
+			mesh = std::move(m).value();
 		}
-		mesh = std::move(m).value();
+		// A scene that decoded is enough on its own: the whole-file-as-one-mesh decode fails for
+		// any scene draco cannot flatten (mixed triangle and point primitives, say), and the scene
+		// below is what is used whenever there is one.
 	}
 	else if (geometryDecodeData.geometryFileFormat == GeometryFileFormat::GLTF_TEXT)
 	{
 		draco::StatusOr<std::unique_ptr<draco::Scene>> s = gltfDecoder.DecodeFromTextBufferToScene(&dracoDecoderBuffer);
 		if (s.status().code() != draco::Status::OK)
 		{
-			TELEPORT_CERR << s.status().error_msg_string() << "\n";
-			return avs::Result::Failed;
+			TELEPORT_WARN_NOSPAM("draco could not decode {0} ({1}); falling back to tinygltf.",
+								 geometryDecodeData.filename_or_url, s.status().error_msg_string());
+			return DecodeGltfWithTinyGltf(geometryDecodeData);
 		}
 		scene = std::move(s).value();
 	}
@@ -721,6 +756,18 @@ avs::Result GeometryDecoder::DecodeDracoScene(core::DecodedGeometry				   &subSc
 			avsTexture.compressedData = std::move(data);
 			target->CreateTexture(subscene_cache_uid, texture_uid, avsTexture);
 		}
+		else
+		{
+			// No image bytes and no recognised mime type, so nothing is created and the material
+			// that named this texture waits for a resource that will never arrive. It means the
+			// asset references the image as a separate file, which this path cannot resolve - the
+			// url of the asset is not carried into draco's texture library. draco declines such
+			// assets outright, so the tinygltf fallback normally handles them (see DecodeGltf) and
+			// this is the case where it did not. Say so rather than rendering untextured in silence.
+			TELEPORT_WARN_NOSPAM("Texture \"{0}\" of {1} has no image data ({2}); an asset with external "
+								 "images must be decoded by the glTF path, not draco's.",
+								 name, filename_url, mime.empty() ? "no mime type" : mime);
+		}
 	}
 	for (int m = 0; m < dracoScene.NumMeshGroups(); m++)
 	{
@@ -948,6 +995,17 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 	// Accessors may be shared between primitives (and between meshes); the in-place axis conversion below
 	// must be applied to each accessor exactly once.
 	std::set<avs::uid> convertedAccessors;
+	// Before the materials, because they are what reads it: which of the ids their TextureAccessors
+	// name are not textures of this cache at all, but images the asset references as separate files,
+	// identified by url and held by the session's cache. See GeometryCache::RequestTextureFromUrl.
+	if (!dg.externalTextureUrls.empty())
+	{
+		std::shared_ptr<clientrender::GeometryCache> geometryCache = clientrender::GeometryCache::GetGeometryCache(dg.server_or_cache_uid);
+		if (geometryCache)
+		{
+			geometryCache->SetExternalTextureUrls(dg.externalTextureUrls);
+		}
+	}
 	// Create the materials:
 	for (auto m : dg.internalMaterials)
 	{
@@ -979,7 +1037,19 @@ avs::Result GeometryDecoder::CreateFromDecodedGeometry(clientrender::ResourceCre
 			avs::MeshElementCreate &meshElementCreate = meshCreate.m_MeshElementCreate[index];
 			if (primitiveArray.material > 0)
 			{
-				meshElementCreate.internalMaterial = std::make_shared<avs::Material>(dg.internalMaterials[(int)primitiveArray.material - 1]);
+				// internalMaterials is keyed by uid in the glTF paths and by index in
+				// DracoMeshToDecodedGeometry, whose material number is 1-based. Try the uid, then
+				// that 1-based index, and leave the element without an internal material if it is
+				// in neither - operator[] would otherwise silently manufacture a black one.
+				auto m = dg.internalMaterials.find(primitiveArray.material);
+				if (m == dg.internalMaterials.end())
+				{
+					m = dg.internalMaterials.find(primitiveArray.material - 1);
+				}
+				if (m != dg.internalMaterials.end())
+				{
+					meshElementCreate.internalMaterial = std::make_shared<avs::Material>(m->second);
+				}
 			}
 			meshElementCreate.vb_id = primitiveArray.attributes[0].accessor;
 			size_t vertexCount		= 0;
@@ -1170,7 +1240,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData &geometryDecodeData)
 {
 	// Parse buffer and fill struct DecodedGeometry
 	core::DecodedGeometry dg = {};
-	dg.axesStandard			 = platform::crossplatform::AxesStandard::Engineering;
+	dg.axesStandard			 = geometryDecodeData.sourceAxesStandard;
 	dg.server_or_cache_uid	 = geometryDecodeData.server_or_cache_uid;
 	dg.clear();
 	avs::uid	uid = geometryDecodeData.uid;
@@ -1246,7 +1316,7 @@ avs::Result GeometryDecoder::decodeMesh(GeometryDecodeData &geometryDecodeData)
 				copy<uint8_t>(subMesh.buffer.data(), geometryDecodeData.data.data(), geometryDecodeData.offset, bufferSize);
 			}
 			// Anything sent to us is already in the correct form.
-			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh, platform::crossplatform::AxesStandard::Engineering);
+			avs::Result result = DracoMeshToDecodedGeometry(uid, dg, compressedMesh, geometryDecodeData.sourceAxesStandard);
 			if (result != avs::Result::OK)
 			{
 				return result;
@@ -1439,8 +1509,16 @@ avs::Result GeometryDecoder::decodeTexturePointer(GeometryDecodeData &geometryDe
 	TELEPORT_INTERNAL_COUT(Resource, "T+{:.1f} ms: TexturePointer: HTTPS fetch queued (uid={}, url={}, axesStandard={})",
 		teleport::client::SessionClient::GetConnectElapsedMs(), texture_uid, url, static_cast<int>(sourceAxesStandard));
 
-	return decodeFromWeb(
-		geometryDecodeData.server_or_cache_uid, url, avs::GeometryPayloadType::Texture, geometryDecodeData.target, texture_uid, sourceAxesStandard);
+	// The url is the identity of a texture resource: a .glb streamed to us may reference this very
+	// file as one of its images, and must then share this texture rather than fetching, decoding and
+	// uploading its own copy. Going through the registry rather than fetching directly is what makes
+	// that true in both orders - whether the pointer or the asset reaches the file first, exactly one
+	// fetch is issued. texture_uid is passed as the preferred id because the server's own materials
+	// and commands refer to the texture by it. See GeometryCache::RequestTextureFromUrl.
+	geometryCache->RequestTextureFromUrl(
+		AbsoluteResourceUrl(geometryDecodeData.server_or_cache_uid, url), this, geometryDecodeData.target, texture_uid, sourceAxesStandard);
+
+	return avs::Result::OK;
 }
 
 avs::Result GeometryDecoder::decodeMeshPointer(GeometryDecodeData &geometryDecodeData)
@@ -1529,6 +1607,14 @@ avs::Result GeometryDecoder::decodeTextureFromExtension(GeometryDecodeData &geom
 		texture.compression = avs::TextureCompression::MULTIPLE_PNG;
 	}
 	else if (ext == ".png")
+	{
+		texture.compression = avs::TextureCompression::PNG;
+	}
+	else if (ext == ".jpg" || ext == ".jpeg")
+	{
+		texture.compression = avs::TextureCompression::JPEG;
+	}
+	else if (ext == ".gif")
 	{
 		texture.compression = avs::TextureCompression::PNG;
 	}

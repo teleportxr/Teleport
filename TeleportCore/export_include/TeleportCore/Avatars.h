@@ -63,7 +63,7 @@ namespace teleport
 		//! See Teleport/docs/protocol/avatar_manifest.rst.
 		struct AvatarManifestRequirements
 		{
-			//! Accepted @context values, e.g. "https://universalmanifest.net/ns/v0.3".
+			//! Accepted context values, e.g. "https://universalmanifest.net/ns/v0.3".
 			std::vector<std::string> accepted;
 			//! Pointer names that may hold the avatar asset, in precedence order.
 			std::vector<std::string> avatarPointers;

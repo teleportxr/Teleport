@@ -83,7 +83,7 @@ elseif(TELEPORT_MACOS)
 	set(CPACK_PACKAGE_NAME "teleportxr")
 	# DragNDrop-specific settings for the TeleportPCClient.dmg run (cpack -G DragNDrop
 	# -D CPACK_COMPONENTS_ALL=pcclient -D CPACK_PACKAGING_INSTALL_PREFIX=/
-	# -D CPACK_PACKAGE_NAME=TeleportPCClientInstaller). Harmless when not using that generator.
+	# -D CPACK_PACKAGE_NAME=TeleportMacClientInstaller). Harmless when not using that generator.
 	set(CPACK_DMG_VOLUME_NAME "TeleportPCClient")
 	set(CPACK_DMG_FORMAT "UDZO")
 	# Window size/position and icon size/layout for the Finder window the .dmg opens to - see

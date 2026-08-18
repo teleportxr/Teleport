@@ -1,5 +1,6 @@
 #include "AnimationState.h"
 #include <chrono>
+#include <cmath>
 using namespace teleport::clientrender;
 
 /*static float AnimTimeAtTimestamp(const AnimationState &animationState, int64_t timestampNowUs)
@@ -15,6 +16,51 @@ static float UsToS(int64_t timestampUs)
 static float UsToS(int64_t startTimestampUs,int64_t endTimestampUs)
 {
 	return float(double(endTimestampUs-startTimestampUs) / 1000000.0);
+}
+
+//! Duration of the clip a state refers to, or zero if it has none.
+//! A state whose clip has not streamed in yet holds a null animation - SetAnimationState stores the
+//! state anyway, so that it applies once the clip arrives - and a clip whose duration never got
+//! filled in is zero. Every site here already treats a zero duration as "no timeline to advance
+//! along: leave the ratio where it is", so folding null into the same case keeps one code path and,
+//! more to the point, means nothing here dereferences a clip that isn't there.
+static float ClipDuration(const AnimationState &st)
+{
+	return st.animation ? st.animation->duration : 0.0f;
+}
+
+//! The phase-matched ratio at the end of an interval across which the clip duration changes linearly
+//! from d0 to d1, starting from ratio R0. Integrating dR/dt = 1/d(t) gives the logarithm; when the
+//! duration does not change (r == 0) that degenerates to the linear form, and when either duration is
+//! zero there is no phase to match, so the ratio stands still rather than becoming an infinity that
+//! turns into a NaN the moment getState() wraps it into the unit interval.
+static float PhaseMatchedRatio(float R0, float d0, float d1, float dt, float elapsed)
+{
+	if (d0 <= 0.0f)
+	{
+		return R0;
+	}
+	const float r = (d1 > 0.0f && dt != 0.0f) ? ((d1 - d0) / dt) : 0.0f;
+	if (r > 0.0f)
+	{
+		const float scaled = (elapsed * r + d0) / d0;
+		if (scaled > 0.0f)
+		{
+			return R0 + std::log(scaled) / r;
+		}
+	}
+	return R0 + elapsed / d0;
+}
+
+//! Copy a state and advance it to the query time. The stored timeRatio is the base that elapsed
+//! playback is added to, not something to throw away: discarding it restarts the clip from its first
+//! frame on every ApplyAnimation the server sends.
+static void ApplyExtrapolated(AnimationState &out, const AnimationState &in, int64_t timestampUs)
+{
+	out			  = in;
+	const float d = ClipDuration(in);
+	const float t = in.speedUnitsPerS * UsToS(in.timestampUs, timestampUs);
+	out.timeRatio = in.timeRatio + (d ? (t / d) : 0.0f);
 }
 
 
@@ -47,15 +93,14 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 			//create an intermediate state, a snapshot of the current state, from which to interpolate.
 			if (st.timestampUs > last->first && st.timestampUs > time_now_us)
 			{
-				AnimationState &intermediate	= animationStates[time_now_us];
-				const AnimationState &previous	= last->second;
-				intermediate.animationId		= previous.animationId;
-				float d							= previous.animation->duration;
-				intermediate.timeRatio			= d ? (previous.timeRatio + float((time_now_us-st.timestampUs) / 1000000.0) * previous.speedUnitsPerS / d) : 0.0f;
-				intermediate.loop				= previous.loop;
-				intermediate.speedUnitsPerS		= previous.speedUnitsPerS;
-				intermediate.timestampUs		= time_now_us;
-				intermediate.animation			= previous.animation;
+				// The snapshot is the current state wound *forwards* to now, so the cross-fade starts from
+				// where playback actually is. Elapsed time is measured from the state being snapshotted -
+				// measuring it from the new, future state instead runs the clip backwards, and every
+				// transition then starts from a phase the clip has already passed.
+				AnimationState snapshot;
+				ApplyExtrapolated(snapshot, last->second, time_now_us);
+				snapshot.timestampUs			= time_now_us;
+				animationStates[time_now_us]	= snapshot;
 				sequenceNumber					+=1000;
 			}
 		}
@@ -63,39 +108,19 @@ void AnimationLayerStateSequence::AddState(std::chrono::microseconds timestampUs
 	sequenceNumber++;
 	if(st.matchTransition&&animationStates.size()>0)
 	{
-		auto &lastState=animationStates.rbegin().operator*().second;
-		float d0 = lastState.animation->duration;
+		// Copied out, not referenced: inserting the new state below can alias the last one when the two
+		// share a timestamp, and the assignment would then overwrite what we are reading from.
+		const AnimationState lastState	= animationStates.rbegin()->second;
+		const float			 d0			= ClipDuration(lastState);
 		if(d0 > 0)
 		{
-			float R0 = lastState.timeRatio;
-			auto &state=animationStates[st.timestampUs];
-			state=st;
-			if(state.timestampUs > lastState.timestampUs)
-			{
-				float d1 = state.animation->duration;
-				// correct time ratio at new state?
-				float dt = UsToS(lastState.timestampUs,state.timestampUs);
-				float r = (d1 - d0) / (dt);
-				if (r > 0)
-				{
-					float R1 = R0 + std::log(d1 / d0) / r;
-					state.timeRatio = R1;
-					return;
-				}
-			}
-			else
-			{
-				float d1 = state.animation->duration;
-				// correct time ratio at new state?
-				float dt = UsToS(lastState.timestampUs,state.timestampUs);
-				float r = (d1 - d0) / (dt);
-				if (r > 0)
-				{
-					float R1 = R0 + std::log(d1 / d0) / r;
-					state.timeRatio = R1;
-					return;
-				}
-			}
+			auto &state		= animationStates[st.timestampUs];
+			state			= st;
+			// Carry the footfall across the change of clip: the ratio at the new state continues from
+			// the old one rather than restarting.
+			state.timeRatio = PhaseMatchedRatio(lastState.timeRatio, d0, ClipDuration(state), UsToS(lastState.timestampUs, state.timestampUs),
+											   UsToS(lastState.timestampUs, state.timestampUs));
+			return;
 		}
 	}
 	auto &state=animationStates[st.timestampUs];
@@ -138,15 +163,7 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 	if (s1 == animationStates.begin() && s1 != animationStates.end())
 	{
 		st.interpolation					= 1.0f;
-		st.animationState.animationId		= s1->second.animationId;
-		st.animationState.speedUnitsPerS	= s1->second.speedUnitsPerS;
-		st.animationState.timestampUs		= s1->second.timestampUs;
-		st.animationState.loop				= s1->second.loop;
-		st.animationState.matchTransition	= s1->second.matchTransition;
-		st.animationState.animation			= s1->second.animation;
-		float d								= s1->second.animation->duration;
-		float t								= s1->second.speedUnitsPerS * UsToS(s1->second.timestampUs, timestampUs);
-		st.animationState.timeRatio			= s1->second.timeRatio + (d ? (t / d) : 0.0f);
+		ApplyExtrapolated(st.animationState, s1->second, timestampUs);
 		interpState							= 1;
 		return st;
 	}
@@ -158,15 +175,7 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 		{
 			const AnimationState &animationState= s_last->second;
 			st.interpolation					= 1.0f;
-			st.animationState.animationId		= animationState.animationId;
-			float t								= s_last->second.speedUnitsPerS * UsToS(s_last->second.timestampUs, timestampUs);
-			st.animationState.speedUnitsPerS	= animationState.speedUnitsPerS;
-			st.animationState.timestampUs		= animationState.timestampUs;
-			st.animationState.loop				= animationState.loop;
-			st.animationState.matchTransition	= animationState.matchTransition;
-			st.animationState.animation			= animationState.animation;
-			float d								= animationState.animation->duration;
-			st.animationState.timeRatio			= s_last->second.timeRatio + (d ? (t / d) : 0.0f);
+			ApplyExtrapolated(st.animationState, animationState, timestampUs);
 			st.previousAnimationState			= animationState;
 			if (animationStates.size() > 1)
 			{
@@ -186,71 +195,32 @@ InstantaneousAnimationState &AnimationLayerStateSequence::getStateInternal(int64
 	if (animationStates.size() == 0 || s0 == animationStates.end())
 	{
 		st.interpolation					= 1.0f;
-		st.animationState.animationId		= s1->second.animationId;
-		st.animationState.speedUnitsPerS	= s1->second.speedUnitsPerS;
-		st.animationState.timestampUs		= s1->second.timestampUs;
-		st.animationState.loop				= s1->second.loop;
-		st.animationState.matchTransition	= s1->second.matchTransition;
-		st.animationState.animation			= s1->second.animation;
-		float d								= s1->second.animation->duration;
-		float t								= s1->second.speedUnitsPerS * UsToS(s1->second.timestampUs, timestampUs);
-		st.animationState.timeRatio			= s1->second.timeRatio + (d ? (t / d) : 0.0f);
+		ApplyExtrapolated(st.animationState, s1->second, timestampUs);
 		interpState							= 4;
 		return st;
 	}
 	int64_t interpolation_time_us = timestampUs - s0->first;
 	st.interpolation = float(double(interpolation_time_us) / double(s1->first - s0->first));
 	const AnimationState &animationState0		= s0->second;
-	st.previousAnimationState.animationId		= animationState0.animationId;
-	st.previousAnimationState.speedUnitsPerS	= animationState0.speedUnitsPerS;
-	st.previousAnimationState.timestampUs		= animationState0.timestampUs;
-	
-	float t										= animationState0.speedUnitsPerS * UsToS(animationState0.timestampUs, timestampUs);
 	const AnimationState &animationState1		= s1->second;
-	st.animationState.animationId				= animationState1.animationId;
-	st.animationState.speedUnitsPerS			= animationState1.speedUnitsPerS;
-	st.animationState.timestampUs				= animationState1.timestampUs;
-	st.animationState.loop						= animationState1.loop;
-	st.animationState.matchTransition			= animationState1.matchTransition;
-	st.animationState.animation					= animationState1.animation;
-	// In the case that we have two usable keyframes, and they represent the same animation, we must interpolate the animationTime, rather than extrapolating it.
-	if (st.previousAnimationState.animationId == st.animationState.animationId)
-	{
-		//st.previousAnimationState.animationTimeS	= lerp(st.previousAnimationState.animationTimeS, st.animationState.animationTimeS, st.interpolation);
-		//st.animationState.animationTimeS			= lerp(st.previousAnimationState.animationTimeS, st.animationState.animationTimeS, st.interpolation);
-	}
+	// Each side of the blend runs on its own clip's phase, advanced from its own stored base since its
+	// own timestamp. Crossing the two over - reading the outgoing clip's phase on the incoming state -
+	// is what makes a transition visibly jump.
+	ApplyExtrapolated(st.previousAnimationState, animationState0, timestampUs);
+	ApplyExtrapolated(st.animationState, animationState1, timestampUs);
 	if (s0 != animationStates.begin())
 		animationStates.erase(animationStates.begin());
 	interpState = 5;
+	// A phase-matched transition, e.g. walking into running, keeps its footfall: both sides run on one
+	// shared phase, integrated across the duration changing from the outgoing clip's to the incoming
+	// one's. Without it the two clips are independent and each keeps the phase computed above.
 	if(st.animationState.matchTransition)
 	{
-		float d0			= animationState0.animation->duration;
-		float d1			= animationState1.animation->duration;
-		float t0			= 0;
-		float t1			= UsToS(s1->first-s0->first);
-		float R0 = animationState0.timeRatio;
-		float R1 = animationState1.timeRatio;
-		float r				= (d1-d0)/(t1-t0);
-		float R;
-		if(r>0)
-		{
-			R				= R0 + log(((t-t0)*r+d0)/d0)/r;
-		}
-		else
-		{
-			R = R0 + (d0 ? (t / d0) : 0.0f);
-		}
+		const float elapsed = animationState0.speedUnitsPerS * UsToS(animationState0.timestampUs, timestampUs);
+		const float R		= PhaseMatchedRatio(animationState0.timeRatio, ClipDuration(animationState0), ClipDuration(animationState1),
+											   UsToS(s0->first, s1->first), elapsed);
 		st.previousAnimationState.timeRatio	= R;
 		st.animationState.timeRatio			= R;
-	}
-	else // anims are independent.
-	{
-		float t0							= animationState0.speedUnitsPerS * UsToS(animationState0.timestampUs, timestampUs);
-		float d0							= animationState0.animation->duration;
-		st.animationState.timeRatio			= d0?(t / d0):0.0f;
-		float t1							= animationState1.speedUnitsPerS * UsToS(animationState1.timestampUs, timestampUs);
-		float d1							= animationState1.animation->duration;
-		st.previousAnimationState.timeRatio	= d1?(t1 / d1) : 0.0f;
 	}
 	return st;
 }

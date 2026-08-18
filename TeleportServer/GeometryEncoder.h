@@ -78,6 +78,11 @@ namespace teleport
 			avs::Result encodeTextures( std::vector<avs::uid> missingUIDs);
 			
 			avs::Result encodeTexturePointer( avs::uid);
+			//! A .glb/.vrm served beside us rather than extracted into the store: the file itself is
+			//! the resource, so the client is sent its url and fetches it.
+			avs::Result encodeMeshPointer( avs::uid);
+			//! The body every pointer payload shares; see the definition.
+			avs::Result encodeResourcePointer(avs::GeometryPayloadType payloadType, avs::uid uid, const std::string &extension, avs::AxesStandard axesStandard);
 			//The actual implementation of encode textures that can be used by encodeMaterials to package textures with it.
 			avs::Result encodeTexturesBackend( std::vector<avs::uid> missingUIDs, bool isShadowMap = false);
 
