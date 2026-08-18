@@ -102,6 +102,8 @@ void Texture::Create(const TextureCreateInfo& pTextureCreateInfo)
 	platform::crossplatform::TextureCreate textureCreate;
 	textureCreate.w					= pTextureCreateInfo.width;
 	textureCreate.l					= pTextureCreateInfo.height;
+	textureCreate.d					= pTextureCreateInfo.depth;
+	textureCreate.arraysize			= pTextureCreateInfo.arrayCount;
 	textureCreate.f					= pixelFormat;
 	textureCreate.computable		= computable;
 	textureCreate.cubemap			=((pTextureCreateInfo.type&Type::TEXTURE_CUBE_MAP)==Type::TEXTURE_CUBE_MAP);

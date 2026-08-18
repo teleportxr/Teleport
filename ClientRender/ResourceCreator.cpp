@@ -1238,6 +1238,8 @@ static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 		return clientrender::Texture::Format::R8;
 	case VK_FORMAT_R8G8B8A8_UNORM:
 		return clientrender::Texture::Format::RGBA8;
+	case VK_FORMAT_R8G8B8A8_SRGB:
+		return clientrender::Texture::Format::RGBA8;
 	case VK_FORMAT_R8G8B8A8_SNORM:
 		return clientrender::Texture::Format::RGBA8;
 		// Compression formats ------------ GPU Mapping DirectX, Vulkan and OpenGL formats and comments --------
@@ -1261,6 +1263,14 @@ static clientrender::Texture::Format VkFormatToTeleportFormat(VkFormat f)
 	case VK_FORMAT_BC6H_SFLOAT_BLOCK:
 		return clientrender::Texture::Format::RGBA16F; //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK     CMP_FORMAT_BC7     = 0x0071,
 													   //       //  VK_FORMAT_BC7_UNORM_BLOCK
+	case VK_FORMAT_BC7_UNORM_BLOCK:
+	case VK_FORMAT_BC7_SRGB_BLOCK:
+		return clientrender::Texture::Format::RGBA8;
+	case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+	case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+		return clientrender::Texture::Format::RGBA8;
+	case VK_FORMAT_R16G16B16A16_SFLOAT:
+		return clientrender::Texture::Format::RGBA16F;
 	case VK_FORMAT_R32G32B32A32_SFLOAT:
 		return clientrender::Texture::Format::RGBA32F;
 	default:
@@ -1295,6 +1305,12 @@ static teleport::clientrender::Texture::CompressionFormat VkFormatToCompressionF
 	case VK_FORMAT_BC6H_SFLOAT_BLOCK:
 		return teleport::clientrender::Texture::CompressionFormat::BC6H; //       CMP_FORMAT_BC6H_SF = 0x1061,  //  VK_FORMAT_BC6H_SFLOAT_BLOCK CMP_FORMAT_BC7
 																		 //       = 0x0071,  //  VK_FORMAT_BC7_UNORM_BLOCK
+	case VK_FORMAT_BC7_UNORM_BLOCK:
+	case VK_FORMAT_BC7_SRGB_BLOCK:
+		return teleport::clientrender::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+	case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+		return teleport::clientrender::Texture::CompressionFormat::ETC2;
 	default:
 		return teleport::clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	};
@@ -1347,6 +1363,16 @@ static clientrender::Texture::Format GlInternalFormatToTeleportFormat(GLuint p)
 		return Texture::Format::R32UI;
 	case GL_RG32UI:
 		return Texture::Format::RG32UI;
+	case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+		return Texture::Format::RGBA8;
+	case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+		return Texture::Format::RGBA8;
+	case GL_COMPRESSED_RGBA_BPTC_UNORM:
+		return Texture::Format::RGBA8;
+	case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+		return Texture::Format::RGBA16F;
+	case GL_COMPRESSED_RGBA8_ETC2_EAC:
+		return Texture::Format::RGBA8;
 	default:
 		return Texture::Format::FORMAT_UNKNOWN;
 	};
@@ -1355,27 +1381,167 @@ static teleport::clientrender::Texture::CompressionFormat GlFormatToCompressionF
 {
 	switch (f)
 	{
+	case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+		return teleport::clientrender::Texture::CompressionFormat::BC1;
+	case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+		return teleport::clientrender::Texture::CompressionFormat::BC3;
+	case GL_COMPRESSED_RGBA_BPTC_UNORM:
+		return teleport::clientrender::Texture::CompressionFormat::BC7_M6_OPAQUE_ONLY;
+	case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+		return teleport::clientrender::Texture::CompressionFormat::BC6H;
+	case GL_COMPRESSED_RGBA8_ETC2_EAC:
+		return teleport::clientrender::Texture::CompressionFormat::ETC2;
 	case 0:
 	default:
 		return teleport::clientrender::Texture::CompressionFormat::UNCOMPRESSED;
 	};
 }
 
-struct KtxCallbackData
+static clientrender::Texture::Type DetermineKtxTextureType(ktxTexture *ktxt)
 {
-	int												   numFaces	 = 0;
-	int												   numMips	 = 0;
-	int												   numLayers = 0;
-	std::shared_ptr<std::vector<std::vector<uint8_t>>> images;
-};
-KTX_error_code ktxImageExtractionCallback(int miplevel, int face, int width, int height, int depth, ktx_uint64_t faceLodSize, void *pixels, void *userdata)
+	if (!ktxt)
+	{
+		return clientrender::Texture::Type::TEXTURE_UNKNOWN;
+	}
+	bool isArray   = ktxt->numLayers > 1;
+	bool isCubemap = ktxt->numFaces == 6;
+	bool is3D      = ktxt->baseDepth > 1;
+	if (is3D)
+	{
+		return clientrender::Texture::Type::TEXTURE_3D;
+	}
+	if (isArray && isCubemap)
+	{
+		return clientrender::Texture::Type::TEXTURE_CUBE_MAP_ARRAY;
+	}
+	if (isCubemap)
+	{
+		return clientrender::Texture::Type::TEXTURE_CUBE_MAP;
+	}
+	if (isArray)
+	{
+		return clientrender::Texture::Type::TEXTURE_2D_ARRAY;
+	}
+	return clientrender::Texture::Type::TEXTURE_2D;
+}
+
+static bool ExtractKtxSubresources(ktxTexture *ktxt, clientrender::Texture::TextureCreateInfo &textureCI, const std::string &name)
 {
-	KtxCallbackData *ud	 = (KtxCallbackData *)userdata;
-	int				 idx = miplevel + ud->numMips * face;
-	auto			&img = (*ud->images.get())[idx];
-	img.resize(faceLodSize);
-	memcpy(img.data(), pixels, faceLodSize);
-	return KTX_SUCCESS;
+	if (!ktxt || !textureCI.images)
+	{
+		return false;
+	}
+
+	ktx_uint32_t numLevels   = ktxt->numLevels;
+	ktx_uint32_t numLayers   = ktxt->numLayers ? ktxt->numLayers : 1;
+	bool         is3D       = ktxt->baseDepth > 1;
+	// For 3D textures KTX stores depth slices in the faceSlice parameter of
+	// GetImageOffset. Otherwise numFaces is 1 for 2D/array and 6 for cubemaps.
+	ktx_uint32_t numFaces    = is3D ? ktxt->baseDepth : ktxt->numFaces;
+	size_t       totalImages = (size_t)numLevels * numLayers * numFaces;
+	textureCI.images->resize(totalImages);
+
+	// Ensure image data is resident. ktxTexture_LoadImageData with a NULL buffer
+	// allocates storage internally and, for KTX2, decompresses non-Basis schemes.
+	if (!ktxt->pData)
+	{
+		KTX_error_code loadResult = ktxTexture_LoadImageData(ktxt, nullptr, 0);
+		if (loadResult != KTX_SUCCESS || !ktxt->pData)
+		{
+			TELEPORT_WARN("Texture {0} failed to load KTX image data (error {1}).", name, (int)loadResult);
+			return false;
+		}
+	}
+
+	for (ktx_uint32_t level = 0; level < numLevels; ++level)
+	{
+		ktx_uint64_t faceLodSize = ktxTexture_GetImageSize(ktxt, level);
+		for (ktx_uint32_t layer = 0; layer < numLayers; ++layer)
+		{
+			for (ktx_uint32_t face = 0; face < numFaces; ++face)
+			{
+				ktx_size_t     offset       = 0;
+				KTX_error_code offsetResult = ktxTexture_GetImageOffset(ktxt, level, layer, face, &offset);
+				if (offsetResult != KTX_SUCCESS)
+				{
+					TELEPORT_WARN("Texture {0} failed to get KTX image offset level {1} layer {2} face {3} (error {4}).",
+									  name, level, layer, face, (int)offsetResult);
+					return false;
+				}
+				size_t idx = level + numLevels * (layer * numFaces + face);
+				auto  &img = (*textureCI.images)[idx];
+				img.resize((size_t)faceLodSize);
+				memcpy(img.data(), ktxt->pData + offset, (size_t)faceLodSize);
+			}
+		}
+	}
+	return true;
+}
+
+static bool TranscodeKtx2(ktxTexture2 *ktx2Texture, const std::string &name)
+{
+	if (!ktxTexture2_NeedsTranscoding(ktx2Texture))
+	{
+		return true;
+	}
+
+	ktx_uint32_t numComponents = ktxTexture2_GetNumComponents(ktx2Texture);
+	bool         isHDR         = ktxTexture2_IsHDR(ktx2Texture);
+
+#if defined(__ANDROID__)
+	bool preferETC2 = true;
+#else
+	bool preferETC2 = false;
+#endif
+
+	std::vector<ktx_transcode_fmt_e> candidates;
+	if (isHDR)
+	{
+		if (!preferETC2)
+		{
+			candidates.push_back(KTX_TTF_BC6HU);
+		}
+		candidates.push_back(KTX_TTF_RGBA_HALF);
+		if (preferETC2)
+		{
+			candidates.push_back(KTX_TTF_BC6HU);
+		}
+		candidates.push_back(KTX_TTF_RGBA32);
+	}
+	else
+	{
+		if (preferETC2)
+		{
+			candidates.push_back(KTX_TTF_ETC2_RGBA);
+			candidates.push_back(KTX_TTF_BC7_RGBA);
+		}
+		else
+		{
+			candidates.push_back(KTX_TTF_BC7_RGBA);
+			candidates.push_back(KTX_TTF_ETC2_RGBA);
+		}
+		candidates.push_back(KTX_TTF_RGBA32);
+	}
+
+	for (ktx_transcode_fmt_e target : candidates)
+	{
+		KTX_error_code result = ktxTexture2_TranscodeBasis(ktx2Texture, target, KTX_TF_HIGH_QUALITY);
+		if (result == KTX_SUCCESS)
+		{
+			TELEPORT_INTERNAL_COUT(Resource,
+									   "Texture {0} transcoded to {1} ({2} component{3}{4}).",
+									   name,
+									   (int)target,
+									   numComponents,
+									   numComponents == 1 ? "" : "s",
+									   isHDR ? ", HDR" : "");
+			return true;
+		}
+		TELEPORT_WARN("Texture {0} failed to transcode to format {1} (error {2}); trying fallback.", name, (int)target, (int)result);
+	}
+
+	TELEPORT_WARN("Texture {0} failed to transcode to any supported format.", name);
+	return false;
 }
 
 void ResourceCreator::thread_TranscodeTextures()
@@ -1621,15 +1787,18 @@ void ResourceCreator::thread_TranscodeTextures()
 				ktxTextureCreateFlags createFlags = KTX_TEXTURE_CREATE_NO_FLAGS;
 				ktxTexture			 *ktxt		  = nullptr;
 				KTX_error_code		  result	  = ktxTexture_CreateFromMemory(transcoding->data.data(), transcoding->data.size(), createFlags, &ktxt);
-				if (result != KTX_SUCCESS)
+				if (result != KTX_SUCCESS || !ktxt)
 				{
 					const char *errstr = ktxErrorString(result);
 					TELEPORT_WARN("Texture {0} failed to create ktx. KTX Error code {1}.\n", transcoding->name, errstr ? errstr : "");
 					continue;
 				}
+
+				transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
+
 				if (ktxt->classId == ktxTexture1_c)
 				{
-					ktxTexture1 *ktx1Texture		   = (ktxTexture1 *)ktxt;
+					ktxTexture1 *ktx1Texture = (ktxTexture1 *)ktxt;
 					transcoding->textureCI->width	   = ktx1Texture->baseWidth;
 					transcoding->textureCI->height	   = ktx1Texture->baseHeight;
 					transcoding->textureCI->depth	   = ktx1Texture->baseDepth;
@@ -1639,25 +1808,16 @@ void ResourceCreator::thread_TranscodeTextures()
 					transcoding->textureCI->format	   = GlInternalFormatToTeleportFormat(glInternalFormat);
 					if (transcoding->textureCI->format == clientrender::Texture::Format::FORMAT_UNKNOWN)
 					{
-						TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n", transcoding->name);
+						TELEPORT_WARN("Texture {0} has unsupported KTX1 internal format {1}.\n", transcoding->name, glInternalFormat);
+						ktxTexture_Destroy(ktxt);
 						continue;
 					}
-					{
-						transcoding->textureCI->valueScale	= 1.0f;
-						transcoding->textureCI->compression = GlFormatToCompressionFormat(glInternalFormat);
-
-						bool cubemap						= (ktx1Texture->isCubemap);
-						transcoding->textureCI->type =
-							cubemap ? clientrender::Texture::Type::TEXTURE_CUBE_MAP : clientrender::Texture::Type::TEXTURE_2D; // Assumed
-						uint32_t numFaces			   = cubemap ? 6 : 1;
-						uint16_t numImages			   = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount * numFaces;
-						transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
-						transcoding->textureCI->images->resize(ktx1Texture->numFaces * ktx1Texture->numLayers * ktx1Texture->numLevels);
-					}
+					transcoding->textureCI->valueScale	= 1.0f;
+					transcoding->textureCI->compression = GlFormatToCompressionFormat(glInternalFormat);
 				}
 				else if (ktxt->classId == ktxTexture2_c)
 				{
-					ktxTexture2 *ktx2Texture		   = (ktxTexture2 *)ktxt;
+					ktxTexture2 *ktx2Texture = (ktxTexture2 *)ktxt;
 					transcoding->textureCI->width	   = ktx2Texture->baseWidth;
 					transcoding->textureCI->height	   = ktx2Texture->baseHeight;
 					transcoding->textureCI->depth	   = ktx2Texture->baseDepth;
@@ -1665,74 +1825,46 @@ void ResourceCreator::thread_TranscodeTextures()
 					transcoding->textureCI->mipCount   = ktx2Texture->numLevels;
 					VkFormat vkfmt					   = (VkFormat)(ktx2Texture->vkFormat);
 					transcoding->textureCI->format	   = VkFormatToTeleportFormat(vkfmt);
+
 					if (transcoding->textureCI->format == clientrender::Texture::Format::FORMAT_UNKNOWN)
 					{
-						ktx_transcode_fmt_e outputFormat = KTX_TTF_RGBA32;
-						// UASTC HDR / ASTC HDR 4x4 payloads are transcoded to BC6H for desktop.
-						if (vkfmt == VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK)
+						if (!TranscodeKtx2(ktx2Texture, transcoding->name))
 						{
-							outputFormat = KTX_TTF_BC6HU;
-						}
-						ktx_transcode_flags transcodeFlags = KTX_TF_HIGH_QUALITY;
-						result							   = ktxTexture2_TranscodeBasis(ktx2Texture, outputFormat, transcodeFlags);
-						if (result != KTX_SUCCESS)
-						{
-							TELEPORT_WARN("Texture {0} failed to transcode ktx2 basis data (error {1}).\n", transcoding->name, (int)result);
+							TELEPORT_WARN("Texture {0} failed to transcode ktx2 basis data.\n", transcoding->name);
+							ktxTexture_Destroy(ktxt);
 							continue;
 						}
-						vkfmt						   = (VkFormat)(ktx2Texture->vkFormat);
+						vkfmt							   = (VkFormat)(ktx2Texture->vkFormat);
 						transcoding->textureCI->format = VkFormatToTeleportFormat(vkfmt);
 					}
-					{
-						transcoding->textureCI->valueScale	= 1.0f;
-						transcoding->textureCI->compression = VkFormatToCompressionFormat((VkFormat)(ktx2Texture->vkFormat));
 
-						bool cubemap						= (ktx2Texture->isCubemap);
-						transcoding->textureCI->type =
-							cubemap ? clientrender::Texture::Type::TEXTURE_CUBE_MAP : clientrender::Texture::Type::TEXTURE_2D; // Assumed
-						uint32_t numFaces			   = cubemap ? 6 : 1;
-						uint16_t numImages			   = transcoding->textureCI->arrayCount * transcoding->textureCI->mipCount * numFaces;
-						transcoding->textureCI->images = std::make_shared<std::vector<std::vector<uint8_t>>>();
-						transcoding->textureCI->images->resize(ktx2Texture->numFaces * ktx2Texture->numLayers * ktx2Texture->numLevels);
+					if (transcoding->textureCI->format == clientrender::Texture::Format::FORMAT_UNKNOWN)
+					{
+						TELEPORT_WARN("Texture {0} has unsupported KTX2 format {1}.\n", transcoding->name, (int)vkfmt);
+						ktxTexture_Destroy(ktxt);
+						continue;
 					}
+					transcoding->textureCI->compression = VkFormatToCompressionFormat(vkfmt);
+					transcoding->textureCI->valueScale	= 1.0f;
 				}
 				else
 				{
 					TELEPORT_WARN("Invalid ktx class {0}", (uint64_t)ktxt->classId);
+					ktxTexture_Destroy(ktxt);
+					continue;
 				}
-				if (result != KTX_SUCCESS)
+
+				transcoding->textureCI->type = DetermineKtxTextureType(ktxt);
+
+				if (ExtractKtxSubresources(ktxt, *(transcoding->textureCI), transcoding->name))
 				{
-					TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n", transcoding->name);
+					geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
 				}
 				else
 				{
-					// For ktx textures, they will be already encoded, so we upload the whole thing as a single chunk of memory.
-					size_t			textureSize = ktxTexture_GetDataSizeUncompressed(ktxt);
-					KtxCallbackData cbData;
-					cbData.images	 = transcoding->textureCI->images;
-					cbData.numMips	 = transcoding->textureCI->mipCount;
-					cbData.numFaces	 = ktxt->numFaces;
-					cbData.numLayers = ktxt->numLayers;
-					if (ktxt->pData)
-					{
-						result = ktxTexture_IterateLevelFaces(ktxt, ktxImageExtractionCallback, &cbData);
-					}
-					else
-					{
-						result = ktxTexture_IterateLoadLevelFaces(ktxt, ktxImageExtractionCallback, &cbData);
-					}
-					if (result == KTX_SUCCESS)
-					{
-						geometryCache->CompleteTexture(transcoding->texture_uid, *(transcoding->textureCI));
-					}
-					// Note: ktxTexture_IterateLoadLevelFaces already dispatches through the ktxTexture vtbl,
-					// which for a ktxTexture2 calls ktxTexture2_IterateLoadLevelFaces. Calling that internal
-					// (non-exported) function directly is both redundant and unresolved at link time on MSVC.
+					TELEPORT_WARN("Texture {0} failed to obtain upload data from ktx.\n", transcoding->name);
 				}
-				if (ktxt)
-				{
-					ktxTexture_Destroy(ktxt);
-				}
+				ktxTexture_Destroy(ktxt);
 			}
 		}
 
