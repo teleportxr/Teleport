@@ -5,7 +5,7 @@
 #include "ClientRender/Texture.h"
 #include "TeleportClient/basic_linear_algebra.h"
 // For PbrMaterialConstants:
-#include "client/Shaders/pbr_constants.sl"
+#include "client/assets/shaders/pbr_constants.sl"
 namespace teleport
 {
 	namespace clientrender

@@ -4,7 +4,7 @@
 #include "Platform/CrossPlatform/Effect.h"
 #include "Platform/CrossPlatform/Texture.h"
 #include "Platform/CrossPlatform/AxesStandard.h"
-#include "client/Shaders/cubemap_constants.sl"
+#include "client/assets/shaders/cubemap_constants.sl"
 #include "Platform/CrossPlatform/Shaders/camera_constants.sl"
 #include <string>
 #include <memory>

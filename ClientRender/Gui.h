@@ -11,7 +11,7 @@
 #ifdef __ANDROID__
 struct ANativeWindow;
 #endif
-#include <client/Shaders/video_types.sl>
+#include <client/assets/shaders/video_types.sl>
 #define MAX_URL_SIZE (2500)
 namespace avs
 {
