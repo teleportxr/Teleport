@@ -2,7 +2,7 @@
 
 #include "Skeleton.h"
 
-#include "client/Shaders/pbr_constants.sl"
+#include "client/assets/shaders/pbr_constants.sl"
 
 namespace ozz
 {

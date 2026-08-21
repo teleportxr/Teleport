@@ -49,6 +49,27 @@ namespace avs
 		bool closed= false;
 		bool readyToSend = false;
 	};
+	static StreamingConnectionState ConvertConnectionState(rtc::PeerConnection::State rtcState)
+	{
+		switch (rtcState)
+		{
+		case rtc::PeerConnection::State::New:
+			return StreamingConnectionState::NEW_UNCONNECTED;
+		case rtc::PeerConnection::State::Connecting:
+			return StreamingConnectionState::CONNECTING;
+		case rtc::PeerConnection::State::Connected:
+			return StreamingConnectionState::CONNECTED;
+		case rtc::PeerConnection::State::Disconnected:
+			return StreamingConnectionState::DISCONNECTED;
+		case rtc::PeerConnection::State::Failed:
+			return StreamingConnectionState::FAILED;
+		case rtc::PeerConnection::State::Closed:
+			return StreamingConnectionState::CLOSED;
+		default:
+			return StreamingConnectionState::ERROR_STATE;
+		}
+	}
+
 	// Unused mostly.
 	struct WebRtcNetworkSink::Private final : public PipelineNode::Private
 	{
@@ -86,6 +107,7 @@ namespace avs
 				[this](rtc::PeerConnection::State state)
 				{
 					currentState = state;
+					q_ptr()->SetStreamingConnectionState(ConvertConnectionState(state));
 					if (state == rtc::PeerConnection::State::Failed|| state == rtc::PeerConnection::State::Closed)
 					{
 						recreateConnection = true;
@@ -609,8 +631,13 @@ Result WebRtcNetworkSink::sendData(uint8_t id,const uint8_t *packet,size_t sz)
 			else
 			{
 				AVSLOG(Warning) << "WebRTC: channel " << (int)id << ", failed to send packet of size " << sz << ", channel is closed. Should reset WebRTC connection.\n";
-				// This is a fail condition, we should disconnect or try to reset the WebRTC connection.
-				return Result::Failed;
+				// Surface the drop on the public state so callers (e.g. ClientMessaging)
+				// can detect the failure and the server can tear down / reconnect the client.
+				if (getConnectionState() == StreamingConnectionState::CONNECTED)
+				{
+					SetStreamingConnectionState(StreamingConnectionState::DISCONNECTED);
+				}
+				return Result::Network_Disconnection;
 			}
 		}
 		catch (std::runtime_error err)
@@ -855,25 +882,12 @@ void WebRtcNetworkSink::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc)
 
 StreamingConnectionState WebRtcNetworkSink::getConnectionState() const
 {
-	if (m_data->rtcPeerConnection)
-	{
-		switch (m_data->currentState)
-		{
-		case rtc::PeerConnection::State::New:
-			return StreamingConnectionState::NEW_UNCONNECTED;
-		case rtc::PeerConnection::State::Connecting:
-			return StreamingConnectionState::CONNECTING;
-		case rtc::PeerConnection::State::Connected:
-			return StreamingConnectionState::CONNECTED;
-		case rtc::PeerConnection::State::Disconnected:
-			return StreamingConnectionState::DISCONNECTED;
-		case rtc::PeerConnection::State::Failed:
-			return StreamingConnectionState::FAILED;
-		case rtc::PeerConnection::State::Closed:
-			return StreamingConnectionState::CLOSED;
-		default:
-			return StreamingConnectionState::ERROR_STATE;
-		}
-	}
-	return StreamingConnectionState::UNINITIALIZED;
+	if (!m_data->rtcPeerConnection)
+		return StreamingConnectionState::UNINITIALIZED;
+	return webRtcState;
+}
+
+void WebRtcNetworkSink::SetStreamingConnectionState(StreamingConnectionState s)
+{
+	webRtcState = s;
 }

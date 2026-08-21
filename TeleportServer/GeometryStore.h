@@ -150,10 +150,24 @@ namespace teleport
 			//! path containing a period, and encodeTexturePointer, which appends one). The
 			//! extension is recorded here so a url can still be built for an asset that has no
 			//! stored resource to take one from.
-			avs::uid registerExternalAsset(const std::string &pathWithExtension);
+			//!
+			//! The axes standard is the one the file's own contents are authored in, and is sent on
+			//! the pointer that names it. Left at NotInitialized it is derived from the extension: a
+			//! glTF-family file is always Y-up right-handed whatever the scene around it uses, and
+			//! anything else - an ordinary 2D image - has no orientation of its own to declare, which
+			//! is what NotInitialized means. Pass one explicitly only for a file that disagrees, a
+			//! cubemap being the case that arises.
+			avs::uid registerExternalAsset(const std::string &pathWithExtension, avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized);
 			//! The file extension recorded for an external asset, e.g. ".glb". Empty for
 			//! anything that was not registered with registerExternalAsset.
 			std::string GetExternalAssetExtension(avs::uid u) const;
+			//! The axes standard recorded for an external asset. NotInitialized for anything that was
+			//! not registered with registerExternalAsset, which the client reads as "the same as the
+			//! server's scene".
+			avs::AxesStandard GetExternalAssetAxesStandard(avs::uid u) const;
+			//! True if this uid is a file served beside us rather than a resource extracted into the
+			//! store, and so is streamed as a pointer to its url rather than inline.
+			bool IsExternalAsset(avs::uid u) const;
 
 			//! The textures a mesh asset references as external files, and therefore depends on.
 			//!
@@ -221,7 +235,12 @@ namespace teleport
 
 			//! External assets: files served beside us rather than resources extracted into the
 			//! store. See registerExternalAsset.
-			std::map<avs::uid, std::string> externalAssetExtensions;
+			struct ExternalAsset
+			{
+				std::string extension; //!< as written and served, e.g. ".glb"
+				avs::AxesStandard axesStandard = avs::AxesStandard::NotInitialized;
+			};
+			std::map<avs::uid, ExternalAsset> externalAssets;
 			//! What a scan of one .glb/.vrm found, kept so the file is read once rather than
 			//! once per client per streaming pass.
 			struct ScannedTextureDependencies

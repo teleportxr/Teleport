@@ -374,10 +374,10 @@ void InitRenderer(HWND hWnd, bool try_init_vr, bool dev_mode)
 		// Or from the Simul directory -e.g. by automatic builds:
 
 		renderPlatform->PushTexturePath("pc_client/textures");
-		renderPlatform->PushShaderPath("pc_client/Shaders");
-		renderPlatform->PushShaderPath("../client/Shaders");
-		renderPlatform->PushShaderPath("../../client/Shaders");
-		renderPlatform->PushShaderPath("../../../../client/Shaders");
+		renderPlatform->PushShaderPath("pc_client/assets/shaders");
+		renderPlatform->PushShaderPath("../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../../../client/assets/shaders");
 		renderPlatform->PushTexturePath("textures");
 		renderPlatform->PushShaderPath("Shaders"); // working directory C:\Teleport
 
@@ -976,10 +976,10 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 		renderPlatform->PushTexturePath("../../pc_client/textures");
 		renderPlatform->PushTexturePath("assets/textures");
 		renderPlatform->PushTexturePath("pc_client/textures");
-		renderPlatform->PushShaderPath("pc_client/Shaders");
-		renderPlatform->PushShaderPath("../client/Shaders");
-		renderPlatform->PushShaderPath("../../client/Shaders");
-		renderPlatform->PushShaderPath("../../../../client/Shaders");
+		renderPlatform->PushShaderPath("pc_client/assets/shaders");
+		renderPlatform->PushShaderPath("../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../../../client/assets/shaders");
 		renderPlatform->PushTexturePath("textures");
 		renderPlatform->PushShaderPath("Shaders");
 
@@ -1085,7 +1085,7 @@ int main(int argc, char *argv[])
 
 	// Enable Default-category internal logging so diagnostic TELEPORT_INTERNAL_COUT(Default, ...)
 	// messages (e.g. WebRTC media track attachment, audio decoder traces) reach the log file.
-	teleport::SetLogCategoryEnabled(teleport::LogCategory::Default, true);
+	teleport::SetLogCategoryEnabled(teleport::LogCategory::Resource, true);
 
 	// Parse command line
 	for (int i = 1; i < argc; i++)

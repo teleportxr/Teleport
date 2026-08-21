@@ -261,6 +261,55 @@ add_test(NAME resource_url COMMAND resource_url)
 target_link_libraries(resource_url PRIVATE Catch2::Catch2WithMain)
 target_include_directories(resource_url PRIVATE ${CMAKE_SOURCE_DIR})
 
+# texture_url_registry pins how a texture identified by a url rather than a uid is owned and
+# shared: the session's cache holds it, every asset that names the file refers to that one texture,
+# and a material created before the bytes arrive is given them afterwards. Unlike the tests above it
+# links ClientRender rather than compiling a translation unit, because the registry is part of
+# GeometryCache and inseparable from it. Guarded on the target for the same reason spatial_audio is:
+# a headless build has no ClientRender. No render platform is set up, so the tests stop short of
+# completing a texture - everything here is the bookkeeping around that.
+if(TARGET ClientRender)
+   add_executable(texture_url_registry test_texture_url_registry.cpp)
+   add_test(NAME texture_url_registry COMMAND texture_url_registry)
+   target_link_libraries(texture_url_registry PRIVATE Catch2::Catch2WithMain ClientRender TeleportCore)
+   # ClientRender links the Platform libraries privately, so an executable that pulls in its
+   # renderer symbols has to name them too. Nothing here draws anything - the link is what the test
+   # needs, not a device.
+   if(TELEPORT_CLIENT_USE_VULKAN)
+      target_link_libraries(texture_url_registry PRIVATE PlatformVulkan_MT ${Vulkan_LIBRARIES})
+   endif()
+   if(TELEPORT_CLIENT_USE_D3D12)
+      target_link_libraries(texture_url_registry PRIVATE SimulDirectX12_MT)
+   endif()
+   # The graphics backend and the cross-platform layer refer to each other, so on a linker that
+   # takes archives in order one pass is not enough; naming it again after resolves the cycle.
+   target_link_libraries(texture_url_registry PRIVATE PlatformCrossPlatform_MT PlatformMath_MT Core_MT ImGui_MT PlatformCrossPlatform_MT TeleportClient)
+   # TeleportClient's OpenXR support is the last thing needing a library of its own. Found the same
+   # way pc_client finds it, and named after TeleportClient above: it is a shared library, so it has
+   # to follow every archive that refers to it. A build without OpenXR simply does not get this test.
+   find_package(OpenXR QUIET)
+   if(TARGET OpenXR::openxr_loader)
+      target_link_libraries(texture_url_registry PRIVATE OpenXR::openxr_loader)
+   elseif(TARGET openxr_loader)
+      target_link_libraries(texture_url_registry PRIVATE openxr_loader)
+   else()
+      find_package(PkgConfig QUIET)
+      if(PKG_CONFIG_FOUND)
+         pkg_check_modules(TEST_OPENXR openxr)
+         if(TEST_OPENXR_FOUND)
+            target_link_libraries(texture_url_registry PRIVATE ${TEST_OPENXR_LIBRARIES})
+            target_link_directories(texture_url_registry PRIVATE ${TEST_OPENXR_LIBRARY_DIRS})
+         endif()
+      endif()
+   endif()
+   target_include_directories(texture_url_registry PRIVATE
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_SOURCE_DIR}/ClientRender
+      ${CMAKE_SOURCE_DIR}/libavstream/include
+      ${CMAKE_SOURCE_DIR}/libavstream/export_include
+      ${CMAKE_SOURCE_DIR}/firstparty)
+endif()
+
 # Guarded on the target rather than built unconditionally: a headless-only build
 # (macOS, TELEPORT_GUI_CLIENT=OFF) never adds TeleportAudio, and the PulseAudio
 # pkg-config probe below is REQUIRED, so it would hard-fail at configure time.

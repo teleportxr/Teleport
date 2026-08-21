@@ -314,6 +314,10 @@ namespace teleport
 			//! Performs a full disconnect and notifies the renderer so the local reflection
 			//! of the remote scene can be torn down.
 			void GiveUpAndShutDown();
+			//! Count a single reconnect attempt as having failed, either because the
+			//! discovery/signalling deadline expired or because the streaming peer
+			//! connection failed. Either gives up or schedules the next backoff attempt.
+			void OnReconnectAttemptFailed();
 			//! Tear down the streaming pipeline without clearing identity state. Called by
 			//! BeginReconnect; also called as part of GiveUpAndShutDown.
 			void TearDownStreamingPipeline();

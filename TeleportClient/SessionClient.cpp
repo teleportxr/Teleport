@@ -217,17 +217,7 @@ bool SessionClient::HandleConnections()
 				}
 				if (now > reconnectAttemptDeadline)
 				{
-					reconnectAttempts++;
-					if (reconnectAttempts >= config.options.maxReconnectAttempts)
-					{
-						TELEPORT_WARN("Reconnect to {0} failed after {1} attempts; giving up.", GetServerURL(), reconnectAttempts);
-						GiveUpAndShutDown();
-						return false;
-					}
-					currentReconnectBackoffMs	= std::min(currentReconnectBackoffMs * 2u, config.options.reconnectMaxBackoffMs);
-					nextReconnectTime			= now + std::chrono::milliseconds(currentReconnectBackoffMs);
-					reconnectAttemptDeadline	= nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);
-					TELEPORT_INTERNAL_COUT(Default, "Reconnect attempt {0} timed out; next attempt in {1} ms.", reconnectAttempts, currentReconnectBackoffMs);
+					OnReconnectAttemptFailed();
 					return false;
 				}
 			}
@@ -351,6 +341,16 @@ void SessionClient::Frame(const avs::DisplayInfo								&displayInfo,
 				TELEPORT_WARN("Streaming connection to {0} dropped ({1}); beginning reconnect.",
 							  GetServerURL(), avs::stringOf(streamingState));
 				BeginReconnect();
+			}
+			else if (connectionStatus == ConnectionStatus::RECONNECTING && isDown)
+			{
+				// The peer connection created for a reconnect attempt has failed before
+				// we managed to get back to CONNECTED. Don't wait for the discovery
+				// deadline; count it as a failed attempt so we tear down and try again.
+				TELEPORT_WARN("Reconnect attempt for {0} failed ({1}); accelerating next retry.",
+							  GetServerURL(), avs::stringOf(streamingState));
+				TearDownStreamingPipeline();
+				OnReconnectAttemptFailed();
 			}
 			lastStreamingState = streamingState;
 		}
@@ -1253,4 +1253,21 @@ void SessionClient::GiveUpAndShutDown()
 	reconnectAttempts		  = 0;
 	currentReconnectBackoffMs = 0;
 	lastSessionId			  = 0;
+}
+
+void SessionClient::OnReconnectAttemptFailed()
+{
+	auto &config = Config::GetInstance();
+	reconnectAttempts++;
+	if (reconnectAttempts >= config.options.maxReconnectAttempts)
+	{
+		TELEPORT_WARN("Reconnect to {0} failed after {1} attempts; giving up.", GetServerURL(), reconnectAttempts);
+		GiveUpAndShutDown();
+		return;
+	}
+	currentReconnectBackoffMs = std::min(currentReconnectBackoffMs * 2u, config.options.reconnectMaxBackoffMs);
+	const auto now = std::chrono::steady_clock::now();
+	nextReconnectTime		  = now + std::chrono::milliseconds(currentReconnectBackoffMs);
+	reconnectAttemptDeadline  = nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);
+	TELEPORT_INTERNAL_COUT(Default, "Reconnect attempt {0} failed; next attempt in {1} ms.", reconnectAttempts, currentReconnectBackoffMs);
 }

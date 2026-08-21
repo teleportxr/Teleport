@@ -4,7 +4,7 @@
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Platform/CrossPlatform/Shaders/camera_constants.sl"
-#include "client/Shaders/pbr_constants.sl"
+#include "client/assets/shaders/pbr_constants.sl"
 #include "Platform/CrossPlatform/Shaders/text_constants.sl"
 
 namespace avs

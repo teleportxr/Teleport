@@ -212,6 +212,19 @@ avs::Result GeometryEncoder::encodeMeshes(std::vector<avs::uid> missingUIDs)
 	{
 		if (uid == 0)
 			continue;
+		if (geometryStore->IsExternalAsset(uid))
+		{
+			// A .glb/.vrm served beside us. There is no extracted mesh to send inline - the file
+			// itself is the resource - so send its url and let the client fetch it, exactly as for
+			// an external texture. The textures such a file references are streamed alongside it;
+			// see GeometryStreamingService and GeometryStore::getMeshTextureDependencies.
+			avs::Result result = encodeMeshPointer(uid);
+			if (result != avs::Result::OK)
+			{
+				return result;
+			}
+			continue;
+		}
 		const avs::Mesh *mesh = geometryStore->getMesh(uid, geometryStreamingService->getClientAxesStandard());
 		const avs::CompressedMesh *compressedMesh = geometryStore->getCompressedMesh(uid, geometryStreamingService->getClientAxesStandard());
 		if (!compressedMesh || compressedMesh->meshCompressionType == avs::MeshCompressionType::NONE)
@@ -689,28 +702,23 @@ avs::Result GeometryEncoder::encodeShadowMaps(std::vector<avs::uid> missingUIDs)
 // don't send more than a Mb inline:
 #define INLINE_DATA_THRESHOLD_KB (1024)
 
-avs::Result GeometryEncoder::encodeTexturePointer(avs::uid uid)
+//! The body of every pointer payload - TexturePointer, MeshPointer, MaterialPointer,
+//! AnimationPointer - is the same: an axes-standard byte, then a uint16 url length, then the url.
+//! `extension` completes the path, which resource paths deliberately lack: it belongs to the
+//! resource type, and the client is sent the url of an actual file so that even a dumb fileserver
+//! or CDN can answer with a download.
+avs::Result GeometryEncoder::encodeResourcePointer(avs::GeometryPayloadType payloadType, avs::uid uid, const string &extension, avs::AxesStandard axesStandard)
 {
-	// Place payload type onto the buffer.
-	putPayloadType(avs::GeometryPayloadType::TexturePointer, uid);
-
 	GeometryStore *geometryStore = &(GeometryStore::GetInstance());
-	const ExtractedTexture *wrappedTexture = geometryStore->getWrappedTexture(uid);
-	string path = geometryStore->UidToPath(uid);
+	string		   path			 = geometryStore->UidToPath(uid);
 	if (!path.length())
+	{
+		TELEPORT_WARN_NOSPAM("No path for resource {0}, so no url can be sent for it.", uid);
 		return avs::Result::Failed;
-	// The path is incomplete, because it has no file extension. We want to send the full URL of
-	// an actual file, so that even dumb fileservers or CDN's can respond with a download.
-	//
-	// Where the store holds the texture, the extension comes from the format it was compressed
-	// to. Where it does not, this is an external asset - a file served beside us that some
-	// .glb/.vrm references as one of its images - and the extension is the one it was
-	// registered with. Neither must be assumed: a texture uid with no stored texture used to
-	// dereference null here.
-	string extension = wrappedTexture ? wrappedTexture->fileExtension() : geometryStore->GetExternalAssetExtension(uid);
+	}
 	if (!extension.length())
 	{
-		TELEPORT_WARN_NOSPAM("No file extension for texture {0} at {1}, so no url can be sent for it.", uid, path);
+		TELEPORT_WARN_NOSPAM("No file extension for resource {0} at {1}, so no url can be sent for it.", uid, path);
 		return avs::Result::Failed;
 	}
 	string url = geometryStore->GetHttpRoot() + "/";
@@ -718,22 +726,51 @@ avs::Result GeometryEncoder::encodeTexturePointer(avs::uid uid)
 	url += extension;
 	uint16_t urlLength = (uint16_t)url.length();
 	if ((size_t)urlLength != url.length())
+	{
 		return avs::Result::Failed;
+	}
+	// Place payload type onto the buffer.
+	putPayloadType(payloadType, uid);
 	// Every pointer body begins with the axes standard its asset is authored in, ahead of the
 	// url, so it is always in the same place — the decoders consume it unconditionally, and
-	// omitting it shifts the whole body by a byte. The GeometryStore records no per-texture
-	// standard, so declare NotInitialized: the client reads that as "the same as the server's
-	// scene" and falls back to SetupCommand.axesStandard.
-	put((uint8_t)avs::AxesStandard::NotInitialized);
+	// omitting it shifts the whole body by a byte. NotInitialized means "the same as the server's
+	// scene", which the client resolves against SetupCommand.axesStandard.
+	put((uint8_t)axesStandard);
 	// Push url length in 16 bits..
 	put(urlLength);
 	// Push name.
 	put((uint8_t *)url.data(), urlLength);
 	// Actual size is now known so update payload size
 	putPayloadSize();
-	// Flag we have encoded the texture.
+	// Flag we have encoded the resource.
 	geometryStreamingService->encodedResource(uid);
 	return avs::Result::OK;
+}
+
+avs::Result GeometryEncoder::encodeTexturePointer(avs::uid uid)
+{
+	GeometryStore		   *geometryStore = &(GeometryStore::GetInstance());
+	const ExtractedTexture *wrappedTexture = geometryStore->getWrappedTexture(uid);
+	// Where the store holds the texture, the extension comes from the format it was compressed
+	// to. Where it does not, this is an external asset - a file served beside us that some
+	// .glb/.vrm references as one of its images - and the extension is the one it was
+	// registered with. Neither must be assumed: a texture uid with no stored texture used to
+	// dereference null here.
+	const string extension = wrappedTexture ? wrappedTexture->fileExtension() : geometryStore->GetExternalAssetExtension(uid);
+	// A texture extracted into the store has no frame of its own recorded, so it declares none.
+	// An external asset carries whatever it was registered with, which for a cubemap matters:
+	// texture contents are never converted by the server, so the client reorients its sample
+	// directions into the declared frame instead.
+	return encodeResourcePointer(avs::GeometryPayloadType::TexturePointer, uid, extension, geometryStore->GetExternalAssetAxesStandard(uid));
+}
+
+avs::Result GeometryEncoder::encodeMeshPointer(avs::uid uid)
+{
+	GeometryStore *geometryStore = &(GeometryStore::GetInstance());
+	// Only an external asset - a .glb/.vrm served beside us - is sent as a pointer; an extracted
+	// mesh is sent inline, as compressed geometry with its materials and textures as resources.
+	return encodeResourcePointer(
+		avs::GeometryPayloadType::MeshPointer, uid, geometryStore->GetExternalAssetExtension(uid), geometryStore->GetExternalAssetAxesStandard(uid));
 }
 
 avs::Result GeometryEncoder::encodeTexturesBackend(std::vector<avs::uid> missingUIDs, bool)
@@ -785,7 +822,7 @@ avs::Result GeometryEncoder::encodeTexturesBackend(std::vector<avs::uid> missing
 			// Flag we have encoded the texture.
 			geometryStreamingService->encodedResource(uid);
 		}
-		else if (geometryStore->GetExternalAssetExtension(uid).length())
+		else if (geometryStore->IsExternalAsset(uid))
 		{
 			// An external asset: a file served beside us that a .glb/.vrm references as one of
 			// its images. There is no texture in the store to send inline - the file itself is

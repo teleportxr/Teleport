@@ -61,7 +61,7 @@ jobs:
         echo VULKAN_SDK ${{env.VULKAN_SDK}};
         echo GITHUB_PATH ${{env.GITHUB_PATH}};
         dir ${{env.WORKFLOW_VULKAN_DIR}};
-        dir D:/a/Teleport/Teleport/client/Shaders/link.sfx
+        dir D:/a/Teleport/Teleport/client/assets/shaders/link.sfx
     - name: Running cmake (windows)
       run: |
         cd ${{ github.workspace }}

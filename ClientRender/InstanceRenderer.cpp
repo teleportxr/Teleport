@@ -1066,9 +1066,9 @@ void InstanceRenderer::AddNodeMeshToInstanceRender(avs::uid									 cache_uid,
 			auto		layoutHash = platform::crossplatform::GetLayoutHash(meshLayoutDesc);
 			//  To render with normal maps, we must have normal and tangent vertex attributes, and we must have a normal map!
 			bool normal_map		   = meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::NORMAL) &&
-							  meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && (matInfo.normal.texture_uid != 0);
-			bool		emissive		  = (matInfo.emissive.texture_uid != 0 || length(matInfo.emissive.textureOutputScalar.xyz) > 0);
-			bool		combined_map	  = matInfo.combined.texture_uid != 0;
+							  meshLayout->HasSemantic(platform::crossplatform::LayoutSemantic::TANGENT) && matInfo.normal.hasTexture;
+			bool		emissive		  = (matInfo.emissive.hasTexture || length(matInfo.emissive.textureOutputScalar.xyz) > 0);
+			bool		combined_map	  = matInfo.combined.hasTexture;
 			std::string base_pixel_shader = transparent ? "ps_transparent" : "ps_solid";
 			std::string vertex_shader	  = "vs_variants";
 			if (renderState.multiview)

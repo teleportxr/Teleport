@@ -1590,10 +1590,21 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 				const clientrender::Material::MaterialData &md	= selected_material->GetMaterialData();
 				ImGui::Text("%lu: %s", selected_material->id, mci.name.c_str());
 
+				// A texture is not necessarily in the same cache as the material that samples it: an
+				// image a .glb references as a separate file is held by the session's cache, while the
+				// material lives in the sub-scene the .glb became. Selecting one therefore switches the
+				// viewed cache to whichever holds it, which is what Select's first argument does. Fall
+				// back to the current cache for a texture that declares no owner - a dummy, say.
+				auto selectTexture = [this](const std::shared_ptr<clientrender::Texture> &texture)
+				{
+					const auto &tci = texture->GetTextureCreateInfo();
+					Select(tci.cache_uid ? tci.cache_uid : cache_uid, tci.uid);
+				};
+
 				if (ImGui::BeginTable("selectedafs1", 5))
 				{
-					DoRow("Roughness", "%d", mci.combined.textureOutputScalar.x);
-					DoRow("Metallic", "%d", mci.combined.textureOutputScalar.y);
+					DoRow("Roughness", "%3.3f", mci.combined.textureOutputScalar.x);
+					DoRow("Metallic", "%3.3f", mci.combined.textureOutputScalar.y);
 					ImGui::Separator();
 					ImGui::EndTable();
 				}
@@ -1605,7 +1616,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					{
 						if (ImGui::IsItemClicked())
 						{
-							Select(cache_uid, mci.diffuse.texture->GetTextureCreateInfo().uid);
+							selectTexture(mci.diffuse.texture);
 						}
 						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
@@ -1626,7 +1637,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					{
 						if (ImGui::IsItemClicked())
 						{
-							Select(cache_uid, mci.normal.texture->GetTextureCreateInfo().uid);
+							selectTexture(mci.normal.texture);
 						}
 						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
@@ -1640,7 +1651,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 					{
 						if (ImGui::IsItemClicked())
 						{
-							Select(cache_uid, mci.combined.texture->GetTextureCreateInfo().uid);
+							selectTexture(mci.combined.texture);
 						}
 						// ImGui::TreePop();	ImGuiTreeNodeFlags_NoTreePushOnOpen
 					}
@@ -1650,7 +1661,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 
 					if (ImGui::IsItemClicked())
 					{
-						Select(cache_uid, mci.combined.texture->GetTextureCreateInfo().uid);
+						selectTexture(mci.combined.texture);
 					}
 				}
 				if (mci.emissive.texture.get())
@@ -1659,7 +1670,7 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 
 					if (ImGui::IsItemClicked())
 					{
-						Select(cache_uid, mci.emissive.texture->GetTextureCreateInfo().uid);
+						selectTexture(mci.emissive.texture);
 					}
 				}
 			}
@@ -1739,15 +1750,17 @@ void Gui::EndDebugGui(GraphicsDeviceContext &deviceContext)
 			}
 			else if (selected_mesh.get())
 			{
-				avs::uid cache_uid = selected_mesh->GetMeshCreateInfo().subscene_cache_uid;
-				if (cache_uid != 0)
+				// Not named cache_uid: that is the member holding the cache being inspected, and a local
+				// shadowing it here is how the two get confused.
+				avs::uid subscene_cache_uid = selected_mesh->GetMeshCreateInfo().subscene_cache_uid;
+				if (subscene_cache_uid != 0)
 				{
-					ImGui::Text("Subscene resource %lu", cache_uid);
+					ImGui::Text("Subscene resource %lu", subscene_cache_uid);
 
-					auto g = clientrender::GeometryCache::GetGeometryCache(cache_uid);
+					auto g = clientrender::GeometryCache::GetGeometryCache(subscene_cache_uid);
 					if (g)
 					{
-						IMGUITREENODEEX("##name111", flags, " Subscene Geometry Cache: {0}", cache_uid);
+						IMGUITREENODEEX("##name111", flags, " Subscene Geometry Cache: {0}", subscene_cache_uid);
 						auto rn = g->mNodeManager.GetRootNodes();
 						if (rn.size())
 						{
@@ -2396,32 +2409,51 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 
 void Gui::GeometryOSD()
 {
-	const std::vector<avs::uid>		&cache_uids = clientrender::GeometryCache::GetCacheUids();
+	const std::vector<avs::uid>		 cache_uids = clientrender::GeometryCache::GetCacheUids();
 	static std::vector<std::string>	 cache_names;
 	static std::vector<const char *> cache_strings;
-	if (cache_uids.size() != cache_names.size())
+	// Rebuilt when the list of caches differs, not merely when its length does: one sub-scene going
+	// away as another arrives leaves the length alone, and the labels would then name caches other
+	// than the ones the entries select.
+	static std::vector<avs::uid>	 named_cache_uids;
+	if (cache_uids != named_cache_uids)
 	{
+		named_cache_uids = cache_uids;
 		cache_names.clear();
 		cache_strings.resize(cache_uids.size());
 		for (size_t i = 0; i < cache_uids.size(); i++)
 		{
 			auto g = clientrender::GeometryCache::GetGeometryCache(cache_uids[i]);
-			cache_names.push_back(std::format("{0}, {1}", cache_uids[i], g->GetName()));
+			cache_names.push_back(std::format("{0}, {1}", cache_uids[i], g ? g->GetName() : "(gone)"));
 		}
 		for (size_t i = 0; i < cache_uids.size(); i++)
 		{
 			cache_strings[i] = cache_names[i].c_str();
 		}
 	}
-	static int current_choice = 0;
-	ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(), (int)cache_strings.size());
+	// The combo shows which cache is being inspected; it does not decide it. Selecting a resource
+	// sets cache_uid too - following a material's texture into the cache that owns it crosses from a
+	// sub-scene to the session, which is the whole point of Select taking a cache - and writing the
+	// combo's own choice back every frame would undo that on the very next one.
+	int current_choice = 0;
+	for (size_t i = 0; i < cache_uids.size(); i++)
+	{
+		if (cache_uids[i] == cache_uid)
+		{
+			current_choice = (int)i;
+			break;
+		}
+	}
+	if (ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(), (int)cache_strings.size()))
+	{
+		if (current_choice >= 0 && current_choice < (int)cache_uids.size())
+		{
+			cache_uid = cache_uids[current_choice];
+		}
+	}
 
 	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
 
-	if (current_choice >= 0 && current_choice < cache_uids.size())
-	{
-		cache_uid = cache_uids[current_choice];
-	}
 	vec4										 white(1.f, 1.f, 1.f, 1.f);
 	std::unique_ptr<std::lock_guard<std::mutex>> cacheLock;
 	auto										 geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
@@ -3871,12 +3903,29 @@ void Gui::Select(avs::uid c, avs::uid u)
 	}
 }
 
+//! A history entry names the cache it was selected in as well as the resource, because the two are
+//! not separable: a uid is only meaningful against a cache, and a texture a sub-scene's material
+//! samples may well belong to the session's cache. Stepping through the history has to restore
+//! both, or the inspector looks the uid up in the wrong cache and shows nothing.
+void Gui::RestoreSelectedCache()
+{
+	if (selection_cursor < selection_history.size())
+	{
+		const avs::uid c = selection_history[selection_cursor].cache_uid;
+		if (c)
+		{
+			cache_uid = c;
+		}
+	}
+}
+
 void Gui::SelectPrevious()
 {
 	if (selection_cursor > 0)
 	{
 		selection_cursor--;
 	}
+	RestoreSelectedCache();
 	mip_current = 0;
 }
 
@@ -3886,6 +3935,7 @@ void Gui::SelectNext()
 	{
 		selection_cursor++;
 	}
+	RestoreSelectedCache();
 	mip_current = 0;
 }
 

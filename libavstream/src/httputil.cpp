@@ -393,6 +393,9 @@ HTTPUtil::Transfer::Transfer(CURLM *multi, std::string remoteURL, size_t bufferS
 	// Use CURLOPT_SSLCERT later.
 #endif
 	curl_easy_setopt(mHandle, CURLOPT_HEADERFUNCTION, &HTTPUtil::headerCallback);
+	// Prevent libcurl from raising SIGPIPE when the peer closes a connection
+	// while we are tearing down (e.g. during curl_multi_cleanup TLS shutdown).
+	curl_easy_setopt(mHandle, CURLOPT_NOSIGNAL, 1L);
 }
 
 HTTPUtil::Transfer::~Transfer()

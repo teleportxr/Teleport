@@ -685,27 +685,23 @@ namespace teleport::core
 								// would otherwise render untextured with nothing in the log.
 								TELEPORT_WARN_NOSPAM("Image \"{0}\" of {1} cannot be resolved to a url; it will be missing.", image.uri, filename_url);
 							}
-							else if (geometryCache && geometryCache->ShareTextureFromUrl(absoluteUrl, dg.server_or_cache_uid, texture_uid))
+							else if (geometryCache)
 							{
-								TELEPORT_INTERNAL_COUT(Resource, "Texture {0} of {1} shares the resource already delivered from {2}",
+								// The url is the identity, so this asks the session's cache for the
+								// one texture that url delivers - fetching it only if nothing has yet,
+								// whether that was a TexturePointer the server sent or another asset
+								// that names the same file. The texture stays there: this sub-scene
+								// never holds it, because a uid means nothing outside the cache that
+								// issued it and a sub-scene outlives neither the session nor its
+								// siblings.
+								//
+								// texture_uid is therefore not a resource of this cache at all, only
+								// the label the accessors below refer to this image by; the map
+								// records what it really means, and AddTextureToMaterial reads it.
+								geometryCache->RequestTextureFromUrl(absoluteUrl, dec, target);
+								dg.externalTextureUrls[texture_uid] = absoluteUrl;
+								TELEPORT_INTERNAL_COUT(Resource, "Texture {0} of {1} is the resource at {2}",
 									texture_uid, filename_url, absoluteUrl);
-							}
-							else
-							{
-								// Nothing has this file. Fetch it ourselves, and note the url so a
-								// later reference to it - another image in this asset, or a
-								// TexturePointer that arrives afterwards - resolves to this same
-								// texture. Note the url must be absolute here: decodeFromWeb would
-								// otherwise complete it with the cache's default url root, and a
-								// sub-scene cache's root is the whole url of the asset itself
-								// (GeometryCache::CreateGeometryCache).
-								if (geometryCache)
-								{
-									geometryCache->RegisterTextureUrl(absoluteUrl, texture_uid);
-								}
-								TELEPORT_INTERNAL_COUT(Resource, "Texture {0} of {1} fetched from {2}",
-									texture_uid, filename_url, absoluteUrl);
-								dec->decodeFromWeb(dg.server_or_cache_uid, absoluteUrl, avs::GeometryPayloadType::Texture, target, texture_uid);
 							}
 						}
 						// For data URIs
