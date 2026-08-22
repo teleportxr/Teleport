@@ -45,13 +45,13 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../client/Shaders/canvas_text.sfx">
+    <CustomBuild Include="../../../../client/assets/shaders/canvas_text.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating canvas_text.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/canvas_text.sfx -I"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/assets/shaders/canvas_text.sfx -I"../../../../../client/assets/shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -65,13 +65,13 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../client/Shaders/cubemap_clear.sfx">
+    <CustomBuild Include="../../../../client/assets/shaders/cubemap_clear.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/cubemap_clear.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/cubemap_clear.sfx -I"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/assets/shaders/cubemap_clear.sfx -I"../../../../../client/assets/shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -85,13 +85,13 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
 	<ItemGroup>
-		<CustomBuild Include="../../../../client/Shaders/link.sfx">
+		<CustomBuild Include="../../../../client/assets/shaders/link.sfx">
 			<Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/link.sfxo</Message>
 			<Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/link.sfx -I"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/assets/shaders/link.sfx -I"../../../../../client/assets/shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -105,13 +105,13 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
 		</CustomBuild>
 	</ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../client/Shaders/pbr.sfx">
+    <CustomBuild Include="../../../../client/assets/shaders/pbr.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/pbr.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/pbr.sfx -I"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/assets/shaders/pbr.sfx -I"../../../../../client/assets/shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%" -v
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -125,13 +125,13 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="../../../../client/Shaders/texture_conversion.sfx">
+    <CustomBuild Include="../../../../client/assets/shaders/texture_conversion.sfx">
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating ../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders/texture_conversion.sfxo</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
 mkdir shaderbin
 cd shaderbin
 if %errorlevel% neq 0 goto :cmEnd
-..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/Shaders/texture_conversion.sfx -I"../../../../../client/Shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
+..\..\..\..\..\build_pc_client\bin\Release\Sfx.exe ../../../../../client/assets/shaders/texture_conversion.sfx -I"../../../../../client/assets/shaders/Vulkan/Sfx" -I"../../../../../firstparty/Platform/CrossPlatform/Shaders" -I"../../../../../firstparty/Platform/Vulkan/Sfx" -O"../../../../AndroidClient/AndroidPackaging/app/src/main/assets/shaders" -P"../../../../../firstparty/Platform/Vulkan/Sfx/VulkanAndroid.json" -M"../sfx_intermediate" -w -EPLATFORM=../../../../../firstparty/Platform "-EVULKAN_SDK=%VULKAN_SDK%"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -162,11 +162,11 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="../../../../client/Shaders/cubemap_constants.sl">
+    <None Include="../../../../client/assets/shaders/cubemap_constants.sl">
     </None>
-    <None Include="../../../../client/Shaders/pbr_constants.sl">
+    <None Include="../../../../client/assets/shaders/pbr_constants.sl">
     </None>
-    <None Include="../../../../client/Shaders/video_types.sl">
+    <None Include="../../../../client/assets/shaders/video_types.sl">
     </None>
     <None Include="..\..\..\..\firstparty\Platform\Shaders\SL\CppSl.sl">
     </None>

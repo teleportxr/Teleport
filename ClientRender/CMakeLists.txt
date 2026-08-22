@@ -113,8 +113,8 @@ set(av_parser
 	AVParser/Parser.cpp
 	AVParser/Parser.h
 )
-set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/link.sfx" "${CMAKE_SOURCE_DIR}/client/Shaders/pbr.sfx")
-file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
+set(shaders "${CMAKE_SOURCE_DIR}/client/assets/shaders/link.sfx" "${CMAKE_SOURCE_DIR}/client/assets/shaders/pbr.sfx")
+file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/assets/shaders/*.sl" )
 file(GLOB global_shader_includes "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders/*.sl")
 source_group("Shaders" src FILES ${shaders} )
 source_group("Shader Includes" src FILES ${shader_includes} )
@@ -192,7 +192,7 @@ if(ANDROID)
 			#${log-lib} )
 endif()
 
-add_multiplatform_sfx_shader_project( ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." 
+add_multiplatform_sfx_shader_project( ClientRender INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/assets/shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." 
 							SOURCES ${shaders} DEFINES VULKAN_SDK=${VULKAN_SDK_DIR} CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR} 
 							OPTIONS -GSIMUL_TRUESKY=$<BOOL:${SIMUL_TRUESKY}>
 					 		OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" )

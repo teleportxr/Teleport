@@ -27,10 +27,10 @@ set(srcs
 	../ClientApp/ClientApp.h
 	CPackOptions.cmake
 ) 
-set(shaders "${CMAKE_SOURCE_DIR}/client/Shaders/canvas_text.sfx"
-			"${CMAKE_SOURCE_DIR}/client/Shaders/cubemap_clear.sfx"
-			"${CMAKE_SOURCE_DIR}/client/Shaders/texture_conversion.sfx")
-file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/Shaders/*.sl" )
+set(shaders "${CMAKE_SOURCE_DIR}/client/assets/shaders/canvas_text.sfx"
+			"${CMAKE_SOURCE_DIR}/client/assets/shaders/cubemap_clear.sfx"
+			"${CMAKE_SOURCE_DIR}/client/assets/shaders/texture_conversion.sfx")
+file(GLOB shader_includes "${CMAKE_SOURCE_DIR}/client/assets/shaders/*.sl" )
 
 source_group("Shaders" src FILES ${shaders} )
 source_group("Shader Includes" src FILES ${shader_includes} )
@@ -80,7 +80,7 @@ if(TELEPORT_CLIENT_SUPPORT_IPSME)
                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/mosquitto.dll)
 endif()
 
-add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/Shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
+add_multiplatform_sfx_shader_project(TeleportPCClient INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/../client/assets/shaders" "${SIMUL_PLATFORM_DIR}/CrossPlatform/Shaders" "${CMAKE_SOURCE_DIR}/.." "${SIMUL_PLATFORM_DIR}/.." SOURCES ${shaders} ${shader_includes} ${global_shader_includes} OPTIONS OUTPUT "${CMAKE_BINARY_DIR}/shaderbin/$PLATFORM_NAME" DEFINES FOLDER Shaders )
 
 target_include_directories(TeleportPCClient PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR} ${TELEPORT_SIMUL}/.. ../libavstream/include ../libavstream/export_include ../TeleportAudio/src ../ClientRender/src)
@@ -315,7 +315,7 @@ elseif(TELEPORT_MACOS)
 		install(FILES "${CMAKE_SOURCE_DIR}/Installers/MoltenVK_icd.json"
 			DESTINATION TeleportPCClient.app/Contents/Resources/vulkan/icd.d COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	endif()
-	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
+	install(FILES "${CMAKE_SOURCE_DIR}/client/assets/textures/teleportxr.png"
 		DESTINATION TeleportPCClient.app/Contents/share/teleportxr/assets/textures
 		COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	# Re-sign every embedded dylib plus MoltenVK now (fixup_bundle's install_name_tool rewriting
@@ -358,13 +358,13 @@ else()
 	# Icon and desktop entry use absolute paths so they land under /usr/share regardless
 	# of the package prefix, where the freedesktop tooling expects them.
 	install(TARGETS TeleportPCClient RUNTIME DESTINATION bin COMPONENT ${TELEPORT_CLIENT_COMPONENT})
-	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
+	install(FILES "${CMAKE_SOURCE_DIR}/client/assets/textures/teleportxr.png"
 		DESTINATION /usr/share/icons/hicolor/256x256/apps
 		RENAME TeleportXR.png COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/TeleportXR.desktop"
 		DESTINATION /usr/share/applications COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	# Runtime window icon: Main.cpp loads this relative to the client working directory.
-	install(FILES "${CMAKE_SOURCE_DIR}/client/textures/teleportxr.png"
+	install(FILES "${CMAKE_SOURCE_DIR}/client/assets/textures/teleportxr.png"
 		DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/textures COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 	# Convenience symlink so the binary can be invoked from a shell.
 	install(CODE "
@@ -373,8 +373,8 @@ else()
 			\"\$ENV{DESTDIR}/usr/bin/teleportxr\" SYMBOLIC)
 	" COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 endif()
-file(GLOB INSTALL_TEXTURES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*.*")
-file(GLOB INSTALL_FONTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/*.*")
+file(GLOB INSTALL_TEXTURES "${CMAKE_SOURCE_DIR}/client/assets/textures/*.*")
+file(GLOB INSTALL_FONTS "${CMAKE_SOURCE_DIR}/client/assets/fonts/*.*")
 if(TELEPORT_WINDOWS AND LIBAV_USE_CUDA)
 	install(FILES "${LIBAV_CUDA_DIR}/bin/cudart64_110.dll" DESTINATION build/bin/Release COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 endif()
@@ -385,7 +385,7 @@ install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELE
 install(FILES "${CMAKE_SOURCE_DIR}/client/client_default.ini" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets RENAME client.ini COMPONENT ${TELEPORT_CLIENT_COMPONENT} OPTIONAL)
 install(DIRECTORY "${CMAKE_BINARY_DIR}/shaderbin/" DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 
-install(FILES ${shaders} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/Shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})
+install(FILES ${shaders} DESTINATION ${TELEPORT_CLIENT_DATA_DEST}/assets/shaders COMPONENT ${TELEPORT_CLIENT_COMPONENT})
 
 if(TELEPORT_MACOS AND TELEPORT_MACOS_APP_IDENTITY)
 	# Signs TeleportPCClient.app as a whole, sealing everything under Contents/ into its code

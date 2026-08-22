@@ -19,8 +19,8 @@
 #include "TeleportClient/Config.h"
 #include "TeleportClient/OpenXR.h"
 #include "TeleportClient/SessionClient.h"
-#include "client/Shaders/cubemap_constants.sl"
-#include "client/Shaders/video_types.sl"
+#include "client/assets/shaders/cubemap_constants.sl"
+#include "client/assets/shaders/video_types.sl"
 #include <libavstream/surfaces/surface_interface.hpp>
 #include <atomic>
 #if _MSC_VER

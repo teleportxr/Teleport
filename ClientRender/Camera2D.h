@@ -5,7 +5,7 @@
 #include "Platform/Math/OrientationInterface.h"
 #include "Platform/CrossPlatform/Shaders/CppSl.sl"
 #include "Platform/CrossPlatform/Frustum.h"
-#include "client/Shaders/pbr_constants.sl"
+#include "client/assets/shaders/pbr_constants.sl"
 #include "Platform/CrossPlatform/Camera.h"
 namespace teleport
 {

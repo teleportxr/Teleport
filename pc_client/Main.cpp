@@ -374,10 +374,10 @@ void InitRenderer(HWND hWnd, bool try_init_vr, bool dev_mode)
 		// Or from the Simul directory -e.g. by automatic builds:
 
 		renderPlatform->PushTexturePath("pc_client/textures");
-		renderPlatform->PushShaderPath("pc_client/Shaders");
-		renderPlatform->PushShaderPath("../client/Shaders");
-		renderPlatform->PushShaderPath("../../client/Shaders");
-		renderPlatform->PushShaderPath("../../../../client/Shaders");
+		renderPlatform->PushShaderPath("pc_client/assets/shaders");
+		renderPlatform->PushShaderPath("../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../../../client/assets/shaders");
 		renderPlatform->PushTexturePath("textures");
 		renderPlatform->PushShaderPath("Shaders"); // working directory C:\Teleport
 
@@ -976,10 +976,10 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 		renderPlatform->PushTexturePath("../../pc_client/textures");
 		renderPlatform->PushTexturePath("assets/textures");
 		renderPlatform->PushTexturePath("pc_client/textures");
-		renderPlatform->PushShaderPath("pc_client/Shaders");
-		renderPlatform->PushShaderPath("../client/Shaders");
-		renderPlatform->PushShaderPath("../../client/Shaders");
-		renderPlatform->PushShaderPath("../../../../client/Shaders");
+		renderPlatform->PushShaderPath("pc_client/assets/shaders");
+		renderPlatform->PushShaderPath("../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../client/assets/shaders");
+		renderPlatform->PushShaderPath("../../../../client/assets/shaders");
 		renderPlatform->PushTexturePath("textures");
 		renderPlatform->PushShaderPath("Shaders");
 
@@ -1136,6 +1136,11 @@ int main(int argc, char *argv[])
 	{
 		SIMUL_COUT << "MACDEBUG GLFW error " << error << ": " << description << std::endl;
 	});
+	// Keep the working directory where FindClientDirectory() put it (the client data
+	// directory): GLFW's Cocoa backend otherwise chdirs into the bundle's
+	// Contents/Resources at glfwInit() (GLFW_COCOA_CHDIR_RESOURCES defaults to true),
+	// breaking every asset path loaded relative to the data directory.
+	glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
 	if (!glfwInit())
 	{
 		TELEPORT_INTERNAL_CERR("glfwInit failed");
@@ -1158,7 +1163,7 @@ int main(int argc, char *argv[])
 	glfwSetFramebufferSizeCallback(g_window, GlfwFramebufferSizeCallback);
 
 	{
-		TELEPORT_INFO(Default,filesystem::current_path().string());
+		std::cout << "Current path: " << std::filesystem::current_path().string() << std::endl;
 		int w, h, ch;
 		unsigned char *pixels = stbi_load("assets/textures/teleportxr.png", &w, &h, &ch, 4);
 		if (pixels)
