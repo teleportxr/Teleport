@@ -68,7 +68,6 @@ if(TELEPORT_MACOS)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 	# ThisPlatform/{StringFunctions,Threads}.h - the macOS counterpart of the Linux shim.
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/MacOS)
-	add_compile_definitions(UNIX=1)
 endif()
 
 # Runtime library search path for the *installed* binaries. The packages bundle their own
@@ -727,7 +726,7 @@ function(SetTeleportDefaults targname)
 		# TODO: re-enable once pre-existing libavstream/TeleportCore header warnings are fixed.
 		set_property(TARGET ${targname} PROPERTY COMPILE_WARNING_AS_ERROR OFF)
 	endif()
-	add_definitions(-DUNICODE -D_UNICODE)
+	add_definitions(-DUNICODE -D_UNICODE -DPLATFORM_UNIX)
 	if(TELEPORT_TRACY_PROFILING)
 		target_include_directories(${targname} PUBLIC ${CMAKE_BINARY_DIR}/_deps/tracy-src/public)
 		target_compile_definitions(${targname} PRIVATE TRACY_ENABLE=1 )
