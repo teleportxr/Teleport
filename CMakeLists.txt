@@ -68,6 +68,7 @@ if(TELEPORT_MACOS)
 	set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "")
 	# ThisPlatform/{StringFunctions,Threads}.h - the macOS counterpart of the Linux shim.
 	include_directories(${CMAKE_SOURCE_DIR}/firstparty/Platform/MacOS)
+	add_compile_definitions(UNIX=1)
 endif()
 
 # Runtime library search path for the *installed* binaries. The packages bundle their own
