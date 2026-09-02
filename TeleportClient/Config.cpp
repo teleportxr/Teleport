@@ -90,9 +90,7 @@ void Config::LoadBookmarks()
 	}
 	else
 	{
-		bookmarks.push_back({"home.teleportxr.io","home.teleportxr.io"});
-		bookmarks.push_back({"test.teleportxr.io","test.teleportxr.io"});
-		bookmarks.push_back({"192.168.3.40","192.168.3.40"});
+		bookmarks.push_back({"example.teleportxr.io","example.teleportxr.io"});
 		SaveBookmarks();
 	}
 	if(recent_str.length())
