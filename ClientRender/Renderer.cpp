@@ -890,8 +890,8 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 
 	const std::set<int32_t> &tab_ids = client::TabContext::GetTabIndices();
 	// Each tab context has one active server at most.
-	static std::set<avs::uid> server_uids;
-	server_uids.clear();
+	std::set<avs::uid> server_uids;
+	//server_uids.clear();
 	for (const auto t : tab_ids)
 	{
 		auto tabContext = client::TabContext::GetTabContext(t);
@@ -903,7 +903,7 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 		if (server_uid != 0)
 		{
 			auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
-			if (sessionClient->IsConnected())
+			if (sessionClient && sessionClient->IsConnected())
 			{
 				server_uids.insert(server_uid);
 			}
@@ -943,6 +943,10 @@ void Renderer::RenderView(crossplatform::GraphicsDeviceContext &deviceContext)
 	for (const auto &server_uid : server_uids)
 	{
 		auto sessionClient = client::SessionClient::GetSessionClient(server_uid);
+		if (!sessionClient)
+		{
+			continue;
+		}
 		// Init the viewstruct in global space - i.e. with the server offsets.
 		teleport::core::Pose  origin_pose;
 		auto				 &clientServerState = sessionClient->GetClientServerState();
