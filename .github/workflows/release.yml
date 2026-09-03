@@ -220,14 +220,16 @@ jobs:
     # wrote into release_notes.md. The installation instructions are versioned in
     # the repo (Installers/release_instructions.md) rather than inline here, so the
     # tag being released is checked out and its copy of the file is appended -
-    # each release shows the instructions as of that tag. clean: false because
-    # checkout's default clean runs git clean -ffdx, which would delete the
-    # untracked dist/ tree holding the downloaded assets.
+    # each release shows the instructions as of that tag. The checkout goes into a
+    # subdirectory because this job has no earlier checkout: on a fresh workspace
+    # actions/checkout deletes the whole contents of its target path before
+    # fetching (the clean: input only applies to an existing repo), so checking
+    # out at the workspace root would wipe the downloaded dist/ tree.
     - name: Check out the released tag
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.tag || github.ref_name }}
-        clean: false
+        path: tag_checkout
 
     - name: Append the installation instructions
       shell: bash
@@ -235,7 +237,7 @@ jobs:
         set -euo pipefail
         {
           echo ""
-          cat Installers/release_instructions.md
+          cat tag_checkout/Installers/release_instructions.md
         } >> dist/windows/release_notes.md
 
     # Gatekeeper refuses an unsigned package outright, with an error that does not
