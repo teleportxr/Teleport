@@ -80,6 +80,12 @@ namespace teleport
 			{
 				return m_CI;
 			}
+			//! Structural footprint only: the shadow map texture is owned (and counted) by the
+			//! cache's texture manager.
+			size_t GetMemoryBytes() const
+			{
+				return sizeof(LightCreateInfo) + sizeof(LightData);
+			}
 			inline std::shared_ptr<Texture> &GetShadowMapTexture() { return m_CI.shadowMapTexture; }
 			inline bool IsValid() { return m_IsValid; }
 

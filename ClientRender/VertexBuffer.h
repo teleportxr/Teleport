@@ -81,6 +81,13 @@ namespace teleport
 				return m_SimulBuffer;
 			}
 
+			//! Bytes of vertex data retained client-side. Uses the actual buffer size where the
+			//! source data is still held, falling back to the created size otherwise.
+			size_t GetMemoryBytes() const
+			{
+				return m_CI.data ? m_CI.data->size() : m_CI.size;
+			}
+
 		protected:
 			virtual void Bind() const;
 			virtual void Unbind() const;

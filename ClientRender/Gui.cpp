@@ -11,7 +11,10 @@
 #include "IconsForkAwesome.h"
 #include "InstanceRenderer.h"
 #include "Light.h"
+#include "MemoryUtil.h"
 #include "Platform/Core/FileLoader.h"
+
+static std::string FormatBytes(size_t bytes);
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -2409,48 +2412,43 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 
 void Gui::GeometryOSD()
 {
-	const std::vector<avs::uid>		 cache_uids = clientrender::GeometryCache::GetCacheUids();
-	static std::vector<std::string>	 cache_names;
-	static std::vector<const char *> cache_strings;
-	// Rebuilt when the list of caches differs, not merely when its length does: one sub-scene going
-	// away as another arrives leaves the length alone, and the labels would then name caches other
-	// than the ones the entries select.
-	static std::vector<avs::uid>	 named_cache_uids;
-	if (cache_uids != named_cache_uids)
+	const std::vector<avs::uid> cache_uids = clientrender::GeometryCache::GetCacheUids();
+
+	// Left-hand panel: every cache/server/sub-scene as a selectable row, with its total memory
+	// shown right there - so picking a cache to inspect and seeing which one is heaviest is the
+	// same glance, rather than a dropdown that hides both behind a click.
+	// Selecting a row sets cache_uid; it does not merely reflect it. Following a material's
+	// texture into the cache that owns it (via Select) crosses from a sub-scene to the session,
+	// so this list must not write its own choice back over that on the next frame - it only ever
+	// reacts to a click.
+	ImGui::BeginChild("CacheList", ImVec2(260, 0), true);
+	if (ImGui::BeginTable("CacheTable", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable))
 	{
-		named_cache_uids = cache_uids;
-		cache_names.clear();
-		cache_strings.resize(cache_uids.size());
-		for (size_t i = 0; i < cache_uids.size(); i++)
+		ImGui::TableSetupColumn("Cache");
+		ImGui::TableSetupColumn("Memory", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		ImGui::TableHeadersRow();
+		for (avs::uid uid : cache_uids)
 		{
-			auto g = clientrender::GeometryCache::GetGeometryCache(cache_uids[i]);
-			cache_names.push_back(std::format("{0}, {1}", cache_uids[i], g ? g->GetName() : "(gone)"));
+			auto		g	  = clientrender::GeometryCache::GetGeometryCache(uid);
+			std::string name  = std::format("{0}, {1}", uid, g ? g->GetName() : "(gone)");
+			size_t		bytes = g ? g->GetMemoryStats().totalBytes : 0;
+
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			if (ImGui::Selectable(name.c_str(), uid == cache_uid, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				cache_uid = uid;
+			}
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", FormatBytes(bytes).c_str());
 		}
-		for (size_t i = 0; i < cache_uids.size(); i++)
-		{
-			cache_strings[i] = cache_names[i].c_str();
-		}
+		ImGui::EndTable();
 	}
-	// The combo shows which cache is being inspected; it does not decide it. Selecting a resource
-	// sets cache_uid too - following a material's texture into the cache that owns it crosses from a
-	// sub-scene to the session, which is the whole point of Select taking a cache - and writing the
-	// combo's own choice back every frame would undo that on the very next one.
-	int current_choice = 0;
-	for (size_t i = 0; i < cache_uids.size(); i++)
-	{
-		if (cache_uids[i] == cache_uid)
-		{
-			current_choice = (int)i;
-			break;
-		}
-	}
-	if (ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(), (int)cache_strings.size()))
-	{
-		if (current_choice >= 0 && current_choice < (int)cache_uids.size())
-		{
-			cache_uid = cache_uids[current_choice];
-		}
-	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild("CacheDetail", ImVec2(0, 0), false);
 
 	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
 
@@ -2459,6 +2457,7 @@ void Gui::GeometryOSD()
 	auto										 geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
 	{
+		ImGui::EndChild();
 		return;
 	}
 	if (ImGui::BeginTable("numResources", 3))
@@ -2531,6 +2530,7 @@ void Gui::GeometryOSD()
 			LinePrint(txt.c_str());
 		}
 	}
+	ImGui::EndChild();
 }
 
 void Gui::BeginTabBar(const char *txt)
@@ -2552,6 +2552,62 @@ bool Gui::Tab(const char *txt)
 void Gui::EndTab()
 {
 	return ImGui::EndTabItem();
+}
+
+static std::string FormatBytes(size_t bytes)
+{
+	static const char *units[] = {"B", "KB", "MB", "GB"};
+	double value = (double)bytes;
+	int unit = 0;
+	while (value >= 1024.0 && unit < 3)
+	{
+		value /= 1024.0;
+		unit++;
+	}
+	return std::format("{:.2f} {}", value, units[unit]);
+}
+
+void Gui::Memory(clientrender::GeometryCache *geometryCache)
+{
+	if (!geometryCache)
+	{
+		return;
+	}
+	auto stats = geometryCache->GetMemoryStats();
+
+	// Not every client wires up a MemoryUtil singleton (e.g. the PC client currently doesn't),
+	// so this bar is skipped rather than shown as zero when none is registered.
+	if (const auto *memoryUtil = clientrender::MemoryUtil::Get())
+	{
+		long totalMem = memoryUtil->getTotalMemory();
+		long availableMem = memoryUtil->getAvailableMemory();
+		if (totalMem > 0)
+		{
+			float used = float(totalMem - availableMem) / float(totalMem);
+			ImGui::ProgressBar(used, ImVec2(-1, 0),
+								std::format("System memory: {} / {}", FormatBytes((size_t)(totalMem - availableMem)), FormatBytes((size_t)totalMem)).c_str());
+		}
+	}
+	ImGui::Text("This cache: %s", FormatBytes(stats.totalBytes).c_str());
+	ImGui::Separator();
+	if (ImGui::BeginTable("MemoryStats", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+	{
+		ImGui::TableSetupColumn("Type");
+		ImGui::TableSetupColumn("Count");
+		ImGui::TableSetupColumn("Bytes");
+		ImGui::TableHeadersRow();
+		for (const auto &e : stats.entries)
+		{
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", e.name.c_str());
+			ImGui::TableNextColumn();
+			ImGui::Text("%zu", e.count);
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", FormatBytes(e.bytes).c_str());
+		}
+		ImGui::EndTable();
+	}
 }
 
 void Gui::Scene()
@@ -2604,6 +2660,11 @@ void Gui::Scene()
 	if (ImGui::BeginTabItem("Lighting"))
 	{
 		Lighting(geometryCache.get());
+		ImGui::EndTabItem();
+	}
+	if (ImGui::BeginTabItem("Memory"))
+	{
+		Memory(geometryCache.get());
 		ImGui::EndTabItem();
 	}
 

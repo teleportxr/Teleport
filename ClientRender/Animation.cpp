@@ -160,6 +160,24 @@ void MatrixDecompose(const mat4 &matrix, vec3 &scale, vec4 &rotation, vec3 &tran
 		rotation.z = 0.25f * s;
 	}
 }
+size_t Animation::GetMemoryBytes() const
+{
+	size_t bytes = 0;
+	for (const auto &b : boneKeyframeLists)
+	{
+		bytes += b.positionKeyframes.size() * sizeof(teleport::core::Vector3Keyframe);
+		bytes += b.rotationKeyframes.size() * sizeof(teleport::core::Vector4Keyframe);
+	}
+	for (const auto &r : retargeted_animations)
+	{
+		if (r.second)
+		{
+			bytes += r.second->size();
+		}
+	}
+	return bytes;
+}
+
 ozz::animation::Animation *Animation::GetOzzAnimation(uint64_t skeleton_hash)
 {
 	auto a=retargeted_animations.find(skeleton_hash);

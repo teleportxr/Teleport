@@ -1286,7 +1286,7 @@ Result WebRtcNetworkSource::sendOpusFrame(const uint8_t* data, size_t size)
 	m_data->audioRtpBytesSent += size;
 	if(n == 1 || (n % 250) == 0)
 	{
-		TELEPORT_INTERNAL_COUT(Default,
+		TELEPORT_INTERNAL_COUT(Audio,
 			"WebRTC audio send: {} Opus frames ({} bytes total), last frame {} bytes",
 			n, m_data->audioRtpBytesSent.load(), size);
 	}

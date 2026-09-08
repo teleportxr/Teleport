@@ -21,6 +21,8 @@ namespace teleport
 		false,	// Time
 		false,	// Resource
 		false,	// Signaling
+		false,	// Audio
+		false,	// Video
 	};
 
 	bool IsLogCategoryEnabled(LogCategory category)

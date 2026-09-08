@@ -55,6 +55,12 @@ namespace teleport
 				return "TextCanvas";
 			}
 			TextCanvasCreateInfo textCanvasCreateInfo;
+			//! Its own text/layout data only - the font atlas (and its texture) are owned, and
+			//! counted, by the cache's font atlas and texture managers.
+			size_t GetMemoryBytes() const
+			{
+				return sizeof(TextCanvasCreateInfo) + textCanvasCreateInfo.text.size();
+			}
 			void RestoreDeviceObjects(platform::crossplatform::RenderPlatform *r);
 			void InvalidateDeviceObjects();
 

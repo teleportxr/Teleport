@@ -6,6 +6,7 @@
 #include "ozz/animation/offline/raw_skeleton.h"
 #include "ozz/animation/offline/skeleton_builder.h"
 #include "ozz/animation/runtime/skeleton.h"
+#include "ozz/base/maths/soa_transform.h"
 #include "AnimationRetargeter.h"
 
 using namespace teleport;
@@ -237,6 +238,21 @@ void Skeleton::InitBones(GeometryCache &g)
 	skeleton = builder(*raw_skeleton);
 
 	// ...use the skeleton as you want...
+}
+
+size_t Skeleton::GetMemoryBytes() const
+{
+	size_t bytes = boneIds.size() * sizeof(avs::uid);
+	bytes += bones.size() * sizeof(std::shared_ptr<clientrender::Node>);
+	bytes += jointMapping.size() * sizeof(int);
+	if (skeleton)
+	{
+		size_t numJoints = (size_t)skeleton->num_joints();
+		size_t numSoaJoints = (numJoints + 3) / 4;
+		bytes += numSoaJoints * sizeof(ozz::math::SoaTransform);
+		bytes += numJoints * (sizeof(int16_t) + sizeof(const char *));
+	}
+	return bytes;
 }
 
 void Skeleton::GetBoneMatrices(std::shared_ptr<GeometryCache> geometryCache,
