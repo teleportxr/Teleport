@@ -936,7 +936,7 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	displaySurfaceManager.Initialize(renderPlatform);
 
 #if TELEPORT_INTERNAL_CHECKS
-	static bool use_debug = true;
+	static bool use_debug = false;
 #else
 	static bool use_debug = false;
 #endif
