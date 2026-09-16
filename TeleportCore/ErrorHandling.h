@@ -33,6 +33,8 @@ namespace teleport
 		Time,
 		Resource,
 		Signaling,
+		Audio,
+		Video
 	};
 
 	extern bool IsLogCategoryEnabled(LogCategory category);

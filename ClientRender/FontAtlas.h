@@ -31,6 +31,17 @@ namespace teleport
 			{
 				return "FontAtlas";
 			}
+			//! Glyph-map data only - the font texture is owned, and counted, by the cache's
+			//! texture manager.
+			size_t GetMemoryBytes() const
+			{
+				size_t bytes = sizeof(*this);
+				for (const auto &m : fontMaps)
+				{
+					bytes += m.second.glyphs.size() * sizeof(teleport::core::Glyph);
+				}
+				return bytes;
+			}
 			/// Save the Font atlas to the local file cache.
 			virtual void Save(std::ostream &) const override;
 			virtual const char *GetFileExtension() const override

@@ -21,6 +21,7 @@
 #include "Platform/CrossPlatform/DisplaySurfaceManager.h"
 #include "Platform/CrossPlatform/GraphicsDeviceInterface.h"
 #include "Platform/CrossPlatform/RenderPlatform.h"
+#include "MemoryUtil.h"
 #include "ProcessHandler.h"
 #include "TeleportClient/ClientBootstrap.h"
 #include "TeleportClient/TabContext.h"
@@ -144,6 +145,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	std::wstring wcmdline = lpCmdLine;
 	cmdLine = platform::core::WStringToUtf8(wcmdline);
 	if (EnsureSingleProcess(cmdLine)) return 0;
+
+	// Registers itself as the clientrender::MemoryUtil singleton for the process lifetime, so
+	// ResourceManager's per-cache eviction can react to real memory pressure.
+	static PC_MemoryUtil memoryUtil;
 
 	auto *fileLoader = platform::core::FileLoader::GetFileLoader();
 	fileLoader->SetRecordFilesLoaded(true);
@@ -931,7 +936,7 @@ void InitRendererLinux(GLFWwindow *window, bool try_init_vr, bool dev_mode, cons
 	displaySurfaceManager.Initialize(renderPlatform);
 
 #if TELEPORT_INTERNAL_CHECKS
-	static bool use_debug = true;
+	static bool use_debug = false;
 #else
 	static bool use_debug = false;
 #endif
@@ -1097,6 +1102,10 @@ int main(int argc, char *argv[])
 
 	if (EnsureSingleProcess(cmdLine))
 		return 0;
+
+	// Registers itself as the clientrender::MemoryUtil singleton for the process lifetime, so
+	// ResourceManager's per-cache eviction can react to real memory pressure.
+	static PC_MemoryUtil memoryUtil;
 
 	auto *fileLoader = platform::core::FileLoader::GetFileLoader();
 	fileLoader->SetRecordFilesLoaded(true);

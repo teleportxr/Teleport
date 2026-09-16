@@ -87,6 +87,14 @@ namespace teleport
 			}
 			void SetMaterialCreateInfo(const MaterialCreateInfo &pMaterialCreateInfo);
 
+			//! Structural footprint only: the four texture slots are shared_ptr references to
+			//! textures owned (and counted) by the cache's texture manager, so they are not
+			//! re-counted here.
+			size_t GetMemoryBytes() const
+			{
+				return sizeof(MaterialCreateInfo) + sizeof(MaterialData);
+			}
+
 			inline const MaterialCreateInfo &GetMaterialCreateInfo() const { return m_CI; }
 			inline MaterialCreateInfo &GetMaterialCreateInfo() { return m_CI; }
 			inline const MaterialData &GetMaterialData() const { return m_MaterialData; }

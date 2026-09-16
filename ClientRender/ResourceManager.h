@@ -6,6 +6,7 @@
 #include <vector>			//std::vector
 #include <memory>			//Smart pointers
 #include <mutex>			//Thread safety.
+#include <atomic>			//Lock-free memory total, readable without the cache mutex.
 #include <algorithm>		//std::remove
 #include <parallel_hashmap/phmap.h>
 #include "MemoryUtil.h"
@@ -28,7 +29,15 @@ public:
 		std::shared_ptr<T> resource;
 		float postUseLifetime_s; // Seconds the resource should be kept alive after the last object has stopped using it.
 		float timeSinceLastUse_s; // Seconds since the data was last used by the session.
+		size_t memoryBytes = 0; // Snapshot of resource->GetMemoryBytes() taken on Add(), so RemoveResource can adjust the running total without recomputing it.
 	};
+
+	//! Bytes currently held by every resource in this manager, updated incrementally on
+	//! Add()/RemoveResource() so reading it never has to walk the map.
+	size_t GetTotalMemoryBytes() const
+	{
+		return m_totalBytes.load(std::memory_order_relaxed);
+	}
 
 	//Create a resource manager with the class specific function to free it from memory before destroying the resource.
 	ResourceManager(avs::uid cache_uid,std::function<void(T &)> freeResourceFunction = nullptr);
@@ -84,6 +93,7 @@ private:
 	phmap::flat_hash_map<u, ResourceData> cachedItems = phmap::flat_hash_map<u, ResourceData>(); //Hashmap of the stored resources.
 
 	mutable std::mutex mutex_cachedItems; //Mutex for thread-safety of cachedItems.
+	std::atomic<size_t> m_totalBytes{0}; //Running total of ResourceData::memoryBytes across cachedItems; read without locking.
 
 	//Frees the resource using the function that was passed to the resource manager on construction
 	void FreeResource(T & resource);
@@ -92,8 +102,11 @@ private:
 	//Returns an iterator to the next item in the unordered map.
 	mapIterator_t RemoveResource(mapIterator_t it);
 
-	// Bytes
-	static constexpr long MIN_REQUIRED_MEMORY = 1000000;
+	// Bytes of free system memory below which unused resources are evicted immediately rather
+	// than waiting out their normal post-use lifetime. 1MB was too low to ever act as a useful
+	// safety net before the system was already critically low; 512MB gives eviction room to
+	// actually relieve pressure before that point.
+	static constexpr long MIN_REQUIRED_MEMORY = 512L * 1024 * 1024;
 };
 
 template<typename u,class T>
@@ -117,13 +130,15 @@ void ResourceManager<u,T>::Add(u id, std::shared_ptr<T> & newItem, float postUse
 		TELEPORT_WARN("ResourceManager::Add duplicate (cache_uid={}, id={})", cache_uid, id);
 		return;
 	}
-	ResourceData resd = {newItem, postUseLifetime_s, 0};
+	size_t memoryBytes = newItem ? newItem->GetMemoryBytes() : 0;
+	ResourceData resd = {newItem, postUseLifetime_s, 0, memoryBytes};
 	auto res= cachedItems.emplace(id, resd);
 	if(res.second==false)
 //	if(newkey==cachedItems.end())
 	{
 		cachedItems[id]=resd;
 	}
+	m_totalBytes.fetch_add(memoryBytes, std::memory_order_relaxed);
 
 	cacheChecksum++;
 }
@@ -210,6 +225,7 @@ template<typename u,class T> void ResourceManager<u,T>::Clear()
 	}
 	resourceIDs.clear();
 	cachedItems.clear();
+	m_totalBytes.store(0, std::memory_order_relaxed);
 	cacheChecksum++;
 	idListChecksum++;
 }
@@ -252,7 +268,10 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 {
 	if(!lifetimeFactor)
 		return;
-	const bool sufficientMemory = true;//clientrender::MemoryUtil::Get()->isSufficientMemory(MIN_REQUIRED_MEMORY);
+	// Absent a registered MemoryUtil, assume memory is sufficient rather than evicting early -
+	// the normal per-resource lifetime below is what actually reclaims memory in that case.
+	const teleport::clientrender::MemoryUtil *memoryUtil = teleport::clientrender::MemoryUtil::Get();
+	const bool sufficientMemory = !memoryUtil || memoryUtil->isSufficientMemory(MIN_REQUIRED_MEMORY);
 
 	std::lock_guard<std::mutex> lock_cachedItems(mutex_cachedItems);
 	//We will be deleting any resources that have lived without being used for more than their allowed lifetime.
@@ -263,15 +282,15 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 		{
 			it->second.timeSinceLastUse_s += deltaTimestamp_s;
 
-			//Delete the resource, if memory is low and it has been too long since the object was last used.
-			if(!sufficientMemory && it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
+			//Delete the resource once its post-use lifetime has elapsed, or immediately if memory is low.
+			if(!sufficientMemory || it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
 			{
 				TELEPORT_INTERNAL_CERR("Cache {0}, Timeout Freeing {1} resource {2} ({3})\n",cache_uid,T::getTypeName(),it->first,it->second.resource->getName());
 				it = RemoveResource(it);
 			}
 			else
 			{
-				++it; 
+				++it;
 			}
 		}
 		else
@@ -294,6 +313,7 @@ template<typename u,class T>
 typename ResourceManager<u,T>::mapIterator_t ResourceManager<u,T>::RemoveResource(typename ResourceManager<u,T>::mapIterator_t it)
 {
 	FreeResource(*it->second.resource);
+	m_totalBytes.fetch_sub(it->second.memoryBytes, std::memory_order_relaxed);
 	cacheChecksum++;
 	return cachedItems.erase(it);
 }
