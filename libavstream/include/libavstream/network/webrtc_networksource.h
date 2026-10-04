@@ -85,6 +85,13 @@ namespace avs
 		void SetStreamingConnectionState(StreamingConnectionState s);
 		void resetPeerConnection();
 
+		ConnectionDiagnostics GetConnectionDiagnostics() const override;
+		void ClearConnectionFailure() override;
+		//! Called from the PeerConnection's callbacks as local candidates are gathered.
+		void RecordLocalCandidate(IceCandidateKind kind);
+		//! Called once local candidate gathering has finished.
+		void OnGatheringComplete();
+
 		/*!
 		 * Callback signature for an inbound Opus audio RTP frame after
 		 * depacketization. The payload is one Opus packet (typically 20 ms,
@@ -159,6 +166,12 @@ namespace avs
 			int mlineindex;
 		};
 		std::vector<Candidate> cachedCandidates;
+		//! Guards diagnostics, which are written from libdatachannel's threads and read
+		//! from the client's main thread.
+		mutable std::mutex m_diagMutex;
+		ConnectionDiagnostics m_diagnostics;
+		void RecordFailure();
+		void ReceiveServerError(const std::string &code, const std::string &message, bool fatal);
 	};
 
 } // avs

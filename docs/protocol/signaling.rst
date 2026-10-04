@@ -38,6 +38,9 @@ The full message exchange:
             C-->>S: answer (text)
             C-->>S: candidate (text, one or more)
         end
+        opt ICE cannot succeed
+            S-->>C: error (text)
+        end
         Note over C,S: WebRTC PeerConnection negotiating
         S-->>C: setupCommand (binary WebSocket frame OR reliable data channel)
         C-->>S: Handshake (binary WebSocket frame OR reliable data channel)
@@ -157,6 +160,43 @@ Both sides also send one or more ICE candidates:
     }
 
 When each side has received the other's ``offer``/``answer`` and at least one viable ``candidate``, the WebRTC PeerConnection becomes ``connected`` and the data channels open.
+
+``error``
+^^^^^^^^^
+
+Either side may send an ``error`` when it knows why the WebRTC connection is failing. The server sends one as soon as it can classify the failure: when ICE candidate gathering completes without a usable candidate, when its TURN health check already shows the relay to be down, or just before it abandons a connection attempt that has timed out.
+
+  .. code-block:: JSON
+
+    {
+        "teleport-signal-type": "error",
+        "code": "server-relay-unavailable",
+        "message": "TURN relay unavailable (turn:turn.example.com:3478); ICE errors: ...",
+        "fatal": true
+    }
+
+``code`` is a stable identifier. ``message`` is diagnostic text for logs: clients MUST NOT show it to users verbatim, and it never contains credentials. ``fatal`` is ``true`` when retrying cannot succeed until something changes on the server, so a client SHOULD back off its reconnection attempts. The codes are:
+
+.. list-table::
+   :header-rows: 1
+
+   * - ``code``
+     - Meaning
+     - Sent by server
+   * - ``server-relay-unavailable``
+     - The server's ICE policy needs a TURN relay (``iceTransportPolicy`` ``relay``), and no relay allocation succeeded.
+     - Yes (fatal)
+   * - ``no-server-candidates``
+     - The server gathered no usable ICE candidates.
+     - Yes (fatal)
+   * - ``ice-timeout``
+     - Candidates were exchanged but no candidate pair succeeded in time.
+     - Yes
+   * - ``client-udp-blocked``
+     - The client could not learn a public (server-reflexive) address, so its network probably blocks UDP.
+     - No: inferred by the client only
+
+A client that receives no ``error`` MAY infer one of these codes from the candidates it saw: no remote candidates suggests ``no-server-candidates``, no server-reflexive or relay candidates of its own suggests ``client-udp-blocked``, and otherwise ``ice-timeout``. A code received from the server takes precedence over an inferred one. A client MUST treat an unknown code as a generic connection failure. The client's existing use of ``error`` (for example ``"message": "Bad data channel received."``, with no ``code``) is logged by the server.
 
 .. _signaling_reliable_fallback:
 

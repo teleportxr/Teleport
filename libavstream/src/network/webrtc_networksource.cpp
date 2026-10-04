@@ -147,6 +147,18 @@ static double iceElapsedMs()
 		   - static_cast<double>(start) * 1e-6;
 }
 
+static avs::IceCandidateKind ToIceCandidateKind(rtc::Candidate::Type t)
+{
+	switch (t)
+	{
+	case rtc::Candidate::Type::Host:			return avs::IceCandidateKind::Host;
+	case rtc::Candidate::Type::ServerReflexive:	return avs::IceCandidateKind::ServerReflexive;
+	case rtc::Candidate::Type::PeerReflexive:	return avs::IceCandidateKind::PeerReflexive;
+	case rtc::Candidate::Type::Relayed:			return avs::IceCandidateKind::Relayed;
+	default:									return avs::IceCandidateKind::Unknown;
+	}
+}
+
 static shared_ptr<rtc::PeerConnection> createClientPeerConnection(const rtc::Configuration& config,
 avs::WebRtcNetworkSource *src)
 {
@@ -173,10 +185,12 @@ avs::WebRtcNetworkSource *src)
 			TELEPORT_INTERNAL_COUT(Time, "ICE+{:.0f} ms: ICE state → {}", iceElapsedMs(), avs::stringOf(state));
 		});
 
-	pc->onGatheringStateChange([](rtc::PeerConnection::GatheringState state)
+	pc->onGatheringStateChange([src](rtc::PeerConnection::GatheringState state)
 		{
 			std::ostringstream oss; oss << state;
 			TELEPORT_INTERNAL_COUT(Time, "ICE+{:.0f} ms: Gathering state → {}", iceElapsedMs(), oss.str());
+			if(state==rtc::PeerConnection::GatheringState::Complete)
+				src->OnGatheringComplete();
 		});
 
 	pc->onLocalDescription([src](rtc::Description description)
@@ -192,6 +206,7 @@ avs::WebRtcNetworkSource *src)
 
 	pc->onLocalCandidate([ src](rtc::Candidate candidate)
 		{
+			src->RecordLocalCandidate(ToIceCandidateKind(candidate.type()));
 			json message = { {"id", "1"},
 						{"teleport-signal-type", "candidate"},
 						{"candidate", std::string(candidate)},
@@ -452,7 +467,7 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 	rtc::Configuration config;
 	// Enable TCP for e.g. Heroku
 	//config.enableIceTcp=true;
-	config.enableIceUdpMux=true;
+	//config.enableIceUdpMux=true;
 	if(!remoteIceServers.empty())
 	{
 		// Prefer the server-supplied list (may include TURN) over the built-in STUN-only
@@ -488,6 +503,12 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 			}
 		}
 	}
+	// In UDP mux mode libjuice ignores TURN servers ("TURN servers are not supported in mux
+	// mode"), so a server-supplied relay would silently do nothing on this side.
+	bool hasTurn = false;
+	for (const auto &srv : config.iceServers)
+		hasTurn |= (srv.type == rtc::IceServer::Type::Turn);
+	const bool turnIgnored = config.enableIceUdpMux && hasTurn;
 	auto needsRecreate = [](const std::shared_ptr<rtc::PeerConnection>& pc) -> bool
 	{
 		if(!pc)
@@ -533,6 +554,20 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 		}
 		cachedCandidates.clear();
 		offer.clear();
+		{
+			// New ICE session: candidate counts start again, but the last failure is kept
+			// until this session succeeds, so the UI can go on showing why we are retrying.
+			std::lock_guard<std::mutex> lock(m_diagMutex);
+			m_diagnostics.local				  = {};
+			m_diagnostics.remote			  = {};
+			m_diagnostics.gatheringComplete	  = false;
+			if (turnIgnored && !m_diagnostics.turnIgnoredByUdpMux)
+			{
+				AVSLOG(Warning) << "WebRtcNetworkSource: UDP mux is enabled, so the server-supplied TURN server(s) will not be used by this client. "
+									"Only the server's own relay can carry the connection.\n";
+			}
+			m_diagnostics.turnIgnoredByUdpMux = turnIgnored;
+		}
 		m_data->rtcPeerConnection = createClientPeerConnection(config, this);
 	}
 	try
@@ -592,7 +627,12 @@ void WebRtcNetworkSource::receiveCandidate(const std::string& candidate, const s
 		{
 			AVSLOG(Info)<<"IceState: "<<stringOf(iceState)<<".\n";
 		}
-		m_data->rtcPeerConnection->addRemoteCandidate(rtc::Candidate(candidate, mid));
+		rtc::Candidate remoteCandidate(candidate, mid);
+		{
+			std::lock_guard<std::mutex> lock(m_diagMutex);
+			m_diagnostics.remote.Add(ToIceCandidateKind(remoteCandidate.type()));
+		}
+		m_data->rtcPeerConnection->addRemoteCandidate(remoteCandidate);
 	}
 	catch (std::logic_error err)
 	{
@@ -846,7 +886,18 @@ void WebRtcNetworkSource::sendConfigMessage(const std::string &str)
 
 void WebRtcNetworkSource::SetStreamingConnectionState(StreamingConnectionState s)
 {
+	const StreamingConnectionState previous=webRtcState;
 	webRtcState=s;
+	if(s==StreamingConnectionState::FAILED&&previous!=StreamingConnectionState::FAILED)
+	{
+		RecordFailure();
+	}
+	else if(s==StreamingConnectionState::CONNECTED)
+	{
+		std::lock_guard<std::mutex> lock(m_diagMutex);
+		m_diagnostics.failure		 = {};
+		m_diagnostics.failedAttempts = 0;
+	}
 	if(webRtcState!=StreamingConnectionState::CONNECTED&&webRtcState!=StreamingConnectionState::CONNECTING&&webRtcState!=StreamingConnectionState::NEW_UNCONNECTED)
 	{
 		offer="";
@@ -856,6 +907,55 @@ void WebRtcNetworkSource::SetStreamingConnectionState(StreamingConnectionState s
 		// Recover from disconnection, allow processing again!
 		setResult(avs::Result::OK);
 	}
+}
+
+ConnectionDiagnostics WebRtcNetworkSource::GetConnectionDiagnostics() const
+{
+	std::lock_guard<std::mutex> lock(m_diagMutex);
+	return m_diagnostics;
+}
+
+void WebRtcNetworkSource::ClearConnectionFailure()
+{
+	std::lock_guard<std::mutex> lock(m_diagMutex);
+	m_diagnostics.failure		 = {};
+	m_diagnostics.failedAttempts = 0;
+}
+
+void WebRtcNetworkSource::RecordLocalCandidate(IceCandidateKind kind)
+{
+	std::lock_guard<std::mutex> lock(m_diagMutex);
+	m_diagnostics.local.Add(kind);
+}
+
+void WebRtcNetworkSource::OnGatheringComplete()
+{
+	std::lock_guard<std::mutex> lock(m_diagMutex);
+	m_diagnostics.gatheringComplete = true;
+	AVSLOG(Info) << "WebRTC gathering complete: local " << m_diagnostics.local.ToString() << "; remote so far "
+				 << m_diagnostics.remote.ToString() << ".\n";
+}
+
+void WebRtcNetworkSource::RecordFailure()
+{
+	std::lock_guard<std::mutex> lock(m_diagMutex);
+	m_diagnostics.failedAttempts++;
+	// A failure the server reported is kept as it is; otherwise infer one from the counts.
+	m_diagnostics.failure = ClassifyConnectionFailure(m_diagnostics);
+	AVSLOG(Warning) << "WebRTC failed: local " << m_diagnostics.local.ToString() << "; remote " << m_diagnostics.remote.ToString()
+					<< (m_diagnostics.turnIgnoredByUdpMux ? "; server TURN ignored (UDP mux)" : "") << "; "
+					<< (m_diagnostics.failure.fromServer ? "server says " : "inferred ") << m_diagnostics.failure.code << " ("
+					<< m_diagnostics.failure.detail << "); attempt " << m_diagnostics.failedAttempts << ".\n";
+}
+
+void WebRtcNetworkSource::ReceiveServerError(const std::string &code, const std::string &message, bool fatal)
+{
+	std::lock_guard<std::mutex> lock(m_diagMutex);
+	m_diagnostics.failure.code		 = code;
+	m_diagnostics.failure.detail	 = message;
+	m_diagnostics.failure.fatal		 = fatal;
+	m_diagnostics.failure.fromServer = true;
+	AVSLOG(Warning) << "Server reported a streaming error: " << code << (fatal ? " (fatal)" : "") << ": " << message << "\n";
 }
 
 bool WebRtcNetworkSource::getNextStreamingControlMessage(std::string& msg)
@@ -941,6 +1041,16 @@ void WebRtcNetworkSource::receiveStreamingControlMessage(const std::string& str)
 				}
 			}
 			AVSLOG(Info) << ": info: WebRtcNetworkSource: Received " << remoteIceServers.size() << " server-supplied ICE server(s).\n";
+		}
+		else if (type == "error")
+		{
+			// The server's diagnosis of why this connection is failing (see
+			// docs/protocol/signaling.rst). Authoritative over anything we infer locally.
+			std::string code	= message.value("code", "");
+			std::string text	= message.value("message", "");
+			bool		fatal	= message.value("fatal", false);
+			if (!code.empty())
+				ReceiveServerError(code, text, fatal);
 		}
 	}
 	catch (std::invalid_argument inv)

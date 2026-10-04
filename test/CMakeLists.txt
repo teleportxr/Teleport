@@ -153,6 +153,14 @@ add_test(NAME redact COMMAND redact)
 target_link_libraries(redact PRIVATE Catch2::Catch2WithMain)
 target_include_directories(redact PRIVATE ${CMAKE_SOURCE_DIR}/TeleportCore/export_include)
 
+# connection_diagnostics exercises the header-only ICE failure classification in
+# libavstream/network/connection_diagnostics.h, whose codes are shared with the
+# server's "error" signalling message (docs/protocol/signaling.rst).
+add_executable(connection_diagnostics test_connection_diagnostics.cpp)
+add_test(NAME connection_diagnostics COMMAND connection_diagnostics)
+target_link_libraries(connection_diagnostics PRIVATE Catch2::Catch2WithMain)
+target_include_directories(connection_diagnostics PRIVATE ${CMAKE_SOURCE_DIR}/libavstream/include)
+
 # avatar_validation_cache exercises the header-only LRU cache used by
 # host-supplied IAvatarValidator implementations (plan §4.1). No
 # TeleportServer link is required — the header pulls in IAvatarValidator

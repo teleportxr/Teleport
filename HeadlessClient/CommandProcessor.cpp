@@ -105,6 +105,18 @@ namespace
 		j["latencyMs"]	   = status.latencyMs;
 		j["inputsAvailable"] = status.inputsAvailable;
 		j["mode"]		   = (mode == HeadlessMode::Minimal) ? "minimal" : "simulated";
+		if (status.lastError.Empty())
+		{
+			j["lastError"] = nullptr;
+		}
+		else
+		{
+			j["lastError"] = {{"code", status.lastError.code},
+							  {"message", status.lastErrorMessage},
+							  {"detail", status.lastError.detail},
+							  {"fatal", status.lastError.fatal},
+							  {"fromServer", status.lastError.fromServer}};
+		}
 		return j;
 	}
 

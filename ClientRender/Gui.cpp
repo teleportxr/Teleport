@@ -2991,6 +2991,48 @@ void Gui::ListBookmarks()
 	}
 }
 static bool overwrite_url_edit = false;
+
+//! Why the tab's connection failed, in one line for the user, with retry progress. Empty if
+//! nothing has failed. The ICE detail stays in the log and the dev overlay's server tab.
+static std::string ConnectionFailureText(int32_t tab)
+{
+	auto tabContext = client::TabContext::GetTabContext(tab);
+	if (!tabContext)
+	{
+		return {};
+	}
+	// A connection in progress lives under the tab's "next" uid until it completes.
+	avs::uid uid = tabContext->GetNextServerUid();
+	if (!uid)
+	{
+		uid = tabContext->GetServerUid();
+	}
+	if (!uid)
+	{
+		return {};
+	}
+	auto sessionClient = client::SessionClient::GetSessionClient(uid);
+	if (!sessionClient)
+	{
+		return {};
+	}
+	const auto diagnostics = sessionClient->GetConnectionDiagnostics();
+	if (diagnostics.failure.Empty())
+	{
+		return {};
+	}
+	std::string text = avs::DescribeConnectionFailure(diagnostics.failure.code);
+	if (sessionClient->GetConnectionStatus() == client::ConnectionStatus::RECONNECTING)
+	{
+		const int64_t seconds = (sessionClient->GetMsUntilNextReconnect() + 999) / 1000;
+		text += std::format(" Retrying in {} s (attempt {}).", seconds, sessionClient->GetReconnectAttempts() + 1);
+	}
+	else if (diagnostics.failedAttempts > 1)
+	{
+		text += std::format(" ({} failed attempts.)", diagnostics.failedAttempts);
+	}
+	return text;
+}
 void		Gui::Navigate(const std::string &url)
 {
 	connect_please = true;
@@ -3254,6 +3296,23 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		MenuBar2D();
 	}
 	EndMainMenuBar();
+	{
+		const std::string failureText = ConnectionFailureText(current_tab_context);
+		if (!failureText.empty())
+		{
+			auto		&cfg		  = client::Config::GetInstance();
+			const float	 menuHeight	  = 2.f * cfg.options.uiFontSize + ImGui::GetStyle().FramePadding.y * 2.f;
+			ImGuiWindowFlags flags	  = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
+									   | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysAutoResize;
+			ImGui::SetNextWindowPos(ImVec2(0.f, menuHeight));
+			ImGui::SetNextWindowSizeConstraints(ImVec2((float)vp.w, 0.f), ImVec2((float)vp.w, FLT_MAX));
+			ImGuiBegin("connection_failure", nullptr, flags);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.2f, 1.0f));
+			ImGui::TextWrapped("%s", failureText.c_str());
+			ImGui::PopStyleColor();
+			ImGuiEnd();
+		}
+	}
 	auto &style	 = ImGui::GetStyle();
 	auto &config = client::Config::GetInstance();
 	if (config.dev_mode)
@@ -3330,6 +3389,31 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 						ImGui::Text("Latency");
 						ImGui::TableNextColumn();
 						ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+
+						const auto diagnostics = sessionClient->GetConnectionDiagnostics();
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Candidates");
+						ImGui::TableNextColumn();
+						ImGui::Text("local %s", diagnostics.local.ToString().c_str());
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::TableNextColumn();
+						ImGui::Text("remote %s", diagnostics.remote.ToString().c_str());
+
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Last error");
+						ImGui::TableNextColumn();
+						if (diagnostics.failure.Empty())
+						{
+							ImGui::Text("none");
+						}
+						else
+						{
+							ImGui::TextWrapped("%s%s (%s): %s", diagnostics.failure.code.c_str(), diagnostics.failure.fatal ? ", fatal" : "",
+											   diagnostics.failure.fromServer ? "server" : "inferred", diagnostics.failure.detail.c_str());
+						}
 
 						ImGui::TableNextRow();
 					}
@@ -3834,6 +3918,15 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					}
 				}
 #endif
+				{
+					const std::string failureText = ConnectionFailureText(current_tab_context);
+					if (!failureText.empty())
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.2f, 1.0f));
+						ImGui::TextWrapped("%s", failureText.c_str());
+						ImGui::PopStyleColor();
+					}
+				}
 
 				if (show_keyboard)
 				{

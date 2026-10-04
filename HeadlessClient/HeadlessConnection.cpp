@@ -152,6 +152,8 @@ ConnectionStatus HeadlessConnection::GetStatusData() const
 	out.port			= static_cast<int>(sessionClient->GetPort());
 	out.latencyMs		= static_cast<int>(sessionClient->GetLatencyMs());
 	out.inputsAvailable = GetInputDefinitions().size();
+	out.lastError		= sessionClient->GetConnectionDiagnostics().failure;
+	out.lastErrorMessage = avs::DescribeConnectionFailure(out.lastError.code);
 	return out;
 }
 

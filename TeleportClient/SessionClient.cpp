@@ -183,6 +183,9 @@ void SessionClient::RequestConnection(const std::string &path, int port)
 		SetServerDiscoveryPort(port);
 	}
 	connectionStatus = client::ConnectionStatus::OFFERING;
+	// A fresh request from the user: the previous attempt's failure no longer applies.
+	if (clientPipeline.source)
+		clientPipeline.source->ClearConnectionFailure();
 }
 
 void SessionClient::SetSessionCommandInterface(SessionCommandInterface *s)
@@ -418,6 +421,21 @@ avs::StreamingConnectionState SessionClient::GetStreamingConnectionState() const
 	if (!clientPipeline.source)
 		return avs::StreamingConnectionState::ERROR_STATE;
 	return clientPipeline.source->GetStreamingConnectionState();
+}
+
+avs::ConnectionDiagnostics SessionClient::GetConnectionDiagnostics() const
+{
+	if (!clientPipeline.source)
+		return {};
+	return clientPipeline.source->GetConnectionDiagnostics();
+}
+
+int64_t SessionClient::GetMsUntilNextReconnect() const
+{
+	if (connectionStatus != ConnectionStatus::RECONNECTING)
+		return 0;
+	auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(nextReconnectTime - std::chrono::steady_clock::now()).count();
+	return std::max<int64_t>(0, remaining);
 }
 
 bool SessionClient::IsConnecting() const
@@ -1266,6 +1284,17 @@ void SessionClient::OnReconnectAttemptFailed()
 		return;
 	}
 	currentReconnectBackoffMs = std::min(currentReconnectBackoffMs * 2u, config.options.reconnectMaxBackoffMs);
+	// The server has said retrying won't help until something changes on its side (e.g. its
+	// TURN relay is down): go straight to the longest back-off rather than hammering it.
+	if (clientPipeline.source)
+	{
+		const auto failure = clientPipeline.source->GetConnectionDiagnostics().failure;
+		if (failure.fatal)
+		{
+			currentReconnectBackoffMs = config.options.reconnectMaxBackoffMs;
+			TELEPORT_WARN("Connection to {0} failed ({1}): {2}", GetServerURL(), failure.code, avs::DescribeConnectionFailure(failure.code));
+		}
+	}
 	const auto now = std::chrono::steady_clock::now();
 	nextReconnectTime		  = now + std::chrono::milliseconds(currentReconnectBackoffMs);
 	reconnectAttemptDeadline  = nextReconnectTime + std::chrono::milliseconds(config.options.connectionTimeout);

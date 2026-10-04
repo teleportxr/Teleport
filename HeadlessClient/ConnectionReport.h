@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libavstream/common.hpp>
+#include <libavstream/network/connection_diagnostics.h>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -30,6 +31,10 @@ struct ConnectionStatus
 	int port = 0;
 	int latencyMs = 0;
 	size_t inputsAvailable = 0;
+	//! Why the most recent connection attempt failed; lastError.code is empty if nothing has.
+	avs::ConnectionFailure lastError;
+	//! The one-line user-facing message for lastError (avs::DescribeConnectionFailure).
+	std::string lastErrorMessage;
 };
 
 //! Totals from the geometry cache, as reported by bare `geometry`.
