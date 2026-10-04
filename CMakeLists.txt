@@ -128,6 +128,17 @@ option(TELEPORT_INTERNAL_CHECKS "Internal checks for development?" OFF)
 option(TELEPORT_TRACY_PROFILING "Use Tracy to profile Teleport SDK?" OFF)
 option(TELEPORT_USE_DYNAMIC_RUNTIME "Use dynamic (MD) runtime? Only for server builds." OFF)
 option(TELEPORT_ASAN "Enable AddressSanitizer?" OFF)
+# AppleClang's AddressSanitizer runtime deadlocks during process initialisation on macOS 26
+# (Darwin 25): while setting up shadow memory it walks the dyld shared cache, and
+# dyld_shared_cache_iterate_text_swift -> _Block_copy -> malloc re-enters the not-yet-initialised
+# ASan allocator, which then spins forever on the init spinlock the outer init already holds.
+# Every instrumented binary pins a CPU core before main() and never logs or opens a socket.
+# Fixed in Xcode 26.4 (AppleClang 21). See https://github.com/llvm/llvm-project/issues/200447.
+if(TELEPORT_ASAN AND CMAKE_HOST_APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"
+		AND CMAKE_HOST_SYSTEM_VERSION VERSION_GREATER_EQUAL 25
+		AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 21)
+	message(FATAL_ERROR "TELEPORT_ASAN with AppleClang ${CMAKE_CXX_COMPILER_VERSION} produces binaries that deadlock at startup on macOS 26 (Apple's ASan runtime re-enters malloc during its own initialisation; llvm-project issue #200447). Upgrade to Xcode 26.4 or newer, or reconfigure with -DTELEPORT_ASAN=OFF.")
+endif()
 option(TELEPORT_ANDROID_MINIMAL_SETUP "Only fetch dependencies for the Android AGDE build; do not build the client." OFF)
 if(TELEPORT_ANDROID_MINIMAL_SETUP)
 	message(STATUS "Teleport Android minimal setup enabled: dependencies will be fetched, but the client/platform targets will not be built.")

@@ -199,6 +199,41 @@ namespace teleport
 				return resourceIDs;
 			}
 
+			//! Snapshot of this cache's memory use, broken down by resource type. Cheap to build:
+			//! each entry is just an already-maintained atomic total plus a cached id-list size, no
+			//! traversal of any resource map.
+			struct MemoryStats
+			{
+				struct Entry
+				{
+					std::string name;
+					size_t count = 0;
+					size_t bytes = 0;
+				};
+				std::vector<Entry> entries;
+				size_t totalBytes = 0;
+			};
+			MemoryStats GetMemoryStats() const
+			{
+				MemoryStats stats;
+				auto add = [&stats](const char *name, size_t count, size_t bytes)
+				{
+					stats.entries.push_back({name, count, bytes});
+					stats.totalBytes += bytes;
+				};
+				add("Materials", mMaterialManager.GetAllIDs().size(), mMaterialManager.GetTotalMemoryBytes());
+				add("Textures", mTextureManager.GetAllIDs().size(), mTextureManager.GetTotalMemoryBytes());
+				add("Meshes", mMeshManager.GetAllIDs().size(), mMeshManager.GetTotalMemoryBytes());
+				add("Skeletons", mSkeletonManager.GetAllIDs().size(), mSkeletonManager.GetTotalMemoryBytes());
+				add("Lights", mLightManager.GetAllIDs().size(), mLightManager.GetTotalMemoryBytes());
+				add("Animations", mAnimationManager.GetAllIDs().size(), mAnimationManager.GetTotalMemoryBytes());
+				add("Text Canvases", mTextCanvasManager.GetAllIDs().size(), mTextCanvasManager.GetTotalMemoryBytes());
+				add("Font Atlases", mFontAtlasManager.GetAllIDs().size(), mFontAtlasManager.GetTotalMemoryBytes());
+				add("Vertex Buffers", mVertexBufferManager.GetAllIDs().size(), mVertexBufferManager.GetTotalMemoryBytes());
+				add("Index Buffers", mIndexBufferManager.GetAllIDs().size(), mIndexBufferManager.GetTotalMemoryBytes());
+				return stats;
+			}
+
 			// Clear all resources.
 			void ClearAll() override
 			{

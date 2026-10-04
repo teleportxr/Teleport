@@ -57,6 +57,13 @@ namespace teleport
 			bool mInputStarted = false;
 
 			static constexpr size_t sNumBuffers = 3;
+			// Each chunk is ~20ms of audio (see mBufferByteSize). If output ever stalls - no
+			// device, a muted/disconnected route, or a queue that never actually starts consuming -
+			// incoming network audio would otherwise queue up in mPendingChunks forever. Capping it
+			// at 5 seconds' worth and dropping the oldest chunks past that turns a slow leak into a
+			// bounded backlog; stale buffered audio is already useless for real-time playback, so
+			// discarding it is preferable to holding onto it.
+			static constexpr size_t sMaxPendingChunks = 250;
 			size_t mBufferByteSize = 0;
 
 			std::mutex mMutex;

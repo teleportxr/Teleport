@@ -56,6 +56,13 @@ namespace teleport
 
 		inline const IndexBufferCreateInfo& GetIndexBufferCreateInfo() const { return m_CI; }
 
+		//! Bytes of index data retained client-side. Uses the actual buffer size where the
+		//! source data is still held, falling back to count * stride otherwise.
+		size_t GetMemoryBytes() const
+		{
+			return m_CI.data ? m_CI.data->size() : m_CI.indexCount * m_CI.stride;
+		}
+
 		virtual bool ResourceInUse(int timeout) {return true;}
 		std::function<bool(IndexBuffer*, int)> ResourceInUseCallback = &IndexBuffer::ResourceInUse;
 		

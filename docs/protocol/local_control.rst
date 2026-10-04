@@ -109,7 +109,7 @@ Connection-scoped verbs -- ``status``, ``move``, ``turn``, ``input``, ``mode``, 
    * - ``disconnect [id]``
      - ``{"disconnected": 1}``
    * - ``status``
-     - ``{"id", "state", "hasSession", "server", "port", "latencyMs", "inputsAvailable", "mode"}``
+     - ``{"id", "state", "hasSession", "server", "port", "latencyMs", "inputsAvailable", "mode", "lastError"}``
    * - ``move <x> <y> <z>``
      - ``{"position": [x, y, z]}``
    * - ``turn <qx> <qy> <qz> <qw>``
@@ -142,6 +142,8 @@ Connection-scoped verbs -- ``status``, ``move``, ``turn``, ``input``, ``mode``, 
      - ``{"bye": true}``
 
 ``connect`` returns as soon as the attempt is *initiated*: the id is valid immediately, but the connection completes asynchronously. Poll ``status`` until ``state`` is ``CONNECTED``. The reported states are ``UNCONNECTED``, ``OFFERING``, ``AWAITING_SETUP``, ``HANDSHAKING``, ``CONNECTED``, ``RECONNECTING`` and ``UNKNOWN``, or ``DISCONNECTED`` when no session exists yet.
+
+``lastError`` is ``null`` unless the most recent WebRTC connection attempt failed, in which case it is ``{"code", "message", "detail", "fatal", "fromServer"}``. ``code`` is one of the failure codes of the ``error`` signalling message (see :doc:`signaling`), ``message`` is the one-line explanation a user would see, and ``detail`` is the diagnostic text. It is cleared when a connection succeeds or a new one is requested. In text mode the same information appears as a ``Last error:`` line.
 
 ``shutdown`` stops the service and every stream it holds. ``quit``/``exit`` only detach the control connection; streams keep running, which is the point of the split.
 

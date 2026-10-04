@@ -181,6 +181,7 @@ set(hdr_public_network
 	include/libavstream/network/networksink.h
 	include/libavstream/network/webrtc_networksink.h
 	include/libavstream/network/webrtc_observers.h
+	include/libavstream/network/connection_diagnostics.h
 	include/libavstream/network/networksource.h
 	include/libavstream/network/webrtc_networksource.h)
 set(src_public_stream

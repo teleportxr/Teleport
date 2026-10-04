@@ -66,6 +66,9 @@ namespace teleport
 
 			ozz::animation::Animation							   *GetOzzAnimation(uint64_t skeleton_hash);
 
+			//! Bytes of keyframe data plus every per-skeleton retargeted runtime animation held.
+			size_t GetMemoryBytes() const;
+
 		private:
 			ozz::unique_ptr<ozz::animation::offline::RawSkeleton> raw_skeleton;
 			// ozz::unique_ptr<ozz::animation::Skeleton>				ozz_skeleton;

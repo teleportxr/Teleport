@@ -156,6 +156,15 @@ namespace teleport
 			//! @return 
 			ConnectionStatus GetConnectionStatus() const;
 			avs::StreamingConnectionState GetStreamingConnectionState() const;
+			//! ICE candidate counts and the most recent connection failure, if any.
+			avs::ConnectionDiagnostics GetConnectionDiagnostics() const;
+			//! Reconnection progress, for display: the number of failed attempts so far, and
+			//! milliseconds until the next one (0 if not waiting to reconnect).
+			unsigned int GetReconnectAttempts() const
+			{
+				return reconnectAttempts;
+			}
+			int64_t GetMsUntilNextReconnect() const;
 			bool IsConnecting() const;
 			bool IsConnected() const;
 			//! Is this client ready to render, i.e. does it have the final setup from the server required to initialize rendering?

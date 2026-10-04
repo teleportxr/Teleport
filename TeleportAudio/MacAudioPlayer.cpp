@@ -268,6 +268,20 @@ void MacAudioPlayer::SplitAndQueueStream(const uint8_t* data, size_t dataSize)
 		mPendingChunks.emplace_back(data + offset, data + offset + chunkSize);
 		offset += chunkSize;
 	}
+
+	if (mPendingChunks.size() > sMaxPendingChunks)
+	{
+		static bool warned = false;
+		if (!warned)
+		{
+			TELEPORT_INTERNAL_CERR("MacAudioPlayer: Output backlog exceeded {0} chunks; dropping oldest audio. Output may be stalled.", sMaxPendingChunks);
+			warned = true;
+		}
+		while (mPendingChunks.size() > sMaxPendingChunks)
+		{
+			mPendingChunks.pop_front();
+		}
+	}
 }
 
 void MacAudioPlayer::RefillOutputBuffers()
@@ -318,8 +332,25 @@ void MacAudioPlayer::RefillOutputBuffersLocked()
 
 		if (!mOutputStarted)
 		{
-			AudioQueueStart(mOutputQueue, nullptr);
-			mOutputStarted = true;
+			// If this fails (e.g. no output device available), leave mOutputStarted false so we
+			// keep retrying on every subsequent buffer rather than silently giving up forever -
+			// otherwise OutputCallback never fires again, buffers never return to
+			// mFreeOutputBuffers, and every future packet piles up in mPendingChunks for the rest
+			// of the session with no way to recover.
+			OSStatus startStatus = AudioQueueStart(mOutputQueue, nullptr);
+			if (startStatus == noErr)
+			{
+				mOutputStarted = true;
+			}
+			else
+			{
+				static bool warned = false;
+				if (!warned)
+				{
+					TELEPORT_INTERNAL_CERR("MacAudioPlayer: AudioQueueStart failed with status {0}; will keep retrying.", (int)startStatus);
+					warned = true;
+				}
+			}
 		}
 	}
 }

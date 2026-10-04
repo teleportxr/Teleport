@@ -75,6 +75,10 @@ namespace teleport
 			{
 				return jointMapping;
 			}
+			//! Bytes of bone-mapping and runtime ozz skeleton data actually held. Excludes the
+			//! external bone Nodes themselves, which are scene nodes tracked by NodeManager, not
+			//! this cache's resource managers.
+			size_t GetMemoryBytes() const;
 		protected:
 			avs::uid rootId=0;
 			std::vector<avs::uid> boneIds;

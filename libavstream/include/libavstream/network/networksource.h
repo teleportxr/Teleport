@@ -5,6 +5,7 @@
 
 #include <libavstream/common.hpp>
 #include <libavstream/node.hpp>
+#include <libavstream/network/connection_diagnostics.h>
 #include <optional>
 
 namespace avs
@@ -89,6 +90,13 @@ namespace avs
 			return false;
 		}
 		virtual StreamingConnectionState GetStreamingConnectionState() const = 0;
+		//! Candidate counts and the most recent failure, for logs and the UI.
+		virtual ConnectionDiagnostics GetConnectionDiagnostics() const
+		{
+			return {};
+		}
+		//! Forget the last failure, e.g. when the user asks for a new connection.
+		virtual void ClearConnectionFailure() {}
 		virtual void sendConfigMessage(const std::string &msg) = 0;
 		const std::vector<StreamStatus>& GetStreamStatus()
 		{

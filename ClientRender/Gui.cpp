@@ -11,7 +11,10 @@
 #include "IconsForkAwesome.h"
 #include "InstanceRenderer.h"
 #include "Light.h"
+#include "MemoryUtil.h"
 #include "Platform/Core/FileLoader.h"
+
+static std::string FormatBytes(size_t bytes);
 #include "Platform/CrossPlatform/RenderPlatform.h"
 #include "Platform/ImGui/imgui_impl_platform.h"
 #include "TeleportCore/ErrorHandling.h"
@@ -2409,48 +2412,43 @@ void Gui::TagOSD(std::vector<clientrender::SceneCaptureCubeTagData> &videoTagDat
 
 void Gui::GeometryOSD()
 {
-	const std::vector<avs::uid>		 cache_uids = clientrender::GeometryCache::GetCacheUids();
-	static std::vector<std::string>	 cache_names;
-	static std::vector<const char *> cache_strings;
-	// Rebuilt when the list of caches differs, not merely when its length does: one sub-scene going
-	// away as another arrives leaves the length alone, and the labels would then name caches other
-	// than the ones the entries select.
-	static std::vector<avs::uid>	 named_cache_uids;
-	if (cache_uids != named_cache_uids)
+	const std::vector<avs::uid> cache_uids = clientrender::GeometryCache::GetCacheUids();
+
+	// Left-hand panel: every cache/server/sub-scene as a selectable row, with its total memory
+	// shown right there - so picking a cache to inspect and seeing which one is heaviest is the
+	// same glance, rather than a dropdown that hides both behind a click.
+	// Selecting a row sets cache_uid; it does not merely reflect it. Following a material's
+	// texture into the cache that owns it (via Select) crosses from a sub-scene to the session,
+	// so this list must not write its own choice back over that on the next frame - it only ever
+	// reacts to a click.
+	ImGui::BeginChild("CacheList", ImVec2(260, 0), true);
+	if (ImGui::BeginTable("CacheTable", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_Resizable))
 	{
-		named_cache_uids = cache_uids;
-		cache_names.clear();
-		cache_strings.resize(cache_uids.size());
-		for (size_t i = 0; i < cache_uids.size(); i++)
+		ImGui::TableSetupColumn("Cache");
+		ImGui::TableSetupColumn("Memory", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+		ImGui::TableHeadersRow();
+		for (avs::uid uid : cache_uids)
 		{
-			auto g = clientrender::GeometryCache::GetGeometryCache(cache_uids[i]);
-			cache_names.push_back(std::format("{0}, {1}", cache_uids[i], g ? g->GetName() : "(gone)"));
+			auto		g	  = clientrender::GeometryCache::GetGeometryCache(uid);
+			std::string name  = std::format("{0}, {1}", uid, g ? g->GetName() : "(gone)");
+			size_t		bytes = g ? g->GetMemoryStats().totalBytes : 0;
+
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			if (ImGui::Selectable(name.c_str(), uid == cache_uid, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				cache_uid = uid;
+			}
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", FormatBytes(bytes).c_str());
 		}
-		for (size_t i = 0; i < cache_uids.size(); i++)
-		{
-			cache_strings[i] = cache_names[i].c_str();
-		}
+		ImGui::EndTable();
 	}
-	// The combo shows which cache is being inspected; it does not decide it. Selecting a resource
-	// sets cache_uid too - following a material's texture into the cache that owns it crosses from a
-	// sub-scene to the session, which is the whole point of Select taking a cache - and writing the
-	// combo's own choice back every frame would undo that on the very next one.
-	int current_choice = 0;
-	for (size_t i = 0; i < cache_uids.size(); i++)
-	{
-		if (cache_uids[i] == cache_uid)
-		{
-			current_choice = (int)i;
-			break;
-		}
-	}
-	if (ImGui::Combo("Cache or Server", &current_choice, cache_strings.data(), (int)cache_strings.size()))
-	{
-		if (current_choice >= 0 && current_choice < (int)cache_uids.size())
-		{
-			cache_uid = cache_uids[current_choice];
-		}
-	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::BeginChild("CacheDetail", ImVec2(0, 0), false);
 
 	auto sessionClient = client::SessionClient::GetSessionClient(cache_uid);
 
@@ -2459,6 +2457,7 @@ void Gui::GeometryOSD()
 	auto										 geometryCache = clientrender::GeometryCache::GetGeometryCache(cache_uid);
 	if (!geometryCache)
 	{
+		ImGui::EndChild();
 		return;
 	}
 	if (ImGui::BeginTable("numResources", 3))
@@ -2531,6 +2530,7 @@ void Gui::GeometryOSD()
 			LinePrint(txt.c_str());
 		}
 	}
+	ImGui::EndChild();
 }
 
 void Gui::BeginTabBar(const char *txt)
@@ -2552,6 +2552,62 @@ bool Gui::Tab(const char *txt)
 void Gui::EndTab()
 {
 	return ImGui::EndTabItem();
+}
+
+static std::string FormatBytes(size_t bytes)
+{
+	static const char *units[] = {"B", "KB", "MB", "GB"};
+	double value = (double)bytes;
+	int unit = 0;
+	while (value >= 1024.0 && unit < 3)
+	{
+		value /= 1024.0;
+		unit++;
+	}
+	return std::format("{:.2f} {}", value, units[unit]);
+}
+
+void Gui::Memory(clientrender::GeometryCache *geometryCache)
+{
+	if (!geometryCache)
+	{
+		return;
+	}
+	auto stats = geometryCache->GetMemoryStats();
+
+	// Not every client wires up a MemoryUtil singleton (e.g. the PC client currently doesn't),
+	// so this bar is skipped rather than shown as zero when none is registered.
+	if (const auto *memoryUtil = clientrender::MemoryUtil::Get())
+	{
+		long totalMem = memoryUtil->getTotalMemory();
+		long availableMem = memoryUtil->getAvailableMemory();
+		if (totalMem > 0)
+		{
+			float used = float(totalMem - availableMem) / float(totalMem);
+			ImGui::ProgressBar(used, ImVec2(-1, 0),
+								std::format("System memory: {} / {}", FormatBytes((size_t)(totalMem - availableMem)), FormatBytes((size_t)totalMem)).c_str());
+		}
+	}
+	ImGui::Text("This cache: %s", FormatBytes(stats.totalBytes).c_str());
+	ImGui::Separator();
+	if (ImGui::BeginTable("MemoryStats", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+	{
+		ImGui::TableSetupColumn("Type");
+		ImGui::TableSetupColumn("Count");
+		ImGui::TableSetupColumn("Bytes");
+		ImGui::TableHeadersRow();
+		for (const auto &e : stats.entries)
+		{
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", e.name.c_str());
+			ImGui::TableNextColumn();
+			ImGui::Text("%zu", e.count);
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", FormatBytes(e.bytes).c_str());
+		}
+		ImGui::EndTable();
+	}
 }
 
 void Gui::Scene()
@@ -2604,6 +2660,11 @@ void Gui::Scene()
 	if (ImGui::BeginTabItem("Lighting"))
 	{
 		Lighting(geometryCache.get());
+		ImGui::EndTabItem();
+	}
+	if (ImGui::BeginTabItem("Memory"))
+	{
+		Memory(geometryCache.get());
 		ImGui::EndTabItem();
 	}
 
@@ -2930,6 +2991,48 @@ void Gui::ListBookmarks()
 	}
 }
 static bool overwrite_url_edit = false;
+
+//! Why the tab's connection failed, in one line for the user, with retry progress. Empty if
+//! nothing has failed. The ICE detail stays in the log and the dev overlay's server tab.
+static std::string ConnectionFailureText(int32_t tab)
+{
+	auto tabContext = client::TabContext::GetTabContext(tab);
+	if (!tabContext)
+	{
+		return {};
+	}
+	// A connection in progress lives under the tab's "next" uid until it completes.
+	avs::uid uid = tabContext->GetNextServerUid();
+	if (!uid)
+	{
+		uid = tabContext->GetServerUid();
+	}
+	if (!uid)
+	{
+		return {};
+	}
+	auto sessionClient = client::SessionClient::GetSessionClient(uid);
+	if (!sessionClient)
+	{
+		return {};
+	}
+	const auto diagnostics = sessionClient->GetConnectionDiagnostics();
+	if (diagnostics.failure.Empty())
+	{
+		return {};
+	}
+	std::string text = avs::DescribeConnectionFailure(diagnostics.failure.code);
+	if (sessionClient->GetConnectionStatus() == client::ConnectionStatus::RECONNECTING)
+	{
+		const int64_t seconds = (sessionClient->GetMsUntilNextReconnect() + 999) / 1000;
+		text += std::format(" Retrying in {} s (attempt {}).", seconds, sessionClient->GetReconnectAttempts() + 1);
+	}
+	else if (diagnostics.failedAttempts > 1)
+	{
+		text += std::format(" ({} failed attempts.)", diagnostics.failedAttempts);
+	}
+	return text;
+}
 void		Gui::Navigate(const std::string &url)
 {
 	connect_please = true;
@@ -3193,6 +3296,23 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 		MenuBar2D();
 	}
 	EndMainMenuBar();
+	{
+		const std::string failureText = ConnectionFailureText(current_tab_context);
+		if (!failureText.empty())
+		{
+			auto		&cfg		  = client::Config::GetInstance();
+			const float	 menuHeight	  = 2.f * cfg.options.uiFontSize + ImGui::GetStyle().FramePadding.y * 2.f;
+			ImGuiWindowFlags flags	  = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
+									   | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_AlwaysAutoResize;
+			ImGui::SetNextWindowPos(ImVec2(0.f, menuHeight));
+			ImGui::SetNextWindowSizeConstraints(ImVec2((float)vp.w, 0.f), ImVec2((float)vp.w, FLT_MAX));
+			ImGuiBegin("connection_failure", nullptr, flags);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.2f, 1.0f));
+			ImGui::TextWrapped("%s", failureText.c_str());
+			ImGui::PopStyleColor();
+			ImGuiEnd();
+		}
+	}
 	auto &style	 = ImGui::GetStyle();
 	auto &config = client::Config::GetInstance();
 	if (config.dev_mode)
@@ -3269,6 +3389,31 @@ void Gui::Render2DConnectionGUI(GraphicsDeviceContext &deviceContext)
 						ImGui::Text("Latency");
 						ImGui::TableNextColumn();
 						ImGui::Text("%4.4f ms", sessionClient->GetLatencyMs());
+
+						const auto diagnostics = sessionClient->GetConnectionDiagnostics();
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Candidates");
+						ImGui::TableNextColumn();
+						ImGui::Text("local %s", diagnostics.local.ToString().c_str());
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::TableNextColumn();
+						ImGui::Text("remote %s", diagnostics.remote.ToString().c_str());
+
+						ImGui::TableNextRow();
+						ImGui::TableNextColumn();
+						ImGui::Text("Last error");
+						ImGui::TableNextColumn();
+						if (diagnostics.failure.Empty())
+						{
+							ImGui::Text("none");
+						}
+						else
+						{
+							ImGui::TextWrapped("%s%s (%s): %s", diagnostics.failure.code.c_str(), diagnostics.failure.fatal ? ", fatal" : "",
+											   diagnostics.failure.fromServer ? "server" : "inferred", diagnostics.failure.detail.c_str());
+						}
 
 						ImGui::TableNextRow();
 					}
@@ -3773,6 +3918,15 @@ void Gui::Render3DConnectionGUI(GraphicsDeviceContext &deviceContext)
 					}
 				}
 #endif
+				{
+					const std::string failureText = ConnectionFailureText(current_tab_context);
+					if (!failureText.empty())
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.55f, 0.2f, 1.0f));
+						ImGui::TextWrapped("%s", failureText.c_str());
+						ImGui::PopStyleColor();
+					}
+				}
 
 				if (show_keyboard)
 				{

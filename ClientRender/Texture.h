@@ -234,6 +234,11 @@ namespace teleport
 
 			inline const TextureCreateInfo &GetTextureCreateInfo() const { return m_CI;}
 
+			//! Estimated GPU-resident bytes, computed from dimensions/format/mips/compression -
+			//! not from any retained CPU buffer, so it stays accurate whether or not the CPU-side
+			//! copy used to create the texture has since been freed.
+			size_t GetMemoryBytes() const;
+
 			virtual bool ResourceInUse(int timeout) {return true;}
 			std::function<bool(Texture*, int)> ResourceInUseCallback = &Texture::ResourceInUse;
 

@@ -17,6 +17,12 @@ std::string RenderStatus(const ConnectionStatus &status)
 	result += "Server: " + status.server + ":" + std::to_string(status.port) + "\n";
 	result += "Latency: " + std::to_string(status.latencyMs) + " ms\n";
 	result += "Inputs Available: " + std::to_string(status.inputsAvailable) + "\n";
+	if (!status.lastError.Empty())
+	{
+		result += "Last error: " + status.lastErrorMessage + "\n";
+		result += "  " + status.lastError.code + (status.lastError.fromServer ? " (from server)" : " (inferred)") + ": "
+				  + status.lastError.detail + "\n";
+	}
 	return result;
 }
 

@@ -61,6 +61,21 @@ namespace teleport
 			{
 				return internalMaterials;
 			}
+
+			//! Bytes owned solely by this mesh: its internal (unshared, not cache-registered)
+			//! materials. Its vertex and index buffers are excluded - they are the same
+			//! shared_ptr instances registered with, and counted by, the cache's own buffer
+			//! managers.
+			size_t GetMemoryBytes() const
+			{
+				size_t bytes = 0;
+				for (const auto &m : internalMaterials)
+				{
+					if (m)
+						bytes += m->GetMemoryBytes();
+				}
+				return bytes;
+			}
 		};
 	}
 }
