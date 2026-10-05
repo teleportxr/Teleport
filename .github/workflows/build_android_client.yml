@@ -143,7 +143,7 @@ jobs:
     - name: Vulkan
       uses: humbletim/install-vulkan-sdk@v1.2
       with:
-        version: 1.3.290.0
+        version: 1.3.296.0
 
     - name: Install Android Game Development Extension
       shell: pwsh
