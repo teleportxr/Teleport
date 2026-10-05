@@ -35,8 +35,26 @@ long PC_MemoryUtil::getAvailableMemory() const
     mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
     if (host_statistics64(host, HOST_VM_INFO64, (host_info64_t)&vmstat, &count) != KERN_SUCCESS)
         return 0;
-    return static_cast<long>(static_cast<uint64_t>(vmstat.free_count) * page_size);
+    // macOS keeps "free" pages to a minimum (often under 100MB) and holds reclaimable memory as
+    // inactive, speculative or purgeable pages, so free_count alone reads as permanently low memory.
+    const uint64_t availablePages = static_cast<uint64_t>(vmstat.free_count) + vmstat.inactive_count + vmstat.speculative_count
+        + vmstat.purgeable_count;
+    return static_cast<long>(availablePages * page_size);
 #else
+    // freeram excludes the page cache, which the kernel reclaims on demand; MemAvailable counts it.
+    if (FILE *f = fopen("/proc/meminfo", "r"))
+    {
+        char line[256];
+        long availableKb = -1;
+        while (fgets(line, sizeof(line), f))
+        {
+            if (sscanf(line, "MemAvailable: %ld kB", &availableKb) == 1)
+                break;
+        }
+        fclose(f);
+        if (availableKb >= 0)
+            return availableKb * 1024;
+    }
     struct sysinfo memInfo;
     sysinfo(&memInfo);
     return static_cast<long>(memInfo.freeram * memInfo.mem_unit);
