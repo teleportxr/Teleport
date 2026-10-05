@@ -200,7 +200,7 @@ it and drag `TeleportPCClient.app` onto the `Applications` symlink, the usual ma
 pattern. The `.dmg` bundles every non-system library `TeleportPCClient` needs (including
 Homebrew's Vulkan loader, MoltenVK and OpenSSL), so the installed app runs without Homebrew or
 any of this project's build dependencies present.
-
+P
 CI signs and notarises both packages; see `docs/macos_signing_secrets.md` for the credentials
 that requires. Locally built packages are unsigned, so Gatekeeper will refuse them until you
 clear the quarantine attribute:

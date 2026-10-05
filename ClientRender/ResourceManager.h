@@ -107,6 +107,10 @@ private:
 	// safety net before the system was already critically low; 512MB gives eviction room to
 	// actually relieve pressure before that point.
 	static constexpr long MIN_REQUIRED_MEMORY = 512L * 1024 * 1024;
+	// Under memory pressure, a resource must still have gone this long without a Get() before it
+	// is evicted. Some resources (lighting cubemaps, the background texture) are held by uid, not
+	// by shared_ptr, and are looked up every frame; without this they would be freed on arrival.
+	static constexpr float LOW_MEMORY_UNUSED_LIFETIME_S = 1.0f;
 };
 
 template<typename u,class T>
@@ -282,8 +286,9 @@ void ResourceManager<u,T>::Update(float deltaTimestamp_s,float lifetimeFactor)
 		{
 			it->second.timeSinceLastUse_s += deltaTimestamp_s;
 
-			//Delete the resource once its post-use lifetime has elapsed, or immediately if memory is low.
-			if(!sufficientMemory || it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
+			//Delete the resource once its post-use lifetime has elapsed, or much sooner if memory is low.
+			if((!sufficientMemory && it->second.timeSinceLastUse_s >= LOW_MEMORY_UNUSED_LIFETIME_S)
+				|| it->second.timeSinceLastUse_s >= it->second.postUseLifetime_s * lifetimeFactor)
 			{
 				TELEPORT_INTERNAL_CERR("Cache {0}, Timeout Freeing {1} resource {2} ({3})\n",cache_uid,T::getTypeName(),it->first,it->second.resource->getName());
 				it = RemoveResource(it);

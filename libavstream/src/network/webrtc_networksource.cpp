@@ -68,6 +68,8 @@ namespace avs
 		shared_ptr<rtc::DataChannel> rtcDataChannel;
 		atomic<size_t> bytesReceived = 0;
 		atomic<size_t> bytesSent = 0;
+		// Set when the PeerConnection that owned rtcDataChannel has been replaced; cleared when
+		// the new PeerConnection delivers this channel again in onDataChannel.
 		bool closed = false;
 		bool readyToSend = false;
 		std::vector<uint8_t> sendBuffer;
@@ -551,6 +553,15 @@ void WebRtcNetworkSource::receiveOffer(const std::string& sdp)
 			m_data->audioSendTrackOpen.store(false);
 			try { m_data->rtcPeerConnection->close(); } catch(...) {}
 			m_data->rtcPeerConnection.reset();
+		}
+		// The old PeerConnection's data channels are now closed. Stop process() sending on them
+		// until the new PeerConnection delivers its channels: the new connection reaches Connected
+		// before onDataChannel fires, and a send on a stale channel in that window would latch
+		// Network_Disconnection and stall the pipeline for good.
+		for (auto &dc : m_data->dataChannels)
+		{
+			dc.readyToSend = false;
+			dc.closed	   = true;
 		}
 		cachedCandidates.clear();
 		offer.clear();
@@ -1124,6 +1135,7 @@ bool WebRtcNetworkSource::Private::onDataChannel(shared_ptr<rtc::DataChannel> dc
 	idToStreamIndex[id] = dcIndex;
 	ClientDataChannel& dataChannel = dataChannels[dcIndex];
 	dataChannel.readyToSend = false;
+	dataChannel.closed = false;
 	dataChannel.rtcDataChannel = dc;
 	std::cout << "ClientDataChannel from " << id << " received with label \"" << dc->label() << "\"" << std::endl;
 
@@ -1452,6 +1464,12 @@ Result WebRtcNetworkSource::Private::sendData(uint8_t streamIndex, const uint8_t
 					return Result::Failed;
 				}
 				dataChannel.bytesSent += sz;
+			}
+			else if (dataChannel.closed)
+			{
+				// Left over from a replaced PeerConnection; the new one's channel has not arrived yet.
+				dataChannel.readyToSend = false;
+				return Result::Failed;
 			}
 			else
 			{
